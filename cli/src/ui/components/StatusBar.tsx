@@ -2,11 +2,12 @@
  * StatusBar component - displays project info, git branch, mode, model, and context usage
  */
 
-import React, { useMemo } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue } from "jotai"
 import {
 	cwdAtom,
+	isParallelModeAtom,
 	extensionModeAtom,
 	apiConfigurationAtom,
 	chatMessagesAtom,
@@ -23,7 +24,9 @@ import {
 	type RouterModels,
 } from "../../constants/providers/models.js"
 import type { ProviderSettings } from "../../types/messages.js"
+import type { ProviderConfig } from "../../config/types.js"
 import path from "path"
+import { isGitWorktree } from "../../utils/git.js"
 
 const MAX_MODEL_NAME_LENGTH = 40
 
@@ -37,9 +40,10 @@ function getModelDisplayName(apiConfig: ProviderSettings | null, routerModels: R
 		// Get current model ID
 		const currentModelId = getCurrentModelId({
 			providerConfig: {
-				provider: apiConfig.apiProvider,
+				id: "default",
+				provider: apiConfig.apiProvider || "",
 				...apiConfig,
-			} as any,
+			} as ProviderConfig,
 			routerModels,
 			kilocodeDefaultModel: apiConfig.kilocodeModel || "",
 		})
@@ -93,6 +97,7 @@ export const StatusBar: React.FC = () => {
 
 	// Get data from atoms
 	const cwd = useAtomValue(cwdAtom)
+	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const mode = useAtomValue(extensionModeAtom)
 	const apiConfig = useAtomValue(apiConfigurationAtom)
 	const messages = useAtomValue(chatMessagesAtom)
@@ -104,8 +109,40 @@ export const StatusBar: React.FC = () => {
 	// Calculate context usage
 	const contextUsage = useContextUsage(messages, apiConfig)
 
+	const [isWorktree, setIsWorktree] = useState(false)
+
+	useEffect(() => {
+		let latest = true
+
+		const checkWorktree = async () => {
+			if (!cwd) {
+				return
+			}
+
+			let result = false
+
+			try {
+				result = await isGitWorktree(cwd)
+			} catch {
+				/* empty */
+			} finally {
+				if (latest) {
+					setIsWorktree(result)
+				}
+			}
+		}
+
+		checkWorktree()
+
+		return () => {
+			latest = false
+		}
+	}, [cwd])
+
 	// Prepare display values
-	const projectName = getProjectName(cwd)
+	// In parallel mode, show the original directory (process.cwd()) instead of the worktree path
+	const displayCwd = isParallelMode ? process.cwd() : cwd
+	const projectName = `${getProjectName(displayCwd)}${isWorktree ? " (git worktree)" : ""}`
 	const modelName = useMemo(() => getModelDisplayName(apiConfig, routerModels), [apiConfig, routerModels])
 
 	// Get context color based on percentage using theme colors

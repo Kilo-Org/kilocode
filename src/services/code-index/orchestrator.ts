@@ -125,106 +125,183 @@ export class CodeIndexOrchestrator {
 		this._isProcessing = true
 		this.stateManager.setSystemState("Indexing", "Initializing services...")
 
+		// Track whether we successfully connected to Qdrant and started indexing
+		// This helps us decide whether to preserve cache on error
+		let indexingStarted = false
+
 		try {
 			const collectionCreated = await this.vectorStore.initialize()
+
+			// Successfully connected to Qdrant
+			indexingStarted = true
 
 			if (collectionCreated) {
 				await this.cacheManager.clearCacheFile()
 			}
 
-			// kilocode_change start
-			if (this._cancelRequested) {
-				this._isProcessing = false
-				this.stateManager.setSystemState("Standby", t("embeddings:orchestrator.indexingCancelled"))
-				return
-			}
-			// kilocode_change end
+			// Check if the collection already has indexed data
+			// If it does, we can skip the full scan and just start the watcher
+			const hasExistingData = await this.vectorStore.hasIndexedData()
 
-			this.stateManager.setSystemState("Indexing", "Services ready. Starting workspace scan...")
-
-			let cumulativeBlocksIndexed = 0
-			let cumulativeBlocksFoundSoFar = 0
-			let batchErrors: Error[] = []
-
-			const handleFileParsed = (fileBlockCount: number) => {
-				if (this._cancelRequested) return // kilocode_change
-				cumulativeBlocksFoundSoFar += fileBlockCount
-				this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
-			}
-
-			const handleBlocksIndexed = (indexedCount: number) => {
-				if (this._cancelRequested) return // kilocode_change
-				cumulativeBlocksIndexed += indexedCount
-				this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
-			}
-
-			const result = await this.scanner.scanDirectory(
-				this.workspacePath,
-				(batchError: Error) => {
-					console.error(
-						`[CodeIndexOrchestrator] Error during initial scan batch: ${batchError.message}`,
-						batchError,
-					)
-					batchErrors.push(batchError)
-				},
-				handleBlocksIndexed,
-				handleFileParsed,
-			)
-
-			if (!result) {
-				throw new Error("Scan failed, is scanner initialized?")
-			}
-
-			// kilocode_change start
-			if (this._cancelRequested || this.scanner.isCancelled) {
-				this._isProcessing = false
-				if (this.stateManager.state !== "Error") {
-					this.stateManager.setSystemState("Standby", t("embeddings:orchestrator.indexingCancelled"))
-				}
-				return
-			}
-			// kilocode_change end
-
-			const { stats } = result
-
-			// Check if any blocks were actually indexed successfully
-			// If no blocks were indexed but blocks were found, it means all batches failed
-			if (cumulativeBlocksIndexed === 0 && cumulativeBlocksFoundSoFar > 0) {
-				if (batchErrors.length > 0) {
-					// Use the first batch error as it's likely representative of the main issue
-					const firstError = batchErrors[0]
-					throw new Error(`Indexing failed: ${firstError.message}`)
-				} else {
-					throw new Error(t("embeddings:orchestrator.indexingFailedNoBlocks"))
-				}
-			}
-
-			// Check for partial failures - if a significant portion of blocks failed
-			const failureRate = (cumulativeBlocksFoundSoFar - cumulativeBlocksIndexed) / cumulativeBlocksFoundSoFar
-			if (batchErrors.length > 0 && failureRate > 0.1) {
-				// More than 10% of blocks failed to index
-				const firstError = batchErrors[0]
-				throw new Error(
-					`Indexing partially failed: Only ${cumulativeBlocksIndexed} of ${cumulativeBlocksFoundSoFar} blocks were indexed. ${firstError.message}`,
+			if (hasExistingData && !collectionCreated) {
+				// Collection exists with data - run incremental scan to catch any new/changed files
+				// This handles files added while workspace was closed or Qdrant was inactive
+				console.log(
+					"[CodeIndexOrchestrator] Collection already has indexed data. Running incremental scan for new/changed files...",
 				)
+
+				// kilocode_change start
+				if (this._cancelRequested) {
+					this._isProcessing = false
+					this.stateManager.setSystemState("Standby", t("embeddings:orchestrator.indexingCancelled"))
+					return
+				}
+				// kilocode_change end
+
+				this.stateManager.setSystemState("Indexing", "Checking for new or modified files...")
+
+				// Mark as incomplete at the start of incremental scan
+				await this.vectorStore.markIndexingIncomplete()
+
+				let cumulativeBlocksIndexed = 0
+				let cumulativeBlocksFoundSoFar = 0
+				let batchErrors: Error[] = []
+
+				const handleFileParsed = (fileBlockCount: number) => {
+					cumulativeBlocksFoundSoFar += fileBlockCount
+					this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
+				}
+
+				const handleBlocksIndexed = (indexedCount: number) => {
+					cumulativeBlocksIndexed += indexedCount
+					this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
+				}
+
+				// Run incremental scan - scanner will skip unchanged files using cache
+				const result = await this.scanner.scanDirectory(
+					this.workspacePath,
+					(batchError: Error) => {
+						console.error(
+							`[CodeIndexOrchestrator] Error during incremental scan batch: ${batchError.message}`,
+							batchError,
+						)
+						batchErrors.push(batchError)
+					},
+					handleBlocksIndexed,
+					handleFileParsed,
+				)
+
+				if (!result) {
+					throw new Error("Incremental scan failed, is scanner initialized?")
+				}
+
+				// kilocode_change start
+				if (this._cancelRequested || this.scanner.isCancelled) {
+					this._isProcessing = false
+					if (this.stateManager.state !== "Error") {
+						this.stateManager.setSystemState("Standby", t("embeddings:orchestrator.indexingCancelled"))
+					}
+					return
+				}
+				// kilocode_change end
+
+				// If new files were found and indexed, log the results
+				if (cumulativeBlocksFoundSoFar > 0) {
+					console.log(
+						`[CodeIndexOrchestrator] Incremental scan completed: ${cumulativeBlocksIndexed} blocks indexed from new/changed files`,
+					)
+				} else {
+					console.log("[CodeIndexOrchestrator] No new or changed files found")
+				}
+
+				await this._startWatcher()
+
+				// Mark indexing as complete after successful incremental scan
+				await this.vectorStore.markIndexingComplete()
+
+				this.stateManager.setSystemState("Indexed", t("embeddings:orchestrator.fileWatcherStarted"))
+			} else {
+				// No existing data or collection was just created - do a full scan
+				this.stateManager.setSystemState("Indexing", "Services ready. Starting workspace scan...")
+
+				// Mark as incomplete at the start of full scan
+				await this.vectorStore.markIndexingIncomplete()
+
+				let cumulativeBlocksIndexed = 0
+				let cumulativeBlocksFoundSoFar = 0
+				let batchErrors: Error[] = []
+
+				const handleFileParsed = (fileBlockCount: number) => {
+					cumulativeBlocksFoundSoFar += fileBlockCount
+					this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
+				}
+
+				const handleBlocksIndexed = (indexedCount: number) => {
+					cumulativeBlocksIndexed += indexedCount
+					this.stateManager.reportBlockIndexingProgress(cumulativeBlocksIndexed, cumulativeBlocksFoundSoFar)
+				}
+
+				const result = await this.scanner.scanDirectory(
+					this.workspacePath,
+					(batchError: Error) => {
+						console.error(
+							`[CodeIndexOrchestrator] Error during initial scan batch: ${batchError.message}`,
+							batchError,
+						)
+						batchErrors.push(batchError)
+					},
+					handleBlocksIndexed,
+					handleFileParsed,
+				)
+
+				if (!result) {
+					throw new Error("Scan failed, is scanner initialized?")
+				}
+
+				const { stats } = result
+
+				// Check if any blocks were actually indexed successfully
+				// If no blocks were indexed but blocks were found, it means all batches failed
+				if (cumulativeBlocksIndexed === 0 && cumulativeBlocksFoundSoFar > 0) {
+					if (batchErrors.length > 0) {
+						// Use the first batch error as it's likely representative of the main issue
+						const firstError = batchErrors[0]
+						throw new Error(`Indexing failed: ${firstError.message}`)
+					} else {
+						throw new Error(t("embeddings:orchestrator.indexingFailedNoBlocks"))
+					}
+				}
+
+				// Check for partial failures - if a significant portion of blocks failed
+				const failureRate = (cumulativeBlocksFoundSoFar - cumulativeBlocksIndexed) / cumulativeBlocksFoundSoFar
+				if (batchErrors.length > 0 && failureRate > 0.1) {
+					// More than 10% of blocks failed to index
+					const firstError = batchErrors[0]
+					throw new Error(
+						`Indexing partially failed: Only ${cumulativeBlocksIndexed} of ${cumulativeBlocksFoundSoFar} blocks were indexed. ${firstError.message}`,
+					)
+				}
+
+				// CRITICAL: If there were ANY batch errors and NO blocks were successfully indexed,
+				// this is a complete failure regardless of the failure rate calculation
+				if (batchErrors.length > 0 && cumulativeBlocksIndexed === 0) {
+					const firstError = batchErrors[0]
+					throw new Error(`Indexing failed completely: ${firstError.message}`)
+				}
+
+				// Final sanity check: If we found blocks but indexed none and somehow no errors were reported,
+				// this is still a failure
+				if (cumulativeBlocksFoundSoFar > 0 && cumulativeBlocksIndexed === 0) {
+					throw new Error(t("embeddings:orchestrator.indexingFailedCritical"))
+				}
+
+				await this._startWatcher()
+
+				// Mark indexing as complete after successful full scan
+				await this.vectorStore.markIndexingComplete()
+
+				this.stateManager.setSystemState("Indexed", t("embeddings:orchestrator.fileWatcherStarted"))
 			}
-
-			// CRITICAL: If there were ANY batch errors and NO blocks were successfully indexed,
-			// this is a complete failure regardless of the failure rate calculation
-			if (batchErrors.length > 0 && cumulativeBlocksIndexed === 0) {
-				const firstError = batchErrors[0]
-				throw new Error(`Indexing failed completely: ${firstError.message}`)
-			}
-
-			// Final sanity check: If we found blocks but indexed none and somehow no errors were reported,
-			// this is still a failure
-			if (cumulativeBlocksFoundSoFar > 0 && cumulativeBlocksIndexed === 0) {
-				throw new Error(t("embeddings:orchestrator.indexingFailedCritical"))
-			}
-
-			await this._startWatcher()
-
-			this.stateManager.setSystemState("Indexed", t("embeddings:orchestrator.fileWatcherStarted"))
 		} catch (error: any) {
 			console.error("[CodeIndexOrchestrator] Error during indexing:", error)
 			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
@@ -232,18 +309,33 @@ export class CodeIndexOrchestrator {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "startIndexing",
 			})
-			try {
-				await this.vectorStore.clearCollection()
-			} catch (cleanupError) {
-				console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
-				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-					stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
-					location: "startIndexing.cleanup",
-				})
+			if (indexingStarted) {
+				try {
+					await this.vectorStore.clearCollection()
+				} catch (cleanupError) {
+					console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
+					TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+						error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+						stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
+						location: "startIndexing.cleanup",
+					})
+				}
 			}
 
-			await this.cacheManager.clearCacheFile()
+			// Only clear cache if indexing had started (Qdrant connection succeeded)
+			// If we never connected to Qdrant, preserve cache for incremental scan when it comes back
+			if (indexingStarted) {
+				// Indexing started but failed mid-way - clear cache to avoid cache-Qdrant mismatch
+				await this.cacheManager.clearCacheFile()
+				console.log(
+					"[CodeIndexOrchestrator] Indexing failed after starting. Clearing cache to avoid inconsistency.",
+				)
+			} else {
+				// Never connected to Qdrant - preserve cache for future incremental scan
+				console.log(
+					"[CodeIndexOrchestrator] Failed to connect to Qdrant. Preserving cache for future incremental scan.",
+				)
+			}
 
 			this.stateManager.setSystemState(
 				"Error",

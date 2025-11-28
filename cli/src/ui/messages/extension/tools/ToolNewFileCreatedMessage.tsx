@@ -55,13 +55,13 @@ export const ToolNewFileCreatedMessage: React.FC<ToolMessageProps> = ({ toolData
 				</Text>
 			</Box>
 
-			{toolData.fastApplyResult && (
+			{toolData.fastApplyResult && typeof toolData.fastApplyResult === "object" ? (
 				<Box marginLeft={2}>
 					<Text color={theme.semantic.success} dimColor>
 						✓ Fast apply
 					</Text>
 				</Box>
-			)}
+			) : null}
 		</Box>
 	)
 }

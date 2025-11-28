@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { Package } from "../../../shared/package"
 
 /**
  * Gets the API request timeout from VSCode configuration with validation.
@@ -7,7 +8,7 @@ import * as vscode from "vscode"
  */
 export function getApiRequestTimeout(): number {
 	// Get timeout with validation to ensure it's a valid non-negative number
-	const configTimeout = vscode.workspace.getConfiguration("kilo-code").get<number>("apiRequestTimeout", 600)
+	const configTimeout = vscode.workspace.getConfiguration(Package.name).get<number>("apiRequestTimeout", 600)
 
 	// Validate that it's actually a number and not NaN
 	if (typeof configTimeout !== "number" || isNaN(configTimeout)) {

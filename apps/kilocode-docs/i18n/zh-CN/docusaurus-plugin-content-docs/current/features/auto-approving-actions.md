@@ -10,6 +10,8 @@
 2.  选择 Kilo Code 可以执行哪些操作而无需请求权限
 3.  使用主开关（最左侧的复选框）快速启用/禁用所有权限
 
+[![KiloCode Task Timeline](https://img.youtube.com/vi/NBccFnYDQ-k/maxresdefault.jpg)](https://youtube.com/shorts/NBccFnYDQ-k?feature=shared)
+
 ## 自动批准工具栏
 
 <img src="/docs/img/auto-approving-actions/auto-approving-actions.png" alt="自动批准工具栏折叠状态" width="600" />

@@ -35,6 +35,7 @@
 		"experimental": "Експериментальне",
 		"language": "Мова",
 		"about": "Про Kilo Code",
+		"autoPurge": "Авто-очищення",
 		"ghost": "Ghost"
 	},
 	"slashCommands": {
@@ -71,6 +72,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Ключ API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -93,10 +97,14 @@
 		"selectModelPlaceholder": "Виберіть модель",
 		"ollamaUrlLabel": "URL Ollama:",
 		"ollamaBaseUrlLabel": "Базовий URL Ollama",
+		"vectorStoreProviderLabel": "Постачальник сховища векторів",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Ключ Qdrant:",
 		"qdrantApiKeyLabel": "Ключ API Qdrant",
 		"qdrantApiKeyPlaceholder": "Введіть ваш ключ API Qdrant (необов'язково)",
+		"lancedbVectorStoreDirectoryLabel": "Шлях до LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Введіть власний шлях до сховища векторів (необов'язково)",
+		"lancedbVectorStoreDirectoryDescription": "Шлях для зберігання бази даних LanceDB Vector. Якщо порожньо, використовується стандартне розташування globalStorageUri/vector.",
 		"setupConfigLabel": "Налаштування",
 		"advancedConfigLabel": "Розширена конфігурація",
 		"searchMinScoreLabel": "Поріг оцінки пошуку",
@@ -145,7 +153,8 @@
 			"ollamaBaseUrlRequired": "Базовий URL Ollama є обов'язковим",
 			"baseUrlRequired": "Базовий URL є обов'язковим",
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
-			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим"
+			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим",
+			"openRouterApiKeyRequired": "Ключ API OpenRouter є обов'язковим"
 		},
 		"cancelling": "Скасування...",
 		"cancelIndexingButton": "Скасувати індексацію"
@@ -240,6 +249,8 @@
 		"providerDocumentation": "Документація {{provider}}",
 		"configProfile": "Профіль конфігурації",
 		"description": "Збережіть різні конфігурації API для швидкого перемикання між провайдерами та налаштуваннями.",
+		"makeActiveProfile": "Зробити активним профілем",
+		"makeActiveTooltip": "Активуй цей профіль для використання в API-запитах",
 		"apiProvider": "Провайдер API",
 		"model": "Модель",
 		"nameEmpty": "Ім'я не може бути порожнім",
@@ -258,6 +269,8 @@
 		"noProviderMatchFound": "Провайдерів не знайдено",
 		"noMatchFound": "Збігів не знайдено",
 		"vscodeLmDescription": "API мовної моделі VS Code дозволяє запускати моделі, надані іншими розширеннями VS Code (включаючи, але не обмежуючись, GitHub Copilot). Найпростіший спосіб почати роботу — встановити розширення Copilot і Copilot Chat з VS Code Marketplace.",
+		"vscodeLmUnavailable": "Підтримка мовних моделей VS Code доступна лише у Visual Studio Code. Форки на кшталт VSCodium та інші можуть не працювати. Крім того, ця можливість недоступна в інструментах JetBrains.",
+		"vscodeLmUnavailableInstructions": "Переконайтеся, що ви використовуєте підтримуваний інструмент, і що VS Code Chat встановлено та ввімкнено",
 		"awsCustomArnUse": "Введіть дійсний ARN Amazon Bedrock для моделі, яку ви хочете використовувати. Приклади формату:",
 		"awsCustomArnDesc": "Переконайтеся, що регіон у ARN відповідає вибраному вами регіону AWS вище.",
 		"openRouterApiKey": "Ключ API OpenRouter",
@@ -312,6 +325,9 @@
 		"moonshotApiKey": "Ключ API Moonshot",
 		"getMoonshotApiKey": "Отримати ключ API Moonshot",
 		"moonshotBaseUrl": "Точка входу Moonshot",
+		"minimaxApiKey": "Ключ API MiniMax",
+		"getMiniMaxApiKey": "Отримати ключ API MiniMax",
+		"minimaxBaseUrl": "Точка входу MiniMax",
 		"zaiEntrypoint": "Точка входу Z AI",
 		"zaiEntrypointDescription": "Будь ласка, виберіть відповідну точку входу API залежно від вашого місцезнаходження. Якщо ви в Китаї, виберіть open.bigmodel.cn. Інакше виберіть api.z.ai.",
 		"geminiApiKey": "Ключ API Gemini",
@@ -340,6 +356,32 @@
 		"huggingFaceSelectProvider": "Виберіть постачальника...",
 		"huggingFaceSearchProviders": "Пошук постачальників...",
 		"huggingFaceNoProvidersFound": "Постачальників не знайдено",
+		"sapAiCore": {
+			"serviceKey": "Ключ сервісу AI Core",
+			"serviceKeyJson": "Введіть JSON ключа сервісу...",
+			"resourceGroup": "Група ресурсів AI Core",
+			"credentialsNote": "Ці облікові дані зберігаються локально і використовуються лише для виконання API-запитів з цього розширення.",
+			"learnMore": "Ви можете знайти більше інформації про доступ до SAP AI Core API тут.",
+			"orchestrationMode": "Режим оркестрації",
+			"orchestrationEnabledDesc": "Коли увімкнено, надає доступ до всіх доступних моделей без необхідності окремих розгортань.",
+			"orchestrationDisabledDesc": "Коли вимкнено, надає доступ лише до розгорнутих базових моделей у вашому екземплярі сервісу AI Core.",
+			"modelDeploymentDesc": "Ви можете вибирати лише моделі з доступними розгортаннями.",
+			"deployment": "Розгортання",
+			"loading": "Завантаження...",
+			"modelsCount": "({{count}} моделей)",
+			"deploymentsCount": "({{count}} розгортань)",
+			"selectModel": "Виберіть модель...",
+			"selectDeployment": "Виберіть розгортання...",
+			"searchModels": "Пошук моделей...",
+			"searchDeployments": "Пошук розгортань...",
+			"noModelsFound": "Моделі не знайдено",
+			"noDeploymentFound": "Розгортання не знайдено",
+			"getStarted": "Почати роботу з SAP AI Core",
+			"supportedProviders": "Підтримувані провайдери",
+			"supportedProvidersDesc1": "Провайдер SAP AI Core наразі підтримує лише базові моделі для наступних провайдерів LLM:",
+			"supportedProvidersDesc2": "Розгляньте можливість перемикання на режим оркестрації для доступу до більшої кількості моделей.",
+			"supportedProvidersDesc3": "Дізнатися більше про режим оркестрації"
+		},
 		"awsApiKey": "Ключ API Amazon Bedrock",
 		"apiKey": "Ключ API",
 		"openAiBaseUrl": "Базовий URL",
@@ -360,6 +402,7 @@
 		"awsSessionToken": "Токен сесії AWS",
 		"awsRegion": "Регіон AWS",
 		"awsCrossRegion": "Використовувати міжрегіональний висновок",
+		"awsGlobalInference": "Використовувати глобальний висновок (автоматичний вибір оптимального регіону AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Використовувати власний кінцевий пункт VPC",
 			"vpcEndpointUrlPlaceholder": "Введіть URL кінцевого пункту VPC (необов'язково)",
@@ -437,6 +480,14 @@
 		"getZaiApiKey": "Отримати ключ API Z.AI",
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
+		"nanoGptApiKey": "Ключ API Nano-GPT",
+		"getNanoGptApiKey": "Отримати ключ API Nano-GPT",
+		"nanoGptModelList": "Список моделей",
+		"nanoGptModelListOptions": {
+			"all": "Усі моделі",
+			"personalized": "Персоналізовані моделі",
+			"subscription": "Підписні моделі"
+		},
 		"customModel": {
 			"capabilities": "Налаштуйте можливості та ціни для вашої власної моделі, сумісної з OpenAI. Будьте обережні при вказуванні можливостей моделі, оскільки вони можуть вплинути на продуктивність Kilo Code.",
 			"maxTokens": {
@@ -479,6 +530,10 @@
 			},
 			"resetDefaults": "Скинути до стандартних"
 		},
+		"rateLimitAfter": {
+			"label": "Обмеження швидкості в кінці",
+			"description": "Розпочніть обмеження швидкості після завершення потоку API."
+		},
 		"rateLimitSeconds": {
 			"label": "Обмеження швидкості",
 			"description": "Мінімальний час між запитами API."
@@ -491,6 +546,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Зусилля з міркування моделі",
+			"none": "Немає",
 			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
@@ -543,6 +599,15 @@
 			"description": "Цей провайдер використовує OAuth-аутентифікацію від сервісу Qwen і не потребує API-ключів.",
 			"instructions": "Будь ласка, дотримуйтесь офіційної документації для отримання файлу авторизації та розміщення його за вказаним шляхом.",
 			"setupLink": "Офіційна документація Qwen"
+		},
+		"profileName": "Назва профілю",
+		"profileType": "Тип профілю",
+		"profileTypeChat": "Чат",
+		"profileTypeAutocomplete": "Автодоповнення",
+		"profileTypeDescription": "Профілі чату використовуються для розмов. Дозволено лише один профіль автодоповнення.",
+		"autocompleteLabel": "(Автодоповнення)",
+		"autocomplete": {
+			"onlyOneAllowed": "Дозволено лише один профіль автодоповнення. Профіль \"{{existingName}}\" вже налаштовано для автодоповнення. Будь ласка, спочатку зміни його тип або видали його."
 		}
 	},
 	"contextWindow": {
@@ -587,6 +652,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Тайм-аут ініціалізації контрольної точки (секунди)",
+			"description": "Максимальний час очікування ініціалізації служби контрольних точок. За замовчуванням 15 секунд. Діапазон: 10-60 секунд."
+		},
 		"enable": {
 			"label": "Увімкнути автоматичні контрольні точки",
 			"description": "Якщо ввімкнено, Kilo Code автоматично створюватиме контрольні точки під час виконання завдання, що полегшить перегляд змін або повернення до попередніх станів. <0>Дізнатися більше</0>"
@@ -597,6 +666,38 @@
 			"label": "Показувати анімацію на полях при автозаповненні",
 			"description": "Відображати анімований індикатор на полях редактора під час роботи автозаповнення",
 			"preview": "Попередній перегляд анімації"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Увімкнути автоматичне очищення завдань",
+			"description": "Автоматично видаляти старі завдання для звільнення дискового простору та покращення продуктивності. Завдання класифікуються за типом та віком для визначення часу видалення."
+		},
+		"defaultRetention": {
+			"label": "Період зберігання за замовчуванням (дні)",
+			"description": "Кількість днів для зберігання завдань перед їх видаленням"
+		},
+		"neverPurgeFavorited": {
+			"label": "Ніколи не видаляти улюблені завдання",
+			"description": "При увімкненні улюблені завдання ніколи не будуть автоматично видалені незалежно від віку"
+		},
+		"favoritedRetention": {
+			"label": "Зберігання улюблених завдань (дні)",
+			"description": "Кількість днів для зберігання улюблених завдань (застосовується лише коли 'Ніколи не видаляти улюблені завдання' вимкнено)"
+		},
+		"completedRetention": {
+			"label": "Зберігання завершених завдань (дні)",
+			"description": "Кількість днів для зберігання завдань, які були успішно завершені"
+		},
+		"incompleteRetention": {
+			"label": "Зберігання незавершених завдань (дні)",
+			"description": "Кількість днів для зберігання завдань, які не були завершені (зазвичай коротше ніж завершені завдання)"
+		},
+		"lastRun": {
+			"label": "Останнє очищення"
+		},
+		"manualPurge": {
+			"button": "Запустити очищення зараз"
 		}
 	},
 	"display": {
@@ -713,6 +814,14 @@
 			"label": "Максимальний загальний розмір зображень",
 			"mb": "МБ",
 			"description": "Максимальний кумулятивний ліміт розміру (у МБ) для всіх зображень в одному запиті. При перевищенні зображення будуть змінені на менший розмір, щоб поміститися в цей ліміт."
+		},
+		"includeCurrentTime": {
+			"label": "Включати поточний час у контекст",
+			"description": "Якщо ввімкнено, поточний час та інформація про часовий пояс будуть включені в системну підказку. Вимкніть це, якщо моделі припиняють роботу через занепокоєння часом."
+		},
+		"includeCurrentCost": {
+			"label": "Включати поточну вартість у контекст",
+			"description": "Якщо ввімкнено, поточна вартість використання API буде включена в системну підказку. Вимкніть це, якщо моделі припиняють роботу через занепокоєння вартістю."
 		}
 	},
 	"terminal": {
@@ -808,10 +917,6 @@
 			"name": "Використовувати експериментальну уніфіковану стратегію diff",
 			"description": "Увімкнути експериментальну уніфіковану стратегію diff. Ця стратегія може зменшити кількість повторних спроб, спричинених помилками моделі, але може викликати несподівану поведінку або неправильні редагування. Вмикайте лише якщо ти розумієш ризики та готовий ретельно переглядати всі зміни."
 		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Використовувати експериментальний інструмент пошуку та заміни",
-			"description": "Увімкнути експериментальний інструмент пошуку та заміни, що дозволяє Kilo Code замінювати кілька екземплярів пошукового терміна за один запит."
-		},
 		"INSERT_BLOCK": {
 			"name": "Використовувати експериментальний інструмент вставки вмісту",
 			"description": "Увімкнути експериментальний інструмент вставки вмісту, що дозволяє Kilo Code вставляти вміст у певні номери рядків без необхідності створювати diff."
@@ -870,8 +975,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Увімкнути Fast Apply",
 			"description": "Коли увімкнено, Kilo Code може редагувати файли за допомогою Fast Apply зі спеціалізованими моделями, оптимізованими для модифікацій коду. Потребує Kilo Gateway Provider, OpenRouter або ключа API Morph.",
-			"apiKey": "Ключ API Morph (необов'язково)",
-			"placeholder": "Введіть ваш ключ API Morph (необов'язково)",
+			"apiProvider": "Провайдер API",
+			"apiProviderList": {
+				"current": "Поточний"
+			},
+			"apiKey": "Ключ API (необов'язково)",
+			"placeholder": "Введіть ваш ключ API (необов'язково)",
 			"modelLabel": "Вибір моделі",
 			"modelDescription": "Виберіть, яку модель швидкого застосування використовувати для редагування файлів",
 			"models": {
@@ -959,7 +1068,9 @@
 		"providerNotAllowed": "Провайдер '{{provider}}' не дозволений твоєю організацією",
 		"modelNotAllowed": "Модель '{{model}}' не дозволена для провайдера '{{provider}}' твоєю організацією",
 		"profileInvalid": "Цей профіль містить провайдера або модель, які не дозволені твоєю організацією",
-		"qwenCodeOauthPath": "Ви повинні надати дійсний шлях до облікових даних OAuth."
+		"qwenCodeOauthPath": "Ви повинні надати дійсний шлях до облікових даних OAuth.",
+		"sapAiCore": "Ви повинні надати дійсний ключ сервісу SAP AI Core.",
+		"sapAiCoreDeploymentId": "Ви повинні вибрати запущене розгортання для моделі '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Введи ключ API...",

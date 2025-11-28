@@ -232,7 +232,7 @@ export const TerminalSettings = ({
 
 						<div>
 							<VSCodeCheckbox
-								checked={terminalShellIntegrationDisabled ?? true /* kilocode_change: default */}
+								checked={terminalShellIntegrationDisabled ?? true}
 								onChange={(e: any) =>
 									setCachedStateField("terminalShellIntegrationDisabled", e.target.checked)
 								}>
@@ -244,7 +244,7 @@ export const TerminalSettings = ({
 								<Trans i18nKey="settings:terminal.shellIntegrationDisabled.description">
 									<VSCodeLink
 										href={buildDocLink(
-											"features/shell-integration#disable-terminal-shell-integration",
+											"features/shell-integration#use-inline-terminal-recommended",
 											"settings_terminal_shell_integration_disabled",
 										)}
 										style={{ display: "inline" }}>
@@ -256,6 +256,34 @@ export const TerminalSettings = ({
 
 						{!terminalShellIntegrationDisabled && (
 							<>
+								<div>
+									<VSCodeCheckbox
+										checked={inheritEnv}
+										onChange={(e: any) => {
+											setInheritEnv(e.target.checked)
+											vscode.postMessage({
+												type: "updateVSCodeSetting",
+												setting: "terminal.integrated.inheritEnv",
+												value: e.target.checked,
+											})
+										}}
+										data-testid="terminal-inherit-env-checkbox">
+										<span className="font-medium">{t("settings:terminal.inheritEnv.label")}</span>
+									</VSCodeCheckbox>
+									<div className="text-vscode-descriptionForeground text-sm mt-1">
+										<Trans i18nKey="settings:terminal.inheritEnv.description">
+											<VSCodeLink
+												href={buildDocLink(
+													"features/shell-integration#inherit-environment-variables",
+													"settings_terminal_inherit_env",
+												)}
+												style={{ display: "inline" }}>
+												{" "}
+											</VSCodeLink>
+										</Trans>
+									</div>
+								</div>
+
 								<div>
 									<label className="block font-medium mb-1">
 										{t("settings:terminal.shellIntegrationTimeout.label")}

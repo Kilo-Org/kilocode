@@ -16,14 +16,15 @@ import type { Metadata } from "next"
 import { Button } from "@/components/ui"
 import { AnimatedBackground } from "@/components/homepage"
 import { SEO } from "@/lib/seo"
+import { ogImageUrl } from "@/lib/og"
 import { EXTERNAL_LINKS } from "@/lib/constants"
 import Image from "next/image"
 
 const TITLE = "Roo Code Cloud"
 const DESCRIPTION =
 	"Roo Code Cloud gives you and your team the tools to take AI-coding to the next level with cloud agents, remote control, and more."
+const OG_DESCRIPTION = "Go way beyond the IDE"
 const PATH = "/cloud"
-const OG_IMAGE = SEO.ogImage
 
 export const metadata: Metadata = {
 	title: TITLE,
@@ -38,10 +39,10 @@ export const metadata: Metadata = {
 		siteName: SEO.name,
 		images: [
 			{
-				url: OG_IMAGE.url,
-				width: OG_IMAGE.width,
-				height: OG_IMAGE.height,
-				alt: OG_IMAGE.alt,
+				url: ogImageUrl(TITLE, OG_DESCRIPTION),
+				width: 1200,
+				height: 630,
+				alt: TITLE,
 			},
 		],
 		locale: SEO.locale,
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
 		card: SEO.twitterCard,
 		title: TITLE,
 		description: DESCRIPTION,
-		images: [OG_IMAGE.url],
+		images: [ogImageUrl(TITLE, OG_DESCRIPTION)],
 	},
 	keywords: [...SEO.keywords, "cloud", "subscription", "cloud agents", "AI cloud development"],
 }

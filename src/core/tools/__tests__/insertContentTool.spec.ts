@@ -4,7 +4,7 @@ import type { MockedFunction } from "vitest"
 
 import { fileExistsAtPath } from "../../../utils/fs"
 import { ToolUse, ToolResponse } from "../../../shared/tools"
-import { insertContentTool } from "../insertContentTool"
+import { insertContentTool } from "../InsertContentTool"
 
 // Helper to normalize paths to POSIX format for cross-platform testing
 const toPosix = (filePath: string) => filePath.replace(/\\/g, "/")
@@ -154,16 +154,14 @@ describe("insertContentTool", () => {
 			partial: isPartial,
 		}
 
-		await insertContentTool(
-			mockCline,
-			toolUse,
-			mockAskApproval,
-			mockHandleError,
-			(result: ToolResponse) => {
+		await insertContentTool.handle(mockCline, toolUse as any, {
+			askApproval: mockAskApproval,
+			handleError: mockHandleError,
+			pushToolResult: (result: ToolResponse) => {
 				toolResult = result
 			},
-			mockRemoveClosingTag,
-		)
+			removeClosingTag: mockRemoveClosingTag,
+		})
 
 		return toolResult
 	}

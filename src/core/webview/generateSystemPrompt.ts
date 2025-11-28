@@ -3,12 +3,14 @@ import { WebviewMessage } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { buildApiHandler } from "../../api"
 import { experiments as experimentsModule, EXPERIMENT_IDS } from "../../shared/experiments"
-import { getActiveToolUseStyle } from "@roo-code/types" // kilocode_change
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
+import { ToolProtocol } from "@roo-code/types"
+import { Package } from "../../shared/package"
 
 import { ClineProvider } from "./ClineProvider"
+import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
 
 export const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMessage) => {
 	const state = await provider.getState() // kilocode_change
@@ -47,25 +49,27 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 	const rooIgnoreInstructions = provider.getCurrentTask()?.rooIgnoreController?.getInstructions()
 
 	// Determine if browser tools can be used based on model support, mode, and user settings
-	let modelSupportsComputerUse = false
+	let modelInfo: any = undefined
 
-	// Create a temporary API handler to check if the model supports computer use
+	// Create a temporary API handler to check if the model supports browser capability
 	// This avoids relying on an active Cline instance which might not exist during preview
 	try {
 		const tempApiHandler = buildApiHandler(apiConfiguration)
-		// kilocode_change: supports images => supports browser
-		modelSupportsComputerUse = tempApiHandler.getModel().info.supportsImages ?? false
+		modelInfo = tempApiHandler.getModel().info
 	} catch (error) {
-		console.error("Error checking if model supports computer use:", error)
+		console.error("Error checking if model supports browser capability:", error)
 	}
 
 	// Check if the current mode includes the browser tool group
 	const modeConfig = getModeBySlug(mode, customModes)
 	const modeSupportsBrowser = modeConfig?.groups.some((group) => getGroupName(group) === "browser") ?? false
 
+	// Check if model supports browser capability (images)
+	const modelSupportsBrowser = modelInfo && (modelInfo as any)?.supportsImages === true
+
 	// Only enable browser tools if the model supports it, the mode includes browser tools,
 	// and browser tools are enabled in settings
-	const canUseBrowserTool = modelSupportsComputerUse && modeSupportsBrowser && (browserToolEnabled ?? true)
+	const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
 
 	const systemPrompt = await SYSTEM_PROMPT(
 		provider.context,
@@ -87,15 +91,15 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		{
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
-			useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
+			useAgentRules: vscode.workspace.getConfiguration(Package.name).get<boolean>("useAgentRules") ?? true,
 			newTaskRequireTodos: vscode.workspace
-				.getConfiguration("kilo-code")
+				.getConfiguration(Package.name)
 				.get<boolean>("newTaskRequireTodos", false),
+			toolProtocol: getActiveToolUseStyle(apiConfiguration), // kilocode_change
 		},
 		// kilocode_change start
 		undefined,
 		undefined,
-		getActiveToolUseStyle(apiConfiguration),
 		state,
 		// kilocode_change end
 	)

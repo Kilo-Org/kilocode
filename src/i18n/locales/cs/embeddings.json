@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}",
-		"vectorDimensionMismatch": "Aktualizace vektorového indexu pro nový model selhala. Zkus prosím vymazat index a začít znovu. Podrobnosti: {{errorMessage}}"
+		"vectorDimensionMismatch": "Aktualizace vektorového indexu pro nový model selhala. Zkus prosím vymazat index a začít znovu. Podrobnosti: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Inicializace úložiště vektorů LanceDB selhala: {{errorMessage}}",
+		"lancedbLoadFailed": "Načtení modulu LanceDB selhalo: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Autentizace selhala. Zkontroluj prosím svůj API klíč v nastavení.",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "Chybí konfigurace OpenAI Compatible pro vytvoření embedderu",
 		"geminiConfigMissing": "Chybí konfigurace Gemini pro vytvoření embedderu",
 		"mistralConfigMissing": "Chybí konfigurace Mistral pro vytvoření embedderu",
+		"openRouterConfigMissing": "Chybí konfigurace OpenRouter pro vytvoření embedderu",
 		"vercelAiGatewayConfigMissing": "Chybí konfigurace Vercel AI Gateway pro vytvoření embedderu",
 		"invalidEmbedderType": "Nakonfigurován neplatný typ embedderu: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Ujisti se prosím, že 'Rozměr Embeddingu' je správně nastaven v nastavení OpenAI-Compatible poskytovatele.",

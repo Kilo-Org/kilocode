@@ -18,6 +18,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
+import { convertOpenAIToolsToAnthropic, ToolCallAccumulatorAnthropic } from "./kilocode/nativeToolCallHelpers"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -43,7 +44,14 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	): ApiStream {
 		let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
 		const cacheControl: CacheControlEphemeral = { type: "ephemeral" }
-		let { id: modelId, betas = [], maxTokens, temperature, reasoning: thinking } = this.getModel()
+		let {
+			id: modelId,
+			betas = [],
+			maxTokens,
+			temperature,
+			reasoning: thinking,
+			verbosity, // kilocode_change
+		} = this.getModel()
 
 		// Add 1M context beta flag if enabled for Claude Sonnet 4 and 4.5
 		if (
@@ -53,10 +61,19 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			betas.push("context-1m-2025-08-07")
 		}
 
+		// kilocode_change start
+		if (verbosity) {
+			betas.push("effort-2025-11-24")
+		}
+		const tools = (metadata?.tools ?? []).length > 0 ? convertOpenAIToolsToAnthropic(metadata?.tools) : undefined
+		const tool_choice = (tools ?? []).length > 0 ? { type: "auto" as const } : undefined
+		// kilocode_change end
+
 		switch (modelId) {
 			case "claude-sonnet-4-5":
 			case "claude-sonnet-4-20250514":
 			case "claude-opus-4-1-20250805":
+			case "claude-opus-4-5-20251101": // kilocode_change
 			case "claude-opus-4-20250514":
 			case "claude-3-7-sonnet-20250219":
 			case "claude-3-5-sonnet-20241022":
@@ -107,6 +124,17 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							return message
 						}),
 						stream: true,
+						// kilocode_change start
+						tools,
+						tool_choice,
+						...(verbosity
+							? {
+									output_config: {
+										effort: verbosity,
+									},
+								}
+							: {}),
+						// kilocode_change end
 					},
 					(() => {
 						// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
@@ -118,6 +146,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							case "claude-sonnet-4-5":
 							case "claude-sonnet-4-20250514":
 							case "claude-opus-4-1-20250805":
+							case "claude-opus-4-5-20251101": // kilocode_change
 							case "claude-opus-4-20250514":
 							case "claude-3-7-sonnet-20250219":
 							case "claude-3-5-sonnet-20241022":
@@ -135,14 +164,18 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 				break
 			}
 			default: {
-				stream = (await this.client.messages.create({
+				stream = await this.client.messages.create({
 					model: modelId,
 					max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 					temperature,
 					system: [{ text: systemPrompt, type: "text" }],
 					messages,
 					stream: true,
-				})) as any
+					// kilocode_change start
+					tools,
+					tool_choice,
+					// kilocode_change end
+				}) // kilocode_change removed: as any
 				break
 			}
 		}
@@ -152,7 +185,16 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		let cacheWriteTokens = 0
 		let cacheReadTokens = 0
 
+		// kilocode_change start
+		let thinkingDeltaAccumulator = ""
+		let thinkText = ""
+		let thinkSignature = ""
+		const toolCallAccumulator = new ToolCallAccumulatorAnthropic()
+		// kilocode_change end
+
 		for await (const chunk of stream) {
+			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
+
 			switch (chunk.type) {
 				case "message_start": {
 					// Tells us cache reads/writes/input/output.
@@ -201,7 +243,34 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							}
 
 							yield { type: "reasoning", text: chunk.content_block.thinking }
+
+							// kilocode_change start
+							thinkText = chunk.content_block.thinking
+							thinkSignature = chunk.content_block.signature
+							if (thinkText && thinkSignature) {
+								yield {
+									type: "ant_thinking",
+									thinking: thinkText,
+									signature: thinkSignature,
+								}
+							}
+							// kilocode_change end
+
 							break
+
+						// kilocode_change start
+						case "redacted_thinking":
+							yield {
+								type: "reasoning",
+								text: "[Redacted thinking block]",
+							}
+							yield {
+								type: "ant_redacted_thinking",
+								data: chunk.content_block.data,
+							}
+							break
+						// kilocode_change end
+
 						case "text":
 							// We may receive multiple text blocks, in which
 							// case just insert a line break between them.
@@ -217,7 +286,21 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 					switch (chunk.delta.type) {
 						case "thinking_delta":
 							yield { type: "reasoning", text: chunk.delta.thinking }
+							thinkingDeltaAccumulator += chunk.delta.thinking // kilocode_change
 							break
+
+						// kilocode_change start
+						case "signature_delta":
+							if (thinkingDeltaAccumulator && chunk.delta.signature) {
+								yield {
+									type: "ant_thinking",
+									thinking: thinkingDeltaAccumulator,
+									signature: chunk.delta.signature,
+								}
+							}
+							break
+						// kilocode_change end
+
 						case "text_delta":
 							yield { type: "text", text: chunk.delta.text }
 							break
@@ -230,17 +313,19 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		}
 
 		if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
+			const { totalCost } = calculateApiCostAnthropic(
+				this.getModel().info,
+				inputTokens,
+				outputTokens,
+				cacheWriteTokens,
+				cacheReadTokens,
+			)
+
 			yield {
 				type: "usage",
 				inputTokens: 0,
 				outputTokens: 0,
-				totalCost: calculateApiCostAnthropic(
-					this.getModel().info,
-					inputTokens,
-					outputTokens,
-					cacheWriteTokens,
-					cacheReadTokens,
-				),
+				totalCost,
 			}
 		}
 	}

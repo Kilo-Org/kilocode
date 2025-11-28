@@ -23,6 +23,17 @@ export interface Key {
 }
 
 /**
+ * Represents a key object from Node's readline keypress event
+ */
+export interface ReadlineKey {
+	name?: string
+	sequence: string
+	ctrl?: boolean
+	meta?: boolean
+	shift?: boolean
+}
+
+/**
  * Handler function type for key events
  */
 export type KeypressHandler = (key: Key) => void

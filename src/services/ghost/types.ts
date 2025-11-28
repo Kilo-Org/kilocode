@@ -1,48 +1,11 @@
 import * as vscode from "vscode"
-
-/**
- * Represents the type of user action performed on a document
- */
-export enum UserActionType {
-	ADDITION = "ADDITION", // Added new code
-	DELETION = "DELETION", // Removed existing code
-	MODIFICATION = "MODIFICATION", // Changed existing code
-	REFACTOR = "REFACTOR", // Renamed or moved code
-	FORMAT = "FORMAT", // Changed formatting without semantic changes
-}
-
-/**
- * Represents a meaningful user action performed on a document
- */
-export interface UserAction {
-	type: UserActionType
-	description: string
-	lineRange?: {
-		start: number
-		end: number
-	}
-	affectedSymbol?: string // Function/variable/class name if applicable
-	scope?: string // Function/class/namespace containing the change
-	timestamp?: number // When the action occurred
-	content?: string // The actual content that was added, deleted, or modified
-}
-
-export interface GhostDocumentStoreItem {
-	uri: string
-	document: vscode.TextDocument
-	history: string[]
-	lastParsedVersion?: number
-	recentActions?: UserAction[]
-}
+import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/snippets/types"
 
 export interface GhostSuggestionContext {
 	document: vscode.TextDocument
-	editor?: vscode.TextEditor
-	openFiles?: vscode.TextDocument[]
 	range?: vscode.Range | vscode.Selection
-	userInput?: string
-	recentOperations?: UserAction[] // Stores meaningful user actions instead of raw diff
-	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
+	recentlyVisitedRanges?: AutocompleteCodeSnippet[] // Recently visited code snippets for context
+	recentlyEditedRanges?: RecentlyEditedRange[] // Recently edited ranges for context
 }
 
 // ============================================================================
@@ -113,12 +76,9 @@ export interface RecentlyEditedRange extends RangeInFile {
 
 /**
  * Code snippet for autocomplete context
- * Duplicated from continuedev/core to avoid coupling
+ * Re-exported from continuedev/core for compatibility
  */
-export interface AutocompleteCodeSnippet extends RangeInFile {
-	content: string
-	score?: number
-}
+export type { AutocompleteCodeSnippet }
 
 /**
  * Input for autocomplete request (CompletionProvider-compatible)
@@ -208,50 +168,22 @@ export function vscodePositionToPosition(pos: vscode.Position): Position {
 }
 
 /**
- * Convert VSCode Range to our Range type
- */
-export function vscodeRangeToRange(range: vscode.Range): Range {
-	return {
-		start: vscodePositionToPosition(range.start),
-		end: vscodePositionToPosition(range.end),
-	}
-}
-
-/**
  * Convert GhostSuggestionContext to AutocompleteInput
  */
 export function contextToAutocompleteInput(context: GhostSuggestionContext): AutocompleteInput {
 	const position = context.range?.start ?? context.document.positionAt(0)
 	const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 
-	// Convert recent operations to recently edited ranges
-	const recentlyEditedRanges: RecentlyEditedRange[] =
-		context.recentOperations?.map((op) => {
-			const range: Range = op.lineRange
-				? {
-						start: { line: op.lineRange.start, character: 0 },
-						end: { line: op.lineRange.end, character: 0 },
-					}
-				: {
-						start: { line: 0, character: 0 },
-						end: { line: 0, character: 0 },
-					}
-
-			return {
-				filepath: context.document.uri.fsPath,
-				range,
-				timestamp: op.timestamp ?? Date.now(),
-				lines: op.content ? op.content.split("\n") : [],
-				symbols: new Set(op.affectedSymbol ? [op.affectedSymbol] : []),
-			}
-		}) ?? []
+	// Get recently visited and edited ranges from context, with empty arrays as fallback
+	const recentlyVisitedRanges = context.recentlyVisitedRanges ?? []
+	const recentlyEditedRanges = context.recentlyEditedRanges ?? []
 
 	return {
 		isUntitledFile: context.document.isUntitled,
 		completionId: crypto.randomUUID(),
 		filepath: context.document.uri.fsPath,
 		pos: vscodePositionToPosition(position),
-		recentlyVisitedRanges: [], // Not tracked in current Ghost implementation
+		recentlyVisitedRanges,
 		recentlyEditedRanges,
 		manuallyPassFileContents: undefined,
 		manuallyPassPrefix: prefix,

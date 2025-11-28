@@ -1,6 +1,16 @@
 // kilocode_change: file added
 // npx vitest core/prompts/__tests__/system-prompt.spec.ts
 
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 vi.mock("os", () => ({
 	default: {
 		homedir: () => "/home/user",
@@ -135,7 +145,7 @@ vi.mock("../../../utils/shell", () => ({
 }))
 
 // Mock the isFastApplyAvailable function
-vi.mock("../../../tools/editFileTool", () => ({
+vi.mock("../../../tools/kilocode/editFileTool", () => ({
 	isFastApplyAvailable: vi.fn(),
 	getFastApplyModelType: vi.fn(),
 }))
@@ -177,13 +187,13 @@ describe("SYSTEM_PROMPT", () => {
 	beforeEach(async () => {
 		vi.clearAllMocks()
 		// Reset the mock to return false by default
-		const { isFastApplyAvailable } = await import("../../../tools/editFileTool")
+		const { isFastApplyAvailable } = await import("../../../tools/kilocode/editFileTool")
 		vi.mocked(isFastApplyAvailable).mockReturnValue(false)
 	})
 
 	it("should exclude traditional editing tools and include Fast Apply instructions when morphFastApply is enabled", async () => {
 		// Mock isFastApplyAvailable to return true for this test
-		const { isFastApplyAvailable } = await import("../../../tools/editFileTool")
+		const { isFastApplyAvailable } = await import("../../../tools/kilocode/editFileTool")
 		vi.mocked(isFastApplyAvailable).mockReturnValue(true)
 
 		const experimentsWithMorph = {
@@ -216,13 +226,9 @@ describe("SYSTEM_PROMPT", () => {
 		expect(prompt).not.toContain("## apply_diff")
 		expect(prompt).not.toContain("## write_to_file")
 		expect(prompt).not.toContain("## insert_content")
-		expect(prompt).not.toContain("## search_and_replace")
 
 		// Should contain Fast Apply-specific instructions
 		expect(prompt).toContain("FastApply is enabled")
-		expect(prompt).toContain(
-			"Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled",
-		)
 		expect(prompt).toContain("ONLY use the edit_file tool for file modifications")
 	})
 
@@ -257,13 +263,9 @@ describe("SYSTEM_PROMPT", () => {
 		expect(prompt).toContain("## apply_diff")
 		expect(prompt).toContain("## write_to_file")
 		expect(prompt).toContain("## insert_content")
-		expect(prompt).toContain("## search_and_replace")
 
 		// Should NOT contain Fast Apply-specific instructions
 		expect(prompt).not.toContain("FastApply is enabled")
-		expect(prompt).not.toContain(
-			"Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled",
-		)
 
 		// Should contain traditional editing instructions
 		expect(prompt).toContain("For editing files, you have access to these tools:")
@@ -271,7 +273,7 @@ describe("SYSTEM_PROMPT", () => {
 
 	it("should use Fast Apply editing instructions in rules section when morphFastApply is enabled", async () => {
 		// Mock isFastApplyAvailable to return true for this test
-		const { isFastApplyAvailable } = await import("../../../tools/editFileTool")
+		const { isFastApplyAvailable } = await import("../../../tools/kilocode/editFileTool")
 		vi.mocked(isFastApplyAvailable).mockReturnValue(true)
 
 		const experimentsWithMorph = {

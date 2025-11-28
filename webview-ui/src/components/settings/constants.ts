@@ -17,14 +17,13 @@ import {
 	vertexModels,
 	xaiModels,
 	groqModels,
-	// chutesModels, // kilocode_change
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
-	syntheticModels, // kilocode_change
 	rooModels,
 	featherlessModels,
+	minimaxModels,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -49,9 +48,9 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
-	synthetic: syntheticModels, // kilocode_change
 	roo: rooModels,
 	featherless: featherlessModels,
+	minimax: minimaxModels,
 }
 
 export const PROVIDERS = [
@@ -63,8 +62,12 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "doubao", label: "Doubao" },
 	// kilocode_change start
+	{ value: "inception", label: "Inception" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "synthetic", label: "Synthetic" },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
+	{ value: "sap-ai-core", label: "SAP AI Core" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
@@ -74,11 +77,11 @@ export const PROVIDERS = [
 	{ value: "vertex", label: "GCP Vertex AI" },
 	{ value: "bedrock", label: "Amazon Bedrock" },
 	{ value: "glama", label: "Glama" },
+	{ value: "nano-gpt", label: "Nano-GPT" }, //kilocode_change
 	{ value: "vscode-lm", label: "VS Code LM API" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },
-	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" }, // kilocode_change
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
@@ -90,13 +93,13 @@ export const PROVIDERS = [
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
-	{ value: "synthetic", label: "Synthetic" }, // kilocode_change
 	{ value: "featherless", label: "Featherless AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
 	// kilocode_change start
 	// { value: "roo", label: "Roo Code Cloud" },
 	// kilocode_change end
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
+	{ value: "minimax", label: "MiniMax" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
 PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

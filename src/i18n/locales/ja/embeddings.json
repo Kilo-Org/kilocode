@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Qdrantベクターデータベースへの接続に失敗しました。Qdrantが実行中で{{qdrantUrl}}でアクセス可能であることを確認してください。エラー：{{errorMessage}}",
-		"vectorDimensionMismatch": "新しいモデルのベクトルインデックスの更新に失敗しました。インデックスをクリアして再試行してください。詳細：{{errorMessage}}"
+		"vectorDimensionMismatch": "新しいモデルのベクトルインデックスの更新に失敗しました。インデックスをクリアして再試行してください。詳細：{{errorMessage}}",
+		"lancedbStoreInitFailed": "LanceDBベクトルストアの初期化に失敗しました: {{errorMessage}}",
+		"lancedbLoadFailed": "LanceDBモジュールの読み込みに失敗しました: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "認証に失敗しました。設定でAPIキーを確認してください。",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "エンベッダー作成のためのOpenAI互換設定がありません",
 		"geminiConfigMissing": "エンベッダー作成のためのGemini設定がありません",
 		"mistralConfigMissing": "エンベッダー作成のためのMistral設定がありません",
+		"openRouterConfigMissing": "エンベッダー作成のためのOpenRouter設定がありません",
 		"vercelAiGatewayConfigMissing": "エンベッダー作成のためのVercel AI Gateway設定がありません",
 		"invalidEmbedderType": "無効なエンベッダータイプが設定されています: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "プロバイダー '{{provider}}' のモデル '{{modelId}}' の埋め込み次元を決定できませんでした。OpenAI互換プロバイダー設定で「埋め込み次元」が正しく設定されていることを確認してください。",

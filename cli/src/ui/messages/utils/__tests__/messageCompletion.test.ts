@@ -232,17 +232,30 @@ describe("messageCompletion", () => {
 				expect(isMessageComplete(message)).toBe(true)
 			})
 
-			it("should return true for non-rendering ask types (command_output)", () => {
-				const message: UnifiedMessage = {
+			it("should return false for command_output ask type until not partial", () => {
+				const partialMessage: UnifiedMessage = {
 					source: "extension",
 					message: {
 						ts: Date.now(),
 						type: "ask",
 						ask: "command_output",
 						text: "",
+						partial: true,
 					},
 				}
-				expect(isMessageComplete(message)).toBe(true)
+				expect(isMessageComplete(partialMessage)).toBe(false)
+
+				const completeMessage: UnifiedMessage = {
+					source: "extension",
+					message: {
+						ts: Date.now(),
+						type: "ask",
+						ask: "command_output",
+						text: "",
+						partial: false,
+					},
+				}
+				expect(isMessageComplete(completeMessage)).toBe(true)
 			})
 		})
 	})

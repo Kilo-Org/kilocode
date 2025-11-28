@@ -4,7 +4,7 @@ import type { ModelInfo } from "../model.js"
 
 export type BedrockModelId = keyof typeof bedrockModels
 
-export const bedrockDefaultModelId: BedrockModelId = "anthropic.claude-sonnet-4-20250514-v1:0"
+export const bedrockDefaultModelId: BedrockModelId = "anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 export const bedrockDefaultPromptRouterModelId: BedrockModelId = "anthropic.claude-3-sonnet-20240229-v1:0"
 
@@ -17,7 +17,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		inputPrice: 3.0,
@@ -32,7 +31,6 @@ export const bedrockModels = {
 		maxTokens: 5000,
 		contextWindow: 300_000,
 		supportsImages: true,
-		supportsComputerUse: false,
 		supportsPromptCache: true,
 		inputPrice: 0.8,
 		outputPrice: 3.2,
@@ -46,7 +44,6 @@ export const bedrockModels = {
 		maxTokens: 5000,
 		contextWindow: 300_000,
 		supportsImages: true,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 1.0,
 		outputPrice: 4.0,
@@ -58,7 +55,6 @@ export const bedrockModels = {
 		maxTokens: 5000,
 		contextWindow: 300_000,
 		supportsImages: true,
-		supportsComputerUse: false,
 		supportsPromptCache: true,
 		inputPrice: 0.06,
 		outputPrice: 0.24,
@@ -72,7 +68,6 @@ export const bedrockModels = {
 		maxTokens: 5000,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: true,
 		inputPrice: 0.035,
 		outputPrice: 0.14,
@@ -86,7 +81,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		inputPrice: 3.0,
@@ -101,7 +95,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		inputPrice: 15.0,
@@ -116,7 +109,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		inputPrice: 15.0,
@@ -131,7 +123,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
 		inputPrice: 3.0,
@@ -146,7 +137,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
-		supportsComputerUse: true,
 		supportsPromptCache: true,
 		inputPrice: 3.0,
 		outputPrice: 15.0,
@@ -254,7 +244,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.5,
 		outputPrice: 1.5,
@@ -264,7 +253,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 2.0,
 		outputPrice: 6.0,
@@ -274,7 +262,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.72,
 		outputPrice: 0.72,
@@ -284,7 +271,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: true,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.72,
 		outputPrice: 0.72,
@@ -294,7 +280,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: true,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.16,
 		outputPrice: 0.16,
@@ -304,7 +289,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.15,
 		outputPrice: 0.15,
@@ -314,7 +298,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.1,
 		outputPrice: 0.1,
@@ -324,7 +307,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 2.4,
 		outputPrice: 2.4,
@@ -334,7 +316,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.72,
 		outputPrice: 0.72,
@@ -344,7 +325,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 128_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.9,
 		outputPrice: 0.9,
@@ -354,7 +334,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.22,
 		outputPrice: 0.22,
@@ -364,7 +343,6 @@ export const bedrockModels = {
 		maxTokens: 2048,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 2.65,
 		outputPrice: 3.5,
@@ -373,7 +351,6 @@ export const bedrockModels = {
 		maxTokens: 2048,
 		contextWindow: 4_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.3,
 		outputPrice: 0.6,
@@ -382,7 +359,6 @@ export const bedrockModels = {
 		maxTokens: 4096,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.15,
 		outputPrice: 0.2,
@@ -392,7 +368,6 @@ export const bedrockModels = {
 		maxTokens: 4096,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.2,
 		outputPrice: 0.6,
@@ -402,7 +377,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.1,
 		description: "Amazon Titan Text Embeddings",
@@ -411,7 +385,6 @@ export const bedrockModels = {
 		maxTokens: 8192,
 		contextWindow: 8_000,
 		supportsImages: false,
-		supportsComputerUse: false,
 		supportsPromptCache: false,
 		inputPrice: 0.02,
 		description: "Amazon Titan Text Embeddings V2",
@@ -428,17 +401,22 @@ export const BEDROCK_DEFAULT_CONTEXT = 128_000
 // https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
 // This mapping is pre-ordered by pattern length (descending) to ensure more specific patterns match first
 export const AWS_INFERENCE_PROFILE_MAPPING: Array<[string, string]> = [
-	// US Government Cloud → ug. inference profile (most specific prefix first)
+	// Australia regions (Sydney and Melbourne) → au. inference profile (most specific - 14 chars)
+	["ap-southeast-2", "au."],
+	["ap-southeast-4", "au."],
+	// Japan regions (Tokyo and Osaka) → jp. inference profile (13 chars)
+	["ap-northeast-", "jp."],
+	// US Government Cloud → ug. inference profile (7 chars)
 	["us-gov-", "ug."],
-	// Americas regions → us. inference profile
+	// Americas regions → us. inference profile (3 chars)
 	["us-", "us."],
-	// Europe regions → eu. inference profile
+	// Europe regions → eu. inference profile (3 chars)
 	["eu-", "eu."],
-	// Asia Pacific regions → apac. inference profile
+	// Asia Pacific regions → apac. inference profile (3 chars)
 	["ap-", "apac."],
-	// Canada regions → ca. inference profile
+	// Canada regions → ca. inference profile (3 chars)
 	["ca-", "ca."],
-	// South America regions → sa. inference profile
+	// South America regions → sa. inference profile (3 chars)
 	["sa-", "sa."],
 ]
 
@@ -474,4 +452,15 @@ export const BEDROCK_REGIONS = [
 export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
 	"anthropic.claude-sonnet-4-20250514-v1:0",
 	"anthropic.claude-sonnet-4-5-20250929-v1:0",
+] as const
+
+// Amazon Bedrock models that support Global Inference profiles
+// As of Oct 2025, AWS supports Global Inference for:
+// - Claude Sonnet 4
+// - Claude Sonnet 4.5
+// - Claude Haiku 4.5
+export const BEDROCK_GLOBAL_INFERENCE_MODEL_IDS = [
+	"anthropic.claude-sonnet-4-20250514-v1:0",
+	"anthropic.claude-sonnet-4-5-20250929-v1:0",
+	"anthropic.claude-haiku-4-5-20251001-v1:0",
 ] as const

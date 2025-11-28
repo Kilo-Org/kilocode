@@ -20,7 +20,7 @@
 		"@vscode/test-electron": "^2.4.0",
 		"glob": "^11.0.1",
 		"mocha": "^11.1.0",
-		"rimraf": "^6.0.1",
+		"rimraf": "^6.1.0",
 		"typescript": "5.8.3"
 	}
 }

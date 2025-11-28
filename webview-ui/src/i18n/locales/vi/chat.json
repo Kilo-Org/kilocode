@@ -91,24 +91,17 @@
 		"tooltip": "Hủy thao tác hiện tại"
 	},
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
-	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
+	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Xem <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
+	"docs": "Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
 	"onboarding": "<strong>Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.</strong> Bắt đầu bằng cách nhập nhiệm vụ bên dưới. Bạn không chắc chắn nên bắt đầu như thế nào? Đọc thêm về những gì Kilo Code có thể làm cho bạn trong <DocsLink>tài liệu</DocsLink>.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Điều phối Nhiệm vụ",
-			"description": "Chia nhỏ các nhiệm vụ thành các phần nhỏ hơn, dễ quản lý hơn."
-		},
-		"stickyModels": {
-			"title": "Chế độ dính",
-			"description": "Mỗi chế độ ghi nhớ mô hình đã sử dụng cuối cùng của bạn"
-		},
-		"tools": {
-			"title": "Công cụ",
-			"description": "Cho phép AI giải quyết vấn đề bằng cách duyệt web, chạy lệnh, v.v."
-		},
 		"customizableModes": {
-			"title": "Chế độ tùy chỉnh",
-			"description": "Các nhân vật chuyên biệt với hành vi riêng và mô hình được chỉ định"
+			"title": "Chế độ có thể tùy chỉnh",
+			"description": "Các nhân vật chuyên biệt luôn bám sát nhiệm vụ và mang lại hiệu quả."
+		},
+		"modelAgnostic": {
+			"title": "Mang theo mô hình của riêng bạn",
+			"description": "Sử dụng khóa nhà cung cấp của riêng bạn hoặc thậm chí chạy suy luận cục bộ — không phụ phí, không khóa, không hạn chế"
 		}
 	},
 	"selectMode": "Chọn chế độ tương tác",
@@ -156,6 +149,9 @@
 		"initializingWarning": "Đang khởi tạo điểm kiểm tra... Nếu quá trình này mất quá nhiều thời gian, bạn có thể vô hiệu hóa điểm kiểm tra trong <settingsLink>cài đặt</settingsLink> và khởi động lại tác vụ của bạn.",
 		"menu": {
 			"viewDiff": "Xem khác biệt",
+			"more": "Thêm tùy chọn",
+			"viewDiffFromInit": "Xem tất cả các thay đổi",
+			"viewDiffWithCurrent": "Xem các thay đổi kể từ điểm kiểm tra này",
 			"restore": "Khôi phục điểm kiểm tra",
 			"restoreFiles": "Khôi phục tệp",
 			"restoreFilesDescription": "Khôi phục các tệp dự án của bạn về bản chụp được thực hiện tại thời điểm này.",
@@ -189,7 +185,9 @@
 		"wantsToGenerateImage": "Kilo Code muốn tạo một hình ảnh",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code muốn tạo hình ảnh bên ngoài không gian làm việc",
 		"wantsToGenerateImageProtected": "Kilo Code muốn tạo hình ảnh ở vị trí được bảo vệ",
-		"didGenerateImage": "Kilo Code đã tạo một hình ảnh"
+		"didGenerateImage": "Kilo Code đã tạo một hình ảnh",
+		"wantsToDelete": "Kilo Code muốn xóa tệp này",
+		"wantsToDeleteDirectory": "Kilo Code muốn xóa thư mục này"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code muốn xem các tệp cấp cao nhất trong thư mục này",
@@ -273,6 +271,7 @@
 		"toggleAriaLabel": "Bật/tắt tự động phê duyệt",
 		"disabledAriaLabel": "Tự động phê duyệt đã tắt - trước tiên hãy chọn các tùy chọn",
 		"triggerLabelOff": "Tự động phê duyệt tắt",
+		"triggerLabelOffShort": "Tắt",
 		"triggerLabel_zero": "0 được tự động phê duyệt",
 		"triggerLabel_one": "1 được tự động phê duyệt",
 		"triggerLabel_other": "{{count}} được tự động phê duyệt",
@@ -302,6 +301,19 @@
 			"selectModel": "Chọn <code>roo/code-supernova</code> từ nhà cung cấp Roo Code Cloud trong Cài đặt để bắt đầu.",
 			"goToSettingsButton": "Đi tới Cài đặt"
 		},
+		"release": {
+			"heading": "Mới trong Extension:",
+			"openRouterEmbeddings": "Hỗ trợ các mô hình nhúng OpenRouter",
+			"chutesDynamic": "Chutes giờ đây tải các mô hình mới nhất một cách động",
+			"queuedMessagesFix": "Sửa lỗi tin nhắn trong hàng đợi bị mất"
+		},
+		"cloudAgents": {
+			"heading": "Mới trên Cloud:",
+			"prFixer": "Giới thiệu agent đám mây <bold>PR Fixer</bold> để bổ sung cho PR Reviewer.",
+			"prFixerDescription": "PR Fixer của Roo Code áp dụng các thay đổi chất lượng cao cho PR của bạn, ngay từ GitHub. Gọi qua bình luận PR và nó sẽ đọc toàn bộ lịch sử bình luận để hiểu ngữ cảnh, thỏa thuận và đánh đổi - sau đó triển khai bản sửa lỗi phù hợp.",
+			"tryPrFixerButton": "Dùng thử PR Fixer"
+		},
+		"careers": "Ngoài ra, <careersLink>chúng tôi đang tuyển dụng!</careersLink>",
 		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
@@ -330,6 +342,8 @@
 		"tooltips": {
 			"expand": "Mở rộng khối mã",
 			"collapse": "Thu gọn khối mã",
+			"enable_wrap": "Bật ngắt dòng",
+			"disable_wrap": "Tắt ngắt dòng",
 			"copy_code": "Sao chép mã"
 		}
 	},
@@ -421,5 +435,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code muốn chạy lệnh slash",
 		"didRun": "Kilo Code đã chạy lệnh slash"
+	},
+	"todo": {
+		"partial": "{{completed}} trong tổng số {{total}} công việc đã hoàn thành",
+		"complete": "{{total}} công việc đã hoàn thành",
+		"updated": "Đã cập nhật danh sách công việc",
+		"completed": "Đã hoàn thành",
+		"started": "Đã bắt đầu"
 	}
 }

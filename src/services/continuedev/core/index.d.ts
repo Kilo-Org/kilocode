@@ -333,7 +333,6 @@ export interface ILLMLogger {
 
 export interface LLMOptions {
 	model: string
-
 	title?: string
 	uniqueId?: string
 	autocompleteOptions?: Partial<TabAutocompleteOptions>
@@ -345,7 +344,9 @@ export interface LLMOptions {
 	apiBase?: string
 	useLegacyCompletionsEndpoint?: boolean
 	capabilities?: ModelCapability
-	env?: Record<string, string | number | boolean>
+	env?: Record<string, string | number | boolean | undefined>
+	promptTemplates?: Partial<Record<keyof PromptTemplates, PromptTemplate>>
+	fimProvider?: IFimProvider // to call a kilocode provider definition
 }
 
 type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
@@ -511,6 +512,9 @@ export interface BaseCompletionOptions {
 	maxTokens?: number
 	raw?: boolean
 	stream?: boolean
+	reasoning?: boolean
+	reasoningBudgetTokens?: number
+	promptCaching?: boolean
 }
 
 export interface ModelCapability {
@@ -547,6 +551,7 @@ export interface TabAutocompleteOptions {
 	modelTimeout: number
 	maxSuffixPercentage: number
 	prefixPercentage: number
+	maxSnippetPercentage: number
 	transform?: boolean
 	multilineCompletions: "always" | "never" | "auto"
 	slidingWindowPrefixPercentage: number
@@ -617,18 +622,18 @@ export class SignatureInformation {
 	 * The label of this signature. Will be shown in
 	 * the UI.
 	 */
-	label: strin
-  /**
-   * The parameters of this signature.
-   */
-  parameters: ParameterInformation[];
+	label: string
+	/**
+	 * The parameters of this signature.
+	 */
+	parameters: ParameterInformation[]
 
-  /**
-   * The index of the active parameter.
-   *
-   * If provided, this is used in place of {@linkcode SignatureHelp.activeParameter}.
-   */
-  activeParameter?: number;g
+	/**
+	 * The index of the active parameter.
+	 *
+	 * If provided, this is used in place of {@linkcode SignatureHelp.activeParameter}.
+	 */
+	activeParameter?: number
 }
 
 export type ConfigMergeType = "merge" | "overwrite"

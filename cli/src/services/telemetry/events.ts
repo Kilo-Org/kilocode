@@ -31,6 +31,7 @@ export enum TelemetryEvent {
 	PROVIDER_CHANGED = "cli_provider_changed",
 	MODEL_CHANGED = "cli_model_changed",
 	MODE_CHANGED = "cli_mode_changed",
+	THEME_CHANGED = "cli_theme_changed",
 
 	// Tool Usage Events
 	TOOL_EXECUTED = "cli_tool_executed",
@@ -52,6 +53,11 @@ export enum TelemetryEvent {
 	CI_MODE_STARTED = "cli_ci_mode_started",
 	CI_MODE_COMPLETED = "cli_ci_mode_completed",
 	CI_MODE_TIMEOUT = "cli_ci_mode_timeout",
+
+	// Parallel Mode Events
+	PARALLEL_MODE_STARTED = "cli_parallel_mode_started",
+	PARALLEL_MODE_COMPLETED = "cli_parallel_mode_completed",
+	PARALLEL_MODE_ERRORED = "cli_parallel_mode_errored",
 
 	// Error Events
 	ERROR_OCCURRED = "cli_error_occurred",
@@ -168,6 +174,14 @@ export interface ProviderChangeEventProperties extends BaseProperties {
 	newProvider: string
 	previousModel?: string
 	newModel?: string
+}
+
+/**
+ * Theme change event properties
+ */
+export interface ThemeChangeEventProperties extends BaseProperties {
+	previousTheme: string
+	newTheme: string
 }
 
 /**
@@ -319,13 +333,13 @@ export interface FeatureUsageProperties extends BaseProperties {
 /**
  * Type guard to check if properties are valid
  */
-export function isValidEventProperties(properties: any): properties is BaseProperties {
+export function isValidEventProperties(properties: unknown): properties is BaseProperties {
 	return (
 		typeof properties === "object" &&
 		properties !== null &&
-		typeof properties.cliVersion === "string" &&
-		typeof properties.sessionId === "string" &&
-		typeof properties.mode === "string" &&
-		typeof properties.ciMode === "boolean"
+		typeof (properties as Record<string, unknown>).cliVersion === "string" &&
+		typeof (properties as Record<string, unknown>).sessionId === "string" &&
+		typeof (properties as Record<string, unknown>).mode === "string" &&
+		typeof (properties as Record<string, unknown>).ciMode === "boolean"
 	)
 }

@@ -41,7 +41,7 @@
 		"chromatic": "^13.0.0",
 		"jsonc-parser": "^3.3.1",
 		"node-fetch": "2",
-		"rimraf": "^6.0.1",
+		"rimraf": "^6.1.0",
 		"storybook": "^9.0.18",
 		"tailwindcss-animate": "^1.0.7",
 		"typescript": "^5.4.5",

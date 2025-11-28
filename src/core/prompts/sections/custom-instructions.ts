@@ -21,6 +21,7 @@ import { Dirent } from "fs"
 import { isLanguage } from "@roo-code/types"
 
 import type { SystemPromptSettings } from "../types"
+import { getEffectiveProtocol, isNativeProtocol } from "@roo-code/types"
 
 import { LANGUAGES } from "../../../shared/language"
 import { ClineRulesToggles } from "../../../shared/cline-rules" // kilocode_change
@@ -273,7 +274,9 @@ async function loadAgentRulesFile(cwd: string): Promise<string> {
 					await resolveSymLink(agentPath, fileInfo, 0)
 
 					// Extract the resolved path from fileInfo
-					if (fileInfo.length > 0) {
+					// kilocode_change start - add null check for fileInfo[0]
+					if (fileInfo.length > 0 && fileInfo[0]) {
+						// kilocode_change end
 						resolvedPath = fileInfo[0].resolvedPath
 					}
 				}
@@ -417,15 +420,20 @@ export async function addCustomInstructions(
 
 	const joinedSections = sections.join("\n\n")
 
+	const effectiveProtocol = getEffectiveProtocol(options.settings?.toolProtocol)
+
 	return joinedSections
 		? `
 ====
 
 USER'S CUSTOM INSTRUCTIONS
 
-The following additional instructions are provided by the user, and should be followed to the best of your ability without interfering with the TOOL USE guidelines.
+The following additional instructions are provided by the user, and should be followed to the best of your ability${
+				isNativeProtocol(effectiveProtocol) ? "." : " without interfering with the TOOL USE guidelines."
+			}
 
-${joinedSections}`
+${joinedSections}
+`
 		: ""
 }
 

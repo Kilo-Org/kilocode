@@ -51,7 +51,7 @@ describe("Provider Merging", () => {
 		expect(result.config.providers[0].id).toBe("default")
 		expect(result.config.providers[0]).toHaveProperty("kilocodeToken")
 		expect(result.config.providers[0]).toHaveProperty("kilocodeModel")
-		expect(result.config.providers[0].kilocodeModel).toBe("anthropic/claude-sonnet-4.5")
+		expect(result.config.providers[0].kilocodeModel).toBe("x-ai/grok-code-fast-1")
 		expect(result.validation.valid).toBe(true)
 	})
 

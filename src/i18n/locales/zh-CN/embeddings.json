@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "连接 Qdrant 向量数据库失败。请确保 Qdrant 正在运行并可在 {{qdrantUrl}} 访问。错误：{{errorMessage}}",
-		"vectorDimensionMismatch": "无法更新新模型的向量索引。请尝试清除索引并重新开始。详细信息：{{errorMessage}}"
+		"vectorDimensionMismatch": "无法更新新模型的向量索引。请尝试清除索引并重新开始。详细信息：{{errorMessage}}",
+		"lancedbStoreInitFailed": "初始化 LanceDB 向量存储失败：{{errorMessage}}",
+		"lancedbLoadFailed": "加载 LanceDB 模块失败：{{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "身份验证失败。请在设置中检查您的 API 密钥。",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "创建嵌入器缺少 OpenAI 兼容配置",
 		"geminiConfigMissing": "创建嵌入器缺少 Gemini 配置",
 		"mistralConfigMissing": "创建嵌入器时缺少 Mistral 配置",
+		"openRouterConfigMissing": "创建嵌入器时缺少 OpenRouter 配置",
 		"vercelAiGatewayConfigMissing": "创建嵌入器时缺少 Vercel AI Gateway 配置",
 		"invalidEmbedderType": "配置的嵌入器类型无效：{{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "无法确定提供商 '{{provider}}' 的模型 '{{modelId}}' 的向量维度。请确保在 OpenAI 兼容提供商设置中正确设置了「嵌入维度」。",

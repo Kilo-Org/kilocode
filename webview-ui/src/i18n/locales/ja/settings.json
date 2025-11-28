@@ -25,6 +25,7 @@
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
+		"display": "表示",
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
@@ -34,7 +35,7 @@
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"display": "表示",
+		"autoPurge": "自動クリーンアップ",
 		"ghost": "Ghost"
 	},
 	"slashCommands": {
@@ -57,6 +58,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "APIキー",
 		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI GatewayのAPIキーを入力してください",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter APIキー",
+		"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
@@ -92,8 +96,12 @@
 		"modelPlaceholder": "モデル名を入力",
 		"selectModel": "モデルを選択",
 		"ollamaBaseUrlLabel": "Ollama ベースURL",
+		"vectorStoreProviderLabel": "ベクターストアプロバイダー",
 		"qdrantApiKeyLabel": "Qdrant APIキー",
 		"qdrantApiKeyPlaceholder": "Qdrant APIキーを入力（オプション）",
+		"lancedbVectorStoreDirectoryLabel": "LanceDBベクトルストアパス",
+		"lancedbVectorStoreDirectoryPlaceholder": "カスタムベクターストアパスを入力（オプション）",
+		"lancedbVectorStoreDirectoryDescription": "LanceDBベクトルデータベースを格納するパス。空の場合は、globalStorageUri/vector のデフォルトの場所が使用されます。",
 		"setupConfigLabel": "設定",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -126,7 +134,8 @@
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway APIキーが必要です",
 			"ollamaBaseUrlRequired": "OllamaのベースURLが必要です",
 			"baseUrlRequired": "ベースURLが必要です",
-			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません"
+			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません",
+			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です"
 		},
 		"advancedConfigLabel": "詳細設定",
 		"searchMinScoreLabel": "検索スコアのしきい値",
@@ -229,6 +238,8 @@
 		"providerDocumentation": "{{provider}}のドキュメント",
 		"configProfile": "設定プロファイル",
 		"description": "異なるAPI設定を保存して、プロバイダーと設定をすばやく切り替えることができます。",
+		"makeActiveProfile": "アクティブプロファイルにする",
+		"makeActiveTooltip": "このプロファイルをアクティブにしてAPIリクエストに使用する",
 		"apiProvider": "APIプロバイダー",
 		"model": "モデル",
 		"nameEmpty": "名前を空にすることはできません",
@@ -247,6 +258,8 @@
 		"noProviderMatchFound": "プロバイダーが見つかりません",
 		"noMatchFound": "一致するプロファイルが見つかりません",
 		"vscodeLmDescription": "VS Code言語モデルAPIを使用すると、他のVS Code拡張機能（GitHub Copilotなど）が提供するモデルを実行できます。最も簡単な方法は、VS Code MarketplaceからCopilotおよびCopilot Chat拡張機能をインストールすることです。",
+		"vscodeLmUnavailable": "VS Code の言語モデルのサポートは Visual Studio Code でのみ利用可能です。VSCodium のようなフォークでは動作しない可能性があります。さらに、この機能は JetBrains ツールでは利用できません。",
+		"vscodeLmUnavailableInstructions": "使用しているツールがサポート対象であり、VS Code Chat がインストールされ有効になっていることを確認してください。",
 		"awsCustomArnUse": "使用したいモデルの有効なAmazon Bedrock ARNを入力してください。形式の例:",
 		"awsCustomArnDesc": "ARN内のリージョンが上で選択したAWSリージョンと一致していることを確認してください。",
 		"openRouterApiKey": "OpenRouter APIキー",
@@ -307,6 +320,9 @@
 		"getZaiApiKey": "Z AI APIキーを取得",
 		"zaiEntrypoint": "Z AI エントリーポイント",
 		"zaiEntrypointDescription": "お住まいの地域に応じて適切な API エントリーポイントを選択してください。中国にお住まいの場合は open.bigmodel.cn を選択してください。それ以外の場合は api.z.ai を選択してください。",
+		"minimaxApiKey": "MiniMax APIキー",
+		"getMiniMaxApiKey": "MiniMax APIキーを取得",
+		"minimaxBaseUrl": "MiniMax エントリーポイント",
 		"geminiApiKey": "Gemini APIキー",
 		"getGroqApiKey": "Groq APIキーを取得",
 		"groqApiKey": "Groq APIキー",
@@ -329,6 +345,32 @@
 		"huggingFaceSelectProvider": "プロバイダーを選択...",
 		"huggingFaceSearchProviders": "プロバイダーを検索...",
 		"huggingFaceNoProvidersFound": "プロバイダーが見つかりません",
+		"sapAiCore": {
+			"serviceKey": "AI Coreサービスキー",
+			"serviceKeyJson": "サービスキーJSONを入力...",
+			"resourceGroup": "AI Coreリソースグループ",
+			"credentialsNote": "これらの認証情報はローカルに保存され、この拡張機能からのAPIリクエストにのみ使用されます。",
+			"learnMore": "SAP AI Core APIアクセスの詳細については、こちらをご覧ください。",
+			"orchestrationMode": "オーケストレーションモード",
+			"orchestrationEnabledDesc": "有効にすると、個別のデプロイメントを必要とせずに、利用可能なすべてのモデルにアクセスできます。",
+			"orchestrationDisabledDesc": "無効にすると、AI Coreサービスインスタンスにデプロイされた基盤モデルにのみアクセスできます。",
+			"modelDeploymentDesc": "利用可能なデプロイメントがあるモデルのみ選択できます。",
+			"deployment": "デプロイメント",
+			"loading": "読み込み中...",
+			"modelsCount": "({{count}}モデル)",
+			"deploymentsCount": "({{count}}デプロイメント)",
+			"selectModel": "モデルを選択...",
+			"selectDeployment": "デプロイメントを選択...",
+			"searchModels": "モデルを検索...",
+			"searchDeployments": "デプロイメントを検索...",
+			"noModelsFound": "モデルが見つかりません",
+			"noDeploymentFound": "デプロイメントが見つかりません",
+			"getStarted": "SAP AI Coreを始める",
+			"supportedProviders": "対応プロバイダー",
+			"supportedProvidersDesc1": "SAP AI Coreプロバイダーは現在、以下のLLMプロバイダーの基盤モデルのみをサポートしています：",
+			"supportedProvidersDesc2": "より多くのモデルにアクセスするには、オーケストレーションモードへの切り替えを検討してください。",
+			"supportedProvidersDesc3": "オーケストレーションモードの詳細"
+		},
 		"getGeminiApiKey": "Gemini APIキーを取得",
 		"openAiApiKey": "OpenAI APIキー",
 		"apiKey": "APIキー",
@@ -338,6 +380,14 @@
 		"getMistralApiKey": "Mistral / Codestral APIキーを取得",
 		"codestralBaseUrl": "Codestral ベースURL（オプション）",
 		"codestralBaseUrlDesc": "Codestralモデルの代替URLを設定します。",
+		"nanoGptApiKey": "Nano-GPT APIキー",
+		"getNanoGptApiKey": "Nano-GPT APIキーを取得",
+		"nanoGptModelList": "モデルリスト",
+		"nanoGptModelListOptions": {
+			"all": "すべてのモデル",
+			"personalized": "パーソナライズされたモデル",
+			"subscription": "サブスクリプションモデル"
+		},
 		"xaiApiKey": "xAI APIキー",
 		"getXaiApiKey": "xAI APIキーを取得",
 		"litellmApiKey": "LiteLLM APIキー",
@@ -351,6 +401,7 @@
 		"awsSessionToken": "AWSセッショントークン",
 		"awsRegion": "AWSリージョン",
 		"awsCrossRegion": "クロスリージョン推論を使用",
+		"awsGlobalInference": "グローバル推論を使用する（最適なAWSリージョンを自動選択）",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "カスタムVPCエンドポイントを使用",
 			"vpcEndpointUrlPlaceholder": "VPCエンドポイントURLを入力（任意）",
@@ -360,7 +411,7 @@
 		"enablePromptCachingTitle": "サポートされているモデルのパフォーマンスを向上させ、コストを削減するためにプロンプトキャッシュを有効化します。",
 		"cacheUsageNote": "注意：キャッシュの使用が表示されない場合は、別のモデルを選択してから希望のモデルを再度選択してみてください。",
 		"vscodeLmModel": "言語モデル",
-		"vscodeLmWarning": "注意：これは非常に実験的な統合であり、プロバイダーのサポートは異なります。モデルがサポートされていないというエラーが表示された場合、それはプロバイダー側の問題です。",
+		"vscodeLmWarning": "注意: VS Code Language Model API を通じて利用されるモデルは、プロバイダーによってラップまたは微調整されている場合があります。したがって、一般的なプロバイダーやルーターから同じモデルを直接使用する場合と挙動が異なることがあります。『Language Model』ドロップダウンのモデルを使用するには、まずそのモデルに切り替え、Copilot Chat のプロンプトで『承認』をクリックしてください。そうしないと、400『The requested model is not supported』などのエラーが表示されることがあります。",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URLコンテキストを有効にする",
@@ -437,7 +488,7 @@
 			},
 			"computerUse": {
 				"label": "コンピューター使用",
-				"description": "このモデルはブラウザとの対話が可能ですか？（例：Claude 3.7 Sonnet）"
+				"description": "このモデルはブラウザとの対話が可能ですか？"
 			},
 			"promptCache": {
 				"label": "プロンプトキャッシュ",
@@ -463,18 +514,23 @@
 			},
 			"resetDefaults": "デフォルトにリセット"
 		},
+		"rateLimitAfter": {
+			"label": "終了時のレート制限",
+			"description": "API ストリームが終了した後にレート制限を開始します。"
+		},
 		"rateLimitSeconds": {
 			"label": "レート制限",
 			"description": "APIリクエスト間の最小時間。"
 		},
 		"consecutiveMistakeLimit": {
 			"label": "エラーと繰り返しの制限",
-			"description": "「Kilo Codeが問題を抱えています」ダイアログを表示するまでの連続エラーまたは繰り返しアクションの数",
+			"description": "「Kiloが問題を抱えています」ダイアログを表示するまでの連続エラーまたは繰り返しアクションの数。この安全機構を無効にするには0に設定します（トリガーされません）。",
 			"unlimitedDescription": "無制限のリトライが有効です（自動進行）。ダイアログは表示されません。",
 			"warning": "⚠️ 0に設定すると無制限のリトライが可能になり、API使用量が大幅に増加する可能性があります"
 		},
 		"reasoningEffort": {
 			"label": "モデル推論の労力",
+			"none": "なし",
 			"minimal": "最小 (最速)",
 			"high": "高",
 			"medium": "中",
@@ -516,6 +572,15 @@
 			"description": "このプロバイダーはQwenサービスからのOAuth認証を使用し、APIキーは必要ありません。",
 			"instructions": "認証ファイルを取得して指定されたパスに配置するには、公式ドキュメントに従ってください。",
 			"setupLink": "Qwen公式ドキュメント"
+		},
+		"profileName": "プロファイル名",
+		"profileType": "プロファイルタイプ",
+		"profileTypeChat": "チャット",
+		"profileTypeAutocomplete": "オートコンプリート",
+		"profileTypeDescription": "チャットプロファイルは会話に使用されます。オートコンプリートプロファイルは1つのみ許可されます。",
+		"autocompleteLabel": "(オートコンプリート)",
+		"autocomplete": {
+			"onlyOneAllowed": "オートコンプリートプロファイルは1つのみ許可されます。プロファイル「{{existingName}}」は既にオートコンプリート用に設定されています。まずそのタイプを変更するか、削除してください。"
 		}
 	},
 	"browser": {
@@ -547,9 +612,45 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "チェックポイント初期化タイムアウト（秒）",
+			"description": "チェックポイントサービスの初期化を待つ最大時間。デフォルトは15秒。範囲：10～60秒。"
+		},
 		"enable": {
 			"label": "自動チェックポイントを有効化",
 			"description": "有効にすると、Kilo Codeはタスク実行中に自動的にチェックポイントを作成し、変更の確認や以前の状態への復帰を容易にします。 <0>詳細情報</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "自動タスククリーンアップを有効化",
+			"description": "古いタスクを自動的に削除してディスク容量を解放し、パフォーマンスを向上させます。タスクはタイプと経過時間によって分類され、削除時期が決定されます。"
+		},
+		"defaultRetention": {
+			"label": "デフォルト保持期間（日）",
+			"description": "タスクがクリーンアップの対象となるまでの保持日数"
+		},
+		"neverPurgeFavorited": {
+			"label": "お気に入りタスクを削除しない",
+			"description": "有効にすると、お気に入りタスクは経過時間に関係なく自動削除されません"
+		},
+		"favoritedRetention": {
+			"label": "お気に入りタスク保持期間（日）",
+			"description": "お気に入りタスクの保持日数（「お気に入りタスクを削除しない」が無効の場合のみ適用）"
+		},
+		"completedRetention": {
+			"label": "完了タスク保持期間（日）",
+			"description": "正常に完了したタスクの保持日数"
+		},
+		"incompleteRetention": {
+			"label": "未完了タスク保持期間（日）",
+			"description": "完了しなかったタスクの保持日数（通常は完了タスクより短い）"
+		},
+		"lastRun": {
+			"label": "最後のクリーンアップ"
+		},
+		"manualPurge": {
+			"button": "今すぐクリーンアップを実行"
 		}
 	},
 	"notifications": {
@@ -643,6 +744,14 @@
 			"label": "最大合計画像サイズ",
 			"mb": "MB",
 			"description": "単一のread_file操作で処理されるすべての画像の累積サイズ制限（MB単位）。複数の画像を読み取る際、各画像のサイズが合計に加算されます。別の画像を含めるとこの制限を超える場合、その画像はスキップされます。"
+		},
+		"includeCurrentTime": {
+			"label": "現在の時刻をコンテキストに含める",
+			"description": "有効にすると、現在の時刻とタイムゾーン情報がシステムプロンプトに含まれます。モデルが時間に関する懸念で動作を停止する場合は無効にしてください。"
+		},
+		"includeCurrentCost": {
+			"label": "現在のコストをコンテキストに含める",
+			"description": "有効にすると、現在のAPI使用コストがシステムプロンプトに含まれます。モデルがコストに関する懸念で動作を停止する場合は無効にしてください。"
 		}
 	},
 	"terminal": {
@@ -652,55 +761,55 @@
 		},
 		"advanced": {
 			"label": "ターミナル設定：詳細",
-			"description": "以下のオプションは設定を適用するためにターミナルの再起動が必要な場合があります"
+			"description": "これらの設定は、「インラインターミナルを使用」が無効の場合にのみ適用されます。VS Code ターミナルのみに影響し、IDE の再起動が必要になる場合があります。"
 		},
 		"outputLineLimit": {
 			"label": "ターミナル出力制限",
-			"description": "コマンド実行時にターミナル出力に含める最大行数。超過すると中央から行が削除され、tokenを節約します。 <0>詳細情報</0>"
+			"description": "制限内に収めるため最初と最後の行を保持し、中間を削除します。トークンを節約するには下げる；Kiloに中間の詳細を与えるには上げる。Kiloはコンテンツがスキップされた箇所にプレースホルダーを表示します。<0>詳細情報</0>"
 		},
 		"outputCharacterLimit": {
-			"label": "ターミナルの文字数制限",
-			"description": "コマンド実行時にターミナル出力に含める最大文字数。この制限は、非常に長い行によるメモリ問題を回避するため、行数制限よりも優先されます。超過した場合、出力は切り捨てられます。<0>詳細</0>"
+			"label": "ターミナル文字制限",
+			"description": "出力サイズにハードキャップを適用してメモリ問題を防ぐため、行制限を上書きします。超過した場合、最初と最後を保持し、コンテンツがスキップされた箇所にKiloにプレースホルダーを表示します。<0>詳細情報</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "ターミナルシェル統合タイムアウト",
-			"description": "コマンドを実行する前にシェル統合の初期化を待つ最大時間。シェルの起動時間が長いユーザーの場合、ターミナルで「Shell Integration Unavailable」エラーが表示される場合は、この値を増やす必要があるかもしれません。 <0>詳細情報</0>"
+			"description": "コマンドを実行する前�����VS Codeシェル統合を待機する時間。シェルが遅く起動する場合や「シェル統合が利用できません」というエラーが表示される場合は、この値を増やしてください。<0>詳細</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "ターミナルシェル統合を無効にする",
-			"description": "ターミナルコマンドが正しく機能しない場合や、「シェル統合が利用できません」というエラーが表示される場合は、これを有効にします。これにより、一部の高度なターミナル機能をバイパスして、コマンドを実行するより簡単な方法が使用されます。 <0>詳細情報</0>"
+			"label": "インラインターミナルを使用（推奨）",
+			"description": "より高速で信頼性の高い実行のため、シェルプロファイル/統合をバイパスしてインラインターミナル（チャット）でコマンドを実行します。無効にすると、Kilo はシェルプロファイル、プロンプト、プラグインと共に VS Code ターミナルを使用します。<0>詳細情報</0>"
 		},
 		"commandDelay": {
 			"label": "ターミナルコマンド遅延",
-			"description": "コマンド実行後に追加する遅延時間（ミリ秒）。デフォルト設定の0は遅延を完全に無効にします。これはタイミングの問題があるターミナルでコマンド出力を完全にキャプチャするのに役立ちます。ほとんどのターミナルでは`PROMPT_COMMAND='sleep N'`を設定することで実装され、PowerShellは各コマンドの最後に`start-sleep`を追加します。元々はVSCodeバグ#237208の回避策で、必要ない場合があります。 <0>詳細情報</0>"
+			"description": "VS Codeターミナルがすべての出力をフラッシュできるよう、各コマンド後に短い一時停止を追加します（bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep）。末尾出力が欠落している場合のみ使用；それ以外は0のままにします。<0>詳細情報</0>"
 		},
 		"compressProgressBar": {
-			"label": "プログレスバー出力を圧縮",
-			"description": "有効にすると、キャリッジリターン（\\r）を含むターミナル出力を処理して、実際のターミナルがコンテンツを表示する方法をシミュレートします。これによりプログレスバーの中間状態が削除され、最終状態のみが保持されるため、より関連性の高い情報のためのコンテキスト空間が節約されます。 <0>詳細情報</0>"
+			"label": "プログレスバー出力を圧���������",
+			"description": "プログレスバー/スピナーを折りたたんで、最終状態のみを保持します（トークンを節約します）。<0>詳細情報</0>"
 		},
 		"powershellCounter": {
-			"label": "PowerShellカウンター回避策を有効化",
-			"description": "有効にすると、PowerShellコマンドにカウンターを追加して、コマンドの正しい実行を確保します。これは出力のキャプチャに問題がある可能性のあるPowerShellターミナルで役立ちます。 <0>詳細情報</0>"
+			"label": "PowerShellカウンターの回避策を有効にする",
+			"description": "PowerShellの出力が欠落または重複している場合にこれをオンにします。出力を安定させるために各コマンドに小さなカウンターを追加します。出力がすでに正しい場合はオフのままにします。<0>詳細情報</0>"
 		},
 		"zshClearEolMark": {
-			"label": "ZSH行末マークをクリア",
-			"description": "有効にすると、PROMPT_EOL_MARK=''を設定してZSHの行末マークをクリアします。これにより、'%'などの特殊文字で終わるコマンド出力の解釈に関する問題を防ぎます。 <0>詳細情報</0>"
+			"label": "ZSH EOLマークをクリア",
+			"description": "行末に迷子の%が表示されたり、解析が間違っているように見える場合にこれをオンにします。Zshの行末マーク（%）を省略します。<0>詳細情報</0>"
 		},
 		"zshOhMy": {
-			"label": "Oh My Zsh 統合を有効化",
-			"description": "有効にすると、ITERM_SHELL_INTEGRATION_INSTALLED=Yes を設定して Oh My Zsh シェル統合機能を有効にします。この設定を適用するには、IDEの再起動が必要な場合があります。 <0>詳細情報</0>"
+			"label": "Oh My Zsh統合を有効にする",
+			"description": "Oh My Zshのテーマ/プラグインがシェル統合を期待している場合にこれをオンにします。ITERM_SHELL_INTEGRATION_INSTALLED=Yesを設定します。その変数を設定しないようにするにはオフにします。<0>詳細情報</0>"
 		},
 		"zshP10k": {
-			"label": "Powerlevel10k 統合を有効化",
-			"description": "有効にすると、POWERLEVEL9K_TERM_SHELL_INTEGRATION=true を設定して Powerlevel10k シェル統合機能を有効にします。 <0>詳細情報</0>"
+			"label": "Powerlevel10k統合を有効にする",
+			"description": "Powerlevel10kシェル統合を使用している場合にこれをオンにします。<0>詳細情報</0>"
 		},
 		"zdotdir": {
-			"label": "ZDOTDIR 処理を有効化",
-			"description": "有効にすると、zsh シェル統合を適切に処理するために ZDOTDIR 用の一時ディレクトリを作成します。これにより、zsh の設定を保持しながら VSCode のシェル統合が正しく機能します。 <0>詳細情報</0>"
+			"label": "ZDOTDIR処理を有効にする",
+			"description": "zshシェル統合が失敗したり、ドットファイルと競合したりする場合にこれをオンにします。<0>詳細情報</0>"
 		},
 		"inheritEnv": {
 			"label": "環境変数を継承",
-			"description": "有効にすると、ターミナルは VSCode の親プロセスから環境変数を継承します。ユーザープロファイルで定義されたシェル統合設定などが含まれます。これは VSCode のグローバル設定 `terminal.integrated.inheritEnv` を直接切り替えます。 <0>詳細情報</0>"
+			"description": "親VS Codeプロセスから環境変数を継承するには、これをオンにします。<0>詳細情報</0>"
 		}
 	},
 	"advancedSettings": {
@@ -709,7 +818,7 @@
 	"advanced": {
 		"diff": {
 			"label": "diff経由の編集を有効化",
-			"description": "有効にすると、Kilo Codeはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。最新のClaude 4 Sonnetモデルで最良に機能します。",
+			"description": "有効にすると、Kiloはファイルをより迅速に編集でき、切り詰められた全ファイル書き込みを自動的に拒否します。",
 			"strategy": {
 				"label": "Diff戦略",
 				"options": {
@@ -737,10 +846,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "実験的な統合diff戦略を使用する",
 			"description": "実験的な統合diff戦略を有効にします。この戦略はモデルエラーによる再試行の回数を減らす可能性がありますが、予期しない動作や不正確な編集を引き起こす可能性があります。リスクを理解し、すべての変更を注意深く確認する準備がある場合にのみ有効にしてください。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "実験的な検索と置換ツールを使用する",
-			"description": "実験的な検索と置換ツールを有効にし、Kilo Codeが1つのリクエストで検索語の複数のインスタンスを置き換えることを可能にします。"
 		},
 		"INSERT_BLOCK": {
 			"name": "実験的なコンテンツ挿入ツールを使用する",
@@ -800,8 +905,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Applyを有効化",
 			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Gateway Provider、OpenRouter、またはMorph APIキーが必要です。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"apiProvider": "APIプロバイダー",
+			"apiProviderList": {
+				"current": "現在"
+			},
+			"apiKey": "APIキー（オプション）",
+			"placeholder": "APIキーを入力してください（オプション）",
 			"modelLabel": "モデル選択",
 			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
 			"models": {
@@ -828,8 +937,6 @@
 	"modelInfo": {
 		"supportsImages": "画像をサポート",
 		"noImages": "画像をサポートしていません",
-		"supportsComputerUse": "コンピュータ使用をサポート",
-		"noComputerUse": "コンピュータ使用をサポートしていません",
 		"supportsPromptCache": "プロンプトキャッシュをサポート",
 		"noPromptCache": "プロンプトキャッシュをサポートしていません",
 		"contextWindow": "コンテキストウィンドウ:",
@@ -889,7 +996,9 @@
 		"providerNotAllowed": "プロバイダー「{{provider}}」は組織によって許可されていません",
 		"modelNotAllowed": "モデル「{{model}}」はプロバイダー「{{provider}}」に対して組織によって許可されていません",
 		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています",
-		"qwenCodeOauthPath": "有効なOAuth認証情報のパスを提供する必要があります"
+		"qwenCodeOauthPath": "有効なOAuth認証情報のパスを提供する必要があります",
+		"sapAiCore": "有効なSAP AI Coreサービスキーを入力してください。",
+		"sapAiCoreDeploymentId": "モデル「{{model}}」に対して実行中のデプロイメントを選択してください。"
 	},
 	"placeholders": {
 		"apiKey": "API キーを入力...",

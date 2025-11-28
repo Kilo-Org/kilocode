@@ -20,6 +20,8 @@ That will walk you through the account setup and _automatically_ configure Kilo 
 
 ## Using another API Provider
 
+_Coming soon to Kilo Code Teams and Enterprise!_
+
 ### Getting Your API Key
 
 #### Option 1: LLM Routers

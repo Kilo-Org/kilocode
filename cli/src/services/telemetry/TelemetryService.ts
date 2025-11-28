@@ -77,7 +77,7 @@ export class TelemetryService {
 
 			// Update Kilocode user ID if token is available
 			const provider = config.providers.find((p) => p.id === config.provider)
-			if (provider && provider.kilocodeToken) {
+			if (provider && provider.kilocodeToken && typeof provider.kilocodeToken === "string") {
 				await identityManager.updateKilocodeUserId(provider.kilocodeToken)
 			}
 
@@ -263,7 +263,7 @@ export class TelemetryService {
 		})
 	}
 
-	public trackTaskCompleted(taskId: string, duration: number, stats: any): void {
+	public trackTaskCompleted(taskId: string, duration: number, stats: Record<string, unknown>): void {
 		if (!this.client) return
 
 		this.client.capture(TelemetryEvent.TASK_COMPLETED, {
@@ -352,11 +352,27 @@ export class TelemetryService {
 		})
 	}
 
+	public trackThemeChanged(previousTheme: string, newTheme: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.THEME_CHANGED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			previousTheme,
+			newTheme,
+		})
+	}
+
 	// ============================================================================
 	// Tool Tracking
 	// ============================================================================
 
-	public trackToolExecuted(toolName: string, executionTime: number, success: boolean, metadata?: any): void {
+	public trackToolExecuted(
+		toolName: string,
+		executionTime: number,
+		success: boolean,
+		metadata?: Record<string, unknown>,
+	): void {
 		if (!this.client) return
 
 		this.client.trackToolExecution(toolName, executionTime, success)
@@ -475,7 +491,12 @@ export class TelemetryService {
 	// Performance Tracking
 	// ============================================================================
 
-	public trackApiRequest(provider: string, model: string, responseTime: number, tokens?: any): void {
+	public trackApiRequest(
+		provider: string,
+		model: string,
+		responseTime: number,
+		tokens?: Record<string, unknown>,
+	): void {
 		if (!this.client) return
 
 		this.client.trackApiRequest(provider, model, responseTime, tokens)
@@ -540,7 +561,7 @@ export class TelemetryService {
 		})
 	}
 
-	public trackCIModeCompleted(stats: any): void {
+	public trackCIModeCompleted(stats: Record<string, unknown>): void {
 		if (!this.client) return
 
 		this.client.capture(TelemetryEvent.CI_MODE_COMPLETED, {
@@ -556,6 +577,48 @@ export class TelemetryService {
 		this.client.capture(TelemetryEvent.CI_MODE_TIMEOUT, {
 			mode: this.currentMode,
 			ciMode: true,
+		})
+	}
+
+	// ============================================================================
+	// Parallel Mode Tracking
+	// ============================================================================
+
+	public parallelModeStart = 0
+
+	public trackParallelModeStarted(isExistingBranch: boolean, promptLength: number, timeoutSeconds?: number): void {
+		if (!this.client) return
+
+		this.parallelModeStart = Date.now()
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_STARTED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			isExistingBranch,
+			promptLength,
+			timeoutSeconds,
+		})
+	}
+
+	public trackParallelModeCompleted(): void {
+		if (!this.client) return
+
+		const duration = Date.now() - this.parallelModeStart
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_COMPLETED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			duration,
+		})
+	}
+
+	public trackParallelModeErrored(errorMessage: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_ERRORED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			errorMessage,
 		})
 	}
 

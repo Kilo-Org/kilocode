@@ -24,7 +24,7 @@ describe("Model Validation Functions", () => {
 				outputPrice: 5.0,
 			},
 		},
-		"kilocode-openrouter": {
+		kilocode: {
 			"valid-model": {
 				maxTokens: 8192,
 				contextWindow: 200000,
@@ -52,6 +52,7 @@ describe("Model Validation Functions", () => {
 				outputPrice: 15.0,
 			},
 		},
+		"nano-gpt": {}, //kilocode_change
 		requesty: {},
 		unbound: {},
 		litellm: {},
@@ -63,9 +64,13 @@ describe("Model Validation Functions", () => {
 		huggingface: {},
 		// kilocode_change start
 		ovhcloud: {},
-		chutes: {},
 		gemini: {},
+		inception: {},
+		synthetic: {},
+		"sap-ai-core": {},
 		// kilocode_change end
+		roo: {},
+		chutes: {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

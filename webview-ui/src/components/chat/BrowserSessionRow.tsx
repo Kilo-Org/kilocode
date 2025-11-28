@@ -2,7 +2,6 @@ import React, { memo, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import deepEqual from "fast-deep-equal"
 import { useTranslation } from "react-i18next"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage } from "@roo-code/types"
 
@@ -10,6 +9,7 @@ import { BrowserAction, BrowserActionResult, ClineSayBrowserAction } from "@roo/
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { Button } from "@src/components/ui"
 
 import CodeBlock, { CODE_BLOCK_BG_COLOR } from "../kilocode/common/CodeBlock" // kilocode_change
 import { ChatRowContent } from "./ChatRow"
@@ -372,16 +372,16 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
 						{t("chat:browser.navigation.step", { current: currentPageIndex + 1, total: pages.length })}
 					</div>
 					<div style={{ display: "flex", gap: "4px" }}>
-						<VSCodeButton
+						<Button
 							disabled={currentPageIndex === 0 || isBrowsing}
 							onClick={() => setCurrentPageIndex((i) => i - 1)}>
 							{t("chat:browser.navigation.previous")}
-						</VSCodeButton>
-						<VSCodeButton
+						</Button>
+						<Button
 							disabled={currentPageIndex === pages.length - 1 || isBrowsing}
 							onClick={() => setCurrentPageIndex((i) => i + 1)}>
 							{t("chat:browser.navigation.next")}
-						</VSCodeButton>
+						</Button>
 					</div>
 				</div>
 			)}

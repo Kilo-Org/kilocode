@@ -6,6 +6,7 @@ import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-m
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { Mode, getAllModes } from "@roo/modes"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
+import type { ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
 
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -102,7 +103,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			filePaths,
 			openedTabs,
 			currentApiConfigName,
-			listApiConfigMeta,
+			listApiConfigMeta: listApiConfigMeta_unfilteredByKiloCodeProfileType,
 			customModes,
 			customModePrompts,
 			cwd,
@@ -114,6 +115,18 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			clineMessages,
 		} = useExtensionState()
 
+		// kilocode_change start - autocomplete profile type system
+		// Filter out autocomplete profiles - only show chat profiles in the chat interface
+		const listApiConfigMeta = useMemo(() => {
+			if (!listApiConfigMeta_unfilteredByKiloCodeProfileType) {
+				return []
+			}
+			return listApiConfigMeta_unfilteredByKiloCodeProfileType.filter((config) => {
+				const profileType = (config as { profileType?: ProfileType }).profileType
+				return profileType !== "autocomplete"
+			})
+		}, [listApiConfigMeta_unfilteredByKiloCodeProfileType])
+		// kilocode_change end
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
 			const currentConfig = listApiConfigMeta?.find((config) => config.name === currentApiConfigName)

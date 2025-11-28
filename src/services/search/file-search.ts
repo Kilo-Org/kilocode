@@ -5,6 +5,7 @@ import * as childProcess from "child_process"
 import * as readline from "readline"
 import { byLengthAsc, Fzf } from "fzf"
 import { getBinPath } from "../ripgrep"
+import { Package } from "../../shared/package"
 
 export type FileResult = { path: string; type: "file" | "folder"; label?: string }
 
@@ -85,14 +86,44 @@ export async function executeRipgrep({
 	})
 }
 
+/**
+ * Get extra ripgrep arguments based on VSCode search configuration
+ */
+function getRipgrepSearchOptions(): string[] {
+	const config = vscode.workspace.getConfiguration("search")
+	const extraArgs: string[] = []
+
+	// Respect VSCode's search.useIgnoreFiles setting
+	if (config.get("useIgnoreFiles") === false) {
+		extraArgs.push("--no-ignore")
+	}
+
+	// Respect VSCode's search.useGlobalIgnoreFiles setting
+	if (config.get("useGlobalIgnoreFiles") === false) {
+		extraArgs.push("--no-ignore-global")
+	}
+
+	// Respect VSCode's search.useParentIgnoreFiles setting
+	if (config.get("useParentIgnoreFiles") === false) {
+		extraArgs.push("--no-ignore-parent")
+	}
+
+	return extraArgs
+}
+
 export async function executeRipgrepForFiles(
 	workspacePath: string,
-	limit: number = 5000,
+	limit?: number,
 ): Promise<{ path: string; type: "file" | "folder"; label?: string }[]> {
+	// Get limit from configuration if not provided
+	const effectiveLimit =
+		limit ?? vscode.workspace.getConfiguration(Package.name).get<number>("maximumIndexedFilesForFileSearch", 10000)
+
 	const args = [
 		"--files",
 		"--follow",
 		"--hidden",
+		...getRipgrepSearchOptions(),
 		"-g",
 		"!**/node_modules/**",
 		"-g",
@@ -104,7 +135,7 @@ export async function executeRipgrepForFiles(
 		workspacePath,
 	]
 
-	return executeRipgrep({ args, workspacePath, limit })
+	return executeRipgrep({ args, workspacePath, limit: effectiveLimit })
 }
 
 export async function searchWorkspaceFiles(
@@ -113,8 +144,8 @@ export async function searchWorkspaceFiles(
 	limit: number = 20,
 ): Promise<{ path: string; type: "file" | "folder"; label?: string }[]> {
 	try {
-		// Get all files and directories (from our modified function)
-		const allItems = await executeRipgrepForFiles(workspacePath, 5000)
+		// Get all files and directories (uses configured limit)
+		const allItems = await executeRipgrepForFiles(workspacePath)
 
 		// If no query, just return the top items
 		if (!query.trim()) {

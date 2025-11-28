@@ -4,7 +4,6 @@ import { z } from "zod"
 import {
 	type ModelInfo,
 	isModelParameter,
-	OPEN_ROUTER_COMPUTER_USE_MODELS,
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
 	anthropicModels,
@@ -130,7 +129,7 @@ export async function getOpenRouterModels(
 				continue
 			}
 
-			models[id] = parseOpenRouterModel({
+			const parsedModel = parseOpenRouterModel({
 				id,
 				model,
 				displayName: model.name, // kilocode_change
@@ -139,6 +138,8 @@ export async function getOpenRouterModels(
 				maxTokens: top_provider?.max_completion_tokens,
 				supportedParameters: supported_parameters,
 			})
+
+			models[id] = parsedModel
 		}
 	} catch (error) {
 		console.error(
@@ -236,17 +237,13 @@ export const parseOpenRouterModel = ({
 		cacheReadsPrice,
 		description: model.description,
 		supportsReasoningEffort: supportedParameters ? supportedParameters.includes("reasoning") : undefined,
+		supportsNativeTools: supportedParameters ? supportedParameters.includes("tools") : undefined,
 		supportedParameters: supportedParameters ? supportedParameters.filter(isModelParameter) : undefined,
 		// kilocode_change start
 		displayName,
 		preferredIndex: model.preferredIndex,
+		supportsVerbosity: !!supportedParameters?.includes("verbosity") || undefined,
 		// kilocode_change end
-	}
-
-	// The OpenRouter model definition doesn't give us any hints about
-	// computer use, so we need to set that manually.
-	if (OPEN_ROUTER_COMPUTER_USE_MODELS.has(id)) {
-		modelInfo.supportsComputerUse = true
 	}
 
 	if (OPEN_ROUTER_REASONING_BUDGET_MODELS.has(id)) {

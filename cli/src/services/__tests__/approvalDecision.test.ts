@@ -64,7 +64,7 @@ describe("approvalDecision", () => {
 	describe("getApprovalDecision", () => {
 		describe("non-ask messages", () => {
 			it("should return manual for non-ask messages", () => {
-				const message = { ...createMessage("tool"), type: "say" } as any
+				const message = { ...createMessage("tool"), type: "say" } as ExtensionChatMessage
 				const config = createBaseConfig()
 				const decision = getApprovalDecision(message, config, false)
 				expect(decision.action).toBe("manual")

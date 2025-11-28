@@ -10,7 +10,7 @@ vi.mock("fs/promises", async () => {
 	const actual = await vi.importActual<typeof import("fs/promises")>("fs/promises")
 	return {
 		...actual,
-		readFile: vi.fn(async (filePath: any, encoding?: any) => {
+		readFile: vi.fn(async (filePath: string | Buffer | URL, encoding?: BufferEncoding | null) => {
 			// If reading schema.json, return a minimal valid schema
 			if (typeof filePath === "string" && filePath.includes("schema.json")) {
 				return JSON.stringify({
@@ -20,7 +20,7 @@ vi.mock("fs/promises", async () => {
 				})
 			}
 			// Otherwise use the actual implementation
-			return actual.readFile(filePath, encoding)
+			return actual.readFile(filePath, encoding as BufferEncoding)
 		}),
 	}
 })

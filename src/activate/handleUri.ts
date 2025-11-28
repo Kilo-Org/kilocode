@@ -49,8 +49,9 @@ export const handleUri = async (uri: vscode.Uri) => {
 		// kilocode_change end
 		case "/requesty": {
 			const code = query.get("code")
+			const baseUrl = query.get("baseUrl")
 			if (code) {
-				await visibleProvider.handleRequestyCallback(code)
+				await visibleProvider.handleRequestyCallback(code, baseUrl)
 			}
 			break
 		}

@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Không thể kết nối với cơ sở dữ liệu vector Qdrant. Vui lòng đảm bảo Qdrant đang chạy và có thể truy cập tại {{qdrantUrl}}. Lỗi: {{errorMessage}}",
-		"vectorDimensionMismatch": "Không thể cập nhật chỉ mục vector cho mô hình mới. Vui lòng thử xóa chỉ mục và bắt đầu lại. Chi tiết: {{errorMessage}}"
+		"vectorDimensionMismatch": "Không thể cập nhật chỉ mục vector cho mô hình mới. Vui lòng thử xóa chỉ mục và bắt đầu lại. Chi tiết: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Không thể khởi tạo kho lưu trữ vector LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "Không thể tải mô-đun LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Xác thực không thành công. Vui lòng kiểm tra khóa API của bạn trong cài đặt.",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "Thiếu cấu hình tương thích OpenAI để tạo embedder",
 		"geminiConfigMissing": "Thiếu cấu hình Gemini để tạo embedder",
 		"mistralConfigMissing": "Thiếu cấu hình Mistral để tạo trình nhúng",
+		"openRouterConfigMissing": "Thiếu cấu hình OpenRouter để tạo trình nhúng",
 		"vercelAiGatewayConfigMissing": "Thiếu cấu hình Vercel AI Gateway để tạo trình nhúng",
 		"invalidEmbedderType": "Loại embedder được cấu hình không hợp lệ: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Không thể xác định kích thước vector cho mô hình '{{modelId}}' với nhà cung cấp '{{provider}}'. Hãy đảm bảo 'Kích thước Embedding' được cài đặt đúng trong cài đặt nhà cung cấp tương thích OpenAI.",

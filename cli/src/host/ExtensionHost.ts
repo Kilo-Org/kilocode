@@ -1,14 +1,45 @@
 import { EventEmitter } from "events"
-import { createVSCodeAPIMock, type IdentityInfo } from "./VSCode.js"
+import { createVSCodeAPIMock, type IdentityInfo, type ExtensionContext } from "./VSCode.js"
 import { logs } from "../services/logs.js"
-import type { ExtensionMessage, WebviewMessage, ExtensionState } from "../types/messages.js"
+import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/messages.js"
 import { getTelemetryService } from "../services/telemetry/index.js"
+import { argsToMessage } from "../utils/safe-stringify.js"
 
 export interface ExtensionHostOptions {
 	workspacePath: string
 	extensionBundlePath: string // Direct path to extension.js
 	extensionRootPath: string // Root path for extension assets
 	identity?: IdentityInfo // Identity information for VSCode environment
+	customModes?: ModeConfig[] // Custom modes configuration
+}
+
+// Extension module interface
+interface ExtensionModule {
+	activate: (context: unknown) => Promise<KiloCodeAPI> | KiloCodeAPI
+	deactivate?: () => Promise<void> | void
+}
+
+// KiloCode API interface returned by extension activation
+interface KiloCodeAPI {
+	startNewTask?: (task: string, images?: string[]) => Promise<void>
+	sendMessage?: (message: ExtensionMessage) => void
+	cancelTask?: () => Promise<void>
+	condense?: () => Promise<void>
+	condenseTaskContext?: () => Promise<void>
+	handleTerminalOperation?: (operation: string) => Promise<void>
+	getState?: () => ExtensionState | Promise<ExtensionState>
+}
+
+// VSCode API mock interface - matches the return type from createVSCodeAPIMock
+interface VSCodeAPIMock {
+	context: ExtensionContext
+	[key: string]: unknown
+}
+
+// Webview provider interface
+interface WebviewProvider {
+	handleCLIMessage?: (message: WebviewMessage) => Promise<void>
+	[key: string]: unknown
 }
 
 export interface ExtensionAPI {
@@ -21,10 +52,13 @@ export class ExtensionHost extends EventEmitter {
 	private options: ExtensionHostOptions
 	private isActivated = false
 	private currentState: ExtensionState | null = null
-	private extensionModule: any = null
-	private extensionAPI: any = null
-	private vscodeAPI: any = null
-	private webviewProviders: Map<string, any> = new Map()
+	private extensionModule: ExtensionModule | null = null
+	private extensionAPI: KiloCodeAPI | null = null
+	private vscodeAPI: VSCodeAPIMock | null = null
+	private webviewProviders: Map<string, WebviewProvider> = new Map()
+	private webviewInitialized = false
+	private pendingMessages: WebviewMessage[] = []
+	private isInitialSetup = true
 	private originalConsole: {
 		log: typeof console.log
 		error: typeof console.error
@@ -40,7 +74,7 @@ export class ExtensionHost extends EventEmitter {
 		lastErrorTime: 0,
 		maxErrorsBeforeWarning: 10,
 	}
-	private unhandledRejectionHandler: ((reason: any, promise: Promise<any>) => void) | null = null
+	private unhandledRejectionHandler: ((reason: unknown, promise: Promise<unknown>) => void) | null = null
 	private uncaughtExceptionHandler: ((error: Error) => void) | null = null
 
 	constructor(options: ExtensionHostOptions) {
@@ -56,7 +90,7 @@ export class ExtensionHost extends EventEmitter {
 	 */
 	private setupGlobalErrorHandlers(): void {
 		// Handle unhandled promise rejections from extension
-		this.unhandledRejectionHandler = (reason: any) => {
+		this.unhandledRejectionHandler = (reason: unknown) => {
 			const error = reason instanceof Error ? reason : new Error(String(reason))
 
 			// Check if this is an expected error
@@ -165,9 +199,9 @@ export class ExtensionHost extends EventEmitter {
 	/**
 	 * Check if an error is expected (e.g., task abortion)
 	 */
-	private isExpectedError(error: any): boolean {
+	private isExpectedError(error: unknown): boolean {
 		if (!error) return false
-		const errorMessage = error.message || error.toString()
+		const errorMessage = error instanceof Error ? error.message : String(error)
 
 		// Task abortion errors are expected
 		if (errorMessage.includes("task") && errorMessage.includes("aborted")) {
@@ -273,6 +307,13 @@ export class ExtensionHost extends EventEmitter {
 				return
 			}
 
+			// Queue messages if webview not initialized
+			if (!this.webviewInitialized) {
+				this.pendingMessages.push(message)
+				logs.debug(`Queued message ${message.type} - webview not ready`, "ExtensionHost")
+				return
+			}
+
 			// Track extension message sent
 			getTelemetryService().trackExtensionMessageSent(message.type)
 
@@ -322,13 +363,15 @@ export class ExtensionHost extends EventEmitter {
 			this.options.extensionRootPath,
 			this.options.workspacePath,
 			this.options.identity,
-		)
+		) as VSCodeAPIMock
 
 		// Set global vscode object for the extension
-		;(global as any).vscode = this.vscodeAPI
+		if (this.vscodeAPI) {
+			;(global as unknown as { vscode: VSCodeAPIMock }).vscode = this.vscodeAPI
+		}
 
 		// Set global reference to this ExtensionHost for webview provider registration
-		;(global as any).__extensionHost = this
+		;(global as unknown as { __extensionHost: ExtensionHost }).__extensionHost = this
 
 		// Set environment variables to disable problematic features in CLI mode
 		process.env.KILO_CLI_MODE = "true"
@@ -347,30 +390,56 @@ export class ExtensionHost extends EventEmitter {
 			info: console.info,
 		}
 
+		// Set up global.__interceptedConsole FIRST, before any module loading
+		// This ensures it's available when the module compilation hook runs
+		// and all extension modules can use the intercepted console
+		;(global as unknown as { __interceptedConsole: Console }).__interceptedConsole = {
+			log: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.info(message, "Extension")
+			},
+			error: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.error(message, "Extension")
+			},
+			warn: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.warn(message, "Extension")
+			},
+			debug: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.debug(message, "Extension")
+			},
+			info: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.info(message, "Extension")
+			},
+		} as Console
+
 		// Override console methods to forward to LogsService ONLY (no console output)
-		// IMPORTANT: Use original console methods to avoid circular dependency
-		console.log = (...args: any[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+		// IMPORTANT: Use safe serialization to avoid circular reference errors
+		console.log = (...args: unknown[]) => {
+			const message = argsToMessage(args)
 			logs.info(message, "Extension")
 		}
 
-		console.error = (...args: any[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+		console.error = (...args: unknown[]) => {
+			const message = argsToMessage(args)
 			logs.error(message, "Extension")
 		}
 
-		console.warn = (...args: any[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+		console.warn = (...args: unknown[]) => {
+			const message = argsToMessage(args)
 			logs.warn(message, "Extension")
 		}
 
-		console.debug = (...args: any[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+		console.debug = (...args: unknown[]) => {
+			const message = argsToMessage(args)
 			logs.debug(message, "Extension")
 		}
 
-		console.info = (...args: any[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+		console.info = (...args: unknown[]) => {
+			const message = argsToMessage(args)
 			logs.info(message, "Extension")
 		}
 	}
@@ -386,8 +455,8 @@ export class ExtensionHost extends EventEmitter {
 		}
 
 		// Clean up global console interception
-		if ((global as any).__interceptedConsole) {
-			delete (global as any).__interceptedConsole
+		if ((global as unknown as { __interceptedConsole?: unknown }).__interceptedConsole) {
+			delete (global as unknown as { __interceptedConsole?: unknown }).__interceptedConsole
 		}
 
 		logs.debug("Console methods and streams restored", "ExtensionHost")
@@ -406,14 +475,25 @@ export class ExtensionHost extends EventEmitter {
 
 			// Get Module class for interception
 			const Module = await import("module")
-			const ModuleClass = Module.default as any
+			interface ModuleClass {
+				_resolveFilename: (request: string, parent: unknown, isMain: boolean, options?: unknown) => string
+				prototype: {
+					_compile: (content: string, filename: string) => unknown
+				}
+			}
+			const ModuleClass = Module.default as unknown as ModuleClass
 
 			// Store original methods
 			const originalResolveFilename = ModuleClass._resolveFilename
 			const originalCompile = ModuleClass.prototype._compile
 
 			// Set up module resolution interception for vscode
-			ModuleClass._resolveFilename = function (request: string, parent: any, isMain: boolean, options?: any) {
+			ModuleClass._resolveFilename = function (
+				request: string,
+				parent: unknown,
+				isMain: boolean,
+				options?: unknown,
+			) {
 				if (request === "vscode") {
 					return "vscode-mock"
 				}
@@ -443,31 +523,7 @@ export class ExtensionHost extends EventEmitter {
 				children: [],
 				exports: this.vscodeAPI,
 				paths: [],
-			} as any
-
-			// Store the intercepted console in global for module injection
-			;(global as any).__interceptedConsole = {
-				log: (...args: any[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
-					logs.info(message, "Extension")
-				},
-				error: (...args: any[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
-					logs.error(message, "Extension")
-				},
-				warn: (...args: any[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
-					logs.warn(message, "Extension")
-				},
-				debug: (...args: any[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
-					logs.debug(message, "Extension")
-				},
-				info: (...args: any[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
-					logs.info(message, "Extension")
-				},
-			}
+			} as unknown as NodeModule
 
 			// Clear extension require cache to ensure fresh load
 			if (require.cache[extensionPath]) {
@@ -498,15 +554,20 @@ export class ExtensionHost extends EventEmitter {
 
 	private async activateExtension(): Promise<void> {
 		try {
-			logs.info("Calling extension activate function...", "ExtensionHost")
-
 			// Call the extension's activate function with our mocked context
 			// Use safeExecute to catch and handle any errors without crashing the CLI
-			this.extensionAPI = await this.safeExecute(
-				async () => await this.extensionModule.activate(this.vscodeAPI.context),
-				"extension.activate",
-				null,
-			)
+			this.extensionAPI =
+				(await this.safeExecute(
+					async () => {
+						if (!this.extensionModule || !this.vscodeAPI) {
+							throw new Error("Extension module or VSCode API not initialized")
+						}
+						logs.info("Calling extension activate function...", "ExtensionHost")
+						return await this.extensionModule.activate(this.vscodeAPI.context)
+					},
+					"extension.activate",
+					null,
+				)) ?? null
 
 			if (!this.extensionAPI) {
 				logs.warn(
@@ -553,112 +614,144 @@ export class ExtensionHost extends EventEmitter {
 			const processedMessageIds = new Set<string>()
 
 			// Listen for messages from the extension's webview (postMessage calls)
-			this.on("extensionWebviewMessage", (message: any) => {
-				this.safeExecute(() => {
-					// Create a unique ID for this message to prevent loops
-					const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
+			this.on(
+				"extensionWebviewMessage",
+				(
+					message: ExtensionMessage & {
+						payload?: unknown
+						state?: Partial<ExtensionState>
+						clineMessage?: unknown
+						chatMessage?: unknown
+						listApiConfigMeta?: unknown
+					},
+				) => {
+					this.safeExecute(() => {
+						// Create a unique ID for this message to prevent loops
+						const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
 
-					if (processedMessageIds.has(messageId)) {
-						logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
-						return
-					}
-
-					processedMessageIds.add(messageId)
-
-					// Clean up old message IDs to prevent memory leaks
-					if (processedMessageIds.size > 100) {
-						const oldestIds = Array.from(processedMessageIds).slice(0, 50)
-						oldestIds.forEach((id) => processedMessageIds.delete(id))
-					}
-
-					// Track extension message received
-					getTelemetryService().trackExtensionMessageReceived(message.type)
-
-					// Only forward specific message types that are important for CLI
-					switch (message.type) {
-						case "state":
-							// Extension is sending a full state update
-							if (message.state && this.currentState) {
-								this.currentState = {
-									...this.currentState,
-									...message.state,
-									chatMessages:
-										message.state.clineMessages ||
-										message.state.chatMessages ||
-										this.currentState.chatMessages,
-									apiConfiguration:
-										message.state.apiConfiguration || this.currentState.apiConfiguration,
-									currentApiConfigName:
-										message.state.currentApiConfigName || this.currentState.currentApiConfigName,
-									listApiConfigMeta:
-										message.state.listApiConfigMeta || this.currentState.listApiConfigMeta,
-									routerModels: message.state.routerModels || this.currentState.routerModels,
-								}
-
-								// Forward the updated state to the CLI
-								this.emit("message", {
-									type: "state",
-									state: this.currentState,
-								})
-							}
-							break
-
-						case "messageUpdated": {
-							// Extension is sending an individual message update
-							// The extension uses 'clineMessage' property (legacy name)
-
-							const chatMessage = message.clineMessage || message.chatMessage
-							if (chatMessage) {
-								// Forward the message update to the CLI
-								const emitMessage = {
-									type: "messageUpdated",
-									chatMessage: chatMessage,
-								}
-								this.emit("message", emitMessage)
-							}
-							break
+						if (processedMessageIds.has(messageId)) {
+							logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
+							return
 						}
 
-						case "taskHistoryResponse":
-							// Extension is sending task history data
-							if (message.payload) {
-								// Forward the task history response to the CLI
-								this.emit("message", {
-									type: "taskHistoryResponse",
-									payload: message.payload,
-								})
-							}
-							break
+						processedMessageIds.add(messageId)
 
-						// Handle configuration-related messages from extension
-						case "listApiConfig":
-							// Extension is sending updated API configuration list
-							if (message.listApiConfigMeta && this.currentState) {
-								this.currentState.listApiConfigMeta = message.listApiConfigMeta
-								logs.debug("Updated listApiConfigMeta from extension", "ExtensionHost")
-							}
-							break
+						// Clean up old message IDs to prevent memory leaks
+						if (processedMessageIds.size > 100) {
+							const oldestIds = Array.from(processedMessageIds).slice(0, 50)
+							oldestIds.forEach((id) => processedMessageIds.delete(id))
+						}
 
-						// Don't forward these message types as they can cause loops
-						case "mcpServers":
-						case "theme":
-						case "rulesData":
-							logs.debug(
-								`Ignoring extension message type to prevent loops: ${message.type}`,
-								"ExtensionHost",
-							)
-							break
+						// Track extension message received
+						getTelemetryService().trackExtensionMessageReceived(message.type)
 
-						default:
-							// Only forward other important messages
-							if (message.type && !message.type.startsWith("_")) {
-								logs.debug(`Forwarding extension message: ${message.type}`, "ExtensionHost")
-								this.emit("message", message)
+						// Only forward specific message types that are important for CLI
+						switch (message.type) {
+							case "state":
+								// Extension is sending a full state update
+								if (message.state && this.currentState) {
+									// Build the new state object, handling optional properties correctly
+									const newState: ExtensionState = {
+										...this.currentState,
+										...message.state,
+										chatMessages:
+											message.state.clineMessages ||
+											message.state.chatMessages ||
+											this.currentState.chatMessages,
+										apiConfiguration:
+											message.state.apiConfiguration || this.currentState.apiConfiguration,
+									}
+
+									// Handle optional properties explicitly to satisfy exactOptionalPropertyTypes
+									if (message.state.currentApiConfigName !== undefined) {
+										newState.currentApiConfigName = message.state.currentApiConfigName
+									} else if (this.currentState.currentApiConfigName !== undefined) {
+										newState.currentApiConfigName = this.currentState.currentApiConfigName
+									}
+
+									if (message.state.listApiConfigMeta !== undefined) {
+										newState.listApiConfigMeta = message.state.listApiConfigMeta
+									} else if (this.currentState.listApiConfigMeta !== undefined) {
+										newState.listApiConfigMeta = this.currentState.listApiConfigMeta
+									}
+
+									if (message.state.routerModels !== undefined) {
+										newState.routerModels = message.state.routerModels
+									} else if (this.currentState.routerModels !== undefined) {
+										newState.routerModels = this.currentState.routerModels
+									}
+
+									this.currentState = newState
+
+									// Forward the updated state to the CLI
+									this.emit("message", {
+										type: "state",
+										state: this.currentState,
+									})
+								}
+								break
+
+							case "messageUpdated": {
+								// Extension is sending an individual message update
+								// The extension uses 'clineMessage' property (legacy name)
+
+								const chatMessage = message.clineMessage || message.chatMessage
+								if (chatMessage) {
+									// Forward the message update to the CLI
+									const emitMessage = {
+										type: "messageUpdated",
+										chatMessage: chatMessage,
+									}
+									this.emit("message", emitMessage)
+								}
+								break
 							}
-							break
-					}
-				}, `extensionWebviewMessage-${message.type}`)
-			})
+
+							case "taskHistoryResponse":
+								// Extension is sending task history data
+								if (message.payload) {
+									// Forward the task history response to the CLI
+									this.emit("message", {
+										type: "taskHistoryResponse",
+										payload: message.payload,
+									})
+								}
+								break
+
+							// Handle configuration-related messages from extension
+							case "listApiConfig":
+								// Extension is sending updated API configuration list
+								if (
+									message.listApiConfigMeta &&
+									this.currentState &&
+									Array.isArray(message.listApiConfigMeta)
+								) {
+									this.currentState.listApiConfigMeta = message.listApiConfigMeta
+									logs.debug("Updated listApiConfigMeta from extension", "ExtensionHost")
+								}
+								break
+
+							// Don't forward these message types as they can cause loops
+							case "mcpServers":
+							case "theme":
+							case "rulesData":
+								logs.debug(
+									`Ignoring extension message type to prevent loops: ${message.type}`,
+									"ExtensionHost",
+								)
+								break
+
+							default:
+								// Only forward other important messages
+								if (message.type && !message.type.startsWith("_")) {
+									logs.debug(`Forwarding extension message: ${message.type}`, "ExtensionHost")
+									this.emit("message", message)
+								}
+								break
+						}
+					}, `extensionWebviewMessage-${message.type}`)
+				},
+			)
 		}
 	}
 
@@ -674,7 +767,7 @@ export class ExtensionHost extends EventEmitter {
 			},
 			chatMessages: [],
 			mode: "code",
-			customModes: [],
+			customModes: this.options.customModes || [],
 			taskHistoryFullLength: 0,
 			taskHistoryVersion: 0,
 			renderContext: "cli",
@@ -704,19 +797,38 @@ export class ExtensionHost extends EventEmitter {
 		// Sync with extension state when webview launches
 		if (this.extensionAPI && typeof this.extensionAPI.getState === "function") {
 			try {
-				const extensionState = await this.safeExecute(() => this.extensionAPI.getState(), "getState", null)
+				const extensionState = await this.safeExecute(
+					() => {
+						if (!this.extensionAPI?.getState) {
+							return null
+						}
+						const result = this.extensionAPI.getState()
+						return result instanceof Promise ? result : Promise.resolve(result)
+					},
+					"getState",
+					null,
+				)
 				if (extensionState && this.currentState) {
 					// Merge extension state with current state, preserving CLI context
-					this.currentState = {
+					const mergedState: ExtensionState = {
 						...this.currentState,
 						apiConfiguration: extensionState.apiConfiguration || this.currentState.apiConfiguration,
-						currentApiConfigName:
-							extensionState.currentApiConfigName || this.currentState.currentApiConfigName,
-						listApiConfigMeta: extensionState.listApiConfigMeta || this.currentState.listApiConfigMeta,
 						mode: extensionState.mode || this.currentState.mode,
 						chatMessages: extensionState.chatMessages || this.currentState.chatMessages,
-						routerModels: extensionState.routerModels || this.currentState.routerModels,
 					}
+
+					// Handle optional properties explicitly to satisfy exactOptionalPropertyTypes
+					if (extensionState.currentApiConfigName !== undefined) {
+						mergedState.currentApiConfigName = extensionState.currentApiConfigName
+					}
+					if (extensionState.listApiConfigMeta !== undefined) {
+						mergedState.listApiConfigMeta = extensionState.listApiConfigMeta
+					}
+					if (extensionState.routerModels !== undefined) {
+						mergedState.routerModels = extensionState.routerModels
+					}
+
+					this.currentState = mergedState
 					logs.debug("Synced state with extension on webview launch", "ExtensionHost")
 				}
 			} catch (error) {
@@ -847,10 +959,10 @@ export class ExtensionHost extends EventEmitter {
 
 		// Sync experiments if present (critical for CLI background editing)
 		if (configState.experiments || this.currentState?.experiments) {
-			const experiments = configState.experiments || this.currentState?.experiments
+			const experiments = (configState.experiments || this.currentState?.experiments) ?? {}
 			await this.sendWebviewMessage({
-				type: "updateExperimental",
-				values: experiments,
+				type: "updateSettings",
+				updatedSettings: { experiments },
 			})
 		}
 	}
@@ -886,14 +998,54 @@ export class ExtensionHost extends EventEmitter {
 	}
 
 	// Methods for webview provider registration (called from VSCode API mock)
-	registerWebviewProvider(viewId: string, provider: any): void {
+	registerWebviewProvider(viewId: string, provider: WebviewProvider): void {
 		this.webviewProviders.set(viewId, provider)
-		logs.debug(`Registered webview provider: ${viewId}`, "ExtensionHost")
+		logs.info(`Webview provider registered: ${viewId}`, "ExtensionHost")
 	}
 
 	unregisterWebviewProvider(viewId: string): void {
 		this.webviewProviders.delete(viewId)
 		logs.debug(`Unregistered webview provider: ${viewId}`, "ExtensionHost")
+	}
+
+	/**
+	 * Mark webview as ready and flush pending messages
+	 * Called by VSCode mock after resolveWebviewView completes
+	 */
+	public markWebviewReady(): void {
+		this.webviewInitialized = true
+		this.isInitialSetup = false
+		logs.info("Webview marked as ready, flushing pending messages", "ExtensionHost")
+		this.flushPendingMessages()
+	}
+
+	/**
+	 * Flush all pending messages that were queued before webview was ready
+	 */
+	private flushPendingMessages(): void {
+		const messages = [...this.pendingMessages]
+		this.pendingMessages = []
+
+		logs.info(`Flushing ${messages.length} pending messages`, "ExtensionHost")
+		for (const message of messages) {
+			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
+			// Use void to explicitly ignore the promise
+			void this.sendWebviewMessage(message)
+		}
+	}
+
+	/**
+	 * Check if webview is ready to receive messages
+	 */
+	public isWebviewReady(): boolean {
+		return this.webviewInitialized
+	}
+
+	/**
+	 * Check if this is the initial setup phase
+	 */
+	public isInInitialSetup(): boolean {
+		return this.isInitialSetup
 	}
 }
 

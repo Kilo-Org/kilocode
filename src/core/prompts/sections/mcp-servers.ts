@@ -1,12 +1,11 @@
 import { DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
-import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
 
 export async function getMcpServersSection(
 	mcpHub?: McpHub,
 	diffStrategy?: DiffStrategy,
 	enableMcpServerCreation?: boolean,
-	toolUseStyle?: ToolUseStyle, // kilocode_change
+	includeToolDescriptions: boolean = true,
 ): Promise<string> {
 	if (!mcpHub) {
 		return ""
@@ -18,17 +17,20 @@ export async function getMcpServersSection(
 					.getServers()
 					.filter((server) => server.status === "connected")
 					.map((server) => {
-						const tools = server.tools
-							?.filter((tool) => tool.enabledForPrompt !== false)
-							?.map((tool) => {
-								const schemaStr = tool.inputSchema
-									? `    Input Schema:
+						// Only include tool descriptions when using XML protocol
+						const tools = includeToolDescriptions
+							? server.tools
+									?.filter((tool) => tool.enabledForPrompt !== false)
+									?.map((tool) => {
+										const schemaStr = tool.inputSchema
+											? `    Input Schema:
 		${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-									: ""
+											: ""
 
-								return `- ${tool.name}: ${tool.description}\n${schemaStr}`
-							})
-							.join("\n\n")
+										return `- ${tool.name}: ${tool.description}\n${schemaStr}`
+									})
+									.join("\n\n")
+							: undefined
 
 						const templates = server.resourceTemplates
 							?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)
@@ -68,19 +70,14 @@ ${connectedServers}`
 		return baseSection
 	}
 
-	let descSection =
+	return (
 		baseSection +
 		`
 ## Creating an MCP Server
 
-The user may ask you something along the lines of "add a tool" that does some function, in other words to create an MCP server that provides tools and resources that may connect to external APIs for example. If they do, you should obtain detailed instructions on this topic using the fetch_instructions tool, `
-	// kilocode_change: toolUseStyle
-	if (toolUseStyle !== "json") {
-		descSection += `like this:
+The user may ask you something along the lines of "add a tool" that does some function, in other words to create an MCP server that provides tools and resources that may connect to external APIs for example. If they do, you should obtain detailed instructions on this topic using the fetch_instructions tool, like this:
 <fetch_instructions>
 <task>create_mcp_server</task>
 </fetch_instructions>`
-	}
-
-	return descSection
+	)
 }

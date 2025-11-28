@@ -1,4 +1,5 @@
 # Why I Let AI Write My Commit Messages
+
 ### And Probably You Should Too
 
 I've just finished implementing a big feature, the code is staged and ready to go, but there I am — mesmerized by the empty commit message field, brain is blank. What do I write? "Fixed stuff"? "Updates"? "asdf"? Do you know that feeling too?
@@ -11,7 +12,7 @@ I've been there countless times, and honestly, it's one of those tiny friction p
 
 - Summarize what changed without being too vague
 - Follow your team's conventions (Conventional Commits, anyone?)
-- Capture the *why* behind the change, which is often harder than the *what*
+- Capture the _why_ behind the change, which is often harder than the _what_
 - Keep it concise but informative
 - Do all this while your brain is already moving on to the coffee machine
 
@@ -24,6 +25,7 @@ Here's the thing that makes this feature genuinely useful: it only looks at your
 This is crucial because it means the AI understands the scope of what you're actually committing. It can see that you added a new authentication method, fixed a specific bug, or updated documentation, and it crafts the message accordingly.
 
 The process is dead simple:
+
 1. Stage your changes (like you normally would)
 2. Click the Kilo Code logo next to the commit message field
 3. Get a properly formatted commit message - automagically!
@@ -38,7 +40,7 @@ Let me show you some actual commit messages this feature has generated for me:
 feat(auth): implement OAuth2 integration with GitHub
 
 Add GitHub OAuth2 authentication flow including:
-- OAuth2 client configuration  
+- OAuth2 client configuration
 - User profile retrieval
 - Token refresh mechanism
 ```
@@ -91,7 +93,7 @@ Better commit messages also mean better code reviews. When your teammates can qu
 
 The feature is available in Kilo Code since `v4.35` and became customizable in `v4.38`. Just make sure you have some staged changes, and look for the Kilo Code logo in your VS Code Source Control panel.
 
-Pro tip: Consider setting up a dedicated [API configuration profile](https://kilocode.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilocode.ai/p/2x-faster-prompt-enhancement-in-kilo)!
+Pro tip: Consider setting up a dedicated [API configuration profile](https://kilocode.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilo.ai/p/2x-faster-prompt-enhancement-in-kilo)!
 
 ## One More Thing
 
@@ -103,4 +105,4 @@ Give it a try. I think you'll find yourself wondering how you ever managed witho
 
 ---
 
-*Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilocode.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.love/discord)!*
+_Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilocode.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.love/discord)!_

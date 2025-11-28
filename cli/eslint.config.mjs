@@ -1,13 +1,34 @@
-import { config } from "@roo-code/config-eslint/base"
+import js from "@eslint/js"
+import eslintConfigPrettier from "eslint-config-prettier"
+import turboPlugin from "eslint-plugin-turbo"
+import tseslint from "typescript-eslint"
 
 export default [
-	...config,
+	js.configs.recommended,
+	eslintConfigPrettier,
+	...tseslint.configs.recommended,
 	{
+		plugins: {
+			turbo: turboPlugin,
+		},
 		rules: {
-			// "@typescript-eslint/no-explicit-any": "off",
+			"turbo/no-undeclared-env-vars": "off",
 		},
 	},
 	{
-		ignores: ["dist/*"],
+		rules: {
+			"@typescript-eslint/no-unused-vars": [
+				"error",
+				{
+					argsIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+					caughtErrorsIgnorePattern: "^_",
+				},
+			],
+			"@typescript-eslint/no-explicit-any": "error",
+		},
+	},
+	{
+		ignores: ["dist/*", "scripts/*"],
 	},
 ]

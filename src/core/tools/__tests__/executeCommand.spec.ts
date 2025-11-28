@@ -4,7 +4,7 @@
 import * as path from "path"
 import * as fs from "fs/promises"
 
-import { ExecuteCommandOptions } from "../executeCommandTool"
+import { ExecuteCommandOptions } from "../ExecuteCommandTool"
 import { TerminalRegistry } from "../../../integrations/terminal/TerminalRegistry"
 import { Terminal } from "../../../integrations/terminal/Terminal"
 import { ExecaTerminal } from "../../../integrations/terminal/ExecaTerminal"
@@ -21,7 +21,7 @@ vitest.mock("../../../integrations/terminal/Terminal")
 vitest.mock("../../../integrations/terminal/ExecaTerminal")
 
 // Import the actual executeCommand function (not mocked)
-import { executeCommand } from "../executeCommandTool"
+import { executeCommandInTerminal } from "../ExecuteCommandTool"
 
 // Tests for the executeCommand function
 describe("executeCommand", () => {
@@ -104,7 +104,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -145,7 +145,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -178,7 +178,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -209,7 +209,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -239,7 +239,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -262,7 +262,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -289,7 +289,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			await executeCommand(mockTask, options)
+			await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(TerminalRegistry.getOrCreateTerminal).toHaveBeenCalledWith(mockTask.cwd, mockTask.taskId, "vscode")
@@ -312,7 +312,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			await executeCommand(mockTask, options)
+			await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(TerminalRegistry.getOrCreateTerminal).toHaveBeenCalledWith(mockTask.cwd, mockTask.taskId, "execa")
@@ -338,7 +338,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -364,7 +364,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -398,7 +398,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify
 			expect(rejected).toBe(false)
@@ -440,7 +440,7 @@ describe("executeCommand", () => {
 			}
 
 			// Execute
-			const [rejected, result] = await executeCommand(mockTask, options)
+			const [rejected, result] = await executeCommandInTerminal(mockTask, options)
 
 			// Verify the result uses the updated working directory
 			expect(rejected).toBe(false)

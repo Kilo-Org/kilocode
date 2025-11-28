@@ -17,6 +17,7 @@
 		"@roo-code/evals": "workspace:^",
 		"@roo-code/types": "workspace:^",
 		"@tanstack/react-query": "^5.79.0",
+		"@vercel/og": "^0.6.2",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"embla-carousel-auto-scroll": "^8.6.0",

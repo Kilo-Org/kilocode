@@ -53,27 +53,31 @@ const sidebars: SidebarsConfig = {
 							items: [
 								"providers/anthropic",
 								"providers/bedrock",
+								"providers/cerebras", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
 								"providers/deepseek",
 								"providers/fireworks",
-								"providers/synthetic", // kilocode_change
-								"providers/vertex",
-								"providers/glama",
 								"providers/gemini",
+								"providers/glama",
 								"providers/groq",
 								"providers/human-relay",
+								"providers/inception", // kilocode_change
 								"providers/lmstudio",
+								"providers/minimax", // kilocode_change (M2 model update)
 								"providers/mistral",
+								"providers/moonshot", // kilocode_change
 								"providers/ollama",
 								"providers/openai",
 								"providers/openai-compatible",
 								"providers/openrouter",
 								"providers/ovhcloud", // kilocode_change
 								"providers/requesty",
+								"providers/synthetic", // kilocode_change
 								"providers/unbound",
 								"providers/v0",
 								"providers/vercel-ai-gateway",
+								"providers/vertex",
 								"providers/virtual-quota-fallback",
 								"providers/vscode-lm",
 								"providers/xai",
@@ -98,21 +102,21 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Kilo for Teams & Enterprise",
+			label: "Kilo Paid Plans",
 			items: [
-				"seats/about",
-				"seats/getting-started",
-				"seats/dashboard",
-				"seats/analytics",
-				"seats/team-management",
-				"seats/custom-modes",
-				"seats/billing",
+				"plans/about",
+				"plans/getting-started",
+				"plans/dashboard",
+				"plans/analytics",
+				"plans/team-management",
+				"plans/custom-modes",
+				"plans/billing",
 				{
 					type: "category",
 					label: "Enterprise-Only Features",
-					items: ["seats/enterprise/SSO", "seats/enterprise/model-access", "seats/enterprise/audit-logs"],
+					items: ["plans/enterprise/SSO", "plans/enterprise/model-access", "plans/enterprise/audit-logs"],
 				},
-				"seats/migration",
+				"plans/migration",
 			],
 		},
 		{
@@ -126,6 +130,7 @@ const sidebars: SidebarsConfig = {
 					items: [
 						"advanced-usage/custom-rules",
 						"advanced-usage/custom-instructions",
+						"advanced-usage/migrating-from-cursor-windsurf",
 						"features/slash-commands/workflows",
 					],
 				},
@@ -150,6 +155,10 @@ const sidebars: SidebarsConfig = {
 					],
 				},
 				"features/auto-launch-configuration",
+				"advanced-usage/auto-cleanup",
+				"advanced-usage/cloud-agent",
+				"advanced-usage/code-reviews",
+				"advanced-usage/deploy",
 				"features/experimental/experimental-features",
 			],
 		},
@@ -189,6 +198,7 @@ const sidebars: SidebarsConfig = {
 				"features/tools/ask-followup-question",
 				"features/tools/attempt-completion",
 				"features/tools/browser-action",
+				"features/tools/delete-file",
 				"features/tools/execute-command",
 				"features/tools/list-code-definition-names",
 				"features/tools/list-files",

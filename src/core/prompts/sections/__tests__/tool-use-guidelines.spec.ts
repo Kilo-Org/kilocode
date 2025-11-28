@@ -1,3 +1,13 @@
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 import { getToolUseGuidelinesSection } from "../tool-use-guidelines"
 import type { CodeIndexManager } from "../../../../services/code-index/manager"
 

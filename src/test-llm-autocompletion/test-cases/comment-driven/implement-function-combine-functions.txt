@@ -8,4 +8,4 @@ function multiplyBy5(a) {
     return a * 5
 }
 
-// Implement function to combine above functions<<CURSOR>>
+// Implement function to combine above functions<<<CURSOR>>>

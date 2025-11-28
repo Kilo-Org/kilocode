@@ -17,6 +17,7 @@ export const getModelIdKey = ({
 	| "lmStudioModelId"
 	| "vsCodeLmModelSelector"
 	| "ovhCloudAiEndpointsModelId" // kilocode_change
+	| "nanoGptModelId" // kilocode_change
 	| "apiModelId"
 > => {
 	switch (provider) {
@@ -53,6 +54,9 @@ export const getModelIdKey = ({
 		// kilocode_change start
 		case "ovhcloud": {
 			return "ovhCloudAiEndpointsModelId"
+		}
+		case "nano-gpt": {
+			return "nanoGptModelId"
 		}
 		// kilocode_change end
 		default: {

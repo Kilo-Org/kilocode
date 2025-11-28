@@ -44,52 +44,59 @@ Files are organized in a hierarchical structure that builds a complete picture o
 ## Core Memory Bank Files
 
 ### brief.md
-*This file is created and maintained manually by you*
+
+_This file is created and maintained manually by you_
+
 - The foundation of your project
 - High-level overview of what you're building
 - Core requirements and goals
 
-Example: *"Building a React web app for inventory management with barcode scanning. The system needs to support multiple warehouses and integrate with our existing ERP system."*
+Example: _"Building a React web app for inventory management with barcode scanning. The system needs to support multiple warehouses and integrate with our existing ERP system."_
 
 Note: Kilo Code will not edit this file directly but may suggest improvements if it identifies ways to enhance your project brief.
 
 ### product.md
+
 - Explains why the project exists
 - Describes the problems being solved
 - Outlines how the product should work
 - User experience goals
 
-Example: *"The inventory system needs to support multiple warehouses and real-time updates. It solves the problem of inventory discrepancies by providing barcode scanning for accurate stock counts."*
+Example: _"The inventory system needs to support multiple warehouses and real-time updates. It solves the problem of inventory discrepancies by providing barcode scanning for accurate stock counts."_
 
 ### context.md
+
 - The most frequently updated file
 - Contains current work focus and recent changes
 - Tracks active decisions and considerations
 - Next steps for development
 
-Example: *"Currently implementing the barcode scanner component; last session completed the API integration. Next steps include adding error handling for network failures."*
+Example: _"Currently implementing the barcode scanner component; last session completed the API integration. Next steps include adding error handling for network failures."_
 
 ### architecture.md
+
 - Documents the system architecture
 - Records key technical decisions
 - Lists design patterns in use
 - Explains component relationships
 - Critical implementation paths
 
-Example: *"Using Redux for state management with a normalized store structure. The application follows a modular architecture with separate services for API communication, state management, and UI components."*
+Example: _"Using Redux for state management with a normalized store structure. The application follows a modular architecture with separate services for API communication, state management, and UI components."_
 
 ### tech.md
+
 - Lists technologies and frameworks used
 - Describes development setup
 - Notes technical constraints
 - Records dependencies and tool configurations
 - Tool usage patterns
 
-Example: *"React 18, TypeScript, Firebase, Jest for testing. Development requires Node.js 16+ and uses Vite as the build tool."*
+Example: _"React 18, TypeScript, Firebase, Jest for testing. Development requires Node.js 16+ and uses Vite as the build tool."_
 
 ## Additional Context Files
 
 Create additional files as needed to organize:
+
 - Complex feature documentation
 - Integration specifications
 - API documentation
@@ -99,7 +106,9 @@ Create additional files as needed to organize:
 These additional files help organize more detailed information that doesn't fit neatly into the core files.
 
 ### tasks.md
-*Optional file for documenting repetitive tasks*
+
+_Optional file for documenting repetitive tasks_
+
 - Stores workflows for tasks that follow similar patterns
 - Documents which files need to be modified
 - Captures step-by-step procedures
@@ -142,12 +151,12 @@ Provide a concise and comprehensive description of this project, highlighting it
 The initialization step is critically important as it establishes the foundation for all future interactions with your project. When you request initialization with the command `initialize memory bank`, Kilo Code will:
 
 1. Perform an exhaustive analysis of your project, including:
-   - All source code files and their relationships
-   - Configuration files and build system setup
-   - Project structure and organization patterns
-   - Documentation and comments
-   - Dependencies and external integrations
-   - Testing frameworks and patterns
+    - All source code files and their relationships
+    - Configuration files and build system setup
+    - Project structure and organization patterns
+    - Documentation and comments
+    - Dependencies and external integrations
+    - Testing frameworks and patterns
 2. Create comprehensive memory bank files in the `.kilocode/rules/memory-bank` folder
 3. Provide a detailed summary of what it has understood about your project
 4. Ask you to verify the accuracy of the generated files
@@ -159,12 +168,14 @@ Take time to carefully review and correct the generated files after initializati
 #### Memory Bank Updates
 
 Memory Bank updates occur when:
+
 1. Kilo Code discovers new project patterns
 2. After implementing significant changes
 3. When you explicitly request with `update memory bank`
 4. When context needs clarification
 
 To execute a Memory Bank update, Kilo Code will:
+
 1. Review ALL project files
 2. Document the current state
 3. Document insights and patterns
@@ -175,6 +186,7 @@ You can direct Kilo Code to focus on specific information sources by using comma
 #### Regular Task Execution
 
 At the beginning of every task, Kilo Code:
+
 1. Reads ALL memory bank files
 2. Includes `[Memory Bank: Active]` at the beginning of its response
 3. Provides a brief summary of its understanding of your project
@@ -187,13 +199,14 @@ At the end of a task, Kilo Code may suggest updating the memory bank if signific
 When you complete a repetitive task that follows a similar pattern each time, you can document it for future reference. This is particularly useful for tasks like adding features that follow existing patterns
 
 To document a task, use the command `add task` or `store this as a task`. Kilo Code will:
+
 1. Create or update the `tasks.md` file in the memory bank folder
 2. Document the task using current context:
-   - Task name and description
-   - List of files that need to be modified
-   - Step-by-step workflow
-   - Important considerations
-   - Example implementation
+    - Task name and description
+    - List of files that need to be modified
+    - Step-by-step workflow
+    - Important considerations
+    - Example implementation
 
 When starting a new task, Kilo Code will check if it matches any documented tasks and follow the established workflow to ensure no steps are missed.
 
@@ -215,6 +228,7 @@ These indicators appear at the beginning of Kilo Code's responses, providing imm
 ### Documentation Updates
 
 Memory Bank updates should automatically occur when:
+
 - You discover new patterns in your project
 - After implementing significant changes
 - When you explicitly request with `update memory bank`
@@ -243,24 +257,31 @@ This ensures that even with imperfect documentation, Kilo Code can still functio
 ## Frequently Asked Questions
 
 ### Where are the memory bank files stored?
+
 The Memory Bank files are regular markdown files stored in your project repository, typically in a `.kilocode/rules/memory-bank/` folder. They're not hidden system files - they're designed to be part of your project documentation.
 
 ### How often should I update the memory bank?
+
 Update the Memory Bank after significant milestones or changes in direction. For active development, updates every few sessions can be helpful. Use the "update memory bank" command when you want to ensure all context is preserved.
 
 ### Can I edit memory bank files manually?
+
 Yes! While Kilo Code manages most of the files, you can edit any of them manually. The `brief.md` file is specifically designed to be maintained by you. Manual edits to other files will be respected by Kilo Code.
 
 ### What happens if memory bank files are missing?
+
 If memory bank files are missing, Kilo Code will indicate this with `[Memory Bank: Missing]` at the beginning of its response and suggest initializing the memory bank.
 
 ### Does Memory Bank work with all AI models?
+
 Memory Bank works with all AI models, but more powerful models will create more comprehensive and accurate memory bank files. Lightweight models may struggle with the resource-intensive process of analyzing and updating memory bank files.
 
 ### Can I use Memory Bank with multiple projects?
+
 Yes! Each project has its own Memory Bank in its `.kilocode/rules/memory-bank/` folder. Kilo Code will automatically use the correct Memory Bank for each project.
 
 ### Doesn't Memory Bank use up my context window?
+
 Yes, Memory Bank does consume some of your context window at the beginning of each session as it loads all memory bank files. However, this is a strategic tradeoff that significantly improves overall efficiency. By front-loading project context:
 
 - You eliminate repetitive explanations that would consume even more context over time
@@ -272,12 +293,14 @@ Testing shows that while Memory Bank uses more tokens initially, it dramatically
 ## Best Practices
 
 ### Getting Started
+
 - Start with a basic project brief and let the structure evolve
 - Let Kilo Code help create the initial structure
 - Review and adjust files as needed to match your workflow
 - Verify the accuracy of generated files after initialization
 
 ### Ongoing Work
+
 - Let patterns emerge naturally as you work
 - Don't force documentation updates - they should happen organically
 - Trust the process - the value compounds over time
@@ -285,12 +308,14 @@ Testing shows that while Memory Bank uses more tokens initially, it dramatically
 - Use the status indicators to confirm Memory Bank is active
 
 ### Documentation Flow
+
 - `brief.md` is your foundation
 - `context.md` changes most frequently
 - All files collectively maintain project intelligence
 - Update after significant milestones or changes in direction
 
 ### Optimizing Memory Bank Performance
+
 - Keep memory bank files concise and focused
 - Use additional files for detailed documentation
 - Update regularly but not excessively

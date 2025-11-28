@@ -22,7 +22,6 @@ vi.mock("../../../api", () => ({
 		getModel: () => ({ info: {}, id: "test-model" }),
 	})),
 }))
-vi.mock("./AutoApprovalHandler")
 
 // Mock TelemetryService
 vi.mock("@roo-code/telemetry", () => ({

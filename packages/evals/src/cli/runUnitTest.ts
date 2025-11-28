@@ -1,12 +1,27 @@
 import * as path from "path"
 
 import { execa, parseCommandString } from "execa"
-import psTree from "ps-tree"
+import psList from "ps-list"
 
 import type { Task } from "../db/index.js"
 import { type ExerciseLanguage, EVALS_REPO_PATH } from "../exercises/index.js"
 
 import { Logger } from "./utils.js"
+
+// kilocode_change start
+/**
+ * Get child process IDs for a given parent PID
+ */
+async function getChildPids(parentPid: number): Promise<number[]> {
+	try {
+		const processes = await psList()
+		return processes.filter((p) => p.ppid === parentPid).map((p) => p.pid)
+	} catch (error) {
+		console.error(`Failed to get child processes for PID ${parentPid}:`, error)
+		return []
+	}
+}
+// kilocode_change end
 
 const UNIT_TEST_TIMEOUT = 2 * 60 * 1_000
 
@@ -38,15 +53,7 @@ export const runUnitTest = async ({ task, logger }: RunUnitTestOptions) => {
 			subprocess.stderr.pipe(process.stderr)
 
 			const timeout = setTimeout(async () => {
-				const descendants = await new Promise<number[]>((resolve, reject) => {
-					psTree(subprocess.pid!, (err, children) => {
-						if (err) {
-							reject(err)
-						}
-
-						resolve(children.map((p) => parseInt(p.PID)))
-					})
-				})
+				const descendants = await getChildPids(subprocess.pid!) // kilocode_change
 
 				logger.info(
 					`"${command.join(" ")}" timed out, killing ${subprocess.pid} + ${JSON.stringify(descendants)}`,

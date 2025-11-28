@@ -45,7 +45,5 @@
 		"mostTokens": "最多 Token",
 		"mostRelevant": "最相關"
 	},
-	"viewAllHistory": "檢視所有工作",
-	"expandTask": "展開工作",
-	"collapseTask": "收起工作"
+	"viewAllHistory": "檢視全部"
 }

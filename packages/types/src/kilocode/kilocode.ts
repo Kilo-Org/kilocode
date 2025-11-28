@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { ProviderSettings, ProviderSettingsEntry } from "../provider-settings.js"
 
 declare global {
 	interface Window {
@@ -12,7 +11,7 @@ export const ghostServiceSettingsSchema = z
 		enableAutoTrigger: z.boolean().optional(),
 		enableQuickInlineTaskKeybinding: z.boolean().optional(),
 		enableSmartInlineTaskKeybinding: z.boolean().optional(),
-		showGutterAnimation: z.boolean().optional(),
+		useNewAutocomplete: z.boolean().optional(),
 		provider: z.string().optional(),
 		model: z.string().optional(),
 	})
@@ -43,13 +42,17 @@ export const fastApplyModelSchema = z.enum([
 
 export type FastApplyModel = z.infer<typeof fastApplyModelSchema>
 
-export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
+export const fastApplyApiProviderSchema = z.enum(["current", "morph", "kilocode", "openrouter"])
+
+export type FastApplyApiProvider = z.infer<typeof fastApplyApiProviderSchema>
+
+export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilo.ai"
 
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 	if (kilocodeToken) {
 		try {
 			const payload_string = kilocodeToken.split(".")[1]
-			if (!payload_string) return "https://api.kilocode.ai"
+			if (!payload_string) return "https://api.kilo.ai"
 
 			const payload_json =
 				typeof atob !== "undefined" ? atob(payload_string) : Buffer.from(payload_string, "base64").toString()
@@ -60,7 +63,7 @@ export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
-	return "https://api.kilocode.ai"
+	return "https://api.kilo.ai"
 }
 
 /**
@@ -90,52 +93,31 @@ function getGlobalKilocodeBackendUrl(): string {
 	)
 }
 
-function removeTrailingSlash(url: string, pathname: string): string {
-	return url.endsWith("/") && (pathname === "/" || pathname === "") ? url.slice(0, -1) : url
-}
-
-function ensureLeadingSlash(path: string): string {
-	return path.startsWith("/") ? path : `/${path}`
-}
-
-/**
- * Internal helper to build URLs for the current environment.
- */
-function buildUrl(path: string = ""): string {
-	try {
-		const backend = new URL(getGlobalKilocodeBackendUrl())
-		const result = new URL(backend)
-
-		// Separate pathname and search parameters
-		const [pathname, search] = path.split("?")
-		result.pathname = pathname ? ensureLeadingSlash(pathname) : ""
-		if (search) {
-			result.search = `?${search}`
-		}
-
-		return removeTrailingSlash(result.toString(), result.pathname)
-	} catch (error) {
-		console.warn("Failed to build URL:", path, error)
-		return `https://kilocode.ai${path ? ensureLeadingSlash(path) : ""}`
-	}
-}
-
 /**
  * Gets the app/web URL for the current environment.
  * In development: http://localhost:3000
  * In production: https://kilocode.ai
  */
 export function getAppUrl(path: string = ""): string {
-	return buildUrl(path)
+	return new URL(path, getGlobalKilocodeBackendUrl()).toString()
 }
 
 /**
- * Gets the API base URL for the current environment.
- * In development: http://localhost:3000/api
- * In production: https://kilocode.ai/api
+ * Gets the API URL for the current environment.
+ * Respects KILOCODE_BACKEND_BASE_URL environment variable for local development.
+ * In development: http://localhost:3000
+ * In production: https://api.kilocode.ai
  */
 export function getApiUrl(path: string = ""): string {
-	return buildUrl(`/api${path ? ensureLeadingSlash(path) : ""}`)
+	const backend = getGlobalKilocodeBackendUrl()
+
+	// In development (localhost), API is served from the same origin (no /api prefix needed)
+	if (backend.includes("localhost")) {
+		return new URL(path, backend).toString()
+	}
+
+	// In production, use the api subdomain
+	return new URL(path, "https://api.kilo.ai").toString()
 }
 
 /**
@@ -149,92 +131,10 @@ export function getExtensionConfigUrl(): string {
 		if (backend.includes("localhost")) {
 			return getAppUrl("/extension-config.json")
 		} else {
-			return "https://api.kilocode.ai/extension-config.json"
+			return "https://api.kilo.ai/extension-config.json"
 		}
 	} catch (error) {
 		console.warn("Failed to build extension config URL:", error)
-		return "https://api.kilocode.ai/extension-config.json"
+		return "https://api.kilo.ai/extension-config.json"
 	}
-}
-
-/**
- * Check if the Kilocode account has a positive balance
- * @param kilocodeToken - The Kilocode JWT token
- * @param kilocodeOrganizationId - Optional organization ID to include in headers
- * @returns Promise<boolean> - True if balance > 0, false otherwise
- */
-export async function checkKilocodeBalance(kilocodeToken: string, kilocodeOrganizationId?: string): Promise<boolean> {
-	try {
-		const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
-
-		const headers: Record<string, string> = {
-			Authorization: `Bearer ${kilocodeToken}`,
-		}
-
-		if (kilocodeOrganizationId) {
-			headers["X-KiloCode-OrganizationId"] = kilocodeOrganizationId
-		}
-
-		const response = await fetch(`${baseUrl}/api/profile/balance`, {
-			headers,
-		})
-
-		if (!response.ok) {
-			return false
-		}
-
-		const data = await response.json()
-		const balance = data.balance ?? 0
-		return balance > 0
-	} catch (error) {
-		console.error("Error checking kilocode balance:", error)
-		return false
-	}
-}
-
-export const AUTOCOMPLETE_PROVIDER_MODELS = {
-	mistral: "codestral-latest",
-	kilocode: "mistralai/codestral-2508",
-	openrouter: "mistralai/codestral-2508",
-	bedrock: "mistral.codestral-2508-v1:0",
-} as const
-export type AutocompleteProviderKey = keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
-
-interface ProviderSettingsManager {
-	listConfig(): Promise<ProviderSettingsEntry[]>
-	getProfile(params: { id: string }): Promise<ProviderSettings>
-}
-
-export type ProviderUsabilityChecker = (
-	provider: AutocompleteProviderKey,
-	providerSettingsManager: ProviderSettingsManager,
-) => Promise<boolean>
-
-export const defaultProviderUsabilityChecker: ProviderUsabilityChecker = async (provider, providerSettingsManager) => {
-	if (provider === "kilocode") {
-		try {
-			const profiles = await providerSettingsManager.listConfig()
-			const kilocodeProfile = profiles.find((p) => p.apiProvider === "kilocode")
-
-			if (!kilocodeProfile) {
-				return false
-			}
-
-			const profile = await providerSettingsManager.getProfile({ id: kilocodeProfile.id })
-			const kilocodeToken = profile.kilocodeToken
-			const kilocodeOrgId = profile.kilocodeOrganizationId
-
-			if (!kilocodeToken) {
-				return false
-			}
-
-			return await checkKilocodeBalance(kilocodeToken, kilocodeOrgId)
-		} catch (error) {
-			console.error("Error checking kilocode balance:", error)
-			return false
-		}
-	}
-
-	// For all other providers, assume they are usable
-	return true
 }

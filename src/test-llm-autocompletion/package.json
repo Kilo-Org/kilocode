@@ -6,6 +6,8 @@
 	"scripts": {
 		"test": "tsx runner.ts",
 		"test:verbose": "tsx runner.ts --verbose",
+		"test:fim": "tsx runner.ts --fim",
+		"test:fim:verbose": "tsx runner.ts --fim --verbose",
 		"clean": "tsx runner.ts clean"
 	},
 	"dependencies": {

@@ -1,0 +1,13 @@
+
+function addNumbers(a, b) {
+    return a + b
+}
+
+function multiplyBy5(a) {
+    return a * 5
+}
+
+// Implement function to combine above functions
+function combine(a, b) {
+    return multiplyBy5(addNumbers(a, b))
+}

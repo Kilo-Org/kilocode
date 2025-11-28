@@ -9,7 +9,7 @@ import * as crypto from "crypto"
 import * as os from "os"
 import { KiloCodePaths } from "../../utils/paths.js"
 import { logs } from "../logs.js"
-import { getApiUrl } from "@roo-code/types"
+import { getAppUrl } from "@roo-code/types"
 
 /**
  * User identity structure
@@ -108,7 +108,7 @@ export class IdentityManager {
 
 		try {
 			// Fetch user profile from Kilocode API
-			const response = await fetch(getApiUrl("/profile"), {
+			const response = await fetch(getAppUrl("/api/profile"), {
 				headers: {
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",
@@ -250,13 +250,13 @@ export class IdentityManager {
 	/**
 	 * Validate stored identity data
 	 */
-	private isValidStoredIdentity(data: any): data is StoredIdentity {
+	private isValidStoredIdentity(data: unknown): data is StoredIdentity {
 		return (
 			typeof data === "object" &&
 			data !== null &&
-			typeof data.cliUserId === "string" &&
-			typeof data.createdAt === "number" &&
-			typeof data.lastUsed === "number"
+			typeof (data as Record<string, unknown>).cliUserId === "string" &&
+			typeof (data as Record<string, unknown>).createdAt === "number" &&
+			typeof (data as Record<string, unknown>).lastUsed === "number"
 		)
 	}
 

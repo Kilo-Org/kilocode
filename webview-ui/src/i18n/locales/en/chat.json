@@ -103,23 +103,16 @@
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
 	"about": "Generate, refactor, and debug code with AI assistance. Check out our <DocsLink>documentation</DocsLink> to learn more.",
-	"onboarding": "Your task list in this workspace is empty.",
+	"docs": "Check our <DocsLink>docs</DocsLink> to get started",
+	"onboarding": "What would you like to do?",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Task Orchestration",
-			"description": "Split tasks into smaller, manageable parts"
-		},
-		"stickyModels": {
-			"title": "Sticky Models",
-			"description": "Each mode remembers your last used model"
-		},
-		"tools": {
-			"title": "Tools",
-			"description": "Allow the AI to solve problems by browsing the web, running commands, and more"
-		},
 		"customizableModes": {
-			"title": "Customizable Modes",
-			"description": "Specialized personas with their own behaviors and assigned models"
+			"title": "Customizable modes that don't swerve",
+			"description": "Specialized personas that stay on-task and deliver."
+		},
+		"modelAgnostic": {
+			"title": "Bring your own model, no markup or lock-in",
+			"description": "Use your own provider key or even run local inference — Roo doesn't charge for it"
 		}
 	},
 	"selectMode": "Select mode for interaction",
@@ -162,6 +155,8 @@
 		"initializingWarning": "Still initializing checkpoint... If this takes too long, you can disable checkpoints in <settingsLink>settings</settingsLink> and restart your task.",
 		"menu": {
 			"viewDiff": "View Diff",
+			"viewDiffFromInit": "View All Changes",
+			"viewDiffWithCurrent": "View Changes Since This Checkpoint",
 			"restore": "Restore Checkpoint",
 			"restoreFiles": "Restore Files",
 			"restoreFilesDescription": "Restores your project's files back to a snapshot taken at this point.",
@@ -169,7 +164,8 @@
 			"confirm": "Confirm",
 			"cancel": "Cancel",
 			"cannotUndo": "This action cannot be undone.",
-			"restoreFilesAndTaskDescription": "Restores your project's files back to a snapshot taken at this point and deletes all messages after this point."
+			"restoreFilesAndTaskDescription": "Restores your project's files back to a snapshot taken at this point and deletes all messages after this point.",
+			"more": "More options"
 		},
 		"current": "Current"
 	},
@@ -197,11 +193,11 @@
 		"wantsToGenerateImageProtected": "Kilo Code wants to generate an image in a protected location",
 		"didGenerateImage": "Kilo Code generated an image",
 		"wantsToCreate": "Kilo Code wants to create a new file",
-		"wantsToSearchReplace": "Kilo Code wants to search and replace in this file",
-		"didSearchReplace": "Kilo Code performed search and replace on this file",
 		"wantsToInsert": "Kilo Code wants to insert content into this file",
 		"wantsToInsertWithLineNumber": "Kilo Code wants to insert content into this file at line {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file"
+		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file",
+		"wantsToDelete": "Kilo Code wants to delete this file",
+		"wantsToDeleteDirectory": "Kilo Code wants to delete this directory"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory",
@@ -295,6 +291,7 @@
 		"toggleAriaLabel": "Toggle auto-approval",
 		"disabledAriaLabel": "Auto-approval disabled - select options first",
 		"triggerLabelOff": "Auto-approve off",
+		"triggerLabelOffShort": "Off",
 		"triggerLabel_zero": "0 auto-approve",
 		"triggerLabel_one": "1 auto-approved",
 		"triggerLabel_other": "{{count}} auto-approved",
@@ -309,6 +306,19 @@
 			"selectModel": "Select <code>roo/code-supernova</code> from the Roo Code Cloud provider in Settings to get started.",
 			"goToSettingsButton": "Go to Settings"
 		},
+		"release": {
+			"heading": "New in the Extension:",
+			"openRouterEmbeddings": "Support for OpenRouter embedding models",
+			"chutesDynamic": "Chutes now loads the latest models dynamically",
+			"queuedMessagesFix": "Fixes for queued messages getting lost"
+		},
+		"cloudAgents": {
+			"heading": "New in the Cloud:",
+			"prFixer": "Introducing the <bold>PR Fixer</bold> cloud agent to complement the PR Reviewer.",
+			"prFixerDescription": "The PR Fixer applies high-quality changes to your PRs, right from GitHub. Invoke via a PR comment and it will read the entire comment history to understand context, agreements, and tradeoffs - then implement the right fix.",
+			"tryPrFixerButton": "Try PR Fixer"
+		},
+		"careers": "Also, <careersLink>we're hiring!</careersLink>",
 		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
@@ -346,6 +356,8 @@
 		"tooltips": {
 			"expand": "Expand code block",
 			"collapse": "Collapse code block",
+			"enable_wrap": "Enable word wrap",
+			"disable_wrap": "Disable word wrap",
 			"copy_code": "Copy code"
 		}
 	},
@@ -414,5 +426,12 @@
 		"problems": "Problems",
 		"terminal": "Terminal",
 		"url": "Paste URL to fetch contents"
+	},
+	"todo": {
+		"partial": "{{completed}} of {{total}} to-dos done",
+		"complete": "{{total}} to-dos done",
+		"updated": "Updated the to-do list",
+		"completed": "Completed",
+		"started": "Started"
 	}
 }

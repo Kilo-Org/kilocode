@@ -118,6 +118,16 @@ __setMockImplementation(
 	},
 )
 
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 // Mock vscode language
 vi.mock("vscode", () => ({
 	env: {
@@ -193,7 +203,7 @@ describe("addCustomInstructions", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"/test/path",
-			false, // supportsComputerUse
+			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
@@ -216,7 +226,7 @@ describe("addCustomInstructions", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"/test/path",
-			false, // supportsComputerUse
+			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
@@ -241,7 +251,7 @@ describe("addCustomInstructions", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"/test/path",
-			false, // supportsComputerUse
+			false, // supportsImages
 			mockMcpHub, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
@@ -267,7 +277,7 @@ describe("addCustomInstructions", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"/test/path",
-			false, // supportsComputerUse
+			false, // supportsImages
 			mockMcpHub, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
@@ -291,7 +301,7 @@ describe("addCustomInstructions", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"/test/path",
-			false, // supportsComputerUse
+			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize

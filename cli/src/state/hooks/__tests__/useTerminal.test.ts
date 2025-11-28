@@ -32,22 +32,24 @@ describe("useTerminal", () => {
 		})
 
 		// Mock process.stdout.on and off
-		vi.spyOn(process.stdout, "on").mockImplementation((event: string, listener: any) => {
+		vi.spyOn(process.stdout, "on").mockImplementation((event: string, listener: (...args: unknown[]) => void) => {
 			if (event === "resize") {
 				resizeListeners.push(listener)
 			}
 			return process.stdout
 		})
 
-		vi.spyOn(process.stdout, "off").mockImplementation((event: string | symbol, listener: any) => {
-			if (event === "resize") {
-				const index = resizeListeners.indexOf(listener)
-				if (index > -1) {
-					resizeListeners.splice(index, 1)
+		vi.spyOn(process.stdout, "off").mockImplementation(
+			(event: string | symbol, listener: (...args: unknown[]) => void) => {
+				if (event === "resize") {
+					const index = resizeListeners.indexOf(listener)
+					if (index > -1) {
+						resizeListeners.splice(index, 1)
+					}
 				}
-			}
-			return process.stdout
-		})
+				return process.stdout
+			},
+		)
 
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true)
 	})
