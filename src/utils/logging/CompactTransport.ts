@@ -95,7 +95,7 @@ export class CompactTransport implements ICompactTransport {
 
 		// Write to console if level is enabled
 		if (this.config.level && isLevelEnabled(this.config.level, entry.l)) {
-			process.stdout.write(output)
+			console.log(output) // kilocode_change
 		}
 
 		// Write to file if enabled
