@@ -342,6 +342,7 @@ export interface WebviewMessage {
 		codebaseIndexLancedbVectorStoreDirectory?: string // kilocode_change
 		codebaseIndexEmbedderBaseUrl?: string
 		codebaseIndexEmbedderModelId: string
+		codebaseIndexEmbedderTimeoutMS?: number // kilocode_change
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 		codebaseIndexOpenAiCompatibleBaseUrl?: string
 		codebaseIndexSearchMaxResults?: number

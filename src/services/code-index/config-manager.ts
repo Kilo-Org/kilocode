@@ -17,6 +17,7 @@ export class CodeIndexConfigManager {
 	private lancedbVectorStoreDirectory?: string
 	// kilocode_change - end
 	private modelId?: string
+	private codebaseIndexEmbedderTimeoutMS?: number // kilocode_change
 	private modelDimension?: number
 	private openAiOptions?: ApiHandlerOptions
 	private ollamaOptions?: ApiHandlerOptions
@@ -130,6 +131,7 @@ export class CodeIndexConfigManager {
 		this.qdrantApiKey = qdrantApiKey ?? ""
 		this.searchMinScore = codebaseIndexSearchMinScore
 		this.searchMaxResults = codebaseIndexSearchMaxResults
+		this.codebaseIndexEmbedderTimeoutMS = codebaseIndexConfig.codebaseIndexEmbedderTimeoutMS // kilocode_change
 
 		// Validate and set model dimension
 		const rawDimension = codebaseIndexConfig.codebaseIndexEmbedderModelDimension
@@ -195,6 +197,7 @@ export class CodeIndexConfigManager {
 			isConfigured: boolean
 			embedderProvider: EmbedderProvider
 			modelId?: string
+			codebaseIndexEmbedderTimeoutMS?: number // kilocode_change
 			modelDimension?: number
 			openAiOptions?: ApiHandlerOptions
 			ollamaOptions?: ApiHandlerOptions
@@ -219,6 +222,7 @@ export class CodeIndexConfigManager {
 			lancedbVectorStoreDirectory: this.lancedbVectorStoreDirectory,
 			// kilocode_change - end
 			modelId: this.modelId,
+			codebaseIndexEmbedderTimeoutMS: this.codebaseIndexEmbedderTimeoutMS, // kilocode_change
 			modelDimension: this.modelDimension,
 			openAiKey: this.openAiOptions?.openAiNativeApiKey ?? "",
 			ollamaBaseUrl: this.ollamaOptions?.ollamaBaseUrl ?? "",
@@ -246,6 +250,7 @@ export class CodeIndexConfigManager {
 				isConfigured: this.isConfigured(),
 				embedderProvider: this.embedderProvider,
 				modelId: this.modelId,
+				codebaseIndexEmbedderTimeoutMS: this.codebaseIndexEmbedderTimeoutMS, // kilocode_change
 				modelDimension: this.modelDimension,
 				openAiOptions: this.openAiOptions,
 				ollamaOptions: this.ollamaOptions,
@@ -280,8 +285,9 @@ export class CodeIndexConfigManager {
 		} else if (this.embedderProvider === "ollama") {
 			// Ollama model ID has a default, so only base URL is strictly required for config
 			const ollamaBaseUrl = this.ollamaOptions?.ollamaBaseUrl
+			const embedderTimeoutMS = this.codebaseIndexEmbedderTimeoutMS // kilocode_change
 			const qdrantUrl = this.qdrantUrl
-			return !!(ollamaBaseUrl && qdrantUrl)
+			return !!(ollamaBaseUrl && qdrantUrl && embedderTimeoutMS) // kilocode_change
 		} else if (this.embedderProvider === "openai-compatible") {
 			const baseUrl = this.openAiCompatibleOptions?.baseUrl
 			const apiKey = this.openAiCompatibleOptions?.apiKey
@@ -339,6 +345,7 @@ export class CodeIndexConfigManager {
 		const prevOllamaBaseUrl = prev?.ollamaBaseUrl ?? ""
 		const prevOpenAiCompatibleBaseUrl = prev?.openAiCompatibleBaseUrl ?? ""
 		const prevOpenAiCompatibleApiKey = prev?.openAiCompatibleApiKey ?? ""
+		const prevCodebaseIndexEmbedderTimeoutMS = prev?.codebaseIndexEmbedderTimeoutMS // kilocode_change
 		const prevModelDimension = prev?.modelDimension
 		const prevGeminiApiKey = prev?.geminiApiKey ?? ""
 		const prevMistralApiKey = prev?.mistralApiKey ?? ""
@@ -394,6 +401,7 @@ export class CodeIndexConfigManager {
 		const currentOllamaBaseUrl = this.ollamaOptions?.ollamaBaseUrl ?? ""
 		const currentOpenAiCompatibleBaseUrl = this.openAiCompatibleOptions?.baseUrl ?? ""
 		const currentOpenAiCompatibleApiKey = this.openAiCompatibleOptions?.apiKey ?? ""
+		const currentCodebaseIndexEmbedderTimeoutMS = this.codebaseIndexEmbedderTimeoutMS // kilocode_change
 		const currentModelDimension = this.modelDimension
 		const currentGeminiApiKey = this.geminiOptions?.apiKey ?? ""
 		const currentMistralApiKey = this.mistralOptions?.apiKey ?? ""
@@ -429,6 +437,11 @@ export class CodeIndexConfigManager {
 			return true
 		}
 
+		// kilocode_change start
+		if (prevCodebaseIndexEmbedderTimeoutMS !== currentCodebaseIndexEmbedderTimeoutMS) {
+			return true
+		}
+		// kilocode_change end
 		if (prevOpenRouterApiKey !== currentOpenRouterApiKey) {
 			return true
 		}
@@ -488,6 +501,7 @@ export class CodeIndexConfigManager {
 			lancedbVectorStoreDirectoryPlaceholder: this.lancedbVectorStoreDirectory,
 			// kilocode_change - end
 			modelId: this.modelId,
+			codebaseIndexEmbedderTimeoutMS: this.codebaseIndexEmbedderTimeoutMS, // kilocode_change
 			modelDimension: this.modelDimension,
 			openAiOptions: this.openAiOptions,
 			ollamaOptions: this.ollamaOptions,
