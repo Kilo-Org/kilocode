@@ -65,6 +65,7 @@ export const PROVIDERS = [
 	{ value: "inception", label: "Inception" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "intelligent", label: "Intelligent Provider" },
 	{ value: "synthetic", label: "Synthetic" },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	{ value: "sap-ai-core", label: "SAP AI Core" },

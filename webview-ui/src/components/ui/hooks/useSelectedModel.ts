@@ -80,7 +80,7 @@ function getValidatedModelId(
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	// kilocode_change start
-	const { kilocodeDefaultModel, virtualQuotaActiveModel } = useExtensionState()
+	const { kilocodeDefaultModel, virtualQuotaActiveModel, intelligentActiveModel } = useExtensionState()
 	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
 	const ollamaModelId = provider === "ollama" ? apiConfiguration?.ollamaModelId : undefined
 	// kilocode_change end
@@ -138,6 +138,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					kilocodeDefaultModel,
 					ollamaModels: (ollamaModels.data || undefined) as ModelRecord | undefined,
 					virtualQuotaActiveModel, // kilocode_change: Pass virtual quota active model
+					intelligentActiveModel, // kilocode_change: Pass intelligent active model
 				})
 			: { id: getProviderDefaultModelId(provider), info: undefined }
 
@@ -167,6 +168,7 @@ function getSelectedModel({
 	kilocodeDefaultModel,
 	ollamaModels,
 	virtualQuotaActiveModel, //kilocode_change
+	intelligentActiveModel, //kilocode_change
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
@@ -176,6 +178,7 @@ function getSelectedModel({
 	kilocodeDefaultModel: string
 	ollamaModels: ModelRecord | undefined
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } //kilocode_change
+	intelligentActiveModel?: { id: string; info: ModelInfo } //kilocode_change
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -414,6 +417,21 @@ function getSelectedModel({
 			}
 		}
 		// kilocode_change end
+
+		case "intelligent": {
+			if (intelligentActiveModel) {
+				return intelligentActiveModel
+			}
+			// Fallback if no profiles or settings found
+			return {
+				id: "",
+				info: {
+					maxTokens: 1,
+					contextWindow: 1,
+					supportsPromptCache: false,
+				},
+			}
+		}
 
 		case "claude-code": {
 			// Claude Code models extend anthropic models but with images and prompt caching disabled

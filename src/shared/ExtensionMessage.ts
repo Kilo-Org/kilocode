@@ -500,6 +500,7 @@ export type ExtensionState = Pick<
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
+	intelligentActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add intelligent active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 }
 

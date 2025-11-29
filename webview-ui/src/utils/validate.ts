@@ -194,6 +194,23 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				})
 			}
 			break
+		case "intelligent": {
+			// Validate that easy, medium, and hard profiles are configured
+			const profiles = apiConfiguration.profiles || []
+			const difficultyLevels = profiles.map((p: any) => p.difficultyLevel)
+			const hasEasy = difficultyLevels.includes("easy")
+			const hasMedium = difficultyLevels.includes("medium")
+			const hasHard = difficultyLevels.includes("hard")
+
+			if (!hasEasy || !hasMedium || !hasHard) {
+				const missing = []
+				if (!hasEasy) missing.push("Easy")
+				if (!hasMedium) missing.push("Medium")
+				if (!hasHard) missing.push("Hard")
+				return `Required profiles missing: ${missing.join(", ")}. Please configure all three difficulty profiles before saving.`
+			}
+			break
+		}
 		// kilocode_change end
 	}
 

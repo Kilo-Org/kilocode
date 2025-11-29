@@ -38,6 +38,7 @@ import {
 	OVHcloudAIEndpointsHandler,
 	MiniMaxAnthropicHandler,
 	SapAiCoreHandler,
+	IntelligentHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -109,6 +110,11 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * Used by providers to determine whether to include native tool definitions.
 	 */
 	toolProtocol?: ToolProtocol
+	/**
+	 * Profile ID to use for difficulty classification in IntelligentHandler.
+	 * If not provided, defaults to using the easy handler profile.
+	 */
+	classifierProfileId?: string
 }
 
 export interface ApiHandler {
@@ -233,6 +239,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FeatherlessHandler(options)
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
+		case "intelligent":
+			return new IntelligentHandler(options)
 		case "minimax":
 			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
 		default:
