@@ -10,6 +10,7 @@ import { formatResponse } from "../../prompts/responses"
 import { ClineSayTool } from "../../../shared/ExtensionMessage"
 import { getReadablePath } from "../../../utils/path"
 import { fileExistsAtPath } from "../../../utils/fs"
+import { parsePathFromArgsParam } from "../../../utils/xml"
 import { RecordSource } from "../../context-tracking/FileContextTrackerTypes"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
@@ -69,6 +70,10 @@ export async function searchAndReplaceTool(
 		if (block.partial) {
 			return
 		}
+
+		// Fix `path` param first to prevent `validateParams` from
+		// failing if `path` exists in `args`
+		block.params.path ||= parsePathFromArgsParam(block.params)
 
 		// Validate required parameters
 		const params = await validateParams(cline, block, pushToolResult)

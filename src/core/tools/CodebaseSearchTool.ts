@@ -4,6 +4,7 @@ import path from "path"
 import { Task } from "../task/Task"
 import { CodeIndexManager } from "../../services/code-index/manager"
 import { getWorkspacePath } from "../../utils/path"
+import { parsePathFromArgsParam } from "../../utils/xml"
 import { formatResponse } from "../prompts/responses"
 import { VectorStoreSearchResult } from "../../services/code-index/interfaces"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
@@ -23,7 +24,7 @@ export class CodebaseSearchTool extends BaseTool<"codebase_search"> {
 
 	parseLegacy(params: Partial<Record<string, string>>): CodebaseSearchParams {
 		let query = params.query
-		let directoryPrefix = params.path
+		let directoryPrefix = params.path || parsePathFromArgsParam(params)
 
 		if (directoryPrefix) {
 			directoryPrefix = path.normalize(directoryPrefix)

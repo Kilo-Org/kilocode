@@ -11,6 +11,7 @@ import { formatResponse } from "../prompts/responses"
 import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
+import { parsePathFromArgsParam } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
@@ -25,8 +26,10 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 	readonly name = "apply_diff" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): ApplyDiffParams {
+		const relPath = params.path || parsePathFromArgsParam(params) || ""
+
 		return {
-			path: params.path || "",
+			path: relPath,
 			diff: params.diff || "",
 		}
 	}

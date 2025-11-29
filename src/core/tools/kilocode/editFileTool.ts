@@ -7,6 +7,7 @@ import { formatResponse } from "../../prompts/responses"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
 import { fileExistsAtPath } from "../../../utils/fs"
 import { getReadablePath } from "../../../utils/path"
+import { parsePathFromArgsParam } from "../../../utils/xml"
 import { FastApplyApiProvider, fastApplyApiProviderSchema, getKiloUrlFromToken } from "@roo-code/types"
 import { DEFAULT_HEADERS } from "../../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -84,7 +85,7 @@ export async function editFileTool(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ): Promise<void> {
-	const target_file: string | undefined = block.params.target_file
+	const target_file: string | undefined = block.params.target_file || parsePathFromArgsParam(block.params)
 	const instructions: string | undefined = block.params.instructions
 	const code_edit: string | undefined = block.params.code_edit
 

@@ -4,6 +4,7 @@ import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
+import { parsePathFromArgsParam } from "../../utils/xml"
 import { regexSearchFiles } from "../../services/ripgrep"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
@@ -18,8 +19,10 @@ export class SearchFilesTool extends BaseTool<"search_files"> {
 	readonly name = "search_files" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): SearchFilesParams {
+		const relPath = params.path || parsePathFromArgsParam(params) || ""
+
 		return {
-			path: params.path || "",
+			path: relPath,
 			regex: params.regex || "",
 			file_pattern: params.file_pattern || undefined,
 		}

@@ -6,6 +6,7 @@ import { formatResponse } from "../prompts/responses"
 import { listFiles } from "../../services/glob/list-files"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
+import { parsePathFromArgsParam } from "../../utils/xml"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 
@@ -18,11 +19,12 @@ export class ListFilesTool extends BaseTool<"list_files"> {
 	readonly name = "list_files" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): ListFilesParams {
+		const relPath = params.path || parsePathFromArgsParam(params) || ""
 		const recursiveRaw: string | undefined = params.recursive
 		const recursive = recursiveRaw?.toLowerCase() === "true"
 
 		return {
-			path: params.path || "",
+			path: relPath,
 			recursive,
 		}
 	}

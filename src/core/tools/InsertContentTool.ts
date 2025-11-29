@@ -7,6 +7,7 @@ import { formatResponse } from "../prompts/responses"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { fileExistsAtPath } from "../../utils/fs"
+import { parsePathFromArgsParam } from "../../utils/xml"
 import { insertGroups } from "../diff/insert-groups"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
@@ -24,7 +25,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 	readonly name = "insert_content" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): InsertContentParams {
-		const relPath = params.path || ""
+		const relPath = params.path || parsePathFromArgsParam(params) || ""
 		const lineStr = params.line || ""
 		const content = params.content || ""
 
