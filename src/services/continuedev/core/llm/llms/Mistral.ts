@@ -70,9 +70,12 @@ class Mistral extends OpenAI {
 		return finalOptions
 	}
 
+	// kilocode_change start
 	override supportsFim(): boolean {
-		return true
+		// Only codestral models support FIM
+		return this.model.startsWith("codestral-")
 	}
+	// kilocode_change end
 }
 
 export default Mistral
