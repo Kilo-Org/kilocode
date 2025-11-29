@@ -1,12 +1,18 @@
 import path, { resolve } from "path"
 import fs from "fs"
 import { execSync } from "child_process"
+import { fileURLToPath } from "url"
+import { dirname } from "path"
 
 import { defineConfig, type PluginOption, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 
 import { sourcemapPlugin } from "./src/vite-plugins/sourcemapPlugin"
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 function getGitSha() {
 	let gitSha: string | undefined = undefined
@@ -51,6 +57,19 @@ const persistPortPlugin = (): Plugin => ({
 	},
 })
 
+const copyChangelogPlugin = (): Plugin => ({
+	name: "copy-changelog",
+	buildStart() {
+		try {
+			const publicDir = path.resolve(__dirname, "./public")
+			fs.mkdirSync(publicDir, { recursive: true })
+			fs.copyFileSync(path.resolve(__dirname, "../../CHANGELOG.md"), path.join(publicDir, "changelog.md"))
+		} catch (_error) {
+			// Ignore errors - build can continue without changelog
+		}
+	},
+})
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
 	let outDir = "../src/webview-ui/build"
@@ -91,7 +110,14 @@ export default defineConfig(({ mode }) => {
 		define["process.env.PKG_OUTPUT_CHANNEL"] = JSON.stringify("Kilo-Code-Nightly")
 	}
 
-	const plugins: PluginOption[] = [react(), tailwindcss(), persistPortPlugin(), wasmPlugin(), sourcemapPlugin()]
+	const plugins: PluginOption[] = [
+		react(),
+		tailwindcss(),
+		persistPortPlugin(),
+		wasmPlugin(),
+		sourcemapPlugin(),
+		copyChangelogPlugin(), // kilocode_change: Generate release notes at build time
+	]
 
 	return {
 		plugins,
