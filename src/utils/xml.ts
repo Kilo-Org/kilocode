@@ -61,29 +61,3 @@ export function parseXmlForDiff(xmlString: string, stopNodes?: string[]): unknow
 	// Delegate to parseXml with processEntities disabled
 	return parseXml(xmlString, stopNodes, { processEntities: false })
 }
-
-/**
- * Extracts the file path from XML arguments parameter
- * @param params The parameters object that may contain an 'args' XML string
- * @returns The first file path found in the XML, or undefined if not found
- */
-export function parsePathFromArgsParam(params: Partial<Record<string, string>>): string | undefined {
-	const argsXmlTag = params.args
-
-	if (argsXmlTag) {
-		const parsed = parseXml(argsXmlTag) as any
-		const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
-
-		for (const file of files) {
-			if (!file?.path) continue
-
-			return file.path
-		}
-
-		if (parsed.path) {
-			return parsed.path
-		}
-	}
-
-	return undefined
-}

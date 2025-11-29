@@ -5,8 +5,7 @@ import { Task } from "../../task/Task"
 import { ClineSayTool } from "../../../shared/ExtensionMessage"
 import { formatResponse } from "../../prompts/responses"
 import { getReadablePath } from "../../../utils/path"
-import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
-import { parsePathFromArgsParam } from "../../../utils/xml"
+import { isPathOutsideWorkspace, parseParamsFromArgs } from "../../../utils/pathUtils"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
 
 interface DirectoryStats {
@@ -100,7 +99,8 @@ export async function deleteFileTool(
 		return
 	}
 
-	const relPath: string | undefined = block.params.path || parsePathFromArgsParam(block.params)
+	const args = parseParamsFromArgs(block.params.args, ["path"])
+	const relPath: string | undefined = block.params.path || args.path
 
 	try {
 		if (!relPath) {

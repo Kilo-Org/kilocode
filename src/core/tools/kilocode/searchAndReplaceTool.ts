@@ -9,8 +9,8 @@ import { AskApproval, HandleError, PushToolResult, ToolUse } from "../../../shar
 import { formatResponse } from "../../prompts/responses"
 import { ClineSayTool } from "../../../shared/ExtensionMessage"
 import { getReadablePath } from "../../../utils/path"
+import { parseParamsFromArgs } from "../../../utils/pathUtils"
 import { fileExistsAtPath } from "../../../utils/fs"
-import { parsePathFromArgsParam } from "../../../utils/xml"
 import { RecordSource } from "../../context-tracking/FileContextTrackerTypes"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
@@ -71,9 +71,12 @@ export async function searchAndReplaceTool(
 			return
 		}
 
-		// Fix `path` param first to prevent `validateParams` from
-		// failing if `path` exists in `args`
-		block.params.path ||= parsePathFromArgsParam(block.params)
+		// Fix params first to prevent `validateParams` from
+		// failing if they exist in `args`
+		const args = parseParamsFromArgs(block.params.args, ["path", "old_str", "new_str"])
+		block.params.path ||= args.path
+		block.params.old_str ||= args.old_str
+		block.params.new_str ||= args.new_str
 
 		// Validate required parameters
 		const params = await validateParams(cline, block, pushToolResult)
