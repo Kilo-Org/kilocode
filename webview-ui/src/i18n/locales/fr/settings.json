@@ -142,6 +142,10 @@
 		"searchMinScoreResetTooltip": "Réinitialiser à la valeur par défaut (0.4)",
 		"searchMaxResultsLabel": "Résultats de recherche maximum",
 		"searchMaxResultsDescription": "Nombre maximum de résultats de recherche à retourner lors de l'interrogation de l'index de code. Des valeurs plus élevées fournissent plus de contexte mais peuvent inclure des résultats moins pertinents.",
+		"embeddingBatchSizeLabel": "Taille du lot d'embedding",
+		"embeddingBatchSizeDescription": "Nombre de segments de code à regrouper pour la génération d'embeddings et les upserts de stockage vectoriel. Des valeurs plus élevées peuvent améliorer la vitesse d'indexation mais peuvent augmenter l'utilisation de la mémoire. Des valeurs plus faibles réduisent l'utilisation de la mémoire mais peuvent ralentir l'indexation.",
+		"scannerMaxBatchRetriesLabel": "Nombre max. de tentatives de lot du scanner",
+		"scannerMaxBatchRetriesDescription": "Nombre maximum de tentatives pour un lot échoué lors de l'analyse de répertoire. Des valeurs plus élevées augmentent la résilience aux erreurs transitoires mais peuvent ralentir l'indexation si les erreurs persistent. Des valeurs plus faibles échouent plus rapidement mais peuvent ignorer du contenu en cas de problèmes temporaires.",
 		"resetToDefault": "Réinitialiser par défaut",
 		"cancelling": "Annulation...",
 		"cancelIndexingButton": "Annuler l'indexation"

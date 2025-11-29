@@ -39,7 +39,7 @@ export class FileWatcher implements IFileWatcher {
 	private batchProcessDebounceTimer?: NodeJS.Timeout
 	private readonly BATCH_DEBOUNCE_DELAY_MS = 500
 	private readonly FILE_PROCESSING_CONCURRENCY_LIMIT = 10
-	private readonly batchSegmentThreshold: number
+	private batchSegmentThreshold: number
 
 	private readonly _onDidStartBatchProcessing = new vscode.EventEmitter<string[]>()
 	private readonly _onBatchProgressUpdate = new vscode.EventEmitter<{
@@ -117,6 +117,14 @@ export class FileWatcher implements IFileWatcher {
 		this.fileWatcher.onDidCreate(this.handleFileCreated.bind(this))
 		this.fileWatcher.onDidChange(this.handleFileChanged.bind(this))
 		this.fileWatcher.onDidDelete(this.handleFileDeleted.bind(this))
+	}
+
+	/**
+	 * Updates the batch segment threshold
+	 * @param newThreshold New batch segment threshold value
+	 */
+	updateBatchSegmentThreshold(newThreshold: number): void {
+		this.batchSegmentThreshold = newThreshold
 	}
 
 	/**

@@ -2954,10 +2954,20 @@ export const webviewMessageHandler = async (
 					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
 					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
+					codebaseIndexEmbeddingBatchSize: settings.codebaseIndexEmbeddingBatchSize,
+					codebaseIndexScannerMaxBatchRetries: settings.codebaseIndexScannerMaxBatchRetries,
 				}
 
 				// Save global state first
 				await updateGlobalState("codebaseIndexConfig", globalStateConfig)
+
+				// Update the batch size in the running scanner and file watcher
+				if (settings.codebaseIndexEmbeddingBatchSize !== undefined) {
+					const currentCodeIndexManager = provider.getCurrentWorkspaceCodeIndexManager()
+					if (currentCodeIndexManager) {
+						currentCodeIndexManager.updateBatchSegmentThreshold(settings.codebaseIndexEmbeddingBatchSize)
+					}
+				}
 
 				// Save secrets directly using context proxy
 				if (settings.codeIndexOpenAiKey !== undefined) {

@@ -28,6 +28,15 @@ export class CodeIndexOrchestrator {
 	) {}
 
 	/**
+	 * Updates the batch segment threshold for both scanner and file watcher
+	 * @param newThreshold New batch segment threshold value
+	 */
+	public updateBatchSegmentThreshold(newThreshold: number): void {
+		this.scanner.updateBatchSegmentThreshold(newThreshold)
+		this.fileWatcher.updateBatchSegmentThreshold(newThreshold)
+	}
+
+	/**
 	 * Starts the file watcher if not already running.
 	 */
 	private async _startWatcher(): Promise<void> {
