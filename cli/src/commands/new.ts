@@ -2,9 +2,9 @@
  * /new command - Start a new task with a clean slate
  */
 
+import { SessionManager } from "../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { createWelcomeMessage } from "../ui/utils/welcomeMessage.js"
 import type { Command } from "./core/types.js"
-import { SessionService } from "../services/session.js"
 
 export const newCommand: Command = {
 	name: "new",
@@ -22,7 +22,7 @@ export const newCommand: Command = {
 
 		// Clear the session to start fresh
 		try {
-			const sessionService = SessionService.init()
+			const sessionService = SessionManager.init()
 			await sessionService.destroy()
 		} catch (error) {
 			// Log error but don't block the command - session might not exist yet

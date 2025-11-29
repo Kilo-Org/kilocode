@@ -267,6 +267,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		)
 	}
 
+	try {
+		await provider.kilo_initializeSessionManager()
+	} catch (error) {
+		outputChannel.appendLine(
+			`[SessionManager] Failed to initialize SessionManager: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
 	// Finish initializing the provider.
 	TelemetryService.instance.setProvider(provider)
 

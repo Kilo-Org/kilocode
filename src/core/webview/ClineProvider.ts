@@ -71,6 +71,8 @@ import { ShadowCheckpointService } from "../../services/checkpoints/ShadowCheckp
 import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
 import { MdmService } from "../../services/mdm/MdmService"
+import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager"
+import { ExtensionPathProvider, ExtensionLoggerAdapter, ExtensionMessengerImpl } from "../../services/kilo-session"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
@@ -461,6 +463,54 @@ export class ClineProvider
 		}
 	}
 
+	private kilo_isCli(): boolean {
+		return process.env.KILO_CLI_MODE === "true"
+	}
+
+	public async kilo_initializeSessionManager(): Promise<void> {
+		// cli manages its own session manager
+		if (this.kilo_isCli()) {
+			return
+		}
+
+		try {
+			const { apiConfiguration } = await this.getState()
+			const kiloToken = apiConfiguration.kilocodeToken
+
+			if (!kiloToken) {
+				this.log("SessionManager not initialized: No authentication token available")
+				return
+			}
+
+			const pathProvider = new ExtensionPathProvider(this.context)
+			const logger = new ExtensionLoggerAdapter(this.outputChannel)
+			const extensionMessenger = new ExtensionMessengerImpl(this)
+
+			const sessionManager = SessionManager.init({
+				pathProvider,
+				logger,
+				extensionMessenger,
+				getToken: () => Promise.resolve(kiloToken),
+				onSessionCreated: (message) => {
+					this.log(`Session created: ${message.sessionId}`)
+				},
+				onSessionRestored: () => {
+					this.log("Session restored")
+				},
+				platform: vscode.env.appName,
+			})
+
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+			if (workspaceFolder) {
+				sessionManager.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
+			}
+
+			this.log("SessionManager initialized successfully")
+		} catch (error) {
+			this.log(`Failed to initialize SessionManager: ${error instanceof Error ? error.message : String(error)}`)
+		}
+	}
+
 	// Adds a new Task instance to clineStack, marking the start of a new task.
 	// The instance is pushed to the top of the stack (LIFO order).
 	// When the task is completed, the top instance is removed, reactivating the
@@ -470,6 +520,10 @@ export class ClineProvider
 		// all the called tasks.
 		this.clineStack.push(task)
 		task.emit(RooCodeEventName.TaskFocused)
+
+		if (!this.kilo_isCli()) {
+			await SessionManager.init().destroy()
+		}
 
 		// Perform special setup provider specific tasks.
 		await this.performPreparationTasks(task)
@@ -683,6 +737,10 @@ export class ClineProvider
 		if (this.autoPurgeScheduler) {
 			this.autoPurgeScheduler.stop()
 			this.autoPurgeScheduler = undefined
+		}
+
+		if (!this.kilo_isCli()) {
+			await SessionManager.init().destroy()
 		}
 		// kilocode_change end
 
@@ -1139,6 +1197,22 @@ ${prompt}
 	}
 
 	public async postMessageToWebview(message: ExtensionMessage) {
+		if (!this.kilo_isCli()) {
+			if (message.type === "apiMessagesSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "apiConversationHistoryPath", filePath)
+			} else if (message.type === "taskMessagesSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "uiMessagesPath", filePath)
+			} else if (message.type === "taskMetadataSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "taskMetadataPath", filePath)
+			}
+		}
+
 		await this.view?.webview.postMessage(message)
 	}
 
@@ -1879,6 +1953,11 @@ ${prompt}
 
 	async refreshWorkspace() {
 		this.currentWorkspacePath = getWorkspacePath()
+
+		if (this.currentWorkspacePath && !this.kilo_isCli()) {
+			SessionManager.init().setWorkspaceDirectory(this.currentWorkspacePath)
+		}
+
 		await this.postStateToWebview()
 	}
 
