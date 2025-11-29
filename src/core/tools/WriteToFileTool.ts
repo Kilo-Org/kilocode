@@ -10,7 +10,7 @@ import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { fileExistsAtPath } from "../../utils/fs"
 import { stripLineNumbers, everyLineHasLineNumbers } from "../../integrations/misc/extract-text"
 import { getReadablePath } from "../../utils/path"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
+import { isPathOutsideWorkspace, parseParamsFromArgs } from "../../utils/pathUtils"
 import { detectCodeOmission } from "../../integrations/editor/detect-omission"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
@@ -29,10 +29,15 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 	readonly name = "write_to_file" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): WriteToFileParams {
+		const args = parseParamsFromArgs(params.args, ["path", "content", "line_count"])
+		const relPath = params.path || args.path || ""
+		const content = params.content || args.content || ""
+		const lineCount = parseInt(params.line_count || args.line_count || "0", 10)
+
 		return {
-			path: params.path || "",
-			content: params.content || "",
-			line_count: parseInt(params.line_count ?? "0", 10),
+			path: relPath,
+			content: content,
+			line_count: lineCount,
 		}
 	}
 

@@ -4,7 +4,7 @@ import fs from "fs/promises"
 import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
+import { isPathOutsideWorkspace, parseParamsFromArgs } from "../../utils/pathUtils"
 import { parseSourceCodeForDefinitionsTopLevel, parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
@@ -19,8 +19,11 @@ export class ListCodeDefinitionNamesTool extends BaseTool<"list_code_definition_
 	readonly name = "list_code_definition_names" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): ListCodeDefinitionNamesParams {
+		const args = parseParamsFromArgs(params.args, ["path"])
+		const relPath = params.path || args.path || ""
+
 		return {
-			path: params.path || "",
+			path: relPath,
 		}
 	}
 
