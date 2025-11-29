@@ -28,9 +28,15 @@ export interface AppProps {
 export const App: React.FC<AppProps> = ({ store, options, onExit }) => {
 	return (
 		<JotaiProvider store={store}>
-			<KeyboardProvider>
+			{(options.json && options.ci) || !process.stdout.isTTY ? (
+				// Skip KeyboardProvider when in JSON mode or when stdout is redirected
+				// to prevent terminal control sequences in output
 				<UI options={options} onExit={onExit} />
-			</KeyboardProvider>
+			) : (
+				<KeyboardProvider>
+					<UI options={options} onExit={onExit} />
+				</KeyboardProvider>
+			)}
 		</JotaiProvider>
 	)
 }
