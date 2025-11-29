@@ -37,6 +37,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (!mode) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "mode"))
 				return
 			}
@@ -44,6 +45,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (!message) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "message"))
 				return
 			}
@@ -52,6 +54,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			const provider = task.providerRef.deref()
 
 			if (!provider) {
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError("Provider reference lost"))
 				return
 			}
@@ -69,6 +72,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (requireTodos && todos === undefined) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "todos"))
 				return
 			}
@@ -81,6 +85,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("new_task")
+					task.didToolFailInCurrentTurn = true
 					pushToolResult(formatResponse.toolError("Invalid todos format: must be a markdown checklist"))
 					return
 				}
@@ -96,6 +101,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			const targetMode = getModeBySlug(mode, state?.customModes)
 
 			if (!targetMode) {
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError(`Invalid mode: ${mode}`))
 				return
 			}
@@ -125,6 +131,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			const newTask = await task.startSubtask(unescapedMessage, todoItems, mode)
 
 			if (!newTask) {
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(t("tools:newTask.errors.policy_restriction"))
 				return
 			}

@@ -283,6 +283,7 @@ describe("mergeExtensionState", () => {
 				newTaskRequireTodos: false,
 				imageGeneration: false,
 				runSlashCommand: false,
+				multipleNativeToolCalls: false
 			} as Record<ExperimentId, boolean>,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS + 5,
 		}

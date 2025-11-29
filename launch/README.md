@@ -1,3 +1,3 @@
-# Isolated Launch Root
+# Raíz de Lanzamiento Aislado
 
-This file will exist when you run the extension using the [Run Extension [Isolated]](../.vscode/launch.json) run configuration in [launch.json]](../.vscode/launch.json).
+Este archivo existirá cuando ejecutes la extensión usando la configuración de ejecución [Run Extension [Isolated]](../.vscode/launch.json) en [launch.json]](../.vscode/launch.json).

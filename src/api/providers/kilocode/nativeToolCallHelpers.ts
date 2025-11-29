@@ -71,7 +71,7 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
 		//optimally we'd have tool_choice as 'required', but many providers, especially
 		// those using SGlang dont properly handle that setting and barf with a 400.
 		params.tool_choice = "auto" as const
-		params.parallel_tool_calls = false
+		params.parallel_tool_calls = true
 	}
 
 	return params

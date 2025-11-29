@@ -45,6 +45,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		if (!relPath) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("write_to_file")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("write_to_file", "path"))
 			await task.diffViewProvider.reset()
 			return
@@ -53,6 +54,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		if (newContent === undefined) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("write_to_file")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("write_to_file", "content"))
 			await task.diffViewProvider.reset()
 			return
@@ -62,6 +64,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 		if (!accessAllowed) {
 			await task.say("rooignore_error", relPath)
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
 			return
 		}
@@ -105,7 +108,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			if (predictedLineCount === undefined || predictedLineCount === 0) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("write_to_file")
-
+				task.didToolFailInCurrentTurn = true
 				const actualLineCount = newContent.split("\n").length
 				const isNewFile = !fileExists
 				const diffStrategyEnabled = !!task.diffStrategy

@@ -71,6 +71,7 @@ export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
 			if (!question) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("ask_followup_question")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("ask_followup_question", "question"))
 				return
 			}

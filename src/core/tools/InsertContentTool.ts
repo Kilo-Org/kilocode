@@ -46,6 +46,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 			if (!relPath) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("insert_content")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("insert_content", "path"))
 				return
 			}
@@ -53,6 +54,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 			if (isNaN(lineNumber) || lineNumber < 0) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("insert_content")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError("Invalid line number. Must be a non-negative integer."))
 				return
 			}
@@ -60,6 +62,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 			if (content === undefined) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("insert_content")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("insert_content", "content"))
 				return
 			}
@@ -68,6 +71,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 
 			if (!accessAllowed) {
 				await task.say("rooignore_error", relPath)
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
 				return
 			}
@@ -85,6 +89,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 					task.recordToolError("insert_content")
 					const formattedError = `Cannot insert content at line ${lineNumber} into a non-existent file. For new files, 'line' must be 0 (to append) or 1 (to insert at the beginning).`
 					await task.say("error", formattedError)
+					task.didToolFailInCurrentTurn = true
 					pushToolResult(formattedError)
 					return
 				}
@@ -164,6 +169,7 @@ export class InsertContentTool extends BaseTool<"insert_content"> {
 				if (!isPreventFocusDisruptionEnabled) {
 					await task.diffViewProvider.revertChanges()
 				}
+				task.didToolFailInCurrentTurn = true
 				pushToolResult("Changes were rejected by the user.")
 				await task.diffViewProvider.reset()
 				return

@@ -26,6 +26,7 @@ export class FetchInstructionsTool extends BaseTool<"fetch_instructions"> {
 			if (!taskParam) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("fetch_instructions")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("fetch_instructions", "task"))
 				return
 			}

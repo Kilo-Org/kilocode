@@ -109,6 +109,13 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * Used by providers to determine whether to include native tool definitions.
 	 */
 	toolProtocol?: ToolProtocol
+	/**
+	 * Controls whether the model can return multiple tool calls in a single response.
+	 * When true, parallel tool calls are enabled (OpenAI's parallel_tool_calls=true).
+	 * When false (default), only one tool call is returned per response.
+	 * Only applies when toolProtocol is "native".
+	 */
+	parallelToolCalls?: boolean
 }
 
 export interface ApiHandler {

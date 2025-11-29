@@ -31,6 +31,7 @@ export class ListCodeDefinitionNamesTool extends BaseTool<"list_code_definition_
 		if (!relPath) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("list_code_definition_names")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("list_code_definition_names", "path"))
 			return
 		}

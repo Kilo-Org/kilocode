@@ -104,6 +104,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 		if (!params.server_name) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("use_mcp_tool")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("use_mcp_tool", "server_name"))
 			return { isValid: false }
 		}
@@ -111,6 +112,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 		if (!params.tool_name) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("use_mcp_tool")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("use_mcp_tool", "tool_name"))
 			return { isValid: false }
 		}
@@ -129,6 +131,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("use_mcp_tool")
+					task.didToolFailInCurrentTurn = true
 					await task.say("error", t("mcp:errors.invalidJsonArgument", { toolName: params.tool_name }))
 
 					pushToolResult(
@@ -177,6 +180,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 
 				task.consecutiveMistakeCount++
 				task.recordToolError("use_mcp_tool")
+				task.didToolFailInCurrentTurn = true
 				await task.say("error", t("mcp:errors.serverNotFound", { serverName, availableServers }))
 
 				pushToolResult(formatResponse.unknownMcpServerError(serverName, availableServersArray))
@@ -187,6 +191,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 			if (!server.tools || server.tools.length === 0) {
 				// No tools available on this server
 				task.consecutiveMistakeCount++
+				task.didToolFailInCurrentTurn = true
 				task.recordToolError("use_mcp_tool")
 				await task.say(
 					"error",
@@ -209,6 +214,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 				const availableToolNames = server.tools.map((tool) => tool.name)
 
 				task.consecutiveMistakeCount++
+				task.didToolFailInCurrentTurn = true
 				task.recordToolError("use_mcp_tool")
 				await task.say(
 					"error",
@@ -230,6 +236,7 @@ export class UseMcpToolTool extends BaseTool<"use_mcp_tool"> {
 				const enabledToolNames = enabledTools.map((t) => t.name)
 
 				task.consecutiveMistakeCount++
+				task.didToolFailInCurrentTurn = true
 				task.recordToolError("use_mcp_tool")
 				await task.say(
 					"error",
