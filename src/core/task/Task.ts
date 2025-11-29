@@ -3353,7 +3353,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			// Filter native tools based on mode restrictions (similar to XML tool filtering)
 			const filteredNativeTools = filterNativeToolsForMode(
-				nativeTools,
+				nativeTools(this.cwd),
 				mode,
 				state?.customModes,
 				state?.experiments,

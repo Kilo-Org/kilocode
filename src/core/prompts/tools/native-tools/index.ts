@@ -25,31 +25,33 @@ import editFile from "./kilocode/edit_file"
 export { getMcpServerTools } from "./mcp_server"
 export { convertOpenAIToolToAnthropic, convertOpenAIToolsToAnthropic } from "./converters"
 
-export const nativeTools = [
-	// kilocode_change start
-	searchAndReplace,
-	deleteFile,
-	editFile,
-	// todo:
-	// condenseTool,
-	// newRuleTool,
-	// reportBugTool,
-	// kilocode_change end
-	askFollowupQuestion,
-	attemptCompletion,
-	browserAction,
-	codebaseSearch,
-	executeCommand,
-	fetchInstructions,
-	generateImage,
-	insertContent,
-	listCodeDefinitionNames,
-	listFiles,
-	newTask,
-	read_file,
-	runSlashCommand,
-	searchFiles,
-	switchMode,
-	updateTodoList,
-	writeToFile,
-] satisfies OpenAI.Chat.ChatCompletionTool[]
+export function nativeTools(cwd: string): OpenAI.Chat.ChatCompletionTool[] {
+	return [
+		// kilocode_change start
+		searchAndReplace,
+		deleteFile,
+		editFile,
+		// todo:
+		// condenseTool,
+		// newRuleTool,
+		// reportBugTool,
+		// kilocode_change end
+		askFollowupQuestion,
+		attemptCompletion,
+		browserAction,
+		codebaseSearch(cwd),
+		executeCommand(cwd),
+		fetchInstructions,
+		generateImage(cwd),
+		insertContent,
+		listCodeDefinitionNames(cwd),
+		listFiles(cwd),
+		newTask,
+		read_file(cwd),
+		runSlashCommand,
+		searchFiles(cwd),
+		switchMode,
+		updateTodoList,
+		writeToFile(cwd),
+	]
+}
