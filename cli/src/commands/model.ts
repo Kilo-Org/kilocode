@@ -289,14 +289,14 @@ async function selectModel(context: CommandContext, modelId: string): Promise<vo
 	try {
 		await updateProviderModel(modelId)
 
-		let content = `✓ Switched to **${modelId}**\n`
+		let content = `Switched to **${modelId}**\n`
 		if (model.displayName) {
-			content += `  Display Name: ${model.displayName}\n`
+			content += `Display Name: ${model.displayName}\n`
 		}
-		content += `  Provider: ${currentProvider.provider}\n`
+		content += `Provider: ${currentProvider.provider}\n`
 		if (model.contextWindow) {
 			const contextK = Math.floor(model.contextWindow / 1000)
-			content += `  Context Window: ${contextK}K tokens\n`
+			content += `Context Window: ${contextK}K tokens\n`
 		}
 
 		addMessage({

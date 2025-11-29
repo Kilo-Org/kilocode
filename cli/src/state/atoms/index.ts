@@ -145,6 +145,14 @@ export {
 } from "./effects.js"
 
 // ============================================================================
+// Model Validation Atoms - Model availability validation
+// ============================================================================
+export {
+	// Model validation effect
+	validateModelOnRouterModelsUpdateAtom,
+} from "./modelValidation.js"
+
+// ============================================================================
 // Config Sync Atoms - Configuration synchronization
 // ============================================================================
 export {

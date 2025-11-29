@@ -234,7 +234,7 @@ describe("/model command", () => {
 			expect(addMessageMock).toHaveBeenCalledTimes(1)
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
-			expect(message.content).toContain("✓ Switched to")
+			expect(message.content).toContain("Switched to")
 			expect(message.content).toContain("gpt-3.5-turbo")
 		})
 
