@@ -23,6 +23,7 @@ vi.mock("fs/promises", () => ({
 
 vi.mock("../../../utils/pathUtils", () => ({
 	isPathOutsideWorkspace: vi.fn().mockReturnValue(false),
+	parseParamsFromArgs: vi.fn().mockReturnValue({}),
 }))
 
 vi.mock("../../prompts/responses", () => ({
