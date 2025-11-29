@@ -156,6 +156,7 @@ const sidebars: SidebarsConfig = {
 				},
 				"features/auto-launch-configuration",
 				"advanced-usage/auto-cleanup",
+				"advanced-usage/integrations",
 				"advanced-usage/cloud-agent",
 				"advanced-usage/code-reviews",
 				"advanced-usage/deploy",

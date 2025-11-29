@@ -294,6 +294,8 @@
 		"anthropicUseAuthToken": "將 Anthropic API 金鑰作為 Authorization 標頭傳遞，而非使用 X-Api-Key",
 		"anthropic1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"anthropic1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"anthropicUseAzureDeployment": "使用 Azure 部署名稱",
+		"anthropicAzureDeploymentPlaceholder": "輸入部署名稱...",
 		"awsBedrock1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"awsBedrock1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
 		"cerebrasApiKey": "Cerebras API 金鑰",

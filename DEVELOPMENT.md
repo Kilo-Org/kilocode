@@ -279,7 +279,7 @@ We welcome contributions to Kilo Code! Here's how you can help:
 1. **Report an issue** using [GitHub Issues](https://github.com/Kilo-Org/kilocode/issues)
 2. **Find an issue** and submit a Pull Request with your fix
 3. **Write tests** to improve Code Coverage
-4. **Improve Documentation** at [kilocode.ai/docs](https://kilocode.ai/docs)
+4. **Improve Documentation** at [kilo.ai/docs](https://kilo.ai/docs)
 5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
 6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
 

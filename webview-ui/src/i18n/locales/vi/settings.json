@@ -299,6 +299,8 @@
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
+		"anthropicUseAzureDeployment": "Sử dụng tên triển khai Azure",
+		"anthropicAzureDeploymentPlaceholder": "Nhập tên triển khai...",
 		"anthropic1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",

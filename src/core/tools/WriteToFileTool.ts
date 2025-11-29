@@ -112,7 +112,7 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 				await task.say(
 					"error",
-					`Roo tried to use write_to_file${
+					`Kilo tried to use write_to_file${
 						relPath ? ` for '${relPath.toPosix()}'` : ""
 					} but the required parameter 'line_count' was missing or truncated after ${actualLineCount} lines of content were written. Retrying...`,
 				)

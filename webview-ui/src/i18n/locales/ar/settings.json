@@ -300,6 +300,8 @@
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"anthropicUseAzureDeployment": "استخدام اسم نشر Azure",
+		"anthropicAzureDeploymentPlaceholder": "أدخل اسم النشر...",
 		"anthropic1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
 		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",

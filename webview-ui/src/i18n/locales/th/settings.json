@@ -297,6 +297,8 @@
 		"anthropicApiKey": "คีย์ API ของ Anthropic",
 		"getAnthropicApiKey": "รับคีย์ API ของ Anthropic",
 		"anthropicUseAuthToken": "ส่งคีย์ API ของ Anthropic เป็นส่วนหัว Authorization แทน X-Api-Key",
+		"anthropicUseAzureDeployment": "ใช้ชื่อการปรับใช้ Azure",
+		"anthropicAzureDeploymentPlaceholder": "ป้อนชื่อการปรับใช้...",
 		"anthropic1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
 		"anthropic1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",

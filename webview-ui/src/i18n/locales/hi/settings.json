@@ -301,6 +301,8 @@
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
 		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"anthropicUseAzureDeployment": "Azure डिप्लॉयमेंट नाम का उपयोग करें",
+		"anthropicAzureDeploymentPlaceholder": "डिप्लॉयमेंट नाम दर्ज करें...",
 		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"cerebrasApiKey": "Cerebras API कुंजी",

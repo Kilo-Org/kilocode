@@ -294,6 +294,8 @@
 		"anthropicUseAuthToken": "Anthropic APIキーをX-Api-Keyの代わりにAuthorizationヘッダーとして渡す",
 		"anthropic1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
+		"anthropicUseAzureDeployment": "Azureデプロイメント名を使用",
+		"anthropicAzureDeploymentPlaceholder": "デプロイメント名を入力...",
 		"awsBedrock1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
 		"cerebrasApiKey": "Cerebras APIキー",

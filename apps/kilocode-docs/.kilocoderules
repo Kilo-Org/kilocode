@@ -23,7 +23,7 @@ This ensures links work correctly in the built documentation while maintaining c
 ## External Link References
 - Use constants from `src/constants.ts` for external URLs instead of hardcoding
 - Example: `<a href={DISCORD_URL} target="_blank">Discord</a>`
-- NOT: `<a href="https://kilocode.ai/discord">Discord</a>`
+- NOT: `<a href="https://kilo.ai/discord">Discord</a>`
 
 ## Sidebar Configuration
 - Document IDs in `sidebars.ts` should match file paths without extensions

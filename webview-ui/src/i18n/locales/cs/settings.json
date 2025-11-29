@@ -395,6 +395,8 @@
 			"baseUrl": "Základní URL",
 			"baseUrlDescription": "Vlastní základní URL pro Anthropic API (volitelné)"
 		},
+		"anthropicUseAzureDeployment": "Použít název nasazení Azure",
+		"anthropicAzureDeploymentPlaceholder": "Zadejte název nasazení...",
 		"openai": {
 			"baseUrl": "Základní URL",
 			"baseUrlDescription": "Vlastní základní URL pro OpenAI API (volitelné)"

@@ -291,6 +291,8 @@
 		"anthropicApiKey": "Anthropic API 키",
 		"getAnthropicApiKey": "Anthropic API 키 받기",
 		"anthropicUseAuthToken": "X-Api-Key 대신 Authorization 헤더로 Anthropic API 키 전달",
+		"anthropicUseAzureDeployment": "Azure 배포 이름 사용",
+		"anthropicAzureDeploymentPlaceholder": "배포 이름 입력...",
 		"anthropic1MContextBetaLabel": "1M 컨텍스트 창 활성화 (베타)",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4의 컨텍스트 창을 100만 토큰으로 확장",
 		"awsBedrock1MContextBetaLabel": "1M 컨텍스트 창 활성화 (베타)",

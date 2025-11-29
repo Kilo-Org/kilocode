@@ -53,6 +53,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			verbosity, // kilocode_change
 		} = this.getModel()
 
+		const apiModelId = this.options.anthropicDeploymentName?.trim() || modelId // kilocode_change
+
 		// Add 1M context beta flag if enabled for Claude Sonnet 4 and 4.5
 		if (
 			(modelId === "claude-sonnet-4-20250514" || modelId === "claude-sonnet-4-5") &&
@@ -101,7 +103,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 				stream = await this.client.messages.create(
 					{
-						model: modelId,
+						model: apiModelId, // kilocode_change
 						max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 						temperature,
 						thinking,
@@ -165,7 +167,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			}
 			default: {
 				stream = await this.client.messages.create({
-					model: modelId,
+					model: apiModelId, // kilocode_change
 					max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 					temperature,
 					system: [{ text: systemPrompt, type: "text" }],
@@ -372,9 +374,10 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 	async completePrompt(prompt: string) {
 		let { id: model, temperature } = this.getModel()
+		const apiModelId = this.options.anthropicDeploymentName?.trim() || model // kilocode_change
 
 		const message = await this.client.messages.create({
-			model,
+			model: apiModelId, // kilocode_change
 			max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
 			thinking: undefined,
 			temperature,
@@ -396,9 +399,10 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		try {
 			// Use the current model
 			const { id: model } = this.getModel()
+			const apiModelId = this.options.anthropicDeploymentName?.trim() || model // kilocode_change
 
 			const response = await this.client.messages.countTokens({
-				model,
+				model: apiModelId, // kilocode_change
 				messages: [{ role: "user", content: content }],
 			})
 

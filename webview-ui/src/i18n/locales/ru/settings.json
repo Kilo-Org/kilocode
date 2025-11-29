@@ -291,6 +291,8 @@
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
+		"anthropicUseAzureDeployment": "Использовать имя развертывания Azure",
+		"anthropicAzureDeploymentPlaceholder": "Введите имя развертывания...",
 		"anthropic1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
 		"anthropic1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Включить контекстное окно 1M (бета)",

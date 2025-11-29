@@ -307,6 +307,8 @@
 		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Використовувати ім'я розгортання Azure",
+		"anthropicAzureDeploymentPlaceholder": "Введіть ім'я розгортання...",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",

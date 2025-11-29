@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.125.1
+
+### Patch Changes
+
+- [#4057](https://github.com/Kilo-Org/kilocode/pull/4057) [`c2a7407`](https://github.com/Kilo-Org/kilocode/commit/c2a7407e8964c5fa8114d17ab5a6936b81c785ab) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Kilo Code sidebar no longer steals focus on startup when managed codebase indexing is active
+
 ## 4.125.0
 
 ### Minor Changes

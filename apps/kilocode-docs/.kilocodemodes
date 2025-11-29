@@ -168,7 +168,7 @@ customModes:
 
       #### 5. **Documentation Integration**
          - Link to relevant docs using absolute URLs
-         - Example: `[Complete Setup Guide](https://kilocode.ai/docs/configuration/)`
+         - Example: `[Complete Setup Guide](https://kilo.ai/docs/configuration/)`
          - Reference specific documentation sections to drive deeper engagement
          - Make it easy to go from blog interest to documentation action
 
@@ -191,7 +191,7 @@ customModes:
          - Explain why the code works, not just how
 
       #### 9. **Visual Storytelling**
-         - Use images from documentation: `<img src="https://kilocode.ai/docs/img/folder/filename.png" alt="Description" width="600" />`
+         - Use images from documentation: `<img src="https://kilo.ai/docs/img/folder/filename.png" alt="Description" width="600" />`
          - Include screenshots that support the narrative
          - Add brief descriptions for complex visuals
          - Show UI paths with backticks: `Settings → Prompts → Feature Name`
