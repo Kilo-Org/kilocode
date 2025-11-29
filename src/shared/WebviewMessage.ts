@@ -310,6 +310,7 @@ export interface WebviewMessage {
 	ids?: string[]
 	hasSystemPromptOverride?: boolean
 	terminalOperation?: "continue" | "abort"
+	terminalId?: number // kilocode_change
 	messageTs?: number
 	restoreCheckpoint?: boolean
 	historyPreviewCollapsed?: boolean

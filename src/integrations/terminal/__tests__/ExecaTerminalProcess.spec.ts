@@ -1,20 +1,49 @@
 // npx vitest run integrations/terminal/__tests__/ExecaTerminalProcess.spec.ts
 
 const mockPid = 12345
+// kilocode_change start - mocking
+let mockSubprocess: any
+let mockExitCode = 0
+let mockStreamData = ["test output\n"]
+// kilocode_change end - mocking
 
 vitest.mock("execa", () => {
 	const mockKill = vitest.fn()
 	const execa = vitest.fn((options: any) => {
-		return (_template: TemplateStringsArray, ...args: any[]) => ({
-			pid: mockPid,
-			iterable: (_opts: any) =>
-				(async function* () {
-					yield "test output\n"
-				})(),
-			kill: mockKill,
-		})
+		// kilocode_change update mockSubprocess with mocks ^
+		return (_template: TemplateStringsArray, ...args: any[]) => {
+			mockSubprocess = {
+				pid: mockPid,
+				kill: mockKill,
+				iterable: (_opts: any) =>
+					(async function* () {
+						for (const data of mockStreamData) {
+							yield data
+						}
+					})(),
+				then: vitest.fn((onResolve) => {
+					setTimeout(() => onResolve({ exitCode: mockExitCode }), 10)
+					return Promise.resolve({ exitCode: mockExitCode })
+				}),
+				catch: vitest.fn((onReject) => {
+					return Promise.resolve({ exitCode: mockExitCode })
+				}),
+			}
+			return mockSubprocess
+		}
 	})
-	return { execa, ExecaError: class extends Error {} }
+	return {
+		execa,
+		ExecaError: class extends Error {
+			exitCode?: number
+			signal?: string
+			constructor(message: string, exitCode?: number, signal?: string) {
+				super(message)
+				this.exitCode = exitCode
+				this.signal = signal
+			}
+		},
+	}
 })
 
 // kilocode_change start
@@ -50,6 +79,12 @@ describe("ExecaTerminalProcess", () => {
 			cleanCompletedProcessQueue: vitest.fn(),
 		} as unknown as RooTerminal
 		terminalProcess = new ExecaTerminalProcess(mockTerminal)
+
+		// kilocode_change start - mocking
+		mockExitCode = 0
+		mockStreamData = ["test output\n"]
+		vitest.clearAllMocks()
+		// kilocode_change end  - mocking
 	})
 
 	afterEach(() => {
@@ -66,6 +101,9 @@ describe("ExecaTerminalProcess", () => {
 					shell: true,
 					cwd: "/test/cwd",
 					all: true,
+					detached: true, // kilocode_change - Should be detached for background execution
+					cleanup: true, // kilocode_change - Should auto-cleanup on exit
+					stdin: "ignore",
 					env: expect.objectContaining({
 						LANG: "en_US.UTF-8",
 						LC_ALL: "en_US.UTF-8",
@@ -95,7 +133,7 @@ describe("ExecaTerminalProcess", () => {
 		})
 	})
 
-	describe("basic functionality", () => {
+	describe("basic functionality (legacy synchronous behavior)", () => {
 		it("should create instance with terminal reference", () => {
 			expect(terminalProcess).toBeInstanceOf(ExecaTerminalProcess)
 			expect(terminalProcess.terminal).toBe(mockTerminal)
@@ -103,22 +141,75 @@ describe("ExecaTerminalProcess", () => {
 
 		it("should emit shell_execution_complete with exitCode 0", async () => {
 			const spy = vitest.fn()
+			const completedSpy = vitest.fn()
+
 			terminalProcess.on("shell_execution_complete", spy)
+			terminalProcess.on("completed", completedSpy)
+
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(spy).toHaveBeenCalledWith({ exitCode: 0 })
+			expect(completedSpy).toHaveBeenCalledWith("test output\n")
 		})
 
 		it("should emit completed event with full output", async () => {
 			const spy = vitest.fn()
 			terminalProcess.on("completed", spy)
+
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(spy).toHaveBeenCalledWith("test output\n")
 		})
 
 		it("should set and clear active stream", async () => {
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(mockTerminal.setActiveStream).toHaveBeenCalledWith(expect.any(Object), mockPid)
 			expect(mockTerminal.setActiveStream).toHaveBeenLastCalledWith(undefined)
 		})
 	})
+
+	// kilocode_change start - background support
+	describe("basic functionality with background support", () => {
+		it("should create instance with terminal reference", () => {
+			expect(terminalProcess).toBeInstanceOf(ExecaTerminalProcess)
+			expect(terminalProcess.terminal).toBe(mockTerminal)
+		})
+
+		it("should emit shell_execution_started and continue immediately", async () => {
+			const startSpy = vitest.fn()
+			const continueSpy = vitest.fn()
+			terminalProcess.on("shell_execution_started", startSpy)
+			terminalProcess.on("continue", continueSpy)
+
+			await terminalProcess.run("echo test")
+
+			expect(startSpy).toHaveBeenCalledWith(mockPid)
+			expect(continueSpy).toHaveBeenCalled()
+		})
+
+		it("should start background stream monitoring", async () => {
+			await terminalProcess.run("echo test")
+			expect(mockTerminal.setActiveStream).toHaveBeenCalledWith(expect.any(Object), mockPid)
+		})
+
+		it("should complete run() immediately without waiting for subprocess", async () => {
+			const startTime = Date.now()
+			await terminalProcess.run("sleep 1") // Would normally take 1 second
+			const elapsed = Date.now() - startTime
+
+			// Should complete almost immediately (< 100ms) since it's non-blocking
+			expect(elapsed).toBeLessThan(100)
+		})
+	})
+	// kilocode_change end - background support
 })

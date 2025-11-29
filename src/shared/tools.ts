@@ -83,6 +83,8 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"run_in_background", // kilocode_change
+	"terminal_id", // kilocode_change
 	"files", // Native protocol parameter for read_file
 ] as const
 
@@ -97,7 +99,7 @@ export type ToolProtocol = "xml" | "native"
 export type NativeToolArgs = {
 	read_file: { files: FileEntry[] }
 	attempt_completion: { result: string }
-	execute_command: { command: string; cwd?: string }
+	execute_command: { command: string; cwd?: string; run_in_background?: boolean } // kilocode_change: add run_in_background
 	insert_content: { path: string; line: number; content: string }
 	apply_diff: { path: string; diff: string }
 	ask_followup_question: {
@@ -138,8 +140,15 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
-	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd" | "run_in_background">> // kilocode_change - add run_in_background
 }
+
+// kilocode_change start: Add terminal control tool interface
+export interface TerminalCtrlToolUse extends ToolUse {
+	name: "terminal_kill"
+	params: Partial<Pick<Record<ToolParamName, string>, "action" | "terminal_id">>
+}
+// kilocode_change end: Add terminal control tool interface
 
 export interface ReadFileToolUse extends ToolUse<"read_file"> {
 	name: "read_file"
@@ -257,7 +266,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	delete_file: "delete files",
 	report_bug: "report bug",
 	condense: "condense the current context window",
-	// kilocode_change start
+	// kilocode_change end
 	search_files: "search files",
 	list_files: "list files",
 	list_code_definition_names: "list definitions",
@@ -270,6 +279,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	new_task: "create new task",
 	insert_content: "insert content",
 	new_rule: "create new rule",
+	terminal_kill: "control terminals", // kilocode_change: new terminal control tool
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
@@ -303,7 +313,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["browser_action"],
 	},
 	command: {
-		tools: ["execute_command"],
+		tools: ["execute_command", "terminal_kill"], // kilocode_change add terminal_kill
 	},
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],

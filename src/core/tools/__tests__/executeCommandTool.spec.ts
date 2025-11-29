@@ -37,9 +37,10 @@ vitest.mock("../../../integrations/terminal/TerminalRegistry", () => ({
 vitest.mock("../../task/Task")
 vitest.mock("../../prompts/responses")
 
-// Import the module
+// Import the module for the executeCommandInTerminal function
 import * as executeCommandModule from "../ExecuteCommandTool"
-const { executeCommandTool } = executeCommandModule
+import { executeCommandTool } from "../ExecuteCommandTool"
+
 
 describe("executeCommandTool", () => {
 	// Setup common test variables
@@ -286,4 +287,38 @@ describe("executeCommandTool", () => {
 			expect(mockOptions.commandExecutionTimeout).toBeDefined()
 		})
 	})
+
+	// kilocode_change start
+	describe("run_in_background parameter", () => {
+		it("should extract run_in_background parameter when set to 'true'", async () => {
+			mockToolUse.params.command = "npm run dev"
+			mockToolUse.params.run_in_background = "true"
+
+			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
+				askApproval: mockAskApproval as unknown as AskApproval,
+				handleError: mockHandleError as unknown as HandleError,
+				pushToolResult: mockPushToolResult as unknown as PushToolResult,
+				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
+			})
+
+			// Verify the command was approved and executed
+			expect(mockAskApproval).toHaveBeenCalledWith("command", "npm run dev")
+			expect(mockPushToolResult).toHaveBeenCalled()
+		})
+		it("should default run_in_background to false when parameter is missing", async () => {
+			mockToolUse.params.command = "echo test"
+
+			await executeCommandTool.handle(mockCline as unknown as Task, mockToolUse, {
+				askApproval: mockAskApproval as unknown as AskApproval,
+				handleError: mockHandleError as unknown as HandleError,
+				pushToolResult: mockPushToolResult as unknown as PushToolResult,
+				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
+			})
+
+			// Verify the command was approved and executed
+			expect(mockAskApproval).toHaveBeenCalledWith("command", "echo test")
+			expect(mockPushToolResult).toHaveBeenCalled()
+		})
+	})
+	// kilocode_change end: Background execution parameter tests
 })
