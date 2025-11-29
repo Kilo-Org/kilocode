@@ -149,12 +149,17 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const confirmDialogHandler = useRef<() => void>()
 
 	const [cachedState, setCachedState] = useState(() => extensionState)
+	const latestExtensionStateRef = useRef(extensionState)
 
 	// kilocode_change begin
 	useEffect(() => {
 		ensureBodyPointerEventsRestored()
 	}, [isDiscardDialogShow])
 	// kilocode_change end
+
+	useEffect(() => {
+		latestExtensionStateRef.current = extensionState
+	}, [extensionState])
 
 	const {
 		alwaysAllowReadOnly,
@@ -260,11 +265,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			return
 		}
 
-		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
+		setCachedState((prevCachedState) => ({ ...prevCachedState, ...latestExtensionStateRef.current }))
 		prevApiConfigName.current = currentApiConfigName
 		setChangeDetected(false)
 		setEditingApiConfigName(currentApiConfigName || "default") // kilocode_change: Sync editing profile when active profile changes
-	}, [currentApiConfigName, extensionState])
+	}, [currentApiConfigName])
 
 	// kilocode_change start
 	const isLoadingProfileForEditing = useRef(false)
