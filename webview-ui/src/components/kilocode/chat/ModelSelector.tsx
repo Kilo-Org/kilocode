@@ -14,6 +14,7 @@ interface ModelSelectorProps {
 	apiConfiguration: ProviderSettings
 	fallbackText: string
 	virtualQuotaActiveModel?: { id: string; name: string } // kilocode_change: Add virtual quota active model for UI display
+	intelligentActiveModel?: { id: string; name: string } // kilocode_change: Add intelligent active model for UI display
 }
 
 export const ModelSelector = ({
@@ -21,6 +22,7 @@ export const ModelSelector = ({
 	apiConfiguration,
 	fallbackText,
 	virtualQuotaActiveModel, //kilocode_change
+	intelligentActiveModel, //kilocode_change
 }: ModelSelectorProps) => {
 	const { t } = useAppTranslation()
 	const { provider, providerModels, providerDefaultModel, isLoading, isError } = useProviderModels(apiConfiguration)
@@ -72,6 +74,14 @@ export const ModelSelector = ({
 		return (
 			<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
 				{prettyModelName(virtualQuotaActiveModel.id)}
+			</span>
+		)
+	}
+
+	if (provider === "intelligent" && intelligentActiveModel) {
+		return (
+			<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
+				{prettyModelName(intelligentActiveModel.id)}
 			</span>
 		)
 	}

@@ -401,9 +401,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.apiConfiguration = apiConfiguration
 		this.api = buildApiHandler(apiConfiguration)
-		// kilocode_change start: Listen for model changes in virtual quota fallback
+		// kilocode_change start: Listen for model changes in virtual quota fallback and intelligent provider
 		if (this.api instanceof VirtualQuotaFallbackHandler) {
-			this.api.on("handlerChanged", () => {
+			;(this.api as any).on("handlerChanged", () => {
+				this.emit("modelChanged")
+			})
+		}
+
+		// Listen for handler changes in intelligent provider
+		// Both VirtualQuotaFallbackHandler and IntelligentHandler extend EventEmitter and emit handlerChanged events
+		// We can't import IntelligentHandler here due to circular dependency, so we check by name
+		if (this.api.constructor.name === "IntelligentHandler" && typeof (this.api as any).on === "function") {
+			;(this.api as any).on("handlerChanged", () => {
 				this.emit("modelChanged")
 			})
 		}

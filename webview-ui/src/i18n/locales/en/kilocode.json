@@ -270,6 +270,21 @@
 		"confirmClearTitle": "Are you sure?",
 		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
 	},
+	"intelligentProvider": {
+		"title": "Intelligent Provider Settings",
+		"description": "Configure three profiles for different difficulty levels. The system will automatically select the appropriate provider based on the complexity of your request.",
+		"easyProfileLabel": "Easy Profile",
+		"mediumProfileLabel": "Medium Profile",
+		"hardProfileLabel": "Hard Profile",
+		"selectProfilePlaceholder": "Select profile...",
+		"clearProfile": "Clear profile",
+		"noProfilesAvailable": "No profiles available. Please configure at least one non-intelligent profile first.",
+		"classifierProfileLabel": "Classifier Profile",
+		"classifierProfileDescription": "Specifies which profile to use for difficulty classification. If not set, defaults to using the easy profile.",
+		"easyProfileDescription": "Used for simple requests like quick explanations, basic summaries, or simple code snippets.",
+		"mediumProfileDescription": "Used for moderate requests like code analysis, implementation suggestions, or moderate complexity tasks.",
+		"hardProfileDescription": "Used for complex requests like architecture design, complex debugging, or advanced problem solving."
+	},
 	"marketplace": {
 		"mcp": {
 			"description": "These MCP servers are maintained by the community. Click <1>here</1> to edit your own MCP settings."
