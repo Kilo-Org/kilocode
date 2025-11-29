@@ -94,7 +94,7 @@
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",
-		"p-limit": "^6.2.0",
+		"p-limit": "^7.2.0",
 		"p-wait-for": "^5.0.2",
 		"package-json": "^10.0.1",
 		"pdf-parse": "^1.1.1",
