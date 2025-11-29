@@ -586,12 +586,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 
-			// These have more complex logic so they aren't (yet) handled
-			// by the `updateSettings` message.
-			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
-			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
-
 			// kilocode_change: When editing a different profile, don't overwrite apiConfiguration
 			if (editingApiConfigName !== currentApiConfigName) {
 				// Only sync non-apiConfiguration fields from extensionState
