@@ -96,7 +96,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "litellm":
 				// Type safety ensures apiKey and baseUrl are always provided for LiteLLM.
-				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
+				models = await getLiteLLMModels(options.apiKey || "", options.baseUrl || "")
 				break
 			// kilocode_change start
 			case "kilocode": {

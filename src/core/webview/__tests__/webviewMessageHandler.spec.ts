@@ -202,6 +202,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 				// kilocode_change end
 			},
+			// Configured profiles - only these providers will be fetched
+			listApiConfigMeta: [
+				{ id: "1", name: "OpenRouter", apiProvider: "openrouter" },
+				{ id: "2", name: "Gemini", apiProvider: "gemini" },
+				{ id: "3", name: "Requesty", apiProvider: "requesty" },
+				{ id: "4", name: "Glama", apiProvider: "glama" },
+				{ id: "5", name: "Unbound", apiProvider: "unbound" },
+				{ id: "6", name: "Nano-GPT", apiProvider: "nano-gpt" },
+				{ id: "7", name: "OVHcloud", apiProvider: "ovhcloud" },
+				{ id: "8", name: "Inception", apiProvider: "inception" },
+				{ id: "9", name: "Roo", apiProvider: "roo" },
+				{ id: "10", name: "Chutes", apiProvider: "chutes" },
+				{ id: "11", name: "LiteLLM", apiProvider: "litellm" },
+			],
 		})
 	})
 
@@ -227,84 +241,100 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			type: "requestRouterModels",
 		})
 
-		// Verify getModels was called for each provider
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		// kilocode_change start
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
+		// Verify getModels was called for each provider that has a configured profile
+		// Providers without configured profiles are skipped (deepinfra, kilocode, ollama, vercel-ai-gateway, synthetic, io-intelligence)
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "openrouter",
+			apiKey: "openrouter-key",
+			baseUrl: undefined,
+		})
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "gemini",
 			apiKey: "gemini-key",
 			baseUrl: "https://gemini.example.com",
 		})
-		expect(mockGetModels).toHaveBeenCalledWith({
-			provider: "inception",
-			apiKey: "inception-key",
-			baseUrl: "https://api.inceptionlabs.ai/v1/",
-		})
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key", baseUrl: undefined })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama", apiKey: "glama-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "nano-gpt",
 			apiKey: "nano-gpt-key",
 			nanoGptModelList: undefined,
 		})
-		// kilocode_change end
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "deepinfra" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key", baseUrl: undefined })
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "inception",
+			apiKey: "inception-key",
+			baseUrl: "https://api.inceptionlabs.ai/v1/",
+		})
+		// roo has a configured profile
 		expect(mockGetModels).toHaveBeenCalledWith(
-			expect.objectContaining({
-				provider: "roo",
-				baseUrl: expect.any(String),
-			}),
+			expect.objectContaining({ provider: "roo", baseUrl: expect.any(String) }),
 		)
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
-		// Note: huggingface is not fetched in requestRouterModels - it has its own handler
-		// Note: io-intelligence is not fetched because no API key is provided in the mock state
 
-		// Verify response was sent
+		// Verify providers without configured profiles are NOT called
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "deepinfra" }))
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "kilocode" }))
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "ollama" }))
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "vercel-ai-gateway" }))
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "synthetic" }))
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "io-intelligence" }))
+
+		// Verify response was sent - only providers with configured profiles are in the result
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
-				deepinfra: mockModels,
+				// Providers that were fetched successfully (have configured profiles)
 				openrouter: mockModels,
-				gemini: mockModels, // kilocode_change
+				gemini: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
-				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
-				litellm: mockModels,
-				kilocode: mockModels,
-				"nano-gpt": mockModels, // kilocode_change
+				"nano-gpt": mockModels,
+				ovhcloud: mockModels,
+				inception: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
-				ollama: mockModels, // kilocode_change
-				lmstudio: {},
-				"vercel-ai-gateway": mockModels,
-				huggingface: {},
+				litellm: mockModels,
+				// Providers without configured profiles are initialized to empty in routerModels
+				deepinfra: {},
+				kilocode: {},
+				ollama: {},
+				"vercel-ai-gateway": {},
+				synthetic: {},
 				"io-intelligence": {},
-				ovhcloud: mockModels, // kilocode_change
-				inception: mockModels, // kilocode_change
-				"sap-ai-core": {}, // kilocode_change
+				// Static empty entries
+				lmstudio: {},
+				huggingface: {},
+				"sap-ai-core": {},
 			},
 			values: undefined,
 		})
 	})
 
-	it("handles LiteLLM models with values from message when config is missing", async () => {
+	it("skips providers without configured profiles", async () => {
+		// This test verifies providers are only fetched if they have a configured profile in listApiConfigMeta
+		// - Providers with configured profiles are fetched
+		// - Providers without configured profiles are skipped, even if they have credentials
+
 		mockClineProvider.getState = vi.fn().mockResolvedValue({
 			apiConfiguration: {
-				openRouterApiKey: "openrouter-key",
-				requestyApiKey: "requesty-key",
-				glamaApiKey: "glama-key",
-				unboundApiKey: "unbound-key",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
-				// Missing litellm config
+				// Both providers have credentials
+				openRouterApiKey: "valid-key",
+				deepInfraApiKey: "deepinfra-key",
+				deepInfraBaseUrl: "https://api.deepinfra.com",
 			},
+			// But only openrouter and roo have configured profiles
+			listApiConfigMeta: [
+				{ id: "1", name: "OpenRouter", apiProvider: "openrouter" },
+				{ id: "2", name: "Roo", apiProvider: "roo" },
+			],
 		})
 
 		const mockModels: ModelRecord = {
@@ -320,21 +350,29 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
-			values: {
-				litellmApiKey: "message-litellm-key",
-				litellmBaseUrl: "http://message-url:4000",
-			},
 		})
 
-		// Verify LiteLLM was called with values from message
-		expect(mockGetModels).toHaveBeenCalledWith({
-			provider: "litellm",
-			apiKey: "message-litellm-key",
-			baseUrl: "http://message-url:4000",
-		})
+		// Verify openrouter was fetched (has configured profile)
+		expect(mockGetModels).toHaveBeenCalledWith(
+			expect.objectContaining({ provider: "openrouter", apiKey: "valid-key" }),
+		)
+
+		// Verify roo was fetched (has configured profile)
+		expect(mockGetModels).toHaveBeenCalledWith(
+			expect.objectContaining({ provider: "roo", baseUrl: expect.any(String) }),
+		)
+
+		// Verify deepinfra was NOT fetched (no configured profile, even though it has credentials)
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "deepinfra" }))
+
+		// Verify vercel-ai-gateway was NOT fetched (no configured profile)
+		expect(mockGetModels).not.toHaveBeenCalledWith(expect.objectContaining({ provider: "vercel-ai-gateway" }))
 	})
 
-	it("skips LiteLLM when both config and message values are missing", async () => {
+	// Note: LiteLLM does NOT support getting values from message.values - only from apiConfiguration
+	// The candidate definition uses apiConfiguration.litellmApiKey, not message?.values?.litellmApiKey
+
+	it("skips LiteLLM when profile is not configured", async () => {
 		mockClineProvider.getState = vi.fn().mockResolvedValue({
 			apiConfiguration: {
 				openRouterApiKey: "openrouter-key",
@@ -348,6 +386,17 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				// kilocode_change end
 				// Missing litellm config
 			},
+			// Configured profiles - LiteLLM profile is not included
+			listApiConfigMeta: [
+				{ id: "1", name: "OpenRouter", apiProvider: "openrouter" },
+				{ id: "2", name: "Requesty", apiProvider: "requesty" },
+				{ id: "3", name: "Glama", apiProvider: "glama" },
+				{ id: "4", name: "Unbound", apiProvider: "unbound" },
+				{ id: "5", name: "Nano-GPT", apiProvider: "nano-gpt" },
+				{ id: "6", name: "OVHcloud", apiProvider: "ovhcloud" },
+				{ id: "7", name: "Roo", apiProvider: "roo" },
+				{ id: "8", name: "Chutes", apiProvider: "chutes" },
+			],
 		})
 
 		const mockModels: ModelRecord = {
@@ -366,37 +415,40 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			// No values provided
 		})
 
-		// Verify LiteLLM was NOT called
+		// Verify LiteLLM was NOT called (no configured profile)
 		expect(mockGetModels).not.toHaveBeenCalledWith(
 			expect.objectContaining({
 				provider: "litellm",
 			}),
 		)
 
-		// Verify response includes empty object for LiteLLM
+		// Verify response includes empty object for providers without configured profiles
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
-				deepinfra: mockModels,
+				// Providers with configured profiles were fetched successfully
 				openrouter: mockModels,
-				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
-				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
+				"nano-gpt": mockModels,
+				ovhcloud: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
-				litellm: {},
-				kilocode: mockModels,
-				"nano-gpt": mockModels, // kilocode_change
-				ollama: mockModels, // kilocode_change
-				lmstudio: {},
-				"vercel-ai-gateway": mockModels,
-				huggingface: {},
+				// Providers without configured profiles get empty objects
+				gemini: {},
+				deepinfra: {},
+				kilocode: {},
+				ollama: {},
+				"vercel-ai-gateway": {},
+				synthetic: {},
 				"io-intelligence": {},
-				ovhcloud: mockModels, // kilocode_change
-				inception: mockModels, // kilocode_change
-				"sap-ai-core": {}, // kilocode_change
+				inception: {},
+				litellm: {},
+				// Static empty entries
+				lmstudio: {},
+				huggingface: {},
+				"sap-ai-core": {},
 			},
 			values: undefined,
 		})
@@ -412,30 +464,37 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			},
 		}
 
-		// Mock some providers to succeed and others to fail
+		// The beforeEach mock includes these providers with configured profiles:
+		// openrouter, gemini, requesty, glama, unbound, nano-gpt, ovhcloud, inception, roo, chutes, litellm
+		// Providers without configured profiles (kilocode, ollama, deepinfra, vercel-ai-gateway, synthetic, io-intelligence)
+		// are skipped before fetch - they don't call getModels at all.
+
+		// Mock providers in order they appear in candidates array
+		// (skipping those without configured profiles as they won't call getModels)
 		mockGetModels
-			.mockResolvedValueOnce(mockModels) // openrouter
-			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
-			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockResolvedValueOnce(mockModels) // glama
-			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
-			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
-			.mockResolvedValueOnce(mockModels) // deepinfra
-			.mockResolvedValueOnce(mockModels) // nano-gpt // kilocode_change
-			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change
-			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
-			.mockResolvedValueOnce(mockModels) // roo
-			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
-			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
+			.mockResolvedValueOnce(mockModels) // openrouter - success
+			.mockResolvedValueOnce(mockModels) // gemini - success
+			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty - fail
+			.mockResolvedValueOnce(mockModels) // glama - success
+			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound - fail
+			// kilocode skipped (no configured profile)
+			// ollama skipped (no configured profile)
+			// vercel-ai-gateway skipped (no configured profile)
+			// deepinfra skipped (no configured profile)
+			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt - fail
+			.mockResolvedValueOnce(mockModels) // ovhcloud - success
+			.mockRejectedValueOnce(new Error("Inception API error")) // inception - fail
+			// synthetic skipped (no configured profile)
+			.mockResolvedValueOnce(mockModels) // roo - success
+			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes - fail
+			// io-intelligence skipped (no configured profile)
+			.mockResolvedValueOnce(mockModels) // litellm - success
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
 		})
 
-		// Verify error messages were sent for failed providers (these come first)
+		// Verify error messages were sent for failed providers
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -450,7 +509,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Nano-GPT API error",
+			values: { provider: "nano-gpt" },
+		})
+
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -461,96 +526,86 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Synthetic API error",
-			values: { provider: "synthetic" },
-		})
-		// kilocode_change end
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
 			error: "Chutes API error",
 			values: { provider: "chutes" },
-		})
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "LiteLLM connection failed",
-			values: { provider: "litellm" },
 		})
 
 		// Verify final routerModels response includes successful providers and empty objects for failed ones
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
-				deepinfra: mockModels,
+				// Successfully fetched
 				openrouter: mockModels,
-				requesty: {},
-				glama: mockModels,
-				unbound: {},
-				roo: mockModels,
-				chutes: {},
-				litellm: {},
-				ollama: {},
-				lmstudio: {},
-				"vercel-ai-gateway": mockModels,
-				huggingface: {},
-				"io-intelligence": {},
-				// kilocode_change start
-				kilocode: mockModels,
-				"nano-gpt": mockModels,
-				inception: {},
-				synthetic: {},
 				gemini: mockModels,
+				glama: mockModels,
 				ovhcloud: mockModels,
+				roo: mockModels,
+				litellm: mockModels,
+				// Failed (API errors)
+				requesty: {},
+				unbound: {},
+				"nano-gpt": {},
+				inception: {},
+				chutes: {},
+				// Skipped (no configured profile - returned {} without calling getModels)
+				kilocode: {},
+				ollama: {},
+				"vercel-ai-gateway": {},
+				deepinfra: {},
+				synthetic: {},
+				"io-intelligence": {},
+				// Static empty entries
+				lmstudio: {},
+				huggingface: {},
 				"sap-ai-core": {},
-				// kilocode_change end
 			},
 			values: undefined,
 		})
 	})
 
 	it("handles Error objects and string errors correctly", async () => {
-		// Mock providers to fail with different error types
+		// The beforeEach mock includes these providers with credentials:
+		// openrouter, gemini, requesty, glama, unbound, nano-gpt, ovhcloud, inception, roo, chutes, litellm
+		// Providers without credentials are skipped (don't call getModels)
+
+		// Mock all providers to fail to verify error handling
 		mockGetModels
-			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
-			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
+			.mockRejectedValueOnce(new Error("OpenRouter API error")) // openrouter
+			.mockRejectedValueOnce(new Error("Gemini API error")) // gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
-			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
-			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
-			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt // kilocode_change
-			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change inception
-			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
-			.mockRejectedValueOnce(new Error("Roo API error")) // roo
+			// kilocode skipped (no token)
+			// ollama skipped (no baseUrl)
+			// vercel-ai-gateway skipped (no apiKey)
+			// deepinfra skipped (no apiKey)
+			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt
+			.mockRejectedValueOnce(new Error("OVHcloud API error")) // ovhcloud
+			.mockRejectedValueOnce(new Error("Inception API error")) // inception
+			// synthetic skipped (no apiKey)
+			.mockRejectedValueOnce(new Error("Roo API error")) // roo (has default baseUrl)
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
+			// io-intelligence skipped (no apiKey)
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
 		})
 
-		// Verify error handling for different error types
+		// Verify error handling for each provider that was actually fetched
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Structured error message",
+			error: "OpenRouter API error",
 			values: { provider: "openrouter" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Gemini API error",
 			values: { provider: "gemini" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -573,50 +628,25 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Ollama API error",
-			values: { provider: "ollama" },
-		})
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Vercel AI Gateway error",
-			values: { provider: "vercel-ai-gateway" },
-		})
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Chutes API error",
-			values: { provider: "chutes" },
-		})
-		// kilocode_change end
-
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "DeepInfra API error",
-			values: { provider: "deepinfra" },
-		})
-
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Nano-GPT API error",
 			values: { provider: "nano-gpt" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "Vercel AI Gateway error",
-			values: { provider: "vercel-ai-gateway" },
+			error: "OVHcloud API error",
+			values: { provider: "ovhcloud" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Inception API error",
+			values: { provider: "inception" },
 		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -639,24 +669,9 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
-
-		// kilocode_change start
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "OVHcloud AI Endpoints error",
-			values: { provider: "ovhcloud" },
-		})
-		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
-			type: "singleRouterModelFetchResponse",
-			success: false,
-			error: "Inception API error",
-			values: { provider: "inception" },
-		})
-		// kilocode_change end
 	})
 
-	it("prefers config values over message values for LiteLLM", async () => {
+	it("uses config values for LiteLLM (message values are not used)", async () => {
 		const mockModels: ModelRecord = {}
 		mockGetModels.mockResolvedValue(mockModels)
 
@@ -668,7 +683,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			},
 		})
 
-		// Verify config values are used over message values
+		// LiteLLM does NOT use message.values - only apiConfiguration
+		// (Unlike openrouter which supports both via fallback)
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key", // From config

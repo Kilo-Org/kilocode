@@ -840,11 +840,17 @@ export const webviewMessageHandler = async (
 			await flushModels(routerNameFlush)
 			break
 		case "requestRouterModels":
-			const { apiConfiguration } = await provider.getState()
+			const { apiConfiguration, listApiConfigMeta = [] } = await provider.getState()
 
 			// Optional single provider filter from webview
 			const requestedProvider = message?.values?.provider
 			const providerFilter = requestedProvider ? toRouterName(requestedProvider) : undefined
+
+			// Helper to check if a provider has any configured profiles
+			// This ensures we only fetch models for providers that are actually in use
+			const hasConfiguredProfile = (providerName: RouterName): boolean => {
+				return listApiConfigMeta.some((profile) => profile.apiProvider === providerName)
+			}
 
 			const routerModels: Record<RouterName, ModelRecord> = providerFilter
 				? ({} as Record<RouterName, ModelRecord>)
@@ -891,7 +897,13 @@ export const webviewMessageHandler = async (
 			const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || message?.values?.openRouterBaseUrl
 
 			// Base candidates (only those handled by this aggregate fetcher)
-			const candidates: { key: RouterName; options: GetModelsOptions }[] = [
+
+			type Candidate = {
+				key: RouterName
+				options: GetModelsOptions
+			}
+
+			const candidates: Candidate[] = [
 				{
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
@@ -912,7 +924,7 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.requestyBaseUrl,
 					},
 				},
-				{ key: "glama", options: { provider: "glama" } },
+				{ key: "glama", options: { provider: "glama", apiKey: apiConfiguration.glamaApiKey } },
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
 				{
 					key: "kilocode",
@@ -923,7 +935,10 @@ export const webviewMessageHandler = async (
 					},
 				},
 				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
-				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
+				{
+					key: "vercel-ai-gateway",
+					options: { provider: "vercel-ai-gateway", apiKey: apiConfiguration.vercelAiGatewayApiKey },
+				},
 				{
 					key: "deepinfra",
 					options: {
@@ -973,32 +988,26 @@ export const webviewMessageHandler = async (
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
 				},
+				{
+					key: "io-intelligence",
+					options: { provider: "io-intelligence", apiKey: apiConfiguration.ioIntelligenceApiKey },
+				},
+				{
+					key: "litellm",
+					options: {
+						provider: "litellm",
+						apiKey: apiConfiguration.litellmApiKey,
+						baseUrl: apiConfiguration.litellmBaseUrl,
+					},
+				},
 			]
 			// kilocode_change end
 
-			// IO Intelligence is conditional on api key
-			if (apiConfiguration.ioIntelligenceApiKey) {
-				candidates.push({
-					key: "io-intelligence",
-					options: { provider: "io-intelligence", apiKey: apiConfiguration.ioIntelligenceApiKey },
-				})
-			}
-
-			// LiteLLM is conditional on baseUrl+apiKey
-			const litellmApiKey = apiConfiguration.litellmApiKey || message?.values?.litellmApiKey
-			const litellmBaseUrl = apiConfiguration.litellmBaseUrl || message?.values?.litellmBaseUrl
-
-			if (litellmApiKey && litellmBaseUrl) {
-				candidates.push({
-					key: "litellm",
-					options: { provider: "litellm", apiKey: litellmApiKey, baseUrl: litellmBaseUrl },
-				})
-			}
-
-			// Apply single provider filter if specified
+			// Apply single provider filter if specified, and only fetch models for providers
+			// that have at least one configured profile (to avoid fetching for deleted providers)
 			const modelFetchPromises = providerFilter
-				? candidates.filter(({ key }) => key === providerFilter)
-				: candidates
+				? candidates.filter(({ key }) => key === providerFilter && hasConfiguredProfile(key))
+				: candidates.filter(({ key }) => hasConfiguredProfile(key))
 
 			const results = await Promise.allSettled(
 				modelFetchPromises.map(async ({ key, options }) => {

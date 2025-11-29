@@ -97,6 +97,12 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 	})
 
 	it("fetches only requested provider when values.provider is present ('roo')", async () => {
+		// Need to include the provider in listApiConfigMeta so hasConfiguredProfile returns true
+		mockProvider.getState.mockResolvedValue({
+			apiConfiguration: {},
+			listApiConfigMeta: [{ apiProvider: "roo" }],
+		})
+
 		await webviewMessageHandler(
 			mockProvider as any,
 			{
@@ -148,6 +154,12 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 	})
 
 	it("supports filtering another single provider ('openrouter')", async () => {
+		// Need to include the provider in listApiConfigMeta so hasConfiguredProfile returns true
+		mockProvider.getState.mockResolvedValue({
+			apiConfiguration: {},
+			listApiConfigMeta: [{ apiProvider: "openrouter" }],
+		})
+
 		await webviewMessageHandler(
 			mockProvider as any,
 			{

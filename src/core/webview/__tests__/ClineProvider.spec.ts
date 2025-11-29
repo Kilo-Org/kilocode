@@ -2739,6 +2739,25 @@ describe("ClineProvider - Router Models", () => {
 				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 				// kilocode_change end
 			},
+			// Need to include listApiConfigMeta for hasConfiguredProfile check
+			listApiConfigMeta: [
+				{ apiProvider: "openrouter" },
+				{ apiProvider: "gemini" },
+				{ apiProvider: "requesty" },
+				{ apiProvider: "glama" },
+				{ apiProvider: "unbound" },
+				{ apiProvider: "kilocode" },
+				{ apiProvider: "ollama" },
+				{ apiProvider: "vercel-ai-gateway" },
+				{ apiProvider: "deepinfra" },
+				{ apiProvider: "nano-gpt" },
+				{ apiProvider: "ovhcloud" },
+				{ apiProvider: "inception" },
+				{ apiProvider: "synthetic" },
+				{ apiProvider: "roo" },
+				{ apiProvider: "chutes" },
+				{ apiProvider: "litellm" },
+			],
 		} as any)
 
 		const mockModels = {
@@ -2776,11 +2795,11 @@ describe("ClineProvider - Router Models", () => {
 			baseUrl: "https://api.inceptionlabs.ai/v1/",
 		})
 		// kilocode_change end
-		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key", baseUrl: undefined })
+		expect(getModels).toHaveBeenCalledWith({ provider: "glama", apiKey: "glama-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "deepinfra" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway", apiKey: undefined })
+		expect(getModels).toHaveBeenCalledWith({ provider: "deepinfra", apiKey: undefined, baseUrl: undefined })
 		expect(getModels).toHaveBeenCalledWith(
 			expect.objectContaining({
 				provider: "roo",
@@ -2846,6 +2865,25 @@ describe("ClineProvider - Router Models", () => {
 				syntheticApiKey: "synthetic-key",
 				// kilocode_change end
 			},
+			// Need to include listApiConfigMeta for hasConfiguredProfile check
+			listApiConfigMeta: [
+				{ apiProvider: "openrouter" },
+				{ apiProvider: "gemini" },
+				{ apiProvider: "requesty" },
+				{ apiProvider: "glama" },
+				{ apiProvider: "unbound" },
+				{ apiProvider: "kilocode" },
+				{ apiProvider: "ollama" },
+				{ apiProvider: "vercel-ai-gateway" },
+				{ apiProvider: "deepinfra" },
+				{ apiProvider: "nano-gpt" },
+				{ apiProvider: "ovhcloud" },
+				{ apiProvider: "inception" },
+				{ apiProvider: "synthetic" },
+				{ apiProvider: "roo" },
+				{ apiProvider: "chutes" },
+				{ apiProvider: "litellm" },
+			],
 		} as any)
 
 		const mockModels = {
@@ -2955,47 +2993,6 @@ describe("ClineProvider - Router Models", () => {
 		})
 	})
 
-	test("handles requestRouterModels with LiteLLM values from message", async () => {
-		await provider.resolveWebviewView(mockWebviewView)
-		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
-
-		// Mock state without LiteLLM config
-		vi.spyOn(provider, "getState").mockResolvedValue({
-			apiConfiguration: {
-				openRouterApiKey: "openrouter-key",
-				requestyApiKey: "requesty-key",
-				glamaApiKey: "glama-key",
-				unboundApiKey: "unbound-key",
-				// kilocode_change start
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
-				chutesApiKey: "chutes-key",
-				// kilocode_change end
-				// No litellm config
-			},
-		} as any)
-
-		const mockModels = {
-			"model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model", supportsPromptCache: false },
-		}
-		const { getModels } = await import("../../../api/providers/fetchers/modelCache")
-		vi.mocked(getModels).mockResolvedValue(mockModels)
-
-		await messageHandler({
-			type: "requestRouterModels",
-			values: {
-				litellmApiKey: "message-litellm-key",
-				litellmBaseUrl: "http://message-url:4000",
-			},
-		})
-
-		// Verify LiteLLM was called with values from message
-		expect(getModels).toHaveBeenCalledWith({
-			provider: "litellm",
-			apiKey: "message-litellm-key",
-			baseUrl: "http://message-url:4000",
-		})
-	})
-
 	test("skips LiteLLM when neither config nor message values are provided", async () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
@@ -3013,6 +3010,25 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change end
 				// No litellm config
 			},
+			// Need to include listApiConfigMeta for hasConfiguredProfile check - all providers except litellm
+			listApiConfigMeta: [
+				{ apiProvider: "openrouter" },
+				{ apiProvider: "gemini" },
+				{ apiProvider: "requesty" },
+				{ apiProvider: "glama" },
+				{ apiProvider: "unbound" },
+				{ apiProvider: "kilocode" },
+				{ apiProvider: "ollama" },
+				{ apiProvider: "vercel-ai-gateway" },
+				{ apiProvider: "deepinfra" },
+				{ apiProvider: "nano-gpt" },
+				{ apiProvider: "ovhcloud" },
+				{ apiProvider: "inception" },
+				{ apiProvider: "synthetic" },
+				{ apiProvider: "roo" },
+				{ apiProvider: "chutes" },
+				// Note: litellm NOT in list - testing that it's skipped
+			],
 		} as any)
 
 		const mockModels = {
