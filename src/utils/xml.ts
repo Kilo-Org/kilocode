@@ -79,6 +79,10 @@ export function parsePathFromArgsParam(params: Partial<Record<string, string>>):
 
 			return file.path
 		}
+
+		if (parsed.path) {
+			return parsed.path
+		}
 	}
 
 	return undefined
