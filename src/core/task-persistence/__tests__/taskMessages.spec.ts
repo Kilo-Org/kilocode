@@ -33,9 +33,6 @@ describe("taskMessages.saveTaskMessages", () => {
 				role: "assistant",
 				content: "Hello",
 				metadata: {
-					gpt5: {
-						previous_response_id: "resp_123",
-					},
 					other: "keep",
 				},
 			},

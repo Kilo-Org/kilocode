@@ -15,3 +15,30 @@ export function mergeApiMessages(message1: ApiMessage, message2: Anthropic.Messa
 	}
 	return { ...message1, content }
 }
+
+export function addOrMergeUserContent(
+	messages: Anthropic.ContentBlockParam[],
+	newUserContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[],
+) {
+	const result = [...messages]
+	const lastIndex = result.length - 1
+	const lastItem = result[lastIndex]
+	if (lastItem && lastItem.type === "tool_result") {
+		if (Array.isArray(lastItem.content)) {
+			result[lastIndex] = {
+				...lastItem,
+				content: [...lastItem.content, ...newUserContent],
+			}
+		} else if (lastItem.content) {
+			result[lastIndex] = {
+				...lastItem,
+				content: [{ type: "text", text: lastItem.content }, ...newUserContent],
+			}
+		} else {
+			result[lastIndex] = { ...lastItem, content: newUserContent }
+		}
+	} else {
+		result.push(...newUserContent)
+	}
+	return result
+}

@@ -704,7 +704,13 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 			signal: AbortSignal.timeout(10000),
 		})
 
-		return clerkOrganizationMembershipsSchema.parse(await response.json()).response
+		if (response.ok) {
+			return clerkOrganizationMembershipsSchema.parse(await response.json()).response
+		}
+
+		const errorMessage = `Failed to get organization memberships: ${response.status} ${response.statusText}`
+		this.log(`[auth] ${errorMessage}`)
+		throw new Error(errorMessage)
 	}
 
 	private async getOrganizationMetadata(

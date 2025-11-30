@@ -84,10 +84,14 @@
 		"selectModelPlaceholder": "Seleccionar modelo",
 		"ollamaUrlLabel": "URL de Ollama:",
 		"ollamaBaseUrlLabel": "URL base de Ollama",
+		"vectorStoreProviderLabel": "Proveedor de almacén de vectores",
 		"qdrantUrlLabel": "URL de Qdrant",
 		"qdrantKeyLabel": "Clave de Qdrant:",
 		"qdrantApiKeyLabel": "Clave API de Qdrant",
 		"qdrantApiKeyPlaceholder": "Introduce tu clave API de Qdrant (opcional)",
+		"lancedbVectorStoreDirectoryLabel": "Ruta del LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Introduce una ruta personalizada del almacén de vectores (opcional)",
+		"lancedbVectorStoreDirectoryDescription": "Ruta para almacenar la base de datos de vectores LanceDB. Si está vacía, se usa la ubicación predeterminada en globalStorageUri/vector.",
 		"setupConfigLabel": "Configuración",
 		"startIndexingButton": "Iniciar",
 		"clearIndexDataButton": "Borrar índice",
@@ -252,6 +256,15 @@
 		"searchProviderPlaceholder": "Buscar proveedores",
 		"noProviderMatchFound": "No se encontraron proveedores",
 		"noMatchFound": "No se encontraron perfiles coincidentes",
+		"profileName": "Nombre del perfil",
+		"profileType": "Tipo de perfil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocompletado",
+		"profileTypeDescription": "Los perfiles de chat se usan para conversaciones. Solo se permite un perfil de autocompletado.",
+		"autocompleteLabel": "(Autocompletado)",
+		"autocomplete": {
+			"onlyOneAllowed": "Solo se permite un perfil de autocompletado. El perfil \"{{existingName}}\" ya está configurado para autocompletado. Por favor, cambia su tipo primero o elimínalo."
+		},
 		"vscodeLmDescription": "La API del Modelo de Lenguaje de VS Code le permite ejecutar modelos proporcionados por otras extensiones de VS Code (incluido, entre otros, GitHub Copilot). La forma más sencilla de empezar es instalar las extensiones Copilot y Copilot Chat desde el VS Code Marketplace.",
 		"vscodeLmUnavailable": "El soporte de Modelos de Lenguaje de VS Code solo está disponible en Visual Studio Code. Forks como VSCodium y otros pueden no funcionar. Además, esta capacidad no está disponible en las herramientas de JetBrains.",
 		"vscodeLmUnavailableInstructions": "Asegúrese de usar una herramienta compatible y de que VS Code Chat esté instalado y habilitado",
@@ -289,6 +302,8 @@
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Usar nombre de despliegue de Azure",
+		"anthropicAzureDeploymentPlaceholder": "Introduce el nombre del despliegue...",
 		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"cerebrasApiKey": "Clave API de Cerebras",
@@ -349,6 +364,14 @@
 		"getMistralApiKey": "Obtener clave API de Mistral / Codestral",
 		"codestralBaseUrl": "URL base de Codestral (Opcional)",
 		"codestralBaseUrlDesc": "Establecer una URL alternativa para el modelo Codestral.",
+		"nanoGptApiKey": "Clave API de Nano-GPT",
+		"getNanoGptApiKey": "Obtener clave API de Nano-GPT",
+		"nanoGptModelList": "Lista de Modelos",
+		"nanoGptModelListOptions": {
+			"all": "Todos los Modelos",
+			"personalized": "Modelos Personalizados",
+			"subscription": "Modelos de Suscripción"
+		},
 		"xaiApiKey": "Clave API de xAI",
 		"getXaiApiKey": "Obtener clave API de xAI",
 		"litellmApiKey": "Clave API de LiteLLM",
@@ -362,6 +385,7 @@
 		"awsSessionToken": "Token de sesión de AWS",
 		"awsRegion": "Región de AWS",
 		"awsCrossRegion": "Usar inferencia entre regiones",
+		"awsGlobalInference": "Usar inferencia global (selección automática de la región óptima de AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usar punto de conexión VPC personalizado",
 			"vpcEndpointUrlPlaceholder": "Ingrese URL del punto de conexión VPC (opcional)",
@@ -484,7 +508,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Límite de errores y repeticiones",
-			"description": "Número de errores consecutivos o acciones repetidas antes de mostrar el diálogo 'Kilo Code está teniendo problemas'",
+			"description": "Número de errores consecutivos o acciones repetidas antes de mostrar el diálogo 'Kilo está teniendo problemas'. Establecer en 0 para desactivar este mecanismo de seguridad (nunca se activará).",
 			"unlimitedDescription": "Reintentos ilimitados habilitados (proceder automáticamente). El diálogo nunca aparecerá.",
 			"warning": "⚠️ Establecer en 0 permite reintentos ilimitados que pueden consumir un uso significativo de la API"
 		},
@@ -532,6 +556,32 @@
 			"description": "Este proveedor usa autenticación OAuth del servicio Qwen y no requiere claves API.",
 			"instructions": "Por favor, siga la documentación oficial para obtener el archivo de autorización y colócalo en la ruta especificada.",
 			"setupLink": "Documentación Oficial de Qwen"
+		},
+		"sapAiCore": {
+			"serviceKey": "Clave de servicio de AI Core",
+			"serviceKeyJson": "Ingrese JSON de clave de servicio...",
+			"resourceGroup": "Grupo de recursos de AI Core",
+			"credentialsNote": "Estas credenciales se almacenan localmente y solo se usan para realizar solicitudes de API desde esta extensión.",
+			"learnMore": "Puede encontrar más información sobre el acceso a la API de SAP AI Core aquí.",
+			"orchestrationMode": "Modo de orquestación",
+			"orchestrationEnabledDesc": "Cuando está habilitado, proporciona acceso a todos los modelos disponibles sin requerir despliegues individuales.",
+			"orchestrationDisabledDesc": "Cuando está deshabilitado, proporciona acceso solo a los modelos base desplegados en su instancia de servicio de AI Core.",
+			"modelDeploymentDesc": "Solo puede seleccionar modelos con despliegues disponibles.",
+			"deployment": "Despliegue",
+			"loading": "Cargando...",
+			"modelsCount": "({{count}} modelos)",
+			"deploymentsCount": "({{count}} despliegues)",
+			"selectModel": "Seleccionar un modelo...",
+			"selectDeployment": "Seleccionar un despliegue...",
+			"searchModels": "Buscar modelos...",
+			"searchDeployments": "Buscar despliegues...",
+			"noModelsFound": "No se encontraron modelos",
+			"noDeploymentFound": "No se encontró despliegue",
+			"getStarted": "Comenzar con SAP AI Core",
+			"supportedProviders": "Proveedores soportados",
+			"supportedProvidersDesc1": "El proveedor SAP AI Core actualmente solo admite modelos base para los siguientes proveedores de LLM:",
+			"supportedProvidersDesc2": "Considere cambiar al modo de orquestación para acceder a más modelos.",
+			"supportedProvidersDesc3": "Más información sobre el modo de orquestación"
 		}
 	},
 	"browser": {
@@ -824,8 +874,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Fast Apply con modelos especializados optimizados para modificaciones de código. Requiere Kilo Gateway Provider, OpenRouter o una clave API de Morph.",
-			"apiKey": "Clave API de Morph (opcional)",
-			"placeholder": "Introduce tu clave API de Morph (opcional)",
+			"apiProvider": "Proveedor de API",
+			"apiProviderList": {
+				"current": "Actual"
+			},
+			"apiKey": "Clave API (opcional)",
+			"placeholder": "Introduce tu clave API (opcional)",
 			"modelLabel": "Selección de modelo",
 			"modelDescription": "Elige qué modelo de Fast Apply usar para ediciones de archivos",
 			"models": {
@@ -942,7 +996,9 @@
 		"providerNotAllowed": "El proveedor '{{provider}}' no está permitido por su organización",
 		"modelNotAllowed": "El modelo '{{model}}' no está permitido para el proveedor '{{provider}}' por su organización",
 		"profileInvalid": "Este perfil contiene un proveedor o modelo que no está permitido por su organización",
-		"qwenCodeOauthPath": "Debes proporcionar una ruta válida de credenciales OAuth"
+		"qwenCodeOauthPath": "Debes proporcionar una ruta válida de credenciales OAuth",
+		"sapAiCore": "Debe proporcionar una clave de servicio de SAP AI Core válida.",
+		"sapAiCoreDeploymentId": "Debe seleccionar un despliegue en ejecución para el modelo '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Ingrese clave API...",

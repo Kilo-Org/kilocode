@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Masukkan nama model",
 		"selectModel": "Pilih model",
 		"ollamaBaseUrlLabel": "URL Dasar Ollama",
+		"vectorStoreProviderLabel": "Penyedia Penyimpanan Vektor",
 		"qdrantApiKeyLabel": "Kunci API Qdrant",
 		"qdrantApiKeyPlaceholder": "Masukkan kunci API Qdrant kamu (opsional)",
+		"lancedbVectorStoreDirectoryLabel": "Jalur LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Masukkan jalur penyimpanan vektor kustom (opsional)",
+		"lancedbVectorStoreDirectoryDescription": "Jalur untuk menyimpan database vektor LanceDB. Jika kosong, menggunakan lokasi default di globalStorageUri/vector.",
 		"setupConfigLabel": "Pengaturan",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -289,6 +293,8 @@
 		"anthropicUseAuthToken": "Kirim Anthropic API Key sebagai Authorization header alih-alih X-Api-Key",
 		"anthropic1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Gunakan nama deployment Azure",
+		"anthropicAzureDeploymentPlaceholder": "Masukkan nama deployment...",
 		"awsBedrock1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
 		"cerebrasApiKey": "Cerebras API Key",
@@ -318,6 +324,14 @@
 		"minimaxApiKey": "Kunci API MiniMax",
 		"getMiniMaxApiKey": "Dapatkan Kunci API MiniMax",
 		"minimaxBaseUrl": "Titik Masuk MiniMax",
+		"nanoGptApiKey": "Kunci API Nano-GPT",
+		"getNanoGptApiKey": "Dapatkan Kunci API Nano-GPT",
+		"nanoGptModelList": "Daftar Model",
+		"nanoGptModelListOptions": {
+			"all": "Semua Model",
+			"personalized": "Model Personal",
+			"subscription": "Model Langganan"
+		},
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
@@ -362,6 +376,7 @@
 		"awsSessionToken": "AWS Session Token",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Gunakan cross-region inference",
+		"awsGlobalInference": "Gunakan inferensi Global (pilih Wilayah AWS optimal secara otomatis)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Gunakan VPC endpoint kustom",
 			"vpcEndpointUrlPlaceholder": "Masukkan VPC Endpoint URL (opsional)",
@@ -412,6 +427,32 @@
 			"numCtxHelp": "Ganti ukuran jendela konteks default model. Biarkan kosong untuk menggunakan konfigurasi Modelfile model. Nilai minimum adalah 128.",
 			"description": "Ollama memungkinkan kamu menjalankan model secara lokal di komputer. Untuk instruksi cara memulai, lihat panduan quickstart mereka.",
 			"warning": "Catatan: Kilo Code menggunakan prompt kompleks dan bekerja terbaik dengan model Claude. Model yang kurang mampu mungkin tidak bekerja seperti yang diharapkan."
+		},
+		"sapAiCore": {
+			"serviceKey": "AI Core Service Key",
+			"serviceKeyJson": "Masukkan Service Key JSON...",
+			"resourceGroup": "AI Core Resource Group",
+			"credentialsNote": "Kredensial ini disimpan secara lokal dan hanya digunakan untuk membuat permintaan API dari ekstensi ini.",
+			"learnMore": "Kamu dapat menemukan informasi lebih lanjut tentang akses API SAP AI Core di sini.",
+			"orchestrationMode": "Mode Orkestrasi",
+			"orchestrationEnabledDesc": "Ketika diaktifkan, menyediakan akses ke semua model yang tersedia tanpa memerlukan deployment individual.",
+			"orchestrationDisabledDesc": "Ketika dinonaktifkan, hanya menyediakan akses ke model foundation yang di-deploy di instance AI Core kamu.",
+			"modelDeploymentDesc": "Kamu hanya dapat memilih model dengan deployment yang tersedia.",
+			"deployment": "Deployment",
+			"loading": "Memuat...",
+			"modelsCount": "({{count}} model)",
+			"deploymentsCount": "({{count}} deployment)",
+			"selectModel": "Pilih model...",
+			"selectDeployment": "Pilih deployment...",
+			"searchModels": "Cari model...",
+			"searchDeployments": "Cari deployment...",
+			"noModelsFound": "Tidak ada model ditemukan",
+			"noDeploymentFound": "Tidak ada deployment ditemukan",
+			"getStarted": "Mulai dengan SAP AI Core",
+			"supportedProviders": "Provider yang Didukung",
+			"supportedProvidersDesc1": "Provider SAP AI Core saat ini hanya mendukung model foundation untuk provider LLM berikut:",
+			"supportedProvidersDesc2": "Pertimbangkan untuk beralih ke Mode Orkestrasi untuk akses ke lebih banyak model.",
+			"supportedProvidersDesc3": "Pelajari lebih lanjut tentang Mode Orkestrasi"
 		},
 		"unboundApiKey": "Unbound API Key",
 		"getUnboundApiKey": "Dapatkan Unbound API Key",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Batas Kesalahan & Pengulangan",
-			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Kilo Code mengalami masalah'",
+			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Kilo mengalami masalah'. Atur ke 0 untuk menonaktifkan mekanisme keamanan ini (tidak akan pernah terpicu).",
 			"unlimitedDescription": "Percobaan ulang tak terbatas diaktifkan (lanjut otomatis). Dialog tidak akan pernah muncul.",
 			"warning": "⚠️ Mengatur ke 0 memungkinkan percobaan ulang tak terbatas yang dapat menghabiskan penggunaan API yang signifikan"
 		},
@@ -532,6 +573,15 @@
 			"description": "Provider ini menggunakan autentikasi OAuth dari layanan Qwen dan tidak memerlukan kunci API.",
 			"instructions": "Silakan ikuti dokumentasi resmi untuk mendapatkan file otorisasi dan tempatkan di jalur yang ditentukan.",
 			"setupLink": "Dokumentasi Resmi Qwen"
+		},
+		"profileName": "Nama Profil",
+		"profileType": "Jenis Profil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Pelengkapan Otomatis",
+		"profileTypeDescription": "Profil chat digunakan untuk percakapan. Hanya satu profil pelengkapan otomatis yang diizinkan.",
+		"autocompleteLabel": "(Pelengkapan Otomatis)",
+		"autocomplete": {
+			"onlyOneAllowed": "Hanya satu profil pelengkapan otomatis yang diizinkan. Profil \"{{existingName}}\" sudah dikonfigurasi untuk pelengkapan otomatis. Silakan ubah jenisnya terlebih dahulu atau hapus."
 		}
 	},
 	"browser": {
@@ -846,8 +896,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Gateway Provider, OpenRouter, atau kunci API Morph.",
-			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
+			"apiProvider": "Penyedia API",
+			"apiProviderList": {
+				"current": "Saat ini"
+			},
+			"apiKey": "Kunci API (opsional)",
+			"placeholder": "Masukkan kunci API Anda (opsional)",
 			"modelLabel": "Pemilihan Model",
 			"modelDescription": "Pilih model Fast Apply mana yang akan digunakan untuk edit file",
 			"models": {
@@ -964,7 +1018,9 @@
 		"providerNotAllowed": "Provider '{{provider}}' tidak diizinkan oleh organisasi kamu",
 		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
 		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu",
-		"qwenCodeOauthPath": "Kamu harus memberikan jalur kredensial OAuth yang valid"
+		"qwenCodeOauthPath": "Kamu harus memberikan jalur kredensial OAuth yang valid",
+		"sapAiCore": "Kamu harus menyediakan SAP AI Core Service Key yang valid.",
+		"sapAiCoreDeploymentId": "Kamu harus memilih deployment yang berjalan untuk model '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Masukkan API Key...",

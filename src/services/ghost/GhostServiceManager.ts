@@ -26,7 +26,8 @@ export class GhostServiceManager {
 	// Status bar integration
 	private statusBar: GhostStatusBar | null = null
 	private sessionCost: number = 0
-	private lastCompletionCost: number = 0
+	private completionCount: number = 0
+	private sessionStartTime: number = Date.now()
 
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
@@ -86,10 +87,7 @@ export class GhostServiceManager {
 		// 1% rollout: auto-enable autocomplete for a small subset of logged-in KiloCode users
 		// who have never explicitly toggled enableAutoTrigger.
 		if (this.settings.enableAutoTrigger == undefined) {
-			const rolloutHash = this.model.getRolloutHash_IfLoggedInToKilo()
-			if (rolloutHash != undefined && rolloutHash % 100 < 10) {
-				this.settings.enableAutoTrigger = true
-			}
+			this.settings.enableAutoTrigger = true
 		}
 
 		await this.updateGlobalContext()
@@ -145,6 +143,8 @@ export class GhostServiceManager {
 				enableQuickInlineTaskKeybinding: false,
 			},
 		})
+
+		TelemetryService.instance.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
 
 		await this.load()
 	}
@@ -239,7 +239,8 @@ export class GhostServiceManager {
 			provider: "loading...",
 			hasValidToken: false,
 			totalSessionCost: 0,
-			lastCompletionCost: 0,
+			completionCount: 0,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 
@@ -268,11 +269,15 @@ export class GhostServiceManager {
 		cacheWriteTokens: number,
 		cacheReadTokens: number,
 	): void {
-		this.lastCompletionCost = cost
+		if (inputTokens === 0 && outputTokens === 0) {
+			// Only count completions that actually hit the LLM (not cached)
+			// A cached completion will have 0 input and output tokens
+			return
+		}
+		this.completionCount++
 		this.sessionCost += cost
 		this.updateStatusBar()
 
-		// Send telemetry
 		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
 			taskId: this.taskId,
 			inputTokens,
@@ -293,9 +298,11 @@ export class GhostServiceManager {
 			enabled: this.settings?.enableAutoTrigger,
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
+			profileName: this.model.profileName,
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
-			lastCompletionCost: this.lastCompletionCost,
+			completionCount: this.completionCount,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 

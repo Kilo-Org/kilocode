@@ -1,5 +1,35 @@
 # @kilocode/cli
 
+## 0.10.0
+
+### Minor Changes
+
+- [#3868](https://github.com/Kilo-Org/kilocode/pull/3868) [`cf6ed3e`](https://github.com/Kilo-Org/kilocode/commit/cf6ed3ed3bc7dfe0268121f3e68d422f3ffadfff) Thanks [@iscekic](https://github.com/iscekic)! - add sessions support
+
+## 0.9.0
+
+### Minor Changes
+
+- [#4003](https://github.com/Kilo-Org/kilocode/pull/4003) [`0bb5dfe`](https://github.com/Kilo-Org/kilocode/commit/0bb5dfeb4bb5a5cd07bb852a929acac28e02e78c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Kilo Gateway one click authorization
+
+## 0.8.0
+
+### Minor Changes
+
+- [#3305](https://github.com/Kilo-Org/kilocode/pull/3305) [`df83fc7`](https://github.com/Kilo-Org/kilocode/commit/df83fc71c9dcf4f8aaad0d55a0fd17732d493ff5) Thanks [@benzntech](https://github.com/benzntech)! - Custom modes support
+
+### Patch Changes
+
+- [#4027](https://github.com/Kilo-Org/kilocode/pull/4027) [`2841b10`](https://github.com/Kilo-Org/kilocode/commit/2841b10e9e86f2c74a5797ca9ec10bc93d87c17a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Thinking animation
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3949](https://github.com/Kilo-Org/kilocode/pull/3949) [`5bc6c66`](https://github.com/Kilo-Org/kilocode/commit/5bc6c66b647ebede503c71a42512eef418dbd11a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Continue and abort commands
+
+- [#4001](https://github.com/Kilo-Org/kilocode/pull/4001) [`fb12c27`](https://github.com/Kilo-Org/kilocode/commit/fb12c27d169da8d06eb3598160628081731b0b98) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Support emitting Unix exit codes for signal interruption (SIGINT/SIGTERM).
+
 ## 0.6.0
 
 ### Minor Changes

@@ -545,6 +545,79 @@ describe("getModelParams", () => {
 			expect(result.reasoning).toEqual({ effort: "medium" })
 		})
 
+		it("should include 'minimal' effort for openai format", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				// Array capability explicitly includes minimal
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as any,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { reasoningEffort: "minimal" as any },
+				model,
+			})
+
+			expect(result.reasoningEffort).toBe("minimal")
+			expect(result.reasoning).toEqual({ reasoning_effort: "minimal" })
+		})
+
+		it("should include 'none' effort for openai format", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				// Array capability explicitly includes none
+				supportsReasoningEffort: ["none", "low", "medium", "high"] as any,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { reasoningEffort: "none" as any },
+				model,
+			})
+
+			expect(result.reasoningEffort).toBe("none")
+			expect(result.reasoning).toEqual({ reasoning_effort: "none" })
+		})
+
+		it("should omit reasoning for 'disable' selection", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: true,
+			}
+
+			const result = getModelParams({
+				...openaiParams,
+				settings: { reasoningEffort: "disable" as any },
+				model,
+			})
+
+			expect(result.reasoningEffort).toBeUndefined()
+			expect(result.reasoning).toBeUndefined()
+		})
+
+		it("should include 'minimal' and 'none' for openrouter format", () => {
+			const model: ModelInfo = {
+				...baseModel,
+				// Array capability explicitly includes both
+				supportsReasoningEffort: ["none", "minimal", "low", "medium", "high"] as any,
+			}
+
+			const minimalRes = getModelParams({
+				...openrouterParams,
+				settings: { reasoningEffort: "minimal" as any },
+				model,
+			})
+			expect(minimalRes.reasoningEffort).toBe("minimal")
+			expect(minimalRes.reasoning).toEqual({ effort: "minimal" })
+
+			const noneRes = getModelParams({
+				...openrouterParams,
+				settings: { reasoningEffort: "none" as any },
+				model,
+			})
+			expect(noneRes.reasoningEffort).toBe("none")
+			expect(noneRes.reasoning).toEqual({ effort: "none" })
+		})
 		it("should not use reasoning effort for anthropic format", () => {
 			const model: ModelInfo = {
 				...baseModel,
@@ -793,6 +866,7 @@ describe("getModelParams", () => {
 		it("should include verbosity when specified in settings", () => {
 			const model: ModelInfo = {
 				...baseModel,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({
@@ -807,6 +881,7 @@ describe("getModelParams", () => {
 		it("should handle medium verbosity", () => {
 			const model: ModelInfo = {
 				...baseModel,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({
@@ -821,6 +896,7 @@ describe("getModelParams", () => {
 		it("should handle high verbosity", () => {
 			const model: ModelInfo = {
 				...baseModel,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({
@@ -835,6 +911,7 @@ describe("getModelParams", () => {
 		it("should return undefined verbosity when not specified", () => {
 			const model: ModelInfo = {
 				...baseModel,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({
@@ -850,6 +927,7 @@ describe("getModelParams", () => {
 			const model: ModelInfo = {
 				...baseModel,
 				supportsReasoningEffort: true,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({
@@ -870,6 +948,7 @@ describe("getModelParams", () => {
 			const model: ModelInfo = {
 				...baseModel,
 				supportsReasoningBudget: true,
+				supportsVerbosity: true, // kilocode_change
 			}
 
 			const result = getModelParams({

@@ -220,6 +220,8 @@ This instructs the AI to proceed without user input.
 
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
+- `130`: SIGINT interruption (Ctrl+C)
+- `143`: SIGTERM interruption (system termination)
 - `1`: Error (initialization or execution failure)
 
 #### Example CI/CD Integration

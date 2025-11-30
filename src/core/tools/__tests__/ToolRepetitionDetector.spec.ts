@@ -562,4 +562,139 @@ describe("ToolRepetitionDetector", () => {
 			expect(result.askUser).toBeDefined()
 		})
 	})
+
+	// ===== Native Protocol (nativeArgs) tests =====
+	describe("native protocol with nativeArgs", () => {
+		it("should differentiate read_file calls with different files in nativeArgs", () => {
+			const detector = new ToolRepetitionDetector(2)
+
+			// Create read_file tool use with nativeArgs (like native protocol does)
+			const readFile1: ToolUse = {
+				type: "tool_use",
+				name: "read_file" as ToolName,
+				params: {}, // Empty for native protocol
+				partial: false,
+				nativeArgs: {
+					files: [{ path: "file1.ts" }],
+				},
+			}
+
+			const readFile2: ToolUse = {
+				type: "tool_use",
+				name: "read_file" as ToolName,
+				params: {}, // Empty for native protocol
+				partial: false,
+				nativeArgs: {
+					files: [{ path: "file2.ts" }],
+				},
+			}
+
+			// First call with file1
+			expect(detector.check(readFile1).allowExecution).toBe(true)
+
+			// Second call with file2 - should be treated as different
+			expect(detector.check(readFile2).allowExecution).toBe(true)
+
+			// Third call with file1 again - should reset counter
+			expect(detector.check(readFile1).allowExecution).toBe(true)
+		})
+
+		it("should detect repetition when same files are read multiple times with nativeArgs", () => {
+			const detector = new ToolRepetitionDetector(2)
+
+			// Create identical read_file tool uses
+			const readFile: ToolUse = {
+				type: "tool_use",
+				name: "read_file" as ToolName,
+				params: {}, // Empty for native protocol
+				partial: false,
+				nativeArgs: {
+					files: [{ path: "same-file.ts" }],
+				},
+			}
+
+			// First call allowed
+			expect(detector.check(readFile).allowExecution).toBe(true)
+
+			// Second call allowed
+			expect(detector.check(readFile).allowExecution).toBe(true)
+
+			// Third identical call should be blocked (limit is 2)
+			const result = detector.check(readFile)
+			expect(result.allowExecution).toBe(false)
+			expect(result.askUser).toBeDefined()
+		})
+
+		it("should differentiate read_file calls with multiple files in different orders", () => {
+			const detector = new ToolRepetitionDetector(2)
+
+			const readFile1: ToolUse = {
+				type: "tool_use",
+				name: "read_file" as ToolName,
+				params: {},
+				partial: false,
+				nativeArgs: {
+					files: [{ path: "a.ts" }, { path: "b.ts" }],
+				},
+			}
+
+			const readFile2: ToolUse = {
+				type: "tool_use",
+				name: "read_file" as ToolName,
+				params: {},
+				partial: false,
+				nativeArgs: {
+					files: [{ path: "b.ts" }, { path: "a.ts" }],
+				},
+			}
+
+			// Different order should be treated as different calls
+			expect(detector.check(readFile1).allowExecution).toBe(true)
+			expect(detector.check(readFile2).allowExecution).toBe(true)
+		})
+
+		it("should handle tools with both params and nativeArgs", () => {
+			const detector = new ToolRepetitionDetector(2)
+
+			const tool1: ToolUse = {
+				type: "tool_use",
+				name: "execute_command" as ToolName,
+				params: { command: "ls" },
+				partial: false,
+				nativeArgs: {
+					command: "ls",
+					cwd: "/home/user",
+				},
+			}
+
+			const tool2: ToolUse = {
+				type: "tool_use",
+				name: "execute_command" as ToolName,
+				params: { command: "ls" },
+				partial: false,
+				nativeArgs: {
+					command: "ls",
+					cwd: "/home/admin",
+				},
+			}
+
+			// Different cwd in nativeArgs should make these different
+			expect(detector.check(tool1).allowExecution).toBe(true)
+			expect(detector.check(tool2).allowExecution).toBe(true)
+		})
+
+		it("should handle tools with only params (no nativeArgs)", () => {
+			const detector = new ToolRepetitionDetector(2)
+
+			const legacyTool = createToolUse("read_file", "read_file", { path: "test.txt" })
+
+			// Should work the same as before
+			expect(detector.check(legacyTool).allowExecution).toBe(true)
+			expect(detector.check(legacyTool).allowExecution).toBe(true)
+
+			const result = detector.check(legacyTool)
+			expect(result.allowExecution).toBe(false)
+			expect(result.askUser).toBeDefined()
+		})
+	})
 })

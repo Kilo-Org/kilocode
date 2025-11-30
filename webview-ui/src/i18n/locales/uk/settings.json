@@ -97,10 +97,14 @@
 		"selectModelPlaceholder": "Виберіть модель",
 		"ollamaUrlLabel": "URL Ollama:",
 		"ollamaBaseUrlLabel": "Базовий URL Ollama",
+		"vectorStoreProviderLabel": "Постачальник сховища векторів",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Ключ Qdrant:",
 		"qdrantApiKeyLabel": "Ключ API Qdrant",
 		"qdrantApiKeyPlaceholder": "Введіть ваш ключ API Qdrant (необов'язково)",
+		"lancedbVectorStoreDirectoryLabel": "Шлях до LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Введіть власний шлях до сховища векторів (необов'язково)",
+		"lancedbVectorStoreDirectoryDescription": "Шлях для зберігання бази даних LanceDB Vector. Якщо порожньо, використовується стандартне розташування globalStorageUri/vector.",
 		"setupConfigLabel": "Налаштування",
 		"advancedConfigLabel": "Розширена конфігурація",
 		"searchMinScoreLabel": "Поріг оцінки пошуку",
@@ -303,6 +307,8 @@
 		"anthropic1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Увімкнути контекстне вікно 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Використовувати ім'я розгортання Azure",
+		"anthropicAzureDeploymentPlaceholder": "Введіть ім'я розгортання...",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",
@@ -326,9 +332,6 @@
 		"minimaxBaseUrl": "Точка входу MiniMax",
 		"zaiEntrypoint": "Точка входу Z AI",
 		"zaiEntrypointDescription": "Будь ласка, виберіть відповідну точку входу API залежно від вашого місцезнаходження. Якщо ви в Китаї, виберіть open.bigmodel.cn. Інакше виберіть api.z.ai.",
-		"minimaxApiKey": "Ключ API MiniMax",
-		"getMiniMaxApiKey": "Отримати ключ API MiniMax",
-		"minimaxBaseUrl": "Точка входу MiniMax",
 		"geminiApiKey": "Ключ API Gemini",
 		"geminiUrlContext": "Включати URL у контекст",
 		"geminiUrlContextDescription": "Коли увімкнено, URL будуть включені в контекст при надсиланні запитів до Gemini",
@@ -355,6 +358,32 @@
 		"huggingFaceSelectProvider": "Виберіть постачальника...",
 		"huggingFaceSearchProviders": "Пошук постачальників...",
 		"huggingFaceNoProvidersFound": "Постачальників не знайдено",
+		"sapAiCore": {
+			"serviceKey": "Ключ сервісу AI Core",
+			"serviceKeyJson": "Введіть JSON ключа сервісу...",
+			"resourceGroup": "Група ресурсів AI Core",
+			"credentialsNote": "Ці облікові дані зберігаються локально і використовуються лише для виконання API-запитів з цього розширення.",
+			"learnMore": "Ви можете знайти більше інформації про доступ до SAP AI Core API тут.",
+			"orchestrationMode": "Режим оркестрації",
+			"orchestrationEnabledDesc": "Коли увімкнено, надає доступ до всіх доступних моделей без необхідності окремих розгортань.",
+			"orchestrationDisabledDesc": "Коли вимкнено, надає доступ лише до розгорнутих базових моделей у вашому екземплярі сервісу AI Core.",
+			"modelDeploymentDesc": "Ви можете вибирати лише моделі з доступними розгортаннями.",
+			"deployment": "Розгортання",
+			"loading": "Завантаження...",
+			"modelsCount": "({{count}} моделей)",
+			"deploymentsCount": "({{count}} розгортань)",
+			"selectModel": "Виберіть модель...",
+			"selectDeployment": "Виберіть розгортання...",
+			"searchModels": "Пошук моделей...",
+			"searchDeployments": "Пошук розгортань...",
+			"noModelsFound": "Моделі не знайдено",
+			"noDeploymentFound": "Розгортання не знайдено",
+			"getStarted": "Почати роботу з SAP AI Core",
+			"supportedProviders": "Підтримувані провайдери",
+			"supportedProvidersDesc1": "Провайдер SAP AI Core наразі підтримує лише базові моделі для наступних провайдерів LLM:",
+			"supportedProvidersDesc2": "Розгляньте можливість перемикання на режим оркестрації для доступу до більшої кількості моделей.",
+			"supportedProvidersDesc3": "Дізнатися більше про режим оркестрації"
+		},
 		"awsApiKey": "Ключ API Amazon Bedrock",
 		"apiKey": "Ключ API",
 		"openAiBaseUrl": "Базовий URL",
@@ -375,6 +404,7 @@
 		"awsSessionToken": "Токен сесії AWS",
 		"awsRegion": "Регіон AWS",
 		"awsCrossRegion": "Використовувати міжрегіональний висновок",
+		"awsGlobalInference": "Використовувати глобальний висновок (автоматичний вибір оптимального регіону AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Використовувати власний кінцевий пункт VPC",
 			"vpcEndpointUrlPlaceholder": "Введіть URL кінцевого пункту VPC (необов'язково)",
@@ -452,6 +482,14 @@
 		"getZaiApiKey": "Отримати ключ API Z.AI",
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
+		"nanoGptApiKey": "Ключ API Nano-GPT",
+		"getNanoGptApiKey": "Отримати ключ API Nano-GPT",
+		"nanoGptModelList": "Список моделей",
+		"nanoGptModelListOptions": {
+			"all": "Усі моделі",
+			"personalized": "Персоналізовані моделі",
+			"subscription": "Підписні моделі"
+		},
 		"customModel": {
 			"capabilities": "Налаштуйте можливості та ціни для вашої власної моделі, сумісної з OpenAI. Будьте обережні при вказуванні можливостей моделі, оскільки вони можуть вплинути на продуктивність Kilo Code.",
 			"maxTokens": {
@@ -563,6 +601,15 @@
 			"description": "Цей провайдер використовує OAuth-аутентифікацію від сервісу Qwen і не потребує API-ключів.",
 			"instructions": "Будь ласка, дотримуйтесь офіційної документації для отримання файлу авторизації та розміщення його за вказаним шляхом.",
 			"setupLink": "Офіційна документація Qwen"
+		},
+		"profileName": "Назва профілю",
+		"profileType": "Тип профілю",
+		"profileTypeChat": "Чат",
+		"profileTypeAutocomplete": "Автодоповнення",
+		"profileTypeDescription": "Профілі чату використовуються для розмов. Дозволено лише один профіль автодоповнення.",
+		"autocompleteLabel": "(Автодоповнення)",
+		"autocomplete": {
+			"onlyOneAllowed": "Дозволено лише один профіль автодоповнення. Профіль \"{{existingName}}\" вже налаштовано для автодоповнення. Будь ласка, спочатку зміни його тип або видали його."
 		}
 	},
 	"contextWindow": {
@@ -930,8 +977,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Увімкнути Fast Apply",
 			"description": "Коли увімкнено, Kilo Code може редагувати файли за допомогою Fast Apply зі спеціалізованими моделями, оптимізованими для модифікацій коду. Потребує Kilo Gateway Provider, OpenRouter або ключа API Morph.",
-			"apiKey": "Ключ API Morph (необов'язково)",
-			"placeholder": "Введіть ваш ключ API Morph (необов'язково)",
+			"apiProvider": "Провайдер API",
+			"apiProviderList": {
+				"current": "Поточний"
+			},
+			"apiKey": "Ключ API (необов'язково)",
+			"placeholder": "Введіть ваш ключ API (необов'язково)",
 			"modelLabel": "Вибір моделі",
 			"modelDescription": "Виберіть, яку модель швидкого застосування використовувати для редагування файлів",
 			"models": {
@@ -1019,7 +1070,9 @@
 		"providerNotAllowed": "Провайдер '{{provider}}' не дозволений твоєю організацією",
 		"modelNotAllowed": "Модель '{{model}}' не дозволена для провайдера '{{provider}}' твоєю організацією",
 		"profileInvalid": "Цей профіль містить провайдера або модель, які не дозволені твоєю організацією",
-		"qwenCodeOauthPath": "Ви повинні надати дійсний шлях до облікових даних OAuth."
+		"qwenCodeOauthPath": "Ви повинні надати дійсний шлях до облікових даних OAuth.",
+		"sapAiCore": "Ви повинні надати дійсний ключ сервісу SAP AI Core.",
+		"sapAiCoreDeploymentId": "Ви повинні вибрати запущене розгортання для моделі '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Введи ключ API...",

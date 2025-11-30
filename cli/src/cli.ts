@@ -13,7 +13,7 @@ import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
-import { taskResumedViaContinueAtom } from "./state/atoms/extension.js"
+import { taskResumedViaContinueOrSessionAtom } from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -24,6 +24,9 @@ import type { CLIOptions } from "./types/cli.js"
 import type { CLIConfig, ProviderConfig } from "./config/types.js"
 import { getModelIdKey } from "./constants/providers/models.js"
 import type { ProviderName } from "./types/messages.js"
+import { TrpcClient } from "./services/trpcClient.js"
+import { SessionService } from "./services/session.js"
+import { getKiloToken } from "./config/persistence.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -34,6 +37,7 @@ export class CLI {
 	private ui: Instance | null = null
 	private options: CLIOptions
 	private isInitialized = false
+	private sessionService: SessionService | null = null
 
 	constructor(options: CLIOptions = {}) {
 		this.options = options
@@ -102,6 +106,10 @@ export class CLI {
 				}
 			}
 
+			if (this.options.customModes) {
+				serviceOptions.customModes = this.options.customModes
+			}
+
 			this.service = createExtensionService(serviceOptions)
 			logs.debug("ExtensionService created with identity", "CLI", {
 				hasIdentity: !!identity,
@@ -121,6 +129,31 @@ export class CLI {
 
 			// Track successful extension initialization
 			telemetryService.trackExtensionInitialized(true)
+
+			// Initialize services and restore session if kiloToken is available
+			// This must happen AFTER ExtensionService initialization to allow webview messages
+			const kiloToken = getKiloToken(config)
+
+			if (kiloToken) {
+				TrpcClient.init(kiloToken)
+				logs.debug("TrpcClient initialized with kiloToken", "CLI")
+
+				this.sessionService = SessionService.init(this.service, this.store, this.options.json)
+				logs.debug("SessionService initialized with ExtensionService", "CLI")
+
+				// Set workspace directory for git operations (important for parallel mode/worktrees)
+				const workspace = this.options.workspace || process.cwd()
+				this.sessionService.setWorkspaceDirectory(workspace)
+				logs.debug("SessionService workspace directory set", "CLI", { workspace })
+
+				if (this.options.session) {
+					await this.sessionService.restoreSession(this.options.session)
+				} else if (this.options.fork) {
+					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
+
+					await this.sessionService.forkSession(this.options.fork)
+				}
+			}
 
 			// Load command history
 			await this.store.set(loadHistoryAtom)
@@ -252,7 +285,7 @@ export class CLI {
 	 * - Disposes service
 	 * - Cleans up store
 	 */
-	async dispose(): Promise<void> {
+	async dispose(signal?: string): Promise<void> {
 		if (this.isDisposing) {
 			logs.info("Already disposing, ignoring duplicate dispose call", "CLI")
 
@@ -261,7 +294,7 @@ export class CLI {
 
 		this.isDisposing = true
 
-		// Determine exit code based on CI mode and exit reason
+		// Determine exit code based on signal type and CI mode
 		let exitCode = 0
 
 		let beforeExit = () => {}
@@ -269,8 +302,17 @@ export class CLI {
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
 
-			if (this.options.ci && this.store) {
-				// Check exit reason from CI atoms
+			await this.sessionService?.destroy()
+
+			// Signal codes take precedence over CI logic
+			if (signal === "SIGINT") {
+				exitCode = 130
+				logs.info("Exiting with SIGINT code (130)", "CLI")
+			} else if (signal === "SIGTERM") {
+				exitCode = 143
+				logs.info("Exiting with SIGTERM code (143)", "CLI")
+			} else if (this.options.ci && this.store) {
+				// CI mode logic only when not interrupted by signal
 				const exitReason = this.store.get(ciExitReasonAtom)
 
 				// Set exit code based on the actual exit reason
@@ -421,8 +463,21 @@ export class CLI {
 		try {
 			logs.info("Attempting to resume last conversation", "CLI", { workspace })
 
+			// First, try to restore from persisted session ID if kiloToken is available
+			if (this.sessionService) {
+				const restored = await this.sessionService.restoreLastSession()
+				if (restored) {
+					return
+				}
+
+				logs.debug("Falling back to task history", "CLI")
+			}
+
+			// Fallback: Use task history approach
+			logs.debug("Using task history fallback to resume conversation", "CLI")
+
 			// Update filters to current workspace and newest sort
-			await this.store.set(updateTaskHistoryFiltersAtom, {
+			this.store.set(updateTaskHistoryFiltersAtom, {
 				workspace: "current",
 				sort: "newest",
 				favoritesOnly: false,
@@ -450,7 +505,6 @@ export class CLI {
 				logs.warn("No previous tasks found for workspace", "CLI", { workspace })
 				console.error("\nNo previous tasks found for this workspace. Please start a new conversation.\n")
 				process.exit(1)
-				return // TypeScript doesn't know process.exit stops execution
 			}
 
 			// Find the most recent task (first in the list since we sorted by newest)
@@ -460,7 +514,6 @@ export class CLI {
 				logs.warn("No valid task found in history", "CLI", { workspace })
 				console.error("\nNo valid task found to resume. Please start a new conversation.\n")
 				process.exit(1)
-				return
 			}
 
 			logs.debug("Found last task", "CLI", { taskId: lastTask.id, task: lastTask.task })
@@ -472,7 +525,7 @@ export class CLI {
 			})
 
 			// Mark that the task was resumed via --continue to prevent showing "Task ready to resume" message
-			this.store.set(taskResumedViaContinueAtom, true)
+			this.store.set(taskResumedViaContinueOrSessionAtom, true)
 
 			logs.info("Task resume initiated", "CLI", { taskId: lastTask.id, task: lastTask.task })
 		} catch (error) {

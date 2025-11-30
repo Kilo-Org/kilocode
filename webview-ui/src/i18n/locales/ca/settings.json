@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Introduïu el nom del model",
 		"selectModel": "Seleccioneu un model",
 		"ollamaBaseUrlLabel": "URL base d'Ollama",
+		"vectorStoreProviderLabel": "Proveïdor d'emmagatzematge de vectors",
 		"qdrantApiKeyLabel": "Clau API de Qdrant",
 		"qdrantApiKeyPlaceholder": "Introduïu la vostra clau API de Qdrant (opcional)",
+		"lancedbVectorStoreDirectoryLabel": "Camí LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Introduïu un camí d'emmagatzematge de vectors personalitzat (opcional)",
+		"lancedbVectorStoreDirectoryDescription": "Camí per emmagatzemar la base de dades de vectors LanceDB. Si està buit, s'utilitza la ubicació per defecte a globalStorageUri/vector.",
 		"setupConfigLabel": "Configuració",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -289,6 +293,8 @@
 		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
 		"anthropic1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Utilitza el nom de desplegament d'Azure",
+		"anthropicAzureDeploymentPlaceholder": "Introdueix el nom de desplegament...",
 		"awsBedrock1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
 		"cerebrasApiKey": "Clau API de Cerebras",
@@ -321,6 +327,14 @@
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
+		"nanoGptApiKey": "Clau API de Nano-GPT",
+		"getNanoGptApiKey": "Obtenir clau API de Nano-GPT",
+		"nanoGptModelList": "Llista de models",
+		"nanoGptModelListOptions": {
+			"all": "Tots els models",
+			"personalized": "Models personalitzats",
+			"subscription": "Models de subscripció"
+		},
 		"getSambaNovaApiKey": "Obtenir clau API de SambaNova",
 		"sambaNovaApiKey": "Clau API de SambaNova",
 		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
@@ -340,6 +354,32 @@
 		"huggingFaceSelectProvider": "Selecciona un proveïdor...",
 		"huggingFaceSearchProviders": "Cerca proveïdors...",
 		"huggingFaceNoProvidersFound": "No s'han trobat proveïdors",
+		"sapAiCore": {
+			"serviceKey": "Clau de Servei AI Core",
+			"serviceKeyJson": "Introduïu el JSON de la clau de servei...",
+			"resourceGroup": "Grup de Recursos AI Core",
+			"credentialsNote": "Aquestes credencials s'emmagatzemen localment i només s'utilitzen per fer sol·licituds a l'API des d'aquesta extensió.",
+			"learnMore": "Podeu trobar més informació sobre l'accés a l'API de SAP AI Core aquí.",
+			"orchestrationMode": "Mode d'Orquestració",
+			"orchestrationEnabledDesc": "Quan està habilitat, proporciona accés a tots els models disponibles sense requerir desplegaments individuals.",
+			"orchestrationDisabledDesc": "Quan està deshabilitat, proporciona accés només als models base desplegats a la vostra instància de servei AI Core.",
+			"modelDeploymentDesc": "Només podeu seleccionar models amb desplegaments disponibles.",
+			"deployment": "Desplegament",
+			"loading": "Carregant...",
+			"modelsCount": "({{count}} models)",
+			"deploymentsCount": "({{count}} desplegaments)",
+			"selectModel": "Selecciona un model...",
+			"selectDeployment": "Selecciona un desplegament...",
+			"searchModels": "Cerca models...",
+			"searchDeployments": "Cerca desplegaments...",
+			"noModelsFound": "No s'han trobat models",
+			"noDeploymentFound": "No s'ha trobat cap desplegament",
+			"getStarted": "Comença amb SAP AI Core",
+			"supportedProviders": "Proveïdors Suportats",
+			"supportedProvidersDesc1": "El proveïdor SAP AI Core actualment només suporta models base per als següents proveïdors de LLM:",
+			"supportedProvidersDesc2": "Considereu canviar al Mode d'Orquestració per accedir a més models.",
+			"supportedProvidersDesc3": "Més informació sobre el Mode d'Orquestració"
+		},
 		"getGeminiApiKey": "Obtenir clau API de Gemini",
 		"openAiApiKey": "Clau API d'OpenAI",
 		"apiKey": "Clau API",
@@ -362,6 +402,7 @@
 		"awsSessionToken": "Token de sessió d'AWS",
 		"awsRegion": "Regió d'AWS",
 		"awsCrossRegion": "Utilitzar inferència entre regions",
+		"awsGlobalInference": "Utilitzar la inferència global (selecció automàtica de la regió òptima d'AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utilitzar punt final VPC personalitzat",
 			"vpcEndpointUrlPlaceholder": "Introduïu l'URL del punt final VPC (opcional)",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Límit d'errors i repeticions",
-			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo Code està tenint problemes'",
+			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo està tenint problemes'. Estableix a 0 per desactivar aquest mecanisme de seguretat (no s'activarà mai).",
 			"unlimitedDescription": "Reintents il·limitats habilitats (procediment automàtic). El diàleg no apareixerà mai.",
 			"warning": "⚠️ Establir a 0 permet reintents il·limitats que poden consumir un ús significatiu de l'API"
 		},
@@ -532,6 +573,15 @@
 			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
 			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
 			"setupLink": "Documentació oficial de Qwen"
+		},
+		"profileName": "Nom del perfil",
+		"profileType": "Tipus de perfil",
+		"profileTypeChat": "Xat",
+		"profileTypeAutocomplete": "Autocompletat",
+		"profileTypeDescription": "Els perfils de xat s'utilitzen per a converses. Només es permet un perfil d'autocompletat.",
+		"autocompleteLabel": "(Autocompletat)",
+		"autocomplete": {
+			"onlyOneAllowed": "Només es permet un perfil d'autocompletat. El perfil \"{{existingName}}\" ja està configurat per a autocompletat. Si us plau, canvia el seu tipus primer o elimina'l."
 		}
 	},
 	"browser": {
@@ -855,8 +905,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
-			"apiKey": "Clau API de Morph (opcional)",
-			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"apiProvider": "Proveïdor d'API",
+			"apiProviderList": {
+				"current": "Actual"
+			},
+			"apiKey": "Clau API (opcional)",
+			"placeholder": "Introduïu la vostra clau API (opcional)",
 			"modelLabel": "Selecció de model",
 			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
 			"models": {
@@ -942,7 +996,9 @@
 		"providerNotAllowed": "El proveïdor '{{provider}}' no està permès per la vostra organització",
 		"modelNotAllowed": "El model '{{model}}' no està permès per al proveïdor '{{provider}}' per la vostra organització",
 		"profileInvalid": "Aquest perfil conté un proveïdor o model que no està permès per la vostra organització",
-		"qwenCodeOauthPath": "Has de proporcionar una ruta vàlida de credencials OAuth"
+		"qwenCodeOauthPath": "Has de proporcionar una ruta vàlida de credencials OAuth",
+		"sapAiCore": "Heu de proporcionar una clau de servei SAP AI Core vàlida.",
+		"sapAiCoreDeploymentId": "Heu de seleccionar un desplegament en execució per al model '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Introduïu la clau API...",

@@ -32,6 +32,7 @@ import {
 } from "./WebviewMessage"
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
+import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -99,6 +100,8 @@ export interface ExtensionMessage {
 		| "lmStudioModels"
 		| "vsCodeLmModels"
 		| "huggingFaceModels"
+		| "sapAiCoreModels" // kilocode_change
+		| "sapAiCoreDeployments" // kilocode_change
 		| "vsCodeLmApiAvailable"
 		| "updatePrompt"
 		| "systemPrompt"
@@ -168,15 +171,27 @@ export interface ExtensionMessage {
 		| "commands"
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
-		| "showTimestamps" // kilocode_change
+		| "interactionRequired"
 		| "organizationSwitchResult"
+		| "showTimestamps" // kilocode_change
+		| "apiMessagesSaved" // kilocode_change: File save event for API messages
+		| "taskMessagesSaved" // kilocode_change: File save event for task messages
+		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
+		| "managedIndexerState" // kilocode_change
+		| "singleCompletionResult" // kilocode_change
+		| "managedIndexerState" // kilocode_change
+		| "managedIndexerEnabled" // kilocode_change
 	text?: string
 	// kilocode_change start
+	completionRequestId?: string // Correlation ID from request
+	completionText?: string // The completed text
+	completionError?: string // Error message if failed
 	payload?:
 		| ProfileDataResponsePayload
 		| BalanceDataResponsePayload
 		| TasksByIdResponsePayload
 		| TaskHistoryResponsePayload
+		| [string, string] // For file save events [taskId, filePath]
 	// kilocode_change end
 	// Checkpoint warning message
 	checkpointWarning?: {
@@ -229,6 +244,8 @@ export interface ExtensionMessage {
 			}
 		}>
 	}>
+	sapAiCoreModels?: ModelRecord // kilocode_change
+	sapAiCoreDeployments?: DeploymentRecord // kilocode_change
 	mcpServers?: McpServer[]
 	commits?: GitCommit[]
 	listApiConfig?: ProviderSettingsEntry[]
@@ -289,6 +306,28 @@ export interface ExtensionMessage {
 	queuedMessages?: QueuedMessage[]
 	list?: string[] // For dismissedUpsells
 	organizationId?: string | null // For organizationSwitchResult
+	// kilocode_change start: Managed Indexer
+	managedIndexerEnabled?: boolean
+	managedIndexerState?: Array<{
+		workspaceFolderPath: string
+		workspaceFolderName: string
+		gitBranch: string | null
+		projectId: string | null
+		isIndexing: boolean
+		hasManifest: boolean
+		manifestFileCount: number
+		hasWatcher: boolean
+		error?: {
+			type: string
+			message: string
+			timestamp: string
+			context?: {
+				filePath?: string
+				branch?: string
+				operation?: string
+			}
+		}
+	}> // kilocode_change end: Managed Indexer
 }
 
 export type ExtensionState = Pick<
@@ -296,9 +335,7 @@ export type ExtensionState = Pick<
 	| "currentApiConfigName"
 	| "listApiConfigMeta"
 	| "pinnedApiConfigs"
-	// | "lastShownAnnouncementId"
 	| "customInstructions"
-	// | "taskHistory" // Optional in GlobalSettings, required here.
 	| "dismissedUpsells"
 	| "autoApprovalEnabled"
 	| "yoloMode" // kilocode_change
@@ -307,10 +344,8 @@ export type ExtensionState = Pick<
 	| "alwaysAllowWrite"
 	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
-	// | "writeDelayMs" // Optional in GlobalSettings, required here.
 	| "alwaysAllowBrowser"
 	| "alwaysApproveResubmit"
-	// | "requestDelaySeconds" // Optional in GlobalSettings, required here.
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
@@ -330,16 +365,11 @@ export type ExtensionState = Pick<
 	| "remoteBrowserEnabled"
 	| "cachedChromeHostUrl"
 	| "remoteBrowserHost"
-	// | "enableCheckpoints" // Optional in GlobalSettings, required here.
 	| "ttsEnabled"
 	| "ttsSpeed"
 	| "soundEnabled"
 	| "soundVolume"
-	// | "maxOpenTabsContext" // Optional in GlobalSettings, required here.
-	// | "maxWorkspaceFiles" // Optional in GlobalSettings, required here.
-	// | "showRooIgnoredFiles" // Optional in GlobalSettings, required here.
-	// | "maxReadFileLine" // Optional in GlobalSettings, required here.
-	| "maxConcurrentFileReads" // Optional in GlobalSettings, required here.
+	| "maxConcurrentFileReads"
 	| "allowVeryLargeReads" // kilocode_change
 	| "terminalOutputLineLimit"
 	| "terminalOutputCharacterLimit"
@@ -357,14 +387,10 @@ export type ExtensionState = Pick<
 	| "fuzzyMatchThreshold"
 	| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 	| "fastApplyModel" // kilocode_change: Fast Apply model selection
+	| "fastApplyApiProvider" // kilocode_change: Fast Apply model api base url
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"
-	// | "telemetrySetting" // Optional in GlobalSettings, required here.
-	// | "mcpEnabled" // Optional in GlobalSettings, required here.
-	// | "enableMcpServerCreation" // Optional in GlobalSettings, required here.
-	// | "mode" // Optional in GlobalSettings, required here.
 	| "modeApiConfigs"
-	// | "customModes" // Optional in GlobalSettings, required here.
 	| "customModePrompts"
 	| "customSupportPrompts"
 	| "enhancementApiConfigId"
@@ -496,9 +522,13 @@ export interface ClineSayTool {
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
+		| "updateTodoList"
+		| "deleteFile" // kilocode_change: Handles both files and directories
 	path?: string
 	diff?: string
 	content?: string
+	// Unified diff statistics computed by the extension
+	diffStats?: { added: number; removed: number }
 	regex?: string
 	filePattern?: string
 	mode?: string
@@ -508,6 +538,14 @@ export interface ClineSayTool {
 	additionalFileCount?: number // Number of additional files in the same read_file request
 	lineNumber?: number
 	query?: string
+	// kilocode_change start: Directory stats - only present when deleting directories
+	stats?: {
+		files: number
+		directories: number
+		size: number
+		isComplete: boolean
+	}
+	// kilocode_change end
 	batchFiles?: Array<{
 		path: string
 		lineSnippet: string
@@ -520,6 +558,8 @@ export interface ClineSayTool {
 		changeCount: number
 		key: string
 		content: string
+		// Per-file unified diff statistics computed by the extension
+		diffStats?: { added: number; removed: number }
 		diffs?: Array<{
 			content: string
 			startLine?: number

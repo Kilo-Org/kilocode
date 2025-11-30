@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { OpenAI } from "openai"
 import { OpenRouterEmbedder } from "../openrouter"
 import { getModelDimension, getDefaultModelId } from "../../../../shared/embeddingModels"
+import { DEFAULT_HEADERS } from "../../../../api/providers/constants" // kilocode_change
 
 // Mock the OpenAI SDK
 vi.mock("openai")
@@ -89,10 +90,7 @@ describe("OpenRouterEmbedder", () => {
 			expect(MockedOpenAI).toHaveBeenCalledWith({
 				baseURL: "https://openrouter.ai/api/v1",
 				apiKey: mockApiKey,
-				defaultHeaders: {
-					"HTTP-Referer": "https://github.com/RooCodeInc/Roo-Code",
-					"X-Title": "Roo Code",
-				},
+				defaultHeaders: DEFAULT_HEADERS, // kilocode_change
 			})
 		})
 	})
@@ -265,6 +263,8 @@ describe("OpenRouterEmbedder", () => {
 				"google/gemini-embedding-001",
 				"mistralai/mistral-embed-2312",
 				"mistralai/codestral-embed-2505",
+				"qwen/qwen3-embedding-0.6b",
+				"qwen/qwen3-embedding-4b",
 				"qwen/qwen3-embedding-8b",
 			]
 

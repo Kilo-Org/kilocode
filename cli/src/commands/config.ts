@@ -23,6 +23,16 @@ export const configCommand: Command = {
 			ts: Date.now(),
 		})
 
-		await openConfigFile()
+		try {
+			await openConfigFile()
+		} catch (_error) {
+			// Error already logged by openConfigFile
+			addMessage({
+				id: Date.now().toString(),
+				type: "error",
+				content: "Failed to open configuration file. Please check the error message above.",
+				ts: Date.now(),
+			})
+		}
 	},
 }

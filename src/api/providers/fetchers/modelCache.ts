@@ -27,12 +27,15 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
+import { getSyntheticModels } from "./synthetic"
+import { getSapAiCoreModels } from "./sap-ai-core"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
+import { getNanoGptModels } from "./nano-gpt" //kilocode_change
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -107,6 +110,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				})
 				break
 			}
+			case "synthetic":
+				models = await getSyntheticModels(options.apiKey)
+				break
 			case "gemini":
 				models = await getGeminiModels({
 					apiKey: options.apiKey,
@@ -133,6 +139,13 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getHuggingFaceModels()
 				break
 			// kilocode_change start
+			case "sap-ai-core":
+				models = await getSapAiCoreModels(
+					options.sapAiCoreServiceKey,
+					options.sapAiCoreResourceGroup,
+					options.sapAiCoreUseOrchestration,
+				)
+				break
 			case "inception":
 				models = await getInceptionModels()
 				break
@@ -150,6 +163,14 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "chutes":
 				models = await getChutesModels(options.apiKey)
 				break
+			//kilocode_change start
+			case "nano-gpt":
+				models = await getNanoGptModels({
+					nanoGptModelList: options.nanoGptModelList,
+					apiKey: options.apiKey,
+				})
+				break
+			//kilocode_change end
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider

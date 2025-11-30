@@ -223,6 +223,7 @@
 			},
 			"keybindingNotFound": "tidak ditemukan",
 			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
+			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
 			"provider": "Penyedia"
 		}

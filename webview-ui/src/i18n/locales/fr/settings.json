@@ -84,10 +84,14 @@
 		"selectModelPlaceholder": "Sélectionner un modèle",
 		"ollamaUrlLabel": "URL Ollama :",
 		"ollamaBaseUrlLabel": "URL de base Ollama",
+		"vectorStoreProviderLabel": "Fournisseur de stockage vectoriel",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Clé Qdrant :",
 		"qdrantApiKeyLabel": "Clé API Qdrant",
 		"qdrantApiKeyPlaceholder": "Entrez votre clé API Qdrant (optionnel)",
+		"lancedbVectorStoreDirectoryLabel": "Chemin du LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Entrez un chemin personnalisé du stockage vectoriel (optionnel)",
+		"lancedbVectorStoreDirectoryDescription": "Chemin pour stocker la base de données vectorielle LanceDB. Si vide, utilise l'emplacement par défaut dans globalStorageUri/vector.",
 		"setupConfigLabel": "Configuration",
 		"startIndexingButton": "Démarrer",
 		"clearIndexDataButton": "Effacer l'index",
@@ -252,6 +256,15 @@
 		"searchProviderPlaceholder": "Rechercher des fournisseurs",
 		"noProviderMatchFound": "Aucun fournisseur trouvé",
 		"noMatchFound": "Aucun profil correspondant trouvé",
+		"profileName": "Nom du profil",
+		"profileType": "Type de profil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocomplétion",
+		"profileTypeDescription": "Les profils de chat sont utilisés pour les conversations. Un seul profil d'autocomplétion est autorisé.",
+		"autocompleteLabel": "(Autocomplétion)",
+		"autocomplete": {
+			"onlyOneAllowed": "Un seul profil d'autocomplétion est autorisé. Le profil \"{{existingName}}\" est déjà configuré pour l'autocomplétion. Veuillez d'abord changer son type ou le supprimer."
+		},
 		"vscodeLmDescription": "L'API du modèle de langage VS Code vous permet d'exécuter des modèles fournis par d'autres extensions VS Code (y compris, mais sans s'y limiter, GitHub Copilot). Le moyen le plus simple de commencer est d'installer les extensions Copilot et Copilot Chat depuis le VS Code Marketplace.",
 		"vscodeLmUnavailable": "La prise en charge des modèles linguistiques de VS Code est disponible uniquement dans Visual Studio Code. Des forks comme VSCodium et d'autres peuvent ne pas fonctionner. De plus, cette fonctionnalité n'est pas disponible dans les outils JetBrains.",
 		"vscodeLmUnavailableInstructions": "Assurez-vous d'utiliser un outil pris en charge et que VS Code Chat est installé et activé",
@@ -289,6 +302,8 @@
 		"anthropicUseAuthToken": "Passer la clé API Anthropic comme en-tête d'autorisation au lieu de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"anthropic1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Utiliser le nom de déploiement Azure",
+		"anthropicAzureDeploymentPlaceholder": "Entrez le nom de déploiement...",
 		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"cerebrasApiKey": "Clé API Cerebras",
@@ -349,6 +364,14 @@
 		"getMistralApiKey": "Obtenir la clé API Mistral / Codestral",
 		"codestralBaseUrl": "URL de base Codestral (Optionnel)",
 		"codestralBaseUrlDesc": "Définir une URL alternative pour le modèle Codestral.",
+		"nanoGptApiKey": "Clé API Nano-GPT",
+		"getNanoGptApiKey": "Obtenir la clé API Nano-GPT",
+		"nanoGptModelList": "Liste de modèles",
+		"nanoGptModelListOptions": {
+			"all": "Tous les modèles",
+			"personalized": "Modèles personnalisés",
+			"subscription": "Modèles d'abonnement"
+		},
 		"xaiApiKey": "Clé API xAI",
 		"getXaiApiKey": "Obtenir la clé API xAI",
 		"litellmApiKey": "Clé API LiteLLM",
@@ -362,6 +385,7 @@
 		"awsSessionToken": "Jeton de session AWS",
 		"awsRegion": "Région AWS",
 		"awsCrossRegion": "Utiliser l'inférence inter-régions",
+		"awsGlobalInference": "Utiliser l'inférence globale (sélection automatique de la région AWS optimale)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utiliser un point de terminaison VPC personnalisé",
 			"vpcEndpointUrlPlaceholder": "Entrer l'URL du point de terminaison VPC (optionnel)",
@@ -484,7 +508,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limite d'erreurs et de répétitions",
-			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo Code a des difficultés'",
+			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo a des difficultés'. Mettre à 0 pour désactiver ce mécanisme de sécurité (il ne se déclenchera jamais).",
 			"unlimitedDescription": "Réessais illimités activés (poursuite automatique). La boîte de dialogue n'apparaîtra jamais.",
 			"warning": "⚠️ Mettre à 0 autorise des réessais illimités, ce qui peut consommer une utilisation importante de l'API"
 		},
@@ -532,6 +556,32 @@
 			"description": "Ce fournisseur utilise l'authentification OAuth du service Qwen et ne nécessite pas de clés API.",
 			"instructions": "Veuillez suivre la documentation officielle pour obtenir le fichier d'autorisation et le placer dans le chemin spécifié.",
 			"setupLink": "Documentation officielle Qwen"
+		},
+		"sapAiCore": {
+			"serviceKey": "Clé de service AI Core",
+			"serviceKeyJson": "Entrez le JSON de la clé de service...",
+			"resourceGroup": "Groupe de ressources AI Core",
+			"credentialsNote": "Ces identifiants sont stockés localement et utilisés uniquement pour effectuer des requêtes API depuis cette extension.",
+			"learnMore": "Vous pouvez trouver plus d'informations sur l'accès à l'API SAP AI Core ici.",
+			"orchestrationMode": "Mode Orchestration",
+			"orchestrationEnabledDesc": "Lorsqu'activé, donne accès à tous les modèles disponibles sans nécessiter de déploiements individuels.",
+			"orchestrationDisabledDesc": "Lorsque désactivé, donne accès uniquement aux modèles de fondation déployés dans votre instance de service AI Core.",
+			"modelDeploymentDesc": "Vous ne pouvez sélectionner que des modèles avec des déploiements disponibles.",
+			"deployment": "Déploiement",
+			"loading": "Chargement...",
+			"modelsCount": "({{count}} modèles)",
+			"deploymentsCount": "({{count}} déploiements)",
+			"selectModel": "Sélectionner un modèle...",
+			"selectDeployment": "Sélectionner un déploiement...",
+			"searchModels": "Rechercher des modèles...",
+			"searchDeployments": "Rechercher des déploiements...",
+			"noModelsFound": "Aucun modèle trouvé",
+			"noDeploymentFound": "Aucun déploiement trouvé",
+			"getStarted": "Démarrer avec SAP AI Core",
+			"supportedProviders": "Fournisseurs pris en charge",
+			"supportedProvidersDesc1": "Le fournisseur SAP AI Core ne prend actuellement en charge que les modèles de fondation pour les fournisseurs LLM suivants :",
+			"supportedProvidersDesc2": "Envisagez de passer au mode Orchestration pour accéder à plus de modèles.",
+			"supportedProvidersDesc3": "En savoir plus sur le mode Orchestration"
 		}
 	},
 	"browser": {
@@ -824,8 +874,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Activer Fast Apply",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite Kilo Gateway Provider, OpenRouter ou une clé API Morph.",
-			"apiKey": "Clé API Morph (optionnel)",
-			"placeholder": "Entrez votre clé API Morph (optionnel)",
+			"apiProvider": "Fournisseur d'API",
+			"apiProviderList": {
+				"current": "Actuel"
+			},
+			"apiKey": "Clé API (optionnel)",
+			"placeholder": "Entrez votre clé API (optionnel)",
 			"modelLabel": "Sélection du modèle",
 			"modelDescription": "Choisissez quel modèle Fast Apply utiliser pour les éditions de fichiers",
 			"models": {
@@ -933,6 +987,8 @@
 		"modelId": "Vous devez fournir un ID de modèle valide.",
 		"modelSelector": "Vous devez fournir un sélecteur de modèle valide.",
 		"openAi": "Vous devez fournir une URL de base, une clé API et un ID de modèle valides.",
+		"sapAiCore": "Vous devez fournir une clé de service SAP AI Core valide.",
+		"sapAiCoreDeploymentId": "Vous devez sélectionner un déploiement en cours d'exécution pour le modèle '{{model}}'.",
 		"arn": {
 			"invalidFormat": "Format ARN invalide. Veuillez vérifier les exigences de format.",
 			"regionMismatch": "Attention : La région dans votre ARN ({{arnRegion}}) ne correspond pas à votre région sélectionnée ({{region}}). Cela peut causer des problèmes d'accès. Le fournisseur utilisera la région de l'ARN."

@@ -96,8 +96,12 @@
 		"modelPlaceholder": "輸入模型名稱",
 		"selectModel": "選擇模型",
 		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
+		"vectorStoreProviderLabel": "向量儲存提供者",
 		"qdrantApiKeyLabel": "Qdrant API 金鑰",
 		"qdrantApiKeyPlaceholder": "輸入您的 Qdrant API 金鑰（選用）",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store 路徑",
+		"lancedbVectorStoreDirectoryPlaceholder": "輸入自訂向量儲存路徑（選用）",
+		"lancedbVectorStoreDirectoryDescription": "儲存 LanceDB 向量資料庫的路徑。如果為空，將使用 globalStorageUri/vector 的預設位置。",
 		"setupConfigLabel": "設定",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -290,6 +294,8 @@
 		"anthropicUseAuthToken": "將 Anthropic API 金鑰作為 Authorization 標頭傳遞，而非使用 X-Api-Key",
 		"anthropic1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"anthropic1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"anthropicUseAzureDeployment": "使用 Azure 部署名稱",
+		"anthropicAzureDeploymentPlaceholder": "輸入部署名稱...",
 		"awsBedrock1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"awsBedrock1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
 		"cerebrasApiKey": "Cerebras API 金鑰",
@@ -350,6 +356,14 @@
 		"getMistralApiKey": "取得 Mistral/Codestral API 金鑰",
 		"codestralBaseUrl": "Codestral 基礎 URL（選用）",
 		"codestralBaseUrlDesc": "設定 Codestral 模型的替代 URL。",
+		"nanoGptApiKey": "Nano-GPT API 金鑰",
+		"getNanoGptApiKey": "取得 Nano-GPT API 金鑰",
+		"nanoGptModelList": "模型列表",
+		"nanoGptModelListOptions": {
+			"all": "所有模型",
+			"personalized": "個人化模型",
+			"subscription": "訂閱模型"
+		},
 		"xaiApiKey": "xAI API 金鑰",
 		"getXaiApiKey": "取得 xAI API 金鑰",
 		"litellmApiKey": "LiteLLM API 金鑰",
@@ -363,6 +377,7 @@
 		"awsSessionToken": "AWS 工作階段權杖",
 		"awsRegion": "AWS 區域",
 		"awsCrossRegion": "使用跨區域推論",
+		"awsGlobalInference": "使用全域推論 (自動選取最佳 AWS 區域)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自訂 VPC 端點",
 			"vpcEndpointUrlPlaceholder": "輸入 VPC 端點 URL（選填）",
@@ -485,7 +500,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "錯誤和重複限制",
-			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
+			"description": "在顯示「Kilo 遇到問題」對話方塊前允許的連續錯誤或重複操作次數。設定為 0 可停用此安全機制（永不觸發）。",
 			"unlimitedDescription": "已啟用無限重試（自動繼續）。對話方塊將永遠不會出現。",
 			"warning": "⚠️ 設定為 0 允許無限重試，這可能會消耗大量 API 使用量"
 		},
@@ -533,6 +548,41 @@
 			"description": "此供應商使用 Qwen 服務的 OAuth 身份驗證，不需要 API 金鑰。",
 			"instructions": "請依照官方文件取得授權檔案並放置在指定路徑。",
 			"setupLink": "Qwen 官方文件"
+		},
+		"sapAiCore": {
+			"serviceKey": "AI Core 服務金鑰",
+			"serviceKeyJson": "輸入服務金鑰 JSON...",
+			"resourceGroup": "AI Core 資源群組",
+			"credentialsNote": "這些憑證儲存於本機，僅用於從此擴充功能發送 API 請求。",
+			"learnMore": "您可以在此處找到更多關於 SAP AI Core API 存取的資訊。",
+			"orchestrationMode": "協調模式",
+			"orchestrationEnabledDesc": "啟用後，可存取所有可用模型，無需個別部署。",
+			"orchestrationDisabledDesc": "停用後，僅可存取您 AI Core 服務執行個體中已部署的基礎模型。",
+			"modelDeploymentDesc": "您只能選擇有可用部署的模型。",
+			"deployment": "部署",
+			"loading": "載入中...",
+			"modelsCount": "({{count}} 個模型)",
+			"deploymentsCount": "({{count}} 個部署)",
+			"selectModel": "選擇模型...",
+			"selectDeployment": "選擇部署...",
+			"searchModels": "搜尋模型...",
+			"searchDeployments": "搜尋部署...",
+			"noModelsFound": "找不到模型",
+			"noDeploymentFound": "找不到部署",
+			"getStarted": "開始使用 SAP AI Core",
+			"supportedProviders": "支援的供應商",
+			"supportedProvidersDesc1": "SAP AI Core 供應商目前僅支援以下 LLM 供應商的基礎模型：",
+			"supportedProvidersDesc2": "考慮切換至協調模式以存取更多模型。",
+			"supportedProvidersDesc3": "了解更多關於協調模式"
+		},
+		"profileName": "設定檔名稱",
+		"profileType": "設定檔類型",
+		"profileTypeChat": "對話",
+		"profileTypeAutocomplete": "自動完成",
+		"profileTypeDescription": "對話設定檔用於交談。只允許一個自動完成設定檔。",
+		"autocompleteLabel": "(自動完成)",
+		"autocomplete": {
+			"onlyOneAllowed": "只允許一個自動完成設定檔。設定檔「{{existingName}}」已設定為自動完成。請先變更其類型或刪除它。"
 		}
 	},
 	"browser": {
@@ -826,8 +876,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "啟用 Fast Apply",
 			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
-			"apiKey": "Morph API 金鑰（選用）",
-			"placeholder": "輸入您的 Morph API 金鑰（選用）",
+			"apiProvider": "API 供應商",
+			"apiProviderList": {
+				"current": "目前"
+			},
+			"apiKey": "API 金鑰（選用）",
+			"placeholder": "輸入您的 API 金鑰（選用）",
 			"modelLabel": "模型選擇",
 			"modelDescription": "選擇用於檔案編輯的快速套用模型",
 			"models": {
@@ -944,7 +998,9 @@
 		"providerNotAllowed": "供應商 '{{provider}}' 不允許用於您的組織。",
 		"modelNotAllowed": "模型 '{{model}}' 不允許用於供應商 '{{provider}}'，您的組織不允許",
 		"profileInvalid": "此設定檔包含您的組織不允許的供應商或模型",
-		"qwenCodeOauthPath": "您必須提供有效的 OAuth 憑證路徑"
+		"qwenCodeOauthPath": "您必須提供有效的 OAuth 憑證路徑",
+		"sapAiCore": "您必須提供有效的 SAP AI Core 服務金鑰。",
+		"sapAiCoreDeploymentId": "您必須為模型「{{model}}」選擇執行中的部署。"
 	},
 	"placeholders": {
 		"apiKey": "請輸入 API 金鑰...",

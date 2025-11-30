@@ -95,8 +95,12 @@
 		"modelPlaceholder": "मॉडल नाम दर्ज करें",
 		"selectModel": "एक मॉडल चुनें",
 		"ollamaBaseUrlLabel": "Ollama आधार URL",
+		"vectorStoreProviderLabel": "वेक्टर स्टोर प्रदाता",
 		"qdrantApiKeyLabel": "Qdrant API कुंजी",
 		"qdrantApiKeyPlaceholder": "अपनी Qdrant API कुंजी दर्ज करें (वैकल्पिक)",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store पथ",
+		"lancedbVectorStoreDirectoryPlaceholder": "कस्टम वेक्टर स्टोर पथ दर्ज करें (वैकल्पिक)",
+		"lancedbVectorStoreDirectoryDescription": "LanceDB वेक्टर डेटाबेस संग्रहीत करने के लिए पथ। यदि खाली है, तो globalStorageUri/vector में डिफ़ॉल्ट स्थान का उपयोग किया जाएगा।",
 		"setupConfigLabel": "सेटअप",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -259,6 +263,14 @@
 		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
 		"openRouterApiKey": "OpenRouter API कुंजी",
 		"getOpenRouterApiKey": "OpenRouter API कुंजी प्राप्त करें",
+		"nanoGptApiKey": "Nano-GPT API कुंजी",
+		"getNanoGptApiKey": "Nano-GPT API कुंजी प्राप्त करें",
+		"nanoGptModelList": "मॉडल सूची",
+		"nanoGptModelListOptions": {
+			"all": "सभी मॉडल",
+			"personalized": "व्यक्तिगत मॉडल",
+			"subscription": "सदस्यता मॉडल"
+		},
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी",
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी प्राप्त करें",
 		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
@@ -289,6 +301,8 @@
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
 		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"anthropicUseAzureDeployment": "Azure डिप्लॉयमेंट नाम का उपयोग करें",
+		"anthropicAzureDeploymentPlaceholder": "डिप्लॉयमेंट नाम दर्ज करें...",
 		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"cerebrasApiKey": "Cerebras API कुंजी",
@@ -340,6 +354,32 @@
 		"huggingFaceSelectProvider": "एक प्रदाता चुनें...",
 		"huggingFaceSearchProviders": "प्रदाता खोजें...",
 		"huggingFaceNoProvidersFound": "कोई प्रदाता नहीं मिला",
+		"sapAiCore": {
+			"serviceKey": "AI Core सर्विस कुंजी",
+			"serviceKeyJson": "सर्विस कुंजी JSON दर्ज करें...",
+			"resourceGroup": "AI Core रिसोर्स ग्रुप",
+			"credentialsNote": "ये क्रेडेंशियल्स स्थानीय रूप से संग्रहीत हैं और केवल इस एक्सटेंशन से API अनुरोध करने के लिए उपयोग की जाती हैं।",
+			"learnMore": "SAP AI Core API एक्सेस के बारे में अधिक जानकारी आप यहाँ पा सकते हैं।",
+			"orchestrationMode": "ऑर्केस्ट्रेशन मोड",
+			"orchestrationEnabledDesc": "सक्षम होने पर, व्यक्तिगत डिप्लॉयमेंट की आवश्यकता के बिना सभी उपलब्ध मॉडलों तक पहुंच प्रदान करता है।",
+			"orchestrationDisabledDesc": "अक्षम होने पर, केवल आपके AI Core सर्विस इंस्टेंस में डिप्लॉय किए गए फाउंडेशन मॉडल तक पहुंच प्रदान करता है।",
+			"modelDeploymentDesc": "आप केवल उपलब्ध डिप्लॉयमेंट वाले मॉडल चुन सकते हैं।",
+			"deployment": "डिप्लॉयमेंट",
+			"loading": "लोड हो रहा है...",
+			"modelsCount": "({{count}} मॉडल)",
+			"deploymentsCount": "({{count}} डिप्लॉयमेंट)",
+			"selectModel": "एक मॉडल चुनें...",
+			"selectDeployment": "एक डिप्लॉयमेंट चुनें...",
+			"searchModels": "मॉडल खोजें...",
+			"searchDeployments": "डिप्लॉयमेंट खोजें...",
+			"noModelsFound": "कोई मॉडल नहीं मिला",
+			"noDeploymentFound": "कोई डिप्लॉयमेंट नहीं मिला",
+			"getStarted": "SAP AI Core के साथ शुरू करें",
+			"supportedProviders": "समर्थित प्रदाता",
+			"supportedProvidersDesc1": "SAP AI Core प्रदाता वर्तमान में केवल निम्नलिखित LLM प्रदाताओं के लिए फाउंडेशन मॉडल का समर्थन करता है:",
+			"supportedProvidersDesc2": "अधिक मॉडलों तक पहुंच के लिए ऑर्केस्ट्रेशन मोड पर स्विच करने पर विचार करें।",
+			"supportedProvidersDesc3": "ऑर्केस्ट्रेशन मोड के बारे में अधिक जानें"
+		},
 		"getGeminiApiKey": "Gemini API कुंजी प्राप्त करें",
 		"openAiApiKey": "OpenAI API कुंजी",
 		"apiKey": "API कुंजी",
@@ -362,6 +402,7 @@
 		"awsSessionToken": "AWS सत्र टोकन",
 		"awsRegion": "AWS क्षेत्र",
 		"awsCrossRegion": "क्रॉस-क्षेत्र अनुमान का उपयोग करें",
+		"awsGlobalInference": "वैश्विक अनुमान का उपयोग करें (स्वचालित रूप से श्रेष्ठ AWS क्षेत्र चुनें)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "कस्टम VPC एंडपॉइंट का उपयोग करें",
 			"vpcEndpointUrlPlaceholder": "VPC एंडपॉइंट URL दर्ज करें (वैकल्पिक)",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "त्रुटि और पुनरावृत्ति सीमा",
-			"description": "'रू को समस्या हो रही है' संवाद दिखाने से पहले लगातार त्रुटियों या दोहराए गए कार्यों की संख्या",
+			"description": "'रू को समस्या हो रही है' संवाद दिखाने से पहले लगातार त्रुटियों या दोहराए गए कार्यों की संख्या। इस सुरक्षा तंत्र को अक्षम करने के लिए 0 पर सेट करें (यह कभी ट्रिगर नहीं होगा)।",
 			"unlimitedDescription": "असीमित पुनः प्रयास सक्षम (स्वतः आगे बढ़ें)। संवाद कभी नहीं दिखाई देगा।",
 			"warning": "⚠️ 0 पर सेट करने से असीमित पुनः प्रयास की अनुमति मिलती है जिससे महत्वपूर्ण एपीआई उपयोग हो सकता है"
 		},
@@ -532,6 +573,15 @@
 			"description": "यह प्रदाता Qwen सेवा से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
 			"instructions": "कृपया प्राधिकरण फ़ाइल प्राप्त करने और इसे निर्दिष्ट पथ में रखने के लिए आधिकारिक दस्तावेज़ीकरण का पालन करें।",
 			"setupLink": "Qwen आधिकारिक दस्तावेज़ीकरण"
+		},
+		"profileName": "प्रोफ़ाइल नाम",
+		"profileType": "प्रोफ़ाइल प्रकार",
+		"profileTypeChat": "चैट",
+		"profileTypeAutocomplete": "ऑटोकम्पलीट",
+		"profileTypeDescription": "चैट प्रोफ़ाइल बातचीत के लिए उपयोग की जाती हैं। केवल एक ऑटोकम्पलीट प्रोफ़ाइल की अनुमति है।",
+		"autocompleteLabel": "(ऑटोकम्पलीट)",
+		"autocomplete": {
+			"onlyOneAllowed": "केवल एक ऑटोकम्पलीट प्रोफ़ाइल की अनुमति है। प्रोफ़ाइल \"{{existingName}}\" पहले से ही ऑटोकम्पलीट के लिए कॉन्फ़िगर है। कृपया पहले इसका प्रकार बदलें या इसे हटाएं।"
 		}
 	},
 	"browser": {
@@ -825,8 +875,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply सक्षम करें",
 			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Gateway Provider, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
-			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
+			"apiProvider": "API प्रदाता",
+			"apiProviderList": {
+				"current": "वर्तमान"
+			},
+			"apiKey": "API कुंजी (वैकल्पिक)",
+			"placeholder": "अपनी API कुंजी दर्ज करें (वैकल्पिक)",
 			"modelLabel": "मॉडल चयन",
 			"modelDescription": "फ़ाइल संपादन के लिए किस Fast Apply मॉडल का उपयोग करना है चुनें",
 			"models": {
@@ -943,7 +997,9 @@
 		"providerNotAllowed": "प्रदाता '{{provider}}' आपके संगठन द्वारा अनुमत नहीं है",
 		"modelNotAllowed": "मॉडल '{{model}}' प्रदाता '{{provider}}' के लिए आपके संगठन द्वारा अनुमत नहीं है",
 		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है",
-		"qwenCodeOauthPath": "आपको एक वैध OAuth क्रेडेंशियल पथ प्रदान करना होगा"
+		"qwenCodeOauthPath": "आपको एक वैध OAuth क्रेडेंशियल पथ प्रदान करना होगा",
+		"sapAiCore": "आपको एक वैध SAP AI Core सर्विस कुंजी प्रदान करनी होगी।",
+		"sapAiCoreDeploymentId": "आपको मॉडल '{{model}}' के लिए एक चल रहा डिप्लॉयमेंट चुनना होगा।"
 	},
 	"placeholders": {
 		"apiKey": "API कुंजी दर्ज करें...",

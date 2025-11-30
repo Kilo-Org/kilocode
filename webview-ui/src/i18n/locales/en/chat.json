@@ -103,23 +103,16 @@
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
 	"about": "Generate, refactor, and debug code with AI assistance. Check out our <DocsLink>documentation</DocsLink> to learn more.",
-	"onboarding": "Your task list in this workspace is empty.",
+	"docs": "Check our <DocsLink>docs</DocsLink> to get started",
+	"onboarding": "What would you like to do?",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Task Orchestration",
-			"description": "Split tasks into smaller, manageable parts"
-		},
-		"stickyModels": {
-			"title": "Sticky Models",
-			"description": "Each mode remembers your last used model"
-		},
-		"tools": {
-			"title": "Tools",
-			"description": "Allow the AI to solve problems by browsing the web, running commands, and more"
-		},
 		"customizableModes": {
-			"title": "Customizable Modes",
-			"description": "Specialized personas with their own behaviors and assigned models"
+			"title": "Customizable modes that don't swerve",
+			"description": "Specialized personas that stay on-task and deliver."
+		},
+		"modelAgnostic": {
+			"title": "Bring your own model, no markup or lock-in",
+			"description": "Use your own provider key or even run local inference — Roo doesn't charge for it"
 		}
 	},
 	"selectMode": "Select mode for interaction",
@@ -202,7 +195,9 @@
 		"wantsToCreate": "Kilo Code wants to create a new file",
 		"wantsToInsert": "Kilo Code wants to insert content into this file",
 		"wantsToInsertWithLineNumber": "Kilo Code wants to insert content into this file at line {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file"
+		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file",
+		"wantsToDelete": "Kilo Code wants to delete this file",
+		"wantsToDeleteDirectory": "Kilo Code wants to delete this directory"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory",
@@ -431,5 +426,12 @@
 		"problems": "Problems",
 		"terminal": "Terminal",
 		"url": "Paste URL to fetch contents"
+	},
+	"todo": {
+		"partial": "{{completed}} of {{total}} to-dos done",
+		"complete": "{{total}} to-dos done",
+		"updated": "Updated the to-do list",
+		"completed": "Completed",
+		"started": "Started"
 	}
 }

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.121.0",
+	"version": "4.125.1",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -592,12 +592,35 @@
 					"default": false,
 					"description": "%settings.newTaskRequireTodos.description%"
 				},
+				"kilo-code.enableSettingsSync": {
+					"type": "boolean",
+					"default": true,
+					"description": "%settings.enableSettingsSync.description%"
+				},
 				"kilo-code.codeIndex.embeddingBatchSize": {
 					"type": "number",
 					"default": 60,
 					"minimum": 1,
 					"maximum": 200,
 					"description": "%settings.codeIndex.embeddingBatchSize.description%"
+				},
+				"kilo-code.toolProtocol": {
+					"type": "string",
+					"enum": [
+						"xml",
+						"native"
+					],
+					"default": "xml",
+					"description": "%settings.toolProtocol.description%"
+				}
+			}
+		},
+		"icons": {
+			"kilo-logo": {
+				"description": "Kilo Code logo",
+				"default": {
+					"fontPath": "assets/icons/kilo-icon-font.woff2",
+					"fontCharacter": "\\F101"
 				}
 			}
 		},
@@ -632,10 +655,11 @@
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",
 		"@anthropic-ai/sdk": "^0.51.0",
 		"@anthropic-ai/vertex-sdk": "^0.11.3",
-		"@aws-sdk/client-bedrock-runtime": "^3.812.0",
-		"@aws-sdk/credential-providers": "^3.806.0",
+		"@aws-sdk/client-bedrock-runtime": "^3.922.0",
+		"@aws-sdk/credential-providers": "^3.922.0",
 		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
 		"@google/genai": "^1.0.0",
+		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
 		"@modelcontextprotocol/sdk": "1.13.3",
@@ -644,6 +668,8 @@
 		"@roo-code/ipc": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
+		"@sap-ai-sdk/foundation-models": "^2.2.0",
+		"@sap-ai-sdk/orchestration": "^2.2.0",
 		"@vscode/codicons": "^0.0.36",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.12.0",
@@ -657,6 +683,7 @@
 		"fast-deep-equal": "^3.1.3",
 		"fast-xml-parser": "^5.0.0",
 		"fastest-levenshtein": "^1.0.16",
+		"form-data": ">=4.0.4",
 		"fuse.js": "^7.1.0",
 		"fzf": "^0.5.2",
 		"get-folder-size": "^5.0.0",
@@ -680,6 +707,8 @@
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",
 		"p-limit": "^6.2.0",
+		"p-map": "^7.0.3",
+		"p-retry": "^7.1.0",
 		"p-wait-for": "^5.0.2",
 		"pdf-parse": "^1.1.1",
 		"pkce-challenge": "^5.0.0",
@@ -690,10 +719,12 @@
 		"puppeteer-core": "^23.4.0",
 		"quick-lru": "^7.0.0",
 		"reconnecting-eventsource": "^1.6.4",
+		"safe-stable-stringify": "^2.5.0",
 		"sanitize-filename": "^1.6.3",
 		"say": "^0.16.0",
 		"serialize-error": "^12.0.0",
 		"shiki": "^3.6.0",
+		"shell-quote": "^1.8.2",
 		"simple-git": "^3.27.0",
 		"socket.io-client": "^4.8.1",
 		"sound-play": "^1.1.0",
@@ -732,6 +763,8 @@
 		"@types/node-cache": "^4.1.3",
 		"@types/node-ipc": "^9.2.3",
 		"@types/proper-lockfile": "^4.1.4",
+		"@types/ps-tree": "^1.1.6",
+		"@types/shell-quote": "^1.7.5",
 		"@types/stream-json": "^1.7.8",
 		"@types/string-similarity": "^4.0.2",
 		"@types/tmp": "^0.2.6",

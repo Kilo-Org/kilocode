@@ -221,8 +221,10 @@ export const sendCustomInstructionsAtom = atom(null, async (get, set, instructio
  */
 export const sendAlwaysAllowAtom = atom(null, async (get, set, alwaysAllow: boolean) => {
 	const message: WebviewMessage = {
-		type: "alwaysAllowMcp",
-		bool: alwaysAllow,
+		type: "updateSettings",
+		updatedSettings: {
+			alwaysAllowMcp: alwaysAllow,
+		},
 	}
 
 	await set(sendWebviewMessageAtom, message)

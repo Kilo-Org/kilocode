@@ -237,6 +237,7 @@
 			},
 			"keybindingNotFound": "niet gevonden",
 			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
+			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren.",
 			"model": "Model",
 			"provider": "Provider"
 		}

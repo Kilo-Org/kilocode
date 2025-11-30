@@ -10,7 +10,6 @@ import {
 	// kilocode_change start
 	// geminiModels,
 	geminiCliModels,
-	syntheticModels,
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
@@ -38,7 +37,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change start
 	// gemini: geminiModels,
 	"gemini-cli": geminiCliModels,
-	synthetic: syntheticModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
@@ -69,6 +67,7 @@ export const PROVIDERS = [
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
 	{ value: "synthetic", label: "Synthetic" },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
+	{ value: "sap-ai-core", label: "SAP AI Core" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
@@ -78,6 +77,7 @@ export const PROVIDERS = [
 	{ value: "vertex", label: "GCP Vertex AI" },
 	{ value: "bedrock", label: "Amazon Bedrock" },
 	{ value: "glama", label: "Glama" },
+	{ value: "nano-gpt", label: "Nano-GPT" }, //kilocode_change
 	{ value: "vscode-lm", label: "VS Code LM API" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },

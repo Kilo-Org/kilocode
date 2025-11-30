@@ -91,10 +91,14 @@
 		"selectModelPlaceholder": "เลือกโมเดล",
 		"ollamaUrlLabel": "URL ของ Ollama:",
 		"ollamaBaseUrlLabel": "URL พื้นฐาน Ollama",
+		"vectorStoreProviderLabel": "ผู้ให้บริการ Vector Store",
 		"qdrantUrlLabel": "URL ของ Qdrant",
 		"qdrantKeyLabel": "คีย์ Qdrant:",
 		"qdrantApiKeyLabel": "คีย์ API Qdrant",
 		"qdrantApiKeyPlaceholder": "ป้อนคีย์ API Qdrant ของคุณ (ไม่บังคับ)",
+		"lancedbVectorStoreDirectoryLabel": "เส้นทาง LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "กรอกเส้นทาง Vector Store (ถ้ามี)",
+		"lancedbVectorStoreDirectoryDescription": "เส้นทางสำหรับจัดเก็บฐานข้อมูล LanceDB Vector หากเว้นว่างจะใช้ตำแหน่งเริ่มต้นใน globalStorageUri/vector",
 		"setupConfigLabel": "การตั้งค่า",
 		"advancedConfigLabel": "การกำหนดค่าขั้นสูง",
 		"searchMinScoreLabel": "เกณฑ์คะแนนการค้นหา",
@@ -293,6 +297,8 @@
 		"anthropicApiKey": "คีย์ API ของ Anthropic",
 		"getAnthropicApiKey": "รับคีย์ API ของ Anthropic",
 		"anthropicUseAuthToken": "ส่งคีย์ API ของ Anthropic เป็นส่วนหัว Authorization แทน X-Api-Key",
+		"anthropicUseAzureDeployment": "ใช้ชื่อการปรับใช้ Azure",
+		"anthropicAzureDeploymentPlaceholder": "ป้อนชื่อการปรับใช้...",
 		"anthropic1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
 		"anthropic1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
@@ -320,9 +326,6 @@
 		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
 		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
 		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
-		"minimaxApiKey": "คีย์ API ของ MiniMax",
-		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
-		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
 		"geminiApiKey": "คีย์ API ของ Gemini",
 		"geminiParameters": {
 			"urlContext": {
@@ -375,6 +378,7 @@
 		"awsSessionToken": "โทเค็นเซสชัน AWS",
 		"awsRegion": "ภูมิภาค AWS",
 		"awsCrossRegion": "ใช้การอนุมานข้ามภูมิภาค",
+		"awsGlobalInference": "ใช้การอนุมานแบบ Global (เลือกภูมิภาค AWS ที่เหมาะสมโดยอัตโนมัติ)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "ใช้ปลายทาง VPC ที่กำหนดเอง",
 			"vpcEndpointUrlPlaceholder": "ป้อน URL ปลายทาง VPC (ไม่บังคับ)",
@@ -434,6 +438,14 @@
 		},
 		"doubaoApiKey": "คีย์ API ของ Doubao",
 		"getDoubaoApiKey": "รับคีย์ API ของ Doubao",
+		"nanoGptApiKey": "คีย์ API ของ Nano-GPT",
+		"getNanoGptApiKey": "รับคีย์ API ของ Nano-GPT",
+		"nanoGptModelList": "รายการโมเดล",
+		"nanoGptModelListOptions": {
+			"all": "โมเดลทั้งหมด",
+			"personalized": "โมเดลส่วนตัว",
+			"subscription": "โมเดลตามการสมัครสมาชิก"
+		},
 		"zaiApiKey": "คีย์ API ของ Z.AI",
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
@@ -553,6 +565,41 @@
 		"roo": {
 			"authenticatedMessage": "ยืนยันตัวตนอย่างปลอดภัยผ่านบัญชี Roo Code Cloud ของคุณ",
 			"connectButton": "เชื่อมต่อกับ Roo Code Cloud"
+		},
+		"profileName": "ชื่อโปรไฟล์",
+		"profileType": "ประเภทโปรไฟล์",
+		"profileTypeChat": "แชท",
+		"profileTypeAutocomplete": "เติมข้อความอัตโนมัติ",
+		"profileTypeDescription": "โปรไฟล์แชทใช้สำหรับการสนทนา อนุญาตให้มีโปรไฟล์เติมข้อความอัตโนมัติเพียงหนึ่งโปรไฟล์เท่านั้น",
+		"autocompleteLabel": "(เติมข้อความอัตโนมัติ)",
+		"autocomplete": {
+			"onlyOneAllowed": "อนุญาตให้มีโปรไฟล์เติมข้อความอัตโนมัติเพียงหนึ่งโปรไฟล์เท่านั้น โปรไฟล์ \"{{existingName}}\" ถูกกำหนดค่าสำหรับเติมข้อความอัตโนมัติแล้ว กรุณาเปลี่ยนประเภทก่อนหรือลบออก"
+		},
+		"sapAiCore": {
+			"serviceKey": "คีย์บริการ AI Core",
+			"serviceKeyJson": "ป้อน JSON คีย์บริการ...",
+			"resourceGroup": "กลุ่มทรัพยากร AI Core",
+			"credentialsNote": "ข้อมูลรับรองเหล่านี้ถูกจัดเก็บไว้ในเครื่องและใช้เฉพาะสำหรับการส่งคำขอ API จากส่วนขยายนี้เท่านั้น",
+			"learnMore": "คุณสามารถค้นหาข้อมูลเพิ่มเติมเกี่ยวกับการเข้าถึง API ของ SAP AI Core ได้ที่นี่",
+			"orchestrationMode": "โหมด Orchestration",
+			"orchestrationEnabledDesc": "เมื่อเปิดใช้งาน จะให้สิทธิ์เข้าถึงโมเดลทั้งหมดที่มีโดยไม่ต้องมีการ deploy แต่ละรายการ",
+			"orchestrationDisabledDesc": "เมื่อปิดใช้งาน จะให้สิทธิ์เข้าถึงเฉพาะโมเดลพื้นฐานที่ถูก deploy ในอินสแตนซ์บริการ AI Core ของคุณเท่านั้น",
+			"modelDeploymentDesc": "คุณสามารถเลือกได้เฉพาะโมเดลที่มีการ deploy พร้อมใช้งานเท่านั้น",
+			"deployment": "การ Deploy",
+			"loading": "กำลังโหลด...",
+			"modelsCount": "({{count}} โมเดล)",
+			"deploymentsCount": "({{count}} การ deploy)",
+			"selectModel": "เลือกโมเดล...",
+			"selectDeployment": "เลือกการ deploy...",
+			"searchModels": "ค้นหาโมเดล...",
+			"searchDeployments": "ค้นหาการ deploy...",
+			"noModelsFound": "ไม่พบโมเดล",
+			"noDeploymentFound": "ไม่พบการ deploy",
+			"getStarted": "เริ่มต้นใช้งาน SAP AI Core",
+			"supportedProviders": "ผู้ให้บริการที่รองรับ",
+			"supportedProvidersDesc1": "ผู้ให้บริการ SAP AI Core ปัจจุบันรองรับเฉพาะโมเดลพื้นฐานสำหรับผู้ให้บริการ LLM ต่อไปนี้เท่านั้น:",
+			"supportedProvidersDesc2": "พิจารณาเปลี่ยนไปใช้โหมด Orchestration เพื่อเข้าถึงโมเดลเพิ่มเติม",
+			"supportedProvidersDesc3": "เรียนรู้เพิ่มเติมเกี่ยวกับโหมด Orchestration"
 		}
 	},
 	"contextWindow": {
@@ -915,8 +962,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "เปิดใช้งาน Fast Apply",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Fast Apply กับโมเดลเฉพาะทางที่ปรับแต่งสำหรับการแก้ไขโค้ด ต้องใช้ Kilo Gateway Provider, OpenRouter หรือ Morph API key",
-			"apiKey": "Morph API key (ไม่บังคับ)",
-			"placeholder": "ป้อน Morph API key ของคุณ (ไม่บังคับ)",
+			"apiProvider": "ผู้ให้บริการ API",
+			"apiProviderList": {
+				"current": "ปัจจุบัน"
+			},
+			"apiKey": "คีย์ API (ไม่บังคับ)",
+			"placeholder": "ป้อนคีย์ API ของคุณ (ไม่บังคับ)",
 			"modelLabel": "การเลือกโมเดล",
 			"modelDescription": "เลือกโมเดล Fast Apply ที่จะใช้สำหรับการแก้ไขไฟล์",
 			"models": {
@@ -1004,7 +1055,9 @@
 		"modelNotAllowed": "โมเดล '{{model}}' ไม่ได้รับอนุญาตสำหรับผู้ให้บริการ '{{provider}}' จากองค์กรของคุณ",
 		"profileInvalid": "โปรไฟล์นี้มีผู้ให้บริการหรือโมเดลที่ไม่ได้รับอนุญาตจากองค์กรของคุณ",
 		"qwenCodeOauthPath": "คุณต้องระบุเส้นทางข้อมูลประจำตัว OAuth ที่ถูกต้อง",
-		"modelDeprecated": "โมเดลนี้ไม่สามารถใช้งานได้อีกต่อไป โปรดเลือกโมเดลอื่น"
+		"modelDeprecated": "โมเดลนี้ไม่สามารถใช้งานได้อีกต่อไป โปรดเลือกโมเดลอื่น",
+		"sapAiCore": "คุณต้องระบุคีย์บริการ SAP AI Core ที่ถูกต้อง",
+		"sapAiCoreDeploymentId": "คุณต้องเลือกการ deploy ที่กำลังทำงานสำหรับโมเดล '{{model}}'"
 	},
 	"placeholders": {
 		"apiKey": "ป้อนคีย์ API...",

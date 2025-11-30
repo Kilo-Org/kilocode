@@ -101,7 +101,7 @@ export const TabbedCodeIndexPopoverTabs = ({
 
 			<div className="p-4">
 				<TabsContent value="managed" className="mt-0">
-					<ManagedCodeIndexPopoverContent indexingStatus={indexingStatus} />
+					<ManagedCodeIndexPopoverContent />
 				</TabsContent>
 
 				<TabsContent value="local" className="mt-0">

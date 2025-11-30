@@ -3,6 +3,16 @@ import { CodeIndexServiceFactory } from "../service-factory"
 import type { MockedClass } from "vitest"
 import * as path from "path"
 
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 // Mock vscode module
 vi.mock("vscode", () => {
 	const testPath = require("path")

@@ -86,6 +86,7 @@ const configurationPropertySchema = z.object({
 		})
 		.optional(),
 	properties: z.record(z.string(), z.any()).optional(),
+	enum: z.array(z.any()).optional(),
 	default: z.any().optional(),
 	description: z.string(),
 })

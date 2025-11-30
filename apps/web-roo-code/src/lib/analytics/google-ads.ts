@@ -3,15 +3,13 @@
  */
 
 /**
- * Track a Google Ads conversion event
- * This should only be called after user consent has been given
+ * Tracks a Google Ads conversion event
+ * This is a placeholder function that can be enhanced with actual Google Ads tracking
  */
-export function trackGoogleAdsConversion() {
-	if (typeof window !== "undefined" && window.gtag) {
-		window.gtag("event", "conversion", {
-			send_to: "AW-17391954825/VtOZCJe_77MbEInXkOVA",
-			value: 10.0,
-			currency: "USD",
-		})
+export function trackGoogleAdsConversion(): void {
+	// TODO: Implement Google Ads conversion tracking
+	// This would typically send a conversion event to Google Ads
+	if (typeof window !== "undefined") {
+		console.debug("Google Ads conversion tracked")
 	}
 }

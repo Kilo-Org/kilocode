@@ -1,10 +1,10 @@
 import React, { memo, useState } from "react"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
 
 import type { ClineMessage } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
+import { Button } from "@src/components/ui"
 
 type AutoApprovedRequestLimitWarningProps = {
 	message: ClineMessage
@@ -50,7 +50,7 @@ export const AutoApprovedRequestLimitWarning = memo(({ message }: AutoApprovedRe
 				<div className="flex justify-between items-center">
 					<Trans i18nKey={descriptionKey} ns="chat" values={{ count }} />
 				</div>
-				<VSCodeButton
+				<Button
 					style={{ width: "100%", padding: "6px", borderRadius: "4px" }}
 					onClick={(e) => {
 						e.preventDefault()
@@ -58,7 +58,7 @@ export const AutoApprovedRequestLimitWarning = memo(({ message }: AutoApprovedRe
 						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
 					}}>
 					<Trans i18nKey={buttonKey} ns="chat" />
-				</VSCodeButton>
+				</Button>
 			</div>
 		</>
 	)

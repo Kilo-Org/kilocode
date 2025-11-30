@@ -85,7 +85,7 @@ docs/
 1. **Content Creation** - Markdown/MDX files in `/docs`
 2. **Build Process** - Docusaurus compilation and optimization
 3. **Static Generation** - HTML/CSS/JS output for hosting
-4. **Deployment** - Static files served at https://kilocode.ai/docs
+4. **Deployment** - Static files served at https://kilo.ai/docs
 
 ## Critical Implementation Paths
 

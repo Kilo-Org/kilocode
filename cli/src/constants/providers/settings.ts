@@ -1,6 +1,15 @@
 import type { ProviderName, ProviderSettings } from "../../types/messages.js"
 
 /**
+ * Option for select fields
+ */
+export interface SelectOption {
+	value: string
+	label: string
+	description?: string
+}
+
+/**
  * Provider setting configuration interface
  */
 export interface ProviderSettingConfig {
@@ -8,7 +17,8 @@ export interface ProviderSettingConfig {
 	label: string
 	value: string
 	actualValue: string
-	type: "text" | "password" | "boolean"
+	type: "text" | "password" | "boolean" | "select"
+	options?: SelectOption[]
 }
 
 /**
@@ -16,9 +26,11 @@ export interface ProviderSettingConfig {
  */
 export interface FieldMetadata {
 	label: string
-	type: "text" | "password" | "boolean"
+	type: "text" | "password" | "boolean" | "select"
 	placeholder?: string
 	isOptional?: boolean
+	options?: SelectOption[]
+	defaultValue?: string
 }
 
 /**
@@ -79,6 +91,59 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter base URL (or leave empty for default)...",
 		isOptional: true,
 	},
+	openRouterProviderDataCollection: {
+		label: "Provider Data Collection",
+		type: "select",
+		isOptional: true,
+		options: [
+			{
+				value: "allow",
+				label: "Allow",
+				description: "Allow data collection by the provider",
+			},
+			{
+				value: "deny",
+				label: "Deny",
+				description: "Deny data collection by the provider",
+			},
+		],
+	},
+	openRouterProviderSort: {
+		label: "Provider Sort Preference",
+		type: "select",
+		isOptional: true,
+		options: [
+			{
+				value: "price",
+				label: "Price",
+				description: "Sort by price (lowest first)",
+			},
+			{
+				value: "throughput",
+				label: "Throughput",
+				description: "Sort by throughput (highest first)",
+			},
+			{
+				value: "latency",
+				label: "Latency",
+				description: "Sort by latency (lowest first)",
+			},
+		],
+	},
+	openRouterSpecificProvider: {
+		label: "Specific Provider",
+		type: "text",
+		placeholder: "Enter specific provider (optional)...",
+		isOptional: true,
+	},
+	openRouterUseMiddleOutTransform: {
+		label: "Use Middle-Out Transform",
+		type: "boolean",
+	},
+	openRouterZdr: {
+		label: "Zero Data Retention",
+		type: "boolean",
+	},
 
 	// OpenAI Native fields
 	openAiNativeApiKey: {
@@ -91,6 +156,34 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		type: "text",
 		placeholder: "Enter base URL (or leave empty for default)...",
 		isOptional: true,
+	},
+	openAiNativeServiceTier: {
+		label: "Service Tier",
+		type: "select",
+		defaultValue: "auto",
+		isOptional: true,
+		options: [
+			{
+				value: "auto",
+				label: "Auto",
+				description: "Automatically select the best tier",
+			},
+			{
+				value: "default",
+				label: "Default",
+				description: "Standard processing with balanced performance",
+			},
+			{
+				value: "flex",
+				label: "Flex",
+				description: "Cost-optimized with variable latency",
+			},
+			{
+				value: "priority",
+				label: "Priority",
+				description: "Fastest processing with higher priority",
+			},
+		],
 	},
 
 	// AWS Bedrock fields
@@ -274,6 +367,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter model ID...",
 	},
 
+	// Nano-GPT fields
+	nanoGptApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Nano-GPT API key...",
+	},
+	nanoGptModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
 	// HuggingFace fields
 	huggingFaceApiKey: {
 		label: "API Key",
@@ -406,8 +511,30 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 	},
 	zaiApiLine: {
 		label: "API Line",
-		type: "text",
-		placeholder: "Enter API line...",
+		type: "select",
+		defaultValue: "international_coding",
+		options: [
+			{
+				value: "international_coding",
+				label: "International Coding Plan",
+				description: "Optimized for coding tasks (International)",
+			},
+			{
+				value: "international",
+				label: "International Standard",
+				description: "General-purpose API (International)",
+			},
+			{
+				value: "china_coding",
+				label: "China Coding Plan",
+				description: "Optimized for coding tasks (China)",
+			},
+			{
+				value: "china",
+				label: "China Standard",
+				description: "General-purpose API (China)",
+			},
+		],
 	},
 
 	// Minimax fields
@@ -507,6 +634,32 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter Synthetic API key...",
 	},
 
+	// SAP AI Core fields
+	sapAiCoreServiceKey: {
+		label: "Service Key",
+		type: "password",
+		placeholder: "Enter SAP AI Core service key...",
+	},
+	sapAiCoreResourceGroup: {
+		label: "Resource Group",
+		type: "text",
+		placeholder: "Enter resource group...",
+	},
+	sapAiCoreUseOrchestration: {
+		label: "Use Orchestration",
+		type: "boolean",
+	},
+	sapAiCoreModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+	sapAiCoreDeploymentId: {
+		label: "Deployment ID",
+		type: "text",
+		placeholder: "Enter deployment ID...",
+	},
+
 	// Virtual Quota Fallback fields
 	profiles: {
 		label: "Profiles Configuration",
@@ -518,7 +671,7 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 /**
  * Get field display information
  * @param field - Field name
- * @returns Object with label, placeholder, and type
+ * @returns Object with label, placeholder, type, options, and defaultValue
  */
 export const getFieldInfo = (field: string) => {
 	const metadata = FIELD_REGISTRY[field]
@@ -527,6 +680,8 @@ export const getFieldInfo = (field: string) => {
 			label: metadata.label,
 			placeholder: metadata.placeholder || `Enter ${field}...`,
 			type: metadata.type,
+			options: metadata.options,
+			defaultValue: metadata.defaultValue,
 		}
 	}
 
@@ -534,6 +689,8 @@ export const getFieldInfo = (field: string) => {
 		label: field,
 		placeholder: `Enter ${field}...`,
 		type: "text" as const,
+		options: undefined,
+		defaultValue: undefined,
 	}
 }
 
@@ -589,17 +746,32 @@ const createFieldConfig = (field: string, config: ProviderSettings, defaultValue
 		displayValue = actualValue ? "••••••••" : "Not set"
 	} else if (fieldInfo.type === "boolean") {
 		displayValue = actualValue ? "Enabled" : "Disabled"
+	} else if (fieldInfo.type === "select") {
+		// For select fields, show the label of the selected option
+		if (actualValue && fieldInfo.options) {
+			const selectedOption = fieldInfo.options.find((opt) => opt.value === actualValue)
+			displayValue = selectedOption ? selectedOption.label : String(actualValue)
+		} else {
+			displayValue = defaultValue || "Not set"
+		}
 	} else {
 		displayValue = (typeof actualValue === "string" ? actualValue : "") || defaultValue || "Not set"
 	}
 
-	return {
+	const result: ProviderSettingConfig = {
 		field,
 		label: fieldInfo.label,
 		value: displayValue,
 		actualValue: fieldInfo.type === "boolean" ? (actualValue ? "true" : "false") : String(actualValue),
 		type: fieldInfo.type,
 	}
+
+	// Only add options if they exist
+	if (fieldInfo.options) {
+		result.options = fieldInfo.options
+	}
+
+	return result
 }
 
 /**
@@ -720,6 +892,9 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("glamaApiKey", config),
 				createFieldConfig("glamaModelId", config, "llama-3.1-70b-versatile"),
 			]
+
+		case "nano-gpt":
+			return [createFieldConfig("nanoGptApiKey", config), createFieldConfig("nanoGptModelId", config, "gpt-4o")]
 
 		case "huggingface":
 			return [
@@ -859,6 +1034,14 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("apiModelId", config, "synthetic-model"),
 			]
 
+		case "sap-ai-core":
+			return [
+				createFieldConfig("sapAiCoreServiceKey", config),
+				createFieldConfig("sapAiCoreResourceGroup", config),
+				createFieldConfig("sapAiCoreDeploymentId", config),
+				createFieldConfig("sapAiCoreModelId", config),
+			]
+
 		default:
 			return []
 	}
@@ -886,6 +1069,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"vscode-lm": "copilot-gpt-4o",
 	openai: "gpt-4o",
 	glama: "llama-3.1-70b-versatile",
+	"nano-gpt": "gpt-4o",
 	huggingface: "meta-llama/Llama-2-70b-chat-hf",
 	litellm: "gpt-4o",
 	moonshot: "moonshot-v1-8k",
@@ -910,6 +1094,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	ovhcloud: "gpt-oss-120b",
 	inception: "gpt-4o",
 	synthetic: "synthetic-model",
+	"sap-ai-core": "gpt-4o",
 }
 
 /**

@@ -1,17 +1,17 @@
 import React, { useCallback } from "react"
 import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
-import { ToolUseStyle, toolUseStylesSchema } from "@roo-code/types"
+import { ToolProtocol, toolProtocolSchema } from "@roo-code/types"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 
 interface ToolUseControlProps {
-	toolStyle?: ToolUseStyle
-	onChange: (field: "toolStyle", value?: ToolUseStyle) => void
+	toolStyle?: ToolProtocol
+	onChange: (field: "toolStyle", value?: ToolProtocol) => void
 }
 
 export const ToolUseControl: React.FC<ToolUseControlProps> = ({ toolStyle, onChange }) => {
 	const handleToolStyleChange = useCallback(
 		(e: any) => {
-			const value = toolUseStylesSchema.safeParse(e.target.value).data
+			const value = toolProtocolSchema.safeParse(e.target.value).data
 			onChange("toolStyle", value)
 		},
 		[onChange],
@@ -28,10 +28,10 @@ export const ToolUseControl: React.FC<ToolUseControlProps> = ({ toolStyle, onCha
 					<VSCodeOption className={codeOptionClassName} value="">
 						{t("kilocode:toolCallStyle.automatic")}
 					</VSCodeOption>
-					<VSCodeOption className={codeOptionClassName} value={toolUseStylesSchema.Enum.xml}>
+					<VSCodeOption className={codeOptionClassName} value={toolProtocolSchema.Enum.xml}>
 						{t("kilocode:toolCallStyle.xml")}
 					</VSCodeOption>
-					<VSCodeOption className={codeOptionClassName} value={toolUseStylesSchema.Enum.json}>
+					<VSCodeOption className={codeOptionClassName} value={toolProtocolSchema.Enum.native}>
 						{t("kilocode:toolCallStyle.json")}
 					</VSCodeOption>
 				</VSCodeDropdown>

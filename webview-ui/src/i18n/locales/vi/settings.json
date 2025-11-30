@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Nhập tên mô hình",
 		"selectModel": "Chọn một mô hình",
 		"ollamaBaseUrlLabel": "URL cơ sở Ollama",
+		"vectorStoreProviderLabel": "Nhà cung cấp kho lưu trữ vector",
 		"qdrantApiKeyLabel": "Khóa API Qdrant",
 		"qdrantApiKeyPlaceholder": "Nhập khóa API Qdrant của bạn (tùy chọn)",
+		"lancedbVectorStoreDirectoryLabel": "Đường dẫn LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Nhập đường dẫn kho lưu trữ vector tùy chỉnh (tùy chọn)",
+		"lancedbVectorStoreDirectoryDescription": "Đường dẫn để lưu trữ cơ sở dữ liệu vector LanceDB. Nếu trống, sử dụng vị trí mặc định trong globalStorageUri/vector.",
 		"setupConfigLabel": "Cài đặt",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -259,6 +263,14 @@
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",
 		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
+		"nanoGptApiKey": "Khóa API Nano-GPT",
+		"getNanoGptApiKey": "Lấy khóa API Nano-GPT",
+		"nanoGptModelList": "Danh sách Mô hình",
+		"nanoGptModelListOptions": {
+			"all": "Tất cả Mô hình",
+			"personalized": "Mô hình Cá nhân hóa",
+			"subscription": "Mô hình Đăng ký"
+		},
 		"vercelAiGatewayApiKey": "Khóa API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
@@ -287,6 +299,8 @@
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
+		"anthropicUseAzureDeployment": "Sử dụng tên triển khai Azure",
+		"anthropicAzureDeploymentPlaceholder": "Nhập tên triển khai...",
 		"anthropic1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
@@ -340,6 +354,32 @@
 		"huggingFaceSelectProvider": "Chọn một nhà cung cấp...",
 		"huggingFaceSearchProviders": "Tìm kiếm nhà cung cấp...",
 		"huggingFaceNoProvidersFound": "Không tìm thấy nhà cung cấp",
+		"sapAiCore": {
+			"serviceKey": "Khóa Dịch vụ AI Core",
+			"serviceKeyJson": "Nhập JSON Khóa Dịch vụ...",
+			"resourceGroup": "Nhóm Tài nguyên AI Core",
+			"credentialsNote": "Những thông tin xác thực này được lưu trữ cục bộ và chỉ được sử dụng để thực hiện các yêu cầu API từ tiện ích mở rộng này.",
+			"learnMore": "Bạn có thể tìm thêm thông tin về quyền truy cập API SAP AI Core tại đây.",
+			"orchestrationMode": "Chế độ Điều phối",
+			"orchestrationEnabledDesc": "Khi được bật, cung cấp quyền truy cập vào tất cả các mô hình khả dụng mà không cần triển khai riêng lẻ.",
+			"orchestrationDisabledDesc": "Khi bị tắt, chỉ cung cấp quyền truy cập vào các mô hình nền tảng đã triển khai trong phiên bản dịch vụ AI Core của bạn.",
+			"modelDeploymentDesc": "Bạn chỉ có thể chọn các mô hình có triển khai khả dụng.",
+			"deployment": "Triển khai",
+			"loading": "Đang tải...",
+			"modelsCount": "({{count}} mô hình)",
+			"deploymentsCount": "({{count}} triển khai)",
+			"selectModel": "Chọn một mô hình...",
+			"selectDeployment": "Chọn một triển khai...",
+			"searchModels": "Tìm kiếm mô hình...",
+			"searchDeployments": "Tìm kiếm triển khai...",
+			"noModelsFound": "Không tìm thấy mô hình",
+			"noDeploymentFound": "Không tìm thấy triển khai",
+			"getStarted": "Bắt đầu với SAP AI Core",
+			"supportedProviders": "Nhà cung cấp được hỗ trợ",
+			"supportedProvidersDesc1": "Nhà cung cấp SAP AI Core hiện chỉ hỗ trợ các mô hình nền tảng cho các nhà cung cấp LLM sau:",
+			"supportedProvidersDesc2": "Hãy cân nhắc chuyển sang Chế độ Điều phối để truy cập nhiều mô hình hơn.",
+			"supportedProvidersDesc3": "Tìm hiểu thêm về Chế độ Điều phối"
+		},
 		"getGeminiApiKey": "Lấy khóa API Gemini",
 		"openAiApiKey": "Khóa API OpenAI",
 		"apiKey": "Khóa API",
@@ -362,6 +402,7 @@
 		"awsSessionToken": "Token phiên AWS",
 		"awsRegion": "Vùng AWS",
 		"awsCrossRegion": "Sử dụng suy luận liên vùng",
+		"awsGlobalInference": "Sử dụng suy luận toàn cầu (tự động chọn Khu vực AWS tối ưu)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Sử dụng điểm cuối VPC tùy chỉnh",
 			"vpcEndpointUrlPlaceholder": "Nhập URL điểm cuối VPC (tùy chọn)",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Giới hạn lỗi và lặp lại",
-			"description": "Số lỗi liên tiếp hoặc hành động lặp lại trước khi hiển thị hộp thoại 'Kilo Code đang gặp sự cố'",
+			"description": "Số lỗi liên tiếp hoặc hành động lặp lại trước khi hiển thị hộp thoại 'Kilo đang gặp sự cố'. Đặt thành 0 để tắt cơ chế an toàn này (nó sẽ không bao giờ kích hoạt).",
 			"unlimitedDescription": "Đã bật thử lại không giới hạn (tự động tiếp tục). Hộp thoại sẽ không bao giờ xuất hiện.",
 			"warning": "⚠️ Đặt thành 0 cho phép thử lại không giới hạn, điều này có thể tiêu tốn mức sử dụng API đáng kể"
 		},
@@ -532,6 +573,15 @@
 			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ dịch vụ Qwen và không yêu cầu khóa API.",
 			"instructions": "Vui lòng làm theo tài liệu chính thức để lấy tệp ủy quyền và đặt nó trong đường dẫn được chỉ định.",
 			"setupLink": "Tài liệu chính thức Qwen"
+		},
+		"profileName": "Tên hồ sơ",
+		"profileType": "Loại hồ sơ",
+		"profileTypeChat": "Trò chuyện",
+		"profileTypeAutocomplete": "Tự động hoàn thành",
+		"profileTypeDescription": "Hồ sơ trò chuyện được sử dụng cho các cuộc hội thoại. Chỉ cho phép một hồ sơ tự động hoàn thành.",
+		"autocompleteLabel": "(Tự động hoàn thành)",
+		"autocomplete": {
+			"onlyOneAllowed": "Chỉ cho phép một hồ sơ tự động hoàn thành. Hồ sơ \"{{existingName}}\" đã được cấu hình cho tự động hoàn thành. Vui lòng thay đổi loại của nó trước hoặc xóa nó."
 		}
 	},
 	"browser": {
@@ -856,8 +906,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Bật Fast Apply",
 			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
-			"apiKey": "Khóa API Morph (tùy chọn)",
-			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
+			"apiProvider": "Nhà cung cấp API",
+			"apiProviderList": {
+				"current": "Hiện tại"
+			},
+			"apiKey": "Khóa API (tùy chọn)",
+			"placeholder": "Nhập khóa API của bạn (tùy chọn)",
 			"modelLabel": "Lựa chọn mô hình",
 			"modelDescription": "Chọn mô hình Fast Apply nào để sử dụng cho việc chỉnh sửa tệp",
 			"models": {
@@ -943,7 +997,9 @@
 		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
 		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
 		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn",
-		"qwenCodeOauthPath": "Bạn phải cung cấp đường dẫn thông tin xác thực OAuth hợp lệ"
+		"qwenCodeOauthPath": "Bạn phải cung cấp đường dẫn thông tin xác thực OAuth hợp lệ",
+		"sapAiCore": "Bạn phải cung cấp Khóa Dịch vụ SAP AI Core hợp lệ.",
+		"sapAiCoreDeploymentId": "Bạn phải chọn một triển khai đang chạy cho mô hình '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Nhập khóa API...",

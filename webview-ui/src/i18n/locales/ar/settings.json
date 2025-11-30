@@ -90,10 +90,14 @@
 		"selectModelPlaceholder": "اختر نموذج",
 		"ollamaUrlLabel": "رابط Ollama:",
 		"ollamaBaseUrlLabel": "رابط Ollama الأساسي",
+		"vectorStoreProviderLabel": "مزود تخزين المتجهات",
 		"qdrantUrlLabel": "رابط Qdrant",
 		"qdrantKeyLabel": "مفتاح Qdrant:",
 		"qdrantApiKeyLabel": "مفتاح Qdrant API",
 		"qdrantApiKeyPlaceholder": "أدخل مفتاح Qdrant API (اختياري)",
+		"lancedbVectorStoreDirectoryLabel": "مسار LanceDB لتخزين المتجهات",
+		"lancedbVectorStoreDirectoryPlaceholder": "أدخل مسار تخزين المتجهات (اختياري)",
+		"lancedbVectorStoreDirectoryDescription": "المسار لتخزين قاعدة بيانات LanceDB للمتجهات. إذا تركته فارغًا، سيتم استخدام الموقع الافتراضي في globalStorageUri/vector.",
 		"setupConfigLabel": "الإعداد",
 		"advancedConfigLabel": "الإعدادات المتقدمة",
 		"searchMinScoreLabel": "حد نقاط البحث",
@@ -296,6 +300,8 @@
 		"anthropicApiKey": "مفتاح Anthropic",
 		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
 		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"anthropicUseAzureDeployment": "استخدام اسم نشر Azure",
+		"anthropicAzureDeploymentPlaceholder": "أدخل اسم النشر...",
 		"anthropic1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
 		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
@@ -327,9 +333,14 @@
 		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"zaiEntrypoint": "نقطة دخول Z AI",
 		"zaiEntrypointDescription": "يرجى اختيار نقطة دخول API المناسبة حسب موقعك. إذا كنت في الصين، اختر open.bigmodel.cn. وإلا، اختر api.z.ai.",
-		"minimaxApiKey": "مفتاح MiniMax API",
-		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
-		"minimaxBaseUrl": "نقطة دخول MiniMax",
+		"nanoGptApiKey": "مفتاح Nano-GPT",
+		"getNanoGptApiKey": "احصل على مفتاح Nano-GPT",
+		"nanoGptModelList": "قائمة النماذج",
+		"nanoGptModelListOptions": {
+			"all": "جميع النماذج",
+			"personalized": "نماذج مخصصة",
+			"subscription": "نماذج الاشتراك"
+		},
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
@@ -354,6 +365,32 @@
 		"huggingFaceSelectProvider": "اختر مزوّد...",
 		"huggingFaceSearchProviders": "البحث في المزوّدين...",
 		"huggingFaceNoProvidersFound": "لم يتم العثور على مزوّدين",
+		"sapAiCore": {
+			"serviceKey": "مفتاح خدمة AI Core",
+			"serviceKeyJson": "أدخل مفتاح الخدمة بصيغة JSON...",
+			"resourceGroup": "مجموعة موارد AI Core",
+			"credentialsNote": "هذه البيانات تُحفظ محليًا وتُستخدم فقط لإرسال طلبات API من هذه الإضافة.",
+			"learnMore": "يمكنك العثور على مزيد من المعلومات حول الوصول إلى SAP AI Core API هنا.",
+			"orchestrationMode": "وضع التنسيق",
+			"orchestrationEnabledDesc": "عند التفعيل، يتيح الوصول إلى جميع النماذج المتاحة بدون الحاجة إلى نشر فردي.",
+			"orchestrationDisabledDesc": "عند التعطيل، يتيح الوصول فقط إلى النماذج الأساسية المنشورة في خدمة AI Core الخاصة بك.",
+			"modelDeploymentDesc": "يمكنك فقط اختيار النماذج التي لديها عمليات نشر متاحة.",
+			"deployment": "النشر",
+			"loading": "جارٍ التحميل...",
+			"modelsCount": "({{count}} نموذج)",
+			"deploymentsCount": "({{count}} عملية نشر)",
+			"selectModel": "اختر نموذج...",
+			"selectDeployment": "اختر عملية نشر...",
+			"searchModels": "البحث في النماذج...",
+			"searchDeployments": "البحث في عمليات النشر...",
+			"noModelsFound": "لم يتم العثور على نماذج",
+			"noDeploymentFound": "لم يتم العثور على عملية نشر",
+			"getStarted": "ابدأ مع SAP AI Core",
+			"supportedProviders": "المزوّدون المدعومون",
+			"supportedProvidersDesc1": "مزوّد SAP AI Core يدعم حاليًا فقط النماذج الأساسية للمزوّدين التاليين:",
+			"supportedProvidersDesc2": "فكّر في التبديل إلى وضع التنسيق للوصول إلى مزيد من النماذج.",
+			"supportedProvidersDesc3": "تعرف أكثر عن وضع التنسيق"
+		},
 		"awsApiKey": "مفتاح Amazon Bedrock API",
 		"apiKey": "مفتاح API",
 		"anthropic": {
@@ -386,6 +423,7 @@
 		"awsSessionToken": "رمز الجلسة",
 		"awsRegion": "منطقة AWS",
 		"awsCrossRegion": "تمكين الاستدلال عبر المناطق",
+		"awsGlobalInference": "استخدام الاستدلال العالمي (اختيار منطقة AWS الأمثل تلقائيًا)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "استخدام نقطة VPC مخصصة",
 			"vpcEndpointUrlPlaceholder": "اكتب رابط نقطة VPC (اختياري)",
@@ -568,6 +606,15 @@
 		"roo": {
 			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
 			"connectButton": "اتصل بـ Roo Code Cloud"
+		},
+		"profileName": "اسم الملف الشخصي",
+		"profileType": "نوع الملف الشخصي",
+		"profileTypeChat": "محادثة",
+		"profileTypeAutocomplete": "الإكمال التلقائي",
+		"profileTypeDescription": "تُستخدم ملفات المحادثة للمحادثات. يُسمح بملف إكمال تلقائي واحد فقط.",
+		"autocompleteLabel": "(الإكمال التلقائي)",
+		"autocomplete": {
+			"onlyOneAllowed": "يُسمح بملف إكمال تلقائي واحد فقط. الملف الشخصي \"{{existingName}}\" مُكوّن بالفعل للإكمال التلقائي. يرجى تغيير نوعه أولاً أو حذفه."
 		}
 	},
 	"contextWindow": {
@@ -899,8 +946,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "تفعيل Fast Apply",
 			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
-			"apiKey": "مفتاح Morph API (اختياري)",
-			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"apiProvider": "مزود API",
+			"apiProviderList": {
+				"current": "الحالي"
+			},
+			"apiKey": "مفتاح API (اختياري)",
+			"placeholder": "أدخل مفتاح API (اختياري)",
 			"modelLabel": "اختيار النموذج",
 			"modelDescription": "اختر نموذج التطبيق السريع لتعديل الملفات",
 			"models": {
@@ -1019,7 +1070,9 @@
 		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
 		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
 		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth.",
-		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر."
+		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر.",
+		"sapAiCore": "يجب توفير مفتاح خدمة SAP AI Core صالح.",
+		"sapAiCoreDeploymentId": "يجب اختيار عملية نشر قيد التشغيل للنموذج '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "اكتب مفتاح API...",

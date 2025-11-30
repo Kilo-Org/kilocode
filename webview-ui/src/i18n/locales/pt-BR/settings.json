@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Insira o nome do modelo",
 		"selectModel": "Selecione um modelo",
 		"ollamaBaseUrlLabel": "URL Base do Ollama",
+		"vectorStoreProviderLabel": "Provedor de Armazenamento de Vetores",
 		"qdrantApiKeyLabel": "Chave da API Qdrant",
 		"qdrantApiKeyPlaceholder": "Insira sua chave da API Qdrant (opcional)",
+		"lancedbVectorStoreDirectoryLabel": "Caminho LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Insira um caminho personalizado do armazenamento de vetores (opcional)",
+		"lancedbVectorStoreDirectoryDescription": "Caminho para armazenar o banco de dados de vetores LanceDB. Se vazio, usa a localização padrão em globalStorageUri/vector.",
 		"setupConfigLabel": "Configuração",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -289,6 +293,8 @@
 		"anthropicUseAuthToken": "Passar a chave de API Anthropic como cabeçalho Authorization em vez de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Ativar janela de contexto de 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Estende a janela de contexto para 1 milhão de tokens para o Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Usar nome de implantação do Azure",
+		"anthropicAzureDeploymentPlaceholder": "Digite o nome da implantação...",
 		"awsBedrock1MContextBetaLabel": "Ativar janela de contexto de 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Estende a janela de contexto para 1 milhão de tokens para o Claude Sonnet 4",
 		"cerebrasApiKey": "Chave de API Cerebras",
@@ -311,6 +317,14 @@
 		"moonshotApiKey": "Chave de API Moonshot",
 		"getMoonshotApiKey": "Obter chave de API Moonshot",
 		"moonshotBaseUrl": "Ponto de entrada Moonshot",
+		"nanoGptApiKey": "Chave de API Nano-GPT",
+		"getNanoGptApiKey": "Obter chave de API Nano-GPT",
+		"nanoGptModelList": "Lista de Modelos",
+		"nanoGptModelListOptions": {
+			"all": "Todos os Modelos",
+			"personalized": "Modelos Personalizados",
+			"subscription": "Modelos de Assinatura"
+		},
 		"zaiApiKey": "Chave de API Z AI",
 		"getZaiApiKey": "Obter chave de API Z AI",
 		"zaiEntrypoint": "Ponto de entrada Z AI",
@@ -362,6 +376,7 @@
 		"awsSessionToken": "Token de Sessão AWS",
 		"awsRegion": "Região AWS",
 		"awsCrossRegion": "Usar inferência entre regiões",
+		"awsGlobalInference": "Usar inferência global (selecionar automaticamente a região ideal da AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usar endpoint VPC personalizado",
 			"vpcEndpointUrlPlaceholder": "Digite a URL do endpoint VPC (opcional)",
@@ -484,7 +499,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limite de Erros e Repetições",
-			"description": "Número de erros consecutivos ou ações repetidas antes de exibir o diálogo 'Kilo Code está com problemas'",
+			"description": "Número de erros consecutivos ou ações repetidas antes de exibir o diálogo 'Kilo está com problemas'. Defina como 0 para desativar este mecanismo de segurança (ele nunca será acionado).",
 			"unlimitedDescription": "Tentativas ilimitadas ativadas (prosseguimento automático). O diálogo nunca aparecerá.",
 			"warning": "⚠️ Definir como 0 permite tentativas ilimitadas, o que pode consumir um uso significativo da API"
 		},
@@ -532,6 +547,41 @@
 			"description": "Este provedor usa autenticação OAuth do serviço Qwen e não requer chaves de API.",
 			"instructions": "Siga a documentação oficial para obter o arquivo de autorização e colocá-lo no caminho especificado.",
 			"setupLink": "Documentação Oficial do Qwen"
+		},
+		"sapAiCore": {
+			"serviceKey": "Chave de Serviço AI Core",
+			"serviceKeyJson": "Insira o JSON da Chave de Serviço...",
+			"resourceGroup": "Grupo de Recursos AI Core",
+			"credentialsNote": "Essas credenciais são armazenadas localmente e usadas apenas para fazer solicitações de API a partir desta extensão.",
+			"learnMore": "Você pode encontrar mais informações sobre o acesso à API SAP AI Core aqui.",
+			"orchestrationMode": "Modo de Orquestração",
+			"orchestrationEnabledDesc": "Quando habilitado, fornece acesso a todos os modelos disponíveis sem exigir implantações individuais.",
+			"orchestrationDisabledDesc": "Quando desabilitado, fornece acesso apenas a modelos de fundação implantados na sua instância do serviço AI Core.",
+			"modelDeploymentDesc": "Você só pode selecionar modelos com implantações disponíveis.",
+			"deployment": "Implantação",
+			"loading": "Carregando...",
+			"modelsCount": "({{count}} modelos)",
+			"deploymentsCount": "({{count}} implantações)",
+			"selectModel": "Selecione um modelo...",
+			"selectDeployment": "Selecione uma implantação...",
+			"searchModels": "Buscar modelos...",
+			"searchDeployments": "Buscar implantações...",
+			"noModelsFound": "Nenhum modelo encontrado",
+			"noDeploymentFound": "Nenhuma implantação encontrada",
+			"getStarted": "Comece com o SAP AI Core",
+			"supportedProviders": "Provedores Suportados",
+			"supportedProvidersDesc1": "O provedor SAP AI Core atualmente suporta apenas modelos de fundação para os seguintes provedores LLM:",
+			"supportedProvidersDesc2": "Considere mudar para o Modo de Orquestração para acessar mais modelos.",
+			"supportedProvidersDesc3": "Saiba mais sobre o Modo de Orquestração"
+		},
+		"profileName": "Nome do perfil",
+		"profileType": "Tipo de perfil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocompletar",
+		"profileTypeDescription": "Perfis de chat são usados para conversas. Apenas um perfil de autocompletar é permitido.",
+		"autocompleteLabel": "(Autocompletar)",
+		"autocomplete": {
+			"onlyOneAllowed": "Apenas um perfil de autocompletar é permitido. O perfil \"{{existingName}}\" já está configurado para autocompletar. Por favor, mude seu tipo primeiro ou delete-o."
 		}
 	},
 	"browser": {
@@ -825,8 +875,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Kilo Gateway Provider, OpenRouter ou uma chave de API Morph.",
-			"apiKey": "Chave de API Morph (opcional)",
-			"placeholder": "Digite sua chave de API Morph (opcional)",
+			"apiProvider": "Provedor de API",
+			"apiProviderList": {
+				"current": "Atual"
+			},
+			"apiKey": "Chave de API (opcional)",
+			"placeholder": "Digite sua chave de API (opcional)",
 			"modelLabel": "Seleção de Modelo",
 			"modelDescription": "Escolha qual modelo Fast Apply usar para edições de arquivos",
 			"models": {
@@ -943,7 +997,9 @@
 		"providerNotAllowed": "O provedor '{{provider}}' não é permitido pela sua organização",
 		"modelNotAllowed": "O modelo '{{model}}' não é permitido para o provedor '{{provider}}' pela sua organização",
 		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização",
-		"qwenCodeOauthPath": "Você deve fornecer um caminho válido de credenciais OAuth"
+		"qwenCodeOauthPath": "Você deve fornecer um caminho válido de credenciais OAuth",
+		"sapAiCore": "Você deve fornecer uma Chave de Serviço SAP AI Core válida.",
+		"sapAiCoreDeploymentId": "Você deve selecionar uma implantação em execução para o modelo '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Digite a chave API...",

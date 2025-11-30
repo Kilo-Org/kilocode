@@ -7,12 +7,13 @@ loadEnvFile()
 import { Command } from "commander"
 import { existsSync } from "fs"
 import { CLI } from "./cli.js"
-import { DEFAULT_MODES } from "./constants/modes/defaults.js"
+import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
 import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
-import authWizard from "./utils/authWizard.js"
+import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
+import { loadCustomModes } from "./config/customModes.js"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
@@ -21,7 +22,8 @@ import { logs } from "./services/logs.js"
 const program = new Command()
 let cli: CLI | null = null
 
-// Get list of valid mode slugs
+// Get list of valid mode slugs from default modes
+// Custom modes will be loaded and validated per workspace
 const validModes = DEFAULT_MODES.map((mode) => mode.slug)
 
 program
@@ -41,15 +43,11 @@ program
 	.option("-eb, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
 	.option("-pv, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
 	.option("-mo, --model <model>", "Override model for the selected provider")
+	.option("-s, --session <sessionId>", "Restore a session by ID")
+	.option("-f, --fork <shareId>", "Fork a shared session by share ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
-		// Validate mode if provided
-		if (options.mode && !validModes.includes(options.mode)) {
-			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${validModes.join(", ")}`)
-			process.exit(1)
-		}
-
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
@@ -59,6 +57,17 @@ program
 		// Validate workspace path exists
 		if (!existsSync(options.workspace)) {
 			console.error(`Error: Workspace path does not exist: ${options.workspace}`)
+			process.exit(1)
+		}
+
+		// Load custom modes from workspace
+		const customModes = await loadCustomModes(options.workspace)
+		const allModes = getAllModes(customModes)
+		const allValidModes = allModes.map((mode) => mode.slug)
+
+		// Validate mode if provided
+		if (options.mode && !allValidModes.includes(options.mode)) {
+			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
 			process.exit(1)
 		}
 
@@ -114,6 +123,12 @@ program
 		// Validate that continue mode is not used with a prompt
 		if (options.continue && finalPrompt) {
 			console.error("Error: --continue option cannot be used with a prompt argument")
+			process.exit(1)
+		}
+
+		// Validate that --fork and --session are not used together
+		if (options.fork && options.session) {
+			console.error("Error: --fork and --session options cannot be used together")
 			process.exit(1)
 		}
 
@@ -197,11 +212,14 @@ program
 			json: options.json,
 			prompt: finalPrompt,
 			timeout: options.timeout,
+			customModes: customModes,
 			parallel: options.parallel,
 			worktreeBranch,
 			continue: options.continue,
 			provider: options.provider,
 			model: options.model,
+			session: options.session,
+			fork: options.fork,
 			noSplash: options.nosplash,
 		})
 		await cli.start()
@@ -220,7 +238,12 @@ program
 	.command("config")
 	.description("Open the configuration file in your default editor")
 	.action(async () => {
-		await openConfigFile()
+		try {
+			await openConfigFile()
+		} catch (_error) {
+			// Error already logged by openConfigFile
+			process.exit(1)
+		}
 	})
 
 // Debug command - checks hardware and OS compatibility
@@ -246,16 +269,18 @@ program
 // Handle process termination signals
 process.on("SIGINT", async () => {
 	if (cli) {
-		await cli.dispose()
+		await cli.dispose("SIGINT")
+	} else {
+		process.exit(130)
 	}
-	process.exit(0)
 })
 
 process.on("SIGTERM", async () => {
 	if (cli) {
-		await cli.dispose()
+		await cli.dispose("SIGTERM")
+	} else {
+		process.exit(143)
 	}
-	process.exit(0)
 })
 
 // Parse command line arguments

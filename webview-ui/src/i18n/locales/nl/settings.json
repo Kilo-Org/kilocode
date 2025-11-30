@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Voer modelnaam in",
 		"selectModel": "Selecteer een model",
 		"ollamaBaseUrlLabel": "Ollama Basis-URL",
+		"vectorStoreProviderLabel": "Vectoropslag Provider",
 		"qdrantApiKeyLabel": "Qdrant API-sleutel",
 		"qdrantApiKeyPlaceholder": "Voer je Qdrant API-sleutel in (optioneel)",
+		"lancedbVectorStoreDirectoryLabel": "Pad LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Voer een aangepast vectoropslag pad in (optioneel)",
+		"lancedbVectorStoreDirectoryDescription": "Pad om de LanceDB vectordatabase op te slaan. Als leeg, wordt de standaardlocatie in globalStorageUri/vector gebruikt.",
 		"setupConfigLabel": "Instellen",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -289,6 +293,8 @@
 		"anthropicUseAuthToken": "Anthropic API-sleutel als Authorization-header doorgeven in plaats van X-Api-Key",
 		"anthropic1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"anthropic1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Gebruik Azure deployment naam",
+		"anthropicAzureDeploymentPlaceholder": "Voer deployment naam in...",
 		"awsBedrock1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"awsBedrock1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
 		"cerebrasApiKey": "Cerebras API-sleutel",
@@ -311,6 +317,14 @@
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
+		"nanoGptApiKey": "Nano-GPT API-sleutel",
+		"getNanoGptApiKey": "Nano-GPT API-sleutel ophalen",
+		"nanoGptModelList": "Modellenlijst",
+		"nanoGptModelListOptions": {
+			"all": "Alle modellen",
+			"personalized": "Gepersonaliseerde modellen",
+			"subscription": "Abonnementsmodellen"
+		},
 		"zaiApiKey": "Z AI API-sleutel",
 		"getZaiApiKey": "Z AI API-sleutel ophalen",
 		"zaiEntrypoint": "Z AI-ingangspunt",
@@ -362,6 +376,7 @@
 		"awsSessionToken": "AWS-sessietoken",
 		"awsRegion": "AWS-regio",
 		"awsCrossRegion": "Gebruik cross-region inference",
+		"awsGlobalInference": "Gebruik wereldwijde inferentie (automatische selectie van optimale AWS-regio)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Aangepast VPC-eindpunt gebruiken",
 			"vpcEndpointUrlPlaceholder": "Voer VPC-eindpunt URL in (optioneel)",
@@ -425,6 +440,32 @@
 			"authenticatedMessage": "Veilig geauthenticeerd via je Roo Code Cloud-account.",
 			"connectButton": "Verbinden met Roo Code Cloud"
 		},
+		"sapAiCore": {
+			"serviceKey": "AI Core Servicesleutel",
+			"serviceKeyJson": "Voer Servicesleutel JSON in...",
+			"resourceGroup": "AI Core Resourcegroep",
+			"credentialsNote": "Deze inloggegevens worden lokaal opgeslagen en alleen gebruikt om API-verzoeken vanuit deze extensie te doen.",
+			"learnMore": "Je kunt hier meer informatie vinden over SAP AI Core API-toegang.",
+			"orchestrationMode": "Orchestratiemodus",
+			"orchestrationEnabledDesc": "Indien ingeschakeld, biedt toegang tot alle beschikbare modellen zonder individuele deployments te vereisen.",
+			"orchestrationDisabledDesc": "Indien uitgeschakeld, biedt alleen toegang tot gedeployede foundation-modellen in je AI Core-service-instantie.",
+			"modelDeploymentDesc": "Je kunt alleen modellen selecteren met beschikbare deployments.",
+			"deployment": "Deployment",
+			"loading": "Laden...",
+			"modelsCount": "({{count}} modellen)",
+			"deploymentsCount": "({{count}} deployments)",
+			"selectModel": "Selecteer een model...",
+			"selectDeployment": "Selecteer een deployment...",
+			"searchModels": "Zoek modellen...",
+			"searchDeployments": "Zoek deployments...",
+			"noModelsFound": "Geen modellen gevonden",
+			"noDeploymentFound": "Geen deployment gevonden",
+			"getStarted": "Aan de slag met SAP AI Core",
+			"supportedProviders": "Ondersteunde providers",
+			"supportedProvidersDesc1": "De SAP AI Core-provider ondersteunt momenteel alleen foundation-modellen voor de volgende LLM-providers:",
+			"supportedProvidersDesc2": "Overweeg om te schakelen naar Orchestratiemodus voor toegang tot meer modellen.",
+			"supportedProvidersDesc3": "Meer informatie over Orchestratiemodus"
+		},
 		"openRouter": {
 			"providerRouting": {
 				"title": "OpenRouter-providerroutering",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Fout- & Herhalingslimiet",
-			"description": "Aantal opeenvolgende fouten of herhaalde acties voordat het dialoogvenster 'Kilo Code ondervindt problemen' wordt weergegeven",
+			"description": "Aantal opeenvolgende fouten of herhaalde acties voordat het dialoogvenster 'Kilo ondervindt problemen' wordt weergegeven. Zet op 0 om dit veiligheidsmechanisme uit te schakelen (wordt nooit geactiveerd).",
 			"unlimitedDescription": "Onbeperkt aantal nieuwe pogingen ingeschakeld (automatisch doorgaan). Het dialoogvenster zal nooit verschijnen.",
 			"warning": "⚠️ Instellen op 0 staat onbeperkte nieuwe pogingen toe, wat aanzienlijk API-gebruik kan verbruiken"
 		},
@@ -532,6 +573,15 @@
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Qwen-service en vereist geen API-sleutels.",
 			"instructions": "Volg de officiële documentatie om het autorisatiebestand te verkrijgen en plaats het in het opgegeven pad.",
 			"setupLink": "Qwen Officiële Documentatie"
+		},
+		"profileName": "Profielnaam",
+		"profileType": "Profieltype",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatisch aanvullen",
+		"profileTypeDescription": "Chatprofielen worden gebruikt voor gesprekken. Er is slechts één automatisch aanvullen profiel toegestaan.",
+		"autocompleteLabel": "(Automatisch aanvullen)",
+		"autocomplete": {
+			"onlyOneAllowed": "Er is slechts één automatisch aanvullen profiel toegestaan. Profiel \"{{existingName}}\" is al geconfigureerd voor automatisch aanvullen. Wijzig eerst het type of verwijder het."
 		}
 	},
 	"browser": {
@@ -825,8 +875,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
-			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"apiProvider": "API-provider",
+			"apiProviderList": {
+				"current": "Huidig"
+			},
+			"apiKey": "API-sleutel (optioneel)",
+			"placeholder": "Voer je API-sleutel in (optioneel)",
 			"modelLabel": "Modelselectie",
 			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
 			"models": {
@@ -943,7 +997,9 @@
 		"providerNotAllowed": "Provider '{{provider}}' is niet toegestaan door je organisatie",
 		"modelNotAllowed": "Model '{{model}}' is niet toegestaan voor provider '{{provider}}' door je organisatie",
 		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie",
-		"qwenCodeOauthPath": "Je moet een geldig OAuth-referentiepad opgeven"
+		"qwenCodeOauthPath": "Je moet een geldig OAuth-referentiepad opgeven",
+		"sapAiCore": "Je moet een geldige SAP AI Core Servicesleutel opgeven.",
+		"sapAiCoreDeploymentId": "Je moet een actieve deployment selecteren voor model '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Voer API-sleutel in...",

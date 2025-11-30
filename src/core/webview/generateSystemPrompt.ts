@@ -3,12 +3,14 @@ import { WebviewMessage } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { buildApiHandler } from "../../api"
 import { experiments as experimentsModule, EXPERIMENT_IDS } from "../../shared/experiments"
-import { getActiveToolUseStyle } from "@roo-code/types" // kilocode_change
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
+import { ToolProtocol } from "@roo-code/types"
+import { Package } from "../../shared/package"
 
 import { ClineProvider } from "./ClineProvider"
+import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
 
 export const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMessage) => {
 	const state = await provider.getState() // kilocode_change
@@ -89,15 +91,15 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		{
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
-			useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
+			useAgentRules: vscode.workspace.getConfiguration(Package.name).get<boolean>("useAgentRules") ?? true,
 			newTaskRequireTodos: vscode.workspace
-				.getConfiguration("kilo-code")
+				.getConfiguration(Package.name)
 				.get<boolean>("newTaskRequireTodos", false),
+			toolProtocol: getActiveToolUseStyle(apiConfiguration), // kilocode_change
 		},
 		// kilocode_change start
 		undefined,
 		undefined,
-		getActiveToolUseStyle(apiConfiguration),
 		state,
 		// kilocode_change end
 	)

@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Wprowadź nazwę modelu",
 		"selectModel": "Wybierz model",
 		"ollamaBaseUrlLabel": "Bazowy URL Ollama",
+		"vectorStoreProviderLabel": "Dostawca magazynu wektorów",
 		"qdrantApiKeyLabel": "Klucz API Qdrant",
 		"qdrantApiKeyPlaceholder": "Wprowadź swój klucz API Qdrant (opcjonalnie)",
+		"lancedbVectorStoreDirectoryLabel": "Ścieżka LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Wprowadź niestandardową ścieżkę magazynu wektorów (opcjonalnie)",
+		"lancedbVectorStoreDirectoryDescription": "Ścieżka do przechowywania bazy danych LanceDB. Jeśli pusta, używa domyślnej lokalizacji w globalStorageUri/vector.",
 		"setupConfigLabel": "Konfiguracja",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -287,6 +291,8 @@
 		"anthropicApiKey": "Klucz API Anthropic",
 		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
 		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
+		"anthropicUseAzureDeployment": "Użyj nazwy wdrożenia Azure",
+		"anthropicAzureDeploymentPlaceholder": "Wprowadź nazwę wdrożenia...",
 		"anthropic1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
@@ -341,6 +347,32 @@
 		"huggingFaceSelectProvider": "Wybierz dostawcę...",
 		"huggingFaceSearchProviders": "Szukaj dostawców...",
 		"huggingFaceNoProvidersFound": "Nie znaleziono dostawców",
+		"sapAiCore": {
+			"serviceKey": "Klucz usługi AI Core",
+			"serviceKeyJson": "Wprowadź JSON klucza usługi...",
+			"resourceGroup": "Grupa zasobów AI Core",
+			"credentialsNote": "Te dane uwierzytelniające są przechowywane lokalnie i używane wyłącznie do wykonywania żądań API z tego rozszerzenia.",
+			"learnMore": "Więcej informacji o dostępie do API SAP AI Core znajdziesz tutaj.",
+			"orchestrationMode": "Tryb orkiestracji",
+			"orchestrationEnabledDesc": "Po włączeniu zapewnia dostęp do wszystkich dostępnych modeli bez konieczności indywidualnych wdrożeń.",
+			"orchestrationDisabledDesc": "Po wyłączeniu zapewnia dostęp tylko do wdrożonych modeli bazowych w Twojej instancji usługi AI Core.",
+			"modelDeploymentDesc": "Możesz wybrać tylko modele z dostępnymi wdrożeniami.",
+			"deployment": "Wdrożenie",
+			"loading": "Ładowanie...",
+			"modelsCount": "({{count}} modeli)",
+			"deploymentsCount": "({{count}} wdrożeń)",
+			"selectModel": "Wybierz model...",
+			"selectDeployment": "Wybierz wdrożenie...",
+			"searchModels": "Szukaj modeli...",
+			"searchDeployments": "Szukaj wdrożeń...",
+			"noModelsFound": "Nie znaleziono modeli",
+			"noDeploymentFound": "Nie znaleziono wdrożenia",
+			"getStarted": "Rozpocznij z SAP AI Core",
+			"supportedProviders": "Obsługiwani dostawcy",
+			"supportedProvidersDesc1": "Dostawca SAP AI Core obecnie obsługuje tylko modele bazowe dla następujących dostawców LLM:",
+			"supportedProvidersDesc2": "Rozważ przełączenie na tryb orkiestracji, aby uzyskać dostęp do większej liczby modeli.",
+			"supportedProvidersDesc3": "Dowiedz się więcej o trybie orkiestracji"
+		},
 		"apiKey": "Klucz API",
 		"openAiApiKey": "Klucz API OpenAI",
 		"openAiBaseUrl": "URL bazowy",
@@ -349,6 +381,14 @@
 		"getMistralApiKey": "Uzyskaj klucz API Mistral / Codestral",
 		"codestralBaseUrl": "URL bazowy Codestral (opcjonalnie)",
 		"codestralBaseUrlDesc": "Ustaw opcjonalny URL dla modeli Codestral.",
+		"nanoGptApiKey": "Klucz API Nano-GPT",
+		"getNanoGptApiKey": "Uzyskaj klucz API Nano-GPT",
+		"nanoGptModelList": "Lista modeli",
+		"nanoGptModelListOptions": {
+			"all": "Wszystkie modele",
+			"personalized": "Modele spersonalizowane",
+			"subscription": "Modele subskrypcyjne"
+		},
 		"xaiApiKey": "Klucz API xAI",
 		"getXaiApiKey": "Uzyskaj klucz API xAI",
 		"litellmApiKey": "Klucz API LiteLLM",
@@ -362,6 +402,7 @@
 		"awsSessionToken": "Token sesji AWS",
 		"awsRegion": "Region AWS",
 		"awsCrossRegion": "Użyj wnioskowania międzyregionalnego",
+		"awsGlobalInference": "Użyj globalnej inferencji (automatyczny wybór optymalnego regionu AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Użyj niestandardowego punktu końcowego VPC",
 			"vpcEndpointUrlPlaceholder": "Wprowadź URL punktu końcowego VPC (opcjonalnie)",
@@ -484,7 +525,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limit błędów i powtórzeń",
-			"description": "Liczba kolejnych błędów lub powtórzonych akcji przed wyświetleniem okna dialogowego 'Kilo Code ma problemy'",
+			"description": "Liczba kolejnych błędów lub powtórzonych akcji przed wyświetleniem okna dialogowego 'Kilo ma problemy'. Ustaw na 0, aby wyłączyć ten mechanizm bezpieczeństwa (nigdy się nie uruchomi).",
 			"unlimitedDescription": "Włączono nieograniczone próby (automatyczne kontynuowanie). Okno dialogowe nigdy się nie pojawi.",
 			"warning": "⚠️ Ustawienie na 0 pozwala na nieograniczone próby, co może zużyć znaczną ilość API"
 		},
@@ -532,6 +573,15 @@
 			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
 			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
 			"setupLink": "Oficjalna dokumentacja Qwen"
+		},
+		"profileName": "Nazwa profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Czat",
+		"profileTypeAutocomplete": "Autouzupełnianie",
+		"profileTypeDescription": "Profile czatu są używane do rozmów. Dozwolony jest tylko jeden profil autouzupełniania.",
+		"autocompleteLabel": "(Autouzupełnianie)",
+		"autocomplete": {
+			"onlyOneAllowed": "Dozwolony jest tylko jeden profil autouzupełniania. Profil \"{{existingName}}\" jest już skonfigurowany do autouzupełniania. Najpierw zmień jego typ lub usuń go."
 		}
 	},
 	"browser": {
@@ -825,8 +875,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Włącz Fast Apply",
 			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
-			"apiKey": "Klucz API Morph (opcjonalnie)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"apiProvider": "Dostawca API",
+			"apiProviderList": {
+				"current": "Aktualny"
+			},
+			"apiKey": "Klucz API (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API (opcjonalnie)",
 			"modelLabel": "Wybór modelu",
 			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
 			"models": {
@@ -943,7 +997,9 @@
 		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
 		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
 		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
-		"qwenCodeOauthPath": "Musisz podać prawidłową ścieżkę do poświadczeń OAuth"
+		"qwenCodeOauthPath": "Musisz podać prawidłową ścieżkę do poświadczeń OAuth",
+		"sapAiCore": "Musisz podać prawidłowy klucz usługi SAP AI Core.",
+		"sapAiCoreDeploymentId": "Musisz wybrać działające wdrożenie dla modelu '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Wprowadź klucz API...",

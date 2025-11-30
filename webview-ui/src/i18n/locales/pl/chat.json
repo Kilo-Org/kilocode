@@ -91,24 +91,17 @@
 		"tooltip": "Anuluj bieżącą operację"
 	},
 	"scrollToBottom": "Przewiń do dołu czatu",
-	"about": "Generuj, refaktoryzuj i debuguj kod z pomocą sztucznej inteligencji. Sprawdź naszą <DocsLink>dokumentację</DocsLink>, aby dowiedzieć się więcej.",
+	"about": "Generuj, refaktoryzuj i debuguj kod z pomocą sztucznej inteligencji. Sprawdź naszą <DocsLink>dokumentację</DocsLink>, żeby dowiedzieć się więcej.",
+	"docs": "Sprawdź naszą <DocsLink>dokumentację</DocsLink>, aby dowiedzieć się więcej.",
 	"onboarding": "<strong>Twoja lista zadań w tym obszarze roboczym jest pusta.</strong> Zacznij od wpisania zadania poniżej. Nie wiesz, jak zacząć? Przeczytaj więcej o tym, co Kilo Code może dla Ciebie zrobić w <DocsLink>dokumentacji</DocsLink>.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Orkiestracja Zadań",
-			"description": "Podziel zadania na mniejsze, łatwiejsze do zarządzania części."
-		},
-		"stickyModels": {
-			"title": "Tryby trwałe",
-			"description": "Każdy tryb zapamiętuje ostatnio używany model"
-		},
-		"tools": {
-			"title": "Narzędzia",
-			"description": "Pozwól sztucznej inteligencji rozwiązywać problemy, przeglądając sieć, uruchamiając polecenia i nie tylko."
-		},
 		"customizableModes": {
 			"title": "Konfigurowalne tryby",
-			"description": "Wyspecjalizowane persona z własnymi zachowaniami i przypisanymi modelami"
+			"description": "Wyspecjalizowane persony, które trzymają się zadania i dostarczają."
+		},
+		"modelAgnostic": {
+			"title": "Przynieś własny model",
+			"description": "Użyj własnego klucza dostawcy lub nawet uruchom lokalne wnioskowanie — bez narzutów, bez blokad, bez ograniczeń"
 		}
 	},
 	"selectMode": "Wybierz tryb interakcji",
@@ -181,6 +174,8 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code chce edytować ten plik poza obszarem roboczym",
 		"wantsToEditProtected": "Kilo Code chce edytować chroniony plik konfiguracyjny",
 		"wantsToCreate": "Kilo Code chce utworzyć nowy plik",
+		"wantsToDelete": "Kilo Code chce usunąć ten plik",
+		"wantsToDeleteDirectory": "Kilo Code chce usunąć ten katalog",
 		"wantsToSearchReplace": "Kilo Code chce wykonać wyszukiwanie i zamianę w tym pliku",
 		"didSearchReplace": "Kilo Code wykonał wyszukiwanie i zamianę w tym pliku",
 		"wantsToInsert": "Kilo Code chce wstawić zawartość do tego pliku",
@@ -439,5 +434,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code chce uruchomić komendę slash",
 		"didRun": "Kilo Code uruchomił komendę slash"
+	},
+	"todo": {
+		"partial": "Ukończono {{completed}} z {{total}} zadań do wykonania",
+		"complete": "Ukończono {{total}} zadań do wykonania",
+		"updated": "Zaktualizowano listę zadań do wykonania",
+		"completed": "Ukończono",
+		"started": "Rozpoczęto"
 	}
 }

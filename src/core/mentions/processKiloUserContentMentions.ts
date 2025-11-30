@@ -38,9 +38,9 @@ export async function processKiloUserContentMentions({
 	// Track if we need to check kilorules file
 	let needsRulesFileCheck = false
 
-	/**
-	 * Process mentions in user content, specifically within task and feedback tags
-	 */
+	// kilocode_change
+	const mentionTagRegex = /<(?:task|feedback|answer|user_message)>/
+
 	const processUserContentMentions = async () => {
 		// Process userContent array, which contains various block types:
 		// TextBlockParam, ImageBlockParam, ToolUseBlockParam, and ToolResultBlockParam.
@@ -57,7 +57,8 @@ export async function processKiloUserContentMentions({
 
 		return await Promise.all(
 			userContent.map(async (block) => {
-				const shouldProcessMentions = (text: string) => text.includes("<task>") || text.includes("<feedback>")
+				// kilocode_change
+				const shouldProcessMentions = (text: string) => mentionTagRegex.test(text)
 
 				if (block.type === "text") {
 					if (shouldProcessMentions(block.text)) {
