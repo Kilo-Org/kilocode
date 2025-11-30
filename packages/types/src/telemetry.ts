@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { providerNames } from "./provider-settings.js"
 import { clineMessageSchema } from "./message.js"
-import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
+import { toolProtocolSchema } from "./tool.js" // kilocode_change
 
 /**
  * TelemetrySetting
@@ -158,7 +158,7 @@ export const taskPropertiesSchema = z.object({
 	// kilocode_change start
 	currentTaskSize: z.number().optional(),
 	taskHistorySize: z.number().optional(),
-	toolStyle: toolUseStylesSchema.optional(),
+	toolStyle: toolProtocolSchema.optional(),
 	// kilocode_change end
 })
 

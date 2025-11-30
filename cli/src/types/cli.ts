@@ -38,5 +38,7 @@ export interface CLIOptions {
 	continue?: boolean
 	provider?: string
 	model?: string
+	session?: string
+	fork?: string
 	noSplash?: boolean
 }

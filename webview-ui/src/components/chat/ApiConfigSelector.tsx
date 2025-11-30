@@ -193,27 +193,31 @@ export const ApiConfigSelector = ({
 						</div>
 					)}
 
-					{/* Config list */}
-					<div className="max-h-[300px] overflow-y-auto">
-						{filteredConfigs.length === 0 && searchValue ? (
-							<div className="py-2 px-3 text-sm text-vscode-foreground/70">
-								{t("common:ui.no_results")}
-							</div>
-						) : (
-							<div className="py-1">
-								{/* Pinned configs */}
-								{pinnedConfigs.map((config) => renderConfigItem(config, true))}
+					{/* Config list - single scroll container */}
+					{filteredConfigs.length === 0 && searchValue ? (
+						<div className="py-2 px-3 text-sm text-vscode-foreground/70">{t("common:ui.no_results")}</div>
+					) : (
+						<div className="max-h-[300px] overflow-y-auto">
+							{/* Pinned configs - sticky header */}
+							{pinnedConfigs.length > 0 && (
+								<div
+									className={cn(
+										"sticky top-0 z-10 bg-vscode-dropdown-background py-1",
+										unpinnedConfigs.length > 0 && "border-b border-vscode-dropdown-foreground/10",
+									)}
+									aria-label="Pinned configurations">
+									{pinnedConfigs.map((config) => renderConfigItem(config, true))}
+								</div>
+							)}
 
-								{/* Separator between pinned and unpinned */}
-								{pinnedConfigs.length > 0 && unpinnedConfigs.length > 0 && (
-									<div className="mx-1 my-1 h-px bg-vscode-dropdown-foreground/10" />
-								)}
-
-								{/* Unpinned configs */}
-								{unpinnedConfigs.map((config) => renderConfigItem(config, false))}
-							</div>
-						)}
-					</div>
+							{/* Unpinned configs */}
+							{unpinnedConfigs.length > 0 && (
+								<div className="py-1" aria-label="All configurations">
+									{unpinnedConfigs.map((config) => renderConfigItem(config, false))}
+								</div>
+							)}
+						</div>
+					)}
 
 					{/* Bottom bar with buttons on left and title on right */}
 					<div className="flex flex-row items-center justify-between px-2 py-2 border-t border-vscode-dropdown-border">

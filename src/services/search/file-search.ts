@@ -5,6 +5,7 @@ import * as childProcess from "child_process"
 import * as readline from "readline"
 import { byLengthAsc, Fzf } from "fzf"
 import { getBinPath } from "../ripgrep"
+import { Package } from "../../shared/package"
 
 export type FileResult = { path: string; type: "file" | "folder"; label?: string }
 
@@ -116,7 +117,7 @@ export async function executeRipgrepForFiles(
 ): Promise<{ path: string; type: "file" | "folder"; label?: string }[]> {
 	// Get limit from configuration if not provided
 	const effectiveLimit =
-		limit ?? vscode.workspace.getConfiguration("roo-cline").get<number>("maximumIndexedFilesForFileSearch", 10000)
+		limit ?? vscode.workspace.getConfiguration(Package.name).get<number>("maximumIndexedFilesForFileSearch", 10000)
 
 	const args = [
 		"--files",

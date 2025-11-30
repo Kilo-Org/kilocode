@@ -152,7 +152,7 @@ export const hasActiveTaskAtom = atom<boolean>((get) => {
  * Atom to track if the task was resumed via --continue flag
  * Prevents showing "Task ready to resume" message when already resumed
  */
-export const taskResumedViaContinueAtom = atom<boolean>(false)
+export const taskResumedViaContinueOrSessionAtom = atom<boolean>(false)
 
 /**
  * Atom to track the timestamp of the last API stream activity
@@ -167,7 +167,7 @@ export const lastActivityTimestampAtom = atom<number>(0)
  * But doesn't show the message if the task was already resumed via --continue
  */
 export const hasResumeTaskAtom = atom<boolean>((get) => {
-	const taskResumedViaContinue = get(taskResumedViaContinueAtom)
+	const taskResumedViaContinue = get(taskResumedViaContinueOrSessionAtom)
 	if (taskResumedViaContinue) {
 		return false
 	}

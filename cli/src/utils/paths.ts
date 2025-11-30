@@ -40,6 +40,21 @@ export class KiloCodePaths {
 	}
 
 	/**
+	 * Get tasks base directory
+	 */
+	static getTasksDir(): string {
+		return path.join(this.getGlobalStorageDir(), "tasks")
+	}
+
+	/**
+	 * Get the path to the last session file for a workspace
+	 */
+	static getLastSessionPath(workspacePath: string): string {
+		const workspaceDir = this.getWorkspaceStorageDir(workspacePath)
+		return path.join(workspaceDir, "last-session.json")
+	}
+
+	/**
 	 * Get workspaces base directory
 	 */
 	static getWorkspacesDir(): string {

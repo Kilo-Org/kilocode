@@ -1,12 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import {
-	type XAIModelId,
-	getActiveToolUseStyle, // kilocode_change
-	xaiDefaultModelId,
-	xaiModels,
-} from "@roo-code/types"
+import { type XAIModelId, xaiDefaultModelId, xaiModels } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -19,7 +14,7 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason" // kilocode_change
 import { handleOpenAIError } from "./utils/openai-error-handler"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 const XAI_DEFAULT_TEMPERATURE = 0
 
@@ -83,11 +78,12 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 			throw handleOpenAIError(error, this.providerName)
 		}
 
+		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 
-			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 			if (delta?.content) {
 				yield {

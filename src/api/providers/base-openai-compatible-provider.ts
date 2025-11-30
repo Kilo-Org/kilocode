@@ -1,10 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import {
-	getActiveToolUseStyle, // kilocode_change
-	type ModelInfo,
-} from "@roo-code/types"
+import { type ModelInfo } from "@roo-code/types"
 
 import { type ApiHandlerOptions, getModelMaxOutputTokens } from "../../shared/api"
 import { XmlMatcher } from "../../utils/xml-matcher"
@@ -18,7 +15,7 @@ import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
 import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -130,12 +127,21 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				}) as const,
 		)
 
+		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices?.[0]) // kilocode_change
 
 			const delta = chunk.choices?.[0]?.delta
 
-			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
+
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const chunkAny = chunk as any
+			if (chunkAny.base_resp?.status_code && chunkAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${chunkAny.base_resp.status_code}): ${chunkAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
 
 			if (delta?.content) {
 				for (const processedChunk of matcher.update(delta.content)) {
@@ -174,7 +180,15 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				messages: [{ role: "user", content: prompt }],
 			})
 
-			return response.choices[0]?.message.content || ""
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const responseAny = response as any
+			if (responseAny.base_resp?.status_code && responseAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${responseAny.base_resp.status_code}): ${responseAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
+
+			return response.choices?.[0]?.message.content || ""
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}

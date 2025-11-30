@@ -158,14 +158,13 @@ export class ManagedIndexer implements vscode.Disposable {
 
 	sendEnabledStateToWebview() {
 		const isEnabled = this.isEnabled()
-		ClineProvider.getInstance().then((provider) => {
-			if (provider) {
-				provider.postMessageToWebview({
-					type: "managedIndexerEnabled",
-					managedIndexerEnabled: isEnabled,
-				})
-			}
-		})
+		const provider = ClineProvider.getVisibleInstance()
+		if (provider) {
+			provider.postMessageToWebview({
+				type: "managedIndexerEnabled",
+				managedIndexerEnabled: isEnabled,
+			})
+		}
 	}
 
 	async start() {

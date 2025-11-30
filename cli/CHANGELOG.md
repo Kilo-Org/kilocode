@@ -1,5 +1,17 @@
 # @kilocode/cli
 
+## 0.10.0
+
+### Minor Changes
+
+- [#3868](https://github.com/Kilo-Org/kilocode/pull/3868) [`cf6ed3e`](https://github.com/Kilo-Org/kilocode/commit/cf6ed3ed3bc7dfe0268121f3e68d422f3ffadfff) Thanks [@iscekic](https://github.com/iscekic)! - add sessions support
+
+## 0.9.0
+
+### Minor Changes
+
+- [#4003](https://github.com/Kilo-Org/kilocode/pull/4003) [`0bb5dfe`](https://github.com/Kilo-Org/kilocode/commit/0bb5dfeb4bb5a5cd07bb852a929acac28e02e78c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Kilo Gateway one click authorization
+
 ## 0.8.0
 
 ### Minor Changes

@@ -1,10 +1,11 @@
+import { ToolProtocol, TOOL_PROTOCOL } from "@roo-code/types"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer" // kilocode_change
 import { CodeIndexManager } from "../../../services/code-index/manager"
-import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
+import { isNativeProtocol } from "@roo-code/types"
 
 export function getToolUseGuidelinesSection(
 	codeIndexManager?: CodeIndexManager,
-	toolUseStyle?: ToolUseStyle, // kilocode_change
+	protocol: ToolProtocol = TOOL_PROTOCOL.XML,
 ): string {
 	const isCodebaseSearchAvailable =
 		// kilocode_change start
@@ -42,8 +43,9 @@ export function getToolUseGuidelinesSection(
 	guidelinesList.push(
 		`${itemNumber++}. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.`,
 	)
-	if (toolUseStyle !== "json") {
-		// kilocode_change
+
+	// Protocol-specific guideline - only add for XML protocol
+	if (!isNativeProtocol(protocol)) {
 		guidelinesList.push(`${itemNumber++}. Formulate your tool use using the XML format specified for each tool.`)
 	}
 	guidelinesList.push(`${itemNumber++}. After each tool use, the user will respond with the result of that tool use. This result will provide you with the necessary information to continue your task or make further decisions. This response may include:

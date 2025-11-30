@@ -1,6 +1,6 @@
 # Welcome to the Kilocode Project
 
-See [the Documentation for details on contributing](https://kilocode.ai/docs/extending/contributing-to-kilo)
+See [the Documentation for details on contributing](https://kilo.ai/docs/extending/contributing-to-kilo)
 
 ## TL;DR
 
@@ -13,4 +13,4 @@ There are lots of ways to contribute to the project
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
-The Kilocode Community is [here on Discord](https://kilocode.ai/discord)
+The Kilocode Community is [here on Discord](https://kilo.ai/discord)

@@ -262,6 +262,58 @@ export class ExtensionService extends EventEmitter {
 	}
 
 	/**
+	 * Request a single completion from the extension
+	 *
+	 * @param prompt - The prompt text to complete
+	 * @param timeoutMs - Request timeout in milliseconds (default: 60000)
+	 * @returns Promise resolving to the completed text
+	 */
+	async requestSingleCompletion(prompt: string, timeoutMs: number = 60000): Promise<string> {
+		if (!this.isReady()) {
+			throw new Error("ExtensionService not ready")
+		}
+
+		const completionRequestId = crypto.randomUUID()
+
+		return new Promise<string>((resolve, reject) => {
+			// Setup timeout
+			const timeoutId = setTimeout(() => {
+				this.off("message", messageHandler)
+				reject(new Error("Single completion request timed out"))
+			}, timeoutMs)
+
+			// Setup message handler
+			const messageHandler = (message: ExtensionMessage) => {
+				if (message.type === "singleCompletionResult" && message.completionRequestId === completionRequestId) {
+					clearTimeout(timeoutId)
+					this.off("message", messageHandler)
+
+					if (message.success && typeof message.completionText === "string") {
+						resolve(message.completionText)
+					} else {
+						const errorMessage =
+							typeof message.completionError === "string" ? message.completionError : "Unknown error"
+						reject(new Error(errorMessage))
+					}
+				}
+			}
+
+			this.on("message", messageHandler)
+
+			// Send request
+			this.sendWebviewMessage({
+				type: "singleCompletion",
+				text: prompt,
+				completionRequestId,
+			}).catch((error) => {
+				clearTimeout(timeoutId)
+				this.off("message", messageHandler)
+				reject(error)
+			})
+		})
+	}
+
+	/**
 	 * Get the current extension state
 	 *
 	 * @returns The current extension state or null if not available

@@ -68,7 +68,7 @@ describe("Static Provider Models", () => {
 				})
 
 				expect(result.models).toBeDefined()
-				expect(result.defaultModel).toBe("claude-sonnet-4-20250514")
+				expect(result.defaultModel).toBe("claude-sonnet-4-5")
 
 				// Verify at least one model has expected properties
 				const firstModelId = Object.keys(result.models)[0]
@@ -427,7 +427,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			expect(result).toBe("claude-sonnet-4-20250514")
+			expect(result).toBe("claude-sonnet-4-5")
 		})
 
 		it("should handle vscode-lm provider with selector", () => {

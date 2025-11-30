@@ -91,24 +91,17 @@
 		"tooltip": "Cancelar a operação atual"
 	},
 	"scrollToBottom": "Rolar para o final do chat",
-	"about": "Gere, refatore e depure código com assistência de IA. Confira nossa <DocsLink>documentação</DocsLink> para saber mais.",
+	"about": "Gere, refatore e depure código com assistência de IA. Confira nossa <DocsLink>documentação</DocsLink> para aprender mais.",
+	"docs": "Confira nossa <DocsLink>documentação</DocsLink> para saber mais.",
 	"onboarding": "<strong>Sua lista de tarefas neste espaço de trabalho está vazia.</strong> Comece digitando uma tarefa abaixo. Não sabe como começar? Leia mais sobre o que o Kilo Code pode fazer por você nos <DocsLink>documentos</DocsLink>.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Orquestração de Tarefas",
-			"description": "Divida as tarefas em partes menores e gerenciáveis."
-		},
-		"stickyModels": {
-			"title": "Modos Fixos",
-			"description": "Cada modo lembra o seu último modelo usado"
-		},
-		"tools": {
-			"title": "Ferramentas",
-			"description": "Permita que a IA resolva problemas navegando na web, executando comandos e muito mais."
-		},
 		"customizableModes": {
 			"title": "Modos personalizáveis",
-			"description": "Personas especializadas com comportamentos próprios e modelos atribuídos"
+			"description": "Personas especializadas que mantêm o foco na tarefa e entregam resultados."
+		},
+		"modelAgnostic": {
+			"title": "Traga seu próprio modelo",
+			"description": "Use sua própria chave de provedor ou até mesmo execute inferência local — sem acréscimos, sem aprisionamento, sem restrições"
 		}
 	},
 	"selectMode": "Selecionar modo de interação",
@@ -441,5 +434,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code quer executar um comando slash",
 		"didRun": "Kilo Code executou um comando slash"
+	},
+	"todo": {
+		"partial": "{{completed}} de {{total}} tarefas concluídas",
+		"complete": "{{total}} tarefas concluídas",
+		"updated": "A lista de tarefas foi atualizada",
+		"completed": "Concluído",
+		"started": "Iniciado"
 	}
 }

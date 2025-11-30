@@ -8,10 +8,10 @@ Before building the JetBrains plugin, ensure all dependencies are properly confi
 
 ### Required Dependencies
 
-#### 1. Java Development Kit (JDK) 17
+#### 1. Java Development Kit (JDK) 21
 
-- **Required Version**: Java 17 (LTS)
-- **Why**: The plugin build system requires Java 17 for compilation and runtime compatibility
+- **Required Version**: Java 21 (LTS)
+- **Why**: The plugin build system requires Java 21 for compilation and runtime compatibility
 - **Recommended Installation** (SDKMAN - works on macOS/Linux):
 
     ```bash
@@ -19,15 +19,15 @@ Before building the JetBrains plugin, ensure all dependencies are properly confi
     curl -s "https://get.sdkman.io" | bash
     source ~/.sdkman/bin/sdkman-init.sh
 
-    # Install and use Java 17
-    sdk install java 17.0.12-tem
-    sdk use java 17.0.12-tem
+    # Install and use Java 21
+    sdk install java 21.0.5-tem
+    sdk use java 21.0.5-tem
     ```
 
 - **Alternative Installation**:
-    - macOS: `brew install openjdk@17`
-    - Linux: `sudo apt install openjdk-17-jdk` or equivalent
-    - Windows: Download from [Oracle](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html) or [OpenJDK](https://openjdk.org/projects/jdk/17/)
+    - macOS: `brew install openjdk@21`
+    - Linux: `sudo apt install openjdk-21-jdk` or equivalent
+    - Windows: Download from [Oracle](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html) or [OpenJDK](https://openjdk.org/projects/jdk/21/)
 
 #### 2. VSCode Submodule
 
@@ -56,7 +56,7 @@ cd jetbrains/host && pnpm run deps:check
 
 ### Quick Fixes for Common Issues
 
-- **"Unsupported class file major version 68"**: [Install Java 17](#java-version-issues)
+- **"Unsupported class file major version 68"**: [Install Java 21](#java-version-issues)
 - **"slice is not valid mach-o file"**: [Rebuild native modules](#native-module-architecture-mismatch)
 - **"platform.zip file does not exist"**: [Generate platform files](#missing-platformzip)
 
@@ -75,10 +75,10 @@ git submodule update --init --recursive
 
 ```bash
 java -version
-# Should show Java 17.x.x
+# Should show Java 21.x.x
 
 javac -version
-# Should show javac 17.x.x
+# Should show javac 21.x.x
 ```
 
 ### 3. Install Node Dependencies
@@ -198,7 +198,7 @@ Turbo automatically handles:
 ### Java Version Issues
 
 **Problem**: Build fails with "Unsupported class file major version 68" or similar Java version errors
-**Root Cause**: Running Java 24+ instead of required Java 17
+**Root Cause**: Running Java 24+ instead of required Java 21
 
 **Solution**:
 
@@ -209,28 +209,28 @@ Turbo automatically handles:
 curl -s "https://get.sdkman.io" | bash
 source ~/.sdkman/bin/sdkman-init.sh
 
-# Install and use Java 17
-sdk install java 17.0.12-tem
-sdk use java 17.0.12-tem
+# Install and use Java 21
+sdk install java 21.0.5-tem
+sdk use java 21.0.5-tem
 
-# Make Java 17 default (optional)
-sdk default java 17.0.12-tem
+# Make Java 21 default (optional)
+sdk default java 21.0.5-tem
 
 # Verify version
-java -version  # Should show OpenJDK 17.x.x
+java -version  # Should show OpenJDK 21.x.x
 ```
 
 #### Option 2: Using Homebrew (macOS Alternative)
 
 ```bash
-# Install Java 17
-brew install openjdk@17
+# Install Java 21
+brew install openjdk@21
 
 # Set JAVA_HOME for current session
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 
 # Add to shell profile for persistence
-echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
+echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
 
 # Verify version
 java -version
@@ -239,11 +239,11 @@ java -version
 #### Option 3: Manual JAVA_HOME Setup
 
 ```bash
-# Find Java 17 installation
+# Find Java 21 installation
 /usr/libexec/java_home -V
 
-# Set JAVA_HOME to Java 17 path
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+# Set JAVA_HOME to Java 21 path
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
 ### VSCode Submodule Not Initialized
@@ -338,7 +338,7 @@ npm ls --omit=dev --all --parseable --prefix ../resources > ./prodDep.txt
 3. **Testing**: Build with `debugMode=none` for CI/testing
 4. **Release**: Generate platform files and build with `debugMode=release`
 
-**Automatic Dependency Management**: The build system now automatically verifies and sets up all required dependencies (Java 17, VSCode submodule, Node.js, etc.) before each build, ensuring a smooth development experience.
+**Automatic Dependency Management**: The build system now automatically verifies and sets up all required dependencies (Java 21, VSCode submodule, Node.js, etc.) before each build, ensuring a smooth development experience.
 
 ## Environment Variables
 

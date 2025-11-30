@@ -1,21 +1,15 @@
 import { DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
-import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
 
 export async function getMcpServersSection(
 	mcpHub?: McpHub,
 	diffStrategy?: DiffStrategy,
 	enableMcpServerCreation?: boolean,
-	toolUseStyle?: ToolUseStyle, // kilocode_change
+	includeToolDescriptions: boolean = true,
 ): Promise<string> {
 	if (!mcpHub) {
 		return ""
 	}
-	// kilocode_change start
-	if (toolUseStyle === "json") {
-		return ""
-	}
-	// kilocode_change end
 
 	const connectedServers =
 		mcpHub.getServers().length > 0
@@ -23,17 +17,20 @@ export async function getMcpServersSection(
 					.getServers()
 					.filter((server) => server.status === "connected")
 					.map((server) => {
-						const tools = server.tools
-							?.filter((tool) => tool.enabledForPrompt !== false)
-							?.map((tool) => {
-								const schemaStr = tool.inputSchema
-									? `    Input Schema:
+						// Only include tool descriptions when using XML protocol
+						const tools = includeToolDescriptions
+							? server.tools
+									?.filter((tool) => tool.enabledForPrompt !== false)
+									?.map((tool) => {
+										const schemaStr = tool.inputSchema
+											? `    Input Schema:
 		${JSON.stringify(tool.inputSchema, null, 2).split("\n").join("\n    ")}`
-									: ""
+											: ""
 
-								return `- ${tool.name}: ${tool.description}\n${schemaStr}`
-							})
-							.join("\n\n")
+										return `- ${tool.name}: ${tool.description}\n${schemaStr}`
+									})
+									.join("\n\n")
+							: undefined
 
 						const templates = server.resourceTemplates
 							?.map((template) => `- ${template.uriTemplate} (${template.name}): ${template.description}`)

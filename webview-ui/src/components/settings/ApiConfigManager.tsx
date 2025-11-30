@@ -324,7 +324,6 @@ const ApiConfigManager = ({
 					{isEditingDifferentProfile && onActivateConfig && (
 						<StandardTooltip content={t("settings:providers.makeActiveTooltip")}>
 							<Button
-								variant="default"
 								className="mt-2"
 								onClick={() => onActivateConfig(currentApiConfigName)}
 								data-testid="activate-profile-button">
@@ -412,7 +411,7 @@ const ApiConfigManager = ({
 							{t("settings:common.cancel")}
 						</Button>
 						<Button
-							variant="default"
+							variant="primary"
 							disabled={!newProfileName.trim()}
 							onClick={handleNewProfileSave}
 							data-testid="create-profile-button">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import { Share2 } from "lucide-react"
+import { Share2Icon } from "lucide-react"
 
 import { type HistoryItem, type ShareVisibility, TelemetryEventName } from "@roo-code/types"
 
@@ -10,7 +10,6 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useCloudUpsell } from "@/hooks/useCloudUpsell"
 import { CloudUpsellDialog } from "@/components/cloud/CloudUpsellDialog"
 import {
-	Button,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -20,14 +19,14 @@ import {
 	CommandGroup,
 	StandardTooltip,
 } from "@/components/ui"
+import { LucideIconButton } from "./LucideIconButton"
 
 interface ShareButtonProps {
 	item?: HistoryItem
 	disabled?: boolean
-	showLabel?: boolean
 }
 
-export const ShareButton = ({ item, disabled = false, showLabel = false }: ShareButtonProps) => {
+export const ShareButton = ({ item, disabled = false }: ShareButtonProps) => {
 	const [shareDropdownOpen, setShareDropdownOpen] = useState(false)
 	const [shareSuccess, setShareSuccess] = useState<{ visibility: ShareVisibility; url: string } | null>(null)
 	const [wasConnectInitiatedFromShare, setWasConnectInitiatedFromShare] = useState(false)
@@ -160,20 +159,13 @@ export const ShareButton = ({ item, disabled = false, showLabel = false }: Share
 				<Popover open={shareDropdownOpen} onOpenChange={setShareDropdownOpen}>
 					<StandardTooltip content={shareButtonState.title}>
 						<PopoverTrigger asChild>
-							<Button
-								variant="ghost"
-								size={showLabel ? "sm" : "icon"}
+							<LucideIconButton
+								icon={Share2Icon}
 								disabled={disabled || shareButtonState.disabled}
-								className={
-									showLabel
-										? "h-7 px-2 hover:bg-vscode-toolbar-hoverBackground"
-										: "h-7 w-7 p-1.5 hover:bg-vscode-toolbar-hoverBackground"
-								}
+								tooltip={false}
 								onClick={handleShareButtonClick}
-								data-testid="share-button">
-								<Share2 />
-								{showLabel && <span className="ml-0">{t("chat:task.share")}</span>}
-							</Button>
+								data-testid="share-button"
+								title={t("chat:task.share")}></LucideIconButton>
 						</PopoverTrigger>
 					</StandardTooltip>
 
@@ -228,22 +220,12 @@ export const ShareButton = ({ item, disabled = false, showLabel = false }: Share
 					</PopoverContent>
 				</Popover>
 			) : (
-				<StandardTooltip content={shareButtonState.title}>
-					<Button
-						variant="ghost"
-						size={showLabel ? "sm" : "icon"}
-						disabled={disabled || shareButtonState.disabled}
-						className={
-							showLabel
-								? "h-7 px-2 hover:bg-vscode-toolbar-hoverBackground"
-								: "h-7 w-7 p-1.5 hover:bg-vscode-toolbar-hoverBackground"
-						}
-						onClick={handleShareButtonClick}
-						data-testid="share-button">
-						<Share2 />
-						{showLabel && <span className="ml-1">{t("chat:task.share")}</span>}
-					</Button>
-				</StandardTooltip>
+				<LucideIconButton
+					icon={Share2Icon}
+					disabled={disabled || shareButtonState.disabled}
+					title={shareButtonState.title}
+					onClick={handleShareButtonClick}
+					data-testid="share-button"></LucideIconButton>
 			)}
 
 			{/* Connect to Cloud Modal */}

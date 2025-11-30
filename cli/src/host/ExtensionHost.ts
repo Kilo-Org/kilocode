@@ -959,10 +959,10 @@ export class ExtensionHost extends EventEmitter {
 
 		// Sync experiments if present (critical for CLI background editing)
 		if (configState.experiments || this.currentState?.experiments) {
-			const experiments = configState.experiments || this.currentState?.experiments
+			const experiments = (configState.experiments || this.currentState?.experiments) ?? {}
 			await this.sendWebviewMessage({
-				type: "updateExperimental",
-				values: experiments as Record<string, unknown>,
+				type: "updateSettings",
+				updatedSettings: { experiments },
 			})
 		}
 	}

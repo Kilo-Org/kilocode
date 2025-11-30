@@ -367,6 +367,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter model ID...",
 	},
 
+	// Nano-GPT fields
+	nanoGptApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Nano-GPT API key...",
+	},
+	nanoGptModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
 	// HuggingFace fields
 	huggingFaceApiKey: {
 		label: "API Key",
@@ -622,6 +634,32 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter Synthetic API key...",
 	},
 
+	// SAP AI Core fields
+	sapAiCoreServiceKey: {
+		label: "Service Key",
+		type: "password",
+		placeholder: "Enter SAP AI Core service key...",
+	},
+	sapAiCoreResourceGroup: {
+		label: "Resource Group",
+		type: "text",
+		placeholder: "Enter resource group...",
+	},
+	sapAiCoreUseOrchestration: {
+		label: "Use Orchestration",
+		type: "boolean",
+	},
+	sapAiCoreModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+	sapAiCoreDeploymentId: {
+		label: "Deployment ID",
+		type: "text",
+		placeholder: "Enter deployment ID...",
+	},
+
 	// Virtual Quota Fallback fields
 	profiles: {
 		label: "Profiles Configuration",
@@ -855,6 +893,9 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("glamaModelId", config, "llama-3.1-70b-versatile"),
 			]
 
+		case "nano-gpt":
+			return [createFieldConfig("nanoGptApiKey", config), createFieldConfig("nanoGptModelId", config, "gpt-4o")]
+
 		case "huggingface":
 			return [
 				createFieldConfig("huggingFaceApiKey", config),
@@ -993,6 +1034,14 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("apiModelId", config, "synthetic-model"),
 			]
 
+		case "sap-ai-core":
+			return [
+				createFieldConfig("sapAiCoreServiceKey", config),
+				createFieldConfig("sapAiCoreResourceGroup", config),
+				createFieldConfig("sapAiCoreDeploymentId", config),
+				createFieldConfig("sapAiCoreModelId", config),
+			]
+
 		default:
 			return []
 	}
@@ -1020,6 +1069,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"vscode-lm": "copilot-gpt-4o",
 	openai: "gpt-4o",
 	glama: "llama-3.1-70b-versatile",
+	"nano-gpt": "gpt-4o",
 	huggingface: "meta-llama/Llama-2-70b-chat-hf",
 	litellm: "gpt-4o",
 	moonshot: "moonshot-v1-8k",
@@ -1044,6 +1094,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	ovhcloud: "gpt-oss-120b",
 	inception: "gpt-4o",
 	synthetic: "synthetic-model",
+	"sap-ai-core": "gpt-4o",
 }
 
 /**
