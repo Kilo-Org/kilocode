@@ -13,6 +13,7 @@ import searchFiles from "./search_files"
 // import switchMode from "./switch_mode"
 import fileEdit from "./file_edit"
 import updateTodoList from "./update_todo_list"
+import codebaseSearch from "./codebase_search"
 
 export const nativeTools = [
 	// apply_diff_single_file,
@@ -21,7 +22,7 @@ export const nativeTools = [
 	askFollowupQuestion,
 	attemptCompletion,
 	// browserAction,
-	// codebaseSearch,
+	codebaseSearch,
 	// editFile,
 	executeCommand,
 	fetchInstructions,

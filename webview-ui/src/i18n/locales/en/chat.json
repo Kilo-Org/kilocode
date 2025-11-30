@@ -222,8 +222,8 @@
 		"didSearchOutsideWorkspace": "searched this directory(outside of the workspace) for <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "search the codebase for <code>{{query}}</code>",
-		"wantsToSearchWithPath": "search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
+		"wantsToSearch": "searching codebase for <code>{{query}}</code>",
+		"wantsToSearchWithPath": "searching codebase for <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "Found 1 result",
 		"didSearch_other": "Found {{count}} results",
 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
