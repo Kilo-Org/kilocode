@@ -288,6 +288,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private askResponseImages?: string[]
 	public lastMessageTs?: number
 
+	// Streaming Activity Tracking
+	lastStreamActivityTimestamp: number = 0
+
 	// Tool Use
 	consecutiveMistakeCount: number = 0
 	consecutiveMistakeLimit: number
@@ -815,6 +818,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		} catch (error) {
 			console.error("Failed to save messages:", error)
 		}
+	}
+
+	private trackStreamActivity() {
+		// Update the last stream activity timestamp and notify the provider
+		// This is called whenever a chunk arrives from the API stream
+		this.lastStreamActivityTimestamp = Date.now()
+		this.providerRef.deref()?.postStateToWebview()
 	}
 
 	private findMessageByTimestamp(ts: number): ClineMessage | undefined {
@@ -2182,6 +2192,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				let reasoningMessage = ""
 				let pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
+				this.lastStreamActivityTimestamp = Date.now() // Initialize activity timestamp at stream start
 
 				// kilocode_change start
 				const reasoningDetails = new Array<ReasoningDetail>()
@@ -2201,6 +2212,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							// it, but this workaround seems to fix it.
 							continue
 						}
+
+						// Track actual stream activity for accurate streaming detection
+						this.trackStreamActivity()
 
 						switch (chunk.type) {
 							case "reasoning": {
