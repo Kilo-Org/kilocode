@@ -1,3 +1,5 @@
+// pnpm --filter @roo-code/vscode-webview test src/components/chat/__tests__/CommandExecution.spec.tsx
+
 import React from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 
@@ -111,8 +113,13 @@ describe("CommandExecution", () => {
 
 		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "git push"])
 		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm"])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "git push"] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: ["npm", "git push"],
+				deniedCommands: ["rm"],
+			},
+		})
 	})
 
 	it("should handle deny command change", () => {
@@ -127,8 +134,13 @@ describe("CommandExecution", () => {
 
 		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm"])
 		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm", "docker run"])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm", "docker run"] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: ["npm"],
+				deniedCommands: ["rm", "docker run"],
+			},
+		})
 	})
 
 	it("should toggle allowed command", () => {
@@ -151,8 +163,13 @@ describe("CommandExecution", () => {
 		// "npm test" is already in allowedCommands, so it should be removed
 		expect(stateWithNpmTest.setAllowedCommands).toHaveBeenCalledWith([])
 		expect(stateWithNpmTest.setDeniedCommands).toHaveBeenCalledWith(["rm"])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: [] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: [],
+				deniedCommands: ["rm"],
+			},
+		})
 	})
 
 	it("should toggle denied command", () => {
@@ -175,8 +192,13 @@ describe("CommandExecution", () => {
 		// "rm -rf" is already in deniedCommands, so it should be removed
 		expect(stateWithRmRf.setAllowedCommands).toHaveBeenCalledWith(["npm"])
 		expect(stateWithRmRf.setDeniedCommands).toHaveBeenCalledWith([])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: ["npm"],
+				deniedCommands: [],
+			},
+		})
 	})
 
 	it("should parse command with Output: separator", () => {
@@ -311,8 +333,13 @@ Output here`
 		// "rm file.txt" should be removed from denied and added to allowed
 		expect(stateWithRmInDenied.setAllowedCommands).toHaveBeenCalledWith(["npm", "rm file.txt"])
 		expect(stateWithRmInDenied.setDeniedCommands).toHaveBeenCalledWith([])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "rm file.txt"] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: ["npm", "rm file.txt"],
+				deniedCommands: [],
+			},
+		})
 	})
 
 	describe("integration with CommandPatternSelector", () => {

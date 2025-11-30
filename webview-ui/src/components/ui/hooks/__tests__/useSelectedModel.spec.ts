@@ -100,7 +100,7 @@ describe("useSelectedModel", () => {
 			})
 		})
 
-		it("should use only specific provider info when base model info is missing", () => {
+		it("should fall back to default when configured model doesn't exist in available models", () => {
 			const specificProviderInfo: ModelInfo = {
 				maxTokens: 8192,
 				contextWindow: 16384,
@@ -113,7 +113,18 @@ describe("useSelectedModel", () => {
 
 			mockUseRouterModels.mockReturnValue({
 				data: {
-					openrouter: {},
+					openrouter: {
+						"anthropic/claude-sonnet-4.5": {
+							maxTokens: 8192,
+							contextWindow: 200_000,
+							supportsImages: true,
+							supportsPromptCache: true,
+							inputPrice: 3.0,
+							outputPrice: 15.0,
+							cacheWritesPrice: 3.75,
+							cacheReadsPrice: 0.3,
+						},
+					},
 					requesty: {},
 					glama: {},
 					unbound: {},
@@ -134,15 +145,29 @@ describe("useSelectedModel", () => {
 
 			const apiConfiguration: ProviderSettings = {
 				apiProvider: "openrouter",
-				openRouterModelId: "test-model",
+				openRouterModelId: "test-model", // This model doesn't exist in available models
 				openRouterSpecificProvider: "test-provider",
 			}
 
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
-			expect(result.current.id).toBe("test-model")
-			expect(result.current.info).toEqual(specificProviderInfo)
+			// Should fall back to provider default since "test-model" doesn't exist
+			expect(result.current.id).toBe("anthropic/claude-sonnet-4.5")
+			// Should still use specific provider info for the default model if specified
+			expect(result.current.info).toEqual({
+				...{
+					maxTokens: 8192,
+					contextWindow: 200_000,
+					supportsImages: true,
+					supportsPromptCache: true,
+					inputPrice: 3.0,
+					outputPrice: 15.0,
+					cacheWritesPrice: 3.75,
+					cacheReadsPrice: 0.3,
+				},
+				...specificProviderInfo,
+			})
 		})
 
 		it("should demonstrate the merging behavior validates the comment about missing fields", () => {
@@ -151,7 +176,6 @@ describe("useSelectedModel", () => {
 				contextWindow: 8192,
 				supportsImages: false,
 				supportsPromptCache: false,
-				supportsComputerUse: true,
 				cacheWritesPrice: 0.1,
 				cacheReadsPrice: 0.01,
 			}
@@ -199,7 +223,6 @@ describe("useSelectedModel", () => {
 				// Fields from base model that provider doesn't have
 				contextWindow: 8192, // From base (provider doesn't override)
 				supportsPromptCache: false, // From base (provider doesn't override)
-				supportsComputerUse: true, // From base (provider doesn't have)
 				cacheWritesPrice: 0.1, // From base (provider doesn't have)
 				cacheReadsPrice: 0.01, // From base (provider doesn't have)
 
@@ -253,16 +276,15 @@ describe("useSelectedModel", () => {
 			expect(result.current.info).toEqual(baseModelInfo)
 		})
 
-		it("should fall back to default when both base and specific provider info are missing", () => {
+		it("should fall back to default when configured model and provider don't exist", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {
-						"anthropic/claude-sonnet-4": {
-							// Default model
+						"anthropic/claude-sonnet-4.5": {
+							// Default model - using correct default model name
 							maxTokens: 8192,
 							contextWindow: 200_000,
 							supportsImages: true,
-							supportsComputerUse: true,
 							supportsPromptCache: true,
 							inputPrice: 3.0,
 							outputPrice: 15.0,
@@ -295,13 +317,24 @@ describe("useSelectedModel", () => {
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
-			expect(result.current.id).toBe("non-existent-model")
-			expect(result.current.info).toBeUndefined()
+			// Should fall back to provider default since "non-existent-model" doesn't exist
+			expect(result.current.id).toBe("anthropic/claude-sonnet-4.5")
+			// Should use base model info since provider doesn't exist
+			expect(result.current.info).toEqual({
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				inputPrice: 3.0,
+				outputPrice: 15.0,
+				cacheWritesPrice: 3.75,
+				cacheReadsPrice: 0.3,
+			})
 		})
 	})
 
 	describe("loading and error states", () => {
-		it("should return loading state when router models are loading", () => {
+		it("should NOT set loading when router models are loading but provider is static (anthropic)", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: undefined,
 				isLoading: true,
@@ -317,10 +350,11 @@ describe("useSelectedModel", () => {
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(), { wrapper })
 
-			expect(result.current.isLoading).toBe(true)
+			// With static provider default (anthropic), useSelectedModel gates router fetches, so loading should be false
+			expect(result.current.isLoading).toBe(false)
 		})
 
-		it("should return loading state when open router model providers are loading", () => {
+		it("should NOT set loading when openrouter provider metadata is loading but provider is static (anthropic)", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: { openrouter: {}, requesty: {}, glama: {}, unbound: {}, litellm: {}, "io-intelligence": {} },
 				isLoading: false,
@@ -336,10 +370,11 @@ describe("useSelectedModel", () => {
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(), { wrapper })
 
-			expect(result.current.isLoading).toBe(true)
+			// With static provider default (anthropic), openrouter providers are irrelevant, so loading should be false
+			expect(result.current.isLoading).toBe(false)
 		})
 
-		it("should return error state when either hook has an error", () => {
+		it("should NOT set error when hooks error but provider is static (anthropic)", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: undefined,
 				isLoading: false,
@@ -355,7 +390,8 @@ describe("useSelectedModel", () => {
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(), { wrapper })
 
-			expect(result.current.isError).toBe(true)
+			// Error from gated routerModels should not bubble for static provider default
+			expect(result.current.isError).toBe(false)
 		})
 	})
 
@@ -377,7 +413,7 @@ describe("useSelectedModel", () => {
 			const { result } = renderHook(() => useSelectedModel(), { wrapper })
 
 			expect(result.current.provider).toBe("anthropic")
-			expect(result.current.id).toBe("claude-sonnet-4-20250514")
+			expect(result.current.id).toBe("claude-sonnet-4-5")
 			expect(result.current.info).toBeUndefined()
 		})
 	})
@@ -419,7 +455,6 @@ describe("useSelectedModel", () => {
 			// Verify it inherits other properties from anthropic models
 			expect(result.current.info?.maxTokens).toBe(64_000)
 			expect(result.current.info?.contextWindow).toBe(200_000)
-			expect(result.current.info?.supportsComputerUse).toBe(true)
 		})
 
 		it("should use default claude-code model when no modelId is specified", () => {
@@ -450,11 +485,85 @@ describe("useSelectedModel", () => {
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
 			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-20250514") // Default model
+			expect(result.current.id).toBe("claude-sonnet-4-5") // Default model
 			expect(result.current.info).toBeDefined()
 			expect(result.current.info?.supportsImages).toBe(false)
 		})
 	})
+
+	// kilocode_change start
+	describe("litellm provider", () => {
+		beforeEach(() => {
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {},
+					unbound: {},
+					litellm: {},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+		})
+
+		it("should not crash when litellmDefaultModelId is not found in routerModels.litellm", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "litellm",
+				litellmModelId: "claude-3-7-sonnet-20250219", // This model doesn't exist in routerModels.litellm
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			// Should not crash and should return the model ID with undefined info
+			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
+			expect(result.current.info).toBeUndefined()
+		})
+
+		it("should return model info when litellm model exists in routerModels.litellm", () => {
+			const modelInfo: ModelInfo = {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsImages: false,
+				supportsPromptCache: false,
+			}
+
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {},
+					unbound: {},
+					litellm: {
+						"claude-3-7-sonnet-20250219": modelInfo,
+					},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "litellm",
+				litellmModelId: "claude-3-7-sonnet-20250219",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
+			expect(result.current.info).toEqual(modelInfo)
+		})
+	})
+	// kilocode_change end
 
 	describe("bedrock provider with 1M context", () => {
 		beforeEach(() => {

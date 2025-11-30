@@ -22,7 +22,6 @@
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
-		"freeModelsDescription": "Model gratis mungkin memiliki batas penggunaan. Gunakan tautan di bawah ini untuk mengoptimalkan penggunaan model gratis kamu!",
 		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya"
 	},
 	"notifications": {
@@ -224,6 +223,7 @@
 			},
 			"keybindingNotFound": "tidak ditemukan",
 			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
+			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
 			"provider": "Penyedia"
 		}
@@ -270,7 +270,7 @@
 		"description": "Pilih bagaimana panggilan tool diformat dalam prompt sistem. JSON saat ini bersifat eksperimental dan sebagian besar ditujukan untuk pengguna yang tertarik berkontribusi pada pengembangannya.",
 		"automatic": "Biarkan Kilo yang memutuskan",
 		"xml": "XML",
-		"json": "JSON (eksperimental)"
+		"json": "JSON"
 	},
 	"marketplace": {
 		"mcp": {

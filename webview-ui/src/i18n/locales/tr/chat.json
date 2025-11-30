@@ -91,24 +91,17 @@
 		"tooltip": "Mevcut işlemi iptal et"
 	},
 	"scrollToBottom": "Sohbetin altına kaydır",
-	"about": "AI yardımıyla kod oluşturun, yeniden düzenleyin ve hatalarını ayıklayın. Daha fazla bilgi edinmek için <DocsLink>belgelerimize</DocsLink> göz atın.",
+	"about": "AI yardımıyla kod oluşturun, yeniden düzenleyin ve hatalarını ayıklayın. Daha fazla bilgi için <DocsLink>belgelerimize</DocsLink> göz atın.",
+	"docs": "Daha fazla bilgi için <DocsLink>belgelerimize</DocsLink> göz atın.",
 	"onboarding": "<strong>Bu çalışma alanındaki görev listeniz boş.</strong> Aşağıya bir görev yazarak başlayın. Nasıl başlayacağınızdan emin değil misiniz? Kilo Code'nun sizin için neler yapabileceği hakkında daha fazla bilgiyi <DocsLink>belgelerde</DocsLink> okuyun.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Görev Orkestrasyonu",
-			"description": "Görevleri daha küçük, yönetilebilir parçalara ayırın."
-		},
-		"stickyModels": {
-			"title": "Yapışkan Modlar",
-			"description": "Her mod, en son kullandığınız modeli hatırlar"
-		},
-		"tools": {
-			"title": "Araçlar",
-			"description": "AI'nın web'e göz atarak, komutlar çalıştırarak ve daha fazlasını yaparak sorunları çözmesine izin verin."
-		},
 		"customizableModes": {
-			"title": "Özelleştirilebilir Modlar",
-			"description": "Kendi davranışları ve atanmış modelleri ile özelleştirilmiş kişilikler"
+			"title": "Özelleştirilebilir modlar",
+			"description": "Göreve odaklanan ve sonuç veren özel kişilikler."
+		},
+		"modelAgnostic": {
+			"title": "Kendi modelinizi getirin",
+			"description": "Kendi sağlayıcı anahtarınızı kullanın veya hatta yerel çıkarım yapın — ek ücret yok, kilitlenme yok, kısıtlama yok"
 		}
 	},
 	"selectMode": "Etkileşim modunu seçin",
@@ -156,6 +149,9 @@
 		"initializingWarning": "Kontrol noktası hala başlatılıyor... Bu çok uzun sürerse, <settingsLink>ayarlar</settingsLink> bölümünden kontrol noktalarını devre dışı bırakabilir ve görevinizi yeniden başlatabilirsiniz.",
 		"menu": {
 			"viewDiff": "Farkları Görüntüle",
+			"more": "Daha fazla seçenek",
+			"viewDiffFromInit": "Tüm Değişiklikleri Görüntüle",
+			"viewDiffWithCurrent": "Bu Kontrol Noktasından Bu Yana Değişiklikleri Görüntüle",
 			"restore": "Kontrol Noktasını Geri Yükle",
 			"restoreFiles": "Dosyaları Geri Yükle",
 			"restoreFilesDescription": "Projenizin dosyalarını bu noktada alınan bir anlık görüntüye geri yükler.",
@@ -183,6 +179,8 @@
 		"wantsToInsert": "Kilo Code bu dosyaya içerik eklemek istiyor",
 		"wantsToInsertWithLineNumber": "Kilo Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor",
 		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor",
+		"wantsToDelete": "Kilo Code bu dosyayı silmek istiyor",
+		"wantsToDeleteDirectory": "Kilo Code bu dizini silmek istiyor",
 		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor",
 		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor",
 		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor",
@@ -273,6 +271,7 @@
 		"toggleAriaLabel": "Otomatik onayı aç/kapat",
 		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri seçin",
 		"triggerLabelOff": "Otomatik onay kapalı",
+		"triggerLabelOffShort": "Kapalı",
 		"triggerLabel_zero": "0 otomatik onaylandı",
 		"triggerLabel_one": "1 otomatik onaylandı",
 		"triggerLabel_other": "{{count}} otomatik onaylandı",
@@ -302,6 +301,19 @@
 			"selectModel": "Başlamak için Ayarlar'da Roo Code Cloud sağlayıcısından <code>roo/code-supernova</code>'yı seçin.",
 			"goToSettingsButton": "Ayarlar'a Git"
 		},
+		"release": {
+			"heading": "Uzantıdaki yenilikler:",
+			"openRouterEmbeddings": "OpenRouter gömme modelleri desteği",
+			"chutesDynamic": "Chutes artık en son modelleri dinamik olarak yüklüyor",
+			"queuedMessagesFix": "Sıradaki mesajların kaybolması için düzeltmeler"
+		},
+		"cloudAgents": {
+			"heading": "Cloud'daki yenilikler:",
+			"prFixer": "PR Reviewer'ı tamamlamak için <bold>PR Fixer</bold> bulut ajanını tanıtıyoruz.",
+			"prFixerDescription": "Roo Code'un PR Fixer'ı, PR'larınıza doğrudan GitHub'dan yüksek kaliteli değişiklikler uygular. Bir PR yorumu aracılığıyla çağırın ve bağlamı, anlaşmaları ve ödünleri anlamak için tüm yorum geçmişini okuyacak - sonra doğru düzeltmeyi uygulayacaktır.",
+			"tryPrFixerButton": "PR Fixer'ı Dene"
+		},
+		"careers": "Ayrıca, <careersLink>işe alım yapıyoruz!</careersLink>",
 		"socialLinks": "Bize <xLink>X</xLink>, <discordLink>Discord</discordLink>, veya <redditLink>r/RooCode</redditLink>'da katılın 🚀"
 	},
 	"browser": {
@@ -330,6 +342,8 @@
 		"tooltips": {
 			"expand": "Kod bloğunu genişlet",
 			"collapse": "Kod bloğunu daralt",
+			"enable_wrap": "Satır kaydırmayı etkinleştir",
+			"disable_wrap": "Satır kaydırmayı devre dışı bırak",
 			"copy_code": "Kodu kopyala"
 		}
 	},
@@ -421,5 +435,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code bir slash komutu çalıştırmak istiyor",
 		"didRun": "Kilo Code bir slash komutu çalıştırdı"
+	},
+	"todo": {
+		"partial": "{{total}} yapılacaklar listesinden {{completed}} tanesi tamamlandı",
+		"complete": "{{total}} yapılacaklar listesi tamamlandı",
+		"updated": "Yapılacaklar listesi güncellendi",
+		"completed": "Tamamlandı",
+		"started": "Başladı"
 	}
 }

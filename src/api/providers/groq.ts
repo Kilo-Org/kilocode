@@ -64,7 +64,7 @@ export class GroqHandler extends BaseOpenAiCompatibleProvider<GroqModelId> {
 		const cacheWriteTokens = 0
 
 		// Calculate cost using OpenAI-compatible cost calculation
-		const totalCost = calculateApiCostOpenAI(info, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens)
+		const { totalCost } = calculateApiCostOpenAI(info, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens)
 
 		yield {
 			type: "usage",

@@ -47,7 +47,7 @@ const TaskItem = ({
 			key={item.id}
 			data-testid={`task-item-${item.id}`}
 			className={cn(
-				"cursor-pointer group bg-vscode-editor-background rounded relative overflow-hidden border border-transparent hover:bg-vscode-list-hoverBackground transition-colors",
+				"cursor-pointer group bg-vscode-editor-background rounded relative overflow-hidden border border-transparent hover:bg-vscode-list-hoverBackground transition-colors", // kilocode_change: no rounded borders
 				{
 					"bg-red-900 text-white": item.fileNotfound, // kilocode_change added this state instead of removing
 					"bg-vscode-editor-background": !item.fileNotfound, //kilocode_change this is the default normally in the regular classname list
@@ -74,7 +74,7 @@ const TaskItem = ({
 				<div className="flex-1 min-w-0">
 					<div
 						className={cn(
-							"overflow-hidden whitespace-pre-wrap text-vscode-foreground text-ellipsis line-clamp-2",
+							"overflow-hidden whitespace-pre-wrap font-light text-vscode-foreground text-ellipsis line-clamp-3",
 							{
 								"text-base": !isCompact,
 							},

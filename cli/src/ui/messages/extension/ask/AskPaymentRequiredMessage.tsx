@@ -1,17 +1,39 @@
 import React from "react"
 import { Box, Text } from "ink"
+import Link from "ink-link"
 import type { MessageComponentProps } from "../types.js"
-import { getMessageIcon } from "../utils.js"
-import { MarkdownText } from "../../../components/MarkdownText.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { getBoxWidth } from "../../../utils/width.js"
+import { logs } from "../../../../services/logs.js"
+
+interface PaymentRequiredData {
+	title: string
+	message: string
+	balance: number
+	buyCreditsUrl: string
+}
 
 /**
- * Display low credit warning with payment icon
+ * Display payment required message with parsed JSON data
+ * Shows title, message, balance, and URL for adding credits
  */
 export const AskPaymentRequiredMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
-	const icon = getMessageIcon("ask", "payment_required_prompt")
+
+	// Parse JSON data with error handling and fallback values
+	let data: PaymentRequiredData = {
+		title: "Payment Required",
+		message: "Credits are required to continue.",
+		balance: 0,
+		buyCreditsUrl: "",
+	}
+
+	try {
+		const parsed = JSON.parse(message.text ?? "{}")
+		data = { ...data, ...parsed }
+	} catch (e) {
+		logs.error("Failed to parse payment_required_prompt data", "AskPaymentRequiredMessage", { error: e })
+	}
 
 	return (
 		<Box
@@ -21,29 +43,34 @@ export const AskPaymentRequiredMessage: React.FC<MessageComponentProps> = ({ mes
 			borderColor={theme.semantic.warning}
 			paddingX={1}
 			marginY={1}>
+			{/* Header with $ icon and dynamic title */}
 			<Box>
 				<Text color={theme.semantic.warning} bold>
-					{icon} Low Credit Warning
+					$ {data.title}
 				</Text>
 			</Box>
 
-			{message.text && (
+			{/* Main message content */}
+			{data.message && (
 				<Box marginTop={1}>
-					<MarkdownText>{message.text}</MarkdownText>
+					<Text color={theme.ui.text.primary}>{data.message}</Text>
 				</Box>
 			)}
 
-			<Box marginTop={1}>
-				<Text color={theme.ui.text.dimmed} dimColor>
-					Your account is running low on credits. Please add more credits to continue.
+			{/* Balance display in bordered box */}
+			<Box marginTop={1} borderStyle="single" borderColor={theme.semantic.info} paddingX={1} paddingY={0}>
+				<Text color={theme.semantic.info} bold>
+					Current Balance: ${data.balance.toFixed(2)}
 				</Text>
 			</Box>
 
-			{message.isAnswered && (
-				<Box marginTop={1}>
-					<Text color={theme.ui.text.dimmed} dimColor>
-						✓ Answered
-					</Text>
+			{/* URL section for adding credits */}
+			{data.buyCreditsUrl && (
+				<Box flexDirection="column" marginTop={1}>
+					<Link url={data.buyCreditsUrl}>
+						<Text color={theme.ui.text.primary}>Add Credits:</Text>
+						<Text color={theme.semantic.info}> {data.buyCreditsUrl}</Text>
+					</Link>
 				</Box>
 			)}
 		</Box>

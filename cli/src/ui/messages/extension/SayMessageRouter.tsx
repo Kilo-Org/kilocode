@@ -1,8 +1,6 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { MessageComponentProps } from "./types.js"
-import { parseToolData } from "./utils.js"
-import { ToolRouter } from "./tools/ToolRouter.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
 import {
 	SayTextMessage,
@@ -23,9 +21,9 @@ import {
 	SayUserEditTodosMessage,
 	SayImageMessage,
 	SayMcpServerRequestStartedMessage,
+	SayMcpServerResponseMessage,
 	SayApiReqFinishedMessage,
 	SayApiReqRetryDelayedMessage,
-	SayCommandOutputMessage,
 } from "./say/index.js"
 
 /**
@@ -93,20 +91,14 @@ export const SayMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 		case "user_edit_todos":
 			return <SayUserEditTodosMessage message={message} />
 
-		case "tool": {
-			const toolData = parseToolData(message)
-			if (toolData) {
-				return <ToolRouter message={message} toolData={toolData} />
-			}
-			// Fallback to default if tool data can't be parsed
-			return <DefaultSayMessage message={message} />
-		}
-
 		case "image":
 			return <SayImageMessage message={message} />
 
 		case "mcp_server_request_started":
 			return <SayMcpServerRequestStartedMessage message={message} />
+
+		case "mcp_server_response":
+			return <SayMcpServerResponseMessage message={message} />
 
 		case "api_req_finished":
 			return <SayApiReqFinishedMessage message={message} />
@@ -115,7 +107,7 @@ export const SayMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 			return <SayApiReqRetryDelayedMessage message={message} />
 
 		case "command_output":
-			return <SayCommandOutputMessage message={message} />
+			return null // Handled in AskMessageRouter
 
 		default:
 			return <DefaultSayMessage message={message} />

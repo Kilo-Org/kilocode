@@ -60,7 +60,6 @@ describe("LMStudio Fetcher", () => {
 				contextWindow: rawModel.contextLength,
 				supportsPromptCache: true,
 				supportsImages: rawModel.vision,
-				supportsComputerUse: false,
 				maxTokens: rawModel.contextLength,
 				inputPrice: 0,
 				outputPrice: 0,

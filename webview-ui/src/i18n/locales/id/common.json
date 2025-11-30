@@ -114,5 +114,9 @@
 		"months_ago": "{{count}} bulan yang lalu",
 		"year_ago": "satu tahun yang lalu",
 		"years_ago": "{{count}} tahun yang lalu"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "Kamu sudah menunggu {{timeout}} detik untuk inisialisasi checkpoint. Kalau tidak butuh fitur ini, matikan saja di <settingsLink>pengaturan checkpoint</settingsLink>.",
+		"init_checkpoint_fail_long_time": "Inisialisasi checkpoint sudah lebih dari {{timeout}} detik, jadi checkpoint dinonaktifkan untuk tugas ini. Kamu bisa mematikan checkpoint atau menambah waktu tunggu di <settingsLink>pengaturan checkpoint</settingsLink>."
 	}
 }

@@ -65,6 +65,12 @@ describe("getSelectedModelId", () => {
 		expect(result).toBe("litellm-model-1")
 	})
 
+	it("should return correct model for OVHcloud AI Endpoints provider", () => {
+		const apiConfig = { ovhCloudAiEndpointsModelId: "ovhcloud-model" }
+		const result = getSelectedModelId("ovhcloud", apiConfig)
+		expect(result).toBe("ovhcloud-model")
+	})
+
 	it("should return 'unknown' when model field is not set", () => {
 		const apiConfig = { someOtherField: "value" }
 		const result = getSelectedModelId("kilocode", apiConfig)
@@ -98,7 +104,7 @@ describe("getSelectedModelId", () => {
 
 	it("should handle mixed case provider names", () => {
 		const apiConfig = { kilocodeModel: "test-model" }
-		const result = getSelectedModelId("KiloCode" as any, apiConfig)
+		const result = getSelectedModelId("KiloCode", apiConfig)
 		expect(result).toBe("default") // Will be treated as unknown provider
 	})
 })

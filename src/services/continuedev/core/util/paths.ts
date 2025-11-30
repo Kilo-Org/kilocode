@@ -32,7 +32,3 @@ export function getConfigJsonPath(): string {
 	const p = path.join(getContinueGlobalPath(), "config.json")
 	return p
 }
-
-export function getTabAutocompleteCacheSqlitePath(): string {
-	return path.join(getIndexFolderPath(), "autocompleteCache.sqlite")
-}

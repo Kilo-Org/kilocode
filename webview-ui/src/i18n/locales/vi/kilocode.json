@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
-		"freeModelsDescription": "Các mô hình miễn phí có thể có giới hạn tốc độ. Sử dụng liên kết dưới đây để tối ưu hóa việc sử dụng mô hình miễn phí của bạn!",
 		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí"
 	},
 	"notifications": {
@@ -231,6 +230,7 @@
 			},
 			"keybindingNotFound": "không tìm thấy",
 			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
+			"configureAutocompleteProfile": "Sử dụng bất kỳ mô hình nào bằng cách vào hồ sơ và cấu hình Hồ sơ có Loại Hồ sơ là Tự động hoàn thành.",
 			"model": "Mô hình",
 			"provider": "Nhà cung cấp"
 		}
@@ -262,7 +262,7 @@
 		"description": "Chọn cách định dạng các lệnh gọi công cụ trong system prompt. JSON hiện đang ở giai đoạn thử nghiệm và chủ yếu dành cho người dùng quan tâm đến việc đóng góp vào phát triển của nó.",
 		"automatic": "Để Kilo quyết định",
 		"xml": "XML",
-		"json": "JSON (thử nghiệm)"
+		"json": "JSON"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",

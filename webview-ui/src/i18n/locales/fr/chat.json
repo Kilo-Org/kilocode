@@ -91,24 +91,17 @@
 		"tooltip": "Annuler l'opération actuelle"
 	},
 	"scrollToBottom": "Défiler jusqu'au bas du chat",
-	"about": "Générer, refactoriser et déboguer du code avec l'assistance de l'IA. Consultez notre <DocsLink>documentation</DocsLink> pour en savoir plus.",
-	"onboarding": "Grâce aux dernières avancées en matière de capacités de codage agent, je peux gérer des tâches complexes de développement logiciel étape par étape. Avec des outils qui me permettent de créer et d'éditer des fichiers, d'explorer des projets complexes, d'utiliser le navigateur et d'exécuter des commandes de terminal (après votre autorisation), je peux vous aider de manières qui vont au-delà de la complétion de code ou du support technique. Je peux même utiliser MCP pour créer de nouveaux outils et étendre mes propres capacités.",
+	"about": "Génère, refactorise et débogue du code avec l'assistance de l'IA. Consulte notre <DocsLink>documentation</DocsLink> pour en savoir plus.",
+	"docs": "Consultez notre <DocsLink>documentation</DocsLink> pour en savoir plus.",
+	"onboarding": "Votre liste de tâches dans cet espace de travail est vide.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Orchestration de Tâches",
-			"description": "Divisez les tâches en parties plus petites et gérables."
-		},
-		"stickyModels": {
-			"title": "Modes persistants",
-			"description": "Chaque mode se souvient de votre dernier modèle utilisé"
-		},
-		"tools": {
-			"title": "Outils",
-			"description": "Permettez à l'IA de résoudre des problèmes en naviguant sur le Web, en exécutant des commandes, et plus encore."
-		},
 		"customizableModes": {
 			"title": "Modes personnalisables",
-			"description": "Des personas spécialisés avec leurs propres comportements et modèles assignés"
+			"description": "Des personas spécialisés qui restent concentrés sur la tâche et livrent des résultats."
+		},
+		"modelAgnostic": {
+			"title": "Apportez votre propre modèle",
+			"description": "Utilisez votre propre clé de fournisseur ou même exécutez une inférence locale — pas de majoration, pas de verrouillage, pas de restrictions"
 		}
 	},
 	"selectMode": "Sélectionner le mode d'interaction",
@@ -156,6 +149,9 @@
 		"initializingWarning": "Initialisation du point de contrôle en cours... Si cela prend trop de temps, tu peux désactiver les points de contrôle dans les <settingsLink>paramètres</settingsLink> et redémarrer ta tâche.",
 		"menu": {
 			"viewDiff": "Voir les différences",
+			"more": "Plus d'options",
+			"viewDiffFromInit": "Voir toutes les modifications",
+			"viewDiffWithCurrent": "Voir les modifications depuis ce point de contrôle",
 			"restore": "Restaurer le point de contrôle",
 			"restoreFiles": "Restaurer les fichiers",
 			"restoreFilesDescription": "Restaure les fichiers de votre projet à un instantané pris à ce moment.",
@@ -186,7 +182,9 @@
 		"wantsToGenerateImage": "Kilo Code veut générer une image",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code veut générer une image en dehors de l'espace de travail",
 		"wantsToGenerateImageProtected": "Kilo Code veut générer une image dans un emplacement protégé",
-		"didGenerateImage": "Kilo Code a généré une image"
+		"didGenerateImage": "Kilo Code a généré une image",
+		"wantsToDelete": "Kilo Code veut supprimer ce fichier",
+		"wantsToDeleteDirectory": "Kilo Code veut supprimer ce répertoire"
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code veut récupérer des instructions détaillées pour aider à la tâche actuelle"
@@ -272,6 +270,7 @@
 		"toggleAriaLabel": "Basculer l'approbation automatique",
 		"disabledAriaLabel": "Approbation automatique désactivée - sélectionnez d'abord les options",
 		"triggerLabelOff": "Approbation automatique désactivée",
+		"triggerLabelOffShort": "Désactivé",
 		"triggerLabel_zero": "0 approuvé automatiquement",
 		"triggerLabel_one": "1 approuvé automatiquement",
 		"triggerLabel_other": "{{count}} approuvés automatiquement",
@@ -301,6 +300,19 @@
 			"selectModel": "Sélectionnez <code>roo/code-supernova</code> du fournisseur Roo Code Cloud dans Paramètres pour commencer.",
 			"goToSettingsButton": "Aller aux Paramètres"
 		},
+		"release": {
+			"heading": "Nouveautés dans l'Extension :",
+			"openRouterEmbeddings": "Prise en charge des modèles d'embeddings OpenRouter",
+			"chutesDynamic": "Chutes charge maintenant les derniers modèles dynamiquement",
+			"queuedMessagesFix": "Corrections pour les messages en file d'attente qui se perdent"
+		},
+		"cloudAgents": {
+			"heading": "Nouveautés dans le Cloud :",
+			"prFixer": "Présentation de l'agent cloud <bold>PR Fixer</bold> pour compléter le Réviseur de PR.",
+			"prFixerDescription": "Le PR Fixer de Roo Code applique des modifications de haute qualité à vos PR, directement depuis GitHub. Invoquez-le via un commentaire de PR et il lira tout l'historique des commentaires pour comprendre le contexte, les accords et les compromis - puis implémentera la bonne correction.",
+			"tryPrFixerButton": "Essayer le PR Fixer"
+		},
+		"careers": "Aussi, <careersLink>on recrute !</careersLink>",
 		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
@@ -329,6 +341,8 @@
 		"tooltips": {
 			"expand": "Développer le bloc de code",
 			"collapse": "Réduire le bloc de code",
+			"enable_wrap": "Activer le retour à la ligne",
+			"disable_wrap": "Désactiver le retour à la ligne",
 			"copy_code": "Copier le code"
 		}
 	},
@@ -420,5 +434,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code veut exécuter une commande slash",
 		"didRun": "Kilo Code a exécuté une commande slash"
+	},
+	"todo": {
+		"partial": "{{completed}} sur {{total}} tâches terminées",
+		"complete": "{{total}} tâches terminées",
+		"updated": "La liste des tâches a été mise à jour",
+		"completed": "Terminé",
+		"started": "Commencé"
 	}
 }

@@ -9,7 +9,7 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { useStdin } from "ink"
 import readline from "node:readline"
 import { PassThrough } from "node:stream"
-import type { KeyboardProviderConfig } from "../../types/keyboard.js"
+import type { KeyboardProviderConfig, ReadlineKey } from "../../types/keyboard.js"
 import { logs } from "../../services/logs.js"
 import {
 	broadcastKeyEventAtom,
@@ -51,7 +51,9 @@ interface KeyboardProviderProps {
 }
 
 export function KeyboardProvider({ children, config = {} }: KeyboardProviderProps) {
-	const { debugKeystrokeLogging = false, escapeCodeTimeout = 0 } = config
+	// Default escapeCodeTimeout to 500ms to allow proper parsing of Kitty protocol sequences
+	// When set to 0, readline immediately processes each character, breaking up escape sequences
+	const { debugKeystrokeLogging = false, escapeCodeTimeout = 500 } = config
 
 	// Get stdin and raw mode control
 	const { stdin, setRawMode } = useStdin()
@@ -160,7 +162,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		readline.emitKeypressEvents(keypressStream, rl)
 
 		// Handle keypress events from readline
-		const handleKeypress = (_: unknown, key: any) => {
+		const handleKeypress = (_: unknown, key: ReadlineKey) => {
 			if (!key) return
 
 			// Parse the key

@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
-		"freeModelsDescription": "Bezplatné modely mohou mít limity na počet požadavků. Použij odkaz níže pro optimalizaci využití bezplatných modelů!",
 		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů"
 	},
 	"notifications": {
@@ -213,7 +212,7 @@
 		"description": "Vyber, jak jsou volání nástrojů formátována v systémovém promptu. JSON je momentálně experimentální a je určen především pro uživatele, kteří mají zájem přispět k jeho vývoji.",
 		"automatic": "Nech Kilo rozhodnout",
 		"xml": "XML",
-		"json": "JSON (experimentální)"
+		"json": "JSON"
 	},
 	"ghost": {
 		"title": "Autocomplete",
@@ -238,6 +237,7 @@
 			},
 			"keybindingNotFound": "nenalezeno",
 			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
+			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel"
 		}

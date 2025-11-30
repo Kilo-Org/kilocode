@@ -1,4 +1,14 @@
 // Mocks must come first, before imports
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 vi.mock("vscode", () => ({
 	env: {
 		language: "en",
@@ -96,7 +106,7 @@ describe("File-Based Custom System Prompt", () => {
 			const prompt = await SYSTEM_PROMPT(
 				mockContext,
 				"test/path", // Using a relative path without leading slash
-				false, // supportsComputerUse
+				false, // supportsImages
 				undefined, // mcpHub
 				undefined, // diffStrategy
 				undefined, // browserViewportSize
@@ -135,7 +145,7 @@ describe("File-Based Custom System Prompt", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"test/path", // Using a relative path without leading slash
-			false, // supportsComputerUse
+			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize
@@ -183,7 +193,7 @@ describe("File-Based Custom System Prompt", () => {
 		const prompt = await SYSTEM_PROMPT(
 			mockContext,
 			"test/path", // Using a relative path without leading slash
-			false, // supportsComputerUse
+			false, // supportsImages
 			undefined, // mcpHub
 			undefined, // diffStrategy
 			undefined, // browserViewportSize

@@ -102,7 +102,8 @@
 		"placeholder": "عدّل رسالتك..."
 	},
 	"scrollToBottom": "انزل لنهاية المحادثة",
-	"about": "أنشئ، أعِد هيكلة، واصلِح الأكواد بمساعدة الذكاء. اطّلع على <DocsLink>التوثيق</DocsLink> لتعرف أكثر.",
+	"about": "أنشئ، أعِد هيكلة، واصلِح الأكواد بمساعدة الذكاء الاصطناعي. اطّلع على <DocsLink>التوثيق</DocsLink> لتعرف أكثر.",
+	"docs": "راجع <DocsLink>التوثيق</DocsLink> للبدء",
 	"onboarding": "قائمة المهام فاضية في هالمساحة.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -120,6 +121,10 @@
 		"customizableModes": {
 			"title": "أنماط قابلة للتخصيص",
 			"description": "شخصيات متخصصة لها سلوكها ونماذجها الخاصة"
+		},
+		"modelAgnostic": {
+			"title": "استخدم نموذجك الخاص، بدون رسوم أو قيود",
+			"description": "استخدم مفتاح موفّرك الخاص أو حتى شغّل الاستنتاج محلياً — Kilo Code ما يفرض رسوم عليه"
 		}
 	},
 	"selectMode": "اختر نمط التفاعل",
@@ -163,6 +168,8 @@
 		"initializingWarning": "لا يزال يتم إنشاء نقطة الحفظ... إذا طولت، تقدر تطفّي نقاط الحفظ من <settingsLink>الإعدادات</settingsLink> وتعيد تشغيل المهمة.",
 		"menu": {
 			"viewDiff": "عرض الفرق",
+			"viewDiffFromInit": "عرض كل التغييرات",
+			"viewDiffWithCurrent": "عرض التغييرات منذ هذه النقطة",
 			"restore": "استرجاع نقطة الحفظ",
 			"restoreFiles": "استرجاع الملفات",
 			"restoreFilesDescription": "يعيد ملفات مشروعك لنسخة محفوظة عند هذي النقطة.",
@@ -170,7 +177,8 @@
 			"confirm": "تأكيد",
 			"cancel": "إلغاء",
 			"cannotUndo": "هذا الإجراء ما تقدر تتراجع عنه.",
-			"restoreFilesAndTaskDescription": "يعيد ملفات مشروعك لنسخة محفوظة عند هذي النقطة ويحذف كل الرسائل بعدها."
+			"restoreFilesAndTaskDescription": "يعيد ملفات مشروعك لنسخة محفوظة عند هذي النقطة ويحذف كل الرسائل بعدها.",
+			"more": "خيارات إضافية"
 		},
 		"current": "الحالية"
 	},
@@ -202,7 +210,9 @@
 		"didSearchReplace": "Kilo Code أجرى بحثًا واستبدالًا في هذا الملف:",
 		"wantsToInsert": "Kilo Code يريد إدراج محتوى في هذا الملف:",
 		"wantsToInsertWithLineNumber": "Kilo Code يريد إدراج محتوى في هذا الملف عند السطر {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code يريد إضافة محتوى في نهاية هذا الملف:"
+		"wantsToInsertAtEnd": "Kilo Code يريد إضافة محتوى في نهاية هذا الملف:",
+		"wantsToDelete": "Kilo Code يريد حذف هذا الملف",
+		"wantsToDeleteDirectory": "Kilo Code يريد حذف هذا المجلد"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code يريد عرض الملفات العلوية في هذا المجلد:",
@@ -295,6 +305,7 @@
 		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية",
 		"toggleAriaLabel": "تبديل الموافقة التلقائية",
 		"disabledAriaLabel": "الموافقة التلقائية معطّلة - اختر الخيارات أولاً",
+		"triggerLabelOffShort": "مطفأة",
 		"tooltip": "الموافقة التلقائية على طلبات استخدام الأدوات",
 		"all": "الكل",
 		"triggerLabel_zero": "الموافقة التلقائية: مطفأة",
@@ -315,6 +326,19 @@
 			"connectButton": "اتصل بـ Roo Code Cloud",
 			"selectModel": "اختر <code>roo/sonic</code> من موفر Roo Code Cloud في<br/><settingsLink>الإعدادات</settingsLink> لتبدأ"
 		},
+		"release": {
+			"heading": "الجديد في الإضافة:",
+			"openRouterEmbeddings": "دعم نماذج التضمين من OpenRouter",
+			"chutesDynamic": "Chutes الآن يحمّل أحدث النماذج ديناميكياً",
+			"queuedMessagesFix": "إصلاحات لمشكلة فقدان الرسائل في الطابور"
+		},
+		"cloudAgents": {
+			"heading": "الجديد في السحابة:",
+			"prFixer": "نقدّم وكيل <bold>PR Fixer</bold> السحابي لاستكمال PR Reviewer.",
+			"prFixerDescription": "PR Fixer يطبّق تغييرات عالية الجودة على طلبات السحب مباشرة من GitHub. فعّله عبر تعليق في PR وسيقرأ كامل سجل التعليقات لفهم السياق والاتفاقات والمقايضات - ثم ينفّذ الإصلاح المناسب.",
+			"tryPrFixerButton": "جرّب PR Fixer"
+		},
+		"careers": "أيضاً، <careersLink>نحن نوظّف!</careersLink>",
 		"description": "Kilo Code {{version}} يجلب ميزات وتحسينات كبيرة بناءً على ملاحظاتكم.",
 		"whatsNew": "الجديد",
 		"feature1": "<bold>إطلاق سوق Kilo Code</bold>: السوق صار متاح! اكتشف وثبّت الأنماط و MCPs بسهولة.",
@@ -443,5 +467,12 @@
 	"feedback": {
 		"youSaid": "قلت"
 	},
-	"generateCommitMessage": "إنشاء رسالة الالتزام"
+	"generateCommitMessage": "إنشاء رسالة الالتزام",
+	"todo": {
+		"partial": "{{completed}} من {{total}} مهام مكتملة",
+		"complete": "{{total}} مهام مكتملة",
+		"updated": "تم تحديث قائمة المهام",
+		"completed": "مكتملة",
+		"started": "بدأت"
+	}
 }

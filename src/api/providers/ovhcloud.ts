@@ -69,7 +69,9 @@ export class OVHcloudAIEndpointsHandler extends RouterProvider implements Single
 					type: "usage",
 					inputTokens: usage.prompt_tokens || 0,
 					outputTokens: usage.completion_tokens || 0,
-					totalCost: calculateApiCostOpenAI(info, usage.prompt_tokens || 0, usage.completion_tokens || 0),
+					totalCost:
+						calculateApiCostOpenAI(info, usage.prompt_tokens || 0, usage.completion_tokens || 0)
+							.totalCost || undefined,
 				}
 			}
 		}

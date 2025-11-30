@@ -1,3 +1,4 @@
+import stringify from "safe-stable-stringify"
 import { ToolUse } from "../../shared/tools"
 import { t } from "../../i18n"
 
@@ -95,26 +96,16 @@ export class ToolRepetitionDetector {
 	 * @returns JSON string representation of the tool use with sorted parameter keys
 	 */
 	private serializeToolUse(toolUse: ToolUse): string {
-		// Create a new parameters object with alphabetically sorted keys
-		const sortedParams: Record<string, unknown> = {}
-
-		// Get parameter keys and sort them alphabetically
-		const sortedKeys = Object.keys(toolUse.params).sort()
-
-		// Populate the sorted parameters object in a type-safe way
-		for (const key of sortedKeys) {
-			if (Object.prototype.hasOwnProperty.call(toolUse.params, key)) {
-				sortedParams[key] = toolUse.params[key as keyof typeof toolUse.params]
-			}
-		}
-
-		// Create the object with the tool name and sorted parameters
-		const toolObject = {
+		const toolObject: Record<string, any> = {
 			name: toolUse.name,
-			parameters: sortedParams,
+			params: toolUse.params,
 		}
 
-		// Convert to a canonical JSON string
-		return JSON.stringify(toolObject)
+		// Only include nativeArgs if it has content
+		if (toolUse.nativeArgs && Object.keys(toolUse.nativeArgs).length > 0) {
+			toolObject.nativeArgs = toolUse.nativeArgs
+		}
+
+		return stringify(toolObject)
 	}
 }

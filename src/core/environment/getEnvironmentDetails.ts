@@ -26,6 +26,30 @@ import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { TelemetryService } from "@roo-code/telemetry"
 import { t } from "../../i18n"
 import { NativeOllamaHandler } from "../../api/providers/native-ollama"
+
+// Multiplier for fetching extra files when filtering is enabled to ensure enough non-ignored files; only applied when showRooIgnoredFiles is false.
+const FILE_LIST_OVER_FETCH_MULTIPLIER = 3
+
+function trimFileList(fileListStr: string, maxFiles: number) {
+	let lines = fileListStr.split("\n")
+	if (lines.length <= maxFiles) {
+		return fileListStr
+	}
+
+	const lastLine = lines[lines.length - 1]
+	if (lastLine.startsWith("(File list truncated.")) {
+		// Remove last 3 items from lines (two empty lines and truncation message)
+		lines = lines.slice(0, -3)
+	}
+
+	// Truncate lines to maxFiles
+	lines = lines.slice(0, maxFiles)
+
+	const truncationMsg =
+		"(File list truncated. Use list_files on specific subdirectories if you need to explore further.)"
+
+	return lines.join("\n") + "\n\n" + truncationMsg
+}
 // kilocode_change end
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
@@ -197,24 +221,32 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		details += terminalDetails
 	}
 
-	// Add current time information with timezone.
-	const now = new Date()
+	// Get settings for time and cost display
+	const { includeCurrentTime = true, includeCurrentCost = true } = state ?? {}
 
-	const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-	const timeZoneOffset = -now.getTimezoneOffset() / 60 // Convert to hours and invert sign to match conventional notation
-	const timeZoneOffsetHours = Math.floor(Math.abs(timeZoneOffset))
-	const timeZoneOffsetMinutes = Math.abs(Math.round((Math.abs(timeZoneOffset) - timeZoneOffsetHours) * 60))
-	const timeZoneOffsetStr = `${timeZoneOffset >= 0 ? "+" : "-"}${timeZoneOffsetHours}:${timeZoneOffsetMinutes.toString().padStart(2, "0")}`
-	details += `\n\n# Current Time\nCurrent time in ISO 8601 UTC format: ${now.toISOString()}\nUser time zone: ${timeZone}, UTC${timeZoneOffsetStr}`
+	// Add current time information with timezone (if enabled).
+	if (includeCurrentTime) {
+		const now = new Date()
 
-	// Add context tokens information.
-	const { contextTokens, totalCost } = getApiMetrics(cline.clineMessages)
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+		const timeZoneOffset = -now.getTimezoneOffset() / 60 // Convert to hours and invert sign to match conventional notation
+		const timeZoneOffsetHours = Math.floor(Math.abs(timeZoneOffset))
+		const timeZoneOffsetMinutes = Math.abs(Math.round((Math.abs(timeZoneOffset) - timeZoneOffsetHours) * 60))
+		const timeZoneOffsetStr = `${timeZoneOffset >= 0 ? "+" : "-"}${timeZoneOffsetHours}:${timeZoneOffsetMinutes.toString().padStart(2, "0")}`
+		details += `\n\n# Current Time\nCurrent time in ISO 8601 UTC format: ${now.toISOString()}\nUser time zone: ${timeZone}, UTC${timeZoneOffsetStr}`
+	}
+
+	// Add context tokens information (if enabled).
+	if (includeCurrentCost) {
+		const { totalCost } = getApiMetrics(cline.clineMessages)
+		details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
+	}
 
 	// kilocode_change start
 	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof NativeOllamaHandler) {
+	if (cline.api instanceof OpenRouterHandler || ("fetchModel" in cline.api && cline.api.fetchModel)) {
 		try {
-			await cline.api.fetchModel()
+			await (cline.api.fetchModel as () => Promise<unknown>)()
 		} catch (e) {
 			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
 			await cline.say(
@@ -226,9 +258,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	}
 	// kilocode_change end
 
-	const { id: modelId, info: modelInfo } = cline.api.getModel()
-
-	details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
+	const { id: modelId } = cline.api.getModel()
 
 	// Add current mode and any mode-specific warnings.
 	const {
@@ -276,8 +306,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			if (maxFiles === 0) {
 				details += "(Workspace files context disabled. Use list_files to explore if needed.)"
 			} else {
-				const [files, didHitLimit] = await listFiles(cline.cwd, true, maxFiles)
 				const { showRooIgnoredFiles = false } = state ?? {}
+
+				// kilocode_change start
+				// Only apply multiplier when filtering will remove files (showRooIgnoredFiles = false)
+				// When showRooIgnoredFiles = true, ignored files are just marked with lock symbol, not removed
+				const fetchLimit = showRooIgnoredFiles ? maxFiles : maxFiles * FILE_LIST_OVER_FETCH_MULTIPLIER
+				const [files, didHitLimit] = await listFiles(cline.cwd, true, fetchLimit)
+				// kilocode_change end
 
 				const result = formatResponse.formatFilesList(
 					cline.cwd,
@@ -287,7 +323,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 					showRooIgnoredFiles,
 				)
 
-				details += result
+				// kilocode_change start
+				if (!showRooIgnoredFiles) {
+					// Trim because we over-fetched
+					details += trimFileList(result, maxFiles)
+				} else {
+					details += result
+				}
+				// kilocode_change end
 			}
 		}
 	}

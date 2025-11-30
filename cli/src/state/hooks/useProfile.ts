@@ -75,9 +75,10 @@ export function useProfile(): UseProfileReturn {
 	const { sendMessage } = useWebviewMessage()
 
 	// Get current organization
-	const currentOrganization = currentProvider?.kilocodeOrganizationId
-		? getCurrentOrganization(currentProvider.kilocodeOrganizationId)
-		: null
+	const currentOrganization =
+		currentProvider?.kilocodeOrganizationId && typeof currentProvider.kilocodeOrganizationId === "string"
+			? getCurrentOrganization(currentProvider.kilocodeOrganizationId)
+			: null
 
 	/**
 	 * Fetch profile data from the extension

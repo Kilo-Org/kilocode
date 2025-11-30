@@ -1,12 +1,10 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import {
-	getActiveToolUseStyle, // kilocode_change
-	type ModelInfo,
-} from "@roo-code/types"
+import { type ModelInfo } from "@roo-code/types"
 
-import type { ApiHandlerOptions } from "../../shared/api"
+import { type ApiHandlerOptions, getModelMaxOutputTokens } from "../../shared/api"
+import { XmlMatcher } from "../../utils/xml-matcher"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 
@@ -17,7 +15,7 @@ import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
 import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -81,10 +79,16 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		metadata?: ApiHandlerCreateMessageMetadata,
 		requestOptions?: OpenAI.RequestOptions,
 	) {
-		const {
-			id: model,
-			info: { maxTokens: max_tokens },
-		} = this.getModel()
+		const { id: model, info } = this.getModel()
+
+		// Centralized cap: clamp to 20% of the context window (unless provider-specific exceptions apply)
+		const max_tokens =
+			getModelMaxOutputTokens({
+				modelId: model,
+				model: info,
+				settings: this.options,
+				format: "openai",
+			}) ?? undefined
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
 
@@ -114,16 +118,41 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 	): ApiStream {
 		const stream = await this.createStream(systemPrompt, messages, metadata)
 
-		for await (const chunk of stream) {
-			verifyFinishReason(chunk.choices[0]) // kilocode_change
-			const delta = chunk.choices[0]?.delta
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
 
-			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
+		for await (const chunk of stream) {
+			verifyFinishReason(chunk.choices?.[0]) // kilocode_change
+
+			const delta = chunk.choices?.[0]?.delta
+
+			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
+
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const chunkAny = chunk as any
+			if (chunkAny.base_resp?.status_code && chunkAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${chunkAny.base_resp.status_code}): ${chunkAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
 
 			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				for (const processedChunk of matcher.update(delta.content)) {
+					yield processedChunk
+				}
+			}
+
+			if (delta && "reasoning_content" in delta) {
+				const reasoning_content = (delta.reasoning_content as string | undefined) || ""
+				if (reasoning_content?.trim()) {
+					yield { type: "reasoning", text: reasoning_content }
 				}
 			}
 
@@ -134,6 +163,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 					outputTokens: chunk.usage.completion_tokens || 0,
 				}
 			}
+		}
+
+		// Process any remaining content
+		for (const processedChunk of matcher.final()) {
+			yield processedChunk
 		}
 	}
 
@@ -146,7 +180,15 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				messages: [{ role: "user", content: prompt }],
 			})
 
-			return response.choices[0]?.message.content || ""
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const responseAny = response as any
+			if (responseAny.base_resp?.status_code && responseAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${responseAny.base_resp.status_code}): ${responseAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
+
+			return response.choices?.[0]?.message.content || ""
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}

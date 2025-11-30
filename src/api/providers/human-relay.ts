@@ -70,7 +70,6 @@ export class HumanRelayHandler implements ApiHandler, SingleCompletionHandler {
 				contextWindow: 100000,
 				supportsImages: true,
 				supportsPromptCache: false,
-				supportsComputerUse: true,
 				inputPrice: 0,
 				outputPrice: 0,
 				description: "Calling web-side AI model through human relay",

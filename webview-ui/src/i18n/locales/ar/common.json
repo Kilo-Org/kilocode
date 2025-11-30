@@ -118,5 +118,9 @@
 		"months_ago": "منذ {{count}} شهر",
 		"year_ago": "منذ سنة",
 		"years_ago": "منذ {{count}} سنة"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "انتظرنا {{timeout}} ثانية لتهيئة نقطة الحفظ. إذا كنت لا تحتاج ميزة نقاط الحفظ، يرجى إيقافها في <settingsLink>إعدادات نقاط الحفظ</settingsLink>.",
+		"init_checkpoint_fail_long_time": "استغرقت تهيئة نقطة الحفظ أكثر من {{timeout}} ثانية، لذلك تم تعطيل نقاط الحفظ لهذه المهمة. يمكنك تعطيل نقاط الحفظ أو تمديد وقت الانتظار في <settingsLink>إعدادات نقاط الحفظ</settingsLink>."
 	}
 }

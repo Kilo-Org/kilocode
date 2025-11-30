@@ -14,6 +14,7 @@ export default defineConfig({
 		environment: "jsdom",
 		include: ["src/**/*.spec.ts", "src/**/*.spec.tsx"],
 		onConsoleLog,
+		retry: process.env.CI ? 2 : 0, // kilocode_change: retry tests in CI environments
 	},
 	resolve: {
 		alias: {

@@ -4,6 +4,7 @@
 
 import type { ExtensionChatMessage, ProviderSettings } from "../types/messages.js"
 import type { RouterModels } from "../constants/providers/models.js"
+import type { ProviderConfig } from "../config/types.js"
 import { getCurrentModelId, getModelsByProvider } from "../constants/providers/models.js"
 import { logs } from "../services/logs.js"
 
@@ -39,9 +40,10 @@ function getContextWindowFromModel(apiConfig: ProviderSettings | null, routerMod
 		// Get current model ID
 		const currentModelId = getCurrentModelId({
 			providerConfig: {
-				provider: apiConfig.apiProvider,
+				id: "default",
+				provider: apiConfig.apiProvider || "",
 				...apiConfig,
-			} as any,
+			} as ProviderConfig,
 			routerModels,
 			kilocodeDefaultModel: apiConfig.kilocodeModel || "",
 		})
@@ -92,7 +94,7 @@ function getContextTokensFromMessages(messages: ExtensionChatMessage[]): number 
 			}
 		} else if (message.type === "say" && message.say === "condense_context") {
 			// Check if message has contextCondense metadata
-			const contextCondense = (message as any).contextCondense
+			const contextCondense = message.metadata as { newContextTokens?: number } | undefined
 			if (contextCondense && typeof contextCondense.newContextTokens === "number") {
 				return contextCondense.newContextTokens
 			}
@@ -177,7 +179,7 @@ export function calculateContextUsage(
 		}
 
 		// Get maxTokens setting if available
-		const maxTokens = apiConfig?.apiModelMaxTokens
+		const maxTokens = typeof apiConfig?.modelMaxTokens === "number" ? apiConfig.modelMaxTokens : undefined
 
 		// Calculate token distribution
 		const distribution = calculateTokenDistribution(contextWindow, contextTokens, maxTokens)

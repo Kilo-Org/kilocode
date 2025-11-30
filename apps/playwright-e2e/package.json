@@ -12,14 +12,14 @@
 		"clean": "rimraf test-results playwright-report .turbo"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.53.1",
+		"@playwright/test": "^1.56.1",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@roo-code/types": "workspace:^",
-		"@types/node": "^22.15.29",
+		"@types/node": "^20.x",
 		"@vscode/test-electron": "^2.4.0",
 		"dotenv": "^16.4.5",
-		"rimraf": "^6.0.1",
+		"rimraf": "^6.1.0",
 		"typescript": "5.8.3"
 	},
 	"dependencies": {

@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Qdrant वेक्टर डेटाबेस से कनेक्ट करने में विफल। कृपया सुनिश्चित करें कि Qdrant चल रहा है और {{qdrantUrl}} पर पहुंच योग्य है। त्रुटि: {{errorMessage}}",
-		"vectorDimensionMismatch": "नए मॉडल के लिए वेक्टर इंडेक्स को अपडेट करने में विफल। कृपया इंडेक्स को साफ़ करने और फिर से शुरू करने का प्रयास करें। विवरण: {{errorMessage}}"
+		"vectorDimensionMismatch": "नए मॉडल के लिए वेक्टर इंडेक्स को अपडेट करने में विफल। कृपया इंडेक्स को साफ़ करने और फिर से शुरू करने का प्रयास करें। विवरण: {{errorMessage}}",
+		"lancedbStoreInitFailed": "LanceDB वेक्टर स्टोर प्रारंभ करने में विफल: {{errorMessage}}",
+		"lancedbLoadFailed": "LanceDB मॉड्यूल लोड करने में विफल: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "प्रमाणीकरण विफल। कृपया सेटिंग्स में अपनी एपीआई कुंजी जांचें।",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "एम्बेडर बनाने के लिए OpenAI संगत कॉन्फ़िगरेशन गायब है",
 		"geminiConfigMissing": "एम्बेडर बनाने के लिए Gemini कॉन्फ़िगरेशन गायब है",
 		"mistralConfigMissing": "एम्बेडर निर्माण के लिए मिस्ट्रल कॉन्फ़िगरेशन गायब है",
+		"openRouterConfigMissing": "एम्बेडर निर्माण के लिए OpenRouter कॉन्फ़िगरेशन गायब है",
 		"vercelAiGatewayConfigMissing": "एम्बेडर निर्माण के लिए Vercel AI Gateway कॉन्फ़िगरेशन गायब है",
 		"invalidEmbedderType": "अमान्य एम्बेडर प्रकार कॉन्फ़िगर किया गया: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "प्रदाता '{{provider}}' के साथ मॉडल '{{modelId}}' के लिए वेक्टर आयाम निर्धारित नहीं कर सका। कृपया सुनिश्चित करें कि OpenAI-संगत प्रदाता सेटिंग्स में 'एम्बेडिंग आयाम' सही तरीके से सेट है।",

@@ -10,6 +10,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 ## 创建工作流
 
 工作流是存储在 `.kilocode/workflows/` 中的 markdown 文件：
+
 - **全局工作流**：`~/.kilocode/workflows/`（在所有项目中可用）
 - **项目工作流**：`[project]/.kilocode/workflows/`（项目特定）
 
@@ -22,6 +23,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 ### 工作流功能
 
 工作流可以利用：
+
 - [内置工具](/features/tools/tool-use-overview)：[`read_file()`](/features/tools/read-file)、[`search_files()`](/features/tools/search-files)、[`execute_command()`](/features/tools/execute-command)
 - CLI 工具：`gh`、`docker`、`npm`、自定义脚本
 - [MCP 集成](/features/mcp/overview)：Slack、数据库、API
@@ -30,6 +32,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 ## 常见工作流模式
 
 **发布管理**
+
 ```markdown
 1. 收集自上次发布以来合并的 PR
 2. 从提交消息生成更新日志
@@ -39,6 +42,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 ```
 
 **项目设置**
+
 ```markdown
 1. 克隆仓库模板
 2. 安装依赖项（`npm install`、`pip install -r requirements.txt`）
@@ -48,6 +52,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 ```
 
 **代码审查准备**
+
 ```markdown
 1. 搜索 TODO 注释和 debug 语句
 2. 运行 linting 和格式化
@@ -73,6 +78,7 @@ Workflows 通过为 Kilo Code 定义分步指令来自动化重复性任务。�
 5. 使用 `ask_followup_question` 从用户那里获取 PR 标题和描述
 
 所需参数（如果未提供则询问）：
+
 - 分支名称
 - 要分配的审阅者
 ```

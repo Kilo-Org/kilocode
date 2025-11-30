@@ -8,7 +8,7 @@ import { extractTextFromFile } from "../../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../../services/tree-sitter"
 import { isBinaryFile } from "isbinaryfile"
 import { ReadFileToolUse, ToolParamName, ToolResponse } from "../../../shared/tools"
-import { readFileTool } from "../readFileTool"
+import { readFileTool } from "../ReadFileTool"
 import { formatResponse } from "../../prompts/responses"
 import { DEFAULT_MAX_IMAGE_FILE_SIZE_MB, DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB } from "../helpers/imageHelpers"
 
@@ -201,13 +201,13 @@ function createMockCline(): any {
 		recordToolUsage: vi.fn().mockReturnValue(undefined),
 		recordToolError: vi.fn().mockReturnValue(undefined),
 		didRejectTool: false,
+		getTokenUsage: vi.fn().mockReturnValue({
+			contextTokens: 10000,
+		}),
 		// CRITICAL: Always ensure image support is enabled
 		api: {
 			getModel: vi.fn().mockReturnValue({
-				info: {
-					supportsImages: true,
-					contextWindow: 100000, // Add context window for token limit calculations
-				},
+				info: { supportsImages: true, contextWindow: 200000 },
 			}),
 			countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 		},
@@ -325,16 +325,14 @@ describe("read_file tool with maxReadFileLine setting", () => {
 			partial: false,
 		}
 
-		await readFileTool(
-			mockCline,
-			toolUse,
-			mockCline.ask,
-			vi.fn(),
-			(result: ToolResponse) => {
+		await readFileTool.handle(mockCline, toolUse, {
+			askApproval: mockCline.ask,
+			handleError: vi.fn(),
+			pushToolResult: (result: ToolResponse) => {
 				toolResult = result
 			},
-			(_: ToolParamName, content?: string) => content ?? "",
-		)
+			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+		})
 
 		return toolResult
 	}
@@ -418,6 +416,61 @@ describe("read_file tool with maxReadFileLine setting", () => {
 			expect(result).toContain(`<content lines="1-3">`)
 			expect(result).toContain(`<list_code_definition_names>`)
 			expect(result).toContain("<notice>Showing only 3 of 5 total lines")
+		})
+
+		it("should truncate code definitions when file exceeds maxReadFileLine", async () => {
+			// Setup - file with 100 lines but we'll only read first 30
+			const content = "Line 1\nLine 2\nLine 3"
+			const numberedContent = "1 | Line 1\n2 | Line 2\n3 | Line 3"
+			const fullDefinitions = `# file.txt
+10--20 | function foo() {
+50--60 | function bar() {
+80--90 | function baz() {`
+			const truncatedDefinitions = `# file.txt
+10--20 | function foo() {`
+
+			mockedReadLines.mockResolvedValue(content)
+			mockedParseSourceCodeDefinitionsForFile.mockResolvedValue(fullDefinitions)
+			addLineNumbersMock.mockReturnValue(numberedContent)
+
+			// Execute with maxReadFileLine = 30
+			const result = await executeReadFileTool({}, { maxReadFileLine: 30, totalLines: 100 })
+
+			// Verify that only definitions within the first 30 lines are included
+			expect(result).toContain(`<file><path>${testFilePath}</path>`)
+			expect(result).toContain(`<content lines="1-30">`)
+			expect(result).toContain(`<list_code_definition_names>`)
+
+			// Should include foo (starts at line 10) but not bar (starts at line 50) or baz (starts at line 80)
+			expect(result).toContain("10--20 | function foo()")
+			expect(result).not.toContain("50--60 | function bar()")
+			expect(result).not.toContain("80--90 | function baz()")
+
+			expect(result).toContain("<notice>Showing only 30 of 100 total lines")
+		})
+
+		it("should handle truncation when all definitions are beyond the line limit", async () => {
+			// Setup - all definitions start after maxReadFileLine
+			const content = "Line 1\nLine 2\nLine 3"
+			const numberedContent = "1 | Line 1\n2 | Line 2\n3 | Line 3"
+			const fullDefinitions = `# file.txt
+50--60 | function foo() {
+80--90 | function bar() {`
+
+			mockedReadLines.mockResolvedValue(content)
+			mockedParseSourceCodeDefinitionsForFile.mockResolvedValue(fullDefinitions)
+			addLineNumbersMock.mockReturnValue(numberedContent)
+
+			// Execute with maxReadFileLine = 30
+			const result = await executeReadFileTool({}, { maxReadFileLine: 30, totalLines: 100 })
+
+			// Verify that only the header is included (all definitions filtered out)
+			expect(result).toContain(`<file><path>${testFilePath}</path>`)
+			expect(result).toContain(`<content lines="1-30">`)
+			expect(result).toContain(`<list_code_definition_names>`)
+			expect(result).toContain("# file.txt")
+			expect(result).not.toContain("50--60 | function foo()")
+			expect(result).not.toContain("80--90 | function bar()")
 		})
 	})
 
@@ -581,16 +634,14 @@ describe("read_file tool XML output structure", () => {
 		}
 
 		// Execute the tool
-		await readFileTool(
-			mockCline,
-			toolUse,
-			mockCline.ask,
-			vi.fn(),
-			(result: ToolResponse) => {
+		await readFileTool.handle(mockCline, toolUse, {
+			askApproval: mockCline.ask,
+			handleError: vi.fn(),
+			pushToolResult: (result: ToolResponse) => {
 				toolResult = result
 			},
-			(param: ToolParamName, content?: string) => content ?? "",
-		)
+			removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+		})
 
 		return toolResult
 	}
@@ -687,16 +738,14 @@ describe("read_file tool XML output structure", () => {
 				}
 
 				let localResult: ToolResponse | undefined
-				await readFileTool(
-					mockCline,
-					toolUse,
-					mockCline.ask,
-					vi.fn(),
-					(result: ToolResponse) => {
+				await readFileTool.handle(mockCline, toolUse, {
+					askApproval: mockCline.ask,
+					handleError: vi.fn(),
+					pushToolResult: (result: ToolResponse) => {
 						localResult = result
 					},
-					(_: ToolParamName, content?: string) => content ?? "",
-				)
+					removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+				})
 				// In multi-image scenarios, the result is pushed to pushToolResult, not returned directly.
 				// We need to check the mock's calls to get the result.
 				if (mockCline.pushToolResult.mock.calls.length > 0) {
@@ -1309,16 +1358,14 @@ describe("read_file tool XML output structure", () => {
 			}
 
 			// Execute the tool
-			await readFileTool(
-				mockCline,
-				toolUse,
-				mockCline.ask,
-				vi.fn(),
-				(result: ToolResponse) => {
+			await readFileTool.handle(mockCline, toolUse, {
+				askApproval: mockCline.ask,
+				handleError: vi.fn(),
+				pushToolResult: (result: ToolResponse) => {
 					toolResult = result
 				},
-				(param: ToolParamName, content?: string) => content ?? "",
-			)
+				removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+			})
 
 			// Verify
 			expect(toolResult).toBe(`<files><error>Missing required parameter</error></files>`)
@@ -1398,16 +1445,14 @@ describe("read_file tool with image support", () => {
 		console.log("Mock API:", localMockCline.api)
 		console.log("Supports images:", localMockCline.api?.getModel?.()?.info?.supportsImages)
 
-		await readFileTool(
-			localMockCline,
-			toolUse,
-			localMockCline.ask,
-			vi.fn(),
-			(result: ToolResponse) => {
+		await readFileTool.handle(localMockCline, toolUse, {
+			askApproval: localMockCline.ask,
+			handleError: vi.fn(),
+			pushToolResult: (result: ToolResponse) => {
 				toolResult = result
 			},
-			(_: ToolParamName, content?: string) => content ?? "",
-		)
+			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+		})
 
 		console.log("Result type:", Array.isArray(toolResult) ? "array" : typeof toolResult)
 		console.log("Result:", toolResult)
@@ -1562,10 +1607,7 @@ describe("read_file tool with image support", () => {
 			// Setup - simulate read error
 			mockedFsReadFile.mockRejectedValue(new Error("Failed to read image"))
 
-			// Create a spy for handleError
-			const handleErrorSpy = vi.fn()
-
-			// Execute with the spy
+			// Execute
 			const argsContent = `<file><path>${testImagePath}</path></file>`
 			const toolUse: ReadFileToolUse = {
 				type: "tool_use",
@@ -1574,20 +1616,19 @@ describe("read_file tool with image support", () => {
 				partial: false,
 			}
 
-			await readFileTool(
-				localMockCline,
-				toolUse,
-				localMockCline.ask,
-				handleErrorSpy, // Use our spy here
-				(result: ToolResponse) => {
+			await readFileTool.handle(localMockCline, toolUse, {
+				askApproval: localMockCline.ask,
+				handleError: vi.fn(),
+				pushToolResult: (result: ToolResponse) => {
 					toolResult = result
 				},
-				(_: ToolParamName, content?: string) => content ?? "",
-			)
+				removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+			})
 
 			// Verify error handling
 			expect(toolResult).toContain("<error>Error reading image file: Failed to read image</error>")
-			expect(handleErrorSpy).toHaveBeenCalled()
+			// Verify that say was called to show error to user
+			expect(localMockCline.say).toHaveBeenCalledWith("error", expect.stringContaining("Failed to read image"))
 		})
 	})
 

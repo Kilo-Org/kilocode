@@ -99,7 +99,7 @@ describe("context utilities", () => {
 			}
 
 			const routerModels: Partial<RouterModels> = {
-				"kilocode-openrouter": {
+				kilocode: {
 					"anthropic/claude-sonnet-4.5": {
 						contextWindow: 200000,
 						supportsPromptCache: true,

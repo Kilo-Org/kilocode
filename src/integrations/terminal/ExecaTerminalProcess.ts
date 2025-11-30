@@ -1,9 +1,24 @@
 import { execa, ExecaError } from "execa"
-import psTree from "ps-tree"
+import psList from "ps-list"
 import process from "process"
 
 import type { RooTerminal } from "./types"
 import { BaseTerminalProcess } from "./BaseTerminalProcess"
+
+// kilocode_change start
+/**
+ * Get child process IDs for a given parent PID
+ */
+async function getChildPids(parentPid: number): Promise<number[]> {
+	try {
+		const processes = await psList()
+		return processes.filter((p) => p.ppid === parentPid).map((p) => p.pid)
+	} catch (error) {
+		console.error(`Failed to get child processes for PID ${parentPid}:`, error)
+		return []
+	}
+}
+// kilocode_change end
 
 export class ExecaTerminalProcess extends BaseTerminalProcess {
 	private terminalRef: WeakRef<RooTerminal>
@@ -57,18 +72,20 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			// Find the actual command PID after a small delay
 			if (this.pid) {
 				this.pidUpdatePromise = new Promise<void>((resolve) => {
-					setTimeout(() => {
-						psTree(this.pid!, (err, children) => {
-							if (!err && children.length > 0) {
+					// kilocode_change start
+					setTimeout(async () => {
+						try {
+							const childPids = await getChildPids(this.pid!)
+							if (childPids.length > 0) {
 								// Update PID to the first child (the actual command)
-								const actualPid = parseInt(children[0].PID)
-								if (!isNaN(actualPid)) {
-									this.pid = actualPid
-								}
+								this.pid = childPids[0]
 							}
-							resolve()
-						})
+						} catch (error) {
+							console.error(`Failed to update PID:`, error)
+						}
+						resolve()
 					}, 100)
+					// kilocode_change end
 				})
 			}
 
@@ -195,26 +212,30 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		// Continue with the rest of the abort logic
 		if (this.pid) {
 			// Also check for any child processes
-			psTree(this.pid, async (err, children) => {
-				if (!err) {
-					const pids = children.map((p) => parseInt(p.PID))
-					console.error(`[ExecaTerminalProcess#abort] SIGKILL children -> ${pids.join(", ")}`)
+			// kilocode_change start
+			;(async () => {
+				try {
+					const childPids = await getChildPids(this.pid!)
+					if (childPids.length > 0) {
+						console.error(`[ExecaTerminalProcess#abort] SIGKILL children -> ${childPids.join(", ")}`)
 
-					for (const pid of pids) {
-						try {
-							process.kill(pid, "SIGKILL")
-						} catch (e) {
-							console.warn(
-								`[ExecaTerminalProcess#abort] Failed to send SIGKILL to child PID ${pid}: ${e instanceof Error ? e.message : String(e)}`,
-							)
+						for (const pid of childPids) {
+							try {
+								process.kill(pid, "SIGKILL")
+							} catch (e) {
+								console.warn(
+									`[ExecaTerminalProcess#abort] Failed to send SIGKILL to child PID ${pid}: ${e instanceof Error ? e.message : String(e)}`,
+								)
+							}
 						}
 					}
-				} else {
+				} catch (error) {
 					console.error(
-						`[ExecaTerminalProcess#abort] Failed to get process tree for PID ${this.pid}: ${err.message}`,
+						`[ExecaTerminalProcess#abort] Failed to get child processes for PID ${this.pid}: ${error instanceof Error ? error.message : String(error)}`,
 					)
 				}
-			})
+			})()
+			// kilocode_change end
 		}
 	}
 

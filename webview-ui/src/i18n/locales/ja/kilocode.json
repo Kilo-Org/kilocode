@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
-		"freeModelsDescription": "無料モデルにはレート制限がある場合があります。下のリンクを使って無料モデルの使用を最適化しよう！",
 		"freeModelsLink": "無料・格安モデルのオプションを見る"
 	},
 	"notifications": {
@@ -109,7 +108,7 @@
 		"description": "システムプロンプトでツール呼び出しをどのようにフォーマットするかを選択します。JSONは現在実験的であり、主にその開発に貢献することに興味のあるユーザーを対象としています。",
 		"automatic": "Kiloに任せる",
 		"xml": "XML",
-		"json": "JSON（実験的）"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {
@@ -238,6 +237,7 @@
 			},
 			"keybindingNotFound": "見つかりません",
 			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
+			"configureAutocompleteProfile": "プロファイルに移動し、プロファイルタイプがオートコンプリートのプロファイルを設定することで、任意のモデルを使用できます。",
 			"model": "モデル",
 			"provider": "プロバイダー"
 		}

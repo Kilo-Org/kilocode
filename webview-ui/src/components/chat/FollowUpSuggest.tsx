@@ -108,9 +108,7 @@ export const FollowUpSuggest = ({
 				const isFirstSuggestion = index === 0
 
 				return (
-					<div
-						key={`${suggestion.answer}-${ts}`}
-						className="bg-vscode-editor-background rounded-sm w-full relative group">
+					<div key={`${suggestion.answer}-${ts}`} className="w-full relative group">
 						<Button
 							variant="outline"
 							className="text-left whitespace-normal break-words w-full h-auto px-3 py-2 justify-start pr-8"
@@ -133,7 +131,7 @@ export const FollowUpSuggest = ({
 						)}
 						<StandardTooltip content={t("chat:followUpSuggest.copyToInput")}>
 							<div
-								className="absolute cursor-pointer top-2 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+								className="absolute cursor-pointer top-1.5 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
 								onClick={(e) => {
 									e.stopPropagation()
 									// Cancel the auto-approve timer when edit button is clicked

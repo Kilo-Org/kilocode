@@ -1,4 +1,4 @@
-import type { ProviderName } from "../../types/messages.js"
+import type { ProviderName, ProviderSettings } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
 
 // Import model definitions from @roo-code/types
@@ -45,6 +45,9 @@ import {
 	claudeCodeDefaultModelId,
 	geminiCliModels,
 	geminiCliDefaultModelId,
+	minimaxModels,
+	minimaxDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId,
 } from "@roo-code/types"
 
 /**
@@ -56,12 +59,13 @@ export type RouterName =
 	| "glama"
 	| "unbound"
 	| "litellm"
-	| "kilocode-openrouter"
+	| "kilocode"
 	| "ollama"
 	| "lmstudio"
 	| "io-intelligence"
 	| "deepinfra"
 	| "vercel-ai-gateway"
+	| "ovhcloud"
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -73,18 +77,39 @@ export interface ModelInfo {
 	supportsImages?: boolean
 	supportsComputerUse?: boolean
 	supportsPromptCache: boolean
+	promptCacheRetention?: "in_memory" | "24h"
 	supportsVerbosity?: boolean
 	supportsReasoningBudget?: boolean
+	supportsReasoningBinary?: boolean
 	supportsTemperature?: boolean
+	defaultTemperature?: number
 	requiredReasoningBudget?: boolean
-	supportsReasoningEffort?: boolean
+	supportsReasoningEffort?: boolean | ("disable" | "none" | "minimal" | "low" | "medium" | "high")[]
+	requiredReasoningEffort?: boolean
+	preserveReasoning?: boolean
+	supportedParameters?: ("max_tokens" | "temperature" | "reasoning" | "include_reasoning")[]
 	inputPrice?: number
 	outputPrice?: number
 	cacheWritesPrice?: number
 	cacheReadsPrice?: number
 	description?: string
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high"
+	minTokensPerCachePoint?: number
+	maxCachePoints?: number
+	cachableFields?: string[]
 	displayName?: string | null
 	preferredIndex?: number | null
+	deprecated?: boolean
+	isFree?: boolean
+	supportsNativeTools?: boolean
+	tiers?: Array<{
+		name?: "default" | "flex" | "priority"
+		contextWindow: number
+		inputPrice?: number
+		outputPrice?: number
+		cacheWritesPrice?: number
+		cacheReadsPrice?: number
+	}>
 }
 
 export type ModelRecord = Record<string, ModelInfo>
@@ -94,17 +119,19 @@ export type RouterModels = Record<RouterName, ModelRecord>
  * Mapping from ProviderName to RouterName for model fetching
  */
 export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = {
-	kilocode: "kilocode-openrouter",
+	kilocode: "kilocode",
 	openrouter: "openrouter",
 	ollama: "ollama",
 	lmstudio: "lmstudio",
 	litellm: "litellm",
 	glama: "glama",
+	"nano-gpt": null,
 	unbound: "unbound",
 	requesty: "requesty",
 	deepinfra: "deepinfra",
 	"io-intelligence": "io-intelligence",
 	"vercel-ai-gateway": "vercel-ai-gateway",
+	ovhcloud: "ovhcloud",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,
@@ -117,6 +144,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
+	minimax: null,
 	"qwen-code": null,
 	"human-relay": null,
 	"fake-ai": null,
@@ -133,6 +161,9 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
+	inception: null,
+	synthetic: null,
+	"sap-ai-core": null,
 }
 
 /**
@@ -145,11 +176,13 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	lmstudio: "lmStudioModelId",
 	litellm: "litellmModelId",
 	glama: "glamaModelId",
+	"nano-gpt": "nanoGptModelId",
 	unbound: "unboundModelId",
 	requesty: "requestyModelId",
 	deepinfra: "deepInfraModelId",
 	"io-intelligence": "ioIntelligenceModelId",
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
+	ovhcloud: "ovhCloudAiEndpointsModelId",
 	// Providers without dynamic model support
 	anthropic: null,
 	bedrock: null,
@@ -162,6 +195,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
+	minimax: null,
 	"qwen-code": null,
 	"human-relay": null,
 	"fake-ai": null,
@@ -178,6 +212,9 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
+	inception: "inceptionLabsModelId",
+	synthetic: null,
+	"sap-ai-core": "sapAiCoreModelId",
 }
 
 /**
@@ -239,9 +276,11 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	sambanova: sambaNovaDefaultModelId,
 	featherless: featherlessDefaultModelId,
 	deepinfra: "deepseek-ai/DeepSeek-R1-0528",
+	minimax: "MiniMax-M2",
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
 	"gemini-cli": geminiCliDefaultModelId,
+	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
 }
 
 /**
@@ -301,6 +340,11 @@ export function getModelsByProvider(params: {
 			return {
 				models: moonshotModels as ModelRecord,
 				defaultModel: moonshotDefaultModelId,
+			}
+		case "minimax":
+			return {
+				models: minimaxModels as ModelRecord,
+				defaultModel: minimaxDefaultModelId,
 			}
 		case "deepseek":
 			return {
@@ -413,6 +457,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "ioIntelligenceModelId"
 		case "vercel-ai-gateway":
 			return "vercelAiGatewayModelId"
+		case "ovhcloud":
+			return "ovhCloudAiEndpointsModelId"
 		default:
 			return "apiModelId"
 	}
@@ -432,8 +478,8 @@ export function getCurrentModelId(params: {
 
 	// Special handling for vscode-lm
 	if (provider === "vscode-lm" && providerConfig.vsCodeLmModelSelector) {
-		const selector = providerConfig.vsCodeLmModelSelector as any
-		return `${selector.vendor}/${selector.family}`
+		const selector = providerConfig.vsCodeLmModelSelector as ProviderSettings["vsCodeLmModelSelector"]
+		return `${selector?.vendor}/${selector?.family}`
 	}
 
 	// Get model ID from config

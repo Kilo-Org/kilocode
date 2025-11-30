@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",
-		"freeModelsDescription": "Kostenlose Modelle können Ratenbeschränkungen haben. Nutze den Link unten, um deine kostenlose Modellnutzung zu optimieren!",
 		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken"
 	},
 	"notifications": {
@@ -231,7 +230,8 @@
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
 			},
 			"keybindingNotFound": "nicht gefunden",
-			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen."
+			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen.",
+			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst."
 		}
 	},
 	"virtualProvider": {
@@ -261,7 +261,7 @@
 		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind.",
 		"automatic": "Lass Kilo entscheiden",
 		"xml": "XML",
-		"json": "JSON (experimentell)"
+		"json": "JSON"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",

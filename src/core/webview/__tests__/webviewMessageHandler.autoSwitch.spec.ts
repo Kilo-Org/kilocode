@@ -1,3 +1,5 @@
+// kilocode_change new file
+
 import type { Mock } from "vitest"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import axios from "axios"
@@ -137,10 +139,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify organization ID was set to first org (via recursive upsertApiConfiguration call)
-			expect(mockUpsertProviderProfile).toHaveBeenCalledWith("default", {
-				kilocodeToken: "test-token",
-				kilocodeOrganizationId: "org-1",
-			})
+			expect(mockUpsertProviderProfile).toHaveBeenCalledWith(
+				"default",
+				{
+					kilocodeToken: "test-token",
+					kilocodeOrganizationId: "org-1",
+				},
+				false,
+			)
 
 			// Verify flag was set to true after the recursive call
 			expect(mockUpdateGlobalState).toHaveBeenCalledWith("hasPerformedOrganizationAutoSwitch", true)
@@ -149,9 +155,9 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(refreshOrganizationModes).toHaveBeenCalled()
 
 			// Verify models were flushed and refetched (via upsertApiConfiguration handler)
-			expect(flushModels).toHaveBeenCalledWith("kilocode-openrouter")
+			expect(flushModels).toHaveBeenCalledWith("kilocode")
 			expect(getModels).toHaveBeenCalledWith({
-				provider: "kilocode-openrouter",
+				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
 				kilocodeToken: "test-token",
 			})
@@ -217,11 +223,11 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify flushModels was called (via upsertApiConfiguration)
-			expect(flushModels).toHaveBeenCalledWith("kilocode-openrouter")
+			expect(flushModels).toHaveBeenCalledWith("kilocode")
 
 			// Verify getModels was called with organization ID (via upsertApiConfiguration)
 			expect(getModels).toHaveBeenCalledWith({
-				provider: "kilocode-openrouter",
+				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
 				kilocodeToken: "test-token",
 			})
@@ -229,7 +235,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			// Verify models were sent to webview (via upsertApiConfiguration)
 			expect(mockPostMessageToWebview).toHaveBeenCalledWith({
 				type: "routerModels",
-				routerModels: { "kilocode-openrouter": { "model-1": {}, "model-2": {} } },
+				routerModels: { kilocode: { "model-1": {}, "model-2": {} } },
 			})
 		})
 	})
@@ -344,10 +350,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(mockUpdateGlobalState).toHaveBeenCalledWith("hasPerformedOrganizationAutoSwitch", undefined)
 
 			// Verify organization ID was cleared
-			expect(mockUpsertProviderProfile).toHaveBeenCalledWith("default", {
-				kilocodeToken: "new-token",
-				kilocodeOrganizationId: undefined,
-			})
+			expect(mockUpsertProviderProfile).toHaveBeenCalledWith(
+				"default",
+				{
+					kilocodeToken: "new-token",
+					kilocodeOrganizationId: undefined,
+				},
+				false,
+			)
 		})
 
 		it("should NOT reset flag if token stays the same", async () => {
@@ -502,10 +512,14 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify first organization was selected (index 0)
-			expect(mockUpsertProviderProfile).toHaveBeenCalledWith("default", {
-				kilocodeToken: "test-token",
-				kilocodeOrganizationId: "org-1",
-			})
+			expect(mockUpsertProviderProfile).toHaveBeenCalledWith(
+				"default",
+				{
+					kilocodeToken: "test-token",
+					kilocodeOrganizationId: "org-1",
+				},
+				false,
+			)
 
 			// Verify log message mentions the correct organization
 			expect(mockLog).toHaveBeenCalledWith(

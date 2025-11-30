@@ -51,6 +51,7 @@ describe("ClineProvider", () => {
 					kilocodeToken: "test-kilo-token",
 					kilocodeOrganizationId: "org-123", // Should be preserved
 				}),
+				false, // activate parameter
 			)
 		})
 
@@ -89,6 +90,7 @@ describe("ClineProvider", () => {
 					kilocodeToken: "new-kilo-token",
 					kilocodeOrganizationId: undefined, // Should be cleared
 				}),
+				false, // activate parameter
 			)
 		})
 	})

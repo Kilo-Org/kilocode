@@ -1,24 +1,16 @@
-import React, { useCallback } from "react"
-import { Slider } from "@/components/ui"
-import { useAppTranslation } from "@/i18n/TranslationContext"
 import { DEFAULT_CONSECUTIVE_MISTAKE_LIMIT } from "@roo-code/types"
+
+import { useAppTranslation } from "@/i18n/TranslationContext"
+
+import { Slider } from "@/components/ui"
 
 interface ConsecutiveMistakeLimitControlProps {
 	value: number
 	onChange: (value: number) => void
 }
 
-export const ConsecutiveMistakeLimitControl: React.FC<ConsecutiveMistakeLimitControlProps> = ({ value, onChange }) => {
+export const ConsecutiveMistakeLimitControl = ({ value, onChange }: ConsecutiveMistakeLimitControlProps) => {
 	const { t } = useAppTranslation()
-
-	const handleValueChange = useCallback(
-		(newValue: number) => {
-			// Ensure value is not negative
-			const validValue = Math.max(0, newValue)
-			onChange(validValue)
-		},
-		[onChange],
-	)
 
 	return (
 		<div className="flex flex-col gap-1">
@@ -29,7 +21,7 @@ export const ConsecutiveMistakeLimitControl: React.FC<ConsecutiveMistakeLimitCon
 					min={0}
 					max={10}
 					step={1}
-					onValueChange={(newValue) => handleValueChange(newValue[0])}
+					onValueChange={(newValue) => onChange(Math.max(0, newValue[0]))}
 				/>
 				<span className="w-10">{Math.max(0, value ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT)}</span>
 			</div>

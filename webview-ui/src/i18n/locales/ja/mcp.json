@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "ツール",
 		"resources": "リソース",
-		"errors": "エラー"
+		"logs": "ログ"
 	},
 	"emptyState": {
 		"noTools": "ツールが見つかりません",
 		"noResources": "リソースが見つかりません",
-		"noErrors": "エラーが見つかりません"
+		"noLogs": "ログはまだありません"
 	},
 	"networkTimeout": {
 		"label": "ネットワークタイムアウト",

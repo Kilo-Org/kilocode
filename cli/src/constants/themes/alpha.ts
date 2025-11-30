@@ -13,6 +13,7 @@ import type { Theme } from "../../types/theme.js"
 export const alphaTheme: Theme = {
 	id: "alpha",
 	name: "Alpha",
+	type: "dark",
 
 	brand: {
 		primary: "#faf74f", // Kilo Code yellow

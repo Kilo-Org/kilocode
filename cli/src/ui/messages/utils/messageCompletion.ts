@@ -45,7 +45,7 @@ function isExtensionMessageComplete(message: ExtensionChatMessage): boolean {
 	// Ask messages completion logic
 	if (message.type === "ask") {
 		// These ask types don't render, so they're immediately complete
-		const nonRenderingAskTypes = ["completion_result", "command_output"]
+		const nonRenderingAskTypes = ["completion_result"]
 		if (message.ask && nonRenderingAskTypes.includes(message.ask)) {
 			return true
 		}
@@ -120,7 +120,7 @@ export function splitMessages(messages: UnifiedMessage[]): {
 	const deduplicatedMessages = deduplicateCheckpointMessages(messages)
 
 	let lastCompleteIndex = -1
-	const incompleteReasons: Array<{ index: number; reason: string; message: any }> = []
+	const incompleteReasons: Array<{ index: number; reason: string; message: unknown }> = []
 
 	// Find the last consecutive index where all messages up to that point are complete
 	for (let i = 0; i < deduplicatedMessages.length; i++) {

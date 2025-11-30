@@ -7,7 +7,12 @@ import { atom } from "jotai"
 import { atomWithReset } from "jotai/utils"
 import type { CliMessage } from "../../types/cli.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
+import type {
+	CommandSuggestion,
+	ArgumentSuggestion,
+	FileMentionSuggestion,
+	FileMentionContext,
+} from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
@@ -33,6 +38,7 @@ export const messagesAtom = atom<CliMessage[]>([])
  * Atom to track when messages have been reset/replaced
  * Increments each time replaceMessages is called to force Static component re-render
  */
+export const refreshTerminalCounterAtom = atom<number>(0)
 export const messageResetCounterAtom = atom<number>(0)
 
 /**
@@ -135,6 +141,7 @@ export type InputMode =
 	| "autocomplete" // Command autocomplete active
 	| "followup" // Followup suggestions active
 	| "history" // History navigation mode
+	| "shell" // Shell mode for command execution
 
 /**
  * Current input mode
@@ -179,6 +186,16 @@ export const suggestionsAtom = atom<CommandSuggestion[]>([])
 export const argumentSuggestionsAtom = atom<ArgumentSuggestion[]>([])
 
 /**
+ * Atom to hold file mention suggestions for autocomplete
+ */
+export const fileMentionSuggestionsAtom = atom<FileMentionSuggestion[]>([])
+
+/**
+ * Atom to hold file mention context (when cursor is in @ mention)
+ */
+export const fileMentionContextAtom = atom<FileMentionContext | null>(null)
+
+/**
  * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
  * This atom is kept for backward compatibility but will be removed in a future version.
  */
@@ -218,12 +235,16 @@ export const selectedFollowupIndexAtom = selectedIndexAtom
 // ============================================================================
 
 /**
- * Derived atom to get the total count of suggestions (command or argument)
+ * Derived atom to get the total count of suggestions (command, argument, or file mention)
  */
 export const suggestionCountAtom = atom<number>((get) => {
 	const commandSuggestions = get(suggestionsAtom)
 	const argumentSuggestions = get(argumentSuggestionsAtom)
-	return commandSuggestions.length > 0 ? commandSuggestions.length : argumentSuggestions.length
+	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
+
+	if (fileMentionSuggestions.length > 0) return fileMentionSuggestions.length
+	if (commandSuggestions.length > 0) return commandSuggestions.length
+	return argumentSuggestions.length
 })
 
 /**
@@ -266,18 +287,30 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 	const messages = get(chatMessagesAtom)
 
 	// Ask types that require user approval
-	const approvalAskTypes = ["tool", "command", "browser_action_launch", "use_mcp_server"]
+	const approvalAskTypes = [
+		"tool",
+		"command",
+		"command_output",
+		"browser_action_launch",
+		"use_mcp_server",
+		"payment_required_prompt",
+		"checkpoint_restore",
+	]
 
 	const lastMessage = messages[messages.length - 1]
+
 	if (
 		lastMessage &&
 		lastMessage.type === "ask" &&
 		!lastMessage.isAnswered &&
 		lastMessage.ask &&
-		approvalAskTypes.includes(lastMessage.ask) &&
-		!lastMessage.partial
+		approvalAskTypes.includes(lastMessage.ask)
 	) {
-		return lastMessage
+		// command_output asks can be partial (while command is running)
+		// All other asks must be complete (not partial) to show approval
+		if (lastMessage.ask === "command_output" || !lastMessage.partial) {
+			return lastMessage
+		}
 	}
 	return null
 })
@@ -313,8 +346,8 @@ export const clearMessagesAtom = atom(null, (get, set) => {
  * Increments the reset counter to force Static component re-render
  */
 export const replaceMessagesAtom = atom(null, (get, set, messages: CliMessage[]) => {
+	set(messageCutoffTimestampAtom, 0)
 	set(messagesAtom, messages)
-	set(messageResetCounterAtom, (prev) => prev + 1)
 })
 
 /**
@@ -352,6 +385,10 @@ export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
 	}
 })
 
+export const refreshTerminalAtom = atom(null, (get, set) => {
+	set(refreshTerminalCounterAtom, (prev) => prev + 1)
+})
+
 /**
  * Action atom to clear the text buffer
  */
@@ -365,7 +402,11 @@ export const clearTextBufferAtom = atom(null, (get, set) => {
  */
 export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSuggestion[]) => {
 	set(suggestionsAtom, suggestions)
-	set(selectedIndexAtom, 0)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
 })
 
 /**
@@ -373,7 +414,38 @@ export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSugg
  */
 export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: ArgumentSuggestion[]) => {
 	set(argumentSuggestionsAtom, suggestions)
-	set(selectedIndexAtom, 0)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
+})
+
+/**
+ * Action atom to set file mention suggestions
+ */
+export const setFileMentionSuggestionsAtom = atom(null, (get, set, suggestions: FileMentionSuggestion[]) => {
+	set(fileMentionSuggestionsAtom, suggestions)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
+})
+
+/**
+ * Action atom to set file mention context
+ */
+export const setFileMentionContextAtom = atom(null, (get, set, context: FileMentionContext | null) => {
+	set(fileMentionContextAtom, context)
+})
+
+/**
+ * Action atom to clear file mention state
+ */
+export const clearFileMentionAtom = atom(null, (get, set) => {
+	set(fileMentionSuggestionsAtom, [])
+	set(fileMentionContextAtom, null)
 })
 
 /**
@@ -431,7 +503,7 @@ export const hideAutocompleteAtom = atom(null, (get, set) => {
  * This atom is kept for backward compatibility but has no effect
  * @deprecated This atom is kept for backward compatibility but may be removed
  */
-export const showAutocompleteMenuAtom = atom(null, (get, set) => {
+export const showAutocompleteMenuAtom = atom(null, (_get, _set) => {
 	// No-op: autocomplete visibility is now derived from text buffer
 	// Kept for backward compatibility
 })
@@ -439,21 +511,28 @@ export const showAutocompleteMenuAtom = atom(null, (get, set) => {
 /**
  * Action atom to get the currently selected suggestion
  */
-export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSuggestion | null>((get) => {
-	const commandSuggestions = get(suggestionsAtom)
-	const argumentSuggestions = get(argumentSuggestionsAtom)
-	const selectedIndex = get(selectedIndexAtom)
+export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion | null>(
+	(get) => {
+		const commandSuggestions = get(suggestionsAtom)
+		const argumentSuggestions = get(argumentSuggestionsAtom)
+		const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
+		const selectedIndex = get(selectedIndexAtom)
 
-	if (commandSuggestions.length > 0) {
-		return commandSuggestions[selectedIndex] ?? null
-	}
+		if (fileMentionSuggestions.length > 0) {
+			return fileMentionSuggestions[selectedIndex] ?? null
+		}
 
-	if (argumentSuggestions.length > 0) {
-		return argumentSuggestions[selectedIndex] ?? null
-	}
+		if (commandSuggestions.length > 0) {
+			return commandSuggestions[selectedIndex] ?? null
+		}
 
-	return null
-})
+		if (argumentSuggestions.length > 0) {
+			return argumentSuggestions[selectedIndex] ?? null
+		}
+
+		return null
+	},
+)
 
 /**
  * Derived atom that merges CLI messages and extension messages chronologically

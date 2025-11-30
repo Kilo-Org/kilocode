@@ -41,7 +41,8 @@ import {
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
-	getActiveToolUseStyle, // kilocode_change
+	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	getModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -92,10 +93,9 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage } from "@roo-code/types"
-import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
+import { REQUESTY_BASE_URL } from "../../shared/utils/requesty"
 
 //kilocode_change start
 import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
@@ -105,8 +105,8 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
-import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
-import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
+import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
+import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -153,14 +153,19 @@ export class ClineProvider
 	private taskCreationCallback: (task: Task) => void
 	private taskEventListeners: WeakMap<Task, Array<() => void>> = new WeakMap()
 	private currentWorkspacePath: string | undefined
+	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
 
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
 	private static readonly PENDING_OPERATION_TIMEOUT_MS = 30000 // 30 seconds
 
+	private cloudOrganizationsCache: CloudOrganizationMembership[] | null = null
+	private cloudOrganizationsCacheTimestamp: number | null = null
+	private static readonly CLOUD_ORGANIZATIONS_CACHE_DURATION_MS = 5 * 1000 // 5 seconds
+
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "sep-2025-code-supernova-1m" // Code Supernova 1M context window announcement
+	public readonly latestAnnouncementId = "nov-2025-v3.30.0-pr-fixer" // v3.30.0 PR Fixer announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -256,6 +261,7 @@ export class ClineProvider
 			const onTaskUserMessage = (taskId: string) => this.emit(RooCodeEventName.TaskUserMessage, taskId)
 			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage) =>
 				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage)
+			const onModelChanged = () => this.postStateToWebview() // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Attach the listeners.
 			instance.on(RooCodeEventName.TaskStarted, onTaskStarted)
@@ -272,6 +278,7 @@ export class ClineProvider
 			instance.on(RooCodeEventName.TaskSpawned, onTaskSpawned)
 			instance.on(RooCodeEventName.TaskUserMessage, onTaskUserMessage)
 			instance.on(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated)
+			instance.on("modelChanged", onModelChanged) // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Store the cleanup functions for later removal.
 			this.taskEventListeners.set(instance, [
@@ -289,6 +296,7 @@ export class ClineProvider
 				() => instance.off(RooCodeEventName.TaskUnpaused, onTaskUnpaused),
 				() => instance.off(RooCodeEventName.TaskSpawned, onTaskSpawned),
 				() => instance.off(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated),
+				() => instance.off("modelChanged", onModelChanged), // kilocode_change: Clean up model change listener
 			])
 		}
 
@@ -300,7 +308,52 @@ export class ClineProvider
 		} else {
 			this.log("CloudService not ready, deferring cloud profile sync")
 		}
+
+		// kilocode_change start - Initialize auto-purge scheduler
+		this.initializeAutoPurgeScheduler()
+		// kilocode_change end
 	}
+
+	// kilocode_change start
+	/**
+	 * Initialize the auto-purge scheduler
+	 */
+	private async initializeAutoPurgeScheduler() {
+		try {
+			const { AutoPurgeScheduler } = await import("../../services/auto-purge")
+			this.autoPurgeScheduler = new AutoPurgeScheduler(this.contextProxy.globalStorageUri.fsPath)
+
+			// Start the scheduler with functions to get current settings and task history
+			this.autoPurgeScheduler.start(
+				async () => {
+					const state = await this.getState()
+					return {
+						enabled: state.autoPurgeEnabled ?? false,
+						defaultRetentionDays: state.autoPurgeDefaultRetentionDays ?? 30,
+						favoritedTaskRetentionDays: state.autoPurgeFavoritedTaskRetentionDays ?? null,
+						completedTaskRetentionDays: state.autoPurgeCompletedTaskRetentionDays ?? 30,
+						incompleteTaskRetentionDays: state.autoPurgeIncompleteTaskRetentionDays ?? 7,
+						lastRunTimestamp: state.autoPurgeLastRunTimestamp,
+					}
+				},
+				async () => {
+					return this.getTaskHistory()
+				},
+				() => this.getCurrentTask()?.taskId,
+				async (taskId: string) => {
+					// Remove task from state when purged
+					await this.deleteTaskFromState(taskId)
+				},
+			)
+
+			this.log("Auto-purge scheduler initialized")
+		} catch (error) {
+			this.log(
+				`Failed to initialize auto-purge scheduler: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Override EventEmitter's on method to match TaskProviderLike interface
@@ -625,6 +678,14 @@ export class ClineProvider
 		this.mcpHub = undefined
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
+
+		// kilocode_change start - Stop auto-purge scheduler
+		if (this.autoPurgeScheduler) {
+			this.autoPurgeScheduler.stop()
+			this.autoPurgeScheduler = undefined
+		}
+		// kilocode_change end
+
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 
@@ -692,7 +753,12 @@ export class ClineProvider
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
 		if (command === "addToContext") {
-			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: `${prompt}\n\n`,
+			})
+			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
 
@@ -749,7 +815,12 @@ ${prompt}
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
 		if (command === "terminalAddToContext") {
-			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: `${prompt}\n\n`,
+			})
+			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
 
@@ -827,7 +898,7 @@ ${prompt}
 		webviewView.webview.html =
 			this.contextProxy.extensionMode === vscode.ExtensionMode.Development
 				? await this.getHMRHtmlContent(webviewView.webview)
-				: this.getHtmlContent(webviewView.webview)
+				: await this.getHtmlContent(webviewView.webview)
 
 		// Sets up an event listener to listen for messages passed from the webview view context
 		// and executes code based on the message that is received.
@@ -899,7 +970,13 @@ ${prompt}
 	}
 
 	public async createTaskWithHistoryItem(historyItem: HistoryItem & { rootTask?: Task; parentTask?: Task }) {
-		await this.removeClineFromStack()
+		// Check if we're rehydrating the current task to avoid flicker
+		const currentTask = this.getCurrentTask()
+		const isRehydratingCurrentTask = currentTask && currentTask.taskId === historyItem.id
+
+		if (!isRehydratingCurrentTask) {
+			await this.removeClineFromStack()
+		}
 
 		// If the history item has a saved mode, restore it and its associated API configuration.
 		if (historyItem.mode) {
@@ -948,6 +1025,7 @@ ${prompt}
 			apiConfiguration,
 			diffEnabled: enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			experiments,
 			cloudUserInfo,
@@ -960,6 +1038,7 @@ ${prompt}
 			apiConfiguration,
 			enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			historyItem,
@@ -972,11 +1051,46 @@ ${prompt}
 			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, taskSyncEnabled),
 		})
 
-		await this.addClineToStack(task)
+		if (isRehydratingCurrentTask) {
+			// Replace the current task in-place to avoid UI flicker
+			const stackIndex = this.clineStack.length - 1
 
-		this.log(
-			`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
-		)
+			// Properly dispose of the old task to ensure garbage collection
+			const oldTask = this.clineStack[stackIndex]
+
+			// Abort the old task to stop running processes and mark as abandoned
+			try {
+				await oldTask.abortTask(true)
+			} catch (e) {
+				this.log(
+					`[createTaskWithHistoryItem] abortTask() failed for old task ${oldTask.taskId}.${oldTask.instanceId}: ${e.message}`,
+				)
+			}
+
+			// Remove event listeners from the old task
+			const cleanupFunctions = this.taskEventListeners.get(oldTask)
+			if (cleanupFunctions) {
+				cleanupFunctions.forEach((cleanup) => cleanup())
+				this.taskEventListeners.delete(oldTask)
+			}
+
+			// Replace the task in the stack
+			this.clineStack[stackIndex] = task
+			task.emit(RooCodeEventName.TaskFocused)
+
+			// Perform preparation tasks and set up event listeners
+			await this.performPreparationTasks(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] rehydrated task ${task.taskId}.${task.instanceId} in-place (flicker-free)`,
+			)
+		} else {
+			await this.addClineToStack(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
+			)
+		}
 
 		// Check if there's a pending edit after checkpoint restoration
 		const operationId = `task-${task.taskId}`
@@ -1060,6 +1174,12 @@ ${prompt}
 
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		const stylesUri = getUri(webview, this.contextProxy.extensionUri, [
 			"webview-ui",
 			"build",
@@ -1097,7 +1217,7 @@ ${prompt}
 			`img-src ${webview.cspSource} https://storage.googleapis.com https://img.clerk.com data: https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com`, // kilocode_change: add https://*.googleusercontent.com and https://*.googleapis.com and https://*.githubusercontent.com
 			`media-src ${webview.cspSource}`,
 			`script-src 'unsafe-eval' ${webview.cspSource} https://* https://*.posthog.com http://${localServerUrl} http://0.0.0.0:${localPort} 'nonce-${nonce}'`,
-			`connect-src ${webview.cspSource} https://* http://localhost:3000 https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`, // kilocode_change: add http://localhost:3000
+			`connect-src ${webview.cspSource} ${openRouterDomain} https://* http://localhost:3000 https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`, // kilocode_change: add http://localhost:3000
 		]
 
 		return /*html*/ `
@@ -1111,7 +1231,6 @@ ${prompt}
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
-						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
@@ -1138,7 +1257,7 @@ ${prompt}
 	 * @returns A template string literal containing the HTML that should be
 	 * rendered within the webview panel
 	 */
-	private getHtmlContent(webview: vscode.Webview): string {
+	private async getHtmlContent(webview: vscode.Webview): Promise<string> {
 		// Get the local path to main script run in the webview,
 		// then convert it to a uri we can use in the webview.
 
@@ -1174,6 +1293,12 @@ ${prompt}
 		*/
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
 		return /*html*/ `
         <!DOCTYPE html>
@@ -1183,12 +1308,11 @@ ${prompt}
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com to img-src, https://*, http://localhost:3000 to connect-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
-				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
@@ -1304,6 +1428,40 @@ ${prompt}
 
 	// Provider Profile Management
 
+	/**
+	 * Updates the current task's API handler.
+	 * Rebuilds when:
+	 * - provider or model changes, OR
+	 * - explicitly forced (e.g., user-initiated profile switch/save to apply changed settings like headers/baseUrl/tier).
+	 * Always synchronizes task.apiConfiguration with latest provider settings.
+	 * @param providerSettings The new provider settings to apply
+	 * @param options.forceRebuild Force rebuilding the API handler regardless of provider/model equality
+	 */
+	private updateTaskApiHandlerIfNeeded(
+		providerSettings: ProviderSettings,
+		options: { forceRebuild?: boolean } = {},
+	): void {
+		const task = this.getCurrentTask()
+		if (!task) return
+
+		const { forceRebuild = false } = options
+
+		// Determine if we need to rebuild using the previous configuration snapshot
+		const prevConfig = task.apiConfiguration
+		const prevProvider = prevConfig?.apiProvider
+		const prevModelId = prevConfig ? getModelId(prevConfig) : undefined
+		const newProvider = providerSettings.apiProvider
+		const newModelId = getModelId(providerSettings)
+
+		if (forceRebuild || prevProvider !== newProvider || prevModelId !== newModelId) {
+			task.api = buildApiHandler(providerSettings)
+		}
+
+		// Always sync the task's apiConfiguration with the latest provider settings.
+		// Note: Task.apiConfiguration is declared readonly in types, so we cast to any for runtime update.
+		;(task as any).apiConfiguration = providerSettings
+	}
+
 	getProviderProfileEntries(): ProviderSettingsEntry[] {
 		return this.contextProxy.getValues().listApiConfigMeta || []
 	}
@@ -1358,6 +1516,8 @@ ${prompt}
 				}
 
 				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+
+				this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
 			} else {
 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
 			}
@@ -1412,13 +1572,8 @@ ${prompt}
 		if (id) {
 			await this.providerSettingsManager.setModeConfig(mode, id)
 		}
-
 		// Change the provider for the current task.
-		const task = this.getCurrentTask()
-
-		if (task) {
-			task.api = buildApiHandler(providerSettings)
-		}
+		this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
 
 		await this.postStateToWebview()
 		await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
@@ -1536,8 +1691,8 @@ ${prompt}
 
 	// Requesty
 
-	async handleRequestyCallback(code: string) {
-		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+	async handleRequestyCallback(code: string, baseUrl: string | null) {
+		let { apiConfiguration } = await this.getState()
 
 		const newConfiguration: ProviderSettings = {
 			...apiConfiguration,
@@ -1546,7 +1701,16 @@ ${prompt}
 			requestyModelId: apiConfiguration?.requestyModelId || requestyDefaultModelId,
 		}
 
-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+		// set baseUrl as undefined if we don't provide one
+		// or if it is the default requesty url
+		if (!baseUrl || baseUrl === REQUESTY_BASE_URL) {
+			newConfiguration.requestyBaseUrl = undefined
+		} else {
+			newConfiguration.requestyBaseUrl = baseUrl
+		}
+
+		const profileName = `Requesty (${new Date().toLocaleString()})`
+		await this.upsertProviderProfile(profileName, newConfiguration)
 	}
 
 	// kilocode_change:
@@ -1876,6 +2040,7 @@ ${prompt}
 			ttsSpeed,
 			diffEnabled,
 			enableCheckpoints,
+			checkpointTimeout,
 			// taskHistory, // kilocode_change
 			soundVolume,
 			browserViewportSize,
@@ -1945,11 +2110,14 @@ ${prompt}
 			dismissedNotificationIds, // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel, // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider, // kilocode_change: Fast Apply model api base url
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
 			maxDiagnosticMessages,
 			includeTaskHistoryInEnhance,
+			includeCurrentTime,
+			includeCurrentCost,
 			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
@@ -1958,16 +2126,36 @@ ${prompt}
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
+			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 		} = await this.getState()
+
+		// kilocode_change start: Get active model for virtual quota fallback UI display
+		const virtualQuotaActiveModel =
+			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
+				: undefined
+		// kilocode_change end
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
 		try {
-			cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+			if (!CloudService.instance.isCloudAgent) {
+				const now = Date.now()
+
+				if (
+					this.cloudOrganizationsCache !== null &&
+					this.cloudOrganizationsCacheTimestamp !== null &&
+					now - this.cloudOrganizationsCacheTimestamp < ClineProvider.CLOUD_ORGANIZATIONS_CACHE_DURATION_MS
+				) {
+					cloudOrganizations = this.cloudOrganizationsCache!
+				} else {
+					cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+					this.cloudOrganizationsCache = cloudOrganizations
+					this.cloudOrganizationsCacheTimestamp = now
+				}
+			}
 		} catch (error) {
-			console.error(
-				`[getStateToPostToWebview] failed to get cloud organizations: ${error instanceof Error ? error.message : String(error)}`,
-			)
+			// Ignore this error.
 		}
 
 		const telemetryKey = process.env.KILOCODE_POSTHOG_API_KEY
@@ -2027,6 +2215,7 @@ ${prompt}
 			ttsSpeed: ttsSpeed ?? 1.0,
 			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
+			checkpointTimeout: checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			shouldShowAnnouncement: false, // kilocode_change
 			allowedCommands: mergedAllowedCommands,
 			deniedCommands: mergedDeniedCommands,
@@ -2096,18 +2285,20 @@ ${prompt}
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
-			ghostServiceSettings: ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: ghostServiceSettings,
 			// kilocode_change end
 			organizationSettingsVersion,
 			condensingApiConfigId,
 			customCondensingPrompt,
+			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: codebaseIndexConfig?.codebaseIndexEnabled ?? true,
 				codebaseIndexQdrantUrl: codebaseIndexConfig?.codebaseIndexQdrantUrl ?? "http://localhost:6333",
+				// kilocode_change start
+				codebaseIndexVectorStoreProvider: codebaseIndexConfig?.codebaseIndexVectorStoreProvider ?? "qdrant",
+				codebaseIndexLancedbVectorStoreDirectory: codebaseIndexConfig?.codebaseIndexLancedbVectorStoreDirectory,
+				// kilocode_change end
 				codebaseIndexEmbedderProvider: codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
@@ -2126,18 +2317,36 @@ ${prompt}
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel: fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider: fastApplyApiProvider ?? "current", // kilocode_change: Fast Apply model api base url
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? true,
+			includeCurrentTime: includeCurrentTime ?? true,
+			includeCurrentCost: includeCurrentCost ?? true,
 			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: await this.getState().then((s) => s.autoPurgeEnabled),
+			autoPurgeDefaultRetentionDays: await this.getState().then((s) => s.autoPurgeDefaultRetentionDays),
+			autoPurgeFavoritedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeFavoritedTaskRetentionDays,
+			),
+			autoPurgeCompletedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeCompletedTaskRetentionDays,
+			),
+			autoPurgeIncompleteTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeIncompleteTaskRetentionDays,
+			),
+			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 		}
 	}
 
@@ -2276,6 +2485,7 @@ ${prompt}
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
 			diffEnabled: stateValues.diffEnabled ?? true,
 			enableCheckpoints: stateValues.enableCheckpoints ?? true,
+			checkpointTimeout: stateValues.checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			soundVolume: stateValues.soundVolume,
 			browserViewportSize: stateValues.browserViewportSize ?? "900x600",
 			screenshotQuality: stateValues.screenshotQuality ?? 75,
@@ -2301,6 +2511,7 @@ ${prompt}
 			language: stateValues.language ?? formatLanguage(vscode.env.language),
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: stateValues.enableMcpServerCreation ?? true,
+			mcpServers: this.mcpHub?.getAllServers() ?? [],
 			alwaysApproveResubmit: stateValues.alwaysApproveResubmit ?? false,
 			requestDelaySeconds: Math.max(5, stateValues.requestDelaySeconds ?? 10),
 			currentApiConfigName: stateValues.currentApiConfigName ?? "default",
@@ -2313,10 +2524,15 @@ ${prompt}
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: stateValues.ghostServiceSettings,
+			// kilocode_change end
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: stateValues.autoPurgeEnabled ?? false,
+			autoPurgeDefaultRetentionDays: stateValues.autoPurgeDefaultRetentionDays ?? 30,
+			autoPurgeFavoritedTaskRetentionDays: stateValues.autoPurgeFavoritedTaskRetentionDays ?? null,
+			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
+			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
+			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
@@ -2341,6 +2557,7 @@ ${prompt}
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey: stateValues.morphApiKey, // kilocode_change
 			fastApplyModel: stateValues.fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider: stateValues.fastApplyApiProvider ?? "current", // kilocode_change: Fast Apply model api config id
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			reasoningBlockCollapsed: stateValues.reasoningBlockCollapsed ?? true,
 			cloudUserInfo,
@@ -2350,6 +2567,7 @@ ${prompt}
 			organizationSettingsVersion,
 			condensingApiConfigId: stateValues.condensingApiConfigId,
 			customCondensingPrompt: stateValues.customCondensingPrompt,
+			yoloGatekeeperApiConfigId: stateValues.yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 			codebaseIndexModels: stateValues.codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: stateValues.codebaseIndexConfig?.codebaseIndexEnabled ?? true,
@@ -2357,6 +2575,12 @@ ${prompt}
 					stateValues.codebaseIndexConfig?.codebaseIndexQdrantUrl ?? "http://localhost:6333",
 				codebaseIndexEmbedderProvider:
 					stateValues.codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
+				// kilocode_change start
+				codebaseIndexVectorStoreProvider:
+					stateValues.codebaseIndexConfig?.codebaseIndexVectorStoreProvider ?? "qdrant",
+				codebaseIndexLancedbVectorStoreDirectory:
+					stateValues.codebaseIndexConfig?.codebaseIndexLancedbVectorStoreDirectory,
+				// kilocode_change end
 				codebaseIndexEmbedderBaseUrl: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
 				codebaseIndexEmbedderModelDimension:
@@ -2370,6 +2594,8 @@ ${prompt}
 			includeDiagnosticMessages: stateValues.includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: stateValues.maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: stateValues.includeTaskHistoryInEnhance ?? true,
+			includeCurrentTime: stateValues.includeCurrentTime ?? true,
+			includeCurrentCost: stateValues.includeCurrentCost ?? true,
 			taskSyncEnabled,
 			remoteControlEnabled: (() => {
 				try {
@@ -2737,6 +2963,7 @@ ${prompt}
 			organizationAllowList,
 			diffEnabled: enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			experiments,
 			cloudUserInfo,
@@ -2753,6 +2980,7 @@ ${prompt}
 			apiConfiguration,
 			enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			task: text,
@@ -3012,7 +3240,8 @@ ${prompt}
 
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start
-		const { apiConfiguration, experiments } = await this.getState()
+		const state = await this.getState()
+		const { apiConfiguration, experiments } = state
 		const task = this.getCurrentTask()
 
 		async function getModelId() {
@@ -3062,11 +3291,40 @@ ${prompt}
 						morphFastApply: Boolean(experiments.morphFastApply),
 						morphApiKey: Boolean(this.contextProxy.getValue("morphApiKey")),
 						selectedModel: this.contextProxy.getValue("fastApplyModel") || "auto",
+						fastApplyApiProvider: this.contextProxy.getValue("fastApplyApiProvider") || "current",
 					},
 				}
 			} catch (error) {
 				return {
 					fastApplyException: stringifyError(error),
+				}
+			}
+		}
+
+		const getAutoApproveSettings = () => {
+			try {
+				return {
+					autoApprove: {
+						autoApprovalEnabled: !!state.autoApprovalEnabled,
+						alwaysAllowBrowser: !!state.alwaysAllowBrowser,
+						alwaysAllowExecute: !!state.alwaysAllowExecute,
+						alwaysAllowFollowupQuestions: !!state.alwaysAllowFollowupQuestions,
+						alwaysAllowMcp: !!state.alwaysAllowMcp,
+						alwaysAllowModeSwitch: !!state.alwaysAllowModeSwitch,
+						alwaysAllowReadOnly: !!state.alwaysAllowReadOnly,
+						alwaysAllowReadOnlyOutsideWorkspace: !!state.alwaysAllowReadOnlyOutsideWorkspace,
+						alwaysAllowSubtasks: !!state.alwaysAllowSubtasks,
+						alwaysAllowUpdateTodoList: !!state.alwaysAllowUpdateTodoList,
+						alwaysAllowWrite: !!state.alwaysAllowWrite,
+						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
+						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
+						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
+						yoloMode: !!state.yoloMode,
+					},
+				}
+			} catch (error) {
+				return {
+					autoApproveException: stringifyError(error),
 				}
 			}
 		}
@@ -3080,6 +3338,7 @@ ${prompt}
 			...getMemory(),
 			...getFastApply(),
 			...getOpenRouter(),
+			...getAutoApproveSettings(),
 			// kilocode_change end
 			...(await this.getTaskProperties()),
 			...(await this.getGitProperties()),

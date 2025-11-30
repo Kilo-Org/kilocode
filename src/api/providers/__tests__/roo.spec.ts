@@ -1,7 +1,7 @@
 // npx vitest run api/providers/__tests__/roo.spec.ts
 
 import { Anthropic } from "@anthropic-ai/sdk"
-import { rooDefaultModelId, rooModels } from "@roo-code/types"
+import { rooDefaultModelId } from "@roo-code/types"
 
 import { ApiHandlerOptions } from "../../../shared/api"
 
@@ -86,6 +86,28 @@ vitest.mock("../../../i18n", () => ({
 	}),
 }))
 
+// Mock model cache
+vitest.mock("../../providers/fetchers/modelCache", () => ({
+	getModels: vitest.fn(),
+	flushModels: vitest.fn(),
+	getModelsFromCache: vitest.fn((provider: string) => {
+		if (provider === "roo") {
+			return {
+				"xai/grok-code-fast-1": {
+					maxTokens: 16_384,
+					contextWindow: 262_144,
+					supportsImages: false,
+					supportsReasoningEffort: true, // Enable reasoning for tests
+					supportsPromptCache: true,
+					inputPrice: 0,
+					outputPrice: 0,
+				},
+			}
+		}
+		return {}
+	}),
+}))
+
 // Import after mocks are set up
 import { RooHandler } from "../roo"
 import { CloudService } from "@roo-code/cloud"
@@ -158,6 +180,21 @@ describe("RooHandler", () => {
 	describe("createMessage", () => {
 		beforeEach(() => {
 			handler = new RooHandler(mockOptions)
+		})
+
+		it("should update API key before making request", async () => {
+			// Set up a fresh token that will be returned when createMessage is called
+			const freshToken = "fresh-session-token"
+			mockGetSessionTokenFn.mockReturnValue(freshToken)
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			// Consume the stream to trigger the API call
+			for await (const _chunk of stream) {
+				// Just consume
+			}
+
+			// Verify getSessionToken was called to get the fresh token
+			expect(mockGetSessionTokenFn).toHaveBeenCalled()
 		})
 
 		it("should handle streaming responses", async () => {
@@ -268,6 +305,25 @@ describe("RooHandler", () => {
 			})
 		})
 
+		it("should update API key before making request", async () => {
+			// Set up a fresh token that will be returned when completePrompt is called
+			const freshToken = "fresh-session-token"
+			mockGetSessionTokenFn.mockReturnValue(freshToken)
+
+			// Access the client's apiKey property to verify it gets updated
+			const clientApiKeyGetter = vitest.fn()
+			Object.defineProperty(handler["client"], "apiKey", {
+				get: clientApiKeyGetter,
+				set: vitest.fn(),
+				configurable: true,
+			})
+
+			await handler.completePrompt("Test prompt")
+
+			// Verify getSessionToken was called to get the fresh token
+			expect(mockGetSessionTokenFn).toHaveBeenCalled()
+		})
+
 		it("should handle API errors", async () => {
 			mockCreate.mockRejectedValueOnce(new Error("API Error"))
 			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(
@@ -301,8 +357,9 @@ describe("RooHandler", () => {
 			const modelInfo = handler.getModel()
 			expect(modelInfo.id).toBe(mockOptions.apiModelId)
 			expect(modelInfo.info).toBeDefined()
-			// xai/grok-code-fast-1 is a valid model in rooModels
-			expect(modelInfo.info).toBe(rooModels["xai/grok-code-fast-1"])
+			// Models are loaded dynamically, so we just verify the structure
+			expect(modelInfo.info.maxTokens).toBeDefined()
+			expect(modelInfo.info.contextWindow).toBeDefined()
 		})
 
 		it("should return default model when no model specified", () => {
@@ -310,7 +367,9 @@ describe("RooHandler", () => {
 			const modelInfo = handlerWithoutModel.getModel()
 			expect(modelInfo.id).toBe(rooDefaultModelId)
 			expect(modelInfo.info).toBeDefined()
-			expect(modelInfo.info).toBe(rooModels[rooDefaultModelId])
+			// Models are loaded dynamically
+			expect(modelInfo.info.maxTokens).toBeDefined()
+			expect(modelInfo.info.contextWindow).toBeDefined()
 		})
 
 		it("should handle unknown model ID with fallback info", () => {
@@ -320,24 +379,27 @@ describe("RooHandler", () => {
 			const modelInfo = handlerWithUnknownModel.getModel()
 			expect(modelInfo.id).toBe("unknown-model-id")
 			expect(modelInfo.info).toBeDefined()
-			// Should return fallback info for unknown models
-			expect(modelInfo.info.maxTokens).toBe(16_384)
-			expect(modelInfo.info.contextWindow).toBe(262_144)
-			expect(modelInfo.info.supportsImages).toBe(false)
-			expect(modelInfo.info.supportsPromptCache).toBe(true)
-			expect(modelInfo.info.inputPrice).toBe(0)
-			expect(modelInfo.info.outputPrice).toBe(0)
+			// Should return fallback info for unknown models (dynamic models will be merged in real usage)
+			expect(modelInfo.info.maxTokens).toBeDefined()
+			expect(modelInfo.info.contextWindow).toBeDefined()
+			expect(modelInfo.info.supportsImages).toBeDefined()
+			expect(modelInfo.info.supportsPromptCache).toBeDefined()
+			expect(modelInfo.info.inputPrice).toBeDefined()
+			expect(modelInfo.info.outputPrice).toBeDefined()
 		})
 
-		it("should return correct model info for all Roo models", () => {
-			// Test each model in rooModels
-			const modelIds = Object.keys(rooModels) as Array<keyof typeof rooModels>
+		it("should handle any model ID since models are loaded dynamically", () => {
+			// Test with various model IDs - they should all work since models are loaded dynamically
+			const testModelIds = ["xai/grok-code-fast-1", "roo/sonic", "deepseek/deepseek-chat-v3.1"]
 
-			for (const modelId of modelIds) {
+			for (const modelId of testModelIds) {
 				const handlerWithModel = new RooHandler({ apiModelId: modelId })
 				const modelInfo = handlerWithModel.getModel()
 				expect(modelInfo.id).toBe(modelId)
-				expect(modelInfo.info).toBe(rooModels[modelId])
+				expect(modelInfo.info).toBeDefined()
+				// Verify the structure has required fields
+				expect(modelInfo.info.maxTokens).toBeDefined()
+				expect(modelInfo.info.contextWindow).toBeDefined()
 			}
 		})
 	})
@@ -438,6 +500,134 @@ describe("RooHandler", () => {
 			// Constructor should succeed even with empty session token
 			const handler = new RooHandler(mockOptions)
 			expect(handler).toBeInstanceOf(RooHandler)
+		})
+	})
+
+	describe("reasoning effort support", () => {
+		it("should include reasoning with enabled: false when not enabled", async () => {
+			handler = new RooHandler(mockOptions)
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: mockOptions.apiModelId,
+					messages: expect.any(Array),
+					stream: true,
+					stream_options: { include_usage: true },
+					reasoning: { enabled: false },
+				}),
+				undefined,
+			)
+		})
+
+		it("should include reasoning with enabled: false when explicitly disabled", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				enableReasoningEffort: false,
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					reasoning: { enabled: false },
+				}),
+				undefined,
+			)
+		})
+
+		it("should include reasoning with enabled: true and effort: low", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				reasoningEffort: "low",
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					reasoning: { enabled: true, effort: "low" },
+				}),
+				undefined,
+			)
+		})
+
+		it("should include reasoning with enabled: true and effort: medium", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				reasoningEffort: "medium",
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					reasoning: { enabled: true, effort: "medium" },
+				}),
+				undefined,
+			)
+		})
+
+		it("should include reasoning with enabled: true and effort: high", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				reasoningEffort: "high",
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					reasoning: { enabled: true, effort: "high" },
+				}),
+				undefined,
+			)
+		})
+
+		it("should not include reasoning for minimal (treated as none)", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				reasoningEffort: "minimal",
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			// minimal should result in no reasoning parameter
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.reasoning).toBeUndefined()
+		})
+
+		it("should handle enableReasoningEffort: false overriding reasoningEffort setting", async () => {
+			handler = new RooHandler({
+				...mockOptions,
+				enableReasoningEffort: false,
+				reasoningEffort: "high",
+			})
+			const stream = handler.createMessage(systemPrompt, messages)
+			for await (const _chunk of stream) {
+				// Consume stream
+			}
+
+			// When explicitly disabled, should send enabled: false regardless of effort setting
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					reasoning: { enabled: false },
+				}),
+				undefined,
+			)
 		})
 	})
 })

@@ -22,7 +22,6 @@
 	"pricing": {
 		"costUnknown": "cost desconegut",
 		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",
-		"freeModelsDescription": "Els models gratuïts poden tenir límits de velocitat. Utilitza l'enllaç de sota per optimitzar l'ús dels models gratuïts!",
 		"freeModelsLink": "Descobreix les opcions de models gratuïts i econòmics"
 	},
 	"notifications": {
@@ -224,6 +223,7 @@
 			},
 			"keybindingNotFound": "no trobat",
 			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
+			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
 			"provider": "Proveïdor"
 		}
@@ -263,7 +263,7 @@
 		"description": "Tria com es formaten les crides d'eina al prompt del sistema. JSON és actualment experimental i està principalment destinat a usuaris interessats a contribuir al seu desenvolupament.",
 		"automatic": "Deixa que Kilo decideixi",
 		"xml": "XML",
-		"json": "JSON (experimental)"
+		"json": "JSON"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",

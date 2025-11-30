@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",
-		"freeModelsDescription": "I modelli gratuiti potrebbero avere limiti di utilizzo. Usa il link qui sotto per ottimizzare l'uso dei modelli gratuiti!",
 		"freeModelsLink": "Scopri le opzioni dei modelli gratuiti e a budget"
 	},
 	"notifications": {
@@ -231,6 +230,7 @@
 			},
 			"keybindingNotFound": "non trovato",
 			"noModelConfigured": "Nessun modello di autocompletamento adatto trovato. Configura un provider nelle impostazioni API.",
+			"configureAutocompleteProfile": "Usa qualsiasi modello andando nei profili e configurando un Profilo del Tipo di Profilo Autocompletamento.",
 			"model": "Modello",
 			"provider": "Provider"
 		}
@@ -270,7 +270,7 @@
 		"description": "Scegli come formattare le chiamate agli strumenti nel prompt di sistema. JSON è attualmente sperimentale e destinato principalmente agli utenti interessati a contribuire al suo sviluppo.",
 		"automatic": "Lascia decidere a Kilo",
 		"xml": "XML",
-		"json": "JSON (sperimentale)"
+		"json": "JSON"
 	},
 	"marketplace": {
 		"mcp": {

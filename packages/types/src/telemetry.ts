@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { providerNames } from "./provider-settings.js"
 import { clineMessageSchema } from "./message.js"
-import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
+import { toolProtocolSchema } from "./tool.js" // kilocode_change
 
 /**
  * TelemetrySetting
@@ -35,6 +35,12 @@ export enum TelemetryEventName {
 	CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
+	AUTO_PURGE_STARTED = "Auto Purge Started",
+	AUTO_PURGE_COMPLETED = "Auto Purge Completed",
+	AUTO_PURGE_FAILED = "Auto Purge Failed",
+	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
+	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
+	ASK_APPROVAL = "Ask Approval",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -152,7 +158,7 @@ export const taskPropertiesSchema = z.object({
 	// kilocode_change start
 	currentTaskSize: z.number().optional(),
 	taskHistorySize: z.number().optional(),
-	toolStyle: toolUseStylesSchema.optional(),
+	toolStyle: toolProtocolSchema.optional(),
 	// kilocode_change end
 })
 
@@ -198,6 +204,11 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
+			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
+			TelemetryEventName.GHOST_SERVICE_DISABLED, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

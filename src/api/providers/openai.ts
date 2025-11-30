@@ -8,7 +8,6 @@ import {
 	openAiModelInfoSaneDefaults,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
-	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -20,7 +19,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -100,12 +99,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			return
 		}
 
-		if (this.options.openAiStreamingEnabled ?? true) {
-			let systemMessage: OpenAI.Chat.ChatCompletionSystemMessageParam = {
-				role: "system",
-				content: systemPrompt,
-			}
+		let systemMessage: OpenAI.Chat.ChatCompletionSystemMessageParam = {
+			role: "system",
+			content: systemPrompt,
+		}
 
+		if (this.options.openAiStreamingEnabled ?? true) {
 			let convertedMessages
 
 			if (deepseekReasoner) {
@@ -194,13 +193,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
+			const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 
 			for await (const chunk of stream) {
-				const delta = chunk.choices[0]?.delta ?? {}
+				const delta = chunk.choices?.[0]?.delta ?? {}
 
-				// kilocode_change start: Handle native tool calls when toolStyle is "json"
-				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
-				// kilocode_change end
+				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta.content) {
 					for (const chunk of matcher.update(delta.content)) {
@@ -236,12 +234,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				yield this.processUsageMetrics(lastUsage, modelInfo)
 			}
 		} else {
-			// o1 for instance doesnt support streaming, non-1 temp, or system prompt
-			const systemMessage: OpenAI.Chat.ChatCompletionUserMessageParam = {
-				role: "user",
-				content: systemPrompt,
-			}
-
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
 				messages: deepseekReasoner
@@ -267,7 +259,6 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			// kilocode_change start: reasoning & tool calls.
-			const toolStyle = getActiveToolUseStyle(this.options)
 			const message = response.choices[0]?.message
 			if (message) {
 				if ("reasoning" in message && typeof message.reasoning === "string") {
@@ -279,13 +270,19 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				if (message.content) {
 					yield {
 						type: "text",
-						text: message.content,
+						text: message.content || "",
 					}
 				}
-				if (toolStyle === "json" && message.tool_calls) {
-					yield {
-						type: "native_tool_calls",
-						toolCalls: message.tool_calls,
+				if (message.tool_calls) {
+					for (const toolCall of message.tool_calls) {
+						if (toolCall.type === "function") {
+							yield {
+								type: "tool_call",
+								id: toolCall.id,
+								name: toolCall.function.name,
+								arguments: toolCall.function.arguments,
+							}
+						}
 					}
 				}
 			}
@@ -336,7 +333,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			return response.choices[0]?.message.content || ""
+			return response.choices?.[0]?.message.content || ""
 		} catch (error) {
 			if (error instanceof Error) {
 				throw new Error(`${this.providerName} completion error: ${error.message}`)
@@ -419,7 +416,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			yield {
 				type: "text",
-				text: response.choices[0]?.message.content || "",
+				text: response.choices?.[0]?.message.content || "",
 			}
 			yield this.processUsageMetrics(response.usage)
 		}
@@ -427,7 +424,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
 		for await (const chunk of stream) {
-			const delta = chunk.choices[0]?.delta
+			const delta = chunk.choices?.[0]?.delta
 			if (delta?.content) {
 				yield {
 					type: "text",

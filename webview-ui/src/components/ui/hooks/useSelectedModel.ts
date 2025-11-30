@@ -4,66 +4,41 @@ import {
 	type ModelInfo,
 	anthropicDefaultModelId,
 	anthropicModels,
-	bedrockDefaultModelId,
 	bedrockModels,
-	cerebrasDefaultModelId,
 	cerebrasModels,
-	deepSeekDefaultModelId,
 	deepSeekModels,
-	moonshotDefaultModelId,
 	moonshotModels,
-	geminiDefaultModelId,
+	minimaxModels,
 	geminiModels,
+	geminiDefaultModelId,
 	// kilocode_change start
 	geminiCliDefaultModelId,
 	geminiCliModels,
+	syntheticDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId,
+	inceptionDefaultModelId,
 	// kilocode_change end
-	mistralDefaultModelId,
 	mistralModels,
 	openAiModelInfoSaneDefaults,
-	openAiNativeDefaultModelId,
 	openAiNativeModels,
-	vertexDefaultModelId,
 	vertexModels,
-	xaiDefaultModelId,
 	xaiModels,
 	groqModels,
-	groqDefaultModelId,
-	// chutesModels, // kilocode_change
-	chutesDefaultModelId,
 	vscodeLlmModels,
 	vscodeLlmDefaultModelId,
 	openRouterDefaultModelId,
-	requestyDefaultModelId,
-	glamaDefaultModelId,
-	unboundDefaultModelId,
-	litellmDefaultModelId,
-	claudeCodeDefaultModelId,
 	claudeCodeModels,
 	sambaNovaModels,
-	sambaNovaDefaultModelId,
 	doubaoModels,
-	doubaoDefaultModelId,
-	internationalZAiDefaultModelId,
-	mainlandZAiDefaultModelId,
 	internationalZAiModels,
 	mainlandZAiModels,
 	fireworksModels,
-	fireworksDefaultModelId,
-	syntheticModels, // kilocode_change
-	syntheticDefaultModelId, // kilocode_change
 	featherlessModels,
-	featherlessDefaultModelId,
-	ioIntelligenceDefaultModelId,
 	ioIntelligenceModels,
-	rooDefaultModelId,
-	rooModels,
-	qwenCodeDefaultModelId,
 	qwenCodeModels,
-	vercelAiGatewayDefaultModelId,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
-	deepInfraDefaultModelId,
-	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	isDynamicProvider,
+	getProviderDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -90,54 +65,96 @@ export const useModelProviders = (kilocodeDefaultModel: string, apiConfiguration
 // kilocode_change end
 import { useOllamaModels } from "./useOllamaModels"
 
+/**
+ * Helper to get a validated model ID for dynamic providers.
+ * Returns the configured model ID if it exists in the available models, otherwise returns the default.
+ */
+function getValidatedModelId(
+	configuredId: string | undefined,
+	availableModels: ModelRecord | undefined,
+	defaultModelId: string,
+): string {
+	return configuredId && availableModels?.[configuredId] ? configuredId : defaultModelId
+}
+
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	// kilocode_change start
-	const { kilocodeDefaultModel } = useExtensionState()
+	const { kilocodeDefaultModel, virtualQuotaActiveModel } = useExtensionState()
 	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
 	const ollamaModelId = provider === "ollama" ? apiConfiguration?.ollamaModelId : undefined
-
-	const routerModels = useRouterModels({
-		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
-		openRouterApiKey: apiConfiguration?.apiKey,
-		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId,
-		geminiApiKey: apiConfiguration?.geminiApiKey,
-		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
-	})
-	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration)
 	// kilocode_change end
+
+	// Only fetch router models for dynamic providers
+	const shouldFetchRouterModels = isDynamicProvider(provider)
+	const routerModels = useRouterModels(
+		//kilocode_change start
+		{
+			openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
+			openRouterApiKey: apiConfiguration?.apiKey,
+			kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId,
+			geminiApiKey: apiConfiguration?.geminiApiKey,
+			googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+			syntheticApiKey: apiConfiguration?.syntheticApiKey,
+		},
+		// kilocode_change end
+		{
+			provider: shouldFetchRouterModels ? provider : undefined,
+			enabled: shouldFetchRouterModels,
+		},
+	)
+
+	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration) // kilocode_change
 	const lmStudioModels = useLmStudioModels(lmStudioModelId)
 	const ollamaModels = useOllamaModels(ollamaModelId)
 
+	// Compute readiness only for the data actually needed for the selected provider
+	const needRouterModels = shouldFetchRouterModels
+	const needOpenRouterProviders = provider === "openrouter"
+	const needLmStudio = typeof lmStudioModelId !== "undefined"
+	const needOllama = typeof ollamaModelId !== "undefined"
+
+	const hasValidRouterData = needRouterModels
+		? routerModels.data &&
+			routerModels.data[provider] !== undefined &&
+			typeof routerModels.data[provider] === "object" &&
+			!routerModels.isLoading
+		: true
+
+	const isReady =
+		(!needLmStudio || typeof lmStudioModels.data !== "undefined") &&
+		(!needOllama || typeof ollamaModels.data !== "undefined") &&
+		hasValidRouterData &&
+		(!needOpenRouterProviders || typeof openRouterModelProviders.data !== "undefined")
+
 	const { id, info } =
-		apiConfiguration &&
-		(typeof lmStudioModelId === "undefined" || typeof lmStudioModels.data !== "undefined") &&
-		(typeof ollamaModelId === "undefined" || typeof ollamaModels.data !== "undefined") &&
-		typeof routerModels.data !== "undefined" &&
-		typeof openRouterModelProviders.data !== "undefined"
+		apiConfiguration && isReady
 			? getSelectedModel({
 					provider,
 					apiConfiguration,
-					routerModels: routerModels.data,
-					openRouterModelProviders: openRouterModelProviders.data,
-					lmStudioModels: lmStudioModels.data,
+					routerModels: (routerModels.data || {}) as RouterModels,
+					openRouterModelProviders: (openRouterModelProviders.data || {}) as Record<string, ModelInfo>,
+					lmStudioModels: (lmStudioModels.data || undefined) as ModelRecord | undefined,
 					kilocodeDefaultModel,
-					ollamaModels: ollamaModels.data,
+					ollamaModels: (ollamaModels.data || undefined) as ModelRecord | undefined,
+					virtualQuotaActiveModel, // kilocode_change: Pass virtual quota active model
 				})
-			: { id: anthropicDefaultModelId, info: undefined }
+			: { id: getProviderDefaultModelId(provider), info: undefined }
 
 	return {
 		provider,
 		id,
 		info,
 		isLoading:
-			routerModels.isLoading ||
-			openRouterModelProviders.isLoading ||
-			(apiConfiguration?.lmStudioModelId && lmStudioModels!.isLoading),
+			(needRouterModels && routerModels.isLoading) ||
+			(needOpenRouterProviders && openRouterModelProviders.isLoading) ||
+			(needLmStudio && lmStudioModels!.isLoading) ||
+			(needOllama && ollamaModels!.isLoading),
 		isError:
-			routerModels.isError ||
-			openRouterModelProviders.isError ||
-			(apiConfiguration?.lmStudioModelId && lmStudioModels!.isError),
+			(needRouterModels && routerModels.isError) ||
+			(needOpenRouterProviders && openRouterModelProviders.isError) ||
+			(needLmStudio && lmStudioModels!.isError) ||
+			(needOllama && ollamaModels!.isError),
 	}
 }
 
@@ -149,6 +166,7 @@ function getSelectedModel({
 	lmStudioModels,
 	kilocodeDefaultModel,
 	ollamaModels,
+	virtualQuotaActiveModel, //kilocode_change
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
@@ -157,14 +175,16 @@ function getSelectedModel({
 	lmStudioModels: ModelRecord | undefined
 	kilocodeDefaultModel: string
 	ollamaModels: ModelRecord | undefined
+	virtualQuotaActiveModel?: { id: string; info: ModelInfo } //kilocode_change
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
 	// this gives a better UX than showing the default model
+	const defaultModelId = getProviderDefaultModelId(provider)
 	switch (provider) {
 		case "openrouter": {
-			const id = apiConfiguration.openRouterModelId ?? openRouterDefaultModelId
-			let info = routerModels.openrouter[id]
+			const id = getValidatedModelId(apiConfiguration.openRouterModelId, routerModels.openrouter, defaultModelId)
+			let info = routerModels.openrouter?.[id]
 			const specificProvider = apiConfiguration.openRouterSpecificProvider
 
 			if (specificProvider && openRouterModelProviders[specificProvider]) {
@@ -179,37 +199,32 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "requesty": {
-			const id = apiConfiguration.requestyModelId ?? requestyDefaultModelId
-			const info = routerModels.requesty[id]
+			const id = getValidatedModelId(apiConfiguration.requestyModelId, routerModels.requesty, defaultModelId)
+			const info = routerModels.requesty?.[id]
 			return { id, info }
 		}
 		case "glama": {
-			const id = apiConfiguration.glamaModelId ?? glamaDefaultModelId
-			const info = routerModels.glama[id]
+			const id = getValidatedModelId(apiConfiguration.glamaModelId, routerModels.glama, defaultModelId)
+			const info = routerModels.glama?.[id]
 			return { id, info }
 		}
 		case "unbound": {
-			const id = apiConfiguration.unboundModelId ?? unboundDefaultModelId
-			const info = routerModels.unbound[id]
+			const id = getValidatedModelId(apiConfiguration.unboundModelId, routerModels.unbound, defaultModelId)
+			const info = routerModels.unbound?.[id]
 			return { id, info }
 		}
 		case "litellm": {
-			const id = apiConfiguration.litellmModelId ?? litellmDefaultModelId
-			const info = routerModels.litellm[id]
-			return { id, info }
-		}
-		case "deepinfra": {
-			const id = apiConfiguration.deepInfraModelId ?? deepInfraDefaultModelId
-			const info = routerModels.deepinfra[id]
+			const id = getValidatedModelId(apiConfiguration.litellmModelId, routerModels.litellm, defaultModelId)
+			const info = routerModels.litellm?.[id]
 			return { id, info }
 		}
 		case "xai": {
-			const id = apiConfiguration.apiModelId ?? xaiDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = xaiModels[id as keyof typeof xaiModels]
 			return info ? { id, info } : { id, info: undefined }
 		}
 		case "groq": {
-			const id = apiConfiguration.apiModelId ?? groqDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = groqModels[id as keyof typeof groqModels]
 			return { id, info }
 		}
@@ -224,12 +239,12 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "chutes": {
-			const id = apiConfiguration.apiModelId ?? chutesDefaultModelId
-			const info = routerModels.chutes[id] // kilocode_change
+			const id = getValidatedModelId(apiConfiguration.apiModelId, routerModels.chutes, defaultModelId)
+			const info = routerModels.chutes?.[id]
 			return { id, info }
 		}
 		case "bedrock": {
-			const id = apiConfiguration.apiModelId ?? bedrockDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = bedrockModels[id as keyof typeof bedrockModels]
 
 			// Special case for custom ARN.
@@ -253,7 +268,7 @@ function getSelectedModel({
 			return { id, info: baseInfo }
 		}
 		case "vertex": {
-			const id = apiConfiguration.apiModelId ?? vertexDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = vertexModels[id as keyof typeof vertexModels]
 			return { id, info }
 		}
@@ -266,35 +281,40 @@ function getSelectedModel({
 		}
 		// kilocode_change end
 		case "deepseek": {
-			const id = apiConfiguration.apiModelId ?? deepSeekDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = deepSeekModels[id as keyof typeof deepSeekModels]
 			return { id, info }
 		}
 		case "doubao": {
-			const id = apiConfiguration.apiModelId ?? doubaoDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = doubaoModels[id as keyof typeof doubaoModels]
 			return { id, info }
 		}
 		case "moonshot": {
-			const id = apiConfiguration.apiModelId ?? moonshotDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = moonshotModels[id as keyof typeof moonshotModels]
+			return { id, info }
+		}
+		case "minimax": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = minimaxModels[id as keyof typeof minimaxModels]
 			return { id, info }
 		}
 		case "zai": {
 			const isChina = apiConfiguration.zaiApiLine === "china_coding"
 			const models = isChina ? mainlandZAiModels : internationalZAiModels
-			const defaultModelId = isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
+			const defaultModelId = getProviderDefaultModelId(provider, { isChina })
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = models[id as keyof typeof models]
 			return { id, info }
 		}
 		case "openai-native": {
-			const id = apiConfiguration.apiModelId ?? openAiNativeDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = openAiNativeModels[id as keyof typeof openAiNativeModels]
 			return { id, info }
 		}
 		case "mistral": {
-			const id = apiConfiguration.apiModelId ?? mistralDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = mistralModels[id as keyof typeof mistralModels]
 			return { id, info }
 		}
@@ -327,6 +347,11 @@ function getSelectedModel({
 				info: info || undefined,
 			}
 		}
+		case "deepinfra": {
+			const id = getValidatedModelId(apiConfiguration.deepInfraModelId, routerModels.deepinfra, defaultModelId)
+			const info = routerModels.deepinfra?.[id]
+			return { id, info }
+		}
 		case "vscode-lm": {
 			const id = apiConfiguration?.vsCodeLmModelSelector
 				? `${apiConfiguration.vsCodeLmModelSelector.vendor}/${apiConfiguration.vsCodeLmModelSelector.family}`
@@ -338,9 +363,9 @@ function getSelectedModel({
 		// kilocode_change begin
 		case "kilocode": {
 			// Use the fetched models from routerModels
-			if (routerModels["kilocode-openrouter"] && apiConfiguration.kilocodeModel) {
+			if (routerModels["kilocode"] && apiConfiguration.kilocodeModel) {
 				// Find the model in the fetched models
-				const modelEntries = Object.entries(routerModels["kilocode-openrouter"])
+				const modelEntries = Object.entries(routerModels["kilocode"])
 
 				const selectedModelId = apiConfiguration.kilocodeModel.toLowerCase()
 
@@ -366,7 +391,7 @@ function getSelectedModel({
 			const invalidOrDefaultModel = apiConfiguration.kilocodeModel ?? kilocodeDefaultModel
 			return {
 				id: invalidOrDefaultModel,
-				info: routerModels["kilocode-openrouter"][invalidOrDefaultModel],
+				info: routerModels["kilocode"][invalidOrDefaultModel],
 			}
 		}
 		case "gemini-cli": {
@@ -375,85 +400,108 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "virtual-quota-fallback": {
+			if (virtualQuotaActiveModel) {
+				return virtualQuotaActiveModel
+			}
+			// Fallback if no profiles or settings found
 			return {
-				id: apiConfiguration.apiModelId ?? anthropicDefaultModelId,
-				info: anthropicModels[
-					(apiConfiguration.apiModelId ?? anthropicDefaultModelId) as keyof typeof anthropicModels
-				],
+				id: "",
+				info: {
+					maxTokens: 1,
+					contextWindow: 1,
+					supportsPromptCache: false,
+				},
 			}
 		}
 		// kilocode_change end
 
 		case "claude-code": {
 			// Claude Code models extend anthropic models but with images and prompt caching disabled
-			const id = apiConfiguration.apiModelId ?? claudeCodeDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
 		}
 		case "cerebras": {
-			const id = apiConfiguration.apiModelId ?? cerebrasDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = cerebrasModels[id as keyof typeof cerebrasModels]
 			return { id, info }
 		}
 		case "sambanova": {
-			const id = apiConfiguration.apiModelId ?? sambaNovaDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = sambaNovaModels[id as keyof typeof sambaNovaModels]
 			return { id, info }
 		}
 		case "fireworks": {
-			const id = apiConfiguration.apiModelId ?? fireworksDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = fireworksModels[id as keyof typeof fireworksModels]
 			return { id, info }
 		}
 		// kilocode_change start
 		case "synthetic": {
 			const id = apiConfiguration.apiModelId ?? syntheticDefaultModelId
-			const info = syntheticModels[id as keyof typeof syntheticModels]
+			const info = routerModels.synthetic[id]
 			return { id, info }
 		}
 		// kilocode_change end
 		case "featherless": {
-			const id = apiConfiguration.apiModelId ?? featherlessDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = featherlessModels[id as keyof typeof featherlessModels]
 			return { id, info }
 		}
 		case "io-intelligence": {
-			const id = apiConfiguration.ioIntelligenceModelId ?? ioIntelligenceDefaultModelId
+			const id = getValidatedModelId(
+				apiConfiguration.ioIntelligenceModelId,
+				routerModels["io-intelligence"],
+				defaultModelId,
+			)
 			const info =
 				routerModels["io-intelligence"]?.[id] ?? ioIntelligenceModels[id as keyof typeof ioIntelligenceModels]
 			return { id, info }
 		}
 		case "roo": {
-			const requestedId = apiConfiguration.apiModelId
-
-			// Check if the requested model exists in rooModels
-			if (requestedId && rooModels[requestedId as keyof typeof rooModels]) {
-				return {
-					id: requestedId,
-					info: rooModels[requestedId as keyof typeof rooModels],
-				}
-			}
-
-			// Fallback to default model if requested model doesn't exist or is not specified
-			return {
-				id: rooDefaultModelId,
-				info: rooModels[rooDefaultModelId as keyof typeof rooModels],
-			}
+			const id = getValidatedModelId(apiConfiguration.apiModelId, routerModels.roo, defaultModelId)
+			const info = routerModels.roo?.[id]
+			return { id, info }
 		}
 		case "qwen-code": {
-			const id = apiConfiguration.apiModelId ?? qwenCodeDefaultModelId
+			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = qwenCodeModels[id as keyof typeof qwenCodeModels]
 			return { id, info }
 		}
 		case "vercel-ai-gateway": {
-			const id = apiConfiguration.vercelAiGatewayModelId ?? vercelAiGatewayDefaultModelId
+			const id = getValidatedModelId(
+				apiConfiguration.vercelAiGatewayModelId,
+				routerModels["vercel-ai-gateway"],
+				defaultModelId,
+			)
 			const info = routerModels["vercel-ai-gateway"]?.[id]
 			return { id, info }
 		}
-		// kilocode_change start
+		//kilocode_change start
+		case "nano-gpt": {
+			const id = apiConfiguration.nanoGptModelId ?? "chatgpt-4o-latest"
+			const info = routerModels["nano-gpt"]?.[id]
+			return { id, info }
+		}
 		case "ovhcloud": {
 			const id = apiConfiguration.ovhCloudAiEndpointsModelId ?? ovhCloudAiEndpointsDefaultModelId
 			const info = routerModels.ovhcloud[id]
+			return { id, info }
+		}
+		case "inception": {
+			const id = apiConfiguration.inceptionLabsModelId ?? inceptionDefaultModelId
+			const info = routerModels.inception[id]
+			return { id, info }
+		}
+		case "sap-ai-core": {
+			const id = apiConfiguration.sapAiCoreModelId ?? "gpt-5"
+			const info = {
+				maxTokens: 128000,
+				contextWindow: 400000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				description: "GPT-5: The best model for coding and agentic tasks across domains",
+			}
 			return { id, info }
 		}
 		// kilocode_change end
@@ -461,13 +509,7 @@ function getSelectedModel({
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies
-				| "anthropic"
-				| "gemini-cli"
-				| "qwen-code"
-				| "human-relay"
-				| "fake-ai"
-				| "kilocode-openrouter"
+			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "human-relay" | "fake-ai" | "kilocode"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Falha ao conectar com o banco de dados vetorial Qdrant. Certifique-se de que o Qdrant esteja rodando e acessível em {{qdrantUrl}}. Erro: {{errorMessage}}",
-		"vectorDimensionMismatch": "Falha ao atualizar o índice de vetores para o novo modelo. Tente limpar o índice e começar novamente. Detalhes: {{errorMessage}}"
+		"vectorDimensionMismatch": "Falha ao atualizar o índice de vetores para o novo modelo. Tente limpar o índice e começar novamente. Detalhes: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Falha ao inicializar o armazenamento vetorial LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "Falha ao carregar o módulo LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Falha na autenticação. Verifique sua chave de API nas configurações.",
@@ -47,6 +49,7 @@
 		"openAiCompatibleConfigMissing": "Configuração compatível com OpenAI ausente para criação do embedder",
 		"geminiConfigMissing": "Configuração do Gemini ausente para criação do embedder",
 		"mistralConfigMissing": "Configuração do Mistral ausente para a criação do embedder",
+		"openRouterConfigMissing": "Configuração do OpenRouter ausente para a criação do embedder",
 		"vercelAiGatewayConfigMissing": "Configuração do Vercel AI Gateway ausente para a criação do embedder",
 		"invalidEmbedderType": "Tipo de embedder configurado inválido: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Não foi possível determinar a dimensão do vetor para o modelo '{{modelId}}' com o provedor '{{provider}}'. Certifique-se de que a 'Dimensão de Embedding' esteja configurada corretamente nas configurações do provedor compatível com OpenAI.",

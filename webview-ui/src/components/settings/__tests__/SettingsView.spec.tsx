@@ -1,3 +1,5 @@
+// pnpm --filter @roo-code/vscode-webview test src/components/settings/__tests__/SettingsView.spec.tsx
+
 import { render, screen, fireEvent } from "@/utils/test-utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
@@ -79,6 +81,18 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 			role="textbox"
 		/>
 	),
+	// kilocode_change start
+	VSCodeDropdown: ({ children, value, onChange, className, "data-testid": dataTestId }: any) => (
+		<select value={value} onChange={onChange} className={className} data-testid={dataTestId}>
+			{children}
+		</select>
+	),
+	VSCodeOption: ({ children, value, className }: any) => (
+		<option value={value} className={className}>
+			{children}
+		</option>
+	),
+	// kilocode_change end
 }))
 
 vi.mock("../../../components/common/Tab", () => ({
@@ -334,8 +348,10 @@ describe("SettingsView - Sound Settings", () => {
 
 		expect(vscode.postMessage).toHaveBeenCalledWith(
 			expect.objectContaining({
-				type: "ttsEnabled",
-				bool: true,
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					ttsEnabled: true,
+				}),
 			}),
 		)
 	})
@@ -359,8 +375,10 @@ describe("SettingsView - Sound Settings", () => {
 
 		expect(vscode.postMessage).toHaveBeenCalledWith(
 			expect.objectContaining({
-				type: "soundEnabled",
-				bool: true,
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					soundEnabled: true,
+				}),
 			}),
 		)
 	})
@@ -419,10 +437,14 @@ describe("SettingsView - Sound Settings", () => {
 		fireEvent.click(saveButton)
 
 		// Verify message sent to VSCode
-		expect(vscode.postMessage).toHaveBeenCalledWith({
-			type: "ttsSpeed",
-			value: 0.75,
-		})
+		expect(vscode.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					ttsSpeed: 0.75,
+				}),
+			}),
+		)
 	})
 
 	it("updates volume and sends message to VSCode when slider changes", () => {
@@ -445,10 +467,14 @@ describe("SettingsView - Sound Settings", () => {
 		fireEvent.click(saveButtons[0])
 
 		// Verify message sent to VSCode
-		expect(vscode.postMessage).toHaveBeenCalledWith({
-			type: "soundVolume",
-			value: 0.75,
-		})
+		expect(vscode.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					soundVolume: 0.75,
+				}),
+			}),
+		)
 	})
 })
 
@@ -507,8 +533,10 @@ describe("SettingsView - Allowed Commands", () => {
 
 		// Verify VSCode message was sent
 		expect(vscode.postMessage).toHaveBeenCalledWith({
-			type: "allowedCommands",
-			commands: ["npm test"],
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: ["npm test"],
+			},
 		})
 	})
 
@@ -538,8 +566,10 @@ describe("SettingsView - Allowed Commands", () => {
 
 		// Verify VSCode message was sent
 		expect(vscode.postMessage).toHaveBeenLastCalledWith({
-			type: "allowedCommands",
-			commands: [],
+			type: "updateSettings",
+			updatedSettings: {
+				allowedCommands: [],
+			},
 		})
 	})
 
@@ -654,8 +684,10 @@ describe("SettingsView - Duplicate Commands", () => {
 		// Verify VSCode messages were sent
 		expect(vscode.postMessage).toHaveBeenCalledWith(
 			expect.objectContaining({
-				type: "allowedCommands",
-				commands: ["npm test"],
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					allowedCommands: ["npm test"],
+				}),
 			}),
 		)
 	})

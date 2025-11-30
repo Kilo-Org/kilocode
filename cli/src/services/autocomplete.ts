@@ -5,6 +5,7 @@
 
 import { commandRegistry } from "../commands/core/registry.js"
 import { extractCommandName, parseCommand } from "../commands/core/parser.js"
+import { fileSearchService } from "./fileSearch.js"
 import type {
 	Command,
 	ArgumentSuggestion,
@@ -12,6 +13,7 @@ import type {
 	ArgumentDefinition,
 	InputState,
 	ArgumentProvider,
+	ArgumentProviderCommandContext,
 } from "../commands/core/types.js"
 
 // ============================================================================
@@ -25,6 +27,38 @@ export interface CommandSuggestion {
 }
 
 export type { ArgumentSuggestion }
+
+/**
+ * File mention suggestion interface
+ */
+export interface FileMentionSuggestion {
+	/** Relative path from workspace root */
+	value: string
+	/** Additional description or full path */
+	description?: string
+	/** Match score for sorting */
+	matchScore: number
+	/** Highlighted value for display */
+	highlightedValue: string
+	/** Type of file entry */
+	type: "file" | "folder"
+	/** Loading state */
+	loading?: boolean
+	/** Error message if any */
+	error?: string
+}
+
+/**
+ * File mention context detected in text
+ */
+export interface FileMentionContext {
+	/** Whether cursor is in a file mention */
+	isInMention: boolean
+	/** Start position of the @ symbol */
+	mentionStart: number
+	/** Query string after @ */
+	query: string
+}
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -410,7 +444,7 @@ function createProviderContext(
 	currentArgs: string[],
 	argumentIndex: number,
 	partialInput: string,
-	commandContext?: any,
+	commandContext?: ArgumentProviderCommandContext,
 ): ArgumentProviderContext {
 	const argumentDef = command.arguments?.[argumentIndex]
 
@@ -439,6 +473,7 @@ function createProviderContext(
 
 	if (commandContext) {
 		baseContext.commandContext = {
+			config: commandContext.config,
 			routerModels: commandContext.routerModels || null,
 			currentProvider: commandContext.currentProvider || null,
 			kilocodeDefaultModel: commandContext.kilocodeDefaultModel || "",
@@ -446,6 +481,8 @@ function createProviderContext(
 			profileLoading: commandContext.profileLoading || false,
 			updateProviderModel: commandContext.updateProviderModel,
 			refreshRouterModels: commandContext.refreshRouterModels,
+			taskHistoryData: commandContext.taskHistoryData || null,
+			chatMessages: commandContext.chatMessages || [],
 		}
 	}
 
@@ -460,7 +497,7 @@ function getProvider(
 	command: Command,
 	currentArgs: string[],
 	argumentIndex: number,
-	commandContext?: any,
+	commandContext?: ArgumentProviderCommandContext,
 ): ArgumentProvider | null {
 	// Check conditional providers
 	if (definition.conditionalProviders) {
@@ -554,7 +591,10 @@ function getCacheKey(definition: ArgumentDefinition, command: Command, index: nu
 /**
  * Get argument suggestions for current input
  */
-export async function getArgumentSuggestions(input: string, commandContext?: any): Promise<ArgumentSuggestion[]> {
+export async function getArgumentSuggestions(
+	input: string,
+	commandContext?: ArgumentProviderCommandContext,
+): Promise<ArgumentSuggestion[]> {
 	const state = detectInputState(input)
 
 	if (state.type !== "argument" || !state.currentArgument) {
@@ -630,20 +670,133 @@ export function clearArgumentCache(): void {
 }
 
 // ============================================================================
+// FILE MENTION DETECTION & SUGGESTIONS
+// ============================================================================
+
+/**
+ * Detect if cursor is within a file mention context
+ * Scans backward from cursor position to find '@' symbol
+ * @param text Full text buffer
+ * @param cursorPosition Current cursor position
+ * @returns File mention context or null if not in mention
+ */
+export function detectFileMentionContext(text: string, cursorPosition: number): FileMentionContext | null {
+	// Scan backward from cursor to find '@'
+	let mentionStart = -1
+
+	for (let i = cursorPosition - 1; i >= 0; i--) {
+		const char = text[i]
+
+		// Found '@' - this is our mention start
+		if (char === "@") {
+			mentionStart = i
+			break
+		}
+
+		// If we hit whitespace or newline before '@', no mention context
+		if (char === " " || char === "\n" || char === "\t" || char === "\r") {
+			return null
+		}
+	}
+
+	// No '@' found before cursor
+	if (mentionStart === -1) {
+		return null
+	}
+
+	// Extract query between '@' and cursor
+	const query = text.slice(mentionStart + 1, cursorPosition)
+
+	// Check if query contains unescaped whitespace (not a valid mention)
+	// Use negative lookbehind to check for whitespace not preceded by backslash
+	if (/(?<!\\)\s/.test(query)) {
+		return null
+	}
+
+	return {
+		isInMention: true,
+		mentionStart,
+		query,
+	}
+}
+
+/**
+ * Get file mention suggestions based on query
+ * @param query Search query (text after @)
+ * @param cwd Current working directory (workspace root)
+ * @param maxResults Maximum number of results (default: 50)
+ * @returns Array of file mention suggestions
+ */
+export async function getFileMentionSuggestions(
+	query: string,
+	cwd: string,
+	maxResults = 50,
+): Promise<FileMentionSuggestion[]> {
+	try {
+		// Search files using file search service
+		const results = await fileSearchService.searchFiles(query, cwd, maxResults)
+
+		// Convert to FileMentionSuggestion format
+		return results.map((result) => {
+			const suggestion: FileMentionSuggestion = {
+				value: result.path,
+				matchScore: 100, // fileSearchService already sorts by relevance
+				highlightedValue: result.path,
+				type: result.type,
+			}
+
+			if (result.dirname) {
+				suggestion.description = `in ${result.dirname}`
+			}
+
+			return suggestion
+		})
+	} catch (error) {
+		return [
+			{
+				value: "",
+				description: "Error loading file suggestions",
+				matchScore: 0,
+				highlightedValue: "",
+				type: "file",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+		]
+	}
+}
+
+// ============================================================================
 // MAIN API
 // ============================================================================
 
 /**
- * Get all suggestions (commands or arguments) based on input state
+ * Get all suggestions (commands, arguments, or file mentions) based on input state
+ * @param input Current input text
+ * @param cursorPosition Current cursor position (required for file mention detection)
+ * @param commandContext Optional command context for argument providers
+ * @param cwd Current working directory for file suggestions
  */
 export async function getAllSuggestions(
 	input: string,
-	commandContext?: any,
+	cursorPosition: number,
+	commandContext?: ArgumentProviderCommandContext,
+	cwd?: string,
 ): Promise<
 	| { type: "command"; suggestions: CommandSuggestion[] }
 	| { type: "argument"; suggestions: ArgumentSuggestion[] }
+	| { type: "file-mention"; suggestions: FileMentionSuggestion[] }
 	| { type: "none"; suggestions: [] }
 > {
+	// Check for file mention context first (highest priority)
+	const fileMentionCtx = detectFileMentionContext(input, cursorPosition)
+	if (fileMentionCtx?.isInMention && cwd) {
+		return {
+			type: "file-mention",
+			suggestions: await getFileMentionSuggestions(fileMentionCtx.query, cwd),
+		}
+	}
+
+	// Fall back to command/argument detection
 	const state = detectInputState(input)
 
 	if (state.type === "command") {

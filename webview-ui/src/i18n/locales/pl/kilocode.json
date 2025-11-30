@@ -22,7 +22,6 @@
 	"pricing": {
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
-		"freeModelsDescription": "Darmowe modele mogą mieć limity użycia. Użyj poniższego linku, aby zoptymalizować wykorzystanie darmowych modeli!",
 		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych"
 	},
 	"notifications": {
@@ -102,7 +101,7 @@
 		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój.",
 		"automatic": "Pozwól Kilo zdecydować",
 		"xml": "XML",
-		"json": "JSON (eksperymentalny)"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {
@@ -231,6 +230,7 @@
 			},
 			"keybindingNotFound": "nie znaleziono",
 			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
+			"configureAutocompleteProfile": "Użyj dowolnego modelu, przechodząc do profili i konfigurując Profil typu Autouzupełnianie.",
 			"model": "Model",
 			"provider": "Dostawca"
 		}

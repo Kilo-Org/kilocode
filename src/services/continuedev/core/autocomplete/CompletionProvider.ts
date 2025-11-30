@@ -14,11 +14,9 @@ import { renderPromptWithTokenLimit } from "./templating/index.js"
 import { GetLspDefinitionsFunction } from "./types.js"
 import { AutocompleteDebouncer } from "./util/AutocompleteDebouncer.js"
 import { AutocompleteLoggingService } from "./util/AutocompleteLoggingService.js"
-import { AutocompleteLruCache } from "./util/AutocompleteLruCache.js"
+import { AutocompleteLruCacheInMem } from "./util/AutocompleteLruCacheInMem.js"
 import { HelperVars } from "./util/HelperVars.js"
 import { AutocompleteInput, AutocompleteOutcome } from "./util/types.js"
-
-const autocompleteCache = AutocompleteLruCache.get()
 
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
@@ -29,7 +27,7 @@ const ERRORS_TO_IGNORE = [
 ]
 
 export class CompletionProvider {
-	private autocompleteCache = AutocompleteLruCache.get()
+	private autocompleteCache = AutocompleteLruCacheInMem.get()
 	public errorsShown: Set<string> = new Set()
 	private bracketMatchingService = new BracketMatchingService()
 	private debouncer = new AutocompleteDebouncer()
@@ -55,7 +53,6 @@ export class CompletionProvider {
 			return undefined
 		}
 
-
 		// Temporary fix for JetBrains autocomplete bug as described in https://github.com/continuedev/continue/pull/3022
 		if (llm.model === undefined && llm.completionOptions?.model !== undefined) {
 			llm.model = llm.completionOptions.model
@@ -76,7 +73,6 @@ export class CompletionProvider {
 			llm.useLegacyCompletionsEndpoint = true
 		}
 
-		console.log('using LLM', llm)
 		return llm
 	}
 
@@ -123,7 +119,7 @@ export class CompletionProvider {
 
 		// Enable static contextualization if defined.
 		if (config?.experimental?.enableStaticContextualization) {
-			options.experimental_enableStaticContextualization = true
+			options.experimental_enableStaticContextualization = false
 		}
 
 		return options
@@ -138,7 +134,6 @@ export class CompletionProvider {
 			// Create abort signal if not given
 			if (!token) {
 				const controller = this.loggingService.createAbortController(input.completionId)
-				console.log('creating abort token because none given')
 				token = controller.signal
 			}
 			const startTime = Date.now()
@@ -187,7 +182,7 @@ export class CompletionProvider {
 			// Completion
 			let completion: string | undefined = ""
 
-			const cache = await autocompleteCache
+			const cache = await this.autocompleteCache
 			const cachedCompletion = helper.options.useCache ? await cache.get(helper.prunedPrefix) : undefined
 			let cacheHit = false
 			if (cachedCompletion) {
@@ -214,11 +209,8 @@ export class CompletionProvider {
 
 				// Don't postprocess if aborted
 				if (token.aborted) {
-					console.log('aborted')
 					return undefined
 				}
-
-				console.log('raw completion', completion)
 
 				const processedCompletion = helper.options.transform
 					? postprocessCompletion({

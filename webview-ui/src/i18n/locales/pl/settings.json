@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-zatwierdzanie",
 		"browser": "Dostęp komputera",
 		"checkpoints": "Punkty kontrolne",
+		"display": "Wyświetl",
 		"notifications": "Powiadomienia",
 		"contextManagement": "Kontekst",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"display": "Wyświetl"
+		"autoPurge": "Auto-czyszczenie"
 	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
@@ -59,6 +60,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Klucz API",
 		"vercelAiGatewayApiKeyPlaceholder": "Wprowadź swój klucz API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Klucz API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
@@ -91,8 +95,12 @@
 		"modelPlaceholder": "Wprowadź nazwę modelu",
 		"selectModel": "Wybierz model",
 		"ollamaBaseUrlLabel": "Bazowy URL Ollama",
+		"vectorStoreProviderLabel": "Dostawca magazynu wektorów",
 		"qdrantApiKeyLabel": "Klucz API Qdrant",
 		"qdrantApiKeyPlaceholder": "Wprowadź swój klucz API Qdrant (opcjonalnie)",
+		"lancedbVectorStoreDirectoryLabel": "Ścieżka LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Wprowadź niestandardową ścieżkę magazynu wektorów (opcjonalnie)",
+		"lancedbVectorStoreDirectoryDescription": "Ścieżka do przechowywania bazy danych LanceDB. Jeśli pusta, używa domyślnej lokalizacji w globalStorageUri/vector.",
 		"setupConfigLabel": "Konfiguracja",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -125,7 +133,8 @@
 			"vercelAiGatewayApiKeyRequired": "Klucz API Vercel AI Gateway jest wymagany",
 			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
 			"baseUrlRequired": "Wymagany jest bazowy adres URL",
-			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0"
+			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0",
+			"openRouterApiKeyRequired": "Wymagany jest klucz API OpenRouter"
 		},
 		"advancedConfigLabel": "Konfiguracja zaawansowana",
 		"searchMinScoreLabel": "Próg wyniku wyszukiwania",
@@ -228,6 +237,8 @@
 		"providerDocumentation": "Dokumentacja {{provider}}",
 		"configProfile": "Profil konfiguracji",
 		"description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
+		"makeActiveProfile": "Ustaw jako aktywny profil",
+		"makeActiveTooltip": "Aktywuj ten profil, aby używać go w żądaniach API",
 		"apiProvider": "Dostawca API",
 		"model": "Model",
 		"nameEmpty": "Nazwa nie może być pusta",
@@ -280,6 +291,8 @@
 		"anthropicApiKey": "Klucz API Anthropic",
 		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
 		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
+		"anthropicUseAzureDeployment": "Użyj nazwy wdrożenia Azure",
+		"anthropicAzureDeploymentPlaceholder": "Wprowadź nazwę wdrożenia...",
 		"anthropic1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
 		"anthropic1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
@@ -308,6 +321,9 @@
 		"getZaiApiKey": "Uzyskaj klucz API Z AI",
 		"zaiEntrypoint": "Punkt wejścia Z AI",
 		"zaiEntrypointDescription": "Wybierz odpowiedni punkt wejścia API w zależności od swojej lokalizacji. Jeśli jesteś w Chinach, wybierz open.bigmodel.cn. W przeciwnym razie wybierz api.z.ai.",
+		"minimaxApiKey": "Klucz API MiniMax",
+		"getMiniMaxApiKey": "Uzyskaj klucz API MiniMax",
+		"minimaxBaseUrl": "Punkt wejścia MiniMax",
 		"geminiApiKey": "Klucz API Gemini",
 		"getGroqApiKey": "Uzyskaj klucz API Groq",
 		"groqApiKey": "Klucz API Groq",
@@ -331,6 +347,32 @@
 		"huggingFaceSelectProvider": "Wybierz dostawcę...",
 		"huggingFaceSearchProviders": "Szukaj dostawców...",
 		"huggingFaceNoProvidersFound": "Nie znaleziono dostawców",
+		"sapAiCore": {
+			"serviceKey": "Klucz usługi AI Core",
+			"serviceKeyJson": "Wprowadź JSON klucza usługi...",
+			"resourceGroup": "Grupa zasobów AI Core",
+			"credentialsNote": "Te dane uwierzytelniające są przechowywane lokalnie i używane wyłącznie do wykonywania żądań API z tego rozszerzenia.",
+			"learnMore": "Więcej informacji o dostępie do API SAP AI Core znajdziesz tutaj.",
+			"orchestrationMode": "Tryb orkiestracji",
+			"orchestrationEnabledDesc": "Po włączeniu zapewnia dostęp do wszystkich dostępnych modeli bez konieczności indywidualnych wdrożeń.",
+			"orchestrationDisabledDesc": "Po wyłączeniu zapewnia dostęp tylko do wdrożonych modeli bazowych w Twojej instancji usługi AI Core.",
+			"modelDeploymentDesc": "Możesz wybrać tylko modele z dostępnymi wdrożeniami.",
+			"deployment": "Wdrożenie",
+			"loading": "Ładowanie...",
+			"modelsCount": "({{count}} modeli)",
+			"deploymentsCount": "({{count}} wdrożeń)",
+			"selectModel": "Wybierz model...",
+			"selectDeployment": "Wybierz wdrożenie...",
+			"searchModels": "Szukaj modeli...",
+			"searchDeployments": "Szukaj wdrożeń...",
+			"noModelsFound": "Nie znaleziono modeli",
+			"noDeploymentFound": "Nie znaleziono wdrożenia",
+			"getStarted": "Rozpocznij z SAP AI Core",
+			"supportedProviders": "Obsługiwani dostawcy",
+			"supportedProvidersDesc1": "Dostawca SAP AI Core obecnie obsługuje tylko modele bazowe dla następujących dostawców LLM:",
+			"supportedProvidersDesc2": "Rozważ przełączenie na tryb orkiestracji, aby uzyskać dostęp do większej liczby modeli.",
+			"supportedProvidersDesc3": "Dowiedz się więcej o trybie orkiestracji"
+		},
 		"apiKey": "Klucz API",
 		"openAiApiKey": "Klucz API OpenAI",
 		"openAiBaseUrl": "URL bazowy",
@@ -339,6 +381,14 @@
 		"getMistralApiKey": "Uzyskaj klucz API Mistral / Codestral",
 		"codestralBaseUrl": "URL bazowy Codestral (opcjonalnie)",
 		"codestralBaseUrlDesc": "Ustaw opcjonalny URL dla modeli Codestral.",
+		"nanoGptApiKey": "Klucz API Nano-GPT",
+		"getNanoGptApiKey": "Uzyskaj klucz API Nano-GPT",
+		"nanoGptModelList": "Lista modeli",
+		"nanoGptModelListOptions": {
+			"all": "Wszystkie modele",
+			"personalized": "Modele spersonalizowane",
+			"subscription": "Modele subskrypcyjne"
+		},
 		"xaiApiKey": "Klucz API xAI",
 		"getXaiApiKey": "Uzyskaj klucz API xAI",
 		"litellmApiKey": "Klucz API LiteLLM",
@@ -352,6 +402,7 @@
 		"awsSessionToken": "Token sesji AWS",
 		"awsRegion": "Region AWS",
 		"awsCrossRegion": "Użyj wnioskowania międzyregionalnego",
+		"awsGlobalInference": "Użyj globalnej inferencji (automatyczny wybór optymalnego regionu AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Użyj niestandardowego punktu końcowego VPC",
 			"vpcEndpointUrlPlaceholder": "Wprowadź URL punktu końcowego VPC (opcjonalnie)",
@@ -361,7 +412,7 @@
 		"enablePromptCachingTitle": "Włącz buforowanie podpowiedzi, aby poprawić wydajność i zmniejszyć koszty dla obsługiwanych modeli.",
 		"cacheUsageNote": "Uwaga: Jeśli nie widzisz użycia bufora, spróbuj wybrać inny model, a następnie ponownie wybrać żądany model.",
 		"vscodeLmModel": "Model językowy",
-		"vscodeLmWarning": "Uwaga: To bardzo eksperymentalna integracja, a wsparcie dostawcy może się różnić. Jeśli otrzymasz błąd dotyczący nieobsługiwanego modelu, jest to problem po stronie dostawcy.",
+		"vscodeLmWarning": "Uwaga: Modele dostępne przez interfejs VS Code Language Model API mogą być opakowane lub dostrojone przez dostawcę, dlatego ich działanie może różnić się od bezpośredniego użycia tego samego modelu u typowego dostawcy lub routera. Aby użyć modelu z listy «Language Model», najpierw przełącz się na ten model, a następnie kliknij «Akceptuj» w monicie Copilot Chat; w przeciwnym razie możesz zobaczyć błąd, np. 400 „The requested model is not supported”.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Włącz kontekst URL",
@@ -438,7 +489,7 @@
 			},
 			"computerUse": {
 				"label": "Użycie komputera",
-				"description": "Czy model jest w stanie wchodzić w interakcję z przeglądarką? (np. Claude 3.7 Sonnet)."
+				"description": "Czy model jest w stanie wchodzić w interakcję z przeglądarką?"
 			},
 			"promptCache": {
 				"label": "Buforowanie podpowiedzi",
@@ -464,18 +515,23 @@
 			},
 			"resetDefaults": "Przywróć domyślne"
 		},
+		"rateLimitAfter": {
+			"label": "Limit prędkości na końcu",
+			"description": "Rozpocznij ograniczanie prędkości po zakończeniu strumienia API."
+		},
 		"rateLimitSeconds": {
 			"label": "Limit szybkości",
 			"description": "Minimalny czas między żądaniami API."
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limit błędów i powtórzeń",
-			"description": "Liczba kolejnych błędów lub powtórzonych akcji przed wyświetleniem okna dialogowego 'Kilo Code ma problemy'",
+			"description": "Liczba kolejnych błędów lub powtórzonych akcji przed wyświetleniem okna dialogowego 'Kilo ma problemy'. Ustaw na 0, aby wyłączyć ten mechanizm bezpieczeństwa (nigdy się nie uruchomi).",
 			"unlimitedDescription": "Włączono nieograniczone próby (automatyczne kontynuowanie). Okno dialogowe nigdy się nie pojawi.",
 			"warning": "⚠️ Ustawienie na 0 pozwala na nieograniczone próby, co może zużyć znaczną ilość API"
 		},
 		"reasoningEffort": {
 			"label": "Wysiłek rozumowania modelu",
+			"none": "Brak",
 			"minimal": "Minimalny (najszybszy)",
 			"high": "Wysoki",
 			"medium": "Średni",
@@ -517,6 +573,15 @@
 			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
 			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
 			"setupLink": "Oficjalna dokumentacja Qwen"
+		},
+		"profileName": "Nazwa profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Czat",
+		"profileTypeAutocomplete": "Autouzupełnianie",
+		"profileTypeDescription": "Profile czatu są używane do rozmów. Dozwolony jest tylko jeden profil autouzupełniania.",
+		"autocompleteLabel": "(Autouzupełnianie)",
+		"autocomplete": {
+			"onlyOneAllowed": "Dozwolony jest tylko jeden profil autouzupełniania. Profil \"{{existingName}}\" jest już skonfigurowany do autouzupełniania. Najpierw zmień jego typ lub usuń go."
 		}
 	},
 	"browser": {
@@ -548,9 +613,45 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Limit czasu inicjalizacji punktu kontrolnego (sekundy)",
+			"description": "Maksymalny czas oczekiwania na inicjalizację usługi punktów kontrolnych. Domyślnie 15 sekund. Zakres: 10-60 sekund."
+		},
 		"enable": {
 			"label": "Włącz automatyczne punkty kontrolne",
 			"description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów. <0>Dowiedz się więcej</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Włącz automatyczne czyszczenie zadań",
+			"description": "Automatycznie usuwaj stare zadania, aby zwolnić miejsce na dysku i poprawić wydajność. Zadania są klasyfikowane według typu i wieku, aby określić, kiedy powinny zostać usunięte."
+		},
+		"defaultRetention": {
+			"label": "Domyślny okres przechowywania (dni)",
+			"description": "Liczba dni przechowywania zadań przed ich kwalifikacją do czyszczenia"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nigdy nie usuwaj ulubionych zadań",
+			"description": "Gdy włączone, ulubione zadania nigdy nie będą automatycznie usuwane niezależnie od wieku"
+		},
+		"favoritedRetention": {
+			"label": "Przechowywanie ulubionych zadań (dni)",
+			"description": "Liczba dni przechowywania ulubionych zadań (dotyczy tylko gdy 'Nigdy nie usuwaj ulubionych zadań' jest wyłączone)"
+		},
+		"completedRetention": {
+			"label": "Przechowywanie ukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które zostały pomyślnie ukończone"
+		},
+		"incompleteRetention": {
+			"label": "Przechowywanie nieukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które nie zostały ukończone (zazwyczaj krócej niż ukończone zadania)"
+		},
+		"lastRun": {
+			"label": "Ostatnie czyszczenie"
+		},
+		"manualPurge": {
+			"button": "Uruchom czyszczenie teraz"
 		}
 	},
 	"notifications": {
@@ -644,6 +745,14 @@
 			"label": "Maksymalny całkowity rozmiar obrazów",
 			"mb": "MB",
 			"description": "Maksymalny skumulowany limit rozmiaru (w MB) dla wszystkich obrazów przetwarzanych w jednej operacji read_file. Podczas odczytu wielu obrazów rozmiar każdego obrazu jest dodawany do sumy. Jeśli dołączenie kolejnego obrazu przekroczyłoby ten limit, zostanie on pominięty."
+		},
+		"includeCurrentTime": {
+			"label": "Uwzględnij bieżący czas w kontekście",
+			"description": "Gdy włączone, bieżący czas i informacje o strefie czasowej zostaną uwzględnione w promptcie systemowym. Wyłącz, jeśli modele przestają działać z powodu problemów z czasem."
+		},
+		"includeCurrentCost": {
+			"label": "Uwzględnij bieżący koszt w kontekście",
+			"description": "Gdy włączone, bieżący koszt użycia API zostanie uwzględniony w promptcie systemowym. Wyłącz, jeśli modele przestają działać z powodu problemów z kosztami."
 		}
 	},
 	"terminal": {
@@ -653,55 +762,55 @@
 		},
 		"advanced": {
 			"label": "Ustawienia terminala: Zaawansowane",
-			"description": "Poniższe opcje mogą wymagać ponownego uruchomienia terminala, aby zastosować ustawienie."
+			"description": "Te ustawienia mają zastosowanie tylko gdy 'Użyj terminala wbudowanego' jest wyłączone. Dotyczą tylko terminala VS Code i mogą wymagać ponownego uruchomienia IDE."
 		},
 		"outputLineLimit": {
 			"label": "Limit wyjścia terminala",
-			"description": "Maksymalna liczba linii do uwzględnienia w wyjściu terminala podczas wykonywania poleceń. Po przekroczeniu linie będą usuwane ze środka, oszczędzając token. <0>Dowiedz się więcej</0>"
+			"description": "Zachowuje pierwsze i ostatnie linie i odrzuca środkowe, aby zmieścić się w limicie. Zmniejsz, aby oszczędzać tokeny; zwiększ, aby dać Roo więcej szczegółów ze środka. Roo widzi symbol zastępczy tam, gdzie treść jest pomijana.<0>Dowiedz się więcej</0>"
 		},
 		"outputCharacterLimit": {
-			"label": "Limit znaków w terminalu",
-			"description": "Maksymalna liczba znaków do uwzględnienia w danych wyjściowych terminala podczas wykonywania poleceń. Limit ten ma pierwszeństwo przed limitem linii, aby zapobiec problemom z pamięcią spowodowanym przez bardzo długie linie. Po przekroczeniu limitu dane wyjściowe zostaną obcięte. <0>Dowiedz się więcej</0>"
+			"label": "Limit znaków terminala",
+			"description": "Zastępuje limit linii, aby zapobiec problemom z pamięcią, narzucając twardy limit rozmiaru wyjścia. W przypadku przekroczenia zachowuje początek i koniec i pokazuje symbol zastępczy Roo tam, gdzie treść jest pomijana. <0>Dowiedz się więcej</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Limit czasu integracji powłoki terminala",
-			"description": "Maksymalny czas oczekiwania na inicjalizację integracji powłoki przed wykonaniem poleceń. Dla użytkowników z długim czasem uruchamiania powłoki, ta wartość może wymagać zwiększenia, jeśli widzisz błędy \"Shell Integration Unavailable\" w terminalu. <0>Dowiedz się więcej</0>"
+			"description": "Jak długo czekać na integrację powłoki VS Code przed wykonaniem poleceń. Zwiększ, jeśli twoja powłoka wolno się uruchamia lub widzisz błędy 'Integracja Powłoki Niedostępna'. <0>Dowiedz się więcej</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Wyłącz integrację powłoki terminala",
-			"description": "Włącz tę opcję, jeśli polecenia terminala nie działają poprawnie lub widzisz błędy 'Shell Integration Unavailable'. Używa to prostszej metody uruchamiania poleceń, omijając niektóre zaawansowane funkcje terminala. <0>Dowiedz się więcej</0>"
+			"label": "Użyj terminala wbudowanego (zalecane)",
+			"description": "Uruchamiaj polecenia w terminalu wbudowanym (czat), aby ominąć profile/integrację powłoki dla szybszych, bardziej niezawodnych uruchomień. Gdy wyłączony, Roo używa terminala VS Code z twoim profilem powłoki, monitami i wtyczkami. <0>Dowiedz się więcej</0>"
 		},
 		"commandDelay": {
-			"label": "Opóźnienie poleceń terminala",
-			"description": "Opóźnienie w milisekundach dodawane po wykonaniu polecenia. Domyślne ustawienie 0 całkowicie wyłącza opóźnienie. Może to pomóc w zapewnieniu pełnego przechwytywania wyjścia poleceń w terminalach z problemami z synchronizacją. W większości terminali jest to implementowane przez ustawienie `PROMPT_COMMAND='sleep N'`, a PowerShell dodaje `start-sleep` na końcu każdego polecenia. Pierwotnie było to obejście błędu VSCode#237208 i może nie być potrzebne. <0>Dowiedz się więcej</0>"
+			"label": "Opóźnienie polecenia terminala",
+			"description": "Dodaje krótką pauzę po każdym poleceniu, aby terminal VS Code mógł opróżnić całe wyjście (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Używaj tylko gdy widzisz brakujące wyjście końcowe; w przeciwnym razie zostaw na 0. <0>Dowiedz się więcej</0>"
 		},
 		"compressProgressBar": {
-			"label": "Kompresuj wyjście pasków postępu",
-			"description": "Po włączeniu, przetwarza wyjście terminala z powrotami karetki (\\r), aby symulować sposób wyświetlania treści przez prawdziwy terminal. Usuwa to pośrednie stany pasków postępu, zachowując tylko stan końcowy, co oszczędza przestrzeń kontekstową dla bardziej istotnych informacji. <0>Dowiedz się więcej</0>"
+			"label": "Kompresuj wyjście paska postępu",
+			"description": "Zwija paski postępu/spinnery, aby zachować tylko stan końcowy (oszczędza tokeny). <0>Dowiedz się więcej</0>"
 		},
 		"powershellCounter": {
 			"label": "Włącz obejście licznika PowerShell",
-			"description": "Po włączeniu dodaje licznik do poleceń PowerShell, aby zapewnić prawidłowe wykonanie poleceń. Pomaga to w terminalach PowerShell, które mogą mieć problemy z przechwytywaniem wyjścia. <0>Dowiedz się więcej</0>"
+			"description": "Włącz gdy brakuje lub jest zduplikowane wyjście PowerShell; dodaje mały licznik do każdego polecenia, aby ustabilizować wyjście. Pozostaw wyłączone, jeśli wyjście już wygląda poprawnie. <0>Dowiedz się więcej</0>"
 		},
 		"zshClearEolMark": {
 			"label": "Wyczyść znacznik końca linii ZSH",
-			"description": "Po włączeniu czyści znacznik końca linii ZSH poprzez ustawienie PROMPT_EOL_MARK=''. Zapobiega to problemom z interpretacją wyjścia poleceń, gdy kończy się ono znakami specjalnymi jak '%'. <0>Dowiedz się więcej</0>"
+			"description": "Włącz gdy widzisz zbłąkane % na końcu linii lub parsowanie wygląda nieprawidłowo; pomija znacznik końca linii (%) Zsh. <0>Dowiedz się więcej</0>"
 		},
 		"zshOhMy": {
 			"label": "Włącz integrację Oh My Zsh",
-			"description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. Zastosowanie tego ustawienia może wymagać ponownego uruchomienia IDE. <0>Dowiedz się więcej</0>"
+			"description": "Włącz gdy twój motyw/wtyczki Oh My Zsh oczekują integracji powłoki; ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Wyłącz, aby uniknąć ustawiania tej zmiennej. <0>Dowiedz się więcej</0>"
 		},
 		"zshP10k": {
 			"label": "Włącz integrację Powerlevel10k",
-			"description": "Po włączeniu ustawia POWERLEVEL9K_TERM_SHELL_INTEGRATION=true, aby włączyć funkcje integracji powłoki Powerlevel10k. <0>Dowiedz się więcej</0>"
+			"description": "Włącz gdy używasz integracji powłoki Powerlevel10k. <0>Dowiedz się więcej</0>"
 		},
 		"zdotdir": {
 			"label": "Włącz obsługę ZDOTDIR",
-			"description": "Po włączeniu tworzy tymczasowy katalog dla ZDOTDIR, aby poprawnie obsłużyć integrację powłoki zsh. Zapewnia to prawidłowe działanie integracji powłoki VSCode z zsh, zachowując twoją konfigurację zsh. <0>Dowiedz się więcej</0>"
+			"description": "Włącz gdy integracja powłoki zsh zawodzi lub jest w konflikcie z twoimi plikami dotfiles. <0>Dowiedz się więcej</0>"
 		},
 		"inheritEnv": {
 			"label": "Dziedzicz zmienne środowiskowe",
-			"description": "Po włączeniu terminal dziedziczy zmienne środowiskowe z procesu nadrzędnego VSCode, takie jak ustawienia integracji powłoki zdefiniowane w profilu użytkownika. Przełącza to bezpośrednio globalne ustawienie VSCode `terminal.integrated.inheritEnv`. <0>Dowiedz się więcej</0>"
+			"description": "Włącz, aby dziedziczyć zmienne środowiskowe z procesu nadrzędnego VS Code. <0>Dowiedz się więcej</0>"
 		}
 	},
 	"advancedSettings": {
@@ -710,7 +819,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Włącz edycję przez różnice",
-			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 4 Sonnet.",
+			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików",
 			"strategy": {
 				"label": "Strategia diff",
 				"options": {
@@ -739,10 +848,6 @@
 			"name": "Użyj eksperymentalnej ujednoliconej strategii diff",
 			"description": "Włącz eksperymentalną ujednoliconą strategię diff. Ta strategia może zmniejszyć liczbę ponownych prób spowodowanych błędami modelu, ale może powodować nieoczekiwane zachowanie lub nieprawidłowe edycje. Włącz tylko jeśli rozumiesz ryzyko i jesteś gotów dokładnie przeglądać wszystkie zmiany."
 		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Użyj eksperymentalnego narzędzia do wyszukiwania i zamiany",
-			"description": "Włącz eksperymentalne narzędzie do wyszukiwania i zamiany, umożliwiając Kilo Code zastąpienie wielu wystąpień wyszukiwanego terminu w jednym żądaniu."
-		},
 		"INSERT_BLOCK": {
 			"name": "Użyj eksperymentalnego narzędzia do wstawiania treści",
 			"description": "Włącz eksperymentalne narzędzie do wstawiania treści, umożliwiając Kilo Code wstawianie treści w określonych numerach linii bez konieczności tworzenia diff."
@@ -770,8 +875,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Włącz Fast Apply",
 			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
-			"apiKey": "Klucz API Morph (opcjonalnie)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"apiProvider": "Dostawca API",
+			"apiProviderList": {
+				"current": "Aktualny"
+			},
+			"apiKey": "Klucz API (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API (opcjonalnie)",
 			"modelLabel": "Wybór modelu",
 			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
 			"models": {
@@ -829,8 +938,6 @@
 	"modelInfo": {
 		"supportsImages": "Obsługuje obrazy",
 		"noImages": "Nie obsługuje obrazów",
-		"supportsComputerUse": "Obsługuje użycie komputera",
-		"noComputerUse": "Nie obsługuje użycia komputera",
 		"supportsPromptCache": "Obsługuje buforowanie podpowiedzi",
 		"noPromptCache": "Nie obsługuje buforowania podpowiedzi",
 		"contextWindow": "Okno kontekstowe:",
@@ -890,7 +997,9 @@
 		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
 		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
 		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
-		"qwenCodeOauthPath": "Musisz podać prawidłową ścieżkę do poświadczeń OAuth"
+		"qwenCodeOauthPath": "Musisz podać prawidłową ścieżkę do poświadczeń OAuth",
+		"sapAiCore": "Musisz podać prawidłowy klucz usługi SAP AI Core.",
+		"sapAiCoreDeploymentId": "Musisz wybrać działające wdrożenie dla modelu '{{model}}'."
 	},
 	"placeholders": {
 		"apiKey": "Wprowadź klucz API...",

@@ -21,6 +21,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	openai: ["openAiApiKey"],
 	cerebras: ["cerebrasApiKey", "apiModelId"],
 	glama: ["glamaApiKey", "glamaModelId"],
+	"nano-gpt": ["nanoGptApiKey", "nanoGptModelId"],
 	huggingface: ["huggingFaceApiKey", "huggingFaceModelId", "huggingFaceInferenceProvider"],
 	litellm: ["litellmBaseUrl", "litellmApiKey", "litellmModelId"],
 	moonshot: ["moonshotBaseUrl", "moonshotApiKey", "apiModelId"],
@@ -40,8 +41,13 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	"vercel-ai-gateway": ["vercelAiGatewayApiKey", "vercelAiGatewayModelId"],
 	"human-relay": ["apiModelId"],
 	"fake-ai": ["apiModelId"],
+	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
+	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
+	synthetic: ["syntheticApiKey", "apiModelId"],
+	"sap-ai-core": ["sapAiCoreServiceKey", "sapAiCoreResourceGroup", "sapAiCoreDeploymentId", "sapAiCoreModelId"],
 	// Special cases handled separately in handleSpecialValidations
 	vertex: [], // Has special validation logic (either/or fields)
 	"vscode-lm": [], // Has nested object validation
 	"virtual-quota-fallback": [], // Has array validation
+	minimax: ["minimaxBaseUrl", "minimaxApiKey", "apiModelId"],
 }

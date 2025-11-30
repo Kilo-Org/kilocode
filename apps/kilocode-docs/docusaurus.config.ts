@@ -158,16 +158,55 @@ const config: Config = {
 						from: ["/mcp/mcp-vs-api"],
 					},
 
-					// Deleted seats page
-					{
-						to: "/seats/team-management",
-						from: ["/seats/team-management"],
-					},
-
 					// Kilo credits, not tokens
 					{
 						to: "/basic-usage/adding-credits",
 						from: ["/basic-usage/adding-tokens"],
+					},
+					// Change to plans language
+					{
+						to: "/plans/about",
+						from: ["/seats/about"],
+					},
+					{
+						to: "/plans/getting-started",
+						from: ["/seats/getting-started"],
+					},
+					{
+						to: "/plans/dashboard",
+						from: ["/seats/dashboard"],
+					},
+					{
+						to: "/plans/analytics",
+						from: ["/seats/analytics"],
+					},
+					{
+						to: "/plans/team-management",
+						from: ["/seats/team-management"],
+					},
+					{
+						to: "/plans/custom-modes",
+						from: ["/seats/custom-modes"],
+					},
+					{
+						to: "/plans/billing",
+						from: ["/seats/billing"],
+					},
+					{
+						to: "/plans/enterprise/SSO",
+						from: ["/seats/enterprise/SSO"],
+					},
+					{
+						to: "/plans/enterprise/model-access",
+						from: ["/seats/enterprise/model-access"],
+					},
+					{
+						to: "/plans/enterprise/audit-logs",
+						from: ["/seats/enterprise/audit-logs"],
+					},
+					{
+						to: "/plans/migration",
+						from: ["/seats/migration"],
 					},
 				],
 			},

@@ -25,6 +25,7 @@
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
+		"display": "显示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
@@ -35,7 +36,7 @@
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
-		"display": "显示"
+		"autoPurge": "自动清理"
 	},
 	"slashCommands": {
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
@@ -62,6 +63,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 密钥",
 		"vercelAiGatewayApiKeyPlaceholder": "输入您的 Vercel AI Gateway API 密钥",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API 密钥",
+		"openRouterApiKeyPlaceholder": "输入您的 OpenRouter API 密钥",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
@@ -81,10 +85,14 @@
 		"selectModelPlaceholder": "选择模型",
 		"ollamaUrlLabel": "Ollama URL：",
 		"ollamaBaseUrlLabel": "Ollama 基础 URL",
+		"vectorStoreProviderLabel": "向量存储提供商",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 密钥：",
 		"qdrantApiKeyLabel": "Qdrant API 密钥",
 		"qdrantApiKeyPlaceholder": "输入你的 Qdrant API 密钥（可选）",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store 路径",
+		"lancedbVectorStoreDirectoryPlaceholder": "输入自定义向量存储路径（可选）",
+		"lancedbVectorStoreDirectoryDescription": "存储 LanceDB 向量数据库的路径。如果为空，将使用 globalStorageUri/vector 的默认位置。",
 		"setupConfigLabel": "设置",
 		"startIndexingButton": "开始",
 		"clearIndexDataButton": "清除索引",
@@ -126,7 +134,8 @@
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
-			"modelDimensionMinValue": "模型维度必须大于 0"
+			"modelDimensionMinValue": "模型维度必须大于 0",
+			"openRouterApiKeyRequired": "OpenRouter API 密钥是必需的"
 		},
 		"advancedConfigLabel": "高级配置",
 		"searchMinScoreLabel": "搜索分数阈值",
@@ -229,6 +238,8 @@
 		"providerDocumentation": "{{provider}} 文档",
 		"configProfile": "配置文件",
 		"description": "保存多组API配置便于快速切换",
+		"makeActiveProfile": "设为活动配置",
+		"makeActiveTooltip": "激活此配置用于 API 请求",
 		"apiProvider": "API提供商",
 		"model": "模型",
 		"nameEmpty": "名称不能为空",
@@ -267,6 +278,14 @@
 		"headerValue": "标头值",
 		"noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
 		"requestyApiKey": "Requesty API 密钥",
+		"nanoGptApiKey": "Nano-GPT API 密钥",
+		"getNanoGptApiKey": "获取 Nano-GPT API 密钥",
+		"nanoGptModelList": "模型列表",
+		"nanoGptModelListOptions": {
+			"all": "所有模型",
+			"personalized": "个性化模型",
+			"subscription": "订阅模型"
+		},
 		"refreshModels": {
 			"label": "刷新模型",
 			"hint": "请重新打开设置以查看最新模型。",
@@ -283,6 +302,8 @@
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
 		"anthropic1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"anthropic1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"anthropicUseAzureDeployment": "使用 Azure 部署名称",
+		"anthropicAzureDeploymentPlaceholder": "输入部署名称...",
 		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
 		"cerebrasApiKey": "Cerebras API 密钥",
@@ -305,10 +326,16 @@
 		"moonshotApiKey": "Moonshot API 密钥",
 		"getMoonshotApiKey": "获取 Moonshot API 密钥",
 		"moonshotBaseUrl": "Moonshot 服务站点",
+		"minimaxApiKey": "MiniMax API 密钥",
+		"getMiniMaxApiKey": "获取 MiniMax API 密钥",
+		"minimaxBaseUrl": "MiniMax 服务站点",
 		"zaiApiKey": "Z AI API 密钥",
 		"getZaiApiKey": "获取 Z AI API 密钥",
 		"zaiEntrypoint": "Z AI 服务站点",
 		"zaiEntrypointDescription": "请根据您的位置选择适当的 API 服务站点。如果您在中国，请选择 open.bigmodel.cn。否则，请选择 api.z.ai。",
+		"minimaxApiKey": "MiniMax API 密钥",
+		"getMiniMaxApiKey": "获取 MiniMax API 密钥",
+		"minimaxBaseUrl": "MiniMax 服务站点",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
@@ -331,6 +358,32 @@
 		"huggingFaceSelectProvider": "选择提供商...",
 		"huggingFaceSearchProviders": "搜索提供商...",
 		"huggingFaceNoProvidersFound": "未找到提供商",
+		"sapAiCore": {
+			"serviceKey": "AI Core 服务密钥",
+			"serviceKeyJson": "输入服务密钥 JSON...",
+			"resourceGroup": "AI Core 资源组",
+			"credentialsNote": "这些凭证存储在本地，仅用于从此扩展发送 API 请求。",
+			"learnMore": "您可以在此处找到有关 SAP AI Core API 访问的更多信息。",
+			"orchestrationMode": "编排模式",
+			"orchestrationEnabledDesc": "启用后，无需单独部署即可访问所有可用模型。",
+			"orchestrationDisabledDesc": "禁用后，仅可访问 AI Core 服务实例中已部署的基础模型。",
+			"modelDeploymentDesc": "您只能选择有可用部署的模型。",
+			"deployment": "部署",
+			"loading": "加载中...",
+			"modelsCount": "({{count}} 个模型)",
+			"deploymentsCount": "({{count}} 个部署)",
+			"selectModel": "选择模型...",
+			"selectDeployment": "选择部署...",
+			"searchModels": "搜索模型...",
+			"searchDeployments": "搜索部署...",
+			"noModelsFound": "未找到模型",
+			"noDeploymentFound": "未找到部署",
+			"getStarted": "开始使用 SAP AI Core",
+			"supportedProviders": "支持的提供商",
+			"supportedProvidersDesc1": "SAP AI Core 提供商目前仅支持以下 LLM 提供商的基础模型：",
+			"supportedProvidersDesc2": "考虑切换到编排模式以访问更多模型。",
+			"supportedProvidersDesc3": "了解更多关于编排模式"
+		},
 		"getGeminiApiKey": "获取 Gemini API 密钥",
 		"openAiApiKey": "OpenAI API 密钥",
 		"apiKey": "API 密钥",
@@ -353,6 +406,7 @@
 		"awsSessionToken": "AWS 会话Token",
 		"awsRegion": "AWS 区域",
 		"awsCrossRegion": "使用跨区域推理",
+		"awsGlobalInference": "使用全局推理（自动选择最佳 AWS 区域）",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自定义 VPC 端点",
 			"vpcEndpointUrlPlaceholder": "输入 VPC 端点 URL（可选）",
@@ -362,7 +416,7 @@
 		"enablePromptCachingTitle": "开启提示缓存可提升性能并节省成本",
 		"cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
 		"vscodeLmModel": "VSCode LM 模型",
-		"vscodeLmWarning": "注意：这是一个非常实验性的集成，提供商支持会有所不同。如果您收到有关不支持模型的错误，则这是提供商方面的问题。",
+		"vscodeLmWarning": "注意：通过 VS Code Language Model API 访问的模型可能由提供商进行封装或微调，因此其行为可能与直接从常见提供商或路由器使用同一模型时不同。要使用「Language Model」下拉列表中的模型，请先切换到该模型，然后在 Copilot Chat 提示中点击「接受」；否则可能会出现 400「The requested model is not supported」等错误。",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "启用 URL 上下文",
@@ -439,7 +493,7 @@
 			},
 			"computerUse": {
 				"label": "计算机功能调用",
-				"description": "此模型是否能够与浏览器交互？（例如 Claude 3.7 Sonnet）。"
+				"description": "此模型是否能够与浏览器交互？（例如 Claude Sonnet）。"
 			},
 			"promptCache": {
 				"label": "提示缓存",
@@ -465,18 +519,23 @@
 			},
 			"resetDefaults": "重置为默认值"
 		},
+		"rateLimitAfter": {
+			"label": "在结束时速率限制",
+			"description": "在 API 流结束后开始速率限制。"
+		},
 		"rateLimitSeconds": {
 			"label": "API 请求频率限制",
 			"description": "设置API请求的最小间隔时间"
 		},
 		"consecutiveMistakeLimit": {
 			"label": "错误和重复限制",
-			"description": "在显示\"Kilo Code遇到问题\"对话框前允许的连续错误或重复操作次数",
+			"description": "在显示“Kilo遇到问题”对话框前允许的连续错误或重复操作次数。设置为 0 可禁用此安全机制（它将永远不会触发）。",
 			"unlimitedDescription": "已启用无限重试（自动继续）。对话框将永远不会出现。",
 			"warning": "⚠️ 设置为 0 允许无限重试，这可能会消耗大量 API 使用量"
 		},
 		"reasoningEffort": {
 			"label": "模型推理强度",
+			"none": "无",
 			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
@@ -518,6 +577,15 @@
 			"description": "此提供商使用 Qwen 服务的 OAuth 身份验证，不需要 API 密钥。",
 			"instructions": "请按照官方文档获取授权文件并将其放置在指定路径中。",
 			"setupLink": "Qwen 官方文档"
+		},
+		"profileName": "配置名称",
+		"profileType": "配置类型",
+		"profileTypeChat": "对话",
+		"profileTypeAutocomplete": "自动补全",
+		"profileTypeDescription": "对话配置用于会话。只允许一个自动补全配置。",
+		"autocompleteLabel": "(自动补全)",
+		"autocomplete": {
+			"onlyOneAllowed": "只允许一个自动补全配置。配置「{{existingName}}」已配置为自动补全。请先更改其类型或删除它。"
 		}
 	},
 	"browser": {
@@ -549,9 +617,45 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "存档点初始化超时时间（秒）",
+			"description": "存档点服务初始化最长等待时间。默认 15 秒。范围：10-60 秒。"
+		},
 		"enable": {
 			"label": "启用自动存档点",
 			"description": "开启后自动创建任务存档点，方便回溯修改。 <0>了解更多</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "启用自动任务清理",
+			"description": "自动删除旧任务以释放磁盘空间并提高性能。任务按类型和时间分类，以确定何时应该删除。"
+		},
+		"defaultRetention": {
+			"label": "默认保留期（天）",
+			"description": "任务在符合清理条件之前保留的天数"
+		},
+		"neverPurgeFavorited": {
+			"label": "永不删除收藏任务",
+			"description": "启用后，收藏任务无论多久都不会被自动删除"
+		},
+		"favoritedRetention": {
+			"label": "收藏任务保留期（天）",
+			"description": "收藏任务的保留天数（仅在「永不删除收藏任务」禁用时适用）"
+		},
+		"completedRetention": {
+			"label": "已完成任务保留期（天）",
+			"description": "成功完成的任务保留天数"
+		},
+		"incompleteRetention": {
+			"label": "未完成任务保留期（天）",
+			"description": "未完成任务的保留天数（通常比已完成任务更短）"
+		},
+		"lastRun": {
+			"label": "上次清理"
+		},
+		"manualPurge": {
+			"button": "立即执行清理"
 		}
 	},
 	"notifications": {
@@ -645,6 +749,14 @@
 			"label": "图片总大小上限",
 			"mb": "MB",
 			"description": "单次 read_file 操作中处理的所有图片的最大累计大小限制（MB）。读取多张图片时，每张图片的大小会累加到总大小中。如果包含另一张图片会超过此限制，则会跳过该图片。"
+		},
+		"includeCurrentTime": {
+			"label": "在上下文中包含当前时间",
+			"description": "启用后，当前时间和时区信息将包含在系统提示中。如果模型因时间问题停止工作，请禁用此选项。"
+		},
+		"includeCurrentCost": {
+			"label": "在上下文中包含当前成本",
+			"description": "启用后，当前 API 使用成本将包含在系统提示中。如果模型因成本问题停止工作，请禁用此选项。"
 		}
 	},
 	"terminal": {
@@ -654,55 +766,55 @@
 		},
 		"advanced": {
 			"label": "终端设置：高级",
-			"description": "以下选项可能需要重启终端才能应用设置"
+			"description": "这些设置仅在「使用内联终端」禁用时适用。仅影响 VS Code 终端，可能需要重启 IDE。"
 		},
 		"outputLineLimit": {
 			"label": "终端输出限制",
-			"description": "执行命令时在终端输出中包含的最大行数。超过时将从中间删除行，节省 token。 <0>了解更多</0>"
+			"description": "保留首尾行并丢弃中间行以保持在限制内。降低可节省 token；提高可为 Kilo 提供更多中间细节。Kilo 看到内容被跳过的占位符。<0>了解更多</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "终端字符限制",
-			"description": "执行命令时在终端输出中包含的最大字符数。此限制优先于行数限制，以防止因行过长而导致的内存问题。超出后，输出将被截断。 <0>了解更多</0>"
+			"description": "通过强制限制输出大小来覆盖行限制以防止内存问题。如果超出，保留开头和结尾并向 Kilo 显示内容被跳过的占位符。<0>了解更多</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "终端初始化等待时间",
-			"description": "执行命令前等待 Shell 集成初始化的最长时间。对于 Shell 启动时间较长的用户，如果在终端中看到\"Shell Integration Unavailable\"错误，可能需要增加此值。 <0>了解更多</0>"
+			"label": "终端 shell 集成超时",
+			"description": "运行命令前等待 VS Code shell 集成的时间。如果 shell 启动缓慢或看到 'Shell Integration Unavailable' 错误，请提高此值。<0>了解更多</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "禁用终端 Shell 集成",
-			"description": "如果终端命令无法正常工作或看到 'Shell Integration Unavailable' 错误，请启用此项。这将使用更简单的方法运行命令，绕过一些高级终端功能。 <0>了解更多</0>"
+			"label": "使用内联终端（推荐）",
+			"description": "在内联终端（聊天）中运行命令以绕过 shell 配置文件/集成，实现更快、更可靠的运行。禁用时，Kilo 使用 VS Code 终端及您的 shell 配置文件、提示和插件。<0>了解更多</0>"
 		},
 		"commandDelay": {
 			"label": "终端命令延迟",
-			"description": "命令执行后添加的延迟时间（毫秒）。默认设置为 0 时完全禁用延迟。这可以帮助确保在有计时问题的终端中完全捕获命令输出。在大多数终端中，这是通过设置 `PROMPT_COMMAND='sleep N'` 实现的，而 PowerShell 会在每个命令末尾添加 `start-sleep`。最初是为了解决 VSCode 错误#237208，现在可能不再需要。 <0>了解更多</0>"
+			"description": "在每个命令后添加短暂暂停，以便 VS Code 终端刷新所有输出（bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep）。仅在看到缺少尾部输出时使用；否则保持为 0。<0>了解更多</0>"
 		},
 		"compressProgressBar": {
 			"label": "压缩进度条输出",
-			"description": "启用后，将处理包含回车符 (\\r) 的终端输出，模拟真实终端显示内容的方式。这会移除进度条的中间状态，只保留最终状态，为更重要的信息节省上下文空间。 <0>了解更多</0>"
+			"description": "折叠进度条/旋转器，仅保留最终状态（节省 token）。<0>了解更多</0>"
 		},
 		"powershellCounter": {
 			"label": "启用 PowerShell 计数器解决方案",
-			"description": "启用后，会在 PowerShell 命令中添加计数器以确保命令正确执行。这有助于解决可能存在输出捕获问题的 PowerShell 终端。 <0>了解更多</0>"
+			"description": "当 PowerShell 输出丢失或重复时启用此选项；它会为每个命令附加一个小计数器以稳定输出。如果输出已正常，请保持关闭。<0>了解更多</0>"
 		},
 		"zshClearEolMark": {
-			"label": "清除 ZSH 行尾标记",
-			"description": "启用后，通过设置 PROMPT_EOL_MARK='' 清除 ZSH 行尾标记。这可以防止命令输出以特殊字符（如 '%'）结尾时的解析问题。 <0>了解更多</0>"
+			"label": "清除 ZSH EOL 标记",
+			"description": "当您在行尾看到零散的 % 或解析看起来错误时启用此选项；它会省略 Zsh 的行尾标记（%）。<0>了解更多</0>"
 		},
 		"zshOhMy": {
 			"label": "启用 Oh My Zsh 集成",
-			"description": "启用后，设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以启用 Oh My Zsh shell 集成功能。应用此设置可能需要重启 IDE。 <0>了解更多</0>"
+			"description": "当您的 Oh My Zsh 主题/插件期望 shell 集成时启用此选项；它会设置 ITERM_SHELL_INTEGRATION_INSTALLED=Yes。关闭此选项以避免设置该变量。<0>了解更多</0>"
 		},
 		"zshP10k": {
 			"label": "启用 Powerlevel10k 集成",
-			"description": "启用后，设置 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以启用 Powerlevel10k shell 集成功能。 <0>了解更多</0>"
+			"description": "使用 Powerlevel10k shell 集成时启用此选项。<0>了解更多</0>"
 		},
 		"zdotdir": {
 			"label": "启用 ZDOTDIR 处理",
-			"description": "启用后将创建临时目录用于 ZDOTDIR，以正确处理 zsh shell 集成。这确保 VSCode shell 集成能与 zsh 正常工作，同时保留您的 zsh 配置。 <0>了解更多</0>"
+			"description": "当 zsh shell 集成失败或与您的 dotfiles 冲突时启用此选项。<0>了解更多</0>"
 		},
 		"inheritEnv": {
 			"label": "继承环境变量",
-			"description": "启用后，终端将从 VSCode 父进程继承环境变量，如用户配置文件中定义的 shell 集成设置。这直接切换 VSCode 全局设置 `terminal.integrated.inheritEnv`。 <0>了解更多</0>"
+			"description": "启用此选项以从父 VS Code 进程继承环境变量。<0>了解更多</0>"
 		}
 	},
 	"advancedSettings": {
@@ -711,7 +823,7 @@
 	"advanced": {
 		"diff": {
 			"label": "启用diff更新",
-			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗。与最新的 Claude 4 Sonnet 模型配合最佳。",
+			"description": "启用后，Kilo Code 将能够通过差异算法写入，避免模型输出完整文件，以降低Token消耗",
 			"strategy": {
 				"label": "Diff 策略",
 				"options": {
@@ -739,10 +851,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "启用diff更新工具",
 			"description": "可减少因模型错误导致的重复尝试，但可能引发意外操作。启用前请确保理解风险并会仔细检查所有修改。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "启用搜索和替换工具",
-			"description": "启用实验性搜索和替换工具，允许 Kilo Code 在一个请求中替换搜索词的多个实例。"
 		},
 		"INSERT_BLOCK": {
 			"name": "启用插入内容工具",
@@ -806,8 +914,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "启用 Fast Apply",
 			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
-			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"apiProvider": "API 提供商",
+			"apiProviderList": {
+				"current": "当前"
+			},
+			"apiKey": "API 密钥（可选）",
+			"placeholder": "输入您的 API 密钥（可选）",
 			"modelLabel": "模型选择",
 			"modelDescription": "选择用于文件编辑的快速应用模型",
 			"models": {
@@ -834,8 +946,6 @@
 	"modelInfo": {
 		"supportsImages": "支持图像",
 		"noImages": "不支持图像",
-		"supportsComputerUse": "支持计算机功能调用",
-		"noComputerUse": "不支持计算机功能调用",
 		"supportsPromptCache": "支持提示缓存",
 		"noPromptCache": "不支持提示缓存",
 		"contextWindow": "上下文窗口:",
@@ -895,7 +1005,9 @@
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
 		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
-		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径"
+		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径",
+		"sapAiCore": "您必须提供有效的 SAP AI Core 服务密钥。",
+		"sapAiCoreDeploymentId": "您必须为模型 '{{model}}' 选择一个运行中的部署。"
 	},
 	"placeholders": {
 		"apiKey": "请输入 API 密钥...",

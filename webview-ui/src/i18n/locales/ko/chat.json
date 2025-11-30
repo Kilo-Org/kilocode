@@ -91,24 +91,17 @@
 		"tooltip": "현재 작업 취소"
 	},
 	"scrollToBottom": "채팅 하단으로 스크롤",
-	"about": "AI 지원으로 코드를 생성, 리팩터링 및 디버깅합니다. 자세한 내용은 <DocsLink>문서</DocsLink>를 확인하세요.",
+	"about": "AI 지원으로 코드를 생성, 리팩터링 및 디버깅합니다. 자세한 내용은 <DocsLink>문서</DocsLink>를 참조하세요.",
+	"docs": "더 알아보려면 <DocsLink>문서</DocsLink>를 확인하세요.",
 	"onboarding": "<strong>이 작업 공간의 작업 목록이 비어 있습니다.</strong> 아래에 작업을 입력하여 시작하세요. 어떻게 시작해야 할지 모르겠나요? Kilo Code가 무엇을 할 수 있는지 <DocsLink>문서</DocsLink>에서 자세히 알아보세요.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "작업 오케스트레이션",
-			"description": "작업을 더 작고 관리하기 쉬운 부분으로 나눕니다."
-		},
-		"stickyModels": {
-			"title": "스티키 모드",
-			"description": "각 모드는 마지막으로 사용한 모델을 기억합니다."
-		},
-		"tools": {
-			"title": "도구",
-			"description": "AI가 웹 탐색, 명령 실행 등으로 문제를 해결하도록 허용합니다."
-		},
 		"customizableModes": {
-			"title": "사용자 정의 모드",
-			"description": "고유한 동작과 할당된 모델을 가진 전문 페르소나"
+			"title": "사용자 정의 가능한 모드",
+			"description": "작업에 집중하고 결과를 제공하는 전문화된 페르소나."
+		},
+		"modelAgnostic": {
+			"title": "자신만의 모델 가져오기",
+			"description": "자체 공급자 키를 사용하거나 로컬에서 추론을 실행하세요 — 마크업 없음, 종속 없음, 제한 없음"
 		}
 	},
 	"selectMode": "상호작용 모드 선택",
@@ -156,6 +149,9 @@
 		"initializingWarning": "체크포인트 초기화 중... 시간이 너무 오래 걸리면 <settingsLink>설정</settingsLink>에서 체크포인트를 비활성화하고 작업을 다시 시작할 수 있습니다.",
 		"menu": {
 			"viewDiff": "차이점 보기",
+			"more": "더 많은 옵션",
+			"viewDiffFromInit": "모든 변경 사항 보기",
+			"viewDiffWithCurrent": "이 체크포인트 이후 변경 사항 보기",
 			"restore": "체크포인트 복원",
 			"restoreFiles": "파일 복원",
 			"restoreFilesDescription": "프로젝트 파일을 이 시점에 찍힌 스냅샷으로 복원합니다.",
@@ -189,7 +185,9 @@
 		"wantsToGenerateImage": "Kilo Code가 이미지를 생성하고 싶어합니다",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code가 워크스페이스 외부에서 이미지를 생성하고 싶어합니다",
 		"wantsToGenerateImageProtected": "Kilo Code가 보호된 위치에서 이미지를 생성하고 싶어합니다",
-		"didGenerateImage": "Kilo Code가 이미지를 생성했습니다"
+		"didGenerateImage": "Kilo Code가 이미지를 생성했습니다",
+		"wantsToDelete": "Kilo Code가 이 파일을 삭제하고 싶어합니다",
+		"wantsToDeleteDirectory": "Kilo Code가 이 디렉토리를 삭제하고 싶어합니다"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code가 이 디렉토리의 최상위 파일을 보고 싶어합니다",
@@ -272,6 +270,7 @@
 		"toggleAriaLabel": "자동 승인 전환",
 		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하십시오",
 		"triggerLabelOff": "자동 승인 꺼짐",
+		"triggerLabelOffShort": "꺼짐",
 		"triggerLabel_zero": "0개 자동 승인됨",
 		"triggerLabel_one": "1개 자동 승인됨",
 		"triggerLabel_other": "{{count}}개 자동 승인됨",
@@ -301,6 +300,19 @@
 			"selectModel": "설정에서 Roo Code Cloud 제공업체의 <code>roo/code-supernova</code>를 선택하여 시작하세요.",
 			"goToSettingsButton": "설정으로 이동"
 		},
+		"release": {
+			"heading": "확장 프로그램의 새로운 기능:",
+			"openRouterEmbeddings": "OpenRouter 임베딩 모델 지원",
+			"chutesDynamic": "Chutes가 이제 최신 모델을 동적으로 로드합니다",
+			"queuedMessagesFix": "대기 중인 메시지가 손실되는 문제 수정"
+		},
+		"cloudAgents": {
+			"heading": "클라우드의 새로운 기능:",
+			"prFixer": "PR 리뷰어를 보완하는 <bold>PR Fixer</bold> 클라우드 에이전트를 소개합니다.",
+			"prFixerDescription": "Roo Code의 PR Fixer는 GitHub에서 직접 PR에 고품질 변경사항을 적용합니다. PR 댓글을 통해 호출하면 전체 댓글 기록을 읽어 컨텍스트, 합의사항 및 트레이드오프를 이해한 다음 올바른 수정을 구현합니다.",
+			"tryPrFixerButton": "PR Fixer 사용해보기"
+		},
+		"careers": "그리고, <careersLink>채용 중입니다!</careersLink>",
 		"socialLinks": "<xLink>X</xLink>, <discordLink>Discord</discordLink>, 또는 <redditLink>r/RooCode</redditLink>에서 만나요 🚀"
 	},
 	"browser": {
@@ -329,6 +341,8 @@
 		"tooltips": {
 			"expand": "코드 블록 확장",
 			"collapse": "코드 블록 축소",
+			"enable_wrap": "줄 바꿈 활성화",
+			"disable_wrap": "줄 바꿈 비활성화",
 			"copy_code": "코드 복사"
 		}
 	},
@@ -420,5 +434,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code가 슬래시 명령어를 실행하려고 합니다",
 		"didRun": "Kilo Code가 슬래시 명령어를 실행했습니다"
+	},
+	"todo": {
+		"partial": "{{total}}개의 할 일 중 {{completed}}개 완료",
+		"complete": "{{total}}개의 할 일 완료",
+		"updated": "할 일 목록을 업데이트했습니다",
+		"completed": "완료됨",
+		"started": "시작됨"
 	}
 }
