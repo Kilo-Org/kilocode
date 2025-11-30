@@ -23,6 +23,7 @@ export * from "./lite-llm.js"
 export * from "./lm-studio.js"
 export * from "./mistral.js"
 export * from "./moonshot.js"
+export * from "./nano-gpt.js" // kilocode_change
 export * from "./ollama.js"
 export * from "./openai.js"
 export * from "./openrouter.js"
@@ -38,3 +39,121 @@ export * from "./vercel-ai-gateway.js"
 export * from "./zai.js"
 export * from "./deepinfra.js"
 export * from "./minimax.js"
+
+import { anthropicDefaultModelId } from "./anthropic.js"
+import { bedrockDefaultModelId } from "./bedrock.js"
+import { cerebrasDefaultModelId } from "./cerebras.js"
+import { chutesDefaultModelId } from "./chutes.js"
+import { claudeCodeDefaultModelId } from "./claude-code.js"
+import { deepSeekDefaultModelId } from "./deepseek.js"
+import { doubaoDefaultModelId } from "./doubao.js"
+import { featherlessDefaultModelId } from "./featherless.js"
+import { fireworksDefaultModelId } from "./fireworks.js"
+import { geminiDefaultModelId } from "./gemini.js"
+import { glamaDefaultModelId } from "./glama.js"
+import { groqDefaultModelId } from "./groq.js"
+import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
+import { litellmDefaultModelId } from "./lite-llm.js"
+import { mistralDefaultModelId } from "./mistral.js"
+import { moonshotDefaultModelId } from "./moonshot.js"
+import { openRouterDefaultModelId } from "./openrouter.js"
+import { qwenCodeDefaultModelId } from "./qwen-code.js"
+import { requestyDefaultModelId } from "./requesty.js"
+import { rooDefaultModelId } from "./roo.js"
+import { sambaNovaDefaultModelId } from "./sambanova.js"
+import { unboundDefaultModelId } from "./unbound.js"
+import { vertexDefaultModelId } from "./vertex.js"
+import { vscodeLlmDefaultModelId } from "./vscode-llm.js"
+import { xaiDefaultModelId } from "./xai.js"
+import { vercelAiGatewayDefaultModelId } from "./vercel-ai-gateway.js"
+import { internationalZAiDefaultModelId, mainlandZAiDefaultModelId } from "./zai.js"
+import { deepInfraDefaultModelId } from "./deepinfra.js"
+import { minimaxDefaultModelId } from "./minimax.js"
+
+// Import the ProviderName type from provider-settings to avoid duplication
+import type { ProviderName } from "../provider-settings.js"
+
+/**
+ * Get the default model ID for a given provider.
+ * This function returns only the provider's default model ID, without considering user configuration.
+ * Used as a fallback when provider models are still loading.
+ */
+export function getProviderDefaultModelId(
+	provider: ProviderName,
+	options: { isChina?: boolean } = { isChina: false },
+): string {
+	switch (provider) {
+		case "openrouter":
+			return openRouterDefaultModelId
+		case "requesty":
+			return requestyDefaultModelId
+		case "glama":
+			return glamaDefaultModelId
+		case "unbound":
+			return unboundDefaultModelId
+		case "litellm":
+			return litellmDefaultModelId
+		case "xai":
+			return xaiDefaultModelId
+		case "groq":
+			return groqDefaultModelId
+		case "huggingface":
+			return "meta-llama/Llama-3.3-70B-Instruct"
+		case "chutes":
+			return chutesDefaultModelId
+		case "bedrock":
+			return bedrockDefaultModelId
+		case "vertex":
+			return vertexDefaultModelId
+		case "gemini":
+			return geminiDefaultModelId
+		case "deepseek":
+			return deepSeekDefaultModelId
+		case "doubao":
+			return doubaoDefaultModelId
+		case "moonshot":
+			return moonshotDefaultModelId
+		case "minimax":
+			return minimaxDefaultModelId
+		case "zai":
+			return options?.isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
+		case "openai-native":
+			return "gpt-4o" // Based on openai-native patterns
+		case "mistral":
+			return mistralDefaultModelId
+		case "openai":
+			return "" // OpenAI provider uses custom model configuration
+		case "ollama":
+			return "" // Ollama uses dynamic model selection
+		case "lmstudio":
+			return "" // LMStudio uses dynamic model selection
+		case "deepinfra":
+			return deepInfraDefaultModelId
+		case "vscode-lm":
+			return vscodeLlmDefaultModelId
+		case "claude-code":
+			return claudeCodeDefaultModelId
+		case "cerebras":
+			return cerebrasDefaultModelId
+		case "sambanova":
+			return sambaNovaDefaultModelId
+		case "fireworks":
+			return fireworksDefaultModelId
+		case "featherless":
+			return featherlessDefaultModelId
+		case "io-intelligence":
+			return ioIntelligenceDefaultModelId
+		case "roo":
+			return rooDefaultModelId
+		case "qwen-code":
+			return qwenCodeDefaultModelId
+		case "vercel-ai-gateway":
+			return vercelAiGatewayDefaultModelId
+		case "anthropic":
+		case "gemini-cli":
+		case "human-relay":
+		case "fake-ai":
+		default:
+			return anthropicDefaultModelId
+	}
+}

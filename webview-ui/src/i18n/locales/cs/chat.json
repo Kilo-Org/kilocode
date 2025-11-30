@@ -106,7 +106,8 @@
 		"noResults": "Nebyly nalezeny žádné výsledky"
 	},
 	"scrollToBottom": "Posunout se na konec chatu",
-	"about": "Generuj, refaktoruj a ladí kód s pomocí AI. Podívej se na naši <DocsLink>dokumentaci</DocsLink> pro více informací.",
+	"about": "Generuj, refaktoruj a ladí kód s pomocí AI. Podívej se na naši <DocsLink>dokumentaci</DocsLink>, abys se dozvěděl více.",
+	"docs": "Pro začátek se podívej na naši <DocsLink>dokumentaci</DocsLink>",
 	"onboarding": "Tvůj seznam úkolů v tomto pracovním prostoru je prázdný.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -124,6 +125,10 @@
 		"customizableModes": {
 			"title": "Přizpůsobitelné režimy",
 			"description": "Specializované persony s vlastním chováním a přiřazenými modely"
+		},
+		"modelAgnostic": {
+			"title": "Přines si vlastní model, bez přirážky nebo závazků",
+			"description": "Používej svůj vlastní klíč poskytovatele nebo dokonce lokální inferenci — Kilo za to neúčtuje"
 		}
 	},
 	"selectMode": "Vyber režim pro interakci",
@@ -439,9 +444,6 @@
 		"title": "Zprávy ve frontě:",
 		"clickToEdit": "Klikni pro úpravu zprávy"
 	},
-	"editMessage": {
-		"placeholder": "Upravit tvou zprávu..."
-	},
 	"generateCommitMessage": "Vygenerovat commit zprávu",
 	"slashCommand": {
 		"wantsToRun": "Kilo Code chce spustit slash příkaz:",
@@ -452,5 +454,12 @@
 		"problems": "Problémy",
 		"terminal": "Terminál",
 		"url": "Vložit URL pro získání obsahu"
+	},
+	"todo": {
+		"partial": "{{completed}} z {{total}} úkolů hotovo",
+		"complete": "{{total}} úkolů hotovo",
+		"updated": "Aktualizován seznam úkolů",
+		"completed": "Dokončeno",
+		"started": "Zahájeno"
 	}
 }

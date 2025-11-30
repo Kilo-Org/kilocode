@@ -20,11 +20,11 @@ Kilo Code 中的模式是专门设计的角色，可以根据当前任务调整�
 
 1. **下拉菜单**：点击聊天输入框左侧的选择器
 
-    <img src="/docs/img/modes/modes.png" alt="使用下拉菜单切换模式" width="400" />
+ <img src="/docs/img/modes/modes.png" alt="使用下拉菜单切换模式" width="400" />
 
 2. **斜杠命令**：在聊天输入框中输入 `/architect`、`/ask`、`/debug` 或 `/code`
 
-    <img src="/docs/img/modes/modes-1.png" alt="使用斜杠命令切换模式" width="400" />
+ <img src="/docs/img/modes/modes-1.png" alt="使用斜杠命令切换模式" width="400" />
 
 3. **切换命令/键盘快捷键**：使用适用于你操作系统的键盘快捷键。每次按下都会按顺序循环切换可用模式，到达末尾后返回第一个模式。
 

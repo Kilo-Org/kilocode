@@ -302,6 +302,8 @@
 		"anthropicUseAuthToken": "Passer la clé API Anthropic comme en-tête d'autorisation au lieu de X-Api-Key",
 		"anthropic1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"anthropic1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
+		"anthropicUseAzureDeployment": "Utiliser le nom de déploiement Azure",
+		"anthropicAzureDeploymentPlaceholder": "Entrez le nom de déploiement...",
 		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
 		"cerebrasApiKey": "Clé API Cerebras",
@@ -362,6 +364,14 @@
 		"getMistralApiKey": "Obtenir la clé API Mistral / Codestral",
 		"codestralBaseUrl": "URL de base Codestral (Optionnel)",
 		"codestralBaseUrlDesc": "Définir une URL alternative pour le modèle Codestral.",
+		"nanoGptApiKey": "Clé API Nano-GPT",
+		"getNanoGptApiKey": "Obtenir la clé API Nano-GPT",
+		"nanoGptModelList": "Liste de modèles",
+		"nanoGptModelListOptions": {
+			"all": "Tous les modèles",
+			"personalized": "Modèles personnalisés",
+			"subscription": "Modèles d'abonnement"
+		},
 		"xaiApiKey": "Clé API xAI",
 		"getXaiApiKey": "Obtenir la clé API xAI",
 		"litellmApiKey": "Clé API LiteLLM",
@@ -375,6 +385,7 @@
 		"awsSessionToken": "Jeton de session AWS",
 		"awsRegion": "Région AWS",
 		"awsCrossRegion": "Utiliser l'inférence inter-régions",
+		"awsGlobalInference": "Utiliser l'inférence globale (sélection automatique de la région AWS optimale)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utiliser un point de terminaison VPC personnalisé",
 			"vpcEndpointUrlPlaceholder": "Entrer l'URL du point de terminaison VPC (optionnel)",
@@ -497,7 +508,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limite d'erreurs et de répétitions",
-			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo Code a des difficultés'",
+			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo a des difficultés'. Mettre à 0 pour désactiver ce mécanisme de sécurité (il ne se déclenchera jamais).",
 			"unlimitedDescription": "Réessais illimités activés (poursuite automatique). La boîte de dialogue n'apparaîtra jamais.",
 			"warning": "⚠️ Mettre à 0 autorise des réessais illimités, ce qui peut consommer une utilisation importante de l'API"
 		},
@@ -545,6 +556,32 @@
 			"description": "Ce fournisseur utilise l'authentification OAuth du service Qwen et ne nécessite pas de clés API.",
 			"instructions": "Veuillez suivre la documentation officielle pour obtenir le fichier d'autorisation et le placer dans le chemin spécifié.",
 			"setupLink": "Documentation officielle Qwen"
+		},
+		"sapAiCore": {
+			"serviceKey": "Clé de service AI Core",
+			"serviceKeyJson": "Entrez le JSON de la clé de service...",
+			"resourceGroup": "Groupe de ressources AI Core",
+			"credentialsNote": "Ces identifiants sont stockés localement et utilisés uniquement pour effectuer des requêtes API depuis cette extension.",
+			"learnMore": "Vous pouvez trouver plus d'informations sur l'accès à l'API SAP AI Core ici.",
+			"orchestrationMode": "Mode Orchestration",
+			"orchestrationEnabledDesc": "Lorsqu'activé, donne accès à tous les modèles disponibles sans nécessiter de déploiements individuels.",
+			"orchestrationDisabledDesc": "Lorsque désactivé, donne accès uniquement aux modèles de fondation déployés dans votre instance de service AI Core.",
+			"modelDeploymentDesc": "Vous ne pouvez sélectionner que des modèles avec des déploiements disponibles.",
+			"deployment": "Déploiement",
+			"loading": "Chargement...",
+			"modelsCount": "({{count}} modèles)",
+			"deploymentsCount": "({{count}} déploiements)",
+			"selectModel": "Sélectionner un modèle...",
+			"selectDeployment": "Sélectionner un déploiement...",
+			"searchModels": "Rechercher des modèles...",
+			"searchDeployments": "Rechercher des déploiements...",
+			"noModelsFound": "Aucun modèle trouvé",
+			"noDeploymentFound": "Aucun déploiement trouvé",
+			"getStarted": "Démarrer avec SAP AI Core",
+			"supportedProviders": "Fournisseurs pris en charge",
+			"supportedProvidersDesc1": "Le fournisseur SAP AI Core ne prend actuellement en charge que les modèles de fondation pour les fournisseurs LLM suivants :",
+			"supportedProvidersDesc2": "Envisagez de passer au mode Orchestration pour accéder à plus de modèles.",
+			"supportedProvidersDesc3": "En savoir plus sur le mode Orchestration"
 		}
 	},
 	"browser": {
@@ -950,6 +987,8 @@
 		"modelId": "Vous devez fournir un ID de modèle valide.",
 		"modelSelector": "Vous devez fournir un sélecteur de modèle valide.",
 		"openAi": "Vous devez fournir une URL de base, une clé API et un ID de modèle valides.",
+		"sapAiCore": "Vous devez fournir une clé de service SAP AI Core valide.",
+		"sapAiCoreDeploymentId": "Vous devez sélectionner un déploiement en cours d'exécution pour le modèle '{{model}}'.",
 		"arn": {
 			"invalidFormat": "Format ARN invalide. Veuillez vérifier les exigences de format.",
 			"regionMismatch": "Attention : La région dans votre ARN ({{arnRegion}}) ne correspond pas à votre région sélectionnée ({{region}}). Cela peut causer des problèmes d'accès. Le fournisseur utilisera la région de l'ARN."

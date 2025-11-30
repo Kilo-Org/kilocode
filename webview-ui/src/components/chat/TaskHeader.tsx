@@ -3,7 +3,15 @@ import { useTranslation } from "react-i18next"
 import { useCloudUpsell } from "@src/hooks/useCloudUpsell"
 import { CloudUpsellDialog } from "@src/components/cloud/CloudUpsellDialog"
 import DismissibleUpsell from "@src/components/common/DismissibleUpsell"
-import { FoldVertical, ChevronUp, ChevronDown } from "lucide-react"
+import {
+	ChevronUp,
+	ChevronDown,
+	SquarePen,
+	Coins,
+	HardDriveDownload,
+	HardDriveUpload,
+	FoldVerticalIcon,
+} from "lucide-react"
 import prettyBytes from "pretty-bytes"
 
 import type { ClineMessage } from "@roo-code/types"
@@ -23,6 +31,7 @@ import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
 import { Mention } from "./Mention"
 import { TodoListDisplay } from "./TodoListDisplay"
+import { LucideIconButton } from "./LucideIconButton"
 
 export interface TaskHeaderProps {
 	task: ClineMessage
@@ -87,20 +96,18 @@ const TaskHeader = ({
 	const contextWindow = model?.contextWindow || 1
 
 	const condenseButton = (
-		<StandardTooltip content={t("chat:task.condenseContext")}>
-			<button
-				disabled={buttonsDisabled}
-				onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
-				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
-				<FoldVertical size={16} />
-			</button>
-		</StandardTooltip>
+		<LucideIconButton
+			title={t("chat:task.condenseContext")}
+			icon={FoldVerticalIcon}
+			disabled={buttonsDisabled}
+			onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
+		/>
 	)
 
 	const hasTodos = todos && Array.isArray(todos) && todos.length > 0
 
 	return (
-		<div className="pt-2 pb-0 px-3">
+		<div className="group pt-2 pb-0 px-3">
 			{showLongRunningTaskMessage && !isTaskComplete && (
 				<DismissibleUpsell
 					upsellId="longRunningTask"
@@ -112,13 +119,18 @@ const TaskHeader = ({
 			)}
 			<div
 				className={cn(
-					"px-2.5 pt-2.5 pb-2 flex flex-col gap-1.5 relative z-1 cursor-pointer",
+					"px-3 pt-2.5 pb-2 flex flex-col gap-1.5 relative z-1 cursor-pointer",
 					"bg-vscode-input-background hover:bg-vscode-input-background/90",
 					"text-vscode-foreground/80 hover:text-vscode-foreground",
-					"shadow-sm shadow-black/30 rounded-md",
+					"shadow-lg shadow-vscode-sideBar-background/50 rounded-xl",
 					hasTodos && "border-b-0",
 				)}
 				onClick={(e) => {
+					// Don't expand if clicking on todos section
+					if (e.target instanceof Element && e.target.closest("[data-todo-list]")) {
+						return
+					}
+
 					// Don't expand if clicking on buttons or interactive elements
 					if (
 						e.target instanceof Element &&
@@ -142,12 +154,14 @@ const TaskHeader = ({
 				}}>
 				<div className="flex justify-between items-center gap-0">
 					<div className="flex items-center select-none grow min-w-0">
-						<div className="whitespace-nowrap overflow-hidden text-ellipsis grow min-w-0">
+						<div className="grow min-w-0">
 							{isTaskExpanded && <span className="font-bold">{t("chat:task.title")}</span>}
 							{!isTaskExpanded && (
-								<div>
-									<span className="font-bold mr-1">{t("chat:task.title")}</span>
-									<Mention text={task.text} />
+								<div className="flex items-center gap-2">
+									<SquarePen className="size-3 shrink-0" />
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis">
+										<Mention text={task.text} />
+									</span>
 								</div>
 							)}
 						</div>
@@ -156,14 +170,21 @@ const TaskHeader = ({
 								<button
 									onClick={() => setIsTaskExpanded(!isTaskExpanded)}
 									className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
-									{isTaskExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+									{isTaskExpanded ? (
+										<ChevronUp size={16} />
+									) : (
+										<ChevronDown size={16} className="opacity-0 group-hover:opacity-100" />
+									)}
 								</button>
 							</StandardTooltip>
 						</div>
 					</div>
 				</div>
 				{!isTaskExpanded && contextWindow > 0 && (
-					<div className="flex items-center gap-2 text-sm" onClick={(e) => e.stopPropagation()}>
+					<div
+						className="flex items-center gap-2 text-sm text-muted-foreground/70"
+						onClick={(e) => e.stopPropagation()}>
+						<Coins className="size-3 shrink-0" />
 						<StandardTooltip
 							content={
 								<div className="space-y-1">
@@ -218,7 +239,7 @@ const TaskHeader = ({
 							className="text-vscode-font-size overflow-y-auto break-words break-anywhere relative">
 							<div
 								ref={textRef}
-								className="overflow-auto max-h-80 whitespace-pre-wrap break-words break-anywhere cursor-text"
+								className="overflow-auto max-h-80 whitespace-pre-wrap break-words break-anywhere cursor-text py-0.5"
 								style={{
 									display: "-webkit-box",
 									WebkitLineClamp: "unset",
@@ -229,18 +250,22 @@ const TaskHeader = ({
 						</div>
 						{task.images && task.images.length > 0 && <Thumbnails images={task.images} />}
 
-						<div className="border-t border-b border-vscode-panel-border/50 py-4 mt-2 mb-1">
-							<table className="w-full">
+						<div onClick={(e) => e.stopPropagation()}>
+							<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
+						</div>
+
+						<div className="pt-3 mt-2 -mx-2.5 px-2.5 border-t border-vscode-sideBar-background">
+							<table className="w-full text-sm">
 								<tbody>
 									{contextWindow > 0 && (
 										<tr>
 											<th
-												className="font-bold text-left align-top w-1 whitespace-nowrap pl-1 pr-3 h-[24px]"
+												className="font-medium text-left align-top w-1 whitespace-nowrap pr-3 h-[24px]"
 												data-testid="context-window-label">
 												{t("chat:task.contextWindow")}
 											</th>
-											<td className="align-top">
-												<div className={`max-w-80 -mt-0.5 flex flex-nowrap gap-1`}>
+											<td className="font-light align-top">
+												<div className={`max-w-md -mt-1.5 flex flex-nowrap gap-1`}>
 													<ContextWindowProgress
 														contextWindow={contextWindow}
 														contextTokens={contextTokens || 0}
@@ -261,10 +286,10 @@ const TaskHeader = ({
 									)}
 
 									<tr>
-										<th className="font-bold text-left align-top w-1 whitespace-nowrap pl-1 pr-3 h-[24px]">
+										<th className="font-medium text-left align-top w-1 whitespace-nowrap pr-3 h-[24px]">
 											{t("chat:task.tokens")}
 										</th>
-										<td className="align-top">
+										<td className="font-light align-top">
 											<div className="flex items-center gap-1 flex-wrap">
 												{typeof tokensIn === "number" && tokensIn > 0 && (
 													<span>↑ {formatLargeNumber(tokensIn)}</span>
@@ -279,16 +304,22 @@ const TaskHeader = ({
 									{((typeof cacheReads === "number" && cacheReads > 0) ||
 										(typeof cacheWrites === "number" && cacheWrites > 0)) && (
 										<tr>
-											<th className="font-bold text-left align-top w-1 whitespace-nowrap pl-1 pr-3 h-[24px]">
+											<th className="font-medium text-left align-top w-1 whitespace-nowrap pr-3 h-[24px]">
 												{t("chat:task.cache")}
 											</th>
-											<td className="align-top">
+											<td className="font-light align-top">
 												<div className="flex items-center gap-1 flex-wrap">
 													{typeof cacheWrites === "number" && cacheWrites > 0 && (
-														<span>↑ {formatLargeNumber(cacheWrites)}</span>
+														<>
+															<HardDriveDownload className="size-2.5" />
+															<span>{formatLargeNumber(cacheWrites)}</span>
+														</>
 													)}
 													{typeof cacheReads === "number" && cacheReads > 0 && (
-														<span>↓ {formatLargeNumber(cacheReads)}</span>
+														<>
+															<HardDriveUpload className="size-2.5" />
+															<span>{formatLargeNumber(cacheReads)}</span>
+														</>
 													)}
 												</div>
 											</td>
@@ -297,10 +328,10 @@ const TaskHeader = ({
 
 									{!!totalCost && (
 										<tr>
-											<th className="font-bold text-left align-top w-1 whitespace-nowrap pl-1 pr-3 h-[24px]">
+											<th className="font-medium text-left align-top w-1 whitespace-nowrap pr-3 h-[24px]">
 												{t("chat:task.apiCost")}
 											</th>
-											<td className="align-top">
+											<td className="font-light align-top">
 												<span>${totalCost?.toFixed(2)}</span>
 											</td>
 										</tr>
@@ -309,24 +340,22 @@ const TaskHeader = ({
 									{/* Size display */}
 									{!!currentTaskItem?.size && currentTaskItem.size > 0 && (
 										<tr>
-											<th className="font-bold text-left align-top w-1 whitespace-nowrap pl-1 pr-2  h-[20px]">
+											<th className="font-medium text-left align-top w-1 whitespace-nowrap pr-2 h-[20px]">
 												{t("chat:task.size")}
 											</th>
-											<td className="align-top">{prettyBytes(currentTaskItem.size)}</td>
+											<td className="font-light align-top">
+												{prettyBytes(currentTaskItem.size)}
+											</td>
 										</tr>
 									)}
 								</tbody>
 							</table>
 						</div>
-
-						{/* Footer with task management buttons */}
-						<div onClick={(e) => e.stopPropagation()}>
-							<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
-						</div>
 					</>
 				)}
+				{/* Todo list - always shown at bottom when todos exist */}
+				{hasTodos && <TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />}
 			</div>
-			<TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />
 			<CloudUpsellDialog open={isOpen} onOpenChange={closeUpsell} onConnect={handleConnect} />
 		</div>
 	)

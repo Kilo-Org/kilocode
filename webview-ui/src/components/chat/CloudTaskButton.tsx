@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { CloudUpload, Copy, Check } from "lucide-react"
+import { Copy, Check, CloudUploadIcon } from "lucide-react"
 import QRCode from "qrcode"
 
 import type { HistoryItem } from "@roo-code/types"
 
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useCopyToClipboard } from "@/utils/clipboard"
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, StandardTooltip } from "@/components/ui"
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input } from "@/components/ui"
 import { vscode } from "@/utils/vscode"
+import { LucideIconButton } from "./LucideIconButton"
 
 interface CloudTaskButtonProps {
 	item?: HistoryItem
@@ -83,18 +84,12 @@ export const CloudTaskButton = ({ item, disabled = false }: CloudTaskButtonProps
 
 	return (
 		<>
-			<StandardTooltip content={t("chat:task.openInCloud")}>
-				<Button
-					variant="ghost"
-					size="icon"
-					disabled={disabled}
-					className="h-7 w-7 p-1.5 hover:bg-vscode-toolbar-hoverBackground"
-					onClick={() => setDialogOpen(true)}
-					data-testid="cloud-task-button"
-					aria-label={t("chat:task.openInCloud")}>
-					<CloudUpload className="h-4 w-4" />
-				</Button>
-			</StandardTooltip>
+			<LucideIconButton
+				icon={CloudUploadIcon}
+				disabled={disabled}
+				data-testid="cloud-task-button"
+				title={t("chat:task.openInCloud")}
+				onClick={() => setDialogOpen(true)}></LucideIconButton>
 
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent className="max-w-100">

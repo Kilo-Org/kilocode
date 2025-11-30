@@ -1,8 +1,4 @@
-import type {
-	ToolName,
-	ModeConfig,
-	ToolUseStyle, // kilocode_change
-} from "@roo-code/types"
+import type { ToolName, ModeConfig } from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
@@ -34,7 +30,7 @@ import { getDeleteFileDescription } from "./delete-file" // kilocode_change
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
 // kilocode_change start: Morph fast apply
-import { isFastApplyAvailable } from "../../tools/editFileTool"
+import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
@@ -134,16 +130,17 @@ export function getToolDescriptionsForMode(
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
 	// Conditionally exclude codebase_search if feature is disabled or not configured
-	if (
-		!codeIndexManager ||
-		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
-	) {
-		// kilocode_change start
-		if (!ManagedIndexer.getInstance()?.isEnabled()) {
-			tools.delete("codebase_search")
-		}
-		// kilocode_change end
+	// kilocode_change start
+	const isCodebaseSearchAvailable =
+		ManagedIndexer.getInstance().isEnabled() ||
+		(codeIndexManager &&
+			codeIndexManager.isFeatureEnabled &&
+			codeIndexManager.isFeatureConfigured &&
+			codeIndexManager.isInitialized)
+	if (!isCodebaseSearchAvailable) {
+		tools.delete("codebase_search")
 	}
+	// kilocode_change end
 
 	// kilocode_change start: Morph fast apply
 	if (isFastApplyAvailable(clineProviderState)) {
@@ -177,10 +174,12 @@ export function getToolDescriptionsForMode(
 			return undefined
 		}
 
-		return descriptionFn({
+		const description = descriptionFn({
 			...args,
 			toolOptions: undefined, // No tool options in group-based approach
 		})
+
+		return description
 	})
 
 	return `# Tools\n\n${descriptions.filter(Boolean).join("\n\n")}`
@@ -208,3 +207,6 @@ export {
 	getRunSlashCommandDescription,
 	getGenerateImageDescription,
 }
+
+// Export native tool definitions (JSON schema format for OpenAI-compatible APIs)
+export { nativeTools } from "./native-tools"

@@ -1,6 +1,6 @@
 // npx vitest core/tools/__tests__/useMcpToolTool.spec.ts
 
-import { useMcpToolTool } from "../useMcpToolTool"
+import { useMcpToolTool } from "../UseMcpToolTool"
 import { Task } from "../../task/Task"
 import { ToolUse } from "../../../shared/tools"
 
@@ -99,14 +99,12 @@ describe("useMcpToolTool", () => {
 
 			mockTask.sayAndCreateMissingParamError = vi.fn().mockResolvedValue("Missing server_name error")
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
@@ -127,14 +125,12 @@ describe("useMcpToolTool", () => {
 
 			mockTask.sayAndCreateMissingParamError = vi.fn().mockResolvedValue("Missing tool_name error")
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
@@ -154,14 +150,28 @@ describe("useMcpToolTool", () => {
 				partial: false,
 			}
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			// Mock server exists so we get to the JSON validation step
+			const mockServers = [
+				{
+					name: "test_server",
+					tools: [{ name: "test_tool", description: "Test Tool" }],
+				},
+			]
+
+			mockProviderRef.deref.mockReturnValue({
+				getMcpHub: () => ({
+					getAllServers: vi.fn().mockReturnValue(mockServers),
+					callTool: vi.fn(),
+				}),
+				postMessageToWebview: vi.fn(),
+			})
+
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
@@ -185,14 +195,12 @@ describe("useMcpToolTool", () => {
 
 			mockTask.ask = vi.fn().mockResolvedValue(true)
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.ask).toHaveBeenCalledWith("use_mcp_server", expect.stringContaining("use_mcp_tool"), true)
 		})
@@ -229,14 +237,12 @@ describe("useMcpToolTool", () => {
 				}),
 			})
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(0)
 			expect(mockAskApproval).toHaveBeenCalled()
@@ -263,14 +269,12 @@ describe("useMcpToolTool", () => {
 
 			mockAskApproval.mockResolvedValue(false)
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.say).not.toHaveBeenCalledWith("mcp_server_request_started")
 			expect(mockPushToolResult).not.toHaveBeenCalled()
@@ -305,14 +309,12 @@ describe("useMcpToolTool", () => {
 			const error = new Error("Unexpected error")
 			mockAskApproval.mockRejectedValue(error)
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockHandleError).toHaveBeenCalledWith("executing MCP tool", error)
 		})
@@ -350,14 +352,12 @@ describe("useMcpToolTool", () => {
 				partial: false,
 			}
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
@@ -397,14 +397,12 @@ describe("useMcpToolTool", () => {
 				partial: false,
 			}
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
@@ -448,14 +446,12 @@ describe("useMcpToolTool", () => {
 
 			mockAskApproval.mockResolvedValue(true)
 
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(0)
 			expect(mockTask.recordToolError).not.toHaveBeenCalled()
@@ -488,14 +484,12 @@ describe("useMcpToolTool", () => {
 			}
 
 			// Act
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			// Assert
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -531,14 +525,12 @@ describe("useMcpToolTool", () => {
 			}
 
 			// Act
-			await useMcpToolTool(
-				mockTask as Task,
-				block,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await useMcpToolTool.handle(mockTask as Task, block as any, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			// Assert
 			expect(mockTask.consecutiveMistakeCount).toBe(1)

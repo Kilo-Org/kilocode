@@ -34,7 +34,11 @@ export const modeCommand: Command = {
 			const modesList = allModes.map((mode) => {
 				// Treat undefined source as "global" (for built-in modes from @roo-code/types)
 				const source =
-					mode.source === "project" ? " (project)" : mode.source === "global" || !mode.source ? " (global)" : ""
+					mode.source === "project"
+						? " (project)"
+						: mode.source === "global" || !mode.source
+							? " (global)"
+							: ""
 				return `  - **${mode.name}** (${mode.slug})${source}: ${mode.description || "No description"}`
 			})
 

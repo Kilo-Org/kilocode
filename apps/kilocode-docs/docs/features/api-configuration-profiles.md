@@ -26,27 +26,27 @@ Note that available settings vary by provider and model. Each provider offers di
 1. Open Settings by clicking the gear icon <Codicon name="gear" /> → Providers
 2. Click the "+" button next to the profile selector
 
-    <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-1.png" alt="Profile selector with plus button" width="550" />
+ <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-1.png" alt="Profile selector with plus button" width="550" />
 
 3. Enter a name for your new profile
 
-    <img src="/docs/img/api-configuration-profiles/api-configuration-profiles.png" alt="Creating a new profile dialog" width="550" />
+ <img src="/docs/img/api-configuration-profiles/api-configuration-profiles.png" alt="Creating a new profile dialog" width="550" />
 
-4. Configure the profile settings:
+4.  Configure the profile settings:
 
     - Select your API provider
       <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-2.png" alt="Provider selection dropdown" width="550" />
     - Enter API key
 
-         <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API key entry field" width="550" />
+               <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API key entry field" width="550" />
 
     - Choose a model
 
-         <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="Model selection interface" width="550" />
+               <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="Model selection interface" width="550" />
 
     - Adjust model parameters
 
-         <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="Model parameter adjustment controls" width="550" />
+               <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="Model parameter adjustment controls" width="550" />
 
 ### Switching Profiles
 
@@ -54,11 +54,11 @@ Switch profiles in two ways:
 
 1. From Settings panel: Select a different profile from the dropdown
 
-    <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-7.png" alt="Profile selection dropdown in Settings" width="550" />
+ <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-7.png" alt="Profile selection dropdown in Settings" width="550" />
 
 2. During chat: Access the API Configuration dropdown in the chat interface
 
-    <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-6.png" alt="API Configuration dropdown in chat interface" width="550" />
+ <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-6.png" alt="API Configuration dropdown in chat interface" width="550" />
 
 ### Pinning and Sorting Profiles
 

@@ -1,49 +1,85 @@
 import { DiffStrategy } from "../../../shared/tools"
 import { CodeIndexManager } from "../../../services/code-index/manager"
+import type { SystemPromptSettings } from "../types"
+import { getEffectiveProtocol, isNativeProtocol } from "@roo-code/types"
+import type { ModeConfig, ToolName } from "@roo-code/types"
+import { getAvailableToolsInGroup } from "../tools/filter-tools-for-mode"
 
 // kilocode_change start
 import { getFastApplyEditingInstructions } from "../tools/edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
-import { getFastApplyModelType, isFastApplyAvailable } from "../../tools/editFileTool"
-import { ToolUseStyle } from "../../../../packages/types/src/kilocode/native-function-calling"
+import { getFastApplyModelType, isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
 // kilocode_change end
 
-function getEditingInstructions(diffStrategy?: DiffStrategy): string {
+function getEditingInstructions(
+	mode: string,
+	customModes: ModeConfig[] | undefined,
+	experiments: Record<string, boolean> | undefined,
+	codeIndexManager: CodeIndexManager | undefined,
+	settings: SystemPromptSettings | undefined,
+	diffStrategy?: DiffStrategy,
+	clineProviderState?: ClineProviderState, // kilocode_change
+): string {
+	// Get available editing tools from the edit group
+	const availableEditTools = getAvailableToolsInGroup(
+		"edit",
+		mode,
+		customModes,
+		experiments,
+		codeIndexManager,
+		settings,
+	)
+
+	// Filter for the main editing tools we care about
+	const hasApplyDiff = diffStrategy && availableEditTools.includes("apply_diff" as ToolName)
+	const hasWriteToFile = availableEditTools.includes("write_to_file" as ToolName)
+	const hasInsertContent = availableEditTools.includes("insert_content" as ToolName)
+
+	// If no editing tools are available, return empty string
+	if (availableEditTools.length === 0) {
+		return ""
+	}
+
 	const instructions: string[] = []
 	const availableTools: string[] = []
 
 	// Collect available editing tools
-	if (diffStrategy) {
-		availableTools.push(
-			"apply_diff (for surgical edits - targeted changes to specific lines or functions)",
-			"write_to_file (for creating new files or complete file rewrites)",
-		)
-	} else {
+	if (hasApplyDiff) {
+		availableTools.push("apply_diff (for surgical edits - targeted changes to specific lines or functions)")
+	}
+	if (hasWriteToFile) {
 		availableTools.push("write_to_file (for creating new files or complete file rewrites)")
 	}
-
-	availableTools.push("insert_content (for adding lines to files)")
+	if (hasInsertContent) {
+		availableTools.push("insert_content (for adding lines to files)")
+	}
 
 	// Base editing instruction mentioning all available tools
-	if (availableTools.length > 1) {
+	if (availableTools.length > 0) {
 		instructions.push(`- For editing files, you have access to these tools: ${availableTools.join(", ")}.`)
 	}
 
-	// Additional details for experimental features
-	instructions.push(
-		"- The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.",
-	)
+	// Additional details for insert_content
+	if (hasInsertContent) {
+		instructions.push(
+			"- The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.",
+		)
+	}
 
-	if (availableTools.length > 1) {
+	// Preference instruction if multiple tools are available
+	if (availableTools.length > 1 && hasWriteToFile) {
 		instructions.push(
 			"- You should always prefer using other editing tools over write_to_file when making changes to existing files since write_to_file is much slower and cannot handle large files.",
 		)
 	}
 
-	instructions.push(
-		"- When using the write_to_file tool to modify a file, use the tool directly with the desired content. You do not need to display the content before using the tool. ALWAYS provide the COMPLETE file content in your response. This is NON-NEGOTIABLE. Partial updates or placeholders like '// rest of code unchanged' are STRICTLY FORBIDDEN. You MUST include ALL parts of the file, even if they haven't been modified. Failure to do so will result in incomplete or broken code, severely impacting the user's project.",
-	)
+	// Write to file instructions
+	if (hasWriteToFile) {
+		instructions.push(
+			"- When using the write_to_file tool to modify a file, use the tool directly with the desired content. You do not need to display the content before using the tool. ALWAYS provide the COMPLETE file content in your response. This is NON-NEGOTIABLE. Partial updates or placeholders like '// rest of code unchanged' are STRICTLY FORBIDDEN. You MUST include ALL parts of the file, even if they haven't been modified. Failure to do so will result in incomplete or broken code, severely impacting the user's project.",
+		)
+	}
 
 	return instructions.join("\n")
 }
@@ -51,10 +87,13 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 export function getRulesSection(
 	cwd: string,
 	supportsComputerUse: boolean,
+	mode: string,
+	customModes: ModeConfig[] | undefined,
+	experiments: Record<string, boolean> | undefined,
 	diffStrategy?: DiffStrategy,
 	codeIndexManager?: CodeIndexManager,
+	settings?: SystemPromptSettings,
 	clineProviderState?: ClineProviderState, // kilocode_change
-	toolUseStyle?: ToolUseStyle, // kilocode_change
 ): string {
 	const isCodebaseSearchAvailable =
 		// kilocode_change start
@@ -70,22 +109,64 @@ export function getRulesSection(
 		: ""
 
 	const kiloCodeUseMorph = isFastApplyAvailable(clineProviderState)
+	// Get available tools from relevant groups
+	const availableEditTools = getAvailableToolsInGroup(
+		"edit",
+		mode,
+		customModes,
+		experiments,
+		codeIndexManager,
+		settings,
+	)
+	const availableBrowserTools = getAvailableToolsInGroup(
+		"browser",
+		mode,
+		customModes,
+		experiments,
+		codeIndexManager,
+		settings,
+	)
 
-	let rulesContent = ""
-	rulesContent += `====
+	// Check which editing tools are available for the search_files tool description
+	const hasApplyDiff = diffStrategy && availableEditTools.includes("apply_diff" as ToolName)
+	const hasWriteToFile = availableEditTools.includes("write_to_file" as ToolName)
+	const hasBrowserAction = supportsComputerUse && availableBrowserTools.includes("browser_action" as ToolName)
+
+	// Build editing tools reference for search_files description
+	let editingToolsRef = ""
+	if (hasApplyDiff && hasWriteToFile) {
+		editingToolsRef = "apply_diff or write_to_file"
+	} else if (hasApplyDiff) {
+		editingToolsRef = "apply_diff"
+	} else if (hasWriteToFile) {
+		editingToolsRef = "write_to_file"
+	}
+
+	// Determine whether to use XML tool references based on protocol
+	const effectiveProtocol = getEffectiveProtocol(settings?.toolProtocol)
+
+	return `====
 
 RULES
 
 - The project base directory is: ${cwd.toPosix()}
-`
-	rulesContent += `- All file paths must be relative to this directory. However, commands may change directories in terminals, so respect working directory specified by the response to ${toolUseStyle === "json" ? '"execute_command"' : "<execute_command>" /*kilocode_change*/}.`
-	rulesContent += `
+- All file paths must be relative to this directory. However, commands may change directories in terminals, so respect working directory specified by the response to ${isNativeProtocol(effectiveProtocol) ? "execute_command" : "<execute_command>"}.
 - You cannot \`cd\` into a different directory to complete a task. You are stuck operating from '${cwd.toPosix()}', so be sure to pass in the correct 'path' parameter when using tools that require a path.
 - Do not use the ~ character or $HOME to refer to the home directory.
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '${cwd.toPosix()}', and if so prepend with \`cd\`'ing into that directory && then executing the command (as one command since you are stuck operating from '${cwd.toPosix()}'). For example, if you needed to run \`npm install\` in a project outside of '${cwd.toPosix()}', you would need to prepend with a \`cd\` i.e. pseudocode for this would be \`cd (path to project) && (command, in this case npm install)\`.
-${codebaseSearchRule}- When using the search_files tool${isCodebaseSearchAvailable ? " (after codebase_search)" : ""}, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using ${kiloCodeUseMorph ? "edit_file" : diffStrategy ? "apply_diff or write_to_file" : "write_to_file"} to make informed changes.
-- When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the ${kiloCodeUseMorph ? "edit_file" : "write_to_file"} tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
-${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(clineProviderState)) : getEditingInstructions(diffStrategy)}
+${codebaseSearchRule}${
+		editingToolsRef
+			? `- When using the search_files tool${isCodebaseSearchAvailable ? " (after codebase_search)" : ""}, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using ${editingToolsRef} to make informed changes.
+`
+			: `- When using the search_files tool${isCodebaseSearchAvailable ? " (after codebase_search)" : ""}, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches.
+`
+	}${
+		hasWriteToFile
+			? `- When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the ${kiloCodeUseMorph ? "edit_file" : "write_to_file"} tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
+`
+			: ""
+	}
+${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(clineProviderState)) : getEditingInstructions(mode, customModes, experiments, codeIndexManager, settings, diffStrategy)}
 - Some modes have restrictions on which files they can edit. If you attempt to edit a restricted file, the operation will be rejected with a FileRestrictionError that will specify which file patterns are allowed for the current mode.
 - Be sure to consider the type of project (e.g. Python, JavaScript, web application) when determining the appropriate structure and files to include. Also consider what files may be most relevant to accomplishing the task, for example looking at a project's manifest file would help you understand the project's dependencies, which you could incorporate into any code you write.
   * For example, in architect mode trying to edit app.js would be rejected because architect mode can only edit files matching "\\.md$"
@@ -95,7 +176,7 @@ ${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(cline
 - When executing commands, if you don't see the expected output, assume the terminal executed the command successfully and proceed with the task. The user's terminal may be unable to stream the output back properly. If you absolutely need to see the actual terminal output, use the ask_followup_question tool to request the user to copy and paste it back to you.
 - The user may provide a file's contents directly in their message, in which case you shouldn't use the read_file tool to get the file contents again since you already have it.
 - Your goal is to try to accomplish the user's task, NOT engage in a back and forth conversation.${
-		supportsComputerUse
+		hasBrowserAction
 			? '\n- The user may ask generic non-development tasks, such as "what\'s the latest news" or "look up the weather in San Diego", in which case you might use the browser_action tool to complete the task if it makes sense to do so, rather than trying to create a website or using curl to answer the question. However, if an available MCP server tool or resource can be used instead, you should prefer to use it over browser_action.'
 			: ""
 	}
@@ -106,9 +187,8 @@ ${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(cline
 - Before executing commands, check the "Actively Running Terminals" section in environment_details. If present, consider how these active processes might impact your task. For example, if a local development server is already running, you wouldn't need to start it again. If no active terminals are listed, proceed with command execution as normal.
 - MCP operations should be used one at a time, similar to other tool usage. Wait for confirmation of success before proceeding with additional operations.
 - It is critical you wait for the user's response after each tool use, in order to confirm the success of the tool use. For example, if asked to make a todo app, you would create a file, wait for the user's response it was created successfully, then create another file if needed, wait for the user's response it was created successfully, etc.${
-		supportsComputerUse
+		hasBrowserAction
 			? " Then if you want to test your work, you might use browser_action to launch the site, wait for the user's response confirming the site was launched along with a screenshot, then perhaps e.g., click a button to test functionality if needed, wait for the user's response confirming the button was clicked along with a screenshot of the new state, before finally closing the browser."
 			: ""
 	}`
-	return rulesContent
 }

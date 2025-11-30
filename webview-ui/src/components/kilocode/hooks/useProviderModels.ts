@@ -47,6 +47,7 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	nanoGptDefaultModelId, //kilocode_change
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
 	minimaxModels,
@@ -250,6 +251,12 @@ export const getModelsByProvider = ({
 				defaultModel: inceptionDefaultModelId,
 			}
 		}
+		case "sap-ai-core": {
+			return {
+				models: routerModels["sap-ai-core"],
+				defaultModel: "",
+			}
+		}
 		// kilocode_change end
 		case "io-intelligence": {
 			return {
@@ -281,6 +288,14 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		//kilocode_change start
+		case "nano-gpt": {
+			return {
+				models: routerModels["nano-gpt"],
+				defaultModel: nanoGptDefaultModelId,
+			}
+		}
+		//kilocode_change end
 		case "minimax": {
 			return {
 				models: minimaxModels,
@@ -307,6 +322,10 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		chutesApiKey: apiConfiguration?.chutesApiKey,
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		//kilocode_change start
+		nanoGptApiKey: apiConfiguration?.nanoGptApiKey,
+		nanoGptModelList: apiConfiguration?.nanoGptModelList,
+		//kilocode_change end
 		syntheticApiKey: apiConfiguration?.syntheticApiKey, // kilocode_change
 	})
 

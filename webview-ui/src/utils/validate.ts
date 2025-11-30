@@ -181,6 +181,19 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "sap-ai-core":
+			if (!apiConfiguration.sapAiCoreServiceKey) {
+				return i18next.t("settings:validation.sapAiCore")
+			}
+			if (!apiConfiguration.sapAiCoreModelId) {
+				return i18next.t("settings:validation.modelId")
+			}
+			if (!apiConfiguration.sapAiCoreUseOrchestration && !apiConfiguration.sapAiCoreDeploymentId) {
+				return i18next.t("settings:validation.sapAiCoreDeploymentId", {
+					model: apiConfiguration.sapAiCoreModelId,
+				})
+			}
+			break
 		// kilocode_change end
 	}
 

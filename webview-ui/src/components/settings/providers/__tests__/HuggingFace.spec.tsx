@@ -76,6 +76,11 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 
 // Mock the UI components
 vi.mock("@src/components/ui", () => ({
+	Button: ({ children, onClick, variant, ...rest }: any) => (
+		<button onClick={onClick} data-testid="button" data-variant={variant} {...rest}>
+			{children}
+		</button>
+	),
 	Select: ({ children }: any) => <div data-testid="select">{children}</div>,
 	SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
 	SelectItem: ({ children }: any) => <div data-testid="select-item">{children}</div>,
@@ -190,7 +195,7 @@ describe("HuggingFace Component", () => {
 		)
 
 		// Check that the API key button is rendered
-		const apiKeyButton = screen.getByTestId("vscode-button")
+		const apiKeyButton = screen.getByTestId("button")
 		expect(apiKeyButton).toBeInTheDocument()
 		expect(apiKeyButton).toHaveTextContent("Get Hugging Face API Key")
 	})

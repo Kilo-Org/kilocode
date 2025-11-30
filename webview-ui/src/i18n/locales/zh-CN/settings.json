@@ -278,6 +278,14 @@
 		"headerValue": "标头值",
 		"noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
 		"requestyApiKey": "Requesty API 密钥",
+		"nanoGptApiKey": "Nano-GPT API 密钥",
+		"getNanoGptApiKey": "获取 Nano-GPT API 密钥",
+		"nanoGptModelList": "模型列表",
+		"nanoGptModelListOptions": {
+			"all": "所有模型",
+			"personalized": "个性化模型",
+			"subscription": "订阅模型"
+		},
 		"refreshModels": {
 			"label": "刷新模型",
 			"hint": "请重新打开设置以查看最新模型。",
@@ -294,6 +302,8 @@
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
 		"anthropic1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"anthropic1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"anthropicUseAzureDeployment": "使用 Azure 部署名称",
+		"anthropicAzureDeploymentPlaceholder": "输入部署名称...",
 		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
 		"cerebrasApiKey": "Cerebras API 密钥",
@@ -348,6 +358,32 @@
 		"huggingFaceSelectProvider": "选择提供商...",
 		"huggingFaceSearchProviders": "搜索提供商...",
 		"huggingFaceNoProvidersFound": "未找到提供商",
+		"sapAiCore": {
+			"serviceKey": "AI Core 服务密钥",
+			"serviceKeyJson": "输入服务密钥 JSON...",
+			"resourceGroup": "AI Core 资源组",
+			"credentialsNote": "这些凭证存储在本地，仅用于从此扩展发送 API 请求。",
+			"learnMore": "您可以在此处找到有关 SAP AI Core API 访问的更多信息。",
+			"orchestrationMode": "编排模式",
+			"orchestrationEnabledDesc": "启用后，无需单独部署即可访问所有可用模型。",
+			"orchestrationDisabledDesc": "禁用后，仅可访问 AI Core 服务实例中已部署的基础模型。",
+			"modelDeploymentDesc": "您只能选择有可用部署的模型。",
+			"deployment": "部署",
+			"loading": "加载中...",
+			"modelsCount": "({{count}} 个模型)",
+			"deploymentsCount": "({{count}} 个部署)",
+			"selectModel": "选择模型...",
+			"selectDeployment": "选择部署...",
+			"searchModels": "搜索模型...",
+			"searchDeployments": "搜索部署...",
+			"noModelsFound": "未找到模型",
+			"noDeploymentFound": "未找到部署",
+			"getStarted": "开始使用 SAP AI Core",
+			"supportedProviders": "支持的提供商",
+			"supportedProvidersDesc1": "SAP AI Core 提供商目前仅支持以下 LLM 提供商的基础模型：",
+			"supportedProvidersDesc2": "考虑切换到编排模式以访问更多模型。",
+			"supportedProvidersDesc3": "了解更多关于编排模式"
+		},
 		"getGeminiApiKey": "获取 Gemini API 密钥",
 		"openAiApiKey": "OpenAI API 密钥",
 		"apiKey": "API 密钥",
@@ -370,6 +406,7 @@
 		"awsSessionToken": "AWS 会话Token",
 		"awsRegion": "AWS 区域",
 		"awsCrossRegion": "使用跨区域推理",
+		"awsGlobalInference": "使用全局推理（自动选择最佳 AWS 区域）",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自定义 VPC 端点",
 			"vpcEndpointUrlPlaceholder": "输入 VPC 端点 URL（可选）",
@@ -492,7 +529,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "错误和重复限制",
-			"description": "在显示\"Kilo Code遇到问题\"对话框前允许的连续错误或重复操作次数",
+			"description": "在显示“Kilo遇到问题”对话框前允许的连续错误或重复操作次数。设置为 0 可禁用此安全机制（它将永远不会触发）。",
 			"unlimitedDescription": "已启用无限重试（自动继续）。对话框将永远不会出现。",
 			"warning": "⚠️ 设置为 0 允许无限重试，这可能会消耗大量 API 使用量"
 		},
@@ -968,7 +1005,9 @@
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
 		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
-		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径"
+		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径",
+		"sapAiCore": "您必须提供有效的 SAP AI Core 服务密钥。",
+		"sapAiCoreDeploymentId": "您必须为模型 '{{model}}' 选择一个运行中的部署。"
 	},
 	"placeholders": {
 		"apiKey": "请输入 API 密钥...",

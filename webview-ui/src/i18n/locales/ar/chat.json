@@ -102,7 +102,8 @@
 		"placeholder": "عدّل رسالتك..."
 	},
 	"scrollToBottom": "انزل لنهاية المحادثة",
-	"about": "أنشئ، أعِد هيكلة، واصلِح الأكواد بمساعدة الذكاء. اطّلع على <DocsLink>التوثيق</DocsLink> لتعرف أكثر.",
+	"about": "أنشئ، أعِد هيكلة، واصلِح الأكواد بمساعدة الذكاء الاصطناعي. اطّلع على <DocsLink>التوثيق</DocsLink> لتعرف أكثر.",
+	"docs": "راجع <DocsLink>التوثيق</DocsLink> للبدء",
 	"onboarding": "قائمة المهام فاضية في هالمساحة.",
 	"rooTips": {
 		"boomerangTasks": {
@@ -120,6 +121,10 @@
 		"customizableModes": {
 			"title": "أنماط قابلة للتخصيص",
 			"description": "شخصيات متخصصة لها سلوكها ونماذجها الخاصة"
+		},
+		"modelAgnostic": {
+			"title": "استخدم نموذجك الخاص، بدون رسوم أو قيود",
+			"description": "استخدم مفتاح موفّرك الخاص أو حتى شغّل الاستنتاج محلياً — Kilo Code ما يفرض رسوم عليه"
 		}
 	},
 	"selectMode": "اختر نمط التفاعل",
@@ -462,5 +467,12 @@
 	"feedback": {
 		"youSaid": "قلت"
 	},
-	"generateCommitMessage": "إنشاء رسالة الالتزام"
+	"generateCommitMessage": "إنشاء رسالة الالتزام",
+	"todo": {
+		"partial": "{{completed}} من {{total}} مهام مكتملة",
+		"complete": "{{total}} مهام مكتملة",
+		"updated": "تم تحديث قائمة المهام",
+		"completed": "مكتملة",
+		"started": "بدأت"
+	}
 }

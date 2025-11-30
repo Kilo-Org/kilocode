@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from "react"
 import knuthShuffle from "knuth-shuffle-seeded"
 import { Trans } from "react-i18next"
-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import posthog from "posthog-js"
 
 import type { ProviderSettings } from "@roo-code/types"
@@ -13,6 +13,7 @@ import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { getRequestyAuthUrl, getOpenRouterAuthUrl } from "@src/oauth/urls"
 import { telemetryClient } from "@src/utils/TelemetryClient"
+import { Button } from "@src/components/ui"
 
 import ApiOptions from "../settings/ApiOptions"
 import { Tab, TabContent } from "../common/Tab"
@@ -198,9 +199,9 @@ const WelcomeView = () => {
 							{t("welcome:importSettings")}
 						</VSCodeLink>
 					</div>
-					<VSCodeButton onClick={handleSubmit} appearance="primary">
+					<Button onClick={handleSubmit} variant="primary">
 						{t("welcome:start")}
-					</VSCodeButton>
+					</Button>
 					{errorMessage && <div className="text-vscode-errorForeground">{errorMessage}</div>}
 				</div>
 			</div>

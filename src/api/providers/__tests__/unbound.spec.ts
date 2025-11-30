@@ -22,6 +22,18 @@ vitest.mock("../fetchers/modelCache", () => ({
 				description: "Claude 3.5 Sonnet",
 				thinking: false,
 			},
+			"anthropic/claude-sonnet-4-5": {
+				maxTokens: 8192,
+				contextWindow: 200000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				inputPrice: 3,
+				outputPrice: 15,
+				cacheWritesPrice: 3.75,
+				cacheReadsPrice: 0.3,
+				description: "Claude 4.5 Sonnet",
+				thinking: false,
+			},
 			"anthropic/claude-3-7-sonnet-20250219": {
 				maxTokens: 8192,
 				contextWindow: 200000,
@@ -312,7 +324,7 @@ describe("UnboundHandler", () => {
 		it("should return default model when invalid model provided", async () => {
 			const handlerWithInvalidModel = new UnboundHandler({ ...mockOptions, unboundModelId: "invalid/model" })
 			const modelInfo = await handlerWithInvalidModel.fetchModel()
-			expect(modelInfo.id).toBe("anthropic/claude-3-7-sonnet-20250219")
+			expect(modelInfo.id).toBe("anthropic/claude-sonnet-4-5")
 			expect(modelInfo.info).toBeDefined()
 		})
 	})

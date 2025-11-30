@@ -45,6 +45,8 @@ import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
+import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
+import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 
@@ -318,6 +320,40 @@ export async function activate(context: vscode.ExtensionContext) {
 			`[AutoImport] Error during auto-import: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
+
+	// kilocode_change start
+	// Check for env var conflicts that might confuse users
+	try {
+		checkAnthropicApiKeyConflict()
+	} catch (error) {
+		outputChannel.appendLine(`Failed to check API key conflicts: ${error}`)
+	}
+
+	// Initialize VS Code Settings Sync integration
+	try {
+		await SettingsSyncService.initialize(context, outputChannel)
+		outputChannel.appendLine("[SettingsSync] VS Code Settings Sync integration initialized")
+
+		// Listen for configuration changes to update sync registration
+		const configChangeListener = vscode.workspace.onDidChangeConfiguration(async (event) => {
+			if (event.affectsConfiguration(`${Package.name}.enableSettingsSync`)) {
+				try {
+					await SettingsSyncService.updateSyncRegistration(context, outputChannel)
+					outputChannel.appendLine("[SettingsSync] Sync registration updated due to configuration change")
+				} catch (error) {
+					outputChannel.appendLine(
+						`[SettingsSync] Error updating sync registration: ${error instanceof Error ? error.message : String(error)}`,
+					)
+				}
+			}
+		})
+		context.subscriptions.push(configChangeListener)
+	} catch (error) {
+		outputChannel.appendLine(
+			`[SettingsSync] Error during settings sync initialization: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+	// kilocode_change end
 
 	registerCommands({ context, outputChannel, provider })
 

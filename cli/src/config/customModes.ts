@@ -106,8 +106,7 @@ function parseCustomModes(content: string, source: "global" | "project"): ModeCo
 					roleDefinition: (m.roleDefinition as string) || (m.systemPrompt as string) || "",
 					groups: (m.groups as ModeConfig["groups"]) || ["read", "edit", "browser", "command", "mcp"],
 					customInstructions:
-						(m.customInstructions as string) ||
-						(m.rules ? (m.rules as string[]).join("\n") : undefined),
+						(m.customInstructions as string) || (m.rules ? (m.rules as string[]).join("\n") : undefined),
 					source: (m.source as ModeConfig["source"]) || source,
 				}
 			})

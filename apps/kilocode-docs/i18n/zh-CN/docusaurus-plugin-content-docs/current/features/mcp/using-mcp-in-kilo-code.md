@@ -122,7 +122,7 @@ SSE配置示例：
 1. 点击要删除的MCP服务器旁边的<Codicon name="trash" />
 2. 在确认框中点击`删除`按钮
 
-    <img src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-5.png" alt="删除确认框" width="400" />
+ <img src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-5.png" alt="删除确认框" width="400" />
 
 ### 重启服务器
 

@@ -283,6 +283,7 @@ export const SECRET_STATE_KEYS = [
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
+	"sapAiCoreServiceKey", // kilocode_change
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)

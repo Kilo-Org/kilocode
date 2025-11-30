@@ -1,8 +1,6 @@
 import { type ToolName, toolNames } from "@roo-code/types"
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
-import { extractMcpToolInfo, NativeToolCall } from "./kilocode/native-tool-call"
-import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
  * Parser for assistant messages. Maintains state between chunks
@@ -18,14 +16,6 @@ export class AssistantMessageParser {
 	private currentParamValueStartIndex = 0
 	private readonly MAX_ACCUMULATOR_SIZE = 1024 * 1024 // 1MB limit
 	private readonly MAX_PARAM_LENGTH = 1024 * 100 // 100KB per parameter limit
-
-	// kilocode_change start
-	// State for accumulating native tool calls
-	private nativeToolCallsAccumulator: Map<string, NativeToolCall> = new Map()
-	private processedNativeToolCallIds: Set<string> = new Set()
-	// Map index to id for tracking across streaming deltas
-	private nativeToolCallIndexToId: Map<number, string> = new Map()
-	// kilocode_change end
 
 	private accumulator = ""
 
@@ -48,12 +38,6 @@ export class AssistantMessageParser {
 		this.currentParamName = undefined
 		this.currentParamValueStartIndex = 0
 		this.accumulator = ""
-
-		// kilocode_change start
-		this.nativeToolCallsAccumulator.clear()
-		this.processedNativeToolCallIds.clear()
-		this.nativeToolCallIndexToId.clear()
-		// kilocode_change end
 	}
 
 	/**
@@ -64,179 +48,6 @@ export class AssistantMessageParser {
 		// Return a shallow copy to prevent external mutation
 		return this.contentBlocks.slice()
 	}
-
-	// kilocode_change start
-	/**
-	 * Process native OpenAI-format tool calls and convert them to internal ToolUse format.
-	 * This handles tool calls that come from OpenAI-compatible APIs in their native format
-	 * rather than embedded as XML in text content.
-	 *
-	 * Native tool calls stream in as deltas, so this method accumulates them until complete.
-	 *
-	 * @param toolCalls Array of native tool call objects (may be partial during streaming).  We
-	 * currently set parallel_tool_calls to false, so in theory there should only be 1 call.
-	 */
-	public *processNativeToolCalls(toolCalls: NativeToolCall[]): Generator<Anthropic.ToolUseBlockParam> {
-		for (const toolCall of toolCalls) {
-			// Determine the tracking key
-			// If we have an index, use that to look up or store the id
-			// Otherwise use the id directly (for non-streaming or first delta)
-			let toolCallId: string
-
-			if (toolCall.index !== undefined) {
-				// Check if we've seen this index before
-				const existingId = this.nativeToolCallIndexToId.get(toolCall.index)
-				if (existingId) {
-					toolCallId = existingId
-				} else if (toolCall.id) {
-					// First time seeing this index with an id - store the mapping
-					toolCallId = toolCall.id
-					this.nativeToolCallIndexToId.set(toolCall.index, toolCallId)
-				} else {
-					console.warn(
-						"[AssistantMessageParser] Skipping tool call: has index but no id in mapping:",
-						toolCall,
-					)
-					continue
-				}
-			} else if (toolCall.id) {
-				toolCallId = toolCall.id
-			} else {
-				console.warn("[AssistantMessageParser] Skipping tool call without index or ID:", toolCall)
-				continue
-			}
-
-			// Check if we've already processed this tool call
-			if (this.processedNativeToolCallIds.has(toolCallId)) {
-				console.log("[AssistantMessageParser] Tool call already processed:", toolCallId)
-				continue
-			}
-
-			// Get or create the accumulator entry for this tool call
-			let accumulatedCall = this.nativeToolCallsAccumulator.get(toolCallId)
-
-			// First delta: has function name (initialize accumulator)
-			if (toolCall.function?.name) {
-				const toolName = toolCall.function.name
-
-				// Check if it's a dynamic MCP tool or a recognized static tool name
-				const mcpToolInfo = extractMcpToolInfo(toolName)
-				const isValidTool = mcpToolInfo !== null || toolNames.includes(toolName as ToolName)
-
-				if (!isValidTool) {
-					console.warn("[AssistantMessageParser] Unknown tool name in native call:", toolName)
-					continue
-				}
-
-				if (!accumulatedCall) {
-					accumulatedCall = {
-						id: toolCall.id,
-						type: toolCall.type,
-						function: {
-							name: toolCall.function.name,
-							arguments: toolCall.function.arguments || "",
-						},
-					}
-					this.nativeToolCallsAccumulator.set(toolCallId, accumulatedCall)
-				} else {
-					// Shouldn't happen, but append arguments if it does
-					accumulatedCall.function!.arguments += toolCall.function.arguments || ""
-				}
-			}
-			// Subsequent deltas: only have arguments (append to existing accumulator)
-			else if (accumulatedCall) {
-				accumulatedCall.function!.arguments += toolCall.function?.arguments || ""
-			}
-			// Got arguments without ever getting a name - shouldn't happen
-			else {
-				console.warn("[AssistantMessageParser] Received arguments for unknown tool call:", toolCallId)
-				continue
-			}
-
-			// Only try to parse if we have an accumulator (shouldn't be undefined at this point)
-			if (!accumulatedCall) {
-				continue
-			}
-
-			// Try to parse the arguments - if successful, the tool call is complete
-			let isComplete = false
-			let parsedArgs: Record<string, any> = {}
-
-			try {
-				if (accumulatedCall.function!.arguments.trim()) {
-					parsedArgs = JSON.parse(accumulatedCall.function!.arguments)
-					isComplete = true
-				}
-			} catch (error) {
-				// Arguments are not yet complete valid JSON, continue accumulating
-				continue
-			}
-
-			// Tool call is complete - convert it to ToolUse format
-			if (isComplete) {
-				const toolName = accumulatedCall.function!.name
-
-				// Finalize any current text content before adding tool use
-				if (this.currentTextContent) {
-					this.currentTextContent.partial = false
-					this.currentTextContent = undefined
-				}
-
-				// Normalize dynamic MCP tool names to "use_mcp_tool"
-				// Dynamic tools have format: use_mcp_tool_{serverName}_{toolName}
-				const mcpToolInfo = extractMcpToolInfo(toolName)
-				let normalizedToolName: ToolName
-				let normalizedParams = parsedArgs
-
-				if (mcpToolInfo) {
-					// Dynamic MCP tool - normalize to "use_mcp_tool"
-					// Tool name format: use_mcp_tool___{serverName}___{toolName}
-					normalizedToolName = "use_mcp_tool"
-
-					// Extract toolInputProps and convert to JSON string for the arguments parameter
-					// The model provides: { server_name, tool_name, toolInputProps: {...actual args...} }
-					// We need: { server_name, tool_name, arguments: "{...actual args as JSON string...}" }
-					const toolInputProps = (parsedArgs as any).toolInputProps || {}
-					const argumentsJson = JSON.stringify(toolInputProps)
-
-					// Add server_name, tool_name, and arguments to params
-					normalizedParams = {
-						server_name: parsedArgs.server_name || mcpToolInfo.serverName,
-						tool_name: parsedArgs.tool_name || mcpToolInfo.toolName,
-						arguments: argumentsJson,
-					}
-				} else {
-					// Standard tool
-					normalizedToolName = toolName as ToolName
-				}
-
-				// Create a ToolUse block from the native tool call
-				const toolUse: ToolUse = {
-					type: "tool_use",
-					name: normalizedToolName,
-					params: normalizedParams,
-					partial: false, // Now complete after accumulation
-					toolUseId: accumulatedCall.id,
-				}
-
-				// Add the tool use to content blocks
-				this.contentBlocks.push(toolUse)
-
-				// Mark this tool call as processed
-				this.processedNativeToolCallIds.add(toolCallId)
-				this.nativeToolCallsAccumulator.delete(toolCallId)
-
-				yield {
-					type: "tool_use",
-					name: toolUse.name,
-					id: toolUse.toolUseId ?? "",
-					input: toolUse.params,
-				}
-			}
-		}
-	}
-
-	// kilocode_change end
 
 	/**
 	 * Process a new chunk of text and update the parser state.

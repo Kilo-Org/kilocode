@@ -1,9 +1,4 @@
-import {
-	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	chutesDefaultModelId,
-	chutesDefaultModelInfo,
-	getActiveToolUseStyle, // kilocode_change
-} from "@roo-code/types"
+import { DEEP_SEEK_DEFAULT_TEMPERATURE, chutesDefaultModelId, chutesDefaultModelInfo } from "@roo-code/types"
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
@@ -16,7 +11,7 @@ import { ApiStream } from "../transform/stream"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 import { RouterProvider } from "./router-provider"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 export class ChutesHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -72,6 +67,8 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 	): ApiStream {
 		const model = await this.fetchModel()
 
+		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
+
 		if (model.id.includes("DeepSeek-R1")) {
 			const stream = await this.client.chat.completions.create({
 				...this.getCompletionParams(
@@ -94,7 +91,7 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
 
-				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					for (const processedChunk of matcher.update(delta.content)) {
@@ -128,7 +125,7 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
 
-				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					yield { type: "text", text: delta.content }

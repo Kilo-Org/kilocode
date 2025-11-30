@@ -77,18 +77,39 @@ export interface ModelInfo {
 	supportsImages?: boolean
 	supportsComputerUse?: boolean
 	supportsPromptCache: boolean
+	promptCacheRetention?: "in_memory" | "24h"
 	supportsVerbosity?: boolean
 	supportsReasoningBudget?: boolean
+	supportsReasoningBinary?: boolean
 	supportsTemperature?: boolean
+	defaultTemperature?: number
 	requiredReasoningBudget?: boolean
-	supportsReasoningEffort?: boolean
+	supportsReasoningEffort?: boolean | ("disable" | "none" | "minimal" | "low" | "medium" | "high")[]
+	requiredReasoningEffort?: boolean
+	preserveReasoning?: boolean
+	supportedParameters?: ("max_tokens" | "temperature" | "reasoning" | "include_reasoning")[]
 	inputPrice?: number
 	outputPrice?: number
 	cacheWritesPrice?: number
 	cacheReadsPrice?: number
 	description?: string
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high"
+	minTokensPerCachePoint?: number
+	maxCachePoints?: number
+	cachableFields?: string[]
 	displayName?: string | null
 	preferredIndex?: number | null
+	deprecated?: boolean
+	isFree?: boolean
+	supportsNativeTools?: boolean
+	tiers?: Array<{
+		name?: "default" | "flex" | "priority"
+		contextWindow: number
+		inputPrice?: number
+		outputPrice?: number
+		cacheWritesPrice?: number
+		cacheReadsPrice?: number
+	}>
 }
 
 export type ModelRecord = Record<string, ModelInfo>
@@ -104,6 +125,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	lmstudio: "lmstudio",
 	litellm: "litellm",
 	glama: "glama",
+	"nano-gpt": null,
 	unbound: "unbound",
 	requesty: "requesty",
 	deepinfra: "deepinfra",
@@ -141,6 +163,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	huggingface: null,
 	inception: null,
 	synthetic: null,
+	"sap-ai-core": null,
 }
 
 /**
@@ -153,6 +176,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	lmstudio: "lmStudioModelId",
 	litellm: "litellmModelId",
 	glama: "glamaModelId",
+	"nano-gpt": "nanoGptModelId",
 	unbound: "unboundModelId",
 	requesty: "requestyModelId",
 	deepinfra: "deepInfraModelId",
@@ -190,6 +214,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	huggingface: null,
 	inception: "inceptionLabsModelId",
 	synthetic: null,
+	"sap-ai-core": "sapAiCoreModelId",
 }
 
 /**

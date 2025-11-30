@@ -91,24 +91,17 @@
 		"tooltip": "Hủy thao tác hiện tại"
 	},
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
-	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
+	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Xem <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
+	"docs": "Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
 	"onboarding": "<strong>Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.</strong> Bắt đầu bằng cách nhập nhiệm vụ bên dưới. Bạn không chắc chắn nên bắt đầu như thế nào? Đọc thêm về những gì Kilo Code có thể làm cho bạn trong <DocsLink>tài liệu</DocsLink>.",
 	"rooTips": {
-		"boomerangTasks": {
-			"title": "Điều phối Nhiệm vụ",
-			"description": "Chia nhỏ các nhiệm vụ thành các phần nhỏ hơn, dễ quản lý hơn."
-		},
-		"stickyModels": {
-			"title": "Chế độ dính",
-			"description": "Mỗi chế độ ghi nhớ mô hình đã sử dụng cuối cùng của bạn"
-		},
-		"tools": {
-			"title": "Công cụ",
-			"description": "Cho phép AI giải quyết vấn đề bằng cách duyệt web, chạy lệnh, v.v."
-		},
 		"customizableModes": {
-			"title": "Chế độ tùy chỉnh",
-			"description": "Các nhân vật chuyên biệt với hành vi riêng và mô hình được chỉ định"
+			"title": "Chế độ có thể tùy chỉnh",
+			"description": "Các nhân vật chuyên biệt luôn bám sát nhiệm vụ và mang lại hiệu quả."
+		},
+		"modelAgnostic": {
+			"title": "Mang theo mô hình của riêng bạn",
+			"description": "Sử dụng khóa nhà cung cấp của riêng bạn hoặc thậm chí chạy suy luận cục bộ — không phụ phí, không khóa, không hạn chế"
 		}
 	},
 	"selectMode": "Chọn chế độ tương tác",
@@ -442,5 +435,12 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code muốn chạy lệnh slash",
 		"didRun": "Kilo Code đã chạy lệnh slash"
+	},
+	"todo": {
+		"partial": "{{completed}} trong tổng số {{total}} công việc đã hoàn thành",
+		"complete": "{{total}} công việc đã hoàn thành",
+		"updated": "Đã cập nhật danh sách công việc",
+		"completed": "Đã hoàn thành",
+		"started": "Đã bắt đầu"
 	}
 }

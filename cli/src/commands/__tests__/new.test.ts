@@ -2,13 +2,16 @@
  * Tests for /new command
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { newCommand } from "../new.js"
 import type { CommandContext } from "../core/types.js"
 import { createMockContext } from "./helpers/mockContext.js"
+import { SessionService } from "../../services/session.js"
 
 describe("/new command", () => {
 	let mockContext: CommandContext
+	let mockSessionService: Partial<SessionService> & { destroy: ReturnType<typeof vi.fn> }
+
 	beforeEach(() => {
 		// Mock process.stdout.write to capture terminal clearing
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true)
@@ -16,6 +19,19 @@ describe("/new command", () => {
 		mockContext = createMockContext({
 			input: "/new",
 		})
+
+		// Mock SessionService
+		mockSessionService = {
+			destroy: vi.fn().mockResolvedValue(undefined),
+			sessionId: "test-session-id",
+		}
+
+		// Mock SessionService.init to return our mock
+		vi.spyOn(SessionService, "init").mockReturnValue(mockSessionService as unknown as SessionService)
+	})
+
+	afterEach(() => {
+		vi.restoreAllMocks()
 	})
 
 	describe("Command metadata", () => {
@@ -55,6 +71,27 @@ describe("/new command", () => {
 			expect(mockContext.clearTask).toHaveBeenCalledTimes(1)
 		})
 
+		it("should clear the session", async () => {
+			await newCommand.handler(mockContext)
+
+			expect(SessionService.init).toHaveBeenCalled()
+			expect(mockSessionService.destroy).toHaveBeenCalledTimes(1)
+		})
+
+		it("should continue execution even if session clearing fails", async () => {
+			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+			mockSessionService.destroy.mockRejectedValue(new Error("Session error"))
+
+			await newCommand.handler(mockContext)
+
+			// Should still clear task and replace messages despite session error
+			expect(mockContext.clearTask).toHaveBeenCalled()
+			expect(mockContext.replaceMessages).toHaveBeenCalled()
+			expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to clear session:", expect.any(Error))
+
+			consoleErrorSpy.mockRestore()
+		})
+
 		it("should replace CLI messages with welcome message", async () => {
 			await newCommand.handler(mockContext)
 
@@ -84,6 +121,10 @@ describe("/new command", () => {
 				callOrder.push("clearTask")
 			})
 
+			mockSessionService.destroy = vi.fn().mockImplementation(async () => {
+				callOrder.push("sessionDestroy")
+			})
+
 			mockContext.replaceMessages = vi.fn().mockImplementation(() => {
 				callOrder.push("replaceMessages")
 			})
@@ -91,7 +132,7 @@ describe("/new command", () => {
 			await newCommand.handler(mockContext)
 
 			// Operations should execute in this order
-			expect(callOrder).toEqual(["clearTask", "replaceMessages"])
+			expect(callOrder).toEqual(["clearTask", "sessionDestroy", "replaceMessages"])
 		})
 
 		it("should handle clearTask errors gracefully", async () => {
@@ -123,6 +164,7 @@ describe("/new command", () => {
 
 			// Verify all cleanup operations were performed
 			expect(mockContext.clearTask).toHaveBeenCalled()
+			expect(mockSessionService.destroy).toHaveBeenCalled()
 			expect(mockContext.replaceMessages).toHaveBeenCalled()
 
 			// Verify welcome message was replaced

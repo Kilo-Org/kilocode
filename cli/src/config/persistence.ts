@@ -80,6 +80,16 @@ function deepMerge(target: any, source: any): any {
 	return result
 }
 
+export function getKiloToken(config: CLIConfig) {
+	const kiloProvider = config.providers.find((p) => p.provider === "kilocode")
+
+	if (kiloProvider && "kilocodeToken" in kiloProvider) {
+		return kiloProvider.kilocodeToken
+	}
+
+	return null
+}
+
 /**
  * Merge loaded config with defaults to fill in missing keys
  */

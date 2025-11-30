@@ -2,7 +2,13 @@ import { useCallback, useState, useEffect } from "react"
 import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import { type ProviderSettings, type ModelInfo, BEDROCK_REGIONS, BEDROCK_1M_CONTEXT_MODEL_IDS } from "@roo-code/types"
+import {
+	type ProviderSettings,
+	type ModelInfo,
+	BEDROCK_REGIONS,
+	BEDROCK_1M_CONTEXT_MODEL_IDS,
+	BEDROCK_GLOBAL_INFERENCE_MODEL_IDS,
+} from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StandardTooltip } from "@src/components/ui"
@@ -22,6 +28,11 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 	// Check if the selected model supports 1M context (Claude Sonnet 4 / 4.5)
 	const supports1MContextBeta =
 		!!apiConfiguration?.apiModelId && BEDROCK_1M_CONTEXT_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
+
+	// Check if the selected model supports Global Inference profile routing
+	const supportsGlobalInference =
+		!!apiConfiguration?.apiModelId &&
+		BEDROCK_GLOBAL_INFERENCE_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
 
 	// Update the endpoint enabled state when the configuration changes
 	useEffect(() => {
@@ -138,9 +149,25 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 					</SelectContent>
 				</Select>
 			</div>
+			{supportsGlobalInference && (
+				<Checkbox
+					checked={apiConfiguration?.awsUseGlobalInference || false}
+					disabled={apiConfiguration?.awsUseCrossRegionInference || false}
+					onChange={(checked: boolean) => {
+						// Enabling Global Inference should disable cross-region inference
+						setApiConfigurationField("awsUseGlobalInference", checked)
+						if (checked) setApiConfigurationField("awsUseCrossRegionInference", false)
+					}}>
+					{t("settings:providers.awsGlobalInference")}
+				</Checkbox>
+			)}
 			<Checkbox
 				checked={apiConfiguration?.awsUseCrossRegionInference || false}
-				onChange={handleInputChange("awsUseCrossRegionInference", noTransform)}>
+				disabled={apiConfiguration?.awsUseGlobalInference || false}
+				onChange={(checked: boolean) => {
+					setApiConfigurationField("awsUseCrossRegionInference", checked)
+					if (checked) setApiConfigurationField("awsUseGlobalInference", false)
+				}}>
 				{t("settings:providers.awsCrossRegion")}
 			</Checkbox>
 			{selectedModelInfo?.supportsPromptCache && (
