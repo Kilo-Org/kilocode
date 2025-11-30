@@ -103,6 +103,9 @@ importers:
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
+      docusaurus-plugin-llms:
+        specifier: ^0.2.2
+        version: 0.2.2(@docusaurus/core@3.9.2(@mdx-js/react@3.1.1(@types/react@18.3.23)(react@19.2.0))(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3))
       posthog-docusaurus:
         specifier: ^2.0.4
         version: 2.0.5
@@ -4930,7 +4933,6 @@ packages:
   '@lancedb/lancedb@0.21.3':
     resolution: {integrity: sha512-hfzp498BfcCJ730fV1YGGoXVxRgE+W1n0D0KwanKlbt8bBPSQ6E6Tf8mPXc8rKdAXIRR3o5mTzMG3z3Fda+m3Q==}
     engines: {node: '>= 18'}
-    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -10757,6 +10759,12 @@ packages:
   doctrine@3.0.0:
     resolution: {integrity: sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==}
     engines: {node: '>=6.0.0'}
+
+  docusaurus-plugin-llms@0.2.2:
+    resolution: {integrity: sha512-DZlZ6cv9p5poFE00Qg78aurBNWhLa4o0VhH4kI33DUT0y4ydlFEJJbf8Bks9BuuGPFbY/Guebn+hRc2QymMImg==}
+    engines: {node: '>=18.0'}
+    peerDependencies:
+      '@docusaurus/core': ^3.0.0
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -27794,7 +27802,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.17.50)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.2.1)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.1)
 
   '@vitest/utils@2.0.5':
     dependencies:
@@ -30648,6 +30656,13 @@ snapshots:
   doctrine@3.0.0:
     dependencies:
       esutils: 2.0.3
+
+  docusaurus-plugin-llms@0.2.2(@docusaurus/core@3.9.2(@mdx-js/react@3.1.1(@types/react@18.3.23)(react@19.2.0))(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3)):
+    dependencies:
+      '@docusaurus/core': 3.9.2(@mdx-js/react@3.1.1(@types/react@18.3.23)(react@19.2.0))(debug@4.4.3)(esbuild@0.25.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.6.3)
+      gray-matter: 4.0.3
+      minimatch: 9.0.5
+      yaml: 2.8.1
 
   dom-accessibility-api@0.5.16: {}
 
@@ -37263,7 +37278,7 @@ snapshots:
   postcss-load-config@4.0.2(postcss@8.5.4)(ts-node@10.9.2(@swc/core@1.15.1)(@types/node@20.17.57)(typescript@5.8.3)):
     dependencies:
       lilconfig: 3.1.3
-      yaml: 2.8.0
+      yaml: 2.8.1
     optionalDependencies:
       postcss: 8.5.4
       ts-node: 10.9.2(@swc/core@1.15.1)(@types/node@20.17.57)(typescript@5.8.3)
