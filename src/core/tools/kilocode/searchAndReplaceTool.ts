@@ -100,7 +100,7 @@ export async function searchAndReplaceTool(
 
 		if (!fileExists) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("apply_diff", "file_does_not_exist")
+			cline.recordToolError("search_and_replace", "file_does_not_exist")
 			const formattedError = formatResponse.toolError(
 				`File does not exist at path: ${absolutePath}\nThe specified file could not be found. Please verify the file path and try again.`,
 			)
@@ -118,7 +118,7 @@ export async function searchAndReplaceTool(
 			fileContent = await fs.readFile(absolutePath, "utf-8")
 		} catch (error) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("apply_diff", "exception")
+			cline.recordToolError("search_and_replace", "exception")
 			const errorMessage = `Error reading file: ${absolutePath}\nFailed to read the file content: ${
 				error instanceof Error ? error.message : String(error)
 			}\nPlease verify file permissions and try again.`
@@ -138,7 +138,7 @@ export async function searchAndReplaceTool(
 		const matchCount = fileContent.match(searchPattern)?.length ?? 0
 		if (matchCount > 1) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("apply_diff", "multiple_matches")
+			cline.recordToolError("search_and_replace", "multiple_matches")
 			pushToolResult(
 				formatResponse.toolError(
 					`Found ${matchCount} matches for replacement text. Please provide more context to make a unique match.`,
@@ -156,7 +156,7 @@ export async function searchAndReplaceTool(
 		const diff = formatResponse.createPrettyPatch(validRelPath, fileContent, newContent)
 		if (!diff) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("apply_diff", "no_match")
+			cline.recordToolError("search_and_replace", "no_match")
 			pushToolResult(
 				formatResponse.toolError(
 					`No match found for replacement in '${validRelPath}'. Please check your text and try again.`,
@@ -227,7 +227,7 @@ export async function searchAndReplaceTool(
 		pushToolResult(message)
 
 		// Record successful tool usage and cleanup
-		cline.recordToolUsage("apply_diff")
+		cline.recordToolUsage("search_and_replace")
 		await cline.diffViewProvider.reset()
 
 		// Process any queued messages after file edit completes

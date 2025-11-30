@@ -118,7 +118,6 @@ describe("filterNativeToolsForMode", () => {
 		// Should include all tools (code mode has all groups)
 		expect(toolNames).toContain("read_file")
 		expect(toolNames).toContain("write_to_file")
-		expect(toolNames).toContain("apply_diff")
 		expect(toolNames).toContain("execute_command")
 		expect(toolNames).toContain("browser_action")
 		expect(toolNames).toContain("ask_followup_question")

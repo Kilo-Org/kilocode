@@ -16,7 +16,7 @@ import searchFiles from "./search_files"
 import switchMode from "./switch_mode"
 import updateTodoList from "./update_todo_list"
 import writeToFile from "./write_to_file"
-// import { apply_diff_single_file } from "./apply_diff" // kilocode_change
+import { apply_diff } from "./apply_diff" // kilocode_change
 
 import searchAndReplace from "./kilocode/search_and_replace"
 import deleteFile from "./kilocode/delete_file"
@@ -47,6 +47,7 @@ export const nativeTools = [
 	listFiles,
 	newTask,
 	read_file,
+	apply_diff, //kilocode_change
 	runSlashCommand,
 	searchFiles,
 	switchMode,

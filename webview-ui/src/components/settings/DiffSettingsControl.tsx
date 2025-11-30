@@ -10,7 +10,7 @@ interface DiffSettingsControlProps {
 }
 
 export const DiffSettingsControl: React.FC<DiffSettingsControlProps> = ({
-	diffEnabled = true,
+	diffEnabled = false,
 	fuzzyMatchThreshold = 1.0,
 	onChange,
 }) => {

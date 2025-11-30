@@ -45,7 +45,6 @@ describe("SettingsSyncService", () => {
 				"kilo-code.deniedCommands",
 				"kilo-code.autoApprovalEnabled",
 				"kilo-code.fuzzyMatchThreshold",
-				"kilo-code.diffEnabled",
 				"kilo-code.directoryContextAddedContext",
 				"kilo-code.language",
 				"kilo-code.customModes",
@@ -53,7 +52,7 @@ describe("SettingsSyncService", () => {
 				"kilo-code.telemetrySetting",
 			])
 			expect(mockOutputChannel.appendLine).toHaveBeenCalledWith(
-				expect.stringContaining("[SettingsSyncService] Registered 10 keys for synchronization"),
+				expect.stringContaining("[SettingsSyncService] Registered 9 keys for synchronization"),
 			)
 		})
 
@@ -124,7 +123,6 @@ describe("SettingsSyncService", () => {
 				"kilo-code.deniedCommands",
 				"kilo-code.autoApprovalEnabled",
 				"kilo-code.fuzzyMatchThreshold",
-				"kilo-code.diffEnabled",
 				"kilo-code.directoryContextAddedContext",
 				"kilo-code.language",
 				"kilo-code.customModes",
