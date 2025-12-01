@@ -2560,7 +2560,9 @@ export const webviewMessageHandler = async (
 				}
 
 				try {
+					// Skip auto-switch in YOLO mode (cloud agents, CI) to prevent usage billing issues
 					const shouldAutoSwitch =
+						!getGlobalState("yoloMode") &&
 						response.data.organizations &&
 						response.data.organizations.length > 0 &&
 						!apiConfiguration.kilocodeOrganizationId &&
