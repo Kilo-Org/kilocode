@@ -790,6 +790,9 @@ const ApiOptions = ({
 				<IntelligentProvider
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
+					onValidationChange={(_isValid, errorMessage) => {
+						setErrorMessage(errorMessage)
+					}}
 				/>
 			)}
 			{/* kilocode_change end */}

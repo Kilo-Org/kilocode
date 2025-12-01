@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { type ProviderSettings, type ProviderSettingsEntry } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -7,6 +7,7 @@ import { IntelligentProviderPresentation } from "./IntelligentProviderPresentati
 type IntelligentProviderProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	onValidationChange?: (isValid: boolean, errorMessage?: string) => void
 }
 
 export type IntelligentProfileData = {
@@ -21,7 +22,11 @@ export interface IntelligentProviderConfig {
 	classifierProfile?: IntelligentProfileData
 }
 
-export const IntelligentProvider = ({ apiConfiguration, setApiConfigurationField }: IntelligentProviderProps) => {
+export const IntelligentProvider = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	onValidationChange,
+}: IntelligentProviderProps) => {
 	const { listApiConfigMeta, currentApiConfigName } = useExtensionState()
 	const [isAlertOpen, setIsAlertOpen] = useState(false)
 
@@ -42,6 +47,12 @@ export const IntelligentProvider = ({ apiConfiguration, setApiConfigurationField
 		}
 		return null
 	}, [apiConfiguration.profiles])
+
+	// Notify parent component about validation state
+	const isValid = !validationError
+	useEffect(() => {
+		onValidationChange?.(isValid, validationError || undefined)
+	}, [isValid, validationError, onValidationChange])
 
 	// Get current profile ID to exclude from available profiles
 	const currentProfile = listApiConfigMeta?.find((config) => config.name === currentApiConfigName)

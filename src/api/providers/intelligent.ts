@@ -441,49 +441,37 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			return this.assessDifficultyWithKeywords(prompt)
 		}
 
-		const classifierPrompt = `
-You are a specialized Task Complexity Classifier. Your sole function is to analyze the user's request and classify its complexity.
+		const classifierPrompt = `You are a Task Complexity Classifier for coding tasks. Classify the complexity as EASY, MEDIUM, or HARD.
 
-**Classification Levels:**
-- EASY: Simple, well-defined tasks requiring 1-2 steps or basic information retrieval
-- MEDIUM: Moderately complex tasks requiring 3-4 steps, analysis, or implementation
-- HARD: Complex tasks requiring 5+ steps, strategic planning, deep debugging, or architectural design
+**Levels:**
+- EASY: 1-2 steps, simple edits, questions, single file changes
+- MEDIUM: 3-4 steps, feature implementation, moderate debugging, multiple file changes
+- HARD: 5+ steps, architecture design, complex refactoring, system-wide changes
 
-**Classification Criteria:**
-1. **Operational Complexity**: How many distinct steps or tool calls are needed?
-   - Easy: 1-2 steps (e.g., "list files", "explain this function")
-   - Medium: 3-4 steps (e.g., "implement this feature", "debug this issue")
-   - Hard: 5+ steps (e.g., "refactor entire module", "design system architecture")
+**Rules:**
+- When uncertain, default to MEDIUM
+- Consider both the explicit request AND implied work
 
-2. **Strategic Thinking**: Does this require planning, design decisions, or architecture?
-   - Easy: Simple execution or information retrieval
-   - Medium: Some planning or design required
-   - Hard: High-level strategy, architecture patterns, or complex design
-
-3. **Ambiguity & Scope**: How broad or undefined is the request?
-   - Easy: Specific, bounded, clear requirements
-   - Medium: Moderately defined with some ambiguity
-   - Hard: Broad scope requiring investigation or clarification
-
-**Output Format:**
-Respond ONLY with valid JSON: {"difficulty": "easy|medium|hard", "reasoning": "brief explanation"}
-
-**Task to classify:**
-"${prompt}"
+**Output:** JSON only: {"difficulty": "easy|medium|hard"}
 
 **Examples:**
-- "list files in current directory" → {"difficulty": "easy", "reasoning": "Single command, 1 step"}
-- "implement user authentication" → {"difficulty": "medium", "reasoning": "Multiple components, 3-4 steps"}
-- "design microservices architecture" → {"difficulty": "hard", "reasoning": "Strategic planning, complex design"}
-- "what is a variable?" → {"difficulty": "easy", "reasoning": "Simple information retrieval"}
-- "debug performance bottleneck" → {"difficulty": "hard", "reasoning": "Complex investigation, multiple steps"}
-`
+- "add a console.log" → easy
+- "rename this variable" → easy
+- "what does this function do?" → easy
+- "fix this bug" → medium
+- "add user authentication" → medium
+- "write tests for this module" → medium
+- "refactor to use dependency injection" → hard
+- "design a plugin system" → hard
+- "optimize database queries across the app" → hard`
+
+		const taskToClassify = `Task: "${prompt.substring(0, 500)}"`
 
 		try {
 			// Use the classification handler to perform classification
 			const response = await classificationHandler.createMessage(
 				classifierPrompt,
-				[{ role: "user", content: classifierPrompt }],
+				[{ role: "user", content: taskToClassify }],
 				{ taskId: "classification-task" } as ApiHandlerCreateMessageMetadata,
 			)
 
