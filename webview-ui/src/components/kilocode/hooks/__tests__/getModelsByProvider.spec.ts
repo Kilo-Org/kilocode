@@ -47,6 +47,7 @@ describe("getModelsByProvider", () => {
 			"virtual-quota-fallback", // no models
 			"zai", // has weird mainland/international distiction
 			"vercel-ai-gateway", // different structure
+			"intelligent", // uses profiles instead of models
 		]
 
 		const providersWithoutModels = providerNames

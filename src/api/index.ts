@@ -115,6 +115,20 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * If not provided, defaults to using the easy handler profile.
 	 */
 	classifierProfileId?: string
+	/**
+	 * Raw user prompt from the UI input, used by IntelligentHandler for difficulty assessment.
+	 */
+	rawUserPrompt?: string
+	/**
+	 * The current user prompt for difficulty assessment in IntelligentHandler.
+	 * Only passed on initial messages to avoid redundant assessments.
+	 */
+	userPrompt?: string
+	/**
+	 * Indicates whether this is the initial message for difficulty assessment.
+	 * IntelligentHandler only assesses difficulty once per user message.
+	 */
+	isInitialMessage?: boolean
 }
 
 export interface ApiHandler {

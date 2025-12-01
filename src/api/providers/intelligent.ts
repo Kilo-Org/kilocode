@@ -39,6 +39,10 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 	private activeDifficulty: "easy" | "medium" | "hard" | null = null
 	private lastNotificationMessage: string | null = null
 	private settingsHash: string | null = null
+	private cachedDifficulty: "easy" | "medium" | "hard" | null = null
+	private lastAssessedPrompt: string | null = null
+	private assessmentInProgress: boolean = false
+	private assessmentCount: number = 0
 
 	constructor(options: ProviderSettings) {
 		super()
@@ -105,8 +109,8 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		try {
 			await this.initialize()
 
-			// Get the user's prompt from the last message to assess difficulty
-			const userPrompt = this.extractUserPrompt(messages)
+			// Get the user's prompt from metadata (set by Task.ts from UI inputValue)
+			const userPrompt = metadata?.rawUserPrompt ?? ""
 			const difficulty = await this.assessDifficulty(userPrompt, metadata)
 
 			// Debug logging for difficulty assessment
@@ -311,94 +315,53 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		}
 	}
 
-	private extractUserPrompt(messages: Anthropic.Messages.MessageParam[]): string {
-		// Get the last user message as the prompt to analyze
-		for (let i = messages.length - 1; i >= 0; i--) {
-			const message = messages[i]
-			if (message.role === "user") {
-				let userContent = ""
-				if (Array.isArray(message.content)) {
-					userContent = message.content
-						.map((block) => {
-							if (block.type === "text") {
-								return block.text
-							}
-							return ""
-						})
-						.filter((text) => text)
-						.join(" ")
-				} else {
-					userContent = message.content || ""
-				}
-
-				// Try to extract just the actual user question from the task context
-				// Look for patterns that indicate task boundaries
-				const taskMatch = userContent.match(/<task>(.*?)<\/task>/s)
-				if (taskMatch) {
-					return taskMatch[1].trim()
-				}
-
-				// Fallback: if no task tags, try to get the last meaningful part
-				// Split by common separators and take the last non-context part
-				const lines = userContent.split("\n")
-				// Look for lines that don't match environment details patterns
-				const meaningfulLines = lines.filter(
-					(line) =>
-						!line.includes("extensionHostProcess.js") &&
-						!line.includes("# VSCode") &&
-						!line.includes("# Current") &&
-						!line.includes("<environment_details>"),
-				)
-
-				if (meaningfulLines.length > 0) {
-					return meaningfulLines[meaningfulLines.length - 1].trim()
-				}
-
-				return userContent
-			}
-		}
-		return ""
-	}
-
-	private recentAssessments: ("easy" | "medium" | "hard")[] = []
-	private lastDifficultyChange: number = 0
-	private readonly COOLDOWN_PERIOD = 30000 // 30 seconds cooldown between difficulty changes
-	private readonly ASSESSMENT_HISTORY_SIZE = 5
-
 	async assessDifficulty(
 		prompt: string,
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): Promise<"easy" | "medium" | "hard"> {
-		const currentDifficulty = this.activeDifficulty
+		// If we already have an active difficulty for this task, use it (assess only once per task)
+		if (this.activeDifficulty) {
+			console.debug(
+				`IntelligentHandler: Using existing task difficulty: ${this.activeDifficulty} (assessment count: ${this.assessmentCount})`,
+			)
+			return this.activeDifficulty
+		}
+
+		// If assessment is already in progress, wait for it to complete
+		if (this.assessmentInProgress) {
+			console.debug(`IntelligentHandler: Waiting for assessment in progress...`)
+			// Simple polling wait - not ideal but prevents race conditions
+			while (this.assessmentInProgress && !this.activeDifficulty) {
+				await new Promise((resolve) => setTimeout(resolve, 10))
+			}
+			if (this.activeDifficulty) {
+				console.debug(
+					`IntelligentHandler: Using difficulty from completed assessment: ${this.activeDifficulty}`,
+				)
+				return this.activeDifficulty
+			}
+		}
 
 		if (!prompt.trim()) {
-			return currentDifficulty || "medium" // maintain current or default to medium
+			return "medium" // default to medium for empty prompts
 		}
 
-		// Apply cooldown period to prevent rapid switching
-		const now = Date.now()
-		if (this.lastDifficultyChange && now - this.lastDifficultyChange < this.COOLDOWN_PERIOD) {
-			return currentDifficulty || "medium"
+		// Set flag to prevent concurrent assessments
+		this.assessmentInProgress = true
+
+		try {
+			// Assess difficulty only on initial messages
+			const calculatedDifficulty = metadata?.isInitialMessage
+				? await this.assessDifficultyWithAI(prompt, metadata)
+				: await this.assessDifficultyWithKeywords(prompt)
+
+			// Set the active difficulty (maintained for the entire task)
+			this.activeDifficulty = calculatedDifficulty
+
+			return calculatedDifficulty
+		} finally {
+			this.assessmentInProgress = false
 		}
-
-		// Use AI-powered semantic analysis with the easy profile
-		const calculatedDifficulty = await this.assessDifficultyWithAI(prompt, metadata)
-
-		// Improved hysteresis logic
-		const finalDifficulty = this.applyHysteresis(currentDifficulty, calculatedDifficulty)
-
-		// Track assessment history
-		this.recentAssessments.push(finalDifficulty)
-		if (this.recentAssessments.length > this.ASSESSMENT_HISTORY_SIZE) {
-			this.recentAssessments.shift()
-		}
-
-		// Update cooldown timestamp if difficulty changed
-		if (currentDifficulty !== finalDifficulty) {
-			this.lastDifficultyChange = now
-		}
-
-		return finalDifficulty
 	}
 
 	private async assessDifficultyWithAI(
@@ -468,6 +431,9 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		const taskToClassify = `Task: "${prompt.substring(0, 500)}"`
 
 		try {
+			this.assessmentCount++
+			console.debug(`IntelligentHandler: Starting assessment #${this.assessmentCount}`)
+
 			// Use the classification handler to perform classification
 			const response = await classificationHandler.createMessage(
 				classifierPrompt,
@@ -483,10 +449,14 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 				}
 			}
 
+			// Debug: Log the raw AI response
+			console.debug(`IntelligentHandler: Classifier AI response: "${fullResponse.trim()}"`)
+
 			// Parse the JSON response
 			const jsonMatch = fullResponse.match(/\{[^}]+\}/)
 			if (jsonMatch) {
 				const parsed = JSON.parse(jsonMatch[0])
+				console.debug(`IntelligentHandler: Parsed difficulty: ${parsed.difficulty}`)
 				return parsed.difficulty.toLowerCase()
 			}
 
@@ -579,39 +549,6 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		if (wordCount > hardThreshold) return "hard"
 		if (wordCount > easyThreshold) return "medium"
 		return "easy"
-	}
-
-	private applyHysteresis(
-		currentDifficulty: "easy" | "medium" | "hard" | null,
-		calculatedDifficulty: "easy" | "medium" | "hard",
-	): "easy" | "medium" | "hard" {
-		// If no current difficulty, use calculated
-		if (!currentDifficulty) return calculatedDifficulty
-
-		// Enhanced hysteresis: Look at recent assessment history
-		const recentCount = this.recentAssessments.length
-		if (recentCount >= 3) {
-			const recent = this.recentAssessments.slice(-3)
-			const nonHardCount = recent.filter((d) => d !== "hard").length
-
-			// Only downgrade from hard if we have 3 consecutive non-hard assessments
-			if (currentDifficulty === "hard" && nonHardCount >= 3) {
-				return calculatedDifficulty === "easy" ? "medium" : calculatedDifficulty
-			}
-		}
-
-		// For other transitions, be more conservative
-		if (currentDifficulty === "hard") {
-			return "hard" // Stay in hard unless conditions above are met
-		}
-
-		if (currentDifficulty === "medium" && calculatedDifficulty === "easy") {
-			// Only downgrade to easy after 2 consecutive easy assessments
-			const recentEasy = this.recentAssessments.slice(-2).every((d) => d === "easy")
-			return recentEasy ? "easy" : "medium"
-		}
-
-		return calculatedDifficulty
 	}
 
 	private getHandlerForDifficulty(difficulty: "easy" | "medium" | "hard"): ApiHandler | undefined {
