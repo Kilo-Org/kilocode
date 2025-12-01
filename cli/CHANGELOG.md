@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.10.1
+
+### Patch Changes
+
+- [#4115](https://github.com/Kilo-Org/kilocode/pull/4115) [`a36323c`](https://github.com/Kilo-Org/kilocode/commit/a36323c0fbb560172071826d2920ce7b94bd5985) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Public Docker images
+
 ## 0.10.0
 
 ### Minor Changes

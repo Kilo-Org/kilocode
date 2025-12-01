@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.126.0
+
+### Minor Changes
+
+- [#4026](https://github.com/Kilo-Org/kilocode/pull/4026) [`a44ec02`](https://github.com/Kilo-Org/kilocode/commit/a44ec024347d345f46bf01486a6913f0e1e5a8c2) Thanks [@quantizoor](https://github.com/quantizoor)! - Add possibility to specify Azure deployment name for Anthropic models
+
 ## 4.125.1
 
 ### Patch Changes
