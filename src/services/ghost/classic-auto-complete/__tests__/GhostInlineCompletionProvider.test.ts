@@ -938,6 +938,50 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 		})
 
+		describe("in-flight request reuse (partial entry)", () => {
+			it("should not start a new request when the new prefix equals the partial prefix or is a prefix of it", async () => {
+				const longerPrefix = "const x = 1"
+				const shorterPrefix = "const x = "
+				const suffix = "\nconst y = 2"
+
+				// We only want to test reuse logic; stub the actual fetch so it doesn't depend on prompt builders.
+				const fetchSpy = vi.spyOn(provider as any, "fetchAndCacheSuggestion").mockResolvedValue(undefined)
+
+				const prompt = {
+					strategy: "hole_filler",
+					autocompleteInput: {} as any,
+					systemPrompt: "",
+					userPrompt: "",
+				} as any
+
+				const p1 = (provider as any).debouncedFetchAndCacheSuggestion(prompt, longerPrefix, suffix)
+
+				// Partial entry should be inserted synchronously
+				const history = (provider as any).suggestionsHistory as Array<{
+					prefix: string
+					suffix: string
+					isPartial?: boolean
+					requestDone?: Promise<void>
+				}>
+				expect(history.length).toBeGreaterThan(0)
+				expect(history[history.length - 1].prefix).toBe(longerPrefix)
+				expect(history[history.length - 1].suffix).toBe(suffix)
+				expect(history[history.length - 1].isPartial).toBe(true)
+				expect(history[history.length - 1].requestDone).toBeDefined()
+
+				// New call with a shorter prefix should reuse the in-flight request (same promise)
+				const p2 = (provider as any).debouncedFetchAndCacheSuggestion(prompt, shorterPrefix, suffix)
+				expect(p2).toBe(p1)
+
+				// Only one scheduled fetch should run
+				await vi.advanceTimersByTimeAsync(300)
+
+				expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+				await Promise.all([p1, p2])
+			})
+		})
+
 		describe("dispose", () => {
 			it("should clear pending debounce timer when disposed", () => {
 				// Start a debounced fetch (don't await it)

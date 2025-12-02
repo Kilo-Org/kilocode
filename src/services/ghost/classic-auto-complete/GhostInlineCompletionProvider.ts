@@ -24,6 +24,26 @@ export type CostTrackingCallback = (
 
 export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
 
+type SuggestionHistoryEntry = FillInAtCursorSuggestion & {
+	/**
+	 * When true, this entry represents an in-flight request (placeholder).
+	 * It should not be treated as a cached result by lookups.
+	 */
+	isPartial?: boolean
+	/**
+	 * Promise that resolves when the in-flight request completes.
+	 */
+	requestDone?: Promise<void>
+}
+
+type PendingSuggestionRequest = {
+	prefix: string
+	suffix: string
+	done: Promise<void>
+	resolveDone: () => void
+	entry: SuggestionHistoryEntry
+}
+
 /**
  * Find a matching suggestion from the history based on current prefix and suffix
  * @param prefix - The text before the cursor position
@@ -34,11 +54,16 @@ export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
 export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
-	suggestionsHistory: FillInAtCursorSuggestion[],
+	suggestionsHistory: ReadonlyArray<SuggestionHistoryEntry>,
 ): string | null {
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
+
+		// Skip in-flight placeholder entries
+		if (fillInAtCursor.isPartial) {
+			continue
+		}
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
@@ -88,7 +113,8 @@ export interface LLMRetrievalResult {
 }
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
-	private suggestionsHistory: FillInAtCursorSuggestion[] = []
+	private suggestionsHistory: SuggestionHistoryEntry[] = []
+	private pendingSuggestionRequest: PendingSuggestionRequest | null = null
 	private holeFiller: HoleFiller
 	private fimPromptBuilder: FimPromptBuilder
 	private model: GhostModel
@@ -297,20 +323,84 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	private debouncedFetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+		// If there's an in-flight (partial) request for a "longer or equal" prefix
+		// and the new prefix is the same as, or a prefix of, that in-flight prefix,
+		// then do not start a new request.
+		if (
+			this.pendingSuggestionRequest &&
+			this.pendingSuggestionRequest.suffix === suffix &&
+			(this.pendingSuggestionRequest.prefix === prefix || this.pendingSuggestionRequest.prefix.startsWith(prefix))
+		) {
+			return this.pendingSuggestionRequest.done
+		}
+
+		// If we are about to start a new request, make sure any previously scheduled request
+		// doesn't leave an unresolved promise behind.
+		if (this.pendingSuggestionRequest) {
+			this.pendingSuggestionRequest.entry.isPartial = false
+			this.pendingSuggestionRequest.resolveDone()
+			this.pendingSuggestionRequest = null
+		}
+
 		if (this.debounceTimer !== null) {
 			clearTimeout(this.debounceTimer)
 		}
 
-		return new Promise<void>((resolve) => {
-			this.debounceTimer = setTimeout(async () => {
-				this.debounceTimer = null
-				await this.fetchAndCacheSuggestion(prompt, prefix, suffix)
-				resolve()
-			}, DEBOUNCE_DELAY_MS)
+		let resolveDone: () => void
+		const done = new Promise<void>((resolve) => {
+			resolveDone = resolve
 		})
+
+		const entry: SuggestionHistoryEntry = {
+			text: "",
+			prefix,
+			suffix,
+			isPartial: true,
+			requestDone: done,
+		}
+
+		// Add partial entry immediately
+		this.suggestionsHistory.push(entry)
+
+		// Remove oldest if we exceed the limit
+		if (this.suggestionsHistory.length > MAX_SUGGESTIONS_HISTORY) {
+			this.suggestionsHistory.shift()
+		}
+
+		const request: PendingSuggestionRequest = {
+			prefix,
+			suffix,
+			done,
+			resolveDone: resolveDone!,
+			entry,
+		}
+		this.pendingSuggestionRequest = request
+
+		this.debounceTimer = setTimeout(async () => {
+			this.debounceTimer = null
+			try {
+				await this.fetchAndCacheSuggestion(prompt, prefix, suffix, request)
+			} finally {
+				// Complete the request entry + promise regardless of success/failure
+				request.entry.isPartial = false
+				request.resolveDone()
+
+				// Only clear if this is still the active request
+				if (this.pendingSuggestionRequest === request) {
+					this.pendingSuggestionRequest = null
+				}
+			}
+		}, DEBOUNCE_DELAY_MS)
+
+		return done
 	}
 
-	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+	private async fetchAndCacheSuggestion(
+		prompt: GhostPrompt,
+		prefix: string,
+		suffix: string,
+		request?: PendingSuggestionRequest,
+	): Promise<void> {
 		try {
 			// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
 			const curriedProcessSuggestion = (text: string) => this.processSuggestion(text, prefix, suffix, this.model)
@@ -328,9 +418,24 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				result.cacheReadTokens,
 			)
 
+			// If this completion corresponds to the in-flight placeholder entry, update it in-place
+			// so the history doesn't end up with duplicate entries.
+			if (request) {
+				request.entry.text = result.suggestion.text
+				request.entry.prefix = result.suggestion.prefix
+				request.entry.suffix = result.suggestion.suffix
+				request.entry.isPartial = false
+				return
+			}
+
 			// Always update suggestions, even if text is empty (for caching)
 			this.updateSuggestions(result.suggestion)
 		} catch (error) {
+			// If we were fulfilling an in-flight placeholder, complete it as "empty"
+			if (request) {
+				request.entry.text = ""
+				request.entry.isPartial = false
+			}
 			console.error("Error getting inline completion from LLM:", error)
 		}
 	}
