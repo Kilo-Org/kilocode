@@ -9,6 +9,7 @@ import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harnes
 import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { GhostGeneratorReuseManager } from "./GhostGeneratorReuseManager"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -97,6 +98,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
 	private ignoreController?: Promise<RooIgnoreController>
+	private generatorReuseManager: GhostGeneratorReuseManager
 
 	constructor(
 		model: GhostModel,
@@ -116,6 +118,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const ide = contextProvider.getIde()
 		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
 		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
+
+		// Initialize generator reuse manager
+		this.generatorReuseManager = new GhostGeneratorReuseManager((err) => {
+			console.error("[GhostInlineCompletionProvider] Generator error:", err)
+		})
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -196,6 +203,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			clearTimeout(this.debounceTimer)
 			this.debounceTimer = null
 		}
+		this.generatorReuseManager.cancel()
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 	}
@@ -260,12 +268,43 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
+			// First, check if we have a cached suggestion that matches
 			const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 			if (matchingText !== null) {
 				return stringToInlineCompletions(matchingText, position)
 			}
 
+			// Check if we can reuse an existing generator
+			if (this.generatorReuseManager.shouldReuseExistingGenerator(prefix, suffix)) {
+				// Wait for the pending generator to complete and get the result
+				const result = await this.generatorReuseManager.getCompletion(
+					prefix,
+					suffix,
+					// These won't be used since we're reusing
+					{ strategy: "fim" } as GhostPrompt,
+					() => {
+						throw new Error("Should not create new generator when reusing")
+					},
+				)
+
+				if (result.text) {
+					// Process and cache the suggestion
+					const suggestion = this.processSuggestion(
+						result.text,
+						result.originalPrefix,
+						result.originalSuffix,
+						this.model,
+					)
+					this.updateSuggestions(suggestion)
+
+					// Return the stripped text for the current position
+					const strippedText = this.stripTypedCharacters(prefix, result.originalPrefix, suggestion.text)
+					return stringToInlineCompletions(strippedText, position)
+				}
+			}
+
+			// No reusable generator, start a new one with debouncing
 			const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)
 			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix)
 
@@ -287,12 +326,56 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return new Promise<void>((resolve) => {
 			this.debounceTimer = setTimeout(async () => {
 				this.debounceTimer = null
-				await this.fetchAndCacheSuggestion(prompt, prefix, suffix)
+				await this.fetchAndCacheSuggestionWithReuse(prompt, prefix, suffix)
 				resolve()
 			}, DEBOUNCE_DELAY_MS)
 		})
 	}
 
+	/**
+	 * Fetch a suggestion using the generator reuse manager.
+	 * This method creates a streaming generator and waits for it to complete.
+	 */
+	private async fetchAndCacheSuggestionWithReuse(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+		try {
+			// Create a generator factory based on the prompt strategy
+			const generatorFactory = (abortSignal: AbortSignal): AsyncGenerator<string> => {
+				if (prompt.strategy === "fim") {
+					return this.fimPromptBuilder.createStreamingGenerator(this.model, prompt, abortSignal)
+				} else {
+					return this.holeFiller.createStreamingGenerator(this.model, prompt, abortSignal)
+				}
+			}
+
+			// Use the generator reuse manager to get the completion
+			const result = await this.generatorReuseManager.getCompletion(prefix, suffix, prompt, generatorFactory)
+
+			// Get the full accumulated text
+			let suggestionText = result.text
+
+			// For hole filler (chat), we need to extract the completion from XML tags
+			if (prompt.strategy === "hole_filler") {
+				suggestionText = HoleFiller.extractCompletionText(suggestionText)
+			}
+
+			// Process the suggestion
+			const suggestion = this.processSuggestion(suggestionText, prefix, suffix, this.model)
+
+			// Track costs - we only have usage info when the generator completes
+			// For now, we'll track costs separately when we have access to usage info
+			// TODO: Capture usage info from the generator return value
+
+			// Always update suggestions, even if text is empty (for caching)
+			this.updateSuggestions(suggestion)
+		} catch (error) {
+			console.error("Error getting inline completion from LLM:", error)
+		}
+	}
+
+	/**
+	 * Legacy method for fetching suggestions without generator reuse.
+	 * Kept for reference and potential fallback.
+	 */
 	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
 		try {
 			// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
@@ -318,5 +401,29 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		} catch (error) {
 			console.error("Error getting inline completion from LLM:", error)
 		}
+	}
+
+	/**
+	 * Strip characters that the user has already typed from the completion
+	 */
+	private stripTypedCharacters(currentPrefix: string, originalPrefix: string, completion: string): string {
+		// What the user typed since the generation started
+		const typedSinceGenerator = currentPrefix.slice(originalPrefix.length)
+
+		let result = completion
+		let typed = typedSinceGenerator
+
+		// Strip matching prefix
+		while (result.length > 0 && typed.length > 0) {
+			if (result[0] === typed[0]) {
+				result = result.slice(1)
+				typed = typed.slice(1)
+			} else {
+				// Mismatch - stop stripping
+				break
+			}
+		}
+
+		return result
 	}
 }

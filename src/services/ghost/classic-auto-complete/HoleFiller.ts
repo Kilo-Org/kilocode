@@ -26,6 +26,14 @@ export interface ChatCompletionResult {
 	cacheReadTokens: number
 }
 
+export interface UsageInfo {
+	cost: number
+	inputTokens: number
+	outputTokens: number
+	cacheWriteTokens: number
+	cacheReadTokens: number
+}
+
 /**
  * Parse the response - only handles responses with <COMPLETION> tags
  * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
@@ -226,5 +234,37 @@ Return the COMPLETION tags`
 			cacheWriteTokens: usageInfo.cacheWriteTokens,
 			cacheReadTokens: usageInfo.cacheReadTokens,
 		}
+	}
+
+	/**
+	 * Create a streaming generator for chat-based completion.
+	 * Yields raw text chunks as they arrive (including XML tags).
+	 * The caller is responsible for parsing the <COMPLETION> tags from the accumulated text.
+	 *
+	 * @param model - The GhostModel to use for generation
+	 * @param prompt - The prompt configuration
+	 * @param abortSignal - Optional signal to abort the generation
+	 * @returns AsyncGenerator that yields text chunks and returns usage info
+	 */
+	createStreamingGenerator(
+		model: GhostModel,
+		prompt: HoleFillerGhostPrompt,
+		abortSignal?: AbortSignal,
+	): AsyncGenerator<string, UsageInfo> {
+		const { systemPrompt, userPrompt } = prompt
+		console.log("[HoleFiller] userPrompt (streaming):", userPrompt)
+		return model.streamResponse(systemPrompt, userPrompt, abortSignal)
+	}
+
+	/**
+	 * Extract the completion text from a full response that may contain <COMPLETION> tags.
+	 * This is used to parse the accumulated text from a streaming generator.
+	 *
+	 * @param fullResponse - The full accumulated response text
+	 * @returns The extracted completion text, or empty string if no tags found
+	 */
+	static extractCompletionText(fullResponse: string): string {
+		const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
+		return completionMatch ? (completionMatch[1] || "").replace(/<\/?COMPLETION>/gi, "") : ""
 	}
 }

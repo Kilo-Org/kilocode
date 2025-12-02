@@ -202,6 +202,151 @@ export class GhostModel {
 		}
 	}
 
+	/**
+	 * Stream response as an AsyncGenerator, yielding text chunks.
+	 * Returns usage info when the generator completes.
+	 */
+	public async *streamResponse(
+		systemPrompt: string,
+		userPrompt: string,
+		abortSignal?: AbortSignal,
+	): AsyncGenerator<
+		string,
+		{
+			cost: number
+			inputTokens: number
+			outputTokens: number
+			cacheWriteTokens: number
+			cacheReadTokens: number
+		}
+	> {
+		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
+			throw new Error("API handler is not initialized. Please check your configuration.")
+		}
+
+		console.log("USED MODEL (streaming)", this.apiHandler.getModel())
+
+		const stream = this.apiHandler.createMessage(systemPrompt, [
+			{ role: "user", content: [{ type: "text", text: userPrompt }] },
+		])
+
+		let cost = 0
+		let inputTokens = 0
+		let outputTokens = 0
+		let cacheReadTokens = 0
+		let cacheWriteTokens = 0
+
+		try {
+			for await (const chunk of stream) {
+				// Check for abort
+				if (abortSignal?.aborted) {
+					break
+				}
+
+				// Yield text chunks
+				if (chunk.type === "text") {
+					yield chunk.text
+				}
+
+				// Track usage information
+				if (chunk.type === "usage") {
+					cost = chunk.totalCost ?? 0
+					cacheReadTokens = chunk.cacheReadTokens ?? 0
+					cacheWriteTokens = chunk.cacheWriteTokens ?? 0
+					inputTokens = chunk.inputTokens ?? 0
+					outputTokens = chunk.outputTokens ?? 0
+				}
+			}
+		} catch (error) {
+			if (abortSignal?.aborted) {
+				// Ignore errors from abort
+				console.log("Stream aborted")
+			} else {
+				console.error("Error streaming completion:", error)
+				throw error
+			}
+		}
+
+		return {
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens,
+			cacheReadTokens,
+		}
+	}
+
+	/**
+	 * Stream FIM response as an AsyncGenerator, yielding text chunks.
+	 * Returns usage info when the generator completes.
+	 */
+	public async *streamFimResponse(
+		prefix: string,
+		suffix: string,
+		abortSignal?: AbortSignal,
+		taskId?: string,
+	): AsyncGenerator<
+		string,
+		{
+			cost: number
+			inputTokens: number
+			outputTokens: number
+			cacheWriteTokens: number
+			cacheReadTokens: number
+		}
+	> {
+		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
+			throw new Error("API handler is not initialized. Please check your configuration.")
+		}
+
+		if (!(this.apiHandler instanceof KilocodeOpenrouterHandler)) {
+			throw new Error("FIM is only supported for KiloCode provider")
+		}
+
+		if (!this.apiHandler.supportsFim()) {
+			throw new Error("Current model does not support FIM completions")
+		}
+
+		console.log("USED MODEL (FIM streaming)", this.apiHandler.getModel())
+
+		let usage: CompletionUsage | undefined
+
+		try {
+			for await (const chunk of this.apiHandler.streamFim(prefix, suffix, taskId, (u) => {
+				usage = u
+			})) {
+				// Check for abort
+				if (abortSignal?.aborted) {
+					break
+				}
+				yield chunk
+			}
+		} catch (error) {
+			if (abortSignal?.aborted) {
+				// Ignore errors from abort
+				console.log("FIM stream aborted")
+			} else {
+				console.error("Error streaming FIM completion:", error)
+				throw error
+			}
+		}
+
+		const cost = usage ? this.apiHandler.getTotalCost(usage) : 0
+		const inputTokens = usage?.prompt_tokens ?? 0
+		const outputTokens = usage?.completion_tokens ?? 0
+		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens ?? 0
+
+		return {
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens: 0, // FIM doesn't support cache writes
+			cacheReadTokens,
+		}
+	}
+
 	public getModelName(): string | undefined {
 		if (!this.apiHandler) return undefined
 

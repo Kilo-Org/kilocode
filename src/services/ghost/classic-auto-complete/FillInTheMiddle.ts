@@ -2,7 +2,7 @@ import { AutocompleteInput } from "../types"
 import { GhostContextProvider } from "./GhostContextProvider"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
-import { FillInAtCursorSuggestion } from "./HoleFiller"
+import { FillInAtCursorSuggestion, UsageInfo } from "./HoleFiller"
 
 export interface FimGhostPrompt {
 	strategy: "fim"
@@ -109,5 +109,24 @@ export class FimPromptBuilder {
 			cacheWriteTokens: usageInfo.cacheWriteTokens,
 			cacheReadTokens: usageInfo.cacheReadTokens,
 		}
+	}
+
+	/**
+	 * Create a streaming generator for FIM-based completion.
+	 * Yields raw text chunks as they arrive.
+	 *
+	 * @param model - The GhostModel to use for generation
+	 * @param prompt - The FIM prompt configuration
+	 * @param abortSignal - Optional signal to abort the generation
+	 * @returns AsyncGenerator that yields text chunks and returns usage info
+	 */
+	createStreamingGenerator(
+		model: GhostModel,
+		prompt: FimGhostPrompt,
+		abortSignal?: AbortSignal,
+	): AsyncGenerator<string, UsageInfo> {
+		const { formattedPrefix, prunedSuffix, autocompleteInput } = prompt
+		console.log("[FIM] formattedPrefix (streaming):", formattedPrefix)
+		return model.streamFimResponse(formattedPrefix, prunedSuffix, abortSignal, autocompleteInput.completionId)
 	}
 }
