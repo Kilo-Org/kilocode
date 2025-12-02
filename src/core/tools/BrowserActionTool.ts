@@ -81,6 +81,7 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 		if (!action || !browserActions.includes(action)) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("browser_action")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "action"))
 			await task.browserSession.closeBrowser()
 			return
@@ -93,6 +94,7 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 				if (!url) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("browser_action")
+					task.didToolFailInCurrentTurn = true
 					pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "url"))
 					await task.browserSession.closeBrowser()
 					return
@@ -114,6 +116,7 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 					if (!coordinate) {
 						task.consecutiveMistakeCount++
 						task.recordToolError("browser_action")
+						task.didToolFailInCurrentTurn = true
 						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "coordinate"))
 						await task.browserSession.closeBrowser()
 						return
@@ -124,6 +127,7 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 					if (!text) {
 						task.consecutiveMistakeCount++
 						task.recordToolError("browser_action")
+						task.didToolFailInCurrentTurn = true
 						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "text"))
 						await task.browserSession.closeBrowser()
 						return
@@ -134,6 +138,7 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 					if (!size) {
 						task.consecutiveMistakeCount++
 						task.recordToolError("browser_action")
+						task.didToolFailInCurrentTurn = true
 						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "size"))
 						await task.browserSession.closeBrowser()
 						return

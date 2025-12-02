@@ -291,6 +291,7 @@ export async function executeCommandInTerminal(
 				const status: CommandExecutionStatus = { executionId, status: "timeout" }
 				provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 				await task.say("error", t("common:errors:command_timeout", { seconds: commandExecutionTimeoutSeconds }))
+				task.didToolFailInCurrentTurn = true
 				task.terminalProcess = undefined
 
 				return [

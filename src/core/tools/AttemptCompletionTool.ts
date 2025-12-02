@@ -9,6 +9,7 @@ import { formatResponse } from "../prompts/responses"
 import { Package } from "../../shared/package"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { t } from "../../i18n"
 
 interface AttemptCompletionParams {
 	result: string
@@ -33,6 +34,14 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 	async execute(params: AttemptCompletionParams, task: Task, callbacks: AttemptCompletionCallbacks): Promise<void> {
 		const { result } = params
 		const { handleError, pushToolResult, askFinishSubTaskApproval, toolDescription } = callbacks
+		// Prevent attempt_completion if any tool failed in the current turn
+		if (task.didToolFailInCurrentTurn) {
+			const errorMsg = t("common:errors.attempt_completion_tool_failed")
+
+			await task.say("error", errorMsg)
+			pushToolResult(formatResponse.toolError(errorMsg))
+			return
+		}
 
 		const preventCompletionWithOpenTodos = vscode.workspace
 			.getConfiguration(Package.name)

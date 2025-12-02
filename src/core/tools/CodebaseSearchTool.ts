@@ -48,6 +48,7 @@ export class CodebaseSearchTool extends BaseTool<"codebase_search"> {
 
 		if (!query) {
 			task.consecutiveMistakeCount++
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("codebase_search", "query"))
 			return
 		}

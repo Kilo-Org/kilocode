@@ -109,6 +109,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 		if (!fileEntries || fileEntries.length === 0) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("read_file")
+			task.didToolFailInCurrentTurn = true
 			const errorMsg = await task.sayAndCreateMissingParamError("read_file", "args (containing valid file paths)")
 			pushToolResult(`<files><error>${errorMsg}</error></files>`)
 			return
@@ -570,7 +571,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
 
 			const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
-
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(`<files>\n${xmlResults.join("\n")}\n</files>`)
 		}
 	}

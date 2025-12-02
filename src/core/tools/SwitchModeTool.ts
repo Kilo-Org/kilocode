@@ -29,6 +29,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 			if (!mode_slug) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("switch_mode")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("switch_mode", "mode_slug"))
 				return
 			}
@@ -40,6 +41,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 			if (!targetMode) {
 				task.recordToolError("switch_mode")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError(`Invalid mode: ${mode_slug}`))
 				return
 			}
@@ -49,6 +51,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 			if (currentMode === mode_slug) {
 				task.recordToolError("switch_mode")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(`Already in ${targetMode.name} mode.`)
 				return
 			}
