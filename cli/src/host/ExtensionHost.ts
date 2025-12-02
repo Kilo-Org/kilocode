@@ -1016,13 +1016,13 @@ export class ExtensionHost extends EventEmitter {
 		this.webviewInitialized = true
 		this.isInitialSetup = false
 		logs.info("Webview marked as ready, flushing pending messages", "ExtensionHost")
-		this.flushPendingMessages()
+		void this.flushPendingMessages()
 	}
 
 	/**
 	 * Flush all pending messages that were queued before webview was ready
 	 */
-	private flushPendingMessages(): void {
+	private async flushPendingMessages(): Promise<void> {
 		const upsertMessages = this.pendingMessages.filter((m) => m.type === "upsertApiConfiguration")
 		const otherMessages = this.pendingMessages.filter((m) => m.type !== "upsertApiConfiguration")
 		this.pendingMessages = []
