@@ -264,6 +264,21 @@
 		"xml": "XML",
 		"json": "JSON"
 	},
+	"intelligentProvider": {
+		"title": "Configurações do Provedor Inteligente",
+		"description": "Configure três perfis para diferentes níveis de dificuldade. O sistema selecionará automaticamente o provedor apropriado com base na complexidade da sua solicitação.",
+		"easyProfileLabel": "Perfil Fácil",
+		"mediumProfileLabel": "Perfil Médio",
+		"hardProfileLabel": "Perfil Difícil",
+		"selectProfilePlaceholder": "Selecione perfil...",
+		"clearProfile": "Limpar perfil",
+		"noProfilesAvailable": "Nenhum perfil disponível. Por favor, configure pelo menos um perfil não-inteligente primeiro.",
+		"classifierProfileLabel": "Perfil Classificador",
+		"classifierProfileDescription": "Especifica qual perfil usar para classificação de dificuldade. Se não definido, usa o perfil fácil por padrão.",
+		"easyProfileDescription": "Usado para solicitações simples como explicações rápidas, resumos básicos ou snippets de código simples.",
+		"mediumProfileDescription": "Usado para solicitações moderadas como análise de código, sugestões de implementação ou tarefas de complexidade moderada.",
+		"hardProfileDescription": "Usado para solicitações complexas como design de arquitetura, depuração complexa ou resolução avançada de problemas."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",
 		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais.",

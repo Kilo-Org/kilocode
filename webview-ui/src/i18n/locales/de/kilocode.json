@@ -281,5 +281,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Neu: Modi teilen durch Erstellen einer Organisation"
+	},
+	"intelligentProvider": {
+		"title": "Intelligent Provider-Einstellungen",
+		"description": "Konfigurieren Sie drei Profile für verschiedene Schwierigkeitsstufen. Das System wählt automatisch den geeigneten Anbieter basierend auf der Komplexität Ihrer Anfrage.",
+		"easyProfileLabel": "Einfaches Profil",
+		"mediumProfileLabel": "Mittleres Profil",
+		"hardProfileLabel": "Schwieriges Profil",
+		"selectProfilePlaceholder": "Profil auswählen...",
+		"clearProfile": "Profil löschen",
+		"noProfilesAvailable": "Keine Profile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-intelligentes Provider-Profil.",
+		"classifierProfileLabel": "Klassifikator-Profil",
+		"classifierProfileDescription": "Gibt an, welches Profil für die Schwierigkeitsklassifizierung verwendet werden soll. Wenn nicht festgelegt, wird standardmäßig das einfache Profil verwendet.",
+		"easyProfileDescription": "Wird für einfache Anfragen wie schnelle Erklärungen, grundlegende Zusammenfassungen oder einfache Code-Schnipsel verwendet.",
+		"mediumProfileDescription": "Wird für mittlere Anfragen wie Code-Analyse, Implementierungsvorschläge oder Aufgaben mittlerer Komplexität verwendet.",
+		"hardProfileDescription": "Wird für komplexe Anfragen wie Architekturdesign, komplexes Debugging oder erweiterte Problemlösung verwendet."
 	}
 }

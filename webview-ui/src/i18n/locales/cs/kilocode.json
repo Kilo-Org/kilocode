@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Novinka: Sdílejte režimy vytvořením organizace"
+	},
+	"intelligentProvider": {
+		"title": "Nastavení inteligentního poskytovatele",
+		"description": "Nakonfigurujte tři profily pro různé úrovně obtížnosti. Systém automaticky vybere vhodného poskytovatele na základě složitosti vašeho požadavku.",
+		"easyProfileLabel": "Jednoduchý profil",
+		"mediumProfileLabel": "Střední profil",
+		"hardProfileLabel": "Těžký profil",
+		"selectProfilePlaceholder": "Vybrat profil...",
+		"clearProfile": "Vymazat profil",
+		"noProfilesAvailable": "Nejsou k dispozici žádné profily. Prosím nejprve nakonfigurujte alespoň jeden neinteligentní profil poskytovatele.",
+		"classifierProfileLabel": "Klasifikační profil",
+		"classifierProfileDescription": "Určuje, který profil se má použít pro klasifikaci obtížnosti. Pokud není nastaven, ve výchozím se používá jednoduchý profil.",
+		"easyProfileDescription": "Používá se pro jednoduché požadavky, jako jsou rychlá vysvětlení, základní souhrny nebo jednoduché fragmenty kódu.",
+		"mediumProfileDescription": "Používá se pro středně složité požadavky, jako jsou analýza kódu, návrhy implementace nebo středně složité úkoly.",
+		"hardProfileDescription": "Používá se pro složité požadavky, jako je návrh architektury, složité ladění nebo pokročilé řešení problémů."
 	}
 }

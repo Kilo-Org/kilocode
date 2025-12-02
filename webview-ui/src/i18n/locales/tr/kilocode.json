@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"intelligentProvider": {
+		"title": "Akıllı Sağlayıcı Ayarları",
+		"description": "Farklı zorluk seviyeleri için üç profil yapılandırın. Sistem, isteğinizin karmaşıklığına göre uygun sağlayıcıyı otomatik olarak seçecektir.",
+		"easyProfileLabel": "Kolay Profil",
+		"mediumProfileLabel": "Orta Profil",
+		"hardProfileLabel": "Zor Profil",
+		"selectProfilePlaceholder": "Profil seç...",
+		"clearProfile": "Profili temizle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir akıllı olmayan sağlayıcı profilini yapılandırın.",
+		"classifierProfileLabel": "Sınıflandırıcı Profil",
+		"classifierProfileDescription": "Zorluk sınıflandırması için hangi profilin kullanılacağını belirtir. Ayarlanmadıysa, varsayılan olarak kolay profili kullanır.",
+		"easyProfileDescription": "Hızlı açıklamalar, temel özetler veya basit kod parçacıkları gibi basit istekler için kullanılır.",
+		"mediumProfileDescription": "Kod analizi, uygulama önerileri veya orta karmaşıklıktaki görevler gibi orta düzey istekler için kullanılır.",
+		"hardProfileDescription": "Mimari tasarım, karmaşık hata ayıklama veya gelişmiş problem çözme gibi karmaşık istekler için kullanılır."
 	}
 }

@@ -281,6 +281,21 @@
 		}
 	},
 	"modes": {
-		"shareModesNewBanner": "新功能：通过创建组织共享模式"
+		"shareModesNewBanner": "新功能：透過建立組織共享模式"
+	},
+	"intelligentProvider": {
+		"title": "智慧供應商設定",
+		"description": "為不同難度級別設定三個設定檔。系統將根據您請求的複雜性自動選擇合適的供應商。",
+		"easyProfileLabel": "簡易設定檔",
+		"mediumProfileLabel": "中等設定檔",
+		"hardProfileLabel": "困難設定檔",
+		"selectProfilePlaceholder": "選擇設定檔...",
+		"clearProfile": "清除設定檔",
+		"noProfilesAvailable": "沒有可用的設定檔。請先設定至少一個非智慧供應商設定檔。",
+		"classifierProfileLabel": "分類器設定檔",
+		"classifierProfileDescription": "指定用於難度分類的設定檔。若未設定，預設使用簡易設定檔。",
+		"easyProfileDescription": "用於簡單請求，如快速解釋、基本摘要或簡單程式碼片段。",
+		"mediumProfileDescription": "用於中等請求，如程式碼分析、實施建議或中等複雜度的任務。",
+		"hardProfileDescription": "用於複雜請求，如架構設計、複雜除錯或進階問題解決。"
 	}
 }
