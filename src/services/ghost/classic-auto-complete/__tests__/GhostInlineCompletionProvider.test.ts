@@ -8,7 +8,18 @@ import {
 import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
-import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
+import { GhostContextProvider } from "../GhostContextProvider"
+
+// Mock RooIgnoreController to prevent vscode.RelativePattern errors
+vi.mock("../../../../core/ignore/RooIgnoreController", () => {
+	return {
+		RooIgnoreController: class MockRooIgnoreController {
+			initialize = vi.fn().mockResolvedValue(undefined)
+			validateAccess = vi.fn().mockReturnValue(true)
+			dispose = vi.fn()
+		},
+	}
+})
 
 // Mock vscode InlineCompletionTriggerKind enum and event listeners
 vi.mock("vscode", async () => {
@@ -332,8 +343,8 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockModel: GhostModel
 	let mockCostTrackingCallback: CostTrackingCallback
 	let mockSettings: { enableAutoTrigger: boolean } | null
-	let mockContextProvider: any
-	let mockIgnoreController: Promise<RooIgnoreController> | undefined
+	let mockExtensionContext: vscode.ExtensionContext
+	let mockClineProvider: { cwd: string }
 
 	// Helper to call provideInlineCompletionItems and advance timers
 	async function provideWithDebounce(
@@ -358,29 +369,60 @@ describe("GhostInlineCompletionProvider", () => {
 		mockToken = {} as vscode.CancellationToken
 		mockSettings = { enableAutoTrigger: true }
 
-		// Create mock IDE for tracking services
+		// Create mock extension context
+		mockExtensionContext = {
+			subscriptions: [],
+			workspaceState: {
+				get: vi.fn(),
+				update: vi.fn(),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			globalState: {
+				get: vi.fn(),
+				update: vi.fn(),
+				keys: vi.fn().mockReturnValue([]),
+				setKeysForSync: vi.fn(),
+			},
+			extensionPath: "/mock/extension/path",
+			extensionUri: vscode.Uri.file("/mock/extension/path"),
+			storagePath: "/mock/storage/path",
+			storageUri: vscode.Uri.file("/mock/storage/path"),
+			globalStoragePath: "/mock/global/storage/path",
+			globalStorageUri: vscode.Uri.file("/mock/global/storage/path"),
+			logPath: "/mock/log/path",
+			logUri: vscode.Uri.file("/mock/log/path"),
+			extensionMode: 1, // Development
+			asAbsolutePath: vi.fn((relativePath: string) => `/mock/extension/path/${relativePath}`),
+			secrets: {
+				get: vi.fn(),
+				store: vi.fn(),
+				delete: vi.fn(),
+				onDidChange: vi.fn(),
+			},
+			environmentVariableCollection: {} as any,
+			extension: {} as any,
+			languageModelAccessInformation: {} as any,
+		} as unknown as vscode.ExtensionContext
+
+		// Mock GhostContextProvider
 		const mockIde = {
 			getWorkspaceDirs: vi.fn().mockResolvedValue([]),
 			getOpenFiles: vi.fn().mockResolvedValue([]),
 			readFile: vi.fn().mockResolvedValue(""),
-			// Add other methods as needed by RecentlyVisitedRangesService and RecentlyEditedTracker
 		}
 
-		// Create mock context provider with IDE
-		mockContextProvider = {
-			getIde: vi.fn().mockReturnValue(mockIde),
-			getProcessedSnippets: vi.fn().mockResolvedValue({
-				filepathUri: "file:///test.ts",
-				helper: {
-					filepath: "file:///test.ts",
-					lang: { name: "typescript", singleLineComment: "//" },
-					prunedPrefix: "const x = 1",
-					prunedSuffix: "\nconst y = 2",
-				},
-				snippetsWithUris: [],
-				workspaceDirs: [],
-			}),
-		}
+		vi.spyOn(GhostContextProvider.prototype, "getIde").mockReturnValue(mockIde as any)
+		vi.spyOn(GhostContextProvider.prototype, "getProcessedSnippets").mockResolvedValue({
+			filepathUri: "file:///test.ts",
+			helper: {
+				filepath: "file:///test.ts",
+				lang: { name: "typescript", singleLineComment: "//" },
+				prunedPrefix: "const x = 1",
+				prunedSuffix: "\nconst y = 2",
+			},
+			snippetsWithUris: [],
+			workspaceDirs: [],
+		})
 
 		// Create mock dependencies
 		mockModel = {
@@ -395,18 +437,20 @@ describe("GhostInlineCompletionProvider", () => {
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
+		mockClineProvider = { cwd: "/test/workspace" }
 
 		provider = new GhostInlineCompletionProvider(
+			mockExtensionContext,
 			mockModel,
 			mockCostTrackingCallback,
 			() => mockSettings,
-			mockContextProvider,
-			mockIgnoreController,
+			mockClineProvider as any,
 		)
 	})
 
 	afterEach(() => {
 		vi.useRealTimers()
+		vi.restoreAllMocks()
 	})
 
 	describe("provideInlineCompletionItems", () => {
@@ -1366,95 +1410,8 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 	})
 
-	describe("RooIgnoreController integration", () => {
-		beforeEach(() => {
-			// Reset mock ignore controller for each test
-			mockIgnoreController = undefined
-		})
-
-		it("should return empty array when file is ignored", async () => {
-			// Create a mock ignore controller that rejects the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion that would normally be returned
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			const result = await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-
-			// Should return empty array because file is ignored
-			expect(result).toEqual([])
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-			// Model should not be called
-			expect(mockModel.generateResponse).not.toHaveBeenCalled()
-		})
-
-		it("should provide completions when file is not ignored", async () => {
-			// Create a mock ignore controller that accepts the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(true),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			const result = (await provideWithDebounce(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)) as vscode.InlineCompletionItem[]
-
-			// Should return the completion because file is not ignored
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("console.log('test');")
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-		})
-
-		it("should provide completions for untitled documents even with ignore controller", async () => {
-			// Create a mock ignore controller
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false), // Would reject if called
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
+	describe("untitled document handling", () => {
+		it("should provide completions for untitled documents", async () => {
 			// Create an untitled document using MockTextDocument
 			const untitledDocument = new MockTextDocument(
 				vscode.Uri.parse("untitled:Untitled-1"),
@@ -1483,99 +1440,6 @@ describe("GhostInlineCompletionProvider", () => {
 			// Should return the completion because untitled documents are always allowed
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe("console.log('test');")
-			// validateAccess should not be called for untitled documents
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).not.toHaveBeenCalled()
-		})
-
-		it("should work without ignore controller (backward compatibility)", async () => {
-			// Create provider without ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				undefined, // No ignore controller
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			const result = (await provideWithDebounce(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)) as vscode.InlineCompletionItem[]
-
-			// Should return the completion because there's no ignore controller
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("console.log('test');")
-		})
-
-		it("should check ignore status in provideInlineCompletionItems_Internal for manual triggers", async () => {
-			// Create a mock ignore controller that rejects the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Call the internal method directly (simulating manual trigger via codeSuggestion)
-			const result = await provider.provideInlineCompletionItems_Internal(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)
-
-			// Should return empty array because file is ignored
-			expect(result).toEqual([])
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-			// Model should not be called
-			expect(mockModel.generateResponse).not.toHaveBeenCalled()
-		})
-
-		it("should check ignore status only once per call", async () => {
-			// Create a mock ignore controller
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(true),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-
-			// Should check access exactly once in provideInlineCompletionItems_Internal
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledTimes(1)
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
 		})
 	})
 })

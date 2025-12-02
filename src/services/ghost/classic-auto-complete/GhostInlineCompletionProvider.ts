@@ -11,6 +11,7 @@ import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 import { GeneratorReuseManager } from "../../continuedev/core/autocomplete/generation/GeneratorReuseManager"
+import { ClineProvider } from "../../../core/webview/ClineProvider"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -131,20 +132,27 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private ignoreController?: Promise<RooIgnoreController>
 
 	constructor(
+		context: vscode.ExtensionContext,
 		model: GhostModel,
 		costTrackingCallback: CostTrackingCallback,
 		getSettings: () => GhostServiceSettings | null,
-		contextProvider: GhostContextProvider,
-		ignoreController?: Promise<RooIgnoreController>,
+		cline: ClineProvider,
 	) {
 		this.model = model
 		this.costTrackingCallback = costTrackingCallback
 		this.getSettings = getSettings
+
+		// Create ignore controller internally
+		this.ignoreController = (async () => {
+			const ignoreController = new RooIgnoreController(cline.cwd)
+			await ignoreController.initialize()
+			return ignoreController
+		})()
+
+		const contextProvider = new GhostContextProvider(context, model, this.ignoreController)
 		this.holeFiller = new HoleFiller(contextProvider)
 		this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
-		this.ignoreController = ignoreController
 
-		// Initialize tracking services with IDE from context provider
 		const ide = contextProvider.getIde()
 		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
 		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
@@ -223,6 +231,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return { text: "", prefix, suffix }
 	}
 
+	private async disposeIgnoreController(): Promise<void> {
+		if (this.ignoreController) {
+			const ignoreController = this.ignoreController
+			this.ignoreController = undefined
+			;(await ignoreController).dispose()
+		}
+	}
+
 	public dispose(): void {
 		if (this.debounceTimer !== null) {
 			clearTimeout(this.debounceTimer)
@@ -234,6 +250,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
+		void this.disposeIgnoreController()
 	}
 
 	public async provideInlineCompletionItems(
@@ -662,15 +679,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				const finalTextRaw = this.generatorReuseManager.pendingCompletion
 				const finalSuggestion = this.processSuggestion(finalTextRaw, completionPrefix, suffix, this.model)
 
-				if (this.costTrackingCallback) {
-					this.costTrackingCallback(
-						usage.cost,
-						usage.inputTokens,
-						usage.outputTokens,
-						usage.cacheWriteTokens,
-						usage.cacheReadTokens,
-					)
-				}
+        this.costTrackingCallback(
+          usage.cost,
+          usage.inputTokens,
+          usage.outputTokens,
+          usage.cacheWriteTokens,
+          usage.cacheReadTokens,
+        )
 
 				// Always cache, even if empty (failed/filtered suggestion).
 				this.updateSuggestions(finalSuggestion)
