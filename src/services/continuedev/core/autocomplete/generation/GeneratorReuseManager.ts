@@ -28,6 +28,27 @@ export class GeneratorReuseManager {
 		)
 	}
 
+	/**
+	 * Ensures `currentGenerator` is set up, without requiring the caller to consume a generator.
+	 *
+	 * Returns `true` when the existing generator can be reused for the provided prefix; otherwise
+	 * cancels the old generator and starts a new one (and returns `false`).
+	 *
+	 * This is useful in "pull-based UI" scenarios (e.g. VS Code inline completions) where the
+	 * consumer might not continuously iterate an output generator, but still wants background
+	 * streaming + reuse semantics.
+	 */
+	ensureGenerator(prefix: string, newGenerator: (abortSignal: AbortSignal) => AsyncGenerator<string>): boolean {
+		const reused = this.shouldReuseExistingGenerator(prefix)
+
+		if (!reused) {
+			const abortController = new AbortController()
+			this._createListenableGenerator(abortController, newGenerator(abortController.signal), prefix)
+		}
+
+		return reused
+	}
+
 	async *getGenerator(
 		prefix: string,
 		newGenerator: (abortSignal: AbortSignal) => AsyncGenerator<string>,

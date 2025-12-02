@@ -9,6 +9,8 @@ import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harnes
 import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { ApiStreamChunk } from "../../../api/transform/stream"
+import { GeneratorReuseManager } from "../../continuedev/core/autocomplete/generation/GeneratorReuseManager"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -86,8 +88,38 @@ export interface LLMRetrievalResult {
 	cacheReadTokens: number
 }
 
+type PendingSuggestionState = {
+	requestId: number
+	documentUri: string
+	prefix: string
+	suffix: string
+	usagePromise: Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> | null
+	done: Promise<void>
+	resolveDone: () => void
+}
+
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
+
+	/**
+	 * Pending (in-flight) suggestion state.
+	 *
+	 * We keep this separate from `suggestionsHistory` to avoid polluting the history with many
+	 * partial entries. The pending suggestion is treated as the "most recent" entry for matching.
+	 */
+	private pendingSuggestion: PendingSuggestionState | null = null
+	private pendingRequestId = 0
+
+	private generatorReuseManager = new GeneratorReuseManager((err) => {
+		console.error("[GhostInlineCompletionProvider] GeneratorReuseManager error:", err)
+	})
+
 	private holeFiller: HoleFiller
 	private fimPromptBuilder: FimPromptBuilder
 	private model: GhostModel
@@ -196,6 +228,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			clearTimeout(this.debounceTimer)
 			this.debounceTimer = null
 		}
+
+		this.generatorReuseManager.currentGenerator?.cancel()
+		this.pendingSuggestion = null
+
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 	}
@@ -259,17 +295,20 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			}
 
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
+			const documentUri = document.uri.toString()
 
-			const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			const matchingText = this.findMatchingSuggestionIncludingPending(prefix, suffix, documentUri)
 
 			if (matchingText !== null) {
 				return stringToInlineCompletions(matchingText, position)
 			}
 
 			const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)
-			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix)
 
-			const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			// Start streaming in background (debounced), potentially reusing an in-flight request.
+			await this.debouncedStartOrReuseStreaming(prompt, promptPrefix, promptSuffix, documentUri)
+
+			const cachedText = this.findMatchingSuggestionIncludingPending(prefix, suffix, documentUri)
 			return stringToInlineCompletions(cachedText ?? "", position)
 		} catch (error) {
 			// only big catch at the top of the call-chain, if anything goes wrong at a lower level
@@ -279,7 +318,251 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 	}
 
-	private debouncedFetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+	private findMatchingSuggestionIncludingPending(prefix: string, suffix: string, documentUri: string): string | null {
+		const candidates: FillInAtCursorSuggestion[] = [...this.suggestionsHistory]
+
+		// Pending suggestion should be preferred over history, so we append it last.
+		if (
+			this.pendingSuggestion &&
+			this.pendingSuggestion.documentUri === documentUri &&
+			this.pendingSuggestion.suffix === suffix
+		) {
+			const pendingPrefix = this.pendingSuggestion.prefix
+			const pendingRawText = this.generatorReuseManager.pendingCompletion
+
+			const processedPending = this.processSuggestion(pendingRawText, pendingPrefix, suffix, this.model)
+			candidates.push(processedPending)
+		}
+
+		return findMatchingSuggestion(prefix, suffix, candidates)
+	}
+
+	private createCompletionTagDeltaParser() {
+		const openTag = "<completion>"
+		const closeTag = "</completion>"
+		const keepOpen = openTag.length - 1
+		const keepClose = closeTag.length - 1
+
+		let buffer = ""
+		let inCompletion = false
+		let done = false
+
+		return {
+			push(text: string): string {
+				if (done) return ""
+
+				buffer += text
+				let output = ""
+
+				while (buffer.length > 0 && !done) {
+					const lower = buffer.toLowerCase()
+
+					if (!inCompletion) {
+						const openIndex = lower.indexOf(openTag)
+						if (openIndex < 0) {
+							// Keep a small tail so tags split across chunks still match.
+							buffer = buffer.slice(Math.max(0, buffer.length - keepOpen))
+							break
+						}
+
+						// Discard everything up to (and including) the opening tag.
+						buffer = buffer.slice(openIndex + openTag.length)
+						inCompletion = true
+						continue
+					}
+
+					const closeIndex = lower.indexOf(closeTag)
+					if (closeIndex < 0) {
+						/**
+						 * No close tag found yet.
+						 *
+						 * To support streaming, we want to emit as much as we safely can, but still keep
+						 * the possibility of a `</COMPLETION>` tag being split across chunk boundaries.
+						 *
+						 * Keeping a fixed tail (`keepClose`) is overly conservative and can truncate real
+						 * completion text (e.g. when the chunk contains only content and no `<`).
+						 *
+						 * Safer heuristic:
+						 * - If there is no `<` at all, we can emit the entire buffer.
+						 * - If there is a `<`, keep from the last `<` onwards (it might be the start of `</COMPLETION>`).
+						 */
+						const lastLt = buffer.lastIndexOf("<")
+						if (lastLt < 0) {
+							output += buffer
+							buffer = ""
+							break
+						}
+
+						// Emit everything before the last potential tag fragment.
+						output += buffer.slice(0, lastLt)
+						buffer = buffer.slice(lastLt)
+
+						// If what's left is longer than our conservative tail, trim it down.
+						if (buffer.length > keepClose) {
+							output += buffer.slice(0, buffer.length - keepClose)
+							buffer = buffer.slice(buffer.length - keepClose)
+						}
+
+						break
+					}
+
+					// Emit up to close tag, then mark done.
+					output += buffer.slice(0, closeIndex)
+					buffer = ""
+					done = true
+				}
+
+				return output
+			},
+		}
+	}
+
+	private createAsyncQueue<T>() {
+		const values: T[] = []
+		const waiters: Array<(value: IteratorResult<T>) => void> = []
+		let ended = false
+
+		return {
+			push(value: T) {
+				if (ended) return
+				const waiter = waiters.shift()
+				if (waiter) {
+					waiter({ value, done: false })
+				} else {
+					values.push(value)
+				}
+			},
+			end() {
+				if (ended) return
+				ended = true
+				while (waiters.length) {
+					const waiter = waiters.shift()!
+					waiter({ value: undefined as any, done: true })
+				}
+			},
+			async *iterate(): AsyncGenerator<T> {
+				while (true) {
+					if (values.length) {
+						yield values.shift()!
+						continue
+					}
+					if (ended) {
+						return
+					}
+					const next = await new Promise<IteratorResult<T>>((resolve) => waiters.push(resolve))
+					if (next.done) {
+						return
+					}
+					yield next.value
+				}
+			},
+		}
+	}
+
+	private createSuggestionGeneratorAndUsagePromise(
+		prompt: GhostPrompt,
+		abortSignal: AbortSignal,
+	): {
+		generator: AsyncGenerator<string>
+		usagePromise: Promise<{
+			cost: number
+			inputTokens: number
+			outputTokens: number
+			cacheWriteTokens: number
+			cacheReadTokens: number
+		}>
+	} {
+		const queue = this.createAsyncQueue<string>()
+
+		let usageResolve!: (usage: {
+			cost: number
+			inputTokens: number
+			outputTokens: number
+			cacheWriteTokens: number
+			cacheReadTokens: number
+		}) => void
+		let usageReject!: (err: unknown) => void
+		const usagePromise = new Promise<{
+			cost: number
+			inputTokens: number
+			outputTokens: number
+			cacheWriteTokens: number
+			cacheReadTokens: number
+		}>((resolve, reject) => {
+			usageResolve = resolve
+			usageReject = reject
+		})
+
+		const model = this.model
+		const createCompletionTagDeltaParser = () => this.createCompletionTagDeltaParser()
+
+		const generator = (async function* () {
+			// Run the underlying model request concurrently; it will push into our queue via callbacks.
+			;(async () => {
+				try {
+					if (prompt.strategy === "fim") {
+						const usage = await model.generateFimResponse(
+							prompt.formattedPrefix,
+							prompt.prunedSuffix,
+							(text: string) => {
+								if (!abortSignal.aborted && text) {
+									queue.push(text)
+								}
+							},
+							prompt.autocompleteInput.completionId,
+						)
+						usageResolve(usage)
+					} else {
+						const parser = createCompletionTagDeltaParser()
+
+						const usage = await model.generateResponse(
+							prompt.systemPrompt,
+							prompt.userPrompt,
+							(chunk: ApiStreamChunk) => {
+								if (abortSignal.aborted) return
+								if (chunk.type !== "text") return
+								const delta = parser.push(chunk.text ?? "")
+								if (delta) {
+									queue.push(delta)
+								}
+							},
+						)
+						usageResolve(usage)
+					}
+				} catch (err) {
+					usageReject(err)
+				} finally {
+					queue.end()
+				}
+			})().catch(() => {
+				// Prevent unhandled rejection; errors are surfaced through usagePromise.
+			})
+
+			for await (const chunk of queue.iterate()) {
+				if (abortSignal.aborted) {
+					return
+				}
+				yield chunk
+			}
+		})()
+
+		return { generator, usagePromise }
+	}
+
+	private cancelActiveGeneration() {
+		this.generatorReuseManager.currentGenerator?.cancel()
+		this.generatorReuseManager.currentGenerator = undefined
+		this.generatorReuseManager.pendingGeneratorPrefix = undefined
+		this.generatorReuseManager.pendingCompletion = ""
+		this.pendingSuggestion = null
+	}
+
+	private debouncedStartOrReuseStreaming(
+		prompt: GhostPrompt,
+		prefix: string,
+		suffix: string,
+		documentUri: string,
+	): Promise<void> {
 		if (this.debounceTimer !== null) {
 			clearTimeout(this.debounceTimer)
 		}
@@ -287,36 +570,120 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return new Promise<void>((resolve) => {
 			this.debounceTimer = setTimeout(async () => {
 				this.debounceTimer = null
-				await this.fetchAndCacheSuggestion(prompt, prefix, suffix)
+				await this.startOrReuseStreaming(prompt, prefix, suffix, documentUri)
+
+				/**
+				 * Give the newly-started streaming pipeline a chance to run a microtask turn so that
+				 * synchronous stream mocks (tests) and fast providers can populate `pendingCompletion`
+				 * before the provider call reads it again.
+				 */
+				await new Promise<void>((r) => queueMicrotask(r))
+
 				resolve()
 			}, DEBOUNCE_DELAY_MS)
 		})
 	}
 
-	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
-		try {
-			// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
-			const curriedProcessSuggestion = (text: string) => this.processSuggestion(text, prefix, suffix, this.model)
-
-			const result =
-				prompt.strategy === "fim"
-					? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
-					: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
-
-			if (this.costTrackingCallback) {
-				this.costTrackingCallback(
-					result.cost,
-					result.inputTokens,
-					result.outputTokens,
-					result.cacheWriteTokens,
-					result.cacheReadTokens,
-				)
-			}
-
-			// Always update suggestions, even if text is empty (for caching)
-			this.updateSuggestions(result.suggestion)
-		} catch (error) {
-			console.error("Error getting inline completion from LLM:", error)
+	private async startOrReuseStreaming(prompt: GhostPrompt, prefix: string, suffix: string, documentUri: string) {
+		// If the context changed (suffix/doc), cancel previous generation, regardless of prefix reuse.
+		if (
+			this.pendingSuggestion &&
+			(this.pendingSuggestion.documentUri !== documentUri || this.pendingSuggestion.suffix !== suffix)
+		) {
+			this.cancelActiveGeneration()
 		}
+
+		const requestId = ++this.pendingRequestId
+
+		let usagePromiseFromNewGenerator:
+			| Promise<{
+					cost: number
+					inputTokens: number
+					outputTokens: number
+					cacheWriteTokens: number
+					cacheReadTokens: number
+			  }>
+			| undefined
+
+		const reused = this.generatorReuseManager.ensureGenerator(prefix, (abortSignal) => {
+			const { generator, usagePromise } = this.createSuggestionGeneratorAndUsagePromise(prompt, abortSignal)
+			usagePromiseFromNewGenerator = usagePromise
+			return generator
+		})
+
+		if (reused) {
+			// Reuse means the pendingSuggestion remains valid; no new finalizer should be started.
+			return
+		}
+
+		// New generation: establish pending state.
+		let resolveDone!: () => void
+		const done = new Promise<void>((resolve) => {
+			resolveDone = resolve
+		})
+
+		this.pendingSuggestion = {
+			requestId,
+			documentUri,
+			prefix,
+			suffix,
+			usagePromise: usagePromiseFromNewGenerator ?? null,
+			done,
+			resolveDone,
+		}
+
+		// Finalize suggestion + cost accounting once the underlying generator finishes.
+		const currentGenerator = this.generatorReuseManager.currentGenerator
+		const completionPrefix = this.generatorReuseManager.pendingGeneratorPrefix ?? prefix
+		const usagePromise = usagePromiseFromNewGenerator
+
+		if (!currentGenerator || !usagePromise) {
+			// Nothing to finalize.
+			this.pendingSuggestion.resolveDone()
+			return
+		}
+
+		currentGenerator
+			.waitForCompletion()
+			.then(async () => {
+				// Ignore if a newer request has superseded this one.
+				if (!this.pendingSuggestion || this.pendingSuggestion.requestId !== requestId) {
+					return
+				}
+
+				let usage
+				try {
+					usage = await usagePromise
+				} catch (err) {
+					console.error("[GhostInlineCompletionProvider] Error in streaming usage promise:", err)
+					return
+				}
+
+				const finalTextRaw = this.generatorReuseManager.pendingCompletion
+				const finalSuggestion = this.processSuggestion(finalTextRaw, completionPrefix, suffix, this.model)
+
+				if (this.costTrackingCallback) {
+					this.costTrackingCallback(
+						usage.cost,
+						usage.inputTokens,
+						usage.outputTokens,
+						usage.cacheWriteTokens,
+						usage.cacheReadTokens,
+					)
+				}
+
+				// Always cache, even if empty (failed/filtered suggestion).
+				this.updateSuggestions(finalSuggestion)
+			})
+			.catch((err) => {
+				console.error("[GhostInlineCompletionProvider] Error waiting for generator completion:", err)
+			})
+			.finally(() => {
+				// Resolve the pending promise and clear pending state if it's still ours.
+				if (this.pendingSuggestion?.requestId === requestId) {
+					this.pendingSuggestion.resolveDone()
+					this.pendingSuggestion = null
+				}
+			})
 	}
 }
