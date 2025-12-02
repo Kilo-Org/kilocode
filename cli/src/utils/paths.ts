@@ -49,9 +49,10 @@ export class KiloCodePaths {
 	/**
 	 * Get the path to the last session file for a workspace
 	 */
-	static getLastSessionPath(workspacePath: string): string {
+	static getSessionFilePath(workspacePath: string): string {
 		const workspaceDir = this.getWorkspaceStorageDir(workspacePath)
-		return path.join(workspaceDir, "last-session.json")
+
+		return path.join(workspaceDir, "session.json")
 	}
 
 	/**

@@ -9,6 +9,25 @@ import { formatResponse } from "../prompts/responses"
 import { Package } from "../../shared/package"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { getCommitRangeForNewCompletion } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
+
+// kilocode_change start
+async function getClineMessageOptions(
+	task: Task,
+): Promise<{ isNonInteractive?: boolean; metadata?: Record<string, unknown> }> {
+	const commitRange = await getCommitRangeForNewCompletion(task)
+
+	if (!commitRange) {
+		return {}
+	}
+
+	return {
+		metadata: {
+			kiloCode: { commitRange },
+		},
+	}
+}
+// kilocode_change end
 
 interface AttemptCompletionParams {
 	result: string
@@ -63,7 +82,17 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 			task.consecutiveMistakeCount = 0
 
-			await task.say("completion_result", result, undefined, false)
+			await task.say(
+				"completion_result",
+				result,
+				undefined,
+				false,
+				// kilocode_change start
+				undefined,
+				undefined,
+				await getClineMessageOptions(task),
+				// kilocode_change end
+			)
 			TelemetryService.instance.captureTaskCompleted(task.taskId)
 			task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
 
@@ -113,6 +142,11 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 					this.removeClosingTag("result", result, block.partial),
 					undefined,
 					false,
+					// kilocode_change start
+					undefined,
+					undefined,
+					await getClineMessageOptions(task),
+					// kilocode_change end
 				)
 
 				TelemetryService.instance.captureTaskCompleted(task.taskId)
@@ -128,6 +162,11 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				this.removeClosingTag("result", result, block.partial),
 				undefined,
 				block.partial,
+				// kilocode_change start
+				undefined,
+				undefined,
+				await getClineMessageOptions(task),
+				// kilocode_change end
 			)
 		}
 	}

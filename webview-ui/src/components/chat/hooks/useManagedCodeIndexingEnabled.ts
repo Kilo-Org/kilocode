@@ -1,23 +1,6 @@
-import { useEffect, useState } from "react"
-import { vscode } from "@/utils/vscode"
+import { useManagedIndexerState } from "./useManagedIndexerState"
 
 export function useManagedCodeIndexingEnabled() {
-	const [isEnabled, setEnabled] = useState(false)
-
-	useEffect(() => {
-		vscode.postMessage({ type: "requestManagedIndexerEnabled" as any })
-
-		const handleMessage = (event: MessageEvent<any>) => {
-			if (event.data.type === "managedIndexerEnabled") {
-				setEnabled(event.data.managedIndexerEnabled === true)
-			}
-		}
-
-		window.addEventListener("message", handleMessage)
-		return () => {
-			window.removeEventListener("message", handleMessage)
-		}
-	}, [])
-
-	return isEnabled
+	const state = useManagedIndexerState()
+	return state.isEnabled
 }

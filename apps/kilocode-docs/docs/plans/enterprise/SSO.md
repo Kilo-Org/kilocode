@@ -22,7 +22,7 @@ You’ll need:
 
 ## Step-by-Step Setup
 
-### 1. Open [Organization](https://app.kilocode.ai/organizations) Dashboard
+### 1. Open [Organization](https://app.kilo.ai/organizations) Dashboard
 
 Find the Single Sign-On (SSO) Configuration panel, and click "Set up SSO":
 <img width="822" height="288" alt="Set-up-SSO screen" src="https://github.com/user-attachments/assets/b6ca5f83-4533-4d41-bcb1-0038b645c030" />

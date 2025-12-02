@@ -141,6 +141,17 @@ vi.mock("@roo-code/cloud", () => ({
 	getRooCodeApiUrl: vi.fn().mockReturnValue("https://app.roocode.com"),
 }))
 
+vi.mock("../../../shared/kilocode/cli-sessions/core/SessionManager", () => ({
+	SessionManager: {
+		init: vi.fn().mockReturnValue({
+			startTimer: vi.fn(),
+			setPath: vi.fn(),
+			setWorkspaceDirectory: vi.fn(),
+			destroy: vi.fn().mockResolvedValue(undefined),
+		}),
+	},
+}))
+
 describe("ClineProvider - API Handler Rebuild Guard", () => {
 	let provider: ClineProvider
 	let mockContext: vscode.ExtensionContext

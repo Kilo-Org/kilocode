@@ -6,11 +6,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { newCommand } from "../new.js"
 import type { CommandContext } from "../core/types.js"
 import { createMockContext } from "./helpers/mockContext.js"
-import { SessionService } from "../../services/session.js"
+import { SessionManager } from "../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 describe("/new command", () => {
 	let mockContext: CommandContext
-	let mockSessionService: Partial<SessionService> & { destroy: ReturnType<typeof vi.fn> }
+	let mockSessionManager: Partial<SessionManager> & { destroy: ReturnType<typeof vi.fn> }
 
 	beforeEach(() => {
 		// Mock process.stdout.write to capture terminal clearing
@@ -20,14 +20,14 @@ describe("/new command", () => {
 			input: "/new",
 		})
 
-		// Mock SessionService
-		mockSessionService = {
+		// Mock SessionManager
+		mockSessionManager = {
 			destroy: vi.fn().mockResolvedValue(undefined),
 			sessionId: "test-session-id",
 		}
 
-		// Mock SessionService.init to return our mock
-		vi.spyOn(SessionService, "init").mockReturnValue(mockSessionService as unknown as SessionService)
+		// Mock SessionManager.init to return our mock
+		vi.spyOn(SessionManager, "init").mockReturnValue(mockSessionManager as unknown as SessionManager)
 	})
 
 	afterEach(() => {
@@ -74,13 +74,13 @@ describe("/new command", () => {
 		it("should clear the session", async () => {
 			await newCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalled()
-			expect(mockSessionService.destroy).toHaveBeenCalledTimes(1)
+			expect(SessionManager.init).toHaveBeenCalled()
+			expect(mockSessionManager.destroy).toHaveBeenCalledTimes(1)
 		})
 
 		it("should continue execution even if session clearing fails", async () => {
 			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
-			mockSessionService.destroy.mockRejectedValue(new Error("Session error"))
+			mockSessionManager.destroy.mockRejectedValue(new Error("Session error"))
 
 			await newCommand.handler(mockContext)
 
@@ -121,7 +121,7 @@ describe("/new command", () => {
 				callOrder.push("clearTask")
 			})
 
-			mockSessionService.destroy = vi.fn().mockImplementation(async () => {
+			mockSessionManager.destroy = vi.fn().mockImplementation(async () => {
 				callOrder.push("sessionDestroy")
 			})
 
@@ -164,7 +164,7 @@ describe("/new command", () => {
 
 			// Verify all cleanup operations were performed
 			expect(mockContext.clearTask).toHaveBeenCalled()
-			expect(mockSessionService.destroy).toHaveBeenCalled()
+			expect(mockSessionManager.destroy).toHaveBeenCalled()
 			expect(mockContext.replaceMessages).toHaveBeenCalled()
 
 			// Verify welcome message was replaced

@@ -4,9 +4,8 @@
 
 import { generateMessage } from "../ui/utils/messages.js"
 import type { Command, CommandContext, ArgumentProviderContext, ArgumentSuggestion } from "./core/types.js"
-import { SessionService } from "../services/session.js"
-import { SessionClient } from "../services/sessionClient.js"
 import { formatRelativeTime } from "../utils/time.js"
+import { SessionManager } from "../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 /**
  * Show current session ID
@@ -14,7 +13,7 @@ import { formatRelativeTime } from "../utils/time.js"
 async function showSessionId(context: CommandContext): Promise<void> {
 	const { addMessage } = context
 
-	const sessionService = SessionService.init()
+	const sessionService = SessionManager.init()
 	const sessionId = sessionService.sessionId
 
 	if (!sessionId) {
@@ -38,8 +37,8 @@ async function showSessionId(context: CommandContext): Promise<void> {
  */
 async function listSessions(context: CommandContext): Promise<void> {
 	const { addMessage } = context
-	const sessionService = SessionService.init()
-	const sessionClient = SessionClient.getInstance()
+	const sessionService = SessionManager.init()
+	const sessionClient = sessionService.sessionClient
 
 	try {
 		const result = await sessionClient.list({ limit: 50 })
@@ -89,7 +88,7 @@ async function listSessions(context: CommandContext): Promise<void> {
  */
 async function selectSession(context: CommandContext, sessionId: string): Promise<void> {
 	const { addMessage, replaceMessages, refreshTerminal } = context
-	const sessionService = SessionService.init()
+	const sessionService = SessionManager.init()
 
 	if (!sessionId) {
 		addMessage({
@@ -136,8 +135,8 @@ async function selectSession(context: CommandContext, sessionId: string): Promis
  */
 async function searchSessions(context: CommandContext, query: string): Promise<void> {
 	const { addMessage } = context
-	const sessionService = SessionService.init()
-	const sessionClient = SessionClient.getInstance()
+	const sessionService = SessionManager.init()
+	const sessionClient = sessionService.sessionClient
 
 	if (!query) {
 		addMessage({
@@ -191,7 +190,7 @@ async function searchSessions(context: CommandContext, query: string): Promise<v
  */
 async function shareSession(context: CommandContext): Promise<void> {
 	const { addMessage } = context
-	const sessionService = SessionService.init()
+	const sessionService = SessionManager.init()
 
 	try {
 		const result = await sessionService.shareSession()
@@ -215,7 +214,7 @@ async function shareSession(context: CommandContext): Promise<void> {
  */
 async function forkSession(context: CommandContext, shareId: string): Promise<void> {
 	const { addMessage, replaceMessages, refreshTerminal } = context
-	const sessionService = SessionService.init()
+	const sessionService = SessionManager.init()
 
 	if (!shareId) {
 		addMessage({
@@ -263,7 +262,8 @@ async function forkSession(context: CommandContext, shareId: string): Promise<vo
  */
 async function deleteSession(context: CommandContext, sessionId: string): Promise<void> {
 	const { addMessage } = context
-	const sessionClient = SessionClient.getInstance()
+	const sessionService = SessionManager.init()
+	const sessionClient = sessionService.sessionClient
 
 	if (!sessionId) {
 		addMessage({
@@ -296,7 +296,7 @@ async function deleteSession(context: CommandContext, sessionId: string): Promis
  */
 async function renameSession(context: CommandContext, newName: string): Promise<void> {
 	const { addMessage } = context
-	const sessionService = SessionService.init()
+	const sessionService = SessionManager.init()
 
 	if (!newName) {
 		addMessage({
@@ -328,7 +328,8 @@ async function renameSession(context: CommandContext, newName: string): Promise<
  * Autocomplete provider for session IDs
  */
 async function sessionIdAutocompleteProvider(context: ArgumentProviderContext): Promise<ArgumentSuggestion[]> {
-	const sessionClient = SessionClient.getInstance()
+	const sessionService = SessionManager.init()
+	const sessionClient = sessionService.sessionClient
 
 	// Extract prefix from user input
 	const prefix = context.partialInput.trim()

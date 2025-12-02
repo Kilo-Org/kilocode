@@ -63,7 +63,8 @@ interface ManagedIndexerWorkspaceFolderState {
 }
 
 export class ManagedIndexer implements vscode.Disposable {
-	static prevInstance: ManagedIndexer | null = null
+	private static prevInstance: ManagedIndexer | null = null
+
 	static getInstance(): ManagedIndexer {
 		if (!ManagedIndexer.prevInstance) {
 			throw new Error("[ManagedIndexer.getInstance()] no available instance")
@@ -101,6 +102,8 @@ export class ManagedIndexer implements vscode.Disposable {
 		this.config = config
 		this.dispose()
 		await this.start()
+		// Send updated state after restart
+		this.sendStateToWebview()
 	}
 
 	// TODO: The fetchConfig, fetchOrganization, and isEnabled functions are sort of spaghetti
@@ -156,13 +159,47 @@ export class ManagedIndexer implements vscode.Disposable {
 		return true
 	}
 
-	sendEnabledStateToWebview() {
-		const isEnabled = this.isEnabled()
+	/**
+	 * Get a complete serializable snapshot of the managed indexer state
+	 * for communication to the webview
+	 */
+	private getManagedIndexerStateSnapshot() {
+		return {
+			isEnabled: this.isEnabled(),
+			isActive: this.isActive,
+			workspaceFolders: this.workspaceFolderState.map((state) => ({
+				workspaceFolderPath: state.workspaceFolder.uri.fsPath,
+				workspaceFolderName: state.workspaceFolder.name,
+				gitBranch: state.gitBranch,
+				projectId: state.projectId,
+				repositoryUrl: state.repositoryUrl,
+				isIndexing: state.isIndexing,
+				hasManifest: !!state.manifest,
+				manifestFileCount: state.manifest ? Object.keys(state.manifest.files).length : 0,
+				hasWatcher: !!state.watcher,
+				error: state.error
+					? {
+							type: state.error.type,
+							message: state.error.message,
+							timestamp: state.error.timestamp,
+							context: state.error.context,
+						}
+					: undefined,
+			})),
+		}
+	}
+
+	/**
+	 * Send the complete managed indexer state to the webview
+	 */
+	sendStateToWebview() {
+		const state = this.getManagedIndexerStateSnapshot()
 		const provider = ClineProvider.getVisibleInstance()
 		if (provider) {
 			provider.postMessageToWebview({
-				type: "managedIndexerEnabled",
-				managedIndexerEnabled: isEnabled,
+				type: "managedIndexerState",
+				managedIndexerEnabled: state.isEnabled,
+				managedIndexerState: state.workspaceFolders,
 			})
 		}
 	}
@@ -185,7 +222,7 @@ export class ManagedIndexer implements vscode.Disposable {
 		this.organization = await this.fetchOrganization()
 
 		const isEnabled = this.isEnabled()
-		this.sendEnabledStateToWebview()
+		this.sendStateToWebview()
 		if (!isEnabled) {
 			return
 		}
@@ -322,6 +359,9 @@ export class ManagedIndexer implements vscode.Disposable {
 				await state.watcher?.start()
 			}),
 		)
+
+		// Send initial state after setup
+		this.sendStateToWebview()
 	}
 
 	dispose() {
@@ -401,6 +441,9 @@ export class ManagedIndexer implements vscode.Disposable {
 					state.error = undefined
 				}
 
+				// Send state update after successful manifest fetch
+				this.sendStateToWebview()
+
 				return manifest
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : String(error)
@@ -416,6 +459,9 @@ export class ManagedIndexer implements vscode.Disposable {
 					},
 					details: error instanceof Error ? error.stack : undefined,
 				}
+
+				// Send state update after error
+				this.sendStateToWebview()
 
 				throw error
 			} finally {
@@ -514,6 +560,7 @@ export class ManagedIndexer implements vscode.Disposable {
 		// Set indexing state
 		state.isIndexing = true
 		state.error = undefined
+		this.sendStateToWebview()
 
 		try {
 			// Ensure we have the manifest (wait if it's being fetched)
@@ -611,6 +658,7 @@ export class ManagedIndexer implements vscode.Disposable {
 							// Clear any previous file-upsert errors on success
 							if (state.error?.type === "file-upsert") {
 								state.error = undefined
+								this.sendStateToWebview()
 							}
 						} catch (error) {
 							// Don't log abort errors as failures
@@ -633,10 +681,11 @@ export class ManagedIndexer implements vscode.Disposable {
 								},
 								details: error instanceof Error ? error.stack : undefined,
 							}
+							this.sendStateToWebview()
 						}
 					}
 				},
-				{ concurrency: 20 },
+				{ concurrency: 5 },
 			)
 
 			// Force a re-fetch of the manifest
@@ -645,6 +694,7 @@ export class ManagedIndexer implements vscode.Disposable {
 			// Always clear indexing state when done
 			state.isIndexing = false
 			console.log("[ManagedIndexer] Indexing complete")
+			this.sendStateToWebview()
 		}
 	}
 
@@ -652,6 +702,7 @@ export class ManagedIndexer implements vscode.Disposable {
 		// TODO we could more intelligently handle this instead of going scorched earth
 		this.dispose()
 		await this.start()
+		this.sendStateToWebview()
 	}
 
 	/**
@@ -813,6 +864,9 @@ export class ManagedIndexer implements vscode.Disposable {
 				},
 				details: error instanceof Error ? error.stack : undefined,
 			}
+
+			// Send state update after error
+			this.sendStateToWebview()
 
 			throw error
 		}

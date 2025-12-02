@@ -24,9 +24,9 @@ import type { CLIOptions } from "./types/cli.js"
 import type { CLIConfig, ProviderConfig } from "./config/types.js"
 import { getModelIdKey } from "./constants/providers/models.js"
 import type { ProviderName } from "./types/messages.js"
-import { TrpcClient } from "./services/trpcClient.js"
-import { SessionService } from "./services/session.js"
+import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
+import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -37,7 +37,7 @@ export class CLI {
 	private ui: Instance | null = null
 	private options: CLIOptions
 	private isInitialized = false
-	private sessionService: SessionService | null = null
+	private sessionService: SessionManager | null = null
 
 	constructor(options: CLIOptions = {}) {
 		this.options = options
@@ -135,16 +135,31 @@ export class CLI {
 			const kiloToken = getKiloToken(config)
 
 			if (kiloToken) {
-				TrpcClient.init(kiloToken)
-				logs.debug("TrpcClient initialized with kiloToken", "CLI")
+				const pathProvider = new KiloCodePathProvider()
+				const extensionMessenger = new ExtensionMessengerAdapter(this.service)
 
-				this.sessionService = SessionService.init(this.service, this.store, this.options.json)
-				logs.debug("SessionService initialized with ExtensionService", "CLI")
+				this.sessionService = SessionManager.init({
+					pathProvider,
+					logger: logs,
+					extensionMessenger,
+					getToken: () => Promise.resolve(kiloToken),
+					onSessionCreated: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
+					onSessionRestored: () => {
+						if (this.store) {
+							this.store.set(taskResumedViaContinueOrSessionAtom, true)
+						}
+					},
+					platform: "cli",
+				})
+				logs.debug("SessionManager initialized with dependencies", "CLI")
 
-				// Set workspace directory for git operations (important for parallel mode/worktrees)
 				const workspace = this.options.workspace || process.cwd()
 				this.sessionService.setWorkspaceDirectory(workspace)
-				logs.debug("SessionService workspace directory set", "CLI", { workspace })
+				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
 					await this.sessionService.restoreSession(this.options.session)
