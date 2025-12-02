@@ -1023,13 +1023,21 @@ export class ExtensionHost extends EventEmitter {
 	 * Flush all pending messages that were queued before webview was ready
 	 */
 	private flushPendingMessages(): void {
-		const messages = [...this.pendingMessages]
+		const upsertMessages = this.pendingMessages.filter((m) => m.type === "upsertApiConfiguration")
+		const otherMessages = this.pendingMessages.filter((m) => m.type !== "upsertApiConfiguration")
 		this.pendingMessages = []
 
-		logs.info(`Flushing ${messages.length} pending messages`, "ExtensionHost")
-		for (const message of messages) {
+		logs.info(`Flushing ${upsertMessages.length + otherMessages.length} pending messages`, "ExtensionHost")
+
+		// Ensure the API configuration is applied before anything tries to read it
+		for (const message of upsertMessages) {
 			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
-			// Use void to explicitly ignore the promise
+			// Serialize upserts so provider settings are persisted before readers run
+			await this.sendWebviewMessage(message)
+		}
+
+		for (const message of otherMessages) {
+			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
 			void this.sendWebviewMessage(message)
 		}
 	}
