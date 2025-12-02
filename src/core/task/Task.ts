@@ -1271,6 +1271,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		progressStatus?: ToolProgressStatus,
 		options: {
 			isNonInteractive?: boolean
+			metadata?: Record<string, unknown> // kilocode_change
 		} = {},
 		contextCondense?: ContextCondense,
 	): Promise<undefined> {
@@ -1323,6 +1324,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					lastMessage.images = images
 					lastMessage.partial = false
 					lastMessage.progressStatus = progressStatus
+					// kilocode_change start
+					if (options.metadata) {
+						lastMessage.metadata = Object.assign(lastMessage.metadata ?? {}, options.metadata)
+					}
+					// kilocode_change end
 
 					// Instead of streaming partialMessage events, we do a save
 					// and post like normal to persist to disk.
@@ -1345,6 +1351,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						text,
 						images,
 						contextCondense,
+						metadata: options.metadata, // kilocode_csouhange
 					})
 				}
 			}
@@ -1368,6 +1375,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				images,
 				checkpoint,
 				contextCondense,
+				metadata: options.metadata, // kilocode_change
 			})
 		}
 	}

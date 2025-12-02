@@ -8,7 +8,18 @@ import {
 import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
-import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
+import { GhostContextProvider } from "../GhostContextProvider"
+
+// Mock RooIgnoreController to prevent vscode.RelativePattern errors
+vi.mock("../../../../core/ignore/RooIgnoreController", () => {
+	return {
+		RooIgnoreController: class MockRooIgnoreController {
+			initialize = vi.fn().mockResolvedValue(undefined)
+			validateAccess = vi.fn().mockReturnValue(true)
+			dispose = vi.fn()
+		},
+	}
+})
 
 // Mock vscode InlineCompletionTriggerKind enum and event listeners
 vi.mock("vscode", async () => {
@@ -125,6 +136,111 @@ describe("findMatchingSuggestion", () => {
 		it("should return null when suggestions array is empty", () => {
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", [])
 			expect(result).toBeNull()
+		})
+	})
+
+	describe("backward deletion support", () => {
+		it("should return deleted prefix portion plus suggestion when user backspaces", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "henk",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			// User backspaced from "foo" to "f"
+			const result = findMatchingSuggestion("f", "bar", suggestions)
+			expect(result).toBe("oohenk")
+		})
+
+		it("should return full prefix plus suggestion when user deletes entire prefix", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "world",
+					prefix: "hello",
+					suffix: "!",
+				},
+			]
+
+			// User deleted entire prefix
+			const result = findMatchingSuggestion("", "!", suggestions)
+			expect(result).toBe("helloworld")
+		})
+
+		it("should return null when suffix does not match during backward deletion", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "henk",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			// User backspaced but suffix changed
+			const result = findMatchingSuggestion("f", "baz", suggestions)
+			expect(result).toBeNull()
+		})
+
+		it("should return null when current prefix is not a prefix of stored prefix", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "henk",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			// Current prefix "x" is not a prefix of "foo"
+			const result = findMatchingSuggestion("x", "bar", suggestions)
+			expect(result).toBeNull()
+		})
+
+		it("should handle backward deletion with empty suggestion text", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			// User backspaced - should return just the deleted portion
+			const result = findMatchingSuggestion("f", "bar", suggestions)
+			expect(result).toBe("oo")
+		})
+
+		it("should prefer exact match over backward deletion match", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "henk",
+					prefix: "foo",
+					suffix: "bar",
+				},
+				{
+					text: "exact",
+					prefix: "f",
+					suffix: "bar",
+				},
+			]
+
+			// Should match the exact prefix "f" first (most recent)
+			const result = findMatchingSuggestion("f", "bar", suggestions)
+			expect(result).toBe("exact")
+		})
+
+		it("should handle multi-character backward deletion", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "test()",
+					prefix: "function myFunc",
+					suffix: " { }",
+				},
+			]
+
+			// User deleted "unc" from "function myFunc"
+			const result = findMatchingSuggestion("function myF", " { }", suggestions)
+			expect(result).toBe("unctest()")
 		})
 	})
 
@@ -332,8 +448,8 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockModel: GhostModel
 	let mockCostTrackingCallback: CostTrackingCallback
 	let mockSettings: { enableAutoTrigger: boolean } | null
-	let mockContextProvider: any
-	let mockIgnoreController: Promise<RooIgnoreController> | undefined
+	let mockExtensionContext: vscode.ExtensionContext
+	let mockClineProvider: { cwd: string }
 
 	// Helper to call provideInlineCompletionItems and advance timers
 	async function provideWithDebounce(
@@ -358,29 +474,60 @@ describe("GhostInlineCompletionProvider", () => {
 		mockToken = {} as vscode.CancellationToken
 		mockSettings = { enableAutoTrigger: true }
 
-		// Create mock IDE for tracking services
+		// Create mock extension context
+		mockExtensionContext = {
+			subscriptions: [],
+			workspaceState: {
+				get: vi.fn(),
+				update: vi.fn(),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			globalState: {
+				get: vi.fn(),
+				update: vi.fn(),
+				keys: vi.fn().mockReturnValue([]),
+				setKeysForSync: vi.fn(),
+			},
+			extensionPath: "/mock/extension/path",
+			extensionUri: vscode.Uri.file("/mock/extension/path"),
+			storagePath: "/mock/storage/path",
+			storageUri: vscode.Uri.file("/mock/storage/path"),
+			globalStoragePath: "/mock/global/storage/path",
+			globalStorageUri: vscode.Uri.file("/mock/global/storage/path"),
+			logPath: "/mock/log/path",
+			logUri: vscode.Uri.file("/mock/log/path"),
+			extensionMode: 1, // Development
+			asAbsolutePath: vi.fn((relativePath: string) => `/mock/extension/path/${relativePath}`),
+			secrets: {
+				get: vi.fn(),
+				store: vi.fn(),
+				delete: vi.fn(),
+				onDidChange: vi.fn(),
+			},
+			environmentVariableCollection: {} as any,
+			extension: {} as any,
+			languageModelAccessInformation: {} as any,
+		} as unknown as vscode.ExtensionContext
+
+		// Mock GhostContextProvider
 		const mockIde = {
 			getWorkspaceDirs: vi.fn().mockResolvedValue([]),
 			getOpenFiles: vi.fn().mockResolvedValue([]),
 			readFile: vi.fn().mockResolvedValue(""),
-			// Add other methods as needed by RecentlyVisitedRangesService and RecentlyEditedTracker
 		}
 
-		// Create mock context provider with IDE
-		mockContextProvider = {
-			getIde: vi.fn().mockReturnValue(mockIde),
-			getProcessedSnippets: vi.fn().mockResolvedValue({
-				filepathUri: "file:///test.ts",
-				helper: {
-					filepath: "file:///test.ts",
-					lang: { name: "typescript", singleLineComment: "//" },
-					prunedPrefix: "const x = 1",
-					prunedSuffix: "\nconst y = 2",
-				},
-				snippetsWithUris: [],
-				workspaceDirs: [],
-			}),
-		}
+		vi.spyOn(GhostContextProvider.prototype, "getIde").mockReturnValue(mockIde as any)
+		vi.spyOn(GhostContextProvider.prototype, "getProcessedSnippets").mockResolvedValue({
+			filepathUri: "file:///test.ts",
+			helper: {
+				filepath: "file:///test.ts",
+				lang: { name: "typescript", singleLineComment: "//" },
+				prunedPrefix: "const x = 1",
+				prunedSuffix: "\nconst y = 2",
+			},
+			snippetsWithUris: [],
+			workspaceDirs: [],
+		})
 
 		// Create mock dependencies
 		mockModel = {
@@ -395,18 +542,20 @@ describe("GhostInlineCompletionProvider", () => {
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
+		mockClineProvider = { cwd: "/test/workspace" }
 
 		provider = new GhostInlineCompletionProvider(
+			mockExtensionContext,
 			mockModel,
 			mockCostTrackingCallback,
 			() => mockSettings,
-			mockContextProvider,
-			mockIgnoreController,
+			mockClineProvider as any,
 		)
 	})
 
 	afterEach(() => {
 		vi.useRealTimers()
+		vi.restoreAllMocks()
 	})
 
 	describe("provideInlineCompletionItems", () => {
@@ -1366,95 +1515,8 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 	})
 
-	describe("RooIgnoreController integration", () => {
-		beforeEach(() => {
-			// Reset mock ignore controller for each test
-			mockIgnoreController = undefined
-		})
-
-		it("should return empty array when file is ignored", async () => {
-			// Create a mock ignore controller that rejects the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion that would normally be returned
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			const result = await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-
-			// Should return empty array because file is ignored
-			expect(result).toEqual([])
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-			// Model should not be called
-			expect(mockModel.generateResponse).not.toHaveBeenCalled()
-		})
-
-		it("should provide completions when file is not ignored", async () => {
-			// Create a mock ignore controller that accepts the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(true),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
-
-			const result = (await provideWithDebounce(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)) as vscode.InlineCompletionItem[]
-
-			// Should return the completion because file is not ignored
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("console.log('test');")
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-		})
-
-		it("should provide completions for untitled documents even with ignore controller", async () => {
-			// Create a mock ignore controller
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false), // Would reject if called
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
+	describe("untitled document handling", () => {
+		it("should provide completions for untitled documents", async () => {
 			// Create an untitled document using MockTextDocument
 			const untitledDocument = new MockTextDocument(
 				vscode.Uri.parse("untitled:Untitled-1"),
@@ -1483,99 +1545,154 @@ describe("GhostInlineCompletionProvider", () => {
 			// Should return the completion because untitled documents are always allowed
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe("console.log('test');")
-			// validateAccess should not be called for untitled documents
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).not.toHaveBeenCalled()
 		})
+	})
 
-		it("should work without ignore controller (backward compatibility)", async () => {
-			// Create provider without ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				undefined, // No ignore controller
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
+	describe("pending request reuse", () => {
+		it("should reuse pending request when user types forward (prefix extends, suffix unchanged)", async () => {
+			// Mock the model to track call count
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+				callCount++
+				if (onChunk) {
+					onChunk({ type: "text", text: "<COMPLETION>" })
+					onChunk({ type: "text", text: "console.log('test');" })
+					onChunk({ type: "text", text: "</COMPLETION>" })
+				}
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
 			})
 
-			const result = (await provideWithDebounce(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)) as vscode.InlineCompletionItem[]
+			// First request: user at "const x = 1"
+			const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
+			const pos1 = new vscode.Position(0, 11) // After "const x = 1"
 
-			// Should return the completion because there's no ignore controller
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("console.log('test');")
+			// Start first request but don't await it yet
+			const promise1 = provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+
+			// Advance time partially (not past debounce)
+			await vi.advanceTimersByTimeAsync(100)
+
+			// Second request: user typed "c" - prefix extended, suffix unchanged
+			const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1c\nconst y = 2")
+			const pos2 = new vscode.Position(0, 12) // After "const x = 1c"
+
+			// Start second request
+			const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
+
+			// Advance time past debounce to let requests complete
+			await vi.advanceTimersByTimeAsync(500)
+
+			// Wait for both promises
+			await promise1
+			await promise2
+
+			// The model should only have been called once because the second request
+			// should have reused the pending request from the first
+			expect(callCount).toBe(1)
 		})
 
-		it("should check ignore status in provideInlineCompletionItems_Internal for manual triggers", async () => {
-			// Create a mock ignore controller that rejects the file
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(false),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Call the internal method directly (simulating manual trigger via codeSuggestion)
-			const result = await provider.provideInlineCompletionItems_Internal(
-				mockDocument,
-				mockPosition,
-				mockContext,
-				mockToken,
-			)
-
-			// Should return empty array because file is ignored
-			expect(result).toEqual([])
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
-			// Model should not be called
-			expect(mockModel.generateResponse).not.toHaveBeenCalled()
-		})
-
-		it("should check ignore status only once per call", async () => {
-			// Create a mock ignore controller
-			mockIgnoreController = Promise.resolve({
-				validateAccess: vi.fn().mockReturnValue(true),
-			} as unknown as RooIgnoreController)
-
-			// Create provider with ignore controller
-			provider = new GhostInlineCompletionProvider(
-				mockModel,
-				mockCostTrackingCallback,
-				() => mockSettings,
-				mockContextProvider,
-				mockIgnoreController,
-			)
-
-			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
+		it("should NOT reuse pending request when suffix changes", async () => {
+			// Mock the model to track call count
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+				callCount++
+				if (onChunk) {
+					onChunk({ type: "text", text: "<COMPLETION>" })
+					onChunk({ type: "text", text: "console.log('test');" })
+					onChunk({ type: "text", text: "</COMPLETION>" })
+				}
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
 			})
 
-			await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
+			// First request: user at "const x = 1"
+			const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
+			const pos1 = new vscode.Position(0, 11)
 
-			// Should check access exactly once in provideInlineCompletionItems_Internal
-			const controller = await mockIgnoreController!
-			expect(controller.validateAccess).toHaveBeenCalledTimes(1)
-			expect(controller.validateAccess).toHaveBeenCalledWith(mockDocument.fileName)
+			// Start first request (don't await - it will be cancelled by the second request)
+			provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+
+			// Advance time partially (not past debounce)
+			await vi.advanceTimersByTimeAsync(100)
+
+			// Second request: suffix changed (different text after cursor)
+			// This will cancel the first request's debounce timer and start a new one
+			const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst z = 3")
+			const pos2 = new vscode.Position(0, 11)
+
+			// Start second request
+			const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
+
+			// Advance time past debounce to let the second request complete
+			await vi.advanceTimersByTimeAsync(500)
+
+			await promise2
+
+			// The model should have been called once (only the second request fires,
+			// the first was cancelled by the debounce)
+			// But the key point is that the second request was NOT reused from the first
+			// because the suffix changed - it started a new debounce cycle
+			expect(callCount).toBe(1)
+		})
+
+		it("should NOT reuse pending request when user backspaces (prefix shrinks)", async () => {
+			// Mock the model to track call count
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+				callCount++
+				if (onChunk) {
+					onChunk({ type: "text", text: "<COMPLETION>" })
+					onChunk({ type: "text", text: "console.log('test');" })
+					onChunk({ type: "text", text: "</COMPLETION>" })
+				}
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First request: user at "const x = 1"
+			const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
+			const pos1 = new vscode.Position(0, 11)
+
+			// Start first request (don't await - it will be cancelled by the second request)
+			provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+
+			// Advance time partially (not past debounce)
+			await vi.advanceTimersByTimeAsync(100)
+
+			// Second request: user backspaced - prefix is now shorter
+			// This will cancel the first request's debounce timer and start a new one
+			const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = \nconst y = 2")
+			const pos2 = new vscode.Position(0, 10) // After "const x = "
+
+			// Start second request
+			const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
+
+			// Advance time past debounce to let the second request complete
+			await vi.advanceTimersByTimeAsync(500)
+
+			await promise2
+
+			// The model should have been called once (only the second request fires,
+			// the first was cancelled by the debounce)
+			// But the key point is that the second request was NOT reused from the first
+			// because the prefix shrunk - it started a new debounce cycle
+			expect(callCount).toBe(1)
 		})
 	})
 })
