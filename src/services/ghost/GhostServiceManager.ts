@@ -5,13 +5,11 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { GhostContextProvider } from "./classic-auto-complete/GhostContextProvider"
 import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 
 export class GhostServiceManager {
 	private static instance: GhostServiceManager | null = null
@@ -19,7 +17,6 @@ export class GhostServiceManager {
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
 	private settings: GhostServiceSettings | null = null
-	private readonly ghostContextProvider: GhostContextProvider
 
 	private taskId: string | null = null
 
@@ -35,8 +32,6 @@ export class GhostServiceManager {
 	private newAutocompleteProvider: NewAutocompleteProvider | null = null
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
-	private ignoreController?: Promise<RooIgnoreController>
-
 	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
 		this.cline = cline
@@ -44,22 +39,14 @@ export class GhostServiceManager {
 		// Register Internal Components
 		this.model = new GhostModel()
 
-		this.ignoreController = (async () => {
-			const ignoreController = new RooIgnoreController(cline.cwd)
-			await ignoreController.initialize()
-			return ignoreController
-		})()
-
-		this.ghostContextProvider = new GhostContextProvider(this.context, this.model, this.ignoreController)
-
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
+			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
-			this.ghostContextProvider,
-			this.ignoreController,
+			this.cline,
 		)
 
 		void this.load()
@@ -147,14 +134,6 @@ export class GhostServiceManager {
 		TelemetryService.instance.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
 
 		await this.load()
-	}
-
-	private async disposeIgnoreController() {
-		if (this.ignoreController) {
-			const ignoreController = this.ignoreController
-			delete this.ignoreController
-			;(await ignoreController).dispose()
-		}
 	}
 
 	public async codeSuggestion() {
@@ -339,8 +318,6 @@ export class GhostServiceManager {
 			this.newAutocompleteProvider.dispose()
 			this.newAutocompleteProvider = null
 		}
-
-		void this.disposeIgnoreController()
 
 		GhostServiceManager.instance = null // Reset singleton
 	}

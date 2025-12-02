@@ -21,7 +21,7 @@ sidebar_label: Overview
 - Google sign-in with free credits included
 - No API key management required
 - Access to frontier coding models
-- [Competitive pricing](https://kilocode.ai/pricing)
+- [Competitive pricing](https://kilo.ai/pricing)
 
 **Key point**: The extension works with any provider—our API service is just the "batteries included" option.
 
@@ -31,7 +31,7 @@ sidebar_label: Overview
 
 ✅ **Fastest setup**
 
-- Sign in with Google or GitHub at kilocode.ai
+- Sign in with Google or GitHub at kilo.ai
 - Free credits included for your first top-up
 - Zero API key management
 - Latest models available

@@ -21,7 +21,7 @@ sidebar_label: Overview
 - 包含免费积分的 Google 登录
 - 无需 API 密钥管理
 - 访问前沿编码模型
-- [有竞争力的定价](https://kilocode.ai/pricing)
+- [有竞争力的定价](https://kilo.ai/pricing)
 
 **关键点**：该扩展适用于任何提供商——我们的 API 服务只是“包含电池”的选项。
 
@@ -31,7 +31,7 @@ sidebar_label: Overview
 
 ✅ **快速设置**
 
-- 在 kilocode.ai 使用 Google 或 GitHub 登录
+- 在 kilo.ai 使用 Google 或 GitHub 登录
 - 首次充值包含免费积分
 - 无需 API 密钥管理
 - 可使用最新模型

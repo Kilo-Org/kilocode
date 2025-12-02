@@ -33,7 +33,7 @@ Open the browser and view our site.
 ```
 
 ```
-Can you check if my website at https://kilocode.ai is displaying correctly?
+Can you check if my website at https://kilo.ai is displaying correctly?
 ```
 
 ```

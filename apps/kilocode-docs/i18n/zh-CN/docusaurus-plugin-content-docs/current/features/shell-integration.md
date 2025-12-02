@@ -412,4 +412,4 @@ functions fish_prompt | grep -i vsc
 1.  查看 [Kilo Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) 页面，看是否有人报告了类似的问题。
 2.  如果没有，请创建一个新 issue，并提供有关您的操作系统、VSCode/Cursor 版本以及您已尝试过的步骤的详细信息。
 
-如需更多帮助，请加入我们的 [Discord](https://kilocode.ai/discord)。如需其他帮助，请加入我们的 [Discord](https://kilocode.ai/discord)。
+如需更多帮助，请加入我们的 [Discord](https://kilo.ai/discord)。如需其他帮助，请加入我们的 [Discord](https://kilo.ai/discord)。

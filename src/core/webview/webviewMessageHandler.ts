@@ -3881,28 +3881,7 @@ export const webviewMessageHandler = async (
 		// kilocode_change end
 		// kilocode_change start - ManagedIndexer state
 		case "requestManagedIndexerState": {
-			try {
-				const state = ManagedIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
-				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: state,
-				})
-			} catch (error) {
-				provider.log(
-					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
-				)
-				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: [],
-				})
-			}
-			break
-		}
-
-		// we're going to delete this message at some point and use apiConfiguration
-		// probably. So casting as any as to not define a more permanent type
-		case "requestManagedIndexerEnabled" as any: {
-			ManagedIndexer.getInstance()?.sendEnabledStateToWebview()
+			ManagedIndexer.getInstance()?.sendStateToWebview()
 			break
 		}
 		// kilocode_change end
