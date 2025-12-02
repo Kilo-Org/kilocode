@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.10.2
+
+### Patch Changes
+
+- [#4116](https://github.com/Kilo-Org/kilocode/pull/4116) [`c6072d0`](https://github.com/Kilo-Org/kilocode/commit/c6072d03709d93e9aca1b187c2005f65463d6b53) Thanks [@catrielmuller](https://github.com/catrielmuller)! - NPM provenance
+
 ## 0.10.1
 
 ### Patch Changes

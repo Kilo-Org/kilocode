@@ -218,7 +218,11 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: cli-packaged
-                  path: cli/dist            
+                  path: cli/dist
+            - name: Configure Git
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"            
             - name: Create and Push Git Tag
               run: |
                   version=${{ needs.check-version.outputs.version }}

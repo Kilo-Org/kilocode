@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-NPM provenance
+Pulish version on Github Pages

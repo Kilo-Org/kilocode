@@ -6,12 +6,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import { sessionCommand } from "../session.js"
 import type { CommandContext, ArgumentProviderContext, ArgumentSuggestion } from "../core/types.js"
 import { createMockContext } from "./helpers/mockContext.js"
-import { SessionService } from "../../services/session.js"
-import { SessionClient } from "../../services/sessionClient.js"
+import { SessionManager } from "../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { SessionClient } from "../../../../src/shared/kilocode/cli-sessions/core/SessionClient.js"
 
-// Mock the SessionService
-vi.mock("../../services/session.js", () => ({
-	SessionService: {
+// Mock the SessionManager
+vi.mock("../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js", () => ({
+	SessionManager: {
 		init: vi.fn(),
 	},
 }))
@@ -34,19 +34,13 @@ vi.mock("simple-git", () => ({
 
 describe("sessionCommand", () => {
 	let mockContext: CommandContext
-	let mockSessionService: Partial<SessionService>
+	let mockSessionManager: Partial<SessionManager>
 	let mockSessionClient: Partial<SessionClient>
 
 	beforeEach(() => {
 		mockContext = createMockContext({
 			input: "/session",
 		})
-
-		// Create a mock session service instance
-		mockSessionService = {
-			sessionId: null,
-			restoreSession: vi.fn().mockResolvedValue(undefined),
-		}
 
 		// Create a mock session client instance
 		mockSessionClient = {
@@ -62,11 +56,15 @@ describe("sessionCommand", () => {
 			}),
 		}
 
-		// Mock SessionService.init to return our mock instance
-		vi.mocked(SessionService.init).mockReturnValue(mockSessionService as SessionService)
+		// Create a mock session manager instance with sessionClient property
+		mockSessionManager = {
+			sessionId: null,
+			restoreSession: vi.fn().mockResolvedValue(undefined),
+			sessionClient: mockSessionClient as SessionClient,
+		}
 
-		// Mock SessionClient.getInstance to return our mock instance
-		vi.mocked(SessionClient.getInstance).mockReturnValue(mockSessionClient as SessionClient)
+		// Mock SessionManager.init to return our mock instance
+		vi.mocked(SessionManager.init).mockReturnValue(mockSessionManager as SessionManager)
 	})
 
 	afterEach(() => {
@@ -163,25 +161,24 @@ describe("sessionCommand", () => {
 			expect(message.content).toContain("rename")
 		})
 
-		it("should not call SessionService when showing usage", async () => {
+		it("should not call SessionManager when showing usage", async () => {
 			mockContext.args = []
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).not.toHaveBeenCalled()
-			expect(SessionClient.getInstance).not.toHaveBeenCalled()
+			expect(SessionManager.init).not.toHaveBeenCalled()
 		})
 	})
 
 	describe("handler - show subcommand", () => {
 		it("should display session ID when session exists", async () => {
 			const testSessionId = "test-session-123"
-			mockSessionService.sessionId = testSessionId
+			mockSessionManager.sessionId = testSessionId
 			mockContext.args = ["show"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalledTimes(1)
+			expect(SessionManager.init).toHaveBeenCalledTimes(1)
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
@@ -190,12 +187,12 @@ describe("sessionCommand", () => {
 		})
 
 		it("should display message when no session exists", async () => {
-			mockSessionService.sessionId = null
+			mockSessionManager.sessionId = null
 			mockContext.args = ["show"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalledTimes(1)
+			expect(SessionManager.init).toHaveBeenCalledTimes(1)
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
@@ -203,12 +200,12 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle 'show' subcommand case-insensitively", async () => {
-			mockSessionService.sessionId = "test-id"
+			mockSessionManager.sessionId = "test-id"
 			mockContext.args = ["SHOW"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalledTimes(1)
+			expect(SessionManager.init).toHaveBeenCalledTimes(1)
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 		})
 	})
@@ -223,7 +220,7 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionClient.getInstance).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockSessionClient.list).toHaveBeenCalledWith({ limit: 50 })
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -267,7 +264,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should indicate active session in list", async () => {
-			mockSessionService.sessionId = "session-active"
+			mockSessionManager.sessionId = "session-active"
 			const mockSessions = [
 				{
 					session_id: "session-active",
@@ -357,10 +354,10 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockContext.replaceMessages).toHaveBeenCalledTimes(1)
 			expect(mockContext.refreshTerminal).toHaveBeenCalled()
-			expect(mockSessionService.restoreSession).toHaveBeenCalledWith("session-123", true)
+			expect(mockSessionManager.restoreSession).toHaveBeenCalledWith("session-123", true)
 
 			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(replacedMessages).toHaveLength(2)
@@ -377,7 +374,7 @@ describe("sessionCommand", () => {
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Usage: /session select <sessionId>")
-			expect(mockSessionService.restoreSession).not.toHaveBeenCalled()
+			expect(mockSessionManager.restoreSession).not.toHaveBeenCalled()
 		})
 
 		it("should show error when sessionId is empty string", async () => {
@@ -392,7 +389,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle restore error gracefully", async () => {
-			mockSessionService.restoreSession = vi.fn().mockRejectedValue(new Error("Session not found"))
+			mockSessionManager.restoreSession = vi.fn().mockRejectedValue(new Error("Session not found"))
 			mockContext.args = ["select", "invalid-session"]
 
 			await sessionCommand.handler(mockContext)
@@ -413,27 +410,27 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionService.restoreSession).toHaveBeenCalledWith("session-123", true)
+			expect(mockSessionManager.restoreSession).toHaveBeenCalledWith("session-123", true)
 		})
 	})
 
 	describe("handler - share subcommand", () => {
 		beforeEach(() => {
-			// Setup shareSession mock on service
-			mockSessionService.shareSession = vi.fn().mockResolvedValue({
+			// Setup shareSession mock on manager
+			mockSessionManager.shareSession = vi.fn().mockResolvedValue({
 				share_id: "share-123",
 				session_id: "test-session-123",
 			})
 		})
 
 		it("should share current session", async () => {
-			mockSessionService.sessionId = "test-session-123"
+			mockSessionManager.sessionId = "test-session-123"
 			mockContext.args = ["share"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalled()
-			expect(mockSessionService.shareSession).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
+			expect(mockSessionManager.shareSession).toHaveBeenCalled()
 
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -443,8 +440,8 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle share error gracefully", async () => {
-			mockSessionService.sessionId = "test-session-123"
-			mockSessionService.shareSession = vi.fn().mockRejectedValue(new Error("Not in a git repository"))
+			mockSessionManager.sessionId = "test-session-123"
+			mockSessionManager.shareSession = vi.fn().mockRejectedValue(new Error("Not in a git repository"))
 			mockContext.args = ["share"]
 
 			await sessionCommand.handler(mockContext)
@@ -484,7 +481,7 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionClient.getInstance).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockSessionClient.search).toHaveBeenCalledWith({ search_string: "test-query", limit: 20 })
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -538,7 +535,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should indicate active session in search results", async () => {
-			mockSessionService.sessionId = "session-active"
+			mockSessionManager.sessionId = "session-active"
 			const mockSearchResults = [
 				{
 					session_id: "session-active",
@@ -598,8 +595,8 @@ describe("sessionCommand", () => {
 
 	describe("handler - fork subcommand", () => {
 		beforeEach(() => {
-			// Setup forkSession mock on service
-			mockSessionService.forkSession = vi.fn().mockResolvedValue({
+			// Setup forkSession mock on manager
+			mockSessionManager.forkSession = vi.fn().mockResolvedValue({
 				session_id: "forked-session-123",
 				title: "Forked Session",
 				created_at: new Date().toISOString(),
@@ -616,10 +613,10 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockContext.replaceMessages).toHaveBeenCalledTimes(1)
 			expect(mockContext.refreshTerminal).toHaveBeenCalled()
-			expect(mockSessionService.forkSession).toHaveBeenCalledWith("share-123", true)
+			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123", true)
 			// restoreSession is now called internally by forkSession, not by the command handler
 
 			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -637,7 +634,7 @@ describe("sessionCommand", () => {
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Usage: /session fork <shareId>")
-			expect(mockSessionService.forkSession).not.toHaveBeenCalled()
+			expect(mockSessionManager.forkSession).not.toHaveBeenCalled()
 		})
 
 		it("should show error when shareId is empty string", async () => {
@@ -652,7 +649,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle fork error gracefully", async () => {
-			mockSessionService.forkSession = vi.fn().mockRejectedValue(new Error("Share ID not found"))
+			mockSessionManager.forkSession = vi.fn().mockRejectedValue(new Error("Share ID not found"))
 			mockContext.args = ["fork", "invalid-share-id"]
 
 			await sessionCommand.handler(mockContext)
@@ -673,24 +670,24 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionService.forkSession).toHaveBeenCalledWith("share-123", true)
+			expect(mockSessionManager.forkSession).toHaveBeenCalledWith("share-123", true)
 		})
 	})
 
 	describe("handler - rename subcommand", () => {
 		beforeEach(() => {
-			// Setup renameSession mock on service
-			mockSessionService.renameSession = vi.fn().mockResolvedValue(undefined)
+			// Setup renameSession mock on manager
+			mockSessionManager.renameSession = vi.fn().mockResolvedValue(undefined)
 		})
 
 		it("should rename session successfully", async () => {
-			mockSessionService.sessionId = "test-session-123"
+			mockSessionManager.sessionId = "test-session-123"
 			mockContext.args = ["rename", "My", "New", "Session", "Name"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).toHaveBeenCalled()
-			expect(mockSessionService.renameSession).toHaveBeenCalledWith("My New Session Name")
+			expect(SessionManager.init).toHaveBeenCalled()
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("My New Session Name")
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
@@ -699,12 +696,12 @@ describe("sessionCommand", () => {
 		})
 
 		it("should rename session with single word name", async () => {
-			mockSessionService.sessionId = "test-session-123"
+			mockSessionManager.sessionId = "test-session-123"
 			mockContext.args = ["rename", "SingleWord"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionService.renameSession).toHaveBeenCalledWith("SingleWord")
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("SingleWord")
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("SingleWord")
@@ -719,11 +716,11 @@ describe("sessionCommand", () => {
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Usage: /session rename <new name>")
-			expect(mockSessionService.renameSession).not.toHaveBeenCalled()
+			expect(mockSessionManager.renameSession).not.toHaveBeenCalled()
 		})
 
 		it("should handle rename error when no active session", async () => {
-			mockSessionService.renameSession = vi.fn().mockRejectedValue(new Error("No active session"))
+			mockSessionManager.renameSession = vi.fn().mockRejectedValue(new Error("No active session"))
 			mockContext.args = ["rename", "New", "Name"]
 
 			await sessionCommand.handler(mockContext)
@@ -736,7 +733,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle rename error when title is empty", async () => {
-			mockSessionService.renameSession = vi.fn().mockRejectedValue(new Error("Session title cannot be empty"))
+			mockSessionManager.renameSession = vi.fn().mockRejectedValue(new Error("Session title cannot be empty"))
 			mockContext.args = ["rename", "   "]
 
 			await sessionCommand.handler(mockContext)
@@ -748,16 +745,16 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle 'rename' subcommand case-insensitively", async () => {
-			mockSessionService.sessionId = "test-session-123"
+			mockSessionManager.sessionId = "test-session-123"
 			mockContext.args = ["RENAME", "New", "Name"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionService.renameSession).toHaveBeenCalledWith("New Name")
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("New Name")
 		})
 
 		it("should handle backend error gracefully", async () => {
-			mockSessionService.renameSession = vi.fn().mockRejectedValue(new Error("Network error"))
+			mockSessionManager.renameSession = vi.fn().mockRejectedValue(new Error("Network error"))
 			mockContext.args = ["rename", "New", "Name"]
 
 			await sessionCommand.handler(mockContext)
@@ -781,7 +778,7 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionClient.getInstance).toHaveBeenCalled()
+			expect(SessionManager.init).toHaveBeenCalled()
 			expect(mockSessionClient.delete).toHaveBeenCalledWith({ session_id: "session-123" })
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
@@ -855,26 +852,25 @@ describe("sessionCommand", () => {
 			expect(message.content).toContain("rename")
 		})
 
-		it("should not call SessionService for invalid subcommand", async () => {
+		it("should not call SessionManager for invalid subcommand", async () => {
 			mockContext.args = ["invalid"]
 
 			await sessionCommand.handler(mockContext)
 
-			expect(SessionService.init).not.toHaveBeenCalled()
-			expect(SessionClient.getInstance).not.toHaveBeenCalled()
+			expect(SessionManager.init).not.toHaveBeenCalled()
 		})
 	})
 
 	describe("handler - execution", () => {
 		it("should execute without errors when session exists", async () => {
-			mockSessionService.sessionId = "test-id"
+			mockSessionManager.sessionId = "test-id"
 			mockContext.args = ["show"]
 
 			await expect(sessionCommand.handler(mockContext)).resolves.not.toThrow()
 		})
 
 		it("should execute without errors when no session exists", async () => {
-			mockSessionService.sessionId = null
+			mockSessionManager.sessionId = null
 			mockContext.args = ["show"]
 
 			await expect(sessionCommand.handler(mockContext)).resolves.not.toThrow()
@@ -889,7 +885,7 @@ describe("sessionCommand", () => {
 
 	describe("message generation", () => {
 		it("should generate messages with proper structure", async () => {
-			mockSessionService.sessionId = "test-id"
+			mockSessionManager.sessionId = "test-id"
 			mockContext.args = ["show"]
 
 			await sessionCommand.handler(mockContext)

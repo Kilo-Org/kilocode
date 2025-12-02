@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.126.1
+
+### Patch Changes
+
+- [#4114](https://github.com/Kilo-Org/kilocode/pull/4114) [`ac020d6`](https://github.com/Kilo-Org/kilocode/commit/ac020d600e5034ca025b71213aa64c5629cab219) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix profile editing when adjusting non-activated profile
+
 ## 4.126.0
 
 ### Minor Changes
