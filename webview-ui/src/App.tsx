@@ -137,7 +137,7 @@ const App = () => {
 			setCurrentSection(undefined)
 			setCurrentMarketplaceTab(undefined)
 
-			// kilocode_change: strart - Bypass unsaved changes check when navigating to auth tab
+			// kilocode_change: start - Bypass unsaved changes check when navigating to auth tab
 			if (newTab === "auth") {
 				setTab(newTab)
 			} else if (settingsRef.current?.checkUnsaveChanges) {
