@@ -135,6 +135,11 @@ export class CLI {
 			const kiloToken = getKiloToken(config)
 
 			if (kiloToken) {
+				// Inject CLI configuration into ExtensionHost
+				// This must happen BEFORE session restoration to ensure org ID is set
+				await this.injectConfigurationToExtension()
+				logs.debug("CLI configuration injected into extension", "CLI")
+
 				const pathProvider = new KiloCodePathProvider()
 				const extensionMessenger = new ExtensionMessengerAdapter(this.service)
 
@@ -161,13 +166,6 @@ export class CLI {
 				this.sessionService.setWorkspaceDirectory(workspace)
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
-				// Inject configuration BEFORE session restoration to ensure the extension
-				// has the correct config (including org ID) during session operations
-				if (this.options.session || this.options.fork) {
-					await this.injectConfigurationToExtension()
-					logs.debug("CLI configuration pre-injected before session operation", "CLI")
-				}
-
 				if (this.options.session) {
 					await this.sessionService.restoreSession(this.options.session)
 				} else if (this.options.fork) {
@@ -181,6 +179,8 @@ export class CLI {
 			logs.debug("Command history loaded", "CLI")
 
 			// Inject CLI configuration into ExtensionHost
+			// This happens after session restoration (if any) to ensure CLI config takes precedence
+			// Session restoration may have activated a saved profile that doesn't include org ID from env vars
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
