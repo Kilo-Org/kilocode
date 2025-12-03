@@ -202,6 +202,10 @@
 			"label": "Podúkoly",
 			"description": "Povolit vytváření a dokončování podúkolů bez nutnosti schválení"
 		},
+		"delete": {
+			"label": "Smazat",
+			"description": "Automaticky mazat soubory a adresáře bez nutnosti schválení"
+		},
 		"followupQuestions": {
 			"label": "Otázka",
 			"description": "Automaticky vybrat první navrhovanou odpověď pro následné otázky po uplynutí nastaveného časového limitu",

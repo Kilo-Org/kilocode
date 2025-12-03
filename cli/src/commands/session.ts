@@ -41,10 +41,8 @@ async function listSessions(context: CommandContext): Promise<void> {
 	const sessionClient = sessionService.sessionClient
 
 	try {
-		const result = await sessionClient.list({ limit: 50 })
-		const { cliSessions } = result
-
-		if (cliSessions.length === 0) {
+		const result = await sessionClient?.list({ limit: 50 })
+		if (!result || result.cliSessions.length === 0) {
 			addMessage({
 				...generateMessage(),
 				type: "system",
@@ -52,6 +50,8 @@ async function listSessions(context: CommandContext): Promise<void> {
 			})
 			return
 		}
+
+		const { cliSessions } = result
 
 		// Format and display sessions
 		let content = `**Available Sessions:**\n\n`
@@ -148,10 +148,9 @@ async function searchSessions(context: CommandContext, query: string): Promise<v
 	}
 
 	try {
-		const result = await sessionClient.search({ search_string: query, limit: 20 })
-		const { results, total } = result
+		const result = await sessionClient?.search({ search_string: query, limit: 20 })
 
-		if (results.length === 0) {
+		if (!result || result.results.length === 0) {
 			addMessage({
 				...generateMessage(),
 				type: "system",
@@ -159,6 +158,8 @@ async function searchSessions(context: CommandContext, query: string): Promise<v
 			})
 			return
 		}
+
+		const { results, total } = result
 
 		let content = `**Search Results** (${results.length} of ${total}):\n\n`
 		results.forEach((session, index) => {
@@ -198,7 +199,7 @@ async function shareSession(context: CommandContext): Promise<void> {
 		addMessage({
 			...generateMessage(),
 			type: "system",
-			content: `✅ Session shared successfully!\n\n\`https://kilo.ai/share/${result.share_id}\``,
+			content: `✅ Session shared successfully!\n\n\`https://app.kilo.ai/share/${result.share_id}\``,
 		})
 	} catch (error) {
 		addMessage({
@@ -212,15 +213,15 @@ async function shareSession(context: CommandContext): Promise<void> {
 /**
  * Fork a shared session by share ID
  */
-async function forkSession(context: CommandContext, shareId: string): Promise<void> {
+async function forkSession(context: CommandContext, id: string): Promise<void> {
 	const { addMessage, replaceMessages, refreshTerminal } = context
 	const sessionService = SessionManager.init()
 
-	if (!shareId) {
+	if (!id) {
 		addMessage({
 			...generateMessage(),
 			type: "error",
-			content: "Usage: /session fork <shareId>",
+			content: "Usage: /session fork <id>",
 		})
 		return
 	}
@@ -238,14 +239,14 @@ async function forkSession(context: CommandContext, shareId: string): Promise<vo
 			{
 				id: `system-${now + 1}`,
 				type: "system",
-				content: `Forking session from share ID \`${shareId}\`...`,
+				content: `Forking session from ID \`${id}\`...`,
 				ts: 2,
 			},
 		])
 
 		await refreshTerminal()
 
-		await sessionService.forkSession(shareId, true)
+		await sessionService.forkSession(id, true)
 
 		// Success message handled by restoreSession via extension messages
 	} catch (error) {
@@ -275,6 +276,10 @@ async function deleteSession(context: CommandContext, sessionId: string): Promis
 	}
 
 	try {
+		if (!sessionClient) {
+			throw new Error("SessionManager used before initialization")
+		}
+
 		await sessionClient.delete({ session_id: sessionId })
 
 		addMessage({
@@ -340,7 +345,11 @@ async function sessionIdAutocompleteProvider(context: ArgumentProviderContext): 
 	}
 
 	try {
-		const response = await sessionClient.search({ search_string: prefix, limit: 20 })
+		const response = await sessionClient?.search({ search_string: prefix, limit: 20 })
+
+		if (!response) {
+			return []
+		}
 
 		return response.results.map((session, index) => {
 			const title = session.title || "Untitled"
@@ -373,7 +382,7 @@ export const sessionCommand: Command = {
 		"/session search <query>",
 		"/session select <sessionId>",
 		"/session share",
-		"/session fork <shareId>",
+		"/session fork <id>",
 		"/session delete <sessionId>",
 		"/session rename <new name>",
 	],
@@ -390,7 +399,7 @@ export const sessionCommand: Command = {
 				{ value: "search", description: "Search sessions by title or ID" },
 				{ value: "select", description: "Restore a session" },
 				{ value: "share", description: "Share current session publicly" },
-				{ value: "fork", description: "Fork a shared session" },
+				{ value: "fork", description: "Fork a session" },
 				{ value: "delete", description: "Delete a session" },
 				{ value: "rename", description: "Rename the current session" },
 			],

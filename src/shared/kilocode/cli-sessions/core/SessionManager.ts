@@ -6,6 +6,7 @@ import { createHash } from "crypto"
 import type { IPathProvider } from "../types/IPathProvider.js"
 import type { ILogger } from "../types/ILogger.js"
 import type { IExtensionMessenger } from "../types/IExtensionMessenger.js"
+import type { ITaskDataProvider } from "../types/ITaskDataProvider.js"
 import { SessionClient } from "./SessionClient.js"
 import { SessionWithSignedUrls, CliSessionSharedState } from "./SessionClient.js"
 import type { ClineMessage, HistoryItem } from "@roo-code/types"
@@ -36,22 +37,14 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 export class SessionManager {
 	static readonly SYNC_INTERVAL = 3000
 
-	private static instance: SessionManager | null = null
+	private static instance = new SessionManager()
 
 	static init(dependencies?: SessionManagerDependencies) {
-		if (!dependencies && !SessionManager.instance) {
-			throw new Error("SessionManager not initialized")
+		if (dependencies) {
+			SessionManager.instance.initSingleton(dependencies)
 		}
 
-		if (dependencies && !SessionManager.instance) {
-			SessionManager.instance = new SessionManager(dependencies)
-		}
-
-		const instance = SessionManager.instance!
-
-		instance.startTimer()
-
-		return instance
+		return SessionManager.instance
 	}
 
 	private paths = { ...defaultPaths }
@@ -66,16 +59,18 @@ export class SessionManager {
 	private lastSyncedBlobHashes = this.createDefaultBlobHashes()
 	private isSyncing: boolean = false
 
-	private readonly pathProvider: IPathProvider
-	private readonly logger: ILogger
-	private readonly extensionMessenger: IExtensionMessenger
-	private readonly sessionPersistenceManager: SessionPersistenceManager
-	public readonly sessionClient: SessionClient
-	private readonly onSessionCreated: (message: SessionCreatedMessage) => void
-	private readonly onSessionRestored: () => void
-	private readonly platform: string
+	private pathProvider: IPathProvider | undefined
+	private logger: ILogger | undefined
+	private extensionMessenger: IExtensionMessenger | undefined
+	public sessionPersistenceManager: SessionPersistenceManager | undefined
+	public sessionClient: SessionClient | undefined
+	private onSessionCreated: ((message: SessionCreatedMessage) => void) | undefined
+	private onSessionRestored: (() => void) | undefined
+	private platform: string | undefined
 
-	private constructor(dependencies: SessionManagerDependencies) {
+	private constructor() {}
+
+	private initDeps(dependencies: SessionManagerDependencies) {
 		this.pathProvider = dependencies.pathProvider
 		this.logger = dependencies.logger
 		this.extensionMessenger = dependencies.extensionMessenger
@@ -93,7 +88,9 @@ export class SessionManager {
 		this.logger.debug("Initialized SessionManager", "SessionManager")
 	}
 
-	private startTimer() {
+	private initSingleton(dependencies: SessionManagerDependencies) {
+		this.initDeps(dependencies)
+
 		if (!this.timer) {
 			this.timer = setInterval(() => {
 				this.syncSession()
@@ -114,30 +111,34 @@ export class SessionManager {
 
 	setWorkspaceDirectory(dir: string) {
 		this.workspaceDir = dir
-		this.sessionPersistenceManager.setWorkspaceDir(dir)
+		this.sessionPersistenceManager?.setWorkspaceDir(dir)
 	}
 
 	async restoreLastSession() {
 		try {
+			if (!this.sessionPersistenceManager) {
+				throw new Error("SessionManager used before initialization")
+			}
+
 			const lastSession = this.sessionPersistenceManager.getLastSession()
 
 			if (!lastSession?.sessionId) {
-				this.logger.debug("No persisted session ID found", "SessionManager")
+				this.logger?.debug("No persisted session ID found", "SessionManager")
 				return false
 			}
 
-			this.logger.info("Found persisted session ID, attempting to restore", "SessionManager", {
+			this.logger?.info("Found persisted session ID, attempting to restore", "SessionManager", {
 				sessionId: lastSession.sessionId,
 			})
 
 			await this.restoreSession(lastSession.sessionId, true)
 
-			this.logger.info("Successfully restored persisted session", "SessionManager", {
+			this.logger?.info("Successfully restored persisted session", "SessionManager", {
 				sessionId: lastSession.sessionId,
 			})
 			return true
 		} catch (error) {
-			this.logger.warn("Failed to restore persisted session", "SessionManager", {
+			this.logger?.warn("Failed to restore persisted session", "SessionManager", {
 				error: error instanceof Error ? error.message : String(error),
 			})
 
@@ -147,7 +148,16 @@ export class SessionManager {
 
 	async restoreSession(sessionId: string, rethrowError = false) {
 		try {
-			this.logger.info("Restoring session", "SessionManager", { sessionId })
+			this.logger?.info("Restoring session", "SessionManager", { sessionId })
+
+			if (
+				!this.pathProvider ||
+				!this.sessionClient ||
+				!this.extensionMessenger ||
+				!this.sessionPersistenceManager
+			) {
+				throw new Error("SessionManager used before initialization")
+			}
 
 			this.sessionId = sessionId
 			this.resetBlobHashes()
@@ -156,10 +166,10 @@ export class SessionManager {
 			const session = (await this.sessionClient.get({
 				session_id: sessionId,
 				include_blob_urls: true,
-			})) as SessionWithSignedUrls
+			})) as SessionWithSignedUrls | undefined
 
 			if (!session) {
-				this.logger.error("Failed to obtain session", "SessionManager", { sessionId })
+				this.logger?.error("Failed to obtain session", "SessionManager", { sessionId })
 				throw new Error("Failed to obtain session")
 			}
 
@@ -180,7 +190,7 @@ export class SessionManager {
 				.filter((blobUrlField) => {
 					const signedUrl = session[blobUrlField]
 					if (!signedUrl) {
-						this.logger.debug(`No signed URL for ${blobUrlField}`, "SessionManager")
+						this.logger?.debug(`No signed URL for ${blobUrlField}`, "SessionManager")
 						return false
 					}
 					return true
@@ -226,9 +236,9 @@ export class SessionManager {
 
 						writeFileSync(fullPath, JSON.stringify(fileContent, null, 2))
 
-						this.logger.debug(`Wrote blob to file`, "SessionManager", { fullPath })
+						this.logger?.debug(`Wrote blob to file`, "SessionManager", { fullPath })
 					} else {
-						this.logger.error(`Failed to process blob`, "SessionManager", {
+						this.logger?.error(`Failed to process blob`, "SessionManager", {
 							filename,
 							error: fetchResult.error,
 						})
@@ -251,7 +261,7 @@ export class SessionManager {
 				historyItem,
 			})
 
-			this.logger.info("Task registered with extension", "SessionManager", {
+			this.logger?.info("Task registered with extension", "SessionManager", {
 				sessionId,
 				taskId: historyItem.id,
 			})
@@ -261,15 +271,15 @@ export class SessionManager {
 				text: sessionId,
 			})
 
-			this.logger.info("Switched to restored task", "SessionManager", { sessionId })
+			this.logger?.info("Switched to restored task", "SessionManager", { sessionId })
 
 			this.sessionPersistenceManager.setLastSession(this.sessionId)
 
-			this.onSessionRestored()
+			this.onSessionRestored?.()
 
-			this.logger.debug("Marked task as resumed after session restoration", "SessionManager", { sessionId })
+			this.logger?.debug("Marked task as resumed after session restoration", "SessionManager", { sessionId })
 		} catch (error) {
-			this.logger.error("Failed to restore session", "SessionManager", {
+			this.logger?.error("Failed to restore session", "SessionManager", {
 				error: error instanceof Error ? error.message : String(error),
 				sessionId,
 			})
@@ -287,19 +297,27 @@ export class SessionManager {
 		}
 	}
 
-	async shareSession() {
-		const sessionId = this.sessionId
-		if (!sessionId) {
+	async shareSession(sessionId?: string) {
+		if (!this.sessionClient) {
+			throw new Error("SessionManager used before initialization")
+		}
+
+		const sessionIdToShare = sessionId || this.sessionId
+		if (!sessionIdToShare) {
 			throw new Error("No active session")
 		}
 
 		return await this.sessionClient.share({
-			session_id: sessionId,
+			session_id: sessionIdToShare,
 			shared_state: CliSessionSharedState.Public,
 		})
 	}
 
 	async renameSession(newTitle: string) {
+		if (!this.sessionClient) {
+			throw new Error("SessionManager used before initialization")
+		}
+
 		const sessionId = this.sessionId
 		if (!sessionId) {
 			throw new Error("No active session")
@@ -317,13 +335,17 @@ export class SessionManager {
 
 		this.sessionTitle = trimmedTitle
 
-		this.logger.info("Session renamed successfully", "SessionManager", {
+		this.logger?.info("Session renamed successfully", "SessionManager", {
 			sessionId,
 			newTitle: trimmedTitle,
 		})
 	}
 
 	async forkSession(shareOrSessionId: string, rethrowError = false) {
+		if (!this.platform || !this.sessionClient) {
+			throw new Error("SessionManager used before initialization")
+		}
+
 		const { session_id } = await this.sessionClient.fork({
 			share_or_session_id: shareOrSessionId,
 			created_on_platform: this.platform,
@@ -332,8 +354,56 @@ export class SessionManager {
 		await this.restoreSession(session_id, rethrowError)
 	}
 
+	async getSessionFromTask(taskId: string, provider: ITaskDataProvider): Promise<string> {
+		try {
+			if (!this.platform || !this.sessionClient || !this.sessionPersistenceManager) {
+				throw new Error("SessionManager used before initialization")
+			}
+
+			let sessionId = this.sessionPersistenceManager.getSessionForTask(taskId)
+
+			if (!sessionId) {
+				this.logger?.debug("No existing session for task, creating new session", "SessionManager", { taskId })
+
+				const { historyItem, apiConversationHistoryFilePath, uiMessagesFilePath } =
+					await provider.getTaskWithId(taskId)
+
+				const apiConversationHistory = JSON.parse(readFileSync(apiConversationHistoryFilePath, "utf8"))
+				const uiMessages = JSON.parse(readFileSync(uiMessagesFilePath, "utf8"))
+
+				const title = historyItem.task || this.getFirstMessageText(uiMessages, true) || ""
+
+				const session = await this.sessionClient.create({
+					title,
+					created_on_platform: process.env.KILO_PLATFORM || this.platform,
+				})
+
+				sessionId = session.session_id
+
+				this.logger?.info("Created new session for task", "SessionManager", { taskId, sessionId })
+
+				await this.sessionClient.uploadBlob(sessionId, "api_conversation_history", apiConversationHistory)
+				await this.sessionClient.uploadBlob(sessionId, "ui_messages", uiMessages)
+
+				this.logger?.debug("Uploaded conversation blobs to session", "SessionManager", { sessionId })
+
+				this.sessionPersistenceManager.setSessionForTask(taskId, sessionId)
+			} else {
+				this.logger?.debug("Found existing session for task", "SessionManager", { taskId, sessionId })
+			}
+
+			return sessionId
+		} catch (error) {
+			this.logger?.error("Failed to get or create session from task", "SessionManager", {
+				taskId,
+				error: error instanceof Error ? error.message : String(error),
+			})
+			throw error
+		}
+	}
+
 	async destroy() {
-		this.logger.debug("Destroying SessionManager", "SessionManager", {
+		this.logger?.debug("Destroying SessionManager", "SessionManager", {
 			sessionId: this.sessionId,
 			isSyncing: this.isSyncing,
 		})
@@ -356,7 +426,13 @@ export class SessionManager {
 		this.sessionTitle = null
 		this.isSyncing = false
 
-		this.logger.debug("SessionManager flushed", "SessionManager")
+		this.logger?.debug("SessionManager flushed", "SessionManager")
+
+		if (!this.timer) {
+			this.timer = setInterval(() => {
+				this.syncSession()
+			}, SessionManager.SYNC_INTERVAL)
+		}
 	}
 
 	private async syncSession(force = false) {
@@ -374,9 +450,17 @@ export class SessionManager {
 			}
 		}
 
+		if (process.env.KILO_DISABLE_SESSIONS) {
+			return
+		}
+
 		this.isSyncing = true
 
 		try {
+			if (!this.platform || !this.sessionClient || !this.sessionPersistenceManager) {
+				throw new Error("SessionManager used before initialization")
+			}
+
 			const rawPayload = this.readPaths()
 
 			if (Object.values(rawPayload).every((item) => !item)) {
@@ -385,7 +469,10 @@ export class SessionManager {
 				return
 			}
 
-			const basePayload: Omit<Parameters<typeof this.sessionClient.create>[0], "created_on_platform"> = {}
+			const basePayload: Omit<
+				Parameters<NonNullable<typeof this.sessionClient>["create"]>[0],
+				"created_on_platform"
+			> = {}
 
 			let gitInfo: Awaited<ReturnType<typeof this.getGitState>> | null = null
 
@@ -396,7 +483,7 @@ export class SessionManager {
 					basePayload.git_url = gitInfo.repoUrl
 				}
 			} catch (error) {
-				this.logger.debug("Could not get git state", "SessionManager", {
+				this.logger?.debug("Could not get git state", "SessionManager", {
 					error: error instanceof Error ? error.message : String(error),
 				})
 			}
@@ -413,7 +500,7 @@ export class SessionManager {
 				const gitUrlChanged = gitInfo?.repoUrl && gitInfo.repoUrl !== this.sessionGitUrl
 
 				if (gitUrlChanged) {
-					this.logger.debug("Updating existing session", "SessionManager", { sessionId: this.sessionId })
+					this.logger?.debug("Updating existing session", "SessionManager", { sessionId: this.sessionId })
 
 					await this.sessionClient.update({
 						session_id: this.sessionId,
@@ -422,10 +509,10 @@ export class SessionManager {
 
 					this.sessionGitUrl = gitInfo?.repoUrl || null
 
-					this.logger.debug("Session updated successfully", "SessionManager", { sessionId: this.sessionId })
+					this.logger?.debug("Session updated successfully", "SessionManager", { sessionId: this.sessionId })
 				}
 			} else {
-				this.logger.debug("Creating new session", "SessionManager")
+				this.logger?.debug("Creating new session", "SessionManager")
 
 				if (rawPayload.uiMessagesPath) {
 					const title = this.getFirstMessageText(rawPayload.uiMessagesPath as ClineMessage[], true)
@@ -443,11 +530,11 @@ export class SessionManager {
 				this.sessionId = session.session_id
 				this.sessionGitUrl = gitInfo?.repoUrl || null
 
-				this.logger.info("Session created successfully", "SessionManager", { sessionId: this.sessionId })
+				this.logger?.info("Session created successfully", "SessionManager", { sessionId: this.sessionId })
 
 				this.sessionPersistenceManager.setLastSession(this.sessionId)
 
-				this.onSessionCreated({
+				this.onSessionCreated?.({
 					timestamp: Date.now(),
 					event: "session_created",
 					sessionId: this.sessionId,
@@ -466,10 +553,10 @@ export class SessionManager {
 						.uploadBlob(this.sessionId, "api_conversation_history", rawPayload.apiConversationHistoryPath)
 						.then(() => {
 							this.markBlobSynced("apiConversationHistory")
-							this.logger.debug("Uploaded api_conversation_history blob", "SessionManager")
+							this.logger?.debug("Uploaded api_conversation_history blob", "SessionManager")
 						})
 						.catch((error) => {
-							this.logger.error("Failed to upload api_conversation_history blob", "SessionManager", {
+							this.logger?.error("Failed to upload api_conversation_history blob", "SessionManager", {
 								error: error instanceof Error ? error.message : String(error),
 							})
 						}),
@@ -482,10 +569,10 @@ export class SessionManager {
 						.uploadBlob(this.sessionId, "task_metadata", rawPayload.taskMetadataPath)
 						.then(() => {
 							this.markBlobSynced("taskMetadata")
-							this.logger.debug("Uploaded task_metadata blob", "SessionManager")
+							this.logger?.debug("Uploaded task_metadata blob", "SessionManager")
 						})
 						.catch((error) => {
-							this.logger.error("Failed to upload task_metadata blob", "SessionManager", {
+							this.logger?.error("Failed to upload task_metadata blob", "SessionManager", {
 								error: error instanceof Error ? error.message : String(error),
 							})
 						}),
@@ -498,10 +585,10 @@ export class SessionManager {
 						.uploadBlob(this.sessionId, "ui_messages", rawPayload.uiMessagesPath)
 						.then(() => {
 							this.markBlobSynced("uiMessages")
-							this.logger.debug("Uploaded ui_messages blob", "SessionManager")
+							this.logger?.debug("Uploaded ui_messages blob", "SessionManager")
 						})
 						.catch((error) => {
-							this.logger.error("Failed to upload ui_messages blob", "SessionManager", {
+							this.logger?.error("Failed to upload ui_messages blob", "SessionManager", {
 								error: error instanceof Error ? error.message : String(error),
 							})
 						}),
@@ -526,10 +613,10 @@ export class SessionManager {
 								.uploadBlob(this.sessionId, "git_state", gitStateData)
 								.then(() => {
 									this.markBlobSynced("gitState")
-									this.logger.debug("Uploaded git_state blob", "SessionManager")
+									this.logger?.debug("Uploaded git_state blob", "SessionManager")
 								})
 								.catch((error) => {
-									this.logger.error("Failed to upload git_state blob", "SessionManager", {
+									this.logger?.error("Failed to upload git_state blob", "SessionManager", {
 										error: error instanceof Error ? error.message : String(error),
 									})
 								}),
@@ -550,13 +637,13 @@ export class SessionManager {
 						return null
 					})
 					.catch((error) => {
-						this.logger.warn("Failed to generate session title", "SessionManager", {
+						this.logger?.warn("Failed to generate session title", "SessionManager", {
 							error: error instanceof Error ? error.message : String(error),
 						})
 					})
 			}
 		} catch (error) {
-			this.logger.error("Failed to sync session", "SessionManager", {
+			this.logger?.error("Failed to sync session", "SessionManager", {
 				error: error instanceof Error ? error.message : String(error),
 				sessionId: this.sessionId,
 				hasApiHistory: !!this.paths.apiConversationHistoryPath,
@@ -600,7 +687,7 @@ export class SessionManager {
 
 	private async fetchBlobFromSignedUrl(url: string, urlType: string) {
 		try {
-			this.logger.debug(`Fetching blob from signed URL`, "SessionManager", { url, urlType })
+			this.logger?.debug(`Fetching blob from signed URL`, "SessionManager", { url, urlType })
 
 			const response = await fetch(url)
 
@@ -610,11 +697,11 @@ export class SessionManager {
 
 			const data = await response.json()
 
-			this.logger.debug(`Successfully fetched blob`, "SessionManager", { url, urlType })
+			this.logger?.debug(`Successfully fetched blob`, "SessionManager", { url, urlType })
 
 			return data
 		} catch (error) {
-			this.logger.error(`Failed to fetch blob from signed URL`, "SessionManager", {
+			this.logger?.error(`Failed to fetch blob from signed URL`, "SessionManager", {
 				url,
 				urlType,
 				error: error instanceof Error ? error.message : String(error),
@@ -746,12 +833,12 @@ export class SessionManager {
 
 				if (stashCountAfter > stashCountBefore) {
 					shouldPop = true
-					this.logger.debug(`Stashed current work`, "SessionManager")
+					this.logger?.debug(`Stashed current work`, "SessionManager")
 				} else {
-					this.logger.debug(`No changes to stash`, "SessionManager")
+					this.logger?.debug(`No changes to stash`, "SessionManager")
 				}
 			} catch (error) {
-				this.logger.warn(`Failed to stash current work`, "SessionManager", {
+				this.logger?.warn(`Failed to stash current work`, "SessionManager", {
 					error: error instanceof Error ? error.message : String(error),
 				})
 			}
@@ -760,7 +847,7 @@ export class SessionManager {
 				const currentHead = await git.revparse(["HEAD"])
 
 				if (currentHead.trim() === gitState.head.trim()) {
-					this.logger.debug(`Already at target commit, skipping checkout`, "SessionManager", {
+					this.logger?.debug(`Already at target commit, skipping checkout`, "SessionManager", {
 						head: gitState.head.substring(0, 8),
 					})
 				} else {
@@ -771,14 +858,14 @@ export class SessionManager {
 							if (branchCommit.trim() === gitState.head.trim()) {
 								await git.checkout(gitState.branch)
 
-								this.logger.debug(`Checked out to branch`, "SessionManager", {
+								this.logger?.debug(`Checked out to branch`, "SessionManager", {
 									branch: gitState.branch,
 									head: gitState.head.substring(0, 8),
 								})
 							} else {
 								await git.checkout(gitState.head)
 
-								this.logger.debug(
+								this.logger?.debug(
 									`Branch moved, checked out to commit (detached HEAD)`,
 									"SessionManager",
 									{
@@ -790,7 +877,7 @@ export class SessionManager {
 						} catch {
 							await git.checkout(gitState.head)
 
-							this.logger.debug(
+							this.logger?.debug(
 								`Branch not found, checked out to commit (detached HEAD)`,
 								"SessionManager",
 								{
@@ -802,13 +889,13 @@ export class SessionManager {
 					} else {
 						await git.checkout(gitState.head)
 
-						this.logger.debug(`No branch info, checked out to commit (detached HEAD)`, "SessionManager", {
+						this.logger?.debug(`No branch info, checked out to commit (detached HEAD)`, "SessionManager", {
 							head: gitState.head.substring(0, 8),
 						})
 					}
 				}
 			} catch (error) {
-				this.logger.warn(`Failed to checkout`, "SessionManager", {
+				this.logger?.warn(`Failed to checkout`, "SessionManager", {
 					branch: gitState.branch,
 					head: gitState.head.substring(0, 8),
 					error: error instanceof Error ? error.message : String(error),
@@ -824,7 +911,7 @@ export class SessionManager {
 
 					await git.applyPatch(patchFile)
 
-					this.logger.debug(`Applied patch`, "SessionManager", {
+					this.logger?.debug(`Applied patch`, "SessionManager", {
 						patchSize: gitState.patch.length,
 					})
 				} finally {
@@ -835,7 +922,7 @@ export class SessionManager {
 					}
 				}
 			} catch (error) {
-				this.logger.warn(`Failed to apply patch`, "SessionManager", {
+				this.logger?.warn(`Failed to apply patch`, "SessionManager", {
 					error: error instanceof Error ? error.message : String(error),
 				})
 			}
@@ -844,19 +931,19 @@ export class SessionManager {
 				if (shouldPop) {
 					await git.stash(["pop"])
 
-					this.logger.debug(`Popped stash`, "SessionManager")
+					this.logger?.debug(`Popped stash`, "SessionManager")
 				}
 			} catch (error) {
-				this.logger.warn(`Failed to pop stash`, "SessionManager", {
+				this.logger?.warn(`Failed to pop stash`, "SessionManager", {
 					error: error instanceof Error ? error.message : String(error),
 				})
 			}
 
-			this.logger.info(`Git state restoration finished`, "SessionManager", {
+			this.logger?.info(`Git state restoration finished`, "SessionManager", {
 				head: gitState.head.substring(0, 8),
 			})
 		} catch (error) {
-			this.logger.error(`Failed to restore git state`, "SessionManager", {
+			this.logger?.error(`Failed to restore git state`, "SessionManager", {
 				error: error instanceof Error ? error.message : String(error),
 			})
 		}
@@ -899,12 +986,16 @@ export class SessionManager {
 		}
 
 		try {
-			const prompt = `Summarize the following user request in 140 characters or less. Be concise and capture the main intent. Do not use quotes or add any prefix like "Summary:" - just provide the summary text directly. Your result will be used as the conversation title.
+			const prompt = `Summarize the following user request in 140 characters or less. Be concise and capture the main intent. Do not use quotes or add any prefix like "Summary:" - just provide the summary text directly. Strip out any sensitive information. Your result will be used as the conversation title.
 
 User request:
 ${rawText}
 
 Summary:`
+
+			if (!this.extensionMessenger) {
+				throw new Error("SessionManager used before initialization")
+			}
 
 			const summary = await this.extensionMessenger.requestSingleCompletion(prompt, 30000)
 
@@ -918,7 +1009,7 @@ Summary:`
 
 			return cleanedSummary || rawText.substring(0, 137) + "..."
 		} catch (error) {
-			this.logger.warn("Failed to generate title using LLM, falling back to truncation", "SessionManager", {
+			this.logger?.warn("Failed to generate title using LLM, falling back to truncation", "SessionManager", {
 				error: error instanceof Error ? error.message : String(error),
 			})
 

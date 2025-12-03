@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 0.11.0
+
+### Minor Changes
+
+- [#4148](https://github.com/Kilo-Org/kilocode/pull/4148) [`44ebf95`](https://github.com/Kilo-Org/kilocode/commit/44ebf95e72d2abad86181cc957a8fa29d1b38740) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix potential credential seeding race
+
+### Patch Changes
+
+- [#4066](https://github.com/Kilo-Org/kilocode/pull/4066) [`1831796`](https://github.com/Kilo-Org/kilocode/commit/18317963fbb5b02a1178f4579d5cb643cfbd531c) Thanks [@iscekic](https://github.com/iscekic)! - use shared session manager from extension folder
+
+- [#4121](https://github.com/Kilo-Org/kilocode/pull/4121) [`7cd2035`](https://github.com/Kilo-Org/kilocode/commit/7cd2035a920a466d93001eb621cd21082d6cf9bd) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve "/model list" command with pagination, filters and sorting
+
+- [#4122](https://github.com/Kilo-Org/kilocode/pull/4122) [`fa54645`](https://github.com/Kilo-Org/kilocode/commit/fa546456b379d10044c045118b08f77b9034d5fc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Pulish version on Github Pages
+
 ## 0.10.2
 
 ### Patch Changes

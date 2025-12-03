@@ -177,6 +177,10 @@
 				"description": "Allow Kilo Code to create and edit protected files (like .kilocodeignore and .kilocode/ configuration files) without requiring approval."
 			}
 		},
+		"delete": {
+			"label": "Delete",
+			"description": "Automatically delete files and directories without requiring approval"
+		},
 		"browser": {
 			"label": "Browser",
 			"description": "Automatically perform browser actions without requiring approval. Note: Only applies when the model supports computer use"

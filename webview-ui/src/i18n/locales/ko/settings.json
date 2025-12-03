@@ -194,6 +194,10 @@
 			"label": "하위 작업",
 			"description": "승인 없이 하위 작업 생성 및 완료 허용"
 		},
+		"delete": {
+			"label": "삭제",
+			"description": "승인 없이 자동으로 파일 및 디렉토리 삭제"
+		},
 		"followupQuestions": {
 			"label": "질문",
 			"description": "설정된 시간이 지나면 후속 질문에 대한 첫 번째 제안 답변을 자동으로 선택합니다",

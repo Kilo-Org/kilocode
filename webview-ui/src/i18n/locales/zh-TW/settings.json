@@ -220,6 +220,10 @@
 			"label": "待辦",
 			"description": "自動更新待辦清單無需核准"
 		},
+		"delete": {
+			"label": "刪除",
+			"description": "自動刪除檔案和目錄無需核准"
+		},
 		"apiRequestLimit": {
 			"title": "最大請求數",
 			"description": "在請求核准以繼續執行工作之前，自動發出此數量的 API 請求。",

@@ -19,6 +19,8 @@ import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 
 interface ManagedIndexerConfig {
 	kilocodeToken: string | null
@@ -67,7 +69,13 @@ export class ManagedIndexer implements vscode.Disposable {
 
 	static getInstance(): ManagedIndexer {
 		if (!ManagedIndexer.prevInstance) {
-			throw new Error("[ManagedIndexer.getInstance()] no available instance")
+			// NOTE: (brianc) - This _should_ never happen. The ManagedIndexer is instantiated on extension startup
+			// and a reference stays around forever, however, we've seen weird hard to reproduce issue where on occassion
+			// it IS null here. To mitigate that, we'll just create a new instance if needed. This dummy instance will
+			// be disabled and not respond as 'start' will never be called on it, but it wont blow up the extension.
+			console.warn("[ManagedIndexer] Warning: Previous ManagedIndexer instance was null, creating new instance")
+			TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER)
+			ManagedIndexer.prevInstance = new ManagedIndexer()
 		}
 
 		return ManagedIndexer.prevInstance
@@ -76,7 +84,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	// Handle changes to vscode workspace folder changes
 	workspaceFoldersListener: vscode.Disposable | null = null
 	// kilocode_change: Listen to configuration changes from ContextProxy
-	configChangeListener: vscode.Disposable | null = null
+	configChangeListener: vscode.Disposable | undefined | null = null
 	config: ManagedIndexerConfig | null = null
 	organization: KiloOrganization | null = null
 	isActive = false
@@ -86,10 +94,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	 */
 	workspaceFolderState: ManagedIndexerWorkspaceFolderState[] = []
 
-	// Concurrency limiter for file upserts
-	private readonly fileUpsertLimit = pLimit(MANAGED_MAX_CONCURRENT_FILES)
-
-	constructor(public contextProxy: ContextProxy) {
+	constructor(public contextProxy?: ContextProxy | null) {
 		ManagedIndexer.prevInstance = this
 	}
 
@@ -112,9 +117,9 @@ export class ManagedIndexer implements vscode.Disposable {
 
 	async fetchConfig(): Promise<ManagedIndexerConfig> {
 		// kilocode_change: Read directly from ContextProxy instead of ClineProvider
-		const kilocodeToken = this.contextProxy.getSecret("kilocodeToken")
-		const kilocodeOrganizationId = this.contextProxy.getValue("kilocodeOrganizationId")
-		const kilocodeTesterWarningsDisabledUntil = this.contextProxy.getValue("kilocodeTesterWarningsDisabledUntil")
+		const kilocodeToken = this.contextProxy?.getSecret("kilocodeToken")
+		const kilocodeOrganizationId = this.contextProxy?.getValue("kilocodeOrganizationId")
+		const kilocodeTesterWarningsDisabledUntil = this.contextProxy?.getValue("kilocodeTesterWarningsDisabledUntil")
 
 		this.config = {
 			kilocodeToken: kilocodeToken ?? null,
@@ -207,7 +212,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	async start() {
 		console.log("[ManagedIndexer] Starting ManagedIndexer")
 
-		this.configChangeListener = this.contextProxy.onManagedIndexerConfigChange(
+		this.configChangeListener = this.contextProxy?.onManagedIndexerConfigChange(
 			this.onConfigurationChange.bind(this),
 		)
 

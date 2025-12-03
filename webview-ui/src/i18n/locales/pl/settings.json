@@ -173,6 +173,10 @@
 				"description": "Pozwól Kilo Code na tworzenie i edycję plików chronionych (takich jak .kilocodeignore i pliki konfiguracyjne .kilocode/) bez konieczności zatwierdzania."
 			}
 		},
+		"delete": {
+			"label": "Usuń",
+			"description": "Automatycznie usuwaj pliki i katalogi bez konieczności zatwierdzania"
+		},
 		"browser": {
 			"label": "Przeglądarka",
 			"description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"

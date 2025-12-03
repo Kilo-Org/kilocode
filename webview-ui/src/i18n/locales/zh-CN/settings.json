@@ -153,6 +153,10 @@
 		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
+		"delete": {
+			"label": "删除",
+			"description": "自动删除文件和目录，无需批准"
+		},
 		"readOnly": {
 			"label": "读取",
 			"description": "启用后，Kilo Code 将自动浏览目录和读取文件内容，无需人工确认。",
