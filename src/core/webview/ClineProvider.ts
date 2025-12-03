@@ -34,6 +34,7 @@ import {
 	type CreateTaskOptions,
 	type TokenUsage,
 	RooCodeEventName,
+	TelemetryEventName, // kilocode_change
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
 	glamaDefaultModelId,
@@ -773,6 +774,9 @@ export class ClineProvider
 
 		//kilocode_change start
 		if (command === "addToContextAndFocus") {
+			// Capture telemetry for inline assist quick task
+			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK)
+
 			let messageText = prompt
 
 			const editor = vscode.window.activeTextEditor

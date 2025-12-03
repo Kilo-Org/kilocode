@@ -1,5 +1,25 @@
 # kilo-code
 
+## 4.127.0
+
+### Minor Changes
+
+- [#4129](https://github.com/Kilo-Org/kilocode/pull/4129) [`a2d5b29`](https://github.com/Kilo-Org/kilocode/commit/a2d5b29ce79853e6a98cb30b86af1844b6023833) Thanks [@brianc](https://github.com/brianc)! - Managed Code Indexing UI internals updated. Removed optionality in the UI, included link to backend management UI, and improved architecture for better incremental status and error reporting.
+
+- [#4066](https://github.com/Kilo-Org/kilocode/pull/4066) [`1831796`](https://github.com/Kilo-Org/kilocode/commit/18317963fbb5b02a1178f4579d5cb643cfbd531c) Thanks [@iscekic](https://github.com/iscekic)! - use shared session manager from extension folder
+
+### Patch Changes
+
+- [#4128](https://github.com/Kilo-Org/kilocode/pull/4128) [`29fbec0`](https://github.com/Kilo-Org/kilocode/commit/29fbec0b6a9feb4bc79ba819a164b45ccec236bb) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: show diff buttons after task completion
+
+- [#4120](https://github.com/Kilo-Org/kilocode/pull/4120) [`ebe1667`](https://github.com/Kilo-Org/kilocode/commit/ebe1667e8160a809a82f561627ce5494fa8808d3) Thanks [@iscekic](https://github.com/iscekic)! - increase session sync interval to 3s
+
+- [#4071](https://github.com/Kilo-Org/kilocode/pull/4071) [`d5e89a1`](https://github.com/Kilo-Org/kilocode/commit/d5e89a141e8736902c6dcb2e8ab253cc8590abe7) Thanks [@inj-src](https://github.com/inj-src)! - Added support for Gemini 3 Pro Preview to Gemini CLI provider and removed deprecated models
+
+- [#4137](https://github.com/Kilo-Org/kilocode/pull/4137) [`119e31b`](https://github.com/Kilo-Org/kilocode/commit/119e31b610f24621ae91731ce1596b6cded0ec24) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Slightly improved reliability of Opus with Claude Code
+
+- [#4149](https://github.com/Kilo-Org/kilocode/pull/4149) [`04497da`](https://github.com/Kilo-Org/kilocode/commit/04497dabeafffd7b1f1f8ab94e66198884c1390c) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix for double id's stored in profiles when activating a new profile and then adding a new one
+
 ## 4.126.1
 
 ### Patch Changes

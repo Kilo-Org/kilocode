@@ -21,10 +21,18 @@ export type TelemetrySetting = z.infer<typeof telemetrySettingsSchema>
 export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
+
 	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
 	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
-	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
-	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
+
+	AUTOCOMPLETE_SUGGESTION_REQUESTED = "Autocomplete Suggestion Requested",
+	AUTOCOMPLETE_LLM_REQUEST_COMPLETED = "Autocomplete LLM Request Completed",
+	AUTOCOMPLETE_LLM_REQUEST_FAILED = "Autocomplete LLM Request Failed",
+	AUTOCOMPLETE_LLM_SUGGESTION_RETURNED = "Autocomplete LLM Suggestion Returned",
+	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
+	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
+	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
@@ -201,8 +209,13 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_FAILED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
