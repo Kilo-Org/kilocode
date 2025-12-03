@@ -258,10 +258,13 @@ export interface WebviewMessage {
 		| "requestManagedIndexerState" // kilocode_change
 		| "addTaskToHistory" // kilocode_change
 		| "singleCompletion" // kilocode_change
+		| "startDeviceAuth" // kilocode_change: Start device auth flow
+		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
+		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 	text?: string
 	completionRequestId?: string // kilocode_change
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" // kilocode_change
 	disabled?: boolean
 	context?: string
 	dataUri?: string

@@ -179,7 +179,11 @@ export interface ExtensionMessage {
 		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
 		| "managedIndexerState" // kilocode_change
 		| "singleCompletionResult" // kilocode_change
-		| "managedIndexerState" // kilocode_change
+		| "deviceAuthStarted" // kilocode_change: Device auth initiated
+		| "deviceAuthPolling" // kilocode_change: Device auth polling update
+		| "deviceAuthComplete" // kilocode_change: Device auth successful
+		| "deviceAuthFailed" // kilocode_change: Device auth failed
+		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -327,6 +331,15 @@ export interface ExtensionMessage {
 			}
 		}
 	}> // kilocode_change end: Managed Indexer
+	// kilocode_change start: Device auth data
+	deviceAuthCode?: string
+	deviceAuthVerificationUrl?: string
+	deviceAuthExpiresIn?: number
+	deviceAuthTimeRemaining?: number
+	deviceAuthToken?: string
+	deviceAuthUserEmail?: string
+	deviceAuthError?: string
+	// kilocode_change end: Device auth data
 }
 
 export type ExtensionState = Pick<
