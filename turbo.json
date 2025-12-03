@@ -39,10 +39,10 @@
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
 		},
 		"cli:build": {
-			"dependsOn": ["@involvex/kilocode-cli#build"]
+			"dependsOn": ["@kilocode/cli#build"]
 		},
 		"cli:bundle": {
-			"dependsOn": ["@involvex/kilocode-cli#build"]
+			"dependsOn": ["@kilocode/cli#build"]
 		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],

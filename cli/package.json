@@ -1,5 +1,5 @@
 {
-	"name": "@involvex/kilocode-cli",
+	"name": "@kilocode/cli",
 	"version": "0.10.7",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",

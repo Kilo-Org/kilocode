@@ -43,7 +43,7 @@ export const aboutCommand: Command = {
 		addMessage({
 			id: Date.now().toString(),
 			type: "system",
-			content: `This is Kilocode CLI by Involvex\nhttps://github.com/involvex/kilocode\nVersion: ${Package.version}`,
+			content: `This is Kilocode CLI forked by Involvex\nhttps://github.com/involvex/kilocode\nVersion: ${Package.version}`,
 			ts: Date.now(),
 		})
 	},
