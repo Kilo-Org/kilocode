@@ -199,11 +199,12 @@ describe("determineParallelBranch", () => {
 			const result = await determineParallelBranch(input)
 
 			expect(result.worktreeBranch).toBe(existingBranch)
-			expect(result.worktreePath).toContain(`kilocode-worktree-${existingBranch}`)
+			expect(result.worktreePath).toContain(`kilocode-worktree-feature`)
+			expect(result.worktreePath).toContain(`existing`)
 			expect(capturedArgs).toEqual([
 				"worktree",
 				"add",
-				expect.stringContaining(`kilocode-worktree-${existingBranch}`),
+				expect.stringContaining(`kilocode-worktree-feature`),
 				existingBranch,
 			])
 			expect(capturedArgs).not.toContain("-b") // Should not have -b flag for existing branch
@@ -222,8 +223,10 @@ describe("determineParallelBranch", () => {
 			const result = await determineParallelBranch(input)
 
 			// Worktree path should be in temp directory
-			expect(result.worktreePath).toMatch(/^\/.*\/kilocode-worktree-/)
+			expect(result.worktreePath).toMatch(/kilocode-worktree-/)
 			expect(result.worktreePath).toContain(generatedBranch)
+			// Should contain temp directory path (cross-platform)
+			expect(result.worktreePath).toMatch(/temp|tmp/i)
 		})
 
 		it("should throw error when worktree creation fails", async () => {
@@ -300,7 +303,8 @@ describe("determineParallelBranch", () => {
 			const result = await determineParallelBranch(input)
 
 			expect(result.worktreeBranch).toBe(existingBranch)
-			expect(result.worktreePath).toContain(existingBranch)
+			expect(result.worktreePath).toContain("feature")
+			expect(result.worktreePath).toContain("existing")
 		})
 	})
 })

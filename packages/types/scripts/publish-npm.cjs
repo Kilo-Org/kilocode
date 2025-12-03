@@ -260,7 +260,7 @@ async function publish() {
 		console.log("  This may take a moment...")
 
 		try {
-			execSync("NODE_ENV=production pnpm tsup --outDir npm/dist", {
+			execSync("pnpm tsup --outDir npm/dist", {
 				cwd: rootDir,
 				stdio: "inherit",
 			})

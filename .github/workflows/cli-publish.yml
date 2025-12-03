@@ -39,7 +39,7 @@ jobs:
               working-directory: cli
               run: |
                   version=$(node -p "require('./package.json').version")
-                  published_version=$(npm view @kilocode/cli version 2>/dev/null || echo "0.0.0")
+                  published_version=$(npm view @involvex/kilocode-cli version 2>/dev/null || echo "0.0.0")
                   if npx semver "$version" -r "> $published_version"; then
                     echo "publish=true" >> $GITHUB_OUTPUT
                   else
@@ -82,7 +82,7 @@ jobs:
               run: pnpm run cli:bundle
             - name: Run integration tests
               shell: bash
-              run: pnpm --filter @kilocode/cli test:integration
+              run: pnpm --filter @involvex/kilocode-cli test:integration
               env:
                   CI: true
                   KILOCODE_TOKEN: ${{ secrets.KILOCODE_INTEGRATION_TOKEN }}

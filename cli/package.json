@@ -1,6 +1,6 @@
 {
-	"name": "@kilocode/cli",
-	"version": "0.10.7",
+	"name": "@involvex/kilocode-cli",
+	"version": "0.10.8",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "dist/index.js",
@@ -29,6 +29,7 @@
 		"clean:kilocode": "npx del-cli ./dist/kilocode --force && npx mkdirp ./dist/kilocode",
 		"copy:kilocode": "node scripts/copy-extension.mjs",
 		"lint": "eslint .",
+		"npm:publish": "pnpm version patch && pnpm build && npm publish --access public",
 		"changeset:version": "jq --arg version \"$(jq -r '.version' package.json)\" '.version = $version' package.dist.json > tmp.json && mv tmp.json package.dist.json && prettier --write package.dist.json"
 	},
 	"dependencies": {
@@ -41,6 +42,7 @@
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
 		"@modelcontextprotocol/sdk": "^1.20.1",
+		"@roo-code/types": "workspace:*",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@vscode/codicons": "^0.0.36",
 		"@vscode/ripgrep": "^1.15.11",

@@ -1454,7 +1454,10 @@ export class WorkspaceAPI {
 
 				// Update the in-memory document object to reflect the new content
 				// This is critical for CLI mode where DiffViewProvider reads from the document object
-				const document = this.textDocuments.find((doc: TextDocument) => doc.uri.fsPath === filePath)
+				const normalizedFilePath = path.normalize(filePath)
+				const document = this.textDocuments.find(
+					(doc: TextDocument) => path.normalize(doc.uri.fsPath) === normalizedFilePath,
+				)
 				if (document) {
 					const newLines = newContent.split("\n")
 

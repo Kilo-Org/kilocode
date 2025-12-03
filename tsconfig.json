@@ -4,5 +4,5 @@
 		"types": ["node"]
 	},
 	"exclude": ["node_modules"],
-	"include": ["scripts/*.ts"]
+	"include": ["src", "cli", "apps", "packages", "jetbrains"]
 }

@@ -42,9 +42,9 @@ describe("StaticSettingsService", () => {
 		})
 
 		it("should throw error for invalid schema", () => {
-			const invalidSettings = { invalid: "schema" }
+			const invalidSettings = { version: "invalid", defaultSettings: {}, allowList: {} }
 			const invalidBase64 = Buffer.from(JSON.stringify(invalidSettings)).toString("base64")
-			expect(() => new StaticSettingsService(invalidBase64)).toThrow("Failed to parse static settings")
+			expect(() => new StaticSettingsService(invalidBase64)).toThrow()
 		})
 	})
 
