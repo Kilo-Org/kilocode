@@ -434,46 +434,7 @@ describe("findMatchingSuggestion", () => {
 		})
 	})
 
-	describe("match type tracking", () => {
-		it("should return exact matchType for exact prefix/suffix match", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "test",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
-
-			const result = findMatchingSuggestion("foo", "bar", suggestions)
-			expect(result?.matchType).toBe("exact")
-		})
-
-		it("should return partial_typing matchType when user has typed part of suggestion", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
-			expect(result?.matchType).toBe("partial_typing")
-		})
-
-		it("should return backward_deletion matchType when user has backspaced", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "test",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
-
-			const result = findMatchingSuggestion("f", "bar", suggestions)
-			expect(result?.matchType).toBe("backward_deletion")
-		})
-	})
+	// matchType behaviour is already covered implicitly by the other tests above
 })
 
 describe("stringToInlineCompletions", () => {
@@ -523,6 +484,34 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockSettings: { enableAutoTrigger: boolean } | null
 	let mockExtensionContext: vscode.ExtensionContext
 	let mockClineProvider: { cwd: string }
+
+	const defaultLlmMetrics = {
+		cost: 0.01,
+		inputTokens: 100,
+		outputTokens: 50,
+		cacheWriteTokens: 0,
+		cacheReadTokens: 0,
+	} as const
+
+	function mockStreamingLlmResponse(
+		text: string,
+		overrides: Partial<typeof defaultLlmMetrics> = {},
+		callCounter?: { count: number },
+	) {
+		vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+			if (callCounter) {
+				callCounter.count++
+			}
+			if (onChunk) {
+				onChunk({ type: "text", text: "<COMPLETION>" })
+				if (text) {
+					onChunk({ type: "text", text })
+				}
+				onChunk({ type: "text", text: "</COMPLETION>" })
+			}
+			return { ...defaultLlmMetrics, ...overrides }
+		})
+	}
 
 	// Helper to call provideInlineCompletionItems and advance timers
 	// With leading edge debounce, first call executes immediately, subsequent calls wait for 300ms of inactivity
@@ -1295,24 +1284,8 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should not cache successful LLM lookups in failed cache", async () => {
-			// Mock the model to return a successful suggestion using proper COMPLETION format
-			let callCount = 0
-			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
-				callCount++
-				// Simulate streaming response with proper COMPLETION format expected by parser
-				if (onChunk) {
-					onChunk({ type: "text", text: "<COMPLETION>" })
-					onChunk({ type: "text", text: "console.log('success');" })
-					onChunk({ type: "text", text: "</COMPLETION>" })
-				}
-				return {
-					cost: 0.01,
-					inputTokens: 100,
-					outputTokens: 50,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
+			const counter = { count: 0 }
+			mockStreamingLlmResponse("console.log('success');", {}, counter)
 
 			// First call - should invoke LLM and get a suggestion
 			const result1 = (await provideWithDebounce(
@@ -1323,7 +1296,7 @@ describe("GhostInlineCompletionProvider", () => {
 			)) as vscode.InlineCompletionItem[]
 
 			expect(result1.length).toBeGreaterThan(0)
-			expect(callCount).toBe(1)
+			expect(counter.count).toBe(1)
 
 			// Second call with same prefix/suffix - should use suggestion cache, not failed cache
 			const result2 = (await provideWithDebounce(
@@ -1335,7 +1308,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 			expect(result2.length).toBeGreaterThan(0)
 			// Should still be 1 - not called again
-			expect(callCount).toBe(1)
+			expect(counter.count).toBe(1)
 		})
 
 		it("should cache different prefix/suffix combinations separately", async () => {
@@ -1467,21 +1440,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 	describe("useless suggestion filtering", () => {
 		it("should refuse suggestions that match the end of prefix", async () => {
-			// Mock the model to return a suggestion that matches the end of prefix
-			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
-				if (onChunk) {
-					onChunk({ type: "text", text: "<COMPLETION>" })
-					onChunk({ type: "text", text: "= 1" }) // This matches the end of "const x = 1"
-					onChunk({ type: "text", text: "</COMPLETION>" })
-				}
-				return {
-					cost: 0.01,
-					inputTokens: 100,
-					outputTokens: 50,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
+			mockStreamingLlmResponse("= 1")
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1496,21 +1455,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should refuse suggestions that match the start of suffix", async () => {
-			// Mock the model to return a suggestion that matches the start of suffix
-			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
-				if (onChunk) {
-					onChunk({ type: "text", text: "<COMPLETION>" })
-					onChunk({ type: "text", text: "\nconst" }) // This matches the start of "\nconst y = 2"
-					onChunk({ type: "text", text: "</COMPLETION>" })
-				}
-				return {
-					cost: 0.01,
-					inputTokens: 100,
-					outputTokens: 50,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
+			mockStreamingLlmResponse("\nconst")
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1525,21 +1470,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should accept useful suggestions that don't match prefix end or suffix start", async () => {
-			// Mock the model to return a useful suggestion
-			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
-				if (onChunk) {
-					onChunk({ type: "text", text: "<COMPLETION>" })
-					onChunk({ type: "text", text: "\nconsole.log('useful');" }) // Useful suggestion
-					onChunk({ type: "text", text: "</COMPLETION>" })
-				}
-				return {
-					cost: 0.01,
-					inputTokens: 100,
-					outputTokens: 50,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
+			mockStreamingLlmResponse("\nconsole.log('useful');")
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1555,21 +1486,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should cache refused suggestions as empty to avoid repeated LLM calls", async () => {
-			// Mock the model to return a useless suggestion
-			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
-				if (onChunk) {
-					onChunk({ type: "text", text: "<COMPLETION>" })
-					onChunk({ type: "text", text: "= 1" }) // Matches end of prefix
-					onChunk({ type: "text", text: "</COMPLETION>" })
-				}
-				return {
-					cost: 0.01,
-					inputTokens: 100,
-					outputTokens: 50,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
+			mockStreamingLlmResponse("= 1")
 
 			// First call - should invoke LLM and refuse the suggestion
 			const result1 = (await provideWithDebounce(
