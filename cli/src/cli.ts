@@ -13,7 +13,13 @@ import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
-import { taskResumedViaContinueOrSessionAtom } from "./state/atoms/extension.js"
+import {
+	taskResumedViaContinueOrSessionAtom,
+	apiConfigurationAtom,
+	extensionModeAtom,
+	apiConfigurationLastLocalUpdateAtom,
+	extensionModeLastLocalUpdateAtom,
+} from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -403,6 +409,21 @@ export class CLI {
 				telemetry: mappedState.telemetrySetting,
 				provider: mappedState.currentApiConfigName,
 			})
+
+			// Set the UI atoms directly with protection to prevent stale extension state from overwriting
+			const now = Date.now()
+			if (mappedState.apiConfiguration) {
+				this.store.set(apiConfigurationAtom, mappedState.apiConfiguration)
+				this.store.set(apiConfigurationLastLocalUpdateAtom, now)
+				logs.debug("Set apiConfigurationAtom directly during injection", "CLI", {
+					apiProvider: mappedState.apiConfiguration.apiProvider,
+					protectionTimestamp: now,
+				})
+			}
+			if (mappedState.mode) {
+				this.store.set(extensionModeAtom, mappedState.mode)
+				this.store.set(extensionModeLastLocalUpdateAtom, now)
+			}
 
 			// Get the extension host from the service
 			const extensionHost = this.service.getExtensionHost()

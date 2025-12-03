@@ -60,9 +60,26 @@ export const routerModelsAtom = atom<RouterModels | null>(null)
 export const apiConfigurationAtom = atom<ProviderSettings | null>(null)
 
 /**
+ * Atom to track when apiConfiguration was last set locally
+ * Used to prevent stale extension state updates from overwriting recent local changes
+ */
+export const apiConfigurationLastLocalUpdateAtom = atom<number>(0)
+
+/**
+ * Protection window in milliseconds - ignore extension state updates for apiConfiguration
+ * if we recently set it locally (within this window)
+ */
+const API_CONFIG_PROTECTION_WINDOW_MS = 60000
+
+/**
  * Atom to hold the current mode
  */
 export const extensionModeAtom = atom<string>("code")
+
+/**
+ * Atom to track when mode was last set locally
+ */
+export const extensionModeLastLocalUpdateAtom = atom<number>(0)
 
 /**
  * Atom to hold custom modes
@@ -248,8 +265,32 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		set(taskTodosAtom, state.currentTaskTodos || [])
 		// Preserve existing routerModels if not provided in new state
 		set(routerModelsAtom, state.routerModels || currentRouterModels)
-		set(apiConfigurationAtom, state.apiConfiguration || null)
-		set(extensionModeAtom, state.mode || "code")
+
+		// Protect apiConfiguration from stale extension state updates
+		// If we recently set it locally (within protection window), keep the local value
+		const apiConfigLastUpdate = get(apiConfigurationLastLocalUpdateAtom)
+		const now = Date.now()
+		const isApiConfigProtected =
+			apiConfigLastUpdate > 0 && now - apiConfigLastUpdate < API_CONFIG_PROTECTION_WINDOW_MS
+		if (isApiConfigProtected) {
+			// Keep existing local value, don't overwrite with potentially stale extension state
+			// The extension will eventually sync and send the correct value
+		} else {
+			// No recent local update, use extension state or preserve current
+			const currentApiConfig = get(apiConfigurationAtom)
+			set(apiConfigurationAtom, state.apiConfiguration || currentApiConfig)
+		}
+
+		// Protect mode from stale extension state updates
+		const modeLastUpdate = get(extensionModeLastLocalUpdateAtom)
+		const isModeProtected = modeLastUpdate > 0 && now - modeLastUpdate < API_CONFIG_PROTECTION_WINDOW_MS
+		if (isModeProtected) {
+			// Keep existing local value
+		} else {
+			const currentMode = get(extensionModeAtom)
+			set(extensionModeAtom, state.mode || currentMode || "code")
+		}
+
 		set(customModesAtom, state.customModes || [])
 		set(mcpServersAtom, state.mcpServers || [])
 		set(cwdAtom, state.cwd || null)
