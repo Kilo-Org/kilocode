@@ -21,6 +21,10 @@ import { tasksCommand } from "./tasks.js"
 import { themeCommand } from "./theme.js"
 import { checkpointCommand } from "./checkpoint.js"
 import { sessionCommand } from "./session.js"
+import { aboutCommand } from "./about.js"
+import { cdCommand } from "./cd.js"
+import { chatCommand } from "./chat.js"
+import { clearContextCommand } from "./clearcontext.js"
 
 /**
  * Initialize all commands
@@ -41,4 +45,10 @@ export function initializeCommands(): void {
 	commandRegistry.register(themeCommand)
 	commandRegistry.register(checkpointCommand)
 	commandRegistry.register(sessionCommand)
+	commandRegistry.register(aboutCommand)
+	commandRegistry.register(cdCommand)
+	commandRegistry.register(aboutCommand)
+	commandRegistry.register(cdCommand)
+	commandRegistry.register(chatCommand)
+	commandRegistry.register(clearContextCommand)
 }

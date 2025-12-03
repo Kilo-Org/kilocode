@@ -29,7 +29,7 @@ export class StaticSettingsService implements SettingsService {
 				error,
 			)
 
-			throw new Error("Failed to parse static settings", { cause: error })
+			throw new Error("Failed to parse static settings")
 		}
 	}
 

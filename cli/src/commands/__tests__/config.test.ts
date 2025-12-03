@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { configCommand } from "../config.js"
 import type { CommandContext } from "../core/types.js"
-import openConfigFile from "../../config/openConfig.js"
+import { startInteractiveConfigEditor } from "../../config/interactiveEditor.js"
 import { createMockContext } from "./helpers/mockContext.js"
 
-// Mock the openConfigFile function
-vi.mock("../../config/openConfig.js", () => ({
-	default: vi.fn(),
+// Mock the interactive config editor
+vi.mock("../../config/interactiveEditor.js", () => ({
+	startInteractiveConfigEditor: vi.fn(),
 }))
 
 describe("configCommand", () => {
@@ -31,17 +31,17 @@ describe("configCommand", () => {
 		expect(configCommand.priority).toBe(8)
 	})
 
-	it("should open config file successfully", async () => {
-		vi.mocked(openConfigFile).mockResolvedValue(undefined)
+	it("should start interactive config editor successfully", async () => {
+		vi.mocked(startInteractiveConfigEditor).mockResolvedValue(undefined)
 
 		await configCommand.handler(mockContext)
 
 		expect(addMessageSpy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				type: "system",
-				content: "Opening configuration file...",
+				content: "Starting interactive configuration editor...",
 			}),
 		)
-		expect(openConfigFile).toHaveBeenCalled()
+		expect(startInteractiveConfigEditor).toHaveBeenCalledWith(mockContext)
 	})
 })

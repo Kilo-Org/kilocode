@@ -93,7 +93,7 @@ jobs:
                     echo "Release v${current_package_version} already exists, skipping release creation"
                     exit 0
                   fi
-                  
+
                   echo "Extracting changelog for version ${current_package_version}"
                   # Match version headers: ## [vX.X.X], ## [X.X.X], ## X.X.X (brackets and v are optional)
                   changelog_content=$(sed -E -n "/^## \\[?v?${current_package_version}\\]?/,/^## /p" CHANGELOG.md | sed '$d')
@@ -103,7 +103,7 @@ jobs:
                     echo "Please add a changelog entry in CHANGELOG.md for version ${current_package_version}"
                     exit 1
                   fi
-                  
+
                   echo "Found changelog section for version ${current_package_version}"
 
                   # Create release with changelog content

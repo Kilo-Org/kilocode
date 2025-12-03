@@ -23,7 +23,7 @@ async function commentPlaywrightResults(github, context) {
 					const fullPath = path.join(dir, item.name)
 					if (item.isDirectory()) {
 						// Skip vscode-logs directories which contain VSCode internal files
-						if (item.name === 'vscode-logs') {
+						if (item.name === "vscode-logs") {
 							continue
 						}
 						scanDirectory(fullPath)

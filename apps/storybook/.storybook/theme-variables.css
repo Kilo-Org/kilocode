@@ -133,7 +133,6 @@ classes at build time based on the @theme */
 --radius-md: calc(var(--radius) - 2px);
 --radius-sm: calc(var(--radius) - 4px);
 
-
 /* Tailwind color delegations for semantic colors */
 --color-background: var(--background);
 --color-foreground: var(--foreground);
