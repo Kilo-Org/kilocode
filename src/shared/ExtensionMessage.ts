@@ -189,6 +189,7 @@ export interface ExtensionMessage {
 		| "deviceAuthComplete" // kilocode_change: Device auth successful
 		| "deviceAuthFailed" // kilocode_change: Device auth failed
 		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request

@@ -273,6 +273,7 @@ export interface WebviewMessage {
 		| "startDeviceAuth" // kilocode_change: Start device auth flow
 		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
+		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 	text?: string
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork

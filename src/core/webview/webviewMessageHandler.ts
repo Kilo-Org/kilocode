@@ -3698,7 +3698,19 @@ export const webviewMessageHandler = async (
 				await provider.postMessageToWebview({ type: "keybindingsResponse", keybindings: {} })
 			}
 			break
+		} // kilocode_change start: Chat text area FIM autocomplete
+		case "requestChatCompletion": {
+			const { handleChatCompletionRequest } = await import(
+				"../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
+			)
+			await handleChatCompletionRequest(
+				message as WebviewMessage & { type: "requestChatCompletion" },
+				provider,
+				getCurrentCwd,
+			)
+			break
 		}
+		// kilocode_change end: Chat text area FIM autocomplete
 		case "openCommandFile": {
 			try {
 				if (message.text) {
