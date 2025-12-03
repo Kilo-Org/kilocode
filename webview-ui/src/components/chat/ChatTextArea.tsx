@@ -75,6 +75,35 @@ interface ChatTextAreaProps {
 	sendMessageOnEnter?: boolean // kilocode_change
 }
 
+// kilocode_change start
+function handleSessionCommand(trimmedInput: string, setInputValue: (value: string) => void) {
+	if (trimmedInput.startsWith("/session share")) {
+		vscode.postMessage({
+			type: "sessionShare",
+		})
+
+		setInputValue("")
+
+		return true
+	} else if (trimmedInput.startsWith("/session fork ")) {
+		const shareId = trimmedInput.substring("/session fork ".length).trim()
+
+		vscode.postMessage({
+			type: "sessionFork",
+			shareId: shareId,
+		})
+
+		if (shareId) {
+			setInputValue("")
+		}
+
+		return true
+	}
+
+	return false
+}
+// kilocode_change end
+
 export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 	(
 		{
@@ -609,6 +638,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				if (shouldSendMessage) {
 					event.preventDefault()
+
+					const trimmedInput = inputValue.trim()
+
+					const preventFlow = handleSessionCommand(trimmedInput, setInputValue)
+
+					if (preventFlow) {
+						return
+					}
 
 					resetHistoryNavigation()
 					onSend()

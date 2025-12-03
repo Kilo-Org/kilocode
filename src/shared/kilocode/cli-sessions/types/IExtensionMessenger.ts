@@ -8,7 +8,7 @@ export type { HistoryItem, WebviewMessage }
  */
 export interface IExtensionMessenger {
 	/**
-	 * Send a message to the webview/UI.
+	 * Send a message to the extension
 	 * @param message The message to send
 	 */
 	sendWebviewMessage(message: WebviewMessage): Promise<void>

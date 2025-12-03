@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.128.0
+
+### Minor Changes
+
+- [#4165](https://github.com/Kilo-Org/kilocode/pull/4165) [`6e9ff79`](https://github.com/Kilo-Org/kilocode/commit/6e9ff7910ba1b51b1e460ce3c7d63e66d803cb70) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Add separate "Delete" auto-approve option
+
 ## 4.127.0
 
 ### Minor Changes
