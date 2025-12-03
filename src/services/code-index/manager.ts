@@ -367,25 +367,6 @@ export class CodeIndexManager {
 			rooIgnoreController,
 		)
 
-		// kilocode_change start: Handle Kilo org mode (no embedder/vector store validation needed)
-		const isKiloOrgMode = this._configManager!.isKiloOrgMode
-
-		if (!isKiloOrgMode) {
-			// Only validate the embedder if it matches the currently configured provider
-			const config = this._configManager!.getConfig()
-			const shouldValidate = embedder && embedder.embedderInfo.name === config.embedderProvider
-
-			if (shouldValidate) {
-				const validationResult = await this._serviceFactory.validateEmbedder(embedder)
-				if (!validationResult.valid) {
-					const errorMessage = validationResult.error || "Embedder configuration validation failed"
-					this._stateManager.setSystemState("Error", errorMessage)
-					throw new Error(errorMessage)
-				}
-			}
-		}
-		// kilocode_change end
-
 		// (Re)Initialize orchestrator
 		this._orchestrator = new CodeIndexOrchestrator(
 			this._configManager!,
