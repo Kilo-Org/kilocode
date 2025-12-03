@@ -1,5 +1,5 @@
 import EventEmitter from "events"
-import { getApiUrl } from "@roo-code/types"
+import { getApiUrl, DeviceAuthInitiateResponseSchema, DeviceAuthPollResponseSchema } from "@roo-code/types"
 import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "@roo-code/types"
 
 const POLL_INTERVAL_MS = 3000
@@ -45,14 +45,28 @@ export class DeviceAuthService extends EventEmitter<DeviceAuthServiceEvents> {
 				throw new Error(`Failed to initiate device authorization: ${response.status}`)
 			}
 
-			const data = (await response.json()) as DeviceAuthInitiateResponse
+			const data = await response.json()
 
-			this.code = data.code
-			this.expiresIn = data.expiresIn
+			// Validate the response against the schema
+			const validationResult = DeviceAuthInitiateResponseSchema.safeParse(data)
+
+			if (!validationResult.success) {
+				console.error("[DeviceAuthService] Invalid initiate response format", {
+					errors: validationResult.error.errors,
+				})
+				// Continue with unvalidated data for graceful degradation
+			}
+
+			const validatedData = validationResult.success
+				? validationResult.data
+				: (data as DeviceAuthInitiateResponse)
+
+			this.code = validatedData.code
+			this.expiresIn = validatedData.expiresIn
 			this.startTime = Date.now()
 			this.aborted = false
 
-			this.emit("started", data)
+			this.emit("started", validatedData)
 
 			// Start polling
 			this.startPolling()
@@ -110,13 +124,25 @@ export class DeviceAuthService extends EventEmitter<DeviceAuthServiceEvents> {
 				throw new Error(`Failed to poll device authorization: ${response.status}`)
 			}
 
-			const data = (await response.json()) as DeviceAuthPollResponse
+			const data = await response.json()
 
-			if (data.status === "approved" && data.token && data.userEmail) {
-				this.emit("success", data.token, data.userEmail)
-			} else if (data.status === "denied") {
+			// Validate the response against the schema
+			const validationResult = DeviceAuthPollResponseSchema.safeParse(data)
+
+			if (!validationResult.success) {
+				console.error("[DeviceAuthService] Invalid poll response format", {
+					errors: validationResult.error.errors,
+				})
+				// Continue with unvalidated data for graceful degradation
+			}
+
+			const validatedData = validationResult.success ? validationResult.data : (data as DeviceAuthPollResponse)
+
+			if (validatedData.status === "approved" && validatedData.token && validatedData.userEmail) {
+				this.emit("success", validatedData.token, validatedData.userEmail)
+			} else if (validatedData.status === "denied") {
 				this.emit("denied")
-			} else if (data.status === "expired") {
+			} else if (validatedData.status === "expired") {
 				this.emit("expired")
 			}
 		} catch (error) {

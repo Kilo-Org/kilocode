@@ -1,28 +1,34 @@
+import { z } from "zod"
+
 /**
  * Device authorization response from initiate endpoint
  */
-export interface DeviceAuthInitiateResponse {
+export const DeviceAuthInitiateResponseSchema = z.object({
 	/** Verification code to display to user */
-	code: string
+	code: z.string(),
 	/** URL for user to visit in browser */
-	verificationUrl: string
+	verificationUrl: z.string(),
 	/** Time in seconds until code expires */
-	expiresIn: number
-}
+	expiresIn: z.number(),
+})
+
+export type DeviceAuthInitiateResponse = z.infer<typeof DeviceAuthInitiateResponseSchema>
 
 /**
  * Device authorization poll response
  */
-export interface DeviceAuthPollResponse {
+export const DeviceAuthPollResponseSchema = z.object({
 	/** Current status of the authorization */
-	status: "pending" | "approved" | "denied" | "expired"
+	status: z.enum(["pending", "approved", "denied", "expired"]),
 	/** API token (only present when approved) */
-	token?: string
+	token: z.string().optional(),
 	/** User ID (only present when approved) */
-	userId?: string
+	userId: z.string().optional(),
 	/** User email (only present when approved) */
-	userEmail?: string
-}
+	userEmail: z.string().optional(),
+})
+
+export type DeviceAuthPollResponse = z.infer<typeof DeviceAuthPollResponseSchema>
 
 /**
  * Device auth state for UI

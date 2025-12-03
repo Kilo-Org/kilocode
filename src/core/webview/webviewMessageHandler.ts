@@ -80,7 +80,13 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
+// kilocode_change start
+import {
+	editMessageHandler,
+	fetchKilocodeNotificationsHandler,
+	deviceAuthMessageHandler,
+} from "../kilocode/webview/webviewMessageHandlerUtils"
+// kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -3886,49 +3892,10 @@ export const webviewMessageHandler = async (
 		}
 		// kilocode_change end
 		// kilocode_change start - Device Auth handlers
-		case "startDeviceAuth": {
-			await provider.startDeviceAuth()
-			break
-		}
-		case "cancelDeviceAuth": {
-			provider.cancelDeviceAuth()
-			break
-		}
+		case "startDeviceAuth":
+		case "cancelDeviceAuth":
 		case "deviceAuthCompleteWithProfile": {
-			// Save token to specific profile or current profile if no profile name provided
-			if (message.values?.token) {
-				const profileName = message.text || undefined // Empty string becomes undefined
-				const token = message.values.token as string
-				try {
-					if (profileName) {
-						// Save to specified profile
-						const { ...profileConfig } = await provider.providerSettingsManager.getProfile({
-							name: profileName,
-						})
-						await provider.upsertProviderProfile(
-							profileName,
-							{
-								...profileConfig,
-								apiProvider: "kilocode",
-								kilocodeToken: token,
-							},
-							false, // Don't activate - just save
-						)
-					} else {
-						// Save to current profile (from welcome screen)
-						const { apiConfiguration, currentApiConfigName = "default" } = await provider.getState()
-						await provider.upsertProviderProfile(currentApiConfigName, {
-							...apiConfiguration,
-							apiProvider: "kilocode",
-							kilocodeToken: token,
-						})
-					}
-				} catch (error) {
-					provider.log(
-						`Error saving device auth token: ${error instanceof Error ? error.message : String(error)}`,
-					)
-				}
-			}
+			await deviceAuthMessageHandler(provider, message)
 			break
 		}
 		// kilocode_change end
