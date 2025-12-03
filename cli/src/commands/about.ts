@@ -1,5 +1,6 @@
 import type { Command } from "./core/types.js"
 import { commandRegistry } from "./core/registry.js"
+import { Package } from "../constants/package.js"
 
 export const aboutCommand: Command = {
 	name: "about",
@@ -42,7 +43,7 @@ export const aboutCommand: Command = {
 		addMessage({
 			id: Date.now().toString(),
 			type: "system",
-			content: "This is Kilocode CLI by Involvex\nhttps://github.com/involvex/kilocode",
+			content: `This is Kilocode CLI by Involvex\nhttps://github.com/involvex/kilocode\nVersion: ${Package.version}`,
 			ts: Date.now(),
 		})
 	},
