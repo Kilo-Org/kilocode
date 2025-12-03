@@ -19,6 +19,8 @@ import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 
 interface ManagedIndexerConfig {
 	kilocodeToken: string | null
@@ -72,6 +74,7 @@ export class ManagedIndexer implements vscode.Disposable {
 			// it IS null here. To mitigate that, we'll just create a new instance if needed. This dummy instance will
 			// be disabled and not respond as 'start' will never be called on it, but it wont blow up the extension.
 			console.warn("[ManagedIndexer] Warning: Previous ManagedIndexer instance was null, creating new instance")
+			TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER)
 			ManagedIndexer.prevInstance = new ManagedIndexer()
 		}
 
