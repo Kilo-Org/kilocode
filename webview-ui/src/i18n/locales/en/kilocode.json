@@ -10,8 +10,8 @@
 		"loginText": "Log in here"
 	},
 	"lowCreditWarning": {
-		"addCredit": "Add Credit",
-		"lowBalance": "Your Axon Code balance is low",
+		"addCredit": "Upgrade Plan",
+		"lowBalance": "Your Axon Code balance is empty",
 		"newOrganization": "Using Axon for work?"
 	},
 	"memoryWarning": {

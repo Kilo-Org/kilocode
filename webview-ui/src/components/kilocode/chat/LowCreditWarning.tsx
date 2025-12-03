@@ -1,11 +1,8 @@
-import { ClineMessage, getAppUrl, TelemetryEventName } from "@roo-code/types"
+import { ClineMessage } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import { RetryIconButton } from "../common/RetryIconButton"
-import styled from "styled-components"
 import { useTranslation } from "react-i18next"
-import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
-import { telemetryClient } from "@/utils/TelemetryClient"
+import styled from "styled-components"
 
 type LowCreditWarningProps = {
 	message: ClineMessage
@@ -26,7 +23,10 @@ const Description = styled.div`
 	overflow-wrap: anywhere;
 `
 
-export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningProps) => {
+export const LowCreditWarning = ({
+	message,
+	// , isOrganization
+}: LowCreditWarningProps) => {
 	const { t } = useTranslation()
 	let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "" }
 
@@ -39,7 +39,7 @@ export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningPr
 	return (
 		<>
 			<HeaderContainer>
-				<span className="text-blue-400" style={{ marginBottom: "-1.5px" }}>
+				<span className="text-red-400" style={{}}>
 					$
 				</span>
 				<span style={{ fontWeight: "bold" }}>{data.title}</span>
@@ -47,15 +47,15 @@ export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningPr
 			<Description>{data.message}</Description>
 
 			<div
-				className="bg-vscode-panel-border flex flex-col gap-3"
+				className="flex flex-col gap-3"
 				style={{
 					borderRadius: "4px",
 					display: "flex",
 					marginTop: "15px",
-					padding: "14px 16px 22px",
+					// padding: "14px 16px 22px",
 					justifyContent: "center",
 				}}>
-				<div className="flex justify-between items-center">
+				{/* <div className="flex justify-between items-center">
 					{t("kilocode:lowCreditWarning.lowBalance")}
 					<RetryIconButton
 						onClick={() => {
@@ -66,20 +66,21 @@ export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningPr
 							})
 						}}
 					/>
-				</div>
+				</div> */}
 				<VSCodeButton
-					className="p-1 w-full rounded"
+					appearance="secondary"
+					className="flex-[2] rounded-lg border border-green-400 outline-none bg-vscode-input-background max-w-fit"
 					onClick={(e) => {
 						e.preventDefault()
 
 						vscode.postMessage({
 							type: "openInBrowser",
-							url: data.buyCreditsUrl,
+							url: "https://app.matterai.so/usage",
 						})
 					}}>
 					{t("kilocode:lowCreditWarning.addCredit")}
 				</VSCodeButton>
-				{!isOrganization && (
+				{/* {!isOrganization && (
 					<VSCodeButtonLink
 						onClick={() => {
 							telemetryClient.capture(TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED, {
@@ -91,7 +92,7 @@ export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningPr
 						className="p-1 w-full rounded">
 						{t("kilocode:lowCreditWarning.newOrganization")}
 					</VSCodeButtonLink>
-				)}
+				)} */}
 			</div>
 		</>
 	)

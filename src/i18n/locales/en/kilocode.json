@@ -8,8 +8,8 @@
 		"message_updated": "Message updated successfully"
 	},
 	"lowCreditWarning": {
-		"title": "Low Credit Warning!",
-		"message": "Check to see if you can top up with free credits or purchase some more!"
+		"title": "Insufficient Credit Warning!",
+		"message": "Your monthly credit limit has been reached. Purchase/Upgrade to the paid plan to continue using the service."
 	},
 	"task": {
 		"noAssistantMessages": "Encountered an error while generating a response. Trying auto-repair, if I'm unable to repair the error, please send a 'Continue' message.",

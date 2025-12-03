@@ -2,8 +2,37 @@ export function stringifyError(error: unknown) {
 	return error instanceof Error ? error.stack || error.message : String(error)
 }
 
+function getErrorMessage(error: any): string | undefined {
+	if (!error) {
+		return undefined
+	}
+
+	if (typeof error.error === "string") {
+		return error.error
+	}
+
+	if (typeof error.error?.message === "string") {
+		return error.error.message
+	}
+
+	if (typeof error.message === "string") {
+		return error.message
+	}
+
+	return undefined
+}
+
+function isInsufficientCreditsThrottle(error: any) {
+	if (!error || error.status !== 429) {
+		return false
+	}
+
+	const message = getErrorMessage(error)
+	return typeof message === "string" && message.toLowerCase().includes("insufficient credit")
+}
+
 export function isPaymentRequiredError(error: any) {
-	return !!(error && error.status === 402)
+	return !!(error && error.status === 402) || isInsufficientCreditsThrottle(error)
 }
 
 export function isAlphaPeriodEndedError(error: any) {
