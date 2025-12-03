@@ -54,12 +54,12 @@ export const createComponentCreationMessages = (): ClineMessage[] => {
 
 	// Immediate checkpoint (200-800ms)
 	currentTime += randomInterval(200, 800)
-	messages.push({
-		ts: currentTime,
-		type: "say",
-		say: "checkpoint_saved",
-		text: "Checkpoint saved",
-	})
+	// messages.push({
+	// 	ts: currentTime,
+	// 	type: "say",
+	// 	say: "checkpoint_saved",
+	// 	text: "Checkpoint saved",
+	// })
 
 	// Long completion summary (10-20 seconds)
 	currentTime += randomInterval(10000, 20000)

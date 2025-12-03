@@ -38,7 +38,6 @@ import { Markdown } from "./Markdown"
 import { Mention } from "./Mention"
 import { ProgressIndicator } from "./ProgressIndicator"
 import ReportBugPreview from "./ReportBugPreview"
-import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 
 import { cn } from "@/lib/utils"
 import { appendImages } from "@src/utils/imageUtils"
@@ -46,14 +45,11 @@ import {
 	// User,
 	Edit,
 	Eye,
-	FileCode2,
 	FileDiff,
 	FolderTree,
 	ListTree,
 	MessageCircleQuestionMark,
 	PocketKnife,
-	Search,
-	TerminalSquare,
 	Trash2,
 } from "lucide-react"
 import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
@@ -89,6 +85,16 @@ interface ChatRowProps {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
+
+const headerStyle: React.CSSProperties = {
+	display: "flex",
+	alignItems: "center",
+	gap: "0px",
+	fontWeight: "600",
+	marginBottom: "2px",
+	wordBreak: "break-word",
+	color: "var(--vscode-descriptionForeground)",
+}
 
 const ChatRow = memo(
 	(props: ChatRowProps) => {
@@ -149,8 +155,14 @@ export const ChatRowContent = ({
 	const { t } = useTranslation()
 
 	// kilocode_change: add showTimestamps
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, showTimestamps } =
-		useExtensionState()
+	const {
+		mcpServers,
+		alwaysAllowMcp,
+		// currentCheckpoint,
+		mode,
+		apiConfiguration,
+		showTimestamps,
+	} = useExtensionState()
 	const { info: model } = useSelectedModel(apiConfiguration)
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedContent, setEditedContent] = useState("")
@@ -263,12 +275,9 @@ export const ChatRowContent = ({
 				return [null, null] // These will be handled by ErrorRow component
 			case "command":
 				return [
-					isCommandExecuting ? (
-						<ProgressIndicator />
-					) : (
-						<TerminalSquare className="size-3 -mr-1" aria-label="Terminal icon" />
-					),
-					<span style={{ color: normalColor }}>{t("chat:commandExecution.running")}</span>,
+					isCommandExecuting ? <ProgressIndicator /> : null,
+					// <TerminalSquare className="size-3 -mr-1" aria-label="Terminal icon" />
+					<span style={headerStyle}>{t("chat:commandExecution.running")}</span>,
 				]
 			case "use_mcp_server":
 				const mcpServerUse = safeJsonParse<ClineAskUseMcpServer>(message.text)
@@ -364,14 +373,6 @@ export const ChatRowContent = ({
 		inferenceProvider, // kilocode_change
 	])
 
-	const headerStyle: React.CSSProperties = {
-		display: "flex",
-		alignItems: "center",
-		gap: "2px",
-		marginBottom: "4px",
-		wordBreak: "break-word",
-	}
-
 	const tool = useMemo(() => {
 		const isToolAsk = message.type === "ask" && message.ask === "tool"
 		const isToolSay = message.type === "say" && (message.say as any) === "tool"
@@ -453,16 +454,15 @@ export const ChatRowContent = ({
 				)
 			case "fileEdit":
 				return (
-					<>
+					<div className={`flex ${isExpanded ? "flex-col" : "flex-row"} gap-1`}>
 						<div style={headerStyle}>
 							{tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
 									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
 								/>
-							) : (
-								toolIcon("edit")
-							)}
+							) : // toolIcon("edit")
+							null}
 							<span style={{}}>
 								{tool.isProtected
 									? t("chat:fileOperations.wantsToEditProtected")
@@ -487,7 +487,7 @@ export const ChatRowContent = ({
 								// kilocode_change end
 							}
 						</div>
-					</>
+					</div>
 				)
 			case "insertContent":
 				return (
@@ -562,7 +562,7 @@ export const ChatRowContent = ({
 			case "codebaseSearch": {
 				return (
 					<div style={headerStyle}>
-						{toolIcon("search")}
+						{/* {toolIcon("search")} */}
 						<span style={{}}>
 							{tool.path ? (
 								<Trans
@@ -654,11 +654,15 @@ export const ChatRowContent = ({
 					)
 				}
 
+				const splitPaths = tool.path?.split("/")
+				let fileName = splitPaths?.[splitPaths.length - 1]
+				fileName = removeLeadingNonAlphanumeric(fileName ?? "") + "\u200E"
+
 				// Regular single file read request
 				return (
-					<div className="">
+					<div className="flex gap-1">
 						<div style={headerStyle}>
-							<FileCode2 className="w-3 h-3 shrink-0" aria-label="Read file icon" />
+							{/* <FileCode2 className="w-3 h-3 shrink-0" aria-label="Read file icon" /> */}
 							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -678,7 +682,7 @@ export const ChatRowContent = ({
 									onClick={() => vscode.postMessage({ type: "openFile", text: tool.content })}>
 									{tool.path?.startsWith(".") && <span>.</span>}
 									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
-										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
+										{fileName}
 										{tool.reason}
 									</span>
 								</ToolUseBlockHeader>
@@ -784,9 +788,9 @@ export const ChatRowContent = ({
 				)
 			case "searchFiles":
 				return (
-					<>
+					<div className={`flex ${isExpanded ? "flex-col" : "flex-row"} gap-1`}>
 						<div style={headerStyle}>
-							<Search className="w-3 h-3 shrink-0" aria-label="Search icon" />
+							{/* <Search className="w-3 h-3 shrink-0" aria-label="Search icon" /> */}
 							<span style={{}}>
 								{message.type === "ask" ? (
 									<Trans
@@ -795,8 +799,9 @@ export const ChatRowContent = ({
 												? "chat:directoryOperations.wantsToSearchOutsideWorkspace"
 												: "chat:directoryOperations.wantsToSearch"
 										}
-										components={{ code: <code className="font-medium">{tool.regex}</code> }}
+										components={{ code: <code className="font-medium text-xs">{tool.regex}</code> }}
 										values={{ regex: tool.regex }}
+										className="text-xs"
 									/>
 								) : (
 									<Trans
@@ -820,7 +825,7 @@ export const ChatRowContent = ({
 								onToggleExpand={handleToggleExpand}
 							/>
 						</div>
-					</>
+					</div>
 				)
 			case "switchMode":
 				return (
@@ -1326,14 +1331,15 @@ export const ChatRowContent = ({
 				case "shell_integration_warning":
 					return <CommandExecutionError />
 				case "checkpoint_saved":
-					return (
-						<CheckpointSaved
-							ts={message.ts!}
-							commitHash={message.text!}
-							currentHash={currentCheckpoint}
-							checkpoint={message.checkpoint}
-						/>
-					)
+					return null
+				// return (
+				// 	<CheckpointSaved
+				// 		ts={message.ts!}
+				// 		commitHash={message.text!}
+				// 		currentHash={currentCheckpoint}
+				// 		checkpoint={message.checkpoint}
+				// 	/>
+				// )
 				case "condense_context":
 					if (message.partial) {
 						return <CondensingContextRow />
