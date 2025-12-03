@@ -1765,15 +1765,20 @@ describe("GhostInlineCompletionProvider", () => {
 			// Start second request
 			const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
 
+			// First call executed immediately (leading edge), second is debounced
+			expect(callCount).toBe(1)
+
 			// Advance time past debounce to let the second request complete
 			await vi.advanceTimersByTimeAsync(500)
 
 			await promise2
 
-			// The model should have been called once (only the second request fires,
-			// the first was cancelled by the debounce)
-			// But the key point is that the second request was NOT reused from the first
-			// because the prefix shrunk - it started a new debounce cycle
+			// The model should have been called once (leading edge on first request).
+			// The second request finds a backward deletion cache hit from the first
+			// request's cached result, so no new LLM call is needed.
+			// The key point is that the second request was NOT reused from the first
+			// *pending* request - it started a new debounce cycle, but then found
+			// a cache hit from the completed first request.
 			expect(callCount).toBe(1)
 		})
 	})
@@ -1787,6 +1792,9 @@ describe("GhostInlineCompletionProvider", () => {
 				cacheWriteTokens: 0,
 				cacheReadTokens: 0,
 			})
+
+			const mockDocument = new MockTextDocument(vscode.Uri.file("/test.ts"), "const a = 1\nconst b = 2")
+			const mockPosition = new vscode.Position(0, 11)
 
 			// First call should execute immediately without waiting
 			const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)

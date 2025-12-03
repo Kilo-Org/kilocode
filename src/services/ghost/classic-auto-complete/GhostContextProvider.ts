@@ -10,8 +10,9 @@ import { getSnippets } from "../../continuedev/core/autocomplete/templating/filt
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
+import { IContextProvider } from "./IContextProvider"
 
-export class GhostContextProvider {
+export class GhostContextProvider implements IContextProvider {
 	private contextService: ContextRetrievalService
 	private ide: VsCodeIde
 	private model: GhostModel

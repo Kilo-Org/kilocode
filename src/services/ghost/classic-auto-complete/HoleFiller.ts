@@ -1,5 +1,5 @@
 import { AutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
+import { IContextProvider } from "./IContextProvider"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
@@ -52,7 +52,7 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 }
 
 export class HoleFiller {
-	constructor(private contextProvider: GhostContextProvider) {}
+	constructor(private contextProvider: IContextProvider) {}
 
 	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
 		return {

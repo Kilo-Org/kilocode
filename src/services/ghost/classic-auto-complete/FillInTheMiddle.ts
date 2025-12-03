@@ -1,5 +1,5 @@
 import { AutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
+import { IContextProvider } from "./IContextProvider"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
 import { FillInAtCursorSuggestion } from "./HoleFiller"
@@ -21,7 +21,7 @@ export interface FimCompletionResult {
 }
 
 export class FimPromptBuilder {
-	constructor(private contextProvider: GhostContextProvider) {}
+	constructor(private contextProvider: IContextProvider) {}
 
 	/**
 	 * Build complete FIM prompt with all necessary data

@@ -1,24 +1,21 @@
 import * as vscode from "vscode"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { GhostContextProvider } from "./GhostContextProvider"
-import { HoleFiller, FillInAtCursorSuggestion, HoleFillerGhostPrompt } from "./HoleFiller"
-import { FimPromptBuilder, FimGhostPrompt } from "./FillInTheMiddle"
+import { FillInAtCursorSuggestion } from "./HoleFiller"
 import { GhostModel } from "../GhostModel"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
-import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import * as telemetry from "./AutocompleteTelemetry"
 import type { AutocompleteContext, CacheMatchType } from "./AutocompleteTelemetry"
+import { CompletionEngine } from "./CompletionEngine"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
 
 export type CostTrackingCallback = (cost: number, inputTokens: number, outputTokens: number) => void
-
-export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
 
 /**
  * Result of finding a matching suggestion, includes the match type for telemetry
@@ -124,8 +121,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
 	/** Tracks all pending/in-flight requests */
 	private pendingRequests: PendingRequest[] = []
-	private holeFiller: HoleFiller
-	private fimPromptBuilder: FimPromptBuilder
+	private engine: CompletionEngine
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private getSettings: () => GhostServiceSettings | null
@@ -155,8 +151,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		})()
 
 		const contextProvider = new GhostContextProvider(context, model, this.ignoreController)
-		this.holeFiller = new HoleFiller(contextProvider)
-		this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
+		this.engine = new CompletionEngine(contextProvider)
 
 		const ide = contextProvider.getIde()
 		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
@@ -186,61 +181,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		if (this.suggestionsHistory.length > MAX_SUGGESTIONS_HISTORY) {
 			this.suggestionsHistory.shift()
 		}
-	}
-
-	private async getPrompt(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-	): Promise<{ prompt: GhostPrompt; prefix: string; suffix: string }> {
-		// Build complete context with all tracking data
-		const recentlyVisitedRanges = this.recentlyVisitedRangesService.getSnippets()
-		const recentlyEditedRanges = await this.recentlyEditedTracker.getRecentlyEditedRanges()
-
-		const context: GhostSuggestionContext = {
-			document,
-			range: new vscode.Range(position, position),
-			recentlyVisitedRanges,
-			recentlyEditedRanges,
-		}
-
-		const autocompleteInput = contextToAutocompleteInput(context)
-
-		const { prefix, suffix } = extractPrefixSuffix(document, position)
-		const languageId = document.languageId
-
-		// Determine strategy based on model capabilities and call only the appropriate prompt builder
-		const prompt = this.model.supportsFim()
-			? await this.fimPromptBuilder.getFimPrompts(autocompleteInput, this.model.getModelName() ?? "codestral")
-			: await this.holeFiller.getPrompts(autocompleteInput, languageId)
-
-		return { prompt, prefix, suffix }
-	}
-
-	private processSuggestion(
-		suggestionText: string,
-		prefix: string,
-		suffix: string,
-		model: GhostModel,
-		telemetryContext: AutocompleteContext,
-	): FillInAtCursorSuggestion {
-		if (!suggestionText) {
-			telemetry.captureSuggestionFiltered("empty_response", telemetryContext)
-			return { text: "", prefix, suffix }
-		}
-
-		const processedText = postprocessGhostSuggestion({
-			suggestion: suggestionText,
-			prefix,
-			suffix,
-			model: model.getModelName() || "",
-		})
-
-		if (processedText) {
-			return { text: processedText, prefix, suffix }
-		}
-
-		telemetry.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
-		return { text: "", prefix, suffix }
 	}
 
 	private async disposeIgnoreController(): Promise<void> {
@@ -341,12 +281,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				return stringToInlineCompletions(matchingResult.text, position)
 			}
 
-			const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)
+			const { prefix: promptPrefix, suffix: promptSuffix } = extractPrefixSuffix(document, position)
 
-			// Update context with strategy now that we know it
-			telemetryContext.strategy = prompt.strategy
-
-			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
+			await this.debouncedFetchAndCacheSuggestion(document, position, promptPrefix, promptSuffix)
 
 			const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 			if (cachedResult) {
@@ -404,10 +341,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 * - If a pending request covers the current prefix/suffix, reuse it instead of starting a new one
 	 */
 	private debouncedFetchAndCacheSuggestion(
-		prompt: GhostPrompt,
+		document: vscode.TextDocument,
+		position: vscode.Position,
 		prefix: string,
 		suffix: string,
-		languageId: string,
 	): Promise<void> {
 		// Check if any existing pending request covers this one
 		const coveringRequest = this.findCoveringPendingRequest(prefix, suffix)
@@ -419,7 +356,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// If this is the first call (no pending debounce), execute immediately
 		if (this.isFirstCall && this.debounceTimer === null) {
 			this.isFirstCall = false
-			return this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+			return this.fetchAndCacheSuggestion(document, position, prefix, suffix)
 		}
 
 		// Clear any existing timer (reset the debounce)
@@ -438,7 +375,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			this.debounceTimer = setTimeout(async () => {
 				this.debounceTimer = null
 				this.isFirstCall = true // Reset for next sequence
-				await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+				await this.fetchAndCacheSuggestion(document, position, prefix, suffix)
 				// Remove this request from pending when done
 				this.removePendingRequest(pendingRequest)
 				resolve()
@@ -455,32 +392,47 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	private async fetchAndCacheSuggestion(
-		prompt: GhostPrompt,
+		document: vscode.TextDocument,
+		position: vscode.Position,
 		prefix: string,
 		suffix: string,
-		languageId: string,
 	): Promise<void> {
 		const startTime = performance.now()
+		const languageId = document.languageId
+
+		// Build complete context with all tracking data
+		const recentlyVisitedRanges = this.recentlyVisitedRangesService.getSnippets()
+		const recentlyEditedRanges = await this.recentlyEditedTracker.getRecentlyEditedRanges()
+
+		const context: GhostSuggestionContext = {
+			document,
+			range: new vscode.Range(position, position),
+			recentlyVisitedRanges,
+			recentlyEditedRanges,
+		}
+
+		const autocompleteInput = contextToAutocompleteInput(context)
 
 		// Build telemetry context for this request
 		const telemetryContext: AutocompleteContext = {
 			languageId,
 			modelId: this.model?.getModelName(),
 			provider: this.model?.getProviderDisplayName(),
-			strategy: prompt.strategy,
 		}
 
 		try {
-			// Curry processSuggestion with prefix, suffix, model, and telemetry context
-			const curriedProcessSuggestion = (text: string) =>
-				this.processSuggestion(text, prefix, suffix, this.model, telemetryContext)
+			// Use CompletionEngine to get the completion
+			const result = await this.engine.getCompletion(this.model, autocompleteInput, languageId, prefix, suffix)
 
-			const result =
-				prompt.strategy === "fim"
-					? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
-					: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
+			// Update telemetry context with strategy
+			telemetryContext.strategy = result.strategy
 
 			const latencyMs = performance.now() - startTime
+
+			// Track suggestion filtering if empty
+			if (!result.suggestion.text) {
+				telemetry.captureSuggestionFiltered("empty_response", telemetryContext)
+			}
 
 			telemetry.captureLlmRequestCompleted(
 				{
