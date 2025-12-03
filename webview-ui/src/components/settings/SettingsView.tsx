@@ -119,7 +119,7 @@ type SettingsViewProps = {
 }
 
 const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref) => {
-	const { onDone, targetSection, editingProfile } = props
+	const { onDone, targetSection, editingProfile } = props // kilocode_change - editingProfile
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
