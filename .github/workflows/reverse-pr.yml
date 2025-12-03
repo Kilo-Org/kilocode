@@ -1,0 +1,97 @@
+name: Reverse PR - Fork to Main Repo
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      fork_branch:
+        description: 'Branch to pull from fork'
+        required: false
+        default: 'main'
+
+jobs:
+  reverse-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add fork remote
+        run: |
+          git remote add fork-remote https://github.com/benzntech/kilocode.git || true
+          git fetch fork-remote main
+
+      - name: Check for differences
+        id: check_diff
+        run: |
+          if git diff --quiet origin/main fork-remote/main; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create reverse PR branch
+        if: steps.check_diff.outputs.has_changes == 'true'
+        id: create_branch
+        run: |
+          BRANCH_NAME="reverse-pr-fork-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $BRANCH_NAME origin/main
+          git merge fork-remote/main -m "Merge changes from fork: benzntech/kilocode" || true
+          git push origin $BRANCH_NAME
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Branch created: $BRANCH_NAME"
+
+      - name: Create Pull Request
+        if: steps.check_diff.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[Automated] Reverse PR: Pull changes from fork (benzntech/kilocode)',
+              body: `## Automated Reverse PR
+
+This PR automatically pulls the latest changes from the fork repository.
+
+**Source:** https://github.com/benzntech/kilocode
+**Target:** \`main\` branch
+
+### Details
+- Fork branch: \`${{ github.event.inputs.fork_branch || 'main' }}\`
+- Created by: GitHub Actions
+- Review and merge if the changes look good
+
+### Merge Checklist
+- [ ] Review all changed files
+- [ ] Verify no conflicts exist
+- [ ] Run tests locally if needed
+- [ ] Merge when ready
+
+---
+*This PR was automatically created by the reverse-pr workflow.*`,
+              head: '${{ steps.create_branch.outputs.branch_name }}',
+              base: 'main',
+              draft: false
+            });
+            console.log('✅ Pull request created:', pr.html_url);
+            console.log('PR Number:', pr.number);
+
+      - name: No changes found
+        if: steps.check_diff.outputs.has_changes == 'false'
+        run: |
+          echo "✓ Fork is already up to date with main repo"
