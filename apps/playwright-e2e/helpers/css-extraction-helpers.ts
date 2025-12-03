@@ -74,4 +74,3 @@ export const saveVariablesToFile = async (cssOutput: string, finalFilename: stri
 	await fs.promises.writeFile(outputPath, cssOutput)
 	return outputPath
 }
-

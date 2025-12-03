@@ -123,9 +123,9 @@ jobs:
             - name: Publish to NPM
               working-directory: cli/dist
               run: |
-                version=${{ needs.check-version.outputs.version }}
-                npm publish --access public --provenance kilocode-cli-${version}.tgz
-    
+                  version=${{ needs.check-version.outputs.version }}
+                  npm publish --access public --provenance kilocode-cli-${version}.tgz
+
     publish-docker-debian:
         needs: [check-version, build-and-test]
         runs-on: ubuntu-latest
@@ -222,7 +222,7 @@ jobs:
             - name: Configure Git
               run: |
                   git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"            
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
             - name: Create and Push Git Tag
               run: |
                   version=${{ needs.check-version.outputs.version }}

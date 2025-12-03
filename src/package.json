@@ -645,7 +645,7 @@
 		"vscode:prepublish": "pnpm bundle --production",
 		"vsix:clean": "rimraf ../bin",
 		"vsix": "mkdirp ../bin && vsce package --no-dependencies --out ../bin",
-		"vsix:unpacked": "mkdirp ../bin-unpacked && unzip -q -o ../bin/kilo-code-*.vsix -d ../bin-unpacked",
+		"vsix:unpacked": "mkdirp ../bin-unpacked && echo A | 7z x ../bin/kilo-code-*.vsix -o../bin-unpacked",
 		"publish:marketplace": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
 		"watch:bundle": "pnpm bundle --watch",
 		"watch:tsc": "cd .. && tsc --noEmit --watch --project src/tsconfig.json",

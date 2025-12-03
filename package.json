@@ -1,6 +1,6 @@
 {
 	"name": "kilo-code",
-	"packageManager": "pnpm@10.8.1",
+	"packageManager": "pnpm@10.24.0",
 	"engines": {
 		"node": "20.19.2"
 	},
@@ -34,9 +34,9 @@
 		"jetbrains:run": "turbo jetbrains:run",
 		"cli:build": "turbo run cli:build",
 		"cli:bundle": "turbo run cli:bundle --force",
-		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
-		"cli:dev": "pnpm --filter @kilocode/cli run dev",
-		"cli:run": "pnpm --filter @kilocode/cli run start",
+		"cli:deps": "pnpm --filter @involvex/kilocode-cli run deps:install",
+		"cli:dev": "pnpm --filter @involvex/kilocode-cli run dev",
+		"cli:run": "pnpm --filter @involvex/kilocode-cli run start",
 		"docs:start": "pnpm --filter kilocode-docs start",
 		"docs:build": "pnpm --filter kilocode-docs build"
 	},
@@ -76,6 +76,27 @@
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2",
 			"type-fest": "2.19.0"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"@playwright/browser-chromium",
+			"@swc/core",
+			"@tailwindcss/oxide",
+			"@vscode/policy-watcher",
+			"@vscode/spdlog",
+			"@vscode/sqlite3",
+			"@vscode/vsce-sign",
+			"@vscode/windows-mutex",
+			"@vscode/windows-process-tree",
+			"@vscode/windows-registry",
+			"better-sqlite3",
+			"core-js",
+			"core-js-pure",
+			"esbuild",
+			"keytar",
+			"native-keymap",
+			"puppeteer-chromium-resolver",
+			"sharp",
+			"sqlite3"
+		]
 	}
 }
