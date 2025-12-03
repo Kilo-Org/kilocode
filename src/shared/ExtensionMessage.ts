@@ -180,6 +180,7 @@ export interface ExtensionMessage {
 		| "managedIndexerState" // kilocode_change
 		| "singleCompletionResult" // kilocode_change
 		| "managedIndexerState" // kilocode_change
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request

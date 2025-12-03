@@ -261,6 +261,7 @@ export interface WebviewMessage {
 		| "shareTaskSession" // kilocode_change
 		| "sessionFork" // kilocode_change
 		| "singleCompletion" // kilocode_change
+		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 	text?: string
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
