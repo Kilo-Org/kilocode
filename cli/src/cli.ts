@@ -161,11 +161,17 @@ export class CLI {
 				this.sessionService.setWorkspaceDirectory(workspace)
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
+				// Inject configuration BEFORE session restoration to ensure the extension
+				// has the correct config (including org ID) during session operations
+				if (this.options.session || this.options.fork) {
+					await this.injectConfigurationToExtension()
+					logs.debug("CLI configuration pre-injected before session operation", "CLI")
+				}
+
 				if (this.options.session) {
 					await this.sessionService.restoreSession(this.options.session)
 				} else if (this.options.fork) {
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-
 					await this.sessionService.forkSession(this.options.fork)
 				}
 			}
