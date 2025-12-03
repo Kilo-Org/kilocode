@@ -1,5 +1,6 @@
 ---
 "@involvex/kilocode-cli": patch
+"kilo-code": patch
 ---
 
-Pulish version on Github Pages
+add changeset

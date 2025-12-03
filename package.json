@@ -37,7 +37,7 @@
 		"cli:deps": "pnpm --filter @involvex/kilocode-cli run deps:install",
 		"cli:dev": "pnpm --filter @involvex/kilocode-cli run dev",
 		"cli:run": "pnpm --filter @involvex/kilocode-cli run start",
-		"cli:publish": "cd cli && pnpm run npm:publish",
+		"cli:publish": "pnpm --filter @involvex/kilocode-cli run npm:publish",
 		"docs:start": "pnpm --filter kilocode-docs start",
 		"docs:build": "pnpm --filter kilocode-docs build"
 	},
