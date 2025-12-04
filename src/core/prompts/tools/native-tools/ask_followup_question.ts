@@ -4,8 +4,11 @@ export default {
 	type: "function",
 	function: {
 		name: "ask_followup_question",
-		description:
-			"Ask the user a question to gather additional information needed to complete the task. Use when clarification or more detail is required before proceeding.",
+		description: `Description: Ask the user a question to gather additional information needed to complete the task. Use when you need clarification or more details to proceed effectively.
+
+Parameters:
+- question: (required) A clear, specific question addressing the information needed
+- follow_up: (optional) A list of 2-4 suggested answers. Suggestions must be complete, actionable answers without placeholders. Optionally include mode attribute to switch modes (code/architect/etc.)`,
 		strict: true,
 		parameters: {
 			type: "object",

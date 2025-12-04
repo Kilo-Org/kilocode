@@ -1,26 +1,32 @@
 import type OpenAI from "openai"
 
-export default {
-	type: "function",
-	function: {
-		name: "codebase_search",
-		description:
-			"Run a semantic search across the workspace to find files relevant to a natural-language query. Reuse the user's wording where possible and keep queries in English.",
-		strict: true,
-		parameters: {
-			type: "object",
-			properties: {
-				query: {
-					type: "string",
-					description: "Meaning-based search query describing the information you need",
+export default function codebase_search(cwd: string): OpenAI.Chat.ChatCompletionTool {
+	return {
+		type: "function",
+		function: {
+			name: "codebase_search",
+			description: `Description: Find files most relevant to the search query using semantic search. Searches based on meaning rather than exact text matches. By default searches entire workspace. Reuse the user's exact wording unless there's a clear reason not to - their phrasing often helps semantic search. Queries MUST be in English (translate if needed).
+
+Parameters:
+- query: (required) The search query. Reuse the user's exact wording/question format unless there's a clear reason not to.
+- path: (optional) Limit search to specific subdirectory (relative to the current workspace directory ${cwd}). Leave empty for entire workspace.`,
+			strict: true,
+			parameters: {
+				type: "object",
+				properties: {
+					query: {
+						type: "string",
+						description:
+							"The search query. Reuse the user's exact wording/question format unless there's a clear reason not to.",
+					},
+					path: {
+						type: ["string", "null"],
+						description: `Limit search to specific subdirectory (relative to the current workspace directory ${cwd}). Leave empty for entire workspace.`,
+					},
 				},
-				path: {
-					type: ["string", "null"],
-					description: "Optional subdirectory (relative to the workspace) to limit the search scope",
-				},
+				required: ["query", "path"],
+				additionalProperties: false,
 			},
-			required: ["query", "path"],
-			additionalProperties: false,
 		},
-	},
-} satisfies OpenAI.Chat.ChatCompletionTool
+	}
+}
