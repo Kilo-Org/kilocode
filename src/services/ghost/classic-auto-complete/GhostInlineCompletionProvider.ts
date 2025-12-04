@@ -1,9 +1,9 @@
 import * as vscode from "vscode"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
-import { HoleFiller, FillInAtCursorSuggestion, HoleFillerGhostPrompt } from "./HoleFiller"
+import { HoleFiller, FillInAtCursorSuggestion, HoleFillerGhostPrompt, DefaultSnippetProvider } from "./HoleFiller"
 import { FimPromptBuilder, FimGhostPrompt } from "./FillInTheMiddle"
 import { GhostModel } from "../GhostModel"
+import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
@@ -129,6 +129,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private getSettings: () => GhostServiceSettings | null
+	private ide: VsCodeIde
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
@@ -154,13 +155,22 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return ignoreController
 		})()
 
-		const contextProvider = new GhostContextProvider(context, model, this.ignoreController)
-		this.holeFiller = new HoleFiller(contextProvider)
-		this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
+		// Create IDE directly
+		this.ide = new VsCodeIde(context)
 
-		const ide = contextProvider.getIde()
-		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
-		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
+		// Get model name for prompt builders
+		const modelName = model.getModelName() ?? "codestral"
+
+		// Create shared snippet provider for prompt builders
+		const snippetProvider = new DefaultSnippetProvider(this.ide, modelName, this.ignoreController)
+
+		// Pass snippet provider to prompt builders
+		this.holeFiller = new HoleFiller(snippetProvider)
+		this.fimPromptBuilder = new FimPromptBuilder(snippetProvider)
+
+		// Use IDE directly for tracking services
+		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(this.ide)
+		this.recentlyEditedTracker = new RecentlyEditedTracker(this.ide)
 
 		this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () =>
 			telemetry.captureAcceptSuggestion(),

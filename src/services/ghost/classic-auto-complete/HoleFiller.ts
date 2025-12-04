@@ -1,8 +1,11 @@
 import { AutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { getProcessedSnippets, ProcessedSnippetsResult } from "./snippetProcessor"
 
 export interface HoleFillerGhostPrompt {
 	strategy: "hole_filler"
@@ -51,8 +54,50 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 	}
 }
 
+/**
+ * Interface for providing processed snippets - allows for dependency injection in tests
+ */
+export interface SnippetProvider {
+	getProcessedSnippets(autocompleteInput: AutocompleteInput, filepath: string): Promise<ProcessedSnippetsResult>
+}
+
+/**
+ * Default implementation that uses VsCodeIde and ContextRetrievalService
+ */
+export class DefaultSnippetProvider implements SnippetProvider {
+	private ide: VsCodeIde
+	private contextService: ContextRetrievalService
+	private modelName: string
+	private ignoreController?: Promise<RooIgnoreController>
+
+	constructor(ide: VsCodeIde, modelName: string, ignoreController?: Promise<RooIgnoreController>) {
+		this.ide = ide
+		this.contextService = new ContextRetrievalService(ide)
+		this.modelName = modelName
+		this.ignoreController = ignoreController
+	}
+
+	async getProcessedSnippets(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+	): Promise<ProcessedSnippetsResult> {
+		return getProcessedSnippets(
+			autocompleteInput,
+			filepath,
+			this.ide,
+			this.contextService,
+			this.modelName,
+			this.ignoreController,
+		)
+	}
+}
+
 export class HoleFiller {
-	constructor(private contextProvider: GhostContextProvider) {}
+	private snippetProvider: SnippetProvider
+
+	constructor(snippetProvider: SnippetProvider) {
+		this.snippetProvider = snippetProvider
+	}
 
 	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
 		return {
@@ -168,7 +213,7 @@ Provide a subtle, non-intrusive completion after a typing pause.
 	 * Build minimal prompt for auto-trigger with optional context
 	 */
 	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
-		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
+		const { helper, snippetsWithUris, workspaceDirs } = await this.snippetProvider.getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
 		)

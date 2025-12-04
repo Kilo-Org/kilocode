@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { HoleFiller, parseGhostResponse } from "../HoleFiller"
+import { HoleFiller, parseGhostResponse, SnippetProvider } from "../HoleFiller"
 import { AutocompleteInput } from "../../types"
 import crypto from "crypto"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/snippets/types"
+import { ProcessedSnippetsResult } from "../snippetProcessor"
 
 function createAutocompleteInput(
 	filepath: string = "/test.ts",
@@ -19,25 +20,32 @@ function createAutocompleteInput(
 	}
 }
 
+/**
+ * Create a mock snippet provider for testing
+ */
+function createMockSnippetProvider(result: ProcessedSnippetsResult): SnippetProvider {
+	return {
+		getProcessedSnippets: async () => result,
+	}
+}
+
 describe("HoleFiller", () => {
 	let holeFiller: HoleFiller
 
 	beforeEach(() => {
-		// Create a minimal mock context provider for basic tests
-		const mockContextProvider = {
-			getProcessedSnippets: async () => ({
-				filepathUri: "file:///test.ts",
-				helper: {
-					filepath: "file:///test.ts",
-					lang: { name: "typescript", singleLineComment: "//" },
-					prunedPrefix: "const x = 1;\n",
-					prunedSuffix: "",
-				},
-				snippetsWithUris: [],
-				workspaceDirs: [],
-			}),
-		} as any
-		holeFiller = new HoleFiller(mockContextProvider)
+		// Create a minimal mock snippet provider for basic tests
+		const mockSnippetProvider = createMockSnippetProvider({
+			filepathUri: "file:///test.ts",
+			helper: {
+				filepath: "file:///test.ts",
+				lang: { name: "typescript", singleLineComment: "//" },
+				prunedPrefix: "const x = 1;\n",
+				prunedSuffix: "",
+			} as any,
+			snippetsWithUris: [],
+			workspaceDirs: [],
+		})
+		holeFiller = new HoleFiller(mockSnippetProvider)
 	})
 
 	describe("getPrompts", () => {
@@ -67,27 +75,25 @@ Return the COMPLETION tags`
 		})
 
 		it("should include comment-wrapped context when provider is set", async () => {
-			const mockContextProvider = {
-				getProcessedSnippets: async () => ({
-					filepathUri: "file:///app.ts",
-					helper: {
-						filepath: "file:///app.ts",
-						lang: { name: "typescript", singleLineComment: "//" },
-						prunedPrefix: "function calculate() {\n  ",
-						prunedSuffix: "\n}",
+			const mockSnippetProvider = createMockSnippetProvider({
+				filepathUri: "file:///app.ts",
+				helper: {
+					filepath: "file:///app.ts",
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "function calculate() {\n  ",
+					prunedSuffix: "\n}",
+				} as any,
+				snippetsWithUris: [
+					{
+						filepath: "file:///utils.ts",
+						content: "export function sum(a: number, b: number) {\n  return a + b\n}",
+						type: AutocompleteSnippetType.Code,
 					},
-					snippetsWithUris: [
-						{
-							filepath: "file:///utils.ts",
-							content: "export function sum(a: number, b: number) {\n  return a + b\n}",
-							type: AutocompleteSnippetType.Code,
-						},
-					],
-					workspaceDirs: ["file:///workspace"],
-				}),
-			} as any
+				],
+				workspaceDirs: ["file:///workspace"],
+			})
 
-			const holeFillerWithContext = new HoleFiller(mockContextProvider)
+			const holeFillerWithContext = new HoleFiller(mockSnippetProvider)
 			const { userPrompt } = await holeFillerWithContext.getPrompts(
 				createAutocompleteInput("/app.ts", 5, 0),
 				"typescript",

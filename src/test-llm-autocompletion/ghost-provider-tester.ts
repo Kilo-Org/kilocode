@@ -1,13 +1,13 @@
 import { LLMClient } from "./llm-client.js"
-import { HoleFiller, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
+import { HoleFiller, parseGhostResponse, SnippetProvider } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
 import { AutocompleteInput } from "../services/ghost/types.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 import { createContext } from "./utils.js"
 
-// Mock context provider for standalone testing
-function createMockContextProvider(prefix: string, suffix: string, filepath: string) {
+// Mock snippet provider for standalone testing
+function createMockSnippetProvider(prefix: string, suffix: string, filepath: string): SnippetProvider {
 	return {
 		getProcessedSnippets: async () => ({
 			filepathUri: `file://${filepath}`,
@@ -16,11 +16,11 @@ function createMockContextProvider(prefix: string, suffix: string, filepath: str
 				lang: { name: "typescript", singleLineComment: "//" },
 				prunedPrefix: prefix,
 				prunedSuffix: suffix,
-			},
+			} as any,
 			snippetsWithUris: [],
 			workspaceDirs: [],
 		}),
-	} as any
+	}
 }
 
 /**
@@ -54,8 +54,9 @@ export class GhostProviderTester {
 		const languageId = context.document.languageId || "javascript"
 		const filepath = context.document.uri.fsPath
 
-		// Common setup
-		const mockContextProvider = createMockContextProvider(prefix, suffix, filepath)
+		// Create a mock snippet provider with the current prefix/suffix
+		const mockSnippetProvider = createMockSnippetProvider(prefix, suffix, filepath)
+
 		const autocompleteInput: AutocompleteInput = {
 			isUntitledFile: false,
 			completionId: crypto.randomUUID(),
@@ -68,30 +69,30 @@ export class GhostProviderTester {
 		// Auto-detect strategy based on model capabilities
 		const supportsFim = modelSupportsFim(this.model)
 		const completion = supportsFim
-			? await this.getFimCompletion(mockContextProvider, autocompleteInput)
-			: await this.getHoleFillerCompletion(mockContextProvider, autocompleteInput, languageId, prefix, suffix)
+			? await this.getFimCompletion(mockSnippetProvider, autocompleteInput)
+			: await this.getHoleFillerCompletion(mockSnippetProvider, autocompleteInput, languageId, prefix, suffix)
 
 		return { prefix, completion, suffix }
 	}
 
 	private async getFimCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
+		snippetProvider: SnippetProvider,
 		autocompleteInput: AutocompleteInput,
 	): Promise<string> {
-		const fimPromptBuilder = new FimPromptBuilder(contextProvider)
+		const fimPromptBuilder = new FimPromptBuilder(snippetProvider)
 		const prompt = await fimPromptBuilder.getFimPrompts(autocompleteInput, this.model)
 		const fimResponse = await this.llmClient.sendFimCompletion(prompt.formattedPrefix, prompt.prunedSuffix)
 		return fimResponse.completion
 	}
 
 	private async getHoleFillerCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
+		snippetProvider: SnippetProvider,
 		autocompleteInput: AutocompleteInput,
 		languageId: string,
 		prefix: string,
 		suffix: string,
 	): Promise<string> {
-		const holeFiller = new HoleFiller(contextProvider)
+		const holeFiller = new HoleFiller(snippetProvider)
 		const { systemPrompt, userPrompt } = await holeFiller.getPrompts(autocompleteInput, languageId)
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		const parseResult = parseGhostResponse(response.content, prefix, suffix)

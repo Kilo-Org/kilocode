@@ -1,8 +1,7 @@
 import { AutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
-import { FillInAtCursorSuggestion } from "./HoleFiller"
+import { FillInAtCursorSuggestion, SnippetProvider } from "./HoleFiller"
 
 export interface FimGhostPrompt {
 	strategy: "fim"
@@ -21,14 +20,18 @@ export interface FimCompletionResult {
 }
 
 export class FimPromptBuilder {
-	constructor(private contextProvider: GhostContextProvider) {}
+	private snippetProvider: SnippetProvider
+
+	constructor(snippetProvider: SnippetProvider) {
+		this.snippetProvider = snippetProvider
+	}
 
 	/**
 	 * Build complete FIM prompt with all necessary data
 	 */
 	async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimGhostPrompt> {
 		const { filepathUri, helper, snippetsWithUris, workspaceDirs } =
-			await this.contextProvider.getProcessedSnippets(autocompleteInput, autocompleteInput.filepath)
+			await this.snippetProvider.getProcessedSnippets(autocompleteInput, autocompleteInput.filepath)
 
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
 		const prunedPrefixRaw = helper.prunedPrefix
