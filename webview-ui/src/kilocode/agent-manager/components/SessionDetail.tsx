@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
-import { selectedSessionAtom, selectedSessionIdAtom, startSessionFailedCounterAtom } from "../state/atoms/sessions"
+import {
+	selectedSessionAtom,
+	selectedSessionIdAtom,
+	startSessionFailedCounterAtom,
+	pendingSessionAtom,
+} from "../state/atoms/sessions"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
@@ -12,14 +17,20 @@ import { cn } from "../../../lib/utils"
 export function SessionDetail() {
 	const { t } = useTranslation("agentManager")
 	const selectedSession = useAtomValue(selectedSessionAtom)
+	const pendingSession = useAtomValue(pendingSessionAtom)
 	const setSelectedId = useSetAtom(selectedSessionIdAtom)
+
+	// Show pending session view only when no other session is selected
+	if (pendingSession && !selectedSession) {
+		return <PendingSessionView pendingSession={pendingSession} />
+	}
 
 	if (!selectedSession) {
 		return <NewAgentForm />
 	}
 
 	const handleStop = () => {
-		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.localId })
+		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.sessionId })
 	}
 
 	const handleNewAgent = () => {
@@ -27,7 +38,7 @@ export function SessionDetail() {
 	}
 
 	const handleRefresh = () => {
-		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.localId })
+		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
 	}
 
 	const formatDuration = (start: number, end?: number) => {
@@ -97,9 +108,44 @@ export function SessionDetail() {
 				</div>
 			)}
 
-			<MessageList sessionId={selectedSession.localId} />
+			<MessageList sessionId={selectedSession.sessionId} />
 
-			<ChatInput sessionId={selectedSession.localId} disabled={!isRunning} />
+			<ChatInput sessionId={selectedSession.sessionId} disabled={!isRunning} />
+		</div>
+	)
+}
+
+/**
+ * View shown while a session is being created (waiting for CLI's session_created event)
+ */
+function PendingSessionView({
+	pendingSession,
+}: {
+	pendingSession: { label: string; prompt: string; startTime: number }
+}) {
+	const { t } = useTranslation("agentManager")
+
+	return (
+		<div className="session-detail">
+			<div className="detail-header">
+				<div className="header-info">
+					<div className="header-title" title={pendingSession.prompt}>
+						{pendingSession.label}
+					</div>
+					<div className="header-meta">
+						<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+							<Loader2 size={12} className="spinning" />
+							<span>{t("status.creating")}</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="center-form">
+				<Loader2 size={48} className="spinning" style={{ opacity: 0.5 }} />
+				<h2 style={{ marginTop: 16 }}>{t("sessionDetail.creatingSession")}</h2>
+				<p>{t("sessionDetail.waitingForCli")}</p>
+			</div>
 		</div>
 	)
 }

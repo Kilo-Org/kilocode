@@ -140,7 +140,7 @@ describe("Multi-Agent State Isolation", () => {
 	describe("Session management", () => {
 		it("should add and remove sessions", () => {
 			store.set(upsertSessionAtom, {
-				localId: "agent-1",
+				sessionId: "agent-1",
 				label: "Test Agent",
 				prompt: "test prompt",
 				status: "running",
@@ -157,7 +157,7 @@ describe("Multi-Agent State Isolation", () => {
 
 		it("should update existing session", () => {
 			store.set(upsertSessionAtom, {
-				localId: "agent-1",
+				sessionId: "agent-1",
 				label: "Test",
 				prompt: "p",
 				status: "running",
@@ -166,7 +166,7 @@ describe("Multi-Agent State Isolation", () => {
 			})
 
 			store.set(upsertSessionAtom, {
-				localId: "agent-1",
+				sessionId: "agent-1",
 				label: "Test",
 				prompt: "p",
 				status: "done",
@@ -200,15 +200,15 @@ describe("Multi-Agent State Isolation", () => {
 
 			const merged = store.get(mergedSessionsAtom)
 			expect(merged).toHaveLength(2)
-			expect(merged[0]?.localId).toBe("remote-1")
+			expect(merged[0]?.sessionId).toBe("remote-1")
 			expect(merged[0]?.source).toBe("remote")
-			expect(merged[1]?.localId).toBe("remote-2")
+			expect(merged[1]?.sessionId).toBe("remote-2")
 			expect(merged[1]?.source).toBe("remote")
 		})
 
 		it("should show only local sessions when no remote sessions exist", () => {
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "local-1",
 				label: "Local Session",
 				prompt: "test",
 				status: "running",
@@ -218,20 +218,19 @@ describe("Multi-Agent State Isolation", () => {
 
 			const merged = store.get(mergedSessionsAtom)
 			expect(merged).toHaveLength(1)
-			expect(merged[0]?.localId).toBe("local-1")
+			expect(merged[0]?.sessionId).toBe("local-1")
 			expect(merged[0]?.source).toBe("local")
 		})
 
 		it("should deduplicate when local session has matching sessionId", () => {
 			// Local session with a remote session ID
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "remote-session-123", // Same ID as remote session
 				label: "My Local Session",
 				prompt: "test",
 				status: "running",
 				startTime: Date.now(),
 				source: "local",
-				sessionId: "remote-session-123", // This links to remote
 			})
 
 			// Remote sessions including the one we already have locally
@@ -246,25 +245,24 @@ describe("Multi-Agent State Isolation", () => {
 			expect(merged).toHaveLength(2)
 
 			// First should be our local session (preserves local state)
-			expect(merged[0]?.localId).toBe("local-1")
+			expect(merged[0]?.sessionId).toBe("remote-session-123")
 			expect(merged[0]?.source).toBe("local")
 			expect(merged[0]?.label).toBe("My Local Session") // Local label preserved
 
 			// Second should be the other remote session
-			expect(merged[1]?.localId).toBe("remote-other")
+			expect(merged[1]?.sessionId).toBe("remote-other")
 			expect(merged[1]?.source).toBe("remote")
 		})
 
 		it("should preserve local session state over remote state when deduplicating", () => {
 			// Local session that's still running
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "remote-123", // Same ID as remote session
 				label: "Running Task",
 				prompt: "do something",
 				status: "running", // Still running locally
 				startTime: Date.now() - 5000,
 				source: "local",
-				sessionId: "remote-123",
 			})
 
 			// Remote reports it as updated (maybe with stale data)
@@ -281,7 +279,7 @@ describe("Multi-Agent State Isolation", () => {
 		it("should order local sessions before remote sessions", () => {
 			// Add local session
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "local-1",
 				label: "Local",
 				prompt: "test",
 				status: "running",
@@ -322,7 +320,7 @@ describe("Multi-Agent State Isolation", () => {
 
 			expect(merged).toHaveLength(1)
 			const session = merged[0]
-			expect(session?.localId).toBe("remote-abc")
+			expect(session?.sessionId).toBe("remote-abc")
 			expect(session?.label).toBe("My Remote Task")
 			expect(session?.prompt).toBe("") // Not available from remote
 			expect(session?.status).toBe("done") // Remote sessions assumed done
@@ -367,7 +365,7 @@ describe("Multi-Agent State Isolation", () => {
 
 		it("returns local session when selected", () => {
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "local-1",
 				label: "Local Session",
 				prompt: "test prompt",
 				status: "running",
@@ -377,7 +375,7 @@ describe("Multi-Agent State Isolation", () => {
 			store.set(selectedSessionIdAtom, "local-1")
 
 			const selected = store.get(selectedSessionAtom)
-			expect(selected?.localId).toBe("local-1")
+			expect(selected?.sessionId).toBe("local-1")
 			expect(selected?.label).toBe("Local Session")
 			expect(selected?.source).toBe("local")
 		})
@@ -387,7 +385,7 @@ describe("Multi-Agent State Isolation", () => {
 			store.set(selectedSessionIdAtom, "remote-abc")
 
 			const selected = store.get(selectedSessionAtom)
-			expect(selected?.localId).toBe("remote-abc")
+			expect(selected?.sessionId).toBe("remote-abc")
 			expect(selected?.label).toBe("Remote Task")
 			expect(selected?.source).toBe("remote")
 		})
@@ -395,23 +393,22 @@ describe("Multi-Agent State Isolation", () => {
 		it("prefers local session over remote when both have same ID via sessionId", () => {
 			// Local session with sessionId
 			store.set(upsertSessionAtom, {
-				localId: "local-1",
+				sessionId: "local-1",
 				label: "My Local Label",
 				prompt: "test",
 				status: "running",
 				startTime: Date.now(),
 				source: "local",
-				sessionId: "remote-xyz",
 			})
 
-			// Remote session with matching session_id
+			// Remote session (different ID)
 			store.set(setRemoteSessionsAtom, [createRemoteSession("remote-xyz", "Remote Label")])
 
 			// Select the local session
 			store.set(selectedSessionIdAtom, "local-1")
 
 			const selected = store.get(selectedSessionAtom)
-			expect(selected?.localId).toBe("local-1")
+			expect(selected?.sessionId).toBe("local-1")
 			expect(selected?.label).toBe("My Local Label")
 			expect(selected?.source).toBe("local")
 		})
@@ -426,7 +423,7 @@ describe("Multi-Agent State Isolation", () => {
 			store.set(selectedSessionIdAtom, "remote-2")
 
 			const selected = store.get(selectedSessionAtom)
-			expect(selected?.localId).toBe("remote-2")
+			expect(selected?.sessionId).toBe("remote-2")
 			expect(selected?.label).toBe("Second Remote")
 		})
 	})

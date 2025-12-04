@@ -15,49 +15,49 @@ describe("AgentRegistry", () => {
 	})
 
 	it("uses the selectedId accessor and validates unknown ids", () => {
-		const first = registry.createSession("first prompt")
-		expect(registry.selectedId).toBe(first.localId)
+		const first = registry.createSession("session-1", "first prompt")
+		expect(registry.selectedId).toBe(first.sessionId)
 
 		registry.selectedId = "missing"
 		expect(registry.selectedId).toBeNull()
 
-		const second = registry.createSession("second prompt")
-		registry.selectedId = first.localId
-		expect(registry.selectedId).toBe(first.localId)
+		const second = registry.createSession("session-2", "second prompt")
+		registry.selectedId = first.sessionId
+		expect(registry.selectedId).toBe(first.sessionId)
 
 		// Setting a known id should stick; unknown should clear
-		registry.selectedId = second.localId
-		expect(registry.selectedId).toBe(second.localId)
+		registry.selectedId = second.sessionId
+		expect(registry.selectedId).toBe(second.sessionId)
 	})
 
 	it("re-selects the next session when the selected one is removed", () => {
-		const first = registry.createSession("first")
-		const second = registry.createSession("second")
-		expect(registry.selectedId).toBe(second.localId) // latest auto-selected
+		const first = registry.createSession("session-1", "first")
+		const second = registry.createSession("session-2", "second")
+		expect(registry.selectedId).toBe(second.sessionId) // latest auto-selected
 
-		registry.removeSession(second.localId)
-		expect(registry.selectedId).toBe(first.localId)
+		registry.removeSession(second.sessionId)
+		expect(registry.selectedId).toBe(first.sessionId)
 
-		registry.removeSession(first.localId)
+		registry.removeSession(first.sessionId)
 		expect(registry.selectedId).toBeNull()
 	})
 
 	it("sorts sessions by most recent start time", () => {
-		const first = registry.createSession("first")
+		const first = registry.createSession("session-1", "first")
 		vi.advanceTimersByTime(1)
-		const second = registry.createSession("second")
+		const second = registry.createSession("session-2", "second")
 		const sessions = registry.getSessions()
 
-		expect(sessions.map((s) => s.localId)).toEqual([second.localId, first.localId])
+		expect(sessions.map((s) => s.sessionId)).toEqual([second.sessionId, first.sessionId])
 	})
 
 	it("caps logs to the max log count", () => {
-		const { localId } = registry.createSession("loggy")
+		const { sessionId } = registry.createSession("session-1", "loggy")
 		for (let i = 0; i < 105; i++) {
-			registry.appendLog(localId, `log-${i}`)
+			registry.appendLog(sessionId, `log-${i}`)
 		}
 
-		const session = registry.getSession(localId)
+		const session = registry.getSession(sessionId)
 		expect(session?.logs.length).toBe(100)
 		expect(session?.logs[0]).toBe("log-5") // first five should be trimmed
 		expect(session?.logs.at(-1)).toBe("log-104")
@@ -68,8 +68,8 @@ describe("AgentRegistry", () => {
 		const created: string[] = []
 		for (let i = 0; i < 10; i++) {
 			vi.advanceTimersByTime(1)
-			const session = registry.createSession(`session-${i}`)
-			created.push(session.localId)
+			const session = registry.createSession(`session-${i}`, `session-${i}`)
+			created.push(session.sessionId)
 		}
 
 		// Mark the earliest three as non-running so they are eligible for pruning
@@ -78,63 +78,50 @@ describe("AgentRegistry", () => {
 		registry.updateSessionStatus(created[2], "done")
 
 		// Create one more to trigger pruning; should drop the oldest done session (created[0])
-		const extra = registry.createSession("overflow")
+		const extra = registry.createSession("session-overflow", "overflow")
 
-		const ids = registry.getSessions().map((s) => s.localId)
+		const ids = registry.getSessions().map((s) => s.sessionId)
 		expect(ids).toHaveLength(10)
 		expect(ids).not.toContain(created[0])
 		expect(ids).toContain(created[1])
-		expect(ids).toContain(extra.localId)
+		expect(ids).toContain(extra.sessionId)
 	})
 
 	it("getState returns the current sessions and selection", () => {
-		const session = registry.createSession("stateful")
+		const session = registry.createSession("session-1", "stateful")
 		const state = registry.getState()
 
-		expect(state.selectedId).toBe(session.localId)
-		expect(state.sessions[0].localId).toBe(session.localId)
+		expect(state.selectedId).toBe(session.sessionId)
+		expect(state.sessions[0].sessionId).toBe(session.sessionId)
 	})
 
-	describe("remote session identity", () => {
-		it("setSessionIdFor associates a remote session ID with a local session", () => {
-			const session = registry.createSession("test prompt")
-			expect(session.sessionId).toBeUndefined()
+	describe("pending session", () => {
+		it("setPendingSession creates a pending session", () => {
+			expect(registry.pendingSession).toBeNull()
 
-			registry.setSessionIdFor(session.localId, "remote-abc-123")
+			const pending = registry.setPendingSession("test prompt")
 
-			const updated = registry.getSession(session.localId)
-			expect(updated?.sessionId).toBe("remote-abc-123")
+			expect(pending.prompt).toBe("test prompt")
+			expect(pending.label).toBe("test prompt")
+			expect(pending.startTime).toBeDefined()
+			expect(registry.pendingSession).toBe(pending)
 		})
 
-		it("setSessionIdFor does nothing for non-existent session", () => {
-			registry.setSessionIdFor("non-existent", "remote-abc")
-			// Should not throw, just no-op
-			expect(registry.getSession("non-existent")).toBeUndefined()
+		it("clearPendingSession clears the pending session", () => {
+			registry.setPendingSession("test prompt")
+			expect(registry.pendingSession).not.toBeNull()
+
+			registry.clearPendingSession()
+
+			expect(registry.pendingSession).toBeNull()
 		})
 
-		it("getSessionBySessionId returns session with matching sessionId", () => {
-			const session1 = registry.createSession("first")
-			const session2 = registry.createSession("second")
+		it("truncates long prompts in pending session label", () => {
+			const longPrompt = "a".repeat(100)
+			const pending = registry.setPendingSession(longPrompt)
 
-			registry.setSessionIdFor(session1.localId, "remote-111")
-			registry.setSessionIdFor(session2.localId, "remote-222")
-
-			const found = registry.getSessionBySessionId("remote-111")
-			expect(found?.localId).toBe(session1.localId)
-		})
-
-		it("getSessionBySessionId returns undefined when no match", () => {
-			const session = registry.createSession("test")
-			registry.setSessionIdFor(session.localId, "remote-abc")
-
-			const found = registry.getSessionBySessionId("non-existent-session-id")
-			expect(found).toBeUndefined()
-		})
-
-		it("getSessionBySessionId returns undefined when sessions have no sessionId", () => {
-			registry.createSession("test")
-			const found = registry.getSessionBySessionId("any-session-id")
-			expect(found).toBeUndefined()
+			expect(pending.label.length).toBeLessThanOrEqual(40)
+			expect(pending.label.endsWith("...")).toBe(true)
 		})
 	})
 
@@ -144,34 +131,34 @@ describe("AgentRegistry", () => {
 		})
 
 		it("returns false for running session without pid", () => {
-			const session = registry.createSession("test")
+			const session = registry.createSession("session-1", "test")
 			expect(session.status).toBe("running")
 			expect(session.pid).toBeUndefined()
 
-			expect(registry.hasActiveProcess(session.localId)).toBe(false)
+			expect(registry.hasActiveProcess(session.sessionId)).toBe(false)
 		})
 
 		it("returns true for running session with pid", () => {
-			const session = registry.createSession("test")
-			registry.setSessionPid(session.localId, 12345)
+			const session = registry.createSession("session-1", "test")
+			registry.setSessionPid(session.sessionId, 12345)
 
-			expect(registry.hasActiveProcess(session.localId)).toBe(true)
+			expect(registry.hasActiveProcess(session.sessionId)).toBe(true)
 		})
 
 		it("returns false for completed session with pid", () => {
-			const session = registry.createSession("test")
-			registry.setSessionPid(session.localId, 12345)
-			registry.updateSessionStatus(session.localId, "done")
+			const session = registry.createSession("session-1", "test")
+			registry.setSessionPid(session.sessionId, 12345)
+			registry.updateSessionStatus(session.sessionId, "done")
 
-			expect(registry.hasActiveProcess(session.localId)).toBe(false)
+			expect(registry.hasActiveProcess(session.sessionId)).toBe(false)
 		})
 
 		it("returns false for error session with pid", () => {
-			const session = registry.createSession("test")
-			registry.setSessionPid(session.localId, 12345)
-			registry.updateSessionStatus(session.localId, "error")
+			const session = registry.createSession("session-1", "test")
+			registry.setSessionPid(session.sessionId, 12345)
+			registry.updateSessionStatus(session.sessionId, "error")
 
-			expect(registry.hasActiveProcess(session.localId)).toBe(false)
+			expect(registry.hasActiveProcess(session.sessionId)).toBe(false)
 		})
 	})
 
@@ -181,45 +168,45 @@ describe("AgentRegistry", () => {
 		})
 
 		it("returns true when a session is running", () => {
-			registry.createSession("running session")
+			registry.createSession("session-1", "running session")
 			expect(registry.hasRunningSessions()).toBe(true)
 		})
 
 		it("returns false when all sessions are completed", () => {
-			const session = registry.createSession("done session")
-			registry.updateSessionStatus(session.localId, "done")
+			const session = registry.createSession("session-1", "done session")
+			registry.updateSessionStatus(session.sessionId, "done")
 			expect(registry.hasRunningSessions()).toBe(false)
 		})
 
 		it("returns false when all sessions have errors", () => {
-			const session = registry.createSession("error session")
-			registry.updateSessionStatus(session.localId, "error")
+			const session = registry.createSession("session-1", "error session")
+			registry.updateSessionStatus(session.sessionId, "error")
 			expect(registry.hasRunningSessions()).toBe(false)
 		})
 
 		it("returns false when all sessions are stopped", () => {
-			const session = registry.createSession("stopped session")
-			registry.updateSessionStatus(session.localId, "stopped")
+			const session = registry.createSession("session-1", "stopped session")
+			registry.updateSessionStatus(session.sessionId, "stopped")
 			expect(registry.hasRunningSessions()).toBe(false)
 		})
 
 		it("returns true when at least one session is running among others", () => {
-			const s1 = registry.createSession("done")
-			registry.createSession("running")
-			const s3 = registry.createSession("error")
+			const s1 = registry.createSession("session-1", "done")
+			registry.createSession("session-2", "running")
+			const s3 = registry.createSession("session-3", "error")
 
-			registry.updateSessionStatus(s1.localId, "done")
-			registry.updateSessionStatus(s3.localId, "error")
+			registry.updateSessionStatus(s1.sessionId, "done")
+			registry.updateSessionStatus(s3.sessionId, "error")
 
 			expect(registry.hasRunningSessions()).toBe(true)
 		})
 
 		it("returns the count of running sessions", () => {
-			registry.createSession("running 1")
-			registry.createSession("running 2")
-			const s3 = registry.createSession("done")
+			registry.createSession("session-1", "running 1")
+			registry.createSession("session-2", "running 2")
+			const s3 = registry.createSession("session-3", "done")
 
-			registry.updateSessionStatus(s3.localId, "done")
+			registry.updateSessionStatus(s3.sessionId, "done")
 
 			expect(registry.getRunningSessionCount()).toBe(2)
 		})
@@ -230,91 +217,20 @@ describe("AgentRegistry", () => {
 			expect(registry.hasPendingOrRunningSessions()).toBe(false)
 		})
 
-		it("returns true when a session is running", () => {
-			registry.createSession("running session")
+		it("returns true when pending session exists", () => {
+			registry.setPendingSession("test")
 			expect(registry.hasPendingOrRunningSessions()).toBe(true)
 		})
 
-		it("returns true when a session is pending", () => {
-			const session = registry.createSession("pending session")
-			registry.updateSessionStatus(session.localId, "stopped")
+		it("returns true when running session exists", () => {
+			registry.createSession("session-1", "test")
 			expect(registry.hasPendingOrRunningSessions()).toBe(true)
 		})
 
-		it("returns false when all sessions are completed", () => {
-			const session = registry.createSession("done session")
-			registry.updateSessionStatus(session.localId, "done")
+		it("returns false when only completed sessions exist", () => {
+			const session = registry.createSession("session-1", "test")
+			registry.updateSessionStatus(session.sessionId, "done")
 			expect(registry.hasPendingOrRunningSessions()).toBe(false)
-		})
-
-		it("returns false when all sessions have errors", () => {
-			const session = registry.createSession("error session")
-			registry.updateSessionStatus(session.localId, "error")
-			expect(registry.hasPendingOrRunningSessions()).toBe(false)
-		})
-
-		it("returns false when all sessions are stopped and none running", () => {
-			const session = registry.createSession("stopped session")
-			registry.updateSessionStatus(session.localId, "stopped")
-			expect(registry.hasPendingOrRunningSessions()).toBe(false)
-		})
-
-		it("returns true when at least one session is running among others", () => {
-			const s1 = registry.createSession("done")
-			registry.createSession("running")
-			const s3 = registry.createSession("error")
-
-			registry.updateSessionStatus(s1.localId, "done")
-			registry.updateSessionStatus(s3.localId, "error")
-
-			expect(registry.hasPendingOrRunningSessions()).toBe(true)
-		})
-
-		it("returns the count of pending or running sessions", () => {
-			const s1 = registry.createSession("running 1")
-			registry.updateSessionStatus(s1.localId, "running")
-			const s2 = registry.createSession("running 2")
-			registry.updateSessionStatus(s2.localId, "running")
-			const s3 = registry.createSession("done")
-			registry.updateSessionStatus(s3.localId, "done")
-
-			expect(registry.getPendingOrRunningSessionCount()).toBe(2)
-		})
-
-		it("does not count stopped sessions as pending", () => {
-			const s1 = registry.createSession("stopped 1")
-			registry.updateSessionStatus(s1.localId, "stopped")
-			const s2 = registry.createSession("running 2")
-			registry.updateSessionStatus(s2.localId, "running")
-
-			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
-		})
-
-		it("does not count error sessions as pending", () => {
-			const s1 = registry.createSession("error 1")
-			registry.updateSessionStatus(s1.localId, "error")
-			const s2 = registry.createSession("running 2")
-			registry.updateSessionStatus(s2.localId, "running")
-
-			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
-		})
-
-		it("does not count done sessions as pending", () => {
-			const s1 = registry.createSession("done 1")
-			registry.updateSessionStatus(s1.localId, "done")
-			const s2 = registry.createSession("running 2")
-			registry.updateSessionStatus(s2.localId, "running")
-
-			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
-		})
-
-		it("counts sessions with status running or stopped as pending or running", () => {
-			const runningSession = registry.createSession("running session")
-			const stoppedSession = registry.createSession("stopped session")
-			registry.updateSessionStatus(stoppedSession.localId, "stopped")
-
-			expect(registry.hasPendingOrRunningSessions()).toBe(true)
-			expect(registry.getPendingOrRunningSessionCount()).toBe(2)
 		})
 	})
 })

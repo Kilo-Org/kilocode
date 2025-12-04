@@ -6,6 +6,7 @@ import {
 	selectedSessionIdAtom,
 	isRefreshingRemoteSessionsAtom,
 	startRefreshingRemoteSessionsAtom,
+	pendingSessionAtom,
 	type AgentSession,
 } from "../state/atoms/sessions"
 import { vscode } from "../utils/vscode"
@@ -14,6 +15,7 @@ import { Plus, Trash2, Loader2, RefreshCw } from "lucide-react"
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
 	const sessions = useAtomValue(mergedSessionsAtom)
+	const pendingSession = useAtomValue(pendingSessionAtom)
 	const [selectedId, setSelectedId] = useAtom(selectedSessionIdAtom)
 	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
 	const startRefreshing = useSetAtom(startRefreshingRemoteSessionsAtom)
@@ -38,7 +40,7 @@ export function SessionSidebar() {
 		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 
-	const isNewAgentSelected = selectedId === null
+	const isNewAgentSelected = selectedId === null && !pendingSession
 
 	return (
 		<div className="sidebar">
@@ -68,21 +70,54 @@ export function SessionSidebar() {
 			</div>
 
 			<div className="session-list">
-				{sessions.length === 0 ? (
+				{/* Show pending session at the top */}
+				{pendingSession && (
+					<PendingSessionItem
+						pendingSession={pendingSession}
+						isSelected={selectedId === null}
+						onSelect={() => setSelectedId(null)}
+					/>
+				)}
+
+				{sessions.length === 0 && !pendingSession ? (
 					<div className="no-sessions">
 						<p>{t("sidebar.emptyState")}</p>
 					</div>
 				) : (
 					sessions.map((session) => (
 						<SessionItem
-							key={session.localId}
+							key={session.sessionId}
 							session={session}
-							isSelected={selectedId === session.localId}
-							onSelect={() => handleSelectSession(session.localId)}
-							onRemove={(e) => handleRemoveSession(session.localId, e)}
+							isSelected={selectedId === session.sessionId}
+							onSelect={() => handleSelectSession(session.sessionId)}
+							onRemove={(e) => handleRemoveSession(session.sessionId, e)}
 						/>
 					))
 				)}
+			</div>
+		</div>
+	)
+}
+
+function PendingSessionItem({
+	pendingSession,
+	isSelected,
+	onSelect,
+}: {
+	pendingSession: { label: string; startTime: number }
+	isSelected: boolean
+	onSelect: () => void
+}) {
+	const { t } = useTranslation("agentManager")
+
+	return (
+		<div className={`session-item pending ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+			<div className="status-icon creating" title={t("status.creating")}>
+				<Loader2 size={14} className="spinning" />
+			</div>
+			<div className="session-content">
+				<div className="session-label">{pendingSession.label}</div>
+				<div className="session-meta">{t("status.creating")}</div>
 			</div>
 		</div>
 	)

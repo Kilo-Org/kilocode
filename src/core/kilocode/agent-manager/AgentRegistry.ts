@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto"
-import { AgentSession, AgentStatus, AgentManagerState } from "./types"
+import { AgentSession, AgentStatus, AgentManagerState, PendingSession } from "./types"
 
 const MAX_SESSIONS = 10
 const MAX_LOGS = 100
@@ -7,64 +6,75 @@ const MAX_LOGS = 100
 export class AgentRegistry {
 	private sessions: Map<string, AgentSession> = new Map()
 	private _selectedId: string | null = null
+	private _pendingSession: PendingSession | null = null
 
 	public get selectedId(): string | null {
 		return this._selectedId
 	}
 
-	public set selectedId(localId: string | null) {
-		this._selectedId = localId && this.sessions.has(localId) ? localId : null
+	public set selectedId(sessionId: string | null) {
+		this._selectedId = sessionId && this.sessions.has(sessionId) ? sessionId : null
 	}
 
-	public createSession(prompt: string): AgentSession {
-		const localId = this.generateLocalId()
+	public get pendingSession(): PendingSession | null {
+		return this._pendingSession
+	}
+
+	/**
+	 * Set a pending session while waiting for CLI's session_created event
+	 */
+	public setPendingSession(prompt: string): PendingSession {
+		const label = this.truncatePrompt(prompt)
+		this._pendingSession = {
+			prompt,
+			label,
+			startTime: Date.now(),
+		}
+		return this._pendingSession
+	}
+
+	/**
+	 * Clear the pending session (called after session is created or on error)
+	 */
+	public clearPendingSession(): void {
+		this._pendingSession = null
+	}
+
+	/**
+	 * Create a session with the CLI-provided sessionId
+	 */
+	public createSession(sessionId: string, prompt: string, startTime?: number): AgentSession {
 		const label = this.truncatePrompt(prompt)
 
 		const session: AgentSession = {
-			localId,
+			sessionId,
 			label,
 			prompt,
 			status: "running",
-			startTime: Date.now(),
+			startTime: startTime ?? Date.now(),
 			logs: ["Starting agent..."],
 			source: "local",
 		}
 
-		this.sessions.set(localId, session)
-		this.selectedId = localId
+		this.sessions.set(sessionId, session)
+		this.selectedId = sessionId
 		this.pruneOldSessions()
 
 		return session
 	}
 
-	public setSessionIdFor(localId: string, sessionId: string): void {
-		const session = this.sessions.get(localId)
-		if (session) {
-			session.sessionId = sessionId
-		}
-	}
-
-	public getSessionBySessionId(sessionId: string): AgentSession | undefined {
-		for (const session of this.sessions.values()) {
-			if (session.sessionId === sessionId) {
-				return session
-			}
-		}
-		return undefined
-	}
-
-	public hasActiveProcess(localId: string): boolean {
-		const session = this.sessions.get(localId)
+	public hasActiveProcess(sessionId: string): boolean {
+		const session = this.sessions.get(sessionId)
 		return session?.status === "running" && session?.pid !== undefined
 	}
 
 	public updateSessionStatus(
-		localId: string,
+		sessionId: string,
 		status: AgentStatus,
 		exitCode?: number,
 		error?: string,
 	): AgentSession | undefined {
-		const session = this.sessions.get(localId)
+		const session = this.sessions.get(sessionId)
 		if (!session) return undefined
 
 		session.status = status
@@ -81,25 +91,25 @@ export class AgentRegistry {
 		return session
 	}
 
-	public removeSession(localId: string): boolean {
-		const deleted = this.sessions.delete(localId)
-		if (deleted && this.selectedId === localId) {
+	public removeSession(sessionId: string): boolean {
+		const deleted = this.sessions.delete(sessionId)
+		if (deleted && this.selectedId === sessionId) {
 			const sessions = this.getSessions()
-			this.selectedId = sessions.length > 0 ? sessions[0].localId : null
+			this.selectedId = sessions.length > 0 ? sessions[0].sessionId : null
 		}
 		return deleted
 	}
 
-	public getSession(localId: string): AgentSession | undefined {
-		return this.sessions.get(localId)
+	public getSession(sessionId: string): AgentSession | undefined {
+		return this.sessions.get(sessionId)
 	}
 
 	public getSessions(): AgentSession[] {
 		return Array.from(this.sessions.values()).sort((a, b) => b.startTime - a.startTime)
 	}
 
-	public appendLog(localId: string, line: string): void {
-		const session = this.sessions.get(localId)
+	public appendLog(sessionId: string, line: string): void {
+		const session = this.sessions.get(sessionId)
 		if (!session) return
 
 		session.logs.push(line)
@@ -108,8 +118,8 @@ export class AgentRegistry {
 		}
 	}
 
-	public setSessionPid(localId: string, pid: number): void {
-		const session = this.sessions.get(localId)
+	public setSessionPid(sessionId: string, pid: number): void {
+		const session = this.sessions.get(sessionId)
 		if (session) {
 			session.pid = pid
 		}
@@ -120,6 +130,10 @@ export class AgentRegistry {
 			sessions: this.getSessions(),
 			selectedId: this.selectedId,
 		}
+	}
+
+	public hasPendingOrRunningSessions(): boolean {
+		return this._pendingSession !== null || this.getRunningSessionCount() > 0
 	}
 
 	public hasRunningSessions(): boolean {
@@ -147,12 +161,8 @@ export class AgentRegistry {
 		const toRemove = nonRunning.slice(-Math.min(overflow, nonRunning.length))
 
 		for (const session of toRemove) {
-			this.sessions.delete(session.localId)
+			this.sessions.delete(session.sessionId)
 		}
-	}
-
-	private generateLocalId(): string {
-		return `local-${randomUUID()}`
 	}
 
 	private truncatePrompt(prompt: string, maxLength = 40): string {

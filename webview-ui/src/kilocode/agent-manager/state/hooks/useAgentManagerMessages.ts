@@ -10,8 +10,10 @@ import {
 	startSessionFailedCounterAtom,
 	sessionOrderAtom,
 	setRemoteSessionsAtom,
+	setPendingSessionAtom,
 	type AgentSession,
 	type RemoteSession,
+	type PendingSession,
 } from "../atoms/sessions"
 
 interface AgentManagerState {
@@ -39,11 +41,17 @@ interface RemoteSessionsMessage {
 	sessions: RemoteSession[]
 }
 
+interface PendingSessionMessage {
+	type: "agentManager.pendingSession"
+	pendingSession: PendingSession | null
+}
+
 type ExtensionMessage =
 	| ChatMessagesMessage
 	| StateMessage
 	| StartSessionFailedMessage
 	| RemoteSessionsMessage
+	| PendingSessionMessage
 	| { type: string; [key: string]: unknown }
 
 /**
@@ -58,6 +66,7 @@ export function useAgentManagerMessages() {
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const setStartSessionFailedCounter = useSetAtom(startSessionFailedCounterAtom)
 	const setRemoteSessions = useSetAtom(setRemoteSessionsAtom)
+	const setPendingSession = useSetAtom(setPendingSessionAtom)
 	const sessionOrder = useAtomValue(sessionOrderAtom)
 	const hasInitializedSelection = useRef(false)
 
@@ -77,10 +86,10 @@ export function useAgentManagerMessages() {
 					for (const session of state.sessions) {
 						upsertSession(session)
 					}
-					const extensionSessionIds = new Set(state.sessions.map((s) => s.localId))
-					for (const localId of sessionOrder) {
-						if (!extensionSessionIds.has(localId)) {
-							removeSession(localId)
+					const extensionSessionIds = new Set(state.sessions.map((s) => s.sessionId))
+					for (const sessionId of sessionOrder) {
+						if (!extensionSessionIds.has(sessionId)) {
+							removeSession(sessionId)
 						}
 					}
 					if (!hasInitializedSelection.current && state.selectedId !== undefined) {
@@ -93,12 +102,20 @@ export function useAgentManagerMessages() {
 				case "agentManager.startSessionFailed": {
 					// Increment counter so components can reset their loading state
 					setStartSessionFailedCounter((c) => c + 1)
+					// Also clear pending session
+					setPendingSession(null)
 					break
 				}
 
 				case "agentManager.remoteSessions": {
 					const { sessions } = message as RemoteSessionsMessage
 					setRemoteSessions(sessions)
+					break
+				}
+
+				case "agentManager.pendingSession": {
+					const { pendingSession } = message as PendingSessionMessage
+					setPendingSession(pendingSession)
 					break
 				}
 			}
@@ -114,6 +131,7 @@ export function useAgentManagerMessages() {
 		setSelectedSessionId,
 		setStartSessionFailedCounter,
 		setRemoteSessions,
+		setPendingSession,
 		sessionOrder,
 	])
 }

@@ -1,10 +1,10 @@
 import { atom } from "jotai"
 
-export type AgentStatus = "running" | "done" | "error" | "stopped"
+export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
 
 export interface AgentSession {
-	localId: string
+	sessionId: string
 	label: string
 	prompt: string
 	status: AgentStatus
@@ -13,8 +13,16 @@ export interface AgentSession {
 	exitCode?: number
 	error?: string
 	pid?: number
-	sessionId?: string
 	source: SessionSource
+}
+
+/**
+ * Represents a session that is being created (waiting for CLI's session_created event)
+ */
+export interface PendingSession {
+	prompt: string
+	label: string
+	startTime: number
 }
 
 export interface RemoteSession {
@@ -30,6 +38,7 @@ export const sessionOrderAtom = atom<string[]>([])
 export const selectedSessionIdAtom = atom<string | null>(null)
 export const remoteSessionsAtom = atom<RemoteSession[]>([])
 export const isRefreshingRemoteSessionsAtom = atom(false)
+export const pendingSessionAtom = atom<PendingSession | null>(null)
 
 export const startSessionFailedCounterAtom = atom(0)
 
@@ -42,7 +51,7 @@ export const sessionsArrayAtom = atom((get) => {
 
 function toAgentSession(remote: RemoteSession): AgentSession {
 	return {
-		localId: remote.session_id,
+		sessionId: remote.session_id,
 		label: remote.title || "Untitled",
 		prompt: "",
 		status: "done",
@@ -87,13 +96,13 @@ export const selectedSessionAtom = atom((get) => {
 export const upsertSessionAtom = atom(null, (get, set, session: AgentSession) => {
 	const current = get(sessionsMapAtom)
 	const order = get(sessionOrderAtom)
-	const isNewSession = !order.includes(session.localId)
+	const isNewSession = !order.includes(session.sessionId)
 
-	set(sessionsMapAtom, { ...current, [session.localId]: session })
+	set(sessionsMapAtom, { ...current, [session.sessionId]: session })
 	if (isNewSession) {
-		set(sessionOrderAtom, [session.localId, ...order])
+		set(sessionOrderAtom, [session.sessionId, ...order])
 		if (get(selectedSessionIdAtom) === null) {
-			set(selectedSessionIdAtom, session.localId)
+			set(selectedSessionIdAtom, session.sessionId)
 		}
 	}
 })
@@ -110,6 +119,10 @@ export const removeSessionAtom = atom(null, (get, set, sessionId: string) => {
 		const remaining = get(sessionOrderAtom)
 		set(selectedSessionIdAtom, remaining[0] || null)
 	}
+})
+
+export const setPendingSessionAtom = atom(null, (_get, set, pending: PendingSession | null) => {
+	set(pendingSessionAtom, pending)
 })
 
 export const updateSessionStatusAtom = atom(

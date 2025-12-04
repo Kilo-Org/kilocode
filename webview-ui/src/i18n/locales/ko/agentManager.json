@@ -20,7 +20,9 @@
 		"autoModeWarning": "전자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
-		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈"
+		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈",
+		"creatingSession": "세션 생성 중...",
+		"waitingForCli": "에이전트 세션 초기화 중..."
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",
@@ -41,6 +43,7 @@
 		"running": "실행 중",
 		"done": "완료",
 		"stopped": "중지됨",
-		"error": "오류"
+		"error": "오류",
+		"creating": "생성 중..."
 	}
 }

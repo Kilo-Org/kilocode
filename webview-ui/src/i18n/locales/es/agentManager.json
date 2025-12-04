@@ -20,7 +20,9 @@
 		"autoModeWarning": "Ejecutando en modo completamente automático - el agente ejecutará acciones sin confirmación",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente con el prompt proporcionado",
-		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea"
+		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea",
+		"creatingSession": "Creando sesión...",
+		"waitingForCli": "Inicializando sesión del agente..."
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",
@@ -41,6 +43,7 @@
 		"running": "en ejecución",
 		"done": "hecho",
 		"stopped": "detenido",
-		"error": "error"
+		"error": "error",
+		"creating": "creando..."
 	}
 }

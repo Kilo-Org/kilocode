@@ -6,7 +6,7 @@ import { sessionsArrayAtom, selectedSessionIdAtom, type AgentSession } from "../
 
 function createSession(id: string, status: AgentSession["status"] = "running"): AgentSession {
 	return {
-		localId: id,
+		sessionId: id,
 		label: `Session ${id}`,
 		prompt: `Test prompt ${id}`,
 		status,
@@ -57,7 +57,7 @@ describe("useAgentManagerMessages", () => {
 
 		expect(result.current.sessions).toHaveLength(2)
 		// Sessions are prepended (newest first), so "2" comes before "1"
-		expect(result.current.sessions.map((s) => s.localId)).toEqual(["2", "1"])
+		expect(result.current.sessions.map((s) => s.sessionId)).toEqual(["2", "1"])
 	})
 
 	it("should remove sessions that no longer exist in state - regression test for delete bug", async () => {
@@ -81,7 +81,7 @@ describe("useAgentManagerMessages", () => {
 
 		expect(result.current.sessions).toHaveLength(3)
 		// Sessions are prepended in order processed
-		expect(result.current.sessions.map((s) => s.localId)).toEqual(["3", "2", "1"])
+		expect(result.current.sessions.map((s) => s.sessionId)).toEqual(["3", "2", "1"])
 
 		// Delete session "2" by sending state without it
 		act(() => {
@@ -90,7 +90,7 @@ describe("useAgentManagerMessages", () => {
 
 		// Session "2" should be removed from frontend state
 		expect(result.current.sessions).toHaveLength(2)
-		expect(result.current.sessions.map((s) => s.localId)).toEqual(["3", "1"])
+		expect(result.current.sessions.map((s) => s.sessionId)).toEqual(["3", "1"])
 	})
 
 	it("should handle deleting multiple sessions at once", async () => {
@@ -120,7 +120,7 @@ describe("useAgentManagerMessages", () => {
 		})
 
 		expect(result.current.sessions).toHaveLength(2)
-		expect(result.current.sessions.map((s) => s.localId)).toEqual(["4", "1"])
+		expect(result.current.sessions.map((s) => s.sessionId)).toEqual(["4", "1"])
 	})
 
 	it("should handle deleting all sessions", async () => {

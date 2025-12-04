@@ -2,11 +2,11 @@
  * Agent Manager Types
  */
 
-export type AgentStatus = "running" | "done" | "error" | "stopped"
+export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
 
 export interface AgentSession {
-	localId: string
+	sessionId: string
 	label: string
 	prompt: string
 	status: AgentStatus
@@ -16,8 +16,16 @@ export interface AgentSession {
 	error?: string
 	logs: string[]
 	pid?: number
-	sessionId?: string
 	source: SessionSource
+}
+
+/**
+ * Represents a session that is being created (waiting for CLI's session_created event)
+ */
+export interface PendingSession {
+	prompt: string
+	label: string
+	startTime: number
 }
 
 export interface RemoteSession {
