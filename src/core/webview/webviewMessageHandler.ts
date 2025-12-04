@@ -77,6 +77,8 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
+import { OcaTokenManager } from "../../api/providers/oca/OcaTokenManager"
+import { DEFAULT_OCA_BASE_URL } from "../../api/providers/oca/utils/constants"
 import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
@@ -827,6 +829,7 @@ export const webviewMessageHandler = async (
 						glama: {},
 						ollama: {},
 						lmstudio: {},
+						oca: {},
 						roo: {},
 						synthetic: {}, // kilocode_change
 						chutes: {},
@@ -924,6 +927,25 @@ export const webviewMessageHandler = async (
 				},
 			]
 			// kilocode_change end
+
+			// Add OCA models fetch when the user is authenticated.
+			try {
+				const valid = await OcaTokenManager.getValid()
+				if (valid?.access_token) {
+					candidates.push({
+						key: "oca",
+						options: {
+							provider: "oca",
+							apiKey: valid.access_token,
+							baseUrl: process.env.OCA_API_BASE ?? DEFAULT_OCA_BASE_URL,
+						} as GetModelsOptions,
+					})
+				} else {
+					console.debug("OCA model fetch skipped: user must Sign in.")
+				}
+			} catch (e) {
+				console.debug("OCA model fetch skipped: error occurred while validating IDCS token..", e)
+			}
 
 			// IO Intelligence is conditional on api key
 			if (apiConfiguration.ioIntelligenceApiKey) {
@@ -1117,6 +1139,52 @@ export const webviewMessageHandler = async (
 				vscode.env.openExternal(vscode.Uri.parse(message.url))
 			}
 			break
+		case "oca/login": {
+			OcaTokenManager.loginWithoutAutoOpen((url: string) => {
+				provider.postMessageToWebview({ type: "oca/show-auth-url", url })
+			})
+				.then(async () => {
+					await provider.postMessageToWebview({ type: "oca/login-success" })
+				})
+				.catch(async (error: unknown) => {
+					await provider.postMessageToWebview({
+						type: "oca/login-error",
+						error: error instanceof Error ? error.message : String(error),
+					})
+				})
+			break
+		}
+		case "oca/logout": {
+			try {
+				await OcaTokenManager.logout()
+				try {
+					await provider.context.secrets.delete("ocaTokenSet")
+				} catch {}
+				await provider.postMessageToWebview({ type: "oca/logout-success" })
+			} catch (error) {
+				await provider.postMessageToWebview({
+					type: "oca/login-error",
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
+
+		case "oca/status": {
+			try {
+				const valid = await OcaTokenManager.getValid()
+				await provider.postMessageToWebview({
+					type: "oca/status",
+					authenticated: !!valid?.access_token,
+				})
+			} catch {
+				await provider.postMessageToWebview({
+					type: "oca/status",
+					authenticated: false,
+				})
+			}
+			break
+		}
 		case "checkpointDiff":
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)
 

@@ -170,6 +170,11 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
+		| "oca/show-auth-url"
+		| "oca/login-success"
+		| "oca/login-error"
+		| "oca/status"
+		| "oca/logout-success"
 		| "managedIndexerState" // kilocode_change
 	text?: string
 	// kilocode_change start
@@ -251,6 +256,7 @@ export interface ExtensionMessage {
 		message: string
 	} // kilocode_change
 	url?: string // kilocode_change
+	authenticated?: boolean
 	keybindings?: Record<string, string> // kilocode_change
 	setting?: string
 	value?: any

@@ -43,6 +43,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
 	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
 	synthetic: ["syntheticApiKey", "apiModelId"],
+	oca: [],
 	// Special cases handled separately in handleSpecialValidations
 	vertex: [], // Has special validation logic (either/or fields)
 	"vscode-lm": [], // Has nested object validation

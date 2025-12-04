@@ -281,6 +281,12 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		case "oca": {
+			return {
+				models: routerModels.oca,
+				defaultModel: "",
+			}
+		}
 		case "minimax": {
 			return {
 				models: minimaxModels,
@@ -310,14 +316,18 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		syntheticApiKey: apiConfiguration?.syntheticApiKey, // kilocode_change
 	})
 
-	const { models, defaultModel } =
+	const selection =
 		apiConfiguration && typeof routerModels.data !== "undefined"
 			? getModelsByProvider({
 					provider,
 					routerModels: routerModels.data,
 					kilocodeDefaultModel,
 				})
-			: FALLBACK_MODELS
+			: provider === "oca"
+				? { models: {}, defaultModel: "" }
+				: FALLBACK_MODELS
+
+	const { models, defaultModel } = selection
 
 	return {
 		provider,
