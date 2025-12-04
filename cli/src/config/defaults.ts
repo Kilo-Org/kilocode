@@ -8,7 +8,7 @@ export const DEFAULT_AUTO_APPROVAL: AutoApprovalConfig = {
 	enabled: true,
 	read: {
 		enabled: true,
-		outside: true,
+		outside: false,
 	},
 	write: {
 		enabled: true,
