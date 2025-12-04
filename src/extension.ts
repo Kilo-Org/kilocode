@@ -184,7 +184,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize the provider *before* the Roo Code Cloud service.
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
-	// const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
+
+	// kilocode_change start: Initialize ManagedIndexer
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
+	// kilocode_change end
 
 	// Initialize Roo Code Cloud service.
 	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
@@ -510,14 +514,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	// kilocode_change start: Initialize ManagedIndexer
-	await checkAndRunAutoLaunchingTask(context)
-	const managedIndexer = new ManagedIndexer(contextProxy)
-	context.subscriptions.push(managedIndexer)
 	void managedIndexer.start().catch((error) => {
 		outputChannel.appendLine(
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+	await checkAndRunAutoLaunchingTask(context)
 	// kilocode_change end
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
