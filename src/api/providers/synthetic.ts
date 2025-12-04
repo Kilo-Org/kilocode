@@ -1,7 +1,6 @@
 // kilocode_change - provider added
 
 import { Anthropic } from "@anthropic-ai/sdk"
-import OpenAI from "openai"
 
 import { type SyntheticModelId, syntheticDefaultModelId, syntheticModels } from "@roo-code/types"
 

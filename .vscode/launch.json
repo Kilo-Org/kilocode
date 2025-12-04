@@ -43,7 +43,37 @@
 				"VSCODE_DEBUG_MODE": "true"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
-			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+			"presentation": {
+				"hidden": false,
+				"group": "tasks",
+				"order": 1
+			}
+		},
+		{
+			"name": "Run Extension [Isolated,Proxy]",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/src",
+				"--disable-extensions",
+				"${input:extensionLaunchDir}"
+			],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"preLaunchTask": "${defaultBuildTask}",
+			"env": {
+				"NODE_ENV": "development",
+				"VSCODE_DEBUG_MODE": "true",
+				"http_proxy": "http://localhost:8080",
+				"https_proxy": "http://localhost:8080"
+			},
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"presentation": {
+				"hidden": false,
+				"group": "tasks",
+				"order": 1
+			}
 		},
 		{
 			"name": "Run Extension [Local Backend]",
@@ -60,7 +90,11 @@
 				"KILOCODE_BACKEND_BASE_URL": "${input:kilocodeBackendBaseUrl}"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
-			"presentation": { "hidden": false, "group": "tasks", "order": 2 }
+			"presentation": {
+				"hidden": false,
+				"group": "tasks",
+				"order": 2
+			}
 		}
 	],
 	"inputs": [
