@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { GhostContextProvider } from "../GhostContextProvider"
-import { AutocompleteInput } from "../../types"
+import { getProcessedSnippets } from "../getProcessedSnippets"
+import { AutocompleteInput, GhostContextProvider } from "../../types"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/snippets/types"
 import { GhostModel } from "../../GhostModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
-import * as vscode from "vscode"
 import crypto from "crypto"
+import { ContextRetrievalService } from "../../../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -84,19 +85,11 @@ function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInp
 
 describe("GhostContextProvider", () => {
 	let contextProvider: GhostContextProvider
-	let mockContext: vscode.ExtensionContext
 	let mockModel: GhostModel
 	let mockIgnoreController: Promise<RooIgnoreController> | undefined
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mockContext = {
-			subscriptions: [],
-			globalState: {
-				get: vi.fn(),
-				update: vi.fn(),
-			},
-		} as any
 
 		mockModel = {
 			getModelName: vi.fn().mockReturnValue("codestral"),
@@ -104,13 +97,27 @@ describe("GhostContextProvider", () => {
 
 		mockIgnoreController = undefined
 
-		contextProvider = new GhostContextProvider(mockContext, mockModel, mockIgnoreController)
+		const ide = new VsCodeIde({} as any)
+		const contextService = new ContextRetrievalService(ide)
+		contextProvider = {
+			ide,
+			contextService,
+			model: mockModel,
+			ignoreController: mockIgnoreController,
+		}
 	})
 
 	describe("getProcessedSnippets", () => {
 		it("should return empty snippets when no snippets available", async () => {
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			expect(result.snippetsWithUris).toEqual([])
 			expect(result.helper).toBeDefined()
@@ -141,7 +148,14 @@ describe("GhostContextProvider", () => {
 			})
 
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			expect(result.snippetsWithUris).toHaveLength(1)
 			expect(result.snippetsWithUris[0]).toEqual({
@@ -181,7 +195,14 @@ describe("GhostContextProvider", () => {
 			})
 
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			expect(result.snippetsWithUris).toHaveLength(2)
 			expect(result.snippetsWithUris[0]).toEqual({
@@ -205,7 +226,16 @@ describe("GhostContextProvider", () => {
 
 			const input = createAutocompleteInput("/test.ts")
 
-			await expect(contextProvider.getProcessedSnippets(input, "/test.ts")).rejects.toThrow("Test error")
+			await expect(
+				getProcessedSnippets(
+					input,
+					"/test.ts",
+					contextProvider.contextService,
+					contextProvider.model,
+					contextProvider.ide,
+					contextProvider.ignoreController,
+				),
+			).rejects.toThrow("Test error")
 		})
 	})
 
@@ -222,7 +252,14 @@ describe("GhostContextProvider", () => {
 
 			mockIgnoreController = Promise.resolve(mockController)
 
-			contextProvider = new GhostContextProvider(mockContext, mockModel, mockIgnoreController)
+			const ide = new VsCodeIde({} as any)
+			const contextService = new ContextRetrievalService(ide)
+			contextProvider = {
+				ide,
+				contextService,
+				model: mockModel,
+				ignoreController: mockIgnoreController,
+			}
 		})
 
 		it("should filter out blocked files", async () => {
@@ -259,7 +296,14 @@ describe("GhostContextProvider", () => {
 			})
 
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			// Should only contain the allowed file
 			expect(result.snippetsWithUris).toHaveLength(1)
@@ -315,7 +359,14 @@ describe("GhostContextProvider", () => {
 			])
 
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			// Should not contain blocked file
 			expect(
@@ -331,7 +382,14 @@ describe("GhostContextProvider", () => {
 
 		it("should allow all files when no ignore controller is provided", async () => {
 			// Create provider without ignore controller
-			contextProvider = new GhostContextProvider(mockContext, mockModel)
+			const ide = new VsCodeIde({} as any)
+			const contextService = new ContextRetrievalService(ide)
+			contextProvider = {
+				ide,
+				contextService,
+				model: mockModel,
+				ignoreController: undefined,
+			}
 
 			const { getAllSnippetsWithoutRace } = await import(
 				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
@@ -356,7 +414,14 @@ describe("GhostContextProvider", () => {
 			})
 
 			const input = createAutocompleteInput("/test.ts")
-			const result = await contextProvider.getProcessedSnippets(input, "/test.ts")
+			const result = await getProcessedSnippets(
+				input,
+				"/test.ts",
+				contextProvider.contextService,
+				contextProvider.model,
+				contextProvider.ide,
+				contextProvider.ignoreController,
+			)
 
 			// Should contain all files when no controller
 			expect(result.snippetsWithUris).toHaveLength(1)

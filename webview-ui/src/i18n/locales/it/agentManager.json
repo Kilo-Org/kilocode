@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Gestore agenti",
+		"newAgent": "Nuovo agente",
+		"sessionsSection": "Sessioni",
+		"emptyState": "Nessun agente attivo ancora.",
+		"startAgent": "Avvia agente",
+		"removeSession": "Rimuovi"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Avvia un nuovo agente",
+		"describeTask": "Descrivi il compito che vuoi far eseguire all'agente.",
+		"placeholderTask": "es. Creare un nuovo componente React per un pulsante...",
+		"stopButton": "Ferma",
+		"newButton": "Nuovo",
+		"stopButtonTitle": "Ferma agente",
+		"newButtonTitle": "Nuovo agente",
+		"autoModeWarning": "In esecuzione in modalità completamente automatica - l'agente eseguirà le azioni senza conferma",
+		"starting": "Avvio in corso...",
+		"startAriaLabel": "Avvia agente con il prompt fornito",
+		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga"
+	},
+	"messages": {
+		"waiting": "In attesa della risposta dell'agente...",
+		"kiloSaid": "Kilo ha detto",
+		"youSaid": "Hai detto",
+		"apiRequest": "Richiesta API",
+		"taskCompleted": "Compito completato",
+		"error": "Errore",
+		"question": "Kilo Code ha una domanda",
+		"command": "Kilo vuole eseguire un comando",
+		"tool": "Kilo vuole usare uno strumento",
+		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agente in esecuzione in modalità autonoma"
+	},
+	"status": {
+		"running": "in esecuzione",
+		"done": "fatto",
+		"stopped": "fermato",
+		"error": "errore"
+	}
+}

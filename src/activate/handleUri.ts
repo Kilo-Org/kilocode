@@ -46,6 +46,21 @@ export const handleUri = async (uri: vscode.Uri) => {
 			})
 			break
 		}
+		case "/kilo/fork": {
+			const id = query.get("id")
+			if (id) {
+				await visibleProvider.postMessageToWebview({
+					type: "invoke",
+					invoke: "setChatBoxMessage",
+					text: `/session fork ${id}`,
+				})
+				await visibleProvider.postMessageToWebview({
+					type: "action",
+					action: "focusInput",
+				})
+			}
+			break
+		}
 		// kilocode_change end
 		case "/requesty": {
 			const code = query.get("code")

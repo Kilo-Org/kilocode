@@ -60,3 +60,37 @@
 .animate-message-highlight {
 	animation: message-highlight 1s ease-out forwards;
 }
+
+/* Shimmer text animation - horizontal shimmer effect */
+@keyframes shimmer {
+	0% {
+		background-position: 200% center;
+	}
+	100% {
+		background-position: -200% center;
+	}
+}
+
+.shimmer-text {
+	/* Allow custom colors via CSS variables, with fallback to VSCode theme colors */
+	--shimmer-base: var(--shimmer-foreground, color-mix(in srgb, var(--vscode-descriptionForeground) 80%, black));
+	--shimmer-highlight: var(--shimmer-highlight-color, color-mix(in srgb, var(--shimmer-base) 70%, white));
+
+	color: var(--shimmer-base);
+	background: linear-gradient(
+		90deg,
+		var(--shimmer-base) 0%,
+		var(--shimmer-base) 35%,
+		var(--shimmer-highlight) 45%,
+		var(--shimmer-highlight) 50%,
+		var(--shimmer-highlight) 55%,
+		var(--shimmer-base) 65%,
+		var(--shimmer-base) 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	display: inline-block;
+	animation: shimmer 2.5s linear infinite;
+}

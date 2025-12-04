@@ -1,6 +1,6 @@
 # Kilo Code Docs
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator, and lives at https://kilocode.ai/docs
+This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator, and lives at https://kilo.ai/docs
 
 ### Installation
 

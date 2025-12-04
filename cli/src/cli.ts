@@ -24,9 +24,9 @@ import type { CLIOptions } from "./types/cli.js"
 import type { CLIConfig, ProviderConfig } from "./config/types.js"
 import { getModelIdKey } from "./constants/providers/models.js"
 import type { ProviderName } from "./types/messages.js"
-import { TrpcClient } from "./services/trpcClient.js"
-import { SessionService } from "./services/session.js"
+import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
+import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -37,7 +37,7 @@ export class CLI {
 	private ui: Instance | null = null
 	private options: CLIOptions
 	private isInitialized = false
-	private sessionService: SessionService | null = null
+	private sessionService: SessionManager | null = null
 
 	constructor(options: CLIOptions = {}) {
 		this.options = options
@@ -135,22 +135,41 @@ export class CLI {
 			const kiloToken = getKiloToken(config)
 
 			if (kiloToken) {
-				TrpcClient.init(kiloToken)
-				logs.debug("TrpcClient initialized with kiloToken", "CLI")
+				// Inject CLI configuration into ExtensionHost
+				// This must happen BEFORE session restoration to ensure org ID is set
+				await this.injectConfigurationToExtension()
+				logs.debug("CLI configuration injected into extension", "CLI")
 
-				this.sessionService = SessionService.init(this.service, this.store, this.options.json)
-				logs.debug("SessionService initialized with ExtensionService", "CLI")
+				const pathProvider = new KiloCodePathProvider()
+				const extensionMessenger = new ExtensionMessengerAdapter(this.service)
 
-				// Set workspace directory for git operations (important for parallel mode/worktrees)
+				this.sessionService = SessionManager.init({
+					pathProvider,
+					logger: logs,
+					extensionMessenger,
+					getToken: () => Promise.resolve(kiloToken),
+					onSessionCreated: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
+					onSessionRestored: () => {
+						if (this.store) {
+							this.store.set(taskResumedViaContinueOrSessionAtom, true)
+						}
+					},
+					platform: "cli",
+				})
+				logs.debug("SessionManager initialized with dependencies", "CLI")
+
 				const workspace = this.options.workspace || process.cwd()
 				this.sessionService.setWorkspaceDirectory(workspace)
-				logs.debug("SessionService workspace directory set", "CLI", { workspace })
+				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
 					await this.sessionService.restoreSession(this.options.session)
 				} else if (this.options.fork) {
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-
 					await this.sessionService.forkSession(this.options.fork)
 				}
 			}
@@ -160,6 +179,8 @@ export class CLI {
 			logs.debug("Command history loaded", "CLI")
 
 			// Inject CLI configuration into ExtensionHost
+			// This happens after session restoration (if any) to ensure CLI config takes precedence
+			// Session restoration may have activated a saved profile that doesn't include org ID from env vars
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 

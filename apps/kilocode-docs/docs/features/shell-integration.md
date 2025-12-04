@@ -412,4 +412,4 @@ If you've followed these steps and are still experiencing problems, please:
 1. Check the [Kilo Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) to see if others have reported similar problems
 2. If not, create a new issue with details about your operating system, VSCode/Cursor version, and the steps you've tried
 
-For additional help, join our [Discord](https://kilocode.ai/discord).
+For additional help, join our [Discord](https://kilo.ai/discord).

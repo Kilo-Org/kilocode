@@ -34,6 +34,7 @@ import {
 	type CreateTaskOptions,
 	type TokenUsage,
 	RooCodeEventName,
+	TelemetryEventName, // kilocode_change
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
 	glamaDefaultModelId,
@@ -71,6 +72,7 @@ import { ShadowCheckpointService } from "../../services/checkpoints/ShadowCheckp
 import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
 import { MdmService } from "../../services/mdm/MdmService"
+import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
@@ -107,6 +109,10 @@ import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocod
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
+import {
+	kilo_destroySessionManager,
+	kilo_execIfExtension,
+} from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -471,6 +477,8 @@ export class ClineProvider
 		this.clineStack.push(task)
 		task.emit(RooCodeEventName.TaskFocused)
 
+		await kilo_destroySessionManager()
+
 		// Perform special setup provider specific tasks.
 		await this.performPreparationTasks(task)
 
@@ -684,6 +692,8 @@ export class ClineProvider
 			this.autoPurgeScheduler.stop()
 			this.autoPurgeScheduler = undefined
 		}
+
+		await kilo_destroySessionManager()
 		// kilocode_change end
 
 		this.log("Disposed all disposables")
@@ -764,6 +774,9 @@ export class ClineProvider
 
 		//kilocode_change start
 		if (command === "addToContextAndFocus") {
+			// Capture telemetry for inline assist quick task
+			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK)
+
 			let messageText = prompt
 
 			const editor = vscode.window.activeTextEditor
@@ -1139,6 +1152,22 @@ ${prompt}
 	}
 
 	public async postMessageToWebview(message: ExtensionMessage) {
+		await kilo_execIfExtension(() => {
+			if (message.type === "apiMessagesSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "apiConversationHistoryPath", filePath)
+			} else if (message.type === "taskMessagesSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "uiMessagesPath", filePath)
+			} else if (message.type === "taskMetadataSaved" && message.payload) {
+				const [taskId, filePath] = message.payload as [string, string]
+
+				SessionManager.init().setPath(taskId, "taskMetadataPath", filePath)
+			}
+		})
+
 		await this.view?.webview.postMessage(message)
 	}
 
@@ -1879,6 +1908,13 @@ ${prompt}
 
 	async refreshWorkspace() {
 		this.currentWorkspacePath = getWorkspacePath()
+
+		await kilo_execIfExtension(() => {
+			if (this.currentWorkspacePath) {
+				SessionManager.init().setWorkspaceDirectory(this.currentWorkspacePath)
+			}
+		})
+
 		await this.postStateToWebview()
 	}
 
@@ -2023,6 +2059,7 @@ ${prompt}
 			alwaysAllowWrite,
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowWriteProtected,
+			alwaysAllowDelete, // kilocode_change
 			alwaysAllowExecute,
 			allowedCommands,
 			deniedCommands,
@@ -2184,6 +2221,7 @@ ${prompt}
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
+			alwaysAllowDelete: alwaysAllowDelete ?? false, // kilocode_change
 			alwaysAllowExecute: alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: alwaysAllowMcp ?? true,
@@ -2464,6 +2502,7 @@ ${prompt}
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,
+			alwaysAllowDelete: stateValues.alwaysAllowDelete ?? false, // kilocode_change
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
@@ -3319,6 +3358,7 @@ ${prompt}
 						alwaysAllowWrite: !!state.alwaysAllowWrite,
 						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
 						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
+						alwaysAllowDelete: !!state.alwaysAllowDelete, // kilocode_change
 						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
 						yoloMode: !!state.yoloMode,
 					},

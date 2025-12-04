@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Ajan Yöneticisi",
+		"newAgent": "Yeni Ajan",
+		"sessionsSection": "Oturumlar",
+		"emptyState": "Henüz aktif ajan yok.",
+		"startAgent": "Ajanı Başlat",
+		"removeSession": "Kaldır"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Yeni bir ajan başlat",
+		"describeTask": "Ajanın gerçekleştirmesini istediğiniz görevi açıklayın.",
+		"placeholderTask": "örn. Bir düğme için yeni React bileşeni oluştur...",
+		"stopButton": "Durdur",
+		"newButton": "Yeni",
+		"stopButtonTitle": "Ajanı Durdur",
+		"newButtonTitle": "Yeni Ajan",
+		"autoModeWarning": "Tam otomatik modda çalışıyor - ajan onay almadan eylemleri gerçekleştirecek",
+		"starting": "Başlatılıyor...",
+		"startAriaLabel": "Verilen istemle ajanı başlat",
+		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter"
+	},
+	"messages": {
+		"waiting": "Ajan yanıtı bekleniyor...",
+		"kiloSaid": "Kilo dedi",
+		"youSaid": "Siz dediniz",
+		"apiRequest": "API İsteği",
+		"taskCompleted": "Görev Tamamlandı",
+		"error": "Hata",
+		"question": "Kilo Code'un bir sorusu var",
+		"command": "Kilo bir komut çalıştırmak istiyor",
+		"tool": "Kilo bir araç kullanmak istiyor",
+		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Ajan otonom modda çalışıyor"
+	},
+	"status": {
+		"running": "çalışıyor",
+		"done": "tamamlandı",
+		"stopped": "durduruldu",
+		"error": "hata"
+	}
+}

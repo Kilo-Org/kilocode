@@ -45,5 +45,6 @@
 		"mostTokens": "Больше всего токенов",
 		"mostRelevant": "Наиболее релевантные"
 	},
-	"viewAllHistory": "Посмотреть все"
+	"viewAllHistory": "Посмотреть все",
+	"shareSession": "Поделиться сеансом"
 }

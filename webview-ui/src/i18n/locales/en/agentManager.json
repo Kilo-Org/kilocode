@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Agent Manager",
+		"newAgent": "New Agent",
+		"sessionsSection": "Sessions",
+		"emptyState": "No active agents yet.",
+		"startAgent": "Start Agent",
+		"removeSession": "Remove"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Start a new agent",
+		"describeTask": "Describe the task you want the agent to perform.",
+		"placeholderTask": "e.g. Create a new React component for a button...",
+		"stopButton": "Stop",
+		"newButton": "New",
+		"stopButtonTitle": "Stop Agent",
+		"newButtonTitle": "New Agent",
+		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation",
+		"starting": "Starting...",
+		"startAriaLabel": "Start agent with provided prompt",
+		"keyboardHint": "Press Enter to start, Shift+Enter for new line"
+	},
+	"messages": {
+		"waiting": "Waiting for agent response...",
+		"kiloSaid": "Kilo said",
+		"youSaid": "You said",
+		"apiRequest": "API Request",
+		"taskCompleted": "Task Completed",
+		"error": "Error",
+		"question": "Kilo Code has a question",
+		"command": "Kilo wants to run a command",
+		"tool": "Kilo wants to use a tool",
+		"usingTool": "Using tool: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agent running in autonomous mode"
+	},
+	"status": {
+		"running": "running",
+		"done": "done",
+		"stopped": "stopped",
+		"error": "error"
+	}
+}

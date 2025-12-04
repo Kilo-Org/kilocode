@@ -31,8 +31,10 @@ import {
 	taskHistoryErrorAtom,
 	resolveTaskHistoryRequestAtom,
 } from "./taskHistory.js"
+import { validateModelOnRouterModelsUpdateAtom } from "./modelValidation.js"
+import { validateModeOnCustomModesUpdateAtom } from "./modeValidation.js"
 import { logs } from "../../services/logs.js"
-import { SessionService } from "../../services/session.js"
+import { SessionManager } from "../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 /**
  * Message buffer to handle race conditions during initialization
@@ -121,6 +123,8 @@ export const initializeServiceEffectAtom = atom(null, async (get, set, store?: {
 		service.on("stateChange", (state) => {
 			if (atomStore) {
 				atomStore.set(updateExtensionStateAtom, state)
+				// Trigger mode validation after state update (which includes customModes)
+				void atomStore.set(validateModeOnCustomModesUpdateAtom)
 			}
 		})
 
@@ -287,6 +291,8 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				const routerModels = message.routerModels as RouterModels | undefined
 				if (routerModels) {
 					set(updateRouterModelsAtom, routerModels)
+					// Trigger model validation after router models are updated
+					void set(validateModelOnRouterModelsUpdateAtom)
 				}
 				break
 			}
@@ -375,9 +381,9 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				const payload = message.payload as [string, string] | undefined
 
 				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
+					const [taskId, filePath] = payload
 
-					SessionService.init().setPath("apiConversationHistoryPath", filePath)
+					SessionManager.init().setPath(taskId, "apiConversationHistoryPath", filePath)
 				} else {
 					logs.warn(`[DEBUG] Invalid apiMessagesSaved payload`, "effects", { payload })
 				}
@@ -388,9 +394,9 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				const payload = message.payload as [string, string] | undefined
 
 				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
+					const [taskId, filePath] = payload
 
-					SessionService.init().setPath("uiMessagesPath", filePath)
+					SessionManager.init().setPath(taskId, "uiMessagesPath", filePath)
 				} else {
 					logs.warn(`[DEBUG] Invalid taskMessagesSaved payload`, "effects", { payload })
 				}
@@ -400,9 +406,9 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			case "taskMetadataSaved": {
 				const payload = message.payload as [string, string] | undefined
 				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
+					const [taskId, filePath] = payload
 
-					SessionService.init().setPath("taskMetadataPath", filePath)
+					SessionManager.init().setPath(taskId, "taskMetadataPath", filePath)
 				} else {
 					logs.warn(`[DEBUG] Invalid taskMetadataSaved payload`, "effects", { payload })
 				}

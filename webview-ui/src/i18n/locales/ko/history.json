@@ -45,5 +45,6 @@
 		"mostTokens": "토큰 많은순",
 		"mostRelevant": "관련성 높은순"
 	},
-	"viewAllHistory": "모두 보기"
+	"viewAllHistory": "모두 보기",
+	"shareSession": "세션 공유"
 }

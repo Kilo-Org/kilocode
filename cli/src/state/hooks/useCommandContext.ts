@@ -34,6 +34,13 @@ import {
 	taskHistoryLoadingAtom,
 	taskHistoryErrorAtom,
 } from "../atoms/taskHistory.js"
+import {
+	modelListPageIndexAtom,
+	modelListFiltersAtom,
+	updateModelListFiltersAtom,
+	changeModelListPageAtom,
+	resetModelListStateAtom,
+} from "../atoms/modelList.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
@@ -119,6 +126,13 @@ export function useCommandContext(): UseCommandContextReturn {
 		nextPage: nextTaskHistoryPage,
 		previousPage: previousTaskHistoryPage,
 	} = useTaskHistory()
+
+	// Get model list state and functions
+	const modelListPageIndex = useAtomValue(modelListPageIndexAtom)
+	const modelListFilters = useAtomValue(modelListFiltersAtom)
+	const updateModelListFilters = useSetAtom(updateModelListFiltersAtom)
+	const changeModelListPage = useSetAtom(changeModelListPageAtom)
+	const resetModelListState = useSetAtom(resetModelListStateAtom)
 
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
@@ -216,6 +230,12 @@ export function useCommandContext(): UseCommandContextReturn {
 				previousTaskHistoryPage,
 				sendWebviewMessage: sendMessage,
 				chatMessages: chatMessages as unknown as ExtensionMessage[],
+				// Model list context
+				modelListPageIndex,
+				modelListFilters,
+				updateModelListFilters,
+				changeModelListPage,
+				resetModelListState,
 			}
 		},
 		[
@@ -252,6 +272,11 @@ export function useCommandContext(): UseCommandContextReturn {
 			nextTaskHistoryPage,
 			previousTaskHistoryPage,
 			chatMessages,
+			modelListPageIndex,
+			modelListFilters,
+			updateModelListFilters,
+			changeModelListPage,
+			resetModelListState,
 		],
 	)
 

@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Gestor d'agents",
+		"newAgent": "Agent nou",
+		"sessionsSection": "Sessions",
+		"emptyState": "Encara no hi ha agents actius.",
+		"startAgent": "Iniciar agent",
+		"removeSession": "Eliminar"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Iniciar un agent nou",
+		"describeTask": "Descriu la tasca que vols que l'agent realitzi.",
+		"placeholderTask": "p. ex. Crear un nou component React per a un botó...",
+		"stopButton": "Aturar",
+		"newButton": "Nou",
+		"stopButtonTitle": "Aturar agent",
+		"newButtonTitle": "Agent nou",
+		"autoModeWarning": "Executant en mode completament automàtic - l'agent executarà accions sense confirmació",
+		"starting": "Iniciant...",
+		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
+		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia"
+	},
+	"messages": {
+		"waiting": "Esperant resposta de l'agent...",
+		"kiloSaid": "Kilo ha dit",
+		"youSaid": "Has dit",
+		"apiRequest": "Sol·licitud API",
+		"taskCompleted": "Tasca completada",
+		"error": "Error",
+		"question": "Kilo Code té una pregunta",
+		"command": "Kilo vol executar una comanda",
+		"tool": "Kilo vol utilitzar una eina",
+		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agent executant en mode autònom"
+	},
+	"status": {
+		"running": "en execució",
+		"done": "fet",
+		"stopped": "aturat",
+		"error": "error"
+	}
+}

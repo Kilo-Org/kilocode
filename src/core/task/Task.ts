@@ -1,3 +1,4 @@
+import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
 import os from "os"
@@ -419,7 +420,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
-		this.globalStoragePath = provider.context.globalStorageUri.fsPath
+		// kilocode_change start: Handle CLI mode where globalStorageUri might not be properly set
+		this.globalStoragePath = provider.context?.globalStorageUri?.fsPath ?? this.getCliGlobalStoragePath()
+		// kilocode_change end
 		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
 		this.enableCheckpoints = enableCheckpoints
 		this.checkpointTimeout = checkpointTimeout
@@ -500,6 +503,27 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			throw new Error("Unable to access extension context")
 		}
 		return context
+	}
+
+	/**
+	 * Get global storage path for CLI mode when vscode context is not available.
+	 * Uses KiloCodePaths utility if available, otherwise falls back to home directory.
+	 */
+	private getCliGlobalStoragePath(): string {
+		// Try to use home directory based path for CLI mode
+		const homeDir = process.env.HOME || process.env.USERPROFILE || "/tmp"
+		const cliStoragePath = path.join(homeDir, ".kilocode", "cli", "global")
+
+		// Ensure directory exists
+		try {
+			if (!fs.existsSync(cliStoragePath)) {
+				fs.mkdirSync(cliStoragePath, { recursive: true })
+			}
+		} catch (error) {
+			console.error(`[Task] Failed to create CLI storage path ${cliStoragePath}:`, error)
+		}
+
+		return cliStoragePath
 	}
 	// kilocode_change end
 	/**
@@ -1281,6 +1305,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		progressStatus?: ToolProgressStatus,
 		options: {
 			isNonInteractive?: boolean
+			metadata?: Record<string, unknown> // kilocode_change
 		} = {},
 		contextCondense?: ContextCondense,
 	): Promise<undefined> {
@@ -1333,6 +1358,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					lastMessage.images = images
 					lastMessage.partial = false
 					lastMessage.progressStatus = progressStatus
+					// kilocode_change start
+					if (options.metadata) {
+						lastMessage.metadata = Object.assign(lastMessage.metadata ?? {}, options.metadata)
+					}
+					// kilocode_change end
 
 					// Instead of streaming partialMessage events, we do a save
 					// and post like normal to persist to disk.
@@ -1355,6 +1385,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						text,
 						images,
 						contextCondense,
+						metadata: options.metadata, // kilocode_csouhange
 					})
 				}
 			}
@@ -1378,6 +1409,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				images,
 				checkpoint,
 				contextCondense,
+				metadata: options.metadata, // kilocode_change
 			})
 		}
 	}
