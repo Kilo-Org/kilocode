@@ -1,43 +1,17 @@
-import { LLMClient } from "./llm-client.js"
-import { HoleFiller, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
+import { HoleFiller, FillInAtCursorSuggestion } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
 import { AutocompleteInput } from "../services/ghost/types.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 import { createContext } from "./utils.js"
-
-// Mock context provider for standalone testing
-function createMockContextProvider(prefix: string, suffix: string, filepath: string) {
-	return {
-		getProcessedSnippets: async () => ({
-			filepathUri: `file://${filepath}`,
-			helper: {
-				filepath: `file://${filepath}`,
-				lang: { name: "typescript", singleLineComment: "//" },
-				prunedPrefix: prefix,
-				prunedSuffix: suffix,
-			},
-			snippetsWithUris: [],
-			workspaceDirs: [],
-		}),
-	} as any
-}
-
-/**
- * Check if a model supports FIM (Fill-In-Middle) completions.
- * This mirrors the logic in KilocodeOpenrouterHandler.supportsFim()
- */
-function modelSupportsFim(modelId: string): boolean {
-	return modelId.includes("codestral")
-}
+import { TestGhostModel } from "./test-ghost-model.js"
+import { createMockContextProvider } from "./mock-context-provider.js"
 
 export class GhostProviderTester {
-	private llmClient: LLMClient
-	private model: string
+	private model: TestGhostModel
 
 	constructor() {
-		this.model = process.env.LLM_MODEL || "mistralai/codestral-2508"
-		this.llmClient = new LLMClient()
+		this.model = new TestGhostModel()
 	}
 
 	async getCompletion(
@@ -65,42 +39,34 @@ export class GhostProviderTester {
 			recentlyEditedRanges: [],
 		}
 
-		// Auto-detect strategy based on model capabilities
-		const supportsFim = modelSupportsFim(this.model)
-		const completion = supportsFim
-			? await this.getFimCompletion(mockContextProvider, autocompleteInput)
-			: await this.getHoleFillerCompletion(mockContextProvider, autocompleteInput, languageId, prefix, suffix)
+		// Create prompt builders using production code
+		const holeFiller = new HoleFiller(mockContextProvider)
+		const fimPromptBuilder = new FimPromptBuilder(mockContextProvider)
+
+		// Simple processSuggestion that just wraps the text
+		const processSuggestion = (text: string): FillInAtCursorSuggestion => ({
+			text,
+			prefix,
+			suffix,
+		})
+
+		// Use production code to determine strategy and get completion
+		let completion: string
+		if (this.model.supportsFim()) {
+			const prompt = await fimPromptBuilder.getFimPrompts(autocompleteInput, this.model.getModelName() ?? "")
+			const result = await fimPromptBuilder.getFromFIM(this.model, prompt, processSuggestion)
+			completion = result.suggestion.text
+		} else {
+			const prompt = await holeFiller.getPrompts(autocompleteInput, languageId)
+			const result = await holeFiller.getFromChat(this.model, prompt, processSuggestion)
+			completion = result.suggestion.text
+		}
 
 		return { prefix, completion, suffix }
 	}
 
-	private async getFimCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
-		autocompleteInput: AutocompleteInput,
-	): Promise<string> {
-		const fimPromptBuilder = new FimPromptBuilder(contextProvider)
-		const prompt = await fimPromptBuilder.getFimPrompts(autocompleteInput, this.model)
-		const fimResponse = await this.llmClient.sendFimCompletion(prompt.formattedPrefix, prompt.prunedSuffix)
-		return fimResponse.completion
-	}
-
-	private async getHoleFillerCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
-		autocompleteInput: AutocompleteInput,
-		languageId: string,
-		prefix: string,
-		suffix: string,
-	): Promise<string> {
-		const holeFiller = new HoleFiller(contextProvider)
-		const { systemPrompt, userPrompt } = await holeFiller.getPrompts(autocompleteInput, languageId)
-		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
-		const parseResult = parseGhostResponse(response.content, prefix, suffix)
-		return parseResult.text
-	}
-
 	getName(): string {
-		const supportsFim = modelSupportsFim(this.model)
-		return supportsFim ? "ghost-provider-fim" : "ghost-provider-holefiller"
+		return this.model.supportsFim() ? "ghost-provider-fim" : "ghost-provider-holefiller"
 	}
 
 	dispose(): void {

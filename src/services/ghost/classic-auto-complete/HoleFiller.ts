@@ -1,8 +1,25 @@
 import { AutocompleteInput, GhostContextProvider } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
-import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+
+/**
+ * Interface for models that can generate chat-based completions.
+ * This allows both GhostModel and test implementations to be used.
+ */
+export interface ChatCompletionModel {
+	generateResponse(
+		systemPrompt: string,
+		userPrompt: string,
+		onChunk: (chunk: ApiStreamChunk) => void,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}>
+}
 
 export interface HoleFillerGhostPrompt {
 	strategy: "hole_filler"
@@ -193,7 +210,7 @@ Return the COMPLETION tags`
 	 * Execute chat-based completion using the model
 	 */
 	async getFromChat(
-		model: GhostModel,
+		model: ChatCompletionModel,
 		prompt: HoleFillerGhostPrompt,
 		processSuggestion: (text: string) => FillInAtCursorSuggestion,
 	): Promise<ChatCompletionResult> {

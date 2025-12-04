@@ -1,8 +1,26 @@
 import { AutocompleteInput, GhostContextProvider } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
-import { GhostModel } from "../GhostModel"
 import { FillInAtCursorSuggestion } from "./HoleFiller"
+
+/**
+ * Interface for models that can generate FIM (Fill-In-Middle) completions.
+ * This allows both GhostModel and test implementations to be used.
+ */
+export interface FimCompletionModel {
+	generateFimResponse(
+		prefix: string,
+		suffix: string,
+		onChunk: (text: string) => void,
+		taskId?: string,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}>
+}
 
 export interface FimGhostPrompt {
 	strategy: "fim"
@@ -67,7 +85,7 @@ export class FimPromptBuilder {
 	 * Execute FIM-based completion using the model
 	 */
 	async getFromFIM(
-		model: GhostModel,
+		model: FimCompletionModel,
 		prompt: FimGhostPrompt,
 		processSuggestion: (text: string) => FillInAtCursorSuggestion,
 	): Promise<FimCompletionResult> {
