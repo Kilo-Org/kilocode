@@ -78,6 +78,13 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			task.diffViewProvider.editType = fileExists ? "modify" : "create"
 		}
 
+		// kilocode_change start
+		if (typeof newContent !== "string") {
+			console.warn(`[WriteToFileTool] converting incorrect model output ${typeof newContent} to string`)
+			newContent = JSON.stringify(newContent, null, "\t")
+		}
+		// kilocode_change end
+
 		if (newContent.startsWith("```")) {
 			newContent = newContent.split("\n").slice(1).join("\n")
 		}

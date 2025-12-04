@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "代理管理器",
+		"newAgent": "新增代理",
+		"sessionsSection": "工作階段",
+		"emptyState": "目前沒有活動中的代理。",
+		"startAgent": "啟動代理",
+		"removeSession": "移除"
+	},
+	"sessionDetail": {
+		"startNewAgent": "啟動新代理",
+		"describeTask": "描述您希望代理執行的任務。",
+		"placeholderTask": "例如：為按鈕建立一個新的 React 元件...",
+		"stopButton": "停止",
+		"newButton": "新增",
+		"stopButtonTitle": "停止代理",
+		"newButtonTitle": "新增代理",
+		"autoModeWarning": "正在全自動模式下執行 - 代理將在無需確認的情況下執行操作",
+		"starting": "正在啟動...",
+		"startAriaLabel": "使用提供的提示啟動代理",
+		"keyboardHint": "按 Enter 啟動，Shift+Enter 換行"
+	},
+	"messages": {
+		"waiting": "等待代理回應...",
+		"kiloSaid": "Kilo 說",
+		"youSaid": "您說",
+		"apiRequest": "API 請求",
+		"taskCompleted": "任務完成",
+		"error": "錯誤",
+		"question": "Kilo Code 有一個問題",
+		"command": "Kilo 想要執行一個指令",
+		"tool": "Kilo 想要使用一個工具",
+		"usingTool": "正在使用工具：**{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "代理正在自主模式下執行"
+	},
+	"status": {
+		"running": "執行中",
+		"done": "完成",
+		"stopped": "已停止",
+		"error": "錯誤"
+	}
+}

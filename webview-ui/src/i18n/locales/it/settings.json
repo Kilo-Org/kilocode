@@ -178,6 +178,10 @@
 			"label": "Browser",
 			"description": "Esegui automaticamente azioni del browser senza richiedere approvazione. Nota: Si applica solo quando il modello supporta l'uso del computer"
 		},
+		"delete": {
+			"label": "Elimina",
+			"description": "Elimina automaticamente file e directory senza richiedere approvazione"
+		},
 		"retry": {
 			"label": "Riprova",
 			"description": "Riprova automaticamente le richieste API fallite quando il server restituisce una risposta di errore",

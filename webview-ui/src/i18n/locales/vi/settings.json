@@ -160,6 +160,10 @@
 				"description": "Cho phép Kilo Code đọc các tệp bên ngoài không gian làm việc hiện tại mà không yêu cầu phê duyệt."
 			}
 		},
+		"delete": {
+			"label": "Xóa",
+			"description": "Tự động xóa tệp và thư mục mà không cần phê duyệt"
+		},
 		"write": {
 			"label": "Ghi",
 			"description": "Tự động tạo và chỉnh sửa tệp mà không cần phê duyệt",

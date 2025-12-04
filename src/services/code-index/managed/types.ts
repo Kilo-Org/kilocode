@@ -58,7 +58,7 @@ export interface SearchRequest {
 	/** Search query */
 	query: string
 	/** Organization ID */
-	organizationId: string
+	organizationId: string | null
 	/** Project ID */
 	projectId: string
 	/** Preferred branch to search first */

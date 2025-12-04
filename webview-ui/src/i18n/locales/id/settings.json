@@ -160,6 +160,10 @@
 				"description": "Izinkan Kilo Code membaca file di luar workspace saat ini tanpa memerlukan persetujuan."
 			}
 		},
+		"delete": {
+			"label": "Hapus",
+			"description": "Secara otomatis menghapus file dan direktori tanpa memerlukan persetujuan"
+		},
 		"write": {
 			"label": "Tulis",
 			"description": "Secara otomatis membuat dan mengedit file tanpa memerlukan persetujuan",

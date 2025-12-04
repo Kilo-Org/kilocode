@@ -153,6 +153,10 @@
 		"enabled": "Oto-onay etkinleştirildi",
 		"toggleAriaLabel": "Otomatik onayı değiştir",
 		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri belirleyin",
+		"delete": {
+			"label": "Sil",
+			"description": "Onay gerektirmeden otomatik olarak dosya ve dizinleri sil"
+		},
 		"readOnly": {
 			"label": "Okuma",
 			"description": "Etkinleştirildiğinde, Kilo Code otomatik olarak dizin içeriğini görüntüleyecek ve Onayla düğmesine tıklamanıza gerek kalmadan dosyaları okuyacaktır.",

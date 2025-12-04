@@ -615,6 +615,7 @@ describe("GhostInlineCompletionProvider", () => {
 			getModelName: vi.fn().mockReturnValue("test-model"),
 			getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
+			hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 		mockClineProvider = { cwd: "/test/workspace" }
@@ -1593,6 +1594,55 @@ describe("GhostInlineCompletionProvider", () => {
 
 			expect(result2).toHaveLength(0)
 			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("credentials validation", () => {
+		it("should return empty array when model has no valid credentials", async () => {
+			// Set hasValidCredentials to return false
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
+
+			// Set up a suggestion that would normally be returned
+			provider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			// Should return empty array because credentials are not valid
+			expect(result).toHaveLength(0)
+			// Model should not be called
+			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should return suggestions when model has valid credentials", async () => {
+			// Ensure hasValidCredentials returns true
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(true)
+
+			// Set up a suggestion
+			provider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			// Should return the suggestion because credentials are valid
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("console.log('test');")
 		})
 	})
 

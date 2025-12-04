@@ -219,6 +219,10 @@
 			"label": "Todo",
 			"description": "La llista de tasques es actualitza automàticament sense aprovació"
 		},
+		"delete": {
+			"label": "Eliminar",
+			"description": "Eliminar automàticament fitxers i directoris sense requerir aprovació"
+		},
 		"apiRequestLimit": {
 			"title": "Màximes Sol·licituds",
 			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",

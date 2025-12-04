@@ -52,5 +52,6 @@
 		"mostTokens": "Token Terbanyak",
 		"mostRelevant": "Paling Relevan"
 	},
-	"viewAllHistory": "Lihat semua"
+	"viewAllHistory": "Lihat semua",
+	"shareSession": "Bagikan Sesi"
 }

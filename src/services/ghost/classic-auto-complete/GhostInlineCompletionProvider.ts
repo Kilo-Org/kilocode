@@ -296,8 +296,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		telemetry.captureSuggestionRequested(telemetryContext)
 
-		if (!this.model) {
-			// bail if no model is available, because if there is none, we also have no cache
+		if (!this.model || !this.model.hasValidCredentials()) {
+			// bail if no model is available or no valid API credentials configured
+			// this prevents errors when autocomplete is enabled but no provider is set up
 			return []
 		}
 

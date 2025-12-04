@@ -1,5 +1,11 @@
 import * as vscode from "vscode"
 import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/snippets/types"
+import type {
+	Position,
+	Range,
+	RangeInFile,
+	TabAutocompleteOptions as CoreTabAutocompleteOptions,
+} from "../continuedev/core"
 
 export interface GhostSuggestionContext {
 	document: vscode.TextDocument
@@ -8,61 +14,21 @@ export interface GhostSuggestionContext {
 	recentlyEditedRanges?: RecentlyEditedRange[] // Recently edited ranges for context
 }
 
-// ============================================================================
-// CompletionProvider-compatible types (duplicated to avoid coupling)
-// ============================================================================
-
 /**
- * Position in a file (line and character)
- * Duplicated from continuedev/core to avoid coupling
+ * Ghost-specific extensions to TabAutocompleteOptions
  */
-export interface Position {
-	line: number
-	character: number
-}
-
-/**
- * Range in a file
- * Duplicated from continuedev/core to avoid coupling
- */
-export interface Range {
-	start: Position
-	end: Position
-}
-
-/**
- * Range with file path
- * Duplicated from continuedev/core to avoid coupling
- */
-export interface RangeInFile {
-	filepath: string
-	range: Range
-}
-
-/**
- * Tab autocomplete options
- * Duplicated from continuedev/core to avoid coupling
- */
-export interface TabAutocompleteOptions {
-	disable: boolean
-	maxPromptTokens: number
-	debounceDelay: number
-	modelTimeout: number
-	maxSuffixPercentage: number
-	prefixPercentage: number
-	transform?: boolean
-	multilineCompletions: "always" | "never" | "auto"
-	slidingWindowPrefixPercentage: number
-	slidingWindowSize: number
-	useCache?: boolean
-	onlyMyCode?: boolean
+export interface GhostTabAutocompleteExtensions {
 	template?: string
 	useOtherFiles?: boolean
-	useRecentlyEdited?: boolean
 	recentlyEditedSimilarityThreshold?: number
 	maxSnippetTokens?: number
-	disableInFiles?: string[]
 }
+
+/**
+ * Tab autocomplete options for Ghost
+ * Based on CoreTabAutocompleteOptions with some fields made optional and ghost-specific extensions
+ */
+export type TabAutocompleteOptions = Partial<CoreTabAutocompleteOptions> & GhostTabAutocompleteExtensions
 
 /**
  * Recently edited range with timestamp
@@ -158,16 +124,6 @@ export function extractPrefixSuffix(
 }
 
 /**
- * Convert VSCode Position to our Position type
- */
-export function vscodePositionToPosition(pos: vscode.Position): Position {
-	return {
-		line: pos.line,
-		character: pos.character,
-	}
-}
-
-/**
  * Convert GhostSuggestionContext to AutocompleteInput
  */
 export function contextToAutocompleteInput(context: GhostSuggestionContext): AutocompleteInput {
@@ -182,7 +138,7 @@ export function contextToAutocompleteInput(context: GhostSuggestionContext): Aut
 		isUntitledFile: context.document.isUntitled,
 		completionId: crypto.randomUUID(),
 		filepath: context.document.uri.fsPath,
-		pos: vscodePositionToPosition(position),
+		pos: { line: position.line, character: position.character },
 		recentlyVisitedRanges,
 		recentlyEditedRanges,
 		manuallyPassFileContents: undefined,

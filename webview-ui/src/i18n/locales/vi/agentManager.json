@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Quản lý Agent",
+		"newAgent": "Agent mới",
+		"sessionsSection": "Phiên",
+		"emptyState": "Chưa có agent nào đang hoạt động.",
+		"startAgent": "Khởi động Agent",
+		"removeSession": "Xóa"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Khởi động agent mới",
+		"describeTask": "Mô tả nhiệm vụ bạn muốn agent thực hiện.",
+		"placeholderTask": "ví dụ: Tạo một component React mới cho nút bấm...",
+		"stopButton": "Dừng",
+		"newButton": "Mới",
+		"stopButtonTitle": "Dừng Agent",
+		"newButtonTitle": "Agent mới",
+		"autoModeWarning": "Đang chạy ở chế độ tự động hoàn toàn - agent sẽ thực hiện các hành động mà không cần xác nhận",
+		"starting": "Đang khởi động...",
+		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
+		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới"
+	},
+	"messages": {
+		"waiting": "Đang chờ phản hồi từ agent...",
+		"kiloSaid": "Kilo nói",
+		"youSaid": "Bạn nói",
+		"apiRequest": "Yêu cầu API",
+		"taskCompleted": "Nhiệm vụ hoàn thành",
+		"error": "Lỗi",
+		"question": "Kilo Code có một câu hỏi",
+		"command": "Kilo muốn chạy một lệnh",
+		"tool": "Kilo muốn sử dụng một công cụ",
+		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agent đang chạy ở chế độ tự động"
+	},
+	"status": {
+		"running": "đang chạy",
+		"done": "hoàn thành",
+		"stopped": "đã dừng",
+		"error": "lỗi"
+	}
+}

@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.12.0
+
+### Minor Changes
+
+- [#4177](https://github.com/Kilo-Org/kilocode/pull/4177) [`8d44a94`](https://github.com/Kilo-Org/kilocode/commit/8d44a94a28f1cd84d1af9836c1822eb43fe41a1b) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Fix: inject configuration before session restoration
+
 ## 0.11.0
 
 ### Minor Changes

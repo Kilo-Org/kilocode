@@ -2059,6 +2059,7 @@ ${prompt}
 			alwaysAllowWrite,
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowWriteProtected,
+			alwaysAllowDelete, // kilocode_change
 			alwaysAllowExecute,
 			allowedCommands,
 			deniedCommands,
@@ -2220,6 +2221,7 @@ ${prompt}
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
+			alwaysAllowDelete: alwaysAllowDelete ?? false, // kilocode_change
 			alwaysAllowExecute: alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: alwaysAllowMcp ?? true,
@@ -2499,6 +2501,7 @@ ${prompt}
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,
+			alwaysAllowDelete: stateValues.alwaysAllowDelete ?? false, // kilocode_change
 			alwaysAllowExecute: stateValues.alwaysAllowExecute ?? true,
 			alwaysAllowBrowser: stateValues.alwaysAllowBrowser ?? true,
 			alwaysAllowMcp: stateValues.alwaysAllowMcp ?? true,
@@ -3354,6 +3357,7 @@ ${prompt}
 						alwaysAllowWrite: !!state.alwaysAllowWrite,
 						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
 						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
+						alwaysAllowDelete: !!state.alwaysAllowDelete, // kilocode_change
 						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
 						yoloMode: !!state.yoloMode,
 					},

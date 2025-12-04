@@ -173,6 +173,10 @@
 				"description": "Sta Kilo Code toe om beschermde bestanden (zoals .kilocodeignore en .kilocode/ configuratiebestanden) aan te maken en te bewerken zonder goedkeuring."
 			}
 		},
+		"delete": {
+			"label": "Verwijderen",
+			"description": "Automatisch bestanden en mappen verwijderen zonder goedkeuring"
+		},
 		"browser": {
 			"label": "Browser",
 			"description": "Automatisch browseracties uitvoeren zonder goedkeuring. Let op: geldt alleen als het model computergebruik ondersteunt."

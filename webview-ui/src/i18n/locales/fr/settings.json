@@ -195,6 +195,10 @@
 			"label": "Sous-tâches",
 			"description": "Permettre la création et l'achèvement des sous-tâches sans nécessiter d'approbation"
 		},
+		"delete": {
+			"label": "Supprimer",
+			"description": "Supprimer automatiquement les fichiers et répertoires sans nécessiter d'approbation"
+		},
 		"followupQuestions": {
 			"label": "Question",
 			"description": "Sélectionner automatiquement la première réponse suggérée pour les questions de suivi après le délai configuré",

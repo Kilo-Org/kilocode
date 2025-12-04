@@ -45,5 +45,6 @@
 		"mostTokens": "token มากที่สุด",
 		"mostRelevant": "เกี่ยวข้องมากที่สุด"
 	},
-	"viewAllHistory": "ดูงานทั้งหมด"
+	"viewAllHistory": "ดูงานทั้งหมด",
+	"shareSession": "แชร์เซสชัน"
 }

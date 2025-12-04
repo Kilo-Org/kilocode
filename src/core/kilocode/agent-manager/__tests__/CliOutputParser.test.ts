@@ -1,0 +1,179 @@
+import { describe, it, expect } from "vitest"
+import { tryParseJson, parseCliChunk, CliOutputParser, type StreamEvent } from "../CliOutputParser"
+
+describe("tryParseJson", () => {
+	it("should parse valid JSON", () => {
+		const result = tryParseJson('{"timestamp":123,"source":"extension","type":"say"}')
+		expect(result).toEqual({
+			timestamp: 123,
+			source: "extension",
+			type: "say",
+		})
+	})
+
+	it("should parse JSON with VT control codes", () => {
+		const input = '\x1b[2K\x1b[1A\x1b[2K\x1b[G{"timestamp":123,"source":"extension","type":"say"}'
+		const result = tryParseJson(input)
+		expect(result).not.toBeNull()
+		expect(result?.timestamp).toBe(123)
+	})
+
+	it("should return null for non-JSON", () => {
+		expect(tryParseJson("not json")).toBeNull()
+	})
+
+	it("should return null for empty string", () => {
+		expect(tryParseJson("")).toBeNull()
+	})
+
+	it("should return null for primitive JSON values", () => {
+		expect(tryParseJson("123")).toBeNull()
+		expect(tryParseJson('"string"')).toBeNull()
+		expect(tryParseJson("true")).toBeNull()
+	})
+})
+
+describe("parseCliChunk", () => {
+	it("should parse a single JSON line", () => {
+		const result = parseCliChunk('{"timestamp":123,"source":"extension","type":"say"}\n')
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "kilocode",
+			payload: {
+				timestamp: 123,
+				source: "extension",
+				type: "say",
+			},
+		})
+		expect(result.remainingBuffer).toBe("")
+	})
+
+	it("should parse multiple JSON lines", () => {
+		const input =
+			'{"timestamp":1,"source":"cli","type":"info"}\n{"timestamp":2,"source":"extension","type":"ask"}\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(2)
+		expect(result.events[0]).toMatchObject({ streamEventType: "status" })
+		expect(result.events[1]).toMatchObject({
+			streamEventType: "kilocode",
+			payload: { type: "ask", timestamp: 2 },
+		})
+	})
+
+	it("should handle partial lines in buffer", () => {
+		const result = parseCliChunk('{"timestamp":123')
+		expect(result.events).toHaveLength(0)
+		expect(result.remainingBuffer).toBe('{"timestamp":123')
+	})
+
+	it("should combine buffer with new chunk", () => {
+		const result = parseCliChunk(',"source":"extension","type":"say"}\n', '{"timestamp":123')
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "kilocode",
+			payload: {
+				timestamp: 123,
+				source: "extension",
+				type: "say",
+			},
+		})
+	})
+
+	it("should parse JSON with VT control codes", () => {
+		const input = '\x1b[2K\x1b[1A\x1b[2K\x1b[G{"timestamp":123,"source":"extension","type":"say"}\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({ streamEventType: "kilocode", payload: { timestamp: 123 } })
+	})
+
+	it("should collect non-JSON lines as output events with VT codes stripped", () => {
+		const input = 'not json\n{"timestamp":123,"source":"cli","type":"info"}\nalso not json\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(3)
+		expect(result.events[0]).toMatchObject({ streamEventType: "output", content: "not json" })
+		expect(result.events[1]).toMatchObject({ streamEventType: "status" })
+		expect(result.events[2]).toMatchObject({ streamEventType: "output", content: "also not json" })
+	})
+
+	it("should skip empty lines", () => {
+		const input = '\n\n{"timestamp":123,"source":"cli","type":"info"}\n\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(1)
+	})
+
+	it("should handle real CLI output with terminal codes", () => {
+		const input =
+			'\x1b[2K\x1b[1A\x1b[2K\x1b[G{"timestamp":123,"source":"extension","type":"say","say":"text","content":"Hello"}\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({
+			streamEventType: "kilocode",
+			payload: { content: "Hello" },
+		})
+	})
+})
+
+describe("CliOutputParser class", () => {
+	it("should maintain buffer state across parse calls", () => {
+		const parser = new CliOutputParser()
+
+		// First chunk - partial JSON
+		const result1 = parser.parse('{"timestamp":123')
+		expect(result1.events).toHaveLength(0)
+
+		// Second chunk - completes the JSON
+		const result2 = parser.parse(',"source":"extension","type":"say"}\n')
+		expect(result2.events).toHaveLength(1)
+		expect(result2.events[0]).toMatchObject({
+			streamEventType: "kilocode",
+			payload: { timestamp: 123 },
+		})
+	})
+
+	it("should flush remaining buffer", () => {
+		const parser = new CliOutputParser()
+
+		parser.parse('{"timestamp":123,"source":"cli","type":"info"}')
+		const result = parser.flush()
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({ streamEventType: "status" })
+	})
+
+	it("should reset buffer state", () => {
+		const parser = new CliOutputParser()
+
+		parser.parse('{"timestamp":123')
+		parser.reset()
+
+		// This should not combine with previous partial
+		const result = parser.parse(',"source":"extension"}\n')
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({ streamEventType: "output" })
+	})
+
+	it("should handle streaming chunks correctly", () => {
+		const parser = new CliOutputParser()
+		const events: StreamEvent[] = []
+
+		// Simulate streaming output
+		const chunks = [
+			'{"timestamp":1,"source":"extension","type":"say","partial":true,"content":"He',
+			'llo"}\n{"timestamp":2,"source":"extension","type":"say","partial":false,"content":"Hello World"}\n',
+			'{"timestamp":3,"source":"cli","type":"info"}',
+		]
+
+		for (const chunk of chunks) {
+			const result = parser.parse(chunk)
+			events.push(...result.events)
+		}
+
+		// Flush remaining (last chunk had no newline)
+		const final = parser.flush()
+		events.push(...final.events)
+
+		expect(events).toHaveLength(3)
+		expect(events[0]).toMatchObject({ streamEventType: "kilocode", payload: { content: "Hello" } })
+		expect(events[1]).toMatchObject({ streamEventType: "kilocode", payload: { content: "Hello World" } })
+		expect(events[2]).toMatchObject({ streamEventType: "status" })
+	})
+})

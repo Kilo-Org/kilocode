@@ -1,2 +1,0 @@
-function test() {
-	console.log('hello');<<<AUTOCOMPLETE_HERE>>>

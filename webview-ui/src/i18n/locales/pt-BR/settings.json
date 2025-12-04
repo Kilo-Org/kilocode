@@ -160,6 +160,10 @@
 				"description": "Permitir que o Kilo Code leia arquivos fora do espaço de trabalho atual sem exigir aprovação."
 			}
 		},
+		"delete": {
+			"label": "Excluir",
+			"description": "Excluir automaticamente arquivos e diretórios sem exigir aprovação"
+		},
 		"write": {
 			"label": "Escrita",
 			"description": "Criar e editar arquivos automaticamente sem exigir aprovação",

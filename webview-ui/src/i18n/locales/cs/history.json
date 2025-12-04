@@ -45,5 +45,6 @@
 		"mostTokens": "Nejvíce tokenů",
 		"mostRelevant": "Nejrelevantnější"
 	},
-	"viewAllHistory": "Zobrazit všechny úkoly"
+	"viewAllHistory": "Zobrazit všechny úkoly",
+	"shareSession": "Sdílet relaci"
 }

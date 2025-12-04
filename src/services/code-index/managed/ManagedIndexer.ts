@@ -19,6 +19,8 @@ import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 
 interface ManagedIndexerConfig {
 	kilocodeToken: string | null
@@ -64,10 +66,17 @@ interface ManagedIndexerWorkspaceFolderState {
 
 export class ManagedIndexer implements vscode.Disposable {
 	private static prevInstance: ManagedIndexer | null = null
+	private enabledViaConfig: boolean = false
 
 	static getInstance(): ManagedIndexer {
 		if (!ManagedIndexer.prevInstance) {
-			throw new Error("[ManagedIndexer.getInstance()] no available instance")
+			// NOTE: (brianc) - This _should_ never happen. The ManagedIndexer is instantiated on extension startup
+			// and a reference stays around forever, however, we've seen weird hard to reproduce issue where on occassion
+			// it IS null here. To mitigate that, we'll just create a new instance if needed. This dummy instance will
+			// be disabled and not respond as 'start' will never be called on it, but it wont blow up the extension.
+			console.warn("[ManagedIndexer] Warning: Previous ManagedIndexer instance was null, creating new instance")
+			TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER)
+			ManagedIndexer.prevInstance = new ManagedIndexer()
 		}
 
 		return ManagedIndexer.prevInstance
@@ -76,7 +85,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	// Handle changes to vscode workspace folder changes
 	workspaceFoldersListener: vscode.Disposable | null = null
 	// kilocode_change: Listen to configuration changes from ContextProxy
-	configChangeListener: vscode.Disposable | null = null
+	configChangeListener: vscode.Disposable | undefined | null = null
 	config: ManagedIndexerConfig | null = null
 	organization: KiloOrganization | null = null
 	isActive = false
@@ -86,10 +95,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	 */
 	workspaceFolderState: ManagedIndexerWorkspaceFolderState[] = []
 
-	// Concurrency limiter for file upserts
-	private readonly fileUpsertLimit = pLimit(MANAGED_MAX_CONCURRENT_FILES)
-
-	constructor(public contextProxy: ContextProxy) {
+	constructor(public contextProxy?: ContextProxy | null) {
 		ManagedIndexer.prevInstance = this
 	}
 
@@ -112,9 +118,9 @@ export class ManagedIndexer implements vscode.Disposable {
 
 	async fetchConfig(): Promise<ManagedIndexerConfig> {
 		// kilocode_change: Read directly from ContextProxy instead of ClineProvider
-		const kilocodeToken = this.contextProxy.getSecret("kilocodeToken")
-		const kilocodeOrganizationId = this.contextProxy.getValue("kilocodeOrganizationId")
-		const kilocodeTesterWarningsDisabledUntil = this.contextProxy.getValue("kilocodeTesterWarningsDisabledUntil")
+		const kilocodeToken = this.contextProxy?.getSecret("kilocodeToken")
+		const kilocodeOrganizationId = this.contextProxy?.getValue("kilocodeOrganizationId")
+		const kilocodeTesterWarningsDisabledUntil = this.contextProxy?.getValue("kilocodeTesterWarningsDisabledUntil")
 
 		this.config = {
 			kilocodeToken: kilocodeToken ?? null,
@@ -144,6 +150,10 @@ export class ManagedIndexer implements vscode.Disposable {
 	}
 
 	isEnabled(): boolean {
+		if (this.enabledViaConfig) {
+			return true
+		}
+
 		const organization = this.organization
 
 		if (!organization) {
@@ -151,12 +161,7 @@ export class ManagedIndexer implements vscode.Disposable {
 		}
 
 		const isEnabled = OrganizationService.isCodeIndexingEnabled(organization)
-
-		if (!isEnabled) {
-			return false
-		}
-
-		return true
+		return isEnabled
 	}
 
 	/**
@@ -207,7 +212,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	async start() {
 		console.log("[ManagedIndexer] Starting ManagedIndexer")
 
-		this.configChangeListener = this.contextProxy.onManagedIndexerConfigChange(
+		this.configChangeListener = this.contextProxy?.onManagedIndexerConfigChange(
 			this.onConfigurationChange.bind(this),
 		)
 
@@ -219,18 +224,25 @@ export class ManagedIndexer implements vscode.Disposable {
 			return
 		}
 
+		for (const folder of vscode.workspace.workspaceFolders ?? []) {
+			const config = await getKilocodeConfig(folder.uri.fsPath)
+			if (config?.project?.managedIndexingEnabled) {
+				this.enabledViaConfig = true
+			}
+		}
+
 		this.organization = await this.fetchOrganization()
 
-		const isEnabled = this.isEnabled()
 		this.sendStateToWebview()
-		if (!isEnabled) {
+
+		if (!this.isEnabled()) {
 			return
 		}
 
 		// TODO: Plumb kilocodeTesterWarningsDisabledUntil through
 		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
 
-		if (!kilocodeOrganizationId || !kilocodeToken) {
+		if (!kilocodeToken) {
 			return
 		}
 
@@ -276,6 +288,9 @@ export class ManagedIndexer implements vscode.Disposable {
 					const config = await getKilocodeConfig(cwd, repositoryUrl)
 					const projectId = config?.project?.id
 
+					// TODO: (brianc) - only index projects if they're enabled in the config
+					// right now if any workspace folder is enabled, we index them all
+
 					if (!projectId) {
 						console.log("[ManagedIndexer] No project ID found for workspace folder", cwd)
 						return null
@@ -285,7 +300,7 @@ export class ManagedIndexer implements vscode.Disposable {
 					// Step 3: Fetch server manifest
 					try {
 						state.manifest = await getServerManifest(
-							kilocodeOrganizationId,
+							kilocodeOrganizationId ?? null,
 							projectId,
 							gitBranch,
 							kilocodeToken,
@@ -309,7 +324,7 @@ export class ManagedIndexer implements vscode.Disposable {
 
 					// Step 4: Create git watcher
 					try {
-						const watcher = new GitWatcher({ cwd })
+						const watcher = new GitWatcher({ cwd, defaultBranchOverride: config.project?.baseBranch })
 						state.watcher = watcher
 						const ignoreController = new RooIgnoreController(cwd)
 						await ignoreController.initialize()
@@ -420,7 +435,7 @@ export class ManagedIndexer implements vscode.Disposable {
 				state.projectId = projectId
 
 				// Ensure we have the necessary configuration
-				if (!this.config?.kilocodeToken || !this.config?.kilocodeOrganizationId) {
+				if (!this.config?.kilocodeToken) {
 					throw new Error("Missing required configuration for manifest fetch")
 				}
 
@@ -573,7 +588,7 @@ export class ManagedIndexer implements vscode.Disposable {
 				return
 			}
 
-			if (!this.config?.kilocodeToken || !this.config?.kilocodeOrganizationId || !state.projectId) {
+			if (!this.config?.kilocodeToken || !state.projectId) {
 				console.warn("[ManagedIndexer] Missing token, organization ID, or project ID, skipping file upsert")
 				return
 			}
@@ -584,6 +599,10 @@ export class ManagedIndexer implements vscode.Disposable {
 					// Check if operation was aborted
 					if (signal.aborted) {
 						throw new Error("AbortError")
+					}
+
+					if (this.isEnabled() === false) {
+						throw new Error("ManagedIndexing is not enabled")
 					}
 
 					if (file.type === "file-deleted") {
@@ -613,11 +632,7 @@ export class ManagedIndexer implements vscode.Disposable {
 						try {
 							// Ensure we have the necessary configuration
 							// check again inside loop as this can change mid-flight
-							if (
-								!this.config?.kilocodeToken ||
-								!this.config?.kilocodeOrganizationId ||
-								!state.projectId
-							) {
+							if (!this.config?.kilocodeToken || !state.projectId) {
 								return
 							}
 							const projectId = state.projectId
@@ -733,8 +748,8 @@ export class ManagedIndexer implements vscode.Disposable {
 	public async search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
 		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
 
-		if (!kilocodeOrganizationId || !kilocodeToken) {
-			throw new Error("Kilocode organization ID and token are required for managed index search")
+		if (!kilocodeToken) {
+			throw new Error("Kilocode token is required for managed index search")
 		}
 
 		const results = await Promise.all(
@@ -746,7 +761,7 @@ export class ManagedIndexer implements vscode.Disposable {
 				return await searchCode(
 					{
 						query,
-						organizationId: kilocodeOrganizationId,
+						organizationId: kilocodeOrganizationId ?? null,
 						projectId: state.projectId,
 						preferBranch: state.gitBranch,
 						fallbackBranch: "main",
@@ -819,7 +834,7 @@ export class ManagedIndexer implements vscode.Disposable {
 			)
 
 			// Determine if this is the base branch
-			const defaultBranch = await getBaseBranch(state.workspaceFolder.uri.fsPath)
+			const defaultBranch = await state.watcher?.getDefaultBranch()
 			const isBaseBranch = state.gitBranch.toLowerCase() === defaultBranch.toLowerCase()
 
 			// Create a synthetic event to trigger file processing using GitWatcher's getFiles method

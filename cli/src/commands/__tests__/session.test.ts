@@ -100,7 +100,7 @@ describe("sessionCommand", () => {
 			expect(sessionCommand.examples).toContain("/session search <query>")
 			expect(sessionCommand.examples).toContain("/session select <sessionId>")
 			expect(sessionCommand.examples).toContain("/session share")
-			expect(sessionCommand.examples).toContain("/session fork <shareId>")
+			expect(sessionCommand.examples).toContain("/session fork <id>")
 			expect(sessionCommand.examples).toContain("/session delete <sessionId>")
 			expect(sessionCommand.examples).toContain("/session rename <new name>")
 		})
@@ -621,7 +621,7 @@ describe("sessionCommand", () => {
 
 			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(replacedMessages).toHaveLength(2)
-			expect(replacedMessages[1].content).toContain("Forking session from share ID")
+			expect(replacedMessages[1].content).toContain("Forking session from ID")
 			expect(replacedMessages[1].content).toContain("share-123")
 		})
 
@@ -633,7 +633,7 @@ describe("sessionCommand", () => {
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
-			expect(message.content).toContain("Usage: /session fork <shareId>")
+			expect(message.content).toContain("Usage: /session fork <id>")
 			expect(mockSessionManager.forkSession).not.toHaveBeenCalled()
 		})
 
@@ -645,7 +645,7 @@ describe("sessionCommand", () => {
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
-			expect(message.content).toContain("Usage: /session fork <shareId>")
+			expect(message.content).toContain("Usage: /session fork <id>")
 		})
 
 		it("should handle fork error gracefully", async () => {
