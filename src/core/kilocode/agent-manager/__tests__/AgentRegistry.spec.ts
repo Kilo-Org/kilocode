@@ -205,7 +205,7 @@ describe("AgentRegistry", () => {
 
 		it("returns true when at least one session is running among others", () => {
 			const s1 = registry.createSession("done")
-			const s2 = registry.createSession("running")
+			registry.createSession("running")
 			const s3 = registry.createSession("error")
 
 			registry.updateSessionStatus(s1.localId, "done")
@@ -215,8 +215,8 @@ describe("AgentRegistry", () => {
 		})
 
 		it("returns the count of running sessions", () => {
-			const s1 = registry.createSession("running 1")
-			const s2 = registry.createSession("running 2")
+			registry.createSession("running 1")
+			registry.createSession("running 2")
 			const s3 = registry.createSession("done")
 
 			registry.updateSessionStatus(s3.localId, "done")

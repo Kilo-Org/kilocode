@@ -101,7 +101,7 @@ function SessionItem({
 }) {
 	const { t } = useTranslation("agentManager")
 	// Only show delete for sessions we have local control over (running with a pid)
-	const hasLocalProcess = session.source === "local" && session.status === "running"
+	const hasLocalProcess = session.source === "local" && session.status === "running" && session.pid !== undefined
 
 	const formatDuration = (start: number, end?: number) => {
 		const duration = (end || Date.now()) - start
