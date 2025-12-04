@@ -1,12 +1,96 @@
 import fs from "fs"
 import path from "path"
 import readline from "readline"
+import OpenAI from "openai"
+import { DEFAULT_HEADERS } from "../api/providers/constants.js"
 
 const APPROVALS_DIR = "approvals"
+const OPUS_MODEL = "anthropic/claude-opus-4.5"
 
 export interface ApprovalResult {
 	isApproved: boolean
 	newOutput: boolean
+}
+
+function getKiloBaseUriFromToken(kilocodeToken?: string): string {
+	if (kilocodeToken) {
+		try {
+			const payload_string = kilocodeToken.split(".")[1]
+			const payload_json = Buffer.from(payload_string, "base64").toString()
+			const payload = JSON.parse(payload_json)
+			if (payload.env === "development") return "http://localhost:3000"
+		} catch (_error) {
+			console.warn("Failed to get base URL from Kilo Code token")
+		}
+	}
+	return "https://api.kilo.ai"
+}
+
+async function askOpusApproval(input: string, output: string): Promise<boolean> {
+	const apiKey = process.env.KILOCODE_API_KEY
+	if (!apiKey) {
+		throw new Error("KILOCODE_API_KEY is required for Opus auto-approval")
+	}
+
+	const baseUrl = getKiloBaseUriFromToken(apiKey)
+	const openai = new OpenAI({
+		baseURL: `${baseUrl}/api/openrouter/`,
+		apiKey,
+		defaultHeaders: {
+			...DEFAULT_HEADERS,
+			"X-KILOCODE-TESTER": "SUPPRESS",
+		},
+	})
+
+	const systemPrompt = `You are an expert code reviewer evaluating autocomplete suggestions.
+Your task is to determine if an autocomplete suggestion is USEFUL or NOT USEFUL.
+
+A suggestion is USEFUL if it:
+- Provides meaningful code that helps the developer
+- Completes a logical code pattern
+- Adds substantial functionality (not just trivial characters)
+- Is syntactically correct and contextually appropriate
+
+A suggestion is NOT USEFUL if it:
+- Only adds trivial characters like semicolons, closing brackets, or single characters
+- Is empty or nearly empty
+- Is syntactically incorrect
+- Doesn't make sense in the context
+- Repeats what's already there
+
+Respond with ONLY "APPROVED" or "REJECTED" - nothing else.`
+
+	const userPrompt = `Here is the code context (with cursor position marked by where the completion would be inserted):
+
+INPUT (code before completion):
+\`\`\`
+${input}
+\`\`\`
+
+OUTPUT (code after completion):
+\`\`\`
+${output}
+\`\`\`
+
+Is this autocomplete suggestion useful? Respond with ONLY "APPROVED" or "REJECTED".`
+
+	try {
+		const response = await openai.chat.completions.create({
+			model: OPUS_MODEL,
+			messages: [
+				{ role: "system", content: systemPrompt },
+				{ role: "user", content: userPrompt },
+			],
+			max_tokens: 10,
+			temperature: 0,
+		})
+
+		const content = response.choices[0].message.content?.trim().toUpperCase() || ""
+		return content === "APPROVED"
+	} catch (error) {
+		console.error("Opus approval error:", error)
+		throw error
+	}
 }
 
 function getCategoryPath(category: string): string {
@@ -88,6 +172,7 @@ export async function checkApproval(
 	input: string,
 	output: string,
 	skipApproval: boolean = false,
+	useOpusApproval: boolean = false,
 ): Promise<ApprovalResult> {
 	const categoryDir = getCategoryPath(category)
 
@@ -106,7 +191,10 @@ export async function checkApproval(
 		return { isApproved: false, newOutput: true }
 	}
 
-	const isApproved = await askUserApproval(category, testName, input, output)
+	// Use Opus for auto-approval if enabled, otherwise ask user
+	const isApproved = useOpusApproval
+		? await askOpusApproval(input, output)
+		: await askUserApproval(category, testName, input, output)
 
 	const type: "approved" | "rejected" = isApproved ? "approved" : "rejected"
 
