@@ -57,6 +57,7 @@ export class CodeIndexServiceFactory {
 			}
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
+				codebaseIndexEmbedderTimeoutMS: config.codebaseIndexEmbedderTimeoutMS, // kilocode_change
 				ollamaModelId: config.modelId,
 			})
 		} else if (provider === "openai-compatible") {

@@ -12,6 +12,7 @@ export interface CodeIndexConfig {
 	lancedbVectorStoreDirectoryPlaceholder?: string
 	// kilocode_change end
 	modelId?: string
+	codebaseIndexEmbedderTimeoutMS?: number // kilocode_change
 	modelDimension?: number // Generic dimension property for all providers
 	openAiOptions?: ApiHandlerOptions
 	ollamaOptions?: ApiHandlerOptions
@@ -38,6 +39,7 @@ export type PreviousConfigSnapshot = {
 	lancedbVectorStoreDirectory?: string
 	// kilocode_change end
 	modelId?: string
+	codebaseIndexEmbedderTimeoutMS?: number // kilocode_change
 	modelDimension?: number // Generic dimension property
 	openAiKey?: string
 	ollamaBaseUrl?: string

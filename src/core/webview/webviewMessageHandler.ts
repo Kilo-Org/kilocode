@@ -2953,6 +2953,7 @@ export const webviewMessageHandler = async (
 					// kilocode_change end
 					codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
 					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
+					codebaseIndexEmbedderTimeoutMS: settings.codebaseIndexEmbedderTimeoutMS, // kilocode_change
 					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
 					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
