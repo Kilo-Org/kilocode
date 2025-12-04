@@ -97,7 +97,7 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 		}
 
-		const url = getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", kilocodeToken)
+		const url = getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", kilocodeToken)
 		const response = await axios.get(url, {
 			headers,
 			timeout: 5000,

@@ -72,7 +72,7 @@ describe("OpenRouterHandler", () => {
 			baseURL: "https://openrouter.ai/api/v1",
 			apiKey: mockOptions.openRouterApiKey,
 			defaultHeaders: {
-				"HTTP-Referer": "https://kilocode.ai",
+				"HTTP-Referer": "https://kilo.ai",
 				"X-Title": "Kilo Code",
 				"X-KiloCode-Version": Package.version,
 				"User-Agent": `Kilo-Code/${Package.version}`,

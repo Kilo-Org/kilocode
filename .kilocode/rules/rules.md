@@ -6,12 +6,13 @@
     - Ensure all tests pass before submitting changes
     - The vitest framework is used for testing; the `vi`, `describe`, `test`, `it`, etc functions are defined by default in `tsconfig.json` and therefore don't need to be imported from `vitest`
     - Tests must be run from the same directory as the `package.json` file that specifies `vitest` in `devDependencies`
-    - Run tests with: `npx vitest run <relative-path-from-workspace-root>`
+    - Run tests with: `pnpm test <relative-path-from-workspace-root>`
     - Do NOT run tests from project root - this causes "vitest: command not found" error
     - Tests must be run from inside the correct workspace:
-        - Backend tests: `cd src && npx vitest run path/to/test-file` (don't include `src/` in path)
-        - UI tests: `cd webview-ui && npx vitest run src/path/to/test-file`
-    - Example: For `src/tests/user.test.ts`, run `cd src && npx vitest run tests/user.test.ts` NOT `npx vitest run src/tests/user.test.ts`
+        - Backend tests: `cd src && pnpm test path/to/test-file` (don't include `src/` in path)
+        - UI tests: `cd webview-ui && pnpm test src/path/to/test-file`
+    - Example: For `src/tests/user.spec.ts`, run `cd src && pnpm test tests/user.spec.ts` NOT `pnpm test src/tests/user.spec.ts`
+    - **Test File Naming Convention**: Use `.spec.ts` or `.spec.tsx` for test files, NOT `.test.ts` or `.test.tsx`. This is the project standard.
 
 2. Lint Rules:
 

@@ -23,7 +23,7 @@ export const VSCODE_MARKETPLACE_URL = "https://marketplace.visualstudio.com/item
 export const OPEN_VSX_URL = "https://open-vsx.org/extension/kilocode/kilo-code"
 
 // Company links
-export const CONTACT_EMAIL = "mailto:hi@kilocode.ai"
+export const CONTACT_EMAIL = "mailto:hi@kilo.ai"
 export const CAREERS_URL = "https://kilo.ai"
 export const WEBSITE_PRIVACY_URL = "https://kilo.ai/privacy"
 export const EXTENSION_PRIVACY_URL = `${GITHUB_MAIN_REPO_URL}/blob/main/PRIVACY.md`

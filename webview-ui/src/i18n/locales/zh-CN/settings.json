@@ -977,8 +977,8 @@
 		"useCustomModel": "使用自定义：{{modelId}}"
 	},
 	"footer": {
-		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "如有财务问题，请联系客户支持 <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
+		"support": "如有财务问题，请联系客户支持 <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "允许错误和使用情况报告",
 			"description": "通过发送使用数据和错误报告帮助改进 Kilo Code。绝不会发送代码、提示词或个人信息。详情请查看我们的隐私政策。"

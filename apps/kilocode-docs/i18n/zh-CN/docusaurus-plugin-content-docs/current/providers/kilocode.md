@@ -55,6 +55,6 @@ Kilo Code 通过其内置提供商提供对最新前沿编码模型的访问。�
 - **身份验证：** 临时冻结系统确保服务可靠性，同时防止滥用
 - **无缝集成：** 无需管理多个 API 密钥或提供商配置
 - **最新模型：** 自动访问最新的前沿编码模型
-- **提供支持：** 有关定价或 token 的问题，请联系 [hi@kilocode.ai](mailto:hi@kilocode.ai)
+- **提供支持：** 有关定价或 token 的问题，请联系 [hi@kilo.ai](mailto:hi@kilo.ai)
 
 有关详细设置说明，请参阅[设置 Kilo Code](/getting-started/setting-up)。

@@ -1053,8 +1053,8 @@
 		"useCustomModel": "Použít vlastní: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "Pro finanční dotazy kontaktujte prosím zákaznickou podporu na <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>.",
+		"support": "Pro finanční dotazy kontaktujte prosím zákaznickou podporu na <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Povolit hlášení chyb a používání",
 			"description": "Pomozte vylepšit Kilo Code odesíláním dat o používání a hlášení chyb. Nikdy se neodesílá žádný kód, výzvy ani osobní informace. Další podrobnosti najdete v našich zásadách ochrany osobních údajů."

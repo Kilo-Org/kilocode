@@ -98,7 +98,7 @@ export const KiloModelInfoView = ({
 		queryFn: async () => {
 			try {
 				const url = getKiloUrlFromToken(
-					"https://api.kilocode.ai/api/modelstats",
+					"https://api.kilo.ai/api/modelstats",
 					apiConfiguration.kilocodeToken ?? "",
 				)
 				const response = await fetch(url)

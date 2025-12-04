@@ -77,7 +77,15 @@ interface ChatTextAreaProps {
 
 // kilocode_change start
 function handleSessionCommand(trimmedInput: string, setInputValue: (value: string) => void) {
-	if (trimmedInput.startsWith("/session share")) {
+	if (trimmedInput.startsWith("/session show")) {
+		vscode.postMessage({
+			type: "sessionShow",
+		})
+
+		setInputValue("")
+
+		return true
+	} else if (trimmedInput.startsWith("/session share")) {
 		vscode.postMessage({
 			type: "sessionShare",
 		})

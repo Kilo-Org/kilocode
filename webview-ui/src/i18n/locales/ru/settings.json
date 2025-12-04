@@ -969,8 +969,8 @@
 		"useCustomModel": "Использовать пользовательскую: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "По финансовым вопросам обращайтесь в службу поддержки по адресу <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
+		"support": "По финансовым вопросам обращайтесь в службу поддержки по адресу <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Разрешить отправку ошибок и статистики использования",
 			"description": "Помогите улучшить Kilo Code, отправляя данные об ошибках и использовании. Код, подсказки и личная информация не отправляются. Подробнее — в политике конфиденциальности."

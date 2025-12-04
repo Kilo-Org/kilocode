@@ -969,8 +969,8 @@
 		"useCustomModel": "Aangepast gebruiken: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Voor financiële vragen kunt u contact opnemen met de klantenservice via <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
+		"support": "Voor financiële vragen kunt u contact opnemen met de klantenservice via <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "Fout- en gebruiksrapportage toestaan",
 			"description": "Help Kilo Code te verbeteren door gebruiksgegevens en foutmeldingen te verzenden. Er worden nooit code, prompts of persoonlijke gegevens verzonden. Zie ons privacybeleid voor meer informatie."

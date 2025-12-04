@@ -1042,8 +1042,8 @@
 		"useCustomModel": "استخدام مخصص: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "للاستفسارات المالية: <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>kilo.ai/discord</discordLink>.",
+		"support": "للاستفسارات المالية: <supportLink>https://kilo.ai/support</supportLink>",
 		"telemetry": {
 			"label": "السماح بتقارير الأخطاء والاستخدام",
 			"description": "ساعد في تحسين Kilo Code بإرسال بيانات الاستخدام وتقارير الأخطاء. لا يتم إرسال أي كود أو مطالبات أو معلومات شخصية أبداً. راجع سياسة الخصوصية لمزيد من التفاصيل."

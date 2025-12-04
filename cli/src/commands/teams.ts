@@ -64,7 +64,7 @@ async function listTeams(context: CommandContext): Promise<void> {
 		addMessage({
 			id: Date.now().toString(),
 			type: "system",
-			content: `You're currently not a part of any Kilo Code teams. Go to https://app.kilocode.ai/get-started/teams to get started with Kilo Code for Teams!`,
+			content: `You're currently not a part of any Kilo Code teams. Go to https://app.kilo.ai/get-started/teams to get started with Kilo Code for Teams!`,
 			ts: Date.now(),
 		})
 		return

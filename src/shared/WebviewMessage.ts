@@ -260,6 +260,7 @@ export interface WebviewMessage {
 		| "sessionShare" // kilocode_change
 		| "shareTaskSession" // kilocode_change
 		| "sessionFork" // kilocode_change
+		| "sessionShow" // kilocode_change
 		| "singleCompletion" // kilocode_change
 	text?: string
 	completionRequestId?: string // kilocode_change

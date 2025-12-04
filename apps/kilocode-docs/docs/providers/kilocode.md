@@ -79,6 +79,6 @@ With the Kilo Code provider, if you sign up with Google you can also connect oth
 - **Identity Verification:** The temporary hold system ensures service reliability while preventing misuse
 - **Seamless Integration:** No need to manage multiple API keys or provider configurations
 - **Latest Models:** Automatic access to the most current frontier coding models
-- **Support Available:** Contact [hi@kilocode.ai](mailto:hi@kilocode.ai) for questions about pricing or tokens
+- **Support Available:** Contact [hi@kilo.ai](mailto:hi@kilo.ai) for questions about pricing or tokens
 
 For detailed setup instructions, see [Setting up Kilo Code](/getting-started/setting-up).
