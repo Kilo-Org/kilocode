@@ -57,7 +57,7 @@ describe("RequestyHandler", () => {
 			baseURL: "https://router.requesty.ai/v1",
 			apiKey: mockOptions.requestyApiKey,
 			defaultHeaders: {
-				"HTTP-Referer": "https://kilo.ai",
+				"HTTP-Referer": "https://kilocode.ai",
 				"X-Title": "Kilo Code",
 				"X-KiloCode-Version": Package.version,
 				"User-Agent": `Kilo-Code/${Package.version}`,
@@ -73,7 +73,7 @@ describe("RequestyHandler", () => {
 			baseURL: "https://custom.requesty.ai/v1",
 			apiKey: mockOptions.requestyApiKey,
 			defaultHeaders: {
-				"HTTP-Referer": "https://kilo.ai",
+				"HTTP-Referer": "https://kilocode.ai",
 				"X-Title": "Kilo Code",
 				"X-KiloCode-Version": Package.version,
 				"User-Agent": `Kilo-Code/${Package.version}`,
