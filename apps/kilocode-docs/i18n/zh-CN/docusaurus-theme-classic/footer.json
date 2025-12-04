@@ -17,7 +17,7 @@
 	},
 	"link.item.label.Discord": {
 		"message": "Discord",
-		"description": "The label of footer link with label=Discord linking to https://kilocode.ai/discord"
+		"description": "The label of footer link with label=Discord linking to https://kilo.ai/discord"
 	},
 	"link.item.label.Reddit": {
 		"message": "Reddit",
@@ -45,15 +45,15 @@
 	},
 	"link.item.label.Contact": {
 		"message": "联系我们",
-		"description": "The label of footer link with label=Contact linking to mailto:hi@kilocode.ai"
+		"description": "The label of footer link with label=Contact linking to mailto:hi@kilo.ai"
 	},
 	"link.item.label.Careers": {
 		"message": "官网",
-		"description": "The label of footer link with label=Careers linking to https://kilocode.ai"
+		"description": "The label of footer link with label=Careers linking to https://kilo.ai"
 	},
 	"link.item.label.Website Privacy Policy": {
 		"message": "网站隐私政策",
-		"description": "The label of footer link with label=Website Privacy Policy linking to https://kilocode.ai/privacy"
+		"description": "The label of footer link with label=Website Privacy Policy linking to https://kilo.ai/privacy"
 	},
 	"link.item.label.Extension Privacy Policy": {
 		"message": "扩展隐私政策",

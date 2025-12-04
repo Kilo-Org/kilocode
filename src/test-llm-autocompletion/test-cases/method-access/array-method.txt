@@ -1,3 +1,0 @@
-# Description: Should suggest array methods
-const arr = [1, 2, 3];
-arr.<<<AUTOCOMPLETE_HERE>>>

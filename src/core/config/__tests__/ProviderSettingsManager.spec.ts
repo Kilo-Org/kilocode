@@ -119,6 +119,81 @@ describe("ProviderSettingsManager", () => {
 			expect(storedConfig.apiConfigs.test.id).toBeTruthy()
 		})
 
+		// kilocode_change start
+		it("should not change anything when no duplicated ids exist", async () => {
+			mockSecrets.get.mockResolvedValue(
+				JSON.stringify({
+					currentApiConfigName: "first",
+					apiConfigs: {
+						first: { id: "id-1", apiProvider: "anthropic" },
+						second: { id: "id-2", apiProvider: "anthropic" },
+					},
+					modeApiConfigs: {},
+					migrations: {
+						rateLimitSecondsMigrated: true,
+						diffSettingsMigrated: true,
+						openAiHeadersMigrated: true,
+						consecutiveMistakeLimitMigrated: true,
+						todoListEnabledMigrated: true,
+						morphApiKeyMigrated: true,
+					},
+				}),
+			)
+
+			await providerSettingsManager.initialize()
+
+			// No changes expected since there are no duplicates and migrations are complete
+			expect(mockSecrets.store).not.toHaveBeenCalled()
+			expect(providerSettingsManager.consumeDuplicateIdRepairReport()).toBeNull()
+		})
+
+		it("should dedupe duplicated ids by keeping the first id and assigning new ids to later duplicates", async () => {
+			mockSecrets.get.mockResolvedValue(
+				JSON.stringify({
+					currentApiConfigName: "first",
+					apiConfigs: {
+						// insertion order matters here: first keeps id, second changes
+						first: { id: "dup-id", apiProvider: "anthropic" },
+						second: { id: "dup-id", apiProvider: "anthropic" },
+						third: { id: "ok-id", apiProvider: "anthropic" },
+					},
+					modeApiConfigs: {},
+					migrations: {
+						rateLimitSecondsMigrated: true,
+						diffSettingsMigrated: true,
+						openAiHeadersMigrated: true,
+						consecutiveMistakeLimitMigrated: true,
+						todoListEnabledMigrated: true,
+						morphApiKeyMigrated: true,
+					},
+				}),
+			)
+			// kilocode_change end
+
+			await providerSettingsManager.initialize()
+
+			expect(mockSecrets.store).toHaveBeenCalled()
+			const calls = mockSecrets.store.mock.calls
+			const storedConfig = JSON.parse(calls[calls.length - 1][1])
+
+			expect(storedConfig.apiConfigs.first.id).toBe("dup-id")
+			expect(storedConfig.apiConfigs.second.id).toBeTruthy()
+			expect(storedConfig.apiConfigs.second.id).not.toBe("dup-id")
+			expect(storedConfig.apiConfigs.third.id).toBe("ok-id")
+
+			const report = providerSettingsManager.consumeDuplicateIdRepairReport()
+			expect(report).toBeTruthy()
+			expect(report?.["dup-id"]).toHaveLength(1)
+			expect(report?.["dup-id"][0]).toBe(storedConfig.apiConfigs.second.id)
+
+			// Idempotency: running migrations again on already-deduped config should not write.
+			const newManager = new ProviderSettingsManager(mockContext)
+			mockSecrets.store.mockClear()
+			mockSecrets.get.mockResolvedValueOnce(JSON.stringify(storedConfig))
+			await newManager.initialize()
+			expect(mockSecrets.store).not.toHaveBeenCalled()
+		})
+
 		it("should call migrateRateLimitSeconds if it has not done so already", async () => {
 			mockGlobalState.get.mockResolvedValue(42)
 

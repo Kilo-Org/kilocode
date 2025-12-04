@@ -157,6 +157,12 @@ export async function* runClaudeCode(
 // We want the model to use our custom tool format instead of built-in tools.
 // Disabling built-in tools prevents tool-only responses and ensures text output.
 const claudeCodeTools = [
+	// kilocode_change start
+	"AskUserQuestion",
+	"KillShell",
+	"Skill",
+	"SlashCommand",
+	// kilocode_change end
 	"Task",
 	"Bash",
 	"Glob",

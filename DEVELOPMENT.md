@@ -253,6 +253,7 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 1. **Extension not loading**: Check the VSCode Developer Tools (Help > Toggle Developer Tools) for errors
 2. **Webview not updating**: Try reloading the window (Developer: Reload Window)
 3. **Build errors**: Make sure all dependencies are installed with `pnpm install`
+4. **Ripgrep missing**: We bundle `@vscode/ripgrep`, but if that binary is missing the extension will fall back to `rg` on your `PATH` (commonly `/opt/homebrew/bin/rg` on macOS) or the path set in `RIPGREP_PATH`.
 
 ### Debugging Tips
 

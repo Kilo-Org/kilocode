@@ -113,6 +113,6 @@ If you prefer to download and install the VSIX file directly:
 
 If you encounter issues not covered here:
 
-- Join our [Discord community](https://kilocode.ai/discord) for real-time support
+- Join our [Discord community](https://kilo.ai/discord) for real-time support
 - Submit issues on [GitHub](https://github.com/Kilo-Org/kilocode/issues)
 - Visit our [Reddit community](https://www.reddit.com/r/KiloCode)

@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Správce agentů",
+		"newAgent": "Nový agent",
+		"sessionsSection": "Relace",
+		"emptyState": "Zatím žádní aktivní agenti.",
+		"startAgent": "Spustit agenta",
+		"removeSession": "Odstranit"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Spustit nového agenta",
+		"describeTask": "Popište úkol, který má agent provést.",
+		"placeholderTask": "např. Vytvořit novou React komponentu pro tlačítko...",
+		"stopButton": "Zastavit",
+		"newButton": "Nový",
+		"stopButtonTitle": "Zastavit agenta",
+		"newButtonTitle": "Nový agent",
+		"autoModeWarning": "Běží v plně automatickém režimu - agent bude provádět akce bez potvrzení",
+		"starting": "Spouštění...",
+		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
+		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek"
+	},
+	"messages": {
+		"waiting": "Čekání na odpověď agenta...",
+		"kiloSaid": "Kilo řekl",
+		"youSaid": "Řekli jste",
+		"apiRequest": "API požadavek",
+		"taskCompleted": "Úkol dokončen",
+		"error": "Chyba",
+		"question": "Kilo Code má otázku",
+		"command": "Kilo chce spustit příkaz",
+		"tool": "Kilo chce použít nástroj",
+		"usingTool": "Používání nástroje: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agent běží v autonomním režimu"
+	},
+	"status": {
+		"running": "běží",
+		"done": "hotovo",
+		"stopped": "zastaveno",
+		"error": "chyba"
+	}
+}

@@ -39,10 +39,7 @@ export class OrganizationService {
 				headers[X_KILOCODE_TESTER] = "SUPPRESS"
 			}
 
-			const url = getKiloUrlFromToken(
-				`https://api.kilocode.ai/api/organizations/${organizationId}`,
-				kilocodeToken,
-			)
+			const url = getKiloUrlFromToken(`https://api.kilo.ai/api/organizations/${organizationId}`, kilocodeToken)
 
 			const response = await fetchWithRetries({
 				url,

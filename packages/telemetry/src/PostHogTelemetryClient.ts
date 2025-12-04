@@ -129,7 +129,7 @@ export class PostHogTelemetryClient extends BaseTelemetryClient {
 		}
 		const id = ++this.counter
 		try {
-			const response = await fetch(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken), {
+			const response = await fetch(getKiloUrlFromToken("https://api.kilo.ai/api/profile", kilocodeToken), {
 				headers: {
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",

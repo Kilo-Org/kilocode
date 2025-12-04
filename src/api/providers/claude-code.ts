@@ -95,6 +95,7 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 					}
 				}
 
+				let toolReminder = false // kilocode_change
 				for (const content of message.content) {
 					switch (content.type) {
 						case "text":
@@ -117,6 +118,15 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 							break
 						case "tool_use":
 							console.error(`tool_use is not supported yet. Received: ${JSON.stringify(content)}`)
+							// kilocode_change start
+							if (!toolReminder) {
+								yield {
+									type: "text",
+									text: "Preparing to use tools in XML format... ",
+								}
+								toolReminder = true
+							}
+							// kilocode_change end
 							break
 					}
 				}

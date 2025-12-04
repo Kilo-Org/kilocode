@@ -11,7 +11,7 @@ describe("DEFAULT_HEADERS", () => {
 	})
 
 	it("should have correct HTTP-Referer value", () => {
-		expect(DEFAULT_HEADERS["HTTP-Referer"]).toBe("https://kilocode.ai")
+		expect(DEFAULT_HEADERS["HTTP-Referer"]).toBe("https://kilo.ai")
 	})
 
 	it("should have correct X-Title value", () => {

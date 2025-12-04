@@ -87,38 +87,6 @@ describe("project-config", () => {
 
 			expect(config).toBeNull()
 		})
-
-		it("returns null when config file has no project.id", async () => {
-			const kilocodeDir = path.join(tempDir, ".kilocode")
-			await fs.mkdir(kilocodeDir, { recursive: true })
-			await fs.writeFile(
-				path.join(kilocodeDir, "config.json"),
-				JSON.stringify({
-					project: {},
-				}),
-			)
-
-			const config = await getKilocodeConfigFile(tempDir)
-
-			expect(config).toBeNull()
-		})
-
-		it("returns null when config file has empty project.id", async () => {
-			const kilocodeDir = path.join(tempDir, ".kilocode")
-			await fs.mkdir(kilocodeDir, { recursive: true })
-			await fs.writeFile(
-				path.join(kilocodeDir, "config.json"),
-				JSON.stringify({
-					project: {
-						id: "",
-					},
-				}),
-			)
-
-			const config = await getKilocodeConfigFile(tempDir)
-
-			expect(config).toBeNull()
-		})
 	})
 
 	describe("getProjectId", () => {

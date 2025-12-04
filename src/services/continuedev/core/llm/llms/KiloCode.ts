@@ -40,7 +40,7 @@ class KiloCode extends OpenRouter {
 		// Transform apiBase to use KiloCode backend
 		const transformedOptions = {
 			...parentOptions,
-			apiBase: getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/v1/", kilocodeToken),
+			apiBase: getKiloUrlFromToken("https://api.kilo.ai/api/openrouter/v1/", kilocodeToken),
 		}
 
 		super(transformedOptions)

@@ -728,7 +728,7 @@ importers:
         version: 5.0.4
       jotai:
         specifier: ^2.14.0
-        version: 2.15.1(@babel/core@7.28.5)(@babel/template@7.27.2)(@types/react@18.3.23)(react@19.2.0)
+        version: 2.15.2(@babel/core@7.28.5)(@babel/template@7.27.2)(@types/react@18.3.23)(react@19.2.0)
       jsdom:
         specifier: ^26.0.0
         version: 26.1.0
@@ -2165,6 +2165,9 @@ importers:
       i18next-http-backend:
         specifier: ^3.0.2
         version: 3.0.2(encoding@0.1.13)
+      jotai:
+        specifier: ^2.15.2
+        version: 2.15.2(@babel/core@7.27.1)(@babel/template@7.27.2)(@types/react@18.3.23)(react@18.3.1)
       katex:
         specifier: ^0.16.11
         version: 0.16.22
@@ -13540,8 +13543,8 @@ packages:
   joi@17.13.3:
     resolution: {integrity: sha512-otDA4ldcIx+ZXsKHWmp0YizCweVRZG96J10b0FevjfuncLO1oX59THoAmHkNubYJ+9gWsYsp5k8v4ib6oDv1fA==}
 
-  jotai@2.15.1:
-    resolution: {integrity: sha512-yHT1HAZ3ba2Q8wgaUQ+xfBzEtcS8ie687I8XVCBinfg4bNniyqLIN+utPXWKQE93LMF5fPbQSVRZqgpcN5yd6Q==}
+  jotai@2.15.2:
+    resolution: {integrity: sha512-El86CCfXNMEOytp20NPfppqGGmcp6H6kIA+tJHdmASEUURJCYW4fh8nTHEnB8rUXEFAY1pm8PdHPwnrcPGwdEg==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@babel/core': '>=7.0.0'
@@ -34262,7 +34265,14 @@ snapshots:
       '@sideway/formula': 3.0.1
       '@sideway/pinpoint': 2.0.0
 
-  jotai@2.15.1(@babel/core@7.28.5)(@babel/template@7.27.2)(@types/react@18.3.23)(react@19.2.0):
+  jotai@2.15.2(@babel/core@7.27.1)(@babel/template@7.27.2)(@types/react@18.3.23)(react@18.3.1):
+    optionalDependencies:
+      '@babel/core': 7.27.1
+      '@babel/template': 7.27.2
+      '@types/react': 18.3.23
+      react: 18.3.1
+
+  jotai@2.15.2(@babel/core@7.28.5)(@babel/template@7.27.2)(@types/react@18.3.23)(react@19.2.0):
     optionalDependencies:
       '@babel/core': 7.28.5
       '@babel/template': 7.27.2

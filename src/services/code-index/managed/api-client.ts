@@ -60,7 +60,7 @@ export interface UpsertFileParams {
 	/** The file content as a Buffer */
 	fileBuffer: Buffer
 	/** Organization ID (must be a valid UUID) */
-	organizationId: string
+	organizationId: string | null
 	/** Project ID */
 	projectId: string
 	/** Relative file path from workspace root */
@@ -103,7 +103,9 @@ export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal)
 		// Append the file with metadata
 		const filename = filePath.split("/").pop() || "file"
 		formData.append("file", new Blob([fileBuffer as any]), filename)
-		formData.append("organizationId", organizationId)
+		if (organizationId) {
+			formData.append("organizationId", organizationId)
+		}
 		formData.append("projectId", projectId)
 		formData.append("filePath", filePath)
 		formData.append("fileHash", fileHash)
@@ -145,7 +147,7 @@ export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal)
  * @throws Error if the request fails
  */
 export async function getServerManifest(
-	organizationId: string,
+	organizationId: string | null,
 	projectId: string,
 	gitBranch: string,
 	kilocodeToken: string,
@@ -155,10 +157,13 @@ export async function getServerManifest(
 
 	try {
 		const params = new URLSearchParams({
-			organizationId,
 			projectId,
 			gitBranch,
 		})
+
+		if (organizationId) {
+			params.append("organizationId", organizationId)
+		}
 
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/manifest?${params.toString()}`,

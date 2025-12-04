@@ -400,7 +400,7 @@ mkdir -p .kilocode/rules-docs
 - [Learn about Custom Rules](/advanced-usage/custom-rules)
 - [Explore Custom Modes](/features/custom-modes)
 - [Set up Custom Instructions](/advanced-usage/custom-instructions)
-- [Join our Discord](https://kilocode.ai/discord) for migration support
+- [Join our Discord](https://kilo.ai/discord) for migration support
 
 ## Additional Resources
 

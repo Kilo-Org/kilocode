@@ -101,8 +101,8 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			// kilocode_change start
 			case "kilocode": {
 				const backendUrl = options.kilocodeOrganizationId
-					? `https://api.kilocode.ai/api/organizations/${options.kilocodeOrganizationId}`
-					: "https://api.kilocode.ai/api/openrouter"
+					? `https://api.kilo.ai/api/organizations/${options.kilocodeOrganizationId}`
+					: "https://api.kilo.ai/api/openrouter"
 				const openRouterBaseUrl = getKiloUrlFromToken(backendUrl, options.kilocodeToken ?? "")
 				models = await getOpenRouterModels({
 					openRouterBaseUrl,
