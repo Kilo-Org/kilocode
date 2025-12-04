@@ -224,4 +224,97 @@ describe("AgentRegistry", () => {
 			expect(registry.getRunningSessionCount()).toBe(2)
 		})
 	})
+
+	describe("hasPendingOrRunningSessions", () => {
+		it("returns false when no sessions or pending", () => {
+			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+
+		it("returns true when a session is running", () => {
+			registry.createSession("running session")
+			expect(registry.hasPendingOrRunningSessions()).toBe(true)
+		})
+
+		it("returns true when a session is pending", () => {
+			const session = registry.createSession("pending session")
+			registry.updateSessionStatus(session.localId, "stopped")
+			expect(registry.hasPendingOrRunningSessions()).toBe(true)
+		})
+
+		it("returns false when all sessions are completed", () => {
+			const session = registry.createSession("done session")
+			registry.updateSessionStatus(session.localId, "done")
+			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+
+		it("returns false when all sessions have errors", () => {
+			const session = registry.createSession("error session")
+			registry.updateSessionStatus(session.localId, "error")
+			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+
+		it("returns false when all sessions are stopped and none running", () => {
+			const session = registry.createSession("stopped session")
+			registry.updateSessionStatus(session.localId, "stopped")
+			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+
+		it("returns true when at least one session is running among others", () => {
+			const s1 = registry.createSession("done")
+			registry.createSession("running")
+			const s3 = registry.createSession("error")
+
+			registry.updateSessionStatus(s1.localId, "done")
+			registry.updateSessionStatus(s3.localId, "error")
+
+			expect(registry.hasPendingOrRunningSessions()).toBe(true)
+		})
+
+		it("returns the count of pending or running sessions", () => {
+			const s1 = registry.createSession("running 1")
+			registry.updateSessionStatus(s1.localId, "running")
+			const s2 = registry.createSession("running 2")
+			registry.updateSessionStatus(s2.localId, "running")
+			const s3 = registry.createSession("done")
+			registry.updateSessionStatus(s3.localId, "done")
+
+			expect(registry.getPendingOrRunningSessionCount()).toBe(2)
+		})
+
+		it("does not count stopped sessions as pending", () => {
+			const s1 = registry.createSession("stopped 1")
+			registry.updateSessionStatus(s1.localId, "stopped")
+			const s2 = registry.createSession("running 2")
+			registry.updateSessionStatus(s2.localId, "running")
+
+			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
+		})
+
+		it("does not count error sessions as pending", () => {
+			const s1 = registry.createSession("error 1")
+			registry.updateSessionStatus(s1.localId, "error")
+			const s2 = registry.createSession("running 2")
+			registry.updateSessionStatus(s2.localId, "running")
+
+			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
+		})
+
+		it("does not count done sessions as pending", () => {
+			const s1 = registry.createSession("done 1")
+			registry.updateSessionStatus(s1.localId, "done")
+			const s2 = registry.createSession("running 2")
+			registry.updateSessionStatus(s2.localId, "running")
+
+			expect(registry.getPendingOrRunningSessionCount()).toBe(1)
+		})
+
+		it("counts sessions with status running or stopped as pending or running", () => {
+			const runningSession = registry.createSession("running session")
+			const stoppedSession = registry.createSession("stopped session")
+			registry.updateSessionStatus(stoppedSession.localId, "stopped")
+
+			expect(registry.hasPendingOrRunningSessions()).toBe(true)
+			expect(registry.getPendingOrRunningSessionCount()).toBe(2)
+		})
+	})
 })
