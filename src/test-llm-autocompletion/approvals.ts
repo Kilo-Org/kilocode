@@ -26,7 +26,26 @@ function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 	return "https://api.kilo.ai"
 }
 
-async function askOpusApproval(input: string, output: string): Promise<boolean> {
+function getExistingOutputs(categoryDir: string, testName: string, type: "approved" | "rejected"): string[] {
+	if (!fs.existsSync(categoryDir)) {
+		return []
+	}
+
+	const pattern = new RegExp(`^${testName}\\.${type}\\.\\d+\\.txt$`)
+	const files = fs.readdirSync(categoryDir).filter((f) => pattern.test(f))
+
+	return files.map((file) => {
+		const filePath = path.join(categoryDir, file)
+		return fs.readFileSync(filePath, "utf-8")
+	})
+}
+
+async function askOpusApproval(
+	input: string,
+	output: string,
+	previouslyApproved: string[],
+	previouslyRejected: string[],
+): Promise<boolean> {
 	const apiKey = process.env.KILOCODE_API_KEY
 	if (!apiKey) {
 		throw new Error("KILOCODE_API_KEY is required for Opus auto-approval")
@@ -60,7 +79,7 @@ A suggestion is NOT USEFUL if it:
 
 Respond with ONLY "APPROVED" or "REJECTED" - nothing else.`
 
-	const userPrompt = `Here is the code context (with cursor position marked by where the completion would be inserted):
+	let userPrompt = `Here is the code context (with cursor position marked by where the completion would be inserted):
 
 INPUT (code before completion):
 \`\`\`
@@ -71,8 +90,25 @@ OUTPUT (code after completion):
 \`\`\`
 ${output}
 \`\`\`
+`
 
-Is this autocomplete suggestion useful? Respond with ONLY "APPROVED" or "REJECTED".`
+	// Add previously approved outputs as examples
+	if (previouslyApproved.length > 0) {
+		userPrompt += `\n--- PREVIOUSLY APPROVED OUTPUTS (for reference) ---\n`
+		for (let i = 0; i < previouslyApproved.length; i++) {
+			userPrompt += `\nApproved example ${i + 1}:\n\`\`\`\n${previouslyApproved[i]}\n\`\`\`\n`
+		}
+	}
+
+	// Add previously rejected outputs as examples
+	if (previouslyRejected.length > 0) {
+		userPrompt += `\n--- PREVIOUSLY REJECTED OUTPUTS (for reference) ---\n`
+		for (let i = 0; i < previouslyRejected.length; i++) {
+			userPrompt += `\nRejected example ${i + 1}:\n\`\`\`\n${previouslyRejected[i]}\n\`\`\`\n`
+		}
+	}
+
+	userPrompt += `\nIs this autocomplete suggestion useful? Respond with ONLY "APPROVED" or "REJECTED".`
 
 	try {
 		const response = await openai.chat.completions.create({
@@ -192,9 +228,14 @@ export async function checkApproval(
 	}
 
 	// Use Opus for auto-approval if enabled, otherwise ask user
-	const isApproved = useOpusApproval
-		? await askOpusApproval(input, output)
-		: await askUserApproval(category, testName, input, output)
+	let isApproved: boolean
+	if (useOpusApproval) {
+		const previouslyApproved = getExistingOutputs(categoryDir, testName, "approved")
+		const previouslyRejected = getExistingOutputs(categoryDir, testName, "rejected")
+		isApproved = await askOpusApproval(input, output, previouslyApproved, previouslyRejected)
+	} else {
+		isApproved = await askUserApproval(category, testName, input, output)
+	}
 
 	const type: "approved" | "rejected" = isApproved ? "approved" : "rejected"
 
