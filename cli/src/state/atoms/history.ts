@@ -134,10 +134,8 @@ export const addToHistoryAtom = atom(null, async (get, set, prompt: string) => {
 	try {
 		const currentData = get(historyDataAtom)
 		const newData = addEntry(currentData, prompt)
-
-		// Only save if data actually changed
+		set(historyDataAtom, newData)
 		if (newData.entries.length !== currentData.entries.length) {
-			set(historyDataAtom, newData)
 			await saveHistory(newData)
 		}
 	} catch (error) {

@@ -138,7 +138,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 							/* Single Install button when not installed */
 							<Button
 								size="sm"
-								variant="default"
+								variant="primary"
 								className="text-xs h-5 py-0 px-2"
 								onClick={handleInstallClick}>
 								{t("marketplace:items.card.install")}

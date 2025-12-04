@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Impossibile connettersi al database vettoriale Qdrant. Assicurati che Qdrant sia in esecuzione e accessibile su {{qdrantUrl}}. Errore: {{errorMessage}}",
-		"vectorDimensionMismatch": "Impossibile aggiornare l'indice vettoriale per il nuovo modello. Prova a cancellare l'indice e a ricominciare. Dettagli: {{errorMessage}}"
+		"vectorDimensionMismatch": "Impossibile aggiornare l'indice vettoriale per il nuovo modello. Prova a cancellare l'indice e a ricominciare. Dettagli: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Impossibile inizializzare l'archivio vettoriale LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "Impossibile caricare il modulo LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Autenticazione fallita. Controlla la tua chiave API nelle impostazioni.",

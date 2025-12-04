@@ -45,5 +45,6 @@
 		"mostTokens": "Most Tokens",
 		"mostRelevant": "Most Relevant"
 	},
-	"viewAllHistory": "View all tasks"
+	"viewAllHistory": "View all",
+	"shareSession": "Share Session"
 }

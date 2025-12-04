@@ -5,74 +5,48 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { GhostContextProvider } from "./classic-auto-complete/GhostContextProvider"
-import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 
 export class GhostServiceManager {
-	private static instance: GhostServiceManager | null = null
 	private readonly model: GhostModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
 	private settings: GhostServiceSettings | null = null
-	private readonly ghostContextProvider: GhostContextProvider
 
 	private taskId: string | null = null
 
 	// Status bar integration
 	private statusBar: GhostStatusBar | null = null
 	private sessionCost: number = 0
-	private lastCompletionCost: number = 0
+	private completionCount: number = 0
+	private sessionStartTime: number = Date.now()
 
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
 	public readonly inlineCompletionProvider: GhostInlineCompletionProvider
-	private newAutocompleteProvider: NewAutocompleteProvider | null = null
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
-	private ignoreController?: Promise<RooIgnoreController>
-
-	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
+	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
 		this.cline = cline
 
 		// Register Internal Components
 		this.model = new GhostModel()
 
-		this.ignoreController = (async () => {
-			const ignoreController = new RooIgnoreController(cline.cwd)
-			await ignoreController.initialize()
-			return ignoreController
-		})()
-
-		this.ghostContextProvider = new GhostContextProvider(this.context, this.model, this.ignoreController)
-
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
+			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
-			this.ghostContextProvider,
-			this.ignoreController,
+			this.cline,
 		)
 
 		void this.load()
-	}
-
-	// Singleton Management
-	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostServiceManager {
-		if (GhostServiceManager.instance) {
-			throw new Error(
-				"GhostServiceManager is already initialized. Restart VS code, or change this to return the cached instance.",
-			)
-		}
-		GhostServiceManager.instance = new GhostServiceManager(context, cline)
-		return GhostServiceManager.instance
 	}
 
 	public async load() {
@@ -109,27 +83,15 @@ export class GhostServiceManager {
 			this.inlineCompletionProviderDisposable.dispose()
 			this.inlineCompletionProviderDisposable = null
 		}
-		if (this.newAutocompleteProvider && (!shouldBeRegistered || !this.settings?.useNewAutocomplete)) {
-			// Dispose new autocomplete provider if registration is disabled
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
 
 		if (!shouldBeRegistered) return
 
-		if (this.settings?.useNewAutocomplete) {
-			// Initialize new autocomplete provider if not already created, otherwise reload
-			this.newAutocompleteProvider ??= new NewAutocompleteProvider(this.context, this.cline)
-			await this.newAutocompleteProvider.load()
-			// New autocomplete provider registers itself internally
-		} else {
-			// Register classic provider
-			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-				{ scheme: "file" },
-				this.inlineCompletionProvider,
-			)
-			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-		}
+		// Register classic provider
+		this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+			{ scheme: "file" },
+			this.inlineCompletionProvider,
+		)
+		this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
 	}
 
 	public async disable() {
@@ -148,14 +110,6 @@ export class GhostServiceManager {
 		await this.load()
 	}
 
-	private async disposeIgnoreController() {
-		if (this.ignoreController) {
-			const ignoreController = this.ignoreController
-			delete this.ignoreController
-			;(await ignoreController).dispose()
-		}
-	}
-
 	public async codeSuggestion() {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
@@ -168,13 +122,6 @@ export class GhostServiceManager {
 		})
 
 		const document = editor.document
-
-		// Check if using new autocomplete
-		if (this.settings?.useNewAutocomplete) {
-			// New autocomplete doesn't support manual code suggestion yet
-			// Just return for now
-			return
-		}
 
 		// Ensure model is loaded
 		if (!this.model.loaded) {
@@ -238,7 +185,8 @@ export class GhostServiceManager {
 			provider: "loading...",
 			hasValidToken: false,
 			totalSessionCost: 0,
-			lastCompletionCost: 0,
+			completionCount: 0,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 
@@ -260,27 +208,10 @@ export class GhostServiceManager {
 		return this.model.loaded && this.model.hasValidCredentials()
 	}
 
-	private updateCostTracking(
-		cost: number,
-		inputTokens: number,
-		outputTokens: number,
-		cacheWriteTokens: number,
-		cacheReadTokens: number,
-	): void {
-		this.lastCompletionCost = cost
+	private updateCostTracking(cost: number, inputTokens: number, outputTokens: number): void {
+		this.completionCount++
 		this.sessionCost += cost
 		this.updateStatusBar()
-
-		// Send telemetry
-		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-			taskId: this.taskId,
-			inputTokens,
-			outputTokens,
-			cacheWriteTokens,
-			cacheReadTokens,
-			cost,
-			service: "INLINE_ASSIST",
-		})
 	}
 
 	private updateStatusBar() {
@@ -292,9 +223,11 @@ export class GhostServiceManager {
 			enabled: this.settings?.enableAutoTrigger,
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
+			profileName: this.model.profileName,
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
-			lastCompletionCost: this.lastCompletionCost,
+			completionCount: this.completionCount,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 
@@ -325,15 +258,5 @@ export class GhostServiceManager {
 
 		// Dispose inline completion provider resources
 		this.inlineCompletionProvider.dispose()
-
-		// Dispose new autocomplete provider if it exists
-		if (this.newAutocompleteProvider) {
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
-
-		void this.disposeIgnoreController()
-
-		GhostServiceManager.instance = null // Reset singleton
 	}
 }

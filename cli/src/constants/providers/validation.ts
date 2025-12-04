@@ -21,6 +21,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	openai: ["openAiApiKey"],
 	cerebras: ["cerebrasApiKey", "apiModelId"],
 	glama: ["glamaApiKey", "glamaModelId"],
+	"nano-gpt": ["nanoGptApiKey", "nanoGptModelId"],
 	huggingface: ["huggingFaceApiKey", "huggingFaceModelId", "huggingFaceInferenceProvider"],
 	litellm: ["litellmBaseUrl", "litellmApiKey", "litellmModelId"],
 	moonshot: ["moonshotBaseUrl", "moonshotApiKey", "apiModelId"],
@@ -44,6 +45,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
 	synthetic: ["syntheticApiKey", "apiModelId"],
 	oca: [],
+	"sap-ai-core": ["sapAiCoreServiceKey", "sapAiCoreResourceGroup", "sapAiCoreDeploymentId", "sapAiCoreModelId"],
 	// Special cases handled separately in handleSpecialValidations
 	vertex: [], // Has special validation logic (either/or fields)
 	"vscode-lm": [], // Has nested object validation

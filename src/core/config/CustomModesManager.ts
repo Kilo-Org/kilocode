@@ -45,6 +45,7 @@ interface ExportResult {
 
 interface ImportResult {
 	success: boolean
+	slug?: string
 	error?: string
 }
 
@@ -441,7 +442,7 @@ export class CustomModesManager {
 				const errorMessage = `Invalid mode configuration: ${errorMessages}`
 				logger.error("Mode validation failed", { slug, errors: validationResult.error.errors })
 				vscode.window.showErrorMessage(t("common:customModes.errors.updateFailed", { error: errorMessage }))
-				return
+				throw new Error(errorMessage)
 			}
 
 			const isProjectMode = config.source === "project"
@@ -487,6 +488,7 @@ export class CustomModesManager {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			logger.error("Failed to update custom mode", { slug, error: errorMessage })
 			vscode.window.showErrorMessage(t("common:customModes.errors.updateFailed", { error: errorMessage }))
+			throw error
 		}
 	}
 
@@ -603,14 +605,13 @@ export class CustomModesManager {
 			if (scope === "project") {
 				const workspacePath = getWorkspacePath()
 				if (workspacePath) {
-					rulesFolderPath = path.join(workspacePath, ".roo", `rules-${slug}`)
+					rulesFolderPath = path.join(getProjectRooDirectoryForCwd(workspacePath), `rules-${slug}`) // kilocode_change
 				} else {
 					return // No workspace, can't delete project rules
 				}
 			} else {
 				// Global scope - use OS home directory
-				const homeDir = os.homedir()
-				rulesFolderPath = path.join(homeDir, ".roo", `rules-${slug}`)
+				rulesFolderPath = path.join(getGlobalRooDirectory(), `rules-${slug}`) // kilocode_change
 			}
 
 			// Check if the rules folder exists and delete it
@@ -1029,7 +1030,8 @@ export class CustomModesManager {
 			// Refresh the modes after import
 			await this.refreshMergedState()
 
-			return { success: true }
+			// Return the imported mode's slug so the UI can activate it
+			return { success: true, slug: importData.customModes[0]?.slug }
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			logger.error("Failed to import mode with rules", { error: errorMessage })
@@ -1069,7 +1071,7 @@ export class CustomModesManager {
 			}
 
 			const url = getKiloUrlFromToken(
-				`https://api.kilocode.ai/api/organizations/${organizationId}/modes`,
+				`https://api.kilo.ai/api/organizations/${organizationId}/modes`,
 				kilocodeToken,
 			)
 			const response = await axios.get(url, { headers })

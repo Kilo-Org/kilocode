@@ -8,7 +8,7 @@ Kilo Code requires an API key from an AI model provider to function.
 
 We recommend these options for accessing the powerful **Claude 4 Sonnet** model:
 
-- **Kilo Gateway (Recommended):** Provides access to all of the models available through OpenRouter with competitive pricing and free credits to get started. [View pricing](https://kilocode.ai/pricing)
+- **Kilo Gateway (Recommended):** Provides access to all of the models available through OpenRouter with competitive pricing and free credits to get started. [View pricing](https://kilo.ai/pricing)
 - **OpenRouter:** Provides access to multiple AI models through a single API key. [View pricing](https://openrouter.ai/models?order=pricing-low-to-high).
 - **Anthropic:** Direct access to Claude models. Requires API access approval and may have [rate limits depending on your tier](https://docs.anthropic.com/en/api/rate-limits#requirements-to-advance-tier). See [Anthropic's pricing page](https://www.anthropic.com/pricing#anthropic-api) for details.
 

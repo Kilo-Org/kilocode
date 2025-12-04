@@ -5,7 +5,7 @@ import { ApiHandlerOptions } from "../../shared/api"
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import { RouterProvider } from "./router-provider"
 
-import { getActiveToolUseStyle, inceptionDefaultModelId, inceptionDefaultModelInfo, ModelInfo } from "@roo-code/types"
+import { inceptionDefaultModelId, inceptionDefaultModelInfo } from "@roo-code/types"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelParams } from "../transform/model-params"
@@ -13,7 +13,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import OpenAI from "openai"
 import { convertToOpenAiMessages } from "../transform/openai-format"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 export class InceptionLabsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -83,12 +83,10 @@ export class InceptionLabsHandler extends RouterProvider implements SingleComple
 			.withResponse()
 
 		let lastUsage: OpenAI.CompletionUsage | undefined
+		const toolCallAccumulator = new ToolCallAccumulator()
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
-			yield* processNativeToolCallsFromDelta(
-				delta,
-				getActiveToolUseStyle({ ...this.options, apiProvider: this.name }),
-			)
+			yield* toolCallAccumulator.processChunk(chunk)
 
 			if (delta?.content) {
 				yield { type: "text", text: delta.content }

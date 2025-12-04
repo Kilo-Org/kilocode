@@ -45,5 +45,6 @@
 		"mostTokens": "最多 Token",
 		"mostRelevant": "最相关"
 	},
-	"viewAllHistory": "查看所有历史记录"
+	"viewAllHistory": "查看全部",
+	"shareSession": "分享会话"
 }

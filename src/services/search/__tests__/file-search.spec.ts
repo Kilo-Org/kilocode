@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from "vitest"
 import * as vscode from "vscode"
 
+// Mock Package
+vi.mock("../../../shared/package", () => ({
+	Package: {
+		name: "roo-cline",
+		publisher: "RooVeterinaryInc",
+		version: "1.0.0",
+		outputChannel: "Roo-Code",
+	},
+}))
+
 // Mock vscode
 vi.mock("vscode", () => ({
 	workspace: {
@@ -50,6 +60,7 @@ describe("file-search", () => {
 		})
 
 		it("should read maximumIndexedFilesForFileSearch configuration", async () => {
+			const { Package } = await import("../../../shared/package")
 			const mockRooConfig = {
 				get: vi.fn((key: string, defaultValue: number) => {
 					if (key === "maximumIndexedFilesForFileSearch") return 50000
@@ -58,28 +69,29 @@ describe("file-search", () => {
 			}
 
 			;(vscode.workspace.getConfiguration as any).mockImplementation((section: string) => {
-				if (section === "roo-cline") return mockRooConfig
+				if (section === Package.name) return mockRooConfig
 				return { get: vi.fn() }
 			})
 
 			// The configuration should be readable
-			const config = vscode.workspace.getConfiguration("roo-cline")
+			const config = vscode.workspace.getConfiguration(Package.name)
 			const limit = config.get("maximumIndexedFilesForFileSearch", 10000)
 
 			expect(limit).toBe(50000)
 		})
 
-		it("should use default limit when configuration is not provided", () => {
+		it("should use default limit when configuration is not provided", async () => {
+			const { Package } = await import("../../../shared/package")
 			const mockRooConfig = {
 				get: vi.fn((key: string, defaultValue: number) => defaultValue),
 			}
 
 			;(vscode.workspace.getConfiguration as any).mockImplementation((section: string) => {
-				if (section === "roo-cline") return mockRooConfig
+				if (section === Package.name) return mockRooConfig
 				return { get: vi.fn() }
 			})
 
-			const config = vscode.workspace.getConfiguration("roo-cline")
+			const config = vscode.workspace.getConfiguration(Package.name)
 			const limit = config.get("maximumIndexedFilesForFileSearch", 10000)
 
 			expect(limit).toBe(10000)

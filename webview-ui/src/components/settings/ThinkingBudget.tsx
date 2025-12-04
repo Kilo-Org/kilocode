@@ -1,3 +1,37 @@
+/*
+Semantics for Reasoning Effort (ThinkingBudget)
+
+Capability surface:
+- modelInfo.supportsReasoningEffort: boolean | Array&lt;"disable" | "none" | "minimal" | "low" | "medium" | "high"&gt;
+  - true  → UI shows ["low","medium","high"]
+  - array → UI shows exactly the provided values
+
+Selection behavior:
+- "disable":
+  - Label: t("settings:providers.reasoningEffort.none")
+  - set enableReasoningEffort = false
+  - persist reasoningEffort = "disable"
+  - request builders omit any reasoning parameter/body sections
+- "none":
+  - Label: t("settings:providers.reasoningEffort.none")
+  - set enableReasoningEffort = true
+  - persist reasoningEffort = "none"
+  - request builders include reasoning with value "none"
+- "minimal" | "low" | "medium" | "high":
+  - set enableReasoningEffort = true
+  - persist the selected value
+  - request builders include reasoning with the selected effort
+
+Required:
+- If modelInfo.requiredReasoningEffort is true, do not synthesize a "None" choice. Only show values from the capability.
+- On mount, if unset and a default exists, set enableReasoningEffort = true and use modelInfo.reasoningEffort.
+
+Notes:
+- Current selection is normalized to the capability: unsupported persisted values are not shown.
+- Both "disable" and "none" display as the "None" label per UX, but are wired differently as above.
+- "minimal" uses t("settings:providers.reasoningEffort.minimal").
+*/
+
 import { useEffect } from "react"
 import { Checkbox } from "vscrui"
 
@@ -28,17 +62,6 @@ interface ThinkingBudgetProps {
 	modelInfo?: ModelInfo
 }
 
-// Helper function to determine if minimal option should be shown
-const shouldShowMinimalOption = (
-	provider: string | undefined,
-	modelId: string | undefined,
-	supportsEffort: boolean | undefined,
-): boolean => {
-	const isGpt5Model = provider === "openai-native" && modelId?.startsWith("gpt-5")
-	const isOpenRouterWithEffort = (provider === "openrouter" || provider === "kilocode") && supportsEffort === true
-	return !!(isGpt5Model || isOpenRouterWithEffort)
-}
-
 export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, modelInfo }: ThinkingBudgetProps) => {
 	const { t } = useAppTranslation()
 	const { id: selectedModelId } = useSelectedModel(apiConfiguration)
@@ -53,18 +76,14 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	const isReasoningBudgetRequired = !!modelInfo && modelInfo.requiredReasoningBudget
 	const isReasoningEffortSupported = !!modelInfo && modelInfo.supportsReasoningEffort
 
-	// Determine if minimal option should be shown
-	const showMinimalOption = shouldShowMinimalOption(
-		apiConfiguration.apiProvider,
-		selectedModelId,
-		isReasoningEffortSupported,
-	)
-
-	// Build available reasoning efforts list
-	const baseEfforts = [...reasoningEfforts] as ReasoningEffortWithMinimal[]
-	const availableReasoningEfforts: ReadonlyArray<ReasoningEffortWithMinimal> = showMinimalOption
-		? (["minimal", ...baseEfforts] as ReasoningEffortWithMinimal[])
-		: baseEfforts
+	// Build available reasoning efforts list from capability
+	const supports = modelInfo?.supportsReasoningEffort
+	const availableOptions: ReadonlyArray<ReasoningEffortWithMinimal> =
+		supports === true
+			? (reasoningEfforts as readonly ReasoningEffortWithMinimal[])
+			: Array.isArray(supports)
+				? (supports as ReadonlyArray<ReasoningEffortWithMinimal>)
+				: (reasoningEfforts as readonly ReasoningEffortWithMinimal[])
 
 	// Default reasoning effort - use model's default if available
 	// GPT-5 models have "medium" as their default in the model configuration
@@ -198,7 +217,7 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 					/>
 				</SelectTrigger>
 				<SelectContent>
-					{availableReasoningEfforts.map((value) => (
+					{availableOptions.map((value) => (
 						<SelectItem key={value} value={value}>
 							{t(`settings:providers.reasoningEffort.${value}`)}
 						</SelectItem>

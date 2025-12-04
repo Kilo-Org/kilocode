@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { VSCodeButton, VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 import { type CloudUserInfo, type CloudOrganizationMembership, TelemetryEventName } from "@roo-code/types"
 
@@ -261,18 +261,12 @@ export const CloudView = ({ userInfo, isAuthenticated, cloudApiUrl, onDone, orga
 						</div>
 
 						<div className="flex flex-col gap-2 mt-4 pl-4">
-							<VSCodeButton
-								appearance="secondary"
-								onClick={handleVisitCloudWebsite}
-								className="w-full max-w-80">
+							<Button variant="secondary" onClick={handleVisitCloudWebsite} className="w-full max-w-80">
 								{t("cloud:visitCloudWebsite")}
-							</VSCodeButton>
-							<VSCodeButton
-								appearance="secondary"
-								onClick={handleLogoutClick}
-								className="w-full max-w-80">
+							</Button>
+							<Button variant="secondary" onClick={handleLogoutClick} className="w-full max-w-80">
 								{t("cloud:logOut")}
-							</VSCodeButton>
+							</Button>
 						</div>
 					</>
 				) : (
@@ -281,9 +275,9 @@ export const CloudView = ({ userInfo, isAuthenticated, cloudApiUrl, onDone, orga
 							<div className={cn(authInProgress && "opacity-50")}>{renderCloudBenefitsContent(t)}</div>
 
 							{!authInProgress && (
-								<VSCodeButton appearance="primary" onClick={handleConnectClick} className="w-full">
+								<Button variant="primary" onClick={handleConnectClick} className="w-full">
 									{t("cloud:connect")}
-								</VSCodeButton>
+								</Button>
 							)}
 
 							{/* Manual entry section */}

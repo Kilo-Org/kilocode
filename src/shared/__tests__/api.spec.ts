@@ -473,4 +473,45 @@ describe("shouldUseReasoningEffort", () => {
 		expect(shouldUseReasoningEffort({ model, settings: settingsMedium })).toBe(true)
 		expect(shouldUseReasoningEffort({ model, settings: settingsHigh })).toBe(true)
 	})
+
+	// New cases for extended capability surface
+	test("array capability includes 'disable' with selection 'disable' -> false", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: true,
+			supportsReasoningEffort: ["disable", "low", "medium", "high"] as unknown as any,
+		}
+		const settings: ProviderSettings = { enableReasoningEffort: true, reasoningEffort: "disable" as any }
+		expect(shouldUseReasoningEffort({ model, settings })).toBe(false)
+	})
+
+	test("array capability includes 'none' with settings.reasoningEffort='none' -> true", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: true,
+			supportsReasoningEffort: ["none", "minimal", "low", "medium", "high"] as unknown as any,
+		}
+		const settings: ProviderSettings = { enableReasoningEffort: true, reasoningEffort: "none" as any }
+		expect(shouldUseReasoningEffort({ model, settings })).toBe(true)
+	})
+
+	test("array capability includes 'minimal' with settings.reasoningEffort='minimal' -> true", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: true,
+			supportsReasoningEffort: ["none", "minimal", "low", "medium", "high"] as unknown as any,
+		}
+		const settings: ProviderSettings = { enableReasoningEffort: true, reasoningEffort: "minimal" as any }
+		expect(shouldUseReasoningEffort({ model, settings })).toBe(true)
+	})
+
+	test("boolean true with 'none' and 'minimal' -> true", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: true,
+			supportsReasoningEffort: true,
+		}
+		expect(shouldUseReasoningEffort({ model, settings: { reasoningEffort: "none" as any } })).toBe(true)
+		expect(shouldUseReasoningEffort({ model, settings: { reasoningEffort: "minimal" as any } })).toBe(true)
+	})
 })

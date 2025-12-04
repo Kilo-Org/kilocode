@@ -14,7 +14,7 @@ Then, make sure you place your Kilo Code API token in the CLI config:
 kilocode config # this opens up your editor
 ```
 
-You can find your Kilo Code API token on your profile page at [app.kilocode.ai](https://app.kilocode.ai), and place it in the `kilocodeToken` field in the CLI config.
+You can find your Kilo Code API token on your profile page at [app.kilo.ai](https://app.kilo.ai), and place it in the `kilocodeToken` field in the CLI config.
 
 ## Known Issues
 
@@ -220,6 +220,8 @@ This instructs the AI to proceed without user input.
 
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
+- `130`: SIGINT interruption (Ctrl+C)
+- `143`: SIGTERM interruption (system termination)
 - `1`: Error (initialization or execution failure)
 
 #### Example CI/CD Integration

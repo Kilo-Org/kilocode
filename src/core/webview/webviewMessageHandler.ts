@@ -6,7 +6,7 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
-import { getKiloUrlFromToken, isGlobalStateKey } from "@roo-code/types"
+import { fastApplyApiProviderSchema, getKiloUrlFromToken, isGlobalStateKey } from "@roo-code/types"
 import { getAppUrl } from "@roo-code/types"
 import {
 	MaybeTypedWebviewMessage,
@@ -23,13 +23,16 @@ import {
 	type GlobalState,
 	type ClineMessage,
 	type TelemetrySetting,
+	type UserSettingsConfig,
 	TelemetryEventName,
 	// kilocode_change start
 	ghostServiceSettingsSchema,
 	fastApplyModelSchema,
 	// kilocode_change end
-	UserSettingsConfig,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	RooCodeSettings,
+	Experiments,
+	ExperimentId,
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -84,20 +87,21 @@ import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kiloco
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
-import { setPendingTodoList } from "../tools/updateTodoListTool"
-import { UsageTracker } from "../../utils/usage-tracker"
+import { UsageTracker } from "../../utils/usage-tracker" // kilocode_change
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
 import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
+import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-core" // kilocode_change
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
+import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
+import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager" // kilocode_change
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
 	message: MaybeTypedWebviewMessage, // kilocode_change switch to MaybeTypedWebviewMessage for better type-safety
 	marketplaceManager?: MarketplaceManager,
 ) => {
-	console.log("[webviewMessageHandler]", message)
 	// Utility functions provided for concise get/update of global state via contextProxy API.
 	const getGlobalState = <K extends keyof GlobalState>(key: K) => provider.contextProxy.getValue(key)
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
@@ -550,16 +554,10 @@ export const webviewMessageHandler = async (
 			try {
 				await provider.createTask(message.text, message.images)
 				// Task created successfully - notify the UI to reset
-				await provider.postMessageToWebview({
-					type: "invoke",
-					invoke: "newChat",
-				})
+				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 			} catch (error) {
 				// For all errors, reset the UI and show error
-				await provider.postMessageToWebview({
-					type: "invoke",
-					invoke: "newChat",
-				})
+				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 				// Show error to user
 				vscode.window.showErrorMessage(
 					`Failed to create task: ${error instanceof Error ? error.message : String(error)}`,
@@ -574,69 +572,111 @@ export const webviewMessageHandler = async (
 		case "customInstructions":
 			await provider.updateCustomInstructions(message.text)
 			break
-		case "alwaysAllowReadOnly":
-			await updateGlobalState("alwaysAllowReadOnly", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowReadOnlyOutsideWorkspace":
-			await updateGlobalState("alwaysAllowReadOnlyOutsideWorkspace", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowWrite":
-			await updateGlobalState("alwaysAllowWrite", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowWriteOutsideWorkspace":
-			await updateGlobalState("alwaysAllowWriteOutsideWorkspace", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowWriteProtected":
-			await updateGlobalState("alwaysAllowWriteProtected", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowExecute":
-			await updateGlobalState("alwaysAllowExecute", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowBrowser":
-			await updateGlobalState("alwaysAllowBrowser", message.bool ?? undefined)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowMcp":
-			await updateGlobalState("alwaysAllowMcp", message.bool)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowModeSwitch":
-			await updateGlobalState("alwaysAllowModeSwitch", message.bool)
-			await provider.postStateToWebview()
-			break
-		case "allowedMaxRequests":
-			await updateGlobalState("allowedMaxRequests", message.value)
-			await provider.postStateToWebview()
-			break
-		case "allowedMaxCost":
-			await updateGlobalState("allowedMaxCost", message.value)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowSubtasks":
-			await updateGlobalState("alwaysAllowSubtasks", message.bool)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowUpdateTodoList":
-			await updateGlobalState("alwaysAllowUpdateTodoList", message.bool)
-			await provider.postStateToWebview()
-			break
+
 		case "askResponse":
 			provider.getCurrentTask()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
 			break
-		case "autoCondenseContext":
-			await updateGlobalState("autoCondenseContext", message.bool)
-			await provider.postStateToWebview()
+
+		case "updateSettings":
+			if (message.updatedSettings) {
+				for (const [key, value] of Object.entries(message.updatedSettings)) {
+					let newValue = value
+
+					if (key === "language") {
+						newValue = value ?? "en"
+						changeLanguage(newValue as Language)
+					} else if (key === "allowedCommands") {
+						const commands = value ?? []
+
+						newValue = Array.isArray(commands)
+							? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
+							: []
+
+						await vscode.workspace
+							.getConfiguration(Package.name)
+							.update("allowedCommands", newValue, vscode.ConfigurationTarget.Global)
+					} else if (key === "deniedCommands") {
+						const commands = value ?? []
+
+						newValue = Array.isArray(commands)
+							? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
+							: []
+
+						await vscode.workspace
+							.getConfiguration(Package.name)
+							.update("deniedCommands", newValue, vscode.ConfigurationTarget.Global)
+					} else if (key === "ttsEnabled") {
+						newValue = value ?? true
+						setTtsEnabled(newValue as boolean)
+					} else if (key === "ttsSpeed") {
+						newValue = value ?? 1.0
+						setTtsSpeed(newValue as number)
+					} else if (key === "terminalShellIntegrationTimeout") {
+						if (value !== undefined) {
+							Terminal.setShellIntegrationTimeout(value as number)
+						}
+					} else if (key === "terminalShellIntegrationDisabled") {
+						if (value !== undefined) {
+							Terminal.setShellIntegrationDisabled(value as boolean)
+						}
+					} else if (key === "terminalCommandDelay") {
+						if (value !== undefined) {
+							Terminal.setCommandDelay(value as number)
+						}
+					} else if (key === "terminalPowershellCounter") {
+						if (value !== undefined) {
+							Terminal.setPowershellCounter(value as boolean)
+						}
+					} else if (key === "terminalZshClearEolMark") {
+						if (value !== undefined) {
+							Terminal.setTerminalZshClearEolMark(value as boolean)
+						}
+					} else if (key === "terminalZshOhMy") {
+						if (value !== undefined) {
+							Terminal.setTerminalZshOhMy(value as boolean)
+						}
+					} else if (key === "terminalZshP10k") {
+						if (value !== undefined) {
+							Terminal.setTerminalZshP10k(value as boolean)
+						}
+					} else if (key === "terminalZdotdir") {
+						if (value !== undefined) {
+							Terminal.setTerminalZdotdir(value as boolean)
+						}
+					} else if (key === "terminalCompressProgressBar") {
+						if (value !== undefined) {
+							Terminal.setCompressProgressBar(value as boolean)
+						}
+					} else if (key === "mcpEnabled") {
+						newValue = value ?? true
+						const mcpHub = provider.getMcpHub()
+
+						if (mcpHub) {
+							await mcpHub.handleMcpEnabledChange(newValue as boolean)
+						}
+					} else if (key === "experiments") {
+						if (!value) {
+							continue
+						}
+
+						newValue = {
+							...(getGlobalState("experiments") ?? experimentDefault),
+							...(value as Record<ExperimentId, boolean>),
+						}
+					} else if (key === "customSupportPrompts") {
+						if (!value) {
+							continue
+						}
+					}
+
+					await provider.contextProxy.setValue(key as keyof RooCodeSettings, newValue)
+				}
+
+				await provider.postStateToWebview()
+			}
+
 			break
-		case "autoCondenseContextPercent":
-			await updateGlobalState("autoCondenseContextPercent", message.value)
-			await provider.postStateToWebview()
-			break
+
 		case "terminalOperation":
 			if (message.terminalOperation) {
 				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation)
@@ -832,7 +872,9 @@ export const webviewMessageHandler = async (
 						oca: {},
 						roo: {},
 						synthetic: {}, // kilocode_change
+						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
+						"nano-gpt": {}, // kilocode_change
 					}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -894,6 +936,16 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.deepInfraBaseUrl,
 					},
 				},
+				// kilocode_change start
+				{
+					key: "nano-gpt",
+					options: {
+						provider: "nano-gpt",
+						apiKey: apiConfiguration.nanoGptApiKey,
+						nanoGptModelList: apiConfiguration.nanoGptModelList,
+					},
+				},
+				// kilocode_change end
 				{
 					key: "ovhcloud",
 					options: {
@@ -1118,6 +1170,51 @@ export const webviewMessageHandler = async (
 				provider.postMessageToWebview({ type: "huggingFaceModels", huggingFaceModels: [] })
 			}
 			break
+		// kilocode_change start
+		case "requestSapAiCoreModels": {
+			// Specific handler for SAP AI Core models only.
+			if (message?.values?.sapAiCoreServiceKey) {
+				try {
+					// Flush cache first to ensure fresh models.
+					await flushModels("sap-ai-core")
+
+					const sapAiCoreModels = await getModels({
+						provider: "sap-ai-core",
+						sapAiCoreServiceKey: message?.values?.sapAiCoreServiceKey,
+						sapAiCoreResourceGroup: message?.values?.sapAiCoreResourceGroup,
+						sapAiCoreUseOrchestration: message?.values?.sapAiCoreUseOrchestration,
+					})
+
+					if (Object.keys(sapAiCoreModels).length > 0) {
+						provider.postMessageToWebview({ type: "sapAiCoreModels", sapAiCoreModels: sapAiCoreModels })
+					}
+				} catch (error) {
+					console.error("SAP AI Core models fetch failed:", error)
+				}
+			}
+			break
+		}
+		case "requestSapAiCoreDeployments": {
+			if (message?.values?.sapAiCoreServiceKey) {
+				try {
+					const sapAiCoreDeployments = await getSapAiCoreDeployments(
+						message?.values?.sapAiCoreServiceKey,
+						message?.values?.sapAiCoreResourceGroup,
+					)
+
+					if (Object.keys(sapAiCoreDeployments).length > 0) {
+						provider.postMessageToWebview({
+							type: "sapAiCoreDeployments",
+							sapAiCoreDeployments: sapAiCoreDeployments,
+						})
+					}
+				} catch (error) {
+					console.error("SAP AI Core deployments fetch failed:", error)
+				}
+			}
+			break
+		}
+		// kilocode_change end
 		case "openImage":
 			openImage(message.text!, { values: message.values })
 			break
@@ -1274,38 +1371,6 @@ export const webviewMessageHandler = async (
 		case "cancelTask":
 			await provider.cancelTask()
 			break
-		case "allowedCommands": {
-			// Validate and sanitize the commands array
-			const commands = message.commands ?? []
-			const validCommands = Array.isArray(commands)
-				? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
-				: []
-
-			await updateGlobalState("allowedCommands", validCommands)
-
-			// Also update workspace settings.
-			await vscode.workspace
-				.getConfiguration(Package.name)
-				.update("allowedCommands", validCommands, vscode.ConfigurationTarget.Global)
-
-			break
-		}
-		case "deniedCommands": {
-			// Validate and sanitize the commands array
-			const commands = message.commands ?? []
-			const validCommands = Array.isArray(commands)
-				? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
-				: []
-
-			await updateGlobalState("deniedCommands", validCommands)
-
-			// Also update workspace settings.
-			await vscode.workspace
-				.getConfiguration(Package.name)
-				.update("deniedCommands", validCommands, vscode.ConfigurationTarget.Global)
-
-			break
-		}
 		case "openCustomModesSettings": {
 			const customModesFilePath = await provider.customModesManager.getCustomModesFilePath()
 
@@ -1440,18 +1505,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		case "mcpEnabled":
-			const mcpEnabled = message.bool ?? true
-			await updateGlobalState("mcpEnabled", mcpEnabled)
-
-			const mcpHubInstance = provider.getMcpHub()
-
-			if (mcpHubInstance) {
-				await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
-			}
-
-			await provider.postStateToWebview()
-			break
 		case "enableMcpServerCreation":
 			await updateGlobalState("enableMcpServerCreation", message.bool ?? true)
 			await provider.postStateToWebview()
@@ -1489,21 +1542,24 @@ export const webviewMessageHandler = async (
 				)
 			}
 			break
+
 		case "taskSyncEnabled":
 			const enabled = message.bool ?? false
-			const updatedSettings: Partial<UserSettingsConfig> = {
-				taskSyncEnabled: enabled,
-			}
-			// If disabling task sync, also disable remote control
+			const updatedSettings: Partial<UserSettingsConfig> = { taskSyncEnabled: enabled }
+
+			// If disabling task sync, also disable remote control.
 			if (!enabled) {
 				updatedSettings.extensionBridgeEnabled = false
 			}
+
 			try {
 				await CloudService.instance.updateUserSettings(updatedSettings)
 			} catch (error) {
 				provider.log(`Failed to update cloud settings for task sync: ${error}`)
 			}
+
 			break
+
 		case "refreshAllMcpServers": {
 			const mcpHub = provider.getMcpHub()
 
@@ -1513,16 +1569,7 @@ export const webviewMessageHandler = async (
 
 			break
 		}
-		case "soundEnabled":
-			const soundEnabled = message.bool ?? true
-			await updateGlobalState("soundEnabled", soundEnabled)
-			await provider.postStateToWebview()
-			break
-		case "soundVolume":
-			const soundVolume = message.value ?? 0.5
-			await updateGlobalState("soundVolume", soundVolume)
-			await provider.postStateToWebview()
-			break
+
 		case "ttsEnabled":
 			const ttsEnabled = message.bool ?? true
 			await updateGlobalState("ttsEnabled", ttsEnabled)
@@ -1547,40 +1594,7 @@ export const webviewMessageHandler = async (
 		case "stopTts":
 			stopTts()
 			break
-		case "diffEnabled":
-			const diffEnabled = message.bool ?? true
-			await updateGlobalState("diffEnabled", diffEnabled)
-			await provider.postStateToWebview()
-			break
-		case "enableCheckpoints":
-			const enableCheckpoints = message.bool ?? true
-			await updateGlobalState("enableCheckpoints", enableCheckpoints)
-			await provider.postStateToWebview()
-			break
-		case "checkpointTimeout":
-			const checkpointTimeout = message.value ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS
-			await updateGlobalState("checkpointTimeout", checkpointTimeout)
-			await provider.postStateToWebview()
-			break
-		case "browserViewportSize":
-			const browserViewportSize = message.text ?? "900x600"
-			await updateGlobalState("browserViewportSize", browserViewportSize)
-			await provider.postStateToWebview()
-			break
-		case "remoteBrowserHost":
-			await updateGlobalState("remoteBrowserHost", message.text)
-			await provider.postStateToWebview()
-			break
-		case "remoteBrowserEnabled":
-			// Store the preference in global state
-			// remoteBrowserEnabled now means "enable remote browser connection"
-			await updateGlobalState("remoteBrowserEnabled", message.bool ?? false)
-			// If disabling remote browser connection, clear the remoteBrowserHost
-			if (!message.bool) {
-				await updateGlobalState("remoteBrowserHost", undefined)
-			}
-			await provider.postStateToWebview()
-			break
+
 		case "testBrowserConnection":
 			// If no text is provided, try auto-discovery
 			if (!message.text) {
@@ -1617,10 +1631,6 @@ export const webviewMessageHandler = async (
 				})
 			}
 			break
-		case "fuzzyMatchThreshold":
-			await updateGlobalState("fuzzyMatchThreshold", message.value)
-			await provider.postStateToWebview()
-			break
 		// kilocode_change start
 		case "morphApiKey":
 			await updateGlobalState("morphApiKey", message.text)
@@ -1629,6 +1639,12 @@ export const webviewMessageHandler = async (
 		case "fastApplyModel": {
 			const nextModel = fastApplyModelSchema.safeParse(message.text).data ?? "auto"
 			await updateGlobalState("fastApplyModel", nextModel)
+			await provider.postStateToWebview()
+			break
+		}
+		case "fastApplyApiProvider": {
+			const nextProvider = fastApplyApiProviderSchema.safeParse(message.text).data ?? "current"
+			await updateGlobalState("fastApplyApiProvider", nextProvider)
 			await provider.postStateToWebview()
 			break
 		}
@@ -1669,128 +1685,9 @@ export const webviewMessageHandler = async (
 			}
 
 			break
-		case "alwaysApproveResubmit":
-			await updateGlobalState("alwaysApproveResubmit", message.bool ?? false)
-			await provider.postStateToWebview()
-			break
-		case "requestDelaySeconds":
-			await updateGlobalState("requestDelaySeconds", message.value ?? 5)
-			await provider.postStateToWebview()
-			break
-		case "writeDelayMs":
-			await updateGlobalState("writeDelayMs", message.value)
-			await provider.postStateToWebview()
-			break
-		case "diagnosticsEnabled":
-			await updateGlobalState("diagnosticsEnabled", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "terminalOutputLineLimit":
-			// Validate that the line limit is a positive number
-			const lineLimit = message.value
-			if (typeof lineLimit === "number" && lineLimit > 0) {
-				await updateGlobalState("terminalOutputLineLimit", lineLimit)
-				await provider.postStateToWebview()
-			} else {
-				vscode.window.showErrorMessage(
-					t("common:errors.invalid_line_limit") || "Terminal output line limit must be a positive number",
-				)
-			}
-			break
-		case "terminalOutputCharacterLimit":
-			// Validate that the character limit is a positive number
-			const charLimit = message.value
-			if (typeof charLimit === "number" && charLimit > 0) {
-				await updateGlobalState("terminalOutputCharacterLimit", charLimit)
-				await provider.postStateToWebview()
-			} else {
-				vscode.window.showErrorMessage(
-					t("common:errors.invalid_character_limit") ||
-						"Terminal output character limit must be a positive number",
-				)
-			}
-			break
-		case "terminalShellIntegrationTimeout":
-			await updateGlobalState("terminalShellIntegrationTimeout", message.value)
-			await provider.postStateToWebview()
-			if (message.value !== undefined) {
-				Terminal.setShellIntegrationTimeout(message.value)
-			}
-			break
-		case "terminalShellIntegrationDisabled":
-			await updateGlobalState("terminalShellIntegrationDisabled", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setShellIntegrationDisabled(message.bool)
-			}
-			break
-		case "terminalCommandDelay":
-			await updateGlobalState("terminalCommandDelay", message.value)
-			await provider.postStateToWebview()
-			if (message.value !== undefined) {
-				Terminal.setCommandDelay(message.value)
-			}
-			break
-		case "terminalPowershellCounter":
-			await updateGlobalState("terminalPowershellCounter", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setPowershellCounter(message.bool)
-			}
-			break
-		case "terminalZshClearEolMark":
-			await updateGlobalState("terminalZshClearEolMark", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setTerminalZshClearEolMark(message.bool)
-			}
-			break
-		case "terminalZshOhMy":
-			await updateGlobalState("terminalZshOhMy", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setTerminalZshOhMy(message.bool)
-			}
-			break
-		case "terminalZshP10k":
-			await updateGlobalState("terminalZshP10k", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setTerminalZshP10k(message.bool)
-			}
-			break
-		case "terminalZdotdir":
-			await updateGlobalState("terminalZdotdir", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setTerminalZdotdir(message.bool)
-			}
-			break
-		case "terminalCompressProgressBar":
-			await updateGlobalState("terminalCompressProgressBar", message.bool)
-			await provider.postStateToWebview()
-			if (message.bool !== undefined) {
-				Terminal.setCompressProgressBar(message.bool)
-			}
-			break
+
 		case "mode":
 			await provider.handleModeSwitch(message.text as Mode)
-			break
-		case "updateSupportPrompt":
-			try {
-				if (!message?.values) {
-					return
-				}
-
-				// Replace all prompts with the new values from the cached state
-				await updateGlobalState("customSupportPrompts", message.values)
-				await provider.postStateToWebview()
-			} catch (error) {
-				provider.log(
-					`Error update support prompt: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-				)
-				vscode.window.showErrorMessage(t("common:errors.update_support_prompt"))
-			}
 			break
 		case "updatePrompt":
 			if (message.promptMode && message.customPrompt !== undefined) {
@@ -1851,55 +1748,9 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		case "screenshotQuality":
-			await updateGlobalState("screenshotQuality", message.value)
-			await provider.postStateToWebview()
-			break
-		case "maxOpenTabsContext":
-			const tabCount = Math.min(Math.max(0, message.value ?? 20), 500)
-			await updateGlobalState("maxOpenTabsContext", tabCount)
-			await provider.postStateToWebview()
-			break
-		case "maxWorkspaceFiles":
-			const fileCount = Math.min(Math.max(0, message.value ?? 200), 500)
-			await updateGlobalState("maxWorkspaceFiles", fileCount)
-			await provider.postStateToWebview()
-			break
-		case "alwaysAllowFollowupQuestions":
-			await updateGlobalState("alwaysAllowFollowupQuestions", message.bool ?? false)
-			await provider.postStateToWebview()
-			break
-		case "followupAutoApproveTimeoutMs":
-			await updateGlobalState("followupAutoApproveTimeoutMs", message.value)
-			await provider.postStateToWebview()
-			break
-		case "browserToolEnabled":
-			await updateGlobalState("browserToolEnabled", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "language":
-			changeLanguage(message.text ?? "en")
-			await updateGlobalState("language", message.text as Language)
-			await provider.postStateToWebview()
-			break
-		case "openRouterImageApiKey":
-			await provider.contextProxy.setValue("openRouterImageApiKey", message.text)
-			await provider.postStateToWebview()
-			break
-		case "openRouterImageGenerationSelectedModel":
-			await provider.contextProxy.setValue("openRouterImageGenerationSelectedModel", message.text)
-			await provider.postStateToWebview()
-			break
-		case "showRooIgnoredFiles":
-			await updateGlobalState("showRooIgnoredFiles", message.bool ?? false)
-			await provider.postStateToWebview()
-			break
+
 		case "hasOpenedModeSelector":
 			await updateGlobalState("hasOpenedModeSelector", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "maxReadFileLine":
-			await updateGlobalState("maxReadFileLine", message.value)
 			await provider.postStateToWebview()
 			break
 		// kilocode_change start
@@ -1934,43 +1785,13 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		// kilocode_change end
-		case "maxImageFileSize":
-			await updateGlobalState("maxImageFileSize", message.value)
-			await provider.postStateToWebview()
-			break
-		case "maxTotalImageSize":
-			await updateGlobalState("maxTotalImageSize", message.value)
-			await provider.postStateToWebview()
-			break
-		case "maxConcurrentFileReads":
-			const valueToSave = message.value // Capture the value intended for saving
-			await updateGlobalState("maxConcurrentFileReads", valueToSave)
-			await provider.postStateToWebview()
-			break
-		case "includeDiagnosticMessages":
-			// Only apply default if the value is truly undefined (not false)
-			const includeValue = message.bool !== undefined ? message.bool : true
-			await updateGlobalState("includeDiagnosticMessages", includeValue)
-			await provider.postStateToWebview()
-			break
-		case "includeCurrentTime":
-			await updateGlobalState("includeCurrentTime", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "includeCurrentCost":
-			await updateGlobalState("includeCurrentCost", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "maxDiagnosticMessages":
-			await updateGlobalState("maxDiagnosticMessages", message.value ?? 50)
-			await provider.postStateToWebview()
-			break
-		case "setHistoryPreviewCollapsed": // Add the new case handler
-			await updateGlobalState("historyPreviewCollapsed", message.bool ?? false)
-			// No need to call postStateToWebview here as the UI already updated optimistically
-			break
+
 		case "setReasoningBlockCollapsed":
 			await updateGlobalState("reasoningBlockCollapsed", message.bool ?? true)
+			// No need to call postStateToWebview here as the UI already updated optimistically
+			break
+		case "setHistoryPreviewCollapsed":
+			await updateGlobalState("historyPreviewCollapsed", message.bool ?? false)
 			// No need to call postStateToWebview here as the UI already updated optimistically
 			break
 		case "toggleApiConfigPin":
@@ -2016,14 +1837,6 @@ export const webviewMessageHandler = async (
 			vscode.commands.executeCommand("kilo-code.ghost.reload")
 			break
 		// kilocode_change end
-		case "includeTaskHistoryInEnhance":
-			await updateGlobalState("includeTaskHistoryInEnhance", message.bool ?? true)
-			await provider.postStateToWebview()
-			break
-		case "condensingApiConfigId":
-			await updateGlobalState("condensingApiConfigId", message.text)
-			await provider.postStateToWebview()
-			break
 		// kilocode_change start: AI gatekeeper for YOLO mode
 		case "yoloGatekeeperApiConfigId":
 			await updateGlobalState("yoloGatekeeperApiConfigId", message.text)
@@ -2031,16 +1844,13 @@ export const webviewMessageHandler = async (
 			break
 		// kilocode_change end
 		case "updateCondensingPrompt":
-			// Store the condensing prompt in customSupportPrompts["CONDENSE"] instead of customCondensingPrompt
+			// Store the condensing prompt in customSupportPrompts["CONDENSE"]
+			// instead of customCondensingPrompt.
 			const currentSupportPrompts = getGlobalState("customSupportPrompts") ?? {}
 			const updatedSupportPrompts = { ...currentSupportPrompts, CONDENSE: message.text }
 			await updateGlobalState("customSupportPrompts", updatedSupportPrompts)
-			// Also update the old field for backward compatibility during migration
+			// Also update the old field for backward compatibility during migration.
 			await updateGlobalState("customCondensingPrompt", message.text)
-			await provider.postStateToWebview()
-			break
-		case "profileThresholds":
-			await updateGlobalState("profileThresholds", message.values)
 			await provider.postStateToWebview()
 			break
 		case "autoApprovalEnabled":
@@ -2080,7 +1890,6 @@ export const webviewMessageHandler = async (
 					})
 
 					if (result.success && result.enhancedText) {
-						// Capture telemetry for prompt enhancement
 						MessageEnhancer.captureTelemetry(currentCline?.taskId, includeTaskHistoryInEnhance)
 						await provider.postMessageToWebview({ type: "enhancedPrompt", text: result.enhancedText })
 					} else {
@@ -2285,6 +2094,9 @@ export const webviewMessageHandler = async (
 				if (organizationChanged) {
 					await provider.postStateToWebview()
 				}
+
+				// kilocode_change: Reload ghost model when API provider settings change
+				vscode.commands.executeCommand("kilo-code.ghost.reload")
 			}
 			// kilocode_change end: check for kilocodeToken change to remove organizationId and fetch organization modes
 			break
@@ -2309,6 +2121,9 @@ export const webviewMessageHandler = async (
 					// Re-activate to update the global settings related to the
 					// currently activated provider profile.
 					await provider.activateProviderProfile({ name: newName })
+
+					// kilocode_change: Reload ghost model when API provider settings change
+					vscode.commands.executeCommand("kilo-code.ghost.reload")
 				} catch (error) {
 					provider.log(
 						`Error rename api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2383,6 +2198,9 @@ export const webviewMessageHandler = async (
 				try {
 					await provider.providerSettingsManager.deleteConfig(oldName)
 					await provider.activateProviderProfile({ name: newName })
+
+					// kilocode_change: Reload ghost model when API provider settings change
+					vscode.commands.executeCommand("kilo-code.ghost.reload")
 				} catch (error) {
 					provider.log(
 						`Error delete api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2427,21 +2245,7 @@ export const webviewMessageHandler = async (
 				vscode.window.showErrorMessage(t("common:errors.list_api_config"))
 			}
 			break
-		case "updateExperimental": {
-			if (!message.values) {
-				break
-			}
 
-			const updatedExperiments = {
-				...(getGlobalState("experiments") ?? experimentDefault),
-				...message.values,
-			}
-
-			await updateGlobalState("experiments", updatedExperiments)
-
-			await provider.postStateToWebview()
-			break
-		}
 		case "updateMcpTimeout":
 			if (message.serverName && typeof message.timeout === "number") {
 				try {
@@ -2462,40 +2266,45 @@ export const webviewMessageHandler = async (
 			break
 		case "updateCustomMode":
 			if (message.modeConfig) {
-				// Check if this is a new mode or an update to an existing mode
-				const existingModes = await provider.customModesManager.getCustomModes()
-				const isNewMode = !existingModes.some((mode) => mode.slug === message.modeConfig?.slug)
+				try {
+					// Check if this is a new mode or an update to an existing mode
+					const existingModes = await provider.customModesManager.getCustomModes()
+					const isNewMode = !existingModes.some((mode) => mode.slug === message.modeConfig?.slug)
 
-				await provider.customModesManager.updateCustomMode(message.modeConfig.slug, message.modeConfig)
-				// Update state after saving the mode
-				const customModes = await provider.customModesManager.getCustomModes()
-				await updateGlobalState("customModes", customModes)
-				await updateGlobalState("mode", message.modeConfig.slug)
-				await provider.postStateToWebview()
+					await provider.customModesManager.updateCustomMode(message.modeConfig.slug, message.modeConfig)
+					// Update state after saving the mode
+					const customModes = await provider.customModesManager.getCustomModes()
+					await updateGlobalState("customModes", customModes)
+					await updateGlobalState("mode", message.modeConfig.slug)
+					await provider.postStateToWebview()
 
-				// Track telemetry for custom mode creation or update
-				if (TelemetryService.hasInstance()) {
-					if (isNewMode) {
-						// This is a new custom mode
-						TelemetryService.instance.captureCustomModeCreated(
-							message.modeConfig.slug,
-							message.modeConfig.name,
-						)
-					} else {
-						// Determine which setting was changed by comparing objects
-						const existingMode = existingModes.find((mode) => mode.slug === message.modeConfig?.slug)
-						const changedSettings = existingMode
-							? Object.keys(message.modeConfig).filter(
-									(key) =>
-										JSON.stringify((existingMode as Record<string, unknown>)[key]) !==
-										JSON.stringify((message.modeConfig as Record<string, unknown>)[key]),
-								)
-							: []
+					// Track telemetry for custom mode creation or update
+					if (TelemetryService.hasInstance()) {
+						if (isNewMode) {
+							// This is a new custom mode
+							TelemetryService.instance.captureCustomModeCreated(
+								message.modeConfig.slug,
+								message.modeConfig.name,
+							)
+						} else {
+							// Determine which setting was changed by comparing objects
+							const existingMode = existingModes.find((mode) => mode.slug === message.modeConfig?.slug)
+							const changedSettings = existingMode
+								? Object.keys(message.modeConfig).filter(
+										(key) =>
+											JSON.stringify((existingMode as Record<string, unknown>)[key]) !==
+											JSON.stringify((message.modeConfig as Record<string, unknown>)[key]),
+									)
+								: []
 
-						if (changedSettings.length > 0) {
-							TelemetryService.instance.captureModeSettingChanged(changedSettings[0])
+							if (changedSettings.length > 0) {
+								TelemetryService.instance.captureModeSettingChanged(changedSettings[0])
+							}
 						}
 					}
+				} catch (error) {
+					// Error already shown to user by updateCustomMode
+					// Just prevent unhandled rejection and skip state updates
 				}
 			}
 			break
@@ -2703,10 +2512,11 @@ export const webviewMessageHandler = async (
 						await updateGlobalState("customModes", customModes)
 						await provider.postStateToWebview()
 
-						// Send success message to webview
+						// Send success message to webview, include the imported slug so UI can switch
 						provider.postMessageToWebview({
 							type: "importModeResult",
 							success: true,
+							slug: result.slug,
 						})
 
 						// Show success message
@@ -2804,7 +2614,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile", kilocodeToken)
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
@@ -2819,7 +2629,9 @@ export const webviewMessageHandler = async (
 				}
 
 				try {
+					// Skip auto-switch in YOLO mode (cloud agents, CI) to prevent usage billing issues
 					const shouldAutoSwitch =
+						!getGlobalState("yoloMode") &&
 						response.data.organizations &&
 						response.data.organizations.length > 0 &&
 						!apiConfiguration.kilocodeOrganizationId &&
@@ -2900,7 +2712,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", kilocodeToken)
 				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
@@ -2930,7 +2742,7 @@ export const webviewMessageHandler = async (
 				const source = uiKind === "Web" ? "web" : uriScheme
 
 				const url = getKiloUrlFromToken(
-					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					`https://api.kilo.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
 					kilocodeToken,
 				)
 				const response = await axios.post(
@@ -3045,8 +2857,26 @@ export const webviewMessageHandler = async (
 		// end kilocode_change
 		case "telemetrySetting": {
 			const telemetrySetting = message.text as TelemetrySetting
+			const previousSetting = getGlobalState("telemetrySetting") || "unset"
+			const isOptedIn = telemetrySetting !== "disabled"
+			const wasPreviouslyOptedIn = previousSetting !== "disabled"
+
+			// If turning telemetry OFF, fire event BEFORE disabling
+			if (wasPreviouslyOptedIn && !isOptedIn && TelemetryService.hasInstance()) {
+				TelemetryService.instance.captureTelemetrySettingsChanged(previousSetting, telemetrySetting)
+			}
+
+			// Update the telemetry state
 			await updateGlobalState("telemetrySetting", telemetrySetting)
-			const isOptedIn = telemetrySetting === "enabled"
+
+			if (TelemetryService.hasInstance()) {
+				TelemetryService.instance.updateTelemetryState(isOptedIn)
+			}
+
+			// If turning telemetry ON, fire event AFTER enabling
+			if (!wasPreviouslyOptedIn && isOptedIn && TelemetryService.hasInstance()) {
+				TelemetryService.instance.captureTelemetrySettingsChanged(previousSetting, telemetrySetting)
+			}
 
 			TelemetryService.instance.updateTelemetryState(isOptedIn)
 			await provider.postStateToWebview()
@@ -3185,6 +3015,10 @@ export const webviewMessageHandler = async (
 					codebaseIndexEnabled: settings.codebaseIndexEnabled,
 					codebaseIndexQdrantUrl: settings.codebaseIndexQdrantUrl,
 					codebaseIndexEmbedderProvider: settings.codebaseIndexEmbedderProvider,
+					// kilocode_change start
+					codebaseIndexVectorStoreProvider: settings.codebaseIndexVectorStoreProvider,
+					codebaseIndexLancedbVectorStoreDirectory: settings.codebaseIndexLancedbVectorStoreDirectory,
+					// kilocode_change end
 					codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
 					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
 					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
@@ -4034,6 +3868,7 @@ export const webviewMessageHandler = async (
 
 			break
 		}
+
 		case "dismissUpsell": {
 			if (message.upsellId) {
 				try {
@@ -4068,41 +3903,165 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
-		// kilocode_change start - ManagedIndexer state
-		case "requestManagedIndexerState": {
+		// kilocode_change start
+		case "addTaskToHistory": {
+			if (message.historyItem) {
+				await provider.updateTaskHistory(message.historyItem)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+		case "sessionShow": {
 			try {
-				const state = ManagedIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
+				const sessionService = SessionManager.init()
+
+				if (!sessionService.sessionId) {
+					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
+					break
+				}
+
+				vscode.window.showInformationMessage(`Session ID: ${sessionService.sessionId}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to copy session ID: ${errorMessage}`)
+			}
+			break
+		}
+		case "sessionShare": {
+			try {
+				const sessionService = SessionManager.init()
+
+				if (!sessionService.sessionId) {
+					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
+					break
+				}
+
+				const result = await sessionService.shareSession()
+
+				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
+
+				// Copy URL to clipboard and show success notification
+				await vscode.env.clipboard.writeText(shareUrl)
+				vscode.window.showInformationMessage(`Session shared! Link copied to clipboard: ${shareUrl}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to share session: ${errorMessage}`)
+			}
+			break
+		}
+		case "shareTaskSession": {
+			try {
+				if (!message.text) {
+					vscode.window.showErrorMessage("Task ID is required for sharing a task session")
+					break
+				}
+
+				const taskId = message.text
+				const sessionService = SessionManager.init()
+
+				const sessionId = await sessionService.getSessionFromTask(taskId, provider)
+
+				const result = await sessionService.shareSession(sessionId)
+
+				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
+
+				await vscode.env.clipboard.writeText(shareUrl)
+				vscode.window.showInformationMessage(`Session shared! Link copied to clipboard.`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to share task session: ${errorMessage}`)
+			}
+			break
+		}
+		case "sessionFork": {
+			try {
+				if (!message.shareId) {
+					vscode.window.showErrorMessage("ID is required for forking a session")
+					break
+				}
+
+				const sessionService = SessionManager.init()
+
+				await sessionService.forkSession(message.shareId, true)
+
+				await provider.postStateToWebview()
+
+				vscode.window.showInformationMessage(`Session forked successfully from ${message.shareId}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to fork session: ${errorMessage}`)
+			}
+			break
+		}
+		case "singleCompletion": {
+			try {
+				const { text, completionRequestId } = message
+
+				if (!completionRequestId) {
+					throw new Error("Missing completionRequestId")
+				}
+
+				if (!text) {
+					throw new Error("Missing prompt text")
+				}
+
+				// Always use current configuration
+				const config = (await provider.getState()).apiConfiguration
+
+				// Call the single completion handler
+				const result = await singleCompletionHandler(config, text)
+
+				// Send success response
 				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: state,
+					type: "singleCompletionResult",
+					completionRequestId,
+					completionText: result,
+					success: true,
 				})
 			} catch (error) {
-				provider.log(
-					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
-				)
+				// Send error response
 				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: [],
+					type: "singleCompletionResult",
+					completionRequestId: message.completionRequestId,
+					completionError: error instanceof Error ? error.message : String(error),
+					success: false,
 				})
 			}
 			break
 		}
-
-		// we're going to delete this message at some point and use apiConfiguration
-		// probably. So casting as any as to not define a more permanent type
-		case "requestManagedIndexerEnabled" as any: {
-			try {
-				const managedIndexerEnabled = (await ManagedIndexer.getInstance()?.isEnabled()) || false
-				await provider.postMessageToWebview({
-					type: "managedIndexerEnabled",
-					managedIndexerEnabled,
-				} as any)
-			} catch (error) {
-				provider.log(
-					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
-				)
-			}
+		// kilocode_change end
+		// kilocode_change start - ManagedIndexer state
+		case "requestManagedIndexerState": {
+			ManagedIndexer.getInstance()?.sendStateToWebview()
+			break
 		}
 		// kilocode_change end
+		default: {
+			// console.log(`Unhandled message type: ${message.type}`)
+			//
+			// Currently unhandled:
+			//
+			// "currentApiConfigName" |
+			// "codebaseIndexEnabled" |
+			// "enhancedPrompt" |
+			// "systemPrompt" |
+			// "exportModeResult" |
+			// "importModeResult" |
+			// "checkRulesDirectoryResult" |
+			// "browserConnectionResult" |
+			// "vsCodeSetting" |
+			// "indexingStatusUpdate" |
+			// "indexCleared" |
+			// "marketplaceInstallResult" |
+			// "shareTaskSuccess" |
+			// "playSound" |
+			// "draggedImages" |
+			// "setApiConfigPassword" |
+			// "setopenAiCustomModelInfo" |
+			// "marketplaceButtonClicked" |
+			// "cancelMarketplaceInstall" |
+			// "imageGenerationSettings"
+			break
+		}
 	}
 }

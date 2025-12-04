@@ -25,7 +25,7 @@ Access checkpoint settings in Kilo Code settings under the "Checkpoints" section
 1. Open Settings by clicking the gear icon <Codicon name="gear" /> → Checkpoints
 2. Check or uncheck the "Enable automatic checkpoints" checkbox
 
-    <img src="/docs/img/checkpoints/checkpoints.png" alt="Checkpoint settings in Kilo Code configuration" width="500" />
+ <img src="/docs/img/checkpoints/checkpoints.png" alt="Checkpoint settings in Kilo Code configuration" width="500" />
 
 ## How Checkpoints Work
 
@@ -60,7 +60,7 @@ To compare your current workspace with a previous checkpoint:
 1. Locate the checkpoint in your chat history
 2. Click the checkpoint's `View Differences` button
 
-    <img src="/docs/img/checkpoints/checkpoints-6.png" alt="View Differences button interface" width="100" />
+ <img src="/docs/img/checkpoints/checkpoints-6.png" alt="View Differences button interface" width="100" />
 
 3. Review the differences in the comparison view:
     - Added lines are highlighted in green

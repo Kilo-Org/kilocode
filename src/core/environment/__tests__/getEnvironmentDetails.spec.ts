@@ -166,7 +166,10 @@ describe("getEnvironmentDetails", () => {
 		expect(result).toContain("# Current Workspace Directory")
 		expect(result).toContain("Files")
 
-		expect(listFiles).toHaveBeenCalledWith(mockCwd, true, 50)
+		// kilocode_change start
+		// Expecting 3x multiplier: 50 * 3 = 150
+		expect(listFiles).toHaveBeenCalledWith(mockCwd, true, 150)
+		// kilocode_change end
 
 		expect(formatResponse.formatFilesList).toHaveBeenCalledWith(
 			mockCwd,
@@ -176,6 +179,31 @@ describe("getEnvironmentDetails", () => {
 			false,
 		)
 	})
+
+	// kilocode_change start
+	it("should NOT apply multiplier when showRooIgnoredFiles is true", async () => {
+		mockProvider.getState.mockResolvedValue({
+			...mockState,
+			showRooIgnoredFiles: true, // No filtering happens - ignored files are just marked
+			maxWorkspaceFiles: 50,
+		})
+
+		const result = await getEnvironmentDetails(mockCline as Task, true)
+		expect(result).toContain("# Current Workspace Directory")
+		expect(result).toContain("Files")
+
+		// Should use normal limit without multiplier since no files will be filtered out
+		expect(listFiles).toHaveBeenCalledWith(mockCwd, true, 50)
+
+		expect(formatResponse.formatFilesList).toHaveBeenCalledWith(
+			mockCwd,
+			["file1.ts", "file2.ts"],
+			false,
+			mockCline.rooIgnoreController,
+			true, // showRooIgnoredFiles = true
+		)
+	})
+	// kilocode_change end
 
 	it("should not include file details when includeFileDetails is false", async () => {
 		await getEnvironmentDetails(mockCline as Task, false)

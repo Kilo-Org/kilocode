@@ -9,25 +9,28 @@ Before you begin, choose one of the following development environment options:
 ### Option 1: Native Development (Recommended for MacOS/Linux/Windows Subsystem for Linux)
 
 1. **Git** - For version control
-2. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
-3. **pnpm** - Package manager (https://pnpm.io/)
-4. **Visual Studio Code** - Our recommended IDE for development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
+4. **pnpm** - Package manager (https://pnpm.io/)
+5. **Visual Studio Code** - Our recommended IDE for development
 
 ### Option 2: Devcontainer (Recommended for Windows)
 
 1. **Git** - For version control
-2. **Docker Desktop** - For running the development container
-3. **Visual Studio Code** - Our recommended IDE for development
-4. **Dev Containers extension** - VSCode extension for container development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Docker Desktop** - For running the development container
+4. **Visual Studio Code** - Our recommended IDE for development
+5. **Dev Containers extension** - VSCode extension for container development
 
 > **Note for Windows Contributors**: If you're having issues with WSL or want a standardized development environment, we recommend using the devcontainer option. It provides the exact same environment as our Nix flake configuration but works seamlessly on Windows without WSL.
 
 ### Option 3: Nix Flake (Recommended for NixOS/Nix users)
 
 1. **Git** - For version control
-2. **Nix** - The Nix package manager with flakes enabled
-3. **direnv** - For automatic environment loading
-4. **Visual Studio Code** - Our recommended IDE for development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Nix** - The Nix package manager with flakes enabled
+4. **direnv** - For automatic environment loading
+5. **Visual Studio Code** - Our recommended IDE for development
 
 ## Getting Started
 
@@ -47,7 +50,16 @@ Before you begin, choose one of the following development environment options:
         ```
         Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
-2. **Install dependencies**:
+2. **Setup Git LFS**:
+
+    ```bash
+    git lfs install
+    git lfs pull
+    ```
+
+    This ensures all large files (GIFs, MP4s, etc.) are properly downloaded.
+
+3. **Install dependencies**:
 
     ```bash
     pnpm install
@@ -55,7 +67,7 @@ Before you begin, choose one of the following development environment options:
 
     This command will install dependencies for the main extension, webview UI, and e2e tests.
 
-3. **Install VSCode Extensions**:
+4. **Install VSCode Extensions**:
     - **Required**: [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers) - Helps display build errors correctly.
 
 While not strictly necessary for running the extension, these extensions are recommended for development:
@@ -241,6 +253,7 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 1. **Extension not loading**: Check the VSCode Developer Tools (Help > Toggle Developer Tools) for errors
 2. **Webview not updating**: Try reloading the window (Developer: Reload Window)
 3. **Build errors**: Make sure all dependencies are installed with `pnpm install`
+4. **Ripgrep missing**: We bundle `@vscode/ripgrep`, but if that binary is missing the extension will fall back to `rg` on your `PATH` (commonly `/opt/homebrew/bin/rg` on macOS) or the path set in `RIPGREP_PATH`.
 
 ### Debugging Tips
 
@@ -267,7 +280,7 @@ We welcome contributions to Kilo Code! Here's how you can help:
 1. **Report an issue** using [GitHub Issues](https://github.com/Kilo-Org/kilocode/issues)
 2. **Find an issue** and submit a Pull Request with your fix
 3. **Write tests** to improve Code Coverage
-4. **Improve Documentation** at [kilocode.ai/docs](https://kilocode.ai/docs)
+4. **Improve Documentation** at [kilo.ai/docs](https://kilo.ai/docs)
 5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
 6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
 

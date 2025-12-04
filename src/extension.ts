@@ -45,10 +45,35 @@ import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
+import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
+import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
-import { updateCodeIndexWithKiloProps } from "./services/code-index/managed/webview" // kilocode_change
-import { getCommand } from "./utils/commands"
+import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils"
+
+// kilocode_change start
+async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
+	const { apiConfiguration } = await provider.getState()
+	if (apiConfiguration.kilocodeToken) {
+		return apiConfiguration.kilocodeToken
+	}
+
+	const profiles = await provider.providerSettingsManager.listConfig()
+
+	for (const profile of profiles) {
+		try {
+			const fullProfile = await provider.providerSettingsManager.getProfile({ name: profile.name })
+			if (fullProfile.kilocodeToken) {
+				return fullProfile.kilocodeToken
+			}
+		} catch {
+			continue
+		}
+	}
+
+	return undefined
+}
+// kilocode_change end
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -133,10 +158,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	const contextProxy = await ContextProxy.getInstance(context)
-	// kilocode_change start: Initialize ManagedIndexer
-	const managedIndexer = new ManagedIndexer(contextProxy)
-	context.subscriptions.push(managedIndexer)
-	// kilocode_change end
 
 	// Initialize code index managers for all workspace folders.
 	const codeIndexManagers: CodeIndexManager[] = []
@@ -271,6 +292,24 @@ export async function activate(context: vscode.ExtensionContext) {
 		)
 	}
 
+	// kilocode_change start
+	try {
+		const kiloToken = await findKilocodeTokenFromAnyProfile(provider)
+
+		await kilo_initializeSessionManager({
+			context: context,
+			kiloToken,
+			log: provider.log.bind(provider),
+			outputChannel,
+			provider,
+		})
+	} catch (error) {
+		outputChannel.appendLine(
+			`[SessionManager] Failed to initialize SessionManager: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+	// kilocode_change end
+
 	// Finish initializing the provider.
 	TelemetryService.instance.setProvider(provider)
 
@@ -324,6 +363,40 @@ export async function activate(context: vscode.ExtensionContext) {
 			`[AutoImport] Error during auto-import: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
+
+	// kilocode_change start
+	// Check for env var conflicts that might confuse users
+	try {
+		checkAnthropicApiKeyConflict()
+	} catch (error) {
+		outputChannel.appendLine(`Failed to check API key conflicts: ${error}`)
+	}
+
+	// Initialize VS Code Settings Sync integration
+	try {
+		await SettingsSyncService.initialize(context, outputChannel)
+		outputChannel.appendLine("[SettingsSync] VS Code Settings Sync integration initialized")
+
+		// Listen for configuration changes to update sync registration
+		const configChangeListener = vscode.workspace.onDidChangeConfiguration(async (event) => {
+			if (event.affectsConfiguration(`${Package.name}.enableSettingsSync`)) {
+				try {
+					await SettingsSyncService.updateSyncRegistration(context, outputChannel)
+					outputChannel.appendLine("[SettingsSync] Sync registration updated due to configuration change")
+				} catch (error) {
+					outputChannel.appendLine(
+						`[SettingsSync] Error updating sync registration: ${error instanceof Error ? error.message : String(error)}`,
+					)
+				}
+			}
+		})
+		context.subscriptions.push(configChangeListener)
+	} catch (error) {
+		outputChannel.appendLine(
+			`[SettingsSync] Error during settings sync initialization: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+	// kilocode_change end
 
 	registerCommands({ context, outputChannel, provider })
 
@@ -436,13 +509,16 @@ export async function activate(context: vscode.ExtensionContext) {
 		})
 	}
 
-	await checkAndRunAutoLaunchingTask(context) // kilocode_change
-	// await initManagedCodeIndexing // kilocode_change
+	// kilocode_change start: Initialize ManagedIndexer
+	await checkAndRunAutoLaunchingTask(context)
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
 	void managedIndexer.start().catch((error) => {
 		outputChannel.appendLine(
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+	// kilocode_change end
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }

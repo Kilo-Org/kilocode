@@ -2,11 +2,12 @@
  * Command system type definitions
  */
 
-import type { ExtensionMessage, RouterModels, WebviewMessage } from "../../types/messages.js"
+import type { ExtensionMessage, RouterModels, WebviewMessage, ModeConfig } from "../../types/messages.js"
 import type { CliMessage } from "../../types/cli.js"
 import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
+import type { ModelListFilters } from "../../state/atoms/modelList.js"
 
 export interface Command {
 	name: string
@@ -61,6 +62,8 @@ export interface CommandContext {
 	balanceData: BalanceData | null
 	profileLoading: boolean
 	balanceLoading: boolean
+	// Custom modes context
+	customModes: ModeConfig[]
 	// Task history context
 	taskHistoryData: TaskHistoryData | null
 	taskHistoryFilters: TaskHistoryFilters
@@ -74,6 +77,12 @@ export interface CommandContext {
 	sendWebviewMessage: (message: WebviewMessage) => Promise<void>
 	refreshTerminal: () => Promise<void>
 	chatMessages: ExtensionMessage[]
+	// Model list context
+	modelListPageIndex: number
+	modelListFilters: ModelListFilters
+	updateModelListFilters: (filters: Partial<ModelListFilters>) => void
+	changeModelListPage: (pageIndex: number) => void
+	resetModelListState: () => void
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void

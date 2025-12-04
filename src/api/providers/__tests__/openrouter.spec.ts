@@ -28,6 +28,19 @@ vitest.mock("../fetchers/modelCache", () => ({
 				description: "Claude 3.7 Sonnet",
 				thinking: false,
 			},
+			"anthropic/claude-sonnet-4.5": {
+				maxTokens: 8192,
+				contextWindow: 200000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				supportsNativeTools: true,
+				inputPrice: 3,
+				outputPrice: 15,
+				cacheWritesPrice: 3.75,
+				cacheReadsPrice: 0.3,
+				description: "Claude 4.5 Sonnet",
+				thinking: false,
+			},
 			"anthropic/claude-3.7-sonnet:thinking": {
 				maxTokens: 128000,
 				contextWindow: 200000,
@@ -59,7 +72,7 @@ describe("OpenRouterHandler", () => {
 			baseURL: "https://openrouter.ai/api/v1",
 			apiKey: mockOptions.openRouterApiKey,
 			defaultHeaders: {
-				"HTTP-Referer": "https://kilocode.ai",
+				"HTTP-Referer": "https://kilo.ai",
 				"X-Title": "Kilo Code",
 				"X-KiloCode-Version": Package.version,
 				"User-Agent": `Kilo-Code/${Package.version}`,
@@ -84,8 +97,9 @@ describe("OpenRouterHandler", () => {
 		it("returns default model info when options are not provided", async () => {
 			const handler = new OpenRouterHandler({})
 			const result = await handler.fetchModel()
-			expect(result.id).toBe("anthropic/claude-sonnet-4")
+			expect(result.id).toBe("anthropic/claude-sonnet-4.5")
 			expect(result.info.supportsPromptCache).toBe(true)
+			expect(result.info.supportsNativeTools).toBe(true)
 		})
 
 		it("honors custom maxTokens for thinking models", async () => {

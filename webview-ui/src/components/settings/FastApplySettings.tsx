@@ -6,15 +6,41 @@ import { SetCachedStateField } from "./types"
 export const FastApplySettings = ({
 	morphApiKey,
 	fastApplyModel,
+	fastApplyApiProvider,
 	setCachedStateField,
 }: {
 	morphApiKey?: string
 	fastApplyModel?: string
-	setCachedStateField: SetCachedStateField<"morphApiKey" | "fastApplyModel">
+	fastApplyApiProvider?: string
+	setCachedStateField: SetCachedStateField<"morphApiKey" | "fastApplyModel" | "fastApplyApiProvider">
 }) => {
 	const { t } = useAppTranslation()
 	return (
 		<div className="flex flex-col gap-2">
+			<div>
+				<label className="text-xs text-vscode-descriptionForeground mb-1 block">
+					{t("settings:experimental.MORPH_FAST_APPLY.apiProvider")}
+				</label>
+				<VSCodeDropdown
+					value={fastApplyApiProvider || "current"}
+					onChange={(e: any) =>
+						setCachedStateField("fastApplyApiProvider", (e.target as any)?.value || "current")
+					}
+					className="w-full">
+					<VSCodeOption className="py-2 px-3" value="kilocode">
+						Kilo Code
+					</VSCodeOption>
+					<VSCodeOption className="py-2 px-3" value="openrouter">
+						OpenRouter
+					</VSCodeOption>
+					<VSCodeOption className="py-2 px-3" value="morph">
+						Morph
+					</VSCodeOption>
+					<VSCodeOption className="py-2 px-3" value="current">
+						{t("settings:experimental.MORPH_FAST_APPLY.apiProviderList.current")}
+					</VSCodeOption>
+				</VSCodeDropdown>
+			</div>
 			<div>
 				<label className="text-xs text-vscode-descriptionForeground mb-1 block">
 					{t("settings:experimental.MORPH_FAST_APPLY.modelLabel")}
@@ -39,14 +65,16 @@ export const FastApplySettings = ({
 				</p>
 			</div>
 
-			<VSCodeTextField
-				type="password"
-				value={morphApiKey || ""}
-				placeholder={t("settings:experimental.MORPH_FAST_APPLY.placeholder")}
-				onChange={(e) => setCachedStateField("morphApiKey", (e.target as any)?.value || "")}
-				className="w-full">
-				{t("settings:experimental.MORPH_FAST_APPLY.apiKey")}
-			</VSCodeTextField>
+			{fastApplyApiProvider !== "current" && (
+				<VSCodeTextField
+					type="password"
+					value={morphApiKey || ""}
+					placeholder={t("settings:experimental.MORPH_FAST_APPLY.placeholder")}
+					onChange={(e) => setCachedStateField("morphApiKey", (e.target as any)?.value || "")}
+					className="w-full">
+					{t("settings:experimental.MORPH_FAST_APPLY.apiKey")}
+				</VSCodeTextField>
+			)}
 		</div>
 	)
 }

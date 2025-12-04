@@ -64,18 +64,18 @@ describe("URL functions", () => {
 			expect(getExtensionConfigUrl()).toBe("http://localhost:3000/extension-config.json")
 		})
 		it("should use subdomain structure for production", () => {
-			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
+			expect(getExtensionConfigUrl()).toBe("https://api.kilo.ai/extension-config.json")
 		})
 	})
 
 	describe("getAppUrl", () => {
 		it("should handle production URLs correctly", () => {
-			expect(getAppUrl()).toBe("https://kilocode.ai/")
-			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
-			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
-			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
+			expect(getAppUrl()).toBe("https://kilo.ai/")
+			expect(getAppUrl("/profile")).toBe("https://kilo.ai/profile")
+			expect(getAppUrl("/support")).toBe("https://kilo.ai/support")
+			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilo.ai/sign-in-to-editor")
 			expect(getAppUrl("/sign-in-to-editor?source=vscode")).toBe(
-				"https://kilocode.ai/sign-in-to-editor?source=vscode",
+				"https://kilo.ai/sign-in-to-editor?source=vscode",
 			)
 		})
 
@@ -93,8 +93,8 @@ describe("URL functions", () => {
 		})
 
 		it("should handle empty and root paths", () => {
-			expect(getAppUrl("")).toBe("https://kilocode.ai/")
-			expect(getAppUrl("/")).toBe("https://kilocode.ai/")
+			expect(getAppUrl("")).toBe("https://kilo.ai/")
+			expect(getAppUrl("/")).toBe("https://kilo.ai/")
 		})
 	})
 
@@ -102,21 +102,21 @@ describe("URL functions", () => {
 		it("should handle production token URLs correctly", () => {
 			const prodToken = createProdToken()
 
-			// Token-based URLs using api.kilocode.ai subdomain
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile",
+			// Token-based URLs using api.kilo.ai subdomain
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile", prodToken)).toBe(
+				"https://api.kilo.ai/api/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", prodToken)).toBe(
+				"https://api.kilo.ai/api/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/organizations/123/defaults", prodToken)).toBe(
-				"https://api.kilocode.ai/api/organizations/123/defaults",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/organizations/123/defaults", prodToken)).toBe(
+				"https://api.kilo.ai/api/organizations/123/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", prodToken)).toBe(
-				"https://api.kilocode.ai/api/openrouter/",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/openrouter/", prodToken)).toBe(
+				"https://api.kilo.ai/api/openrouter/",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", prodToken)).toBe(
-				"https://api.kilocode.ai/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", prodToken)).toBe(
+				"https://api.kilo.ai/api/users/notifications",
 			)
 		})
 
@@ -124,19 +124,19 @@ describe("URL functions", () => {
 			const devToken = createDevToken()
 
 			// Development token should map to localhost:3000
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile", devToken)).toBe(
 				"http://localhost:3000/api/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", devToken)).toBe(
 				"http://localhost:3000/api/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/organizations/456/defaults", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/organizations/456/defaults", devToken)).toBe(
 				"http://localhost:3000/api/organizations/456/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/openrouter/", devToken)).toBe(
 				"http://localhost:3000/api/openrouter/",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", devToken)).toBe(
 				"http://localhost:3000/api/users/notifications",
 			)
 		})
@@ -144,8 +144,8 @@ describe("URL functions", () => {
 		it("should handle invalid tokens gracefully", () => {
 			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 			// Use a token that looks like JWT but has invalid JSON payload
-			const result = getKiloUrlFromToken("https://api.kilocode.ai/api/test", "header.invalid-json.signature")
-			expect(result).toBe("https://api.kilocode.ai/api/test")
+			const result = getKiloUrlFromToken("https://api.kilo.ai/api/test", "header.invalid-json.signature")
+			expect(result).toBe("https://api.kilo.ai/api/test")
 			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Kilo Code token")
 			consoleSpy.mockRestore()
 		})
@@ -154,33 +154,33 @@ describe("URL functions", () => {
 	describe("Real-world URL patterns from application", () => {
 		it("should correctly handle marketplace endpoints", () => {
 			// These are the actual endpoints used in RemoteConfigLoader
-			expect(getAppUrl("/api/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
-			expect(getAppUrl("/api/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
+			expect(getAppUrl("/api/marketplace/modes")).toBe("https://kilo.ai/api/marketplace/modes")
+			expect(getAppUrl("/api/marketplace/mcps")).toBe("https://kilo.ai/api/marketplace/mcps")
 		})
 
 		it("should correctly handle app navigation URLs", () => {
 			// These are the actual URLs used in Task.ts and webviewMessageHandler.ts
-			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
-			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
+			expect(getAppUrl("/profile")).toBe("https://kilo.ai/profile")
+			expect(getAppUrl("/support")).toBe("https://kilo.ai/support")
 		})
 
 		it("should correctly handle token-based API calls", () => {
 			// These are the actual API endpoints used throughout the application
 			const prodToken = createProdToken()
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile", prodToken)).toBe(
+				"https://api.kilo.ai/api/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", prodToken)).toBe(
+				"https://api.kilo.ai/api/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", prodToken)).toBe(
-				"https://api.kilocode.ai/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", prodToken)).toBe(
+				"https://api.kilo.ai/api/users/notifications",
 			)
 		})
 
 		it("should maintain backwards compatibility for legacy endpoints", () => {
-			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
-			expect(getAppUrl("/api/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
+			expect(getExtensionConfigUrl()).toBe("https://api.kilo.ai/extension-config.json")
+			expect(getAppUrl("/api/extension-config.json")).toBe("https://kilo.ai/api/extension-config.json")
 			expect(getAppUrl("/api/extension-config.json")).not.toBe(getExtensionConfigUrl())
 		})
 	})

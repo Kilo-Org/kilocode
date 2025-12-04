@@ -14,11 +14,6 @@ import ignore from "ignore"
 import path from "path"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
-// kilocode_change start: Managed indexing (new standalone system)
-import { startIndexing as startManagedIndexing, search as searchManaged, createManagedIndexingConfig } from "./managed"
-import type { IndexerState as ManagedIndexerState } from "./managed"
-import { ManagedIndexer } from "./managed/ManagedIndexer"
-// kilocode_change end
 
 export class CodeIndexManager {
 	// --- Singleton Implementation ---
@@ -31,12 +26,6 @@ export class CodeIndexManager {
 	private _orchestrator: CodeIndexOrchestrator | undefined
 	private _searchService: CodeIndexSearchService | undefined
 	private _cacheManager: CacheManager | undefined
-
-	// kilocode_change start: Managed indexing (new standalone system)
-	public managedIndexer = ManagedIndexer.getInstance()
-	private _managedIndexerDisposable: vscode.Disposable | undefined
-	private _managedIndexerState: ManagedIndexerState | undefined
-	// kilocode_change end
 
 	// Flag to prevent race conditions during error recovery
 	private _isRecoveringFromError = false
@@ -104,11 +93,11 @@ export class CodeIndexManager {
 	}
 
 	public get isFeatureEnabled(): boolean {
-		return (this._configManager?.isFeatureEnabled || !!this.managedIndexer.organization) ?? false
+		return this._configManager?.isFeatureEnabled ?? false
 	}
 
 	public get isFeatureConfigured(): boolean {
-		return (this._configManager?.isFeatureConfigured || !!this.managedIndexer.organization) ?? false
+		return this._configManager?.isFeatureConfigured ?? false
 	}
 
 	public get isInitialized(): boolean {
@@ -129,11 +118,6 @@ export class CodeIndexManager {
 		// 1. ConfigManager Initialization and Configuration Loading
 		if (!this._configManager) {
 			this._configManager = new CodeIndexConfigManager(contextProxy)
-		}
-
-		// Pass Kilo org props to config manager if available
-		if (this._kiloOrgCodeIndexProps) {
-			this._configManager.setKiloOrgProps(this._kiloOrgCodeIndexProps)
 		}
 
 		// Load configuration once to get current state and restart requirements
@@ -293,9 +277,6 @@ export class CodeIndexManager {
 		if (this._orchestrator) {
 			this.stopWatcher()
 		}
-		// kilocode_change start
-		this.stopManagedIndexing()
-		// kilocode_change end
 		this._stateManager.dispose()
 	}
 
@@ -323,18 +304,6 @@ export class CodeIndexManager {
 	}
 
 	public async searchIndex(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
-		// kilocode_change start - proxy out to managed indexing if available
-		if (await this.managedIndexer.isEnabled()) {
-			return await this.managedIndexer.search(query, directoryPrefix)
-		}
-		// kilocode_change start - proxy out to managed indexing if available
-
-		// kilocode_change start: Route to managed indexing if available
-		if (this.isManagedIndexingAvailable) {
-			return this.searchManagedIndex(query, directoryPrefix)
-		}
-
-		// kilocode_change end: Fall back to local indexing
 		if (!this.isFeatureEnabled) {
 			return []
 		}
@@ -489,124 +458,5 @@ export class CodeIndexManager {
 				}
 			}
 		}
-	}
-
-	// kilocode_change start Add ability to set kilo specific props
-	private _kiloOrgCodeIndexProps: {
-		organizationId: string
-		kilocodeToken: string
-		projectId: string
-	} | null = null
-
-	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
-		// this gets called more often than you'd expect so only actually kick off a new manager if things change
-		if (
-			props.kilocodeToken === this._kiloOrgCodeIndexProps?.kilocodeToken &&
-			props.organizationId === this._kiloOrgCodeIndexProps?.organizationId &&
-			props.projectId === this._kiloOrgCodeIndexProps?.projectId
-		) {
-			// No change in token, no need to restart indexing
-			return
-		}
-
-		this._kiloOrgCodeIndexProps = props
-
-		// Pass props to config manager if it exists
-		if (this._configManager) {
-			this._configManager.setKiloOrgProps(props)
-		}
-
-		// Start managed indexing automatically
-		this.startManagedIndexing().catch((error) => {
-			const err = error instanceof Error ? error : new Error(String(error))
-			console.error("[CodeIndexManager] Failed to start managed indexing:", err.message)
-			if (err.stack) {
-				console.error("[CodeIndexManager] Stack trace:", err.stack)
-			}
-			// Don't throw - allow the manager to continue functioning
-			// Set error state so UI can show the issue
-			this._stateManager.setSystemState("Error", `Failed to start indexing: ${err.message}`)
-		})
-	}
-
-	public getKiloOrgCodeIndexProps() {
-		return this._kiloOrgCodeIndexProps
-	}
-
-	// --- Managed Indexing Methods ---
-
-	/**
-	 * Starts the managed indexer (for organization users)
-	 * This is the new standalone indexing system that uses delta-based indexing
-	 */
-	public async startManagedIndexing(): Promise<void> {}
-
-	/**
-	 * Stops the managed indexer
-	 */
-	public stopManagedIndexing(): void {
-		if (this._managedIndexerDisposable) {
-			console.info("[CodeIndexManager] Stopping existing managed indexer")
-			this._managedIndexerDisposable.dispose()
-			this._managedIndexerDisposable = undefined
-			this._managedIndexerState = undefined
-		} else {
-			console.info("[CodeIndexManager] - [stopManagedIndexing] No managed indexer to stop")
-		}
-	}
-
-	/**
-	 * Searches using the managed indexer
-	 */
-	public async searchManagedIndex(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
-		if (!this._kiloOrgCodeIndexProps) {
-			return []
-		}
-
-		try {
-			const config = createManagedIndexingConfig(
-				this._kiloOrgCodeIndexProps.organizationId,
-				this._kiloOrgCodeIndexProps.projectId,
-				this._kiloOrgCodeIndexProps.kilocodeToken,
-				this.workspacePath,
-			)
-
-			const results = await searchManaged(query, config, directoryPrefix)
-
-			// Convert to VectorStoreSearchResult format
-			return results.map((result) => ({
-				id: result.id,
-				score: result.score,
-				payload: {
-					filePath: result.filePath,
-					codeChunk: "", // Managed indexing doesn't return code chunks
-					startLine: result.startLine,
-					endLine: result.endLine,
-				},
-			}))
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			console.error("[CodeIndexManager] Managed search failed:", error)
-			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-				error: errorMessage,
-				stack: error instanceof Error ? error.stack : undefined,
-				location: "searchManagedIndex",
-			})
-			return []
-		}
-	}
-
-	/**
-	 * Gets the managed indexer state
-	 */
-	public getManagedIndexerState(): ManagedIndexerState | undefined {
-		return this._managedIndexerState
-	}
-
-	/**
-	 * Checks if managed indexing is available (has org credentials)
-	 */
-	public get isManagedIndexingAvailable(): boolean {
-		return !!this._kiloOrgCodeIndexProps
 	}
 }

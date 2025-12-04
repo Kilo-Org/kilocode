@@ -23,6 +23,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"vscode-lm": "VS Code LM API",
 	openai: "OpenAI Compatible",
 	glama: "Glama",
+	"nano-gpt": "Nano-GPT",
 	huggingface: "Hugging Face",
 	litellm: "LiteLLM",
 	moonshot: "Moonshot",
@@ -48,6 +49,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	ovhcloud: "OVHcloud AI Endpoints",
 	inception: "Inception",
 	synthetic: "Synthetic",
+	"sap-ai-core": "SAP AI Core",
 }
 
 /**

@@ -10,7 +10,7 @@ contact_links:
       url: https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code&ssr=false#review-details
       about: Enjoying Kilo Code? Leave a review here!
     - name: Join our Discord
-      url: https://kilocode.ai/discord
+      url: https://kilo.ai/discord
       about: Join the community.
 # NOTE(JP): I'd really like to have a "blank issue" at the end here, or accessible still through the URL
 # but this appears not to be possible due to https://github.com/orgs/community/discussions/14287#discussioncomment-12691930

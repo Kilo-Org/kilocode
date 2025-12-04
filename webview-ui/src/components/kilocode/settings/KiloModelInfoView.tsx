@@ -7,12 +7,17 @@ import { useQuery } from "@tanstack/react-query"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
+import { z } from "zod"
 
-type ModelStats = {
-	model: string
-	cost?: number
-	costPerRequest?: number
-}
+const ModelStatsSchema = z.object({
+	model: z.string(),
+	cost: z.coerce.number(),
+	costPerRequest: z.number(),
+})
+
+const ModelStatsResponseSchema = z.array(ModelStatsSchema)
+
+type ModelStats = z.infer<typeof ModelStatsSchema>
 
 export const formatPrice = (price: number | Intl.StringNumericLiteral, digits: number = 2) => {
 	return new Intl.NumberFormat("en-US", {
@@ -93,10 +98,18 @@ export const KiloModelInfoView = ({
 		queryFn: async () => {
 			try {
 				const url = getKiloUrlFromToken(
-					"https://api.kilocode.ai/api/modelstats",
+					"https://api.kilo.ai/api/modelstats",
 					apiConfiguration.kilocodeToken ?? "",
 				)
-				return (await fetch(url)).json()
+				const response = await fetch(url)
+
+				if (!response.ok) {
+					throw new Error(`Failed to fetch model stats: ${response.status}`)
+				}
+
+				const data = await response.json()
+
+				return ModelStatsResponseSchema.parse(data)
 			} catch (err) {
 				if (err instanceof Error) {
 					telemetryClient.captureException(err, { context: "modelstats" })

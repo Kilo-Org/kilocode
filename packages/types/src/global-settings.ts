@@ -14,7 +14,7 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { fastApplyModelSchema, ghostServiceSettingsSchema } from "./kilocode/kilocode.js"
+import { fastApplyModelSchema, ghostServiceSettingsSchema, fastApplyApiProviderSchema } from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -75,6 +75,7 @@ export const globalSettingsSchema = z.object({
 	alwaysAllowWrite: z.boolean().optional(),
 	alwaysAllowWriteOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWriteProtected: z.boolean().optional(),
+	alwaysAllowDelete: z.boolean().optional(), // kilocode_change
 	writeDelayMs: z.number().min(0).optional(),
 	alwaysAllowBrowser: z.boolean().optional(),
 	alwaysApproveResubmit: z.boolean().optional(),
@@ -188,6 +189,7 @@ export const globalSettingsSchema = z.object({
 	// kilocode_change start: Morph fast apply
 	morphApiKey: z.string().optional(),
 	fastApplyModel: fastApplyModelSchema.optional(),
+	fastApplyApiProvider: fastApplyApiProviderSchema.optional(),
 	// kilocode_change end
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
@@ -282,6 +284,7 @@ export const SECRET_STATE_KEYS = [
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
+	"sapAiCoreServiceKey", // kilocode_change
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
@@ -334,6 +337,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowWrite: true,
 	alwaysAllowWriteOutsideWorkspace: false,
 	alwaysAllowWriteProtected: false,
+	alwaysAllowDelete: true, // kilocode_change
 	writeDelayMs: 1000,
 	alwaysAllowBrowser: true,
 	alwaysApproveResubmit: true,

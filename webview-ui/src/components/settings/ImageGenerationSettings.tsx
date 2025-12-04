@@ -47,30 +47,10 @@ export const ImageGenerationSettings = ({
 		if (!enabled) {
 			return
 		}
-		const paidImageGenerationModel = IMAGE_GENERATION_MODELS[0].value
-		if (isUsingOpenRouter) {
-			if (!openRouterImageGenerationSelectedModel) {
-				setImageGenerationSelectedModel(paidImageGenerationModel)
-			}
-		} else {
-			if (openRouterImageApiKey) {
-				setOpenRouterImageApiKey("")
-			}
-			if (openRouterImageGenerationSelectedModel !== paidImageGenerationModel) {
-				setImageGenerationSelectedModel(paidImageGenerationModel)
-			}
+		if (!isUsingOpenRouter && openRouterImageApiKey) {
+			setOpenRouterImageApiKey("")
 		}
-	}, [
-		enabled,
-		isUsingOpenRouter,
-		openRouterImageApiKey,
-		setOpenRouterImageApiKey,
-		kiloCodeImageApiKey,
-		setKiloCodeImageApiKey,
-		openRouterImageGenerationSelectedModel,
-		setImageGenerationSelectedModel,
-		currentProfileKilocodeToken,
-	])
+	}, [enabled, isUsingOpenRouter, openRouterImageApiKey, setOpenRouterImageApiKey])
 	// kilocode_change end
 
 	// Handle API key changes

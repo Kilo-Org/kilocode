@@ -1,5 +1,162 @@
 # kilo-code
 
+## 4.130.0
+
+### Minor Changes
+
+- [#4131](https://github.com/Kilo-Org/kilocode/pull/4131) [`9a2ef51`](https://github.com/Kilo-Org/kilocode/commit/9a2ef512bb50143b6cff690f912f7fd8dcfa65b7) Thanks [@mcowger](https://github.com/mcowger)! - Fix tool parsing failure in write_to_file with JSON contents
+
+## 4.129.0
+
+### Minor Changes
+
+- [#4171](https://github.com/Kilo-Org/kilocode/pull/4171) [`b4b086b`](https://github.com/Kilo-Org/kilocode/commit/b4b086b8520192685e6c262202ecd1863abf1af1) Thanks [@brianc](https://github.com/brianc)! - Fix: prevent crash-loop if ManagedIndexer fails to instantiate.
+
+- [#4145](https://github.com/Kilo-Org/kilocode/pull/4145) [`230bcec`](https://github.com/Kilo-Org/kilocode/commit/230bcec1cdb77bffad06c05aff1e33a908b077b8) Thanks [@iscekic](https://github.com/iscekic)! - add session sharing and forking
+
+### Patch Changes
+
+- [#4145](https://github.com/Kilo-Org/kilocode/pull/4145) [`230bcec`](https://github.com/Kilo-Org/kilocode/commit/230bcec1cdb77bffad06c05aff1e33a908b077b8) Thanks [@iscekic](https://github.com/iscekic)! - update shared session url
+
+## 4.128.0
+
+### Minor Changes
+
+- [#4165](https://github.com/Kilo-Org/kilocode/pull/4165) [`6e9ff79`](https://github.com/Kilo-Org/kilocode/commit/6e9ff7910ba1b51b1e460ce3c7d63e66d803cb70) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Add separate "Delete" auto-approve option
+
+## 4.127.0
+
+### Minor Changes
+
+- [#4129](https://github.com/Kilo-Org/kilocode/pull/4129) [`a2d5b29`](https://github.com/Kilo-Org/kilocode/commit/a2d5b29ce79853e6a98cb30b86af1844b6023833) Thanks [@brianc](https://github.com/brianc)! - Managed Code Indexing UI internals updated. Removed optionality in the UI, included link to backend management UI, and improved architecture for better incremental status and error reporting.
+
+- [#4066](https://github.com/Kilo-Org/kilocode/pull/4066) [`1831796`](https://github.com/Kilo-Org/kilocode/commit/18317963fbb5b02a1178f4579d5cb643cfbd531c) Thanks [@iscekic](https://github.com/iscekic)! - use shared session manager from extension folder
+
+### Patch Changes
+
+- [#4128](https://github.com/Kilo-Org/kilocode/pull/4128) [`29fbec0`](https://github.com/Kilo-Org/kilocode/commit/29fbec0b6a9feb4bc79ba819a164b45ccec236bb) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: show diff buttons after task completion
+
+- [#4120](https://github.com/Kilo-Org/kilocode/pull/4120) [`ebe1667`](https://github.com/Kilo-Org/kilocode/commit/ebe1667e8160a809a82f561627ce5494fa8808d3) Thanks [@iscekic](https://github.com/iscekic)! - increase session sync interval to 3s
+
+- [#4071](https://github.com/Kilo-Org/kilocode/pull/4071) [`d5e89a1`](https://github.com/Kilo-Org/kilocode/commit/d5e89a141e8736902c6dcb2e8ab253cc8590abe7) Thanks [@inj-src](https://github.com/inj-src)! - Added support for Gemini 3 Pro Preview to Gemini CLI provider and removed deprecated models
+
+- [#4137](https://github.com/Kilo-Org/kilocode/pull/4137) [`119e31b`](https://github.com/Kilo-Org/kilocode/commit/119e31b610f24621ae91731ce1596b6cded0ec24) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Slightly improved reliability of Opus with Claude Code
+
+- [#4149](https://github.com/Kilo-Org/kilocode/pull/4149) [`04497da`](https://github.com/Kilo-Org/kilocode/commit/04497dabeafffd7b1f1f8ab94e66198884c1390c) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix for double id's stored in profiles when activating a new profile and then adding a new one
+
+## 4.126.1
+
+### Patch Changes
+
+- [#4114](https://github.com/Kilo-Org/kilocode/pull/4114) [`ac020d6`](https://github.com/Kilo-Org/kilocode/commit/ac020d600e5034ca025b71213aa64c5629cab219) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix profile editing when adjusting non-activated profile
+
+## 4.126.0
+
+### Minor Changes
+
+- [#4026](https://github.com/Kilo-Org/kilocode/pull/4026) [`a44ec02`](https://github.com/Kilo-Org/kilocode/commit/a44ec024347d345f46bf01486a6913f0e1e5a8c2) Thanks [@quantizoor](https://github.com/quantizoor)! - Add possibility to specify Azure deployment name for Anthropic models
+
+## 4.125.1
+
+### Patch Changes
+
+- [#4057](https://github.com/Kilo-Org/kilocode/pull/4057) [`c2a7407`](https://github.com/Kilo-Org/kilocode/commit/c2a7407e8964c5fa8114d17ab5a6936b81c785ab) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Kilo Code sidebar no longer steals focus on startup when managed codebase indexing is active
+
+## 4.125.0
+
+### Minor Changes
+
+- [#2827](https://github.com/Kilo-Org/kilocode/pull/2827) [`c7793db`](https://github.com/Kilo-Org/kilocode/commit/c7793dbd44371431f68deb76863af5f0c21375f4) Thanks [@bea-leanix](https://github.com/bea-leanix)! - Added SAP AI Core provider
+
+- [#3895](https://github.com/Kilo-Org/kilocode/pull/3895) [`f5d3459`](https://github.com/Kilo-Org/kilocode/commit/f5d34595f3a8c9436fb870b5f22bb8094db9f3c5) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.30.1-v3.32.0
+
+    - Feature: Support for OpenAI Responses 24 hour prompt caching (PR #9259 by @hannesrudolph)
+    - Fix: OpenAI Native encrypted_content handling and remove gpt-5-chat-latest verbosity flag (#9225 by @politsin, PR by @hannesrudolph)
+    - Refactor: Rename sliding-window to context-management and truncateConversationIfNeeded to manageContext (thanks @hannesrudolph!)
+    - Fix: Apply updated API profile settings when provider/model unchanged (#9208 by @hannesrudolph, PR by @hannesrudolph)
+    - Migrate conversation continuity to plugin-side encrypted reasoning items using Responses API for improved reliability (thanks @hannesrudolph!)
+    - Fix: Include mcpServers in getState() for auto-approval (#9190 by @bozoweed, PR by @daniel-lxs)
+    - Batch settings updates from the webview to the extension host for improved performance (thanks @cte!)
+    - Fix: Replace rate-limited badges with badgen.net to improve README reliability (thanks @daniel-lxs!)
+    - Fix: Prevent command_output ask from blocking in cloud/headless environments (thanks @daniel-lxs!)
+    - Fix: Model switch re-applies selected profile, ensuring task configuration stays in sync (#9179 by @hannesrudolph, PR by @hannesrudolph)
+    - Move auto-approval logic from `ChatView` to `Task` for better architecture (thanks @cte!)
+    - Add custom Button component with variant system (thanks @brunobergher!)
+    - Improvements to to-do lists and task headers (thanks @brunobergher!)
+    - Fix: Prevent crash when streaming chunks have null choices array (thanks @daniel-lxs!)
+    - Fix: Prevent context condensing on settings save when provider/model unchanged (#4430 by @hannesrudolph, PR by @daniel-lxs)
+    - Fix: Respect custom OpenRouter URL for all API operations (#8947 by @sstraus, PR by @roomote)
+    - Fix: Auto-retry on empty assistant response to prevent task failures (#9076 by @Akillatech, PR by @daniel-lxs)
+    - Fix: Use system role for OpenAI Compatible provider when streaming is disabled (#8215 by @whitfin, PR by @roomote)
+    - Fix: Prevent notification sound on attempt_completion with queued messages (#8537 by @hannesrudolph, PR by @roomote)
+    - Feat: Auto-switch to imported mode with architect fallback for better mode detection (#8239 by @hannesrudolph, PR by @daniel-lxs)
+    - Feat: Improve diff appearance in main chat view (thanks @hannesrudolph!)
+    - UX: Home screen visuals (thanks @brunobergher!)
+    - Fix: eliminate UI flicker during task cancellation (thanks @daniel-lxs!)
+    - Add Global Inference support for Bedrock models (#8750 by @ronyblum, PR by @hannesrudolph)
+    - Add Qwen3 embedding models (0.6B and 4B) to OpenRouter support (#9058 by @dmarkey, PR by @app/roomote)
+    - Fix: keep pinned models fixed at top of scrollable list (#8812 by @XiaoYingYo, PR by @app/roomote)
+    - Fix: update Opus 4.1 max tokens from 8K to 32K (#9045 by @kaveh-deriv, PR by @app/roomote)
+    - Set Claude Sonnet 4.5 as default for key providers (thanks @hannesrudolph!)
+    - Fix: dynamic provider model validation to prevent cross-contamination (#9047 by @NotADev137, PR by @daniel-lxs)
+    - Fix: Bedrock user agent to report full SDK details (#9031 by @ajjuaire, PR by @ajjuaire)
+    - Add file path tooltips with centralized PathTooltip component (#8278 by @da2ce7, PR by @daniel-lxs)
+    - Fix: Correct OpenRouter Mistral model embedding dimension from 3072 to 1536 (thanks @daniel-lxs!)
+
+- [#3868](https://github.com/Kilo-Org/kilocode/pull/3868) [`cf6ed3e`](https://github.com/Kilo-Org/kilocode/commit/cf6ed3ed3bc7dfe0268121f3e68d422f3ffadfff) Thanks [@iscekic](https://github.com/iscekic)! - add sessions support
+
+### Patch Changes
+
+- [#4059](https://github.com/Kilo-Org/kilocode/pull/4059) [`d47a3d5`](https://github.com/Kilo-Org/kilocode/commit/d47a3d52dfbf669fdf50be53c416b060cd537e40) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix error on task resumption with some providers when native tool calls are enabled
+
+- [#3565](https://github.com/Kilo-Org/kilocode/pull/3565) [`4a05694`](https://github.com/Kilo-Org/kilocode/commit/4a05694ac84007397a2b99c826151d6383506001) Thanks [@marcus-v-rodrigues](https://github.com/marcus-v-rodrigues)! - Fix 403 error for Gemini CLI by removing 'default' project fallback
+
+- [#2540](https://github.com/Kilo-Org/kilocode/pull/2540) [`591da2b`](https://github.com/Kilo-Org/kilocode/commit/591da2b8dae2d4c72c0663302e19dfe6e30b1617) Thanks [@gerardbalaoro](https://github.com/gerardbalaoro)! - Support for MCP servers in `.cursor/mcp.json`
+
+- [#2324](https://github.com/Kilo-Org/kilocode/pull/2324) [`ab9b94b`](https://github.com/Kilo-Org/kilocode/commit/ab9b94b0d593bccd222c5cbb7fdffe968d4c6a40) Thanks [@mikkihugo](https://github.com/mikkihugo)! - Add VS Code Settings Sync integration
+
+- [#3193](https://github.com/Kilo-Org/kilocode/pull/3193) [`6a895de`](https://github.com/Kilo-Org/kilocode/commit/6a895dec08d6afccb21dc431c021200f52c4c7cf) Thanks [@siulong](https://github.com/siulong)! - Fix rules folder path when deleting the rules
+
+- [#3804](https://github.com/Kilo-Org/kilocode/pull/3804) [`5d4b38b`](https://github.com/Kilo-Org/kilocode/commit/5d4b38b67ed670da1de651de0491906a594174ac) Thanks [@skridlevsky](https://github.com/skridlevsky)! - fix(settings): codebase indexing toggle not persisting
+
+- [#3484](https://github.com/Kilo-Org/kilocode/pull/3484) [`ac01ae3`](https://github.com/Kilo-Org/kilocode/commit/ac01ae30e735502b6cb265f79ab6f82bf954fb52) Thanks [@mental-lab](https://github.com/mental-lab)! - Add warning for ANTHROPIC_API_KEY conflicts with Claude Code provider
+
+- [#3087](https://github.com/Kilo-Org/kilocode/pull/3087) [`ebab11b`](https://github.com/Kilo-Org/kilocode/commit/ebab11b033dd354c175a4027657446b745a82d96) Thanks [@jinhan1414](https://github.com/jinhan1414)! - Unify slash command parsing and expand mention detection
+
+## 4.124.0
+
+### Minor Changes
+
+- [#2587](https://github.com/Kilo-Org/kilocode/pull/2587) [`f3de1e7`](https://github.com/Kilo-Org/kilocode/commit/f3de1e713c3a61fe04a30aa26e33ef7431ed63f4) Thanks [@NaccOll](https://github.com/NaccOll)! - Add LanceDB vector store support
+
+### Patch Changes
+
+- [#4045](https://github.com/Kilo-Org/kilocode/pull/4045) [`b14afb1`](https://github.com/Kilo-Org/kilocode/commit/b14afb11363a62d45d1feb176d9b5054d75d43a9) Thanks [@eshurakov](https://github.com/eshurakov)! - Nano GPT provider support (by @b3nw)
+
+- [#4023](https://github.com/Kilo-Org/kilocode/pull/4023) [`5af4d01`](https://github.com/Kilo-Org/kilocode/commit/5af4d01b3e0d4467e8234c1c445d098c1f6756f2) Thanks [@markijbema](https://github.com/markijbema)! - Small redesign of the autocomplete statusbar/tooltip
+
+## 4.123.0
+
+### Minor Changes
+
+- [#3020](https://github.com/Kilo-Org/kilocode/pull/3020) [`147786c`](https://github.com/Kilo-Org/kilocode/commit/147786c81238c1adea9c2bddf649d0763dd449d2) Thanks [@CaiDingxian](https://github.com/CaiDingxian)! - Add independent provider setup for Fast Apply feature
+
+### Patch Changes
+
+- [#4019](https://github.com/Kilo-Org/kilocode/pull/4019) [`f16c31b`](https://github.com/Kilo-Org/kilocode/commit/f16c31bf921a642e23d54fb2dfd768e07be8de71) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add Opus 4.5 to Claude Code provider
+
+- [#3445](https://github.com/Kilo-Org/kilocode/pull/3445) [`8065f7a`](https://github.com/Kilo-Org/kilocode/commit/8065f7a44958ec2584ee591d7e936eacdfe73951) Thanks [@jeanduplessis](https://github.com/jeanduplessis)! - fix: apply file limit after .kilocodeignore filtering instead of before
+
+- [#3988](https://github.com/Kilo-Org/kilocode/pull/3988) [`a169e6f`](https://github.com/Kilo-Org/kilocode/commit/a169e6fb0632f06b3271fdcb03d01d5ab7eebd69) Thanks [@dltechy](https://github.com/dltechy)! - Fix an issue where workflows are not working except as the initial prompt of a task
+
+## 4.122.1
+
+### Patch Changes
+
+- [#4000](https://github.com/Kilo-Org/kilocode/pull/4000) [`3ef2237`](https://github.com/Kilo-Org/kilocode/commit/3ef2237493f48ac212732a5b7d67eceb4af0d594) Thanks [@brianc](https://github.com/brianc)! - There was previously some debug log spam introduced for the Managed Indexing feature. This change removes those logs.
+
+- [#4005](https://github.com/Kilo-Org/kilocode/pull/4005) [`5aa56df`](https://github.com/Kilo-Org/kilocode/commit/5aa56df5123d33ba0ecadeabb3727b57974a842e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add Claude Opus 4.5 support, including verbosity controls for Kilo Gateway, OpenRouter and Anthropic providers
+
 ## 4.122.0
 
 ### Minor Changes
@@ -219,7 +376,7 @@
 
 - [#3466](https://github.com/Kilo-Org/kilocode/pull/3466) [`e623ce1`](https://github.com/Kilo-Org/kilocode/commit/e623ce146bbad7453355ee84a4b4bb2fc894b031) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Thanks @pranjaldatta! Added support for Inception as a provider
 
-- [#2435](https://github.com/Kilo-Org/kilocode/pull/2435) [`c13fe3c`](https://github.com/Kilo-Org/kilocode/commit/c13fe3c634496b9e1fc08371822a4071407ff9bc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Auto Cleanup automatically manages your task history by removing old tasks to free up disk space and improve performance - https://kilocode.ai/docs/advanced-usage/auto-cleanup
+- [#2435](https://github.com/Kilo-Org/kilocode/pull/2435) [`c13fe3c`](https://github.com/Kilo-Org/kilocode/commit/c13fe3c634496b9e1fc08371822a4071407ff9bc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Auto Cleanup automatically manages your task history by removing old tasks to free up disk space and improve performance - https://kilo.ai/docs/advanced-usage/auto-cleanup
 
 ### Patch Changes
 

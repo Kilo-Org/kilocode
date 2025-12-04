@@ -45,5 +45,6 @@
 		"mostTokens": "最多トークン",
 		"mostRelevant": "最も関連性の高い"
 	},
-	"viewAllHistory": "すべての履歴を表示"
+	"viewAllHistory": "すべて表示",
+	"shareSession": "セッションを共有"
 }

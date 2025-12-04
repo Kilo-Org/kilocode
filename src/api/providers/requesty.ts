@@ -28,6 +28,16 @@ interface RequestyUsage extends OpenAI.CompletionUsage {
 	total_cost?: number
 }
 
+type RequestyChatCompletionParamsStreaming = OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & {
+	requesty?: {
+		trace_id?: string
+		extra?: {
+			mode?: string
+		}
+	}
+	thinking?: AnthropicReasoningParams
+}
+
 type RequestyChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
 	requesty?: {
 		trace_id?: string
@@ -118,12 +128,17 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 			...convertToOpenAiMessages(messages),
 		]
 
-		const completionParams: RequestyChatCompletionParams = {
+		// Map extended efforts to OpenAI Chat Completions-accepted values (omit unsupported)
+		const allowedEffort = (["low", "medium", "high"] as const).includes(reasoning_effort as any)
+			? (reasoning_effort as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming["reasoning_effort"])
+			: undefined
+
+		const completionParams: RequestyChatCompletionParamsStreaming = {
 			messages: openAiMessages,
 			model,
 			max_tokens,
 			temperature,
-			...(reasoning_effort && reasoning_effort !== "minimal" && { reasoning_effort }),
+			...(allowedEffort && { reasoning_effort: allowedEffort }),
 			...(thinking && { thinking }),
 			stream: true,
 			stream_options: { include_usage: true },
@@ -132,6 +147,7 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 
 		let stream
 		try {
+			// With streaming params type, SDK returns an async iterable stream
 			stream = await this.client.chat.completions.create(completionParams)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)

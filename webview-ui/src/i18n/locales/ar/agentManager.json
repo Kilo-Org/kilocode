@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "مدير الوكيل",
+		"newAgent": "وكيل جديد",
+		"sessionsSection": "الجلسات",
+		"emptyState": "لا توجد وكلاء نشطين بعد.",
+		"startAgent": "بدء الوكيل",
+		"removeSession": "إزالة"
+	},
+	"sessionDetail": {
+		"startNewAgent": "بدء وكيل جديد",
+		"describeTask": "صف المهمة التي تريد أن يقوم بها الوكيل.",
+		"placeholderTask": "مثال: إنشاء مكون React جديد لزر...",
+		"stopButton": "إيقاف",
+		"newButton": "جديد",
+		"stopButtonTitle": "إيقاف الوكيل",
+		"newButtonTitle": "وكيل جديد",
+		"autoModeWarning": "يعمل في الوضع التلقائي الكامل - سينفذ الوكيل الإجراءات دون تأكيد",
+		"starting": "جاري البدء...",
+		"startAriaLabel": "بدء الوكيل بالأمر المقدم",
+		"keyboardHint": "اضغط Enter للبدء، Shift+Enter لسطر جديد"
+	},
+	"messages": {
+		"waiting": "في انتظار رد الوكيل...",
+		"kiloSaid": "قال Kilo",
+		"youSaid": "قلت",
+		"apiRequest": "طلب API",
+		"taskCompleted": "اكتملت المهمة",
+		"error": "خطأ",
+		"question": "لدى Kilo Code سؤال",
+		"command": "يريد Kilo تشغيل أمر",
+		"tool": "يريد Kilo استخدام أداة",
+		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "الوكيل يعمل في الوضع المستقل"
+	},
+	"status": {
+		"running": "قيد التشغيل",
+		"done": "منتهي",
+		"stopped": "متوقف",
+		"error": "خطأ"
+	}
+}

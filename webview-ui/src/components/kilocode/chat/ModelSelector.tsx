@@ -32,6 +32,7 @@ export const ModelSelector = ({
 		defaultModelId: providerDefaultModel,
 	})
 	const modelIdKey = getModelIdKey({ provider })
+	const isAutocomplete = apiConfiguration.profileType === "autocomplete"
 
 	const [ackOpen, setAckOpen] = useState(false)
 	const [pendingModelId, setPendingModelId] = useState<string | null>(null)
@@ -47,7 +48,7 @@ export const ModelSelector = ({
 		}))
 	}, [modelsIds, providerModels, selectedModelId])
 
-	const disabled = isLoading || isError
+	const disabled = isLoading || isError || isAutocomplete
 
 	useEffect(() => {
 		if (provider !== "oca") return
@@ -151,7 +152,7 @@ export const ModelSelector = ({
 	}
 	// kilocode_change end
 
-	if (isError || options.length <= 0) {
+	if (isError || isAutocomplete || options.length <= 0) {
 		return <span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">{fallbackText}</span>
 	}
 

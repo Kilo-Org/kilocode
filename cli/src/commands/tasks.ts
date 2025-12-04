@@ -6,33 +6,14 @@ import { generateMessage } from "../ui/utils/messages.js"
 import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
 import type { HistoryItem } from "@roo-code/types"
 import type { TaskHistoryData, TaskHistoryFilters } from "../state/atoms/taskHistory.js"
+import { formatRelativeTime } from "../utils/time.js"
 
-/**
- * Map kebab-case sort options to camelCase
- */
 const SORT_OPTION_MAP: Record<string, string> = {
 	newest: "newest",
 	oldest: "oldest",
 	"most-expensive": "mostExpensive",
 	"most-tokens": "mostTokens",
 	"most-relevant": "mostRelevant",
-}
-
-/**
- * Format a timestamp as a relative time string
- */
-function formatRelativeTime(ts: number): string {
-	const now = Date.now()
-	const diff = now - ts
-	const seconds = Math.floor(diff / 1000)
-	const minutes = Math.floor(seconds / 60)
-	const hours = Math.floor(minutes / 60)
-	const days = Math.floor(hours / 24)
-
-	if (days > 0) return `${days}d ago`
-	if (hours > 0) return `${hours}h ago`
-	if (minutes > 0) return `${minutes}m ago`
-	return "just now"
 }
 
 /**

@@ -16,7 +16,7 @@ import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
 import {
 	SearchAndReplaceParameters,
 	SearchAndReplaceParametersSchema,
-} from "../../prompts/tools/native-tools/search_and_replace"
+} from "../../prompts/tools/native-tools/kilocode/search_and_replace"
 
 /**
  * Tool for performing search and replace operations on files
@@ -31,7 +31,7 @@ async function validateParams(
 	block: ToolUse,
 	pushToolResult: PushToolResult,
 ): Promise<SearchAndReplaceParameters | null> {
-	const args = SearchAndReplaceParametersSchema.safeParse(block.params)
+	const args = SearchAndReplaceParametersSchema.safeParse(block.nativeArgs)
 	if (!args.success) {
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("apply_diff", "schema_violation")

@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Agentbeheer",
+		"newAgent": "Nieuwe agent",
+		"sessionsSection": "Sessies",
+		"emptyState": "Nog geen actieve agenten.",
+		"startAgent": "Agent starten",
+		"removeSession": "Verwijderen"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Een nieuwe agent starten",
+		"describeTask": "Beschrijf de taak die je de agent wilt laten uitvoeren.",
+		"placeholderTask": "bijv. Maak een nieuw React-component voor een knop...",
+		"stopButton": "Stoppen",
+		"newButton": "Nieuw",
+		"stopButtonTitle": "Agent stoppen",
+		"newButtonTitle": "Nieuwe agent",
+		"autoModeWarning": "Draait in volledig automatische modus - agent voert acties uit zonder bevestiging",
+		"starting": "Starten...",
+		"startAriaLabel": "Agent starten met opgegeven prompt",
+		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel"
+	},
+	"messages": {
+		"waiting": "Wachten op antwoord van agent...",
+		"kiloSaid": "Kilo zei",
+		"youSaid": "Je zei",
+		"apiRequest": "API-verzoek",
+		"taskCompleted": "Taak voltooid",
+		"error": "Fout",
+		"question": "Kilo Code heeft een vraag",
+		"command": "Kilo wil een commando uitvoeren",
+		"tool": "Kilo wil een tool gebruiken",
+		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agent draait in autonome modus"
+	},
+	"status": {
+		"running": "actief",
+		"done": "voltooid",
+		"stopped": "gestopt",
+		"error": "fout"
+	}
+}

@@ -10,6 +10,7 @@ import {
 	configExists,
 	setConfigPaths,
 	resetConfigPaths,
+	getKiloToken,
 } from "../persistence.js"
 import { DEFAULT_CONFIG } from "../defaults.js"
 
@@ -86,12 +87,50 @@ describe("Config Persistence", () => {
 	})
 
 	describe("loadConfig", () => {
-		it("should create default config if file doesn't exist", async () => {
+		it("should return default config in memory without creating file if file doesn't exist", async () => {
 			const result = await loadConfig()
 			expect(result.config).toEqual(DEFAULT_CONFIG)
 			// Default config has empty credentials, so validation should fail
 			expect(result.validation.valid).toBe(false)
 			expect(result.validation.errors).toBeDefined()
+
+			// Verify that the config file was NOT created
+			const exists = await configExists()
+			expect(exists).toBe(false)
+		})
+
+		it("should create config file when saveConfig is called after loadConfig", async () => {
+			// Load config (should not create file)
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+
+			// Verify file doesn't exist yet
+			let exists = await configExists()
+			expect(exists).toBe(false)
+
+			// Now save a valid config
+			const validConfig: CLIConfig = {
+				...DEFAULT_CONFIG,
+				provider: "test-provider",
+				providers: [
+					{
+						id: "test-provider",
+						provider: "kilocode",
+						kilocodeToken: "test-token-1234567890",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+			}
+			await saveConfig(validConfig)
+
+			// Now file should exist
+			exists = await configExists()
+			expect(exists).toBe(true)
+
+			// And we should be able to load it
+			const loadedResult = await loadConfig()
+			expect(loadedResult.config).toEqual(validConfig)
+			expect(loadedResult.validation.valid).toBe(true)
 		})
 
 		it("should load existing config from file", async () => {
@@ -207,6 +246,116 @@ describe("Config Persistence", () => {
 			await saveConfig(validConfig)
 			const exists = await configExists()
 			expect(exists).toBe(true)
+		})
+	})
+
+	describe("getKiloToken", () => {
+		it("should extract kilocodeToken from kilocode provider", async () => {
+			const config = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeToken: "provider-token-1234567890",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			} as CLIConfig
+
+			const token = getKiloToken(config)
+			expect(token).toBe("provider-token-1234567890")
+		})
+
+		it("should return null when provider is not kilocode", async () => {
+			const config = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "anthropic-provider",
+				providers: [
+					{
+						id: "anthropic-provider",
+						provider: "anthropic",
+						apiKey: "anthropic-key-1234567890",
+						apiModelId: "claude-3-5-sonnet-20241022",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			} as CLIConfig
+
+			const token = getKiloToken(config)
+			expect(token).toBeNull()
+		})
+
+		it("should return null when provider is kilocode but kilocodeToken doesn't exist", async () => {
+			const config = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			} as CLIConfig
+
+			const token = getKiloToken(config)
+			expect(token).toBeNull()
+		})
+
+		it("should return empty string when provider has empty kilocodeToken", async () => {
+			const config = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeToken: "",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			} as CLIConfig
+
+			const token = getKiloToken(config)
+			expect(token).toBe("")
+		})
+
+		it("should return null when no kilocode provider exists", async () => {
+			const config = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "openai-provider",
+				providers: [
+					{
+						id: "openai-provider",
+						provider: "openai",
+						apiKey: "openai-key-1234567890",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			} as CLIConfig
+
+			const token = getKiloToken(config)
+			expect(token).toBeNull()
 		})
 	})
 })

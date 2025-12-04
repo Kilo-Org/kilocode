@@ -1,5 +1,67 @@
 # @kilocode/cli
 
+## 0.12.0
+
+### Minor Changes
+
+- [#4177](https://github.com/Kilo-Org/kilocode/pull/4177) [`8d44a94`](https://github.com/Kilo-Org/kilocode/commit/8d44a94a28f1cd84d1af9836c1822eb43fe41a1b) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Fix: inject configuration before session restoration
+
+## 0.11.0
+
+### Minor Changes
+
+- [#4148](https://github.com/Kilo-Org/kilocode/pull/4148) [`44ebf95`](https://github.com/Kilo-Org/kilocode/commit/44ebf95e72d2abad86181cc957a8fa29d1b38740) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix potential credential seeding race
+
+### Patch Changes
+
+- [#4066](https://github.com/Kilo-Org/kilocode/pull/4066) [`1831796`](https://github.com/Kilo-Org/kilocode/commit/18317963fbb5b02a1178f4579d5cb643cfbd531c) Thanks [@iscekic](https://github.com/iscekic)! - use shared session manager from extension folder
+
+- [#4121](https://github.com/Kilo-Org/kilocode/pull/4121) [`7cd2035`](https://github.com/Kilo-Org/kilocode/commit/7cd2035a920a466d93001eb621cd21082d6cf9bd) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve "/model list" command with pagination, filters and sorting
+
+- [#4122](https://github.com/Kilo-Org/kilocode/pull/4122) [`fa54645`](https://github.com/Kilo-Org/kilocode/commit/fa546456b379d10044c045118b08f77b9034d5fc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Pulish version on Github Pages
+
+## 0.10.2
+
+### Patch Changes
+
+- [#4116](https://github.com/Kilo-Org/kilocode/pull/4116) [`c6072d0`](https://github.com/Kilo-Org/kilocode/commit/c6072d03709d93e9aca1b187c2005f65463d6b53) Thanks [@catrielmuller](https://github.com/catrielmuller)! - NPM provenance
+
+## 0.10.1
+
+### Patch Changes
+
+- [#4115](https://github.com/Kilo-Org/kilocode/pull/4115) [`a36323c`](https://github.com/Kilo-Org/kilocode/commit/a36323c0fbb560172071826d2920ce7b94bd5985) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Public Docker images
+
+## 0.10.0
+
+### Minor Changes
+
+- [#3868](https://github.com/Kilo-Org/kilocode/pull/3868) [`cf6ed3e`](https://github.com/Kilo-Org/kilocode/commit/cf6ed3ed3bc7dfe0268121f3e68d422f3ffadfff) Thanks [@iscekic](https://github.com/iscekic)! - add sessions support
+
+## 0.9.0
+
+### Minor Changes
+
+- [#4003](https://github.com/Kilo-Org/kilocode/pull/4003) [`0bb5dfe`](https://github.com/Kilo-Org/kilocode/commit/0bb5dfeb4bb5a5cd07bb852a929acac28e02e78c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Kilo Gateway one click authorization
+
+## 0.8.0
+
+### Minor Changes
+
+- [#3305](https://github.com/Kilo-Org/kilocode/pull/3305) [`df83fc7`](https://github.com/Kilo-Org/kilocode/commit/df83fc71c9dcf4f8aaad0d55a0fd17732d493ff5) Thanks [@benzntech](https://github.com/benzntech)! - Custom modes support
+
+### Patch Changes
+
+- [#4027](https://github.com/Kilo-Org/kilocode/pull/4027) [`2841b10`](https://github.com/Kilo-Org/kilocode/commit/2841b10e9e86f2c74a5797ca9ec10bc93d87c17a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Thinking animation
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3949](https://github.com/Kilo-Org/kilocode/pull/3949) [`5bc6c66`](https://github.com/Kilo-Org/kilocode/commit/5bc6c66b647ebede503c71a42512eef418dbd11a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Continue and abort commands
+
+- [#4001](https://github.com/Kilo-Org/kilocode/pull/4001) [`fb12c27`](https://github.com/Kilo-Org/kilocode/commit/fb12c27d169da8d06eb3598160628081731b0b98) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Support emitting Unix exit codes for signal interruption (SIGINT/SIGTERM).
+
 ## 0.6.0
 
 ### Minor Changes

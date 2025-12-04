@@ -2,7 +2,7 @@
 
 ## Project Status
 
-The Kilo Code documentation site is a mature, production-ready Docusaurus project that serves as the comprehensive documentation hub for the Kilo Code VS Code extension. The site is hosted at https://kilocode.ai/docs and provides extensive documentation covering installation, usage, features, and extension capabilities.
+The Kilo Code documentation site is a mature, production-ready Docusaurus project that serves as the comprehensive documentation hub for the Kilo Code VS Code extension. The site is hosted at https://kilo.ai/docs and provides extensive documentation covering installation, usage, features, and extension capabilities.
 
 ## Current Work Focus
 

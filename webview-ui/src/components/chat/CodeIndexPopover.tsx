@@ -41,6 +41,7 @@ import {
 	PopoverContent,
 	Slider,
 	StandardTooltip,
+	Button,
 } from "@src/components/ui"
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
@@ -65,6 +66,10 @@ interface LocalCodeIndexSettings {
 	codebaseIndexEnabled: boolean
 	codebaseIndexQdrantUrl: string
 	codebaseIndexEmbedderProvider: EmbedderProvider
+	// kilocode_change - start
+	codebaseIndexVectorStoreProvider: "lancedb" | "qdrant"
+	codebaseIndexLancedbVectorStoreDirectory?: string
+	// kilocode_change - end
 	codebaseIndexEmbedderBaseUrl?: string
 	codebaseIndexEmbedderModelId: string
 	codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
@@ -214,6 +219,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEnabled: true,
 		codebaseIndexQdrantUrl: "",
 		codebaseIndexEmbedderProvider: "openai",
+		// kilocode_change - start
+		codebaseIndexVectorStoreProvider: "qdrant",
+		codebaseIndexLancedbVectorStoreDirectory: undefined,
+		// kilocode_change - end
 		codebaseIndexEmbedderBaseUrl: "",
 		codebaseIndexEmbedderModelId: "",
 		codebaseIndexEmbedderModelDimension: undefined,
@@ -242,11 +251,23 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 	// Initialize settings from global state
 	useEffect(() => {
+		// kilocode_change start
+		// Don't update settings if we just saved (prevents race condition with state updates)
+		// Skip update if we're currently saving or just saved
+		if (saveStatus === "saving" || saveStatus === "saved") {
+			return
+		}
+		// kilocode_change end
+
 		if (codebaseIndexConfig) {
 			const settings = {
 				codebaseIndexEnabled: codebaseIndexConfig.codebaseIndexEnabled ?? true,
 				codebaseIndexQdrantUrl: codebaseIndexConfig.codebaseIndexQdrantUrl || "",
 				codebaseIndexEmbedderProvider: codebaseIndexConfig.codebaseIndexEmbedderProvider || "openai",
+				// kilocode_change - start
+				codebaseIndexVectorStoreProvider: codebaseIndexConfig.codebaseIndexVectorStoreProvider || "qdrant",
+				codebaseIndexLancedbVectorStoreDirectory: codebaseIndexConfig.codebaseIndexLancedbVectorStoreDirectory,
+				// kilocode_change - end
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig.codebaseIndexEmbedderBaseUrl || "",
 				codebaseIndexEmbedderModelId: codebaseIndexConfig.codebaseIndexEmbedderModelId || "",
 				codebaseIndexEmbedderModelDimension:
@@ -270,7 +291,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			// Request secret status to check if secrets exist
 			vscode.postMessage({ type: "requestCodeIndexSecretStatus" })
 		}
-	}, [codebaseIndexConfig])
+	}, [codebaseIndexConfig, saveStatus]) // kilocode_change - Added saveStatus to dependency array
 
 	// Request initial indexing status
 	useEffect(() => {
@@ -447,6 +468,15 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 	// Validation function
 	const validateSettings = (): boolean => {
+		// kilocode_change start
+		// If codebase indexing is disabled, skip validation of configuration fields
+		// User should be able to disable the feature without having all fields filled in
+		if (!currentSettings.codebaseIndexEnabled) {
+			setFormErrors({})
+			return true
+		}
+		// kilocode_change end
+
 		const schema = createValidationSchema(currentSettings.codebaseIndexEmbedderProvider, t)
 
 		// Prepare data for validation
@@ -484,6 +514,14 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					}
 				})
 				setFormErrors(errors)
+
+				// kilocode_change start
+				// Auto-expand Setup section if there are validation errors
+				// (so users can see what needs to be configured)
+				if (Object.keys(errors).length > 0) {
+					setIsSetupSettingsOpen(true)
+				}
+				// kilocode_change end
 			}
 			return false
 		}
@@ -1156,6 +1194,28 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										</>
 									)}
 
+									{/* vectorStoreProviderLabel */}
+									{/* kilocode_change start */}
+									<div className="space-y-2">
+										<label className="text-sm font-medium">
+											{t("settings:codeIndex.vectorStoreProviderLabel")}
+										</label>
+										<Select
+											value={currentSettings.codebaseIndexVectorStoreProvider}
+											onValueChange={(value: "lancedb" | "qdrant") => {
+												updateSetting("codebaseIndexVectorStoreProvider", value)
+											}}>
+											<SelectTrigger className="w-full">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="qdrant">Qdrant</SelectItem>
+												<SelectItem value="lancedb">LanceDB</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+									{/* kilocode_change end */}
+
 									{currentSettings.codebaseIndexEmbedderProvider === "vercel-ai-gateway" && (
 										<>
 											<div className="space-y-2">
@@ -1292,53 +1352,86 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									)}
 
 									{/* Qdrant Settings */}
-									<div className="space-y-2">
-										<label className="text-sm font-medium">
-											{t("settings:codeIndex.qdrantUrlLabel")}
-										</label>
-										<VSCodeTextField
-											value={currentSettings.codebaseIndexQdrantUrl || ""}
-											onInput={(e: any) =>
-												updateSetting("codebaseIndexQdrantUrl", e.target.value)
-											}
-											onBlur={(e: any) => {
-												// Set default Qdrant URL if field is empty
-												if (!e.target.value.trim()) {
-													currentSettings.codebaseIndexQdrantUrl = DEFAULT_QDRANT_URL
-													updateSetting("codebaseIndexQdrantUrl", DEFAULT_QDRANT_URL)
-												}
-											}}
-											placeholder={t("settings:codeIndex.qdrantUrlPlaceholder")}
-											className={cn("w-full", {
-												"border-red-500": formErrors.codebaseIndexQdrantUrl,
-											})}
-										/>
-										{formErrors.codebaseIndexQdrantUrl && (
-											<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
-												{formErrors.codebaseIndexQdrantUrl}
-											</p>
-										)}
-									</div>
+									{currentSettings.codebaseIndexVectorStoreProvider === "qdrant" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.qdrantUrlLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexQdrantUrl || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexQdrantUrl", e.target.value)
+													}
+													onBlur={(e: any) => {
+														// Set default Qdrant URL if field is empty
+														if (!e.target.value.trim()) {
+															currentSettings.codebaseIndexQdrantUrl = DEFAULT_QDRANT_URL
+															updateSetting("codebaseIndexQdrantUrl", DEFAULT_QDRANT_URL)
+														}
+													}}
+													placeholder={t("settings:codeIndex.qdrantUrlPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexQdrantUrl,
+													})}
+												/>
+												{formErrors.codebaseIndexQdrantUrl && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexQdrantUrl}
+													</p>
+												)}
+											</div>
 
-									<div className="space-y-2">
-										<label className="text-sm font-medium">
-											{t("settings:codeIndex.qdrantApiKeyLabel")}
-										</label>
-										<VSCodeTextField
-											type="password"
-											value={currentSettings.codeIndexQdrantApiKey || ""}
-											onInput={(e: any) => updateSetting("codeIndexQdrantApiKey", e.target.value)}
-											placeholder={t("settings:codeIndex.qdrantApiKeyPlaceholder")}
-											className={cn("w-full", {
-												"border-red-500": formErrors.codeIndexQdrantApiKey,
-											})}
-										/>
-										{formErrors.codeIndexQdrantApiKey && (
-											<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
-												{formErrors.codeIndexQdrantApiKey}
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.qdrantApiKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codeIndexQdrantApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codeIndexQdrantApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.qdrantApiKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codeIndexQdrantApiKey,
+													})}
+												/>
+												{formErrors.codeIndexQdrantApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codeIndexQdrantApiKey}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
+									{/* kilocode_change start */}
+									{/* LanceDB Vector Store Settings */}
+									{currentSettings.codebaseIndexVectorStoreProvider === "lancedb" && (
+										<div className="space-y-2">
+											<label className="text-sm font-medium">
+												{t("settings:codeIndex.lancedbVectorStoreDirectoryLabel")}
+											</label>
+											<VSCodeTextField
+												value={currentSettings.codebaseIndexLancedbVectorStoreDirectory || ""}
+												onInput={(e: any) =>
+													updateSetting(
+														"codebaseIndexLancedbVectorStoreDirectory",
+														e.target.value,
+													)
+												}
+												placeholder={t(
+													"settings:codeIndex.lancedbVectorStoreDirectoryPlaceholder",
+												)}
+												className="w-full"
+											/>
+											<p className="text-xs text-vscode-descriptionForeground">
+												{t("settings:codeIndex.lancedbVectorStoreDirectoryDescription")}
 											</p>
-										)}
-									</div>
+										</div>
+									)}
+									{/* kilocode_change end */}
 								</div>
 							)}
 						</div>
@@ -1467,11 +1560,11 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 								{currentSettings.codebaseIndexEnabled &&
 									(indexingStatus.systemStatus === "Error" ||
 										indexingStatus.systemStatus === "Standby") && (
-										<VSCodeButton
+										<Button
 											onClick={() => vscode.postMessage({ type: "startIndexing" })}
 											disabled={saveStatus === "saving" || hasUnsavedChanges}>
 											{t("settings:codeIndex.startIndexingButton")}
-										</VSCodeButton>
+										</Button>
 									)}
 
 								{currentSettings.codebaseIndexEnabled &&
@@ -1479,9 +1572,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										indexingStatus.systemStatus === "Error") && (
 										<AlertDialog>
 											<AlertDialogTrigger asChild>
-												<VSCodeButton appearance="secondary">
+												<Button variant="secondary">
 													{t("settings:codeIndex.clearIndexDataButton")}
-												</VSCodeButton>
+												</Button>
 											</AlertDialogTrigger>
 											<AlertDialogContent>
 												<AlertDialogHeader>
@@ -1506,13 +1599,13 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									)}
 							</div>
 
-							<VSCodeButton
+							<Button
 								onClick={handleSaveSettings}
 								disabled={!hasUnsavedChanges || saveStatus === "saving"}>
 								{saveStatus === "saving"
 									? t("settings:codeIndex.saving")
 									: t("settings:codeIndex.saveSettings")}
-							</VSCodeButton>
+							</Button>
 						</div>
 
 						{/* Save Status Messages */}

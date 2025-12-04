@@ -27,7 +27,7 @@ const tmpDir = path.join(os.tmpdir(), "CheckpointService")
 const initWorkspaceRepo = async ({
 	workspaceDir,
 	userName = "Kilo Code",
-	userEmail = "support@kilocode.ai",
+	userEmail = "support@kilo.ai",
 	testFileName = "test.txt",
 	textFileContent = "Hello, world!",
 }: {
@@ -832,6 +832,95 @@ describe.each([[RepoPerTaskCheckpointService, "RepoPerTaskCheckpointService"]])(
 
 				// File should be back to original state
 				expect(await fs.readFile(testFile, "utf-8")).toBe("Hello, world!")
+			})
+
+			it("isolates checkpoint operations from GIT_DIR environment variable", async () => {
+				// This test verifies the fix for the issue where GIT_DIR environment variable
+				// causes checkpoint commits to go to the wrong repository.
+				// In the real-world Dev Container scenario, GIT_DIR is set BEFORE Roo starts,
+				// so we need to set it BEFORE creating the checkpoint service.
+
+				// Create a separate git directory to simulate GIT_DIR pointing elsewhere
+				const externalGitDir = path.join(tmpDir, `external-git-${Date.now()}`)
+				await fs.mkdir(externalGitDir, { recursive: true })
+				const externalGit = simpleGit(externalGitDir)
+				await externalGit.init()
+				await externalGit.addConfig("user.name", "External User")
+				await externalGit.addConfig("user.email", "external@example.com")
+
+				// Create and commit a file in the external repo
+				const externalFile = path.join(externalGitDir, "external.txt")
+				await fs.writeFile(externalFile, "External content")
+				await externalGit.add(".")
+				await externalGit.commit("External commit")
+
+				// Store the original commit count in the external repo
+				const externalLogBefore = await externalGit.log()
+				const externalCommitCountBefore = externalLogBefore.total
+
+				// Initialize the workspace repo BEFORE setting GIT_DIR
+				// (In Dev Containers, the workspace repo already exists before GIT_DIR is set)
+				const testShadowDir = path.join(tmpDir, `shadow-git-dir-test-${Date.now()}`)
+				const testWorkspaceDir = path.join(tmpDir, `workspace-git-dir-test-${Date.now()}`)
+				const testRepo = await initWorkspaceRepo({ workspaceDir: testWorkspaceDir })
+
+				// Set GIT_DIR to point to the external repository BEFORE creating the service
+				// This simulates the Dev Container environment where GIT_DIR is already set
+				const originalGitDir = process.env.GIT_DIR
+				const externalDotGit = path.join(externalGitDir, ".git")
+				process.env.GIT_DIR = externalDotGit
+
+				try {
+					// Create a new checkpoint service with GIT_DIR already set
+					// This is the key difference - we're creating the service
+					// while GIT_DIR is set, just like in a real Dev Container
+					const testService = await klass.create({
+						taskId: `test-git-dir-${Date.now()}`,
+						shadowDir: testShadowDir,
+						workspaceDir: testWorkspaceDir,
+						log: () => {},
+					})
+					await testService.initShadowGit()
+
+					// Make a change in the workspace and save a checkpoint
+					const testWorkspaceFile = path.join(testWorkspaceDir, "test.txt")
+					await fs.writeFile(testWorkspaceFile, "Modified with GIT_DIR set")
+					const commit = await testService.saveCheckpoint("Checkpoint with GIT_DIR set")
+					expect(commit?.commit).toBeTruthy()
+
+					// Verify the checkpoint was saved in the shadow repo, not the external repo
+					// Temporarily clear GIT_DIR to check the external repo
+					delete process.env.GIT_DIR
+					const externalGitCheck = simpleGit(externalGitDir)
+					const externalLogAfter = await externalGitCheck.log()
+					const externalCommitCountAfter = externalLogAfter.total
+					// Restore GIT_DIR
+					process.env.GIT_DIR = externalDotGit
+
+					// External repo should have the same number of commits (no new commits)
+					expect(externalCommitCountAfter).toBe(externalCommitCountBefore)
+
+					// Verify the checkpoint is accessible in the shadow repo
+					const diff = await testService.getDiff({ to: commit!.commit })
+					expect(diff).toHaveLength(1)
+					expect(diff[0].paths.relative).toBe("test.txt")
+					expect(diff[0].content.after).toBe("Modified with GIT_DIR set")
+
+					// Verify we can restore the checkpoint
+					await fs.writeFile(testWorkspaceFile, "Another modification")
+					await testService.restoreCheckpoint(commit!.commit)
+					expect(await fs.readFile(testWorkspaceFile, "utf-8")).toBe("Modified with GIT_DIR set")
+				} finally {
+					// Restore original GIT_DIR
+					if (originalGitDir !== undefined) {
+						process.env.GIT_DIR = originalGitDir
+					} else {
+						delete process.env.GIT_DIR
+					}
+
+					// Clean up external git directory
+					await fs.rm(externalGitDir, { recursive: true, force: true })
+				}
 			})
 		})
 	},

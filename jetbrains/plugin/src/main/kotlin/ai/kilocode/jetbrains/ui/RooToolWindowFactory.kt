@@ -124,7 +124,7 @@ class RooToolWindowFactory : ToolWindowFactory {
                     append("<div style='background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; color: #721c24;'>")
                     append("<b>⚠️ JCEF Not Supported</b><br>")
                     append("Your IDE runtime does not support JCEF. Please use a JCEF-enabled runtime.<br>")
-                    append("<a href='https://kilocode.ai/docs/jetbrains-troubleshooting' target='_blank' style='color: #721c24; text-decoration: underline;'>See JetBrains docs for how to enable JCEF in your IDE</a>")
+                    append("<a href='https://kilo.ai/docs/jetbrains-troubleshooting' target='_blank' style='color: #721c24; text-decoration: underline;'>See JetBrains docs for how to enable JCEF in your IDE</a>")
                     append("</div>")
                     append("<br>")
                 }
@@ -194,7 +194,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             preferredSize = Dimension(150, 30)
             addActionListener {
                 // TODO: Update to point to actual known issues documentation
-                BrowserUtil.browse("https://kilocode.ai/docs")
+                BrowserUtil.browse("https://kilo.ai/docs")
             }
         }
 
