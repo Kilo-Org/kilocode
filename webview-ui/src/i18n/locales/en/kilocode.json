@@ -249,6 +249,10 @@
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
 			},
+			"enableChatAutocomplete": {
+				"label": "Chat Input Autocomplete",
+				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
+			},
 			"keybindingNotFound": "not found",
 			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."

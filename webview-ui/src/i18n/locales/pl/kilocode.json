@@ -238,7 +238,11 @@
 			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
 			"configureAutocompleteProfile": "Użyj dowolnego modelu, przechodząc do profili i konfigurując Profil typu Autouzupełnianie.",
 			"model": "Model",
-			"provider": "Dostawca"
+			"provider": "Dostawca",
+			"enableChatAutocomplete": {
+				"label": "Automatyczne uzupełnianie wpisów czatu",
+				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			}
 		}
 	},
 	"virtualProvider": {

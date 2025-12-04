@@ -238,7 +238,11 @@
 			"noModelConfigured": "Nenhum modelo de autocompletar adequado encontrado. Configure um provedor nas configurações da API.",
 			"configureAutocompleteProfile": "Use qualquer modelo indo para perfis e configurando um Perfil do Tipo de Perfil Autocompletar.",
 			"model": "Modelo",
-			"provider": "Provedor"
+			"provider": "Provedor",
+			"enableChatAutocomplete": {
+				"label": "Preenchimento Automático do Chat",
+				"description": "Quando ativado, o Kilo Code irá sugerir conclusões enquanto você digita no campo de chat. Pressione Tab para aceitar as sugestões."
+			}
 		}
 	},
 	"virtualProvider": {

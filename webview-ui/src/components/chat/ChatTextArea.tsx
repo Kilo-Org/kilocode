@@ -153,6 +153,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			globalWorkflows, // kilocode_change
 			taskHistoryVersion, // kilocode_change
 			clineMessages,
+			ghostServiceSettings, // kilocode_change
 		} = useExtensionState()
 
 		// kilocode_change start - autocomplete profile type system
@@ -314,6 +315,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			inputValue,
 			setInputValue,
 			textAreaRef,
+			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
 		})
 		// kilocode_change end: FIM autocomplete ghost text
 

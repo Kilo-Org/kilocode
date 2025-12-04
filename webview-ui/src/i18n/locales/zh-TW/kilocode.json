@@ -240,7 +240,11 @@
 			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
 			"configureAutocompleteProfile": "前往設定檔並設定自動補全類型的設定檔即可使用任意模型。",
 			"model": "模型",
-			"provider": "供應商"
+			"provider": "供應商",
+			"enableChatAutocomplete": {
+				"label": "聊天输入自动完成",
+				"description": "启用后，Kilo Code 将在您在聊天输入框中输入时提供补全建议。按 Tab 键接受建议。"
+			}
 		}
 	},
 	"virtualProvider": {

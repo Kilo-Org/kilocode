@@ -231,7 +231,11 @@
 			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
 			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
-			"provider": "Penyedia"
+			"provider": "Penyedia",
+			"enableChatAutocomplete": {
+				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
+				"label": "Pelengkapan Otomatis Input Obrolan"
+			}
 		}
 	},
 	"virtualProvider": {

@@ -245,7 +245,11 @@
 			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
 			"configureAutocompleteProfile": "プロファイルに移動し、プロファイルタイプがオートコンプリートのプロファイルを設定することで、任意のモデルを使用できます。",
 			"model": "モデル",
-			"provider": "プロバイダー"
+			"provider": "プロバイダー",
+			"enableChatAutocomplete": {
+				"description": "有効にすると、Kilo Codeはチャット入力の入力中に候補を提案します。Tabキーを押して候補を受け入れることができます。",
+				"label": "チャット入力オートコンプリート"
+			}
 		}
 	},
 	"virtualProvider": {

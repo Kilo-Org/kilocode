@@ -237,7 +237,11 @@
 			},
 			"keybindingNotFound": "nicht gefunden",
 			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen.",
-			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst."
+			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst.",
+			"enableChatAutocomplete": {
+				"label": "Chat-Eingabe-Autovervollständigung",
+				"description": "Wenn aktiviert, wird Kilo Code Vervollständigungen vorschlagen, während Sie im Chat-Eingabefeld tippen. Drücken Sie Tab, um Vorschläge zu akzeptieren."
+			}
 		}
 	},
 	"virtualProvider": {
