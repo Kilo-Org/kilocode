@@ -6,6 +6,10 @@ import type {
 	RangeInFile,
 	TabAutocompleteOptions as CoreTabAutocompleteOptions,
 } from "../continuedev/core"
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { GhostModel } from "./GhostModel"
 
 export interface GhostSuggestionContext {
 	document: vscode.TextDocument
@@ -144,4 +148,11 @@ export function contextToAutocompleteInput(context: GhostSuggestionContext): Aut
 		manuallyPassFileContents: undefined,
 		manuallyPassPrefix: prefix,
 	}
+}
+
+export interface GhostContextProvider {
+	contextService: ContextRetrievalService
+	ide: VsCodeIde
+	model: GhostModel
+	ignoreController?: Promise<RooIgnoreController>
 }

@@ -8,8 +8,8 @@ import {
 import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
-import { GhostContextProvider } from "../GhostContextProvider"
 import * as telemetry from "../AutocompleteTelemetry"
+import * as GhostContextProviderModule from "../getProcessedSnippets"
 
 // Mock RooIgnoreController to prevent vscode.RelativePattern errors
 vi.mock("../../../../core/ignore/RooIgnoreController", () => {
@@ -583,15 +583,7 @@ describe("GhostInlineCompletionProvider", () => {
 			languageModelAccessInformation: {} as any,
 		} as unknown as vscode.ExtensionContext
 
-		// Mock GhostContextProvider
-		const mockIde = {
-			getWorkspaceDirs: vi.fn().mockResolvedValue([]),
-			getOpenFiles: vi.fn().mockResolvedValue([]),
-			readFile: vi.fn().mockResolvedValue(""),
-		}
-
-		vi.spyOn(GhostContextProvider.prototype, "getIde").mockReturnValue(mockIde as any)
-		vi.spyOn(GhostContextProvider.prototype, "getProcessedSnippets").mockResolvedValue({
+		vi.spyOn(GhostContextProviderModule, "getProcessedSnippets").mockResolvedValue({
 			filepathUri: "file:///test.ts",
 			helper: {
 				filepath: "file:///test.ts",

@@ -313,7 +313,11 @@ async function renameSession(context: CommandContext, newName: string): Promise<
 	}
 
 	try {
-		await sessionService.renameSession(newName)
+		if (!sessionService.sessionId) {
+			throw new Error("No active session to rename")
+		}
+
+		await sessionService.renameSession(sessionService.sessionId, newName)
 
 		addMessage({
 			...generateMessage(),

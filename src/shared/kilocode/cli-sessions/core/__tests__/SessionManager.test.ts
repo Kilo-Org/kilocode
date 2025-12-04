@@ -434,26 +434,23 @@ describe("SessionManager", () => {
 
 	describe("renameSession", () => {
 		it("should throw error when no active session", async () => {
-			sessionManager.sessionId = null
-
-			await expect(sessionManager.renameSession("New Title")).rejects.toThrow("No active session")
+			await expect(sessionManager.renameSession("", "New Title")).rejects.toThrow("No active session")
 		})
 
 		it("should throw error when title is empty", async () => {
-			sessionManager.sessionId = "session-123"
-
-			await expect(sessionManager.renameSession("   ")).rejects.toThrow("Session title cannot be empty")
+			await expect(sessionManager.renameSession("session-123", "   ")).rejects.toThrow(
+				"Session title cannot be empty",
+			)
 		})
 
 		it("should rename the session", async () => {
-			sessionManager.sessionId = "session-123"
 			vi.mocked(sessionManager.sessionClient!.update).mockResolvedValue({
 				session_id: "session-123",
 				title: "New Title",
 				updated_at: new Date().toISOString(),
 			})
 
-			await sessionManager.renameSession("New Title")
+			await sessionManager.renameSession("session-123", "New Title")
 
 			expect(sessionManager.sessionClient!.update).toHaveBeenCalledWith({
 				session_id: "session-123",
@@ -463,14 +460,13 @@ describe("SessionManager", () => {
 		})
 
 		it("should trim the title", async () => {
-			sessionManager.sessionId = "session-123"
 			vi.mocked(sessionManager.sessionClient!.update).mockResolvedValue({
 				session_id: "session-123",
 				title: "Trimmed Title",
 				updated_at: new Date().toISOString(),
 			})
 
-			await sessionManager.renameSession("  Trimmed Title  ")
+			await sessionManager.renameSession("session-123", "  Trimmed Title  ")
 
 			expect(sessionManager.sessionClient!.update).toHaveBeenCalledWith({
 				session_id: "session-123",
@@ -635,6 +631,32 @@ describe("SessionManager", () => {
 			await destroyPromise
 
 			expect(sessionManager["isSyncing"]).toBe(false)
+		})
+
+		it("should clear currentTaskId to prevent session ID clobbering across tasks", async () => {
+			sessionManager.setPath("task-A", "apiConversationHistoryPath", "/path/to/taskA/api.json")
+			sessionManager.sessionId = "session-A"
+			vi.mocked(sessionManager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-A")
+			vi.mocked(sessionManager.sessionClient!.create).mockResolvedValue({
+				session_id: "session-B",
+				title: "Task B",
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+			})
+
+			await sessionManager.destroy()
+
+			expect(sessionManager["currentTaskId"]).toBeNull()
+			expect(sessionManager.sessionId).toBeNull()
+
+			sessionManager.setPath("task-B", "apiConversationHistoryPath", "/path/to/taskB/api.json")
+
+			vi.mocked(sessionManager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
+
+			await sessionManager["syncSession"]()
+
+			expect(sessionManager.sessionId).toBe("session-B")
+			expect(sessionManager.sessionId).not.toBe("session-A")
 		})
 	})
 
