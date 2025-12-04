@@ -1,0 +1,5 @@
+# Description: Should implement debounce function
+function handleSearch(query) {
+  // TODO: Add debounce to prevent excessive API calls<<<CURSOR>>>
+  searchAPI(query);
+}

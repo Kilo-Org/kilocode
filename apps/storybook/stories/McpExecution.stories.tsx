@@ -5,7 +5,7 @@ import { McpExecution } from "../../../webview-ui/src/components/chat/McpExecuti
 import { withTooltipProvider } from "../src/decorators/withTooltipProvider"
 
 const meta = {
-	title: "Chat/Row/McpExecution",
+	title: "Chat/McpExecution",
 	component: McpExecution,
 	parameters: { layout: "padded" },
 } satisfies Meta<typeof McpExecution>

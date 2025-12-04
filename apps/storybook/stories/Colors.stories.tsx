@@ -50,7 +50,7 @@ const ColorPreviewTable = () => {
 }
 
 const meta: Meta<typeof ColorPreviewTable> = {
-	title: "Theme",
+	title: "System/Theme",
 	component: ColorPreviewTable,
 	parameters: {
 		layout: "fullscreen",

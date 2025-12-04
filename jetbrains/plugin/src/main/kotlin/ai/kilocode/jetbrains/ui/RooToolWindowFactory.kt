@@ -4,32 +4,32 @@
 
 package ai.kilocode.jetbrains.ui
 
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.content.ContentFactory
-import com.intellij.ide.plugins.PluginManagerCore
-import com.intellij.openapi.extensions.PluginId
-import com.intellij.ui.jcef.JBCefApp
-import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.ide.BrowserUtil
 import ai.kilocode.jetbrains.actions.OpenDevToolsAction
+import ai.kilocode.jetbrains.plugin.DebugMode
 import ai.kilocode.jetbrains.plugin.WecoderPlugin
 import ai.kilocode.jetbrains.plugin.WecoderPluginService
-import ai.kilocode.jetbrains.plugin.DEBUG_MODE
+import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.webview.DragDropHandler
 import ai.kilocode.jetbrains.webview.WebViewCreationCallback
 import ai.kilocode.jetbrains.webview.WebViewInstance
 import ai.kilocode.jetbrains.webview.WebViewManager
-import ai.kilocode.jetbrains.util.PluginConstants
+import com.intellij.ide.BrowserUtil
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.jcef.JBCefApp
 import java.awt.BorderLayout
-import java.awt.datatransfer.StringSelection
-import java.awt.Toolkit
 import java.awt.Dimension
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -48,10 +48,10 @@ class RooToolWindowFactory : ToolWindowFactory {
             titleActions.add(action)
         }
         // Add developer tools button only in debug mode
-        if ( WecoderPluginService.getDebugMode() != DEBUG_MODE.NONE) {
+        if (WecoderPluginService.getDebugMode() != DebugMode.NONE) {
             titleActions.add(OpenDevToolsAction { project.getService(WebViewManager::class.java).getLatestWebView() })
         }
-        
+
         toolWindow.setTitleActions(titleActions)
 
         // webview panel
@@ -60,29 +60,29 @@ class RooToolWindowFactory : ToolWindowFactory {
         val content = contentFactory.createContent(
             rooToolWindowContent.content,
             "",
-            false
+            false,
         )
         toolWindow.contentManager.addContent(content)
     }
 
     private class RooToolWindowContent(
         private val project: Project,
-        private val toolWindow: ToolWindow
+        private val toolWindow: ToolWindow,
     ) : WebViewCreationCallback {
         private val logger = Logger.getInstance(RooToolWindowContent::class.java)
-        
+
         // Get WebViewManager instance
         private val webViewManager = project.getService(WebViewManager::class.java)
-        
+
         // Content panel
         private val contentPanel = JPanel(BorderLayout())
-        
+
         // Placeholder label
         private val placeholderLabel = JLabel(createSystemInfoText())
 
         // System info text for copying
         private val systemInfoText = createSystemInfoPlainText()
-        
+
         /**
          * Create system information text in HTML format
          */
@@ -94,10 +94,10 @@ class RooToolWindowFactory : ToolWindowFactory {
             val osVersion = System.getProperty("os.version")
             val osArch = System.getProperty("os.arch")
             val jcefSupported = JBCefApp.isSupported()
-            
+
             // Check for Linux ARM system
             val isLinuxArm = osName.lowercase().contains("linux") && (osArch.lowercase().contains("aarch64") || osArch.lowercase().contains("arm"))
-            
+
             return buildString {
                 append("<html><body style='width: 300px; padding: 8px;'>")
                 append("<p>Kilo Code is initializing...")
@@ -109,7 +109,7 @@ class RooToolWindowFactory : ToolWindowFactory {
                 append("<tr><td><b>Plugin Version:</b></td><td>$pluginVersion</td></tr>")
                 append("<tr><td><b>JCEF Support:</b></td><td>${if (jcefSupported) "Yes" else "No"}</td></tr>")
                 append("</table>")
-                
+
                 // Add warning messages
                 append("<br>")
                 if (isLinuxArm) {
@@ -119,7 +119,7 @@ class RooToolWindowFactory : ToolWindowFactory {
                     append("</div>")
                     append("<br>")
                 }
-                
+
                 if (!jcefSupported) {
                     append("<div style='background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; color: #721c24;'>")
                     append("<b>⚠️ JCEF Not Supported</b><br>")
@@ -128,17 +128,17 @@ class RooToolWindowFactory : ToolWindowFactory {
                     append("</div>")
                     append("<br>")
                 }
-                
+
                 // Add Known Issues text without link
                 append("<div style='text-align: center; margin-top: 10px;'>")
                 append("If this interface persists for a long time, you can refer to the ")
                 append(" known issues documentation to check if there are any known problems.")
                 append("</div>")
-                
+
                 append("</body></html>")
             }
         }
-        
+
         /**
          * Create system information text in plain text format for copying
          */
@@ -150,10 +150,10 @@ class RooToolWindowFactory : ToolWindowFactory {
             val osVersion = System.getProperty("os.version")
             val osArch = System.getProperty("os.arch")
             val jcefSupported = JBCefApp.isSupported()
-            
+
             // Check for Linux ARM system
             val isLinuxArm = osName.lowercase().contains("linux") && (osArch.lowercase().contains("aarch64") || osArch.lowercase().contains("arm"))
-            
+
             return buildString {
                 append("System Information\n")
                 append("==================\n")
@@ -162,7 +162,7 @@ class RooToolWindowFactory : ToolWindowFactory {
                 append("IDE Version: ${appInfo.fullApplicationName} (build ${appInfo.build})\n")
                 append("Plugin Version: $pluginVersion\n")
                 append("JCEF Support: ${if (jcefSupported) "Yes" else "No"}\n")
-                
+
                 // Add warning messages
                 append("\n")
                 if (isLinuxArm) {
@@ -170,17 +170,16 @@ class RooToolWindowFactory : ToolWindowFactory {
                     append("Linux ARM systems are not currently supported by this plugin.\n")
                     append("\n")
                 }
-                
+
                 if (!jcefSupported) {
                     append("WARNING: JCEF Not Supported\n")
                     append("Your IDE runtime does not support JCEF. Please use a JCEF-enabled runtime.\n")
                     append("See Known Issues for more information\n")
                     append("\n")
                 }
-                
             }
         }
-        
+
         /**
          * Copy system information to clipboard
          */
@@ -189,7 +188,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             val clipboard = Toolkit.getDefaultToolkit().getSystemClipboard()
             clipboard.setContents(stringSelection, null)
         }
-        
+
         // Known Issues button
         private val knownIssuesButton = JButton("Known Issues").apply {
             preferredSize = Dimension(150, 30)
@@ -198,34 +197,34 @@ class RooToolWindowFactory : ToolWindowFactory {
                 BrowserUtil.browse("https://kilocode.ai/docs")
             }
         }
-        
+
         // Copy button
         private val copyButton = JButton("Copy System Info").apply {
             preferredSize = Dimension(150, 30)
             addActionListener { copySystemInfo() }
         }
-        
+
         // Button panel to hold both buttons side by side
         private val buttonPanel = JPanel().apply {
             layout = BorderLayout()
             add(knownIssuesButton, BorderLayout.WEST)
             add(copyButton, BorderLayout.EAST)
         }
-        
+
         private var dragDropHandler: DragDropHandler? = null
-        
+
         // Main panel
         val content: JPanel = JPanel(BorderLayout()).apply {
             // Set content panel with both label and button
             contentPanel.layout = BorderLayout()
             contentPanel.add(placeholderLabel, BorderLayout.CENTER)
-            
+
             // Add button panel at the bottom of content panel
             contentPanel.add(buttonPanel, BorderLayout.SOUTH)
-            
+
             add(contentPanel, BorderLayout.CENTER)
         }
-        
+
         init {
             // Try to get existing WebView
             webViewManager.getLatestWebView()?.let { webView ->
@@ -245,9 +244,9 @@ class RooToolWindowFactory : ToolWindowFactory {
                         hideSystemInfo()
                     }
                 }
-            }?:webViewManager.addCreationCallback(this, toolWindow.disposable)
+            } ?: webViewManager.addCreationCallback(this, toolWindow.disposable)
         }
-        
+
         /**
          * WebView creation callback implementation
          */
@@ -264,13 +263,13 @@ class RooToolWindowFactory : ToolWindowFactory {
                 }
             }
         }
-        
+
         /**
          * Add WebView component to UI
          */
         private fun addWebViewComponent(webView: WebViewInstance) {
             logger.info("Adding WebView component to UI: ${webView.viewType}/${webView.viewId}")
-            
+
             // Check if WebView component is already added
             val components = contentPanel.components
             for (component in components) {
@@ -279,25 +278,25 @@ class RooToolWindowFactory : ToolWindowFactory {
                     return
                 }
             }
-            
+
             // Add WebView component without removing existing components
             contentPanel.add(webView.browser.component, BorderLayout.CENTER)
-            
+
             setupDragAndDropSupport(webView)
-            
+
             // Relayout
             contentPanel.revalidate()
             contentPanel.repaint()
-            
+
             logger.info("WebView component added to tool window")
         }
-        
+
         /**
          * Hide system info placeholder
          */
         private fun hideSystemInfo() {
             logger.info("Hiding system info placeholder")
-            
+
             // Remove all components from content panel except WebView component
             val components = contentPanel.components
             for (component in components) {
@@ -309,21 +308,21 @@ class RooToolWindowFactory : ToolWindowFactory {
             // Relayout
             contentPanel.revalidate()
             contentPanel.repaint()
-            
+
             logger.info("System info placeholder hidden")
         }
-        
+
         /**
          * Setup drag and drop support
          */
         private fun setupDragAndDropSupport(webView: WebViewInstance) {
             try {
                 logger.info("Setting up drag and drop support for WebView")
-                
+
                 dragDropHandler = DragDropHandler(webView, contentPanel)
-                
+
                 dragDropHandler?.setupDragAndDrop()
-                
+
                 logger.info("Drag and drop support enabled")
             } catch (e: Exception) {
                 logger.error("Failed to setup drag and drop support", e)

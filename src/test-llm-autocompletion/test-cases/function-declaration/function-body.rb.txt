@@ -1,0 +1,3 @@
+# Description: Should complete Ruby method body
+def calculate_sum(a, b)
+	<<<AUTOCOMPLETE_HERE>>>

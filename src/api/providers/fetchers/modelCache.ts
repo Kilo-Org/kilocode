@@ -20,14 +20,22 @@ import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
 import { getOCAModels } from "./oca"
 import { GetModelsOptions } from "../../../shared/api"
-import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
+// kilocode_change start
+import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
+import { getGeminiModels } from "./gemini"
+import { getInceptionModels } from "./inception"
+import { getSyntheticModels } from "./synthetic"
+// kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
 import { DEFAULT_OCA_BASE_URL } from "../oca/utils/constants"
+import { getRooModels } from "./roo"
+import { getChutesModels } from "./chutes"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -91,14 +99,24 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change start
-			case "kilocode-openrouter":
+			case "kilocode": {
+				const backendUrl = options.kilocodeOrganizationId
+					? `https://api.kilocode.ai/api/organizations/${options.kilocodeOrganizationId}`
+					: "https://api.kilocode.ai/api/openrouter"
+				const openRouterBaseUrl = getKiloUrlFromToken(backendUrl, options.kilocodeToken ?? "")
 				models = await getOpenRouterModels({
-					openRouterBaseUrl:
-						getKiloBaseUriFromToken(options.kilocodeToken ?? "") +
-						(options.kilocodeOrganizationId
-							? `/api/organizations/${options.kilocodeOrganizationId}`
-							: "/api/openrouter"),
+					openRouterBaseUrl,
 					headers: options.kilocodeToken ? { Authorization: `Bearer ${options.kilocodeToken}` } : undefined,
+				})
+				break
+			}
+			case "synthetic":
+				models = await getSyntheticModels(options.apiKey)
+				break
+			case "gemini":
+				models = await getGeminiModels({
+					apiKey: options.apiKey,
+					baseUrl: options.baseUrl,
 				})
 				break
 			// kilocode_change end
@@ -124,6 +142,24 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getOCAModels(options.baseUrl ?? DEFAULT_OCA_BASE_URL, options.apiKey)
 				break
 			}
+			// kilocode_change start
+			case "inception":
+				models = await getInceptionModels()
+				break
+			case "ovhcloud":
+				models = await getOvhCloudAiEndpointsModels()
+				break
+			// kilocode_change end
+			case "roo": {
+				// Roo Code Cloud provider requires baseUrl and optional apiKey
+				const rooBaseUrl =
+					options.baseUrl ?? process.env.ROO_CODE_PROVIDER_URL ?? "https://api.roocode.com/proxy"
+				models = await getRooModels(rooBaseUrl, options.apiKey)
+				break
+			}
+			case "chutes":
+				models = await getChutesModels(options.apiKey)
+				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider

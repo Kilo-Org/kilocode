@@ -4,6 +4,13 @@
 
 package ai.kilocode.jetbrains.webview
 
+import ai.kilocode.jetbrains.core.PluginContext
+import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.events.WebviewHtmlUpdateData
+import ai.kilocode.jetbrains.events.WebviewViewProviderData
+import ai.kilocode.jetbrains.ipc.proxy.SerializableObjectWithBuffers
+import ai.kilocode.jetbrains.theme.ThemeChangeListener
+import ai.kilocode.jetbrains.theme.ThemeManager
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.ide.BrowserUtil
@@ -15,13 +22,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefJSQuery
-import ai.kilocode.jetbrains.core.PluginContext
-import ai.kilocode.jetbrains.core.ServiceProxyRegistry
-import ai.kilocode.jetbrains.events.WebviewHtmlUpdateData
-import ai.kilocode.jetbrains.events.WebviewViewProviderData
-import ai.kilocode.jetbrains.ipc.proxy.SerializableObjectWithBuffers
-import ai.kilocode.jetbrains.theme.ThemeChangeListener
-import ai.kilocode.jetbrains.theme.ThemeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,22 +29,26 @@ import kotlinx.coroutines.launch
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
-import org.cef.handler.*
+import org.cef.handler.CefDisplayHandlerAdapter
+import org.cef.handler.CefLoadHandler
+import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.handler.CefResourceRequestHandler
 import org.cef.misc.BoolRef
 import org.cef.network.CefRequest
+import java.awt.BorderLayout
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.pathString
-import java.awt.BorderLayout
 import javax.swing.JButton
 import javax.swing.JFrame
 import javax.swing.JPanel
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.pathString
 
 /**
  * WebView creation callback interface
@@ -122,11 +126,11 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         logger.info("Send theme config to WebView")
 
 //        getAllWebViews().forEach { webView ->
-            try {
-                getLatestWebView()?.sendThemeConfigToWebView(themeConfig, this.bodyThemeClass)
-            } catch (e: Exception) {
-                logger.error("Failed to send theme config to WebView", e)
-            }
+        try {
+            getLatestWebView()?.sendThemeConfigToWebView(themeConfig, this.bodyThemeClass)
+        } catch (e: Exception) {
+            logger.error("Failed to send theme config to WebView", e)
+        }
 //        }
     }
 
@@ -152,7 +156,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
      * @return Saved file path
      */
     private fun saveHtmlToResourceDir(html: String, filename: String): Path? {
-        if( resourceRootDir == null || !resourceRootDir!!.exists() ) {
+        if (resourceRootDir == null || !resourceRootDir!!.exists()) {
             logger.warn("Resource root directory does not exist, cannot save HTML content")
             throw IOException("Resource root directory does not exist")
         }
@@ -183,9 +187,12 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
 
             // If Disposable is provided, automatically remove callback when disposed
             if (disposable != null) {
-                Disposer.register(disposable, Disposable {
-                    removeCreationCallback(callback)
-                })
+                Disposer.register(
+                    disposable,
+                    Disposable {
+                        removeCreationCallback(callback)
+                    },
+                )
             }
         }
 
@@ -241,7 +248,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         // Get location info from extension and set resource root directory
         try {
             @Suppress("UNCHECKED_CAST")
-            val location = extension?.get("location") as? Map<String, Any?>
+            val location = extension.get("location") as? Map<String, Any?>
             val fsPath = location?.get("fsPath") as? String
 
             if (fsPath != null) {
@@ -254,12 +261,11 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                     path.createDirectories()
                 }
 
-                 // Update resource root directory
+                // Update resource root directory
                 resourceRootDir = path
 
                 // Initialize theme manager
                 initializeThemeManager(fsPath)
-
             }
         } catch (e: Exception) {
             logger.error("Failed to get resource directory from extension", e)
@@ -274,15 +280,16 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         val viewId = UUID.randomUUID().toString()
 
         val title = data.options["title"] as? String ?: data.viewType
+
+        @Suppress("UNCHECKED_CAST")
         val state = data.options["state"] as? Map<String, Any?> ?: emptyMap()
 
-        val webview = WebViewInstance(data.viewType, viewId, title, state,project,data.extension)
+        val webview = WebViewInstance(data.viewType, viewId, title, state, project, data.extension)
         // DEBUG HERE!
         // webview.showDebugWindow()
 
         val proxy = protocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostWebviewViews)
         proxy.resolveWebviewView(viewId, data.viewType, title, state, null)
-
 
         // Set as the latest created WebView
         latestWebView = webview
@@ -294,24 +301,26 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
     }
 
     /**
-         * Get the latest created WebView instance
-         */
+     * Get the latest created WebView instance
+     */
     fun getLatestWebView(): WebViewInstance? {
         return latestWebView
     }
 
     /**
-         * Update the HTML content of the WebView
-         * @param data HTML update data
-         */
+     * Update the HTML content of the WebView
+     * @param data HTML update data
+     */
     fun updateWebViewHtml(data: WebviewHtmlUpdateData) {
         data.htmlContent = data.htmlContent.replace("/jetbrains/resources/kilocode/", "./")
         data.htmlContent = data.htmlContent.replace("<html lang=\"en\">", "<html lang=\"en\" style=\"background: var(--vscode-sideBar-background);\">")
         val encodedState = getLatestWebView()?.state.toString().replace("\"", "\\\"")
         val mRst = """<script\s+nonce="([A-Za-z0-9]{32})">""".toRegex().find(data.htmlContent)
         val str = mRst?.value ?: ""
-        data.htmlContent = data.htmlContent.replace(str,"""
-                        ${str}
+        data.htmlContent = data.htmlContent.replace(
+            str,
+            """
+                        $str
                         // First define the function to send messages
                         window.sendMessageToPlugin = function(message) {
                             // Convert JS object to JSON string
@@ -324,7 +333,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                         globalThis.acquireVsCodeApi = (function() {
                             let acquired = false;
 
-                            let state = JSON.parse('${encodedState}');
+                            let state = JSON.parse('$encodedState');
 
                             if (typeof window !== "undefined" && !window.receiveMessageFromPlugin) {
                                 console.log("VSCodeAPIWrapper: Setting up receiveMessageFromPlugin for IDEA plugin compatibility");
@@ -366,9 +375,8 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                         delete window.frameElement;
 
                         console.log("VSCode API mock injected");
-                        """)
-
-
+                        """,
+        )
 
         logger.info("Received HTML update event: handle=${data.handle}, html length: ${data.htmlContent.length}")
 
@@ -377,7 +385,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         if (webView != null) {
             try {
                 // If HTTP server is running
-                if ( resourceRootDir != null) {
+                if (resourceRootDir != null) {
                     // Generate unique file name for WebView
                     val filename = "index.html"
 
@@ -395,7 +403,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                     webView.loadHtml(data.htmlContent)
                 }
 
-                    logger.info("WebView HTML content updated: handle=${data.handle}")
+                logger.info("WebView HTML content updated: handle=${data.handle}")
 
                 // If there is already a theme config, send it after content is loaded
                 if (currentThemeConfig != null) {
@@ -417,7 +425,6 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
             logger.warn("WebView instance not found: handle=${data.handle}")
         }
     }
-
 
     /**
      * Handle project switching by cleaning up current state
@@ -492,8 +499,6 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
 
         logger.info("WebViewManager released for project: ${project.name}")
     }
-
-
 }
 
 /**
@@ -505,7 +510,7 @@ class WebViewInstance(
     val title: String,
     val state: Map<String, Any?>,
     val project: Project,
-    val extension: Map<String, Any?>
+    val extension: Map<String, Any?>,
 ) : Disposable {
     private val logger = Logger.getInstance(WebViewInstance::class.java)
 
@@ -547,8 +552,8 @@ class WebViewInstance(
     fun sendThemeConfigToWebView(themeConfig: JsonObject, bodyThemeClass: String) {
         currentThemeConfig = themeConfig
         this.bodyThemeClass = bodyThemeClass
-        if(isDisposed or !isPageLoaded) {
-            logger.warn("WebView has been disposed or not loaded, cannot send theme config:${isDisposed},${isPageLoaded}")
+        if (isDisposed or !isPageLoaded) {
+            logger.warn("WebView has been disposed or not loaded, cannot send theme config:$isDisposed,$isPageLoaded")
             return
         }
         injectTheme()
@@ -571,7 +576,7 @@ class WebViewInstance(
     }
 
     private fun injectTheme() {
-        if(currentThemeConfig == null) {
+        if (currentThemeConfig == null) {
             return
         }
         try {
@@ -759,7 +764,7 @@ class WebViewInstance(
                         })()
                     """.trimIndent()
 
-                    logger.info("Injecting theme style into WebView(${viewId}), size: ${cssContent.length} bytes")
+                    logger.info("Injecting theme style into WebView($viewId), size: ${cssContent.length} bytes")
                     executeJavaScript(injectThemeScript)
                 }
 
@@ -794,6 +799,8 @@ class WebViewInstance(
 
     private fun setupJSBridge() {
         // Create JS query object to handle messages from webview
+        // Note: The static create() method is deprecated, but the instance method requires the browser parameter
+        @Suppress("DEPRECATION")
         jsQuery = JBCefJSQuery.create(browser)
 
         // Set callback for receiving messages from webview
@@ -815,9 +822,9 @@ class WebViewInstance(
     }
 
     /**
-         * Send message to WebView
-         * @param message Message to send (JSON string)
-         */
+     * Send message to WebView
+     * @param message Message to send (JSON string)
+     */
     fun postMessageToWebView(message: String) {
         if (!isDisposed) {
             // Send message to WebView via JavaScript function
@@ -833,117 +840,123 @@ class WebViewInstance(
     }
 
     /**
-         * Enable resource request interception
-         */
+     * Enable resource request interception
+     */
     fun enableResourceInterception(extension: Map<String, Any?>) {
         try {
             @Suppress("UNCHECKED_CAST")
-            val location = extension?.get("location") as? Map<String, Any?>
+            val location = extension.get("location") as? Map<String, Any?>
             val fsPath = location?.get("fsPath") as? String
 
             // Get JCEF client
             val client = browser.jbCefClient
 
-
-
             // Register console message handler
-            client.addDisplayHandler(object: CefDisplayHandlerAdapter() {
-                override fun onConsoleMessage(
-                    browser: CefBrowser?,
-                    level: CefSettings.LogSeverity?,
-                    message: String?,
-                    source: String?,
-                    line: Int
-                ): Boolean {
-                    logger.info("WebView console message: [$level] $message (line: $line, source: $source)")
-                    return true
-                }
-            }, browser.cefBrowser)
-
-            // Register load handler
-            client.addLoadHandler(object : CefLoadHandlerAdapter() {
-                override fun onLoadingStateChange(
-                    browser: CefBrowser?,
-                    isLoading: Boolean,
-                    canGoBack: Boolean,
-                    canGoForward: Boolean
-                ) {
-                    logger.info("WebView loading state changed: isLoading=$isLoading, canGoBack=$canGoBack, canGoForward=$canGoForward")
-                }
-
-                override fun onLoadStart(
-                    browser: CefBrowser?,
-                    frame: CefFrame?,
-                    transitionType: CefRequest.TransitionType?
-                ) {
-                    logger.info("WebView started loading: ${frame?.url}, transition type: $transitionType")
-                    isPageLoaded = false
-                    isInitialPageLoad = true
-                }
-
-                override fun onLoadEnd(
-                    browser: CefBrowser?,
-                    frame: CefFrame?,
-                    httpStatusCode: Int
-                ) {
-                    logger.info("WebView finished loading: ${frame?.url}, status code: $httpStatusCode")
-                    isPageLoaded = true
-
-                    if (isInitialPageLoad) {
-                        injectTheme()
-                        pageLoadCallback?.invoke()
-                        isInitialPageLoad = false
-                    }
-                }
-
-                override fun onLoadError(
-                    browser: CefBrowser?,
-                    frame: CefFrame?,
-                    errorCode: CefLoadHandler.ErrorCode?,
-                    errorText: String?,
-                    failedUrl: String?
-                ) {
-                    logger.info("WebView load error: $failedUrl, error code: $errorCode, error message: $errorText")
-                }
-            }, browser.cefBrowser)
-
-            client.addRequestHandler(object : CefRequestHandlerAdapter() {
-                override fun onBeforeBrowse(
-                    browser: CefBrowser?,
-                    frame: CefFrame?,
-                    request: CefRequest?,
-                    user_gesture: Boolean,
-                    is_redirect: Boolean
-                ): Boolean {
-                    logger.info("onBeforeBrowse,url:${request?.url}")
-                    if(request?.url?.startsWith("http://localhost") == false){
-                        BrowserUtil.browse(request.url)
+            client.addDisplayHandler(
+                object : CefDisplayHandlerAdapter() {
+                    override fun onConsoleMessage(
+                        browser: CefBrowser?,
+                        level: CefSettings.LogSeverity?,
+                        message: String?,
+                        source: String?,
+                        line: Int,
+                    ): Boolean {
+                        logger.info("WebView console message: [$level] $message (line: $line, source: $source)")
                         return true
                     }
-                    return false
-                }
+                },
+                browser.cefBrowser,
+            )
 
-                override fun getResourceRequestHandler(
-                    browser: CefBrowser?,
-                    frame: CefFrame?,
-                    request: CefRequest?,
-                    isNavigation: Boolean,
-                    isDownload: Boolean,
-                    requestInitiator: String?,
-                    disableDefaultHandling: BoolRef?
-                ): CefResourceRequestHandler? {
-                    logger.info("getResourceRequestHandler,fsPath:${fsPath}")
-                    if (fsPath != null && request?.url?.contains("localhost")==true) {
-                        // Set resource root directory
-                        val path = Paths.get(fsPath)
-                        return LocalResHandler(path.pathString,request)
-                    }else{
-                        logger.info("Resource request handler not found for url: ${request?.url}")
-                        return null
+            // Register load handler
+            client.addLoadHandler(
+                object : CefLoadHandlerAdapter() {
+                    override fun onLoadingStateChange(
+                        browser: CefBrowser?,
+                        isLoading: Boolean,
+                        canGoBack: Boolean,
+                        canGoForward: Boolean,
+                    ) {
+                        logger.info("WebView loading state changed: isLoading=$isLoading, canGoBack=$canGoBack, canGoForward=$canGoForward")
                     }
 
-                }
-            }, browser.cefBrowser)
+                    override fun onLoadStart(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        transitionType: CefRequest.TransitionType?,
+                    ) {
+                        logger.info("WebView started loading: ${frame?.url}, transition type: $transitionType")
+                        isPageLoaded = false
+                        isInitialPageLoad = true
+                    }
+
+                    override fun onLoadEnd(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        httpStatusCode: Int,
+                    ) {
+                        logger.info("WebView finished loading: ${frame?.url}, status code: $httpStatusCode")
+                        isPageLoaded = true
+
+                        if (isInitialPageLoad) {
+                            injectTheme()
+                            pageLoadCallback?.invoke()
+                            isInitialPageLoad = false
+                        }
+                    }
+
+                    override fun onLoadError(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        errorCode: CefLoadHandler.ErrorCode?,
+                        errorText: String?,
+                        failedUrl: String?,
+                    ) {
+                        logger.info("WebView load error: $failedUrl, error code: $errorCode, error message: $errorText")
+                    }
+                },
+                browser.cefBrowser,
+            )
+
+            client.addRequestHandler(
+                object : CefRequestHandlerAdapter() {
+                    override fun onBeforeBrowse(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        request: CefRequest?,
+                        user_gesture: Boolean,
+                        is_redirect: Boolean,
+                    ): Boolean {
+                        logger.info("onBeforeBrowse,url:${request?.url}")
+                        if (request?.url?.startsWith("http://localhost") == false) {
+                            BrowserUtil.browse(request.url)
+                            return true
+                        }
+                        return false
+                    }
+
+                    override fun getResourceRequestHandler(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        request: CefRequest?,
+                        isNavigation: Boolean,
+                        isDownload: Boolean,
+                        requestInitiator: String?,
+                        disableDefaultHandling: BoolRef?,
+                    ): CefResourceRequestHandler? {
+                        logger.info("getResourceRequestHandler,fsPath:$fsPath")
+                        if (fsPath != null && request?.url?.contains("localhost") == true) {
+                            // Set resource root directory
+                            val path = Paths.get(fsPath)
+                            return LocalResHandler(path.pathString, request)
+                        } else {
+                            logger.info("Resource request handler not found for url: ${request?.url}")
+                            return null
+                        }
+                    }
+                },
+                browser.cefBrowser,
+            )
             logger.info("WebView resource interception enabled: $viewType/$viewId")
         } catch (e: Exception) {
             logger.error("Failed to enable WebView resource interception", e)
@@ -951,8 +964,8 @@ class WebViewInstance(
     }
 
     /**
-         * Load URL
-         */
+     * Load URL
+     */
     fun loadUrl(url: String) {
         if (!isDisposed) {
             logger.info("WebView loading URL: $url")
@@ -961,22 +974,22 @@ class WebViewInstance(
     }
 
     /**
-         * Load HTML content
-         */
+     * Load HTML content
+     */
     fun loadHtml(html: String, baseUrl: String? = null) {
         if (!isDisposed) {
             logger.info("WebView loading HTML content, length: ${html.length}, baseUrl: $baseUrl")
-            if(baseUrl != null) {
+            if (baseUrl != null) {
                 browser.loadHTML(html, baseUrl)
-            }else {
+            } else {
                 browser.loadHTML(html)
             }
         }
     }
 
     /**
-         * Execute JavaScript
-         */
+     * Execute JavaScript
+     */
     fun executeJavaScript(script: String) {
         if (!isDisposed) {
             logger.info("WebView executing JavaScript, script length: ${script.length}")
@@ -985,8 +998,8 @@ class WebViewInstance(
     }
 
     /**
-         * Open developer tools
-         */
+     * Open developer tools
+     */
     fun openDevTools() {
         if (!isDisposed) {
             browser.openDevtools()

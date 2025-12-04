@@ -1,18 +1,22 @@
-import { GhostServiceSettings } from "@roo-code/types"
+import { modelIdKeysByProvider, ProviderSettingsEntry, ProviderName } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
-import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
+import { CompletionUsage } from "../../api/providers/openrouter"
 import { ApiStreamChunk } from "../../api/transform/stream"
+import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
+import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
+import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
 
-const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
-const MISTRAL_DEFAULT_MODEL = "codestral-latest"
-
-const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
+// Convert PROVIDERS array to a lookup map for display names
+const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label }) => [value, label])) as Record<
+	ProviderName,
+	string
+>
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
-	private apiConfigId: string | null = null
+	private currentProvider: ProviderName | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -21,81 +25,105 @@ export class GhostModel {
 			this.loaded = true
 		}
 	}
-
-	public getApiConfigId() {
-		return this.apiConfigId
+	private cleanup(): void {
+		this.apiHandler = null
+		this.currentProvider = null
+		this.loaded = false
 	}
 
-	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
-		let enableCustomProvider = settings?.enableCustomProvider || false
+	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
+		const profiles = await providerSettingsManager.listConfig()
 
-		if (!enableCustomProvider) {
-			const profiles = await providerSettingsManager.listConfig()
-			const validProfiles = profiles
-				.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
-				.sort((a, b) => {
-					if (!a.apiProvider) {
-						return 1 // Place undefined providers at the end
-					}
-					if (!b.apiProvider) {
-						return -1 // Place undefined providers at the beginning
-					}
-					return (
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-					)
-				})
+		this.cleanup()
 
-			const selectedProfile = validProfiles[0] || null
-			if (selectedProfile) {
-				this.apiConfigId = selectedProfile.id
-				const profile = await providerSettingsManager.getProfile({
-					id: this.apiConfigId,
-				})
-				const profileProvider = profile.apiProvider
-				let modelDefinition = {}
-				if (profileProvider === "kilocode") {
-					modelDefinition = {
-						kilocodeModel: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "openrouter") {
-					modelDefinition = {
-						openRouterModelId: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "mistral") {
-					modelDefinition = {
-						apiModelId: MISTRAL_DEFAULT_MODEL,
-					}
-				}
-				this.apiHandler = buildApiHandler({
-					...profile,
-					...modelDefinition,
-				})
-			} else {
-				enableCustomProvider = true
+		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
+			const selectedProfile = profiles.find((x) => x?.apiProvider === provider)
+			if (!selectedProfile) continue
+			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
+
+			if (provider === "kilocode") {
+				// For all other providers, assume they are usable
+				if (!profile.kilocodeToken) continue
+				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
 			}
+
+			this.apiHandler = buildApiHandler({ ...profile, [modelIdKeysByProvider[provider]]: model })
+			this.currentProvider = provider
+
+			if (this.apiHandler instanceof OpenRouterHandler) {
+				await this.apiHandler.fetchModel()
+			}
+			this.loaded = true
+			return true
 		}
 
-		if (enableCustomProvider) {
-			this.apiConfigId = settings?.apiConfigId || null
-			const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
-			const profileQuery = this.apiConfigId
-				? {
-						id: this.apiConfigId,
-					}
-				: {
-						name: defaultApiConfigId,
-					}
+		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
+		return false
+	}
 
-			const profile = await providerSettingsManager.getProfile(profileQuery)
-			this.apiHandler = buildApiHandler(profile)
+	public supportsFim(): boolean {
+		if (!this.apiHandler) {
+			return false
 		}
 
-		if (this.apiHandler instanceof OpenRouterHandler) {
-			await this.apiHandler.fetchModel()
+		if (this.apiHandler instanceof KilocodeOpenrouterHandler) {
+			return this.apiHandler.supportsFim()
 		}
 
-		this.loaded = true
+		return false
+	}
+
+	/**
+	 * Generate FIM completion using the FIM API endpoint
+	 */
+	public async generateFimResponse(
+		prefix: string,
+		suffix: string,
+		onChunk: (text: string) => void,
+		taskId?: string,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> {
+		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
+			throw new Error("API handler is not initialized. Please check your configuration.")
+		}
+
+		if (!(this.apiHandler instanceof KilocodeOpenrouterHandler)) {
+			throw new Error("FIM is only supported for KiloCode provider")
+		}
+
+		if (!this.apiHandler.supportsFim()) {
+			throw new Error("Current model does not support FIM completions")
+		}
+
+		console.log("USED MODEL (FIM)", this.apiHandler.getModel())
+
+		let usage: CompletionUsage | undefined
+
+		for await (const chunk of this.apiHandler.streamFim(prefix, suffix, taskId, (u) => {
+			usage = u
+		})) {
+			onChunk(chunk)
+		}
+
+		const cost = usage ? this.apiHandler.getTotalCost(usage) : 0
+		const inputTokens = usage?.prompt_tokens ?? 0
+		const outputTokens = usage?.completion_tokens ?? 0
+		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens ?? 0
+
+		return {
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens: 0, // FIM doesn't support cache writes
+			cacheReadTokens,
+		}
 	}
 
 	/**
@@ -157,12 +185,19 @@ export class GhostModel {
 		}
 	}
 
-	public getModelName(): string | null {
-		if (!this.apiHandler) {
-			return null
-		}
-		// Extract model name from API handler
-		return this.apiHandler.getModel().id ?? "unknown"
+	public getModelName(): string | undefined {
+		if (!this.apiHandler) return undefined
+
+		return this.apiHandler.getModel().id ?? undefined
+	}
+
+	public getProviderDisplayName(): string | undefined {
+		if (!this.currentProvider) return undefined
+		return PROVIDER_DISPLAY_NAMES[this.currentProvider]
+	}
+
+	public getRolloutHash_IfLoggedInToKilo(): number | undefined {
+		return this.apiHandler instanceof KilocodeOpenrouterHandler ? this.apiHandler.getRolloutHash() : undefined
 	}
 
 	public hasValidCredentials(): boolean {

@@ -504,7 +504,11 @@ const BrowserActionBox = ({
 			case "launch":
 				return t("chat:browser.actions.launch", { url: text })
 			case "click":
-				return t("chat:browser.actions.click", { coordinate: coordinate?.replace(",", ", ") })
+				return t("chat:browser.actions.click", {
+					// kilocode_change start: tasks created by older extension versions may have a different type coordinate
+					coordinate: typeof coordinate === "string" ? coordinate.replace(",", ", ") : coordinate,
+					// kilocode_change end
+				})
 			case "type":
 				return t("chat:browser.actions.type", { text })
 			case "scroll_down":

@@ -411,6 +411,7 @@ export const extensionInstanceSchema = z.object({
 	modes: z.array(z.object({ slug: z.string(), name: z.string() })).optional(),
 	providerProfile: z.string().optional(),
 	providerProfiles: z.array(z.object({ name: z.string(), provider: z.string().optional() })).optional(),
+	isCloudAgent: z.boolean().optional(),
 })
 
 export type ExtensionInstance = z.infer<typeof extensionInstanceSchema>
@@ -721,3 +722,25 @@ export type LeaveResponse = {
 	taskId?: string
 	timestamp?: string
 }
+
+/**
+ * UsageStats
+ */
+
+export const usageStatsSchema = z.object({
+	success: z.boolean(),
+	data: z.object({
+		dates: z.array(z.string()), // Array of date strings
+		tasks: z.array(z.number()), // Array of task counts
+		tokens: z.array(z.number()), // Array of token counts
+		costs: z.array(z.number()), // Array of costs in USD
+		totals: z.object({
+			tasks: z.number(),
+			tokens: z.number(),
+			cost: z.number(), // Total cost in USD
+		}),
+	}),
+	period: z.number(), // Period in days (e.g., 30)
+})
+
+export type UsageStats = z.infer<typeof usageStatsSchema>

@@ -12,7 +12,7 @@ import com.intellij.openapi.Disposable
  */
 class PendingRPCReply(
     private val promise: LazyPromise,
-    private val disposable: Disposable
+    private val disposable: Disposable,
 ) {
     /**
      * Resolve reply successfully
@@ -31,4 +31,4 @@ class PendingRPCReply(
         promise.resolveErr(err)
         disposable.dispose()
     }
-} 
+}

@@ -4,13 +4,13 @@
 
 package ai.kilocode.jetbrains.actions
 
+import ai.kilocode.jetbrains.webview.WebViewManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import ai.kilocode.jetbrains.webview.WebViewManager
 
 /**
  * Code action provider, similar to VSCode's CodeActionProvider.
@@ -27,7 +27,7 @@ class CodeActionProvider {
      */
     private fun createAction(
         title: String,
-        command: String
+        command: String,
     ): AnAction {
         return object : AnAction(title) {
             override fun actionPerformed(e: AnActionEvent) {
@@ -59,10 +59,10 @@ class CodeActionProvider {
      */
     private fun createActionPair(
         baseTitle: String,
-        baseCommand: String
+        baseCommand: String,
     ): List<AnAction> {
         return listOf(
-            createAction("$baseTitle in Current Task", "${baseCommand}InCurrentTask")
+            createAction("$baseTitle in Current Task", "${baseCommand}InCurrentTask"),
         )
     }
 
@@ -99,32 +99,32 @@ class CodeActionProvider {
         actions.add(
             createAction(
                 ActionNames.ADD_TO_CONTEXT,
-                CommandIds.ADD_TO_CONTEXT
-            )
+                CommandIds.ADD_TO_CONTEXT,
+            ),
         )
 
         // Explain code action pair
         actions.addAll(
             createActionPair(
                 ActionNames.EXPLAIN,
-                CommandIds.EXPLAIN
-            )
+                CommandIds.EXPLAIN,
+            ),
         )
 
         // Fix code action pair (logic fix)
         actions.addAll(
             createActionPair(
                 ActionNames.FIX_LOGIC,
-                CommandIds.FIX
-            )
+                CommandIds.FIX,
+            ),
         )
 
         // Improve code action pair
         actions.addAll(
             createActionPair(
                 ActionNames.IMPROVE,
-                CommandIds.IMPROVE
-            )
+                CommandIds.IMPROVE,
+            ),
         )
 
         return actions
@@ -142,7 +142,7 @@ class CodeActionProvider {
 data class EffectiveRange(
     val text: String,
     val startLine: Int,
-    val endLine: Int
+    val endLine: Int,
 )
 
 /**
@@ -158,8 +158,8 @@ fun registerCodeAction(
     command: String,
     promptType: String,
     inputPrompt: String? = null,
-    inputPlaceholder: String? = null
-) : AnAction {
+    inputPlaceholder: String? = null,
+): AnAction {
     return object : AnAction(command) {
         override fun actionPerformed(e: AnActionEvent) {
             val project = e.project ?: return
@@ -173,7 +173,7 @@ fun registerCodeAction(
                     "Kilo Code",
                     null,
                     inputPlaceholder,
-                    null
+                    null,
                 )
                 if (userInput == null) return // Cancelled
             }
@@ -189,7 +189,7 @@ fun registerCodeAction(
 
             val params = mutableMapOf<String, Any?>(
                 "filePath" to filePath,
-                "selectedText" to selectedText
+                "selectedText" to selectedText,
             )
             if (startLine != null) params["startLine"] = (startLine + 1).toString()
             if (endLine != null) params["endLine"] = (endLine + 1).toString()
@@ -199,6 +199,7 @@ fun registerCodeAction(
         }
     }
 }
+
 /**
  * Registers a pair of code actions with the specified parameters.
  *
@@ -210,8 +211,8 @@ fun registerCodeAction(
 fun registerCodeActionPair(
     baseCommand: String,
     inputPrompt: String? = null,
-    inputPlaceholder: String? = null
-) : AnAction {
+    inputPlaceholder: String? = null,
+): AnAction {
     // New task version
     return registerCodeAction(baseCommand, baseCommand, inputPrompt, inputPlaceholder)
 }
@@ -235,15 +236,17 @@ fun handleCodeAction(command: String, promptType: String, params: Any, project: 
     val messageContent = when {
         // Add to context command
         command.contains("addToContext") -> {
+            @Suppress("UNCHECKED_CAST")
             val promptParams = if (params is Map<*, *>) params as Map<String, Any?> else emptyMap()
             mapOf(
                 "type" to "invoke",
                 "invoke" to "setChatBoxMessage",
-                "text" to SupportPrompt.create("ADD_TO_CONTEXT", promptParams)
+                "text" to SupportPrompt.create("ADD_TO_CONTEXT", promptParams),
             )
         }
         // Command executed in current task
         command.endsWith("InCurrentTask") -> {
+            @Suppress("UNCHECKED_CAST")
             val promptParams = if (params is Map<*, *>) params as Map<String, Any?> else emptyMap()
             val basePromptType = when {
                 command.contains("explain") -> "EXPLAIN"
@@ -254,25 +257,27 @@ fun handleCodeAction(command: String, promptType: String, params: Any, project: 
             mapOf(
                 "type" to "invoke",
                 "invoke" to "sendMessage",
-                "text" to SupportPrompt.create(basePromptType, promptParams)
+                "text" to SupportPrompt.create(basePromptType, promptParams),
             )
         }
         // Command executed in new task
         else -> {
             val promptParams = if (params is List<*>) {
                 // Process parameter list from createAction
+                @Suppress("UNCHECKED_CAST")
                 val argsList = params as List<Any>
                 if (argsList.size >= 4) {
                     mapOf(
                         "filePath" to argsList[0],
                         "selectedText" to argsList[1],
                         "startLine" to argsList[2],
-                        "endLine" to argsList[3]
+                        "endLine" to argsList[3],
                     )
                 } else {
                     emptyMap()
                 }
             } else if (params is Map<*, *>) {
+                @Suppress("UNCHECKED_CAST")
                 params as Map<String, Any?>
             } else {
                 emptyMap()
@@ -288,7 +293,7 @@ fun handleCodeAction(command: String, promptType: String, params: Any, project: 
             mapOf(
                 "type" to "invoke",
                 "invoke" to "initClineWithTask",
-                "text" to SupportPrompt.create(basePromptType, promptParams)
+                "text" to SupportPrompt.create(basePromptType, promptParams),
             )
         }
     }

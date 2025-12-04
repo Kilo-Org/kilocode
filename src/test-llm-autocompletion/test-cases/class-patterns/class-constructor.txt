@@ -1,0 +1,5 @@
+# Description: Should complete constructor with parameter initialization
+class User {
+	constructor(username, email, role) {
+		this.username = username;
+		this.email = <<<AUTOCOMPLETE_HERE>>>

@@ -16,6 +16,11 @@
 		"title": "Konfigurasi API",
 		"select": "Pilih konfigurasi API mana yang akan digunakan untuk mode ini"
 	},
+	"organizationMode": {
+		"title": "Mode Organisasi",
+		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Kilo Code Dashboard.",
+		"cannotEdit": "Mode organisasi tidak dapat diedit"
+	},
 	"tools": {
 		"title": "Tools yang Tersedia",
 		"builtInModesText": "Tools untuk mode bawaan tidak dapat dimodifikasi",

@@ -18,11 +18,10 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
-
 @Service
 class EventBus : AbsEventBus() {
     companion object {
-        fun get():EventBus{
+        fun get(): EventBus {
             return service<EventBus>()
         }
     }
@@ -32,26 +31,24 @@ class EventBus : AbsEventBus() {
  * Event bus for communication between plugin internal components
  */
 @Service(Service.Level.PROJECT) // Consider other implementation approaches?
-class ProjectEventBus : AbsEventBus() {
-}
+class ProjectEventBus : AbsEventBus()
 
-
-open class AbsEventBus : Disposable{
+open class AbsEventBus : Disposable {
     private val logger = Logger.getInstance(ProjectEventBus::class.java)
-    
+
     // All events are dispatched through this flow
     private val _events = MutableSharedFlow<Event<*>>(extraBufferCapacity = 64)
     val events: SharedFlow<Event<*>> = _events.asSharedFlow()
-    
+
     // Event listener mapping, key is event type, value is listener list
     private val listeners = ConcurrentHashMap<EventType<*>, MutableList<(Any) -> Unit>>()
-    
+
     /**
      * Send event
      */
     suspend fun <T : Any> emit(eventType: EventType<T>, data: T) {
         _events.emit(Event(eventType, data))
-        
+
         // Also notify regular listeners
         @Suppress("UNCHECKED_CAST")
         listeners[eventType]?.forEach { listener ->
@@ -62,7 +59,7 @@ open class AbsEventBus : Disposable{
             }
         }
     }
-    
+
     /**
      * Send event in specified coroutine scope
      */
@@ -71,7 +68,7 @@ open class AbsEventBus : Disposable{
             emit(eventType, data)
         }
     }
-    
+
     /**
      * Send event in IntelliJ application context
      * Use IntelliJ platform's thread-safe methods instead of coroutines
@@ -90,14 +87,14 @@ open class AbsEventBus : Disposable{
             }
         }
     }
-    
+
     /**
      * Subscribe to specific event type in specified coroutine scope
      */
     inline fun <reified T : Any> on(
         scope: CoroutineScope,
         eventType: EventType<T>,
-        crossinline handler: suspend (T) -> Unit
+        crossinline handler: suspend (T) -> Unit,
     ) {
         scope.launch {
             events
@@ -108,7 +105,7 @@ open class AbsEventBus : Disposable{
                 }
         }
     }
-    
+
     /**
      * Add event listener (no coroutines required)
      * Provides IntelliJ platform compatible event listening method
@@ -117,7 +114,7 @@ open class AbsEventBus : Disposable{
     fun <T : Any> addListener(eventType: EventType<T>, handler: (T) -> Unit) {
         listeners.getOrPut(eventType) { mutableListOf() }.add(handler as (Any) -> Unit)
     }
-    
+
     /**
      * Add event listener with Disposable, automatically removes listener when Disposable is disposed
      */
@@ -125,20 +122,23 @@ open class AbsEventBus : Disposable{
     fun <T : Any> addListener(eventType: EventType<T>, disposable: Disposable, handler: (T) -> Unit) {
         val wrappedHandler = handler as (Any) -> Unit
         listeners.getOrPut(eventType) { mutableListOf() }.add(wrappedHandler)
-        
+
         // Use IntelliJ's Disposer API for resource cleanup
-        Disposer.register(disposable, Disposable {
-            removeListener(eventType, wrappedHandler)
-        })
+        Disposer.register(
+            disposable,
+            Disposable {
+                removeListener(eventType, wrappedHandler)
+            },
+        )
     }
-    
+
     /**
      * Remove event listener
      */
     fun <T : Any> removeListener(eventType: EventType<T>, handler: (Any) -> Unit) {
         listeners[eventType]?.remove(handler)
     }
-    
+
     /**
      * Remove all listeners for specific event type
      */
@@ -160,5 +160,5 @@ interface EventType<T : Any>
  */
 data class Event<T : Any>(
     val type: EventType<T>,
-    val data: T
+    val data: T,
 )

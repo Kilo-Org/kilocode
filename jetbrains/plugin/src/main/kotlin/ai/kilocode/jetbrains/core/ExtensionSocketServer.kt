@@ -7,9 +7,9 @@ package ai.kilocode.jetbrains.core
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
-import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
@@ -25,19 +25,19 @@ interface ISocketServer : Disposable {
 
 class ExtensionSocketServer() : ISocketServer {
     private val logger = Logger.getInstance(ExtensionSocketServer::class.java)
-    
+
     // Server socket
     private var serverSocket: ServerSocket? = null
-    
+
     // Connected client managers
     private val clientManagers = ConcurrentHashMap<Socket, ExtensionHostManager>()
-    
+
     // Server thread
     private var serverThread: Thread? = null
-    
+
     // Current project path
     private var projectPath: String = ""
-    
+
     // Whether running
     @Volatile
     private var isRunning = false
@@ -54,27 +54,27 @@ class ExtensionSocketServer() : ISocketServer {
             logger.info("Socket server is already running")
             return serverSocket?.localPort ?: -1
         }
-        
+
         this.projectPath = projectPath
-        
+
         try {
             // Use 0 to indicate random port assignment
             serverSocket = ServerSocket(0)
             val port = serverSocket?.localPort ?: -1
-            
+
             if (port <= 0) {
                 logger.error("Failed to get valid port for socket server")
                 return -1
             }
-            
+
             isRunning = true
             logger.info("Starting socket server on port: $port")
-            
+
             // Start the thread to accept connections
             serverThread = thread(start = true, name = "ExtensionSocketServer") {
                 acceptConnections()
             }
-            
+
             return port
         } catch (e: Exception) {
             logger.error("Failed to start socket server", e)
@@ -82,7 +82,7 @@ class ExtensionSocketServer() : ISocketServer {
             return -1
         }
     }
-    
+
     /**
      * Stop Socket server
      */
@@ -137,24 +137,24 @@ class ExtensionSocketServer() : ISocketServer {
 
         logger.info("Socket server stopped completely")
     }
-    
+
     /**
      * Thread function for accepting connections
      */
     private fun acceptConnections() {
         val server = serverSocket ?: return
-        
-        logger.info("Socket server started, waiting for connections..., tid: ${Thread.currentThread().id}")
-        
+
+        logger.info("Socket server started, waiting for connections..., tid: ${Thread.currentThread().threadId()}")
+
         while (isRunning && !Thread.currentThread().isInterrupted) {
             try {
                 val clientSocket = server.accept()
                 logger.info("New client connected from: ${clientSocket.inetAddress.hostAddress}")
-                
+
                 clientSocket.tcpNoDelay = true // Set no delay
-                
+
                 // Create extension host manager
-                val manager = ExtensionHostManager(clientSocket, projectPath,project)
+                val manager = ExtensionHostManager(clientSocket, projectPath, project)
                 clientManagers[clientSocket] = manager
 
                 handleClient(clientSocket, manager)
@@ -184,7 +184,7 @@ class ExtensionSocketServer() : ISocketServer {
                 }
             }
         }
-        
+
         logger.info("Socket accept loop terminated")
     }
 
@@ -195,11 +195,11 @@ class ExtensionSocketServer() : ISocketServer {
         try {
             // Start extension host manager
             manager.start()
-            
+
             // Periodically check socket health
             var lastCheckTime = System.currentTimeMillis()
             val CHECK_INTERVAL = 15000 // Check every 15 seconds
-            
+
             // Wait for socket to close
             while (clientSocket.isConnected && !clientSocket.isClosed && isRunning) {
                 try {
@@ -207,19 +207,19 @@ class ExtensionSocketServer() : ISocketServer {
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastCheckTime > CHECK_INTERVAL) {
                         lastCheckTime = currentTime
-                        
+
                         if (!isSocketHealthy(clientSocket)) {
                             logger.error("Detected unhealthy Socket connection, closing connection")
                             break
                         }
-                        
+
                         // Check RPC response state
                         val responsiveState = manager.getResponsiveState()
                         if (responsiveState != null) {
                             logger.debug("Current RPC response state: $responsiveState")
                         }
                     }
-                    
+
                     Thread.sleep(500)
                 } catch (ie: InterruptedException) {
                     // Thread interrupted, server is shutting down, exit loop
@@ -238,7 +238,7 @@ class ExtensionSocketServer() : ISocketServer {
             // Clean up resources
             manager.dispose()
             clientManagers.remove(clientSocket)
-            
+
             if (!clientSocket.isClosed) {
                 try {
                     clientSocket.close()
@@ -246,51 +246,53 @@ class ExtensionSocketServer() : ISocketServer {
                     logger.warn("Failed to close client socket", e)
                 }
             }
-            
+
             logger.info("Client socket closed and removed")
         }
     }
-    
+
     /**
      * Check socket connection health
      */
     private fun isSocketHealthy(socket: Socket): Boolean {
-        val isHealthy = socket.isConnected && 
-                        !socket.isClosed && 
-                        !socket.isInputShutdown && 
-                        !socket.isOutputShutdown
-        
+        val isHealthy = socket.isConnected &&
+            !socket.isClosed &&
+            !socket.isInputShutdown &&
+            !socket.isOutputShutdown
+
         if (!isHealthy) {
-            logger.warn("Socket health check failed: isConnected=${socket.isConnected}, " +
-                       "isClosed=${socket.isClosed}, " +
-                       "isInputShutdown=${socket.isInputShutdown}, " +
-                       "isOutputShutdown=${socket.isOutputShutdown}")
+            logger.warn(
+                "Socket health check failed: isConnected=${socket.isConnected}, " +
+                    "isClosed=${socket.isClosed}, " +
+                    "isInputShutdown=${socket.isInputShutdown}, " +
+                    "isOutputShutdown=${socket.isOutputShutdown}",
+            )
         }
-        
+
         return isHealthy
     }
-    
+
     /**
      * Get current port
      */
     fun getPort(): Int {
         return serverSocket?.localPort ?: -1
     }
-    
+
     /**
      * Whether running
      */
     override fun isRunning(): Boolean {
         return isRunning
     }
-    
+
     /**
      * Resource cleanup
      */
     override fun dispose() {
         stop()
     }
-    
+
     /**
      * Connect to debug host
      * @param host Debug host address
@@ -302,20 +304,20 @@ class ExtensionSocketServer() : ISocketServer {
             logger.info("Socket server is already running, stopping first")
             stop()
         }
-        
+
         try {
             logger.info("Connecting to debug host at $host:$port")
-            
+
             // Directly connect to the specified address and port
             val clientSocket = Socket(host, port)
             clientSocket.tcpNoDelay = true // Set no delay
-            
+
             isRunning = true
-            
+
             // Create extension host manager
-            val manager = ExtensionHostManager(clientSocket, projectPath,project)
+            val manager = ExtensionHostManager(clientSocket, projectPath, project)
             clientManagers[clientSocket] = manager
-            
+
             // Start connection handling in background thread
             thread(start = true, name = "DebugHostHandler") {
                 handleClient(clientSocket, manager)
@@ -329,4 +331,4 @@ class ExtensionSocketServer() : ISocketServer {
             return false
         }
     }
-} 
+}

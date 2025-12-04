@@ -1,4 +1,11 @@
 import { parse } from "shell-quote"
+// kilocode_change start
+import {
+	protectNewlinesInQuotes,
+	NEWLINE_PLACEHOLDER,
+	CARRIAGE_RETURN_PLACEHOLDER,
+} from "./command-validation-quote-protection"
+// kilocode_change end
 
 type ShellToken = string | { op: string } | { command: string }
 
@@ -122,23 +129,31 @@ export function containsDangerousSubstitution(source: string): boolean {
 	)
 }
 
+// kilocode_change start added exception for quoted newlines
 /**
  * Split a command string into individual sub-commands by
  * chaining operators (&&, ||, ;, |, or &) and newlines.
  *
  * Uses shell-quote to properly handle:
- * - Quoted strings (preserves quotes)
+ * - Quoted strings (preserves quotes and newlines within quotes)
  * - Subshell commands ($(cmd), `cmd`, <(cmd), >(cmd))
  * - PowerShell redirections (2>&1)
  * - Chain operators (&&, ||, ;, |, &)
- * - Newlines as command separators
+ * - Newlines as command separators (but not within quotes)
  */
+//kilocode_change end
 export function parseCommand(command: string): string[] {
 	if (!command?.trim()) return []
 
-	// Split by newlines first (handle different line ending formats)
+	// kilocode_change start
+	// First, protect newlines inside quoted strings by replacing them with placeholders
+	// This prevents splitting multi-line quoted strings (e.g., git commit -m "multi\nline")
+	const protectedCommand = protectNewlinesInQuotes(command, NEWLINE_PLACEHOLDER, CARRIAGE_RETURN_PLACEHOLDER)
+
+	// Split by newlines (handle different line ending formats)
 	// This regex splits on \r\n (Windows), \n (Unix), or \r (old Mac)
-	const lines = command.split(/\r\n|\r|\n/)
+	const lines = protectedCommand.split(/\r\n|\r|\n/)
+	// kilocode_change end
 	const allCommands: string[] = []
 
 	for (const line of lines) {
@@ -150,7 +165,14 @@ export function parseCommand(command: string): string[] {
 		allCommands.push(...lineCommands)
 	}
 
-	return allCommands
+	// kilocode_change start
+	// Restore newlines and carriage returns in quoted strings
+	return allCommands.map((cmd) =>
+		cmd
+			.replace(new RegExp(NEWLINE_PLACEHOLDER, "g"), "\n")
+			.replace(new RegExp(CARRIAGE_RETURN_PLACEHOLDER, "g"), "\r"),
+	)
+	// kilocode_change end
 }
 
 /**

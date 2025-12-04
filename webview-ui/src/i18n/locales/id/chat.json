@@ -130,7 +130,8 @@
 		"settings": "Pengaturan Mode",
 		"description": "Persona khusus yang menyesuaikan perilaku Kilo Code.",
 		"searchPlaceholder": "Cari mode...",
-		"noResults": "Tidak ada hasil yang ditemukan"
+		"noResults": "Tidak ada hasil yang ditemukan",
+		"organizationModes": "Mode Organisasi"
 	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
@@ -158,6 +159,9 @@
 		"initializingWarning": "Masih menginisialisasi checkpoint... Jika ini terlalu lama, kamu bisa menonaktifkan checkpoint di <settingsLink>pengaturan</settingsLink> dan restart tugas.",
 		"menu": {
 			"viewDiff": "Lihat Diff",
+			"more": "Opsi lainnya",
+			"viewDiffFromInit": "Lihat Semua Perubahan",
+			"viewDiffWithCurrent": "Lihat Perubahan Sejak Checkpoint Ini",
 			"restore": "Pulihkan Checkpoint",
 			"restoreFiles": "Pulihkan File",
 			"restoreFilesDescription": "Mengembalikan file proyek kamu ke snapshot yang diambil pada titik ini.",
@@ -197,7 +201,9 @@
 		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini",
 		"wantsToInsert": "Kilo Code ingin menyisipkan konten ke file ini",
 		"wantsToInsertWithLineNumber": "Kilo Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini"
+		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini",
+		"wantsToDelete": "Kilo Code ingin menghapus file ini",
+		"wantsToDeleteDirectory": "Kilo Code ingin menghapus direktori ini"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code ingin melihat file tingkat atas di direktori ini",
@@ -292,6 +298,7 @@
 		"toggleAriaLabel": "Beralih persetujuan otomatis",
 		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
 		"triggerLabelOff": "Persetujuan otomatis mati",
+		"triggerLabelOffShort": "Mati",
 		"triggerLabel_zero": "0 disetujui otomatis",
 		"triggerLabel_one": "1 disetujui otomatis",
 		"triggerLabel_other": "{{count}} disetujui otomatis",
@@ -306,6 +313,19 @@
 			"selectModel": "Pilih <code>roo/code-supernova</code> dari penyedia Roo Code Cloud di Pengaturan untuk memulai.",
 			"goToSettingsButton": "Pergi ke Pengaturan"
 		},
+		"release": {
+			"heading": "Baru di Ekstensi:",
+			"openRouterEmbeddings": "Dukungan untuk model embedding OpenRouter",
+			"chutesDynamic": "Chutes sekarang memuat model terbaru secara dinamis",
+			"queuedMessagesFix": "Perbaikan untuk pesan antrian yang hilang"
+		},
+		"cloudAgents": {
+			"heading": "Baru di Cloud:",
+			"prFixer": "Memperkenalkan agen cloud <bold>PR Fixer</bold> untuk melengkapi PR Reviewer.",
+			"prFixerDescription": "PR Fixer dari Roo Code menerapkan perubahan berkualitas tinggi ke PR Anda, langsung dari GitHub. Panggil melalui komentar PR dan ia akan membaca seluruh riwayat komentar untuk memahami konteks, kesepakatan, dan trade-off - kemudian menerapkan perbaikan yang tepat.",
+			"tryPrFixerButton": "Coba PR Fixer"
+		},
+		"careers": "Juga, <careersLink>kami sedang merekrut!</careersLink>",
 		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
@@ -343,6 +363,8 @@
 		"tooltips": {
 			"expand": "Perluas blok kode",
 			"collapse": "Tutup blok kode",
+			"enable_wrap": "Aktifkan pembungkusan",
+			"disable_wrap": "Nonaktifkan pembungkusan",
 			"copy_code": "Salin kode"
 		}
 	},

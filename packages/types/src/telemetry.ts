@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { providerNames } from "./provider-settings.js"
 import { clineMessageSchema } from "./message.js"
+import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
 /**
  * TelemetrySetting
@@ -29,10 +30,16 @@ export enum TelemetryEventName {
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
+	MEMORY_WARNING_SHOWN = "Memory Warning Shown",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
-	SWITCH_TO_KILO_CODE_CLICKED = "Switch To Kilo Code Clicked",
+	CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
+	AUTO_PURGE_STARTED = "Auto Purge Started",
+	AUTO_PURGE_COMPLETED = "Auto Purge Completed",
+	AUTO_PURGE_FAILED = "Auto Purge Failed",
+	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
+	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -134,6 +141,7 @@ export type AppProperties = z.infer<typeof appPropertiesSchema>
 
 export const taskPropertiesSchema = z.object({
 	taskId: z.string().optional(),
+	parentTaskId: z.string().optional(),
 	apiProvider: z.enum(providerNames).optional(),
 	modelId: z.string().optional(),
 	diffStrategy: z.string().optional(),
@@ -149,6 +157,7 @@ export const taskPropertiesSchema = z.object({
 	// kilocode_change start
 	currentTaskSize: z.number().optional(),
 	taskHistorySize: z.number().optional(),
+	toolStyle: toolUseStylesSchema.optional(),
 	// kilocode_change end
 })
 
@@ -194,6 +203,11 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
+			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
+			TelemetryEventName.GHOST_SERVICE_DISABLED, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

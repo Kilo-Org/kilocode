@@ -130,7 +130,8 @@
 		"settings": "Ustawienia Trybów",
 		"description": "Wyspecjalizowane persony, które dostosowują zachowanie Kilo Code.",
 		"searchPlaceholder": "Szukaj trybów...",
-		"noResults": "Nie znaleziono wyników"
+		"noResults": "Nie znaleziono wyników",
+		"organizationModes": "Tryby organizacji"
 	},
 	"errorReadingFile": "Błąd odczytu pliku",
 	"noValidImages": "Nie przetworzono żadnych prawidłowych obrazów",
@@ -155,6 +156,9 @@
 		"initializingWarning": "Trwa inicjalizacja punktu kontrolnego... Jeśli to trwa zbyt długo, możesz wyłączyć punkty kontrolne w <settingsLink>ustawieniach</settingsLink> i uruchomić zadanie ponownie.",
 		"menu": {
 			"viewDiff": "Zobacz różnice",
+			"more": "Więcej opcji",
+			"viewDiffFromInit": "Zobacz wszystkie zmiany",
+			"viewDiffWithCurrent": "Zobacz zmiany od tego punktu kontrolnego",
 			"restore": "Przywróć punkt kontrolny",
 			"restoreFiles": "Przywróć pliki",
 			"restoreFilesDescription": "Przywraca pliki Twojego projektu do zrzutu wykonanego w tym punkcie.",
@@ -177,6 +181,8 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code chce edytować ten plik poza obszarem roboczym",
 		"wantsToEditProtected": "Kilo Code chce edytować chroniony plik konfiguracyjny",
 		"wantsToCreate": "Kilo Code chce utworzyć nowy plik",
+		"wantsToDelete": "Kilo Code chce usunąć ten plik",
+		"wantsToDeleteDirectory": "Kilo Code chce usunąć ten katalog",
 		"wantsToSearchReplace": "Kilo Code chce wykonać wyszukiwanie i zamianę w tym pliku",
 		"didSearchReplace": "Kilo Code wykonał wyszukiwanie i zamianę w tym pliku",
 		"wantsToInsert": "Kilo Code chce wstawić zawartość do tego pliku",
@@ -271,6 +277,7 @@
 		"toggleAriaLabel": "Przełącz automatyczne zatwierdzanie",
 		"disabledAriaLabel": "Automatyczne zatwierdzanie wyłączone - najpierw wybierz opcje",
 		"triggerLabelOff": "Automatyczne zatwierdzanie wyłączone",
+		"triggerLabelOffShort": "Wyłączone",
 		"triggerLabel_zero": "0 automatycznie zatwierdzone",
 		"triggerLabel_one": "1 automatycznie zatwierdzony",
 		"triggerLabel_other": "{{count}} automatycznie zatwierdzonych",
@@ -300,6 +307,19 @@
 			"selectModel": "Wybierz <code>roo/code-supernova</code> od dostawcy Roo Code Cloud w Ustawieniach, aby rozpocząć.",
 			"goToSettingsButton": "Przejdź do Ustawień"
 		},
+		"release": {
+			"heading": "Nowości w rozszerzeniu:",
+			"openRouterEmbeddings": "Wsparcie dla modeli osadzania OpenRouter",
+			"chutesDynamic": "Chutes teraz dynamicznie ładuje najnowsze modele",
+			"queuedMessagesFix": "Poprawki dla gubienia się wiadomości w kolejce"
+		},
+		"cloudAgents": {
+			"heading": "Nowości w chmurze:",
+			"prFixer": "Przedstawiamy agenta chmurowego <bold>PR Fixer</bold> uzupełniającego PR Reviewer.",
+			"prFixerDescription": "PR Fixer Roo Code stosuje wysokiej jakości zmiany do Twoich PR, bezpośrednio z GitHub. Wywołaj go przez komentarz PR, a on przeczyta całą historię komentarzy, aby zrozumieć kontekst, uzgodnienia i kompromisy - następnie wdroży właściwą poprawkę.",
+			"tryPrFixerButton": "Wypróbuj PR Fixer"
+		},
+		"careers": "Dodatkowo, <careersLink>zatrudniamy!</careersLink>",
 		"socialLinks": "Dołącz do nas na <xLink>X</xLink>, <discordLink>Discord</discordLink>, lub <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
@@ -328,6 +348,8 @@
 		"tooltips": {
 			"expand": "Rozwiń blok kodu",
 			"collapse": "Zwiń blok kodu",
+			"enable_wrap": "Włącz zawijanie wierszy",
+			"disable_wrap": "Wyłącz zawijanie wierszy",
 			"copy_code": "Kopiuj kod"
 		}
 	},

@@ -13,7 +13,7 @@ import com.intellij.openapi.vfs.VirtualFile
 enum class FileChangeType {
     CREATED,
     UPDATED,
-    DELETED
+    DELETED,
 }
 
 /**
@@ -21,7 +21,7 @@ enum class FileChangeType {
  */
 enum class FileSystemItemType {
     FILE,
-    DIRECTORY
+    DIRECTORY,
 }
 
 /**
@@ -41,7 +41,7 @@ data class WorkspaceFileChangeData(
     val file: VirtualFile,
     val changeType: FileChangeType,
     val timestamp: Long = System.currentTimeMillis(),
-    val itemType: FileSystemItemType = if (file.isDirectory) FileSystemItemType.DIRECTORY else FileSystemItemType.FILE
+    val itemType: FileSystemItemType = if (file.isDirectory) FileSystemItemType.DIRECTORY else FileSystemItemType.FILE,
 )
 
 /**
@@ -52,15 +52,14 @@ object WorkspaceFilesChangeEvent : EventType<WorkspaceFilesChangeData>
 /**
  * Workspace directories change event type
  */
-object WorkspaceDirectoriesChangeEvent: EventType<WorkspaceFilesChangeData>
+object WorkspaceDirectoriesChangeEvent : EventType<WorkspaceFilesChangeData>
 
 /**
  * Workspace multiple files change data
  */
 data class WorkspaceFilesChangeData(
-    val changes: List<WorkspaceFileChangeData>
+    val changes: List<WorkspaceFileChangeData>,
 )
-
 
 /**
  * Workspace root change data class
@@ -71,7 +70,7 @@ data class WorkspaceFilesChangeData(
 data class WorkspaceRootChangeData(
     val project: Project,
     val oldPath: String?,
-    val newPath: String
+    val newPath: String,
 )
 
 /**

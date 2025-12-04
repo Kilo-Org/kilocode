@@ -14,7 +14,7 @@ data class FileSystemEvents(
     val session: String? = null,
     val created: List<Map<String, Any?>>, // UriComponents
     val changed: List<Map<String, Any?>>, // UriComponents
-    val deleted: List<Map<String, Any?>>  // UriComponents
+    val deleted: List<Map<String, Any?>>, // UriComponents
 )
 
 /**
@@ -23,7 +23,7 @@ data class FileSystemEvents(
  */
 data class SourceTargetPair(
     val source: Map<String, Any?>? = null, // UriComponents
-    val target: Map<String, Any?>          // UriComponents
+    val target: Map<String, Any?>, // UriComponents
 )
 
 /**
@@ -32,7 +32,7 @@ data class SourceTargetPair(
  */
 data class FileOperationParticipation(
     val edit: Map<String, Any?>, // IWorkspaceEditDto
-    val extensionNames: List<String>
+    val extensionNames: List<String>,
 )
 
 /**
@@ -44,7 +44,7 @@ enum class FileOperation {
     DELETE,
     RENAME,
     COPY,
-    MOVE
+    MOVE,
 }
 
 /**
@@ -72,7 +72,7 @@ interface ExtHostFileSystemEventServiceProxy {
         operation: FileOperation,
         files: List<SourceTargetPair>,
         timeout: Int,
-        token: Any?
+        token: Any?,
     ): CompletableFuture<FileOperationParticipation?>
 
     /**
@@ -83,6 +83,6 @@ interface ExtHostFileSystemEventServiceProxy {
      */
     fun onDidRunFileOperation(
         operation: FileOperation,
-        files: List<SourceTargetPair>
+        files: List<SourceTargetPair>,
     )
-} 
+}

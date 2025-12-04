@@ -8,7 +8,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.lang.Exception
 
- // Symbol name for buffer reference during serialization
+// Symbol name for buffer reference during serialization
 private const val REF_SYMBOL_NAME = "\$\$ref\$\$"
 
 // Undefined reference
@@ -19,7 +19,7 @@ private val UNDEFINED_REF = mapOf(REF_SYMBOL_NAME to -1)
  */
 data class StringifiedJsonWithBufferRefs(
     val jsonString: String,
-    val referencedBuffers: List<ByteArray>
+    val referencedBuffers: List<ByteArray>,
 ) {
     // data class auto-generates component1() and component2() functions, supports destructuring
 }
@@ -29,7 +29,7 @@ data class StringifiedJsonWithBufferRefs(
  */
 fun stringifyJsonWithBufferRefs(obj: Any?, replacer: ((String, Any?) -> Any?)? = null, useSafeStringify: Boolean = false): StringifiedJsonWithBufferRefs {
     val foundBuffers = mutableListOf<ByteArray>()
-    
+
     // Process object recursively, identify and replace buffers
     fun processObject(value: Any?): Any? {
         return when (value) {
@@ -65,18 +65,18 @@ fun stringifyJsonWithBufferRefs(obj: Any?, replacer: ((String, Any?) -> Any?)? =
             }
         }
     }
-    
+
     // Process object, collect buffers
     val processedObj = processObject(obj)
-    
-        // Use GSON for serialization
-        val gson = Gson()
+
+    // Use GSON for serialization
+    val gson = Gson()
     val serialized = try {
         gson.toJson(processedObj)
     } catch (e: Exception) {
         if (useSafeStringify) "null" else throw e
     }
-    
+
     return StringifiedJsonWithBufferRefs(serialized, foundBuffers)
 }
 
@@ -87,16 +87,16 @@ sealed class SerializedRequestArguments {
     /**
      * Simple type argument
      */
-    data class Simple(val args: String) : SerializedRequestArguments(){
+    data class Simple(val args: String) : SerializedRequestArguments() {
         override fun toString(): String {
             return args
         }
     }
-    
+
     /**
      * Mixed type argument
      */
-    data class Mixed(val args: List<MixedArg>) : SerializedRequestArguments(){
+    data class Mixed(val args: List<MixedArg>) : SerializedRequestArguments() {
         override fun toString(): String {
             return args.joinToString { "\n" }
         }
@@ -119,7 +119,7 @@ object MessageIO {
         }
         return false
     }
-    
+
     /**
      * Serialize request arguments
      */
@@ -135,10 +135,12 @@ object MessageIO {
                         massagedArgs.add(MixedArg.UndefinedArg)
                     arg is SerializableObjectWithBuffers<*> -> {
                         val result = stringifyJsonWithBufferRefs(arg.value, replacer)
-                        massagedArgs.add(MixedArg.SerializedObjectWithBuffersArg(
-                            result.jsonString.toByteArray(),
-                            result.referencedBuffers
-                        ))
+                        massagedArgs.add(
+                            MixedArg.SerializedObjectWithBuffersArg(
+                                result.jsonString.toByteArray(),
+                                result.referencedBuffers,
+                            ),
+                        )
                     }
                     else -> {
                         val gson = Gson()
@@ -148,11 +150,11 @@ object MessageIO {
             }
             return SerializedRequestArguments.Mixed(massagedArgs)
         }
-        
+
         val gson = Gson()
         return SerializedRequestArguments.Simple(gson.toJson(args))
     }
-    
+
     /**
      * Serialize request
      */
@@ -161,7 +163,7 @@ object MessageIO {
         rpcId: Int,
         method: String,
         serializedArgs: SerializedRequestArguments,
-        usesCancellationToken: Boolean
+        usesCancellationToken: Boolean,
     ): ByteArray {
         return when (serializedArgs) {
             is SerializedRequestArguments.Simple ->
@@ -170,7 +172,7 @@ object MessageIO {
                 requestMixedArgs(req, rpcId, method, serializedArgs.args, usesCancellationToken)
         }
     }
-    
+
     /**
      * Serialize JSON argument request
      */
@@ -179,28 +181,29 @@ object MessageIO {
         rpcId: Int,
         method: String,
         args: String,
-        usesCancellationToken: Boolean
+        usesCancellationToken: Boolean,
     ): ByteArray {
         val methodBuff = method.toByteArray()
         val argsBuff = args.toByteArray()
-        
+
         var len = 0
         len += MessageBuffer.sizeUInt8 // use constant directly, not function call
         len += MessageBuffer.sizeShortString(methodBuff)
         len += MessageBuffer.sizeLongString(argsBuff)
-        
-        val messageType = if (usesCancellationToken)
+
+        val messageType = if (usesCancellationToken) {
             MessageType.RequestJSONArgsWithCancellation
-        else
+        } else {
             MessageType.RequestJSONArgs
-            
+        }
+
         val result = MessageBuffer.alloc(messageType, req, len)
         result.writeUInt8(rpcId)
         result.writeShortString(methodBuff)
         result.writeLongString(argsBuff)
         return result.bytes
     }
-    
+
     /**
      * Deserialize JSON argument request
      */
@@ -211,14 +214,14 @@ object MessageIO {
             method = method.substring(1)
         }
         val argsJson = buff.readLongString()
-        
+
         val gson = Gson()
         val listType = object : TypeToken<List<Any?>>() {}.type
         val args = gson.fromJson<List<Any?>>(argsJson, listType)
-        
+
         return Triple(rpcId, method, args)
     }
-    
+
     /**
      * Serialize mixed argument request
      */
@@ -227,27 +230,28 @@ object MessageIO {
         rpcId: Int,
         method: String,
         args: List<MixedArg>,
-        usesCancellationToken: Boolean
+        usesCancellationToken: Boolean,
     ): ByteArray {
         val methodBuff = method.toByteArray()
-        
+
         var len = 0
         len += MessageBuffer.sizeUInt8 // use constant directly, not function call
         len += MessageBuffer.sizeShortString(methodBuff)
         len += MessageBuffer.sizeMixedArray(args)
-        
-        val messageType = if (usesCancellationToken)
+
+        val messageType = if (usesCancellationToken) {
             MessageType.RequestMixedArgsWithCancellation
-        else
+        } else {
             MessageType.RequestMixedArgs
-            
+        }
+
         val result = MessageBuffer.alloc(messageType, req, len)
         result.writeUInt8(rpcId)
         result.writeShortString(methodBuff)
         result.writeMixedArray(args)
         return result.bytes
     }
-    
+
     /**
      * Deserialize mixed argument request
      */
@@ -267,24 +271,24 @@ object MessageIO {
                 else -> rawArg
             }
         }
-        
+
         return Triple(rpcId, method, args)
     }
-    
+
     /**
      * Serialize acknowledged message
      */
     fun serializeAcknowledged(req: Int): ByteArray {
         return MessageBuffer.alloc(MessageType.Acknowledged, req, 0).bytes
     }
-    
+
     /**
      * Serialize cancel message
      */
     fun serializeCancel(req: Int): ByteArray {
         return MessageBuffer.alloc(MessageType.Cancel, req, 0).bytes
     }
-    
+
     /**
      * Serialize OK reply
      */
@@ -307,70 +311,70 @@ object MessageIO {
             }
         }
     }
-    
+
     /**
      * Serialize empty OK reply
      */
     private fun serializeReplyOKEmpty(req: Int): ByteArray {
         return MessageBuffer.alloc(MessageType.ReplyOKEmpty, req, 0).bytes
     }
-    
+
     /**
      * Serialize OK reply with binary buffer
      */
     private fun serializeReplyOKVSBuffer(req: Int, res: ByteArray): ByteArray {
         var len = 0
         len += MessageBuffer.sizeVSBuffer(res)
-        
+
         val result = MessageBuffer.alloc(MessageType.ReplyOKVSBuffer, req, len)
         result.writeVSBuffer(res)
         return result.bytes
     }
-    
+
     /**
      * Deserialize OK reply with binary buffer
      */
     fun deserializeReplyOKVSBuffer(buff: MessageBuffer): ByteArray {
         return buff.readVSBuffer()
     }
-    
+
     /**
      * Serialize OK reply with JSON
      */
     private fun serializeReplyOKJSON(req: Int, res: String): ByteArray {
         val resBuff = res.toByteArray()
-        
+
         var len = 0
         len += MessageBuffer.sizeLongString(resBuff)
-        
+
         val result = MessageBuffer.alloc(MessageType.ReplyOKJSON, req, len)
         result.writeLongString(resBuff)
         return result.bytes
     }
-    
+
     /**
      * Serialize OK reply with JSON and buffers
      */
     private fun serializeReplyOKJSONWithBuffers(req: Int, res: String, buffers: List<ByteArray>): ByteArray {
         val resBuff = res.toByteArray()
-        
+
         var len = 0
         len += MessageBuffer.sizeUInt32 // use constant directly, not function call
         len += MessageBuffer.sizeLongString(resBuff)
         for (buffer in buffers) {
             len += MessageBuffer.sizeVSBuffer(buffer)
         }
-        
+
         val result = MessageBuffer.alloc(MessageType.ReplyOKJSONWithBuffers, req, len)
         result.writeUInt32(buffers.size)
         result.writeLongString(resBuff)
         for (buffer in buffers) {
             result.writeBuffer(buffer)
         }
-        
+
         return result.bytes
     }
-    
+
     /**
      * Deserialize OK reply with JSON
      */
@@ -379,22 +383,22 @@ object MessageIO {
         val gson = Gson()
         return gson.fromJson(res, Any::class.java)
     }
-    
+
     /**
      * Deserialize OK reply with JSON and buffers
      */
     fun deserializeReplyOKJSONWithBuffers(buff: MessageBuffer, uriTransformer: ((String, Any?) -> Any?)? = null): SerializableObjectWithBuffers<*> {
         val bufferCount = buff.readUInt32()
         val res = buff.readLongString()
-        
+
         val buffers = mutableListOf<ByteArray>()
         for (i in 0 until bufferCount) {
             buffers.add(buff.readVSBuffer())
         }
-        
+
         return SerializableObjectWithBuffers(parseJsonAndRestoreBufferRefs(res, buffers, uriTransformer))
     }
-    
+
     /**
      * Serialize error reply
      */
@@ -406,14 +410,16 @@ object MessageIO {
             } catch (e: Exception) {
                 null
             }
-        } else null
-        
+        } else {
+            null
+        }
+
         return if (errStr != null) {
             val errBuff = errStr.toByteArray()
-            
+
             var len = 0
             len += MessageBuffer.sizeLongString(errBuff)
-            
+
             val result = MessageBuffer.alloc(MessageType.ReplyErrError, req, len)
             result.writeLongString(errBuff)
             result.bytes
@@ -421,7 +427,7 @@ object MessageIO {
             serializeReplyErrEmpty(req)
         }
     }
-    
+
     /**
      * Deserialize error reply
      */
@@ -429,26 +435,26 @@ object MessageIO {
         val err = buff.readLongString()
         val gson = Gson()
         val errorMap = gson.fromJson(err, Map::class.java)
-        
+
         // Create custom exception
         val exception = Exception(errorMap["message"] as? String ?: "Unknown error")
-        
+
         // Set stack and other properties
         if (errorMap.containsKey("stack")) {
             // Note: Java/Kotlin cannot directly set stack, this is just a demonstration
             // In actual implementation, may need custom exception type or other methods
         }
-        
+
         return exception
     }
-    
+
     /**
      * Serialize empty error reply
      */
     private fun serializeReplyErrEmpty(req: Int): ByteArray {
         return MessageBuffer.alloc(MessageType.ReplyErrEmpty, req, 0).bytes
     }
-    
+
     /**
      * Transform error for serialization
      */
@@ -457,7 +463,7 @@ object MessageIO {
             "\$isError" to true,
             "name" to error.javaClass.simpleName,
             "message" to error.message,
-            "stack" to error.stackTraceToString()
+            "stack" to error.stackTraceToString(),
         )
     }
 }

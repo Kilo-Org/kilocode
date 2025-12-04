@@ -4,13 +4,13 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.util.URI
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import ai.kilocode.jetbrains.util.URI
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -88,19 +88,25 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
     override suspend fun showOpenDialog(map: Map<String, Any?>?): MutableList<URI>? {
         // Convert the configuration map to typed options
         val options = create(map)
-        
+
         // Create file chooser descriptor with default values for unspecified options
         val descriptor = FileChooserDescriptor(
-            /* chooseFiles = */ true,
-            /* chooseFolders = */ options?.canSelectFolders ?: true,
-            /* chooseJars = */ false,
-            /* chooseJarsAsFiles = */ false,
-            /* chooseMultipleJars = */ false,
-            /* chooseMultiple = */ options?.canSelectMany ?: true
+            /* chooseFiles = */
+            true,
+            /* chooseFolders = */
+            options?.canSelectFolders ?: true,
+            /* chooseJars = */
+            false,
+            /* chooseJarsAsFiles = */
+            false,
+            /* chooseMultipleJars = */
+            false,
+            /* chooseMultiple = */
+            options?.canSelectMany ?: true,
         )
             .withTitle(options?.title ?: "Open")
             .withDescription(options?.openLabel ?: "Select files")
-        
+
         // Apply file extension filters if provided
         options?.filters?.forEach { (name, extensions) ->
             descriptor.withFileFilter { file ->
@@ -114,12 +120,12 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
                 try {
                     // Show the file chooser dialog and get selected files
                     val files = FileChooser.chooseFiles(descriptor, null, null)
-                    
+
                     // Convert IntelliJ VirtualFile objects to URI objects
                     val result = files.map { file ->
                         URI.file(file.path)
                     }.toMutableList()
-                    
+
                     // Resume coroutine with the result
                     continuation.resume(result)
                 } catch (e: Exception) {
@@ -142,7 +148,7 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
     override suspend fun showSaveDialog(map: Map<String, Any?>?): URI? {
         // Convert the configuration map to typed options
         val options = create(map)
-        
+
         // Create file saver descriptor with custom title and description
         val descriptor = FileSaverDescriptor("Save", options?.openLabel ?: "Select save location")
 
@@ -156,7 +162,7 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
         // Extract default path and filename from options
         val path = options?.defaultUri?.get("path")
         var fileName: String? = null
-        
+
         // Convert the path string to a Path object and extract filename
         val virtualFile = path?.let { filePath ->
             val file = File(filePath)
@@ -172,10 +178,10 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
                     val file = FileChooserFactory.getInstance()
                         .createSaveFileDialog(descriptor, null)
                         .save(virtualFile, fileName)
-                    
+
                     // Convert the result to URI format
                     val result = file?.let { URI.file(it.file.absolutePath) }
-                    
+
                     // Resume coroutine with the result
                     continuation.resume(result)
                 } catch (e: Exception) {
@@ -197,6 +203,7 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
      */
     private fun create(map: Map<String, Any?>?): MainThreadDialogOpenOptions? {
         map?.let {
+            @Suppress("UNCHECKED_CAST")
             return MainThreadDialogOpenOptions(
                 defaultUri = it["defaultUri"] as? Map<String, String?>,
                 openLabel = it["openLabel"] as? String,
@@ -205,7 +212,7 @@ class MainThreadDiaglogs : MainThreadDiaglogsShape {
                 canSelectMany = it["canSelectMany"] as? Boolean,
                 filters = it["filters"] as? MutableMap<String, MutableList<String>>,
                 title = it["title"] as? String,
-                allowUIResources = it["allowUIResources"] as? Boolean
+                allowUIResources = it["allowUIResources"] as? Boolean,
             )
         } ?: return null
     }

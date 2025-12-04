@@ -1,0 +1,15 @@
+# Description: Should complete Ruby method override in derived class
+class Shape
+	def area
+		0
+	end
+end
+
+class Rectangle < Shape
+	def initialize(width, height)
+		@width = width
+		@height = height
+	end
+	
+	def area
+		<<<AUTOCOMPLETE_HERE>>>

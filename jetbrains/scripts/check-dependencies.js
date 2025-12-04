@@ -89,10 +89,10 @@ function checkJava() {
 
 	if (!commandExists("java")) {
 		printError("Java is not installed or not in PATH")
-		console.log("  Install Java 17 (recommended):")
-		console.log("  - Windows: Download from https://openjdk.org/projects/jdk/17/")
-		console.log("  - macOS: brew install openjdk@17")
-		console.log("  - Linux: sudo apt install openjdk-17-jdk")
+		console.log("  Install Java 21 (recommended):")
+		console.log("  - Windows: Download from https://openjdk.org/projects/jdk/21/")
+		console.log("  - macOS: brew install openjdk@21")
+		console.log("  - Linux: sudo apt install openjdk-21-jdk")
 		return false
 	}
 
@@ -117,34 +117,34 @@ function checkJava() {
 	const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true" || process.env.JENKINS_URL
 	const isWindows = process.platform === "win32"
 
-	if (majorVersion !== "17") {
+	if (majorVersion !== "21") {
 		if (isCI && isWindows) {
-			printWarning(`Java version is ${majorVersion}, but Java 17 is required for JetBrains plugin development`)
+			printWarning(`Java version is ${majorVersion}, but Java 21 is required for JetBrains plugin development`)
 			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
 			console.log("  Windows CI Environment detected - JetBrains plugin build will be skipped")
-			console.log("  Note: JetBrains plugin requires Java 17, which is not available in this environment")
+			console.log("  Note: JetBrains plugin requires Java 21, which is not available in this environment")
 			console.log("  This is expected behavior - JetBrains plugin builds are primarily tested on Linux/macOS CI")
 			return true // Allow CI to continue, but JetBrains build will be skipped
 		} else if (isCI) {
-			printWarning(`Java version is ${majorVersion}, but Java 17 is recommended for JetBrains plugin development`)
+			printWarning(`Java version is ${majorVersion}, but Java 21 is recommended for JetBrains plugin development`)
 			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
 			console.log("  CI Environment detected - continuing with available Java version")
 			console.log(`  Note: Some features may not work correctly with Java ${majorVersion}`)
 			return true // Allow CI to continue with warning
 		} else {
-			printError(`Java version is ${majorVersion}, but Java 17 is required`)
+			printError(`Java version is ${majorVersion}, but Java 21 is required`)
 			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
 			console.log("  Recommended fix:")
-			console.log("  - Windows: Download Java 17 from https://openjdk.org/projects/jdk/17/")
-			console.log("  - macOS: brew install openjdk@17 && export JAVA_HOME=$(/usr/libexec/java_home -v 17)")
+			console.log("  - Windows: Download Java 21 from https://openjdk.org/projects/jdk/21/")
+			console.log("  - macOS: brew install openjdk@21 && export JAVA_HOME=$(/usr/libexec/java_home -v 21)")
 			console.log(
-				"  - Linux: sudo apt install openjdk-17-jdk && export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64",
+				"  - Linux: sudo apt install openjdk-21-jdk && export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64",
 			)
 			return false
 		}
 	}
 
-	printSuccess("Java 17 is installed and active")
+	printSuccess("Java 21 is installed and active")
 	console.log(`  ${javaVersion.split("\n")[0]}`)
 	return true
 }

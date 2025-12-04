@@ -6,12 +6,12 @@ package ai.kilocode.jetbrains.ipc.proxy.interfaces
 
 import ai.kilocode.jetbrains.ipc.proxy.LazyPromise
 
-//export interface ExtHostCommandsShape {
+// export interface ExtHostCommandsShape {
 //    $executeContributedCommand(id: string, ...args: any[]): Promise<unknown>;
 //    $getContributedCommandMetadata(): Promise<{ [id: string]: string | ICommandMetadataDto }>;
-//}
+// }
 
 interface ExtHostCommandsProxy {
-    fun executeContributedCommand(id: String, args: List<Any?>) : LazyPromise
-    fun getContributedCommandMetadata() : LazyPromise
+    fun executeContributedCommand(id: String, args: List<Any?>): LazyPromise
+    fun getContributedCommandMetadata(): LazyPromise
 }

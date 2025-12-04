@@ -1,0 +1,4 @@
+function processData(data) {
+	try {
+		const result = JSON.parse(data);
+		<<<AUTOCOMPLETE_HERE>>>

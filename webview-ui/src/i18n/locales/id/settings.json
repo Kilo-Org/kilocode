@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoint",
+		"display": "Tampilkan",
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code",
-		"display": "Tampilkan"
+		"autoPurge": "Pembersihan Otomatis"
 	},
 	"slashCommands": {
 		"description": "Kelola perintah slash kamu untuk mengeksekusi alur kerja dan tindakan kustom dengan cepat. <DocsLink>Pelajari lebih lanjut</DocsLink>"
@@ -56,6 +57,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API Key",
 		"vercelAiGatewayApiKeyPlaceholder": "Masukkan kunci API Vercel AI Gateway Anda",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Kunci API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Masukkan kunci API OpenRouter Anda",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Kunci API:",
 		"mistralApiKeyPlaceholder": "Masukkan kunci API Mistral Anda",
@@ -125,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Kunci API Vercel AI Gateway diperlukan",
 			"ollamaBaseUrlRequired": "URL dasar Ollama diperlukan",
 			"baseUrlRequired": "URL dasar diperlukan",
-			"modelDimensionMinValue": "Dimensi model harus lebih besar dari 0"
+			"modelDimensionMinValue": "Dimensi model harus lebih besar dari 0",
+			"openRouterApiKeyRequired": "Kunci API OpenRouter diperlukan"
 		},
 		"advancedConfigLabel": "Konfigurasi Lanjutan",
 		"searchMinScoreLabel": "Ambang Batas Skor Pencarian",
@@ -228,6 +233,8 @@
 		"providerDocumentation": "Dokumentasi {{provider}}",
 		"configProfile": "Profil Konfigurasi",
 		"description": "Simpan konfigurasi API yang berbeda untuk beralih dengan cepat antara provider dan pengaturan.",
+		"makeActiveProfile": "Jadikan Profil Aktif",
+		"makeActiveTooltip": "Aktifkan profil ini untuk digunakan dalam permintaan API",
 		"apiProvider": "Provider API",
 		"model": "Model",
 		"nameEmpty": "Nama tidak boleh kosong",
@@ -246,6 +253,8 @@
 		"noProviderMatchFound": "Tidak ada penyedia ditemukan",
 		"noMatchFound": "Tidak ada profil yang cocok ditemukan",
 		"vscodeLmDescription": " API Model Bahasa VS Code memungkinkan kamu menjalankan model yang disediakan oleh ekstensi VS Code lainnya (termasuk namun tidak terbatas pada GitHub Copilot). Cara termudah untuk memulai adalah menginstal ekstensi Copilot dan Copilot Chat dari VS Code Marketplace.",
+		"vscodeLmUnavailable": "Dukungan Model Bahasa VS Code hanya tersedia di Visual Studio Code. Fork seperti VSCodium dan lainnya mungkin tidak berfungsi. Selain itu, kemampuan ini tidak tersedia di alat JetBrains.",
+		"vscodeLmUnavailableInstructions": "Pastikan Anda menggunakan alat yang didukung dan bahwa VS Code Chat telah diinstal dan diaktifkan",
 		"awsCustomArnUse": "Masukkan ARN Amazon Bedrock yang valid untuk model yang ingin kamu gunakan. Contoh format:",
 		"awsCustomArnDesc": "Pastikan region di ARN cocok dengan AWS Region yang kamu pilih di atas.",
 		"openRouterApiKey": "OpenRouter API Key",
@@ -288,6 +297,8 @@
 		"getChutesApiKey": "Dapatkan Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Dapatkan Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Dapatkan Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Dapatkan Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
@@ -304,6 +315,9 @@
 		"getZaiApiKey": "Dapatkan Kunci API Z AI",
 		"zaiEntrypoint": "Titik Masuk Z AI",
 		"zaiEntrypointDescription": "Silakan pilih titik masuk API yang sesuai berdasarkan lokasi Anda. Jika Anda berada di China, pilih open.bigmodel.cn. Jika tidak, pilih api.z.ai.",
+		"minimaxApiKey": "Kunci API MiniMax",
+		"getMiniMaxApiKey": "Dapatkan Kunci API MiniMax",
+		"minimaxBaseUrl": "Titik Masuk MiniMax",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Dapatkan Groq API Key",
 		"groqApiKey": "Groq API Key",
@@ -311,6 +325,10 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
 		"huggingFaceApiKey": "Kunci API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Dapatkan Kunci API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Kunci API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL Dasar",
+		"getOvhCloudAiEndpointsBaseUrl": "Gunakan URL dasar kustom",
 		"huggingFaceModelId": "ID Model",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
 		"huggingFaceLoading": "Memuat...",
@@ -353,7 +371,7 @@
 		"enablePromptCachingTitle": "Aktifkan prompt caching untuk meningkatkan performa dan mengurangi biaya untuk model yang didukung.",
 		"cacheUsageNote": "Catatan: Jika kamu tidak melihat penggunaan cache, coba pilih model yang berbeda lalu pilih model yang kamu inginkan lagi.",
 		"vscodeLmModel": "Model Bahasa",
-		"vscodeLmWarning": "Catatan: Ini adalah integrasi yang sangat eksperimental dan dukungan provider akan bervariasi. Jika kamu mendapat error tentang model yang tidak didukung, itu adalah masalah di sisi provider.",
+		"vscodeLmWarning": "Catatan: Model yang diakses melalui VS Code Language Model API dapat dibungkus atau disetel‑halus oleh penyedia, sehingga perilakunya dapat berbeda dibandingkan menggunakan model yang sama secara langsung dari penyedia atau router tipikal. Untuk menggunakan model dari menu tarik‑turun «Language Model», pertama beralihlah ke model tersebut lalu klik «Terima» pada prompt Copilot Chat; jika tidak, Anda mungkin melihat kesalahan seperti 400 «The requested model is not supported».",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Aktifkan konteks URL",
@@ -430,7 +448,7 @@
 			},
 			"computerUse": {
 				"label": "Computer Use",
-				"description": "Apakah model ini mampu berinteraksi dengan browser? (misalnya Claude 3.7 Sonnet)."
+				"description": "Apakah model ini mampu berinteraksi dengan browser?"
 			},
 			"promptCache": {
 				"label": "Prompt Caching",
@@ -456,6 +474,10 @@
 			},
 			"resetDefaults": "Reset ke Default"
 		},
+		"rateLimitAfter": {
+			"label": "Batas laju di akhir",
+			"description": "Mulai membatasi laju setelah aliran API berakhir."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Waktu minimum antara permintaan API."
@@ -468,6 +490,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Upaya Reasoning Model",
+			"none": "Tidak Ada",
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
 			"medium": "Sedang",
@@ -540,9 +563,45 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Batas waktu inisialisasi checkpoint (detik)",
+			"description": "Waktu maksimum menunggu inisialisasi layanan checkpoint. Default 15 detik. Rentang: 10-60 detik."
+		},
 		"enable": {
 			"label": "Aktifkan checkpoint otomatis",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Aktifkan pembersihan tugas otomatis",
+			"description": "Secara otomatis menghapus tugas lama untuk membebaskan ruang disk dan meningkatkan kinerja. Tugas diklasifikasikan berdasarkan jenis dan usia untuk menentukan kapan harus dihapus."
+		},
+		"defaultRetention": {
+			"label": "Periode retensi default (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas sebelum memenuhi syarat untuk dibersihkan"
+		},
+		"neverPurgeFavorited": {
+			"label": "Jangan pernah hapus tugas favorit",
+			"description": "Ketika diaktifkan, tugas favorit tidak akan pernah dihapus secara otomatis terlepas dari usia"
+		},
+		"favoritedRetention": {
+			"label": "Retensi tugas favorit (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas favorit (hanya berlaku ketika 'Jangan pernah hapus tugas favorit' dinonaktifkan)"
+		},
+		"completedRetention": {
+			"label": "Retensi tugas selesai (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang telah berhasil diselesaikan"
+		},
+		"incompleteRetention": {
+			"label": "Retensi tugas tidak lengkap (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang tidak diselesaikan (biasanya lebih pendek dari tugas yang selesai)"
+		},
+		"lastRun": {
+			"label": "Pembersihan terakhir"
+		},
+		"manualPurge": {
+			"button": "Jalankan Pembersihan Sekarang"
 		}
 	},
 	"notifications": {
@@ -636,6 +695,14 @@
 			"label": "Ukuran total gambar maksimum",
 			"mb": "MB",
 			"description": "Batas ukuran kumulatif maksimum (dalam MB) untuk semua gambar yang diproses dalam satu operasi read_file. Saat membaca beberapa gambar, ukuran setiap gambar ditambahkan ke total. Jika menyertakan gambar lain akan melebihi batas ini, gambar tersebut akan dilewati."
+		},
+		"includeCurrentTime": {
+			"label": "Sertakan waktu saat ini dalam konteks",
+			"description": "Ketika diaktifkan, waktu saat ini dan informasi zona waktu akan disertakan dalam prompt sistem. Nonaktifkan ini jika model berhenti bekerja karena masalah waktu."
+		},
+		"includeCurrentCost": {
+			"label": "Sertakan biaya saat ini dalam konteks",
+			"description": "Ketika diaktifkan, biaya penggunaan API saat ini akan disertakan dalam prompt sistem. Nonaktifkan ini jika model berhenti bekerja karena masalah biaya."
 		}
 	},
 	"terminal": {
@@ -645,55 +712,55 @@
 		},
 		"advanced": {
 			"label": "Pengaturan Terminal: Lanjutan",
-			"description": "Opsi berikut mungkin memerlukan restart terminal untuk menerapkan pengaturan."
+			"description": "Pengaturan ini hanya berlaku ketika 'Gunakan Terminal Inline' dinonaktifkan. Hanya mempengaruhi terminal VS Code dan mungkin memerlukan restart IDE."
 		},
 		"outputLineLimit": {
-			"label": "Batas output terminal",
-			"description": "Jumlah maksimum baris yang disertakan dalam output terminal saat mengeksekusi perintah. Ketika terlampaui, baris akan dihapus dari tengah, menghemat token. <0>Pelajari lebih lanjut</0>"
+			"label": "Batas keluaran terminal",
+			"description": "Menyimpan baris pertama dan terakhir dan membuang yang tengah agar tetap di bawah batas. Turunkan untuk menghemat token; naikkan untuk memberi Kilo lebih banyak detail tengah. Kilo melihat placeholder di mana konten dilewati.<0>Pelajari lebih lanjut</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Batas karakter terminal",
-			"description": "Jumlah maksimum karakter yang akan disertakan dalam output terminal saat menjalankan perintah. Batas ini lebih diutamakan daripada batas baris untuk mencegah masalah memori dari baris yang sangat panjang. Ketika terlampaui, output akan dipotong. <0>Pelajari lebih lanjut</0>"
+			"description": "Override batas baris untuk mencegah masalah memori dengan memberlakukan cap keras pada ukuran output. Jika terlampaui, simpan awal dan akhir lalu tampilkan placeholder ke Kilo di mana konten dilewati. <0>Pelajari lebih lanjut</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Timeout integrasi shell terminal",
-			"description": "Waktu maksimum untuk menunggu integrasi shell menginisialisasi sebelum mengeksekusi perintah. Untuk pengguna dengan waktu startup shell yang lama, nilai ini mungkin perlu ditingkatkan jika kamu melihat error \"Shell Integration Unavailable\" di terminal. <0>Pelajari lebih lanjut</0>"
+			"description": "Waktu tunggu integrasi shell VS Code sebelum menjalankan perintah. Naikkan jika shell lambat start atau muncul error 'Shell Integration Unavailable'. <0>Pelajari lebih lanjut</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Nonaktifkan integrasi shell terminal",
-			"description": "Aktifkan ini jika perintah terminal tidak bekerja dengan benar atau kamu melihat error 'Shell Integration Unavailable'. Ini menggunakan metode yang lebih sederhana untuk menjalankan perintah, melewati beberapa fitur terminal lanjutan. <0>Pelajari lebih lanjut</0>"
+			"label": "Gunakan Terminal Inline (disarankan)",
+			"description": "Jalankan perintah di Terminal Inline (obrolan) untuk melewati profil/integrasi shell untuk proses lebih cepat dan andal. Saat dinonaktifkan, Kilo menggunakan terminal VS Code dengan profil shell, prompt, dan plugin Anda. <0>Pelajari lebih lanjut</0>"
 		},
 		"commandDelay": {
 			"label": "Delay perintah terminal",
-			"description": "Delay dalam milidetik untuk ditambahkan setelah eksekusi perintah. Pengaturan default 0 menonaktifkan delay sepenuhnya. Ini dapat membantu memastikan output perintah sepenuhnya ditangkap di terminal dengan masalah timing. Di sebagian besar terminal ini diimplementasikan dengan mengatur `PROMPT_COMMAND='sleep N'` dan Powershell menambahkan `start-sleep` di akhir setiap perintah. Awalnya adalah workaround untuk VSCode bug#237208 dan mungkin tidak diperlukan. <0>Pelajari lebih lanjut</0>"
+			"description": "Tambahkan jeda singkat setelah setiap perintah agar VS Code terminal bisa flush semua output (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Gunakan hanya jika output ekor hilang; jika tidak biarkan di 0. <0>Pelajari lebih lanjut</0>"
 		},
 		"compressProgressBar": {
-			"label": "Kompres output progress bar",
-			"description": "Ketika diaktifkan, memproses output terminal dengan carriage return (\\r) untuk mensimulasikan bagaimana terminal nyata akan menampilkan konten. Ini menghapus state progress bar intermediate, hanya mempertahankan state final, yang menghemat ruang konteks untuk informasi yang lebih relevan. <0>Pelajari lebih lanjut</0>"
+			"label": "Kompres keluaran bilah kemajuan",
+			"description": "Menciutkan bilah kemajuan/spinner sehingga hanya status akhir yang disimpan (menghemat token). <0>Pelajari lebih lanjut</0>"
 		},
 		"powershellCounter": {
-			"label": "Aktifkan workaround counter PowerShell",
-			"description": "Ketika diaktifkan, menambahkan counter ke perintah PowerShell untuk memastikan eksekusi perintah yang tepat. Ini membantu dengan terminal PowerShell yang mungkin memiliki masalah dengan penangkapan output perintah. <0>Pelajari lebih lanjut</0>"
+			"label": "Aktifkan solusi penghitung PowerShell",
+			"description": "Aktifkan saat keluaran PowerShell hilang atau digandakan; menambahkan penghitung kecil ke setiap perintah untuk menstabilkan keluaran. Biarkan nonaktif jika keluaran sudah terlihat benar. <0>Pelajari lebih lanjut</0>"
 		},
 		"zshClearEolMark": {
-			"label": "Hapus ZSH EOL mark",
-			"description": "Ketika diaktifkan, menghapus ZSH end-of-line mark dengan mengatur PROMPT_EOL_MARK=''. Ini mencegah masalah dengan interpretasi output perintah ketika output berakhir dengan karakter khusus seperti '%'. <0>Pelajari lebih lanjut</0>"
+			"label": "Hapus tanda EOL ZSH",
+			"description": "Aktifkan saat Anda melihat % liar di akhir baris atau penguraian terlihat salah; menghilangkan tanda akhir baris (%) Zsh. <0>Pelajari lebih lanjut</0>"
 		},
 		"zshOhMy": {
 			"label": "Aktifkan integrasi Oh My Zsh",
-			"description": "Ketika diaktifkan, mengatur ITERM_SHELL_INTEGRATION_INSTALLED=Yes untuk mengaktifkan fitur integrasi shell Oh My Zsh. Menerapkan pengaturan ini mungkin memerlukan restart IDE. <0>Pelajari lebih lanjut</0>"
+			"description": "Aktifkan saat tema/plugin Oh My Zsh Anda mengharapkan integrasi shell; menyetel ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Nonaktifkan untuk menghindari penyetelan variabel tersebut. <0>Pelajari lebih lanjut</0>"
 		},
 		"zshP10k": {
 			"label": "Aktifkan integrasi Powerlevel10k",
-			"description": "Ketika diaktifkan, mengatur POWERLEVEL9K_TERM_SHELL_INTEGRATION=true untuk mengaktifkan fitur integrasi shell Powerlevel10k. <0>Pelajari lebih lanjut</0>"
+			"description": "Aktifkan saat menggunakan integrasi shell Powerlevel10k. <0>Pelajari lebih lanjut</0>"
 		},
 		"zdotdir": {
 			"label": "Aktifkan penanganan ZDOTDIR",
-			"description": "Ketika diaktifkan, membuat direktori sementara untuk ZDOTDIR untuk menangani integrasi shell zsh dengan benar. Ini memastikan integrasi shell VSCode bekerja dengan benar dengan zsh sambil mempertahankan konfigurasi zsh kamu. <0>Pelajari lebih lanjut</0>"
+			"description": "Aktifkan saat integrasi shell zsh gagal atau bertentangan dengan dotfile Anda. <0>Pelajari lebih lanjut</0>"
 		},
 		"inheritEnv": {
-			"label": "Warisi variabel environment",
-			"description": "Ketika diaktifkan, terminal akan mewarisi variabel environment dari proses parent VSCode, seperti pengaturan integrasi shell yang didefinisikan user-profile. Ini secara langsung mengalihkan pengaturan global VSCode `terminal.integrated.inheritEnv`. <0>Pelajari lebih lanjut</0>"
+			"label": "Warisi variabel lingkungan",
+			"description": "Aktifkan untuk mewarisi variabel lingkungan dari proses induk VS Code. <0>Pelajari lebih lanjut</0>"
 		}
 	},
 	"advancedSettings": {
@@ -702,7 +769,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Aktifkan editing melalui diff",
-			"description": "Ketika diaktifkan, Kilo Code akan dapat mengedit file lebih cepat dan akan secara otomatis menolak penulisan file penuh yang terpotong. Bekerja terbaik dengan model Claude 3.7 Sonnet terbaru.",
+			"description": "Ketika diaktifkan, Kilo Code akan dapat mengedit file lebih cepat dan akan secara otomatis menolak penulisan file penuh yang terpotong",
 			"strategy": {
 				"label": "Strategi diff",
 				"options": {
@@ -752,10 +819,6 @@
 			"name": "Gunakan strategi unified diff eksperimental",
 			"description": "Aktifkan strategi unified diff eksperimental. Strategi ini mungkin mengurangi jumlah retry yang disebabkan oleh error model tetapi dapat menyebabkan perilaku yang tidak terduga atau edit yang salah. Hanya aktifkan jika kamu memahami risikonya dan bersedia meninjau semua perubahan dengan hati-hati."
 		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Gunakan tool search and replace eksperimental",
-			"description": "Aktifkan tool search and replace eksperimental, memungkinkan Kilo Code mengganti beberapa instance dari term pencarian dalam satu permintaan."
-		},
 		"INSERT_BLOCK": {
 			"name": "Gunakan tool insert content eksperimental",
 			"description": "Aktifkan tool insert content eksperimental, memungkinkan Kilo Code menyisipkan konten pada nomor baris spesifik tanpa perlu membuat diff."
@@ -782,7 +845,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Gateway Provider, OpenRouter, atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
 			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
 			"modelLabel": "Pemilihan Model",
@@ -842,8 +905,6 @@
 	"modelInfo": {
 		"supportsImages": "Mendukung gambar",
 		"noImages": "Tidak mendukung gambar",
-		"supportsComputerUse": "Mendukung computer use",
-		"noComputerUse": "Tidak mendukung computer use",
 		"supportsPromptCache": "Mendukung prompt caching",
 		"noPromptCache": "Tidak mendukung prompt caching",
 		"contextWindow": "Jendela Konteks:",
@@ -899,6 +960,7 @@
 			"regionMismatch": "Peringatan: Region di ARN kamu ({{arnRegion}}) tidak cocok dengan region yang kamu pilih ({{region}}). Ini dapat menyebabkan masalah akses. Provider akan menggunakan region dari ARN."
 		},
 		"modelAvailability": "Model ID ({{modelId}}) yang kamu berikan tidak tersedia. Silakan pilih model yang berbeda.",
+		"modelDeprecated": "Model ini tidak lagi tersedia. Silakan pilih model yang berbeda.",
 		"providerNotAllowed": "Provider '{{provider}}' tidak diizinkan oleh organisasi kamu",
 		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
 		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu",
@@ -941,6 +1003,19 @@
 		"taskTimeline": {
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		},
+		"sendMessageOnEnter": {
+			"label": "Kirim pesan dengan Enter",
+			"description": "Saat diaktifkan, tekan Enter untuk mengirim dan Shift+Enter untuk baris baru. Matikan untuk menggunakan Shift+Enter untuk mengirim."
+		},
+		"costThreshold": {
+			"label": "Sembunyikan biaya di bawah ambang batas",
+			"currentValue": "Ambang batas saat ini: ${{value}}",
+			"description": "Hanya tampilkan biaya permintaan di atas jumlah ini. Biaya selalu terlihat saat panel detail terbuka."
+		},
+		"showTimestamps": {
+			"label": "Tampilkan stempel waktu",
+			"description": "Tampilkan stempel waktu untuk setiap pesan di tampilan obrolan"
 		}
 	},
 	"ghost": {

@@ -17,7 +17,7 @@ interface MainThreadErrorsShape : Disposable {
      * @param err Error information
      */
     fun onUnexpectedError(err: Any?)
-    
+
     /**
      * Releases resources.
      */

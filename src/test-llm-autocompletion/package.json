@@ -1,0 +1,28 @@
+{
+	"name": "llm-autocompletion-tests",
+	"version": "1.0.0",
+	"description": "Standalone test suite for AutoTriggerStrategy with real LLM calls",
+	"type": "module",
+	"scripts": {
+		"test": "tsx runner.ts",
+		"test:verbose": "tsx runner.ts --verbose",
+		"test:fim": "tsx runner.ts --fim",
+		"test:fim:verbose": "tsx runner.ts --fim --verbose",
+		"clean": "tsx runner.ts clean"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.51.0",
+		"openai": "^5.12.2",
+		"dotenv": "^16.4.5",
+		"diff": "^7.0.0",
+		"web-tree-sitter": "^0.20.8"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"tsx": "^4.19.3",
+		"typescript": "^5.8.3"
+	},
+	"volta": {
+		"node": "20.19.2"
+	}
+}

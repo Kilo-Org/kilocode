@@ -3,9 +3,8 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { ModelDescriptionMarkdown } from "../../settings/ModelDescriptionMarkdown"
 import { ModelInfoSupportsItem } from "@/components/settings/ModelInfoView"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, StandardTooltip } from "@/components/ui"
-import { FreeModelsInfoView } from "../FreeModelsLink"
 import { useQuery } from "@tanstack/react-query"
-import { getKiloBaseUriFromToken } from "@roo/kilocode/token"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 
@@ -93,9 +92,11 @@ export const KiloModelInfoView = ({
 		queryKey: ["modelstats"],
 		queryFn: async () => {
 			try {
-				return (
-					await fetch(`${getKiloBaseUriFromToken(apiConfiguration.kilocodeToken ?? "")}/api/modelstats`)
-				).json()
+				const url = getKiloUrlFromToken(
+					"https://api.kilocode.ai/api/modelstats",
+					apiConfiguration.kilocodeToken ?? "",
+				)
+				return (await fetch(url)).json()
 			} catch (err) {
 				if (err instanceof Error) {
 					telemetryClient.captureException(err, { context: "modelstats" })
@@ -115,9 +116,6 @@ export const KiloModelInfoView = ({
 					isExpanded={isDescriptionExpanded}
 					setIsExpanded={setIsDescriptionExpanded}
 				/>
-			)}
-			{apiConfiguration.apiProvider === "kilocode" && modelId.endsWith(":free") && (
-				<FreeModelsInfoView modelId={modelId} origin="settings" />
 			)}
 			<div className="text-sm text-vscode-descriptionForeground">
 				<ModelInfoSupportsItem

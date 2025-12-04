@@ -80,4 +80,4 @@ class MainThreadClipboard : MainThreadClipboardShape {
     override fun dispose() {
         logger.info("Releasing resources: MainThreadClipboard")
     }
-} 
+}

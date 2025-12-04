@@ -63,28 +63,12 @@ ollama pull qwen3-coder:30b
 By default Ollama truncates prompts to a very short length, [as documented here](https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size).
 
 You need to have at least 32k to get decent results, but increasing the context size increases memory usage and may decrease performance, depending on your hardware.
-To configure a model, you need to set its parameters and save a copy of it.
 
-Load the model (we will use `qwen3-coder:30b` as an example):
+To configure the context window, set "Context Window Size (num_ctx)" in the API Provider settings.
 
-```bash
-ollama run qwen3-coder:30b
-```
+### Configure the Timout
 
-Change context size parameter:
-
-```bash
-/set parameter num_ctx 32768
-```
-
-Save the model with a new name:
-
-```bash
-/save qwen3-coder-30b-c32k
-```
-
-You can also set the `OLLAMA_CONTEXT_LENGTH` environment variable,
-but this is not recommended as it changes the context for all models and the environment variable needs to be visible to both the Ollama server and the IDE.
+By default, API requests time out after 10 minutes. Local models can be slow, if you hit this timeout you can consider increasing it here: VS Code Extensions panel > Kilo Code gear menu > Settings > API Request Timeout.
 
 ### Configure Kilo Code
 

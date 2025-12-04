@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "Die Antwort des Modells endete unerwartet (keine Assistant-Nachrichten). Dies könnte ein Hinweis auf Raten-Limitierung sein.",
 		"notLoggedInError": "Anfrage kann nicht abgeschlossen werden. Stelle sicher, dass du mit dem ausgewählten Anbieter verbunden und angemeldet bist.\n\n{{error}}",
-		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht."
+		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht.",
+		"disableApplyDiff": "Falls dieser Fehler weiterhin auftritt, deaktiviere bitte 'Bearbeitung durch Diffs' in den erweiterten Einstellungen.",
+		"disableEditFile": "Falls dieser Fehler weiterhin auftritt, deaktiviere bitte die experimentelle Funktion 'Schnelles Anwenden'."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints sind nicht verfügbar, da ein verschachteltes Git-Repository erkannt wurde unter: {{path}}. Bitte entferne oder verschiebe verschachtelte Git-Repositories, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",
@@ -58,7 +60,41 @@
 		"generationFailed": "Kilo: Fehler beim Generieren der Commit-Nachricht: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Nachricht mit nicht bereitgestellten Änderungen generieren",
 		"activationFailed": "Kilo: Der Nachrichtengenerator konnte nicht aktiviert werden: {{error}}",
-		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
+		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert",
+		"errors": {
+			"noProject": "Kein Projekt verfügbar",
+			"connectionFailed": "Verbindung zur Kilo Code-Erweiterung fehlgeschlagen",
+			"missingMessage": "Keine Commit-Nachricht von der Erweiterung erhalten",
+			"timeout": "Anfrage nach 30 Sekunden abgelaufen",
+			"invalidResponse": "Ungültiges Antwortformat vom Erweiterung erhalten",
+			"noChanges": "Keine Änderungen zum Committen gefunden",
+			"noWorkspacePath": "Konnte Arbeitsbereichspfad für Git-Repository nicht ermitteln",
+			"workspaceNotFound": "Konnte den Arbeitsbereichspfad für das Git-Repository nicht ermitteln",
+			"processingError": "Fehler bei der Verarbeitung der Commit-Nachrichtengenerierung: {{error}}"
+		},
+		"error": {
+			"title": "Fehler",
+			"workspacePathNotFound": "Workspace-Pfad für Git-Repository konnte nicht ermittelt werden",
+			"unknown": "Unbekannter Fehler",
+			"processingFailed": "Fehler bei der Verarbeitung der Commit-Nachrichtengenerierung: {{error}}",
+			"generationFailed": "Fehler beim Generieren der Commit-Nachricht: {{error}}"
+		},
+		"dialogs": {
+			"info": "KI-Commit-Nachricht",
+			"success": "Erfolg",
+			"title": "KI-Commit-Nachricht",
+			"error": "Fehler"
+		},
+		"progress": {
+			"title": "Commit-Nachricht generieren",
+			"analyzing": "Änderungen werden analysiert...",
+			"connecting": "Verbindung mit Kilo Code wird hergestellt...",
+			"generating": "Commit-Nachricht wird generiert..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Generiert Commit-Nachrichten mittels KI zur Analyse Ihrer Code-Änderungen",
+			"generateButton": "Commit-Nachricht generieren"
+		}
 	},
 	"ghost": {
 		"statusBar": {
@@ -71,6 +107,7 @@
 				"tokenError": "Ein gültiger Token muss gesetzt werden, um Autocomplete zu verwenden",
 				"lastCompletion": "Letzter Vorschlag:",
 				"sessionTotal": "Sitzungsgesamtkosten:",
+				"provider": "Anbieter:",
 				"model": "Modell:"
 			},
 			"cost": {
@@ -96,7 +133,6 @@
 			"cancelSuggestions": "Bearbeitungsvorschläge abbrechen",
 			"applyCurrentSuggestion": "Aktuellen Bearbeitungsvorschlag anwenden",
 			"applyAllSuggestions": "Alle Bearbeitungsvorschläge anwenden",
-			"promptCodeSuggestion": "Schnellaufgabe",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

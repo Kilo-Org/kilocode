@@ -28,22 +28,22 @@ class URI private constructor(
     override val authority: String?,
     override val path: String,
     override val query: String?,
-    override val fragment: String?
+    override val fragment: String?,
 ) : URIComponents {
-    
+
     companion object {
         private val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         private const val SLASH = "/"
         private val EMPTY = ""
-        
+
         private val schemePattern = Regex("^\\w[\\w\\d+.-]*$")
         private val singleSlashStart = Regex("^/")
         private val doubleSlashStart = Regex("^//")
-        
+
         // URI regular expression, used to parse URI strings
         // Corresponds to _regexp in VSCode
         private val uriRegex = Regex("^(([^:/?#]+?):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?")
-        
+
         /**
          * Parse URI from string
          * Corresponds to URI.parse in VSCode
@@ -54,17 +54,17 @@ class URI private constructor(
          */
         fun parse(value: String, strict: Boolean = false): URI {
             val match = uriRegex.find(value) ?: return URI(EMPTY, EMPTY, EMPTY, EMPTY, EMPTY)
-            
+
             return URI(
                 scheme = match.groups[2]?.value ?: EMPTY,
                 authority = percentDecode(match.groups[4]?.value ?: EMPTY),
                 path = percentDecode(match.groups[5]?.value ?: EMPTY),
                 query = percentDecode(match.groups[7]?.value ?: EMPTY),
                 fragment = percentDecode(match.groups[9]?.value ?: EMPTY),
-                strict = strict
+                strict = strict,
             )
         }
-        
+
         /**
          * Create URI from file path
          * Corresponds to URI.file in VSCode
@@ -75,12 +75,12 @@ class URI private constructor(
         fun file(path: String): URI {
             var normalizedPath = path
             var authority = EMPTY
-            
+
             // On Windows, convert backslashes to forward slashes
             if (isWindows) {
                 normalizedPath = normalizedPath.replace('\\', '/')
             }
-            
+
             // Check UNC shared path
             if (normalizedPath.startsWith("//")) {
                 val idx = normalizedPath.indexOf('/', 2)
@@ -92,10 +92,10 @@ class URI private constructor(
                     normalizedPath = normalizedPath.substring(idx) ?: SLASH
                 }
             }
-            
+
             return URI("file", authority, normalizedPath, EMPTY, EMPTY)
         }
-        
+
         /**
          * Create URI from Path object
          *
@@ -105,7 +105,7 @@ class URI private constructor(
         fun file(path: Path): URI {
             return file(path.toString())
         }
-        
+
         /**
          * Create URI from URI components
          * Corresponds to URI.from in VSCode
@@ -121,10 +121,10 @@ class URI private constructor(
                 components.path,
                 components.query,
                 components.fragment,
-                strict
+                strict,
             )
         }
-        
+
         /**
          * Join URI path and path fragments
          * Corresponds to URI.joinPath in VSCode
@@ -137,7 +137,7 @@ class URI private constructor(
             if (uri.path.isEmpty()) {
                 throw IllegalArgumentException("[UriError]: cannot call joinPath on URI without path")
             }
-            
+
             val newPath: String = if (isWindows && uri.scheme == "file") {
                 val fsPath = uriToFsPath(uri, true)
                 val joinedPath = Paths.get(fsPath, *pathFragments).toString()
@@ -147,10 +147,10 @@ class URI private constructor(
                 val fragments = listOf(uri.path) + pathFragments
                 fragments.joinToString("/").replace(Regex("/+"), "/")
             }
-            
+
             return uri.with(path = newPath)
         }
-        
+
         /**
          * Percent decode
          * Corresponds to percentDecode in VSCode
@@ -160,22 +160,22 @@ class URI private constructor(
          */
         private fun percentDecode(str: String): String {
             val encodedAsHex = Regex("(%[0-9A-Za-z][0-9A-Za-z])+")
-            
+
             if (!encodedAsHex.containsMatchIn(str)) {
                 return str
             }
-            
+
             return encodedAsHex.replace(str) { match ->
                 try {
                     java.net.URLDecoder.decode(match.value, "UTF-8")
                 } catch (e: Exception) {
-                     // If decoding fails, keep the original string
+                    // If decoding fails, keep the original string
                     match.value
                 }
             }
         }
     }
-    
+
     /**
      * Constructor
      */
@@ -185,19 +185,19 @@ class URI private constructor(
         path: String,
         query: String?,
         fragment: String?,
-        strict: Boolean
+        strict: Boolean,
     ) : this(
         scheme = schemeFix(scheme, strict),
         authority = authority,
         path = referenceResolution(schemeFix(scheme, strict), path),
         query = query,
-        fragment = fragment
+        fragment = fragment,
     ) {
         if (strict) {
             validate()
         }
     }
-    
+
     /**
      * Validate if URI is valid
      * Corresponds to _validateUri in VSCode
@@ -206,33 +206,33 @@ class URI private constructor(
         // Check scheme
         if (scheme.isEmpty()) {
             throw IllegalArgumentException(
-                "[UriError]: Scheme is missing: {scheme: \"\", authority: \"$authority\", path: \"$path\", query: \"$query\", fragment: \"$fragment\"}"
+                "[UriError]: Scheme is missing: {scheme: \"\", authority: \"$authority\", path: \"$path\", query: \"$query\", fragment: \"$fragment\"}",
             )
         }
-        
+
         // Check scheme format
         if (!schemePattern.matches(scheme)) {
             throw IllegalArgumentException("[UriError]: Scheme contains illegal characters.")
         }
-        
+
         // Check path format
         if (path.isNotEmpty()) {
             if (authority?.isNotEmpty() == true) {
                 if (!singleSlashStart.containsMatchIn(path)) {
                     throw IllegalArgumentException(
-                        "[UriError]: If a URI contains an authority component, then the path component must either be empty or begin with a slash (\"/\") character"
+                        "[UriError]: If a URI contains an authority component, then the path component must either be empty or begin with a slash (\"/\") character",
                     )
                 }
             } else {
                 if (doubleSlashStart.containsMatchIn(path)) {
                     throw IllegalArgumentException(
-                        "[UriError]: If a URI does not contain an authority component, then the path cannot begin with two slash characters (\"//\")"
+                        "[UriError]: If a URI does not contain an authority component, then the path cannot begin with two slash characters (\"//\")",
                     )
                 }
             }
         }
     }
-    
+
     /**
      * Get file system path
      * Corresponds to URI.fsPath in VSCode
@@ -241,7 +241,7 @@ class URI private constructor(
      */
     val fsPath: String
         get() = uriToFsPath(this, false)
-    
+
     /**
      * Create new URI with modified components
      * Corresponds to URI.with in VSCode
@@ -258,14 +258,14 @@ class URI private constructor(
         authority: String? = null,
         path: String? = null,
         query: String? = null,
-        fragment: String? = null
+        fragment: String? = null,
     ): URI {
         val newScheme = scheme ?: this.scheme
         val newAuthority = authority ?: this.authority
         val newPath = path ?: this.path
         val newQuery = query ?: this.query
         val newFragment = fragment ?: this.fragment
-        
+
         if (newScheme == this.scheme &&
             newAuthority == this.authority &&
             newPath == this.path &&
@@ -274,10 +274,10 @@ class URI private constructor(
         ) {
             return this
         }
-        
+
         return URI(newScheme, newAuthority, newPath, newQuery, newFragment)
     }
-    
+
     /**
      * Convert to string
      * Corresponds to URI.toString in VSCode
@@ -288,7 +288,7 @@ class URI private constructor(
     override fun toString(): String {
         return asFormatted(false)
     }
-    
+
     /**
      * Convert to formatted string
      *
@@ -298,7 +298,7 @@ class URI private constructor(
     fun toString(skipEncoding: Boolean): String {
         return asFormatted(skipEncoding)
     }
-    
+
     /**
      * Format URI as string
      * Corresponds to _asFormatted in VSCode
@@ -308,21 +308,21 @@ class URI private constructor(
      */
     private fun asFormatted(skipEncoding: Boolean): String {
         // Define encoder function type
-        val encoderFn: (String, Boolean, Boolean) -> String = 
+        val encoderFn: (String, Boolean, Boolean) -> String =
             if (!skipEncoding) ::encodeURIComponentFast else ::encodeURIComponentMinimal
-        
+
         var res = ""
-        
+
         if (scheme.isNotEmpty()) {
             res += scheme
             res += ":"
         }
-        
+
         if (authority?.isNotEmpty() == true || scheme == "file") {
             res += SLASH
             res += SLASH
         }
-        
+
         if (authority?.isNotEmpty() == true) {
             val idx = authority.indexOf('@')
             if (idx != -1) {
@@ -330,7 +330,7 @@ class URI private constructor(
                 val userinfo = authority.substring(0, idx)
                 val auth = authority.substring(idx + 1)
                 val userinfoIdx = userinfo.lastIndexOf(':')
-                
+
                 if (userinfoIdx == -1) {
                     res += encoderFn(userinfo, false, false)
                 } else {
@@ -339,12 +339,12 @@ class URI private constructor(
                     res += ":"
                     res += encoderFn(userinfo.substring(userinfoIdx + 1), false, true)
                 }
-                
+
                 res += "@"
-                
+
                 val authorityLower = auth.lowercase()
                 val authorityIdx = authorityLower.lastIndexOf(':')
-                
+
                 if (authorityIdx == -1) {
                     res += encoderFn(authorityLower, false, true)
                 } else {
@@ -355,7 +355,7 @@ class URI private constructor(
             } else {
                 val authorityLower = authority.lowercase()
                 val idx2 = authorityLower.lastIndexOf(':')
-                
+
                 if (idx2 == -1) {
                     res += encoderFn(authorityLower, false, true)
                 } else {
@@ -365,7 +365,7 @@ class URI private constructor(
                 }
             }
         }
-        
+
         if (path.isNotEmpty()) {
             // Handle Windows drive path
             var normalizedPath = path
@@ -380,73 +380,76 @@ class URI private constructor(
                     normalizedPath = "${normalizedPath[0].lowercaseChar()}:${normalizedPath.substring(2)}"
                 }
             }
-            
+
             res += encoderFn(normalizedPath, true, false)
         }
-        
+
         if (query?.isNotEmpty() == true) {
             res += "?"
             res += encoderFn(query, false, false)
         }
-        
+
         if (fragment?.isNotEmpty() == true) {
             res += "#"
             res += encoderFn(fragment, false, false)
         }
-        
+
         return res
     }
-    
+
     /**
      * Override equals method
      */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is URI) return false
-        
+
         if (scheme != other.scheme) return false
         if (path != other.path) return false
-        
+
         // Treat authority: null and empty string as the same
         if ((authority == null || authority.isEmpty()) &&
-            (other.authority == null || other.authority.isEmpty())) {
-             // Both are null or empty string, considered equal
+            (other.authority == null || other.authority.isEmpty())
+        ) {
+            // Both are null or empty string, considered equal
         } else if (authority != other.authority) {
             return false
         }
-        
+
         // Treat query: null and empty string as the same
         if ((query == null || query.isEmpty()) &&
-            (other.query == null || other.query.isEmpty())) {
-             // Both are null or empty string, considered equal
+            (other.query == null || other.query.isEmpty())
+        ) {
+            // Both are null or empty string, considered equal
         } else if (query != other.query) {
             return false
         }
-        
+
         // Treat fragment: null and empty string as the same
         if ((fragment == null || fragment.isEmpty()) &&
-            (other.fragment == null || other.fragment.isEmpty())) {
-             // Both are null or empty string, considered equal
+            (other.fragment == null || other.fragment.isEmpty())
+        ) {
+            // Both are null or empty string, considered equal
         } else if (fragment != other.fragment) {
             return false
         }
-        
+
         return true
     }
-    
+
     /**
      * Override hashCode method
      */
     override fun hashCode(): Int {
         var result = scheme.hashCode()
-        if(authority != null && authority != ""){
+        if (authority != null && authority != "") {
             result = 31 * result + authority.hashCode()
         }
         result = 31 * result + path.hashCode()
-        if (query != null && query != ""){
+        if (query != null && query != "") {
             result = 31 * result + query.hashCode()
         }
-        if (fragment != null && fragment != ""){
+        if (fragment != null && fragment != "") {
             result = 31 * result + fragment.hashCode()
         }
         return result
@@ -464,7 +467,7 @@ class URI private constructor(
 private fun uriToFsPath(uri: URI, keepDriveLetterCasing: Boolean): String {
     val value: String
     val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-    
+
     if (uri.authority?.isNotEmpty() == true && uri.path.length > 1 && uri.scheme == "file") {
         // UNC path: file://shares/c$/far/boo
         value = "//${uri.authority}${uri.path}"
@@ -485,7 +488,7 @@ private fun uriToFsPath(uri: URI, keepDriveLetterCasing: Boolean): String {
         // Other paths
         value = uri.path
     }
-    
+
     return if (isWindows) {
         value.replace('/', '\\')
     } else {
@@ -543,31 +546,31 @@ private fun referenceResolution(scheme: String, path: String): String {
 private fun encodeURIComponentFast(uriComponent: String, isPath: Boolean, isAuthority: Boolean): String {
     var result: String? = null
     var nativeEncodePos = -1
-    
+
     for (pos in uriComponent.indices) {
         val code = uriComponent[pos].code
-        
+
         // Characters that do not need encoding: a-z, A-Z, 0-9, -, ., _, ~, /, [, ], :
         if ((code in 97..122) || // a-z
-            (code in 65..90) ||  // A-Z
-            (code in 48..57) ||  // 0-9
-            code == 45 ||        // -
-            code == 46 ||        // .
-            code == 95 ||        // _
-            code == 126 ||       // ~
+            (code in 65..90) || // A-Z
+            (code in 48..57) || // 0-9
+            code == 45 || // -
+            code == 46 || // .
+            code == 95 || // _
+            code == 126 || // ~
             (isPath && code == 47) || // /
             (isAuthority && code == 91) || // [
             (isAuthority && code == 93) || // ]
-            (isAuthority && code == 58)    // :
+            (isAuthority && code == 58) // :
         ) {
             // Check if delayed encoding
             if (nativeEncodePos != -1) {
                 result = (result ?: uriComponent.substring(0, nativeEncodePos)) +
-                         java.net.URLEncoder.encode(uriComponent.substring(nativeEncodePos, pos), "UTF-8")
-                         .replace("+", "%20")
+                    java.net.URLEncoder.encode(uriComponent.substring(nativeEncodePos, pos), "UTF-8")
+                        .replace("+", "%20")
                 nativeEncodePos = -1
             }
-            
+
             // Check if writing new string
             if (result != null) {
                 result += uriComponent[pos]
@@ -577,20 +580,20 @@ private fun encodeURIComponentFast(uriComponent: String, isPath: Boolean, isAuth
             if (result == null) {
                 result = uriComponent.substring(0, pos)
             }
-            
+
             // Check if using native encoding
             if (nativeEncodePos == -1) {
                 nativeEncodePos = pos
             }
         }
     }
-    
+
     if (nativeEncodePos != -1) {
-        result = (result ?: "") + 
-                 java.net.URLEncoder.encode(uriComponent.substring(nativeEncodePos), "UTF-8")
-                 .replace("+", "%20")
+        result = (result ?: "") +
+            java.net.URLEncoder.encode(uriComponent.substring(nativeEncodePos), "UTF-8")
+                .replace("+", "%20")
     }
-    
+
     return result ?: uriComponent
 }
 
@@ -605,10 +608,10 @@ private fun encodeURIComponentFast(uriComponent: String, isPath: Boolean, isAuth
  */
 private fun encodeURIComponentMinimal(path: String, isPath: Boolean = false, isAuthority: Boolean = false): String {
     var result: String? = null
-    
+
     for (pos in path.indices) {
         val code = path[pos].code
-        
+
         if (code == 35 || code == 63) { // # or ?
             if (result == null) {
                 result = path.substring(0, pos)
@@ -624,6 +627,6 @@ private fun encodeURIComponentMinimal(path: String, isPath: Boolean = false, isA
             }
         }
     }
-    
+
     return result ?: path
-} 
+}

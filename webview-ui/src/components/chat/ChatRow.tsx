@@ -1,10 +1,11 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
-import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react" // kilocode_change: add VSCodeButton
+import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
+import { Mode } from "@roo/modes"
 
 import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
@@ -21,13 +22,13 @@ import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import CodeAccordian from "../common/CodeAccordian"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
-// import Thumbnails from "../common/Thumbnails" // kilocode_change
+import Thumbnails from "../common/Thumbnails"
 import ImageBlock from "../common/ImageBlock"
 import ErrorRow from "./ErrorRow"
 
 import McpResourceRow from "../mcp/McpResourceRow"
 
-// import { Mention } from "./Mention" // kilocode_change
+import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
 import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning" // kilocode_change
@@ -44,17 +45,21 @@ import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar" // 
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
-import { KiloChatRowUserFeedback } from "../kilocode/chat/KiloChatRowUserFeedback" // kilocode_change
 import { StandardTooltip } from "../ui" // kilocode_change
 import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
+import { appendImages } from "@src/utils/imageUtils"
 import { McpExecution } from "./McpExecution"
-import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
+import { ChatTextArea } from "./ChatTextArea"
+import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
+import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
+import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 import {
-	ChevronRight,
-	ChevronDown,
 	Eye,
 	FileDiff,
 	ListTree,
+	User,
+	Edit,
+	Trash2,
 	MessageCircleQuestionMark,
 	SquareArrowOutUpRight,
 	FileCode2,
@@ -64,6 +69,9 @@ import {
 	MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatFileSize } from "@/lib/formatting-utils" // kilocode_change
+import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
+import ChatTimestamps from "./ChatTimestamps" // kilocode_change
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -76,11 +84,11 @@ interface ChatRowProps {
 	onSuggestionClick?: (suggestion: SuggestionItem, event?: React.MouseEvent) => void
 	onBatchFileResponse?: (response: { [key: string]: boolean }) => void
 	highlighted?: boolean // kilocode_change: Add highlighted prop
-	onChatReset?: () => void // kilocode_change
 	enableCheckpoints?: boolean // kilocode_change
 	onFollowUpUnmount?: () => void
 	isFollowUpAnswered?: boolean
 	editable?: boolean
+	hasCheckpoint?: boolean
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -138,29 +146,99 @@ export const ChatRowContent = ({
 	onSuggestionClick,
 	onFollowUpUnmount,
 	onBatchFileResponse,
-	onChatReset, // kilocode_change
 	enableCheckpoints, // kilocode_change
 	isFollowUpAnswered,
 	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	// kilocode_change: add showTimestamps
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, showTimestamps } =
+		useExtensionState()
+	const { info: model } = useSelectedModel(apiConfiguration)
+	const [isEditing, setIsEditing] = useState(false)
+	const [editedContent, setEditedContent] = useState("")
+	const [editMode, setEditMode] = useState<Mode>(mode || "code")
+	const [editImages, setEditImages] = useState<string[]>([])
+
+	// Handle message events for image selection during edit mode
+	useEffect(() => {
+		const handleMessage = (event: MessageEvent) => {
+			const msg = event.data
+			if (msg.type === "selectedImages" && msg.context === "edit" && msg.messageTs === message.ts && isEditing) {
+				setEditImages((prevImages) => appendImages(prevImages, msg.images, MAX_IMAGES_PER_MESSAGE))
+			}
+		}
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	}, [isEditing, message.ts])
 
 	// Memoized callback to prevent re-renders caused by inline arrow functions.
 	const handleToggleExpand = useCallback(() => {
 		onToggleExpand(message.ts)
 	}, [onToggleExpand, message.ts])
 
-	// kilocode_change: usageMissing
-	const [cost, usageMissing, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
+	// Handle edit button click
+	const handleEditClick = useCallback(() => {
+		setIsEditing(true)
+		setEditedContent(message.text || "")
+		setEditImages(message.images || [])
+		setEditMode(mode || "code")
+		// Edit mode is now handled entirely in the frontend
+		// No need to notify the backend
+	}, [message.text, message.images, mode])
+
+	// Handle cancel edit
+	const handleCancelEdit = useCallback(() => {
+		setIsEditing(false)
+		setEditedContent(message.text || "")
+		setEditImages(message.images || [])
+		setEditMode(mode || "code")
+	}, [message.text, message.images, mode])
+
+	// Handle save edit
+	const handleSaveEdit = useCallback(() => {
+		setIsEditing(false)
+		// Send edited message to backend
+		vscode.postMessage({
+			type: "submitEditedMessage",
+			value: message.ts,
+			editedMessageContent: editedContent,
+			images: editImages,
+		})
+	}, [message.ts, editedContent, editImages])
+
+	// Handle image selection for editing
+	const handleSelectImages = useCallback(() => {
+		vscode.postMessage({ type: "selectImages", context: "edit", messageTs: message.ts })
+	}, [message.ts])
+
+	// kilocode_change: usageMissing, inferenceProvider
+	const [cost, usageMissing, inferenceProvider, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info = safeJsonParse<ClineApiReqInfo>(message.text)
-			return [info?.cost, info?.usageMissing, info?.cancelReason, info?.streamingFailedMessage]
+			return [
+				info?.cost,
+				info?.usageMissing,
+				info?.inferenceProvider,
+				info?.cancelReason,
+				info?.streamingFailedMessage,
+			]
 		}
 
 		return [undefined, undefined, undefined]
 	}, [message.text, message.say])
+
+	// kilocode_change start: hide cost display check
+	const { hideCostBelowThreshold } = useExtensionState()
+	const shouldShowCost = useMemo(() => {
+		if (cost === undefined || cost === null || cost <= 0) return false
+		if (isExpanded) return true
+		const threshold = hideCostBelowThreshold ?? 0
+		return cost >= threshold
+	}, [cost, isExpanded, hideCostBelowThreshold])
+	// kilocode_change end: hide cost display check
 
 	// When resuming task, last wont be api_req_failed but a resume_task
 	// message, so api_req_started will show loading spinner. That's why we just
@@ -250,11 +328,7 @@ export const ChatRowContent = ({
 							getIconSpan("error", errorColor)
 						)
 					) : cost !== null && cost !== undefined ? (
-						isExpanded ? (
-							<ChevronDown className="w-4 shrink-0" />
-						) : (
-							<ChevronRight className="w-4 shrink-0" />
-						)
+						getIconSpan("arrow-swap", normalColor)
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
@@ -271,8 +345,12 @@ export const ChatRowContent = ({
 							</span>
 						)
 					) : cost !== null && cost !== undefined ? (
-						<span style={{ color: normalColor }}>{t("chat:apiRequest.title")}</span>
-					) : apiRequestFailedMessage ? (
+						// kilocode_change start: tooltip
+						<StandardTooltip content={inferenceProvider && `Inference Provider: ${inferenceProvider}`}>
+							<span style={{ color: normalColor }}>{t("chat:apiRequest.title")}</span>
+						</StandardTooltip>
+					) : // kilocode_change end
+					apiRequestFailedMessage ? (
 						<span style={{ color: errorColor }}>{t("chat:apiRequest.failed")}</span>
 					) : (
 						<span style={{ color: normalColor }}>{t("chat:apiRequest.streaming")}</span>
@@ -295,7 +373,7 @@ export const ChatRowContent = ({
 		cost,
 		apiRequestFailedMessage,
 		t,
-		isExpanded,
+		inferenceProvider, // kilocode_change
 	])
 
 	const headerStyle: React.CSSProperties = {
@@ -418,39 +496,6 @@ export const ChatRowContent = ({
 						</div>
 					</>
 				)
-			case "searchAndReplace":
-				return (
-					<>
-						<div style={headerStyle}>
-							{tool.isProtected ? (
-								<span
-									className="codicon codicon-lock"
-									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
-								/>
-							) : (
-								toolIcon("replace")
-							)}
-							<span style={{ fontWeight: "bold" }}>
-								{tool.isProtected && message.type === "ask"
-									? t("chat:fileOperations.wantsToEditProtected")
-									: message.type === "ask"
-										? t("chat:fileOperations.wantsToSearchReplace")
-										: t("chat:fileOperations.didSearchReplace")}
-							</span>
-						</div>
-						<div className="pl-6">
-							<CodeAccordian
-								path={tool.path}
-								code={tool.diff}
-								language="diff"
-								progressStatus={message.progressStatus}
-								isLoading={message.partial}
-								isExpanded={isExpanded}
-								onToggleExpand={handleToggleExpand}
-							/>
-						</div>
-					</>
-				)
 			case "codebaseSearch": {
 				return (
 					<div style={headerStyle}>
@@ -524,6 +569,53 @@ export const ChatRowContent = ({
 						</div>
 					</>
 				)
+			// kilocode_change start
+			case "deleteFile":
+				return (
+					<>
+						<div style={headerStyle}>
+							<Trash2 className="w-4 shrink-0" aria-label="Delete icon" />
+							<span style={{ fontWeight: "bold" }}>
+								{tool.stats
+									? t("chat:fileOperations.wantsToDeleteDirectory")
+									: t("chat:fileOperations.wantsToDelete")}
+							</span>
+						</div>
+						<div className="pl-6">
+							<ToolUseBlock>
+								<ToolUseBlockHeader className="group">
+									{tool.path?.startsWith(".") && <span>.</span>}
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
+									</span>
+								</ToolUseBlockHeader>
+								{tool.stats && tool.stats.isComplete === true && (
+									<div
+										className="py-1.5 text-xs text-vscode-descriptionForeground"
+										style={{
+											borderTop: "1px solid var(--vscode-editorGroup-border)",
+										}}>
+										<div className="flex items-center gap-3 flex-wrap">
+											<span className="flex items-center gap-1">
+												<span>📁</span>
+												<span>{tool.stats.directories}</span>
+											</span>
+											<span className="flex items-center gap-1">
+												<span>📄</span>
+												<span>{tool.stats.files}</span>
+											</span>
+											<span className="flex items-center gap-1">
+												<span>💾</span>
+												<span>{formatFileSize(tool.stats.size)}</span>
+											</span>
+										</div>
+									</div>
+								)}
+							</ToolUseBlock>
+						</div>
+					</>
+				)
+			// kilocode_change end
 			case "readFile":
 				// Check if this is a batch file permission request
 				const isBatchRequest = message.type === "ask" && tool.batchFiles && Array.isArray(tool.batchFiles)
@@ -1033,20 +1125,19 @@ export const ChatRowContent = ({
 											? 10
 											: 0,
 									justifyContent: "space-between",
-									cursor: "pointer",
-									userSelect: "none",
-									WebkitUserSelect: "none",
-									MozUserSelect: "none",
-									msUserSelect: "none",
-								}}
-								onClick={handleToggleExpand}>
+								}}>
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
-									{title}
+									{/* kilocode_change start */}
+									<div style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
+										{title}
+										{showTimestamps && <ChatTimestamps ts={message.ts} />}
+									</div>
+									{/* kilocode_change end */}
 								</div>
 								<div
 									className="text-xs text-vscode-dropdown-foreground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
-									style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
+									style={{ opacity: shouldShowCost ? 1 : 0 }}>
 									${Number(cost || 0)?.toFixed(4)}
 								</div>
 								{
@@ -1084,17 +1175,6 @@ export const ChatRowContent = ({
 									}
 								/>
 							)}
-
-							{isExpanded && (
-								<div className="ml-6" style={{ marginTop: "10px" }}>
-									<CodeAccordian
-										code={safeJsonParse<any>(message.text)?.request}
-										language="markdown"
-										isExpanded={true}
-										onToggleExpand={handleToggleExpand}
-									/>
-								</div>
-							)}
 						</>
 					)
 				case "api_req_finished":
@@ -1119,15 +1199,81 @@ export const ChatRowContent = ({
 						</div>
 					)
 				case "user_feedback":
-					// kilocode_change start
 					return (
-						<KiloChatRowUserFeedback
-							message={message}
-							isStreaming={isStreaming}
-							onChatReset={onChatReset}
-						/>
+						<div className="group">
+							<div style={headerStyle}>
+								<User className="w-4 shrink-0" aria-label="User icon" />
+								<span style={{ fontWeight: "bold" }}>{t("chat:feedback.youSaid")}</span>
+							</div>
+							<div
+								className={cn(
+									"ml-6 border rounded-sm whitespace-pre-wrap",
+									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
+									isEditing
+										? "bg-vscode-editor-background text-vscode-editor-foreground"
+										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
+								)}>
+								{isEditing ? (
+									<div className="flex flex-col gap-2">
+										<ChatTextArea
+											inputValue={editedContent}
+											setInputValue={setEditedContent}
+											sendingDisabled={false}
+											selectApiConfigDisabled={true}
+											placeholderText={t("chat:editMessage.placeholder")}
+											selectedImages={editImages}
+											setSelectedImages={setEditImages}
+											onSend={handleSaveEdit}
+											onSelectImages={handleSelectImages}
+											shouldDisableImages={!model?.supportsImages}
+											mode={editMode}
+											setMode={setEditMode}
+											modeShortcutText=""
+											isEditMode={true}
+											onCancel={handleCancelEdit}
+										/>
+									</div>
+								) : (
+									<div className="flex justify-between">
+										<div
+											className="flex-grow px-2 py-1 wrap-anywhere rounded-lg transition-colors"
+											onClick={(e) => {
+												e.stopPropagation()
+												if (!isStreaming) {
+													handleEditClick()
+												}
+											}}
+											title={t("chat:queuedMessages.clickToEdit")}>
+											<Mention text={message.text} withShadow />
+										</div>
+										<div className="flex gap-2 pr-1">
+											<div
+												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+												style={{ visibility: isStreaming ? "hidden" : "visible" }}
+												onClick={(e) => {
+													e.stopPropagation()
+													handleEditClick()
+												}}>
+												<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
+											</div>
+											<div
+												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+												style={{ visibility: isStreaming ? "hidden" : "visible" }}
+												onClick={(e) => {
+													e.stopPropagation()
+													vscode.postMessage({ type: "deleteMessage", value: message.ts })
+												}}>
+												<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
+											</div>
+										</div>
+									</div>
+								)}
+								{!isEditing && message.images && message.images.length > 0 && (
+									<Thumbnails images={message.images} style={{ marginTop: "8px" }} />
+								)}
+							</div>
+						</div>
 					)
-				// kilocode_change end
 				case "user_feedback_diff":
 					const tool = safeJsonParse<ClineSayTool>(message.text)
 					return (
@@ -1149,7 +1295,12 @@ export const ChatRowContent = ({
 						<>
 							<div style={headerStyle}>
 								{icon}
-								{title}
+								{/* kilocode_change start */}
+								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+									{title}
+									{showTimestamps && <ChatTimestamps ts={message.ts} />}
+								</div>
+								{/* kilocode_change end */}
 							</div>
 							<div className="border-l border-green-600/30 ml-2 pl-4 pb-1">
 								<Markdown markdown={message.text} />
@@ -1157,21 +1308,7 @@ export const ChatRowContent = ({
 							{
 								// kilocode_change start
 								!message.partial && enableCheckpoints !== false && commitRange ? (
-									<div>
-										<VSCodeButton
-											className="w-full mt-2"
-											appearance="secondary"
-											onClick={() => {
-												vscode.postMessage({
-													type: "seeNewChanges",
-													payload: {
-														commitRange,
-													},
-												})
-											}}>
-											{t("kilocode:chat.seeNewChanges")}
-										</VSCodeButton>
-									</div>
+									<SeeNewChangesButtons commitRange={commitRange} />
 								) : (
 									<></>
 								)
@@ -1358,7 +1495,12 @@ export const ChatRowContent = ({
 							{title && (
 								<div style={headerStyle}>
 									{icon}
-									{title}
+									{/* kilocode_change start */}
+									<div style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
+										{title}
+										{showTimestamps && <ChatTimestamps ts={message.ts} />}
+									</div>
+									{/* kilocode_change end */}
 								</div>
 							)}
 							<div style={{ paddingTop: 10 }}>
@@ -1461,7 +1603,12 @@ export const ChatRowContent = ({
 							{title && (
 								<div style={headerStyle}>
 									{icon}
-									{title}
+									{/* kilocode_change start */}
+									<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+										{title}
+										{showTimestamps && <ChatTimestamps ts={message.ts} />}
+									</div>
+									{/* kilocode_change start */}
 								</div>
 							)}
 							<div className="flex flex-col gap-2 ml-6">
@@ -1499,7 +1646,12 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
-					return <LowCreditWarning message={message} />
+					return (
+						<LowCreditWarning
+							message={message}
+							isOrganization={!!apiConfiguration.kilocodeOrganizationId}
+						/>
+					)
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

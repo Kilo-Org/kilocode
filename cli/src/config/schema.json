@@ -1,0 +1,2463 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Kilo Code CLI Configuration",
+	"description": "Configuration file for Kilo Code CLI",
+	"type": "object",
+	"required": ["version", "mode", "telemetry", "provider", "providers"],
+	"properties": {
+		"version": {
+			"type": "string",
+			"enum": ["1.0.0"],
+			"description": "Configuration schema version"
+		},
+		"mode": {
+			"type": "string",
+			"default": "code",
+			"description": "Default mode for the CLI"
+		},
+		"telemetry": {
+			"type": "boolean",
+			"default": false,
+			"description": "Enable or disable telemetry"
+		},
+		"provider": {
+			"type": "string",
+			"description": "ID of the currently selected provider"
+		},
+		"providers": {
+			"type": "array",
+			"description": "List of configured providers",
+			"items": {
+				"$ref": "#/definitions/provider"
+			}
+		},
+		"autoApproval": {
+			"type": "object",
+			"description": "Auto approval configuration for CLI operations",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Global toggle for auto approval"
+				},
+				"read": {
+					"type": "object",
+					"description": "Auto approval settings for read operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve read operations"
+						},
+						"outside": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve reads outside workspace"
+						}
+					}
+				},
+				"write": {
+					"type": "object",
+					"description": "Auto approval settings for write operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve write operations"
+						},
+						"outside": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve writes outside workspace"
+						},
+						"protected": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve writes to protected files"
+						}
+					}
+				},
+				"browser": {
+					"type": "object",
+					"description": "Auto approval settings for browser operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve browser operations"
+						}
+					}
+				},
+				"retry": {
+					"type": "object",
+					"description": "Auto approval settings for retry operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve retry operations"
+						},
+						"delay": {
+							"type": "number",
+							"minimum": 0,
+							"default": 10,
+							"description": "Delay in seconds before auto-approving retry"
+						}
+					}
+				},
+				"mcp": {
+					"type": "object",
+					"description": "Auto approval settings for MCP operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve MCP operations"
+						}
+					}
+				},
+				"mode": {
+					"type": "object",
+					"description": "Auto approval settings for mode switching",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve mode switches"
+						}
+					}
+				},
+				"subtasks": {
+					"type": "object",
+					"description": "Auto approval settings for subtask creation",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve subtask creation"
+						}
+					}
+				},
+				"execute": {
+					"type": "object",
+					"description": "Auto approval settings for command execution",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve command execution"
+						},
+						"allowed": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"default": [],
+							"description": "List of allowed commands (empty means all allowed)"
+						},
+						"denied": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"default": [],
+							"description": "List of denied commands"
+						}
+					}
+				},
+				"question": {
+					"type": "object",
+					"description": "Auto approval settings for followup questions",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve followup questions"
+						},
+						"timeout": {
+							"type": "number",
+							"minimum": 0,
+							"default": 60,
+							"description": "Timeout in seconds before auto-approving question"
+						}
+					}
+				},
+				"todo": {
+					"type": "object",
+					"description": "Auto approval settings for todo list updates",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve todo list updates"
+						}
+					}
+				},
+				"limits": {
+					"type": "object",
+					"description": "Auto approval limits",
+					"properties": {
+						"maxRequests": {
+							"type": ["number", "null"],
+							"minimum": 1,
+							"default": null,
+							"description": "Maximum number of auto-approved requests (null for unlimited)"
+						},
+						"maxCost": {
+							"type": ["number", "null"],
+							"minimum": 0,
+							"default": null,
+							"description": "Maximum cost for auto-approved requests (null for unlimited)"
+						}
+					}
+				}
+			}
+		}
+	},
+	"definitions": {
+		"provider": {
+			"type": "object",
+			"required": ["id", "provider"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for this provider configuration"
+				},
+				"provider": {
+					"type": "string",
+					"enum": [
+						"kilocode",
+						"anthropic",
+						"openai-native",
+						"openrouter",
+						"bedrock",
+						"gemini",
+						"vertex",
+						"claude-code",
+						"mistral",
+						"groq",
+						"deepseek",
+						"xai",
+						"cerebras",
+						"ollama",
+						"lmstudio",
+						"vscode-lm",
+						"openai",
+						"glama",
+						"huggingface",
+						"litellm",
+						"moonshot",
+						"doubao",
+						"chutes",
+						"sambanova",
+						"fireworks",
+						"featherless",
+						"deepinfra",
+						"io-intelligence",
+						"qwen-code",
+						"gemini-cli",
+						"zai",
+						"minimax",
+						"unbound",
+						"requesty",
+						"roo",
+						"vercel-ai-gateway",
+						"virtual-quota-fallback",
+						"human-relay",
+						"fake-ai",
+						"ovhcloud",
+						"inception",
+						"synthetic"
+					]
+				}
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": { "provider": { "const": "kilocode" } }
+					},
+					"then": {
+						"properties": {
+							"kilocodeToken": {
+								"type": "string",
+								"description": "Kilocode API token"
+							},
+							"kilocodeModel": {
+								"type": "string",
+								"description": "Kilocode model ID"
+							},
+							"kilocodeOrganizationId": {
+								"type": "string",
+								"description": "Organization ID for team accounts"
+							},
+							"openRouterSpecificProvider": {
+								"type": "string",
+								"description": "Specific OpenRouter provider to use"
+							},
+							"openRouterProviderDataCollection": {
+								"type": "string",
+								"enum": ["allow", "deny"],
+								"description": "OpenRouter provider data collection preference"
+							},
+							"openRouterProviderSort": {
+								"type": "string",
+								"enum": ["price", "throughput", "latency"],
+								"description": "OpenRouter provider sorting preference"
+							},
+							"openRouterZdr": {
+								"type": "boolean",
+								"description": "Enable OpenRouter Zero Data Retention"
+							},
+							"kilocodeTesterWarningsDisabledUntil": {
+								"type": "number",
+								"description": "Timestamp until which tester warnings are disabled"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "kilocode" },
+							"kilocodeToken": { "type": "string", "minLength": 1 }
+						},
+						"required": ["kilocodeToken"]
+					},
+					"then": {
+						"properties": {
+							"kilocodeToken": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "kilocode" },
+							"kilocodeModel": { "type": "string", "minLength": 1 }
+						},
+						"required": ["kilocodeModel"]
+					},
+					"then": {
+						"properties": {
+							"kilocodeModel": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "anthropic" } }
+					},
+					"then": {
+						"properties": {
+							"apiKey": {
+								"type": "string",
+								"description": "Anthropic API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Anthropic model ID"
+							},
+							"anthropicBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for Anthropic API requests"
+							},
+							"anthropicUseAuthToken": {
+								"type": "boolean",
+								"description": "Use authentication token instead of API key"
+							},
+							"anthropicBeta1MContext": {
+								"type": "boolean",
+								"description": "Enable beta 1M context window support"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "anthropic" },
+							"apiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiKey"]
+					},
+					"then": {
+						"properties": {
+							"apiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "anthropic" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai-native" } }
+					},
+					"then": {
+						"properties": {
+							"openAiNativeApiKey": {
+								"type": "string",
+								"description": "OpenAI Native API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							},
+							"openAiNativeBaseUrl": { "type": "string" },
+							"openAiNativeServiceTier": {
+								"type": "string",
+								"enum": ["auto", "default", "flex", "priority"],
+								"description": "OpenAI service tier for request prioritization and latency optimization. 'auto' lets OpenAI choose the best tier, 'default' uses standard processing, 'flex' offers cost-optimized processing with variable latency, and 'priority' provides the fastest processing with higher priority."
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai-native" },
+							"openAiNativeApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiNativeApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openAiNativeApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openrouter" } }
+					},
+					"then": {
+						"properties": {
+							"openRouterApiKey": {
+								"type": "string",
+								"description": "OpenRouter API key"
+							},
+							"openRouterModelId": {
+								"type": "string",
+								"description": "OpenRouter model ID"
+							},
+							"openRouterBaseUrl": { "type": "string" },
+							"openRouterSpecificProvider": {
+								"type": "string",
+								"description": "Specific OpenRouter provider to use for routing requests"
+							},
+							"openRouterUseMiddleOutTransform": {
+								"type": "boolean",
+								"description": "Enable middle-out transform for optimized request routing"
+							},
+							"openRouterProviderDataCollection": {
+								"type": "string",
+								"enum": ["allow", "deny"],
+								"description": "OpenRouter provider data collection preference"
+							},
+							"openRouterProviderSort": {
+								"type": "string",
+								"enum": ["price", "throughput", "latency"],
+								"description": "OpenRouter provider sorting preference for model selection"
+							},
+							"openRouterZdr": {
+								"type": "boolean",
+								"description": "Enable OpenRouter Zero Data Retention for enhanced privacy"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openrouter" },
+							"openRouterApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openRouterApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openRouterApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openrouter" },
+							"openRouterModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openRouterModelId"]
+					},
+					"then": {
+						"properties": {
+							"openRouterModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "bedrock" } }
+					},
+					"then": {
+						"properties": {
+							"awsAccessKey": {
+								"type": "string",
+								"description": "AWS Access Key"
+							},
+							"awsSecretKey": {
+								"type": "string",
+								"description": "AWS Secret Key"
+							},
+							"awsSessionToken": {
+								"type": "string",
+								"description": "AWS Session Token (optional)"
+							},
+							"awsRegion": {
+								"type": "string",
+								"description": "AWS Region"
+							},
+							"awsUseCrossRegionInference": {
+								"type": "boolean",
+								"description": "Use cross-region inference"
+							},
+							"awsUsePromptCache": {
+								"type": "boolean",
+								"description": "Enable prompt caching to reduce costs and latency for repeated prompts"
+							},
+							"awsProfile": {
+								"type": "string",
+								"description": "AWS profile name from credentials file"
+							},
+							"awsUseProfile": {
+								"type": "boolean",
+								"description": "Use AWS profile from credentials file instead of access keys"
+							},
+							"awsApiKey": {
+								"type": "string",
+								"description": "AWS API key for alternative authentication"
+							},
+							"awsUseApiKey": {
+								"type": "boolean",
+								"description": "Use API key authentication instead of access keys"
+							},
+							"awsCustomArn": {
+								"type": "string",
+								"description": "Custom ARN for cross-account or custom model access"
+							},
+							"awsModelContextWindow": {
+								"type": "number",
+								"minimum": 1,
+								"description": "Override the model's default context window size"
+							},
+							"awsBedrockEndpointEnabled": {
+								"type": "boolean",
+								"description": "Enable custom Bedrock endpoint"
+							},
+							"awsBedrockEndpoint": {
+								"type": "string",
+								"description": "Custom Bedrock endpoint URL"
+							},
+							"awsBedrock1MContext": {
+								"type": "boolean",
+								"description": "Enable 1M token context window support for compatible models"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Bedrock model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsAccessKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsAccessKey"]
+					},
+					"then": {
+						"properties": {
+							"awsAccessKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsSecretKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsSecretKey"]
+					},
+					"then": {
+						"properties": {
+							"awsSecretKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsRegion": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsRegion"]
+					},
+					"then": {
+						"properties": {
+							"awsRegion": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "gemini" } }
+					},
+					"then": {
+						"properties": {
+							"geminiApiKey": {
+								"type": "string",
+								"description": "Gemini API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Gemini model ID"
+							},
+							"googleGeminiBaseUrl": { "type": "string" },
+							"enableUrlContext": {
+								"type": "boolean",
+								"description": "Allows the model to access and process URLs in prompts"
+							},
+							"enableGrounding": {
+								"type": "boolean",
+								"description": "Enables Google Search grounding for factual responses"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini" },
+							"geminiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"geminiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vertex" } }
+					},
+					"then": {
+						"properties": {
+							"vertexJsonCredentials": {
+								"type": "string",
+								"description": "Vertex AI JSON credentials"
+							},
+							"vertexKeyFile": {
+								"type": "string",
+								"description": "Vertex AI key file path"
+							},
+							"vertexProjectId": {
+								"type": "string",
+								"description": "Vertex AI project ID"
+							},
+							"vertexRegion": {
+								"type": "string",
+								"description": "Vertex AI region"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Vertex AI model ID"
+							},
+							"enableUrlContext": {
+								"type": "boolean",
+								"description": "Allows the model to access and process URLs in prompts"
+							},
+							"enableGrounding": {
+								"type": "boolean",
+								"description": "Enables Google Search grounding for factual responses"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"vertexProjectId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vertexProjectId"]
+					},
+					"then": {
+						"properties": {
+							"vertexProjectId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"vertexRegion": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vertexRegion"]
+					},
+					"then": {
+						"properties": {
+							"vertexRegion": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "claude-code" } }
+					},
+					"then": {
+						"properties": {
+							"claudeCodePath": {
+								"type": "string",
+								"description": "Path to Claude Code executable"
+							},
+							"claudeCodeMaxOutputTokens": {
+								"type": "string",
+								"description": "Maximum output tokens for Claude Code"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Claude Code model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "claude-code" },
+							"claudeCodePath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["claudeCodePath"]
+					},
+					"then": {
+						"properties": {
+							"claudeCodePath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "claude-code" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ollama" } }
+					},
+					"then": {
+						"properties": {
+							"ollamaBaseUrl": {
+								"type": "string",
+								"description": "Ollama base URL"
+							},
+							"ollamaModelId": {
+								"type": "string",
+								"description": "Ollama model ID"
+							},
+							"ollamaApiKey": { "type": "string" },
+							"ollamaNumCtx": {
+								"type": "number",
+								"minimum": 1,
+								"description": "Context window size for Ollama models. Controls the maximum number of tokens the model can process at once. Common values: 2048, 4096, 8192, 16384, 32768. Higher values allow processing longer conversations but require more memory."
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "lmstudio" } }
+					},
+					"then": {
+						"properties": {
+							"lmStudioBaseUrl": {
+								"type": "string",
+								"description": "LM Studio base URL"
+							},
+							"lmStudioModelId": {
+								"type": "string",
+								"description": "LM Studio model ID"
+							},
+							"lmStudioDraftModelId": {
+								"type": "string",
+								"description": "Draft model ID for speculative decoding. This smaller, faster model generates initial predictions that are verified by the main model, potentially improving inference speed."
+							},
+							"lmStudioSpeculativeDecodingEnabled": {
+								"type": "boolean",
+								"description": "Enable speculative decoding for faster inference. When enabled with a draft model, uses a two-stage generation process where a smaller model proposes tokens that are verified by the main model."
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "lmstudio" },
+							"lmStudioBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["lmStudioBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"lmStudioBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "lmstudio" },
+							"lmStudioModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["lmStudioModelId"]
+					},
+					"then": {
+						"properties": {
+							"lmStudioModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ollama" },
+							"ollamaBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ollamaBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"ollamaBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ollama" },
+							"ollamaModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ollamaModelId"]
+					},
+					"then": {
+						"properties": {
+							"ollamaModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "mistral" } }
+					},
+					"then": {
+						"properties": {
+							"mistralApiKey": {
+								"type": "string",
+								"description": "Mistral API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Mistral model ID"
+							},
+							"mistralCodestralUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "mistral" },
+							"mistralApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["mistralApiKey"]
+					},
+					"then": {
+						"properties": {
+							"mistralApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "mistral" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "groq" } }
+					},
+					"then": {
+						"properties": {
+							"groqApiKey": {
+								"type": "string",
+								"description": "Groq API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Groq model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "groq" },
+							"groqApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["groqApiKey"]
+					},
+					"then": {
+						"properties": {
+							"groqApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "groq" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "deepseek" } }
+					},
+					"then": {
+						"properties": {
+							"deepSeekApiKey": {
+								"type": "string",
+								"description": "DeepSeek API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "DeepSeek model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepseek" },
+							"deepSeekApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepSeekApiKey"]
+					},
+					"then": {
+						"properties": {
+							"deepSeekApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepseek" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "xai" } }
+					},
+					"then": {
+						"properties": {
+							"xaiApiKey": {
+								"type": "string",
+								"description": "xAI API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "xAI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "xai" },
+							"xaiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["xaiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"xaiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "xai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai" } }
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": {
+								"type": "string",
+								"description": "OpenAI API key"
+							},
+							"openAiBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for OpenAI API requests"
+							},
+							"openAiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							},
+							"openAiLegacyFormat": {
+								"type": "boolean",
+								"description": "Use legacy API format for compatibility with older OpenAI API versions"
+							},
+							"openAiR1FormatEnabled": {
+								"type": "boolean",
+								"description": "Enable R1 format for reasoning models that support extended thinking capabilities"
+							},
+							"openAiUseAzure": {
+								"type": "boolean",
+								"description": "Use Azure OpenAI Service instead of standard OpenAI API"
+							},
+							"azureApiVersion": {
+								"type": "string",
+								"description": "Azure OpenAI API version (e.g., '2024-02-15-preview'). Required when openAiUseAzure is true"
+							},
+							"openAiStreamingEnabled": {
+								"type": "boolean",
+								"description": "Enable streaming responses for real-time token generation"
+							},
+							"openAiHeaders": {
+								"type": "object",
+								"description": "Custom HTTP headers to include in OpenAI API requests",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai" },
+							"openAiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai" },
+							"openAiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiModelId"]
+					},
+					"then": {
+						"properties": {
+							"openAiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "cerebras" } }
+					},
+					"then": {
+						"properties": {
+							"cerebrasApiKey": {
+								"type": "string",
+								"description": "Cerebras API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Cerebras model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "cerebras" },
+							"cerebrasApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["cerebrasApiKey"]
+					},
+					"then": {
+						"properties": {
+							"cerebrasApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "cerebras" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "glama" } }
+					},
+					"then": {
+						"properties": {
+							"glamaApiKey": {
+								"type": "string",
+								"description": "Glama API key"
+							},
+							"glamaModelId": {
+								"type": "string",
+								"description": "Glama model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "glama" },
+							"glamaApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["glamaApiKey"]
+					},
+					"then": {
+						"properties": {
+							"glamaApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "glama" },
+							"glamaModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["glamaModelId"]
+					},
+					"then": {
+						"properties": {
+							"glamaModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "huggingface" } }
+					},
+					"then": {
+						"properties": {
+							"huggingFaceApiKey": {
+								"type": "string",
+								"description": "HuggingFace API key"
+							},
+							"huggingFaceModelId": {
+								"type": "string",
+								"description": "HuggingFace model ID"
+							},
+							"huggingFaceInferenceProvider": {
+								"type": "string",
+								"description": "HuggingFace inference provider"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "litellm" } }
+					},
+					"then": {
+						"properties": {
+							"litellmBaseUrl": {
+								"type": "string",
+								"description": "LiteLLM base URL"
+							},
+							"litellmApiKey": {
+								"type": "string",
+								"description": "LiteLLM API key"
+							},
+							"litellmModelId": {
+								"type": "string",
+								"description": "LiteLLM model ID"
+							},
+							"litellmUsePromptCache": {
+								"type": "boolean",
+								"description": "Enable prompt caching to reduce costs and improve performance for repeated prompts"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceApiKey"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceModelId"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceInferenceProvider": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceInferenceProvider"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceInferenceProvider": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"litellmBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "moonshot" } }
+					},
+					"then": {
+						"properties": {
+							"moonshotBaseUrl": {
+								"type": "string",
+								"description": "Moonshot base URL"
+							},
+							"moonshotApiKey": {
+								"type": "string",
+								"description": "Moonshot API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Moonshot model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "minimax" } }
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": {
+								"type": "string",
+								"description": "MiniMax base URL"
+							},
+							"minimaxApiKey": {
+								"type": "string",
+								"description": "MiniMax API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "MiniMax model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "doubao" } }
+					},
+					"then": {
+						"properties": {
+							"doubaoApiKey": {
+								"type": "string",
+								"description": "Doubao API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Doubao model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "doubao" },
+							"doubaoApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["doubaoApiKey"]
+					},
+					"then": {
+						"properties": {
+							"doubaoApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "doubao" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"moonshotBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["moonshotBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"moonshotBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"moonshotApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["moonshotApiKey"]
+					},
+					"then": {
+						"properties": {
+							"moonshotApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxApiKey"]
+					},
+					"then": {
+						"properties": {
+							"minimaxApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "chutes" } }
+					},
+					"then": {
+						"properties": {
+							"chutesApiKey": {
+								"type": "string",
+								"description": "Chutes API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Chutes model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "chutes" },
+							"chutesApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["chutesApiKey"]
+					},
+					"then": {
+						"properties": {
+							"chutesApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "chutes" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "sambanova" } }
+					},
+					"then": {
+						"properties": {
+							"sambaNovaApiKey": {
+								"type": "string",
+								"description": "SambaNova API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "SambaNova model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "sambanova" },
+							"sambaNovaApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["sambaNovaApiKey"]
+					},
+					"then": {
+						"properties": {
+							"sambaNovaApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "sambanova" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "fireworks" } }
+					},
+					"then": {
+						"properties": {
+							"fireworksApiKey": {
+								"type": "string",
+								"description": "Fireworks API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Fireworks model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fireworks" },
+							"fireworksApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["fireworksApiKey"]
+					},
+					"then": {
+						"properties": {
+							"fireworksApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fireworks" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "featherless" } }
+					},
+					"then": {
+						"properties": {
+							"featherlessApiKey": {
+								"type": "string",
+								"description": "Featherless API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Featherless model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "deepinfra" } }
+					},
+					"then": {
+						"properties": {
+							"deepInfraApiKey": {
+								"type": "string",
+								"description": "DeepInfra API key"
+							},
+							"deepInfraModelId": {
+								"type": "string",
+								"description": "DeepInfra model ID"
+							},
+							"deepInfraBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for DeepInfra API requests"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "featherless" },
+							"featherlessApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["featherlessApiKey"]
+					},
+					"then": {
+						"properties": {
+							"featherlessApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "featherless" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepinfra" },
+							"deepInfraApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepInfraApiKey"]
+					},
+					"then": {
+						"properties": {
+							"deepInfraApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepinfra" },
+							"deepInfraModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepInfraModelId"]
+					},
+					"then": {
+						"properties": {
+							"deepInfraModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "io-intelligence" } }
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceApiKey": {
+								"type": "string",
+								"description": "IO Intelligence API key"
+							},
+							"ioIntelligenceModelId": {
+								"type": "string",
+								"description": "IO Intelligence model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "io-intelligence" },
+							"ioIntelligenceApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ioIntelligenceApiKey"]
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "io-intelligence" },
+							"ioIntelligenceModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ioIntelligenceModelId"]
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmApiKey"]
+					},
+					"then": {
+						"properties": {
+							"litellmApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmModelId"]
+					},
+					"then": {
+						"properties": {
+							"litellmModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "qwen-code" } }
+					},
+					"then": {
+						"properties": {
+							"qwenCodeOauthPath": {
+								"type": "string",
+								"description": "Qwen Code OAuth path"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Qwen Code model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "gemini-cli" } }
+					},
+					"then": {
+						"properties": {
+							"geminiCliOAuthPath": {
+								"type": "string",
+								"description": "Gemini CLI OAuth path"
+							},
+							"geminiCliProjectId": {
+								"type": "string",
+								"description": "Gemini CLI project ID"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Gemini CLI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "qwen-code" },
+							"qwenCodeOauthPath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["qwenCodeOauthPath"]
+					},
+					"then": {
+						"properties": {
+							"qwenCodeOauthPath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "qwen-code" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"geminiCliOAuthPath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiCliOAuthPath"]
+					},
+					"then": {
+						"properties": {
+							"geminiCliOAuthPath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"geminiCliProjectId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiCliProjectId"]
+					},
+					"then": {
+						"properties": {
+							"geminiCliProjectId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "zai" } }
+					},
+					"then": {
+						"properties": {
+							"zaiApiKey": {
+								"type": "string",
+								"description": "Zai API key"
+							},
+							"zaiApiLine": {
+								"type": "string",
+								"description": "Zai API line"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Zai model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "unbound" } }
+					},
+					"then": {
+						"properties": {
+							"unboundApiKey": {
+								"type": "string",
+								"description": "Unbound API key"
+							},
+							"unboundModelId": {
+								"type": "string",
+								"description": "Unbound model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"zaiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["zaiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"zaiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"zaiApiLine": { "type": "string", "minLength": 1 }
+						},
+						"required": ["zaiApiLine"]
+					},
+					"then": {
+						"properties": {
+							"zaiApiLine": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "unbound" },
+							"unboundApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["unboundApiKey"]
+					},
+					"then": {
+						"properties": {
+							"unboundApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "unbound" },
+							"unboundModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["unboundModelId"]
+					},
+					"then": {
+						"properties": {
+							"unboundModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "requesty" } }
+					},
+					"then": {
+						"properties": {
+							"requestyApiKey": {
+								"type": "string",
+								"description": "Requesty API key"
+							},
+							"requestyBaseUrl": {
+								"type": "string",
+								"description": "Requesty base URL"
+							},
+							"requestyModelId": {
+								"type": "string",
+								"description": "Requesty model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "requesty" },
+							"requestyApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["requestyApiKey"]
+					},
+					"then": {
+						"properties": {
+							"requestyApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "requesty" },
+							"requestyModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["requestyModelId"]
+					},
+					"then": {
+						"properties": {
+							"requestyModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "roo" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Roo model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "roo" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vercel-ai-gateway" } }
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayApiKey": {
+								"type": "string",
+								"description": "Vercel AI Gateway API key"
+							},
+							"vercelAiGatewayModelId": {
+								"type": "string",
+								"description": "Vercel AI Gateway model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vercel-ai-gateway" },
+							"vercelAiGatewayApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vercelAiGatewayApiKey"]
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vercel-ai-gateway" },
+							"vercelAiGatewayModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vercelAiGatewayModelId"]
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "virtual-quota-fallback" } }
+					},
+					"then": {
+						"properties": {
+							"profiles": {
+								"type": "array",
+								"description": "Array of provider profiles for quota fallback",
+								"items": {
+									"type": "object"
+								},
+								"minItems": 1
+							}
+						},
+						"required": ["profiles"]
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "virtual-quota-fallback" },
+							"profiles": { "type": "array", "minItems": 1 }
+						},
+						"required": ["profiles"]
+					},
+					"then": {
+						"properties": {
+							"profiles": {
+								"minItems": 1
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "human-relay" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Human relay model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "human-relay" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "fake-ai" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Fake AI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fake-ai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vscode-lm" } }
+					},
+					"then": {
+						"properties": {
+							"vsCodeLmModelSelector": {
+								"type": "object",
+								"description": "VSCode LM model selector",
+								"properties": {
+									"vendor": {
+										"type": "string",
+										"description": "Model vendor"
+									},
+									"family": {
+										"type": "string",
+										"description": "Model family"
+									}
+								},
+								"required": ["vendor", "family"]
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vscode-lm" },
+							"vsCodeLmModelSelector": {
+								"type": "object",
+								"properties": {
+									"vendor": { "type": "string", "minLength": 1 },
+									"family": { "type": "string", "minLength": 1 }
+								}
+							}
+						},
+						"required": ["vsCodeLmModelSelector"]
+					},
+					"then": {
+						"properties": {
+							"vsCodeLmModelSelector": {
+								"properties": {
+									"vendor": { "minLength": 1 },
+									"family": { "minLength": 1 }
+								}
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints API key"
+							},
+							"ovhCloudAiEndpointsModelId": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints model ID"
+							},
+							"ovhCloudAiEndpointsBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for OVHcloud AI Endpoints API requests"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": { "type": "string" }
+						},
+						"required": []
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ovhcloud" },
+							"ovhCloudAiEndpointsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ovhCloudAiEndpointsModelId"]
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "inception" } }
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": {
+								"type": "string",
+								"description": "Inception Labs API key"
+							},
+							"inceptionLabsBaseUrl": {
+								"type": "string",
+								"description": "Inception Labs base URL"
+							},
+							"inceptionLabsModelId": {
+								"type": "string",
+								"description": "Inception Labs model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsApiKey"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsModelId"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "synthetic" } }
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": {
+								"type": "string",
+								"description": "Synthetic API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Synthetic model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"syntheticApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["syntheticApiKey"]
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				}
+			]
+		}
+	}
+}

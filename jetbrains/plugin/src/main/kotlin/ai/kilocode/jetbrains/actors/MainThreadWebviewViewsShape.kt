@@ -4,11 +4,11 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.events.WebviewViewProviderData
+import ai.kilocode.jetbrains.webview.WebViewManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import ai.kilocode.jetbrains.events.WebviewViewProviderData
-import ai.kilocode.jetbrains.webview.WebViewManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -25,7 +25,7 @@ interface MainThreadWebviewViewsShape : Disposable {
     fun registerWebviewViewProvider(
         extension: Map<String, Any?>,
         viewType: String,
-        options: Map<String, Any?>
+        options: Map<String, Any?>,
     )
 
     /**
@@ -70,10 +70,10 @@ class MainThreadWebviewViews(val project: Project) : MainThreadWebviewViewsShape
     override fun registerWebviewViewProvider(
         extension: Map<String, Any?>,
         viewType: String,
-        options: Map<String, Any?>
+        options: Map<String, Any?>,
     ) {
         logger.info("Registering Webview view provider: viewType=$viewType, options=$options")
-        
+
 //         Use EventBus to send WebView view provider registration event, using IntelliJ platform compatible method
 //        project.getService(ProjectEventBus::class.java).emitInApplication(
 //            WebviewViewProviderRegisterEvent,
@@ -105,4 +105,4 @@ class MainThreadWebviewViews(val project: Project) : MainThreadWebviewViewsShape
     override fun dispose() {
         logger.info("Disposing MainThreadWebviewViews resources")
     }
-} 
+}

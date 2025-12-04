@@ -21,7 +21,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheReadsPrice: 0.3,
 				description: "Claude 3.5 Sonnet",
 				thinking: false,
-				supportsComputerUse: true,
 			},
 			"anthropic/claude-3-7-sonnet-20250219": {
 				maxTokens: 8192,
@@ -34,7 +33,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheReadsPrice: 0.3,
 				description: "Claude 3.7 Sonnet",
 				thinking: false,
-				supportsComputerUse: true,
 			},
 			"openai/gpt-4o": {
 				maxTokens: 4096,

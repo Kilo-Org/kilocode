@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { kiloCodeMetaDataSchema } from "./kilocode.js"
+import { kiloCodeMetaDataSchema } from "./kilocode/kilocode.js"
 
 /**
  * ClineAsk
@@ -44,6 +44,7 @@ export const clineAsks = [
 	"invalid_model",
 	"report_bug",
 	"condense",
+	"checkpoint_restore", // Added for checkpoint restore approval
 	// kilocode_change end
 ] as const
 
@@ -228,8 +229,6 @@ export const clineMessageSchema = z.object({
 			gpt5: z
 				.object({
 					previous_response_id: z.string().optional(),
-					instructions: z.string().optional(),
-					reasoning_summary: z.string().optional(),
 				})
 				.optional(),
 			kiloCode: kiloCodeMetaDataSchema.optional(),

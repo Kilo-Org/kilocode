@@ -7,8 +7,8 @@ import {
 	claudeCodeModels,
 	deepSeekModels,
 	moonshotModels,
-	geminiModels,
 	// kilocode_change start
+	// geminiModels,
 	geminiCliModels,
 	// kilocode_change end
 	mistralModels,
@@ -17,13 +17,13 @@ import {
 	vertexModels,
 	xaiModels,
 	groqModels,
-	chutesModels,
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
 	rooModels,
 	featherlessModels,
+	minimaxModels,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -34,8 +34,8 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	deepseek: deepSeekModels,
 	doubao: doubaoModels,
 	moonshot: moonshotModels,
-	gemini: geminiModels,
 	// kilocode_change start
+	// gemini: geminiModels,
 	"gemini-cli": geminiCliModels,
 	// kilocode_change end
 	mistral: mistralModels,
@@ -44,12 +44,13 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	vertex: vertexModels,
 	xai: xaiModels,
 	groq: groqModels,
-	chutes: chutesModels,
+	// chutes: chutesModels, // kilocode_change
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
 	roo: rooModels,
 	featherless: featherlessModels,
+	minimax: minimaxModels,
 }
 
 export const PROVIDERS = [
@@ -61,8 +62,11 @@ export const PROVIDERS = [
 	{ value: "gemini", label: "Google Gemini" },
 	{ value: "doubao", label: "Doubao" },
 	// kilocode_change start
+	{ value: "inception", label: "Inception" },
 	{ value: "gemini-cli", label: "Gemini CLI" },
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
+	{ value: "synthetic", label: "Synthetic" },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
@@ -94,6 +98,7 @@ export const PROVIDERS = [
 	// kilocode_change end
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
 	{ value: "oca", label: "Oracle Code Assist" },
+	{ value: "minimax", label: "MiniMax" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
-PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

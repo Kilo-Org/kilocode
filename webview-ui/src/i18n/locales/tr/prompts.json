@@ -16,6 +16,11 @@
 		"title": "API Yapılandırması",
 		"select": "Bu mod için hangi API yapılandırmasının kullanılacağını seçin"
 	},
+	"organizationMode": {
+		"title": "Kuruluş Modu",
+		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Kilo Code Dashboard'u ziyaret et.",
+		"cannotEdit": "Kuruluş modları düzenlenemez"
+	},
 	"tools": {
 		"title": "Kullanılabilir Araçlar",
 		"builtInModesText": "Yerleşik modlar için araçlar değiştirilemez",

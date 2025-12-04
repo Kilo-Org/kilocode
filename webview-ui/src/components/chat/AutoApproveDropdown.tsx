@@ -173,6 +173,7 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 						"inline-flex items-center gap-1.5 relative whitespace-nowrap px-1.5 py-1 text-xs",
 						"bg-transparent border border-[rgba(255,255,255,0.08)] rounded-md text-vscode-foreground",
 						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
+						"max-[300px]:shrink-0",
 						disabled
 							? "opacity-50 cursor-not-allowed"
 							: "opacity-90 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] cursor-pointer",
@@ -184,12 +185,19 @@ export const AutoApproveDropdown = ({ disabled = false, triggerClassName = "" }:
 						<CheckCheck className="size-3 flex-shrink-0" />
 					)}
 
-					<span className="truncate min-w-0">
+					<span className="hidden min-[300px]:inline truncate min-w-0">
 						{!effectiveAutoApprovalEnabled
 							? t("chat:autoApprove.triggerLabelOff")
 							: enabledCount === totalCount
 								? t("chat:autoApprove.triggerLabelAll")
 								: t("chat:autoApprove.triggerLabel", { count: enabledCount })}
+					</span>
+					<span className="inline min-[300px]:hidden min-w-0">
+						{!effectiveAutoApprovalEnabled
+							? t("chat:autoApprove.triggerLabelOffShort")
+							: enabledCount === totalCount
+								? t("chat:autoApprove.triggerLabelAll")
+								: enabledCount}
 					</span>
 				</PopoverTrigger>
 			</StandardTooltip>

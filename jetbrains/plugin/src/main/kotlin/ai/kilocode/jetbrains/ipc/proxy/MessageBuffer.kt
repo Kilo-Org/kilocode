@@ -30,7 +30,8 @@ enum class ArgType(val value: Int) {
     /**
      * Undefined type
      */
-    Undefined(4);
+    Undefined(4),
+    ;
 
     companion object {
         /**
@@ -70,14 +71,15 @@ sealed class MixedArg {
  * Corresponds to MessageBuffer in VSCode
  */
 class MessageBuffer private constructor(
-    private val buffer: ByteBuffer
+    private val buffer: ByteBuffer,
 ) {
     companion object {
         /**
          * Allocate message buffer of specified size
          */
         fun alloc(type: MessageType, req: Int, messageSize: Int): MessageBuffer {
-            val totalSize = messageSize + 1 /* type */ + 4 /* req */
+            // type + req
+            val totalSize = messageSize + 1 + 4
             val buffer = ByteBuffer.allocate(totalSize).order(ByteOrder.BIG_ENDIAN)
             val result = MessageBuffer(buffer)
             result.writeUInt8(type.value)
@@ -108,21 +110,24 @@ class MessageBuffer private constructor(
          * Calculate short string size
          */
         fun sizeShortString(str: ByteArray): Int {
-            return sizeUInt8 /* string length */ + str.size /* actual string */
+            // string length + actual string
+            return sizeUInt8 + str.size
         }
 
         /**
          * Calculate long string size
          */
         fun sizeLongString(str: ByteArray): Int {
-            return sizeUInt32 /* string length */ + str.size /* actual string */
+            // string length + actual string
+            return sizeUInt32 + str.size
         }
 
         /**
          * Calculate binary buffer size
          */
         fun sizeVSBuffer(buff: ByteArray): Int {
-            return sizeUInt32 /* buffer length */ + buff.size /* actual buffer */
+            // buffer length + actual buffer
+            return sizeUInt32 + buff.size
         }
 
         /**
@@ -292,7 +297,7 @@ class MessageBuffer private constructor(
     fun readMixedArray(): List<Any?> {
         val arrLen = readUInt8()
         val arr = ArrayList<Any?>(arrLen)
-        
+
         for (i in 0 until arrLen) {
             val argType = ArgType.fromValue(readUInt8()) ?: ArgType.Undefined
             when (argType) {
@@ -327,7 +332,7 @@ class MessageBuffer private constructor(
 fun parseJsonAndRestoreBufferRefs(
     jsonString: String,
     buffers: List<ByteArray>,
-    uriTransformer: ((String, Any?) -> Any?)? = null
+    uriTransformer: ((String, Any?) -> Any?)? = null,
 ): Any {
     // In actual project, should implement more complete functionality
     // Need to parse JSON string, restore buffer references, and apply URI transformation

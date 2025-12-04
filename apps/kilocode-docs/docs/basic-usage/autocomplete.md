@@ -64,16 +64,25 @@ This is ideal for:
 
 You can customize this keyboard shortcut as well in your VS Code settings.
 
-## Advanced Settings
+## Disable Rival Autocomplete
 
-### Provider Configuration
+We recommend disabling rival autocompletes to optimize your experience with Kilo Code. To disable GitHub Copilot autocomplete in VSCode, go to **Settings** and navigate to **GitHub** > **Copilot: Advanced** (or search for 'copilot').
 
-By default, autocomplete uses your main Kilo Code/OpenRouter/Mistral credentials with the Codestral model.
-This model is recommended as it strikes an optimal balance between performance speed and capability.
-However, you can:
+Then, toggle to 'disabled':
 
-- **Use custom provider**: Toggle this option to use a different AI provider specifically for autocomplete
-- **Select different models**: Choose models optimized for speed vs. quality based on your needs
+<img
+  src="https://github.com/user-attachments/assets/60c69417-1d1c-4a48-9820-5390c30ae25c"
+  alt="Disable GitHub Copilot in VSCode"
+  width="800"
+/>
+
+If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle off 'Cursor Tab':
+
+<img
+  src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47"
+  alt="Disable Cursor autocomplete"
+  width="800"
+/>
 
 ## Best Practices
 

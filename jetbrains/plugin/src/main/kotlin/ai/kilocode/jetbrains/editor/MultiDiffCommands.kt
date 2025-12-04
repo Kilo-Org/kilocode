@@ -4,6 +4,9 @@
 
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.commands.CommandRegistry
+import ai.kilocode.jetbrains.commands.ICommand
+import ai.kilocode.jetbrains.util.URI
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.chains.DiffRequestChain
 import com.intellij.diff.chains.SimpleDiffRequestChain
@@ -15,10 +18,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
-import ai.kilocode.jetbrains.commands.CommandRegistry
-import ai.kilocode.jetbrains.commands.ICommand
-import ai.kilocode.jetbrains.util.URI
-import ai.kilocode.jetbrains.util.URIComponents
 import java.io.File
 
 /**
@@ -33,7 +32,7 @@ fun registerMultiDiffCommands(project: Project, registry: CommandRegistry) {
         override fun getId(): String {
             return "_workbench.changes"
         }
-        
+
         override fun getMethod(): String {
             return "vscode_changes"
         }
@@ -46,10 +45,10 @@ fun registerMultiDiffCommands(project: Project, registry: CommandRegistry) {
             return "void"
         }
     }
-    
+
     // Register the primary command
     registry.registerCommand(multiDiffCommand)
-    
+
     // Register an alias for VSCode compatibility
     registry.registerCommandAlias("_workbench.changes", "vscode.changes")
 }
@@ -59,7 +58,7 @@ fun registerMultiDiffCommands(project: Project, registry: CommandRegistry) {
  */
 class MultiDiffCommands(val project: Project) {
     private val logger = Logger.getInstance(MultiDiffCommands::class.java)
-    
+
     /**
      * Shows a multi-file diff view similar to VSCode's "vscode.changes" command
      *
@@ -69,49 +68,49 @@ class MultiDiffCommands(val project: Project) {
      */
     suspend fun vscode_changes(title: String, changes: List<List<Map<String, Any?>>>): Any? {
         logger.info("Opening multi-file diff view: $title with ${changes.size} changes")
-        
+
         if (changes.isEmpty()) {
             logger.warn("No changes provided for multi-diff view")
             return null
         }
-        
+
         try {
             val diffRequests = mutableListOf<SimpleDiffRequest>()
-            
+
             // Process each change triplet
             for ((index, changeTriplet) in changes.withIndex()) {
                 if (changeTriplet.size != 3) {
                     logger.warn("Invalid change triplet at index $index: expected 3 elements, got ${changeTriplet.size}")
                     continue
                 }
-                
+
                 val originalFileUri = ai.kilocode.jetbrains.editor.createURI(changeTriplet[0])
                 val beforeContentUri = ai.kilocode.jetbrains.editor.createURI(changeTriplet[1])
                 val afterContentUri = ai.kilocode.jetbrains.editor.createURI(changeTriplet[2])
-                
+
                 logger.info("Processing change for file: ${originalFileUri.path}")
-                
+
                 val beforeContent = createContent(beforeContentUri, project)
                 val afterContent = createContent(afterContentUri, project, beforeContent?.contentType)
-                
+
                 if (beforeContent != null && afterContent != null) {
                     val fileName = File(originalFileUri.path).name
                     val diffTitle = "$fileName: Changes"
-                    
+
                     val diffRequest = SimpleDiffRequest(
                         diffTitle,
                         beforeContent,
                         afterContent,
                         "Original",
-                        "Modified"
+                        "Modified",
                     )
-                    
+
                     diffRequests.add(diffRequest)
                 } else {
                     logger.warn("Failed to create diff content for file: ${originalFileUri.path}")
                 }
             }
-            
+
             if (diffRequests.isNotEmpty()) {
                 ApplicationManager.getApplication().invokeAndWait {
                     showMultiDiffView(title, diffRequests)
@@ -119,21 +118,20 @@ class MultiDiffCommands(val project: Project) {
             } else {
                 logger.warn("No valid diff requests created")
             }
-            
         } catch (e: Exception) {
             logger.error("Error creating multi-file diff view", e)
         }
-        
+
         logger.info("Multi-file diff view operation completed")
         return null
     }
-    
+
     /**
      * Shows the multi-diff view using IntelliJ's diff editor
      */
     private fun showMultiDiffView(title: String, diffRequests: List<SimpleDiffRequest>) {
         val diffEditorTabFilesManager = DiffEditorTabFilesManager.getInstance(project)
-        
+
         try {
             if (diffRequests.size == 1) {
                 // For single file, show regular diff
@@ -153,7 +151,7 @@ class MultiDiffCommands(val project: Project) {
             throw e
         }
     }
-    
+
     /**
      * Creates a DiffContent object from URI components
      *
@@ -166,35 +164,35 @@ class MultiDiffCommands(val project: Project) {
         val path = uri.path
         val scheme = uri.scheme
         val query = uri.query
-        
+
         if (scheme.isNullOrEmpty()) {
             logger.warn("URI scheme is null or empty for path: $path")
             return null
         }
-        
+
         val contentFactory = DiffContentFactory.getInstance()
-        
+
         return try {
             when (scheme) {
                 "file" -> {
                     val vfs = LocalFileSystem.getInstance()
                     val fileIO = File(path)
-                    
+
                     if (!fileIO.exists()) {
                         logger.debug("File does not exist, creating empty content: $path")
                         // Create empty content for non-existent files (new files)
                         return contentFactory.create(project, "", preferredFileType)
                     }
-                    
+
                     val file = vfs.refreshAndFindFileByPath(path)
                     if (file == null) {
                         logger.warn("Virtual file not found: $path")
                         return contentFactory.create(project, "", preferredFileType)
                     }
-                    
+
                     contentFactory.create(project, file)
                 }
-                
+
                 "cline-diff" -> {
                     val content = if (!query.isNullOrEmpty()) {
                         try {
@@ -207,10 +205,10 @@ class MultiDiffCommands(val project: Project) {
                     } else {
                         ""
                     }
-                    
+
                     contentFactory.create(project, content, preferredFileType)
                 }
-                
+
                 else -> {
                     logger.warn("Unsupported URI scheme: $scheme for path: $path")
                     null
@@ -221,5 +219,4 @@ class MultiDiffCommands(val project: Project) {
             null
         }
     }
-    
 }

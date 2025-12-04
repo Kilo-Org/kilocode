@@ -20,7 +20,7 @@ describe("getModelsByProvider", () => {
 			glama: { "test-model": testModel },
 			unbound: { "test-model": testModel },
 			litellm: { "test-model": testModel },
-			"kilocode-openrouter": { "test-model": testModel },
+			kilocode: { "test-model": testModel },
 			ollama: { "test-model": testModel },
 			lmstudio: { "test-model": testModel },
 			"io-intelligence": { "test-model": testModel },
@@ -28,6 +28,12 @@ describe("getModelsByProvider", () => {
 			"vercel-ai-gateway": { "test-model": testModel },
 			huggingface: { "test-model": testModel },
 			oca: { "test-model": testModel },
+			gemini: { "test-model": testModel },
+			ovhcloud: { "test-model": testModel },
+			chutes: { "test-model": testModel },
+			synthetic: { "test-model": testModel }, // kilocode_change
+			inception: { "test-model": testModel },
+			roo: { "test-model": testModel },
 		}
 
 		const exceptions = [

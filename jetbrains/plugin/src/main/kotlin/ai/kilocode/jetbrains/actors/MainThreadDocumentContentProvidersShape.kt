@@ -6,7 +6,6 @@ package ai.kilocode.jetbrains.actors
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import java.net.URI
 import kotlinx.coroutines.CompletableDeferred
 
 /**
@@ -54,4 +53,4 @@ class MainThreadDocumentContentProviders : MainThreadDocumentContentProvidersSha
     override fun dispose() {
         logger.info("Disposing MainThreadDocumentContentProviders resources")
     }
-} 
+}

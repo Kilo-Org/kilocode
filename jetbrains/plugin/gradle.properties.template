@@ -3,9 +3,13 @@ pluginGroup=ai.kilocode.jetbrains
 pluginVersion={{VERSION}}
 
 # Platform basic information
-platformVersion=2024.1.4
+platformVersion=2024.3
 platformType=IC
-pluginSinceBuild=241
+pluginSinceBuild=243
+
+# Disable automatic Kotlin stdlib dependency to avoid conflicts with IntelliJ Platform's bundled version
+# See: https://jb.gg/intellij-platform-kotlin-stdlib
+kotlin.stdlib.default.dependency=false
 
 # Other project configurations can be added here
 vscodeVersion=1.100.0

@@ -1,0 +1,2 @@
+# Description: Should complete closing bracket for array
+const arr = [1, 2, 3<<<AUTOCOMPLETE_HERE>>>

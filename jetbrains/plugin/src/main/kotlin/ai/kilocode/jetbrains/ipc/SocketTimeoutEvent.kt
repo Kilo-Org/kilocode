@@ -13,14 +13,14 @@ data class SocketTimeoutEvent(
      * Unacknowledged message count
      */
     val unacknowledgedMsgCount: Int,
-    
+
     /**
      * Time since oldest unacknowledged message (milliseconds)
      */
     val timeSinceOldestUnacknowledgedMsg: Long,
-    
+
     /**
      * Time since last received some data (milliseconds)
      */
-    val timeSinceLastReceivedSomeData: Long
-) 
+    val timeSinceLastReceivedSomeData: Long,
+)

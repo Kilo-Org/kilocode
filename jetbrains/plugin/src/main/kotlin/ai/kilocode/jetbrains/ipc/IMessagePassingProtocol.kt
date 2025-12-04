@@ -5,7 +5,6 @@
 package ai.kilocode.jetbrains.ipc
 
 import com.intellij.openapi.Disposable
-import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Message passing protocol interface
@@ -17,24 +16,24 @@ interface IMessagePassingProtocol : Disposable {
      * @param buffer Message data to send
      */
     fun send(buffer: ByteArray)
-    
+
     /**
      * Add message receive listener
      * @param listener Message receive listener
      * @return Listener registration identifier for removing the listener
      */
     fun onMessage(listener: MessageListener): Disposable
-    
+
     /**
      * Add protocol close listener
      * @param listener Close event listener
      * @return Listener registration identifier for removing the listener
      */
     fun onDidDispose(listener: () -> Unit): Disposable
-    
+
     /**
      * Wait for all data to be sent
      * @return Promise for async operation completion
      */
     suspend fun drain(): Unit
-} 
+}

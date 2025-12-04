@@ -4,15 +4,15 @@
 
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.commands.CommandRegistry
+import ai.kilocode.jetbrains.commands.ICommand
+import ai.kilocode.jetbrains.util.URI
+import ai.kilocode.jetbrains.util.URIComponents
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.contents.DiffContent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
-import ai.kilocode.jetbrains.commands.CommandRegistry
-import ai.kilocode.jetbrains.commands.ICommand
-import ai.kilocode.jetbrains.util.URI
-import ai.kilocode.jetbrains.util.URIComponents
 import java.io.File
 
 /**
@@ -22,10 +22,9 @@ import java.io.File
  * @param project The current IntelliJ project
  * @param registry The command registry to register commands with
  */
-fun registerOpenEditorAPICommands(project: Project,registry: CommandRegistry) {
-
+fun registerOpenEditorAPICommands(project: Project, registry: CommandRegistry) {
     registry.registerCommand(
-        object : ICommand{
+        object : ICommand {
             override fun getId(): String {
                 return "_workbench.diff"
             }
@@ -40,10 +39,9 @@ fun registerOpenEditorAPICommands(project: Project,registry: CommandRegistry) {
             override fun returns(): String? {
                 return "void"
             }
-
-        }
+        },
     )
-    
+
     // Register the multi-diff command
     registerMultiDiffCommands(project, registry)
 }
@@ -53,7 +51,7 @@ fun registerOpenEditorAPICommands(project: Project,registry: CommandRegistry) {
  */
 class OpenEditorAPICommands(val project: Project) {
     private val logger = Logger.getInstance(OpenEditorAPICommands::class.java)
-    
+
     /**
      * Opens a diff editor to compare two files
      *
@@ -63,17 +61,17 @@ class OpenEditorAPICommands(val project: Project) {
      * @param columnOrOptions Optional column or options for the diff editor
      * @return null after operation completes
      */
-    suspend fun workbench_diff(left: Map<String, Any?>, right : Map<String, Any?>, title : String?,columnOrOptions : Any?): Any?{
+    suspend fun workbench_diff(left: Map<String, Any?>, right: Map<String, Any?>, title: String?, columnOrOptions: Any?): Any? {
         val rightURI = createURI(right)
         val leftURI = createURI(left)
         logger.info("Opening diff: ${rightURI.path}")
-        val content1 = createContent(left,project)
-        val content2 = createContent(right,project)
-        if (content1 != null && content2 != null){
-            project.getService(EditorAndDocManager::class.java).openDiffEditor(leftURI,rightURI,title?:"File Comparison")
+        val content1 = createContent(left, project)
+        val content2 = createContent(right, project)
+        if (content1 != null && content2 != null) {
+            project.getService(EditorAndDocManager::class.java).openDiffEditor(leftURI, rightURI, title ?: "File Comparison")
         }
         logger.info("Opening diff completed: ${rightURI.path}")
-        return null;
+        return null
     }
 
     /**
@@ -83,17 +81,17 @@ class OpenEditorAPICommands(val project: Project) {
      * @param project The current IntelliJ project
      * @return DiffContent object or null if creation fails
      */
-    fun createContent(uri: Map<String, Any?>, project: Project) : DiffContent?{
+    fun createContent(uri: Map<String, Any?>, project: Project): DiffContent? {
         val path = uri["path"]
         val scheme = uri["scheme"]
         val query = uri["query"]
         val fragment = uri["fragment"]
-        if(scheme != null){
+        if (scheme != null) {
             val contentFactory = DiffContentFactory.getInstance()
-            if(scheme == "file"){
+            if (scheme == "file") {
                 val vfs = LocalFileSystem.getInstance()
                 val fileIO = File(path as String)
-                if(!fileIO.exists()){
+                if (!fileIO.exists()) {
                     fileIO.createNewFile()
                     vfs.refreshIoFiles(listOf(fileIO.parentFile))
                 }
@@ -103,16 +101,18 @@ class OpenEditorAPICommands(val project: Project) {
                     return null
                 }
                 return contentFactory.create(project, file)
-            }else if(scheme == "cline-diff"){
-                val string = if(query != null){
+            } else if (scheme == "cline-diff") {
+                val string = if (query != null) {
                     val bytes = java.util.Base64.getDecoder().decode(query as String)
                     String(bytes)
-                }else ""
+                } else {
+                    ""
+                }
                 val content = contentFactory.create(project, string)
                 return content
             }
             return null
-        }else{
+        } else {
             return null
         }
     }

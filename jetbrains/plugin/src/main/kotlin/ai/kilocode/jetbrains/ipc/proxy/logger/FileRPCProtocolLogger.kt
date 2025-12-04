@@ -4,10 +4,10 @@
 
 package ai.kilocode.jetbrains.ipc.proxy.logger
 
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.diagnostic.Logger
 import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocolLogger
 import ai.kilocode.jetbrains.ipc.proxy.RequestInitiator
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,81 +30,81 @@ import kotlin.concurrent.thread
  */
 class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
     private val logger = Logger.getInstance(FileRPCProtocolLogger::class.java)
-    
-   // Total incoming bytes
-   private var totalIncoming = 0
-    
-   // Total outgoing bytes
-   private var totalOutgoing = 0
-    
-   // Log directory
-   private var logDir: Path? = null
-    
-   // Log file
-   private var logFile: File? = null
-    
-   // Log file writer
-   private var writer: BufferedWriter? = null
-    
-   // Log queue
-   private val logQueue = LinkedBlockingQueue<String>()
-    
-   // Whether initialized
-   private val isInitialized = AtomicBoolean(false)
-    
-   // Whether disposed
-   private val isDisposed = AtomicBoolean(false)
-    
-   // Logger thread
-   private var loggerThread: Thread? = null
-    
-   // Coroutine scope
-   private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-   // Whether logging is enabled
-   private val isEnabled = false
-    
+    // Total incoming bytes
+    private var totalIncoming = 0
+
+    // Total outgoing bytes
+    private var totalOutgoing = 0
+
+    // Log directory
+    private var logDir: Path? = null
+
+    // Log file
+    private var logFile: File? = null
+
+    // Log file writer
+    private var writer: BufferedWriter? = null
+
+    // Log queue
+    private val logQueue = LinkedBlockingQueue<String>()
+
+    // Whether initialized
+    private val isInitialized = AtomicBoolean(false)
+
+    // Whether disposed
+    private val isDisposed = AtomicBoolean(false)
+
+    // Logger thread
+    private var loggerThread: Thread? = null
+
+    // Coroutine scope
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Whether logging is enabled
+    private val isEnabled = false
+
     init {
-        if(!isEnabled) {
-           logger.warn("FileRPCProtocolLogger not enabled")
-        }else {
-           // Create log directory
-           val userHome = System.getProperty("user.home")
-           logDir = Paths.get(userHome, ".ext_host", "log")
+        if (!isEnabled) {
+            logger.warn("FileRPCProtocolLogger not enabled")
+        } else {
+            // Create log directory
+            val userHome = System.getProperty("user.home")
+            logDir = Paths.get(userHome, ".ext_host", "log")
 
-           // Ensure directory exists
-           if (!Files.exists(logDir)) {
-               Files.createDirectories(logDir)
-           }
+            // Ensure directory exists
+            if (!Files.exists(logDir)) {
+                Files.createDirectories(logDir)
+            }
 
-           // Create log filename, use timestamp for uniqueness
-           val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-           logFile = logDir?.resolve("rpc_${timestamp}-idea.log")?.toFile()
+            // Create log filename, use timestamp for uniqueness
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+            logFile = logDir?.resolve("rpc_$timestamp-idea.log")?.toFile()
 
-           // Create file writer
-           writer = BufferedWriter(FileWriter(logFile))
+            // Create file writer
+            writer = BufferedWriter(FileWriter(logFile))
 
-           // Start logger thread
-           startLoggerThread()
+            // Start logger thread
+            startLoggerThread()
 
-           // Write log header
-           val startTime = formatTimestampWithMilliseconds(Date())
-           val header = """
+            // Write log header
+            val startTime = formatTimestampWithMilliseconds(Date())
+            val header = """
                |-------------------------------------------------------------
                | IDEA RPC Protocol Logger
                | Started at: $startTime
                | Log file: ${logFile?.absolutePath}
                |-------------------------------------------------------------
            
-           """.trimMargin()
+            """.trimMargin()
 
             logQueue.add(header)
 
             isInitialized.set(true)
-           logger.info("FileRPCProtocolLogger initialized successfully, log file: ${logFile?.absolutePath}")
+            logger.info("FileRPCProtocolLogger initialized successfully, log file: ${logFile?.absolutePath}")
         }
     }
-    
+
     /**
      * Start logger thread
      */
@@ -118,17 +118,17 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
                         writer?.newLine()
                         writer?.flush()
                     } catch (e: Exception) {
-                       logger.error("Failed to write log file", e)
+                        logger.error("Failed to write log file", e)
                     }
                 }
             } catch (e: InterruptedException) {
-               // Thread interrupted, exit normally
+                // Thread interrupted, exit normally
             } catch (e: Exception) {
-               logger.error("Logger thread exception", e)
+                logger.error("Logger thread exception", e)
             }
         }
     }
-    
+
     /**
      * Log incoming message
      */
@@ -136,11 +136,11 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
         if (!isInitialized.get()) {
             return
         }
-        
+
         totalIncoming += msgLength
         logMessage("Ext → IDEA", totalIncoming, msgLength, req, initiator, str, data)
     }
-    
+
     /**
      * Log outgoing message
      */
@@ -148,11 +148,11 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
         if (!isInitialized.get()) {
             return
         }
-        
+
         totalOutgoing += msgLength
         logMessage("IDEA → Ext", totalOutgoing, msgLength, req, initiator, str, data)
     }
-    
+
     /**
      * Log message
      */
@@ -163,7 +163,7 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
         req: Int,
         initiator: RequestInitiator,
         str: String,
-        data: Any?
+        data: Any?,
     ) {
         try {
             val timestamp = formatTimestampWithMilliseconds(Date())
@@ -171,7 +171,7 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
                 RequestInitiator.LocalSide -> "Local"
                 RequestInitiator.OtherSide -> "Other"
             }
-            
+
             val logEntry = StringBuilder()
             logEntry.append("[$timestamp] ")
             logEntry.append("[$direction] ")
@@ -180,7 +180,7 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
             logEntry.append("[${req.toString().padStart(5)}] ")
             logEntry.append("[$initiatorStr] ")
             logEntry.append(str)
-            
+
             if (data != null) {
                 val dataStr = if (str.endsWith("(")) {
                     "$data)"
@@ -189,16 +189,16 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
                 }
                 logEntry.append(" ").append(dataStr)
             }
-            
-           // Use coroutine to asynchronously add to queue
-           coroutineScope.launch(Dispatchers.IO) {
-               logQueue.add(logEntry.toString())
-           }
+
+            // Use coroutine to asynchronously add to queue
+            coroutineScope.launch(Dispatchers.IO) {
+                logQueue.add(logEntry.toString())
+            }
         } catch (e: Exception) {
-           logger.error("Failed to format log message", e)
+            logger.error("Failed to format log message", e)
         }
     }
-    
+
     /**
      * Safely convert data to string
      */
@@ -211,17 +211,17 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
                 else -> data.toString()
             }
         } catch (e: Exception) {
-           "Unserializable data: ${e.message}"
+            "Unserializable data: ${e.message}"
         }
     }
-    
+
     /**
      * Format timestamp with milliseconds
      */
     private fun formatTimestampWithMilliseconds(date: Date): String {
         val calendar = Calendar.getInstance()
         calendar.time = date
-        
+
         val year = calendar.get(Calendar.YEAR)
         val month = (calendar.get(Calendar.MONTH) + 1).toString().padStart(2, '0')
         val day = calendar.get(Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
@@ -229,10 +229,10 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
         val minutes = calendar.get(Calendar.MINUTE).toString().padStart(2, '0')
         val seconds = calendar.get(Calendar.SECOND).toString().padStart(2, '0')
         val milliseconds = calendar.get(Calendar.MILLISECOND).toString().padStart(3, '0')
-        
+
         return "$year-$month-$day $hours:$minutes:$seconds.$milliseconds"
     }
-    
+
     /**
      * Release resources
      */
@@ -240,39 +240,39 @@ class FileRPCProtocolLogger : IRPCProtocolLogger, Disposable {
         if (isDisposed.getAndSet(true)) {
             return
         }
-        
+
         try {
-           // Write log footer
-           val endTime = formatTimestampWithMilliseconds(Date())
-           val footer = """
+            // Write log footer
+            val endTime = formatTimestampWithMilliseconds(Date())
+            val footer = """
                |-------------------------------------------------------------
                | IDEA RPC Protocol Logger
                | Ended at: $endTime
                | Total incoming: $totalIncoming bytes
                | Total outgoing: $totalOutgoing bytes
                |-------------------------------------------------------------
-           """.trimMargin()
-            
+            """.trimMargin()
+
             logQueue.add(footer)
-            
-           // Wait for log queue to empty
-           var retries = 0
-           while (logQueue.isNotEmpty() && retries < 10) {
-               Thread.sleep(100)
-               retries++
-           }
-            
-           // Close writer
-           writer?.close()
-           writer = null
-            
-           // Interrupt logger thread
-           loggerThread?.interrupt()
-           loggerThread = null
-            
-           logger.info("FileRPCProtocolLogger released")
+
+            // Wait for log queue to empty
+            var retries = 0
+            while (logQueue.isNotEmpty() && retries < 10) {
+                Thread.sleep(100)
+                retries++
+            }
+
+            // Close writer
+            writer?.close()
+            writer = null
+
+            // Interrupt logger thread
+            loggerThread?.interrupt()
+            loggerThread = null
+
+            logger.info("FileRPCProtocolLogger released")
         } catch (e: Exception) {
-           logger.error("Failed to release FileRPCProtocolLogger", e)
+            logger.error("Failed to release FileRPCProtocolLogger", e)
         }
     }
-} 
+}

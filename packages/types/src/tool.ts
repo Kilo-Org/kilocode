@@ -20,7 +20,6 @@ export const toolNames = [
 	"write_to_file",
 	"apply_diff",
 	"insert_content",
-	"search_and_replace",
 	"search_files",
 	"list_files",
 	"list_code_definition_names",
@@ -38,6 +37,7 @@ export const toolNames = [
 	"new_rule",
 	"report_bug",
 	"condense",
+	"delete_file",
 	// kilocode_change end
 	"update_todo_list",
 	"run_slash_command",

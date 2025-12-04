@@ -33,7 +33,7 @@ const CodeAccordian = ({
 	onJumpToFile,
 }: CodeAccordianProps) => {
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
-	const source = useMemo(() => code.trim(), [code])
+	const source = useMemo(() => String(code).trim() /*kilocode_change: coerce to string*/, [code])
 	const hasHeader = Boolean(path || isFeedback || header)
 
 	return (

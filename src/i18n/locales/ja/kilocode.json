@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "モデルの応答が予期せず終了しました（アシスタントメッセージなし）。これは制限に達している兆候である可能性があります。",
 		"notLoggedInError": "リクエストを完了できません。選択したプロバイダーに接続してログインしていることを確認してください。\n\n{{error}}",
-		"maxCompletionTokens": "完了トークンの最大数に達しました。"
+		"maxCompletionTokens": "完了トークンの最大数に達しました。",
+		"disableApplyDiff": "このエラーが繰り返し発生する場合は、詳細設定で「差分による編集」を無効にしてください。",
+		"disableEditFile": "このエラーが繰り返し発生する場合は、実験的機能「高速適用」を無効にしてください。"
 	},
 	"checkpoints": {
 		"nestedGitRepos": "{{path}} にネストされたGitリポジトリが検出されたため、チェックポイント機能は利用できません。チェックポイント機能を使用するには、ネストされたGitリポジトリを削除または移動するか、設定でチェックポイントを無効にしてこの警告を非表示にしてください。",
@@ -58,7 +60,41 @@
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: ステージされていない変更を使用してメッセージを生成中",
 		"activationFailed": "Kilo: メッセージジェネレーターのアクティブ化に失敗しました: {{error}}",
-		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
+		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました",
+		"errors": {
+			"noProject": "利用可能なプロジェクトがありません",
+			"timeout": "リクエストが30秒後にタイムアウトしました",
+			"connectionFailed": "Kilo Code拡張機能への接続に失敗しました",
+			"invalidResponse": "拡張機能から無効な応答フォーマットを受信しました",
+			"missingMessage": "拡張機能からコミットメッセージを受信できませんでした",
+			"noChanges": "コミットする変更が見つかりません",
+			"noWorkspacePath": "Gitリポジトリのワークスペースパスを特定できませんでした",
+			"processingError": "コミットメッセージ生成の処理エラー: {{error}}",
+			"workspaceNotFound": "Gitリポジトリのワークスペースパスを特定できませんでした"
+		},
+		"error": {
+			"title": "エラー",
+			"workspacePathNotFound": "Gitリポジトリのワークスペースパスを特定できませんでした",
+			"generationFailed": "コミットメッセージの生成に失敗しました: {{error}}",
+			"processingFailed": "コミットメッセージ生成の処理エラー: {{error}}",
+			"unknown": "不明なエラー"
+		},
+		"dialogs": {
+			"info": "AIコミットメッセージ",
+			"error": "エラー",
+			"success": "成功",
+			"title": "AIコミットメッセージ"
+		},
+		"progress": {
+			"analyzing": "変更を分析中...",
+			"title": "コミットメッセージの生成中",
+			"connecting": "Kilo Codeに接続しています...",
+			"generating": "コミットメッセージを生成中..."
+		},
+		"ui": {
+			"generateButton": "コミットメッセージを生成する",
+			"generateButtonTooltip": "AIを使用してコード変更を分析し、コミットメッセージを生成します"
+		}
 	},
 	"ghost": {
 		"statusBar": {
@@ -71,6 +107,7 @@
 				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
 				"lastCompletion": "最後の提案:",
 				"sessionTotal": "セッション合計コスト:",
+				"provider": "プロバイダー:",
 				"model": "モデル:"
 			},
 			"cost": {
@@ -96,7 +133,6 @@
 			"cancelSuggestions": "編集提案をキャンセル",
 			"applyCurrentSuggestion": "現在の編集提案を適用",
 			"applyAllSuggestions": "すべての編集提案を適用",
-			"promptCodeSuggestion": "クイックタスク",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

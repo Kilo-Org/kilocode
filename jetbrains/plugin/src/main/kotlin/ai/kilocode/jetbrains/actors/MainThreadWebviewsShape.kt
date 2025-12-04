@@ -4,15 +4,11 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.events.WebviewHtmlUpdateData
+import ai.kilocode.jetbrains.webview.WebViewManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import ai.kilocode.jetbrains.events.EventBus
-import ai.kilocode.jetbrains.events.ProjectEventBus
-import ai.kilocode.jetbrains.events.WebviewHtmlUpdateData
-import ai.kilocode.jetbrains.events.WebviewHtmlUpdateEvent
-import ai.kilocode.jetbrains.webview.WebViewManager
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -33,7 +29,7 @@ interface MainThreadWebviewsShape : Disposable {
      * @param value HTML content
      */
     fun setHtml(handle: WebviewHandle, value: String)
-    
+
     /**
      * Set Webview options
      * Corresponds to $setOptions method in TypeScript interface
@@ -41,7 +37,7 @@ interface MainThreadWebviewsShape : Disposable {
      * @param options Webview content options
      */
     fun setOptions(handle: WebviewHandle, options: Map<String, Any?>)
-    
+
     /**
      * Send message to Webview
      * Corresponds to $postMessage method in TypeScript interface
@@ -58,11 +54,11 @@ interface MainThreadWebviewsShape : Disposable {
  */
 class MainThreadWebviews(val project: Project) : MainThreadWebviewsShape {
     private val logger = Logger.getInstance(MainThreadWebviews::class.java)
-    
+
     // Store registered Webviews
     private val webviews = ConcurrentHashMap<WebviewHandle, Any?>()
-    private var webviewHandle : WebviewHandle = ""
-    
+    private var webviewHandle: WebviewHandle = ""
+
     override fun setHtml(handle: WebviewHandle, value: String) {
         logger.info("Setting Webview HTML: handle=$handle, length=${value.length}")
         webviewHandle = handle
@@ -70,7 +66,7 @@ class MainThreadWebviews(val project: Project) : MainThreadWebviewsShape {
             // Replace vscode-file protocol format, using regex to match from vscode-file:/ to /kilocode/ part
             val modifiedHtml = value.replace(Regex("vscode-file:/.*?/kilocode/"), "/")
             logger.info("Replaced vscode-file protocol path format")
-            
+
             // Send HTML content update event through EventBus
             val data = WebviewHtmlUpdateData(handle, modifiedHtml)
 //            project.getService(ProjectEventBus::class.java).emitInApplication(WebviewHtmlUpdateEvent, data)
@@ -80,7 +76,7 @@ class MainThreadWebviews(val project: Project) : MainThreadWebviewsShape {
             logger.error("Failed to set Webview HTML", e)
         }
     }
-    
+
     override fun setOptions(handle: WebviewHandle, options: Map<String, Any?>) {
         logger.info("Setting Webview options: handle=$handle, options=$options")
         webviewHandle = handle
@@ -91,10 +87,10 @@ class MainThreadWebviews(val project: Project) : MainThreadWebviewsShape {
             logger.error("Failed to set Webview options: $e")
         }
     }
-    
+
     override fun postMessage(handle: WebviewHandle, value: String): Boolean {
 //        logger.info("Sending message to Webview: handle=$handle")
-        if(value.contains("theme")) {
+        if (value.contains("theme")) {
             logger.info("Sending theme message to Webview")
         }
 
@@ -109,9 +105,9 @@ class MainThreadWebviews(val project: Project) : MainThreadWebviewsShape {
             false
         }
     }
-    
+
     override fun dispose() {
         logger.info("Disposing MainThreadWebviews resources")
         webviews.clear()
     }
-} 
+}

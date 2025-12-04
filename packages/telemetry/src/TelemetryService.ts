@@ -101,7 +101,10 @@ export class TelemetryService {
 			cacheWriteTokens: number
 			cacheReadTokens: number
 			cost?: number
-			completionTime?: number // kilocode_change
+			// kilocode_change start
+			completionTime?: number
+			inferenceProvider?: string
+			// kilocode_change end
 		},
 	): void {
 		this.captureEvent(TelemetryEventName.LLM_COMPLETION, { taskId, ...properties })

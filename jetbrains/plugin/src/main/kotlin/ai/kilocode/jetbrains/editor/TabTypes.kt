@@ -14,27 +14,26 @@ enum class TabModelOperationKind(val value: Int) {
     TAB_OPEN(0),
     TAB_CLOSE(1),
     TAB_UPDATE(2),
-    TAB_MOVE(3)
+    TAB_MOVE(3),
 }
-
 
 /**
  * Tab input type, corresponding to VSCode's TabInputKind
  * Represents different types of content that can be displayed in a tab
  */
 enum class TabInputKind(val value: Int) {
-    unknownInput(0),
-    textInput(1),
-    textDiffInput(2),
-    textMergeInput(3),
-    notebookInput(4),
-    notebookDiffInput(5),
-    customEditorInput(6),
-    webviewEditorInput(7),
-    terminalEditorInput(8),
-    interactiveEditorInput(9),
-    chatEditorInput(10),
-    multiDiffEditorInput(11)
+    UNKNOWN_INPUT(0),
+    TEXT_INPUT(1),
+    TEXT_DIFF_INPUT(2),
+    TEXT_MERGE_INPUT(3),
+    NOTEBOOK_INPUT(4),
+    NOTEBOOK_DIFF_INPUT(5),
+    CUSTOM_EDITOR_INPUT(6),
+    WEBVIEW_EDITOR_INPUT(7),
+    TERMINAL_EDITOR_INPUT(8),
+    INTERACTIVE_EDITOR_INPUT(9),
+    CHAT_EDITOR_INPUT(10),
+    MULTI_DIFF_EDITOR_INPUT(11),
 }
 
 /**
@@ -46,7 +45,7 @@ data class TabOperation(
     val index: Int,
     val tabDto: EditorTabDto,
     val kind: Int,
-    val oldIndex : Int?
+    val oldIndex: Int?,
 )
 
 /**
@@ -60,7 +59,7 @@ data class EditorTabDto(
     var isActive: Boolean,
     var isPinned: Boolean,
     var isPreview: Boolean,
-    var isDirty: Boolean
+    var isDirty: Boolean,
 )
 
 /**
@@ -71,7 +70,7 @@ data class EditorTabGroupDto(
     val groupId: Int,
     var isActive: Boolean,
     var viewColumn: Int,
-    var tabs: List<EditorTabDto>
+    var tabs: List<EditorTabDto>,
 )
 
 /**
@@ -79,7 +78,7 @@ data class EditorTabGroupDto(
  * Stores the kind of input for the tab.
  */
 open class TabInputBase(
-    var kind: Int = TabInputKind.unknownInput.value
+    var kind: Int = TabInputKind.UNKNOWN_INPUT.value,
 )
 
 /**
@@ -88,9 +87,9 @@ open class TabInputBase(
  */
 data class EditorTabInput(
     var uri: URI?,
-    var label: String? ,
-    var languageId: String?
-) : TabInputBase(TabInputKind.textInput.value)
+    var label: String?,
+    var languageId: String?,
+) : TabInputBase(TabInputKind.TEXT_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's IWebviewEditorTabInput
@@ -100,7 +99,7 @@ data class EditorTabInput(
  * Represents a webview editor input for a tab.
  * Used for tabs displaying webview content.
  */
-class WebviewEditorTabInput(var viewType: String?) : TabInputBase(TabInputKind.webviewEditorInput.value)
+class WebviewEditorTabInput(var viewType: String?) : TabInputBase(TabInputKind.WEBVIEW_EDITOR_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's ICustomEditorTabInput
@@ -111,9 +110,9 @@ class WebviewEditorTabInput(var viewType: String?) : TabInputBase(TabInputKind.w
  * Used for tabs with custom editor implementations.
  */
 class CustomEditorTabInput(
-    var uri: URI? ,
-    var viewType: String?
-) : TabInputBase(TabInputKind.customEditorInput.value)
+    var uri: URI?,
+    var viewType: String?,
+) : TabInputBase(TabInputKind.CUSTOM_EDITOR_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's ITerminalEditorTabInput
@@ -123,7 +122,7 @@ class CustomEditorTabInput(
  * Represents a terminal editor input for a tab.
  * Used for tabs displaying terminal sessions.
  */
-class TerminalEditorTabInput() : TabInputBase(TabInputKind.terminalEditorInput.value)
+class TerminalEditorTabInput() : TabInputBase(TabInputKind.TERMINAL_EDITOR_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's INotebookEditorTabInput
@@ -135,8 +134,8 @@ class TerminalEditorTabInput() : TabInputBase(TabInputKind.terminalEditorInput.v
  */
 class NotebookEditorTabInput(
     var uri: URI,
-    val notebookType: String
-) : TabInputBase(TabInputKind.notebookInput.value)
+    val notebookType: String,
+) : TabInputBase(TabInputKind.NOTEBOOK_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's INotebookDiffEditorTabInput
@@ -145,8 +144,8 @@ class NotebookEditorTabInput(
 data class NotebookDiffEditorTabInput(
     var original: URI,
     var modified: URI,
-    var notebookType: String
-) : TabInputBase(TabInputKind.notebookDiffInput.value)
+    var notebookType: String,
+) : TabInputBase(TabInputKind.NOTEBOOK_DIFF_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's IInteractiveWindowInput
@@ -154,8 +153,8 @@ data class NotebookDiffEditorTabInput(
  */
 data class InteractiveWindowInput(
     var uri: URI,
-    var inputBoxUri: URI
-) : TabInputBase(TabInputKind.interactiveEditorInput.value)
+    var inputBoxUri: URI,
+) : TabInputBase(TabInputKind.INTERACTIVE_EDITOR_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's IChatEditorTabInput
@@ -165,7 +164,7 @@ data class InteractiveWindowInput(
  * Represents a chat editor input for a tab.
  * Used for tabs displaying chat interfaces.
  */
-class ChatEditorTabInput() : TabInputBase(TabInputKind.chatEditorInput.value)
+class ChatEditorTabInput() : TabInputBase(TabInputKind.CHAT_EDITOR_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's ITextDiffTabInput
@@ -173,10 +172,10 @@ class ChatEditorTabInput() : TabInputBase(TabInputKind.chatEditorInput.value)
  */
 data class TextDiffTabInput(
     var original: URI,
-    var modified: URI
-) : TabInputBase(TabInputKind.textDiffInput.value){
+    var modified: URI,
+) : TabInputBase(TabInputKind.TEXT_DIFF_INPUT.value) {
     companion object {
-        fun create(original: URI, modified: URI) : TextDiffTabInput {
+        fun create(original: URI, modified: URI): TextDiffTabInput {
             return TextDiffTabInput(original, modified)
         }
     }
@@ -190,13 +189,13 @@ data class TextMergeTabInput(
     var base: URI,
     var input1: URI,
     var input2: URI,
-    var result: URI
-) : TabInputBase(TabInputKind.textMergeInput.value)
+    var result: URI,
+) : TabInputBase(TabInputKind.TEXT_MERGE_INPUT.value)
 
 /**
  * Tab input, corresponding to VSCode's multi-diff editor input
  * Represents a multi-diff editor input for comparing multiple text files
  */
 data class TextMultiDiffTabInput(
-    var resources: List<URI>
-) : TabInputBase(TabInputKind.multiDiffEditorInput.value)
+    var resources: List<URI>,
+) : TabInputBase(TabInputKind.MULTI_DIFF_EDITOR_INPUT.value)

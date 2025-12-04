@@ -4,11 +4,54 @@
 
 package ai.kilocode.jetbrains.core
 
+import ai.kilocode.jetbrains.actors.MainThreadBulkEditsShape
+import ai.kilocode.jetbrains.actors.MainThreadClipboardShape
+import ai.kilocode.jetbrains.actors.MainThreadCommandsShape
+import ai.kilocode.jetbrains.actors.MainThreadConfigurationShape
+import ai.kilocode.jetbrains.actors.MainThreadConsoleShape
+import ai.kilocode.jetbrains.actors.MainThreadDebugServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadDiaglogsShape
+import ai.kilocode.jetbrains.actors.MainThreadDocumentContentProvidersShape
+import ai.kilocode.jetbrains.actors.MainThreadDocumentsShape
+import ai.kilocode.jetbrains.actors.MainThreadEditorTabsShape
+import ai.kilocode.jetbrains.actors.MainThreadErrorsShape
+import ai.kilocode.jetbrains.actors.MainThreadExtensionServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadFileSystemEventServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadFileSystemShape
+import ai.kilocode.jetbrains.actors.MainThreadLanguageFeaturesShape
+import ai.kilocode.jetbrains.actors.MainThreadLanguageModelToolsShape
+import ai.kilocode.jetbrains.actors.MainThreadLoggerShape
+import ai.kilocode.jetbrains.actors.MainThreadMessageServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadOutputServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadSearchShape
+import ai.kilocode.jetbrains.actors.MainThreadSecretStateShape
+import ai.kilocode.jetbrains.actors.MainThreadStatusBarShape
+import ai.kilocode.jetbrains.actors.MainThreadStorageShape
+import ai.kilocode.jetbrains.actors.MainThreadTaskShape
+import ai.kilocode.jetbrains.actors.MainThreadTelemetryShape
+import ai.kilocode.jetbrains.actors.MainThreadTerminalServiceShape
+import ai.kilocode.jetbrains.actors.MainThreadTerminalShellIntegrationShape
+import ai.kilocode.jetbrains.actors.MainThreadTextEditorsShape
+import ai.kilocode.jetbrains.actors.MainThreadUrlsShape
+import ai.kilocode.jetbrains.actors.MainThreadWebviewViewsShape
+import ai.kilocode.jetbrains.actors.MainThreadWebviewsShape
+import ai.kilocode.jetbrains.actors.MainThreadWindowShape
+import ai.kilocode.jetbrains.ipc.proxy.createProxyIdentifier
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostCommandsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostConfigurationProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostDocumentsAndEditorsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostDocumentsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostEditorTabsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostEditorsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostExtensionServiceProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostFileSystemEventServiceProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostTerminalServiceProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostTerminalShellIntegrationProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostWebviewViewsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostWebviewsProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostWorkspaceProxy
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.actors.*
-import ai.kilocode.jetbrains.ipc.proxy.createProxyIdentifier
-import ai.kilocode.jetbrains.ipc.proxy.interfaces.*
 
 /**
  * Service proxy registry class, centrally manages registration of all service proxies
@@ -16,7 +59,7 @@ import ai.kilocode.jetbrains.ipc.proxy.interfaces.*
 @Service(Service.Level.PROJECT)
 class ServiceProxyRegistry private constructor() {
     private val logger = Logger.getInstance(this::class.java)
-    
+
 //    companion object {
 //        private val instance = ServiceProxyRegistry()
 //
@@ -32,14 +75,14 @@ class ServiceProxyRegistry private constructor() {
         // Initialize all proxy identifiers
         initializeAllProxies()
     }
-    
+
     /**
      * Initialize all proxy identifiers
      * Ensure all services are initialized when created
      */
     private fun initializeAllProxies() {
         logger.info("Initialize all proxy identifiers")
-        
+
         // Main thread service proxies
         val mainThreadProxies = listOf(
             MainContext.MainThreadAuthentication,
@@ -113,9 +156,9 @@ class ServiceProxyRegistry private constructor() {
             MainContext.MainThreadMcp,
             MainContext.MainThreadAiRelatedInformation,
             MainContext.MainThreadAiEmbeddingVector,
-            MainContext.MainThreadChatStatus
+            MainContext.MainThreadChatStatus,
         )
-        
+
         // Extension host service proxies
         val extHostProxies = listOf(
             ExtHostContext.ExtHostCodeMapper,
@@ -185,12 +228,11 @@ class ServiceProxyRegistry private constructor() {
             ExtHostContext.ExtHostTesting,
             ExtHostContext.ExtHostTelemetry,
             ExtHostContext.ExtHostLocalization,
-            ExtHostContext.ExtHostMcp
+            ExtHostContext.ExtHostMcp,
         )
-        
+
         logger.info("Initialized ${mainThreadProxies.size} main thread services and ${extHostProxies.size} extension host services")
     }
-    
 
     /**
      * Main thread context - Context ID enum values defined in VSCode
@@ -228,7 +270,7 @@ class ServiceProxyRegistry private constructor() {
         val MainThreadProgress = createProxyIdentifier<Any>("MainThreadProgress")
         val MainThreadQuickDiff = createProxyIdentifier<Any>("MainThreadQuickDiff")
         val MainThreadQuickOpen = createProxyIdentifier<Any>("MainThreadQuickOpen")
-        val MainThreadStatusBar = createProxyIdentifier<Any>("MainThreadStatusBar")
+        val MainThreadStatusBar = createProxyIdentifier<MainThreadStatusBarShape>("MainThreadStatusBar")
         val MainThreadSecretState = createProxyIdentifier<MainThreadSecretStateShape>("MainThreadSecretState")
         val MainThreadStorage = createProxyIdentifier<MainThreadStorageShape>("MainThreadStorage")
         val MainThreadSpeech = createProxyIdentifier<Any>("MainThreadSpeechProvider")
@@ -343,4 +385,4 @@ class ServiceProxyRegistry private constructor() {
         val ExtHostLocalization = createProxyIdentifier<Any>("ExtHostLocalization")
         val ExtHostMcp = createProxyIdentifier<Any>("ExtHostMcp")
     }
-} 
+}

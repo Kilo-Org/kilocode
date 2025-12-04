@@ -4,9 +4,38 @@
 
 package ai.kilocode.jetbrains.core
 
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import ai.kilocode.jetbrains.actors.*
+import ai.kilocode.jetbrains.actors.MainThreadBulkEdits
+import ai.kilocode.jetbrains.actors.MainThreadClipboard
+import ai.kilocode.jetbrains.actors.MainThreadCommands
+import ai.kilocode.jetbrains.actors.MainThreadConfiguration
+import ai.kilocode.jetbrains.actors.MainThreadConsole
+import ai.kilocode.jetbrains.actors.MainThreadDebugService
+import ai.kilocode.jetbrains.actors.MainThreadDiaglogs
+import ai.kilocode.jetbrains.actors.MainThreadDocumentContentProviders
+import ai.kilocode.jetbrains.actors.MainThreadDocuments
+import ai.kilocode.jetbrains.actors.MainThreadEditorTabs
+import ai.kilocode.jetbrains.actors.MainThreadErrors
+import ai.kilocode.jetbrains.actors.MainThreadExtensionService
+import ai.kilocode.jetbrains.actors.MainThreadFileSystem
+import ai.kilocode.jetbrains.actors.MainThreadFileSystemEventService
+import ai.kilocode.jetbrains.actors.MainThreadLanguageFeatures
+import ai.kilocode.jetbrains.actors.MainThreadLanguageModelTools
+import ai.kilocode.jetbrains.actors.MainThreadLogger
+import ai.kilocode.jetbrains.actors.MainThreadMessageService
+import ai.kilocode.jetbrains.actors.MainThreadOutputService
+import ai.kilocode.jetbrains.actors.MainThreadSearch
+import ai.kilocode.jetbrains.actors.MainThreadSecretState
+import ai.kilocode.jetbrains.actors.MainThreadStatusBar
+import ai.kilocode.jetbrains.actors.MainThreadStorage
+import ai.kilocode.jetbrains.actors.MainThreadTask
+import ai.kilocode.jetbrains.actors.MainThreadTelemetry
+import ai.kilocode.jetbrains.actors.MainThreadTerminalService
+import ai.kilocode.jetbrains.actors.MainThreadTerminalShellIntegration
+import ai.kilocode.jetbrains.actors.MainThreadTextEditors
+import ai.kilocode.jetbrains.actors.MainThreadUrls
+import ai.kilocode.jetbrains.actors.MainThreadWebviewViews
+import ai.kilocode.jetbrains.actors.MainThreadWebviews
+import ai.kilocode.jetbrains.actors.MainThreadWindow
 import ai.kilocode.jetbrains.ipc.IMessagePassingProtocol
 import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
 import ai.kilocode.jetbrains.ipc.proxy.RPCProtocol
@@ -14,6 +43,8 @@ import ai.kilocode.jetbrains.ipc.proxy.logger.FileRPCProtocolLogger
 import ai.kilocode.jetbrains.ipc.proxy.uri.IURITransformer
 import ai.kilocode.jetbrains.theme.ThemeManager
 import ai.kilocode.jetbrains.util.ProxyConfigUtil
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -24,7 +55,7 @@ class RPCManager(
     private val protocol: IMessagePassingProtocol,
     private val extensionManager: ExtensionManager,
     private val uriTransformer: IURITransformer? = null,
-    private val project: Project
+    private val project: Project,
 ) {
     private val logger = Logger.getInstance(RPCManager::class.java)
     private val rpcProtocol: IRPCProtocol = RPCProtocol(protocol, FileRPCProtocolLogger(), uriTransformer)
@@ -58,27 +89,27 @@ class RPCManager(
                 val emptyMap = mapOf(
                     "contents" to emptyMap<String, Any>(),
                     "keys" to emptyList<String>(),
-                    "overrides" to emptyList<String>()
+                    "overrides" to emptyList<String>(),
                 )
                 // Get proxy configuration
                 val httpProxyConfig = ProxyConfigUtil.getHttpProxyConfigForInitialization()
-                
+
                 // Build configuration contents
                 val contentsBuilder = mutableMapOf<String, Any>(
-                    "workbench" to mapOf("colorTheme" to themeName)
+                    "workbench" to mapOf("colorTheme" to themeName),
                 )
-                
+
                 // Add proxy configuration if available
                 httpProxyConfig?.let {
                     contentsBuilder["http"] = it
                     logger.info("Using proxy configuration for initialization: $it")
                 }
-                
+
                 val emptyConfigModel = mapOf(
                     "defaults" to mapOf(
                         "contents" to contentsBuilder,
                         "keys" to emptyList<String>(),
-                        "overrides" to emptyList<String>()
+                        "overrides" to emptyList<String>(),
                     ),
                     "policy" to emptyMap,
                     "application" to emptyMap,
@@ -86,7 +117,7 @@ class RPCManager(
                     "userRemote" to emptyMap,
                     "workspace" to emptyMap,
                     "folders" to emptyList<Any>(),
-                    "configurationScopes" to emptyList<Any>()
+                    "configurationScopes" to emptyList<Any>(),
                 )
 
                 // Directly call the interface method
@@ -141,6 +172,9 @@ class RPCManager(
 
         // MainThreadConfiguration
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadConfiguration, MainThreadConfiguration())
+
+        // MainThreadStatusBar
+        rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadStatusBar, MainThreadStatusBar(project))
     }
 
     /**
@@ -159,7 +193,7 @@ class RPCManager(
         // MainThreadTerminalShellIntegration - use new architecture, pass project parameter
         rpcProtocol.set(
             ServiceProxyRegistry.MainContext.MainThreadTerminalShellIntegration,
-            MainThreadTerminalShellIntegration(project)
+            MainThreadTerminalShellIntegration(project),
         )
 
         // MainThreadTerminalService - use new architecture, pass project parameter
@@ -183,13 +217,13 @@ class RPCManager(
         // MainThreadClipboard
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadClipboard, MainThreadClipboard())
 
-        //MainThreadBulkEdits
+        // MainThreadBulkEdits
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadBulkEdits, MainThreadBulkEdits(project))
 
-        //MainThreadEditorTabs
+        // MainThreadEditorTabs
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadEditorTabs, MainThreadEditorTabs(project))
 
-        //MainThreadDocuments
+        // MainThreadDocuments
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadDocuments, MainThreadDocuments(project))
     }
 
@@ -214,7 +248,7 @@ class RPCManager(
         // MainThreadDocumentContentProviders
         rpcProtocol.set(
             ServiceProxyRegistry.MainContext.MainThreadDocumentContentProviders,
-            MainThreadDocumentContentProviders()
+            MainThreadDocumentContentProviders(),
         )
 
         // MainThreadUrls
@@ -226,7 +260,7 @@ class RPCManager(
         // MainThreadFileSystem
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadFileSystem, MainThreadFileSystem())
 
-        //MainThreadMessageServiceShape
+        // MainThreadMessageServiceShape
         rpcProtocol.set(ServiceProxyRegistry.MainContext.MainThreadMessageService, MainThreadMessageService())
     }
 
@@ -236,7 +270,7 @@ class RPCManager(
         // MainThreadFileSystemEventService
         rpcProtocol.set(
             ServiceProxyRegistry.MainContext.MainThreadFileSystemEventService,
-            MainThreadFileSystemEventService()
+            MainThreadFileSystemEventService(),
         )
 
         // MainThreadSecretState
@@ -255,4 +289,4 @@ class RPCManager(
     fun getRPCProtocol(): IRPCProtocol {
         return rpcProtocol
     }
-} 
+}

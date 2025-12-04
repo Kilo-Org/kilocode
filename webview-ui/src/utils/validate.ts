@@ -148,6 +148,13 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change start
+		case "synthetic":
+			if (!apiConfiguration.syntheticApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		// kilocode_change end
 		case "io-intelligence":
 			if (!apiConfiguration.ioIntelligenceApiKey) {
 				return i18next.t("settings:validation.apiKey")
@@ -168,6 +175,13 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change start
+		case "ovhcloud":
+			if (!apiConfiguration.ovhCloudAiEndpointsApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		// kilocode_change end
 	}
 
 	return undefined

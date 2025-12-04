@@ -1,0 +1,366 @@
+/**
+ * Effect atoms for message handling and service initialization
+ * These atoms handle side effects like processing messages and initializing the service
+ */
+
+import { atom } from "jotai"
+import type { ExtensionMessage, ExtensionChatMessage, RouterModels } from "../../types/messages.js"
+import type { HistoryItem } from "@roo-code/types"
+import { extensionServiceAtom, setServiceReadyAtom, setServiceErrorAtom, setIsInitializingAtom } from "./service.js"
+import { updateExtensionStateAtom, updateChatMessageByTsAtom, updateRouterModelsAtom } from "./extension.js"
+import { ciCompletionDetectedAtom } from "./ci.js"
+import {
+	updateProfileDataAtom,
+	updateBalanceDataAtom,
+	setProfileLoadingAtom,
+	setBalanceLoadingAtom,
+	setProfileErrorAtom,
+	setBalanceErrorAtom,
+	type ProfileData,
+	type BalanceData,
+} from "./profile.js"
+import {
+	taskHistoryDataAtom,
+	taskHistoryLoadingAtom,
+	taskHistoryErrorAtom,
+	resolveTaskHistoryRequestAtom,
+} from "./taskHistory.js"
+import { logs } from "../../services/logs.js"
+
+/**
+ * Message buffer to handle race conditions during initialization
+ * Messages received before state is ready are buffered and processed later
+ */
+const messageBufferAtom = atom<ExtensionMessage[]>([])
+
+/**
+ * Flag to track if we're currently processing buffered messages
+ */
+const isProcessingBufferAtom = atom<boolean>(false)
+
+// Indexing status types
+export interface IndexingStatus {
+	systemStatus: string
+	message?: string
+	processedItems: number
+	totalItems: number
+	currentItemUnit?: string
+	workspacePath?: string
+	gitBranch?: string // Current git branch being indexed
+	manifest?: {
+		totalFiles: number
+		totalChunks: number
+		lastUpdated: string
+	}
+}
+
+/**
+ * Effect atom to initialize the ExtensionService
+ * This sets up event listeners and activates the service
+ */
+export const initializeServiceEffectAtom = atom(null, async (get, set, store?: { set: typeof set }) => {
+	const service = get(extensionServiceAtom)
+
+	if (!service) {
+		const error = new Error("ExtensionService not available for initialization")
+		set(setServiceErrorAtom, error)
+		throw error
+	}
+
+	// Get the store reference - if not passed, we can't update atoms from event listeners
+	const atomStore = store || (get as { store?: { set: typeof set } }).store
+	if (!atomStore) {
+		logs.error("No store available for event listeners", "effects")
+	}
+
+	try {
+		set(setIsInitializingAtom, true)
+		logs.info("Initializing ExtensionService...", "effects")
+
+		// Set up event listeners before initialization
+		// IMPORTANT: Use atomStore.set() instead of set() for async event handlers
+		service.on("ready", (api) => {
+			logs.info("Extension ready", "effects")
+			if (atomStore) {
+				atomStore.set(setServiceReadyAtom, true)
+
+				// Get initial state
+				const state = api.getState()
+				if (state) {
+					atomStore.set(updateExtensionStateAtom, state)
+				}
+
+				// Process any buffered messages
+				atomStore.set(processMessageBufferAtom)
+			}
+		})
+
+		service.on("stateChange", (state) => {
+			if (atomStore) {
+				atomStore.set(updateExtensionStateAtom, state)
+			}
+		})
+
+		service.on("message", (message) => {
+			if (atomStore) {
+				atomStore.set(messageHandlerEffectAtom, message)
+			}
+		})
+
+		service.on("error", (error) => {
+			logs.error("Extension service error", "effects", { error })
+			if (atomStore) {
+				atomStore.set(setServiceErrorAtom, error)
+			}
+		})
+
+		service.on("disposed", () => {
+			logs.info("Extension service disposed", "effects")
+			if (atomStore) {
+				atomStore.set(setServiceReadyAtom, false)
+			}
+		})
+
+		// Initialize the service
+		await service.initialize()
+
+		logs.info("ExtensionService initialized successfully", "effects")
+	} catch (error) {
+		logs.error("Failed to initialize ExtensionService", "effects", { error })
+		const err = error instanceof Error ? error : new Error(String(error))
+		set(setServiceErrorAtom, err)
+		set(setIsInitializingAtom, false)
+		throw err
+	}
+})
+
+/**
+ * Effect atom to handle incoming extension messages
+ * This processes messages and updates state accordingly
+ */
+export const messageHandlerEffectAtom = atom(null, (get, set, message: ExtensionMessage) => {
+	try {
+		// Check if service is ready
+		const service = get(extensionServiceAtom)
+		if (!service) {
+			logs.warn("Message received but service not available, buffering", "effects")
+			const buffer = get(messageBufferAtom)
+			set(messageBufferAtom, [...buffer, message])
+			return
+		}
+
+		// Handle different message types
+		switch (message.type) {
+			case "state":
+				// State messages are handled by the stateChange event listener
+				// Skip processing here to avoid duplication
+				break
+
+			case "messageUpdated": {
+				const chatMessage = message.chatMessage as ExtensionChatMessage | undefined
+				if (chatMessage) {
+					set(updateChatMessageByTsAtom, chatMessage)
+				}
+				break
+			}
+
+			case "routerModels": {
+				const routerModels = message.routerModels as RouterModels | undefined
+				if (routerModels) {
+					set(updateRouterModelsAtom, routerModels)
+				}
+				break
+			}
+
+			case "profileDataResponse": {
+				set(setProfileLoadingAtom, false)
+				const payload = message.payload as { success: boolean; data?: unknown; error?: string } | undefined
+				if (payload?.success) {
+					set(updateProfileDataAtom, payload.data as ProfileData)
+				} else {
+					set(setProfileErrorAtom, payload?.error || "Failed to fetch profile")
+				}
+				break
+			}
+
+			case "balanceDataResponse": {
+				// Handle balance data response
+				set(setBalanceLoadingAtom, false)
+				const payload = message.payload as { success: boolean; data?: unknown; error?: string } | undefined
+				if (payload?.success) {
+					set(updateBalanceDataAtom, payload.data as BalanceData)
+				} else {
+					set(setBalanceErrorAtom, payload?.error || "Failed to fetch balance")
+				}
+				break
+			}
+
+			case "taskHistoryResponse": {
+				// Handle task history response
+				set(taskHistoryLoadingAtom, false)
+				const payload = message.payload as
+					| {
+							historyItems?: HistoryItem[]
+							pageIndex?: number
+							pageCount?: number
+							requestId?: string
+					  }
+					| undefined
+				if (payload) {
+					const { historyItems, pageIndex, pageCount, requestId } = payload
+					const data = {
+						historyItems: historyItems || [],
+						pageIndex: pageIndex || 0,
+						pageCount: pageCount || 1,
+					}
+					set(taskHistoryDataAtom, data)
+					set(taskHistoryErrorAtom, null)
+
+					// Resolve any pending request with this requestId
+					if (requestId) {
+						set(resolveTaskHistoryRequestAtom, { requestId, data })
+					}
+				} else {
+					set(taskHistoryErrorAtom, "Failed to fetch task history")
+					// Reject any pending requests
+					const payloadWithRequestId = message.payload as { requestId?: string } | undefined
+					if (payloadWithRequestId?.requestId) {
+						set(resolveTaskHistoryRequestAtom, {
+							requestId: payloadWithRequestId.requestId,
+							error: "Failed to fetch task history",
+						})
+					}
+				}
+				break
+			}
+
+			case "action":
+				// Action messages are typically handled by the UI
+				break
+
+			case "partialMessage":
+				// Partial messages update the current message being streamed
+				break
+
+			case "invoke":
+				// Invoke messages trigger specific UI actions
+				break
+
+			case "indexingStatusUpdate": {
+				// this message fires rapidly as the scanner is progressing and we don't have a UI for it in the
+				// CLI at this point, so just quietly ignore it. Eventually we can add more CLI info about indexing.
+				break
+			}
+
+			default:
+				logs.debug(`Unhandled message type: ${message.type}`, "effects")
+		}
+
+		// Check for completion_result in chatMessages (for CI mode)
+		if (message.state?.chatMessages) {
+			const lastMessage = message.state.chatMessages[message.state.chatMessages.length - 1]
+			if (lastMessage?.type === "ask" && lastMessage?.ask === "completion_result") {
+				logs.info("Completion result detected in state update", "effects")
+				set(ciCompletionDetectedAtom, true)
+			}
+		}
+	} catch (error) {
+		logs.error("Error handling extension message", "effects", { error, message })
+	}
+})
+
+/**
+ * Effect atom to process buffered messages
+ * This is called after the service becomes ready
+ */
+export const processMessageBufferAtom = atom(null, (get, set) => {
+	// Prevent concurrent processing
+	if (get(isProcessingBufferAtom)) {
+		return
+	}
+
+	const buffer = get(messageBufferAtom)
+	if (buffer.length === 0) {
+		return
+	}
+
+	try {
+		set(isProcessingBufferAtom, true)
+		logs.info(`Processing ${buffer.length} buffered messages`, "effects")
+
+		// Process each buffered message
+		for (const message of buffer) {
+			set(messageHandlerEffectAtom, message)
+		}
+
+		// Clear the buffer
+		set(messageBufferAtom, [])
+		logs.info("Buffered messages processed", "effects")
+	} catch (error) {
+		logs.error("Error processing message buffer", "effects", { error })
+	} finally {
+		set(isProcessingBufferAtom, false)
+	}
+})
+
+/**
+ * Effect atom to dispose the service
+ * This cleans up resources and removes event listeners
+ */
+export const disposeServiceEffectAtom = atom(null, async (get, set) => {
+	const service = get(extensionServiceAtom)
+
+	if (!service) {
+		logs.warn("No service to dispose", "effects")
+		return
+	}
+
+	try {
+		logs.info("Disposing ExtensionService...", "effects")
+
+		// Clear any buffered messages
+		set(messageBufferAtom, [])
+
+		// Dispose the service
+		await service.dispose()
+
+		// Clear state
+		set(updateExtensionStateAtom, null)
+		set(setServiceReadyAtom, false)
+
+		logs.info("ExtensionService disposed successfully", "effects")
+	} catch (error) {
+		logs.error("Error disposing ExtensionService", "effects", { error })
+		const err = error instanceof Error ? error : new Error(String(error))
+		set(setServiceErrorAtom, err)
+		throw err
+	}
+})
+
+/**
+ * Derived atom to get the message buffer size
+ * Useful for debugging and monitoring
+ */
+export const messageBufferSizeAtom = atom<number>((get) => {
+	const buffer = get(messageBufferAtom)
+	return buffer.length
+})
+
+/**
+ * Derived atom to check if there are buffered messages
+ */
+export const hasBufferedMessagesAtom = atom<boolean>((get) => {
+	return get(messageBufferSizeAtom) > 0
+})
+
+/**
+ * Action atom to clear the message buffer
+ * Useful for error recovery
+ */
+export const clearMessageBufferAtom = atom(null, (get, set) => {
+	const bufferSize = get(messageBufferSizeAtom)
+	if (bufferSize > 0) {
+		logs.warn(`Clearing ${bufferSize} buffered messages`, "effects")
+		set(messageBufferAtom, [])
+	}
+})

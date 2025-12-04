@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "Ferramentas",
 		"resources": "Recursos",
-		"errors": "Erros"
+		"logs": "Logs"
 	},
 	"emptyState": {
 		"noTools": "Nenhuma ferramenta encontrada",
 		"noResources": "Nenhum recurso encontrado",
-		"noErrors": "Nenhum erro encontrado"
+		"noLogs": "Ainda sem logs"
 	},
 	"networkTimeout": {
 		"label": "Tempo limite de rede",

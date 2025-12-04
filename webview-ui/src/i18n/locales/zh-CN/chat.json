@@ -67,7 +67,7 @@
 		"tooltip": "批准此操作"
 	},
 	"runCommand": {
-		"title": "命令",
+		"title": "运行",
 		"tooltip": "执行此命令"
 	},
 	"proceedWhileRunning": {
@@ -130,7 +130,8 @@
 		"settings": "模式设置",
 		"description": "专门定制Kilo Code行为的角色。",
 		"searchPlaceholder": "搜索模式...",
-		"noResults": "未找到结果"
+		"noResults": "未找到结果",
+		"organizationModes": "组织模式"
 	},
 	"errorReadingFile": "读取文件时出错",
 	"noValidImages": "没有处理有效图片",
@@ -155,6 +156,9 @@
 		"initializingWarning": "正在初始化检查点...如果耗时过长，你可以在<settingsLink>设置</settingsLink>中禁用检查点并重新启动任务。",
 		"menu": {
 			"viewDiff": "查看差异",
+			"more": "更多选项",
+			"viewDiffFromInit": "查看所有更改",
+			"viewDiffWithCurrent": "查看自此检查点以来的更改",
 			"restore": "恢复检查点",
 			"restoreFiles": "恢复文件",
 			"restoreFilesDescription": "将项目文件恢复到此检查点状态",
@@ -182,6 +186,8 @@
 		"wantsToInsert": "需要在此文件中插入内容",
 		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容",
 		"wantsToInsertAtEnd": "需要在文件末尾添加内容",
+		"wantsToDelete": "需要删除文件",
+		"wantsToDeleteDirectory": "Kilo Code 想要删除此目录",
 		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件",
 		"wantsToReadMultiple": "Kilo Code 想要读取多个文件",
 		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改",
@@ -272,6 +278,7 @@
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"triggerLabelOff": "自动批准已关闭",
+		"triggerLabelOffShort": "关闭",
 		"triggerLabel_zero": "0 个自动批准",
 		"triggerLabel_one": "1 个自动批准",
 		"triggerLabel_other": "{{count}} 个自动批准",
@@ -301,6 +308,19 @@
 			"selectModel": "在设置中从 Roo Code Cloud 提供商选择 <code>roo/code-supernova</code> 开始使用。",
 			"goToSettingsButton": "前往设置"
 		},
+		"release": {
+			"heading": "扩展新功能：",
+			"openRouterEmbeddings": "支持 OpenRouter 嵌入模型",
+			"chutesDynamic": "Chutes 现在动态加载最新模型",
+			"queuedMessagesFix": "修复队列消息丢失问题"
+		},
+		"cloudAgents": {
+			"heading": "云端新功能：",
+			"prFixer": "推出 <bold>PR Fixer</bold> 云端 Agent 以补充 PR 审查员。",
+			"prFixerDescription": "Roo Code 的 PR Fixer 直接在 GitHub 上为你的 PR 应用高质量更改。通过 PR 评论调用，它会读取整个评论历史以理解上下文、协议和权衡 - 然后实施正确的修复。",
+			"tryPrFixerButton": "试用 PR Fixer"
+		},
+		"careers": "此外，<careersLink>我们正在招聘！</careersLink>",
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
 	},
 	"browser": {
@@ -329,6 +349,8 @@
 		"tooltips": {
 			"expand": "展开代码块",
 			"collapse": "收起代码块",
+			"enable_wrap": "启用换行",
+			"disable_wrap": "禁用换行",
 			"copy_code": "复制代码"
 		}
 	},

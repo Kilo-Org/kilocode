@@ -1,4 +1,4 @@
-const REQUESTY_BASE_URL = "https://router.requesty.ai/v1"
+export const REQUESTY_BASE_URL = "https://router.requesty.ai/v1"
 
 type URLType = "router" | "app" | "api"
 

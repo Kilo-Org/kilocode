@@ -1,0 +1,15 @@
+
+function addNumbers(a, b) {
+    return a + b
+}
+
+function multiplyBy5(a) {
+    return a * 5
+}
+
+// Implement function to combine above functions
+
+function combineFunctions(a, b) {
+    const sum = addNumbers(a, b);
+    return multiplyBy5(sum);
+}

@@ -1,0 +1,2 @@
+# Description: Should suggest object initialization
+const config = <<<AUTOCOMPLETE_HERE>>>

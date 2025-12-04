@@ -13,17 +13,19 @@ enum class ExtensionHostMessageType {
      * Initialized
      */
     Initialized,
-    
+
     /**
      * Ready
      */
     Ready,
-    
+
     /**
      * Terminated
      */
-    Terminate;
-    
+    Terminate,
+
+    ;
+
     companion object {
         /**
          * Get message type from numeric value
@@ -38,7 +40,7 @@ enum class ExtensionHostMessageType {
                 else -> null
             }
         }
-        
+
         /**
          * Get message type from protocol message data
          * @param data Message data
@@ -48,7 +50,7 @@ enum class ExtensionHostMessageType {
             if (data.size != 1) {
                 return null
             }
-            
+
             return when (data[0].toInt()) {
                 1 -> Initialized
                 2 -> Ready
@@ -57,4 +59,4 @@ enum class ExtensionHostMessageType {
             }
         }
     }
-} 
+}

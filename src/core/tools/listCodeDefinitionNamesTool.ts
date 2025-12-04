@@ -8,6 +8,7 @@ import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { parseSourceCodeForDefinitionsTopLevel, parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
+import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 
 export async function listCodeDefinitionNamesTool(
 	cline: Task,
@@ -51,7 +52,14 @@ export async function listCodeDefinitionNamesTool(
 
 				if (stats.isFile()) {
 					const fileResult = await parseSourceCodeDefinitionsForFile(absolutePath, cline.rooIgnoreController)
-					result = fileResult ?? "No source code definitions found in cline file."
+
+					// Apply truncation based on maxReadFileLine setting
+					if (fileResult) {
+						const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
+						result = truncateDefinitionsToLineLimit(fileResult, maxReadFileLine)
+					} else {
+						result = "No source code definitions found in file."
+					}
 				} else if (stats.isDirectory()) {
 					result = await parseSourceCodeForDefinitionsTopLevel(absolutePath, cline.rooIgnoreController)
 				} else {

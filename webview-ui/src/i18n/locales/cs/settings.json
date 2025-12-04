@@ -34,7 +34,8 @@
 		"ui": "Uživatelské rozhraní",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
-		"about": "O Kilo Code"
+		"about": "O Kilo Code",
+		"autoPurge": "Automatické čištění"
 	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
@@ -70,6 +71,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Klíč API",
 		"vercelAiGatewayApiKeyPlaceholder": "Zadejte svůj klíč API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Klíč API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Zadejte svůj klíč API OpenRouter",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
@@ -136,6 +140,7 @@
 			"geminiApiKeyRequired": "Klíč API Gemini je povinný",
 			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
 			"vercelAiGatewayApiKeyRequired": "Je vyžadován klíč API Vercel AI Gateway",
+			"openRouterApiKeyRequired": "Klíč API OpenRouter je povinný",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
@@ -237,6 +242,8 @@
 		"providerDocumentation": "Dokumentace {{provider}}",
 		"configProfile": "Konfigurační profil",
 		"description": "Uložte si různé konfigurace API pro rychlé přepínání mezi poskytovateli a nastaveními.",
+		"makeActiveProfile": "Nastavit jako aktivní profil",
+		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
 		"apiProvider": "Poskytovatel API",
 		"model": "Model",
 		"nameEmpty": "Jméno nemůže být prázdné",
@@ -255,6 +262,8 @@
 		"noProviderMatchFound": "Nebyli nalezeni žádní poskytovatelé",
 		"noMatchFound": "Nebyly nalezeny žádné odpovídající profily",
 		"vscodeLmDescription": "API jazykového modelu VS Code vám umožňuje spouštět modely poskytované jinými rozšířeními VS Code (včetně, ale nejen, GitHub Copilot). Nejjednodušší způsob, jak začít, je nainstalovat rozšíření Copilot a Copilot Chat z VS Code Marketplace.",
+		"vscodeLmUnavailable": "Podpora jazykových modelů VS Code je dostupná pouze ve Visual Studio Code. Forky jako VSCodium a další nemusí fungovat. Dále tato funkce není dostupná v nástrojích JetBrains.",
+		"vscodeLmUnavailableInstructions": "Ujistěte se, že používáte podporovaný nástroj a že máte nainstalovaný a povolený VS Code Chat",
 		"awsCustomArnUse": "Zadejte platný Amazon Bedrock ARN pro model, který chcete použít. Příklady formátu:",
 		"awsCustomArnDesc": "Ujistěte se, že region v ARN odpovídá výše vybranému regionu AWS.",
 		"openRouterApiKey": "Klíč API OpenRouter",
@@ -306,13 +315,21 @@
 		"getFeatherlessApiKey": "Získat klíč API Featherless",
 		"fireworksApiKey": "Klíč API Fireworks",
 		"getFireworksApiKey": "Získat klíč API Fireworks",
+		"syntheticApiKey": "Klíč API Synthetic",
+		"getSyntheticApiKey": "Získat klíč API Synthetic",
 		"zaiApiKey": "Klíč API Z.AI",
 		"getZaiApiKey": "Získat klíč API Z.AI",
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
+		"minimaxApiKey": "Klíč API MiniMax",
+		"getMiniMaxApiKey": "Získat klíč API MiniMax",
+		"minimaxBaseUrl": "Vstupní bod MiniMax",
 		"zaiEntrypoint": "Vstupní bod Z AI",
 		"zaiEntrypointDescription": "Vyberte prosím vhodný vstupní bod API podle vaší polohy. Pokud jste v Číně, vyberte open.bigmodel.cn. Jinak vyberte api.z.ai.",
+		"minimaxApiKey": "Klíč API MiniMax",
+		"getMiniMaxApiKey": "Získat klíč API MiniMax",
+		"minimaxBaseUrl": "Vstupní bod MiniMax",
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
@@ -322,6 +339,10 @@
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
 		"huggingFaceApiKey": "Klíč API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Získat klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Základní URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Použít vlastní základní URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Načítání...",
 		"huggingFaceModelsCount": "({{count}} modelů)",
@@ -478,6 +499,10 @@
 			},
 			"resetDefaults": "Obnovit výchozí"
 		},
+		"rateLimitAfter": {
+			"label": "Omezení rychlosti na konci",
+			"description": "Začněte omezovat rychlost poté, co stream API skončí."
+		},
 		"rateLimitSeconds": {
 			"label": "Omezení rychlosti",
 			"description": "Minimální čas mezi požadavky API."
@@ -490,10 +515,11 @@
 		},
 		"reasoningEffort": {
 			"label": "Úsilí modelu při uvažování",
+			"none": "Žádné",
 			"minimal": "Minimální (nejrychlejší)",
-			"high": "Vysoké",
+			"low": "Nízké",
 			"medium": "Střední",
-			"low": "Nízké"
+			"high": "Vysoké"
 		},
 		"verbosity": {
 			"label": "Podrobnost výstupu",
@@ -586,15 +612,64 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Časový limit inicializace kontrolního bodu (sekundy)",
+			"description": "Maximální doba čekání na inicializaci služby kontrolních bodů. Výchozí je 15 sekund. Rozsah: 10-60 sekund."
+		},
 		"enable": {
 			"label": "Povolit automatické kontrolní body",
 			"description": "Pokud je povoleno, Kilo Code automaticky vytvoří kontrolní body během provádění úkolu, což usnadní kontrolu změn nebo návrat do předchozích stavů. <0>Dozvědět se více</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Povolit automatické čištění úkolů",
+			"description": "Automaticky mazat staré úkoly pro uvolnění místa na disku a zlepšení výkonu. Úkoly jsou klasifikovány podle typu a stáří pro určení, kdy mají být odstraněny."
+		},
+		"defaultRetention": {
+			"label": "Výchozí doba uchovávání (dny)",
+			"description": "Počet dní pro uchovávání úkolů před tím, než jsou způsobilé k čištění"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nikdy nemazat oblíbené úkoly",
+			"description": "Když je povoleno, oblíbené úkoly nebudou nikdy automaticky smazány bez ohledu na stáří"
+		},
+		"favoritedRetention": {
+			"label": "Uchovávání oblíbených úkolů (dny)",
+			"description": "Počet dní pro uchovávání oblíbených úkolů (platí pouze když je 'Nikdy nemazat oblíbené úkoly' zakázáno)"
+		},
+		"completedRetention": {
+			"label": "Uchovávání dokončených úkolů (dny)",
+			"description": "Počet dní pro uchovávání úkolů, které byly úspěšně dokončeny"
+		},
+		"incompleteRetention": {
+			"label": "Uchovávání nedokončených úkolů (dny)",
+			"description": "Počet dní pro uchovávání úkolů, které nebyly dokončeny (obvykle kratší než dokončené úkoly)"
+		},
+		"lastRun": {
+			"label": "Poslední čištění"
+		},
+		"manualPurge": {
+			"button": "Spustit čištění nyní"
 		}
 	},
 	"display": {
 		"taskTimeline": {
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
+		},
+		"sendMessageOnEnter": {
+			"label": "Odeslat zprávu pomocí Enter",
+			"description": "Je-li povoleno, stiskněte Enter pro odeslání a Shift+Enter pro nový řádek. Vypněte pro použití Shift+Enter pro odeslání."
+		},
+		"costThreshold": {
+			"label": "Skrýt cenu pod prahem",
+			"currentValue": "Aktuální práh: ${{value}}",
+			"description": "Zobrazovat pouze náklady na požadavky převyšující tuto částku. Náklady jsou vždy viditelné, když je panel podrobností otevřený."
+		},
+		"showTimestamps": {
+			"label": "Zobrazit časová razítka",
+			"description": "Zobrazit časové razítko pro každou zprávu v zobrazení chatu"
 		}
 	},
 	"ghost": {
@@ -660,6 +735,16 @@
 			"lines": "řádky",
 			"always_full_read": "Vždy číst celý soubor"
 		},
+		"maxImageFileSize": {
+			"label": "Maximální velikost souboru obrázku",
+			"mb": "MB",
+			"description": "Maximální velikost (v MB) pro soubory obrázků, které může nástroj pro čtení souborů zpracovat."
+		},
+		"maxTotalImageSize": {
+			"label": "Maximální celková velikost obrázků",
+			"mb": "MB",
+			"description": "Maximální kumulativní limit velikosti (v MB) pro všechny obrázky zpracované v jedné operaci read_file. Při čtení více obrázků se velikost každého obrázku přičte k celkové velikosti. Pokud by zahrnutí dalšího obrázku překročilo tento limit, bude přeskočen."
+		},
 		"condensingThreshold": {
 			"label": "Prahová hodnota spouštění zhušťování",
 			"selectProfile": "Nakonfigurovat prahovou hodnotu pro profil",
@@ -685,15 +770,13 @@
 				"description": "Čas čekání po zápisu souborů před pokračováním (v milisekundách). Vyšší hodnoty mohou zlepšit přesnost, ale zpomalují detekci chyb."
 			}
 		},
-		"maxImageFileSize": {
-			"label": "Maximální velikost souboru obrázku",
-			"mb": "MB",
-			"description": "Maximální velikost (v MB) pro soubory obrázků, které mohou být zahrnuty do požadavků. Větší soubory budou automaticky změněny na menší velikost."
+		"includeCurrentTime": {
+			"label": "Zahrnout aktuální čas do kontextu",
+			"description": "Pokud je povoleno, aktuální čas a informace o časovém pásmu budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o čas."
 		},
-		"maxTotalImageSize": {
-			"label": "Maximální celková velikost obrázků",
-			"mb": "MB",
-			"description": "Maximální kumulativní limit velikosti (v MB) pro všechny obrázky v jednom požadavku. Při překročení budou obrázky změněny na menší velikost, aby se vešly do tohoto limitu."
+		"includeCurrentCost": {
+			"label": "Zahrnout aktuální náklady do kontextu",
+			"description": "Pokud je povoleno, aktuální náklady na využití API budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o náklady."
 		}
 	},
 	"terminal": {
@@ -801,8 +884,8 @@
 			"description": "Povolit experimentální sjednocenou strategii diff. Tato strategie může snížit počet opakování způsobených chybami modelu, ale může způsobit neočekávané chování nebo nesprávné úpravy. Povolte pouze pokud rozumíte rizikům a jste ochotni pečlivě zkontrolovat všechny změny."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Povolit rychlé aplikování",
-			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí rychlého aplikování se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje poskytovatele Kilo Code API, OpenRouter nebo klíč API Morph.",
+			"name": "Povolit Fast Apply",
+			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Fast Apply se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter nebo klíč API Morph.",
 			"apiKey": "Klíč API Morph (volitelné)",
 			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
 			"modelLabel": "Výběr modelu",
@@ -813,10 +896,6 @@
 				"morphLarge": "Morph v3 Large (schopnější)",
 				"relace": "Relace Apply v3"
 			}
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Použít experimentální nástroj hledání a nahrazování",
-			"description": "Povolit experimentální nástroj hledání a nahrazování, který umožňuje Kilo Code nahradit více výskytů hledaného výrazu v jednom požadavku."
 		},
 		"INSERT_BLOCK": {
 			"name": "Použít experimentální nástroj vkládání obsahu",
@@ -950,6 +1029,7 @@
 		"providerNotAllowed": "Poskytovatel '{{provider}}' není povolen vaší organizací",
 		"modelNotAllowed": "Model '{{model}}' není povolen pro poskytovatele '{{provider}}' vaší organizací",
 		"profileInvalid": "Tento profil obsahuje poskytovatele nebo model, který není povolen vaší organizací",
+		"modelDeprecated": "Tento model již není dostupný. Prosím vyberte jiný model.",
 		"qwenCodeOauthPath": "Musíte poskytnout platnou cestu k OAuth pověřením."
 	},
 	"placeholders": {

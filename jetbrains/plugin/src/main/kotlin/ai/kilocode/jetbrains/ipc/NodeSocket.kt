@@ -8,7 +8,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import java.io.IOException
 import java.net.Socket
-import java.net.SocketException
 import java.nio.channels.Channels
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ConcurrentHashMap
@@ -165,10 +164,11 @@ class NodeSocket : ISocket {
         }
 
         traceSocketEvent(
-            SocketDiagnosticsEventType.ERROR, mapOf(
+            SocketDiagnosticsEventType.ERROR,
+            mapOf(
                 "code" to errorCode,
-                "message" to error.message
-            )
+                "message" to error.message,
+            ),
         )
 
         // EPIPE errors don't need additional handling, socket will close itself
@@ -275,14 +275,16 @@ class NodeSocket : ISocket {
         try {
             if (isSocket && socket != null) {
                 socket.shutdownOutput()
-            } else channel?.shutdownOutput()
+            } else {
+                channel?.shutdownOutput()
+            }
         } catch (e: Exception) {
             logger.error("Socket[$debugLabel] Exception occurred while sending END signal", e)
             handleSocketError(e)
         }
     }
 
-    override suspend fun drain(): Unit {
+    override suspend fun drain() {
         traceSocketEvent(SocketDiagnosticsEventType.NODE_DRAIN_BEGIN)
 
         try {
@@ -377,4 +379,4 @@ class NodeSocket : ISocket {
     }
 
     fun isDisposed(): Boolean = isDisposed.get()
-} 
+}

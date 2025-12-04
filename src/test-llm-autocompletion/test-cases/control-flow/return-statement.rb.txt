@@ -1,0 +1,5 @@
+# Description: Should complete Ruby return statement
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return <<<AUTOCOMPLETE_HERE>>>

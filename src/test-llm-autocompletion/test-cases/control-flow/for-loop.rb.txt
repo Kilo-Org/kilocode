@@ -1,0 +1,4 @@
+# Description: Should complete Ruby loop iteration
+arr = [1, 2, 3, 4, 5]
+arr.each do |item|
+	<<<AUTOCOMPLETE_HERE>>>

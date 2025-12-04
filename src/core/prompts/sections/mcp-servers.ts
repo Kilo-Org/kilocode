@@ -1,14 +1,21 @@
 import { DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
+import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
 
 export async function getMcpServersSection(
 	mcpHub?: McpHub,
 	diffStrategy?: DiffStrategy,
 	enableMcpServerCreation?: boolean,
+	toolUseStyle?: ToolUseStyle, // kilocode_change
 ): Promise<string> {
 	if (!mcpHub) {
 		return ""
 	}
+	// kilocode_change start
+	if (toolUseStyle === "json") {
+		return ""
+	}
+	// kilocode_change end
 
 	const connectedServers =
 		mcpHub.getServers().length > 0

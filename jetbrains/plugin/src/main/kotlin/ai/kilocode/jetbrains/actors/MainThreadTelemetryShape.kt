@@ -17,7 +17,7 @@ interface MainThreadTelemetryShape : Disposable {
      * @param data Event data
      */
     fun publicLog(eventName: String, data: Any?)
-    
+
     /**
      * Logs public event (supports categorized events).
      * @param eventName Event name
@@ -32,7 +32,7 @@ class MainThreadTelemetry : MainThreadTelemetryShape {
     override fun publicLog(eventName: String, data: Any?) {
         logger.info("[Telemetry] $eventName: $data")
     }
-    
+
     override fun publicLog2(eventName: String, data: Any?) {
         logger.info("[Telemetry] $eventName: $data")
     }
@@ -40,4 +40,4 @@ class MainThreadTelemetry : MainThreadTelemetryShape {
     override fun dispose() {
         logger.info("Dispose MainThreadTelemetry")
     }
-} 
+}

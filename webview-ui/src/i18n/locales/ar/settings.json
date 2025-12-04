@@ -34,7 +34,8 @@
 		"ui": "واجهة المستخدم",
 		"experimental": "تجريبي",
 		"language": "اللغة",
-		"about": "عن Kilo Code"
+		"about": "عن Kilo Code",
+		"autoPurge": "التنظيف التلقائي"
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
@@ -70,6 +71,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "مفتاح API",
 		"vercelAiGatewayApiKeyPlaceholder": "أدخل مفتاح Vercel AI Gateway API",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "مفتاح OpenRouter API",
+		"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
@@ -136,6 +140,7 @@
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
 			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
+			"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -237,6 +242,8 @@
 		"providerDocumentation": "توثيق {{provider}}",
 		"configProfile": "ملف الإعداد",
 		"description": "احفظ إعدادات متعددة للتبديل السريع بين مزوّدين ونماذج.",
+		"makeActiveProfile": "جعل الملف النشط",
+		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
 		"apiProvider": "مزود API",
 		"model": "النموذج",
 		"nameEmpty": "الاسم ما يصير فاضي",
@@ -255,6 +262,8 @@
 		"noProviderMatchFound": "لم يتم العثور على مزوّدين",
 		"noMatchFound": "ما فيه ملفات مطابقة",
 		"vscodeLmDescription": "واجهة VS Code Language Model تسمح بتشغيل نماذج من إضافات أخرى مثل GitHub Copilot.",
+		"vscodeLmUnavailable": "دعم نماذج اللغة الخاصة بـ VS Code متاح فقط على Visual Studio Code. قد لا تعمل النسخ الفرعية مثل VSCodium وغيرها. علاوة على ذلك، هذه الميزة غير متوفرة في أدوات JetBrains.",
+		"vscodeLmUnavailableInstructions": "تأكد من أنك تستخدم أداة مدعومة وأن VS Code Chat مثبت ومُمكّن",
 		"awsCustomArnUse": "أدخل ARN صحيح لنموذج Amazon Bedrock. أمثلة:",
 		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
 		"openRouterApiKey": "مفتاح OpenRouter",
@@ -306,13 +315,21 @@
 		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
-		"zaiApiKey": "مفتاح Z.AI",
-		"getZaiApiKey": "احصل على مفتاح Z.AI",
+		"syntheticApiKey": "مفتاح Synthetic API",
+		"getSyntheticApiKey": "احصل على مفتاح Synthetic API",
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
+		"minimaxApiKey": "مفتاح MiniMax API",
+		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
+		"minimaxBaseUrl": "نقطة دخول MiniMax",
+		"zaiApiKey": "مفتاح Z.AI",
+		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"zaiEntrypoint": "نقطة دخول Z AI",
 		"zaiEntrypointDescription": "يرجى اختيار نقطة دخول API المناسبة حسب موقعك. إذا كنت في الصين، اختر open.bigmodel.cn. وإلا، اختر api.z.ai.",
+		"minimaxApiKey": "مفتاح MiniMax API",
+		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
+		"minimaxBaseUrl": "نقطة دخول MiniMax",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
@@ -322,6 +339,10 @@
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
 		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"getOvhCloudAiEndpointsApiKey": "احصل على مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL الأساسي",
+		"getOvhCloudAiEndpointsBaseUrl": "استخدام URL أساسي مخصص",
 		"huggingFaceModelId": "معرّف النموذج",
 		"huggingFaceLoading": "جارٍ التحميل...",
 		"huggingFaceModelsCount": "({{count}} نموذج)",
@@ -474,6 +495,10 @@
 			},
 			"resetDefaults": "رجع للإعدادات الافتراضية"
 		},
+		"rateLimitAfter": {
+			"label": "تحديد الحدّ الأقصى عند النهاية",
+			"description": "ابدأ تقييد المعدل بعد انتهاء تدفّق واجهة برمجة التطبيقات."
+		},
 		"rateLimitSeconds": {
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
@@ -485,11 +510,12 @@
 			"warning": "⚠️ تعيين القيمة إلى 0 يسمح بإعادة المحاولة غير المحدودة مما قد يستهلك استخدام API كبير"
 		},
 		"reasoningEffort": {
-			"label": "جهد الاستنتاج",
+			"label": "جهد الاستنتاج للنموذج",
+			"none": "لا شيء",
 			"minimal": "الحد الأدنى (الأسرع)",
-			"high": "عالي",
+			"low": "منخفض",
 			"medium": "متوسط",
-			"low": "منخفض"
+			"high": "عالي"
 		},
 		"verbosity": {
 			"label": "مستوى التفصيل في المخرجات",
@@ -586,15 +612,64 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "مهلة تهيئة نقطة الحفظ (ثواني)",
+			"description": "أقصى وقت انتظار لتهيئة خدمة نقاط الحفظ. الافتراضي 15 ثانية. النطاق: 10-60 ثانية."
+		},
 		"enable": {
 			"label": "تفعيل نقاط الحفظ التلقائية",
 			"description": "ينشئ نقاط حفظ آليًا أثناء التنفيذ. <0>تعرف أكثر</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "تفعيل تنظيف المهام التلقائي",
+			"description": "حذف المهام القديمة تلقائياً لتحرير مساحة القرص وتحسين الأداء. يتم تصنيف المهام حسب النوع والعمر لتحديد متى يجب إزالتها."
+		},
+		"defaultRetention": {
+			"label": "فترة الاحتفاظ الافتراضية (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام قبل أن تصبح مؤهلة للتنظيف"
+		},
+		"neverPurgeFavorited": {
+			"label": "عدم حذف المهام المفضلة أبداً",
+			"description": "عند التفعيل، لن يتم حذف المهام المفضلة تلقائياً بغض النظر عن العمر"
+		},
+		"favoritedRetention": {
+			"label": "الاحتفاظ بالمهام المفضلة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام المفضلة (ينطبق فقط عند تعطيل 'عدم حذف المهام المفضلة أبداً')"
+		},
+		"completedRetention": {
+			"label": "الاحتفاظ بالمهام المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي تم إكمالها بنجاح"
+		},
+		"incompleteRetention": {
+			"label": "الاحتفاظ بالمهام غير المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي لم يتم إكمالها (عادة أقصر من المهام المكتملة)"
+		},
+		"lastRun": {
+			"label": "آخر تنظيف"
+		},
+		"manualPurge": {
+			"button": "تشغيل التنظيف الآن"
 		}
 	},
 	"display": {
 		"taskTimeline": {
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		},
+		"sendMessageOnEnter": {
+			"label": "إرسال رسالة باستخدام Enter",
+			"description": "عند التمكين، اضغط على Enter للإرسال و Shift+Enter لسطر جديد. قم بإيقاف التشغيل لاستخدام Shift+Enter للإرسال بدلاً من ذلك."
+		},
+		"costThreshold": {
+			"label": "إخفاء التكلفة أقل من الحد الأدنى",
+			"currentValue": "الحد الحالي: ${{value}}",
+			"description": "إظهار تكاليف الطلب فقط عندما تتجاوز هذا المبلغ. التكاليف تكون مرئية دائمًا عندما تكون لوحة التفاصيل مفتوحة."
+		},
+		"showTimestamps": {
+			"label": "إظهار الطوابع الزمنية",
+			"description": "إظهار الطابع الزمني لكل رسالة في عرض المحادثة"
 		}
 	},
 	"ghost": {
@@ -678,6 +753,14 @@
 			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
 			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
 			"usesGlobal": "(يستخدم {{threshold}}% عام)"
+		},
+		"includeCurrentTime": {
+			"label": "تضمين الوقت الحالي في السياق",
+			"description": "عند التفعيل، سيتم تضمين الوقت الحالي ومعلومات المنطقة الزمنية في موجه النظام. عطّل هذا إذا كانت النماذج تتوقف عن العمل بسبب مخاوف الوقت."
+		},
+		"includeCurrentCost": {
+			"label": "تضمين التكلفة الحالية في السياق",
+			"description": "عند التفعيل، سيتم تضمين تكلفة استخدام API الحالية في موجه النظام. عطّل هذا إذا كانت النماذج تتوقف عن العمل بسبب مخاوف التكلفة."
 		},
 		"diagnostics": {
 			"includeMessages": {
@@ -789,10 +872,6 @@
 			"name": "استخدم استراتيجية diff الموحدة التجريبية",
 			"description": "قد تقلل من الإعادات لكنها مخاطرة."
 		},
-		"SEARCH_AND_REPLACE": {
-			"name": "أداة بحث واستبدال تجريبية",
-			"description": "تمكّن استبدال متعدد في طلب واحد."
-		},
 		"INSERT_BLOCK": {
 			"name": "أداة إدراج محتوى تجريبية",
 			"description": "تدرج محتوى في أسطر محددة بدون diff."
@@ -818,8 +897,8 @@
 			"description": "يحرر عدة ملفات في طلب واحد."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "تفعيل التطبيق السريع",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"name": "تفعيل Fast Apply",
+			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
 			"placeholder": "أدخل مفتاح Morph API (اختياري)",
 			"modelLabel": "اختيار النموذج",
@@ -939,7 +1018,8 @@
 		"providerNotAllowed": "المزوّد '{{provider}}' غير مسموح به.",
 		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
 		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
-		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth."
+		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth.",
+		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر."
 	},
 	"placeholders": {
 		"apiKey": "اكتب مفتاح API...",

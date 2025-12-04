@@ -16,6 +16,11 @@
 		"title": "Konfiguracja API",
 		"select": "Wybierz, której konfiguracji API użyć dla tego trybu"
 	},
+	"organizationMode": {
+		"title": "Tryb organizacji",
+		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Kilo Code Dashboard.",
+		"cannotEdit": "Tryby organizacji nie mogą być edytowane"
+	},
 	"tools": {
 		"title": "Dostępne narzędzia",
 		"builtInModesText": "Narzędzia dla wbudowanych trybów nie mogą być modyfikowane",

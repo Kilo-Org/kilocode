@@ -19,20 +19,20 @@ interface MainThreadDebugServiceShape : Disposable {
      * @param debugTypes List of debug type identifiers (e.g., "java", "python", "node")
      */
     fun registerDebugTypes(debugTypes: List<String>)
-    
+
     /**
      * Notifies that a debug session has been cached/stored for later use.
      * @param sessionID Unique identifier for the debug session
      */
     fun sessionCached(sessionID: String)
-    
+
     /**
      * Accepts and processes a message from the debug adapter.
      * @param handle Unique handle identifying the debug adapter connection
      * @param message The protocol message received from the debug adapter
      */
     fun acceptDAMessage(handle: Int, message: Any)
-    
+
     /**
      * Accepts and processes an error reported by the debug adapter.
      * @param handle Unique handle identifying the debug adapter connection
@@ -41,7 +41,7 @@ interface MainThreadDebugServiceShape : Disposable {
      * @param stack Optional stack trace for the error
      */
     fun acceptDAError(handle: Int, name: String, message: String, stack: String?)
-    
+
     /**
      * Accepts notification that the debug adapter has exited.
      * @param handle Unique handle identifying the debug adapter connection
@@ -49,7 +49,7 @@ interface MainThreadDebugServiceShape : Disposable {
      * @param signal Optional signal name that caused termination (null if exited normally)
      */
     fun acceptDAExit(handle: Int, code: Int?, signal: String?)
-    
+
     /**
      * Registers a debug configuration provider for a specific debug type.
      * @param type The debug type this provider handles
@@ -66,9 +66,9 @@ interface MainThreadDebugServiceShape : Disposable {
         hasProvideMethod: Boolean,
         hasResolveMethod: Boolean,
         hasResolve2Method: Boolean,
-        handle: Int
+        handle: Int,
     ): Any
-    
+
     /**
      * Registers a debug adapter descriptor factory for a specific debug type.
      * @param type The debug type this factory creates adapters for
@@ -76,19 +76,19 @@ interface MainThreadDebugServiceShape : Disposable {
      * @return Registration result (typically Unit or success indicator)
      */
     fun registerDebugAdapterDescriptorFactory(type: String, handle: Int): Any
-    
+
     /**
      * Unregisters a debug configuration provider.
      * @param handle The handle of the provider to unregister
      */
     fun unregisterDebugConfigurationProvider(handle: Int)
-    
+
     /**
      * Unregisters a debug adapter descriptor factory.
      * @param handle The handle of the factory to unregister
      */
     fun unregisterDebugAdapterDescriptorFactory(handle: Int)
-    
+
     /**
      * Starts a new debugging session.
      * @param folder Optional workspace folder URI for the debug session
@@ -97,21 +97,21 @@ interface MainThreadDebugServiceShape : Disposable {
      * @return Success indicator (true if debugging started successfully)
      */
     fun startDebugging(folder: URI?, nameOrConfig: Any, options: Any): Any
-    
+
     /**
      * Stops an active debugging session.
      * @param sessionId Optional session ID to stop (null stops all sessions)
      * @return Operation result (typically Unit)
      */
     fun stopDebugging(sessionId: String?): Any
-    
+
     /**
      * Sets a custom name for a debug session.
      * @param id The session ID to name
      * @param name The display name for the session
      */
     fun setDebugSessionName(id: String, name: String)
-    
+
     /**
      * Sends a custom request to the debug adapter.
      * @param id The session ID to send the request to
@@ -120,7 +120,7 @@ interface MainThreadDebugServiceShape : Disposable {
      * @return The response from the debug adapter
      */
     fun customDebugAdapterRequest(id: String, command: String, args: Any): Any
-    
+
     /**
      * Retrieves information about a specific breakpoint from the debug protocol.
      * @param id The session ID
@@ -128,20 +128,20 @@ interface MainThreadDebugServiceShape : Disposable {
      * @return Breakpoint information or null if not found
      */
     fun getDebugProtocolBreakpoint(id: String, breakpoinId: String): Any?
-    
+
     /**
      * Appends text to the debug console output.
      * @param value The text to append to the console
      */
     fun appendDebugConsole(value: String)
-    
+
     /**
      * Registers new breakpoints with the debug service.
      * @param breakpoints List of breakpoint objects to register
      * @return Registration result (typically Unit or success indicator)
      */
     fun registerBreakpoints(breakpoints: List<Any>): Any
-    
+
     /**
      * Unregisters existing breakpoints.
      * @param breakpointIds List of regular breakpoint IDs to remove
@@ -152,30 +152,30 @@ interface MainThreadDebugServiceShape : Disposable {
     fun unregisterBreakpoints(
         breakpointIds: List<String>,
         functionBreakpointIds: List<String>,
-        dataBreakpointIds: List<String>
+        dataBreakpointIds: List<String>,
     ): Any
-    
+
     /**
      * Registers a debug visualizer extension.
      * @param extensionId The ID of the extension providing the visualizer
      * @param id The unique ID of the visualizer within the extension
      */
     fun registerDebugVisualizer(extensionId: String, id: String)
-    
+
     /**
      * Unregisters a debug visualizer extension.
      * @param extensionId The ID of the extension providing the visualizer
      * @param id The unique ID of the visualizer within the extension
      */
     fun unregisterDebugVisualizer(extensionId: String, id: String)
-    
+
     /**
      * Registers a debug visualizer tree structure.
      * @param treeId Unique identifier for the tree
      * @param canEdit Whether the tree structure can be edited by users
      */
     fun registerDebugVisualizerTree(treeId: String, canEdit: Boolean)
-    
+
     /**
      * Unregisters a debug visualizer tree structure.
      * @param treeId Unique identifier for the tree to unregister
@@ -195,106 +195,110 @@ class MainThreadDebugService : MainThreadDebugServiceShape {
     override fun registerDebugTypes(debugTypes: List<String>) {
         logger.info("Registering debug types: $debugTypes")
     }
-    
+
     override fun sessionCached(sessionID: String) {
         logger.info("Session cached: $sessionID")
     }
-    
+
     override fun acceptDAMessage(handle: Int, message: Any) {
         logger.info("Received debug adapter message: handle=$handle, message=$message")
     }
-    
+
     override fun acceptDAError(handle: Int, name: String, message: String, stack: String?) {
         logger.info("Received debug adapter error: handle=$handle, name=$name, message=$message, stack=$stack")
     }
-    
+
     override fun acceptDAExit(handle: Int, code: Int?, signal: String?) {
         logger.info("Received debug adapter exit: handle=$handle, code=$code, signal=$signal")
     }
-    
+
     override fun registerDebugConfigurationProvider(
         type: String,
         triggerKind: Int,
         hasProvideMethod: Boolean,
         hasResolveMethod: Boolean,
         hasResolve2Method: Boolean,
-        handle: Int
+        handle: Int,
     ): Any {
-        logger.info("Registering debug configuration provider: type=$type, triggerKind=$triggerKind, " +
+        logger.info(
+            "Registering debug configuration provider: type=$type, triggerKind=$triggerKind, " +
                 "hasProvideMethod=$hasProvideMethod, hasResolveMethod=$hasResolveMethod, " +
-                "hasResolve2Method=$hasResolve2Method, handle=$handle")
+                "hasResolve2Method=$hasResolve2Method, handle=$handle",
+        )
         return Unit
     }
-    
+
     override fun registerDebugAdapterDescriptorFactory(type: String, handle: Int): Any {
         logger.info("Registering debug adapter descriptor factory: type=$type, handle=$handle")
         return Unit
     }
-    
+
     override fun unregisterDebugConfigurationProvider(handle: Int) {
         logger.info("Unregistering debug configuration provider: handle=$handle")
     }
-    
+
     override fun unregisterDebugAdapterDescriptorFactory(handle: Int) {
         logger.info("Unregistering debug adapter descriptor factory: handle=$handle")
     }
-    
+
     override fun startDebugging(folder: URI?, nameOrConfig: Any, options: Any): Any {
         logger.info("Starting debugging: folder=$folder, nameOrConfig=$nameOrConfig, options=$options")
         return true
     }
-    
+
     override fun stopDebugging(sessionId: String?): Any {
         logger.info("Stopping debugging: sessionId=$sessionId")
         return Unit
     }
-    
+
     override fun setDebugSessionName(id: String, name: String) {
         logger.info("Setting debug session name: id=$id, name=$name")
     }
-    
+
     override fun customDebugAdapterRequest(id: String, command: String, args: Any): Any {
         logger.info("Custom debug adapter request: id=$id, command=$command, args=$args")
         return Unit
     }
-    
+
     override fun getDebugProtocolBreakpoint(id: String, breakpoinId: String): Any? {
         logger.info("Getting debug protocol breakpoint: id=$id, breakpoinId=$breakpoinId")
         return Unit
     }
-    
+
     override fun appendDebugConsole(value: String) {
         logger.info("Appending to debug console: $value")
     }
-    
+
     override fun registerBreakpoints(breakpoints: List<Any>): Any {
         logger.info("Registering breakpoints: ${breakpoints.size} total")
         return Unit
     }
-    
+
     override fun unregisterBreakpoints(
         breakpointIds: List<String>,
         functionBreakpointIds: List<String>,
-        dataBreakpointIds: List<String>
+        dataBreakpointIds: List<String>,
     ): Any {
-        logger.info("Unregistering breakpoints: ${breakpointIds.size} regular, " +
+        logger.info(
+            "Unregistering breakpoints: ${breakpointIds.size} regular, " +
                 "${functionBreakpointIds.size} function, " +
-                "${dataBreakpointIds.size} data breakpoints")
+                "${dataBreakpointIds.size} data breakpoints",
+        )
         return Unit
     }
-    
+
     override fun registerDebugVisualizer(extensionId: String, id: String) {
         logger.info("Registering debug visualizer: extensionId=$extensionId, id=$id")
     }
-    
+
     override fun unregisterDebugVisualizer(extensionId: String, id: String) {
         logger.info("Unregistering debug visualizer: extensionId=$extensionId, id=$id")
     }
-    
+
     override fun registerDebugVisualizerTree(treeId: String, canEdit: Boolean) {
         logger.info("Registering debug visualizer tree: treeId=$treeId, canEdit=$canEdit")
     }
-    
+
     override fun unregisterDebugVisualizerTree(treeId: String) {
         logger.info("Unregistering debug visualizer tree: treeId=$treeId")
     }

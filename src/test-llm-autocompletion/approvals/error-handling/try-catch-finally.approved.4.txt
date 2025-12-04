@@ -1,0 +1,9 @@
+function processData(data) {
+	try {
+		const result = JSON.parse(data);
+				return result;
+	} catch (error) {
+		console.error('Error processing data:', error);
+		throw error;
+	}
+}

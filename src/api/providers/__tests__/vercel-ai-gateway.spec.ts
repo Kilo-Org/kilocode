@@ -26,7 +26,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheWritesPrice: 3.75,
 				cacheReadsPrice: 0.3,
 				description: "Claude Sonnet 4",
-				supportsComputerUse: true,
 			},
 			"anthropic/claude-3.5-haiku": {
 				maxTokens: 32000,
@@ -38,7 +37,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheWritesPrice: 1.25,
 				cacheReadsPrice: 0.1,
 				description: "Claude 3.5 Haiku",
-				supportsComputerUse: false,
 			},
 			"openai/gpt-4o": {
 				maxTokens: 16000,
@@ -50,7 +48,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheWritesPrice: 3.125,
 				cacheReadsPrice: 0.25,
 				description: "GPT-4o",
-				supportsComputerUse: true,
 			},
 		})
 	}),
@@ -117,7 +114,6 @@ describe("VercelAiGatewayHandler", () => {
 			expect(result.info.contextWindow).toBe(200000)
 			expect(result.info.supportsImages).toBe(true)
 			expect(result.info.supportsPromptCache).toBe(true)
-			expect(result.info.supportsComputerUse).toBe(true)
 		})
 
 		it("returns default model info when options are not provided", async () => {

@@ -4,20 +4,16 @@
 
 package ai.kilocode.jetbrains.core
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.util.io.FileUtil
 import ai.kilocode.jetbrains.model.StaticWorkspaceData
 import ai.kilocode.jetbrains.model.WorkspaceData
 import ai.kilocode.jetbrains.model.WorkspaceFolder
 import ai.kilocode.jetbrains.util.URI
-import java.io.File
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
 import java.util.*
 
 /**
@@ -43,11 +39,7 @@ class WorkspaceManager(val project: Project) {
      * @param project The project to get workspace data for
      * @return Workspace data or null if the project is null
      */
-    fun getProjectWorkspaceData(project: Project): WorkspaceData? {
-        if (project == null) {
-            return null
-        }
-
+    fun getProjectWorkspaceData(project: Project): WorkspaceData {
         // Create workspace ID (using hash value of the project's base path)
         val workspaceId = getWorkspaceId(project)
         val workspaceName = project.name
@@ -59,7 +51,7 @@ class WorkspaceManager(val project: Project) {
             transient = false,
             // Configuration can be the project's .idea directory or project configuration file
             configuration = project.basePath?.let { URI.file("$it/.idea") },
-            isUntitled = false
+            isUntitled = false,
         )
 
         // Get workspace folders
@@ -67,7 +59,7 @@ class WorkspaceManager(val project: Project) {
 
         return WorkspaceData(staticWorkspaceData, workspaceFolders)
     }
-    
+
     /**
      * Gets the workspace ID for a project.
      *
@@ -79,7 +71,7 @@ class WorkspaceManager(val project: Project) {
         val basePath = project.basePath ?: return UUID.randomUUID().toString()
         return basePath.hashCode().toString()
     }
-    
+
     /**
      * Gets workspace folders for a project.
      *
@@ -89,14 +81,16 @@ class WorkspaceManager(val project: Project) {
     private fun getWorkspaceFolders(project: Project): List<WorkspaceFolder> {
         val folders = mutableListOf<WorkspaceFolder>()
         val basePath = project.basePath ?: return folders
-        
+
         // Add project root directory as the main workspace folder
-        folders.add(WorkspaceFolder(
-            uri = URI.file(basePath),
-            name = project.name,
-            index = 0
-        ))
-        
+        folders.add(
+            WorkspaceFolder(
+                uri = URI.file(basePath),
+                name = project.name,
+                index = 0,
+            ),
+        )
+
         // Get the virtual file for the project root directory - wrapped in ReadAction
         val projectDir = ApplicationManager.getApplication().runReadAction<VirtualFile?> {
             LocalFileSystem.getInstance().findFileByPath(basePath)
@@ -104,7 +98,7 @@ class WorkspaceManager(val project: Project) {
         if (projectDir == null || !projectDir.isDirectory) {
             return folders
         }
-        
+
 //        // Get subdirectories
 //        val contentRoots = projectDir.children
 //
@@ -125,7 +119,7 @@ class WorkspaceManager(val project: Project) {
 //                ))
 //            }
 //        }
-        
+
         return folders
     }
-} 
+}

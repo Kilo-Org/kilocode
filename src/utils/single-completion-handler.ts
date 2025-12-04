@@ -1,5 +1,6 @@
 import type { ProviderSettings } from "@roo-code/types"
 import { buildApiHandler, SingleCompletionHandler, ApiHandler } from "../api" //kilocode_change
+import { ApiStreamUsageChunk } from "../api/transform/stream" // kilocode_change
 
 /**
  * Enhances a prompt using the configured API without creating a full Cline instance or task history.
@@ -15,11 +16,16 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 
 	const handler = buildApiHandler(apiConfiguration)
 
+	// Initialize handler if it has an initialize method
+	if ("initialize" in handler && typeof handler.initialize === "function") {
+		await handler.initialize()
+	}
+
 	// Check if handler supports single completions
 	if (!("completePrompt" in handler)) {
 		// kilocode_change start - stream responses for handlers without completePrompt
 		// throw new Error("The selected API provider does not support prompt enhancement")
-		return await streamResponseFromHandler(handler, promptText)
+		return (await streamResponseFromHandler(handler, promptText)).text
 		// kilocode_change end
 	}
 
@@ -27,15 +33,26 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 }
 
 // kilocode_change start - Stream responses using createMessage
-async function streamResponseFromHandler(handler: ApiHandler, promptText: string): Promise<string> {
-	const stream = handler.createMessage("", [{ role: "user", content: [{ type: "text", text: promptText }] }])
+export async function streamResponseFromHandler(
+	handler: ApiHandler,
+	promptText: string,
+	systemPrompt = "",
+): Promise<{ text: string; usage?: ApiStreamUsageChunk }> {
+	const stream = handler.createMessage(systemPrompt, [
+		{ role: "user", content: [{ type: "text", text: promptText }] },
+	])
 
-	let response: string = ""
+	let text: string = ""
+	let usage: ApiStreamUsageChunk | undefined = undefined
+
 	for await (const chunk of stream) {
 		if (chunk.type === "text") {
-			response += chunk.text
+			text += chunk.text
+		} else if (chunk.type === "usage") {
+			usage = chunk
 		}
 	}
-	return response
+
+	return { text, usage }
 }
 // kilocode_change end - streamResponseFromHandler

@@ -13,11 +13,11 @@ class ProxyIdentifier<T> private constructor(
      * String identifier
      */
     val sid: String,
-    
+
     /**
      * Numeric identifier
      */
-    val nid: Int
+    val nid: Int,
 ) {
     companion object {
         /**
@@ -25,14 +25,14 @@ class ProxyIdentifier<T> private constructor(
          */
         var count = 0
             private set
-            
+
         /**
          * Create new ProxyIdentifier instance
          */
         internal fun <T> create(sid: String): ProxyIdentifier<T> {
             return ProxyIdentifier<T>(sid, ++count)
         }
-        
+
         /**
          * Create placeholder ProxyIdentifier, does not increment counter
          */
@@ -79,4 +79,4 @@ fun getStringIdentifierForProxy(nid: Int): String {
  * Corresponds to SerializableObjectWithBuffers in VSCode
  * @param value Value to serialize
  */
-class SerializableObjectWithBuffers<T>(val value: T) 
+class SerializableObjectWithBuffers<T>(val value: T)

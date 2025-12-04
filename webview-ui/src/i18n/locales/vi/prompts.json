@@ -16,6 +16,11 @@
 		"title": "Cấu hình API",
 		"select": "Chọn cấu hình API nào để sử dụng cho chế độ này"
 	},
+	"organizationMode": {
+		"title": "Chế độ của tổ chức",
+		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Kilo Code Dashboard.",
+		"cannotEdit": "Không thể chỉnh sửa các chế độ của tổ chức"
+	},
 	"tools": {
 		"title": "Công cụ có sẵn",
 		"builtInModesText": "Công cụ cho các chế độ tích hợp sẵn không thể được sửa đổi",

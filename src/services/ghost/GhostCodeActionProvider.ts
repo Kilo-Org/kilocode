@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import { GhostProvider } from "./GhostProvider"
 import { t } from "../../i18n"
 
 export class GhostCodeActionProvider implements vscode.CodeActionProvider {
@@ -10,8 +9,8 @@ export class GhostCodeActionProvider implements vscode.CodeActionProvider {
 	public provideCodeActions(
 		document: vscode.TextDocument,
 		range: vscode.Range | vscode.Selection,
-		context: vscode.CodeActionContext,
-		token: vscode.CancellationToken,
+		_context: vscode.CodeActionContext,
+		_token: vscode.CancellationToken,
 	): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
 		const action = new vscode.CodeAction(
 			t("kilocode:ghost.codeAction.title"),

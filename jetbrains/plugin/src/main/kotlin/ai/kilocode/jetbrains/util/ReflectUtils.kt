@@ -12,7 +12,7 @@ import kotlin.reflect.typeOf
 suspend fun doInvokeMethod(
     method: KFunction<*>,
     args: List<Any?>,
-    actor: Any
+    actor: Any,
 ): Any? {
     // Handle parameters
     val parameterTypes = method.parameters
@@ -25,31 +25,119 @@ suspend fun doInvokeMethod(
             val arg = realArgs[i]
             val paramType = parameterTypes[i]
 
-            // Handle type mismatch caused by serialization (e.g., int serialized as double)
+            // Handle type mismatch caused by serialization (e.g., int serialized as double or string)
             val convertedArg = when {
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Int>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Int?>())) ->
+                // Handle String to Int conversion
+                arg is String && (
+                    paramType.type.isSubtypeOf(typeOf<Int>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Int?>())
+                    ) -> {
+                    try {
+                        arg.toInt()
+                    } catch (e: NumberFormatException) {
+                        arg
+                    }
+                }
+
+                // Handle String to Long conversion
+                arg is String && (
+                    paramType.type.isSubtypeOf(typeOf<Long>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Long?>())
+                    ) -> {
+                    try {
+                        arg.toLong()
+                    } catch (e: NumberFormatException) {
+                        arg
+                    }
+                }
+
+                // Handle String to Double conversion
+                arg is String && (
+                    paramType.type.isSubtypeOf(typeOf<Double>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Double?>())
+                    ) -> {
+                    try {
+                        arg.toDouble()
+                    } catch (e: NumberFormatException) {
+                        arg
+                    }
+                }
+
+                // Handle String to Float conversion
+                arg is String && (
+                    paramType.type.isSubtypeOf(typeOf<Float>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Float?>())
+                    ) -> {
+                    try {
+                        arg.toFloat()
+                    } catch (e: NumberFormatException) {
+                        arg
+                    }
+                }
+
+                // Handle String to Boolean conversion
+                arg is String && (
+                    paramType.type.isSubtypeOf(typeOf<Boolean>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Boolean?>())
+                    ) -> {
+                    arg.toBoolean()
+                }
+
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Int>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Int?>())
+                    ) ->
                     arg.toInt()
 
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Long>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Long?>())) ->
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Long>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Long?>())
+                    ) ->
                     arg.toLong()
 
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Float>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Float?>())) ->
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Float>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Float?>())
+                    ) ->
                     arg.toFloat()
 
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Short>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Short?>())) ->
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Short>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Short?>())
+                    ) ->
                     arg.toInt().toShort()
 
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Byte>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Byte?>())) ->
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Byte>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Byte?>())
+                    ) ->
                     arg.toInt().toByte()
 
-                arg is Double && (paramType.type.isSubtypeOf(typeOf<Boolean>()) ||
-                                 paramType.type.isSubtypeOf(typeOf<Boolean?>())) ->
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Boolean>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Boolean?>())
+                    ) ->
                     arg != 0.0
+
+                // Handle Double to Double? - keep as Double (no conversion needed)
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Double>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Double?>())
+                    ) ->
+                    arg
+
+                // Handle Double to Any? conversion - convert to appropriate numeric type
+                arg is Double && (
+                    paramType.type.isSubtypeOf(typeOf<Any?>()) ||
+                        paramType.type.isSubtypeOf(typeOf<Any>())
+                    ) -> {
+                    // If the double is a whole number, convert to Int, otherwise keep as Double
+                    if (arg % 1.0 == 0.0 && arg >= Int.MIN_VALUE && arg <= Int.MAX_VALUE) {
+                        arg.toInt()
+                    } else {
+                        arg
+                    }
+                }
 
                 else -> arg
             }

@@ -4,10 +4,10 @@
 
 package ai.kilocode.jetbrains.actors
 
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.diagnostic.Logger
 import ai.kilocode.jetbrains.core.ExtensionManager
 import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
 import java.net.URI
 
 /**
@@ -24,7 +24,7 @@ interface MainThreadExtensionServiceShape : Disposable {
      *         or null if the extension is not found
      */
     fun getExtension(extensionId: Any): Any?
-    
+
     /**
      * Activates an extension with the specified ID and reason.
      * This method triggers the extension activation process and waits for completion.
@@ -33,31 +33,31 @@ interface MainThreadExtensionServiceShape : Disposable {
      * @return Boolean indicating whether the activation was successful (true) or failed (false)
      */
     fun activateExtension(extensionId: Any, reason: Any?): Any
-    
+
     /**
      * Called immediately before an extension is about to be activated.
      * This provides a hook for pre-activation setup or logging.
      * @param extensionId Extension identifier that will be activated
      */
     fun onWillActivateExtension(extensionId: Any)
-    
+
     /**
      * Called after an extension has been successfully activated.
- * Provides detailed timing information about the activation process.
- * @param extensionId Extension identifier that was activated
- * @param codeLoadingTime Time taken to load extension code (in milliseconds)
- * @param activateCallTime Time taken for the activation call (in milliseconds)
- * @param activateResolvedTime Time taken to resolve activation (in milliseconds)
- * @param activationReason Reason or context for the activation
- */
+     * Provides detailed timing information about the activation process.
+     * @param extensionId Extension identifier that was activated
+     * @param codeLoadingTime Time taken to load extension code (in milliseconds)
+     * @param activateCallTime Time taken for the activation call (in milliseconds)
+     * @param activateResolvedTime Time taken to resolve activation (in milliseconds)
+     * @param activationReason Reason or context for the activation
+     */
     fun onDidActivateExtension(
         extensionId: Any,
         codeLoadingTime: Double,
         activateCallTime: Double,
         activateResolvedTime: Double,
-        activationReason: Any?
+        activationReason: Any?,
     )
-    
+
     /**
      * Handles extension activation errors.
      * Called when an extension fails to activate due to errors or missing dependencies.
@@ -65,29 +65,29 @@ interface MainThreadExtensionServiceShape : Disposable {
      * @param error Error information or exception details
      * @param missingExtensionDependency Information about missing dependencies, if applicable
      * @return Unit (void) - the method handles the error internally
-    */
+     */
     fun onExtensionActivationError(
         extensionId: Any,
         error: Any?,
-        missingExtensionDependency: Any?
+        missingExtensionDependency: Any?,
     ): Any
-    
+
     /**
      * Handles runtime errors that occur during extension execution.
      * Called when an extension encounters errors after successful activation.
      * @param extensionId Extension identifier that encountered the runtime error
      * @param error Error information or exception details
-    */
+     */
     fun onExtensionRuntimeError(extensionId: Any, error: Any?)
-    
+
     /**
      * Sets performance marks for extension profiling and monitoring.
      * Used to track performance metrics across extension lifecycle events.
      * @param marks List of performance mark objects containing timing information
      * @return Unit (void) - the method processes the marks internally
-    */
+     */
     fun setPerformanceMarks(marks: List<Any>)
-    
+
     /**
      * Converts a standard URI to a browser-compatible URI format.
      * This method ensures URIs are properly formatted for web browser contexts.
@@ -107,7 +107,7 @@ interface MainThreadExtensionServiceShape : Disposable {
  */
 class MainThreadExtensionService(
     private val extensionManager: ExtensionManager,
-    private val rpcProtocol: IRPCProtocol
+    private val rpcProtocol: IRPCProtocol,
 ) : MainThreadExtensionServiceShape {
     private val logger = Logger.getInstance(MainThreadExtensionService::class.java)
 
@@ -129,7 +129,7 @@ class MainThreadExtensionService(
         logger.info("Retrieving extension: $extensionIdStr")
         return extensionManager.getExtensionDescription(extensionIdStr.toString())
     }
-    
+
     /**
      * Activates an extension with the specified ID and reason.
      * Uses asynchronous activation via Future and waits for completion.
@@ -147,7 +147,7 @@ class MainThreadExtensionService(
             "$extensionId"
         }
         logger.info("Activating extension: $extensionIdStr, reason: $reason")
-        
+
         // Use Future to get asynchronous activation result
         val future = extensionManager.activateExtension(extensionIdStr.toString(), rpcProtocol)
 
@@ -161,7 +161,7 @@ class MainThreadExtensionService(
             false
         }
     }
-    
+
     /**
      * Called immediately before extension activation begins.
      * Provides logging for pre-activation state tracking.
@@ -178,7 +178,7 @@ class MainThreadExtensionService(
         }
         logger.info("Extension $extensionIdStr is about to be activated")
     }
-    
+
     /**
      * Called after extension activation has completed successfully.
      * Logs activation completion with detailed timing information.
@@ -194,7 +194,7 @@ class MainThreadExtensionService(
         codeLoadingTime: Double,
         activateCallTime: Double,
         activateResolvedTime: Double,
-        activationReason: Any?
+        activationReason: Any?,
     ) {
         // Safely extract extension ID string from input parameter
         val extensionIdStr = try {
@@ -205,7 +205,7 @@ class MainThreadExtensionService(
         }
         logger.info("Extension $extensionIdStr activated, reason: $activationReason")
     }
-    
+
     /**
      * Handles extension activation errors with detailed logging.
      * Called when extension activation fails due to errors or missing dependencies.
@@ -218,7 +218,7 @@ class MainThreadExtensionService(
     override fun onExtensionActivationError(
         extensionId: Any,
         error: Any?,
-        missingExtensionDependency: Any?
+        missingExtensionDependency: Any?,
     ): Any {
         // Safely extract extension ID string from input parameter
         val extensionIdStr = try {
@@ -230,7 +230,7 @@ class MainThreadExtensionService(
         logger.error("Extension $extensionIdStr activation error: $error, missing dependency: $missingExtensionDependency")
         return Unit
     }
-    
+
     /**
      * Handles runtime errors that occur during extension execution.
      * Called when an activated extension encounters runtime errors.
@@ -248,7 +248,7 @@ class MainThreadExtensionService(
         }
         logger.warn("Extension $extensionIdStr runtime error: $error")
     }
-    
+
     /**
      * Sets performance marks for extension profiling and monitoring.
      * Used to track performance metrics across extension operations.
@@ -258,7 +258,7 @@ class MainThreadExtensionService(
     override fun setPerformanceMarks(marks: List<Any>) {
         logger.info("Setting performance marks: $marks")
     }
-    
+
     /**
      * Converts a standard URI to browser-compatible format.
      * Ensures URIs are properly formatted for web browser contexts.

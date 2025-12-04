@@ -4,10 +4,10 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.service.ExtensionStorageService
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.service.ExtensionStorageService
 
 /**
  * Main thread storage service interface.
@@ -20,7 +20,7 @@ interface MainThreadStorageShape : Disposable {
      * @return Initialization result
      */
     fun initializeExtensionStorage(shared: Boolean, extensionId: String): Any?
-    
+
     /**
      * Sets value.
      * @param shared Whether shared
@@ -29,7 +29,7 @@ interface MainThreadStorageShape : Disposable {
      * @return Set result
      */
     fun setValue(shared: Boolean, extensionId: String, value: Any)
-    
+
     /**
      * Registers extension storage keys for synchronization.
      * @param extension Extension ID and version
@@ -49,13 +49,13 @@ class MainThreadStorage : MainThreadStorageShape {
         val storage = service<ExtensionStorageService>()
         return storage.getValue(extensionId)
     }
-    
+
     override fun setValue(shared: Boolean, extensionId: String, value: Any) {
 //        logger.info("Setting value: shared=$shared, extensionId=$extensionId, value=$value")
         val storage = service<ExtensionStorageService>()
         storage.setValue(extensionId, value)
     }
-    
+
     override fun registerExtensionStorageKeysToSync(extension: Any, keys: List<String>) {
         val extensionId = if (extension is Map<*, *>) {
             "${extension["id"]}_${extension["version"]}"
@@ -68,4 +68,4 @@ class MainThreadStorage : MainThreadStorageShape {
     override fun dispose() {
         logger.info("Dispose MainThreadStorage")
     }
-} 
+}

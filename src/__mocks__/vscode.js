@@ -122,6 +122,12 @@ export const ThemeIcon = class {
 	}
 }
 
+export const ThemeColor = class {
+	constructor(id) {
+		this.id = id
+	}
+}
+
 export const FileType = {
 	File: 1,
 	Directory: 2,
@@ -170,6 +176,7 @@ export default {
 	Selection,
 	Disposable,
 	ThemeIcon,
+	ThemeColor,
 	FileType,
 	DiagnosticSeverity,
 	OverviewRulerLane,

@@ -130,7 +130,8 @@
 		"settings": "Impostazioni Modalità",
 		"description": "Personalità specializzate che adattano il comportamento di Kilo Code.",
 		"searchPlaceholder": "Cerca modalità...",
-		"noResults": "Nessun risultato trovato"
+		"noResults": "Nessun risultato trovato",
+		"organizationModes": "Modalità dell'organizzazione"
 	},
 	"errorReadingFile": "Errore nella lettura del file",
 	"noValidImages": "Nessuna immagine valida è stata elaborata",
@@ -158,6 +159,9 @@
 		"initializingWarning": "Inizializzazione del checkpoint in corso... Se questa operazione richiede troppo tempo, puoi disattivare i checkpoint nelle <settingsLink>impostazioni</settingsLink> e riavviare l'attività.",
 		"menu": {
 			"viewDiff": "Visualizza differenze",
+			"more": "Altre opzioni",
+			"viewDiffFromInit": "Visualizza tutte le modifiche",
+			"viewDiffWithCurrent": "Visualizza le modifiche da questo checkpoint",
 			"restore": "Ripristina checkpoint",
 			"restoreFiles": "Ripristina file",
 			"restoreFilesDescription": "Ripristina i file del tuo progetto a uno snapshot catturato in questo punto.",
@@ -188,7 +192,9 @@
 		"wantsToGenerateImage": "Kilo Code vuole generare un'immagine",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vuole generare un'immagine fuori dall'area di lavoro",
 		"wantsToGenerateImageProtected": "Kilo Code vuole generare un'immagine in una posizione protetta",
-		"didGenerateImage": "Kilo Code ha generato un'immagine"
+		"didGenerateImage": "Kilo Code ha generato un'immagine",
+		"wantsToDelete": "Kilo Code vuole eliminare questo file",
+		"wantsToDeleteDirectory": "Kilo Code vuole eliminare questa directory"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code vuole visualizzare i file di primo livello in questa directory",
@@ -271,6 +277,7 @@
 		"toggleAriaLabel": "Attiva/disattiva approvazione automatica",
 		"disabledAriaLabel": "Approvazione automatica disabilitata - seleziona prima le opzioni",
 		"triggerLabelOff": "Approvazione automatica disattivata",
+		"triggerLabelOffShort": "Disattivata",
 		"triggerLabel_zero": "0 approvati automaticamente",
 		"triggerLabel_one": "1 approvato automaticamente",
 		"triggerLabel_other": "{{count}} approvati automaticamente",
@@ -300,6 +307,19 @@
 			"selectModel": "Seleziona <code>roo/code-supernova</code> dal provider Roo Code Cloud nelle Impostazioni per iniziare.",
 			"goToSettingsButton": "Vai alle Impostazioni"
 		},
+		"release": {
+			"heading": "Novità nell'Estensione:",
+			"openRouterEmbeddings": "Supporto per i modelli di embedding di OpenRouter",
+			"chutesDynamic": "Chutes ora carica i modelli più recenti dinamicamente",
+			"queuedMessagesFix": "Correzioni per i messaggi in coda che si perdono"
+		},
+		"cloudAgents": {
+			"heading": "Novità nel Cloud:",
+			"prFixer": "Presentazione dell'agente cloud <bold>PR Fixer</bold> per completare il PR Reviewer.",
+			"prFixerDescription": "Il PR Fixer di Roo Code applica modifiche di alta qualità alle tue PR, direttamente da GitHub. Invocalo tramite un commento PR e leggerà l'intera cronologia dei commenti per comprendere il contesto, gli accordi e i compromessi - quindi implementerà la correzione giusta.",
+			"tryPrFixerButton": "Prova PR Fixer"
+		},
+		"careers": "Inoltre, <careersLink>stiamo assumendo!</careersLink>",
 		"socialLinks": "Unisciti a noi su <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
@@ -328,6 +348,8 @@
 		"tooltips": {
 			"expand": "Espandi blocco di codice",
 			"collapse": "Comprimi blocco di codice",
+			"enable_wrap": "Abilita a capo automatico",
+			"disable_wrap": "Disabilita a capo automatico",
 			"copy_code": "Copia codice"
 		}
 	},

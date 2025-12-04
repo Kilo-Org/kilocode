@@ -51,10 +51,6 @@ let j = 3
 
 ## Special Cases
 
-### Kilocode specific file
-
-if the filename or directory name contains kilocode no marking with comments is required
-
 ### New Files
 
 If you're creating a completely new file that doesn't exist in Roo, add this comment at the top:
@@ -62,3 +58,12 @@ If you're creating a completely new file that doesn't exist in Roo, add this com
 ```
 // kilocode_change - new file
 ```
+
+### Kilocode specific file - these rules take precedence over all other rules above
+
+- if the filename or directory name contains kilocode no marking with comments is required
+- all the following folders are kilocode-specific and need no marking with comments:
+    - jetbrains/
+    - cli/
+    - src/services/ghost/
+    - src/services/continuedev/

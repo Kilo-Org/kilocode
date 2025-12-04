@@ -12,14 +12,19 @@ package ai.kilocode.jetbrains.actions
 object ActionNames {
     /** Action to explain selected code */
     const val EXPLAIN = "Explain Code"
+
     /** Action to fix issues in selected code */
     const val FIX = "Fix Code"
+
     /** Action to fix logical issues in selected code */
     const val FIX_LOGIC = "Fix Logic"
+
     /** Action to improve selected code */
     const val IMPROVE = "Improve Code"
+
     /** Action to add selected code to context */
     const val ADD_TO_CONTEXT = "Add to Context"
+
     /** Action to create a new task */
     const val NEW_TASK = "New Task"
 }
@@ -31,18 +36,23 @@ object ActionNames {
 object CommandIds {
     /** Command ID for explaining code */
     const val EXPLAIN = "kilo-code.explainCode"
+
     /** Command ID for fixing code */
     const val FIX = "kilo-code.fixCode"
+
     /** Command ID for improving code */
     const val IMPROVE = "kilo-code.improveCode"
+
     /** Command ID for adding to context */
     const val ADD_TO_CONTEXT = "kilo-code.addToContext"
+
     /** Command ID for creating a new task */
     const val NEW_TASK = "kilo-code.newTask"
 }
 
 /** Type alias for prompt type identifiers */
 typealias SupportPromptType = String
+
 /** Type alias for prompt parameters map */
 typealias PromptParams = Map<String, Any?>
 
@@ -64,7 +74,7 @@ object SupportPromptConfigs {
     val ENHANCE = SupportPromptConfig(
         """Generate an enhanced version of this prompt (reply with only the enhanced prompt - no conversation, explanations, lead-in, bullet points, placeholders, or surrounding quotes):
 
-${'$'}{userInput}"""
+${'$'}{userInput}""",
     )
 
     /**
@@ -82,7 +92,7 @@ ${'$'}{selectedText}
 Please provide a clear and concise explanation of what this code does, including:
 1. The purpose and functionality
 2. Key components and their interactions
-3. Important patterns or techniques used"""
+3. Important patterns or techniques used""",
     )
 
     /**
@@ -102,7 +112,7 @@ Please:
 1. Address all detected problems listed above (if any)
 2. Identify any other potential bugs or issues
 3. Provide corrected code
-4. Explain what was fixed and why"""
+4. Explain what was fixed and why""",
     )
 
     /**
@@ -123,7 +133,7 @@ Please suggest improvements for:
 3. Best practices and patterns
 4. Error handling and edge cases
 
-Provide the improved code along with explanations for each enhancement."""
+Provide the improved code along with explanations for each enhancement.""",
     )
 
     /**
@@ -134,7 +144,7 @@ Provide the improved code along with explanations for each enhancement."""
         """${'$'}{filePath}:${'$'}{startLine}-${'$'}{endLine}
 ```
 ${'$'}{selectedText}
-```"""
+```""",
     )
 
     /**
@@ -146,7 +156,7 @@ ${'$'}{selectedText}
 Terminal output:
 ```
 ${'$'}{terminalContent}
-```"""
+```""",
     )
 
     /**
@@ -163,7 +173,7 @@ ${'$'}{terminalContent}
 Please:
 1. Identify any issues in the command
 2. Provide the corrected command
-3. Explain what was fixed and why"""
+3. Explain what was fixed and why""",
     )
 
     /**
@@ -180,7 +190,7 @@ ${'$'}{terminalContent}
 Please provide:
 1. What the command does
 2. Explanation of each part/flag
-3. Expected output and behavior"""
+3. Expected output and behavior""",
     )
 
     /**
@@ -188,7 +198,7 @@ Please provide:
      * Simple format that passes through user input directly.
      */
     val NEW_TASK = SupportPromptConfig(
-        """${'$'}{userInput}"""
+        """${'$'}{userInput}""",
     )
 
     /**
@@ -204,7 +214,7 @@ Please provide:
         "TERMINAL_ADD_TO_CONTEXT" to TERMINAL_ADD_TO_CONTEXT,
         "TERMINAL_FIX" to TERMINAL_FIX,
         "TERMINAL_EXPLAIN" to TERMINAL_EXPLAIN,
-        "NEW_TASK" to NEW_TASK
+        "NEW_TASK" to NEW_TASK,
     )
 }
 
@@ -221,7 +231,9 @@ object SupportPrompt {
      */
     private fun generateDiagnosticText(diagnostics: List<Map<String, Any?>>?): String {
         if (diagnostics.isNullOrEmpty()) return ""
-        return "\nCurrent problems detected:\n" + diagnostics.joinToString("\n") { d ->
+        return "\nCurrent problems detected:\n" + diagnostics.joinToString("\n") { diagnostic ->
+            @Suppress("UNCHECKED_CAST")
+            val d = diagnostic as Map<String, Any?>
             val source = d["source"] as? String ?: "Error"
             val message = d["message"] as? String ?: ""
             val code = d["code"] as? String
@@ -241,6 +253,7 @@ object SupportPrompt {
         return pattern.replace(template) { matchResult ->
             val key = matchResult.groupValues[1]
             if (key == "diagnosticText") {
+                @Suppress("UNCHECKED_CAST")
                 generateDiagnosticText(params["diagnostics"] as? List<Map<String, Any?>>)
             } else if (params.containsKey(key)) {
                 // Ensure the value is treated as a string for replacement

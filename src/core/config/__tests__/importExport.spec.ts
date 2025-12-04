@@ -17,6 +17,11 @@ import { safeWriteJson } from "../../../utils/safeWriteJson"
 import type { Mock } from "vitest"
 
 vi.mock("vscode", () => ({
+	workspace: {
+		getConfiguration: vi.fn().mockReturnValue({
+			get: vi.fn(),
+		}),
+	},
 	window: {
 		showOpenDialog: vi.fn(),
 		showSaveDialog: vi.fn(),
@@ -57,6 +62,45 @@ vi.mock("os", () => ({
 }))
 
 vi.mock("../../../utils/safeWriteJson")
+
+// Mock buildApiHandler to avoid issues with provider instantiation in tests
+vi.mock("../../../api", () => ({
+	buildApiHandler: vi.fn().mockImplementation((config) => {
+		// Return different model info based on the provider and model
+		const getModelInfo = () => {
+			if (config.apiProvider === "claude-code") {
+				return {
+					id: config.apiModelId || "claude-sonnet-4-5",
+					info: {
+						supportsReasoningBudget: false,
+						requiredReasoningBudget: false,
+					},
+				}
+			}
+			if (config.apiProvider === "anthropic" && config.apiModelId === "claude-3-5-sonnet-20241022") {
+				return {
+					id: "claude-3-5-sonnet-20241022",
+					info: {
+						supportsReasoningBudget: true,
+						requiredReasoningBudget: true,
+					},
+				}
+			}
+			// Default fallback
+			return {
+				id: config.apiModelId || "claude-sonnet-4-5",
+				info: {
+					supportsReasoningBudget: false,
+					requiredReasoningBudget: false,
+				},
+			}
+		}
+
+		return {
+			getModel: vi.fn().mockReturnValue(getModelInfo()),
+		}
+	}),
+}))
 
 describe("importExport", () => {
 	let mockProviderSettingsManager: ReturnType<typeof vi.mocked<ProviderSettingsManager>>
@@ -435,6 +479,71 @@ describe("importExport", () => {
 			expect(showErrorMessageSpy).toHaveBeenCalledWith(expect.stringContaining("errors.settings_import_failed"))
 
 			showErrorMessageSpy.mockRestore()
+		})
+
+		it("should handle import when reasoning budget fields are missing from config", async () => {
+			// This test verifies that import works correctly when reasoning budget fields are not present
+			// Using claude-code provider which doesn't support reasoning budgets
+
+			;(vscode.window.showOpenDialog as Mock).mockResolvedValue([{ fsPath: "/mock/path/settings.json" }])
+
+			const mockFileContent = JSON.stringify({
+				providerProfiles: {
+					currentApiConfigName: "claude-code-provider",
+					apiConfigs: {
+						"claude-code-provider": {
+							apiProvider: "claude-code" as ProviderName,
+							apiModelId: "claude-3-5-sonnet-20241022",
+							id: "claude-code-id",
+							apiKey: "test-key",
+							// No modelMaxTokens or modelMaxThinkingTokens fields
+						},
+					},
+				},
+				globalSettings: { mode: "code", autoApprovalEnabled: true },
+			})
+
+			;(fs.readFile as Mock).mockResolvedValue(mockFileContent)
+
+			const previousProviderProfiles = {
+				currentApiConfigName: "default",
+				apiConfigs: { default: { apiProvider: "anthropic" as ProviderName, id: "default-id" } },
+			}
+
+			mockProviderSettingsManager.export.mockResolvedValue(previousProviderProfiles)
+			mockProviderSettingsManager.listConfig.mockResolvedValue([
+				{ name: "claude-code-provider", id: "claude-code-id", apiProvider: "claude-code" as ProviderName },
+				{ name: "default", id: "default-id", apiProvider: "anthropic" as ProviderName },
+			])
+
+			mockContextProxy.export.mockResolvedValue({ mode: "code" })
+
+			const result = await importSettings({
+				providerSettingsManager: mockProviderSettingsManager,
+				contextProxy: mockContextProxy,
+				customModesManager: mockCustomModesManager,
+			})
+
+			expect(result.success).toBe(true)
+			expect(fs.readFile).toHaveBeenCalledWith("/mock/path/settings.json", "utf-8")
+			expect(mockProviderSettingsManager.export).toHaveBeenCalled()
+
+			expect(mockProviderSettingsManager.import).toHaveBeenCalledWith({
+				currentApiConfigName: "claude-code-provider",
+				apiConfigs: {
+					default: { apiProvider: "anthropic" as ProviderName, id: "default-id" },
+					"claude-code-provider": {
+						apiProvider: "claude-code" as ProviderName,
+						apiModelId: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+						id: "claude-code-id",
+					},
+				},
+				modeApiConfigs: {},
+			})
+
+			expect(mockContextProxy.setValues).toHaveBeenCalledWith({ mode: "code", autoApprovalEnabled: true })
+			expect(mockContextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "claude-code-provider")
 		})
 	})
 
@@ -1610,5 +1719,78 @@ describe("importExport", () => {
 				"https://custom-api.example.com/v1",
 			)
 		})
+
+		it.each([
+			{
+				testCase: "supportsReasoningBudget is false",
+				providerName: "claude-code-provider",
+				modelId: "claude-sonnet-4-5",
+				providerId: "claude-code-id",
+			},
+			{
+				testCase: "requiredReasoningBudget is false",
+				providerName: "claude-code-provider-2",
+				modelId: "claude-sonnet-4-5",
+				providerId: "claude-code-id-2",
+			},
+			{
+				testCase: "both supportsReasoningBudget and requiredReasoningBudget are false",
+				providerName: "claude-code-provider-3",
+				modelId: "claude-3-5-haiku-20241022",
+				providerId: "claude-code-id-3",
+			},
+		])(
+			"should exclude modelMaxTokens and modelMaxThinkingTokens when $testCase",
+			async ({ providerName, modelId, providerId }) => {
+				// This test verifies that token fields are excluded when model doesn't support reasoning budget
+				// Using claude-code provider which has supportsReasoningBudget: false and requiredReasoningBudget: false
+
+				;(vscode.window.showSaveDialog as Mock).mockResolvedValue({
+					fsPath: "/mock/path/roo-code-settings.json",
+				})
+
+				// Use a real ProviderSettingsManager instance to test the actual filtering logic
+				const realProviderSettingsManager = new ProviderSettingsManager(mockExtensionContext)
+
+				// Wait for initialization to complete
+				await realProviderSettingsManager.initialize()
+
+				// Save a claude-code provider config with token fields
+				await realProviderSettingsManager.saveConfig(providerName, {
+					apiProvider: "claude-code" as ProviderName,
+					apiModelId: modelId,
+					id: providerId,
+					apiKey: "test-key",
+					modelMaxTokens: 4096, // This should be removed during export
+					modelMaxThinkingTokens: 2048, // This should be removed during export
+				})
+
+				// Set this as the current provider
+				await realProviderSettingsManager.activateProfile({ name: providerName })
+
+				const mockGlobalSettings = {
+					mode: "code",
+					autoApprovalEnabled: true,
+				}
+
+				mockContextProxy.export.mockResolvedValue(mockGlobalSettings)
+				;(fs.mkdir as Mock).mockResolvedValue(undefined)
+
+				await exportSettings({
+					providerSettingsManager: realProviderSettingsManager,
+					contextProxy: mockContextProxy,
+				})
+
+				// Get the exported data
+				const exportedData = (safeWriteJson as Mock).mock.calls[0][1]
+
+				// Verify that token fields were excluded because reasoning budget is not supported/required
+				const provider = exportedData.providerProfiles.apiConfigs[providerName]
+				expect(provider).toBeDefined()
+				expect(provider.apiModelId).toBe(modelId)
+				expect("modelMaxTokens" in provider).toBe(false) // Should be excluded
+				expect("modelMaxThinkingTokens" in provider).toBe(false) // Should be excluded
+			},
+		)
 	})
 })

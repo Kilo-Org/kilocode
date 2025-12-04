@@ -6,7 +6,7 @@ import { Package } from "@roo/package"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
-import { Button, Input, Slider } from "@/components/ui"
+import { Button, Input, Slider, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui" // kilocode_change
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
@@ -37,6 +37,8 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	allowedMaxRequests?: number | undefined
 	allowedMaxCost?: number | undefined
 	showAutoApproveMenu?: boolean // kilocode_change
+	yoloMode?: boolean // kilocode_change
+	yoloGatekeeperApiConfigId?: string // kilocode_change: AI gatekeeper for YOLO mode
 	deniedCommands?: string[]
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
@@ -57,6 +59,8 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedMaxRequests"
 		| "allowedMaxCost"
 		| "showAutoApproveMenu" // kilocode_change
+		| "yoloMode" // kilocode_change
+		| "yoloGatekeeperApiConfigId" // kilocode_change: AI gatekeeper for YOLO mode
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
 	>
@@ -82,6 +86,8 @@ export const AutoApproveSettings = ({
 	allowedMaxRequests,
 	allowedMaxCost,
 	showAutoApproveMenu, // kilocode_change
+	yoloMode, // kilocode_change
+	yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 	deniedCommands,
 	setCachedStateField,
 	...props
@@ -89,7 +95,7 @@ export const AutoApproveSettings = ({
 	const { t } = useAppTranslation()
 	const [commandInput, setCommandInput] = useState("")
 	const [deniedCommandInput, setDeniedCommandInput] = useState("")
-	const { autoApprovalEnabled, setAutoApprovalEnabled } = useExtensionState()
+	const { autoApprovalEnabled, setAutoApprovalEnabled, listApiConfigMeta } = useExtensionState() // kilocode_change: Add listApiConfigMeta for gatekeeper
 
 	const toggles = useAutoApprovalToggles()
 
@@ -127,6 +133,18 @@ export const AutoApproveSettings = ({
 			</SectionHeader>
 
 			{/* kilocode_change start */}
+			{yoloMode && (
+				<Section>
+					<div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 flex items-center gap-2">
+						<span className="text-lg">⚡</span>
+						<span className="text-sm font-medium text-yellow-500">
+							YOLO Mode is active - all auto-approval settings below are overridden
+						</span>
+					</div>
+				</Section>
+			)}
+			{/* kilocode_change end */}
+
 			<Section>
 				<div>
 					<VSCodeCheckbox
@@ -140,7 +158,6 @@ export const AutoApproveSettings = ({
 					</div>
 				</div>
 			</Section>
-			{/* kilocode_change end */}
 
 			<Section>
 				<div className="space-y-4">
@@ -423,6 +440,71 @@ export const AutoApproveSettings = ({
 					</div>
 				)}
 			</Section>
+
+			{/* kilocode_change start */}
+			<Section>
+				<div className="border-2 border-yellow-500 rounded-md p-4 bg-yellow-500/10">
+					<div className="flex items-center gap-2 mb-3">
+						<span className="text-2xl">⚠️</span>
+						<h3 className="text-lg font-bold text-yellow-500">YOLO Mode</h3>
+					</div>
+					<VSCodeCheckbox
+						checked={yoloMode ?? false}
+						onChange={(e: any) => setCachedStateField("yoloMode", e.target.checked)}
+						data-testid="yolo-mode-checkbox">
+						<span className="font-bold text-base">Enable YOLO Mode - Auto-approve EVERYTHING</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-2 pl-6">
+						<p className="mb-2">
+							When enabled,{" "}
+							<strong>all operations will be automatically approved without confirmation</strong>.
+						</p>
+						<p className="text-yellow-500 font-medium">
+							⚡ This includes file modifications, command execution, MCP tools, browser actions, and all
+							other operations. Use with extreme caution!
+						</p>
+					</div>
+
+					{/* kilocode_change start: AI gatekeeper for YOLO mode */}
+					{yoloMode && (
+						<div className="mt-4 pl-6 border-l-2 border-yellow-500/50">
+							<label className="block font-medium mb-1">AI Safety Gatekeeper (Optional)</label>
+							<Select
+								value={yoloGatekeeperApiConfigId || "-"}
+								onValueChange={(value) => {
+									const newConfigId = value === "-" ? "" : value
+									setCachedStateField("yoloGatekeeperApiConfigId", newConfigId)
+									vscode.postMessage({
+										type: "yoloGatekeeperApiConfigId",
+										text: newConfigId,
+									})
+								}}>
+								<SelectTrigger data-testid="gatekeeper-api-config-select" className="w-full">
+									<SelectValue placeholder="No gatekeeper (approve all)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="-">No gatekeeper (approve all)</SelectItem>
+									{(listApiConfigMeta || []).map((config) => (
+										<SelectItem
+											key={config.id}
+											value={config.id}
+											data-testid={`gatekeeper-${config.id}-option`}>
+											{config.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<div className="text-sm text-vscode-descriptionForeground mt-1">
+								Select a model to evaluate each action before auto-approving. The gatekeeper will decide
+								if risky operations should be allowed. We suggest using a small, fast model. This will
+								incur additional costs, as well as additional latency.
+							</div>
+						</div>
+					)}
+					{/* kilocode_change end */}
+				</div>
+			</Section>
+			{/* kilocode_change end */}
 		</div>
 	)
 }

@@ -1,9 +1,13 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import type { ModelInfo } from "@roo-code/types"
+import {
+	getActiveToolUseStyle, // kilocode_change
+	type ModelInfo,
+} from "@roo-code/types"
 
-import type { ApiHandlerOptions } from "../../shared/api"
+import { type ApiHandlerOptions, getModelMaxOutputTokens } from "../../shared/api"
+import { XmlMatcher } from "../../utils/xml-matcher"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 
@@ -13,8 +17,8 @@ import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
-
-const OPENAI_COMPATIBLE_TIMEOUT_MS = 3_600_000
+import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -60,13 +64,14 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			throw new Error("API key is required")
 		}
 
+		const timeout = getApiRequestTimeout() // kilocode_change
 		this.client = new OpenAI({
 			baseURL,
 			apiKey: this.options.apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
 			// kilocode_change start
-			timeout: OPENAI_COMPATIBLE_TIMEOUT_MS,
-			fetch: fetchWithTimeout(OPENAI_COMPATIBLE_TIMEOUT_MS),
+			timeout: timeout,
+			fetch: fetchWithTimeout(timeout),
 			// kilocode_change end
 		})
 	}
@@ -77,10 +82,16 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		metadata?: ApiHandlerCreateMessageMetadata,
 		requestOptions?: OpenAI.RequestOptions,
 	) {
-		const {
-			id: model,
-			info: { maxTokens: max_tokens },
-		} = this.getModel()
+		const { id: model, info } = this.getModel()
+
+		// Centralized cap: clamp to 20% of the context window (unless provider-specific exceptions apply)
+		const max_tokens =
+			getModelMaxOutputTokens({
+				modelId: model,
+				model: info,
+				settings: this.options,
+				format: "openai",
+			}) ?? undefined
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
 
@@ -94,7 +105,10 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		}
 
 		try {
-			return this.client.chat.completions.create(params, requestOptions)
+			return this.client.chat.completions.create(
+				addNativeToolCallsToParams(params, this.options, metadata), // kilocode_change
+				requestOptions,
+			)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}
@@ -107,14 +121,32 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 	): ApiStream {
 		const stream = await this.createStream(systemPrompt, messages, metadata)
 
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
+
 		for await (const chunk of stream) {
-			verifyFinishReason(chunk.choices[0]) // kilocode_change
-			const delta = chunk.choices[0]?.delta
+			verifyFinishReason(chunk.choices?.[0]) // kilocode_change
+
+			const delta = chunk.choices?.[0]?.delta
+
+			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				for (const processedChunk of matcher.update(delta.content)) {
+					yield processedChunk
+				}
+			}
+
+			if (delta && "reasoning_content" in delta) {
+				const reasoning_content = (delta.reasoning_content as string | undefined) || ""
+				if (reasoning_content?.trim()) {
+					yield { type: "reasoning", text: reasoning_content }
 				}
 			}
 
@@ -125,6 +157,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 					outputTokens: chunk.usage.completion_tokens || 0,
 				}
 			}
+		}
+
+		// Process any remaining content
+		for (const processedChunk of matcher.final()) {
+			yield processedChunk
 		}
 	}
 

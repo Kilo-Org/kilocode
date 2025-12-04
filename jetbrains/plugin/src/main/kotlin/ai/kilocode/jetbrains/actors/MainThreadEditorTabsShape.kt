@@ -4,10 +4,9 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import ai.kilocode.jetbrains.editor.EditorAndDocManager
-
 
 interface MainThreadEditorTabsShape {
     fun moveTab(tabId: String, index: Int, viewColumn: Int, preserveFocus: Boolean?)
@@ -15,7 +14,7 @@ interface MainThreadEditorTabsShape {
     suspend fun closeGroup(groupIds: List<Int>, preservceFocus: Boolean?): Boolean
 }
 
-class MainThreadEditorTabs(val project : Project) : MainThreadEditorTabsShape {
+class MainThreadEditorTabs(val project: Project) : MainThreadEditorTabsShape {
     private val logger = Logger.getInstance(MainThreadEditorTabs::class.java)
     override fun moveTab(tabId: String, index: Int, viewColumn: Int, preserveFocus: Boolean?) {
         logger.info("moveTab $tabId")
@@ -26,8 +25,8 @@ class MainThreadEditorTabs(val project : Project) : MainThreadEditorTabsShape {
 
         // Iterate all tab IDs and trigger close event
         var closedAny = true
-        for (tabId in tabIds){
-            val tab =  project.getService(EditorAndDocManager::class.java).closeTab(tabId)
+        for (tabId in tabIds) {
+            val tab = project.getService(EditorAndDocManager::class.java).closeTab(tabId)
 //            closedAny = tab?.triggerClose()?:false
 //            if (closedAny){
 //                project.getService(TabStateManager::class.java).removeTab(tabId)
@@ -42,11 +41,10 @@ class MainThreadEditorTabs(val project : Project) : MainThreadEditorTabsShape {
 
         // Iterate all tab group IDs and trigger close event
         var closedAny = false
-        for (groupId in groupIds){
-            val group =  project.getService(EditorAndDocManager::class.java).closeGroup(groupId)
+        for (groupId in groupIds) {
+            val group = project.getService(EditorAndDocManager::class.java).closeGroup(groupId)
 //            closedAny = group?.triggerClose()?:false
         }
         return closedAny
     }
-
 }

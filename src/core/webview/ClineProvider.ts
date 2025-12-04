@@ -41,6 +41,8 @@ import {
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
+	getActiveToolUseStyle, // kilocode_change
+	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -91,10 +93,9 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage } from "@roo-code/types"
-import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
+import { REQUESTY_BASE_URL } from "../../shared/utils/requesty"
 
 //kilocode_change start
 import { McpDownloadResponse, McpMarketplaceCatalog } from "../../shared/kilocode/mcp"
@@ -104,6 +105,8 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
+import { updateCodeIndexWithKiloProps } from "../../services/code-index/managed/webview" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -150,6 +153,7 @@ export class ClineProvider
 	private taskCreationCallback: (task: Task) => void
 	private taskEventListeners: WeakMap<Task, Array<() => void>> = new WeakMap()
 	private currentWorkspacePath: string | undefined
+	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
 
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -157,7 +161,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "sep-2025-code-supernova-1m" // Code Supernova 1M context window announcement
+	public readonly latestAnnouncementId = "nov-2025-v3.30.0-pr-fixer" // v3.30.0 PR Fixer announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -253,6 +257,7 @@ export class ClineProvider
 			const onTaskUserMessage = (taskId: string) => this.emit(RooCodeEventName.TaskUserMessage, taskId)
 			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage) =>
 				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage)
+			const onModelChanged = () => this.postStateToWebview() // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Attach the listeners.
 			instance.on(RooCodeEventName.TaskStarted, onTaskStarted)
@@ -269,6 +274,7 @@ export class ClineProvider
 			instance.on(RooCodeEventName.TaskSpawned, onTaskSpawned)
 			instance.on(RooCodeEventName.TaskUserMessage, onTaskUserMessage)
 			instance.on(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated)
+			instance.on("modelChanged", onModelChanged) // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Store the cleanup functions for later removal.
 			this.taskEventListeners.set(instance, [
@@ -286,6 +292,7 @@ export class ClineProvider
 				() => instance.off(RooCodeEventName.TaskUnpaused, onTaskUnpaused),
 				() => instance.off(RooCodeEventName.TaskSpawned, onTaskSpawned),
 				() => instance.off(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated),
+				() => instance.off("modelChanged", onModelChanged), // kilocode_change: Clean up model change listener
 			])
 		}
 
@@ -297,7 +304,52 @@ export class ClineProvider
 		} else {
 			this.log("CloudService not ready, deferring cloud profile sync")
 		}
+
+		// kilocode_change start - Initialize auto-purge scheduler
+		this.initializeAutoPurgeScheduler()
+		// kilocode_change end
 	}
+
+	// kilocode_change start
+	/**
+	 * Initialize the auto-purge scheduler
+	 */
+	private async initializeAutoPurgeScheduler() {
+		try {
+			const { AutoPurgeScheduler } = await import("../../services/auto-purge")
+			this.autoPurgeScheduler = new AutoPurgeScheduler(this.contextProxy.globalStorageUri.fsPath)
+
+			// Start the scheduler with functions to get current settings and task history
+			this.autoPurgeScheduler.start(
+				async () => {
+					const state = await this.getState()
+					return {
+						enabled: state.autoPurgeEnabled ?? false,
+						defaultRetentionDays: state.autoPurgeDefaultRetentionDays ?? 30,
+						favoritedTaskRetentionDays: state.autoPurgeFavoritedTaskRetentionDays ?? null,
+						completedTaskRetentionDays: state.autoPurgeCompletedTaskRetentionDays ?? 30,
+						incompleteTaskRetentionDays: state.autoPurgeIncompleteTaskRetentionDays ?? 7,
+						lastRunTimestamp: state.autoPurgeLastRunTimestamp,
+					}
+				},
+				async () => {
+					return this.getTaskHistory()
+				},
+				() => this.getCurrentTask()?.taskId,
+				async (taskId: string) => {
+					// Remove task from state when purged
+					await this.deleteTaskFromState(taskId)
+				},
+			)
+
+			this.log("Auto-purge scheduler initialized")
+		} catch (error) {
+			this.log(
+				`Failed to initialize auto-purge scheduler: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Override EventEmitter's on method to match TaskProviderLike interface
@@ -622,6 +674,14 @@ export class ClineProvider
 		this.mcpHub = undefined
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
+
+		// kilocode_change start - Stop auto-purge scheduler
+		if (this.autoPurgeScheduler) {
+			this.autoPurgeScheduler.stop()
+			this.autoPurgeScheduler = undefined
+		}
+		// kilocode_change end
+
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 
@@ -689,9 +749,47 @@ export class ClineProvider
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
 		if (command === "addToContext") {
-			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: `${prompt}\n\n`,
+			})
+			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
+
+		//kilocode_change start
+		if (command === "addToContextAndFocus") {
+			let messageText = prompt
+
+			const editor = vscode.window.activeTextEditor
+			if (editor) {
+				const fullContent = editor.document.getText()
+				const filePath = params.filePath as string
+
+				messageText = `
+For context, we are working within this file:
+
+'${filePath}' (see below for file content)
+<file_content path="${filePath}">
+${fullContent}
+</file_content>
+
+Heed this prompt:
+
+${prompt}
+`
+			}
+
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: messageText,
+			})
+			await vscode.commands.executeCommand("kilo-code.focusChatInput")
+			return
+		}
+		// kilocode_change end
 
 		await visibleProvider.createTask(prompt)
 	}
@@ -713,7 +811,12 @@ export class ClineProvider
 		const prompt = supportPrompt.create(promptType, params, customSupportPrompts)
 
 		if (command === "terminalAddToContext") {
-			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: `${prompt}\n\n`,
+			})
+			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
 
@@ -912,6 +1015,7 @@ export class ClineProvider
 			apiConfiguration,
 			diffEnabled: enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			experiments,
 			cloudUserInfo,
@@ -924,6 +1028,7 @@ export class ClineProvider
 			apiConfiguration,
 			enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			historyItem,
@@ -1075,9 +1180,9 @@ export class ClineProvider
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
-						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1151,9 +1256,9 @@ export class ClineProvider
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
-				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -1179,6 +1284,21 @@ export class ClineProvider
 		const messageDisposable = webview.onDidReceiveMessage(onReceiveMessage)
 		this.webviewDisposables.push(messageDisposable)
 	}
+
+	/* kilocode_change start */
+	/**
+	 * Handle messages from CLI ExtensionHost
+	 * This method allows the CLI to send messages directly to the webviewMessageHandler
+	 */
+	public async handleCLIMessage(message: WebviewMessage): Promise<void> {
+		try {
+			await webviewMessageHandler(this, message, this.marketplaceManager)
+		} catch (error) {
+			this.log(`Error handling CLI message: ${error instanceof Error ? error.message : String(error)}`)
+			throw error
+		}
+	}
+	/* kilocode_change end */
 
 	/**
 	 * Handle switching to a new mode, including updating the associated API configuration
@@ -1305,6 +1425,7 @@ export class ClineProvider
 				}
 
 				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+				await updateCodeIndexWithKiloProps(this) // kilocode_change
 			} else {
 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
 			}
@@ -1369,6 +1490,7 @@ export class ClineProvider
 
 		await this.postStateToWebview()
 		await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
+		await updateCodeIndexWithKiloProps(this) // kilocode_change
 
 		if (providerSettings.apiProvider) {
 			this.emit(RooCodeEventName.ProviderProfileChanged, { name, provider: providerSettings.apiProvider })
@@ -1483,8 +1605,8 @@ export class ClineProvider
 
 	// Requesty
 
-	async handleRequestyCallback(code: string) {
-		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+	async handleRequestyCallback(code: string, baseUrl: string | null) {
+		let { apiConfiguration } = await this.getState()
 
 		const newConfiguration: ProviderSettings = {
 			...apiConfiguration,
@@ -1493,7 +1615,16 @@ export class ClineProvider
 			requestyModelId: apiConfiguration?.requestyModelId || requestyDefaultModelId,
 		}
 
-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+		// set baseUrl as undefined if we don't provide one
+		// or if it is the default requesty url
+		if (!baseUrl || baseUrl === REQUESTY_BASE_URL) {
+			newConfiguration.requestyBaseUrl = undefined
+		} else {
+			newConfiguration.requestyBaseUrl = baseUrl
+		}
+
+		const profileName = `Requesty (${new Date().toLocaleString()})`
+		await this.upsertProviderProfile(profileName, newConfiguration)
 	}
 
 	// kilocode_change:
@@ -1823,6 +1954,7 @@ export class ClineProvider
 			ttsSpeed,
 			diffEnabled,
 			enableCheckpoints,
+			checkpointTimeout,
 			// taskHistory, // kilocode_change
 			soundVolume,
 			browserViewportSize,
@@ -1866,6 +1998,9 @@ export class ClineProvider
 			language,
 			showAutoApproveMenu, // kilocode_change
 			showTaskTimeline, // kilocode_change
+			sendMessageOnEnter, // kilocode_change
+			showTimestamps, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			maxReadFileLine,
 			maxImageFileSize,
 			maxTotalImageSize,
@@ -1894,6 +2029,8 @@ export class ClineProvider
 			includeDiagnosticMessages,
 			maxDiagnosticMessages,
 			includeTaskHistoryInEnhance,
+			includeCurrentTime,
+			includeCurrentCost,
 			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
@@ -1901,16 +2038,25 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			yoloMode, // kilocode_change
+			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 		} = await this.getState()
+
+		// kilocode_change start: Get active model for virtual quota fallback UI display
+		const virtualQuotaActiveModel =
+			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
+				: undefined
+		// kilocode_change end
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
 		try {
-			cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+			if (!CloudService.instance.isCloudAgent) {
+				cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+			}
 		} catch (error) {
-			console.error(
-				`[getStateToPostToWebview] failed to get cloud organizations: ${error instanceof Error ? error.message : String(error)}`,
-			)
+			// Ignore this error.
 		}
 
 		const telemetryKey = process.env.KILOCODE_POSTHOG_API_KEY
@@ -1945,6 +2091,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
@@ -1969,6 +2116,7 @@ export class ClineProvider
 			ttsSpeed: ttsSpeed ?? 1.0,
 			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
+			checkpointTimeout: checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			shouldShowAnnouncement: false, // kilocode_change
 			allowedCommands: mergedAllowedCommands,
 			deniedCommands: mergedDeniedCommands,
@@ -2017,6 +2165,9 @@ export class ClineProvider
 			showRooIgnoredFiles: showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: sendMessageOnEnter ?? true, // kilocode_change
+			showTimestamps: showTimestamps ?? true, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
@@ -2035,14 +2186,12 @@ export class ClineProvider
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
-			ghostServiceSettings: ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: ghostServiceSettings,
 			// kilocode_change end
 			organizationSettingsVersion,
 			condensingApiConfigId,
 			customCondensingPrompt,
+			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 			codebaseIndexModels: codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: codebaseIndexConfig?.codebaseIndexEnabled ?? true,
@@ -2070,13 +2219,30 @@ export class ClineProvider
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? true,
+			includeCurrentTime: includeCurrentTime ?? true,
+			includeCurrentCost: includeCurrentCost ?? true,
 			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: await this.getState().then((s) => s.autoPurgeEnabled),
+			autoPurgeDefaultRetentionDays: await this.getState().then((s) => s.autoPurgeDefaultRetentionDays),
+			autoPurgeFavoritedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeFavoritedTaskRetentionDays,
+			),
+			autoPurgeCompletedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeCompletedTaskRetentionDays,
+			),
+			autoPurgeIncompleteTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeIncompleteTaskRetentionDays,
+			),
+			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 		}
 	}
 
@@ -2200,6 +2366,7 @@ export class ClineProvider
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
+			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
@@ -2214,6 +2381,7 @@ export class ClineProvider
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
 			diffEnabled: stateValues.diffEnabled ?? true,
 			enableCheckpoints: stateValues.enableCheckpoints ?? true,
+			checkpointTimeout: stateValues.checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			soundVolume: stateValues.soundVolume,
 			browserViewportSize: stateValues.browserViewportSize ?? "900x600",
 			screenshotQuality: stateValues.screenshotQuality ?? 75,
@@ -2251,10 +2419,15 @@ export class ClineProvider
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: stateValues.ghostServiceSettings,
+			// kilocode_change end
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: stateValues.autoPurgeEnabled ?? false,
+			autoPurgeDefaultRetentionDays: stateValues.autoPurgeDefaultRetentionDays ?? 30,
+			autoPurgeFavoritedTaskRetentionDays: stateValues.autoPurgeFavoritedTaskRetentionDays ?? null,
+			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
+			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
+			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
@@ -2267,6 +2440,9 @@ export class ClineProvider
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: stateValues.sendMessageOnEnter ?? true, // kilocode_change
+			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
+			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
@@ -2285,6 +2461,7 @@ export class ClineProvider
 			organizationSettingsVersion,
 			condensingApiConfigId: stateValues.condensingApiConfigId,
 			customCondensingPrompt: stateValues.customCondensingPrompt,
+			yoloGatekeeperApiConfigId: stateValues.yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
 			codebaseIndexModels: stateValues.codebaseIndexModels ?? EMBEDDING_MODEL_PROFILES,
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: stateValues.codebaseIndexConfig?.codebaseIndexEnabled ?? true,
@@ -2305,6 +2482,8 @@ export class ClineProvider
 			includeDiagnosticMessages: stateValues.includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: stateValues.maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: stateValues.includeTaskHistoryInEnhance ?? true,
+			includeCurrentTime: stateValues.includeCurrentTime ?? true,
+			includeCurrentCost: stateValues.includeCurrentCost ?? true,
 			taskSyncEnabled,
 			remoteControlEnabled: (() => {
 				try {
@@ -2479,6 +2658,7 @@ export class ClineProvider
 			...config,
 			provider: this,
 			sessionId: vscode.env.sessionId,
+			isCloudAgent: CloudService.instance.isCloudAgent,
 		})
 
 		const bridge = BridgeOrchestrator.getInstance()
@@ -2671,6 +2851,7 @@ export class ClineProvider
 			organizationAllowList,
 			diffEnabled: enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			experiments,
 			cloudUserInfo,
@@ -2687,6 +2868,7 @@ export class ClineProvider
 			apiConfiguration,
 			enableDiff,
 			enableCheckpoints,
+			checkpointTimeout,
 			fuzzyMatchThreshold,
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			task: text,
@@ -2907,6 +3089,7 @@ export class ClineProvider
 			language,
 			mode,
 			taskId: task?.taskId,
+			parentTaskId: task?.parentTask?.taskId,
 			apiProvider: apiConfiguration?.apiProvider,
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
@@ -2914,6 +3097,7 @@ export class ClineProvider
 			// kilocode_change start
 			currentTaskSize: task?.clineMessages.length,
 			taskHistorySize: this.kiloCodeTaskHistorySizeForTelemetryOnly || undefined,
+			toolStyle: getActiveToolUseStyle(apiConfiguration),
 			// kilocode_change end
 		}
 	}
@@ -2929,6 +3113,18 @@ export class ClineProvider
 	public get gitProperties(): GitProperties | undefined {
 		return this._gitProperties
 	}
+
+	// kilocode_change start
+	private _kiloConfig: KilocodeConfig | null = null
+	public async getKiloConfig(): Promise<KilocodeConfig | null> {
+		if (this._kiloConfig === null) {
+			const { repositoryUrl } = await this.getGitProperties()
+			this._kiloConfig = await getKilocodeConfig(this.cwd, repositoryUrl)
+			console.log("getKiloConfig", this._kiloConfig)
+		}
+		return this._kiloConfig
+	}
+	// kilocode_change end
 
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start

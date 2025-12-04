@@ -5,6 +5,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { getFastApplyEditingInstructions } from "../tools/edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 import { getFastApplyModelType, isFastApplyAvailable } from "../../tools/editFileTool"
+import { ToolUseStyle } from "../../../../packages/types/src/kilocode/native-function-calling"
 // kilocode_change end
 
 function getEditingInstructions(diffStrategy?: DiffStrategy): string {
@@ -22,7 +23,6 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 	}
 
 	availableTools.push("insert_content (for adding lines to files)")
-	availableTools.push("search_and_replace (for finding and replacing individual pieces of text)")
 
 	// Base editing instruction mentioning all available tools
 	if (availableTools.length > 1) {
@@ -32,10 +32,6 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 	// Additional details for experimental features
 	instructions.push(
 		"- The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.",
-	)
-
-	instructions.push(
-		"- The search_and_replace tool finds and replaces text or regex in files. This tool allows you to search for a specific regex pattern or text and replace it with another value. Be cautious when using this tool to ensure you are replacing the correct text. It can support multiple operations at once.",
 	)
 
 	if (availableTools.length > 1) {
@@ -57,12 +53,16 @@ export function getRulesSection(
 	diffStrategy?: DiffStrategy,
 	codeIndexManager?: CodeIndexManager,
 	clineProviderState?: ClineProviderState, // kilocode_change
+	toolUseStyle?: ToolUseStyle, // kilocode_change
 ): string {
 	const isCodebaseSearchAvailable =
-		codeIndexManager &&
-		codeIndexManager.isFeatureEnabled &&
-		codeIndexManager.isFeatureConfigured &&
-		codeIndexManager.isInitialized
+		// kilocode_change start
+		codeIndexManager?.isManagedIndexingAvailable ||
+		(codeIndexManager &&
+			codeIndexManager.isFeatureEnabled &&
+			codeIndexManager.isFeatureConfigured &&
+			codeIndexManager.isInitialized)
+	// kilocode_change end
 
 	const codebaseSearchRule = isCodebaseSearchAvailable
 		? "- **CRITICAL: For ANY exploration of code you haven't examined yet in this conversation, you MUST use the `codebase_search` tool FIRST before using search_files or other file exploration tools.** This requirement applies throughout the entire conversation, not just when starting a task. The codebase_search tool uses semantic search to find relevant code based on meaning, not just keywords, making it much more effective for understanding how features are implemented. Even if you've already explored some parts of the codebase, any new area or functionality you need to understand requires using codebase_search first.\n"
@@ -70,12 +70,15 @@ export function getRulesSection(
 
 	const kiloCodeUseMorph = isFastApplyAvailable(clineProviderState)
 
-	return `====
+	let rulesContent = ""
+	rulesContent += `====
 
 RULES
 
 - The project base directory is: ${cwd.toPosix()}
-- All file paths must be relative to this directory. However, commands may change directories in terminals, so respect working directory specified by the response to <execute_command>.
+`
+	rulesContent += `- All file paths must be relative to this directory. However, commands may change directories in terminals, so respect working directory specified by the response to ${toolUseStyle === "json" ? '"execute_command"' : "<execute_command>" /*kilocode_change*/}.`
+	rulesContent += `
 - You cannot \`cd\` into a different directory to complete a task. You are stuck operating from '${cwd.toPosix()}', so be sure to pass in the correct 'path' parameter when using tools that require a path.
 - Do not use the ~ character or $HOME to refer to the home directory.
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '${cwd.toPosix()}', and if so prepend with \`cd\`'ing into that directory && then executing the command (as one command since you are stuck operating from '${cwd.toPosix()}'). For example, if you needed to run \`npm install\` in a project outside of '${cwd.toPosix()}', you would need to prepend with a \`cd\` i.e. pseudocode for this would be \`cd (path to project) && (command, in this case npm install)\`.
@@ -106,4 +109,5 @@ ${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(cline
 			? " Then if you want to test your work, you might use browser_action to launch the site, wait for the user's response confirming the site was launched along with a screenshot, then perhaps e.g., click a button to test functionality if needed, wait for the user's response confirming the button was clicked along with a screenshot of the new state, before finally closing the browser."
 			: ""
 	}`
+	return rulesContent
 }

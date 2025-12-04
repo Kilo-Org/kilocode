@@ -1,0 +1,7 @@
+function processData(data) {
+  // TODO: Implement error handling
+  if (!data) {
+    throw new Error('Data is required');
+  }
+  return processedData;
+}

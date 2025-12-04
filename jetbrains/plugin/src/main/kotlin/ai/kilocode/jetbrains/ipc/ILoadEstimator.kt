@@ -14,4 +14,4 @@ interface ILoadEstimator {
      * @return true indicates high load
      */
     fun hasHighLoad(): Boolean
-} 
+}

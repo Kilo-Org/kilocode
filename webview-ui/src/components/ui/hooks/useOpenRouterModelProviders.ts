@@ -91,33 +91,6 @@ async function getOpenRouterProvidersForModel(modelId: string, baseUrl?: string,
 				label: providerName,
 			}
 
-			// TODO: This is wrong. We need to fetch the model info from
-			// OpenRouter instead of hardcoding it here. The endpoints payload
-			// doesn't include this unfortunately, so we need to get it from the
-			// main models endpoint.
-			switch (true) {
-				case modelId.startsWith("anthropic/claude-3.7-sonnet"):
-					modelInfo.supportsComputerUse = true
-					modelInfo.supportsPromptCache = true
-					modelInfo.cacheWritesPrice = 3.75
-					modelInfo.cacheReadsPrice = 0.3
-					modelInfo.maxTokens = modelId === "anthropic/claude-3.7-sonnet:thinking" ? 64_000 : 8192
-					break
-				case modelId.startsWith("anthropic/claude-3.5-sonnet-20240620"):
-					modelInfo.supportsPromptCache = true
-					modelInfo.cacheWritesPrice = 3.75
-					modelInfo.cacheReadsPrice = 0.3
-					modelInfo.maxTokens = 8192
-					break
-				// kilocode_change start
-				//default:
-				//	modelInfo.supportsPromptCache = true
-				//	modelInfo.cacheWritesPrice = 0.3
-				//	modelInfo.cacheReadsPrice = 0.03
-				//	break
-				// kilocode_change end
-			}
-
 			models[providerName] = modelInfo
 		}
 	} catch (error) {

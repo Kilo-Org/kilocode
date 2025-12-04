@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "工具",
 		"resources": "资源",
-		"errors": "错误"
+		"logs": "日志"
 	},
 	"emptyState": {
 		"noTools": "未找到工具",
 		"noResources": "未找到资源",
-		"noErrors": "未找到错误"
+		"noLogs": "暂无日志"
 	},
 	"networkTimeout": {
 		"label": "网络超时",

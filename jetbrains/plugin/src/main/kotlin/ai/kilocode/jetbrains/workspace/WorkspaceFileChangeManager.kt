@@ -4,6 +4,20 @@
 
 package ai.kilocode.jetbrains.workspace
 
+import ai.kilocode.jetbrains.core.PluginContext
+import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.core.WorkspaceManager
+import ai.kilocode.jetbrains.events.FileChangeType
+import ai.kilocode.jetbrains.events.ProjectEventBus
+import ai.kilocode.jetbrains.events.WorkspaceDirectoriesChangeEvent
+import ai.kilocode.jetbrains.events.WorkspaceDirectoryChangeEvent
+import ai.kilocode.jetbrains.events.WorkspaceFileChangeData
+import ai.kilocode.jetbrains.events.WorkspaceFileChangeEvent
+import ai.kilocode.jetbrains.events.WorkspaceFilesChangeData
+import ai.kilocode.jetbrains.events.WorkspaceFilesChangeEvent
+import ai.kilocode.jetbrains.events.WorkspaceRootChangeData
+import ai.kilocode.jetbrains.events.WorkspaceRootChangeEvent
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.FileSystemEvents
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -11,18 +25,18 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vfs.*
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.*
+import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileCopyEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileCreateEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import com.intellij.openapi.vfs.newvfs.events.VFilePropertyChangeEvent
 import com.intellij.util.messages.MessageBusConnection
-import ai.kilocode.jetbrains.core.PluginContext
-import ai.kilocode.jetbrains.core.ServiceProxyRegistry
-import ai.kilocode.jetbrains.core.WorkspaceManager
-import ai.kilocode.jetbrains.events.*
-import ai.kilocode.jetbrains.ipc.proxy.interfaces.FileSystemEvents
 import java.util.concurrent.ConcurrentHashMap
-
 
 /**
  * Workspace file change manager
@@ -34,7 +48,7 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
 
     // Record registered file listener connections
     private val vfsConnections = ConcurrentHashMap<Project, MessageBusConnection>()
-    
+
     // Record project workspace directory paths
     private val projectWorkspacePaths = ConcurrentHashMap<Project, String>()
 
@@ -82,13 +96,13 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
      */
     private fun triggerWorkspaceRootChangeEvent(project: Project, oldPath: String?, newPath: String) {
         logger.info("Trigger workspace root change event: ${project.name}, old path: $oldPath, new path: $newPath")
-        
+
         // Create workspace root change data
         val workspaceChangeData = WorkspaceRootChangeData(project, oldPath, newPath)
-        
+
         // Send workspace root change event via EventBus
         project.getService(ProjectEventBus::class.java).emitInApplication(WorkspaceRootChangeEvent, workspaceChangeData)
-        
+
         // Get ExtHostWorkspace proxy
         val extHostWorkspace = PluginContext.getInstance(project).getRPCProtocol()?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostWorkspace)
 
@@ -96,10 +110,8 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
         val workspaceData = project.getService(WorkspaceManager::class.java).getProjectWorkspaceData(project)
 
         extHostWorkspace?.let {
-            if(workspaceData != null) {
-                logger.info("Send workspace root change to extension process: ${workspaceData.name}, folders: ${workspaceData.folders.size}")
-                it.acceptWorkspaceData(workspaceData)
-            }
+            logger.info("Send workspace root change to extension process: ${workspaceData.name}, folders: ${workspaceData.folders.size}")
+            it.acceptWorkspaceData(workspaceData)
         }
     }
 
@@ -120,15 +132,17 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
             val connection = project.messageBus.connect()
 
             // Add virtual file system listener
-            connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-                override fun after(events: List<VFileEvent>) {
-                    processBulkFileEvents(events, project)
-                }
-            })
+            connection.subscribe(
+                VirtualFileManager.VFS_CHANGES,
+                object : BulkFileListener {
+                    override fun after(events: List<VFileEvent>) {
+                        processBulkFileEvents(events, project)
+                    }
+                },
+            )
 
             // Save connection for later cleanup
             vfsConnections[project] = connection
-
         } catch (e: Exception) {
             logger.error("Failed to register file listener for project ${project.name}", e)
         }
@@ -204,12 +218,12 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
 
         // Trigger bulk file change event
         if (fileChanges.isNotEmpty()) {
-            triggerBulkFileChangeEvent(fileChanges,project)
+            triggerBulkFileChangeEvent(fileChanges, project)
         }
 
         // Trigger bulk directory change event
         if (directoryChanges.isNotEmpty()) {
-            triggerBulkDirectoryChangeEvent(directoryChanges,project)
+            triggerBulkDirectoryChangeEvent(directoryChanges, project)
         }
     }
 
@@ -264,7 +278,7 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
                 session = fileChanges[0].timestamp.toString(),
                 created = createdFiles,
                 changed = changedFiles,
-                deleted = deletedFiles
+                deleted = deletedFiles,
             )
 
             // Call onFileEvent method of extension host file system event service
@@ -305,7 +319,7 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
                 session = directoryChanges[0].timestamp.toString(),
                 created = createdDirs,
                 changed = changedDirs,
-                deleted = deletedDirs
+                deleted = deletedDirs,
             )
 
             // Call onFileEvent method of extension host file system event service
@@ -329,7 +343,7 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
             "path" to file.path,
             "authority" to "",
             "query" to "",
-            "fragment" to ""
+            "fragment" to "",
         )
     }
 
@@ -372,10 +386,8 @@ class WorkspaceFileChangeManager(val project: Project) : Disposable {
             }
 
             vfsConnections.clear()
-
         } catch (e: Exception) {
             logger.error("Failed to release workspace file change manager resources", e)
         }
     }
-
 }

@@ -4,17 +4,17 @@
 
 package ai.kilocode.jetbrains.service
 
+import com.google.gson.Gson
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
-import com.google.gson.Gson
 
 @Service
 @State(
     name = "ai.kilocode.jetbrains.service.ExtensionStorageService",
-    storages = [Storage("kilocode-extension-storage.xml")]
+    storages = [Storage("kilocode-extension-storage.xml")],
 )
 class ExtensionStorageService() : PersistentStateComponent<ExtensionStorageService> {
     private val gson = Gson()
@@ -44,4 +44,4 @@ class ExtensionStorageService() : PersistentStateComponent<ExtensionStorageServi
     fun clear() {
         storageMap.clear()
     }
-} 
+}

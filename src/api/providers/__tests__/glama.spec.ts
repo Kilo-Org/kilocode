@@ -20,7 +20,6 @@ vitest.mock("../fetchers/modelCache", () => ({
 				cacheReadsPrice: 0.3,
 				description: "Claude 3.7 Sonnet",
 				thinking: false,
-				supportsComputerUse: true,
 			},
 			"openai/gpt-4o": {
 				maxTokens: 4096,

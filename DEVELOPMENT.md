@@ -248,6 +248,18 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 - Check the Output panel in VSCode (View > Output) and select "Kilo Code" from the dropdown
 - For webview issues, use the browser developer tools in the webview (right-click > "Inspect Element")
 
+### Testing with Local Backend
+
+To test the extension against a local Kilo Code backend:
+
+1. **Set up your local backend** at `http://localhost:3000`
+2. **Use the "Run Extension [Local Backend]" launch configuration**:
+    - Go to Run and Debug (Ctrl+Shift+D)
+    - Select "Run Extension [Local Backend]" from the dropdown
+    - Press F5 to start debugging
+
+This automatically sets the `KILOCODE_BACKEND_BASE_URL` environment variable, making all sign-in/sign-up buttons point to your local backend instead of production.
+
 ## Contributing
 
 We welcome contributions to Kilo Code! Here's how you can help:

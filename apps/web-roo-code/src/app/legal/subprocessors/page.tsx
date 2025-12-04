@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
 import { SEO } from "@/lib/seo"
+import { ogImageUrl } from "@/lib/og"
 
 const TITLE = "Subprocessors"
 const DESCRIPTION = "List of third-party subprocessors used by Roo Code to process customer data."
+const OG_DESCRIPTION = ""
 const PATH = "/legal/subprocessors"
-const OG_IMAGE = SEO.ogImage
 
 export const metadata: Metadata = {
 	title: TITLE,
@@ -19,10 +20,10 @@ export const metadata: Metadata = {
 		siteName: SEO.name,
 		images: [
 			{
-				url: OG_IMAGE.url,
-				width: OG_IMAGE.width,
-				height: OG_IMAGE.height,
-				alt: OG_IMAGE.alt,
+				url: ogImageUrl(TITLE, OG_DESCRIPTION),
+				width: 1200,
+				height: 630,
+				alt: TITLE,
 			},
 		],
 		locale: SEO.locale,
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 		card: SEO.twitterCard,
 		title: TITLE,
 		description: DESCRIPTION,
-		images: [OG_IMAGE.url],
+		images: [ogImageUrl(TITLE, OG_DESCRIPTION)],
 	},
 	keywords: [...SEO.keywords, "subprocessors", "data processing", "GDPR", "privacy", "third-party services"],
 }
@@ -42,7 +43,7 @@ export default function SubProcessors() {
 		<>
 			<div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
 				<div className="prose prose-lg mx-auto max-w-5xl dark:prose-invert">
-					<p className="text-muted-foreground">Updated: September 18, 2025</p>
+					<p className="text-muted-foreground">Updated: October 17, 2025</p>
 
 					<h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">Subprocessors</h1>
 
@@ -116,12 +117,18 @@ export default function SubProcessors() {
 									<td className="border border-border px-4 py-3">CRM and marketing automation</td>
 								</tr>
 								<tr className="bg-muted/25">
+									<td className="border border-border px-4 py-3 font-medium">Intercom</td>
+									<td className="border border-border px-4 py-3">Communication Services</td>
+									<td className="border border-border px-4 py-3">United States</td>
+									<td className="border border-border px-4 py-3">Customer messaging and support</td>
+								</tr>
+								<tr>
 									<td className="border border-border px-4 py-3 font-medium">Loops</td>
 									<td className="border border-border px-4 py-3">Communication Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Email and customer communication</td>
 								</tr>
-								<tr>
+								<tr className="bg-muted/25">
 									<td className="border border-border px-4 py-3 font-medium">Metabase</td>
 									<td className="border border-border px-4 py-3">Data Analytics</td>
 									<td className="border border-border px-4 py-3">United States</td>
@@ -129,43 +136,43 @@ export default function SubProcessors() {
 										Business intelligence and reporting
 									</td>
 								</tr>
-								<tr className="bg-muted/25">
+								<tr>
 									<td className="border border-border px-4 py-3 font-medium">PostHog</td>
 									<td className="border border-border px-4 py-3">Data Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Product analytics</td>
 								</tr>
-								<tr>
+								<tr className="bg-muted/25">
 									<td className="border border-border px-4 py-3 font-medium">Sentry</td>
 									<td className="border border-border px-4 py-3">All Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Error tracking and monitoring</td>
 								</tr>
-								<tr className="bg-muted/25">
+								<tr>
 									<td className="border border-border px-4 py-3 font-medium">Snowflake</td>
 									<td className="border border-border px-4 py-3">Data Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Data warehousing and analytics</td>
 								</tr>
-								<tr>
+								<tr className="bg-muted/25">
 									<td className="border border-border px-4 py-3 font-medium">Stripe</td>
 									<td className="border border-border px-4 py-3">Payment Services</td>
 									<td className="border border-border px-4 py-3">United States, Europe</td>
 									<td className="border border-border px-4 py-3">Payment processing and billing</td>
 								</tr>
-								<tr className="bg-muted/25">
+								<tr>
 									<td className="border border-border px-4 py-3 font-medium">Supabase</td>
 									<td className="border border-border px-4 py-3">Data Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Database management and storage</td>
 								</tr>
-								<tr>
+								<tr className="bg-muted/25">
 									<td className="border border-border px-4 py-3 font-medium">Upstash</td>
 									<td className="border border-border px-4 py-3">Infrastructure Services</td>
 									<td className="border border-border px-4 py-3">United States</td>
 									<td className="border border-border px-4 py-3">Serverless database services</td>
 								</tr>
-								<tr className="bg-muted/25">
+								<tr>
 									<td className="border border-border px-4 py-3 font-medium">Vercel</td>
 									<td className="border border-border px-4 py-3">Customer-facing Services</td>
 									<td className="border border-border px-4 py-3">United States, Europe</td>

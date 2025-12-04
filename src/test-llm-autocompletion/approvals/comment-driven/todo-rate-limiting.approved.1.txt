@@ -1,0 +1,9 @@
+function handleAPIRequest(req, res) {
+  // TODO: Implement rate limiting to prevent abuse
+  // Implement rate limiting to prevent abuse
+  const rateLimit = checkRateLimit(req.ip);
+  if (!rateLimit.allowed) {
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+  processRequest(req, res);
+}

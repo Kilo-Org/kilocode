@@ -135,6 +135,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		soundVolume,
 		// cloudIsAuthenticated, // kilocode_change
 		messageQueue = [],
+		sendMessageOnEnter, // kilocode_change
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -204,7 +205,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [isAtBottom, setIsAtBottom] = useState(false)
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
-	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
+	const [checkpointWarning, setCheckpointWarning] = useState<
+		{ type: "WAIT_TIMEOUT" | "INIT_TIMEOUT"; timeout: number } | undefined
+	>(undefined)
 	const [isCondensing, setIsCondensing] = useState<boolean>(false)
 	const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
 	const everVisibleMessagesTsRef = useRef<LRUCache<number, boolean>>(
@@ -629,7 +632,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			text = text.trim()
 
 			if (text || images.length > 0) {
-				if (sendingDisabled) {
+				// Queue message if:
+				// - Task is busy (sendingDisabled)
+				// - API request in progress (isStreaming)
+				// - Queue has items (preserve message order during drain)
+				if (sendingDisabled || isStreaming || messageQueue.length > 0) {
 					try {
 						console.log("queueMessage", text, images)
 						vscode.postMessage({ type: "queueMessage", text, images })
@@ -685,7 +692,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handleChatReset()
 			}
 		},
-		[handleChatReset, markFollowUpAsAnswered, sendingDisabled], // messagesRef and clineAskRef are stable
+		[handleChatReset, markFollowUpAsAnswered, sendingDisabled, isStreaming, messageQueue.length], // messagesRef and clineAskRef are stable
 	)
 
 	const handleSetChatBoxMessage = useCallback(
@@ -875,6 +882,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						setIsCondensing(false)
 					}
 					break
+				case "checkpointInitWarning":
+					setCheckpointWarning(message.checkpointWarning)
+					break
 			}
 			// textAreaRef.current is not explicitly required here since React
 			// guarantees that ref will be stable across re-renders, and we're
@@ -891,6 +901,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleSetChatBoxMessage,
 			handlePrimaryButtonClick,
 			handleSecondaryButtonClick,
+			setCheckpointWarning,
 		],
 	)
 
@@ -1051,14 +1062,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			const tool = JSON.parse(message.text)
 
-			return [
-				"editedExistingFile",
-				"appliedDiff",
-				"newFileCreated",
-				"searchAndReplace",
-				"insertContent",
-				"generateImage",
-			].includes(tool.tool)
+			return ["editedExistingFile", "appliedDiff", "newFileCreated", "insertContent", "generateImage"].includes(
+				tool.tool,
+			)
 		}
 
 		return false
@@ -1369,19 +1375,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				}
 
 				if (isBrowserSessionMessage(message)) {
-					currentGroup.push(message)
-
 					// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
+					// Check if this is a browser_action_result for a close action
 					if (message.say === "browser_action_result") {
-						// Check if the previous browser_action was a close action
 						const lastBrowserAction = [...currentGroup].reverse().find((m) => m.say === "browser_action")
 						if (lastBrowserAction) {
 							const browserAction = JSON.parse(lastBrowserAction.text || "{}") as ClineSayBrowserAction
 							if (browserAction.action === "close") {
+								// Don't add the browser_action_result for close action to the group
+								// End the session immediately
 								endBrowserSession()
+								return
 							}
 						}
 					}
+					currentGroup.push(message)
 					// kilocode_change end
 				} else {
 					// complete existing browser session if any
@@ -1521,26 +1529,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [])
 	//kilocode_change
 
-	// Effect to handle showing the checkpoint warning after a delay
+	// Effect to clear checkpoint warning when messages appear or task changes
 	useEffect(() => {
-		// Only show the warning when there's a task but no visible messages yet
-		if (task && modifiedMessages.length === 0 && !isStreaming && !isHidden) {
-			const timer = setTimeout(() => {
-				setShowCheckpointWarning(true)
-			}, 5000) // 5 seconds
-
-			return () => clearTimeout(timer)
-		} else {
-			setShowCheckpointWarning(false)
+		if (isHidden || !task) {
+			setCheckpointWarning(undefined)
 		}
-	}, [task, modifiedMessages.length, isStreaming, isHidden])
-
-	// Effect to hide the checkpoint warning when messages appear
-	useEffect(() => {
-		if (modifiedMessages.length > 0 || isStreaming || isHidden) {
-			setShowCheckpointWarning(false)
-		}
-	}, [modifiedMessages.length, isStreaming, isHidden])
+	}, [modifiedMessages.length, isStreaming, isHidden, task])
 
 	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
 
@@ -1626,6 +1620,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					/>
 				)
 			}
+			const hasCheckpoint = modifiedMessages.some((message) => message.say === "checkpoint_saved")
 
 			// regular message
 			return (
@@ -1662,6 +1657,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							return tool.tool === "updateTodoList" && enableButtons && !!primaryButtonText
 						})()
 					}
+					hasCheckpoint={hasCheckpoint}
 				/>
 			)
 		},
@@ -1962,9 +1958,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						</div>
 					)}
 
-					{showCheckpointWarning && (
+					{checkpointWarning && (
 						<div className="px-3">
-							<CheckpointWarning />
+							<CheckpointWarning warning={checkpointWarning} />
 						</div>
 					)}
 				</>
@@ -2009,7 +2005,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
 							{/* kilocode_change end */}
-							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+							<p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
 									i18nKey="chat:about"
 									components={{
@@ -2207,6 +2203,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				mode={mode}
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
+				sendMessageOnEnter={sendMessageOnEnter} // kilocode_change
 			/>
 			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls showApiConfig />

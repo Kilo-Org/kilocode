@@ -14,9 +14,13 @@ vi.mock("@roo-code/cloud", () => ({
 }))
 
 // kilocode_change start
-vi.mock("../../../shared/kilocode/token", () => ({
-	getKiloBaseUriFromToken: () => "https://test.api.com",
-}))
+vi.mock("@roo-code/types", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@roo-code/types")>()
+	return {
+		...actual,
+		getKiloBaseUriFromToken: () => "https://test.api.com",
+	}
+})
 // kilocode_change end
 
 describe("RemoteConfigLoader", () => {
@@ -27,6 +31,11 @@ describe("RemoteConfigLoader", () => {
 		vi.clearAllMocks()
 		// Clear any existing cache
 		loader.clearCache()
+		process.env.KILOCODE_BACKEND_BASE_URL = "https://test.api.com"
+	})
+
+	afterEach(() => {
+		delete process.env.KILOCODE_BACKEND_BASE_URL
 	})
 
 	describe("loadAllItems", () => {

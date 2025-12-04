@@ -4,14 +4,13 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.util.URI
+import ai.kilocode.jetbrains.util.URIComponents
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import ai.kilocode.jetbrains.core.PluginContext
-import ai.kilocode.jetbrains.util.URI
-import ai.kilocode.jetbrains.util.URIComponents
 
 /**
  * Enum for configuration targets.
@@ -21,21 +20,29 @@ import ai.kilocode.jetbrains.util.URIComponents
 enum class ConfigurationTarget(val value: Int) {
     /** Application-level configuration, applies globally to the entire IDE */
     APPLICATION(1),
+
     /** User-level configuration, applies to the current user across all projects */
     USER(2),
+
     /** Local user configuration, specific to the local machine */
     USER_LOCAL(3),
+
     /** Remote user configuration, for remote development scenarios */
     USER_REMOTE(4),
+
     /** Workspace-level configuration, applies to the current project workspace */
     WORKSPACE(5),
+
     /** Workspace folder-level configuration, applies to specific folders within a workspace */
     WORKSPACE_FOLDER(6),
+
     /** Default configuration target when no specific target is provided */
     DEFAULT(7),
+
     /** Memory-only configuration, temporary and not persisted */
-    MEMORY(8);
-    
+    MEMORY(8),
+    ;
+
     companion object {
         /**
          * Creates a ConfigurationTarget from its integer value.
@@ -45,14 +52,14 @@ enum class ConfigurationTarget(val value: Int) {
         fun fromValue(value: Int?): ConfigurationTarget? {
             return values().find { it.value == value }
         }
-        
+
         /**
          * Converts a ConfigurationTarget enum to its string representation.
          * @param target The configuration target to convert
          * @return The string name of the configuration target
          */
         fun toString(target: ConfigurationTarget): String {
-            return when(target) {
+            return when (target) {
                 APPLICATION -> "APPLICATION"
                 USER -> "USER"
                 USER_LOCAL -> "USER_LOCAL"
@@ -75,7 +82,7 @@ data class ConfigurationOverrides(
     /** Optional identifier for overriding configuration values, typically used for language-specific settings */
     val overrideIdentifier: String? = null,
     /** Optional URI specifying the resource context for the configuration override */
-    val resource: URI? = null
+    val resource: URI? = null,
 )
 
 /**
@@ -98,7 +105,7 @@ interface MainThreadConfigurationShape : Disposable {
         key: String,
         value: Any?,
         overrides: Map<String, Any>?,
-        scopeToLanguage: Boolean?
+        scopeToLanguage: Boolean?,
     )
 
     /**
@@ -112,7 +119,7 @@ interface MainThreadConfigurationShape : Disposable {
         target: Int,
         key: String,
         overrides: Map<String, Any>?,
-        scopeToLanguage: Boolean?
+        scopeToLanguage: Boolean?,
     )
 }
 
@@ -123,7 +130,7 @@ interface MainThreadConfigurationShape : Disposable {
  */
 class MainThreadConfiguration : MainThreadConfigurationShape {
     private val logger = Logger.getInstance(MainThreadConfiguration::class.java)
-    
+
     /**
      * Updates a configuration option in the specified target scope.
      * Handles the conversion of parameters and delegates to the appropriate
@@ -134,20 +141,22 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
         key: String,
         value: Any?,
         overrides: Map<String, Any>?,
-        scopeToLanguage: Boolean?
+        scopeToLanguage: Boolean?,
     ) {
         // Convert parameter types from raw values to type-safe objects
         val configTarget = ConfigurationTarget.fromValue(target)
         val configOverrides = convertToConfigurationOverrides(overrides)
-        
+
         // Log the configuration update for debugging purposes
-        logger.info("Update configuration option: target=${configTarget?.let { ConfigurationTarget.toString(it) }}, key=$key, value=$value, " +
-                   "overrideIdentifier=${configOverrides?.overrideIdentifier}, resource=${configOverrides?.resource}, " +
-                   "scopeToLanguage=$scopeToLanguage")
-        
+        logger.info(
+            "Update configuration option: target=${configTarget?.let { ConfigurationTarget.toString(it) }}, key=$key, value=$value, " +
+                "overrideIdentifier=${configOverrides?.overrideIdentifier}, resource=${configOverrides?.resource}, " +
+                "scopeToLanguage=$scopeToLanguage",
+        )
+
         // Build the complete configuration key including overrides and language scoping
         val fullKey = buildConfigurationKey(key, configOverrides, scopeToLanguage)
-        
+
         // Store the configuration value based on the target scope
         when (configTarget) {
             ConfigurationTarget.APPLICATION -> {
@@ -179,7 +188,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
             }
         }
     }
-    
+
     /**
      * Removes a configuration option from the specified target scope.
      * Handles the conversion of parameters and delegates to the appropriate
@@ -189,20 +198,22 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
         target: Int,
         key: String,
         overrides: Map<String, Any>?,
-        scopeToLanguage: Boolean?
+        scopeToLanguage: Boolean?,
     ) {
         // Convert parameter types from raw values to type-safe objects
         val configTarget = ConfigurationTarget.fromValue(target)
         val configOverrides = convertToConfigurationOverrides(overrides)
-        
+
         // Log the configuration removal for debugging purposes
-        logger.info("Remove configuration option: target=${configTarget?.let { ConfigurationTarget.toString(it) }}, key=$key, " +
-                   "overrideIdentifier=${configOverrides?.overrideIdentifier}, resource=${configOverrides?.resource}, " +
-                   "scopeToLanguage=$scopeToLanguage")
-        
+        logger.info(
+            "Remove configuration option: target=${configTarget?.let { ConfigurationTarget.toString(it) }}, key=$key, " +
+                "overrideIdentifier=${configOverrides?.overrideIdentifier}, resource=${configOverrides?.resource}, " +
+                "scopeToLanguage=$scopeToLanguage",
+        )
+
         // Build the complete configuration key including overrides and language scoping
         val fullKey = buildConfigurationKey(key, configOverrides, scopeToLanguage)
-        
+
         // Remove the configuration value based on the target scope
         when (configTarget) {
             ConfigurationTarget.APPLICATION -> {
@@ -234,7 +245,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
             }
         }
     }
-    
+
     /**
      * Converts a Map<String, Any> to a ConfigurationOverrides object.
      * Handles the parsing of URI strings and map structures into proper URI objects.
@@ -246,7 +257,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
         if (overridesMap.isNullOrEmpty()) {
             return null
         }
-        
+
         try {
             val overrideIdentifier = overridesMap["overrideIdentifier"] as? String
             val resourceUri = when (val uriObj = overridesMap["resource"]) {
@@ -257,7 +268,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
                     val authority = uriObj["authority"] as? String ?: ""
                     val query = uriObj["query"] as? String ?: ""
                     val fragment = uriObj["fragment"] as? String ?: ""
-                    
+
                     if (path.isNotEmpty()) {
                         // Create URI instance using URI.from static method
                         val uriComponents = object : URIComponents {
@@ -283,14 +294,14 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
                 }
                 else -> null
             }
-            
+
             return ConfigurationOverrides(overrideIdentifier, resourceUri)
         } catch (e: Exception) {
             logger.error("Failed to convert configuration overrides: $overridesMap", e)
             return null
         }
     }
-    
+
     /**
      * Builds a complete configuration key based on base key, overrides, and language scoping.
      * Constructs a unique key that incorporates override identifiers and resource contexts.
@@ -301,7 +312,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
      */
     private fun buildConfigurationKey(baseKey: String, overrides: ConfigurationOverrides?, scopeToLanguage: Boolean?): String {
         val keyBuilder = StringBuilder(baseKey)
-        
+
         // Add override identifier if language scoping is enabled
         overrides?.let {
             it.overrideIdentifier?.let { identifier ->
@@ -309,16 +320,16 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
                     keyBuilder.append(".").append(identifier)
                 }
             }
-            
+
             // Add resource identifier if URI is provided
             it.resource?.let { uri ->
                 keyBuilder.append("@").append(uri.toString().hashCode())
             }
         }
-        
+
         return keyBuilder.toString()
     }
-    
+
     /**
      * Retrieves the currently active project in the IDE.
      * @return The active project instance, or null if no project is currently open
@@ -327,7 +338,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
         val openProjects = ProjectManager.getInstance().openProjects
         return openProjects.firstOrNull { it.isInitialized && !it.isDisposed }
     }
-    
+
     /**
      * Stores a configuration value in the properties component based on its type.
      * Handles type-specific storage for common data types and falls back to string
@@ -355,7 +366,7 @@ class MainThreadConfiguration : MainThreadConfigurationShape {
             }
         }
     }
-    
+
     /**
      * Disposes of resources when the configuration manager is no longer needed.
      * Called when the plugin or component is being unloaded.

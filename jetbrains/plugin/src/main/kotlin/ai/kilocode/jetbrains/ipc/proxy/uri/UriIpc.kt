@@ -15,7 +15,7 @@ data class UriParts(
     val authority: String? = null,
     val path: String,
     val query: String? = null,
-    val fragment: String? = null
+    val fragment: String? = null,
 )
 
 /**
@@ -27,12 +27,12 @@ interface IRawURITransformer {
      * Transform incoming URI
      */
     fun transformIncoming(uri: UriParts): UriParts
-    
+
     /**
      * Transform outgoing URI
      */
     fun transformOutgoing(uri: UriParts): UriParts
-    
+
     /**
      * Transform outgoing scheme
      */
@@ -48,12 +48,12 @@ interface IURITransformer {
      * Transform incoming URI
      */
     fun transformIncoming(uri: URI): URI
-    
+
     /**
      * Transform outgoing URI
      */
     fun transformOutgoing(uri: URI): URI
-    
+
     /**
      * Transform outgoing URI string
      */
@@ -65,41 +65,41 @@ interface IURITransformer {
  * Corresponds to URITransformer in VSCode
  */
 class URITransformer(private val transformer: IRawURITransformer) : IURITransformer {
-    
+
     override fun transformIncoming(uri: URI): URI {
         val uriParts = UriParts(
             scheme = uri.scheme,
             authority = uri.authority,
             path = uri.path,
             query = uri.query,
-            fragment = uri.fragment
+            fragment = uri.fragment,
         )
-        
+
         val transformedParts = transformer.transformIncoming(uriParts)
-        
+
         return buildURI(transformedParts)
     }
-    
+
     override fun transformOutgoing(uri: URI): URI {
         val uriParts = UriParts(
             scheme = uri.scheme,
             authority = uri.authority,
             path = uri.path,
             query = uri.query,
-            fragment = uri.fragment
+            fragment = uri.fragment,
         )
-        
+
         val transformedParts = transformer.transformOutgoing(uriParts)
-        
+
         return buildURI(transformedParts)
     }
-    
+
     override fun transformOutgoingURI(uri: String): String {
         try {
             return transformOutgoing(URI(uri)).toString()
         } catch (e: Exception) {
-                        // If the URI is invalid, try to convert only the scheme part
-                        val schemeEndIndex = uri.indexOf(':')
+            // If the URI is invalid, try to convert only the scheme part
+            val schemeEndIndex = uri.indexOf(':')
             if (schemeEndIndex > 0) {
                 val scheme = uri.substring(0, schemeEndIndex)
                 val transformedScheme = transformer.transformOutgoingScheme(scheme)
@@ -110,34 +110,34 @@ class URITransformer(private val transformer: IRawURITransformer) : IURITransfor
             return uri
         }
     }
-    
+
     /**
      * Build URI from UriParts
      */
     private fun buildURI(parts: UriParts): URI {
         val builder = StringBuilder()
-        
+
         // Add scheme
         builder.append(parts.scheme).append(":")
-        
+
         // Add authority (if present)
         if (!parts.authority.isNullOrEmpty()) {
             builder.append("//").append(parts.authority)
         }
-        
+
         // Add path
         builder.append(parts.path)
-        
+
         // Add query (if present)
         if (!parts.query.isNullOrEmpty()) {
             builder.append("?").append(parts.query)
         }
-        
+
         // Add fragment (if present)
         if (!parts.fragment.isNullOrEmpty()) {
             builder.append("#").append(parts.fragment)
         }
-        
+
         return URI(builder.toString())
     }
-} 
+}

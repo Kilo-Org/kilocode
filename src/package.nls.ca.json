@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code Agent d'IA (bifurcació de Roo / Cline)",
+	"extension.displayName": "Kilo Code Agent d'IA",
 	"extension.description": "Assistent de codificació de IA de codi obert per planificar, crear i corregir codi.",
 	"command.newTask.title": "Nova Tasca",
 	"command.explainCode.title": "Explicar Codi",
@@ -42,8 +42,9 @@
 	"settings.customStoragePath.description": "Ruta d'emmagatzematge personalitzada. Deixeu-la buida per utilitzar la ubicació predeterminada. Admet rutes absolutes (p. ex. 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Habilitar correccions ràpides de Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Ruta a un fitxer de configuració de Kilo Code per importar automàticament en iniciar l'extensió. Admet rutes absolutes i rutes relatives al directori d'inici (per exemple, '~/Documents/kilo-code-settings.json'). Deixeu-ho en blanc per desactivar la importació automàtica.",
+	"settings.maximumIndexedFilesForFileSearch.description": "Nombre màxim de fitxers per indexar per a la funció de cerca de fitxers @. Valors més alts proporcionen millors resultats de cerca en projectes grans però poden utilitzar més memòria. Per defecte: 10.000.",
 	"settings.useAgentRules.description": "Activa la càrrega de fitxers AGENTS.md per a regles específiques de l'agent (vegeu https://agent-rules.org/)",
-	"settings.apiRequestTimeout.description": "Temps màxim en segons per esperar les respostes de l'API (0 = sense temps d'espera, 1-3600s, per defecte: 600s). Es recomanen valors més alts per a proveïdors locals com LM Studio i Ollama que poden necessitar més temps de processament.",
+	"settings.apiRequestTimeout.description": "Temps màxim en segons per esperar les respostes de l'API (0 = sense temps d'espera, 1-86400s, per defecte: 600s). Es recomanen valors més alts per a proveïdors locals com LM Studio i Ollama que poden necessitar més temps de processament.",
 	"settings.newTaskRequireTodos.description": "Requerir el paràmetre de tasques pendents quan es creïn noves tasques amb l'eina new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La mida del lot per a operacions d'incrustació durant la indexació de codi. Ajusta això segons els límits del teu proveïdor d'API. Per defecte és 60.",
 	"ghost.input.title": "Premeu 'Enter' per confirmar o 'Escape' per cancel·lar",
@@ -53,7 +54,6 @@
 	"ghost.commands.cancelSuggestions": "Cancel·lar Edicions Suggerides",
 	"ghost.commands.applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
 	"ghost.commands.applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
-	"ghost.commands.promptCodeSuggestion": "Tasca Ràpida",
 	"ghost.commands.goToNextSuggestion": "Anar al Suggeriment Següent",
 	"ghost.commands.goToPreviousSuggestion": "Anar al Suggeriment Anterior"
 }

@@ -6,6 +6,7 @@ import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { maybeRemoveReasoningDetails_kilocode } from "../../api/transform/kilocode/reasoning-details"
 
 export const N_MESSAGES_TO_KEEP = 3
 export const MIN_CONDENSE_THRESHOLD = 5 // Minimum percentage of context window to trigger condensing
@@ -104,7 +105,19 @@ export async function summarizeConversation(
 	// Always preserve the first message (which may contain slash command content)
 	const firstMessage = messages[0]
 	// Get messages to summarize, including the first message and excluding the last N messages
-	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP))
+	let messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP)) // kilocode_change: const=>let
+
+	// kilocode_change start
+	// discard tool_use, because it won't have a result
+	const lastMessageToSummarizeContent = messagesToSummarize.at(-1)?.content
+	if (
+		Array.isArray(lastMessageToSummarizeContent) &&
+		lastMessageToSummarizeContent.some((item) => item.type === "tool_use")
+	) {
+		console.debug("[summarizeConversation] discarding tool_use", lastMessageToSummarizeContent)
+		messagesToSummarize = messagesToSummarize.slice(0, -1)
+	}
+	// kilocode_change end
 
 	if (messagesToSummarize.length <= 1) {
 		// kilocode_change start
@@ -120,7 +133,17 @@ export async function summarizeConversation(
 		return { ...response, error }
 	}
 
-	const keepMessages = messages.slice(-N_MESSAGES_TO_KEEP)
+	let keepMessages = messages.slice(-N_MESSAGES_TO_KEEP) // kilocode_change: const=>let
+
+	// kilocode_change start
+	// discard tool_result, because the corresponding tool_use will be removed
+	const firstKeepMessageContent = keepMessages.at(0)?.content
+	if (Array.isArray(firstKeepMessageContent) && firstKeepMessageContent.some((item) => item.type === "tool_result")) {
+		console.debug("[summarizeConversation] discarding tool_result", firstKeepMessageContent)
+		keepMessages = keepMessages.slice(1)
+	}
+	// kilocode_change end
+
 	// Check if there's a recent summary in the messages we're keeping
 	const recentSummaryExists = keepMessages.some((message) => message.isSummary)
 
@@ -134,8 +157,12 @@ export async function summarizeConversation(
 		content: "Summarize the conversation so far, as described in the prompt instructions.",
 	}
 
-	const requestMessages = maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(
-		({ role, content }) => ({ role, content }),
+	const requestMessages = maybeRemoveReasoningDetails_kilocode(
+		maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(({ role, content }) => ({
+			role,
+			content,
+		})),
+		undefined,
 	)
 
 	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt

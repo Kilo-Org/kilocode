@@ -95,7 +95,6 @@ function parseHuggingFaceModel(model: HuggingFaceModel, provider?: HuggingFacePr
 		contextWindow: contextLength,
 		supportsImages: false, // HuggingFace API doesn't provide this info yet.
 		supportsPromptCache: false,
-		supportsComputerUse: false,
 		inputPrice: pricing?.input,
 		outputPrice: pricing?.output,
 		description,

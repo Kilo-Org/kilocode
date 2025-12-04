@@ -15,7 +15,7 @@ sidebar_label: Overview
 - [Open source](https://github.com/Kilo-Org/kilocode)
 - Connects to any AI provider
 
-### Kilo Code API Provider
+### Kilo Gateway Provider
 
 - **Built-in option** that comes with the extension
 - Google sign-in with free credits included

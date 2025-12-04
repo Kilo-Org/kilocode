@@ -1,4 +1,5 @@
-import { HTMLAttributes, useMemo, useState } from "react"
+// kilocode_change - new file
+import { HTMLAttributes, useMemo } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Monitor } from "lucide-react"
@@ -9,37 +10,36 @@ import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { TaskTimeline } from "../chat/TaskTimeline"
 import { generateSampleTimelineData } from "../../utils/timeline/mockData"
+import { Slider } from "../ui"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
-	ghostServiceSettings?: any
+	sendMessageOnEnter?: boolean // kilocode_change
+	showTimestamps?: boolean
 	reasoningBlockCollapsed: boolean
-	setCachedStateField: SetCachedStateField<"showTaskTimeline" | "ghostServiceSettings" | "reasoningBlockCollapsed">
+	setCachedStateField: SetCachedStateField<
+		| "showTaskTimeline"
+		| "sendMessageOnEnter"
+		| "ghostServiceSettings"
+		| "reasoningBlockCollapsed"
+		| "hideCostBelowThreshold"
+		| "showTimestamps"
+	>
+	hideCostBelowThreshold?: number
 }
 
 export const DisplaySettings = ({
 	showTaskTimeline,
-	ghostServiceSettings,
+	showTimestamps,
+	sendMessageOnEnter,
 	setCachedStateField,
 	reasoningBlockCollapsed,
+	hideCostBelowThreshold,
 	...props
 }: DisplaySettingsProps) => {
 	const { t } = useAppTranslation()
 
-	// Get the icons base URI for the animated logo
-	const [iconsBaseUri] = useState(() => {
-		const w = window as any
-		return w.ICONS_BASE_URI || ""
-	})
-
 	const sampleTimelineData = useMemo(() => generateSampleTimelineData(), [])
-
-	const onShowGutterAnimationChange = (newValue: boolean) => {
-		setCachedStateField("ghostServiceSettings", {
-			...(ghostServiceSettings || {}),
-			showGutterAnimation: newValue,
-		})
-	}
 
 	const handleReasoningBlockCollapsedChange = (value: boolean) => {
 		setCachedStateField("reasoningBlockCollapsed", value)
@@ -91,31 +91,60 @@ export const DisplaySettings = ({
 						</div>
 					</div>
 				</div>
+				{/* Show Timestamps checkbox */}
+				<div className="mt-3">
+					<VSCodeCheckbox
+						checked={showTimestamps}
+						onChange={(e: any) => {
+							setCachedStateField("showTimestamps", e.target.checked)
+						}}>
+						<span className="font-medium">{t("settings:display.showTimestamps.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:display.showTimestamps.description")}
+					</div>
+				</div>
+				{/* Send Message on Enter Setting */}
+				<div className="flex flex-col gap-1">
+					<VSCodeCheckbox
+						checked={sendMessageOnEnter}
+						onChange={(e) => {
+							setCachedStateField("sendMessageOnEnter", (e as any).target?.checked || false)
+						}}>
+						<span className="font-medium">{t("settings:display.sendMessageOnEnter.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:display.sendMessageOnEnter.description")}
+					</div>
+				</div>
+			</Section>
 
-				{/* Gutter Animation Setting */}
-				<div className="mt-6 pt-6 border-t border-vscode-panel-border">
-					<div className="flex flex-col gap-1">
-						<VSCodeCheckbox
-							checked={ghostServiceSettings?.showGutterAnimation !== false}
-							onChange={(e) => {
-								onShowGutterAnimationChange((e as any).target?.checked || false)
-							}}>
-							<span className="font-medium">{t("settings:ghost.showGutterAnimation.label")}</span>
-						</VSCodeCheckbox>
-						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							{t("settings:ghost.showGutterAnimation.description")}
-						</div>
-						<div className="mt-3 flex items-center gap-3">
-							<div className="flex items-center justify-center w-10 h-10 bg-vscode-editor-background border border-vscode-panel-border rounded">
-								<img
-									src={`${iconsBaseUri}/logo-outline-yellow.gif`}
-									alt="Animated logo"
-									className="w-8 h-8"
-								/>
-							</div>
-							<span className="text-vscode-descriptionForeground text-xs">
-								{t("settings:ghost.showGutterAnimation.preview")}
+			<Section>
+				<div>
+					<div className="font-medium">{t("settings:display.costThreshold.label")}</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:display.costThreshold.description")}
+					</div>
+
+					<div className="mt-3">
+						<div className="flex items-center gap-2">
+							<Slider
+								min={0}
+								max={1}
+								step={0.01}
+								value={[hideCostBelowThreshold ?? 0]}
+								onValueChange={([value]) => setCachedStateField("hideCostBelowThreshold", value)}
+								data-testid="cost-threshold-slider"
+								className="flex-1"
+							/>
+							<span className="text-sm text-vscode-foreground min-w-[60px]">
+								${(hideCostBelowThreshold ?? 0).toFixed(2)}
 							</span>
+						</div>
+						<div className="text-xs text-vscode-descriptionForeground mt-1">
+							{t("settings:display.costThreshold.currentValue", {
+								value: (hideCostBelowThreshold ?? 0).toFixed(2),
+							})}
 						</div>
 					</div>
 				</div>

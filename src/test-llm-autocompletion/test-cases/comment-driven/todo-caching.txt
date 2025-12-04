@@ -1,0 +1,7 @@
+# Description: Should implement caching mechanism after TODO
+class DataService {
+  // TODO: Implement caching mechanism to reduce API calls<<<CURSOR>>>
+  async fetchData(id) {
+    return await api.get(`/data/${id}`);
+  }
+}

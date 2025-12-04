@@ -122,7 +122,8 @@
 		"settings": "Modus Instellingen",
 		"description": "Gespecialiseerde persona's die het gedrag van Kilo Code aanpassen.",
 		"searchPlaceholder": "Zoek modi...",
-		"noResults": "Geen resultaten gevonden"
+		"noResults": "Geen resultaten gevonden",
+		"organizationModes": "Organisatiemodi"
 	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
@@ -150,6 +151,9 @@
 		"initializingWarning": "Checkpoint wordt nog steeds geïnitialiseerd... Als dit te lang duurt, kun je checkpoints uitschakelen in de <settingsLink>instellingen</settingsLink> en je taak opnieuw starten.",
 		"menu": {
 			"viewDiff": "Bekijk verschil",
+			"more": "Meer opties",
+			"viewDiffFromInit": "Bekijk alle wijzigingen",
+			"viewDiffWithCurrent": "Bekijk wijzigingen sinds dit checkpoint",
 			"restore": "Herstel checkpoint",
 			"restoreFiles": "Bestanden herstellen",
 			"restoreFilesDescription": "Herstelt de bestanden van je project naar een momentopname die op dit punt is gemaakt.",
@@ -183,7 +187,9 @@
 		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte",
 		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie",
-		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd"
+		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd",
+		"wantsToDelete": "Kilo Code wil dit bestand verwijderen",
+		"wantsToDeleteDirectory": "Kilo Code wil deze map verwijderen"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken",
@@ -271,6 +277,7 @@
 		"toggleAriaLabel": "Automatische goedkeuring in-/uitschakelen",
 		"disabledAriaLabel": "Automatische goedkeuring uitgeschakeld - selecteer eerst opties",
 		"triggerLabelOff": "Automatisch goedkeuren uit",
+		"triggerLabelOffShort": "Uit",
 		"triggerLabel_zero": "0 automatisch goedgekeurd",
 		"triggerLabel_one": "1 automatisch goedgekeurd",
 		"triggerLabel_other": "{{count}} automatisch goedgekeurd",
@@ -285,6 +292,19 @@
 			"selectModel": "Selecteer <code>roo/code-supernova</code> van de Roo Code Cloud provider in Instellingen om te beginnen.",
 			"goToSettingsButton": "Ga naar Instellingen"
 		},
+		"release": {
+			"heading": "Nieuw in de extensie:",
+			"openRouterEmbeddings": "Ondersteuning voor OpenRouter embedding-modellen",
+			"chutesDynamic": "Chutes laadt nu dynamisch de nieuwste modellen",
+			"queuedMessagesFix": "Oplossingen voor berichten in de wachtrij die verloren gaan"
+		},
+		"cloudAgents": {
+			"heading": "Nieuw in de Cloud:",
+			"prFixer": "Introductie van de <bold>PR Fixer</bold> cloud-agent als aanvulling op de PR Reviewer.",
+			"prFixerDescription": "De PR Fixer van Roo Code past hoogwaardige wijzigingen toe op je PR's, direct vanuit GitHub. Roep het aan via een PR-opmerking en het leest de volledige opmerkingengeschiedenis om context, afspraken en afwegingen te begrijpen - en implementeert vervolgens de juiste oplossing.",
+			"tryPrFixerButton": "Probeer PR Fixer"
+		},
+		"careers": "Ook, <careersLink>we nemen aan!</careersLink>",
 		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
@@ -328,6 +348,8 @@
 		"tooltips": {
 			"expand": "Codeblok uitvouwen",
 			"collapse": "Codeblok samenvouwen",
+			"enable_wrap": "Regelafbreking inschakelen",
+			"disable_wrap": "Regelafbreking uitschakelen",
 			"copy_code": "Code kopiëren"
 		}
 	},

@@ -25,6 +25,7 @@ vi.mock("../requesty")
 vi.mock("../glama")
 vi.mock("../unbound")
 vi.mock("../io-intelligence")
+vi.mock("../ovhcloud") // kilocode_change
 
 // Then imports
 import type { Mock } from "vitest"
@@ -35,6 +36,7 @@ import { getRequestyModels } from "../requesty"
 import { getGlamaModels } from "../glama"
 import { getUnboundModels } from "../unbound"
 import { getIOIntelligenceModels } from "../io-intelligence"
+import { getOvhCloudAiEndpointsModels } from "../ovhcloud" // kilocode_change
 
 const mockGetLiteLLMModels = getLiteLLMModels as Mock<typeof getLiteLLMModels>
 const mockGetOpenRouterModels = getOpenRouterModels as Mock<typeof getOpenRouterModels>
@@ -42,6 +44,7 @@ const mockGetRequestyModels = getRequestyModels as Mock<typeof getRequestyModels
 const mockGetGlamaModels = getGlamaModels as Mock<typeof getGlamaModels>
 const mockGetUnboundModels = getUnboundModels as Mock<typeof getUnboundModels>
 const mockGetIOIntelligenceModels = getIOIntelligenceModels as Mock<typeof getIOIntelligenceModels>
+const mockGetOvhCloudAiEndpointsModels = getOvhCloudAiEndpointsModels as Mock<typeof getOvhCloudAiEndpointsModels> // kilocode_change
 
 const DUMMY_REQUESTY_KEY = "requesty-key-for-testing"
 const DUMMY_UNBOUND_KEY = "unbound-key-for-testing"
@@ -157,6 +160,25 @@ describe("getModels with new GetModelsOptions", () => {
 		expect(mockGetIOIntelligenceModels).toHaveBeenCalled()
 		expect(result).toEqual(mockModels)
 	})
+
+	// kilocode_change start
+	it("calls OvhCloudAiEndpointsModels for ovhcloud provider", async () => {
+		const mockModels = {
+			"ovhcloud/model": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "OVHcloud AI Endpoints Model",
+			},
+		}
+		mockGetOvhCloudAiEndpointsModels.mockResolvedValue(mockModels)
+
+		const result = await getModels({ provider: "ovhcloud" })
+
+		expect(mockGetOvhCloudAiEndpointsModels).toHaveBeenCalled()
+		expect(result).toEqual(mockModels)
+	})
+	// kilocode_change end
 
 	it("handles errors and re-throws them", async () => {
 		const expectedError = new Error("LiteLLM connection failed")

@@ -22,14 +22,14 @@ export async function insertContentTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	const relPath: string | undefined = block.params.path
-	const line: string | undefined = block.params.line
+	const lineRaw: string | number | undefined = block.params.line // kilocode_change: lineRaw can be number
 	const content: string | undefined = block.params.content
 
 	const sharedMessageProps: ClineSayTool = {
 		tool: "insertContent",
 		path: getReadablePath(cline.cwd, removeClosingTag("path", relPath)),
 		diff: content,
-		lineNumber: line ? parseInt(line, 10) : undefined,
+		lineNumber: lineRaw !== undefined ? (typeof lineRaw === "number" ? lineRaw : parseInt(lineRaw, 10)) : undefined, // kilocode_change: lineRaw can be number
 	}
 
 	try {
@@ -46,7 +46,7 @@ export async function insertContentTool(
 			return
 		}
 
-		if (!line) {
+		if (lineRaw === undefined /*lineRaw can be number*/) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")
 			pushToolResult(await cline.sayAndCreateMissingParamError("insert_content", "line"))
@@ -72,7 +72,7 @@ export async function insertContentTool(
 		const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
 
 		const absolutePath = path.resolve(cline.cwd, relPath)
-		const lineNumber = parseInt(line, 10)
+		const lineNumber = typeof lineRaw === "number" ? lineRaw : parseInt(lineRaw, 10) // kilocode_change: lineRaw can be number
 		if (isNaN(lineNumber) || lineNumber < 0) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")

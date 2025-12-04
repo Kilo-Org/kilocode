@@ -5,26 +5,23 @@
 package ai.kilocode.jetbrains.theme
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
+import com.google.gson.JsonIOException
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.google.gson.JsonIOException
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.MessageBusConnection
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.swing.UIManager
-import kotlin.io.path.notExists
 import kotlin.io.path.exists
+import kotlin.io.path.notExists
 
 /**
  * Theme change listener interface
@@ -43,7 +40,7 @@ interface ThemeChangeListener {
  */
 class ThemeManager : Disposable {
     private val logger = Logger.getInstance(ThemeManager::class.java)
-    
+
     // Theme configuration resource directory
     private var themeResourceDir: Path? = null
 
@@ -64,50 +61,53 @@ class ThemeManager : Disposable {
 
     // JSON serialization
     private val gson = Gson()
-    
+
     /**
      * Initialize theme manager
      * @param resourceRoot Theme resource root directory
      */
     fun initialize(resourceRoot: String) {
         logger.info("Initializing theme manager, resource root: $resourceRoot")
-        
+
         // Set theme resource directory
         themeResourceDir = Paths.get(resourceRoot, "integrations", "theme", "default-themes")
-        
+
         // Check if resource directory exists
         if (themeResourceDir?.notExists() == true) {
             themeResourceDir = Paths.get(resourceRoot, "integrations", "theme", "default-themes")
-            if(themeResourceDir?.notExists() == true) {
+            if (themeResourceDir?.notExists() == true) {
                 logger.warn("Theme resource directory does not exist: $themeResourceDir")
                 return
             }
         }
-        
+
         logger.info("Theme resource directory set: $themeResourceDir")
-        
+
         // Detect current theme at initialization
         updateCurrentThemeStatus()
-        
+
         // Read initial theme configuration
         loadThemeConfig()
-        
+
         // Register theme change listener
         messageBusConnection = ApplicationManager.getApplication().messageBus.connect()
-        messageBusConnection?.subscribe(LafManagerListener.TOPIC, LafManagerListener {
-            logger.info("Detected IDE theme change")
-            val oldIsDarkTheme = isDarkTheme
-            val oldConfig = currentThemeConfig
-            
-            // Update theme status
-            updateCurrentThemeStatus()
-            
-            // Reload configuration if theme type changes
-            if (oldIsDarkTheme != isDarkTheme || oldConfig == null) {
-                loadThemeConfig()
-            }
-        })
-        
+        messageBusConnection?.subscribe(
+            LafManagerListener.TOPIC,
+            LafManagerListener {
+                logger.info("Detected IDE theme change")
+                val oldIsDarkTheme = isDarkTheme
+                val oldConfig = currentThemeConfig
+
+                // Update theme status
+                updateCurrentThemeStatus()
+
+                // Reload configuration if theme type changes
+                if (oldIsDarkTheme != isDarkTheme || oldConfig == null) {
+                    loadThemeConfig()
+                }
+            },
+        )
+
         logger.info("Theme manager initialization completed, current theme: ${if (isDarkTheme) "dark" else "light"}")
     }
 
@@ -118,7 +118,7 @@ class ThemeManager : Disposable {
         updateCurrentThemeStatus()
         return isDarkTheme()
     }
-    
+
     /**
      * Update current theme status
      */
@@ -140,7 +140,7 @@ class ThemeManager : Disposable {
             isDarkTheme = true
         }
     }
-    
+
     /**
      * Parse theme string, remove comments
      */
@@ -151,31 +151,31 @@ class ThemeManager : Disposable {
                 .split("\n")
                 .filter { !it.trim().startsWith("//") }
                 .joinToString("\n")
-            
+
             return JsonParser.parseString(cleanedContent).asJsonObject
         } catch (e: Exception) {
             logger.error("Error parsing theme string", e)
             throw e
         }
     }
-    
+
     /**
      * Merge two JSON objects
      */
     private fun mergeJsonObjects(first: JsonObject, second: JsonObject): JsonObject {
         try {
             val result = gson.fromJson(gson.toJson(first), JsonObject::class.java)
-            
+
             for (key in second.keySet()) {
                 if (!first.has(key)) {
                     // New value
                     result.add(key, second.get(key))
                     continue
                 }
-                
+
                 val firstValue = first.get(key)
                 val secondValue = second.get(key)
-                
+
                 if (firstValue.isJsonArray && secondValue.isJsonArray) {
                     // Merge arrays
                     val resultArray = firstValue.asJsonArray
@@ -188,7 +188,7 @@ class ThemeManager : Disposable {
                     result.add(key, secondValue)
                 }
             }
-            
+
             return result
         } catch (e: Exception) {
             logger.error("Error merging JSON objects", e)
@@ -198,7 +198,7 @@ class ThemeManager : Disposable {
             return result
         }
     }
-    
+
     /**
      * Convert theme format
      * Implemented according to monaco-vscode-textmate-theme-converter's convertTheme logic
@@ -208,7 +208,7 @@ class ThemeManager : Disposable {
             val result = JsonObject()
             // Set basic properties
             result.addProperty("inherit", false)
-            
+
             // Set base
             var base = "vs-dark" // Default to dark theme
             if (theme.has("type")) {
@@ -222,47 +222,47 @@ class ThemeManager : Disposable {
                 base = if (isDarkTheme) "vs-dark" else "vs"
             }
             result.addProperty("base", base)
-            
+
             // Copy colors
             if (theme.has("colors")) {
                 result.add("colors", theme.get("colors"))
             } else {
                 result.add("colors", JsonObject())
             }
-            
+
             // Create rules array
             val monacoThemeRules = JsonParser.parseString("[]").asJsonArray
             result.add("rules", monacoThemeRules)
-            
+
             // Create empty encodedTokensColors array
             result.add("encodedTokensColors", JsonParser.parseString("[]").asJsonArray)
-            
+
             // Process tokenColors
             if (theme.has("tokenColors") && theme.get("tokenColors").isJsonArray) {
                 val tokenColors = theme.getAsJsonArray("tokenColors")
-                
+
                 for (i in 0 until tokenColors.size()) {
                     val colorElement = tokenColors.get(i)
                     if (colorElement.isJsonObject) {
                         val colorObj = colorElement.asJsonObject
-                        
+
                         if (!colorObj.has("scope") || !colorObj.has("settings")) {
                             continue
                         }
-                        
+
                         val scope = colorObj.get("scope")
                         val settings = colorObj.get("settings")
-                        
+
                         if (scope.isJsonPrimitive && scope.asJsonPrimitive.isString) {
                             // Handle string type scope
                             val scopeStr = scope.asString
                             val scopes = scopeStr.split(",")
-                            
+
                             if (scopes.size > 1) {
                                 // If contains multiple scopes (comma separated), process each
                                 for (scopeItem in scopes) {
                                     val rule = JsonObject()
-                                    
+
                                     // Copy all properties from settings
                                     if (settings.isJsonObject) {
                                         val settingsObj = settings.asJsonObject
@@ -270,7 +270,7 @@ class ThemeManager : Disposable {
                                             rule.add(entry.key, entry.value)
                                         }
                                     }
-                                    
+
                                     // Set token property
                                     rule.addProperty("token", scopeItem.trim())
                                     monacoThemeRules.add(rule)
@@ -278,7 +278,7 @@ class ThemeManager : Disposable {
                             } else {
                                 // Single scope
                                 val rule = JsonObject()
-                                
+
                                 // Copy all properties from settings
                                 if (settings.isJsonObject) {
                                     val settingsObj = settings.asJsonObject
@@ -286,7 +286,7 @@ class ThemeManager : Disposable {
                                         rule.add(entry.key, entry.value)
                                     }
                                 }
-                                
+
                                 // Set token property
                                 rule.addProperty("token", scopeStr.trim())
                                 monacoThemeRules.add(rule)
@@ -298,7 +298,7 @@ class ThemeManager : Disposable {
                                 val scopeItem = scopeArray.get(j)
                                 if (scopeItem.isJsonPrimitive && scopeItem.asJsonPrimitive.isString) {
                                     val rule = JsonObject()
-                                    
+
                                     // Copy all properties from settings
                                     if (settings.isJsonObject) {
                                         val settingsObj = settings.asJsonObject
@@ -306,7 +306,7 @@ class ThemeManager : Disposable {
                                             rule.add(entry.key, entry.value)
                                         }
                                     }
-                                    
+
                                     // Set token property
                                     rule.addProperty("token", scopeItem.asString.trim())
                                     monacoThemeRules.add(rule)
@@ -318,34 +318,34 @@ class ThemeManager : Disposable {
             } else if (theme.has("settings") && theme.get("settings").isJsonArray) {
                 // Handle settings (old format)
                 val settings = theme.getAsJsonArray("settings")
-                
+
                 for (i in 0 until settings.size()) {
                     val settingElement = settings.get(i)
                     if (settingElement.isJsonObject) {
                         val settingObj = settingElement.asJsonObject
-                        
+
                         if (!settingObj.has("scope") || !settingObj.has("settings")) {
                             continue
                         }
-                        
+
                         val scope = settingObj.get("scope")
                         val settingsObj = settingObj.getAsJsonObject("settings")
-                        
+
                         if (scope.isJsonPrimitive && scope.asJsonPrimitive.isString) {
                             // Handle string type scope
                             val scopeStr = scope.asString
                             val scopes = scopeStr.split(",")
-                            
+
                             if (scopes.size > 1) {
                                 // If contains multiple scopes (comma separated), process each
                                 for (scopeItem in scopes) {
                                     val rule = JsonObject()
-                                    
+
                                     // Copy all properties from settings
                                     for (entry in settingsObj.entrySet()) {
                                         rule.add(entry.key, entry.value)
                                     }
-                                    
+
                                     // Set token property
                                     rule.addProperty("token", scopeItem.trim())
                                     monacoThemeRules.add(rule)
@@ -353,12 +353,12 @@ class ThemeManager : Disposable {
                             } else {
                                 // Single scope
                                 val rule = JsonObject()
-                                
+
                                 // Copy all properties from settings
                                 for (entry in settingsObj.entrySet()) {
                                     rule.add(entry.key, entry.value)
                                 }
-                                
+
                                 // Set token property
                                 rule.addProperty("token", scopeStr.trim())
                                 monacoThemeRules.add(rule)
@@ -367,14 +367,14 @@ class ThemeManager : Disposable {
                     }
                 }
             }
-            
+
             return result
         } catch (e: Exception) {
             logger.error("Error converting theme format", e)
             throw e
         }
     }
-    
+
     /**
      * Read VSCode theme style file from classpath
      * @return Theme CSS content
@@ -388,10 +388,10 @@ class ThemeManager : Disposable {
         } catch (e: Exception) {
             logger.error("Failed to read VSCode theme style file: ${vscodeThemeFile.absolutePath}", e)
         }
-        
+
         return null
     }
-    
+
     /**
      * Parse CSS custom properties from theme variables file and add to theme colors
      * @param cssContent CSS content containing custom properties
@@ -402,16 +402,16 @@ class ThemeManager : Disposable {
             // Parse CSS custom properties (--property-name: value;)
             val cssVariablePattern = Regex("""--([a-zA-Z-]+):\s*([^;]+);""")
             val matches = cssVariablePattern.findAll(cssContent)
-            
+
             for (match in matches) {
                 val propertyName = match.groupValues[1]
                 val propertyValue = match.groupValues[2].trim()
-                
+
                 // Skip color delegations that start with --color- as they are Tailwind-specific
                 if (propertyName.startsWith("color-")) {
                     continue
                 }
-                
+
                 // Skip layout/sizing variables that aren't colors
                 val nonColorProperties = setOf(
                     "border-width", "corner-radius", "corner-radius-round", "design-unit",
@@ -424,13 +424,13 @@ class ThemeManager : Disposable {
                     "button-icon-outline-offset", "button-icon-padding", "button-padding-horizontal",
                     "button-padding-vertical", "checkbox-corner-radius", "dropdown-list-max-height",
                     "tag-corner-radius", "text-xs", "text-sm", "text-base", "text-lg",
-                    "radius", "radius-lg", "radius-md", "radius-sm"
+                    "radius", "radius-lg", "radius-md", "radius-sm",
                 )
-                
+
                 if (nonColorProperties.contains(propertyName)) {
                     continue
                 }
-                
+
                 // Convert CSS variable references to values that can be resolved
                 val resolvedValue = if (propertyValue.contains("var(")) {
                     // For var() references, keep them as-is for now
@@ -439,7 +439,7 @@ class ThemeManager : Disposable {
                     // For direct values, use them as-is
                     propertyValue
                 }
-                
+
                 // Add to theme colors with proper formatting
                 // Convert kebab-case to the format expected by the theme system
                 val themePropertyName = if (propertyName.contains("-")) {
@@ -447,16 +447,16 @@ class ThemeManager : Disposable {
                 } else {
                     propertyName
                 }
-                
+
                 themeColors.addProperty(themePropertyName, resolvedValue)
             }
-            
+
             logger.info("Parsed ${matches.count()} CSS custom properties into theme colors")
         } catch (e: Exception) {
             logger.error("Error parsing CSS variables into theme", e)
         }
     }
-    
+
     /**
      * Load theme configuration
      */
@@ -465,7 +465,7 @@ class ThemeManager : Disposable {
             logger.warn("Cannot load theme configuration: resource directory does not exist")
             return
         }
-        
+
         try {
             // Select corresponding theme file
             val themeFileName = if (isDarkTheme) "dark_modern.json" else "light_modern.json"
@@ -474,20 +474,20 @@ class ThemeManager : Disposable {
             val themeFile = themeResourceDir?.resolve(themeFileName)?.toFile()
             val vscodeThemeFile = themeResourceDir?.resolve(vscodeThemeName)?.toFile()
             val themeVariablesFile = themeResourceDir?.resolve(themeVariablesName)?.toFile()
-            
+
             if (themeFile?.exists() == true && vscodeThemeFile?.exists() == true) {
                 // Read theme file content
                 val themeContent = themeFile.readText()
-                
+
                 // Parse theme content
                 val parsed = parseThemeString(themeContent)
-                
+
                 // Handle include field, similar to getTheme.ts logic
                 var finalTheme = parsed
                 if (parsed.has("include")) {
                     val includeFileName = parsed.get("include").asString
                     val includePath = themeResourceDir?.resolve(includeFileName)
-                    
+
                     if (includePath != null && includePath.exists()) {
                         try {
                             val includeContent = includePath.toFile().readText()
@@ -498,20 +498,20 @@ class ThemeManager : Disposable {
                         }
                     }
                 }
-                
+
                 // Convert theme
                 val converted = convertTheme(finalTheme)
-                
+
                 // Read VSCode theme style file
                 themeStyleContent = loadVscodeThemeStyle(vscodeThemeFile)
-                
+
                 // Read theme variables CSS file and combine with theme-specific CSS
                 val themeVariablesContent = if (themeVariablesFile?.exists() == true) {
                     loadVscodeThemeStyle(themeVariablesFile)
                 } else {
                     null
                 }
-                
+
                 // Parse CSS variables from theme-variables.css and add them to the theme colors
                 if (themeVariablesContent != null) {
                     // Ensure colors object exists
@@ -521,7 +521,7 @@ class ThemeManager : Disposable {
                     val themeColors = converted.getAsJsonObject("colors")
                     parseCssVariablesIntoTheme(themeVariablesContent, themeColors)
                 }
-                
+
                 // Combine theme variables and theme-specific CSS content
                 val combinedCssContent = buildString {
                     // Add theme variables first wrapped in :root selector
@@ -551,18 +551,18 @@ class ThemeManager : Disposable {
                         append(themeStyleContent)
                     }
                 }
-                
+
                 // Add combined style content to converted theme object
                 if (combinedCssContent.isNotEmpty()) {
                     converted.addProperty("cssContent", combinedCssContent)
                 }
-                
+
                 // Update cache
                 val oldConfig = currentThemeConfig
                 currentThemeConfig = converted
-                
+
                 logger.info("Loaded and converted theme configuration: $themeFileName with variables: $themeVariablesName")
-                
+
                 // Notify listeners when configuration changes
                 if (oldConfig?.toString() != converted.toString()) {
                     notifyThemeChangeListeners()
@@ -582,13 +582,13 @@ class ThemeManager : Disposable {
             logger.error("Unknown error occurred during theme configuration loading", e)
         }
     }
-    
+
     /**
      * Notify all theme change listeners
      */
     private fun notifyThemeChangeListeners() {
         val config = currentThemeConfig ?: return
-        
+
         logger.info("Notifying ${themeChangeListeners.size} theme change listeners")
         themeChangeListeners.forEach { listener ->
             try {
@@ -598,7 +598,7 @@ class ThemeManager : Disposable {
             }
         }
     }
-    
+
     /**
      * Add theme change listener
      * @param listener Listener
@@ -606,7 +606,7 @@ class ThemeManager : Disposable {
     fun addThemeChangeListener(listener: ThemeChangeListener) {
         themeChangeListeners.add(listener)
         logger.info("Added theme change listener, current listener count: ${themeChangeListeners.size}")
-        
+
         // If theme configuration already exists, immediately notify new listener
         currentThemeConfig?.let {
             try {
@@ -617,7 +617,7 @@ class ThemeManager : Disposable {
             }
         }
     }
-    
+
     /**
      * Remove theme change listener
      * @param listener Listener
@@ -626,7 +626,7 @@ class ThemeManager : Disposable {
         themeChangeListeners.remove(listener)
         logger.info("Removed theme change listener, remaining listener count: ${themeChangeListeners.size}")
     }
-    
+
     /**
      * Manually reload theme configuration
      * Will reload and notify listeners even if theme has not changed
@@ -635,7 +635,7 @@ class ThemeManager : Disposable {
         logger.info("Manually reloading theme configuration")
         loadThemeConfig()
     }
-    
+
     /**
      * Get whether current theme is dark
      * @return Whether dark theme
@@ -643,7 +643,7 @@ class ThemeManager : Disposable {
     fun isDarkTheme(): Boolean {
         return isDarkTheme
     }
-    
+
     /**
      * Get current theme configuration JSON object
      * @return Theme configuration JSON object
@@ -651,13 +651,13 @@ class ThemeManager : Disposable {
     fun getCurrentThemeConfig(): JsonObject? {
         return currentThemeConfig
     }
-    
+
     override fun dispose() {
         logger.info("Releasing theme manager resources")
-        
+
         // Clear listener list
         themeChangeListeners.clear()
-        
+
         // Clean up message bus connection
         try {
             messageBusConnection?.disconnect()
@@ -665,22 +665,22 @@ class ThemeManager : Disposable {
             logger.error("Error disconnecting message bus connection", e)
         }
         messageBusConnection = null
-        
+
         // Reset resources
         themeResourceDir = null
         currentThemeConfig = null
         themeStyleContent = null
-        
+
         // Reset singleton
         resetInstance()
-        
+
         logger.info("Theme manager resources released")
     }
-    
+
     companion object {
         @Volatile
         private var instance: ThemeManager? = null
-        
+
         /**
          * Get theme manager instance
          */
@@ -689,7 +689,7 @@ class ThemeManager : Disposable {
                 instance ?: ThemeManager().also { instance = it }
             }
         }
-        
+
         /**
          * Reset theme manager instance
          */

@@ -10,7 +10,7 @@ sidebar_label: Free & Budget Models
 
 ### Grok Code Fast 1
 
-This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
+This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilo.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
 
 ### OpenRouter Free Tier Models
 
@@ -204,7 +204,7 @@ When you need more capability than free models provide, these options deliver ex
 
 ### Track Your Usage
 
-**Monitor token consumption:**
+**Monitor credit consumption:**
 
 - Check cost estimates in chat history
 - Review monthly usage patterns
