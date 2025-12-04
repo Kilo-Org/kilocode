@@ -26,8 +26,14 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding, provider, model } =
-		ghostServiceSettings || {}
+	const {
+		enableAutoTrigger,
+		enableQuickInlineTaskKeybinding,
+		enableSmartInlineTaskKeybinding,
+		enableChatAutocomplete,
+		provider,
+		model,
+	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = useCallback(
@@ -47,6 +53,13 @@ export const GhostServiceSettingsView = ({
 	const onEnableSmartInlineTaskKeybindingChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableSmartInlineTaskKeybinding", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onEnableChatAutocompleteChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableChatAutocomplete", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -129,6 +142,19 @@ export const GhostServiceSettingsView = ({
 									),
 								}}
 							/>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-1">
+						<VSCodeCheckbox
+							checked={enableChatAutocomplete || false}
+							onChange={onEnableChatAutocompleteChange}>
+							<span className="font-medium">
+								{t("kilocode:ghost.settings.enableChatAutocomplete.label")}
+							</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							<Trans i18nKey="kilocode:ghost.settings.enableChatAutocomplete.description" />
 						</div>
 					</div>
 

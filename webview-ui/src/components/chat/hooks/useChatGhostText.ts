@@ -8,6 +8,7 @@ interface UseChatGhostTextOptions {
 	inputValue: string
 	setInputValue: (value: string) => void
 	textAreaRef: React.RefObject<HTMLTextAreaElement>
+	enableChatAutocomplete?: boolean
 }
 
 interface UseChatGhostTextReturn {
@@ -25,6 +26,7 @@ export function useChatGhostText({
 	inputValue,
 	setInputValue,
 	textAreaRef,
+	enableChatAutocomplete = false,
 }: UseChatGhostTextOptions): UseChatGhostTextReturn {
 	const [ghostText, setGhostText] = useState<string>("")
 	const completionDebounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -84,34 +86,42 @@ export function useChatGhostText({
 		[ghostText, inputValue, setInputValue, textAreaRef],
 	)
 
-	const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		const newValue = e.target.value
+	const handleInputChange = useCallback(
+		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+			const newValue = e.target.value
 
-		// Clear any existing ghost text when typing
-		setGhostText("")
+			// Clear any existing ghost text when typing
+			setGhostText("")
 
-		// Clear any pending completion request
-		if (completionDebounceRef.current) {
-			clearTimeout(completionDebounceRef.current)
-		}
+			// Clear any pending completion request
+			if (completionDebounceRef.current) {
+				clearTimeout(completionDebounceRef.current)
+			}
 
-		// Skip completion request if we just accepted a suggestion (Tab) or undid
-		if (skipNextCompletionRef.current) {
-			skipNextCompletionRef.current = false
-			// Don't request a new completion - wait for user to type more
-		} else if (newValue.length >= 5 && !newValue.startsWith("/") && !newValue.includes("@")) {
-			// Request new completion after debounce
-			completionDebounceRef.current = setTimeout(() => {
-				const requestId = generateRequestId()
-				completionRequestIdRef.current = requestId
-				vscode.postMessage({
-					type: "requestChatCompletion",
-					text: newValue,
-					requestId,
-				})
-			}, 300) // 300ms debounce
-		}
-	}, [])
+			// Skip completion request if we just accepted a suggestion (Tab) or undid
+			if (skipNextCompletionRef.current) {
+				skipNextCompletionRef.current = false
+				// Don't request a new completion - wait for user to type more
+			} else if (
+				enableChatAutocomplete &&
+				newValue.length >= 5 &&
+				!newValue.startsWith("/") &&
+				!newValue.includes("@")
+			) {
+				// Request new completion after debounce (only if feature is enabled)
+				completionDebounceRef.current = setTimeout(() => {
+					const requestId = generateRequestId()
+					completionRequestIdRef.current = requestId
+					vscode.postMessage({
+						type: "requestChatCompletion",
+						text: newValue,
+						requestId,
+					})
+				}, 300) // 300ms debounce
+			}
+		},
+		[enableChatAutocomplete],
+	)
 
 	// Cleanup on unmount
 	useEffect(() => {
