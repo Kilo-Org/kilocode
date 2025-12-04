@@ -29,7 +29,7 @@ Deploy supports all major package managers: **npm, pnpm, yarn, bun**. Kilo Code 
 
 ### 1. Open the Deploy Tab
 
-- Navigate to your [Organization dashboard](https://app.kilocode.ai/organizations) or [Profile](https://app.kilocode.ai/profile)
+- Navigate to your [Organization dashboard](https://app.kilo.ai/organizations) or [Profile](https://app.kilo.ai/profile)
 - Select the **Deploy** tab
 
 ### 2. Select Your Project

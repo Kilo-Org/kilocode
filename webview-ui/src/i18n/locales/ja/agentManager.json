@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "エージェントマネージャー",
+		"newAgent": "新しいエージェント",
+		"sessionsSection": "セッション",
+		"emptyState": "アクティブなエージェントはまだありません。",
+		"startAgent": "エージェントを開始",
+		"removeSession": "削除"
+	},
+	"sessionDetail": {
+		"startNewAgent": "新しいエージェントを開始",
+		"describeTask": "エージェントに実行させたいタスクを説明してください。",
+		"placeholderTask": "例: ボタン用の新しいReactコンポーネントを作成...",
+		"stopButton": "停止",
+		"newButton": "新規",
+		"stopButtonTitle": "エージェントを停止",
+		"newButtonTitle": "新しいエージェント",
+		"autoModeWarning": "フルオートモードで実行中 - エージェントは確認なしでアクションを実行します",
+		"starting": "開始中...",
+		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
+		"keyboardHint": "Enterで開始、Shift+Enterで改行"
+	},
+	"messages": {
+		"waiting": "エージェントの応答を待っています...",
+		"kiloSaid": "Kiloの発言",
+		"youSaid": "あなたの発言",
+		"apiRequest": "APIリクエスト",
+		"taskCompleted": "タスク完了",
+		"error": "エラー",
+		"question": "Kilo Codeから質問があります",
+		"command": "Kiloがコマンドを実行しようとしています",
+		"tool": "Kiloがツールを使用しようとしています",
+		"usingTool": "ツールを使用中: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "エージェントは自律モードで実行中"
+	},
+	"status": {
+		"running": "実行中",
+		"done": "完了",
+		"stopped": "停止",
+		"error": "エラー"
+	}
+}

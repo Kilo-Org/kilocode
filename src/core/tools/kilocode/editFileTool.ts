@@ -372,7 +372,7 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 		if (!token) {
 			return { available: false, error: "No KiloCode token available to use Fast Apply" }
 		}
-		const url = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", token)
+		const url = getKiloUrlFromToken("https://api.kilo.ai/api/openrouter/", token)
 
 		return {
 			available: true,

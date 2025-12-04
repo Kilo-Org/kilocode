@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "ตัวจัดการเอเจนต์",
+		"newAgent": "เอเจนต์ใหม่",
+		"sessionsSection": "เซสชัน",
+		"emptyState": "ยังไม่มีเอเจนต์ที่ใช้งานอยู่",
+		"startAgent": "เริ่มเอเจนต์",
+		"removeSession": "ลบ"
+	},
+	"sessionDetail": {
+		"startNewAgent": "เริ่มเอเจนต์ใหม่",
+		"describeTask": "อธิบายงานที่คุณต้องการให้เอเจนต์ทำ",
+		"placeholderTask": "เช่น สร้างคอมโพเนนต์ React ใหม่สำหรับปุ่ม...",
+		"stopButton": "หยุด",
+		"newButton": "ใหม่",
+		"stopButtonTitle": "หยุดเอเจนต์",
+		"newButtonTitle": "เอเจนต์ใหม่",
+		"autoModeWarning": "ทำงานในโหมดอัตโนมัติเต็มรูปแบบ - เอเจนต์จะดำเนินการโดยไม่ต้องยืนยัน",
+		"starting": "กำลังเริ่ม...",
+		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
+		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่"
+	},
+	"messages": {
+		"waiting": "รอการตอบกลับจากเอเจนต์...",
+		"kiloSaid": "Kilo พูดว่า",
+		"youSaid": "คุณพูดว่า",
+		"apiRequest": "คำขอ API",
+		"taskCompleted": "งานเสร็จสมบูรณ์",
+		"error": "ข้อผิดพลาด",
+		"question": "Kilo Code มีคำถาม",
+		"command": "Kilo ต้องการรันคำสั่ง",
+		"tool": "Kilo ต้องการใช้เครื่องมือ",
+		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "เอเจนต์ทำงานในโหมดอัตโนมัติ"
+	},
+	"status": {
+		"running": "กำลังทำงาน",
+		"done": "เสร็จสิ้น",
+		"stopped": "หยุดแล้ว",
+		"error": "ข้อผิดพลาด"
+	}
+}

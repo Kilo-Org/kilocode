@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "에이전트 관리자",
+		"newAgent": "새 에이전트",
+		"sessionsSection": "세션",
+		"emptyState": "아직 활성 에이전트가 없습니다.",
+		"startAgent": "에이전트 시작",
+		"removeSession": "제거"
+	},
+	"sessionDetail": {
+		"startNewAgent": "새 에이전트 시작",
+		"describeTask": "에이전트가 수행할 작업을 설명하세요.",
+		"placeholderTask": "예: 버튼용 새 React 컴포넌트 만들기...",
+		"stopButton": "중지",
+		"newButton": "새로 만들기",
+		"stopButtonTitle": "에이전트 중지",
+		"newButtonTitle": "새 에이전트",
+		"autoModeWarning": "전자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
+		"starting": "시작 중...",
+		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
+		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈"
+	},
+	"messages": {
+		"waiting": "에이전트 응답 대기 중...",
+		"kiloSaid": "Kilo가 말했습니다",
+		"youSaid": "당신이 말했습니다",
+		"apiRequest": "API 요청",
+		"taskCompleted": "작업 완료",
+		"error": "오류",
+		"question": "Kilo Code가 질문이 있습니다",
+		"command": "Kilo가 명령을 실행하려고 합니다",
+		"tool": "Kilo가 도구를 사용하려고 합니다",
+		"usingTool": "도구 사용 중: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "에이전트가 자율 모드로 실행 중"
+	},
+	"status": {
+		"running": "실행 중",
+		"done": "완료",
+		"stopped": "중지됨",
+		"error": "오류"
+	}
+}

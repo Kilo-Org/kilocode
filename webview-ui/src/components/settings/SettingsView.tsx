@@ -583,16 +583,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				type: "autoPurgeIncompleteTaskRetentionDays",
 				value: autoPurgeIncompleteTaskRetentionDays,
 			})
-			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
-			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
+			// kilocode_change end - Auto-purge settings
 
-			// These have more complex logic so they aren't (yet) handled
-			// by the `updateSettings` message.
-			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
-			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
-			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
-
-			// kilocode_change: When editing a different profile, don't overwrite apiConfiguration
+			// kilocode_change: After saving, sync cachedState to extensionState without clobbering
+			// the editing profile's apiConfiguration when editing a non-active profile.
 			if (editingApiConfigName !== currentApiConfigName) {
 				// Only sync non-apiConfiguration fields from extensionState
 				const { apiConfiguration: _, ...restOfExtensionState } = extensionState
@@ -601,7 +595,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					...restOfExtensionState,
 				}))
 			} else {
-				// When editing the active profile, sync everything
+				// When editing the active profile, sync everything including apiConfiguration
 				setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			}
 			// kilocode_change end

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.125.1",
+	"version": "4.130.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -23,7 +23,7 @@
 		"type": "git",
 		"url": "https://github.com/Kilo-Org/kilocode"
 	},
-	"homepage": "https://kilocode.ai",
+	"homepage": "https://kilo.ai",
 	"categories": [
 		"AI",
 		"Chat",
@@ -292,6 +292,12 @@
 				"command": "kilo-code.ghost.goToPreviousSuggestion",
 				"title": "%ghost.commands.goToPreviousSuggestion%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.agentManagerOpen",
+				"title": "Open Agent Manager",
+				"icon": "$(circuit-board)",
+				"category": "%configuration.title%"
 			}
 		],
 		"menus": {
@@ -340,6 +346,11 @@
 				}
 			],
 			"view/title": [
+				{
+					"command": "kilo-code.agentManagerOpen",
+					"group": "navigation@0",
+					"when": "view == kilo-code.SidebarProvider && kilo-code.agentManagerEnabled"
+				},
 				{
 					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@1",
@@ -723,8 +734,8 @@
 		"sanitize-filename": "^1.6.3",
 		"say": "^0.16.0",
 		"serialize-error": "^12.0.0",
-		"shiki": "^3.6.0",
 		"shell-quote": "^1.8.2",
+		"shiki": "^3.6.0",
 		"simple-git": "^3.27.0",
 		"socket.io-client": "^4.8.1",
 		"sound-play": "^1.1.0",

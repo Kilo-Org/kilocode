@@ -13,8 +13,8 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path",
 				workspaceFolderName: "test-project",
-				gitBranch: "main",
-				projectId: "proj-123",
+				gitBranch: "main" as string | null,
+				projectId: "proj-123" as string | null,
 				isIndexing: false,
 				hasManifest: true,
 				manifestFileCount: 42,
@@ -35,8 +35,8 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path",
 				workspaceFolderName: "test-project",
-				gitBranch: "feature/new",
-				projectId: "proj-123",
+				gitBranch: "feature/new" as string | null,
+				projectId: "proj-123" as string | null,
 				isIndexing: true,
 				hasManifest: false,
 				manifestFileCount: 0,
@@ -54,14 +54,14 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path",
 				workspaceFolderName: "test-project",
-				gitBranch: "main",
-				projectId: "proj-123",
+				gitBranch: "main" as string | null,
+				projectId: "proj-123" as string | null,
 				isIndexing: false,
 				hasManifest: false,
 				manifestFileCount: 0,
 				hasWatcher: false,
 				error: {
-					type: "manifest",
+					type: "manifest" as const,
 					message: "Failed to fetch manifest",
 					timestamp: new Date().toISOString(),
 					context: {
@@ -85,8 +85,8 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path1",
 				workspaceFolderName: "project-1",
-				gitBranch: "main",
-				projectId: "proj-1",
+				gitBranch: "main" as string | null,
+				projectId: "proj-1" as string | null,
 				isIndexing: false,
 				hasManifest: true,
 				manifestFileCount: 10,
@@ -95,8 +95,8 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path2",
 				workspaceFolderName: "project-2",
-				gitBranch: "develop",
-				projectId: "proj-2",
+				gitBranch: "develop" as string | null,
+				projectId: "proj-2" as string | null,
 				isIndexing: true,
 				hasManifest: true,
 				manifestFileCount: 25,
@@ -117,8 +117,8 @@ describe("ManagedIndexerStatus", () => {
 			{
 				workspaceFolderPath: "/test/path",
 				workspaceFolderName: "test-project",
-				gitBranch: "main",
-				projectId: "proj-123",
+				gitBranch: "main" as string | null,
+				projectId: "proj-123" as string | null,
 				isIndexing: false,
 				hasManifest: false,
 				manifestFileCount: 0,

@@ -16,7 +16,7 @@ No Kilo credits are included with a Teams or Enterprise purchase.
 
 ## Organization Credits
 
-Organization Owners can purchase Kilo credits on the [Organization dashboard](https://app.kilocode.ai).
+Organization Owners can purchase Kilo credits on the [Organization dashboard](https://app.kilo.ai).
 
 Organization credits are purchased on behalf of all users in the organization. Every member of the organization can use the credits in the organization's balance with the Kilo Code model provider.
 

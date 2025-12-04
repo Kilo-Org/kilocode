@@ -133,7 +133,7 @@ export const OrganizationIndexingTab: React.FC<OrganizationIndexingTabProps> = (
 					<div className="pt-2 border-t border-vscode-dropdown-border">
 						<div className="text-xs text-vscode-descriptionForeground">
 							<VSCodeLink
-								href={`https://app.kilocode.ai/organizations/${organizationId}/code-indexing`}
+								href={`https://app.kilo.ai/organizations/${organizationId}/code-indexing`}
 								className="inline-flex items-center gap-1 hover:underline">
 								<svg
 									className="w-3 h-3"

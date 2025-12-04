@@ -64,7 +64,7 @@ async function listTeams(context: CommandContext): Promise<void> {
 		addMessage({
 			id: Date.now().toString(),
 			type: "system",
-			content: `You're currently not a part of any Kilo Code teams. Go to https://app.kilocode.ai/get-started/teams to get started with Kilo Code for Teams!`,
+			content: `You're currently not a part of any Kilo Code teams. Go to https://app.kilo.ai/get-started/teams to get started with Kilo Code for Teams!`,
 			ts: Date.now(),
 		})
 		return
@@ -98,7 +98,7 @@ async function listTeams(context: CommandContext): Promise<void> {
  * Select a team
  */
 async function selectTeam(context: CommandContext, teamId: string): Promise<void> {
-	const { currentProvider, addMessage, updateProvider, profileData } = context
+	const { currentProvider, addMessage, updateProvider, profileData, refreshRouterModels } = context
 
 	// Check if user is authenticated with Kilocode
 	if (!currentProvider || currentProvider.provider !== "kilocode") {
@@ -124,16 +124,17 @@ async function selectTeam(context: CommandContext, teamId: string): Promise<void
 	try {
 		// Handle "personal" as special case
 		if (teamId.toLowerCase() === "personal") {
-			addMessage({
-				id: Date.now().toString(),
-				type: "system",
-				content: "✓ Switched to **Personal** account",
-				ts: Date.now(),
-			})
-
 			// Update provider configuration to remove organization ID
 			await updateProvider(currentProvider.id, {
 				kilocodeOrganizationId: undefined,
+			})
+			await refreshRouterModels()
+
+			addMessage({
+				id: Date.now().toString(),
+				type: "system",
+				content: "Switched to **Personal** account",
+				ts: Date.now(),
 			})
 
 			return
@@ -162,16 +163,18 @@ async function selectTeam(context: CommandContext, teamId: string): Promise<void
 				return
 			}
 
+			// Update provider configuration with new organization ID
+			await updateProvider(currentProvider.id, {
+				kilocodeOrganizationId: targetOrg.id,
+			})
+
+			await refreshRouterModels()
+
 			addMessage({
 				id: Date.now().toString(),
 				type: "system",
-				content: `✓ Switched to team: **${targetOrg.name}** (${targetOrg.role})`,
+				content: `Switched to team: **${targetOrg.name}** (${targetOrg.role})`,
 				ts: Date.now(),
-			})
-
-			// Update provider configuration with new organization ID (use the actual org.id)
-			await updateProvider(currentProvider.id, {
-				kilocodeOrganizationId: targetOrg.id,
 			})
 		} else {
 			// No profile data loaded

@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Manajer Agen",
+		"newAgent": "Agen Baru",
+		"sessionsSection": "Sesi",
+		"emptyState": "Belum ada agen aktif.",
+		"startAgent": "Mulai Agen",
+		"removeSession": "Hapus"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Mulai agen baru",
+		"describeTask": "Jelaskan tugas yang ingin Anda lakukan oleh agen.",
+		"placeholderTask": "contoh: Buat komponen React baru untuk tombol...",
+		"stopButton": "Hentikan",
+		"newButton": "Baru",
+		"stopButtonTitle": "Hentikan Agen",
+		"newButtonTitle": "Agen Baru",
+		"autoModeWarning": "Berjalan dalam mode otomatis penuh - agen akan menjalankan tindakan tanpa konfirmasi",
+		"starting": "Memulai...",
+		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
+		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru"
+	},
+	"messages": {
+		"waiting": "Menunggu respons agen...",
+		"kiloSaid": "Kilo berkata",
+		"youSaid": "Anda berkata",
+		"apiRequest": "Permintaan API",
+		"taskCompleted": "Tugas Selesai",
+		"error": "Kesalahan",
+		"question": "Kilo Code memiliki pertanyaan",
+		"command": "Kilo ingin menjalankan perintah",
+		"tool": "Kilo ingin menggunakan alat",
+		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Agen berjalan dalam mode otonom"
+	},
+	"status": {
+		"running": "berjalan",
+		"done": "selesai",
+		"stopped": "dihentikan",
+		"error": "kesalahan"
+	}
+}

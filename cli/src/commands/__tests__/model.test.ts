@@ -4,9 +4,11 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { modelCommand } from "../model.js"
+import { createMockContext } from "./helpers/mockContext.js"
 import type { CommandContext } from "../core/types.js"
 import type { RouterModels } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
+import type { ModelRecord } from "../../constants/providers/models.js"
 
 describe("/model command", () => {
 	let mockContext: CommandContext
@@ -51,26 +53,35 @@ describe("/model command", () => {
 		apiKey: "test-key",
 	}
 
+	// Create many models for pagination testing
+	const createManyModels = (count: number): ModelRecord => {
+		const models: ModelRecord = {}
+		for (let i = 1; i <= count; i++) {
+			models[`model-${i}`] = {
+				contextWindow: 100000 + i * 1000,
+				supportsPromptCache: i % 2 === 0,
+				supportsImages: i % 3 === 0,
+				inputPrice: i * 0.5,
+				outputPrice: i * 1.0,
+				displayName: `Model ${i}`,
+			}
+		}
+		return models
+	}
+
 	beforeEach(() => {
 		addMessageMock = vi.fn()
 		updateProviderModelMock = vi.fn().mockResolvedValue(undefined)
 
-		mockContext = {
+		mockContext = createMockContext({
 			input: "/model",
 			args: [],
-			options: {},
-			sendMessage: vi.fn().mockResolvedValue(undefined),
-			addMessage: addMessageMock,
-			clearMessages: vi.fn(),
-			clearTask: vi.fn().mockResolvedValue(undefined),
-			setMode: vi.fn(),
-			exit: vi.fn(),
 			routerModels: mockRouterModels,
 			currentProvider: mockProvider,
 			kilocodeDefaultModel: "",
 			updateProviderModel: updateProviderModelMock,
-			refreshRouterModels: vi.fn().mockResolvedValue(undefined),
-		}
+			addMessage: addMessageMock,
+		})
 	})
 
 	describe("Command metadata", () => {
@@ -107,7 +118,7 @@ describe("/model command", () => {
 
 		it("should have arguments defined", () => {
 			expect(modelCommand.arguments).toBeDefined()
-			expect(modelCommand.arguments).toHaveLength(2)
+			expect(modelCommand.arguments).toHaveLength(3)
 		})
 
 		it("should have subcommand argument with values", () => {
@@ -234,7 +245,7 @@ describe("/model command", () => {
 			expect(addMessageMock).toHaveBeenCalledTimes(1)
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
-			expect(message.content).toContain("✓ Switched to")
+			expect(message.content).toContain("Switched to")
 			expect(message.content).toContain("gpt-3.5-turbo")
 		})
 
@@ -313,32 +324,47 @@ describe("/model command", () => {
 		})
 
 		it("should filter models when filter is provided", async () => {
+			// Mock updateModelListFilters to actually update the filters
+			const updateFiltersMock = vi.fn((filters) => {
+				mockContext.modelListFilters = { ...mockContext.modelListFilters, ...filters }
+			})
+			mockContext.updateModelListFilters = updateFiltersMock
 			mockContext.args = ["list", "gpt-4"]
 
 			await modelCommand.handler(mockContext)
 
+			// Verify the filter was persisted
+			expect(updateFiltersMock).toHaveBeenCalledWith({ search: "gpt-4" })
+
 			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("Filtered by")
+			expect(message.content).toContain('Search: "gpt-4"')
 			expect(message.content).toContain("gpt-4")
 			expect(message.content).not.toContain("gpt-3.5-turbo")
 		})
 
 		it("should show message when no models match filter", async () => {
+			// Mock updateModelListFilters to actually update the filters
+			const updateFiltersMock = vi.fn((filters) => {
+				mockContext.modelListFilters = { ...mockContext.modelListFilters, ...filters }
+			})
+			mockContext.updateModelListFilters = updateFiltersMock
 			mockContext.args = ["list", "nonexistent"]
 
 			await modelCommand.handler(mockContext)
+
+			// Verify the filter was persisted
+			expect(updateFiltersMock).toHaveBeenCalledWith({ search: "nonexistent" })
 
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("No models found")
 		})
 
-		it("should display model count", async () => {
+		it("should display model count with pagination", async () => {
 			await modelCommand.handler(mockContext)
 
 			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("Total:")
-			expect(message.content).toContain("2 models")
+			expect(message.content).toContain("Showing 1-2 of 2")
 		})
 
 		it("should show error when no provider configured", async () => {
@@ -427,6 +453,206 @@ describe("/model command", () => {
 
 				expect(addMessageMock).toHaveBeenCalledTimes(1)
 			}
+		})
+	})
+
+	describe("Model list pagination", () => {
+		beforeEach(() => {
+			mockContext.routerModels = {
+				...mockRouterModels,
+				openrouter: createManyModels(25),
+			}
+			mockContext.args = ["list"]
+		})
+
+		it("should paginate results with 10 items per page", async () => {
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.content).toContain("Showing 1-10 of 25")
+			expect(message.content).toContain("Page 1/3")
+		})
+
+		it("should navigate to specific page", async () => {
+			mockContext.args = ["list", "page", "2"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.changeModelListPage).toHaveBeenCalledWith(1)
+		})
+
+		it("should go to next page", async () => {
+			mockContext.args = ["list", "next"]
+			mockContext.modelListPageIndex = 0
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.changeModelListPage).toHaveBeenCalledWith(1)
+		})
+
+		it("should go to previous page", async () => {
+			mockContext.args = ["list", "prev"]
+			mockContext.modelListPageIndex = 1
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.changeModelListPage).toHaveBeenCalledWith(0)
+		})
+
+		it("should show error when already on first page", async () => {
+			mockContext.args = ["list", "prev"]
+			mockContext.modelListPageIndex = 0
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("system")
+			expect(message.content).toContain("Already on the first page")
+		})
+
+		it("should show error when already on last page", async () => {
+			mockContext.args = ["list", "next"]
+			mockContext.modelListPageIndex = 2
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("system")
+			expect(message.content).toContain("Already on the last page")
+		})
+
+		it("should validate page number", async () => {
+			mockContext.args = ["list", "page", "invalid"]
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("error")
+			expect(message.content).toContain("Invalid page number")
+		})
+
+		it("should validate page number is within range", async () => {
+			mockContext.args = ["list", "page", "10"]
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("error")
+			expect(message.content).toContain("Must be between 1 and")
+		})
+	})
+
+	describe("Model list sorting", () => {
+		beforeEach(() => {
+			mockContext.args = ["list"]
+		})
+
+		it("should sort by name", async () => {
+			mockContext.args = ["list", "sort", "name"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({ sort: "name" })
+		})
+
+		it("should sort by context window", async () => {
+			mockContext.args = ["list", "sort", "context"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({ sort: "context" })
+		})
+
+		it("should sort by price", async () => {
+			mockContext.args = ["list", "sort", "price"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({ sort: "price" })
+		})
+
+		it("should show error for invalid sort option", async () => {
+			mockContext.args = ["list", "sort", "invalid"]
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("error")
+			expect(message.content).toContain("Invalid sort option")
+		})
+
+		it("should show error when sort option is missing", async () => {
+			mockContext.args = ["list", "sort"]
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("error")
+			expect(message.content).toContain("Usage: /model list sort")
+		})
+	})
+
+	describe("Model list filtering", () => {
+		beforeEach(() => {
+			mockContext.args = ["list"]
+		})
+
+		it("should filter by images capability", async () => {
+			mockContext.args = ["list", "filter", "images"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({
+				capabilities: ["images"],
+			})
+		})
+
+		it("should filter by cache capability", async () => {
+			mockContext.args = ["list", "filter", "cache"]
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({
+				capabilities: ["cache"],
+			})
+		})
+
+		it("should toggle filter off when already active", async () => {
+			mockContext.args = ["list", "filter", "images"]
+			mockContext.modelListFilters = {
+				sort: "preferred",
+				capabilities: ["images"],
+			}
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({
+				capabilities: [],
+			})
+		})
+
+		it("should clear all filters", async () => {
+			mockContext.args = ["list", "filter", "all"]
+			mockContext.modelListFilters = {
+				sort: "preferred",
+				capabilities: ["images", "cache"],
+			}
+
+			await modelCommand.handler(mockContext)
+
+			expect(mockContext.updateModelListFilters).toHaveBeenCalledWith({
+				capabilities: [],
+			})
+		})
+
+		it("should show error for invalid filter option", async () => {
+			mockContext.args = ["list", "filter", "invalid"]
+
+			await modelCommand.handler(mockContext)
+
+			const message = addMessageMock.mock.calls[0][0]
+			expect(message.type).toBe("error")
+			expect(message.content).toContain("Invalid filter option")
 		})
 	})
 })

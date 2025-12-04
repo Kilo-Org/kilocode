@@ -180,7 +180,6 @@ export interface ExtensionMessage {
 		| "managedIndexerState" // kilocode_change
 		| "singleCompletionResult" // kilocode_change
 		| "managedIndexerState" // kilocode_change
-		| "managedIndexerEnabled" // kilocode_change
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -344,6 +343,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowWrite"
 	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
+	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
 	| "alwaysApproveResubmit"
 	| "alwaysAllowMcp"

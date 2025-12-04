@@ -1,0 +1,44 @@
+{
+	"sidebar": {
+		"title": "Менеджер агентів",
+		"newAgent": "Новий агент",
+		"sessionsSection": "Сесії",
+		"emptyState": "Активних агентів поки немає.",
+		"startAgent": "Запустити агента",
+		"removeSession": "Видалити"
+	},
+	"sessionDetail": {
+		"startNewAgent": "Запустити нового агента",
+		"describeTask": "Опишіть завдання, яке має виконати агент.",
+		"placeholderTask": "напр. Створити новий React-компонент для кнопки...",
+		"stopButton": "Зупинити",
+		"newButton": "Новий",
+		"stopButtonTitle": "Зупинити агента",
+		"newButtonTitle": "Новий агент",
+		"autoModeWarning": "Працює в повністю автоматичному режимі - агент виконуватиме дії без підтвердження",
+		"starting": "Запуск...",
+		"startAriaLabel": "Запустити агента з наданим промптом",
+		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка"
+	},
+	"messages": {
+		"waiting": "Очікування відповіді агента...",
+		"kiloSaid": "Kilo сказав",
+		"youSaid": "Ви сказали",
+		"apiRequest": "API-запит",
+		"taskCompleted": "Завдання виконано",
+		"error": "Помилка",
+		"question": "У Kilo Code є питання",
+		"command": "Kilo хоче виконати команду",
+		"tool": "Kilo хоче використати інструмент",
+		"usingTool": "Використання інструменту: **{{tool}}** {{details}}"
+	},
+	"chatInput": {
+		"autonomous": "Агент працює в автономному режимі"
+	},
+	"status": {
+		"running": "виконується",
+		"done": "завершено",
+		"stopped": "зупинено",
+		"error": "помилка"
+	}
+}

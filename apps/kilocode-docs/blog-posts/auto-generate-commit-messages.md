@@ -30,7 +30,7 @@ The process is dead simple:
 2. Click the Kilo Code logo next to the commit message field
 3. Get a properly formatted commit message - automagically!
 
-<img src="https://kilocode.ai/docs/img/git-commit-generation/git-commit-1.png" alt="Auto-generated commit message in VS Code" width="600" />
+<img src="https://kilo.ai/docs/img/git-commit-generation/git-commit-1.png" alt="Auto-generated commit message in VS Code" width="600" />
 
 ## Real Examples from Real Work
 
@@ -67,7 +67,7 @@ Here's where it gets interesting. You can customize the prompt template to match
 
 Just head to `Settings → Prompts → Commit Message Generation` and modify the template. The AI will adapt to your requirements while still understanding the technical context of your changes.
 
-<img src="https://kilocode.ai/docs/img/git-commit-generation/git-commit-2.png" alt="Customizing commit message templates" width="600" />
+<img src="https://kilo.ai/docs/img/git-commit-generation/git-commit-2.png" alt="Customizing commit message templates" width="600" />
 
 ## Why This Isn't Just Another AI Gimmick
 
@@ -93,7 +93,7 @@ Better commit messages also mean better code reviews. When your teammates can qu
 
 The feature is available in Kilo Code since `v4.35` and became customizable in `v4.38`. Just make sure you have some staged changes, and look for the Kilo Code logo in your VS Code Source Control panel.
 
-Pro tip: Consider setting up a dedicated [API configuration profile](https://kilocode.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilo.ai/p/2x-faster-prompt-enhancement-in-kilo)!
+Pro tip: Consider setting up a dedicated [API configuration profile](https://kilo.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilo.ai/p/2x-faster-prompt-enhancement-in-kilo)!
 
 ## One More Thing
 
@@ -105,4 +105,4 @@ Give it a try. I think you'll find yourself wondering how you ever managed witho
 
 ---
 
-_Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilocode.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.love/discord)!_
+_Want to learn more about Kilo Code's commit message generation? Check out the [full documentation](https://kilo.ai/docs/basic-usage/git-commit-generation/) I wrote for setup details. And let me know what you think about it or how could we improve it even more here in comments or on our [Discord Server](https://kilo.love/discord)!_

@@ -93,6 +93,7 @@ import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-cor
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
+import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager" // kilocode_change
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -2545,7 +2546,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile", kilocodeToken)
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
@@ -2560,7 +2561,9 @@ export const webviewMessageHandler = async (
 				}
 
 				try {
+					// Skip auto-switch in YOLO mode (cloud agents, CI) to prevent usage billing issues
 					const shouldAutoSwitch =
+						!getGlobalState("yoloMode") &&
 						response.data.organizations &&
 						response.data.organizations.length > 0 &&
 						!apiConfiguration.kilocodeOrganizationId &&
@@ -2641,7 +2644,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", kilocodeToken)
 				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
@@ -2671,7 +2674,7 @@ export const webviewMessageHandler = async (
 				const source = uiKind === "Web" ? "web" : uriScheme
 
 				const url = getKiloUrlFromToken(
-					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					`https://api.kilo.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
 					kilocodeToken,
 				)
 				const response = await axios.post(
@@ -3840,6 +3843,88 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "sessionShow": {
+			try {
+				const sessionService = SessionManager.init()
+
+				if (!sessionService.sessionId) {
+					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
+					break
+				}
+
+				vscode.window.showInformationMessage(`Session ID: ${sessionService.sessionId}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to copy session ID: ${errorMessage}`)
+			}
+			break
+		}
+		case "sessionShare": {
+			try {
+				const sessionService = SessionManager.init()
+
+				if (!sessionService.sessionId) {
+					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
+					break
+				}
+
+				const result = await sessionService.shareSession()
+
+				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
+
+				// Copy URL to clipboard and show success notification
+				await vscode.env.clipboard.writeText(shareUrl)
+				vscode.window.showInformationMessage(`Session shared! Link copied to clipboard: ${shareUrl}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to share session: ${errorMessage}`)
+			}
+			break
+		}
+		case "shareTaskSession": {
+			try {
+				if (!message.text) {
+					vscode.window.showErrorMessage("Task ID is required for sharing a task session")
+					break
+				}
+
+				const taskId = message.text
+				const sessionService = SessionManager.init()
+
+				const sessionId = await sessionService.getSessionFromTask(taskId, provider)
+
+				const result = await sessionService.shareSession(sessionId)
+
+				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
+
+				await vscode.env.clipboard.writeText(shareUrl)
+				vscode.window.showInformationMessage(`Session shared! Link copied to clipboard.`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to share task session: ${errorMessage}`)
+			}
+			break
+		}
+		case "sessionFork": {
+			try {
+				if (!message.shareId) {
+					vscode.window.showErrorMessage("ID is required for forking a session")
+					break
+				}
+
+				const sessionService = SessionManager.init()
+
+				await sessionService.forkSession(message.shareId, true)
+
+				await provider.postStateToWebview()
+
+				vscode.window.showInformationMessage(`Session forked successfully from ${message.shareId}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				vscode.window.showErrorMessage(`Failed to fork session: ${errorMessage}`)
+			}
+			break
+		}
 		case "singleCompletion": {
 			try {
 				const { text, completionRequestId } = message
@@ -3879,28 +3964,7 @@ export const webviewMessageHandler = async (
 		// kilocode_change end
 		// kilocode_change start - ManagedIndexer state
 		case "requestManagedIndexerState": {
-			try {
-				const state = ManagedIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
-				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: state,
-				})
-			} catch (error) {
-				provider.log(
-					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
-				)
-				await provider.postMessageToWebview({
-					type: "managedIndexerState",
-					managedIndexerState: [],
-				})
-			}
-			break
-		}
-
-		// we're going to delete this message at some point and use apiConfiguration
-		// probably. So casting as any as to not define a more permanent type
-		case "requestManagedIndexerEnabled" as any: {
-			ManagedIndexer.getInstance()?.sendEnabledStateToWebview()
+			ManagedIndexer.getInstance()?.sendStateToWebview()
 			break
 		}
 		// kilocode_change end

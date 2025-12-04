@@ -176,6 +176,7 @@ describe("CompactTransport", () => {
 
 	describe("Delta Timestamp Conversion", () => {
 		let output: string[] = []
+		let originalConsoleLog: typeof console.log // kilocode_change
 
 		beforeEach(() => {
 			output = []
@@ -183,14 +184,17 @@ describe("CompactTransport", () => {
 			const baseTime = 1000000000000
 			vi.setSystemTime(baseTime) // Set time before transport creation
 
-			process.stdout.write = (str: string): boolean => {
-				output.push(str)
-				return true
-			}
+			// kilocode_change start - Mock console.log to capture output
+			originalConsoleLog = console.log
+			console.log = vi.fn((str: string) => {
+				output.push(str.trim())
+			})
+			// kilocode_change end
 		})
 
 		afterEach(() => {
 			vi.useRealTimers()
+			console.log = originalConsoleLog // kilocode_change
 		})
 
 		test("converts absolute timestamps to deltas", () => {

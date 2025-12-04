@@ -1,3 +1,0 @@
-const obj = { name: 'test', value: 42 };
-obj.name = 'new name';
-obj.<<<AUTOCOMPLETE_HERE>>>

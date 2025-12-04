@@ -1,6 +1,6 @@
 # LLM Autocompletion Tests
 
-Standalone test suite for AutoTriggerStrategy with real LLM calls using approval testing.
+Standalone test suite for GhostInlineCompletionProvider with real LLM calls using approval testing.
 
 ## Setup
 
@@ -49,19 +49,14 @@ approvals/
 ## Running Tests
 
 ```bash
-# Run all tests (using HoleFiller strategy)
+# Run all tests
 pnpm run test
-
-# Run all tests using FIM strategy
-pnpm run test:fim
 
 # Run with verbose output
 pnpm run test:verbose
-pnpm run test:fim:verbose
 
 # Run without interactive approval (fail if not already approved)
 pnpm run test --skip-approval
-pnpm run test:fim --skip-approval
 
 # Run a single test
 pnpm run test closing-brace
@@ -71,28 +66,32 @@ pnpm run clean
 
 # Combine flags
 pnpm run test --verbose --skip-approval
-pnpm run test --fim --verbose --skip-approval
 ```
 
-### Completion Strategies
+### Completion Strategy
 
-The test suite supports two strategies for generating completions:
+The test suite uses `GhostProviderTester` which mirrors the behavior of `GhostInlineCompletionProvider`:
 
-- **HoleFiller** (default): Uses chat completion API with structured prompts containing `{{FILL_HERE}}` markers. This strategy sends a system prompt and user prompt to guide the LLM.
-- **FIM** (`--fim` flag): Uses the Fill-In-Middle (FIM) API endpoint directly with prefix/suffix, without any prompting.
+- Uses `LLMClient` for API calls (standalone, no VSCode dependencies)
+- **Auto-selects strategy** based on model capabilities:
+    - **FIM** (Fill-In-Middle): Used when the model supports FIM (e.g., Codestral). Uses `FimPromptBuilder` for prompt building.
+    - **HoleFiller**: Used for chat-based models without FIM support. Uses `HoleFiller` for prompt building.
+- Uses the same prompt building code as the production extension
 
-Both strategies run the same test cases and use the same approval system, allowing direct comparison of completion quality between approaches.
+You can configure the model via the `LLM_MODEL` environment variable:
 
 ```bash
-# Compare HoleFiller vs FIM performance
-pnpm run test              # Run with HoleFiller strategy
-pnpm run test:fim          # Run with FIM strategy
+# Use default model (mistralai/codestral-2508 - supports FIM)
+pnpm run test
+
+# Use a different model
+LLM_MODEL=anthropic/claude-3-haiku pnpm run test
 ```
 
 **Strategy Names in Output:**
 
-- `hole-filler` - HoleFiller strategy with chat completions
-- `fim` - FIM endpoint strategy
+- `ghost-provider-fim` - FIM strategy (model supports FIM)
+- `ghost-provider-holefiller` - HoleFiller strategy (chat-based)
 
 ### Clean Command
 
@@ -151,6 +150,7 @@ Is this acceptable? (y/n):
 - **History**: Keeps track of all approved and rejected outputs
 - **Interactive**: Only asks for input when truly needed
 - **Context-Rich**: Shows the full context when asking for approval
+- **Production Parity**: Uses the same prompt building code as `GhostInlineCompletionProvider`
 
 ## Notes
 

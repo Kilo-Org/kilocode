@@ -382,7 +382,7 @@ export class GitWatcher implements vscode.Disposable {
 	/**
 	 * Get the default branch name
 	 */
-	private async getDefaultBranch(): Promise<string> {
+	public async getDefaultBranch(): Promise<string> {
 		if (this.defaultBranch) {
 			return this.defaultBranch
 		}

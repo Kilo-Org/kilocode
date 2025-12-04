@@ -8,7 +8,7 @@ Kilo Code 需要 AI 模型提供商的 API 密钥才能运行。
 
 我们推荐以下选项来访问强大的 **Claude 4 Sonnet** 模型：
 
-- **Kilo Code API 提供商（推荐）：** 以有竞争力的价格提供对 OpenRouter 可用的所有模型的访问权限，并提供免费积分以供入门。 [查看定价](https://kilocode.ai/pricing)
+- **Kilo Code API 提供商（推荐）：** 以有竞争力的价格提供对 OpenRouter 可用的所有模型的访问权限，并提供免费积分以供入门。 [查看定价](https://kilo.ai/pricing)
 - **OpenRouter：** 通过单个 API 密钥提供对多个 AI 模型的访问权限。 [查看定价](https://openrouter.ai/models?order=pricing-low-to-high)。
 - **Anthropic：** 直接访问 Claude 模型。需要 API 访问批准，并且可能[根据您的层级有速率限制](https://docs.anthropic.com/en/api/rate-limits#requirements-to-advance-tier)。有关详细信息，请参阅 [Anthropic 的定价页面](https://www.anthropic.com/pricing#anthropic-api)。
 

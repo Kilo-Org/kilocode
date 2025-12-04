@@ -111,6 +111,10 @@ export default defineConfig(({ mode }) => {
 			// Ensure source maps are properly included in the build
 			minify: mode === "production" ? "esbuild" : false,
 			rollupOptions: {
+				input: {
+					main: resolve(__dirname, "index.html"),
+					"agent-manager": resolve(__dirname, "agent-manager.html"), // kilocode_change
+				},
 				external: ["vscode"], // kilocode_change: we inadvertently import vscode into the webview: @roo/modes => src/shared/modes => ../core/prompts/sections/custom-instructions
 				output: {
 					entryFileNames: `assets/[name].js`,
