@@ -131,11 +131,12 @@ describe("Multi-Agent State Isolation", () => {
 	describe("Session management", () => {
 		it("should add and remove sessions", () => {
 			store.set(upsertSessionAtom, {
-				id: "agent-1",
+				sessionId: "agent-1",
 				label: "Test Agent",
 				prompt: "test prompt",
 				status: "running",
 				startTime: Date.now(),
+				source: "local",
 			})
 
 			expect(store.get(sessionsArrayAtom)).toHaveLength(1)
@@ -147,20 +148,22 @@ describe("Multi-Agent State Isolation", () => {
 
 		it("should update existing session", () => {
 			store.set(upsertSessionAtom, {
-				id: "agent-1",
+				sessionId: "agent-1",
 				label: "Test",
 				prompt: "p",
 				status: "running",
 				startTime: 1000,
+				source: "local",
 			})
 
 			store.set(upsertSessionAtom, {
-				id: "agent-1",
+				sessionId: "agent-1",
 				label: "Test",
 				prompt: "p",
 				status: "done",
 				startTime: 1000,
 				endTime: 2000,
+				source: "local",
 			})
 
 			const sessions = store.get(sessionsArrayAtom)
