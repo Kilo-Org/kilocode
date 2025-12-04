@@ -11,6 +11,9 @@
 # production
 /build
 
+# copied files
+public/changelog.md
+
 # misc
 .DS_Store
 .env.local

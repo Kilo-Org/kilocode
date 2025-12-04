@@ -14,6 +14,7 @@ import { Package } from "@roo/package"
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui"
+import { ManualReleaseNotesButton } from "@/components/release-notes" // kilocode_change
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
@@ -84,7 +85,6 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 					/>
 				</div>
 				{/* kilocode_change end */}
-
 				<div className="flex flex-wrap items-center gap-2 mt-2">
 					<Button onClick={() => vscode.postMessage({ type: "exportSettings" })} className="w-28">
 						<Upload className="p-0.5" />
@@ -102,6 +102,12 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 						{t("settings:footer.settings.reset")}
 					</Button>
 				</div>
+
+				{/* kilocode_change start */}
+				<div className="flex flex-wrap items-center gap-2 mt-2">
+					<ManualReleaseNotesButton />
+				</div>
+				{/* kilocode_change end */}
 
 				{
 					// kilocode_change start
