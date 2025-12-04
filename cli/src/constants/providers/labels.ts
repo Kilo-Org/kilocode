@@ -40,6 +40,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	unbound: "Unbound",
 	requesty: "Requesty",
 	roo: "Roo",
+	oca: "Oracle Code Assist",
 	"vercel-ai-gateway": "Vercel AI Gateway",
 	"virtual-quota-fallback": "Virtual Quota Fallback",
 	"human-relay": "Human Relay",
