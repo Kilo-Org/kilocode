@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput, GhostContextProvider } from "../types"
+import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { HoleFiller, FillInAtCursorSuggestion, HoleFillerGhostPrompt } from "./HoleFiller"
 import { FimPromptBuilder, FimGhostPrompt } from "./FillInTheMiddle"
 import { GhostModel } from "../GhostModel"
@@ -13,6 +13,7 @@ import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import * as telemetry from "./AutocompleteTelemetry"
 import type { AutocompleteContext, CacheMatchType } from "./AutocompleteTelemetry"
+import { getProcessedSnippets } from "./getProcessedSnippets"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -136,6 +137,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private isFirstCall: boolean = true
 	private ignoreController?: Promise<RooIgnoreController>
 	private acceptedCommand: vscode.Disposable | null = null
+	private ide: VsCodeIde
+	private contextService: ContextRetrievalService
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -155,19 +158,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return ignoreController
 		})()
 
-		const ide = new VsCodeIde(context)
-		const contextService = new ContextRetrievalService(ide)
-		const contextProvider: GhostContextProvider = {
-			ide,
-			contextService,
-			model,
-			ignoreController: this.ignoreController,
-		}
-		this.holeFiller = new HoleFiller(contextProvider)
-		this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
+		this.ide = new VsCodeIde(context)
+		this.contextService = new ContextRetrievalService(this.ide)
+		this.holeFiller = new HoleFiller()
+		this.fimPromptBuilder = new FimPromptBuilder()
 
-		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
-		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
+		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(this.ide)
+		this.recentlyEditedTracker = new RecentlyEditedTracker(this.ide)
 
 		this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () =>
 			telemetry.captureAcceptSuggestion(),
@@ -215,10 +212,24 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 		const languageId = document.languageId
 
+		// Get processed snippets for context
+		const snippetsResult = await getProcessedSnippets(
+			autocompleteInput,
+			document.uri.fsPath,
+			this.contextService,
+			this.model,
+			this.ide,
+			this.ignoreController,
+		)
+
 		// Determine strategy based on model capabilities and call only the appropriate prompt builder
 		const prompt = this.model.supportsFim()
-			? await this.fimPromptBuilder.getFimPrompts(autocompleteInput, this.model.getModelName() ?? "codestral")
-			: await this.holeFiller.getPrompts(autocompleteInput, languageId)
+			? this.fimPromptBuilder.getFimPrompts(
+					snippetsResult,
+					autocompleteInput,
+					this.model.getModelName() ?? "codestral",
+				)
+			: this.holeFiller.getPrompts(snippetsResult, autocompleteInput, languageId)
 
 		return { prompt, prefix, suffix }
 	}

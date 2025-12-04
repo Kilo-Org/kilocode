@@ -1,7 +1,6 @@
-import { AutocompleteInput, GhostContextProvider } from "../types"
-import { getProcessedSnippets } from "./getProcessedSnippets"
+import { AutocompleteInput } from "../types"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
-import { FillInAtCursorSuggestion } from "./HoleFiller"
+import { FillInAtCursorSuggestion, ProcessedSnippetsResult } from "./HoleFiller"
 
 /**
  * Interface for models that can generate FIM (Fill-In-Middle) completions.
@@ -39,20 +38,18 @@ export interface FimCompletionResult {
 }
 
 export class FimPromptBuilder {
-	constructor(private contextProvider: GhostContextProvider) {}
-
 	/**
 	 * Build complete FIM prompt with all necessary data
+	 * @param snippetsResult - Pre-computed snippets from getProcessedSnippets
+	 * @param autocompleteInput - The autocomplete input context
+	 * @param modelName - The model name for template selection
 	 */
-	async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimGhostPrompt> {
-		const { filepathUri, helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
-			autocompleteInput,
-			autocompleteInput.filepath,
-			this.contextProvider.contextService,
-			this.contextProvider.model,
-			this.contextProvider.ide,
-			this.contextProvider.ignoreController,
-		)
+	getFimPrompts(
+		snippetsResult: ProcessedSnippetsResult,
+		autocompleteInput: AutocompleteInput,
+		modelName: string,
+	): FimGhostPrompt {
+		const { filepathUri, helper, snippetsWithUris, workspaceDirs } = snippetsResult
 
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
 		const prunedPrefixRaw = helper.prunedPrefix

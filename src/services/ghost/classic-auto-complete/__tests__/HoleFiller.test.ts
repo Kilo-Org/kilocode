@@ -1,23 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { HoleFiller, parseGhostResponse } from "../HoleFiller"
-import { AutocompleteInput, GhostContextProvider } from "../../types"
+import { HoleFiller, parseGhostResponse, ProcessedSnippetsResult } from "../HoleFiller"
+import { AutocompleteInput } from "../../types"
 import crypto from "crypto"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/snippets/types"
-
-// Mock the getProcessedSnippets module
-vi.mock("../getProcessedSnippets", () => ({
-	getProcessedSnippets: vi.fn().mockResolvedValue({
-		filepathUri: "file:///test.ts",
-		helper: {
-			filepath: "file:///test.ts",
-			lang: { name: "typescript", singleLineComment: "//" },
-			prunedPrefix: "const x = 1;\n",
-			prunedSuffix: "",
-		},
-		snippetsWithUris: [],
-		workspaceDirs: [],
-	}),
-}))
+import { Typescript } from "../../../continuedev/core/autocomplete/constants/AutocompleteLanguageInfo"
+import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../../continuedev/core/util/parameters"
 
 function createAutocompleteInput(
 	filepath: string = "/test.ts",
@@ -34,35 +21,53 @@ function createAutocompleteInput(
 	}
 }
 
+function createMockSnippetsResult(
+	prefix: string,
+	suffix: string,
+	filepath: string,
+	autocompleteInput: AutocompleteInput,
+	snippetsWithUris: any[] = [],
+	workspaceDirs: string[] = [],
+): ProcessedSnippetsResult {
+	const filepathUri = filepath.startsWith("file://") ? filepath : `file://${filepath}`
+
+	return {
+		filepathUri,
+		helper: {
+			lang: Typescript,
+			treePath: undefined,
+			workspaceUris: workspaceDirs,
+			fileContents: prefix + suffix,
+			fileLines: (prefix + suffix).split("\n"),
+			fullPrefix: prefix,
+			fullSuffix: suffix,
+			prunedPrefix: prefix,
+			prunedSuffix: suffix,
+			input: autocompleteInput,
+			options: DEFAULT_AUTOCOMPLETE_OPTS,
+			modelName: "test-model",
+			filepath: filepathUri,
+			pos: autocompleteInput.pos,
+			prunedCaretWindow: prefix + suffix,
+		},
+		snippetsWithUris,
+		workspaceDirs,
+	}
+}
+
 describe("HoleFiller", () => {
 	let holeFiller: HoleFiller
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-
-		// Create a minimal mock context provider for basic tests
-		const mockContextProvider: GhostContextProvider = {
-			contextService: {
-				initializeForFile: vi.fn().mockResolvedValue(undefined),
-			} as any,
-			model: {
-				getModelName: () => "codestral",
-			} as any,
-			ide: {
-				getWorkspaceDirs: vi.fn().mockResolvedValue([]),
-			} as any,
-			ignoreController: undefined,
-		}
-
-		holeFiller = new HoleFiller(mockContextProvider)
+		holeFiller = new HoleFiller()
 	})
 
 	describe("getPrompts", () => {
-		it("should generate prompts with QUERY/FILL_HERE format", async () => {
-			const { systemPrompt, userPrompt } = await holeFiller.getPrompts(
-				createAutocompleteInput("/test.ts", 0, 13),
-				"typescript",
-			)
+		it("should generate prompts with QUERY/FILL_HERE format", () => {
+			const autocompleteInput = createAutocompleteInput("/test.ts", 0, 13)
+			const snippetsResult = createMockSnippetsResult("const x = 1;\n", "", "/test.ts", autocompleteInput)
+			const { systemPrompt, userPrompt } = holeFiller.getPrompts(snippetsResult, autocompleteInput, "typescript")
 
 			// Verify system prompt contains auto-trigger keywords
 			expect(systemPrompt).toContain("Auto-Completion")
@@ -83,45 +88,24 @@ Return the COMPLETION tags`
 			expect(userPrompt).toBe(expected)
 		})
 
-		it("should include comment-wrapped context when provider is set", async () => {
-			// Update the mock for this specific test
-			const { getProcessedSnippets } = await import("../getProcessedSnippets")
-			;(getProcessedSnippets as any).mockResolvedValueOnce({
-				filepathUri: "file:///app.ts",
-				helper: {
-					filepath: "file:///app.ts",
-					lang: { name: "typescript", singleLineComment: "//" },
-					prunedPrefix: "function calculate() {\n  ",
-					prunedSuffix: "\n}",
-				},
-				snippetsWithUris: [
+		it("should include comment-wrapped context when snippets are provided", () => {
+			const autocompleteInput = createAutocompleteInput("/app.ts", 5, 0)
+			const snippetsResult = createMockSnippetsResult(
+				"function calculate() {\n  ",
+				"\n}",
+				"/app.ts",
+				autocompleteInput,
+				[
 					{
 						filepath: "file:///utils.ts",
 						content: "export function sum(a: number, b: number) {\n  return a + b\n}",
 						type: AutocompleteSnippetType.Code,
 					},
 				],
-				workspaceDirs: ["file:///workspace"],
-			})
-
-			const mockContextProvider: GhostContextProvider = {
-				contextService: {
-					initializeForFile: vi.fn().mockResolvedValue(undefined),
-				} as any,
-				model: {
-					getModelName: () => "codestral",
-				} as any,
-				ide: {
-					getWorkspaceDirs: vi.fn().mockResolvedValue(["file:///workspace"]),
-				} as any,
-				ignoreController: undefined,
-			}
-
-			const holeFillerWithContext = new HoleFiller(mockContextProvider)
-			const { userPrompt } = await holeFillerWithContext.getPrompts(
-				createAutocompleteInput("/app.ts", 5, 0),
-				"typescript",
+				["file:///workspace"],
 			)
+
+			const { userPrompt } = holeFiller.getPrompts(snippetsResult, autocompleteInput, "typescript")
 
 			// Use toContain for key parts instead of exact match to avoid whitespace issues
 			expect(userPrompt).toContain("<LANGUAGE>typescript</LANGUAGE>")

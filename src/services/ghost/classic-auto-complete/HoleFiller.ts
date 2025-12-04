@@ -1,7 +1,8 @@
-import { AutocompleteInput, GhostContextProvider } from "../types"
-import { getProcessedSnippets } from "./getProcessedSnippets"
+import { AutocompleteInput } from "../types"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+import { AutocompleteSnippet } from "../../continuedev/core/autocomplete/snippets/types"
+import { HelperVars } from "../../continuedev/core/autocomplete/util/HelperVars"
 
 /**
  * Interface for models that can generate chat-based completions.
@@ -19,6 +20,16 @@ export interface ChatCompletionModel {
 		cacheWriteTokens: number
 		cacheReadTokens: number
 	}>
+}
+
+/**
+ * Result from getProcessedSnippets, containing all context needed for prompt building
+ */
+export interface ProcessedSnippetsResult {
+	filepathUri: string
+	helper: HelperVars
+	snippetsWithUris: AutocompleteSnippet[]
+	workspaceDirs: string[]
 }
 
 export interface HoleFillerGhostPrompt {
@@ -69,13 +80,21 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 }
 
 export class HoleFiller {
-	constructor(private contextProvider: GhostContextProvider) {}
-
-	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
+	/**
+	 * Build prompts for hole-filler completion
+	 * @param snippetsResult - Pre-computed snippets from getProcessedSnippets
+	 * @param autocompleteInput - The autocomplete input context
+	 * @param languageId - The language ID of the document
+	 */
+	getPrompts(
+		snippetsResult: ProcessedSnippetsResult,
+		autocompleteInput: AutocompleteInput,
+		languageId: string,
+	): HoleFillerGhostPrompt {
 		return {
 			strategy: "hole_filler",
 			systemPrompt: this.getSystemInstructions(),
-			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
+			userPrompt: this.getUserPrompt(snippetsResult, languageId),
 			autocompleteInput,
 		}
 	}
@@ -184,15 +203,8 @@ Provide a subtle, non-intrusive completion after a typing pause.
 	/**
 	 * Build minimal prompt for auto-trigger with optional context
 	 */
-	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
-		const { helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
-			autocompleteInput,
-			autocompleteInput.filepath,
-			this.contextProvider.contextService,
-			this.contextProvider.model,
-			this.contextProvider.ide,
-			this.contextProvider.ignoreController,
-		)
+	getUserPrompt(snippetsResult: ProcessedSnippetsResult, languageId: string): string {
+		const { helper, snippetsWithUris, workspaceDirs } = snippetsResult
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
 		return (

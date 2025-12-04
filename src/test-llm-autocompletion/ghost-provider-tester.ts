@@ -1,17 +1,21 @@
-import { HoleFiller, FillInAtCursorSuggestion } from "../services/ghost/classic-auto-complete/HoleFiller.js"
+import { FillInAtCursorSuggestion, HoleFiller } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
 import { AutocompleteInput } from "../services/ghost/types.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 import { createContext } from "./utils.js"
 import { TestGhostModel } from "./test-ghost-model.js"
-import { createMockContextProvider } from "./mock-context-provider.js"
+import { buildTestPrompts } from "./prompt-builder.js"
 
 export class GhostProviderTester {
 	private model: TestGhostModel
+	private holeFiller: HoleFiller
+	private fimPromptBuilder: FimPromptBuilder
 
 	constructor() {
 		this.model = new TestGhostModel()
+		this.holeFiller = new HoleFiller()
+		this.fimPromptBuilder = new FimPromptBuilder()
 	}
 
 	async getCompletion(
@@ -28,8 +32,6 @@ export class GhostProviderTester {
 		const languageId = context.document.languageId || "javascript"
 		const filepath = context.document.uri.fsPath
 
-		// Common setup
-		const mockContextProvider = createMockContextProvider(prefix, suffix, filepath)
 		const autocompleteInput: AutocompleteInput = {
 			isUntitledFile: false,
 			completionId: crypto.randomUUID(),
@@ -39,10 +41,6 @@ export class GhostProviderTester {
 			recentlyEditedRanges: [],
 		}
 
-		// Create prompt builders using production code
-		const holeFiller = new HoleFiller(mockContextProvider)
-		const fimPromptBuilder = new FimPromptBuilder(mockContextProvider)
-
 		// Simple processSuggestion that just wraps the text
 		const processSuggestion = (text: string): FillInAtCursorSuggestion => ({
 			text,
@@ -50,15 +48,16 @@ export class GhostProviderTester {
 			suffix,
 		})
 
-		// Use production code to determine strategy and get completion
+		// Build prompts using test-specific prompt builder (avoids needing real VS Code services)
+		const prompts = buildTestPrompts(prefix, suffix, languageId, autocompleteInput, this.model.getModelName() ?? "")
+
+		// Use production code for LLM interaction
 		let completion: string
 		if (this.model.supportsFim()) {
-			const prompt = await fimPromptBuilder.getFimPrompts(autocompleteInput, this.model.getModelName() ?? "")
-			const result = await fimPromptBuilder.getFromFIM(this.model, prompt, processSuggestion)
+			const result = await this.fimPromptBuilder.getFromFIM(this.model, prompts.fim, processSuggestion)
 			completion = result.suggestion.text
 		} else {
-			const prompt = await holeFiller.getPrompts(autocompleteInput, languageId)
-			const result = await holeFiller.getFromChat(this.model, prompt, processSuggestion)
+			const result = await this.holeFiller.getFromChat(this.model, prompts.holeFiller, processSuggestion)
 			completion = result.suggestion.text
 		}
 
