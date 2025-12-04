@@ -102,15 +102,6 @@ export class AgentRegistry {
 		return session
 	}
 
-	public removeSession(sessionId: string): boolean {
-		const deleted = this.sessions.delete(sessionId)
-		if (deleted && this.selectedId === sessionId) {
-			const sessions = this.getSessions()
-			this.selectedId = sessions.length > 0 ? sessions[0].sessionId : null
-		}
-		return deleted
-	}
-
 	public getSession(sessionId: string): AgentSession | undefined {
 		return this.sessions.get(sessionId)
 	}

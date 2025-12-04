@@ -10,7 +10,7 @@ import {
 	type AgentSession,
 } from "../state/atoms/sessions"
 import { vscode } from "../utils/vscode"
-import { Plus, Trash2, Loader2, RefreshCw, GitBranch, Folder } from "lucide-react"
+import { Plus, Loader2, RefreshCw, GitBranch, Folder } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
@@ -27,11 +27,6 @@ export function SessionSidebar() {
 	const handleSelectSession = (id: string) => {
 		setSelectedId(id)
 		vscode.postMessage({ type: "agentManager.selectSession", sessionId: id })
-	}
-
-	const handleRemoveSession = (id: string, e: React.MouseEvent) => {
-		e.stopPropagation()
-		vscode.postMessage({ type: "agentManager.removeSession", sessionId: id })
 	}
 
 	const handleRefresh = () => {
@@ -90,7 +85,6 @@ export function SessionSidebar() {
 							session={session}
 							isSelected={selectedId === session.sessionId}
 							onSelect={() => handleSelectSession(session.sessionId)}
-							onRemove={(e) => handleRemoveSession(session.sessionId, e)}
 						/>
 					))
 				)}
@@ -127,16 +121,12 @@ function SessionItem({
 	session,
 	isSelected,
 	onSelect,
-	onRemove,
 }: {
 	session: AgentSession
 	isSelected: boolean
 	onSelect: () => void
-	onRemove: (e: React.MouseEvent) => void
 }) {
 	const { t } = useTranslation("agentManager")
-	// Only show delete for sessions we have local control over (running with a pid)
-	const hasLocalProcess = session.source === "local" && session.status === "running" && session.pid !== undefined
 
 	const formatDuration = (start: number, end?: number) => {
 		const duration = (end || Date.now()) - start
@@ -183,11 +173,6 @@ function SessionItem({
 				</div>
 				{isWorktree && isCompleted && <div className="ready-to-merge">{t("sidebar.readyToMerge")}</div>}
 			</div>
-			{hasLocalProcess && (
-				<button className="icon-btn" onClick={onRemove} title={t("sidebar.removeSession")}>
-					<Trash2 size={14} />
-				</button>
-			)}
 		</div>
 	)
 }
