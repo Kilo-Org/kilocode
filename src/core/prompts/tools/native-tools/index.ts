@@ -14,6 +14,7 @@ import { read_file } from "./read_file"
 import runSlashCommand from "./run_slash_command"
 import searchFiles from "./search_files"
 import switchMode from "./switch_mode"
+import terminalKill from "./terminal_kill" // kilocode_change
 import updateTodoList from "./update_todo_list"
 import writeToFile from "./write_to_file"
 // import { apply_diff_single_file } from "./apply_diff" // kilocode_change
@@ -50,6 +51,7 @@ export const nativeTools = [
 	runSlashCommand,
 	searchFiles,
 	switchMode,
+	terminalKill, // kilocode_change
 	updateTodoList,
 	writeToFile,
 ] satisfies OpenAI.Chat.ChatCompletionTool[]

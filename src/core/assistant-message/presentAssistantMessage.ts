@@ -42,6 +42,7 @@ import * as vscode from "vscode"
 import { ToolProtocol, isNativeProtocol } from "@roo-code/types"
 
 import { yieldPromise } from "../kilocode"
+import { terminalKillTool } from "../tools/TerminalKillTool" // kilocode_change
 import { evaluateGatekeeperApproval } from "./kilocode/gatekeeper"
 import { editFileTool } from "../tools/kilocode/editFileTool"
 import { deleteFileTool } from "../tools/kilocode/deleteFileTool"
@@ -257,20 +258,24 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
-					// kilocode_change start
+					// kilocode_change start: Add new tool cases
 					case "new_rule":
 						return `[${block.name} for '${block.params.path}']`
 					case "report_bug":
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
-					// kilocode_change end
+					case "terminal_kill":
+						return `[${block.name}]`
+					// kilocode_change end: Add new tool cases
 					case "run_slash_command":
 						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
 					case "generate_image":
 						return `[${block.name} for '${block.params.path}']`
+					// kilocode_change start: Add default case for new tools
 					default:
 						return `[${block.name}]`
+					// kilocode_change end: Add default case for new tools
 				}
 			}
 
@@ -765,7 +770,7 @@ export async function presentAssistantMessage(cline: Task) {
 					)
 					break
 				}
-				// kilocode_change start
+				// kilocode_change start: Add new tool case executions
 				case "new_rule":
 					await newRuleTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
@@ -775,8 +780,15 @@ export async function presentAssistantMessage(cline: Task) {
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				// kilocode_change end
-
+				case "terminal_kill":
+					await terminalKillTool.handle(cline, block as ToolUse<"terminal_kill">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+					})
+					break
+				// kilocode_change end: Add new tool case executions
 				case "run_slash_command":
 					await runSlashCommandTool.handle(cline, block as ToolUse<"run_slash_command">, {
 						askApproval,
