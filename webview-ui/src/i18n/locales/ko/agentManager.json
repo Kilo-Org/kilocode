@@ -5,7 +5,8 @@
 		"sessionsSection": "세션",
 		"emptyState": "아직 활성 에이전트가 없습니다.",
 		"startAgent": "에이전트 시작",
-		"removeSession": "제거"
+		"removeSession": "제거",
+		"refresh": "새로고침"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -15,6 +16,7 @@
 		"newButton": "새로 만들기",
 		"stopButtonTitle": "에이전트 중지",
 		"newButtonTitle": "새 에이전트",
+		"refreshButtonTitle": "메시지 새로고침",
 		"autoModeWarning": "전자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",

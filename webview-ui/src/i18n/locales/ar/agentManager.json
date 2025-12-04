@@ -5,7 +5,8 @@
 		"sessionsSection": "الجلسات",
 		"emptyState": "لا توجد وكلاء نشطين بعد.",
 		"startAgent": "بدء الوكيل",
-		"removeSession": "إزالة"
+		"removeSession": "إزالة",
+		"refresh": "تحديث"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -15,6 +16,7 @@
 		"newButton": "جديد",
 		"stopButtonTitle": "إيقاف الوكيل",
 		"newButtonTitle": "وكيل جديد",
+		"refreshButtonTitle": "تحديث الرسائل",
 		"autoModeWarning": "يعمل في الوضع التلقائي الكامل - سينفذ الوكيل الإجراءات دون تأكيد",
 		"starting": "جاري البدء...",
 		"startAriaLabel": "بدء الوكيل بالأمر المقدم",

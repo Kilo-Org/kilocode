@@ -5,7 +5,8 @@
 		"sessionsSection": "セッション",
 		"emptyState": "アクティブなエージェントはまだありません。",
 		"startAgent": "エージェントを開始",
-		"removeSession": "削除"
+		"removeSession": "削除",
+		"refresh": "更新"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -15,6 +16,7 @@
 		"newButton": "新規",
 		"stopButtonTitle": "エージェントを停止",
 		"newButtonTitle": "新しいエージェント",
+		"refreshButtonTitle": "メッセージを更新",
 		"autoModeWarning": "フルオートモードで実行中 - エージェントは確認なしでアクションを実行します",
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",

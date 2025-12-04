@@ -5,7 +5,8 @@
 		"sessionsSection": "Сессии",
 		"emptyState": "Активных агентов пока нет.",
 		"startAgent": "Запустить агента",
-		"removeSession": "Удалить"
+		"removeSession": "Удалить",
+		"refresh": "Обновить"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -15,6 +16,7 @@
 		"newButton": "Новый",
 		"stopButtonTitle": "Остановить агента",
 		"newButtonTitle": "Новый агент",
+		"refreshButtonTitle": "Обновить сообщения",
 		"autoModeWarning": "Работает в полностью автоматическом режиме - агент будет выполнять действия без подтверждения",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустить агента с указанным промптом",

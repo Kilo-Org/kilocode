@@ -5,7 +5,8 @@
 		"sessionsSection": "Sessões",
 		"emptyState": "Nenhum agente ativo ainda.",
 		"startAgent": "Iniciar Agente",
-		"removeSession": "Remover"
+		"removeSession": "Remover",
+		"refresh": "Atualizar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar um novo agente",
@@ -15,6 +16,7 @@
 		"newButton": "Novo",
 		"stopButtonTitle": "Parar Agente",
 		"newButtonTitle": "Novo Agente",
+		"refreshButtonTitle": "Atualizar mensagens",
 		"autoModeWarning": "Executando em modo totalmente automático - o agente executará ações sem confirmação",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente com o prompt fornecido",

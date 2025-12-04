@@ -5,7 +5,8 @@
 		"sessionsSection": "Sesi",
 		"emptyState": "Belum ada agen aktif.",
 		"startAgent": "Mulai Agen",
-		"removeSession": "Hapus"
+		"removeSession": "Hapus",
+		"refresh": "Refresh"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -15,6 +16,7 @@
 		"newButton": "Baru",
 		"stopButtonTitle": "Hentikan Agen",
 		"newButtonTitle": "Agen Baru",
+		"refreshButtonTitle": "Refresh pesan",
 		"autoModeWarning": "Berjalan dalam mode otomatis penuh - agen akan menjalankan tindakan tanpa konfirmasi",
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
