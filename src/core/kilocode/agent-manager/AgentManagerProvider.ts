@@ -2,7 +2,14 @@ import * as vscode from "vscode"
 import { spawn, ChildProcess } from "node:child_process"
 import { AgentRegistry } from "./AgentRegistry"
 import { findKilocodeCli } from "./CliPathResolver"
-import { CliOutputParser, type StreamEvent, type KilocodeStreamEvent, type KilocodePayload } from "./CliOutputParser"
+import {
+	CliOutputParser,
+	type StreamEvent,
+	type KilocodeStreamEvent,
+	type KilocodePayload,
+	type SessionCreatedStreamEvent,
+} from "./CliOutputParser"
+import { RemoteSessionService } from "./RemoteSessionService"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
@@ -22,6 +29,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private panel: vscode.WebviewPanel | undefined
 	private disposables: vscode.Disposable[] = []
 	private registry: AgentRegistry
+	private remoteSessionService: RemoteSessionService
 	private processes: Map<string, ChildProcess> = new Map()
 	private timeouts: Map<string, NodeJS.Timeout> = new Map()
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
@@ -34,6 +42,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		private readonly outputChannel: vscode.OutputChannel,
 	) {
 		this.registry = new AgentRegistry()
+		this.remoteSessionService = new RemoteSessionService({ outputChannel })
 	}
 
 	/**
@@ -87,6 +96,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			switch (message.type) {
 				case "agentManager.webviewReady":
 					this.postStateToWebview()
+					void this.fetchAndPostRemoteSessions()
 					break
 				case "agentManager.startSession":
 					void this.startAgentSession(message.prompt as string)
@@ -99,6 +109,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 					break
 				case "agentManager.selectSession":
 					this.selectSession(message.sessionId as string | null)
+					break
+				case "agentManager.refreshRemoteSessions":
+					void this.fetchAndPostRemoteSessions()
+					break
+				case "agentManager.refreshSessionMessages":
+					void this.refreshSessionMessages(message.sessionId as string)
 					break
 			}
 		} catch (error) {
@@ -133,10 +149,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Create the session
 		const session = this.registry.createSession(prompt)
-		this.sessionMessages.set(session.id, [])
-		this.outputChannel.appendLine(`Session created: ${session.id}`)
+		this.sessionMessages.set(session.localId, [])
+		this.outputChannel.appendLine(`Session created: ${session.localId}`)
 
 		// Build CLI command
 		const cliArgs = ["--auto", "--json", `--workspace=${workspace}`, prompt]
@@ -152,9 +167,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			shell: false,
 		})
 
-		this.processes.set(session.id, proc)
+		this.processes.set(session.localId, proc)
 		if (proc.pid) {
-			this.registry.setSessionPid(session.id, proc.pid)
+			this.registry.setSessionPid(session.localId, proc.pid)
 			this.outputChannel.appendLine(`[AgentManager] Process PID: ${proc.pid}`)
 		} else {
 			this.outputChannel.appendLine(`[AgentManager] WARNING: No PID - spawn may have failed`)
@@ -166,16 +181,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// Set timeout
 		const timeout = setTimeout(() => {
-			this.log(session.id, "Timed out. Killing agent.")
-			this.registry.updateSessionStatus(session.id, "error", undefined, "Timeout")
+			this.log(session.localId, "Timed out. Killing agent.")
+			this.registry.updateSessionStatus(session.localId, "error", undefined, "Timeout")
 			proc.kill("SIGTERM")
 			this.postStateToWebview()
 		}, SESSION_TIMEOUT_MS)
-		this.timeouts.set(session.id, timeout)
+		this.timeouts.set(session.localId, timeout)
 
 		// Create parser for this session
 		const parser = new CliOutputParser()
-		this.parsers.set(session.id, parser)
+		this.parsers.set(session.localId, parser)
 
 		// Parse nd-json output from stdout
 		proc.stdout?.on("data", (chunk) => {
@@ -187,7 +202,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			const { events } = parser.parse(chunkStr)
 
 			for (const event of events) {
-				this.handleCliEvent(session.id, event)
+				this.handleCliEvent(session.localId, event)
 			}
 
 			this.postStateToWebview()
@@ -197,7 +212,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		proc.stderr?.on("data", (data) => {
 			const stderrStr = String(data).trim()
 			this.outputChannel.appendLine(`[AgentManager] stderr: ${stderrStr}`)
-			this.log(session.id, `stderr: ${stderrStr}`)
+			this.log(session.localId, `stderr: ${stderrStr}`)
 			this.postStateToWebview()
 		})
 
@@ -206,38 +221,38 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.outputChannel.appendLine(`[AgentManager] Process exited: code=${code}, signal=${signal}`)
 
 			// Flush any buffered parser output to avoid dropping the final message when no newline is sent
-			const parser = this.parsers.get(session.id)
+			const parser = this.parsers.get(session.localId)
 			if (parser) {
 				const { events } = parser.flush()
 				for (const event of events) {
-					this.handleCliEvent(session.id, event)
+					this.handleCliEvent(session.localId, event)
 				}
-				this.parsers.delete(session.id)
+				this.parsers.delete(session.localId)
 			}
 
-			const t = this.timeouts.get(session.id)
+			const t = this.timeouts.get(session.localId)
 			if (t) clearTimeout(t)
-			this.timeouts.delete(session.id)
-			this.processes.delete(session.id)
+			this.timeouts.delete(session.localId)
+			this.processes.delete(session.localId)
 
 			if (code === 0) {
-				this.registry.updateSessionStatus(session.id, "done", code)
-				this.log(session.id, "Agent completed")
+				this.registry.updateSessionStatus(session.localId, "done", code)
+				this.log(session.localId, "Agent completed")
 			} else {
-				this.registry.updateSessionStatus(session.id, "error", code ?? undefined)
-				this.log(session.id, `Agent exited with code ${code ?? "?"}${signal ? ` signal ${signal}` : ""}`)
+				this.registry.updateSessionStatus(session.localId, "error", code ?? undefined)
+				this.log(session.localId, `Agent exited with code ${code ?? "?"}${signal ? ` signal ${signal}` : ""}`)
 			}
 			this.postStateToWebview()
 		})
 
 		proc.on("error", (error) => {
 			this.outputChannel.appendLine(`[AgentManager] Process spawn error: ${error.message}`)
-			this.log(session.id, `Process error: ${error.message}`)
-			this.registry.updateSessionStatus(session.id, "error", undefined, error.message)
+			this.log(session.localId, `Process error: ${error.message}`)
+			this.registry.updateSessionStatus(session.localId, "error", undefined, error.message)
 			this.postStateToWebview()
 		})
 
-		this.outputChannel.appendLine(`[AgentManager] spawned CLI process ${session.id} pid=${proc.pid}`)
+		this.outputChannel.appendLine(`[AgentManager] spawned CLI process ${session.localId} pid=${proc.pid}`)
 		this.postStateToWebview()
 	}
 
@@ -265,10 +280,15 @@ export class AgentManagerProvider implements vscode.Disposable {
 			case "complete":
 				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
 				this.log(sessionId, "Agent completed")
+				void this.fetchAndPostRemoteSessions()
 				break
 			case "interrupted":
 				this.registry.updateSessionStatus(sessionId, "stopped", undefined, event.reason)
 				this.log(sessionId, event.reason || "Execution interrupted")
+				break
+			case "session_created":
+				this.registry.setSessionIdFor(sessionId, event.sessionId)
+				this.log(sessionId, `Remote session: ${event.sessionId}`)
 				break
 		}
 	}
@@ -408,12 +428,47 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.registry.appendLog(sessionId, line)
 	}
 
-	/**
-	 * Select a session to view its details/logs
-	 */
 	private selectSession(sessionId: string | null): void {
 		this.registry.selectedId = sessionId
 		this.postStateToWebview()
+
+		if (this.needsRemoteMessageFetch(sessionId)) {
+			void this.fetchRemoteSessionMessages(sessionId!)
+		}
+	}
+
+	private needsRemoteMessageFetch(sessionId: string | null): boolean {
+		if (!sessionId) return false
+		const hasLocalMessages = this.sessionMessages.has(sessionId)
+		const hasActiveProcess = this.processes.has(sessionId)
+		return !hasLocalMessages && !hasActiveProcess
+	}
+
+	private async fetchRemoteSessionMessages(sessionId: string): Promise<void> {
+		try {
+			const messages = await this.remoteSessionService.fetchSessionMessages(sessionId)
+			if (!messages) return
+
+			this.storeAndPostMessages(sessionId, messages)
+		} catch (error) {
+			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote session messages: ${error}`)
+		}
+	}
+
+	private storeAndPostMessages(sessionId: string, messages: ClineMessage[]): void {
+		this.outputChannel.appendLine(`[AgentManager] Fetched ${messages.length} messages for session: ${sessionId}`)
+
+		this.sessionMessages.set(sessionId, messages)
+		this.postMessage({
+			type: "agentManager.chatMessages",
+			sessionId,
+			messages,
+		})
+	}
+
+	private async refreshSessionMessages(sessionId: string): Promise<void> {
+		this.sessionMessages.delete(sessionId)
+		await this.fetchRemoteSessionMessages(sessionId)
 	}
 
 	/**
@@ -469,6 +524,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 			type: "agentManager.state",
 			state: this.registry.getState(),
 		})
+	}
+
+	/**
+	 * Fetch remote sessions and post them to the webview
+	 */
+	private async fetchAndPostRemoteSessions(): Promise<void> {
+		try {
+			const remoteSessions = await this.remoteSessionService.fetchRemoteSessions()
+
+			this.postMessage({
+				type: "agentManager.remoteSessions",
+				sessions: remoteSessions,
+			})
+		} catch (error) {
+			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote sessions: ${error}`)
+		}
 	}
 
 	private postMessage(message: unknown): void {
@@ -571,7 +642,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// Update all running sessions to stopped
 		for (const session of this.registry.getSessions()) {
 			if (session.status === "running") {
-				this.registry.updateSessionStatus(session.id, "stopped", undefined, "Stopped by user")
+				this.registry.updateSessionStatus(session.localId, "stopped", undefined, "Stopped by user")
 			}
 		}
 

@@ -69,7 +69,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
 		// Enable text handling
-		const sessionId = (provider as any).registry.getSessions()[0].id as string
+		const sessionId = (provider as any).registry.getSessions()[0].localId as string
 		;(provider as any).handleKilocodeEvent(sessionId, {
 			streamEventType: "kilocode",
 			payload: { type: "say", say: "api_req_started" },
@@ -92,7 +92,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("adds metadata text for tool requests and skips non chat events", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("meta").id
+		const sessionId = registry.createSession("meta").localId
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Non-chat event should be logged but not added
@@ -120,7 +120,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("adds fallback text for checkpoint_saved", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("checkpoint").id
+		const sessionId = registry.createSession("checkpoint").localId
 		;(provider as any).sessionMessages.set(sessionId, [])
 		;(provider as any).handleKilocodeEvent(sessionId, {
 			streamEventType: "kilocode",
@@ -140,7 +140,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("dedupes repeated events with same ts/type/say/ask", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("dedupe").id
+		const sessionId = registry.createSession("dedupe").localId
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Enable text handling
@@ -166,7 +166,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("skips user echo before api_req_started", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("echo").id
+		const sessionId = registry.createSession("echo").localId
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// say:text before api_req_started -> skipped
@@ -205,7 +205,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("drops empty partial messages and allows final to overwrite partial", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("partial").id
+		const sessionId = registry.createSession("partial").localId
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Enable text handling

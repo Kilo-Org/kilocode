@@ -5,7 +5,7 @@ import { selectedSessionAtom, selectedSessionIdAtom, startSessionFailedCounterAt
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
-import { SquareTerminal, Clock, Plus, Square, AlertCircle, Loader2, Zap, SendHorizontal } from "lucide-react"
+import { Clock, Plus, Square, Loader2, Zap, SendHorizontal, RefreshCw } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 
@@ -19,11 +19,15 @@ export function SessionDetail() {
 	}
 
 	const handleStop = () => {
-		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.id })
+		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.localId })
 	}
 
 	const handleNewAgent = () => {
 		setSelectedId(null)
+	}
+
+	const handleRefresh = () => {
+		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.localId })
 	}
 
 	const formatDuration = (start: number, end?: number) => {
@@ -34,7 +38,7 @@ export function SessionDetail() {
 		return `${seconds}s`
 	}
 
-	const isError = selectedSession.status === "error"
+	const isRunning = selectedSession.status === "running"
 
 	return (
 		<div className="session-detail">
@@ -44,12 +48,12 @@ export function SessionDetail() {
 						{selectedSession.label}
 					</div>
 					<div className="header-meta">
-						<div
-							style={{ display: "flex", alignItems: "center", gap: 4 }}
-							className={isError ? "status-error" : undefined}>
-							{isError ? <AlertCircle size={12} /> : <SquareTerminal size={12} />}
-							<span>{t(`status.${selectedSession.status}`)}</span>
-						</div>
+						{isRunning && (
+							<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+								<Loader2 size={12} className="spinning" />
+								<span>{t("status.running")}</span>
+							</div>
+						)}
 						<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
 							<Clock size={12} />
 							<span>{formatDuration(selectedSession.startTime, selectedSession.endTime)}</span>
@@ -58,13 +62,22 @@ export function SessionDetail() {
 				</div>
 
 				<div className="header-actions">
-					{selectedSession.status === "running" && (
+					{isRunning && (
 						<button
 							className="btn btn-danger"
 							onClick={handleStop}
 							aria-label={t("sessionDetail.stopButtonTitle")}
 							title={t("sessionDetail.stopButtonTitle")}>
 							<Square size={12} fill="currentColor" /> {t("sessionDetail.stopButton")}
+						</button>
+					)}
+					{!isRunning && (
+						<button
+							className="icon-btn"
+							onClick={handleRefresh}
+							aria-label={t("sessionDetail.refreshButtonTitle")}
+							title={t("sessionDetail.refreshButtonTitle")}>
+							<RefreshCw size={14} />
 						</button>
 					)}
 					<button
@@ -77,23 +90,16 @@ export function SessionDetail() {
 				</div>
 			</div>
 
-			{isError && selectedSession.error && (
-				<div className="session-error-banner" role="alert">
-					<AlertCircle size={16} />
-					<span>{selectedSession.error}</span>
-				</div>
-			)}
-
-			{selectedSession.status === "running" && (
+			{isRunning && (
 				<div className="full-auto-banner">
 					<Zap size={14} />
 					<span>{t("sessionDetail.autoModeWarning")}</span>
 				</div>
 			)}
 
-			<MessageList sessionId={selectedSession.id} />
+			<MessageList sessionId={selectedSession.localId} />
 
-			<ChatInput sessionId={selectedSession.id} disabled={selectedSession.status !== "running"} />
+			<ChatInput sessionId={selectedSession.localId} disabled={!isRunning} />
 		</div>
 	)
 }

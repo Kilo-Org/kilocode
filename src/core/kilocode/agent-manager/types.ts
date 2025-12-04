@@ -3,18 +3,28 @@
  */
 
 export type AgentStatus = "running" | "done" | "error" | "stopped"
+export type SessionSource = "local" | "remote"
 
 export interface AgentSession {
-	id: string
-	label: string // Truncated prompt (first ~30 chars)
-	prompt: string // Full prompt
+	localId: string
+	label: string
+	prompt: string
 	status: AgentStatus
 	startTime: number
 	endTime?: number
 	exitCode?: number
 	error?: string
-	logs: string[] // Log lines from the agent runner
-	pid?: number // Child process PID
+	logs: string[]
+	pid?: number
+	sessionId?: string
+	source: SessionSource
+}
+
+export interface RemoteSession {
+	session_id: string
+	title: string
+	created_at: string
+	updated_at: string
 }
 
 export interface AgentManagerState {
@@ -31,6 +41,7 @@ export type AgentManagerMessage =
 	| { type: "agentManager.stopSession"; sessionId: string }
 	| { type: "agentManager.removeSession"; sessionId: string }
 	| { type: "agentManager.selectSession"; sessionId: string }
+	| { type: "agentManager.refreshRemoteSessions" }
 
 /**
  * Messages from Extension to Webview
@@ -40,3 +51,4 @@ export type AgentManagerExtensionMessage =
 	| { type: "agentManager.sessionUpdated"; session: AgentSession }
 	| { type: "agentManager.sessionRemoved"; sessionId: string }
 	| { type: "agentManager.error"; error: string }
+	| { type: "agentManager.remoteSessions"; sessions: RemoteSession[] }

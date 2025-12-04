@@ -9,7 +9,9 @@ import {
 	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	sessionOrderAtom,
+	setRemoteSessionsAtom,
 	type AgentSession,
+	type RemoteSession,
 } from "../atoms/sessions"
 
 interface AgentManagerState {
@@ -32,10 +34,16 @@ interface StartSessionFailedMessage {
 	type: "agentManager.startSessionFailed"
 }
 
+interface RemoteSessionsMessage {
+	type: "agentManager.remoteSessions"
+	sessions: RemoteSession[]
+}
+
 type ExtensionMessage =
 	| ChatMessagesMessage
 	| StateMessage
 	| StartSessionFailedMessage
+	| RemoteSessionsMessage
 	| { type: string; [key: string]: unknown }
 
 /**
@@ -49,6 +57,7 @@ export function useAgentManagerMessages() {
 	const updateSessionStatus = useSetAtom(updateSessionStatusAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const setStartSessionFailedCounter = useSetAtom(startSessionFailedCounterAtom)
+	const setRemoteSessions = useSetAtom(setRemoteSessionsAtom)
 	const sessionOrder = useAtomValue(sessionOrderAtom)
 	const hasInitializedSelection = useRef(false)
 
@@ -65,19 +74,15 @@ export function useAgentManagerMessages() {
 
 				case "agentManager.state": {
 					const { state } = message as StateMessage
-					// Sync sessions from extension state to Jotai
-					// This handles initial load and session lifecycle events
 					for (const session of state.sessions) {
 						upsertSession(session)
 					}
-					// Remove sessions that no longer exist in extension state
-					const extensionSessionIds = new Set(state.sessions.map((s) => s.id))
-					for (const id of sessionOrder) {
-						if (!extensionSessionIds.has(id)) {
-							removeSession(id)
+					const extensionSessionIds = new Set(state.sessions.map((s) => s.localId))
+					for (const localId of sessionOrder) {
+						if (!extensionSessionIds.has(localId)) {
+							removeSession(localId)
 						}
 					}
-					// Only set selectedId on initial load to avoid overriding user's selection
 					if (!hasInitializedSelection.current && state.selectedId !== undefined) {
 						setSelectedSessionId(state.selectedId)
 						hasInitializedSelection.current = true
@@ -88,6 +93,12 @@ export function useAgentManagerMessages() {
 				case "agentManager.startSessionFailed": {
 					// Increment counter so components can reset their loading state
 					setStartSessionFailedCounter((c) => c + 1)
+					break
+				}
+
+				case "agentManager.remoteSessions": {
+					const { sessions } = message as RemoteSessionsMessage
+					setRemoteSessions(sessions)
 					break
 				}
 			}
@@ -102,6 +113,7 @@ export function useAgentManagerMessages() {
 		updateSessionStatus,
 		setSelectedSessionId,
 		setStartSessionFailedCounter,
+		setRemoteSessions,
 		sessionOrder,
 	])
 }
