@@ -1,5 +1,10 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		validate_data(result)
-		return result
+		result.each do |item|
+			puts item["name"]
+		end
+	rescue JSON::ParserError => e
+		puts "Error parsing JSON: #{e.message}"
+	end
+end

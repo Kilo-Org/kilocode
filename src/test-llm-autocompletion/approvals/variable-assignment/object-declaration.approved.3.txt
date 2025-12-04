@@ -1,1 +1,18 @@
-const config = {}
+const config = require('../config');
+const { get } = require('../utils/request');
+const { getToken } = require('../utils/token');
+
+const getUserInfo = async (ctx) => {
+  const { code } = ctx.request.body;
+  const token = await getToken(code);
+  const url = `${config.userInfoUrl}?access_token=${token.access_token}&openid=${token.openid}&lang=zh_CN`;
+  const userInfo = await get(url);
+  ctx.body = {
+    data: userInfo,
+    success: true,
+  };
+};
+
+module.exports = {
+  getUserInfo,
+};

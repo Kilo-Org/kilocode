@@ -1,1 +1,3 @@
-const userName = "";
+const userName = "John";
+const userQuestion = "Will I become a werewolf tonight?";
+

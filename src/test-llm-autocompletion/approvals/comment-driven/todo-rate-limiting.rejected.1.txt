@@ -1,5 +1,4 @@
 function handleAPIRequest(req, res) {
-  // TODO: Implement rate limiting to prevent abuse
-  // Add rate limiting logic here
+  // TODO: Implement rate limiting to prevent abuse of the API
   processRequest(req, res);
 }

@@ -2,3 +2,9 @@ def calculate_total(items)
 	sum = 0
 	items.each { |item| sum += item }
 	return sum
+end
+
+def calculate_total_with_tax(items, tax_rate)
+	sum = calculate_total(items)
+	sum * (1 + tax_rate)
+end

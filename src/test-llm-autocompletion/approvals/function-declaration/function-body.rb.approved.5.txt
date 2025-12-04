@@ -1,2 +1,12 @@
 def calculate_sum(a, b)
-    return a + b
+	sum = a + b
+	return sum
+end
+
+puts "Enter first number"
+first_number = gets.chomp.to_i
+
+puts "Enter second number"
+second_number = gets.chomp.to_i
+
+puts "The sum is #{calculate_sum(first_number, second_number)}"

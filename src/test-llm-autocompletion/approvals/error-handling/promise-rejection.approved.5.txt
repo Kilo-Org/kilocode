@@ -1,7 +1,0 @@
-fetchUser(userId)
-	.then(user => {
-		return processUser(user);
-	})
-	.catch(error => {
-		console.error('Error fetching user:', error);
-	})

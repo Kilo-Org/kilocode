@@ -9,3 +9,7 @@ class Dog < Animal
 		super(name)
 		@breed = breed
 	end
+end
+
+dog = Dog.new("Fido", "Beagle")
+puts dog.inspect

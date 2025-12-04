@@ -1,8 +1,7 @@
 function processOrder(order) {
+  // TODO: Add comprehensive logging for order processing
   console.log(`Processing order: ${JSON.stringify(order)}`);
-  console.log(`Order validation started at: ${new Date().toISOString()}`);
+  // TODO: Add validation for the order object
   const result = validateOrder(order);
-  console.log(`Order validation completed at: ${new Date().toISOString()}`);
-  console.log(`Order processing result: ${JSON.stringify(result)}`);
   return result;
 }

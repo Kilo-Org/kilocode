@@ -1,12 +1,16 @@
 function processData(data) {
-  // TODO: Implement error handling
-  try {
-    const processedData = data.map(item => {
-      // Process each item
-    });
-  } catch (error) {
-    console.error('Error processing data:', error);
-    throw error;
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
   }
+
+  // TODO: Implement data processing logic
+  const processedData = {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    // Add more fields as needed
+  };
+
   return processedData;
 }

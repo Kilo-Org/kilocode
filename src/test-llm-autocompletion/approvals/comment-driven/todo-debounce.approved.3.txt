@@ -1,10 +1,8 @@
 function handleSearch(query) {
   // TODO: Add debounce to prevent excessive API calls
-  const debounceTimer = setTimeout(() => {
-    searchAPI(query);
-  }, 500);
-
-  return () => clearTimeout(debounceTimer);
-}
+  // TODO: Add error handling for API failures
+  // TODO: Add loading state
+  // TODO: Add caching to prevent duplicate API calls
+  // TODO: Add pagination or infinite scroll for large result sets
   searchAPI(query);
 }

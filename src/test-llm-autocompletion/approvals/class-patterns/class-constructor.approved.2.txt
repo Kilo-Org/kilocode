@@ -2,3 +2,16 @@ class User {
 	constructor(username, email, role) {
 		this.username = username;
 		this.email = email;
+		this.role = role;
+	}
+
+	login() {
+		console.log(`${this.username} has logged in`);
+		return this;
+	}
+
+	logout() {
+		console.log(`${this.username} has logged out`);
+		return this;
+	}
+}

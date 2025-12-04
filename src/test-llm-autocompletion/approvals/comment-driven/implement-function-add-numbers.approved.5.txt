@@ -1,0 +1,32 @@
+// Implement functino to add two numbers
+// You are not allowed to use + and - operators
+// You are not allowed to use incr/decr operators
+// You may use bitwise operators
+
+#include <iostream>
+
+using namespace std;
+
+int add(int a, int b) {
+    int sum = a;
+    int carry = b;
+
+    while (carry != 0) {
+        int temp = sum & carry;
+        sum = sum ^ carry;
+        carry = temp << 1;
+    }
+
+    return sum;
+}
+
+int main() {
+    int a, b;
+
+    cout << "Enter two numbers: ";
+    cin >> a >> b;
+
+    cout << "Sum: " << add(a, b) << endl;
+
+    return 0;
+}

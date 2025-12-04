@@ -1,4 +1,5 @@
 function registerUser(email, password) {
-  // TODO: Add input validation for email and password<<<AUTOCOMPLETE_HERE>>>
+  // TODO: Add input validation for email and password
+
   return createUser(email, password);
 }

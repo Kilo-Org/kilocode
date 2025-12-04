@@ -10,3 +10,13 @@ class Dog < Animal
 		@breed = breed
 	end
 end
+
+class Cat < Animal
+	def initialize(name, color)
+		super(name)
+		@color = color
+	end
+end
+
+dog = Dog.new("Fido", "Golden Retriever")
+cat = Cat.new("Whiskers", "Black")

@@ -32,26 +32,14 @@ class Triangle < Shape
 	end
 
 	def area
-		(@base * @height) / 2
+		@base * @height / 2
 	end
 end
 
-class Square < Shape
-	def initialize(side)
-		@side = side
-	end
+rectangle = Rectangle.new(10, 20)
+circle = Circle.new(10)
+triangle = Triangle.new(10, 20)
 
-	def area
-		@side * @side
-	end
-end
-
-rectangle = Rectangle.new(5, 10)
-circle = Circle.new(7)
-triangle = Triangle.new(8, 12)
-square = Square.new(6)
-
-puts "Area of Rectangle: #{rectangle.area}"
-puts "Area of Circle: #{circle.area}"
-puts "Area of Triangle: #{triangle.area}"
-puts "Area of Square: #{square.area}"
+puts rectangle.area
+puts circle.area
+puts triangle.area

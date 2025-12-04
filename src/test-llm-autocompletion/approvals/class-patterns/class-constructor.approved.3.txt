@@ -4,3 +4,10 @@ class User {
 		this.email = email;
 		this.role = role;
 	}
+}
+
+const user1 = new User('John', 'john@example.com', 'admin');
+const user2 = new User('Jane', 'jane@example.com', 'user');
+
+console.log(user1);
+console.log(user2);

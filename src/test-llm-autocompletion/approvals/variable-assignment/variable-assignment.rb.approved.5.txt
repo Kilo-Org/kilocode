@@ -1,0 +1,11 @@
+x = 10
+y = 20
+
+# x = x + y
+# y = x - y
+# x = x - y
+
+x, y = y, x
+
+print(x)
+print(y)

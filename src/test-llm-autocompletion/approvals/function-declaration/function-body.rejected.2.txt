@@ -1,0 +1,24 @@
+function calculateSum(a, b) {
+    return a + b;
+  }
+
+  function calculateDifference(a, b) {
+    return a - b;
+  }
+
+  function calculateProduct(a, b) {
+    return a * b;
+  }
+
+  function calculateQuotient(a, b) {
+    if (b === 0) {
+      return "Cannot divide by zero";
+    }
+    return a / b;
+  }
+
+  // Example usage:
+  console.log(calculateSum(5, 3)); // Output: 8
+  console.log(calculateDifference(5, 3)); // Output: 2
+  console.log(calculateProduct(5, 3)); // Output: 15
+  console.log(calculateQuotient(6, 3)); // Output: 2

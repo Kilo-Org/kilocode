@@ -2,4 +2,15 @@ fetchUser(userId)
 	.then(user => {
 		return processUser(user);
 	})
-	.catch(<<<AUTOCOMPLETE_HERE>>>
+	.catch(err => {
+		// handle error
+	});
+
+async function showUserAvatar(userId) {
+	try {
+		const user = await fetchUser(userId);
+		const avatar = await processUser(user);
+	} catch (err) {
+		// handle error
+	}
+}

@@ -1,2 +1,10 @@
 function greet(name) { return 'Hello ' + name; }
-greet(<<<AUTOCOMPLETE_HERE>>>
+greet('World'); // 'Hello World'
+
+// Arrow Function
+const greet = (name) => { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+
+// Arrow Function with implicit return
+const greet = (name) => 'Hello ' + name;
+greet('World'); // 'Hello World'

@@ -11,9 +11,4 @@ class Dog < Animal
 	end
 end
 
-class Cat < Animal
-	def initialize(name, color)
-		super(name)
-		@color = color
-	end
-end
+dog = Dog.new("Fido", "Beagle")
