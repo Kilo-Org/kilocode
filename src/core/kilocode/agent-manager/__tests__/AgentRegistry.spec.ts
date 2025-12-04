@@ -30,18 +30,6 @@ describe("AgentRegistry", () => {
 		expect(registry.selectedId).toBe(second.sessionId)
 	})
 
-	it("re-selects the next session when the selected one is removed", () => {
-		const first = registry.createSession("session-1", "first")
-		const second = registry.createSession("session-2", "second")
-		expect(registry.selectedId).toBe(second.sessionId) // latest auto-selected
-
-		registry.removeSession(second.sessionId)
-		expect(registry.selectedId).toBe(first.sessionId)
-
-		registry.removeSession(first.sessionId)
-		expect(registry.selectedId).toBeNull()
-	})
-
 	it("sorts sessions by most recent start time", () => {
 		const first = registry.createSession("session-1", "first")
 		vi.advanceTimersByTime(1)

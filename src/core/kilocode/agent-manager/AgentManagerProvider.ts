@@ -119,9 +119,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
 					break
-				case "agentManager.removeSession":
-					this.removeSession(message.sessionId as string)
-					break
 				case "agentManager.selectSession":
 					this.selectSession(message.sessionId as string | null)
 					break
@@ -390,22 +387,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		this.registry.updateSessionStatus(sessionId, "stopped", undefined, "Stopped by user")
 		this.log(sessionId, "Stopped by user")
-		this.postStateToWebview()
-
-		this.firstApiReqStarted.delete(sessionId)
-	}
-
-	/**
-	 * Remove a session
-	 */
-	private removeSession(sessionId: string): void {
-		// Stop process if running
-		this.processHandler.stopProcess(sessionId)
-
-		// Clean up messages
-		this.sessionMessages.delete(sessionId)
-
-		this.registry.removeSession(sessionId)
 		this.postStateToWebview()
 
 		this.firstApiReqStarted.delete(sessionId)

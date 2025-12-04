@@ -47,7 +47,6 @@ export type AgentManagerMessage =
 	| { type: "agentManager.webviewReady" }
 	| { type: "agentManager.startSession"; prompt: string }
 	| { type: "agentManager.stopSession"; sessionId: string }
-	| { type: "agentManager.removeSession"; sessionId: string }
 	| { type: "agentManager.selectSession"; sessionId: string }
 	| { type: "agentManager.refreshRemoteSessions" }
 
