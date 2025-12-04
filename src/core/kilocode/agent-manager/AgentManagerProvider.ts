@@ -1,8 +1,16 @@
 import * as vscode from "vscode"
+import * as fs from "node:fs"
+import * as path from "node:path"
 import { AgentRegistry } from "./AgentRegistry"
+import {
+	parseParallelModeBranch,
+	parseParallelModeWorktreePath,
+	isParallelModeCompletionMessage,
+	parseParallelModeCompletionBranch,
+} from "./parallelModeParser"
 import { findKilocodeCli } from "./CliPathResolver"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
-import type { StreamEvent, KilocodeStreamEvent, KilocodePayload } from "./CliOutputParser"
+import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { RemoteSessionService } from "./RemoteSessionService"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
@@ -114,7 +122,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					void this.fetchAndPostRemoteSessions()
 					break
 				case "agentManager.startSession":
-					void this.startAgentSession(message.prompt as string)
+					void this.startAgentSession(message.prompt as string, message.parallelMode as boolean | undefined)
 					break
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
@@ -139,8 +147,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Start a new agent session using the kilocode CLI
+	 * @param prompt - The task prompt for the agent
+	 * @param parallelMode - If true, run the agent in an isolated git worktree
 	 */
-	private async startAgentSession(prompt: string): Promise<void> {
+	private async startAgentSession(prompt: string, parallelMode?: boolean): Promise<void> {
 		if (!prompt) {
 			this.outputChannel.appendLine("ERROR: prompt is empty")
 			return
@@ -155,6 +165,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
+		// Check if trying to use parallel mode from within a worktree
+		if (parallelMode && this.isInsideWorktree(workspaceFolder)) {
+			this.outputChannel.appendLine("ERROR: Cannot use parallel mode from within a git worktree")
+			void vscode.window.showErrorMessage(
+				"Parallel mode cannot be used from within a git worktree. Please open the main repository to use this feature.",
+			)
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+			return
+		}
+
 		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 		if (!cliPath) {
 			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
@@ -163,7 +183,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		this.processHandler.spawnProcess(cliPath, workspaceFolder, prompt, (sessionId, event) => {
+		this.processHandler.spawnProcess(cliPath, workspaceFolder, prompt, parallelMode, (sessionId, event) => {
 			this.handleCliEvent(sessionId, event)
 		})
 	}
@@ -177,9 +197,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.handleKilocodeEvent(sessionId, event)
 				break
 			case "status":
+				this.parseParallelModeStatus(sessionId, event.message)
 				this.log(sessionId, event.message)
 				break
 			case "output":
+				this.parseParallelModeOutput(sessionId, event.content)
 				this.log(sessionId, `[${event.source}] ${event.content}`)
 				break
 			case "error":
@@ -201,6 +223,74 @@ export class AgentManagerProvider implements vscode.Disposable {
 			case "session_created":
 				// Handled by CliProcessManager
 				break
+			case "welcome":
+				this.handleWelcomeEvent(sessionId, event as WelcomeStreamEvent)
+				break
+		}
+	}
+
+	/**
+	 * Parse parallel mode info from CLI status messages
+	 */
+	private parseParallelModeStatus(sessionId: string, message: string): void {
+		let updated = false
+
+		const branch = parseParallelModeBranch(message)
+		if (branch) {
+			if (this.registry.updateParallelModeInfo(sessionId, { branch })) {
+				updated = true
+			}
+		}
+
+		const worktreePath = parseParallelModeWorktreePath(message)
+		if (worktreePath) {
+			if (this.registry.updateParallelModeInfo(sessionId, { worktreePath })) {
+				updated = true
+			}
+		}
+
+		if (updated) {
+			this.postStateToWebview()
+		}
+	}
+
+	/**
+	 * Parse parallel mode completion message from CLI output
+	 */
+	private parseParallelModeOutput(sessionId: string, content: string): void {
+		if (isParallelModeCompletionMessage(content)) {
+			let updated = false
+
+			// Extract branch name from completion message
+			const branch = parseParallelModeCompletionBranch(content)
+			if (branch) {
+				if (this.registry.updateParallelModeInfo(sessionId, { branch })) {
+					updated = true
+				}
+			}
+
+			// Store the completion message
+			if (this.registry.updateParallelModeInfo(sessionId, { completionMessage: content })) {
+				updated = true
+			}
+
+			if (updated) {
+				this.postStateToWebview()
+			}
+		}
+	}
+
+	/**
+	 * Handle welcome event from CLI - extracts worktree branch for parallel mode sessions
+	 */
+	private handleWelcomeEvent(sessionId: string, event: WelcomeStreamEvent): void {
+		if (event.worktreeBranch) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Session ${sessionId} worktree branch: ${event.worktreeBranch}`,
+			)
+			if (this.registry.updateParallelModeInfo(sessionId, { branch: event.worktreeBranch })) {
+				this.postStateToWebview()
+			}
 		}
 	}
 
@@ -553,5 +643,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 					void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
 				}
 			})
+	}
+
+	/**
+	 * Check if the given directory is inside a git worktree (not the main repo).
+	 * In a worktree, .git is a file containing "gitdir: /path/to/main/.git/worktrees/..."
+	 * In the main repo, .git is a directory.
+	 */
+	private isInsideWorktree(workspacePath: string): boolean {
+		try {
+			const gitPath = path.join(workspacePath, ".git")
+			const stat = fs.statSync(gitPath)
+			// If .git is a file (not a directory), we're in a worktree
+			return stat.isFile()
+		} catch {
+			// .git doesn't exist or can't be accessed
+			return false
+		}
 	}
 }

@@ -6,7 +6,11 @@
 		"emptyState": "アクティブなエージェントはまだありません。",
 		"startAgent": "エージェントを開始",
 		"removeSession": "削除",
-		"refresh": "更新"
+		"refresh": "更新",
+		"worktree": "Worktree",
+		"local": "ローカル",
+		"mainWorkspace": "メインワークスペース",
+		"readyToMerge": "マージ準備完了"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -21,6 +25,12 @@
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
 		"keyboardHint": "Enterで開始、Shift+Enterで改行",
+		"runModeLocal": "ローカル",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "クラウド",
+		"runningInWorktree": "Worktreeで実行中",
+		"runningLocally": "ローカルで実行中",
+		"branch": "ブランチ",
 		"creatingSession": "セッションを作成中...",
 		"waitingForCli": "エージェントセッションを初期化中..."
 	},

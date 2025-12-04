@@ -6,7 +6,11 @@
 		"emptyState": "暂无活动代理。",
 		"startAgent": "启动代理",
 		"removeSession": "移除",
-		"refresh": "刷新"
+		"refresh": "刷新",
+		"worktree": "Worktree",
+		"local": "本地",
+		"mainWorkspace": "主工作区",
+		"readyToMerge": "准备合并"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -21,6 +25,12 @@
 		"starting": "正在启动...",
 		"startAriaLabel": "使用提供的提示启动代理",
 		"keyboardHint": "按 Enter 启动，Shift+Enter 换行",
+		"runModeLocal": "本地",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "云端",
+		"runningInWorktree": "在 Worktree 中运行",
+		"runningLocally": "本地运行",
+		"branch": "分支",
 		"creatingSession": "正在创建会话...",
 		"waitingForCli": "正在初始化代理会话..."
 	},

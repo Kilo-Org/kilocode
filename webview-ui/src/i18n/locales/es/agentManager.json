@@ -6,7 +6,11 @@
 		"emptyState": "Aún no hay agentes activos.",
 		"startAgent": "Iniciar agente",
 		"removeSession": "Eliminar",
-		"refresh": "Actualizar"
+		"refresh": "Actualizar",
+		"worktree": "Worktree",
+		"local": "Local",
+		"mainWorkspace": "Espacio de trabajo principal",
+		"readyToMerge": "Listo para fusionar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un nuevo agente",
@@ -21,6 +25,12 @@
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente con el prompt proporcionado",
 		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea",
+		"runModeLocal": "Local",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Nube",
+		"runningInWorktree": "Ejecutando en worktree",
+		"runningLocally": "Ejecutando localmente",
+		"branch": "Rama",
 		"creatingSession": "Creando sesión...",
 		"waitingForCli": "Inicializando sesión del agente..."
 	},

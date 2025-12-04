@@ -6,7 +6,11 @@
 		"emptyState": "Henüz aktif ajan yok.",
 		"startAgent": "Ajanı Başlat",
 		"removeSession": "Kaldır",
-		"refresh": "Yenile"
+		"refresh": "Yenile",
+		"worktree": "Worktree",
+		"local": "Yerel",
+		"mainWorkspace": "Ana çalışma alanı",
+		"readyToMerge": "Birleştirmeye hazır"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -21,6 +25,12 @@
 		"starting": "Başlatılıyor...",
 		"startAriaLabel": "Verilen istemle ajanı başlat",
 		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter",
+		"runModeLocal": "Yerel",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Bulut",
+		"runningInWorktree": "Worktree'de çalışıyor",
+		"runningLocally": "Yerel olarak çalışıyor",
+		"branch": "Dal",
 		"creatingSession": "Oturum oluşturuluyor...",
 		"waitingForCli": "Ajan oturumu başlatılıyor..."
 	},

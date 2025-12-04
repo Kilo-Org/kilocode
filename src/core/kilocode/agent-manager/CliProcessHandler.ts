@@ -1,5 +1,10 @@
 import { spawn, ChildProcess } from "node:child_process"
-import { CliOutputParser, type StreamEvent, type SessionCreatedStreamEvent } from "./CliOutputParser"
+import {
+	CliOutputParser,
+	type StreamEvent,
+	type SessionCreatedStreamEvent,
+	type WelcomeStreamEvent,
+} from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
 import type { ClineMessage } from "@roo-code/types"
@@ -15,6 +20,8 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	timeout: NodeJS.Timeout
+	parallelMode?: boolean
+	worktreeBranch?: string // Captured from welcome event before session_created
 }
 
 /**
@@ -55,15 +62,16 @@ export class CliProcessHandler {
 		cliPath: string,
 		workspace: string,
 		prompt: string,
+		parallelMode: boolean | undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		// Set pending session state
-		const pendingSession = this.registry.setPendingSession(prompt)
+		const pendingSession = this.registry.setPendingSession(prompt, { parallelMode })
 		this.callbacks.onLog(`Pending session created, waiting for CLI session_created event`)
 		this.callbacks.onPendingSessionChanged(pendingSession)
 
 		// Build CLI command
-		const cliArgs = buildCliArgs(workspace, prompt)
+		const cliArgs = buildCliArgs(workspace, prompt, { parallelMode })
 		this.callbacks.onLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.callbacks.onLog(`Working dir: ${workspace}`)
 
@@ -103,6 +111,7 @@ export class CliProcessHandler {
 			prompt,
 			startTime: pendingSession.startTime,
 			timeout,
+			parallelMode,
 		}
 
 		// Parse nd-json output from stdout
@@ -183,6 +192,15 @@ export class CliProcessHandler {
 
 		// If this is the pending process, handle specially
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			// Capture worktree branch from welcome event (arrives before session_created)
+			if (event.streamEventType === "welcome") {
+				const welcomeEvent = event as WelcomeStreamEvent
+				if (welcomeEvent.worktreeBranch) {
+					this.pendingProcess.worktreeBranch = welcomeEvent.worktreeBranch
+					this.callbacks.onLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
+				}
+				return
+			}
 			// Events before session_created are typically status messages
 			if (event.streamEventType === "status") {
 				this.callbacks.onLog(`Pending session status: ${event.message}`)
@@ -204,14 +222,20 @@ export class CliProcessHandler {
 			return
 		}
 
-		const { process: proc, prompt, startTime, timeout, parser } = this.pendingProcess
+		const { process: proc, prompt, startTime, timeout, parser, parallelMode, worktreeBranch } = this.pendingProcess
 
 		// Clear pending timeout
 		clearTimeout(timeout)
 
 		// Create the actual session with CLI's sessionId
-		const session = this.registry.createSession(event.sessionId, prompt, startTime)
+		const session = this.registry.createSession(event.sessionId, prompt, startTime, { parallelMode })
 		this.callbacks.onLog(`Session created with CLI sessionId: ${session.sessionId}`)
+
+		// Apply worktree branch if captured from welcome event
+		if (worktreeBranch && parallelMode) {
+			this.registry.updateParallelModeInfo(session.sessionId, { branch: worktreeBranch })
+			this.callbacks.onLog(`Applied worktree branch: ${worktreeBranch}`)
+		}
 
 		// Clear pending session state
 		this.registry.clearPendingSession()

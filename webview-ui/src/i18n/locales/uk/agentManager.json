@@ -6,7 +6,11 @@
 		"emptyState": "Активних агентів поки немає.",
 		"startAgent": "Запустити агента",
 		"removeSession": "Видалити",
-		"refresh": "Оновити"
+		"refresh": "Оновити",
+		"worktree": "Worktree",
+		"local": "Локально",
+		"mainWorkspace": "Основний робочий простір",
+		"readyToMerge": "Готово до злиття"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
@@ -21,6 +25,12 @@
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустити агента з наданим промптом",
 		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка",
+		"runModeLocal": "Локально",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Хмара",
+		"runningInWorktree": "Виконується в worktree",
+		"runningLocally": "Виконується локально",
+		"branch": "Гілка",
 		"creatingSession": "Створення сесії...",
 		"waitingForCli": "Ініціалізація сесії агента..."
 	},

@@ -10,7 +10,7 @@ import {
 	type AgentSession,
 } from "../state/atoms/sessions"
 import { vscode } from "../utils/vscode"
-import { Plus, Trash2, Loader2, RefreshCw } from "lucide-react"
+import { Plus, Trash2, Loader2, RefreshCw, GitBranch, Folder } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
@@ -148,6 +148,9 @@ function SessionItem({
 
 	// Only show spinner for running sessions - all other sessions are resumable/idle
 	const isRunning = session.status === "running"
+	const isWorktree = session.parallelMode?.enabled
+	const branchName = session.parallelMode?.branch
+	const isCompleted = session.status === "done"
 
 	return (
 		<div className={`session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
@@ -158,7 +161,27 @@ function SessionItem({
 			)}
 			<div className="session-content">
 				<div className="session-label">{session.label}</div>
-				<div className="session-meta">{formatDuration(session.startTime, session.endTime)}</div>
+				<div className="session-meta">
+					{formatDuration(session.startTime, session.endTime)}
+					{isWorktree && (
+						<span className="worktree-indicator" title={branchName || t("sidebar.worktree")}>
+							<GitBranch size={10} />
+							{branchName ? (
+								<span className="branch-name">
+									{branchName.length > 20 ? branchName.slice(0, 20) + "..." : branchName}
+								</span>
+							) : (
+								<span>{t("sidebar.worktree")}</span>
+							)}
+						</span>
+					)}
+					{!isWorktree && (
+						<span className="workspace-indicator" title={t("sidebar.local")}>
+							<Folder size={10} />
+						</span>
+					)}
+				</div>
+				{isWorktree && isCompleted && <div className="ready-to-merge">{t("sidebar.readyToMerge")}</div>}
 			</div>
 			{hasLocalProcess && (
 				<button className="icon-btn" onClick={onRemove} title={t("sidebar.removeSession")}>

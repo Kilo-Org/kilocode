@@ -6,7 +6,11 @@
 		"emptyState": "Zatím žádní aktivní agenti.",
 		"startAgent": "Spustit agenta",
 		"removeSession": "Odstranit",
-		"refresh": "Obnovit"
+		"refresh": "Obnovit",
+		"worktree": "Worktree",
+		"local": "Lokální",
+		"mainWorkspace": "Hlavní pracovní prostor",
+		"readyToMerge": "Připraveno ke sloučení"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -21,6 +25,12 @@
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
 		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
+		"runModeLocal": "Lokální",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"runningInWorktree": "Běží ve worktree",
+		"runningLocally": "Běží lokálně",
+		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
 		"waitingForCli": "Inicializace relace agenta..."
 	},

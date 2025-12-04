@@ -3,6 +3,13 @@ import { atom } from "jotai"
 export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
 
+export interface ParallelModeInfo {
+	enabled: boolean
+	branch?: string
+	worktreePath?: string
+	completionMessage?: string
+}
+
 export interface AgentSession {
 	sessionId: string
 	label: string
@@ -14,6 +21,7 @@ export interface AgentSession {
 	error?: string
 	pid?: number
 	source: SessionSource
+	parallelMode?: ParallelModeInfo
 }
 
 /**
@@ -23,6 +31,7 @@ export interface PendingSession {
 	prompt: string
 	label: string
 	startTime: number
+	parallelMode?: boolean
 }
 
 export interface RemoteSession {
@@ -41,6 +50,10 @@ export const isRefreshingRemoteSessionsAtom = atom(false)
 export const pendingSessionAtom = atom<PendingSession | null>(null)
 
 export const startSessionFailedCounterAtom = atom(0)
+
+// User preference for run mode (persisted across new agent forms)
+export type RunMode = "local" | "worktree"
+export const preferredRunModeAtom = atom<RunMode>("local")
 
 // Derived - local sessions only
 export const sessionsArrayAtom = atom((get) => {

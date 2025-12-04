@@ -1,4 +1,8 @@
-import { AgentSession, AgentStatus, AgentManagerState, PendingSession } from "./types"
+import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelModeInfo } from "./types"
+
+export interface CreateSessionOptions {
+	parallelMode?: boolean
+}
 
 const MAX_SESSIONS = 10
 const MAX_LOGS = 100
@@ -23,12 +27,13 @@ export class AgentRegistry {
 	/**
 	 * Set a pending session while waiting for CLI's session_created event
 	 */
-	public setPendingSession(prompt: string): PendingSession {
+	public setPendingSession(prompt: string, options?: CreateSessionOptions): PendingSession {
 		const label = this.truncatePrompt(prompt)
 		this._pendingSession = {
 			prompt,
 			label,
 			startTime: Date.now(),
+			parallelMode: options?.parallelMode,
 		}
 		return this._pendingSession
 	}
@@ -43,7 +48,12 @@ export class AgentRegistry {
 	/**
 	 * Create a session with the CLI-provided sessionId
 	 */
-	public createSession(sessionId: string, prompt: string, startTime?: number): AgentSession {
+	public createSession(
+		sessionId: string,
+		prompt: string,
+		startTime?: number,
+		options?: CreateSessionOptions,
+	): AgentSession {
 		const label = this.truncatePrompt(prompt)
 
 		const session: AgentSession = {
@@ -54,6 +64,7 @@ export class AgentRegistry {
 			startTime: startTime ?? Date.now(),
 			logs: ["Starting agent..."],
 			source: "local",
+			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 		}
 
 		this.sessions.set(sessionId, session)
@@ -123,6 +134,23 @@ export class AgentRegistry {
 		if (session) {
 			session.pid = pid
 		}
+	}
+
+	public updateParallelModeInfo(
+		id: string,
+		info: Partial<Omit<ParallelModeInfo, "enabled">>,
+	): AgentSession | undefined {
+		const session = this.sessions.get(id)
+		if (!session || !session.parallelMode?.enabled) {
+			return undefined
+		}
+
+		session.parallelMode = {
+			...session.parallelMode,
+			...info,
+		}
+
+		return session
 	}
 
 	public getState(): AgentManagerState {
