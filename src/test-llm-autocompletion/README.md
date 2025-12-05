@@ -21,7 +21,8 @@ This test suite uses approval testing instead of regex pattern matching to valid
 
     - Display the test input and output
     - Ask you whether the output is acceptable
-    - Save your decision to `approvals/{category}/{test-name}/approved.N.txt` or `rejected.N.txt`
+    - Save your decision to `approvals/{category}/{test-name}.approved.N.txt` or `{test-name}.rejected.N.txt`
+    - File numbers are globally unique across approved and rejected files (e.g., `approved.1.txt`, `rejected.2.txt`, `approved.3.txt`)
 
 2. **Subsequent Runs**:
     - If the output matches a previously approved file, the test passes
@@ -195,6 +196,6 @@ Is this acceptable? (y/n):
 ## Notes
 
 - The `approvals/` directory is gitignored
-- Each approved/rejected output gets a unique numbered file
+- Each approved/rejected output gets a globally unique numbered file (numbers are unique across both approved and rejected files for the same test case)
 - Tests only prompt for input in the terminal when output is new
 - The test summary at the end shows how many passed/failed

@@ -1,11 +1,11 @@
 function registerUser(email: string, password: string) {
-  // Validate email format
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('Invalid email format');
+  // Validate email
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    throw new Error('Invalid email address');
   }
 
-  // Validate password length
-  if (password.length < 8) {
+  // Validate password
+  if (!password || typeof password !== 'string' || password.length < 8) {
     throw new Error('Password must be at least 8 characters long');
   }
 

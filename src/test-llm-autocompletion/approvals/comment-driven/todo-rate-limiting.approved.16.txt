@@ -1,8 +1,15 @@
 function handleAPIRequest(req, res) {
   // TODO: Implement rate limiting to prevent abuse
-  // Implement rate limiting logic here
-  // For example, using a library like 'express-rate-limit'
-  // or a custom solution with Redis or an in-memory store
+  const rateLimit = require('express-rate-limit');
 
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+  });
+
+  // Apply the rate limiting middleware to API calls
+  limiter(req, res, () => {
+    processRequest(req, res);
+  });
   processRequest(req, res);
 }

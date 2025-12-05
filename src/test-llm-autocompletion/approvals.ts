@@ -28,18 +28,19 @@ function getCategoryPath(category: string): string {
 	return path.join(APPROVALS_DIR, category)
 }
 
-function getNextFileNumber(categoryDir: string, testName: string, type: "approved" | "rejected"): number {
+function getNextFileNumber(categoryDir: string, testName: string): number {
 	if (!fs.existsSync(categoryDir)) {
 		return 1
 	}
 
 	const files = fs.readdirSync(categoryDir)
-	const pattern = new RegExp(`^${testName}\\.${type}\\.(\\d+)\\.txt$`)
+	// Match both approved and rejected files to get globally unique numbers
+	const pattern = new RegExp(`^${testName}\\.(approved|rejected)\\.(\\d+)\\.txt$`)
 	const numbers = files
 		.filter((f) => pattern.test(f))
 		.map((f) => {
 			const match = f.match(pattern)
-			return match ? parseInt(match[1], 10) : 0
+			return match ? parseInt(match[2], 10) : 0
 		})
 
 	return numbers.length > 0 ? Math.max(...numbers) + 1 : 1
@@ -136,7 +137,7 @@ export async function checkApproval(
 
 	fs.mkdirSync(categoryDir, { recursive: true })
 
-	const nextNumber = getNextFileNumber(categoryDir, testName, type)
+	const nextNumber = getNextFileNumber(categoryDir, testName)
 	const filename = `${testName}.${type}.${nextNumber}.txt`
 	const filePath = path.join(categoryDir, filename)
 

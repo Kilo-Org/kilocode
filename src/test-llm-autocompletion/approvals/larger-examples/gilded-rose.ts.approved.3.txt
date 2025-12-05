@@ -125,7 +125,16 @@ export class GildedRose {
 					if (this.items[i].quality < 50) {
 								this.items[i].quality = this.items[i].quality + 1
 							}
-						}) {
+						}
+					}
+				}
+			}
+		}
+
+		return this.items
+	}
+}
+) {
 						this.items[i].quality = this.items[i].quality + 1
 					}
 				}

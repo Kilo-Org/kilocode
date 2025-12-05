@@ -1,3 +1,4 @@
-function greet(name, name: string) {
+function greet(name, greeting = "World") {
+  console.log(`Hello ${name}!`); {
   console.log(`Hello ${name}!`);
 }

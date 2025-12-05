@@ -1,18 +1,16 @@
 class DataService {
-  constructor() {
-    this.cache = new Map();
-  }
+  private cache: Map<string, any> = new Map();
 
+  // TODO: Implement caching mechanism to reduce API calls<<<AUTOCOMPLETE_HERE>>>
   async fetchData(id) {
-    if (this.cache.has(id)) {
-      return this.cache.get(id);
+    const cacheKey = `data_${id}`;
+
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
     }
 
     const data = await api.get(`/data/${id}`);
-    this.cache.set(id, data);
+    this.cache.set(cacheKey, data);
     return data;
-  }
-  async fetchData(id) {
-    return await api.get(`/data/${id}`);
   }
 }

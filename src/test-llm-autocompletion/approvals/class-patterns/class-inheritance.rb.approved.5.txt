@@ -9,11 +9,3 @@ class Dog < Animal
 		super(name)
 		@breed = breed
 	end
-end
-
-class Cat < Animal
-	def initialize(name, color)
-		super(name)
-		@color = color
-	end
-end
