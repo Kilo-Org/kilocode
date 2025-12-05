@@ -83,7 +83,7 @@ While this setting only allows reading files (not modifying them), it could pote
 
 #### Globally Ignored Files
 
-When auto-approve read is enabled, you can configure a list of file patterns that are **always ignored**, even without a `.kilocodeignore` file. This provides an extra layer of protection for sensitive files.
+When auto-approve read is enabled, you can configure a list of file patterns that are **always ignored**, even without a `.kilocodeignore` file. This provides an initial layer of protection for sensitive files.
 
 **Default patterns include:**
 
