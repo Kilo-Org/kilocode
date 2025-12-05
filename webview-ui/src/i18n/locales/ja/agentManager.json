@@ -5,7 +5,8 @@
 		"sessionsSection": "セッション",
 		"emptyState": "アクティブなエージェントはまだありません。",
 		"startAgent": "エージェントを開始",
-		"removeSession": "削除"
+		"removeSession": "削除",
+		"refresh": "更新"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -15,10 +16,13 @@
 		"newButton": "新規",
 		"stopButtonTitle": "エージェントを停止",
 		"newButtonTitle": "新しいエージェント",
+		"refreshButtonTitle": "メッセージを更新",
 		"autoModeWarning": "フルオートモードで実行中 - エージェントは確認なしでアクションを実行します",
 		"starting": "開始中...",
 		"startAriaLabel": "指定されたプロンプトでエージェントを開始",
-		"keyboardHint": "Enterで開始、Shift+Enterで改行"
+		"keyboardHint": "Enterで開始、Shift+Enterで改行",
+		"creatingSession": "セッションを作成中...",
+		"waitingForCli": "エージェントセッションを初期化中..."
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -39,6 +43,7 @@
 		"running": "実行中",
 		"done": "完了",
 		"stopped": "停止",
-		"error": "エラー"
+		"error": "エラー",
+		"creating": "作成中..."
 	}
 }

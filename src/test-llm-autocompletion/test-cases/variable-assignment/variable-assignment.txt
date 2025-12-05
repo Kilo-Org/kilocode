@@ -1,2 +1,3 @@
-# Description: Should suggest common variable assignments
+#### Description: Should suggest common variable assignments
+#### Filename: user-data.js
 const userName = <<<AUTOCOMPLETE_HERE>>>

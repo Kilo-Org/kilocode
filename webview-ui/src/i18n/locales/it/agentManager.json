@@ -5,7 +5,8 @@
 		"sessionsSection": "Sessioni",
 		"emptyState": "Nessun agente attivo ancora.",
 		"startAgent": "Avvia agente",
-		"removeSession": "Rimuovi"
+		"removeSession": "Rimuovi",
+		"refresh": "Aggiorna"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Avvia un nuovo agente",
@@ -15,10 +16,13 @@
 		"newButton": "Nuovo",
 		"stopButtonTitle": "Ferma agente",
 		"newButtonTitle": "Nuovo agente",
+		"refreshButtonTitle": "Aggiorna messaggi",
 		"autoModeWarning": "In esecuzione in modalità completamente automatica - l'agente eseguirà le azioni senza conferma",
 		"starting": "Avvio in corso...",
 		"startAriaLabel": "Avvia agente con il prompt fornito",
-		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga"
+		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga",
+		"creatingSession": "Creazione sessione...",
+		"waitingForCli": "Inizializzazione della sessione dell'agente..."
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",
@@ -39,6 +43,7 @@
 		"running": "in esecuzione",
 		"done": "fatto",
 		"stopped": "fermato",
-		"error": "errore"
+		"error": "errore",
+		"creating": "creazione..."
 	}
 }

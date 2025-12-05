@@ -1,4 +1,5 @@
-# Description: Should complete class inheritance with extends and super
+#### Description: Should complete class inheritance with extends and super
+#### Filename: animals.js
 class Animal {
 	constructor(name) {
 		this.name = name;

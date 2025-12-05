@@ -1,14 +1,13 @@
 import * as vscode from "vscode"
-import { spawn, ChildProcess } from "node:child_process"
 import { AgentRegistry } from "./AgentRegistry"
 import { findKilocodeCli } from "./CliPathResolver"
-import { CliOutputParser, type StreamEvent, type KilocodeStreamEvent, type KilocodePayload } from "./CliOutputParser"
+import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
+import type { StreamEvent, KilocodeStreamEvent, KilocodePayload } from "./CliOutputParser"
+import { RemoteSessionService } from "./RemoteSessionService"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import type { ClineMessage } from "@roo-code/types"
-
-const SESSION_TIMEOUT_MS = 120_000 // 2 minutes
 
 /**
  * AgentManagerProvider
@@ -22,10 +21,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private panel: vscode.WebviewPanel | undefined
 	private disposables: vscode.Disposable[] = []
 	private registry: AgentRegistry
-	private processes: Map<string, ChildProcess> = new Map()
-	private timeouts: Map<string, NodeJS.Timeout> = new Map()
+	private remoteSessionService: RemoteSessionService
+	private processHandler: CliProcessHandler
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
-	private parsers: Map<string, CliOutputParser> = new Map()
 	// Track first api_req_started per session to filter user-input echoes
 	private firstApiReqStarted: Map<string, boolean> = new Map()
 
@@ -34,6 +32,32 @@ export class AgentManagerProvider implements vscode.Disposable {
 		private readonly outputChannel: vscode.OutputChannel,
 	) {
 		this.registry = new AgentRegistry()
+		this.remoteSessionService = new RemoteSessionService({ outputChannel })
+
+		const callbacks: CliProcessHandlerCallbacks = {
+			onLog: (message) => this.outputChannel.appendLine(`[AgentManager] ${message}`),
+			onSessionLog: (sessionId, line) => this.log(sessionId, line),
+			onStateChanged: () => this.postStateToWebview(),
+			onPendingSessionChanged: (pendingSession) => {
+				this.postMessage({ type: "agentManager.pendingSession", pendingSession })
+			},
+			onStartSessionFailed: () => {
+				this.postMessage({ type: "agentManager.startSessionFailed" })
+			},
+			onChatMessages: (sessionId, messages) => {
+				this.postMessage({ type: "agentManager.chatMessages", sessionId, messages })
+			},
+			onSessionCreated: () => {
+				// Initialize messages for the new session
+				const sessions = this.registry.getSessions()
+				if (sessions.length > 0) {
+					const latestSession = sessions[0]
+					this.sessionMessages.set(latestSession.sessionId, [])
+				}
+			},
+		}
+
+		this.processHandler = new CliProcessHandler(this.registry, callbacks)
 	}
 
 	/**
@@ -87,6 +111,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			switch (message.type) {
 				case "agentManager.webviewReady":
 					this.postStateToWebview()
+					void this.fetchAndPostRemoteSessions()
 					break
 				case "agentManager.startSession":
 					void this.startAgentSession(message.prompt as string)
@@ -94,11 +119,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
 					break
-				case "agentManager.removeSession":
-					this.removeSession(message.sessionId as string)
-					break
 				case "agentManager.selectSession":
 					this.selectSession(message.sessionId as string | null)
+					break
+				case "agentManager.refreshRemoteSessions":
+					void this.fetchAndPostRemoteSessions()
+					break
+				case "agentManager.refreshSessionMessages":
+					void this.refreshSessionMessages(message.sessionId as string)
 					break
 			}
 		} catch (error) {
@@ -123,7 +151,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.postMessage({ type: "agentManager.startSessionFailed" })
 			return
 		}
-		const workspace = workspaceFolder
 
 		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 		if (!cliPath) {
@@ -133,112 +160,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Create the session
-		const session = this.registry.createSession(prompt)
-		this.sessionMessages.set(session.id, [])
-		this.outputChannel.appendLine(`Session created: ${session.id}`)
-
-		// Build CLI command
-		const cliArgs = ["--auto", "--json", `--workspace=${workspace}`, prompt]
-		this.outputChannel.appendLine(`[AgentManager] Command: ${cliPath} ${cliArgs.join(" ")}`)
-		this.outputChannel.appendLine(`[AgentManager] Working dir: ${workspace}`)
-
-		// Spawn CLI process. Avoid shell wrapping so the prompt cannot be interpolated by a shell.
-		// Set NO_COLOR and FORCE_COLOR=0 to disable ANSI output.
-		const proc = spawn(cliPath, cliArgs, {
-			cwd: workspace,
-			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
-			shell: false,
+		this.processHandler.spawnProcess(cliPath, workspaceFolder, prompt, (sessionId, event) => {
+			this.handleCliEvent(sessionId, event)
 		})
-
-		this.processes.set(session.id, proc)
-		if (proc.pid) {
-			this.registry.setSessionPid(session.id, proc.pid)
-			this.outputChannel.appendLine(`[AgentManager] Process PID: ${proc.pid}`)
-		} else {
-			this.outputChannel.appendLine(`[AgentManager] WARNING: No PID - spawn may have failed`)
-		}
-
-		// Debug: Log when stdout/stderr attach
-		this.outputChannel.appendLine(`[AgentManager] stdout exists: ${!!proc.stdout}`)
-		this.outputChannel.appendLine(`[AgentManager] stderr exists: ${!!proc.stderr}`)
-
-		// Set timeout
-		const timeout = setTimeout(() => {
-			this.log(session.id, "Timed out. Killing agent.")
-			this.registry.updateSessionStatus(session.id, "error", undefined, "Timeout")
-			proc.kill("SIGTERM")
-			this.postStateToWebview()
-		}, SESSION_TIMEOUT_MS)
-		this.timeouts.set(session.id, timeout)
-
-		// Create parser for this session
-		const parser = new CliOutputParser()
-		this.parsers.set(session.id, parser)
-
-		// Parse nd-json output from stdout
-		proc.stdout?.on("data", (chunk) => {
-			const chunkStr = chunk.toString()
-			this.outputChannel.appendLine(
-				`[AgentManager] stdout chunk (${chunkStr.length} bytes): ${chunkStr.slice(0, 200)}`,
-			)
-
-			const { events } = parser.parse(chunkStr)
-
-			for (const event of events) {
-				this.handleCliEvent(session.id, event)
-			}
-
-			this.postStateToWebview()
-		})
-
-		// Handle stderr
-		proc.stderr?.on("data", (data) => {
-			const stderrStr = String(data).trim()
-			this.outputChannel.appendLine(`[AgentManager] stderr: ${stderrStr}`)
-			this.log(session.id, `stderr: ${stderrStr}`)
-			this.postStateToWebview()
-		})
-
-		// Handle process exit
-		proc.on("exit", (code, signal) => {
-			this.outputChannel.appendLine(`[AgentManager] Process exited: code=${code}, signal=${signal}`)
-
-			// Flush any buffered parser output to avoid dropping the final message when no newline is sent
-			const parser = this.parsers.get(session.id)
-			if (parser) {
-				const { events } = parser.flush()
-				for (const event of events) {
-					this.handleCliEvent(session.id, event)
-				}
-				this.parsers.delete(session.id)
-			}
-
-			const t = this.timeouts.get(session.id)
-			if (t) clearTimeout(t)
-			this.timeouts.delete(session.id)
-			this.processes.delete(session.id)
-
-			if (code === 0) {
-				this.registry.updateSessionStatus(session.id, "done", code)
-				this.log(session.id, "Agent completed")
-			} else {
-				this.registry.updateSessionStatus(session.id, "error", code ?? undefined)
-				this.log(session.id, `Agent exited with code ${code ?? "?"}${signal ? ` signal ${signal}` : ""}`)
-			}
-			this.postStateToWebview()
-		})
-
-		proc.on("error", (error) => {
-			this.outputChannel.appendLine(`[AgentManager] Process spawn error: ${error.message}`)
-			this.log(session.id, `Process error: ${error.message}`)
-			this.registry.updateSessionStatus(session.id, "error", undefined, error.message)
-			this.postStateToWebview()
-		})
-
-		this.outputChannel.appendLine(`[AgentManager] spawned CLI process ${session.id} pid=${proc.pid}`)
-		this.postStateToWebview()
 	}
 
 	/**
@@ -265,10 +189,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 			case "complete":
 				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
 				this.log(sessionId, "Agent completed")
+				void this.fetchAndPostRemoteSessions()
 				break
 			case "interrupted":
 				this.registry.updateSessionStatus(sessionId, "stopped", undefined, event.reason)
 				this.log(sessionId, event.reason || "Execution interrupted")
+				break
+			case "session_created":
+				// Handled by CliProcessManager
 				break
 		}
 	}
@@ -408,57 +336,57 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.registry.appendLog(sessionId, line)
 	}
 
-	/**
-	 * Select a session to view its details/logs
-	 */
 	private selectSession(sessionId: string | null): void {
 		this.registry.selectedId = sessionId
 		this.postStateToWebview()
+
+		if (this.needsRemoteMessageFetch(sessionId)) {
+			void this.fetchRemoteSessionMessages(sessionId!)
+		}
+	}
+
+	private needsRemoteMessageFetch(sessionId: string | null): boolean {
+		if (!sessionId) return false
+		const hasLocalMessages = this.sessionMessages.has(sessionId)
+		const hasActiveProcess = this.processHandler.hasProcess(sessionId)
+		return !hasLocalMessages && !hasActiveProcess
+	}
+
+	private async fetchRemoteSessionMessages(sessionId: string): Promise<void> {
+		try {
+			const messages = await this.remoteSessionService.fetchSessionMessages(sessionId)
+			if (!messages) return
+
+			this.storeAndPostMessages(sessionId, messages)
+		} catch (error) {
+			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote session messages: ${error}`)
+		}
+	}
+
+	private storeAndPostMessages(sessionId: string, messages: ClineMessage[]): void {
+		this.outputChannel.appendLine(`[AgentManager] Fetched ${messages.length} messages for session: ${sessionId}`)
+
+		this.sessionMessages.set(sessionId, messages)
+		this.postMessage({
+			type: "agentManager.chatMessages",
+			sessionId,
+			messages,
+		})
+	}
+
+	private async refreshSessionMessages(sessionId: string): Promise<void> {
+		this.sessionMessages.delete(sessionId)
+		await this.fetchRemoteSessionMessages(sessionId)
 	}
 
 	/**
 	 * Stop a running agent session
 	 */
 	private stopAgentSession(sessionId: string): void {
-		const proc = this.processes.get(sessionId)
-		if (proc) {
-			proc.kill("SIGTERM")
-			this.processes.delete(sessionId)
-		}
-
-		const timeout = this.timeouts.get(sessionId)
-		if (timeout) clearTimeout(timeout)
-		this.timeouts.delete(sessionId)
-
-		this.parsers.delete(sessionId)
+		this.processHandler.stopProcess(sessionId)
 
 		this.registry.updateSessionStatus(sessionId, "stopped", undefined, "Stopped by user")
 		this.log(sessionId, "Stopped by user")
-		this.postStateToWebview()
-
-		this.firstApiReqStarted.delete(sessionId)
-	}
-
-	/**
-	 * Remove a session
-	 */
-	private removeSession(sessionId: string): void {
-		// Stop process if running
-		const proc = this.processes.get(sessionId)
-		if (proc) {
-			proc.kill("SIGTERM")
-			this.processes.delete(sessionId)
-		}
-
-		const timeout = this.timeouts.get(sessionId)
-		if (timeout) clearTimeout(timeout)
-		this.timeouts.delete(sessionId)
-
-		// Clean up messages and parser
-		this.sessionMessages.delete(sessionId)
-		this.parsers.delete(sessionId)
-
-		this.registry.removeSession(sessionId)
 		this.postStateToWebview()
 
 		this.firstApiReqStarted.delete(sessionId)
@@ -469,6 +397,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 			type: "agentManager.state",
 			state: this.registry.getState(),
 		})
+	}
+
+	/**
+	 * Fetch remote sessions and post them to the webview
+	 */
+	private async fetchAndPostRemoteSessions(): Promise<void> {
+		try {
+			const remoteSessions = await this.remoteSessionService.fetchRemoteSessions()
+
+			this.postMessage({
+				type: "agentManager.remoteSessions",
+				sessions: remoteSessions,
+			})
+		} catch (error) {
+			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote sessions: ${error}`)
+		}
 	}
 
 	private postMessage(message: unknown): void {
@@ -558,43 +502,21 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private stopAllAgents(): void {
-		for (const proc of this.processes.values()) {
-			proc.kill("SIGTERM")
-		}
-		this.processes.clear()
-
-		for (const timeout of this.timeouts.values()) {
-			clearTimeout(timeout)
-		}
-		this.timeouts.clear()
+		this.processHandler.stopAllProcesses()
 
 		// Update all running sessions to stopped
 		for (const session of this.registry.getSessions()) {
 			if (session.status === "running") {
-				this.registry.updateSessionStatus(session.id, "stopped", undefined, "Stopped by user")
+				this.registry.updateSessionStatus(session.sessionId, "stopped", undefined, "Stopped by user")
 			}
 		}
 
-		this.parsers.clear()
 		this.firstApiReqStarted.clear()
 	}
 
 	public dispose(): void {
-		// Kill all processes
-		for (const proc of this.processes.values()) {
-			proc.kill("SIGTERM")
-		}
-		this.processes.clear()
-
-		// Clear all timeouts
-		for (const timeout of this.timeouts.values()) {
-			clearTimeout(timeout)
-		}
-		this.timeouts.clear()
-
-		// Clear messages and parsers
+		this.processHandler.dispose()
 		this.sessionMessages.clear()
-		this.parsers.clear()
 		this.firstApiReqStarted.clear()
 
 		this.panel?.dispose()

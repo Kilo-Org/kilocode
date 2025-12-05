@@ -5,7 +5,8 @@
 		"sessionsSection": "Sessies",
 		"emptyState": "Nog geen actieve agenten.",
 		"startAgent": "Agent starten",
-		"removeSession": "Verwijderen"
+		"removeSession": "Verwijderen",
+		"refresh": "Vernieuwen"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -15,10 +16,13 @@
 		"newButton": "Nieuw",
 		"stopButtonTitle": "Agent stoppen",
 		"newButtonTitle": "Nieuwe agent",
+		"refreshButtonTitle": "Berichten vernieuwen",
 		"autoModeWarning": "Draait in volledig automatische modus - agent voert acties uit zonder bevestiging",
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
-		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel"
+		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
+		"creatingSession": "Sessie aanmaken...",
+		"waitingForCli": "Agent-sessie wordt geïnitialiseerd..."
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",
@@ -39,6 +43,7 @@
 		"running": "actief",
 		"done": "voltooid",
 		"stopped": "gestopt",
-		"error": "fout"
+		"error": "fout",
+		"creating": "aanmaken..."
 	}
 }

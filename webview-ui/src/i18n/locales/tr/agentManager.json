@@ -5,7 +5,8 @@
 		"sessionsSection": "Oturumlar",
 		"emptyState": "Henüz aktif ajan yok.",
 		"startAgent": "Ajanı Başlat",
-		"removeSession": "Kaldır"
+		"removeSession": "Kaldır",
+		"refresh": "Yenile"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -15,10 +16,13 @@
 		"newButton": "Yeni",
 		"stopButtonTitle": "Ajanı Durdur",
 		"newButtonTitle": "Yeni Ajan",
+		"refreshButtonTitle": "Mesajları yenile",
 		"autoModeWarning": "Tam otomatik modda çalışıyor - ajan onay almadan eylemleri gerçekleştirecek",
 		"starting": "Başlatılıyor...",
 		"startAriaLabel": "Verilen istemle ajanı başlat",
-		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter"
+		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter",
+		"creatingSession": "Oturum oluşturuluyor...",
+		"waitingForCli": "Ajan oturumu başlatılıyor..."
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",
@@ -39,6 +43,7 @@
 		"running": "çalışıyor",
 		"done": "tamamlandı",
 		"stopped": "durduruldu",
-		"error": "hata"
+		"error": "hata",
+		"creating": "oluşturuluyor..."
 	}
 }

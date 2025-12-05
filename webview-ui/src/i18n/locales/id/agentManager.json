@@ -5,7 +5,8 @@
 		"sessionsSection": "Sesi",
 		"emptyState": "Belum ada agen aktif.",
 		"startAgent": "Mulai Agen",
-		"removeSession": "Hapus"
+		"removeSession": "Hapus",
+		"refresh": "Refresh"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -15,10 +16,13 @@
 		"newButton": "Baru",
 		"stopButtonTitle": "Hentikan Agen",
 		"newButtonTitle": "Agen Baru",
+		"refreshButtonTitle": "Refresh pesan",
 		"autoModeWarning": "Berjalan dalam mode otomatis penuh - agen akan menjalankan tindakan tanpa konfirmasi",
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
-		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru"
+		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
+		"creatingSession": "Membuat sesi...",
+		"waitingForCli": "Menginisialisasi sesi agen..."
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",
@@ -39,6 +43,7 @@
 		"running": "berjalan",
 		"done": "selesai",
 		"stopped": "dihentikan",
-		"error": "kesalahan"
+		"error": "kesalahan",
+		"creating": "membuat..."
 	}
 }
