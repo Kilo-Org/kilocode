@@ -17,7 +17,7 @@ const options = {
 }
 
 if (process.env.GITHUB_TOKEN) {
-	options.headers.Authorization = `token ${process.env.GITHUB_TOKEN}`
+	options.headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
 	console.log("Using GitHub token from environment variable")
 }
 
