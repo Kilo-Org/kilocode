@@ -201,10 +201,6 @@ Consider the security implications of allowing automated browser access.
 
 This setting automatically retries API calls when they fail.
 
-#### Retry Delay Timer
-
-**Delay slider:** "Delay before retrying the request" (Range: 5-100 seconds, Default: 5s)
-
 The delay controls how long Kilo Code waits before trying again:
 
 - Longer delays are gentler on API rate limits
