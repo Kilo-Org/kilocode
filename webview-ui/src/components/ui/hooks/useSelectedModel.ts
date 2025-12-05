@@ -35,6 +35,7 @@ import {
 	fireworksModels,
 	featherlessModels,
 	ioIntelligenceModels,
+	basetenModels,
 	qwenCodeModels,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	isDynamicProvider,
@@ -241,6 +242,11 @@ function getSelectedModel({
 		case "chutes": {
 			const id = getValidatedModelId(apiConfiguration.apiModelId, routerModels.chutes, defaultModelId)
 			const info = routerModels.chutes?.[id]
+			return { id, info }
+		}
+		case "baseten": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = basetenModels[id as keyof typeof basetenModels]
 			return { id, info }
 		}
 		case "bedrock": {

@@ -41,6 +41,7 @@ import { type ApiMessage } from "../task-persistence/apiMessages"
 import { saveTaskMessages } from "../task-persistence"
 
 import { ClineProvider } from "./ClineProvider"
+import { BrowserSessionPanelManager } from "./BrowserSessionPanelManager"
 import { handleCheckpointRestoreOperation } from "./checkpointRestoreHandler"
 import { changeLanguage, t } from "../../i18n"
 import { Package } from "../../shared/package"
@@ -838,7 +839,7 @@ export const webviewMessageHandler = async (
 			break
 		case "flushRouterModels":
 			const routerNameFlush: RouterName = toRouterName(message.text)
-			await flushModels(routerNameFlush)
+			await flushModels(routerNameFlush, true)
 			break
 		case "requestRouterModels":
 			const { apiConfiguration } = await provider.getState()
@@ -990,6 +991,12 @@ export const webviewMessageHandler = async (
 			const litellmBaseUrl = apiConfiguration.litellmBaseUrl || message?.values?.litellmBaseUrl
 
 			if (litellmApiKey && litellmBaseUrl) {
+				// If explicit credentials are provided in message.values (from Refresh Models button),
+				// flush the cache first to ensure we fetch fresh data with the new credentials
+				if (message?.values?.litellmApiKey || message?.values?.litellmBaseUrl) {
+					await flushModels("litellm", true)
+				}
+
 				candidates.push({
 					key: "litellm",
 					options: { provider: "litellm", apiKey: litellmApiKey, baseUrl: litellmBaseUrl },
@@ -1041,8 +1048,8 @@ export const webviewMessageHandler = async (
 			// Specific handler for Ollama models only.
 			const { apiConfiguration: ollamaApiConfig } = await provider.getState()
 			try {
-				// Flush cache first to ensure fresh models.
-				await flushModels("ollama")
+				// Flush cache and refresh to ensure fresh models.
+				await flushModels("ollama", true)
 
 				const ollamaModels = await getModels({
 					provider: "ollama",
@@ -1064,8 +1071,8 @@ export const webviewMessageHandler = async (
 			// Specific handler for LM Studio models only.
 			const { apiConfiguration: lmStudioApiConfig } = await provider.getState()
 			try {
-				// Flush cache first to ensure fresh models.
-				await flushModels("lmstudio")
+				// Flush cache and refresh to ensure fresh models.
+				await flushModels("lmstudio", true)
 
 				const lmStudioModels = await getModels({
 					provider: "lmstudio",
@@ -1087,8 +1094,8 @@ export const webviewMessageHandler = async (
 		case "requestRooModels": {
 			// Specific handler for Roo models only - flushes cache to ensure fresh auth token is used
 			try {
-				// Flush cache first to ensure fresh models with current auth state
-				await flushModels("roo")
+				// Flush cache and refresh to ensure fresh models with current auth state
+				await flushModels("roo", true)
 
 				const rooModels = await getModels({
 					provider: "roo",
@@ -1112,6 +1119,31 @@ export const webviewMessageHandler = async (
 					success: false,
 					error: errorMessage,
 					values: { provider: "roo" },
+				})
+			}
+			break
+		}
+		case "requestRooCreditBalance": {
+			// Fetch Roo credit balance using CloudAPI
+			const requestId = message.requestId
+			try {
+				if (!CloudService.hasInstance() || !CloudService.instance.cloudAPI) {
+					throw new Error("Cloud service not available")
+				}
+
+				const balance = await CloudService.instance.cloudAPI.creditBalance()
+
+				provider.postMessageToWebview({
+					type: "rooCreditBalance",
+					requestId,
+					values: { balance },
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.postMessageToWebview({
+					type: "rooCreditBalance",
+					requestId,
+					values: { error: errorMessage },
 				})
 			}
 			break
@@ -1303,6 +1335,101 @@ export const webviewMessageHandler = async (
 		case "cancelTask":
 			await provider.cancelTask()
 			break
+		case "killBrowserSession":
+			{
+				const task = provider.getCurrentTask()
+				if (task?.browserSession) {
+					await task.browserSession.closeBrowser()
+					await provider.postStateToWebview()
+				}
+			}
+			break
+		case "openBrowserSessionPanel":
+			{
+				// Toggle the Browser Session panel (open if closed, close if open)
+				const panelManager = BrowserSessionPanelManager.getInstance(provider)
+				await panelManager.toggle()
+			}
+			break
+		case "showBrowserSessionPanelAtStep":
+			{
+				const panelManager = BrowserSessionPanelManager.getInstance(provider)
+
+				// If this is a launch action, reset the manual close flag
+				if (message.isLaunchAction) {
+					panelManager.resetManualCloseFlag()
+				}
+
+				// Show panel if:
+				// 1. Manual click (forceShow) - always show
+				// 2. Launch action - always show and reset flag
+				// 3. Auto-open for non-launch action - only if user hasn't manually closed
+				if (message.forceShow || message.isLaunchAction || panelManager.shouldAllowAutoOpen()) {
+					// Ensure panel is shown and populated
+					await panelManager.show()
+
+					// Navigate to a specific step if provided
+					// For launch actions: navigate to step 0
+					// For manual clicks: navigate to the clicked step
+					// For auto-opens of regular actions: don't navigate, let BrowserSessionRow's
+					// internal auto-advance logic handle it (only advances if user is on most recent step)
+					if (typeof message.stepIndex === "number" && message.stepIndex >= 0) {
+						await panelManager.navigateToStep(message.stepIndex)
+					}
+				}
+			}
+			break
+		case "refreshBrowserSessionPanel":
+			{
+				// Re-send the latest browser session snapshot to the panel
+				const panelManager = BrowserSessionPanelManager.getInstance(provider)
+				const task = provider.getCurrentTask()
+				if (task) {
+					const messages = task.clineMessages || []
+					const browserSessionStartIndex = messages.findIndex(
+						(m) =>
+							m.ask === "browser_action_launch" ||
+							(m.say === "browser_session_status" && m.text?.includes("opened")),
+					)
+					const browserSessionMessages =
+						browserSessionStartIndex !== -1 ? messages.slice(browserSessionStartIndex) : []
+					const isBrowserSessionActive = task.browserSession?.isSessionActive() ?? false
+					await panelManager.updateBrowserSession(browserSessionMessages, isBrowserSessionActive)
+				}
+			}
+			break
+		case "allowedCommands": {
+			// Validate and sanitize the commands array
+			const commands = message.commands ?? []
+			const validCommands = Array.isArray(commands)
+				? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
+				: []
+
+			await updateGlobalState("allowedCommands", validCommands)
+
+			// Also update workspace settings.
+			await vscode.workspace
+				.getConfiguration(Package.name)
+				.update("allowedCommands", validCommands, vscode.ConfigurationTarget.Global)
+
+			break
+		}
+		case "deniedCommands": {
+			// Validate and sanitize the commands array
+			const commands = message.commands ?? []
+			const validCommands = Array.isArray(commands)
+				? commands.filter((cmd) => typeof cmd === "string" && cmd.trim().length > 0)
+				: []
+
+			await updateGlobalState("deniedCommands", validCommands)
+
+			// Also update workspace settings.
+			await vscode.workspace
+				.getConfiguration(Package.name)
+				.update("deniedCommands", validCommands, vscode.ConfigurationTarget.Global)
+
+			break
+		}
 		case "openCustomModesSettings": {
 			const customModesFilePath = await provider.customModesManager.getCustomModesFilePath()
 
@@ -2822,7 +2949,8 @@ export const webviewMessageHandler = async (
 		case "rooCloudSignIn": {
 			try {
 				TelemetryService.instance.captureEvent(TelemetryEventName.AUTHENTICATION_INITIATED)
-				await CloudService.instance.login()
+				// Use provider signup flow if useProviderSignup is explicitly true
+				await CloudService.instance.login(undefined, message.useProviderSignup ?? false)
 			} catch (error) {
 				provider.log(`AuthService#login failed: ${error}`)
 				vscode.window.showErrorMessage("Sign in failed.")
@@ -2955,6 +3083,8 @@ export const webviewMessageHandler = async (
 					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
 					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
 					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
+					codebaseIndexBedrockRegion: settings.codebaseIndexBedrockRegion,
+					codebaseIndexBedrockProfile: settings.codebaseIndexBedrockProfile,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
 					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
 				}

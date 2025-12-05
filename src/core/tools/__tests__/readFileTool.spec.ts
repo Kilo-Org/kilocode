@@ -204,10 +204,19 @@ function createMockCline(): any {
 		getTokenUsage: vi.fn().mockReturnValue({
 			contextTokens: 10000,
 		}),
+		apiConfiguration: {
+			apiProvider: "anthropic",
+		},
 		// CRITICAL: Always ensure image support is enabled
 		api: {
 			getModel: vi.fn().mockReturnValue({
-				info: { supportsImages: true, contextWindow: 200000 },
+				info: {
+					supportsImages: true,
+					contextWindow: 200000,
+					maxTokens: 4096,
+					supportsPromptCache: false,
+					supportsNativeTools: false,
+				},
 			}),
 			countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 		},
@@ -332,6 +341,7 @@ describe("read_file tool with maxReadFileLine setting", () => {
 				toolResult = result
 			},
 			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		return toolResult
@@ -641,6 +651,7 @@ describe("read_file tool XML output structure", () => {
 				toolResult = result
 			},
 			removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		return toolResult
@@ -745,6 +756,7 @@ describe("read_file tool XML output structure", () => {
 						localResult = result
 					},
 					removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+					toolProtocol: "xml",
 				})
 				// In multi-image scenarios, the result is pushed to pushToolResult, not returned directly.
 				// We need to check the mock's calls to get the result.
@@ -1365,6 +1377,7 @@ describe("read_file tool XML output structure", () => {
 					toolResult = result
 				},
 				removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+				toolProtocol: "xml",
 			})
 
 			// Verify
@@ -1452,6 +1465,7 @@ describe("read_file tool with image support", () => {
 				toolResult = result
 			},
 			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		console.log("Result type:", Array.isArray(toolResult) ? "array" : typeof toolResult)
@@ -1623,6 +1637,7 @@ describe("read_file tool with image support", () => {
 					toolResult = result
 				},
 				removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+				toolProtocol: "xml",
 			})
 
 			// Verify error handling

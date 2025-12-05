@@ -229,4 +229,226 @@ describe("BrowserSession", () => {
 			expect(mockBrowser.close).not.toHaveBeenCalled()
 		})
 	})
+
+	it("forces same-tab behavior before click", async () => {
+		// Prepare a minimal mock page with required APIs
+		const page: any = {
+			on: vi.fn(),
+			off: vi.fn(),
+			screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+			url: vi.fn().mockReturnValue("https://example.com"),
+			viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+			waitForNavigation: vi.fn().mockResolvedValue(undefined),
+			evaluate: vi.fn().mockResolvedValue(undefined),
+			mouse: {
+				click: vi.fn().mockResolvedValue(undefined),
+				move: vi.fn().mockResolvedValue(undefined),
+			},
+		}
+
+		;(browserSession as any).page = page
+
+		// Spy on the forceLinksToSameTab helper to ensure it's invoked
+		const forceSpy = vi.fn().mockResolvedValue(undefined)
+		;(browserSession as any).forceLinksToSameTab = forceSpy
+
+		await browserSession.click("10,20")
+
+		expect(forceSpy).toHaveBeenCalledTimes(1)
+		expect(forceSpy).toHaveBeenCalledWith(page)
+		expect(page.mouse.click).toHaveBeenCalledWith(10, 20)
+	})
+})
+
+describe("keyboard press", () => {
+	it("presses a keyboard key", async () => {
+		// Prepare a minimal mock page with required APIs
+		const page: any = {
+			on: vi.fn(),
+			off: vi.fn(),
+			screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+			url: vi.fn().mockReturnValue("https://example.com"),
+			viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+			waitForNavigation: vi.fn().mockResolvedValue(undefined),
+			evaluate: vi.fn().mockResolvedValue(undefined),
+			keyboard: {
+				press: vi.fn().mockResolvedValue(undefined),
+				type: vi.fn().mockResolvedValue(undefined),
+			},
+		}
+
+		// Create a fresh BrowserSession with a mock context
+		const mockCtx: any = {
+			globalState: { get: vi.fn(), update: vi.fn() },
+			globalStorageUri: { fsPath: "/mock/global/storage/path" },
+			extensionUri: { fsPath: "/mock/extension/path" },
+		}
+		const session = new BrowserSession(mockCtx)
+
+		;(session as any).page = page
+
+		await session.press("Enter")
+
+		expect(page.keyboard.press).toHaveBeenCalledTimes(1)
+		expect(page.keyboard.press).toHaveBeenCalledWith("Enter")
+	})
+})
+
+describe("cursor visualization", () => {
+	it("should draw cursor indicator when cursor position exists", async () => {
+		// Prepare a minimal mock page with required APIs
+		const page: any = {
+			on: vi.fn(),
+			off: vi.fn(),
+			screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+			url: vi.fn().mockReturnValue("https://example.com"),
+			viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+			evaluate: vi.fn().mockResolvedValue(undefined),
+			mouse: {
+				click: vi.fn().mockResolvedValue(undefined),
+			},
+		}
+
+		// Create a fresh BrowserSession with a mock context
+		const mockCtx: any = {
+			globalState: { get: vi.fn(), update: vi.fn() },
+			globalStorageUri: { fsPath: "/mock/global/storage/path" },
+			extensionUri: { fsPath: "/mock/extension/path" },
+		}
+		const session = new BrowserSession(mockCtx)
+
+		;(session as any).page = page
+
+		// Perform a click action which sets cursor position
+		const result = await session.click("100,200")
+
+		// Verify cursor indicator was drawn and removed
+		// evaluate is called 3 times: 1 for forceLinksToSameTab, 1 for draw cursor, 1 for remove cursor
+		expect(page.evaluate).toHaveBeenCalled()
+
+		// Verify the result includes cursor position
+		expect(result.currentMousePosition).toBe("100,200")
+	})
+
+	it("should include cursor position in action result", async () => {
+		// Prepare a minimal mock page with required APIs
+		const page: any = {
+			on: vi.fn(),
+			off: vi.fn(),
+			screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+			url: vi.fn().mockReturnValue("https://example.com"),
+			viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+			evaluate: vi.fn().mockResolvedValue(undefined),
+			mouse: {
+				move: vi.fn().mockResolvedValue(undefined),
+			},
+		}
+
+		// Create a fresh BrowserSession with a mock context
+		const mockCtx: any = {
+			globalState: { get: vi.fn(), update: vi.fn() },
+			globalStorageUri: { fsPath: "/mock/global/storage/path" },
+			extensionUri: { fsPath: "/mock/extension/path" },
+		}
+		const session = new BrowserSession(mockCtx)
+
+		;(session as any).page = page
+
+		// Perform a hover action which sets cursor position
+		const result = await session.hover("150,250")
+
+		// Verify the result includes cursor position
+		expect(result.currentMousePosition).toBe("150,250")
+		expect(result.viewportWidth).toBe(900)
+		expect(result.viewportHeight).toBe(600)
+	})
+
+	it("should not draw cursor indicator when no cursor position exists", async () => {
+		// Prepare a minimal mock page with required APIs
+		const page: any = {
+			on: vi.fn(),
+			off: vi.fn(),
+			screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+			url: vi.fn().mockReturnValue("https://example.com"),
+			viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+			evaluate: vi.fn().mockResolvedValue(undefined),
+		}
+
+		// Create a fresh BrowserSession with a mock context
+		const mockCtx: any = {
+			globalState: { get: vi.fn(), update: vi.fn() },
+			globalStorageUri: { fsPath: "/mock/global/storage/path" },
+			extensionUri: { fsPath: "/mock/extension/path" },
+		}
+		const session = new BrowserSession(mockCtx)
+
+		;(session as any).page = page
+
+		// Perform scroll action which doesn't set cursor position
+		const result = await session.scrollDown()
+
+		// Verify evaluate was called only for scroll operation (not for cursor drawing/removal)
+		// scrollDown calls evaluate once for scrolling
+		expect(page.evaluate).toHaveBeenCalledTimes(1)
+
+		// Verify no cursor position in result
+		expect(result.currentMousePosition).toBeUndefined()
+	})
+
+	describe("getViewportSize", () => {
+		it("falls back to configured viewport when no page or last viewport is available", () => {
+			const localCtx: any = {
+				globalState: {
+					get: vi.fn((key: string) => {
+						if (key === "browserViewportSize") return "1024x768"
+						return undefined
+					}),
+					update: vi.fn(),
+				},
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+
+			const session = new BrowserSession(localCtx)
+			const vp = (session as any).getViewportSize()
+			expect(vp).toEqual({ width: 1024, height: 768 })
+		})
+
+		it("returns live page viewport when available and updates lastViewport cache", () => {
+			const localCtx: any = {
+				globalState: {
+					get: vi.fn(),
+					update: vi.fn(),
+				},
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(localCtx)
+			;(session as any).page = {
+				viewport: vi.fn().mockReturnValue({ width: 1111, height: 555 }),
+			}
+
+			const vp = (session as any).getViewportSize()
+			expect(vp).toEqual({ width: 1111, height: 555 })
+			expect((session as any).lastViewportWidth).toBe(1111)
+			expect((session as any).lastViewportHeight).toBe(555)
+		})
+
+		it("returns cached last viewport when page no longer exists", () => {
+			const localCtx: any = {
+				globalState: {
+					get: vi.fn(),
+					update: vi.fn(),
+				},
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(localCtx)
+			;(session as any).lastViewportWidth = 800
+			;(session as any).lastViewportHeight = 600
+
+			const vp = (session as any).getViewportSize()
+			expect(vp).toEqual({ width: 800, height: 600 })
+		})
+	})
 })

@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Не вдалося створити нове завдання через обмеження політики."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "OpenRouter API ключ необхідний для генерації зображень з моделями OpenRouter. Будь ласка, налаштуй його в експериментальних налаштуваннях генерації зображень.",
+		"failedWithStatus": "Не вдалося згенерувати зображення: {{status}} {{statusText}}",
+		"failedWithMessage": "Не вдалося згенерувати зображення: {{message}}",
+		"noImageGenerated": "В відповіді не було згенеровано жодного зображення",
+		"invalidImageData": "Недійсні дані зображення у відповіді",
+		"invalidImageFormat": "Отримано недійсний формат зображення",
+		"unknownError": "Сталася невідома помилка",
+		"roo": {
+			"authRequired": "Для генерації зображень потрібна автентифікація Roo Code Cloud. Будь ласка, увійди в Roo Code Cloud."
+		}
 	}
 }

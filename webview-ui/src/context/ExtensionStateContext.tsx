@@ -251,6 +251,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		deniedCommands: [],
 		soundEnabled: false,
 		soundVolume: 0.5,
+		isBrowserSessionActive: false,
 		ttsEnabled: false,
 		ttsSpeed: 1.0,
 		diffEnabled: false,

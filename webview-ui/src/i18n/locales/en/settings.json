@@ -37,6 +37,26 @@
 		"about": "About Kilo Code",
 		"autoPurge": "Auto-Cleanup"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Found a bug?",
+			"link": "Report on GitHub"
+		},
+		"featureRequest": {
+			"label": "Have an idea?",
+			"link": "Share it with us"
+		},
+		"securityIssue": {
+			"label": "Discovered a vulnerability?",
+			"link": "Follow our disclosure process"
+		},
+		"contact": {
+			"label": "Need to talk to us? Write"
+		},
+		"community": "Want tips or to just hang out with other Kilo Code users? Join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Contact & Community",
+		"manageSettings": "Manage Settings"
+	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
 	},
@@ -71,6 +91,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API Key",
 		"vercelAiGatewayApiKeyPlaceholder": "Enter your Vercel AI Gateway API key",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS Region",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS Profile",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "AWS profile name from ~/.aws/credentials (required).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API Key",
 		"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
@@ -144,13 +170,16 @@
 			"geminiApiKeyRequired": "Gemini API key is required",
 			"mistralApiKeyRequired": "Mistral API key is required",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API key is required",
+			"bedrockRegionRequired": "AWS region is required",
+			"bedrockProfileRequired": "AWS profile is required",
 			"openRouterApiKeyRequired": "OpenRouter API key is required",
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
 		},
 		"cancelling": "Cancelling...",
-		"cancelIndexingButton": "Cancel Indexing"
+		"cancelIndexingButton": "Cancel Indexing",
+		"optional": "optional"
 	},
 	"autoApprove": {
 		"description": "Run these actions without asking for permission. Only enable for actions you fully trust and if you understand the security risks.",
@@ -315,6 +344,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Enter deployment name...",
 		"awsBedrock1MContextBetaLabel": "Enable 1M context window (Beta)",
 		"awsBedrock1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
+		"basetenApiKey": "Baseten API Key",
+		"getBasetenApiKey": "Get Baseten API Key",
 		"cerebrasApiKey": "Cerebras API Key",
 		"getCerebrasApiKey": "Get Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
@@ -790,6 +821,10 @@
 		"includeCurrentCost": {
 			"label": "Include current cost in context",
 			"description": "When enabled, the current API usage cost will be included in the system prompt. Disable this if models are stopping work due to cost concerns."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status max files",
+			"description": "Maximum number of file entries to include in git status context. Set to 0 to disable. Branch info is always shown when > 0."
 		}
 	},
 	"terminal": {
@@ -852,6 +887,14 @@
 	},
 	"advancedSettings": {
 		"title": "Advanced settings"
+	},
+	"toolProtocol": {
+		"label": "Tool Call Protocol",
+		"description": "Choose how Kilo Code communicates with the API. Native uses the provider's function calling API, while XML uses XML-formatted tool definitions.",
+		"default": "Default",
+		"xml": "XML",
+		"native": "Native",
+		"currentDefault": "Default: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -943,6 +986,8 @@
 			"name": "Enable AI image generation",
 			"description": "When enabled, Kilo Code can generate images from text prompts. Requires a Kilo Code or OpenRouter API key to be configured.",
 			"apiProvider": "API Provider",
+			"providerLabel": "Provider",
+			"providerDescription": "Select which provider to use for image generation.",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
 			"kiloCodeApiKeyLabel": "Kilo Code API Key",
@@ -957,6 +1002,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Enable model-initiated slash commands",
 			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Parallel tool calls",
+			"description": "When enabled, the native protocol can execute multiple tools in a single assistant message turn."
 		}
 	},
 	"promptCaching": {

@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Nepodařilo se vytvořit nový úkol kvůli omezením zásad."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Pro generování obrázků pomocí OpenRouter modelů je vyžadován OpenRouter API klíč. Nakonfiguruj ho prosím v experimentálním nastavení Generování obrázků.",
+		"failedWithStatus": "Generování obrázku selhalo: {{status}} {{statusText}}",
+		"failedWithMessage": "Generování obrázku selhalo: {{message}}",
+		"noImageGenerated": "V odpovědi nebyl vygenerován žádný obrázek",
+		"invalidImageData": "Neplatná data obrázku v odpovědi",
+		"invalidImageFormat": "Přijat neplatný formát obrázku",
+		"unknownError": "Nastala neznámá chyba",
+		"roo": {
+			"authRequired": "Pro generování obrázků je vyžadována autentizace Roo Code Cloud. Přihlas se prosím do Roo Code Cloud."
+		}
 	}
 }

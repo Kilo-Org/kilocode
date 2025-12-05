@@ -37,6 +37,26 @@
 		"about": "परिचय",
 		"autoPurge": "स्वचालित सफाई"
 	},
+	"about": {
+		"bugReport": {
+			"label": "बग मिला?",
+			"link": "GitHub पर रिपोर्ट करें"
+		},
+		"featureRequest": {
+			"label": "कोई विचार है?",
+			"link": "हमारे साथ साझा करें"
+		},
+		"securityIssue": {
+			"label": "कोई कमजोरी खोजी?",
+			"link": "हमारी प्रकटीकरण प्रक्रिया का पालन करें"
+		},
+		"contact": {
+			"label": "हमसे बात करने की जरूरत है? लिखें"
+		},
+		"community": "सुझाव चाहिए या बस अन्य Kilo Code उपयोगकर्ताओं के साथ घूमना चाहते हैं? <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल हों",
+		"contactAndCommunity": "संपर्क और समुदाय",
+		"manageSettings": "सेटिंग्स प्रबंधित करें"
+	},
 	"slashCommands": {
 		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>"
 	},
@@ -57,6 +77,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API कुंजी",
 		"vercelAiGatewayApiKeyPlaceholder": "अपनी Vercel AI Gateway API कुंजी दर्ज करें",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS क्षेत्र",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS प्रोफ़ाइल",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "~/.aws/credentials से AWS प्रोफ़ाइल नाम (आवश्यक)।",
 		"openRouterProvider": "ओपनराउटर",
 		"openRouterApiKeyLabel": "ओपनराउटर एपीआई कुंजी",
 		"openRouterApiKeyPlaceholder": "अपनी ओपनराउटर एपीआई कुंजी दर्ज करें",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "Gemini API कुंजी आवश्यक है",
 			"mistralApiKeyRequired": "मिस्ट्रल एपीआई कुंजी आवश्यक है",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API कुंजी आवश्यक है",
+			"bedrockRegionRequired": "AWS क्षेत्र आवश्यक है",
+			"bedrockProfileRequired": "AWS प्रोफ़ाइल आवश्यक है",
 			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
 			"baseUrlRequired": "आधार URL आवश्यक है",
 			"modelDimensionMinValue": "मॉडल आयाम 0 से बड़ा होना चाहिए",
 			"openRouterApiKeyRequired": "OpenRouter API कुंजी आवश्यक है"
 		},
+		"optional": "वैकल्पिक",
 		"advancedConfigLabel": "उन्नत कॉन्फ़िगरेशन",
 		"searchMinScoreLabel": "खोज स्कोर थ्रेसहोल्ड",
 		"searchMinScoreDescription": "खोज परिणामों के लिए आवश्यक न्यूनतम समानता स्कोर (0.0-1.0)। कम मान अधिक परिणाम लौटाते हैं लेकिन कम प्रासंगिक हो सकते हैं। उच्च मान कम लेकिन अधिक प्रासंगिक परिणाम लौटाते हैं।",
@@ -310,6 +339,8 @@
 		"anthropicAzureDeploymentPlaceholder": "डिप्लॉयमेंट नाम दर्ज करें...",
 		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"basetenApiKey": "Baseten API कुंजी",
+		"getBasetenApiKey": "Baseten API कुंजी प्राप्त करें",
 		"cerebrasApiKey": "Cerebras API कुंजी",
 		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
 		"chutesApiKey": "Chutes API कुंजी",
@@ -758,6 +789,10 @@
 		"includeCurrentCost": {
 			"label": "संदर्भ में वर्तमान लागत शामिल करें",
 			"description": "सक्षम होने पर, वर्तमान एपीआई उपयोग लागत सिस्टम प्रॉम्प्ट में शामिल की जाएगी। यदि मॉडल लागत संबंधी चिंताओं के कारण काम करना बंद कर देते हैं तो इसे अक्षम करें।"
+		},
+		"maxGitStatusFiles": {
+			"label": "गिट स्थिति अधिकतम फ़ाइलें",
+			"description": "गिट स्थिति संदर्भ में शामिल करने के लिए फ़ाइल प्रविष्टियों की अधिकतम संख्या। अक्षम करने के लिए 0 पर सेट करें। शाखा जानकारी और कमिट हमेशा दिखाए जाते हैं जब > 0 होता है।"
 		}
 	},
 	"terminal": {
@@ -820,6 +855,14 @@
 	},
 	"advancedSettings": {
 		"title": "उन्नत सेटिंग्स"
+	},
+	"toolProtocol": {
+		"label": "टूल कॉल प्रोटोकॉल",
+		"description": "चुनें कि रू एपीआई के साथ कैसे संचार करता है। नेटिव प्रदाता के फ़ंक्शन कॉलिंग एपीआई का उपयोग करता है, जबकि एक्सएमएल एक्सएमएल-स्वरूपित टूल परिभाषाओं का उपयोग करता है।",
+		"default": "डिफ़ॉल्ट",
+		"xml": "एक्सएमएल",
+		"native": "नेटिव",
+		"currentDefault": "डिफ़ॉल्ट: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -908,6 +951,8 @@
 			"description": "जब सक्षम किया जाता है, तो new_task टूल को todos पैरामीटर प्रदान करने की आवश्यकता होगी। यह सुनिश्चित करता है कि सभी नए कार्य स्पष्ट उद्देश्यों की सूची के साथ शुरू हों। जब अक्षम किया जाता है (डिफ़ॉल्ट), तो todos पैरामीटर पिछड़े संगतता के लिए वैकल्पिक रहता है।"
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "प्रदाता",
+			"providerDescription": "छवि निर्माण के लिए प्रदाता चुनें।",
 			"name": "AI छवि निर्माण सक्षम करें",
 			"description": "जब सक्षम किया जाता है, तो Kilo Code टेक्स्ट प्रॉम्प्ट से छवियां उत्पन्न कर सकता है। Kilo Code या OpenRouter API कुंजी कॉन्फ़िगरेशन की आवश्यकता होती है।",
 			"apiProvider": "API प्रदाता",
@@ -929,6 +974,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "मॉडल द्वारा शुरू किए गए स्लैश कमांड सक्षम करें",
 			"description": "जब सक्षम होता है, Kilo Code वर्कफ़्लो चलाने के लिए आपके स्लैश कमांड चला सकता है।"
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "समानांतर टूल कॉल",
+			"description": "सक्षम होने पर, नेटिव प्रोटोकॉल एकल सहायक संदेश टर्न में एकाधिक टूल निष्पादित कर सकता है।"
 		}
 	},
 	"promptCaching": {

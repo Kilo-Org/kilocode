@@ -38,6 +38,26 @@
 		"autoPurge": "自動清理",
 		"ghost": "Ghost"
 	},
+	"about": {
+		"bugReport": {
+			"label": "發現錯誤？",
+			"link": "在 GitHub 回報"
+		},
+		"featureRequest": {
+			"label": "有想法？",
+			"link": "與我們分享"
+		},
+		"securityIssue": {
+			"label": "發現安全漏洞？",
+			"link": "遵循我們的揭露流程"
+		},
+		"contact": {
+			"label": "需要與我們聯絡？請寫信"
+		},
+		"community": "想要獲取使用技巧或與其他 Kilo Code 使用者交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "聯絡與社群",
+		"manageSettings": "管理設定"
+	},
 	"slashCommands": {
 		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
 	},
@@ -58,6 +78,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 金鑰",
 		"vercelAiGatewayApiKeyPlaceholder": "輸入您的 Vercel AI Gateway API 金鑰",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS 區域",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS 設定檔",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "來自 ~/.aws/credentials 的 AWS 設定檔名稱（必需）。",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 		"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
@@ -132,11 +158,14 @@
 			"geminiApiKeyRequired": "需要 Gemini API 金鑰",
 			"mistralApiKeyRequired": "需要 Mistral API 金鑰",
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 金鑰",
+			"bedrockRegionRequired": "AWS 區域為必填",
+			"bedrockProfileRequired": "AWS 設定檔為必填",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",
 			"baseUrlRequired": "需要基礎 URL",
 			"modelDimensionMinValue": "模型維度必須大於 0",
 			"openRouterApiKeyRequired": "OpenRouter API 密鑰是必需的"
 		},
+		"optional": "可選",
 		"advancedConfigLabel": "進階設定",
 		"searchMinScoreLabel": "搜尋分數閾值",
 		"searchMinScoreDescription": "搜尋結果所需的最低相似度分數（0.0-1.0）。較低的值會傳回更多結果，但可能較不相關。較高的值會傳回較少但更相關的結果。",
@@ -302,6 +331,8 @@
 		"anthropicAzureDeploymentPlaceholder": "輸入部署名稱...",
 		"awsBedrock1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
 		"awsBedrock1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"basetenApiKey": "Baseten API 金鑰",
+		"getBasetenApiKey": "取得 Baseten API 金鑰",
 		"cerebrasApiKey": "Cerebras API 金鑰",
 		"getCerebrasApiKey": "取得 Cerebras API 金鑰",
 		"chutesApiKey": "Chutes API 金鑰",
@@ -758,6 +789,10 @@
 		"includeCurrentCost": {
 			"label": "在上下文中包含目前成本",
 			"description": "啟用後，目前 API 使用成本將包含在系統提示中。如果模型因成本問題停止工作，請停用此選項。"
+		},
+		"maxGitStatusFiles": {
+			"label": "Git 狀態最大檔案數",
+			"description": "git狀態上下文中包含的最大檔案條目數。設為0禁用。分支資訊和提交在>0時始終顯示。"
 		}
 	},
 	"terminal": {
@@ -820,6 +855,14 @@
 	},
 	"advancedSettings": {
 		"title": "進階設定"
+	},
+	"toolProtocol": {
+		"label": "工具呼叫協議",
+		"description": "選擇 Kilo Code 如何與 API 通信。原生使用提供者的函數呼叫 API，而 XML 使用 XML 格式的工具定義。",
+		"default": "預設",
+		"xml": "XML",
+		"native": "原生",
+		"currentDefault": "預設: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -908,6 +951,8 @@
 			"description": "啟用後，new_task 工具將需要提供 todos 參數。這可以確保所有新工作都以明確的目標列表開始。停用時（預設），todos 參數保持可選，以實現向後相容。"
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "提供商",
+			"providerDescription": "選擇用於圖像生成的提供商。",
 			"name": "啟用 AI 圖像生成",
 			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
 			"apiProvider": "API 供應商",
@@ -929,6 +974,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "啟用模型發起斜線命令",
 			"description": "啟用時，Kilo Code 可以執行您的斜線命令來執行工作流程。"
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "並行工具呼叫",
+			"description": "啟用後，原生協定可在單個助理訊息輪次中執行多個工具。"
 		}
 	},
 	"promptCaching": {

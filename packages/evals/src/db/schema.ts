@@ -21,6 +21,7 @@ export const runs = pgTable("runs", {
 	cacheWritesPrice: real(),
 	cacheReadsPrice: real(),
 	settings: jsonb().$type<RooCodeSettings>(),
+	jobToken: text(),
 	pid: integer(),
 	socketPath: text("socket_path").notNull(),
 	concurrency: integer().default(2).notNull(),

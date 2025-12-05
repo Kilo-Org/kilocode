@@ -37,6 +37,26 @@
 		"about": "À propos de Kilo Code",
 		"autoPurge": "Auto-nettoyage"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Vous avez trouvé un bug ?",
+			"link": "Signaler sur GitHub"
+		},
+		"featureRequest": {
+			"label": "Vous avez une idée ?",
+			"link": "Partagez-la avec nous"
+		},
+		"securityIssue": {
+			"label": "Vous avez découvert une vulnérabilité ?",
+			"link": "Suivez notre processus de divulgation"
+		},
+		"contact": {
+			"label": "Besoin de nous parler ? Écrivez"
+		},
+		"community": "Vous voulez des conseils ou simplement discuter avec d'autres utilisateurs de Kilo Code ? Rejoignez <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Contact et Communauté",
+		"manageSettings": "Gérer les Paramètres"
+	},
 	"slashCommands": {
 		"description": "Gérez vos commandes slash pour exécuter rapidement des flux de travail et des actions personnalisées. <DocsLink>En savoir plus</DocsLink>"
 	},
@@ -62,6 +82,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Clé API",
 		"vercelAiGatewayApiKeyPlaceholder": "Entrez votre clé API Vercel AI Gateway",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Région AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Profil AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Nom du profil AWS depuis ~/.aws/credentials (requis).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clé d'API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Entrez votre clé d'API OpenRouter",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "La clé API Gemini est requise",
 			"mistralApiKeyRequired": "La clé API Mistral est requise",
 			"vercelAiGatewayApiKeyRequired": "La clé API Vercel AI Gateway est requise",
+			"bedrockRegionRequired": "La région AWS est requise",
+			"bedrockProfileRequired": "Le profil AWS est requis",
 			"ollamaBaseUrlRequired": "L'URL de base Ollama est requise",
 			"baseUrlRequired": "L'URL de base est requise",
 			"modelDimensionMinValue": "La dimension du modèle doit être supérieure à 0",
 			"openRouterApiKeyRequired": "Clé API OpenRouter est requise"
 		},
+		"optional": "optionnel",
 		"advancedConfigLabel": "Configuration avancée",
 		"searchMinScoreLabel": "Seuil de score de recherche",
 		"searchMinScoreDescription": "Score de similarité minimum (0.0-1.0) requis pour les résultats de recherche. Des valeurs plus faibles renvoient plus de résultats mais peuvent être moins pertinents. Des valeurs plus élevées renvoient moins de résultats mais plus pertinents.",
@@ -310,6 +339,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Entrez le nom de déploiement...",
 		"awsBedrock1MContextBetaLabel": "Activer la fenêtre de contexte de 1M (Bêta)",
 		"awsBedrock1MContextBetaDescription": "Étend la fenêtre de contexte à 1 million de tokens pour Claude Sonnet 4",
+		"basetenApiKey": "Clé API Baseten",
+		"getBasetenApiKey": "Obtenir la clé API Baseten",
 		"cerebrasApiKey": "Clé API Cerebras",
 		"getCerebrasApiKey": "Obtenir la clé API Cerebras",
 		"chutesApiKey": "Clé API Chutes",
@@ -756,6 +787,10 @@
 		"includeCurrentCost": {
 			"label": "Inclure le coût actuel dans le contexte",
 			"description": "Lorsque cette option est activée, le coût d'utilisation actuel de l'API sera inclus dans le prompt système. Désactivez cette option si les modèles cessent de fonctionner en raison de problèmes de coût."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status max fichiers",
+			"description": "Nombre maximum de fichiers à inclure dans le contexte de statut git. Mettre à 0 pour désactiver. Les informations de branche et les commits sont toujours affichés si > 0."
 		}
 	},
 	"terminal": {
@@ -818,6 +853,14 @@
 	},
 	"advancedSettings": {
 		"title": "Paramètres avancés"
+	},
+	"toolProtocol": {
+		"label": "Protocole d'appel d'outil",
+		"description": "Choisissez comment Kilo Code communique avec l'API. Natif utilise l'API d'appel de fonction du fournisseur, tandis que XML utilise des définitions d'outils au format XML.",
+		"default": "Défaut",
+		"xml": "XML",
+		"native": "Natif",
+		"currentDefault": "Défaut: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -909,6 +952,8 @@
 			"name": "Activer la génération d'images IA",
 			"description": "Lorsqu'activé, Kilo Code peut générer des images à partir de prompts textuels. Nécessite qu'une clé API Kilo Code ou OpenRouter soit configurée.",
 			"apiProvider": "Fournisseur d'API",
+			"providerLabel": "Fournisseur",
+			"providerDescription": "Sélectionnez le fournisseur pour la génération d'images.",
 			"openRouterApiKeyLabel": "Clé API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Entrez votre clé API OpenRouter",
 			"kiloCodeApiKeyLabel": "Clé API Kilo Code",
@@ -927,6 +972,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Activer les commandes slash initiées par le modèle",
 			"description": "Lorsque activé, Kilo Code peut exécuter tes commandes slash pour lancer des workflows."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Appels d'outils parallèles",
+			"description": "Lorsqu'activé, le protocole natif peut exécuter plusieurs outils en un seul tour de message d'assistant."
 		}
 	},
 	"promptCaching": {

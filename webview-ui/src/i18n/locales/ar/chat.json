@@ -53,9 +53,9 @@
 		"tooltip": "احفظ تغييرات الملف"
 	},
 	"tokenProgress": {
-		"availableSpace": "Available space: {{amount}} tokens",
-		"tokensUsed": "Tokens used: {{used}} of {{total}}",
-		"reservedForResponse": "Reserved for model response: {{amount}} tokens"
+		"availableSpace": "المساحة المتاحة: {{amount}} توكن",
+		"tokensUsed": "التوكينات المستخدمة: {{used}} من {{total}}",
+		"reservedForResponse": "محجوز للاستجابة: {{amount}} توكن"
 	},
 	"reject": {
 		"title": "رفض",
@@ -330,13 +330,18 @@
 			"heading": "الجديد في الإضافة:",
 			"openRouterEmbeddings": "دعم نماذج التضمين من OpenRouter",
 			"chutesDynamic": "Chutes الآن يحمّل أحدث النماذج ديناميكياً",
-			"queuedMessagesFix": "إصلاحات لمشكلة فقدان الرسائل في الطابور"
+			"queuedMessagesFix": "إصلاحات لمشكلة فقدان الرسائل في الطابور",
+			"browserUse": "Browser Use 2.0 يطوّر تجربة التصفح في الدردشة بجلسات دائمة وتغذية راجعة أوضح ولوحة متصفح مخصصة ووصف أوضح للإجراءات",
+			"cloudPaid": "موفر Roo Code Cloud الآن يقدّم نماذج مدفوعة: اشترِ رصيداً واستخدمه للوكلاء السحابيين والاستنتاج"
 		},
 		"cloudAgents": {
 			"heading": "الجديد في السحابة:",
 			"prFixer": "نقدّم وكيل <bold>PR Fixer</bold> السحابي لاستكمال PR Reviewer.",
 			"prFixerDescription": "PR Fixer يطبّق تغييرات عالية الجودة على طلبات السحب مباشرة من GitHub. فعّله عبر تعليق في PR وسيقرأ كامل سجل التعليقات لفهم السياق والاتفاقات والمقايضات - ثم ينفّذ الإصلاح المناسب.",
-			"tryPrFixerButton": "جرّب PR Fixer"
+			"tryPrFixerButton": "جرّب PR Fixer",
+			"specialized": "نقدّم <bold>الشارح</bold> و<bold>المخطط</bold> و<bold>المبرمج</bold> - ثلاثة وكلاء سحابيين متخصصين لتطوير سير عملك.",
+			"description": "الوكلاء يعملون معاً في السحابة ويمكن تشغيلهم من الويب أو عبر Slack.",
+			"tryButton": "جرّب الوكلاء السحابيين"
 		},
 		"careers": "أيضاً، <careersLink>نحن نوظّف!</careersLink>",
 		"description": "Kilo Code {{version}} يجلب ميزات وتحسينات كبيرة بناءً على ملاحظاتكم.",
@@ -359,7 +364,16 @@
 		"autoSelectCountdown": "سيتم الاختيار تلقائياً خلال {{count}}ث",
 		"countdownDisplay": "{{count}}ث"
 	},
+	"browserAnnouncement": "تحديث Browser Use 2.0 يُحسِّن تجربة التصفح في الدردشة بجلسات دائمة، تغذية راجعة أوضح، لوحة متصفح مخصصة، ووصف أوضح للإجراءات",
+	"browserAnnouncementDesc": "الآن يمكنك الحفاظ على جلسات المتصفح بين الطلبات، تتبع أفعال المتصفح بشكل أفضل، والحصول على تجربة تصفح أكثر سلاسة",
+	"browserSession": "جلسة المتصفح",
+	"browserActionPress": "ضغط المفتاح",
+	"browserActionPressDesc": "ضغط مفتاح معين في لوحة المفاتيح",
+	"browserActionHover": "التمرير فوق",
+	"browserActionHoverDesc": "تحريك الماوس فوق عنصر",
+	"rooCloudAnnouncement": "موفر Roo Code Cloud الآن يقدم نماذج مدفوعة: اشترِ رصيداً واستخدمه للوكلاء السحابيين والاستنتاج",
 	"browser": {
+		"session": "جلسة المتصفح",
 		"rooWantsToUse": "Kilo Code يريد استخدام المتصفح:",
 		"consoleLogs": "سجلات الكونسول",
 		"noNewLogs": "(لا توجد سجلات جديدة)",
@@ -376,8 +390,10 @@
 			"launch": "فتح المتصفح على {{url}}",
 			"click": "نقرة ({{coordinate}})",
 			"type": "كتابة \"{{text}}\"",
+			"press": "ضغط {{key}}",
 			"scrollDown": "تمرير لأسفل",
 			"scrollUp": "تمرير لأعلى",
+			"hover": "تمرير ({{coordinate}})",
 			"close": "إغلاق المتصفح"
 		}
 	},

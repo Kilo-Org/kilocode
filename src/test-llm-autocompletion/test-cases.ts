@@ -58,7 +58,9 @@ function parseHeaders(
 
 function parseTestCaseFile(filePath: string): { description: string; filename: string; input: string } {
 	const content = fs.readFileSync(filePath, "utf-8")
-	const lines = content.split("\n")
+	// Normalize line endings to handle Windows CRLF
+	const normalizedContent = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+	const lines = normalizedContent.split("\n")
 
 	const { headers, contentStartIndex } = parseHeaders(lines, filePath, ["description", "filename"])
 

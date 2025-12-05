@@ -301,21 +301,21 @@
 			"goToSettingsButton": "Ir a Configuración"
 		},
 		"release": {
-			"heading": "Novedades en la Extensión:",
-			"openRouterEmbeddings": "Soporte para modelos de embeddings de OpenRouter",
-			"chutesDynamic": "Chutes ahora carga los modelos más recientes dinámicamente",
-			"queuedMessagesFix": "Correcciones para mensajes en cola que se perdían"
+			"heading": "Novedades en esta versión:",
+			"browserUse": "Browser Use 2.0 mejora la experiencia de navegación en el chat con sesiones persistentes, retroalimentación más clara, un panel de navegador dedicado y descripciones de acciones más naturales",
+			"cloudPaid": "El proveedor de Roo Code Cloud ahora ofrece modelos pagos: compra créditos y úsalos tanto para agentes en la nube como para inferencia"
 		},
 		"cloudAgents": {
 			"heading": "Novedades en la Nube:",
-			"prFixer": "Presentamos el agente en la nube <bold>PR Fixer</bold> para complementar el PR Reviewer.",
-			"prFixerDescription": "El PR Fixer de Roo Code aplica cambios de alta calidad a tus PRs, directamente desde GitHub. Invócalo mediante un comentario en el PR y leerá todo el historial de comentarios para entender el contexto, los acuerdos y las compensaciones — luego implementará la solución correcta.",
-			"tryPrFixerButton": "Probar PR Fixer"
+			"specialized": "Presentamos <bold>Explainer</bold>, <bold>Planner</bold> y <bold>Coder</bold> - tres agentes en la nube especializados para mejorar tus flujos de trabajo.",
+			"description": "Los agentes trabajan juntos en la nube y se pueden activar desde la web o mediante Slack.",
+			"tryButton": "Prueba los Agentes en la Nube"
 		},
 		"careers": "Además, <careersLink>¡estamos contratando!</careersLink>",
 		"socialLinks": "Únete a nosotros en <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sesión del navegador",
 		"rooWantsToUse": "Kilo Code quiere usar el navegador",
 		"consoleLogs": "Registros de la consola",
 		"noNewLogs": "(No hay nuevos registros)",
@@ -328,12 +328,14 @@
 		},
 		"sessionStarted": "Sesión de navegador iniciada",
 		"actions": {
-			"title": "Acción de navegación: ",
+			"title": "Acción del navegador: ",
 			"launch": "Iniciar navegador en {{url}}",
 			"click": "Clic ({{coordinate}})",
 			"type": "Escribir \"{{text}}\"",
+			"press": "Pulsar {{key}}",
 			"scrollDown": "Desplazar hacia abajo",
 			"scrollUp": "Desplazar hacia arriba",
+			"hover": "Flotar ({{coordinate}})",
 			"close": "Cerrar navegador"
 		}
 	},

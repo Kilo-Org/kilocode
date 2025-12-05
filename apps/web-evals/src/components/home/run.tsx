@@ -1,11 +1,19 @@
 import { useCallback, useState, useRef } from "react"
 import Link from "next/link"
-import { Ellipsis, ClipboardList, Copy, Check, LoaderCircle, Trash } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Ellipsis, ClipboardList, Copy, Check, LoaderCircle, Trash, Settings } from "lucide-react"
 
 import type { Run as EvalsRun, TaskMetrics as EvalsTaskMetrics } from "@roo-code/evals"
+import type { ToolName } from "@roo-code/types"
 
 import { deleteRun } from "@/actions/runs"
-import { formatCurrency, formatDuration, formatTokens, formatToolUsageSuccessRate } from "@/lib/formatters"
+import {
+	formatCurrency,
+	formatDateTime,
+	formatDuration,
+	formatTokens,
+	formatToolUsageSuccessRate,
+} from "@/lib/formatters"
 import { useCopyRun } from "@/hooks/use-copy-run"
 import {
 	Button,
@@ -23,15 +31,23 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	ScrollArea,
 } from "@/components/ui"
 
 type RunProps = {
 	run: EvalsRun
 	taskMetrics: EvalsTaskMetrics | null
+	toolColumns: ToolName[]
 }
 
-export function Run({ run, taskMetrics }: RunProps) {
+export function Run({ run, taskMetrics, toolColumns }: RunProps) {
+	const router = useRouter()
 	const [deleteRunId, setDeleteRunId] = useState<number>()
+	const [showSettings, setShowSettings] = useState(false)
 	const continueRef = useRef<HTMLButtonElement>(null)
 	const { isPending, copyRun, copied } = useCopyRun(run.id)
 
@@ -48,10 +64,25 @@ export function Run({ run, taskMetrics }: RunProps) {
 		}
 	}, [deleteRunId])
 
+	const handleRowClick = useCallback(
+		(e: React.MouseEvent) => {
+			// Don't navigate if clicking on the dropdown menu
+			if ((e.target as HTMLElement).closest("[data-dropdown-trigger]")) {
+				return
+			}
+			router.push(`/runs/${run.id}`)
+		},
+		[router, run.id],
+	)
+
 	return (
 		<>
-			<TableRow>
-				<TableCell>{run.model}</TableCell>
+			<TableRow className="cursor-pointer hover:bg-muted/50" onClick={handleRowClick}>
+				<TableCell className="max-w-[200px] truncate">{run.model}</TableCell>
+				<TableCell>{run.settings?.apiProvider ?? "-"}</TableCell>
+				<TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+					{formatDateTime(run.createdAt)}
+				</TableCell>
 				<TableCell>{run.passed}</TableCell>
 				<TableCell>{run.failed}</TableCell>
 				<TableCell>
@@ -61,27 +92,33 @@ export function Run({ run, taskMetrics }: RunProps) {
 				</TableCell>
 				<TableCell>
 					{taskMetrics && (
-						<div className="flex items-center gap-1.5">
-							<div>{formatTokens(taskMetrics.tokensIn)}</div>/
-							<div>{formatTokens(taskMetrics.tokensOut)}</div>
+						<div className="flex items-center gap-1">
+							<span>{formatTokens(taskMetrics.tokensIn)}</span>/
+							<span>{formatTokens(taskMetrics.tokensOut)}</span>
 						</div>
 					)}
 				</TableCell>
-				<TableCell>
-					{taskMetrics?.toolUsage?.apply_diff && (
-						<div className="flex flex-row items-center gap-1.5">
-							<div>{taskMetrics.toolUsage.apply_diff.attempts}</div>
-							<div>/</div>
-							<div>{formatToolUsageSuccessRate(taskMetrics.toolUsage.apply_diff)}</div>
-						</div>
-					)}
-				</TableCell>
+				{toolColumns.map((toolName) => {
+					const usage = taskMetrics?.toolUsage?.[toolName]
+					return (
+						<TableCell key={toolName} className="text-xs text-center">
+							{usage ? (
+								<div className="flex flex-col items-center">
+									<span className="font-medium">{usage.attempts}</span>
+									<span className="text-muted-foreground">{formatToolUsageSuccessRate(usage)}</span>
+								</div>
+							) : (
+								<span className="text-muted-foreground">-</span>
+							)}
+						</TableCell>
+					)
+				})}
 				<TableCell>{taskMetrics && formatCurrency(taskMetrics.cost)}</TableCell>
 				<TableCell>{taskMetrics && formatDuration(taskMetrics.duration)}</TableCell>
-				<TableCell>
+				<TableCell onClick={(e) => e.stopPropagation()}>
 					<DropdownMenu>
 						<Button variant="ghost" size="icon" asChild>
-							<DropdownMenuTrigger>
+							<DropdownMenuTrigger data-dropdown-trigger>
 								<Ellipsis />
 							</DropdownMenuTrigger>
 						</Button>
@@ -94,6 +131,14 @@ export function Run({ run, taskMetrics }: RunProps) {
 									</div>
 								</Link>
 							</DropdownMenuItem>
+							{run.settings && (
+								<DropdownMenuItem onClick={() => setShowSettings(true)}>
+									<div className="flex items-center gap-1">
+										<Settings />
+										<div>View Settings</div>
+									</div>
+								</DropdownMenuItem>
+							)}
 							{run.taskMetricsId && (
 								<DropdownMenuItem onClick={() => copyRun()} disabled={isPending || copied}>
 									<div className="flex items-center gap-1">
@@ -144,6 +189,18 @@ export function Run({ run, taskMetrics }: RunProps) {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+			<Dialog open={showSettings} onOpenChange={setShowSettings}>
+				<DialogContent className="max-w-2xl max-h-[80vh]">
+					<DialogHeader>
+						<DialogTitle>Run Settings</DialogTitle>
+					</DialogHeader>
+					<ScrollArea className="max-h-[60vh]">
+						<pre className="text-xs font-mono bg-muted p-4 rounded-md overflow-auto">
+							{JSON.stringify(run.settings, null, 2)}
+						</pre>
+					</ScrollArea>
+				</DialogContent>
+			</Dialog>
 		</>
 	)
 }

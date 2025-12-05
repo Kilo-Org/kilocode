@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+// import posthog from "posthog-js" // kilocode_change unused
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import TranslationProvider from "./i18n/TranslationContext"
@@ -90,6 +91,23 @@ const App = () => {
 		mdmCompliant,
 		apiConfiguration, // kilocode_change
 	} = useExtensionState()
+
+	// kilocode_change start: disable useEffect
+	// const [useProviderSignupView, setUseProviderSignupView] = useState(false)
+
+	// Check PostHog feature flag for provider signup view
+	// Wait for telemetry to be initialized before checking feature flags
+	// useEffect(() => {
+	// 	if (!didHydrateState || telemetrySetting === "disabled") {
+	// 		return
+	// 	}
+
+	// 	posthog.onFeatureFlags(function () {
+	// 		// Feature flag for new provider-focused welcome view
+	// 		setUseProviderSignupView(posthog?.getFeatureFlag("welcome-provider-signup") === "test")
+	// 	})
+	// }, [didHydrateState, telemetrySetting])
+	// kilocode_change end
 
 	// Create a persistent state manager
 	const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), [])
@@ -276,6 +294,7 @@ const App = () => {
 
 	// Do not conditionally load ChatView, it's expensive and there's state we
 	// don't want to lose (user input, disableInput, askResponse promise, etc.)
+	// kilocode_change: no WelcomeViewProvider toggle
 	return showWelcome ? (
 		<WelcomeView />
 	) : (

@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "由於政策限制，無法建立新工作。"
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "使用 OpenRouter 模型生成圖像需要 OpenRouter API 金鑰。請在圖像生成實驗設定中配置。",
+		"failedWithStatus": "圖像生成失敗：{{status}} {{statusText}}",
+		"failedWithMessage": "圖像生成失敗：{{message}}",
+		"noImageGenerated": "回應中未生成圖像",
+		"invalidImageData": "回應中的圖像資料無效",
+		"invalidImageFormat": "收到的圖像格式無效",
+		"unknownError": "發生未知錯誤",
+		"roo": {
+			"authRequired": "圖像生成需要 Roo Code Cloud 認證。請登入 Roo Code Cloud。"
+		}
 	}
 }

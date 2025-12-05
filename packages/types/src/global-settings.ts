@@ -60,6 +60,7 @@ export const globalSettingsSchema = z.object({
 	dismissedUpsells: z.array(z.string()).optional(),
 
 	// Image generation settings (experimental) - flattened for simplicity
+	imageGenerationProvider: z.enum(["openrouter", "kilocode"]).optional(), // kilocode_change: Updated from "roo" to "kilocode"
 	openRouterImageApiKey: z.string().optional(),
 	openRouterImageGenerationSelectedModel: z.string().optional(),
 	kiloCodeImageApiKey: z.string().optional(),
@@ -109,6 +110,12 @@ export const globalSettingsSchema = z.object({
 	 * @default true
 	 */
 	includeCurrentCost: z.boolean().optional(),
+	/**
+	 * Maximum number of git status file entries to include in the environment details.
+	 * Set to 0 to disable git status. The header (branch, commits) is always included when > 0.
+	 * @default 0
+	 */
+	maxGitStatusFiles: z.number().optional(),
 
 	/**
 	 * Whether to include diagnostic messages (errors, warnings) in tool outputs
@@ -285,6 +292,7 @@ export const SECRET_STATE_KEYS = [
 	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
 	"sapAiCoreServiceKey", // kilocode_change
+	"basetenApiKey",
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
@@ -397,6 +405,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	rateLimitSeconds: 0,
 	maxOpenTabsContext: 20,
 	maxWorkspaceFiles: 200,
+	maxGitStatusFiles: 20,
 	showRooIgnoredFiles: true,
 	maxReadFileLine: -1, // -1 to enable full file reading.
 

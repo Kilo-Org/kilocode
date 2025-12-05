@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Impossible de créer une nouvelle tâche en raison de restrictions de politique."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "La clé API OpenRouter est requise pour la génération d'images avec les modèles OpenRouter. Veuillez la configurer dans les paramètres expérimentaux de Génération d'Images.",
+		"failedWithStatus": "Échec de génération de l'image : {{status}} {{statusText}}",
+		"failedWithMessage": "Échec de génération de l'image : {{message}}",
+		"noImageGenerated": "Aucune image n'a été générée dans la réponse",
+		"invalidImageData": "Données d'image non valides dans la réponse",
+		"invalidImageFormat": "Format d'image non valide reçu",
+		"unknownError": "Une erreur inconnue s'est produite",
+		"roo": {
+			"authRequired": "L'authentification Roo Code Cloud est requise pour la génération d'images. Veuillez vous connecter à Roo Code Cloud."
+		}
 	}
 }

@@ -101,7 +101,8 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 				const cacheReadPrice = pricing.input_cache_read ? parseApiPrice(pricing.input_cache_read) : undefined
 				const cacheWritePrice = pricing.input_cache_write ? parseApiPrice(pricing.input_cache_write) : undefined
 
-				models[modelId] = {
+				// Build the base model info from API response
+				const baseModelInfo = {
 					maxTokens,
 					contextWindow,
 					supportsImages,
@@ -117,6 +118,8 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 					deprecated: model.deprecated || false,
 					isFree: tags.includes("free"),
 				}
+
+				models[modelId] = baseModelInfo
 			}
 
 			return models
