@@ -1,3 +1,6 @@
+import type { Session } from "../../../shared/kilocode/cli-sessions/core/SessionClient"
+export type RemoteSession = Session
+
 /**
  * Agent Manager Types
  */
@@ -40,14 +43,7 @@ export interface PendingSession {
 	parallelMode?: boolean
 }
 
-export interface RemoteSession {
-	session_id: string
-	title: string
-	created_at: string
-	updated_at: string
-}
-
-export interface AgentManagerState {
+export type AgentManagerState = {
 	sessions: AgentSession[]
 	selectedId: string | null
 }

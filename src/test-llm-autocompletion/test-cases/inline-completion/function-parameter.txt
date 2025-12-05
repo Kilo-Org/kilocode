@@ -1,4 +1,5 @@
 # Description: Should complete function call parameters
+# Filename: greeter.js
 function greet(name, <<<CURSOR>>>) {
   console.log(`Hello ${name}!`);
 }

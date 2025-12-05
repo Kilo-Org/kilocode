@@ -1,4 +1,5 @@
 # Description: Should fix bug described in FIXME comment
+# Filename: math-utils.js
 function divide(a, b) {
   // FIXME: Handle division by zero<<<CURSOR>>>
   return a / b;

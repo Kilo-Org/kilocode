@@ -68,9 +68,3 @@ export function kilo_initializeSessionManager({
 		}
 	})
 }
-
-export async function kilo_destroySessionManager() {
-	return kilo_execIfExtension(() => {
-		return SessionManager.init().destroy()
-	})
-}
