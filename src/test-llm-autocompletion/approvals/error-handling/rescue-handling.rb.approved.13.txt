@@ -1,0 +1,9 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		return result
+	rescue JSON::ParserError => e
+		puts "Error parsing JSON: #{e.message}"
+		return nil
+	end
+end

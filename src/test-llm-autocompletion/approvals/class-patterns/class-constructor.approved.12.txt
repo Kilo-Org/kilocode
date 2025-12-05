@@ -1,0 +1,19 @@
+class User {
+	constructor(username, email, role) {
+		this.username = username;
+		this.email = email;
+		this.role = role;
+	}
+
+	getInfo() {
+		return `${this.username} ${this.email} ${this.role}`;
+	}
+
+	isAdmin() {
+		return this.role === "admin";
+	}
+}
+
+const user1 = new User("john", "john@example.com", "admin");
+console.log(user1.getInfo());
+console.log(user1.isAdmin());

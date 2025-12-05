@@ -1,0 +1,46 @@
+class Shape
+	def area
+		0
+	end
+end
+
+class Rectangle < Shape
+	def initialize(width, height)
+		@width = width
+		@height = height
+	end
+	
+	def area
+		@width * @height
+	end
+end
+
+class Triangle < Shape
+	def initialize(base, height)
+		@base = base
+		@height = height
+	end
+
+	def area
+		@base * @height / 2
+	end
+end
+
+class Circle < Shape
+	def initialize(radius)
+		@radius = radius
+	end
+
+	def area
+		@radius * @radius * Math::PI
+	end
+end
+
+rectangle = Rectangle.new(10, 20)
+puts rectangle.area
+
+triangle = Triangle.new(10, 20)
+puts triangle.area
+
+circle = Circle.new(10)
+puts circle.area

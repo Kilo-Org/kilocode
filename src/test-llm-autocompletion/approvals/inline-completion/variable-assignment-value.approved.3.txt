@@ -1,0 +1,2 @@
+const total = (acc, item) => acc + item;
+const items = [1, 2, 3, 4, 5];

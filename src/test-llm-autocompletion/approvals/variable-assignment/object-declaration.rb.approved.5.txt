@@ -1,0 +1,17 @@
+user = {
+	name: 'John',
+	email: 'john@example.com',
+	password: 'password'
+}
+
+User.create(user)
+
+10.times do |i|
+	post = {
+		title: "Post #{i}",
+		content: "Content #{i}",
+		user_id: 1
+	}
+
+	Post.create(post)
+end
