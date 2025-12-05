@@ -35,7 +35,7 @@ function parseHeaders(
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i]
-		const headerMatch = line.match(/^# ([^:]+):\s*(.*)$/)
+		const headerMatch = line.match(/^#### ([^:]+):\s*(.*)$/)
 
 		if (headerMatch) {
 			const [, name, value] = headerMatch

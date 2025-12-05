@@ -1,5 +1,5 @@
-# Description: Should suggest nested object properties
-# Filename: config.js
+#### Description: Should suggest nested object properties
+#### Filename: config.js
 const config = {
 	server: {
 	  port: 3000,

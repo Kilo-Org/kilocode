@@ -1,5 +1,5 @@
-# Description: Should fix bug described in FIXME comment
-# Filename: math-operations.js
+#### Description: Should fix bug described in FIXME comment
+#### Filename: math-operations.js
 
 function addNumbers(a, b) {
     return a + b

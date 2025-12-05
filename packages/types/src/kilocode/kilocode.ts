@@ -119,8 +119,8 @@ export function getAppUrl(path: string = ""): string {
 export function getApiUrl(path: string = ""): string {
 	const backend = getGlobalKilocodeBackendUrl()
 
-	// In development (localhost), API is served from the same origin (no /api prefix needed)
-	if (backend.includes("localhost")) {
+	// If using a custom backend (not the default production URL), use it directly
+	if (backend !== DEFAULT_KILOCODE_BACKEND_URL) {
 		return new URL(path, backend).toString()
 	}
 
@@ -136,7 +136,7 @@ export function getApiUrl(path: string = ""): string {
 export function getExtensionConfigUrl(): string {
 	try {
 		const backend = getGlobalKilocodeBackendUrl()
-		if (backend.includes("localhost")) {
+		if (backend !== DEFAULT_KILOCODE_BACKEND_URL) {
 			return getAppUrl("/extension-config.json")
 		} else {
 			return "https://api.kilo.ai/extension-config.json"

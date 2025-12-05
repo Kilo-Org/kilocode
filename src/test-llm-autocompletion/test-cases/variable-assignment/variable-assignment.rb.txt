@@ -1,4 +1,4 @@
-# Description: Should complete Ruby variable assignment
-# Filename: variables.rb
+#### Description: Should complete Ruby variable assignment
+#### Filename: variables.rb
 x = 10
 y = <<<AUTOCOMPLETE_HERE>>>
