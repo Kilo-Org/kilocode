@@ -84,8 +84,6 @@ While this setting only allows reading files (not modifying them), it could pote
 
 #### Read Outside Workspace
 
-> 📌 This option only appears when "Always approve read-only operations" is enabled.
-
 **Setting:** "Allow reading files outside the workspace"
 
 **Description:** "When enabled, Kilo Code can read files outside the current workspace directory without asking for approval."
@@ -123,15 +121,13 @@ This setting allows Kilo Code to modify your files without confirmation. The del
 
 #### Write Outside Workspace
 
-> 📌 This option only appears when "Always approve write operations" is enabled.
-
 **Setting:** "Allow writing files outside the workspace"
 
 **Description:** "When enabled, Kilo Code can create or modify files outside the current workspace directory without asking for approval."
 
 **Risk level:** Very High
 
-This is one of the most dangerous settings. It allows Kilo Code to:
+Use with caution and in controlled environments. It allows Kilo Code to:
 
 - Modify your shell configuration files
 - Change system configurations
@@ -141,8 +137,6 @@ This is one of the most dangerous settings. It allows Kilo Code to:
 
 #### Write to Protected Files
 
-> 📌 This option only appears when "Always approve write operations" is enabled.
-
 **Setting:** "Allow writing to protected files"
 
 **Description:** "When enabled, Kilo Code can overwrite or modify files that are normally protected by the `.kilocodeignore` file."
@@ -150,26 +144,6 @@ This is one of the most dangerous settings. It allows Kilo Code to:
 **Risk level:** Very High
 
 Protected files are intentionally shielded from modification. Enable only if you understand the consequences.
-
-#### Write Delay & Problems Pane Integration
-
-<img src="/docs/img/auto-approving-actions/auto-approving-actions-5.png" alt="VSCode Problems pane showing diagnostic information" width="600" />
-
-_VSCode Problems pane that Kilo Code checks during the write delay_
-
-When you enable auto-approval for writing files, the delay timer works with VSCode's Problems pane:
-
-1. Kilo Code makes a change to your file
-2. VSCode's diagnostic tools analyze the change
-3. The Problems pane updates with any errors or warnings
-4. Kilo Code notices these issues before continuing
-
-This works like a human developer pausing to check for errors after changing code. You can adjust the delay time based on:
-
-- Project complexity
-- Language server speed
-- How important error detection is for your workflow
-  :::
 
 ### Delete Operations
 
@@ -181,7 +155,7 @@ This works like a human developer pausing to check for errors after changing cod
 
 **Risk level:** Very High
 
-This setting allows Kilo Code to permanently remove files without confirmation. Unlike write operations, deletions cannot be easily reversed (unless you're using checkpoints).
+This setting allows Kilo Code to permanently remove files without confirmation.
 
 **Safeguards:**
 
@@ -189,7 +163,7 @@ This setting allows Kilo Code to permanently remove files without confirmation. 
 - Protected files cannot be deleted
 - The delete tool shows what will be removed before execution
 
-**Recommendation:** Enable only in isolated environments or when working with temporary/generated files. Always ensure you have backups or version control.
+**Recommendation:** Enable only in isolated environments or when working with temporary/generated files. Always ensure you have backups, checkpoints, or version control.
 :::
 
 ### Browser Actions
@@ -228,8 +202,6 @@ Consider the security implications of allowing automated browser access.
 This setting automatically retries API calls when they fail.
 
 #### Retry Delay Timer
-
-> 📌 This slider only appears when "Always retry failed API requests" is enabled.
 
 **Delay slider:** "Delay before retrying the request" (Range: 5-100 seconds, Default: 5s)
 
@@ -292,19 +264,23 @@ Enables Kilo Code to create and complete subtasks automatically. This relates to
 
 **Risk level:** High
 
-This setting allows terminal command execution with controls. While risky, the whitelist and denylist features limit what commands can run.
+This setting allows terminal command execution with controls. While risky, the allowlist and denylist features limit what commands can run.
+
+- Allowlist specific command prefixes (recommended)
+- Never use `*` wildcard in production or with sensitive data
+- Consider security implications of each allowed command
+- Consider including potentially dangerous common commands in the deny list
+- Always verify commands that interact with external systems
 
 #### Allowed Commands
 
-> 📌 The command configuration options only appear when "Always approve allowed execute operations" is enabled.
-
 **Setting:** "Command prefixes that can be auto-executed"
 
-Add command prefixes (e.g., `git`, `npm`, `ls`) that Kilo Code can run without asking. Use `*` to allow all commands (extremely dangerous).
+Add command prefixes (e.g., `git`, `npm`, `ls`) that Kilo Code can run without asking. Use `*` to allow all commands (use with caution).
 
 **Interface elements:**
 
-- Text field to enter command prefixes
+- Text field to enter command prefixes (e.g., 'git')
 - "Add" button to add new prefixes
 - Clickable command buttons with X to remove them
 
@@ -312,28 +288,8 @@ Add command prefixes (e.g., `git`, `npm`, `ls`) that Kilo Code can run without a
 
 **Setting:** "Command prefixes that are always blocked"
 
-Commands in this list will never run, even if `*` is in the allowed list. Use this to create exceptions for dangerous commands:
-
-- `rm -rf` - Recursive force delete
-- `sudo rm` - Delete with elevated privileges
-- `mkfs` - Filesystem formatting
-- `dd if=` - Low-level disk operations
-
-#### Command Timeout
-
-**Setting:** "Command execution timeout"
-
-Maximum time (in seconds) a command can run before being terminated. This prevents runaway processes.
-
-**Timeout Allowlist:** Commands that can bypass the timeout (useful for long-running build processes or servers).
-
-**Security recommendations:**
-
-- Never use `*` wildcard in production or with sensitive data
-- Always include common dangerous commands in the deny list
-- Set reasonable timeouts to prevent resource exhaustion
-- Verify commands that interact with external systems
-  :::
+Commands in this list will never run, even if `*` is in the allowed list. Use this to create exceptions for potentially dangerous commands.
+:::
 
 ### Follow-Up Questions
 
@@ -342,10 +298,6 @@ Maximum time (in seconds) a command can run before being terminated. This preven
 **Setting:** `Always default answer for follow-up questions`
 
 **Description:** Automatically selects the first AI-suggested answer for a follow-up question after a configurable timeout. This speeds up your workflow by letting Kilo Code proceed without manual intervention.
-
-#### Auto-Selection Timeout Timer
-
-> 📌 This slider only appears when "Always default answer for follow-up questions" is enabled.
 
 **Timeout slider:** Use the slider to set the wait time (Range: 1-300 seconds, Default: 60s).
 
@@ -384,18 +336,6 @@ This setting allows Kilo Code to automatically update task progress and todo lis
 - Updating task status (pending, in progress, completed)
 - Reorganizing task priorities
 
-#### Prevent Completion with Open Todos
-
-**Setting:** "Prevent task completion when todos remain open"
-
-**Description:** When enabled, Kilo Code cannot use `attempt_completion` if there are unfinished items in the todo list.
-
-**Benefits:**
-
-- Ensures all planned work is completed
-- Prevents premature task closure
-- Maintains project quality standards
-
 **Use cases:**
 
 - Long-running development sessions
@@ -412,7 +352,7 @@ This is particularly useful when combined with the Subtasks permission, as it al
 
 **"You Only Live Once"** mode enables _all_ auto-approve permissions at once using the master toggle. This gives Kilo Code complete autonomy to read files, write code, execute commands, and perform any operation without asking for permission.
 
-You can optionally enable an AI Safety Gatekeeper, which reviews every intended change in YOLO mode and intelligently approves or blocks actions before they execute. We suggest using a small, fast model such as gpt-4o-mini. When enabled, AI Safety Gatekeeper will incur additional costs, as well as additional latency.
+You can optionally enable an AI Safety Gatekeeper, which reviews every intended change in YOLO mode and intelligently approves or blocks actions before they execute. We suggest using a small, fast model such as OpenAI gpt-oss-safeguard-20b. When enabled, AI Safety Gatekeeper will incur additional costs, as well as additional latency.
 
 **When to use:**
 
@@ -428,71 +368,3 @@ You can optionally enable an AI Safety Gatekeeper, which reviews every intended 
 
 This is the fastest way to work with Kilo Code, but also the riskiest. Use it only when you fully trust the AI and are prepared for the consequences.
 :::
-
-## CLI Configuration
-
-When using the Kilo Code CLI, auto-approval settings can be configured in your configuration file. The CLI uses a structured format:
-
-```yaml
-autoApproval:
-    enabled: true
-    read:
-        enabled: true
-        outside: false # Whether to allow reading files outside workspace
-    write:
-        enabled: true
-        outside: false # Whether to allow writing files outside workspace
-        protected: false # Whether to allow writing to protected files
-    browser:
-        enabled: false
-    retry:
-        enabled: false
-        delay: 10 # seconds
-    mcp:
-        enabled: true
-    mode:
-        enabled: true
-    subtasks:
-        enabled: true
-    execute:
-        enabled: true
-        allowed: ["ls", "cat", "echo", "pwd"]
-        denied: ["rm -rf", "sudo rm", "mkfs", "dd if="]
-    question:
-        enabled: false
-        timeout: 60 # seconds
-    todo:
-        enabled: true
-```
-
-See the [CLI documentation](/docs/cli) for more details on configuration options.
-
-## Settings Reference
-
-| Setting                               | Type     | Default | Description                                  |
-| ------------------------------------- | -------- | ------- | -------------------------------------------- |
-| `autoApprovalEnabled`                 | boolean  | false   | Master toggle for all auto-approvals         |
-| `alwaysAllowReadOnly`                 | boolean  | false   | Auto-approve reading files                   |
-| `alwaysAllowReadOnlyOutsideWorkspace` | boolean  | false   | Auto-approve reading files outside workspace |
-| `alwaysAllowWrite`                    | boolean  | false   | Auto-approve writing/editing files           |
-| `alwaysAllowWriteOutsideWorkspace`    | boolean  | false   | Auto-approve writing files outside workspace |
-| `alwaysAllowWriteProtected`           | boolean  | false   | Auto-approve writing to protected files      |
-| `alwaysAllowDelete`                   | boolean  | false   | Auto-approve deleting files                  |
-| `writeDelayMs`                        | number   | 1000    | Delay after writes for diagnostics (ms)      |
-| `alwaysAllowBrowser`                  | boolean  | false   | Auto-approve browser actions                 |
-| `alwaysApproveResubmit`               | boolean  | false   | Auto-retry failed API requests               |
-| `requestDelaySeconds`                 | number   | 5       | Delay between retries (seconds)              |
-| `alwaysAllowMcp`                      | boolean  | false   | Auto-approve MCP tool usage                  |
-| `alwaysAllowModeSwitch`               | boolean  | false   | Auto-approve mode switching                  |
-| `alwaysAllowSubtasks`                 | boolean  | false   | Auto-approve subtask management              |
-| `alwaysAllowExecute`                  | boolean  | false   | Auto-approve command execution               |
-| `allowedCommands`                     | string[] | []      | Commands allowed for auto-execution          |
-| `deniedCommands`                      | string[] | []      | Commands always blocked                      |
-| `commandExecutionTimeout`             | number   | -       | Max command runtime (seconds)                |
-| `commandTimeoutAllowlist`             | string[] | []      | Commands that bypass timeout                 |
-| `alwaysAllowFollowupQuestions`        | boolean  | false   | Auto-answer follow-up questions              |
-| `followupAutoApproveTimeoutMs`        | number   | 60000   | Timeout before auto-selecting answer (ms)    |
-| `alwaysAllowUpdateTodoList`           | boolean  | false   | Auto-approve todo list updates               |
-| `preventCompletionWithOpenTodos`      | boolean  | false   | Block completion with open todos             |
-| `yoloMode`                            | boolean  | false   | Enable YOLO mode (all permissions)           |
-| `yoloGatekeeperApiConfigId`           | string   | -       | API config for AI safety gatekeeper          |
