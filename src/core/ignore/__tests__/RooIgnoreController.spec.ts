@@ -526,4 +526,195 @@ describe("RooIgnoreController", () => {
 			expect(controller.validateAccess("node_modules/package.json")).toBe(true)
 		})
 	})
+
+	describe("global ignore patterns", () => {
+		/**
+		 * Tests that global patterns work without .kilocodeignore
+		 */
+		it("should block globally ignored files even without .kilocodeignore", async () => {
+			// Setup global patterns but no .kilocodeignore
+			// Note: Use .env* (with wildcard) to match .env.production, .env.local, etc.
+			const globalPatterns = [".env*", "*.key", "id_rsa"]
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, globalPatterns)
+
+			mockFileExists.mockResolvedValue(false) // No .kilocodeignore
+			await controllerWithGlobal.initialize()
+
+			// Verify no .kilocodeignore content
+			expect(controllerWithGlobal.rooIgnoreContent).toBeUndefined()
+
+			// Global patterns should still block access
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.production")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("id_rsa")).toBe(false)
+
+			// Non-matching files should be allowed
+			expect(controllerWithGlobal.validateAccess("src/app.ts")).toBe(true)
+			expect(controllerWithGlobal.validateAccess("README.md")).toBe(true)
+			expect(controllerWithGlobal.validateAccess("environment.ts")).toBe(true) // Should not match .env*
+		})
+
+		/**
+		 * Tests that global patterns take priority over .kilocodeignore
+		 */
+		it("should give priority to global patterns over .kilocodeignore", async () => {
+			// Setup global patterns with wildcard
+			const globalPatterns = [".env*", "*.key"]
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, globalPatterns)
+
+			// Setup .kilocodeignore that tries to allow .env but blocks other files
+			mockFileExists.mockResolvedValue(true)
+			mockReadFile.mockResolvedValue("node_modules\n!.env*") // Negation pattern to try to allow .env
+			await controllerWithGlobal.initialize()
+
+			// Global pattern should take priority - .env files should still be blocked
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+
+			// Global patterns should block regardless of .kilocodeignore
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(false)
+
+			// .kilocodeignore patterns should still work
+			expect(controllerWithGlobal.validateAccess("node_modules/package.json")).toBe(false)
+		})
+
+		/**
+		 * Tests updateGlobalIgnorePatterns method
+		 */
+		it("should update global patterns dynamically", async () => {
+			// Start with some patterns
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, [".env*"])
+			mockFileExists.mockResolvedValue(false)
+			await controllerWithGlobal.initialize()
+
+			// Verify initial pattern works
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(true)
+
+			// Update patterns
+			controllerWithGlobal.updateGlobalIgnorePatterns([".env*", "*.key", "*.pem"])
+
+			// Verify updated patterns work
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.production")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("cert.pem")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("src/app.ts")).toBe(true)
+		})
+
+		/**
+		 * Tests clearing global patterns
+		 */
+		it("should allow clearing all global patterns", async () => {
+			// Start with patterns
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, [".env*", "*.key"])
+			mockFileExists.mockResolvedValue(false)
+			await controllerWithGlobal.initialize()
+
+			// Verify patterns work
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(false)
+
+			// Clear patterns
+			controllerWithGlobal.updateGlobalIgnorePatterns([])
+
+			// Verify patterns no longer block
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(true)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(true)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(true)
+		})
+
+		/**
+		 * Tests complex glob patterns in global ignore
+		 */
+		it("should support complex glob patterns", async () => {
+			const globalPatterns = [
+				".env*", // Wildcard suffix
+				"*.pem", // Wildcard prefix
+				"secrets/**", // Directory glob
+				"id_*", // Partial wildcard
+			]
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, globalPatterns)
+			mockFileExists.mockResolvedValue(false)
+			await controllerWithGlobal.initialize()
+
+			// Test wildcard suffix
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.production")).toBe(false)
+
+			// Test wildcard prefix
+			expect(controllerWithGlobal.validateAccess("cert.pem")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("key.pem")).toBe(false)
+
+			// Test directory glob
+			expect(controllerWithGlobal.validateAccess("secrets/api-key.txt")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("secrets/nested/file.txt")).toBe(false)
+
+			// Test partial wildcard
+			expect(controllerWithGlobal.validateAccess("id_rsa")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("id_dsa")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("id_ecdsa")).toBe(false)
+
+			// Non-matching should be allowed
+			expect(controllerWithGlobal.validateAccess("environment.ts")).toBe(true)
+			expect(controllerWithGlobal.validateAccess("config.json")).toBe(true)
+		})
+
+		/**
+		 * Tests that both global and .kilocodeignore patterns work together
+		 */
+		it("should enforce both global and .kilocodeignore patterns", async () => {
+			// Setup global patterns with wildcards
+			const globalPatterns = [".env*", "*.key"]
+			const controllerWithGlobal = new RooIgnoreController(TEST_CWD, globalPatterns)
+
+			// Setup .kilocodeignore with different patterns
+			mockFileExists.mockResolvedValue(true)
+			mockReadFile.mockResolvedValue("node_modules\n*.log")
+			await controllerWithGlobal.initialize()
+
+			// Global patterns should block
+			expect(controllerWithGlobal.validateAccess(".env")).toBe(false)
+			expect(controllerWithGlobal.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("config.key")).toBe(false)
+
+			// .kilocodeignore patterns should also block
+			expect(controllerWithGlobal.validateAccess("node_modules/package.json")).toBe(false)
+			expect(controllerWithGlobal.validateAccess("app.log")).toBe(false)
+
+			// Files not matching either should be allowed
+			expect(controllerWithGlobal.validateAccess("src/app.ts")).toBe(true)
+			expect(controllerWithGlobal.validateAccess("config.json")).toBe(true)
+		})
+
+		/**
+		 * Tests default globally ignored files from DEFAULT_GLOBALLY_IGNORED_FILES
+		 */
+		it("should work with DEFAULT_GLOBALLY_IGNORED_FILES patterns", async () => {
+			// Import the defaults
+			const { DEFAULT_GLOBALLY_IGNORED_FILES } = await import("@roo-code/types")
+
+			const controllerWithDefaults = new RooIgnoreController(TEST_CWD, DEFAULT_GLOBALLY_IGNORED_FILES)
+			mockFileExists.mockResolvedValue(false)
+			await controllerWithDefaults.initialize()
+
+			// Test common sensitive files from defaults
+			expect(controllerWithDefaults.validateAccess(".env")).toBe(false)
+			expect(controllerWithDefaults.validateAccess(".env.local")).toBe(false)
+			expect(controllerWithDefaults.validateAccess("private.key")).toBe(false)
+			expect(controllerWithDefaults.validateAccess("cert.pem")).toBe(false)
+			expect(controllerWithDefaults.validateAccess("id_rsa")).toBe(false)
+			expect(controllerWithDefaults.validateAccess("id_ed25519")).toBe(false)
+			expect(controllerWithDefaults.validateAccess("key.gpg")).toBe(false)
+
+			// Regular files should be allowed
+			expect(controllerWithDefaults.validateAccess("src/config.ts")).toBe(true)
+			expect(controllerWithDefaults.validateAccess("README.md")).toBe(true)
+		})
+	})
 })

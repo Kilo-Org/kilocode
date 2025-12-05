@@ -50,21 +50,20 @@ export const DEFAULT_CHECKPOINT_TIMEOUT_SECONDS = 15
  * These are common sensitive files that should be ignored even without a .kilocodeignore file
  */
 export const DEFAULT_GLOBALLY_IGNORED_FILES = [
-	".env",
-	".env.*",
-	"*.pem",
-	"*.key",
-	"*.p12",
-	"*.pfx",
-	"*.jks",
-	"id_rsa",
-	"id_dsa",
-	"id_ecdsa",
-	"id_ed25519",
-	"*.ppk",
-	"*.gpg",
-	"*.asc",
-	"*.sig",
+	".env*", // Matches .env, .env.local, .env.production, etc.
+	"*.pem", // SSL certificates
+	"*.key", // Private keys
+	"*.p12", // PKCS#12 certificates
+	"*.pfx", // Windows certificates
+	"*.jks", // Java keystores
+	"id_rsa", // SSH private key (RSA)
+	"id_dsa", // SSH private key (DSA)
+	"id_ecdsa", // SSH private key (ECDSA)
+	"id_ed25519", // SSH private key (ED25519)
+	"*.ppk", // PuTTY private keys
+	"*.gpg", // GPG encrypted files
+	"*.asc", // ASCII-armored GPG files
+	"*.sig", // Signature files
 ]
 
 /**
