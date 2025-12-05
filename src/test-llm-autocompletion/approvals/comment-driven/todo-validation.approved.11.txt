@@ -1,8 +1,12 @@
 function registerUser(email, password) {
   // TODO: Add input validation for email and password
-// Check if email is valid and password meets requirements
-  if (!validateEmail(email)) {
-    throw new Error('Invalid email address');
+
+  if (!email || !password) {
+    throw new Error('Email and password are required');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Invalid email format');
   }
 
   if (password.length < 8) {

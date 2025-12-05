@@ -1,7 +1,4 @@
 class User {
 	constructor(username, email, role) {
 		this.username = username;
-		this.email = email,
-		this.role = role;
-	}
-}
+		this.email = <<<AUTOCOMPLETE_HERE>>>

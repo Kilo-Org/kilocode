@@ -1,1 +1,3 @@
-(no changes parsed)
+user = {
+	name: 'John',
+	email: <<<AUTOCOMPLETE_HERE>>>
