@@ -105,6 +105,20 @@ export const bedrockModels = {
 		maxCachePoints: 4,
 		cachableFields: ["system", "messages", "tools"],
 	},
+	"anthropic.claude-opus-4-5-20251101-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
 	"anthropic.claude-opus-4-20250514-v1:0": {
 		maxTokens: 8192,
 		contextWindow: 200_000,
@@ -455,12 +469,14 @@ export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
 ] as const
 
 // Amazon Bedrock models that support Global Inference profiles
-// As of Oct 2025, AWS supports Global Inference for:
+// As of Nov 2025, AWS supports Global Inference for:
 // - Claude Sonnet 4
 // - Claude Sonnet 4.5
 // - Claude Haiku 4.5
+// - Claude Opus 4.5
 export const BEDROCK_GLOBAL_INFERENCE_MODEL_IDS = [
 	"anthropic.claude-sonnet-4-20250514-v1:0",
 	"anthropic.claude-sonnet-4-5-20250929-v1:0",
 	"anthropic.claude-haiku-4-5-20251001-v1:0",
+	"anthropic.claude-opus-4-5-20251101-v1:0",
 ] as const

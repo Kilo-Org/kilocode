@@ -76,6 +76,10 @@ interface LocalCodeIndexSettings {
 	codebaseIndexSearchMaxResults?: number
 	codebaseIndexSearchMinScore?: number
 
+	// Bedrock-specific settings
+	codebaseIndexBedrockRegion?: string
+	codebaseIndexBedrockProfile?: string
+
 	// Secret settings (start empty, will be loaded separately)
 	codeIndexOpenAiKey?: string
 	codeIndexQdrantApiKey?: string
@@ -161,6 +165,15 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		case "bedrock":
+			return baseSchema.extend({
+				codebaseIndexBedrockRegion: z.string().min(1, t("settings:codeIndex.validation.bedrockRegionRequired")),
+				codebaseIndexBedrockProfile: z.string().optional(),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
 		case "openrouter":
 			return baseSchema.extend({
 				codebaseIndexOpenRouterApiKey: z
@@ -192,7 +205,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 }) => {
 	const SECRET_PLACEHOLDER = "••••••••••••••••"
 	const { t } = useAppTranslation()
-	const { codebaseIndexConfig, codebaseIndexModels, cwd } = useExtensionState()
+	const { codebaseIndexConfig, codebaseIndexModels, cwd, apiConfiguration } = useExtensionState()
 
 	// kilocode_change start - Controlled/uncontrolled pattern for open state
 	// const [open, setOpen] = useState(false) // kilocode_change
@@ -228,6 +241,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEmbedderModelDimension: undefined,
 		codebaseIndexSearchMaxResults: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+		codebaseIndexBedrockRegion: "",
+		codebaseIndexBedrockProfile: "",
 		codeIndexOpenAiKey: "",
 		codeIndexQdrantApiKey: "",
 		codebaseIndexOpenAiCompatibleBaseUrl: "",
@@ -276,6 +291,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					codebaseIndexConfig.codebaseIndexSearchMaxResults ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 				codebaseIndexSearchMinScore:
 					codebaseIndexConfig.codebaseIndexSearchMinScore ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+				codebaseIndexBedrockRegion: codebaseIndexConfig.codebaseIndexBedrockRegion || "",
+				codebaseIndexBedrockProfile: codebaseIndexConfig.codebaseIndexBedrockProfile || "",
 				codeIndexOpenAiKey: "",
 				codeIndexQdrantApiKey: "",
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl || "",
@@ -654,7 +671,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	const getAvailableModels = () => {
 		if (!codebaseIndexModels) return []
 
-		const models = codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider]
+		const models =
+			codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels]
 		return models ? Object.keys(models) : []
 	}
 
@@ -776,6 +794,33 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												updateSetting("codebaseIndexEmbedderProvider", value)
 												// Clear model selection when switching providers
 												updateSetting("codebaseIndexEmbedderModelId", "")
+
+												// Auto-populate Region and Profile when switching to Bedrock
+												// if the main API provider is also configured for Bedrock
+												if (
+													value === "bedrock" &&
+													apiConfiguration?.apiProvider === "bedrock"
+												) {
+													// Only populate if currently empty
+													if (
+														!currentSettings.codebaseIndexBedrockRegion &&
+														apiConfiguration.awsRegion
+													) {
+														updateSetting(
+															"codebaseIndexBedrockRegion",
+															apiConfiguration.awsRegion,
+														)
+													}
+													if (
+														!currentSettings.codebaseIndexBedrockProfile &&
+														apiConfiguration.awsProfile
+													) {
+														updateSetting(
+															"codebaseIndexBedrockProfile",
+															apiConfiguration.awsProfile,
+														)
+													}
+												}
 											}}>
 											<SelectTrigger className="w-full">
 												<SelectValue />
@@ -798,6 +843,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												</SelectItem>
 												<SelectItem value="vercel-ai-gateway">
 													{t("settings:codeIndex.vercelAiGatewayProvider")}
+												</SelectItem>
+												<SelectItem value="bedrock">
+													{t("settings:codeIndex.bedrockProvider")}
 												</SelectItem>
 												<SelectItem value="openrouter">
 													{t("settings:codeIndex.openRouterProvider")}
@@ -849,7 +897,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId} className="p-2">
@@ -1106,7 +1154,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId} className="p-2">
@@ -1171,7 +1219,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId} className="p-2">
@@ -1263,7 +1311,100 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
+									{currentSettings.codebaseIndexEmbedderProvider === "bedrock" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.bedrockRegionLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexBedrockRegion || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexBedrockRegion", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.bedrockRegionPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexBedrockRegion,
+													})}
+												/>
+												{formErrors.codebaseIndexBedrockRegion && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexBedrockRegion}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.bedrockProfileLabel")}
+													<span className="text-xs text-vscode-descriptionForeground ml-1">
+														({t("settings:codeIndex.optional")})
+													</span>
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexBedrockProfile || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexBedrockProfile", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.bedrockProfilePlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexBedrockProfile,
+													})}
+												/>
+												{formErrors.codebaseIndexBedrockProfile && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexBedrockProfile}
+													</p>
+												)}
+												{!formErrors.codebaseIndexBedrockProfile && (
+													<p className="text-xs text-vscode-descriptionForeground mt-1 mb-0">
+														{t("settings:codeIndex.bedrockProfileDescription")}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="" className="p-2">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId} className="p-2">
@@ -1328,7 +1469,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													{getAvailableModels().map((modelId) => {
 														const model =
 															codebaseIndexModels?.[
-																currentSettings.codebaseIndexEmbedderProvider
+																currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels
 															]?.[modelId]
 														return (
 															<VSCodeOption key={modelId} value={modelId} className="p-2">

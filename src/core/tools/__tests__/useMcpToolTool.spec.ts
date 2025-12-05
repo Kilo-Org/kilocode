@@ -104,6 +104,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -130,6 +131,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -171,6 +173,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -200,6 +203,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.ask).toHaveBeenCalledWith("use_mcp_server", expect.stringContaining("use_mcp_tool"), true)
@@ -242,6 +246,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(0)
@@ -274,6 +279,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.say).not.toHaveBeenCalledWith("mcp_server_request_started")
@@ -314,6 +320,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockHandleError).toHaveBeenCalledWith("executing MCP tool", error)
@@ -357,6 +364,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -402,6 +410,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -451,6 +460,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockTask.consecutiveMistakeCount).toBe(0)
@@ -489,6 +499,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Assert
@@ -530,6 +541,7 @@ describe("useMcpToolTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Assert

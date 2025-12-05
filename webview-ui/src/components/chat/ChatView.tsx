@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
-import { useDeepCompareEffect, useEvent, useMount } from "react-use"
+import { useDeepCompareEffect, useEvent } from "react-use"
 import debounce from "debounce"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import removeMd from "remove-markdown"
@@ -13,7 +13,7 @@ import { appendImages } from "@src/utils/imageUtils"
 
 import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
-import { ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
+import { ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
 import { findLast } from "@roo/array"
 import { SuggestionItem } from "@roo-code/types"
 import { combineApiRequests } from "@roo/combineApiRequests"
@@ -40,7 +40,8 @@ import { OrganizationSelector } from "../kilocode/common/OrganizationSelector"
 import TelemetryBanner from "../common/TelemetryBanner"
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
-import BrowserSessionRow from "./BrowserSessionRow"
+import BrowserActionRow from "./BrowserActionRow"
+import BrowserSessionStatusRow from "./BrowserSessionStatusRow"
 import ChatRow from "./ChatRow"
 import { ChatTextArea } from "./ChatTextArea"
 // import TaskHeader from "./TaskHeader"// kilocode_change
@@ -110,6 +111,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// cloudIsAuthenticated, // kilocode_change
 		messageQueue = [],
 		sendMessageOnEnter, // kilocode_change
+		isBrowserSessionActive,
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -868,9 +870,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useEvent("message", handleMessage)
 
-	// NOTE: the VSCode window needs to be focused for this to work.
-	useMount(() => textAreaRef.current?.focus())
-
 	const visibleMessages = useMemo(() => {
 		// Pre-compute checkpoint hashes that have associated user messages for O(1) lookup
 		const userMessageCheckpointHashes = new Set<string>()
@@ -1025,118 +1024,54 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setWasStreaming(isStreaming)
 	}, [isStreaming, lastMessage, wasStreaming, messages.length])
 
-	const isBrowserSessionMessage = (message: ClineMessage): boolean => {
-		// Which of visible messages are browser session messages, see above.
-		if (message.type === "ask") {
-			return ["browser_action_launch"].includes(message.ask!)
+	// Compute current browser session messages for the top banner (not grouped into chat stream)
+	// Find the FIRST browser session from the beginning to show ALL sessions
+	const browserSessionStartIndex = useMemo(() => {
+		for (let i = 0; i < messages.length; i++) {
+			if (messages[i].ask === "browser_action_launch") {
+				return i
+			}
 		}
+		return -1
+	}, [messages])
 
-		if (message.type === "say") {
-			return ["api_req_started", "text", "browser_action", "browser_action_result"].includes(message.say!)
+	const _browserSessionMessages = useMemo<ClineMessage[]>(() => {
+		if (browserSessionStartIndex === -1) return []
+		return messages.slice(browserSessionStartIndex)
+	}, [browserSessionStartIndex, messages])
+
+	// Show globe toggle only when in a task that has a browser session (active or inactive)
+	const showBrowserDockToggle = useMemo(
+		() => Boolean(task && (browserSessionStartIndex !== -1 || isBrowserSessionActive)),
+		[task, browserSessionStartIndex, isBrowserSessionActive],
+	)
+
+	const isBrowserSessionMessage = useCallback((message: ClineMessage): boolean => {
+		// Only the launch ask should be hidden from chat (it's shown in the drawer header)
+		if (message.type === "ask" && message.ask === "browser_action_launch") {
+			return true
 		}
-
+		// browser_action_result messages are paired with browser_action and should not appear independently
+		if (message.type === "say" && message.say === "browser_action_result") {
+			return true
+		}
 		return false
-	}
+	}, [])
 
 	const groupedMessages = useMemo(() => {
-		const result: (ClineMessage | ClineMessage[])[] = []
-		let currentGroup: ClineMessage[] = []
-		let isInBrowserSession = false
-
-		const endBrowserSession = () => {
-			if (currentGroup.length > 0) {
-				result.push([...currentGroup])
-				currentGroup = []
-				isInBrowserSession = false
-			}
-		}
-
-		visibleMessages.forEach((message: ClineMessage) => {
-			// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
-			// Special handling for browser_action_result - ensure it's always in a browser session
-			if (message.say === "browser_action_result" && !isInBrowserSession) {
-				isInBrowserSession = true
-				currentGroup = []
-			}
-
-			// Special handling for browser_action - ensure it's always in a browser session
-			if (message.say === "browser_action" && !isInBrowserSession) {
-				isInBrowserSession = true
-				currentGroup = []
-			}
-			// kilocode_change end
-
-			if (message.ask === "browser_action_launch") {
-				// Complete existing browser session if any.
-				endBrowserSession()
-				// Start new.
-				isInBrowserSession = true
-				currentGroup.push(message)
-			} else if (isInBrowserSession) {
-				// End session if `api_req_started` is cancelled.
-
-				if (message.say === "api_req_started") {
-					// Get last `api_req_started` in currentGroup to check if
-					// it's cancelled. If it is then this api req is not part
-					// of the current browser session.
-					const lastApiReqStarted = [...currentGroup].reverse().find((m) => m.say === "api_req_started")
-
-					if (lastApiReqStarted?.text !== null && lastApiReqStarted?.text !== undefined) {
-						const info = JSON.parse(lastApiReqStarted.text)
-						const isCancelled = info.cancelReason !== null && info.cancelReason !== undefined
-
-						if (isCancelled) {
-							endBrowserSession()
-							result.push(message)
-							return
-						}
-					}
-				}
-
-				if (isBrowserSessionMessage(message)) {
-					// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
-					// Check if this is a browser_action_result for a close action
-					if (message.say === "browser_action_result") {
-						const lastBrowserAction = [...currentGroup].reverse().find((m) => m.say === "browser_action")
-						if (lastBrowserAction) {
-							const browserAction = JSON.parse(lastBrowserAction.text || "{}") as ClineSayBrowserAction
-							if (browserAction.action === "close") {
-								// Don't add the browser_action_result for close action to the group
-								// End the session immediately
-								endBrowserSession()
-								return
-							}
-						}
-					}
-					currentGroup.push(message)
-					// kilocode_change end
-				} else {
-					// complete existing browser session if any
-					endBrowserSession()
-					result.push(message)
-				}
-			} else {
-				result.push(message)
-			}
-		})
-
-		// Handle case where browser session is the last group
-		if (currentGroup.length > 0) {
-			result.push([...currentGroup])
-		}
+		// Only filter out the launch ask and result messages - browser actions appear in chat
+		const result: ClineMessage[] = visibleMessages.filter((msg) => !isBrowserSessionMessage(msg))
 
 		if (isCondensing) {
-			// Show indicator after clicking condense button
 			result.push({
 				type: "say",
 				say: "condense_context",
 				ts: Date.now(),
 				partial: true,
-			})
+			} as any)
 		}
-
 		return result
-	}, [isCondensing, visibleMessages])
+	}, [isCondensing, visibleMessages, isBrowserSessionMessage])
 
 	// scrolling
 
@@ -1312,34 +1247,37 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		vscode.postMessage({ type: "askResponse", askResponse: "objectResponse", text: JSON.stringify(response) })
 	}, [])
 
-	// Handler for when FollowUpSuggest component unmounts
-	const handleFollowUpUnmount = useCallback(() => {
-		// Mark that user has responded
-		userRespondedRef.current = true
-	}, [])
-
 	const itemContent = useCallback(
-		(index: number, messageOrGroup: ClineMessage | ClineMessage[]) => {
-			// browser session group
-			if (Array.isArray(messageOrGroup)) {
+		(index: number, messageOrGroup: ClineMessage) => {
+			const hasCheckpoint = modifiedMessages.some((message) => message.say === "checkpoint_saved")
+
+			// Check if this is a browser action message
+			if (messageOrGroup.type === "say" && messageOrGroup.say === "browser_action") {
+				// Find the corresponding result message by looking for the next browser_action_result after this action's timestamp
+				const nextMessage = modifiedMessages.find(
+					(m) => m.ts > messageOrGroup.ts && m.say === "browser_action_result",
+				)
+
+				// Calculate action index and total count
+				const browserActions = modifiedMessages.filter((m) => m.say === "browser_action")
+				const actionIndex = browserActions.findIndex((m) => m.ts === messageOrGroup.ts) + 1
+				const totalActions = browserActions.length
+
 				return (
-					<BrowserSessionRow
-						messages={messageOrGroup}
-						isLast={index === groupedMessages.length - 1}
-						lastModifiedMessage={modifiedMessages.at(-1)}
-						onHeightChange={handleRowHeightChange}
-						isStreaming={isStreaming}
-						isExpanded={(messageTs: number) => expandedRows[messageTs] ?? false}
-						onToggleExpand={(messageTs: number) => {
-							setExpandedRows((prev: Record<number, boolean>) => ({
-								...prev,
-								[messageTs]: !prev[messageTs],
-							}))
-						}}
+					<BrowserActionRow
+						key={messageOrGroup.ts}
+						message={messageOrGroup}
+						nextMessage={nextMessage}
+						actionIndex={actionIndex}
+						totalActions={totalActions}
 					/>
 				)
 			}
-			const hasCheckpoint = modifiedMessages.some((message) => message.say === "checkpoint_saved")
+
+			// Check if this is a browser session status message
+			if (messageOrGroup.type === "say" && messageOrGroup.say === "browser_session_status") {
+				return <BrowserSessionStatusRow key={messageOrGroup.ts} message={messageOrGroup} />
+			}
 
 			// regular message
 			return (
@@ -1356,7 +1294,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					onBatchFileResponse={handleBatchFileResponse}
 					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
 					enableCheckpoints={enableCheckpoints} // kilocode_change
-					onFollowUpUnmount={handleFollowUpUnmount}
 					isFollowUpAnswered={messageOrGroup.isAnswered === true || messageOrGroup.ts === currentFollowUpTs}
 					editable={
 						messageOrGroup.type === "ask" &&
@@ -1391,7 +1328,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleBatchFileResponse,
 			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
 			enableCheckpoints, // kilocode_change
-			handleFollowUpUnmount,
 			currentFollowUpTs,
 			alwaysAllowUpdateTodoList,
 			enableButtons,
@@ -1632,25 +1568,26 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 			{task && (
 				<>
-					<div className="grow flex" ref={scrollContainerRef}>
-						<Virtuoso
-							ref={virtuosoRef}
-							key={task.ts}
-							className="scrollable grow overflow-y-scroll mb-1"
-							// increasing top by 3_000 to prevent jumping around when user collapses a row
-							increaseViewportBy={{ top: 400, bottom: 400 }} // kilocode_change: use more modest numbers to see if they reduce gray screen incidence
-							data={groupedMessages}
-							itemContent={itemContent}
-							atBottomStateChange={(isAtBottom: boolean) => {
-								setIsAtBottom(isAtBottom)
-								if (isAtBottom) {
-									disableAutoScrollRef.current = false
-								}
-								setShowScrollToBottom(disableAutoScrollRef.current && !isAtBottom)
-							}}
-							atBottomThreshold={10}
-							initialTopMostItemIndex={groupedMessages.length - 1}
-						/>
+					<div className="grow flex flex-col min-h-0" ref={scrollContainerRef}>
+						<div className="flex-auto min-h-0">
+							<Virtuoso
+								ref={virtuosoRef}
+								key={task.ts}
+								className="h-full overflow-y-auto mb-1"
+								increaseViewportBy={{ top: 400, bottom: 400 }} // kilocode_change: use more modest numbers to see if they reduce gray screen incidence
+								data={groupedMessages}
+								itemContent={itemContent}
+								atBottomStateChange={(isAtBottom: boolean) => {
+									setIsAtBottom(isAtBottom)
+									if (isAtBottom) {
+										disableAutoScrollRef.current = false
+									}
+									setShowScrollToBottom(disableAutoScrollRef.current && !isAtBottom)
+								}}
+								atBottomThreshold={10}
+								initialTopMostItemIndex={groupedMessages.length - 1}
+							/>
+						</div>
 					</div>
 					<div className={`flex-initial min-h-0 ${!areButtonsVisible ? "mb-1" : ""}`}>
 						{/* kilocode_change: added settings toggle for this */}
@@ -1774,6 +1711,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
 				sendMessageOnEnter={sendMessageOnEnter} // kilocode_change
+				showBrowserDockToggle={showBrowserDockToggle}
 			/>
 			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls showApiConfig />

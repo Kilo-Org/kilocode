@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "{{attempts}} प्रयासों के बाद एम्बेडिंग बनाने में विफल",
 	"textExceedsTokenLimit": "अनुक्रमणिका {{index}} पर पाठ अधिकतम टोकन सीमा ({{itemTokens}} > {{maxTokens}}) से अधिक है। छोड़ा जा रहा है।",
 	"rateLimitRetry": "दर सीमा समाप्त, {{delayMs}}ms में पुन: प्रयास किया जा रहा है (प्रयास {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Amazon Bedrock से अमान्य प्रतिसाद प्रारूप",
+		"invalidCredentials": "अमान्य AWS क्रेडेंशियल्स। कृपया अपनी AWS कॉन्फ़िगरेशन जांचें।",
+		"accessDenied": "Amazon Bedrock सेवा तक पहुंच अस्वीकृत। कृपया अपनी IAM अनुमतियां जांचें।",
+		"modelNotFound": "मॉडल {{model}} Amazon Bedrock में नहीं मिला"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "त्रुटि सामग्री पढ़ नहीं सका",
 		"requestFailed": "Ollama API अनुरोध स्थिति {{status}} {{statusText}} के साथ विफल: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "एम्बेडर निर्माण के लिए मिस्ट्रल कॉन्फ़िगरेशन गायब है",
 		"openRouterConfigMissing": "एम्बेडर निर्माण के लिए OpenRouter कॉन्फ़िगरेशन गायब है",
 		"vercelAiGatewayConfigMissing": "एम्बेडर निर्माण के लिए Vercel AI Gateway कॉन्फ़िगरेशन गायब है",
+		"bedrockConfigMissing": "एम्बेडर निर्माण के लिए Amazon Bedrock कॉन्फ़िगरेशन गायब है",
 		"invalidEmbedderType": "अमान्य एम्बेडर प्रकार कॉन्फ़िगर किया गया: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "प्रदाता '{{provider}}' के साथ मॉडल '{{modelId}}' के लिए वेक्टर आयाम निर्धारित नहीं कर सका। कृपया सुनिश्चित करें कि OpenAI-संगत प्रदाता सेटिंग्स में 'एम्बेडिंग आयाम' सही तरीके से सेट है।",
 		"vectorDimensionNotDetermined": "प्रदाता '{{provider}}' के साथ मॉडल '{{modelId}}' के लिए वेक्टर आयाम निर्धारित नहीं कर सका। मॉडल प्रोफ़ाइल या कॉन्फ़िगरेशन की जांच करें।",

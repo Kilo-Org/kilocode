@@ -6,8 +6,8 @@ import { experiments as experimentsModule, EXPERIMENT_IDS } from "../../shared/e
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
-import { ToolProtocol } from "@roo-code/types"
 import { Package } from "../../shared/package"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 import { ClineProvider } from "./ClineProvider"
 import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
@@ -71,6 +71,9 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 	// and browser tools are enabled in settings
 	const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
 
+	// Resolve tool protocol for system prompt generation
+	const toolProtocol = resolveToolProtocol(apiConfiguration, modelInfo)
+
 	const systemPrompt = await SYSTEM_PROMPT(
 		provider.context,
 		cwd,
@@ -95,7 +98,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			newTaskRequireTodos: vscode.workspace
 				.getConfiguration(Package.name)
 				.get<boolean>("newTaskRequireTodos", false),
-			toolProtocol: getActiveToolUseStyle(apiConfiguration), // kilocode_change
+			toolProtocol,
 		},
 		// kilocode_change start
 		undefined,

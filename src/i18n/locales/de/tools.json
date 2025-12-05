@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Neue Aufgabe konnte aufgrund von Richtlinienbeschränkungen nicht erstellt werden."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "OpenRouter API-Schlüssel ist für die Bildgenerierung mit OpenRouter-Modellen erforderlich. Bitte konfiguriere ihn in den Experimentellen Einstellungen für Bildgenerierung.",
+		"failedWithStatus": "Bildgenerierung fehlgeschlagen: {{status}} {{statusText}}",
+		"failedWithMessage": "Bildgenerierung fehlgeschlagen: {{message}}",
+		"noImageGenerated": "In der Antwort wurde kein Bild generiert",
+		"invalidImageData": "Ungültige Bilddaten in der Antwort",
+		"invalidImageFormat": "Ungültiges Bildformat erhalten",
+		"unknownError": "Unbekannter Fehler aufgetreten",
+		"roo": {
+			"authRequired": "Roo Code Cloud-Authentifizierung ist für die Bildgenerierung erforderlich. Bitte melde dich bei Roo Code Cloud an."
+		}
 	}
 }

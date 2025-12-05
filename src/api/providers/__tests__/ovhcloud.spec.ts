@@ -6,6 +6,7 @@ vitest.mock("vscode", () => ({}))
 
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
+import { TelemetryService } from "@roo-code/telemetry"
 
 import { OVHcloudAIEndpointsHandler } from "../ovhcloud"
 import { ovhCloudAiEndpointsDefaultModelId } from "@roo-code/types"
@@ -26,8 +27,21 @@ describe("OVHcloudAIEndpointsHandler", () => {
 
 	beforeEach(() => {
 		vitest.clearAllMocks()
+
+		// Mock TelemetryService to avoid initialization issues
+		const mockTelemetryService = {
+			captureEvent: vitest.fn(),
+		}
+		vitest.spyOn(TelemetryService, "hasInstance").mockReturnValue(true)
+		vitest.spyOn(TelemetryService, "instance", "get").mockReturnValue(mockTelemetryService as any)
+
 		mockCreate = (OpenAI as unknown as any)().chat.completions.create
 		handler = new OVHcloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
+	})
+
+	afterEach(() => {
+		// Restore TelemetryService mocks
+		vitest.restoreAllMocks()
 	})
 
 	describe("Initialization", () => {

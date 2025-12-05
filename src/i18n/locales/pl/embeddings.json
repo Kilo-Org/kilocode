@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "Nie udało się utworzyć osadzeń po {{attempts}} próbach",
 	"textExceedsTokenLimit": "Tekst w indeksie {{index}} przekracza maksymalny limit tokenów ({{itemTokens}} > {{maxTokens}}). Pomijanie.",
 	"rateLimitRetry": "Osiągnięto limit szybkości, ponawianie za {{delayMs}}ms (próba {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Nieprawidłowy format odpowiedzi z Amazon Bedrock",
+		"invalidCredentials": "Nieprawidłowe poświadczenia AWS. Sprawdź konfigurację AWS.",
+		"accessDenied": "Odmowa dostępu do usługi Amazon Bedrock. Sprawdź uprawnienia IAM.",
+		"modelNotFound": "Model {{model}} nie znaleziony w Amazon Bedrock"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Nie można odczytać treści błędu",
 		"requestFailed": "Żądanie API Ollama nie powiodło się ze statusem {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Brak konfiguracji Mistral do utworzenia embeddera",
 		"openRouterConfigMissing": "Brak konfiguracji OpenRouter do utworzenia embeddera",
 		"vercelAiGatewayConfigMissing": "Brak konfiguracji Vercel AI Gateway do utworzenia embeddera",
+		"bedrockConfigMissing": "Brak konfiguracji Amazon Bedrock do utworzenia embeddera",
 		"invalidEmbedderType": "Skonfigurowano nieprawidłowy typ embeddera: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nie można określić wymiaru wektora dla modelu '{{modelId}}' z dostawcą '{{provider}}'. Upewnij się, że 'Wymiar osadzania' jest poprawnie ustawiony w ustawieniach dostawcy kompatybilnego z OpenAI.",
 		"vectorDimensionNotDetermined": "Nie można określić wymiaru wektora dla modelu '{{modelId}}' z dostawcą '{{provider}}'. Sprawdź profile modelu lub konfigurację.",

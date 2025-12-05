@@ -19,13 +19,14 @@ export class FetchInstructionsTool extends BaseTool<"fetch_instructions"> {
 	}
 
 	async execute(params: FetchInstructionsParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { handleError, pushToolResult, askApproval } = callbacks
+		const { handleError, pushToolResult, askApproval, toolProtocol } = callbacks
 		const { task: taskParam } = params
 
 		try {
 			if (!taskParam) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("fetch_instructions")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("fetch_instructions", "task"))
 				return
 			}

@@ -12,6 +12,7 @@ import {
 	findMatchingSuggestion,
 } from "../services/ghost/classic-auto-complete/GhostInlineCompletionProvider.js"
 import { GhostModel } from "../services/ghost/GhostModel.js"
+import type { ContextFile } from "./test-cases.js"
 
 export class GhostProviderTester {
 	private llmClient: LLMClient
@@ -27,6 +28,7 @@ export class GhostProviderTester {
 	async getCompletion(
 		code: string,
 		testCaseName: string = "test",
+		contextFiles: ContextFile[] = [],
 	): Promise<{ prefix: string; completion: string; suffix: string }> {
 		const context = createContext(code, testCaseName)
 		const position = context.range?.start ?? context.document.positionAt(0)
@@ -34,7 +36,13 @@ export class GhostProviderTester {
 		const languageId = context.document.languageId || "javascript"
 
 		// Create context provider with the actual content for prompt building
-		const contextProvider = createMockContextProvider(prefix, suffix, context.document.fileName, this.ghostModel)
+		const contextProvider = createMockContextProvider(
+			prefix,
+			suffix,
+			context.document.fileName,
+			this.ghostModel,
+			contextFiles,
+		)
 
 		// Create a fresh provider instance for this completion
 		const provider = createProviderForTesting(contextProvider)

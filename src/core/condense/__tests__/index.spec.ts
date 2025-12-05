@@ -7,7 +7,12 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { ApiHandler } from "../../../api"
 import { ApiMessage } from "../../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../../api/transform/image-cleaning"
-import { summarizeConversation, getMessagesSinceLastSummary, N_MESSAGES_TO_KEEP } from "../index"
+import {
+	summarizeConversation,
+	getMessagesSinceLastSummary,
+	getKeepMessagesWithToolBlocks,
+	N_MESSAGES_TO_KEEP,
+} from "../index"
 
 vi.mock("../../../api/transform/image-cleaning", () => ({
 	maybeRemoveImageBlocks: vi.fn((messages: ApiMessage[], _apiHandler: ApiHandler) => [...messages]),
@@ -23,6 +28,222 @@ vi.mock("@roo-code/telemetry", () => ({
 
 const taskId = "test-task-id"
 const DEFAULT_PREV_CONTEXT_TOKENS = 1000
+
+describe("getKeepMessagesWithToolBlocks", () => {
+	it("should return keepMessages without tool blocks when no tool_result blocks in first kept message", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hi there", ts: 2 },
+			{ role: "user", content: "How are you?", ts: 3 },
+			{ role: "assistant", content: "I'm good", ts: 4 },
+			{ role: "user", content: "What's new?", ts: 5 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should return all messages when messages.length <= keepCount", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hi there", ts: 2 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.keepMessages).toEqual(messages)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should preserve tool_use blocks when first kept message has tool_result blocks", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me read that file", ts: 2 },
+			{ role: "user", content: "Please continue", ts: 3 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// keepMessages should be the last 3 messages
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].ts).toBe(5)
+		expect(result.keepMessages[1].ts).toBe(6)
+		expect(result.keepMessages[2].ts).toBe(7)
+
+		// Should preserve the tool_use block from the preceding assistant message
+		expect(result.toolUseBlocksToPreserve).toHaveLength(1)
+		expect(result.toolUseBlocksToPreserve[0]).toEqual(toolUseBlock)
+	})
+
+	it("should not preserve tool_use blocks when first kept message is assistant role", () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hi there", ts: 2 },
+			{ role: "user", content: "Please read", ts: 3 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading..." }, toolUseBlock],
+				ts: 4,
+			},
+			{ role: "user", content: "Continue", ts: 5 },
+			{ role: "assistant", content: "Done", ts: 6 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// First kept message is assistant, not user with tool_result
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.keepMessages[0].role).toBe("assistant")
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should not preserve tool_use blocks when first kept user message has string content", () => {
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Hi there", ts: 2 },
+			{ role: "user", content: "How are you?", ts: 3 },
+			{ role: "assistant", content: "Good", ts: 4 },
+			{ role: "user", content: "Simple text message", ts: 5 }, // String content, not array
+			{ role: "assistant", content: "Response", ts: 6 },
+			{ role: "user", content: "More text", ts: 7 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should handle multiple tool_use blocks that need to be preserved", () => {
+		const toolUseBlock1 = {
+			type: "tool_use" as const,
+			id: "toolu_123",
+			name: "read_file",
+			input: { path: "file1.txt" },
+		}
+		const toolUseBlock2 = {
+			type: "tool_use" as const,
+			id: "toolu_456",
+			name: "read_file",
+			input: { path: "file2.txt" },
+		}
+		const toolResultBlock1 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "contents 1",
+		}
+		const toolResultBlock2 = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_456",
+			content: "contents 2",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading files..." }, toolUseBlock1, toolUseBlock2],
+				ts: 2,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock1, toolResultBlock2],
+				ts: 3,
+			},
+			{ role: "assistant", content: "Got both files", ts: 4 },
+			{ role: "user", content: "Thanks", ts: 5 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		// Should preserve both tool_use blocks
+		expect(result.toolUseBlocksToPreserve).toHaveLength(2)
+		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock1)
+		expect(result.toolUseBlocksToPreserve).toContainEqual(toolUseBlock2)
+	})
+
+	it("should not preserve tool_use blocks when preceding message has no tool_use blocks", () => {
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Plain text response", ts: 2 }, // No tool_use blocks
+			{
+				role: "user",
+				content: [toolResultBlock], // Has tool_result but preceding message has no tool_use
+				ts: 3,
+			},
+			{ role: "assistant", content: "Response", ts: 4 },
+			{ role: "user", content: "Thanks", ts: 5 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.keepMessages).toHaveLength(3)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+
+	it("should handle edge case when startIndex - 1 is negative", () => {
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "file contents",
+		}
+
+		// Only 3 messages total, so startIndex = 0 and precedingIndex would be -1
+		const messages: ApiMessage[] = [
+			{
+				role: "user",
+				content: [toolResultBlock],
+				ts: 1,
+			},
+			{ role: "assistant", content: "Response", ts: 2 },
+			{ role: "user", content: "Thanks", ts: 3 },
+		]
+
+		const result = getKeepMessagesWithToolBlocks(messages, 3)
+
+		expect(result.keepMessages).toEqual(messages)
+		expect(result.toolUseBlocksToPreserve).toHaveLength(0)
+	})
+})
 
 describe("getMessagesSinceLastSummary", () => {
 	it("should return all messages when there is no summary", () => {
@@ -534,6 +755,78 @@ describe("summarizeConversation", () => {
 
 		// Restore console.error
 		console.error = originalError
+	})
+
+	it("should append tool_use blocks to summary message when first kept message has tool_result blocks", async () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_123",
+			name: "read_file",
+			input: { path: "test.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_123",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me read that file", ts: 2 },
+			{ role: "user", content: "Please continue", ts: 3 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Reading file..." }, toolUseBlock],
+				ts: 4,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Continue" }],
+				ts: 5,
+			},
+			{ role: "assistant", content: "Got it, the file says...", ts: 6 },
+			{ role: "user", content: "Thanks", ts: 7 },
+		]
+
+		// Create a stream with usage information
+		const streamWithUsage = (async function* () {
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockReturnValue(streamWithUsage) as any
+		mockApiHandler.countTokens = vi.fn().mockImplementation(() => Promise.resolve(50)) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false, // isAutomaticTrigger
+			undefined, // customCondensingPrompt
+			undefined, // condensingApiHandler
+			true, // useNativeTools - required for tool_use block preservation
+		)
+
+		// Verify the summary message has content array with text and tool_use blocks
+		const summaryMessage = result.messages[1]
+		expect(summaryMessage.role).toBe("assistant")
+		expect(summaryMessage.isSummary).toBe(true)
+		expect(Array.isArray(summaryMessage.content)).toBe(true)
+
+		// Content should be [text block, tool_use block]
+		const content = summaryMessage.content as any[]
+		expect(content).toHaveLength(2)
+		expect(content[0].type).toBe("text")
+		expect(content[0].text).toBe("Summary of conversation")
+		expect(content[1].type).toBe("tool_use")
+		expect(content[1].id).toBe("toolu_123")
+		expect(content[1].name).toBe("read_file")
+
+		// Verify the keepMessages are preserved correctly
+		expect(result.messages).toHaveLength(1 + 1 + N_MESSAGES_TO_KEEP) // first + summary + last 3
+		expect(result.error).toBeUndefined()
 	})
 })
 

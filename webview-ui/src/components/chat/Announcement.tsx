@@ -6,7 +6,6 @@ import { Package } from "@roo/package"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { vscode } from "@src/utils/vscode"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@src/components/ui"
-import { Button } from "@src/components/ui"
 
 interface AnnouncementProps {
 	hideAnnouncement: () => void
@@ -43,47 +42,10 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					{/* Regular Release Highlights */}
 					<div className="mb-4">
 						<p className="mb-3">{t("chat:announcement.release.heading")}</p>
-						<ul className="list-disc list-inside text-sm space-y-1">
-							<li>{t("chat:announcement.release.openRouterEmbeddings")}</li>
-							<li>{t("chat:announcement.release.chutesDynamic")}</li>
-							<li>{t("chat:announcement.release.queuedMessagesFix")}</li>
+						<ul className="list-disc list-inside text-sm space-y-1.5">
+							<li>{t("chat:announcement.release.browserUse")}</li>
+							<li>{t("chat:announcement.release.cloudPaid")}</li>
 						</ul>
-					</div>
-
-					{/* Horizontal Rule */}
-					<hr className="my-4 border-vscode-widget-border" />
-
-					{/* Cloud Agents Section */}
-					<div>
-						<p className="mb-3">{t("chat:announcement.cloudAgents.heading")}</p>
-
-						<div className="mb-3">
-							<Trans
-								i18nKey="chat:announcement.cloudAgents.prFixer"
-								components={{
-									bold: <b />,
-								}}
-							/>
-						</div>
-
-						<p className="mb-3 text-sm text-vscode-descriptionForeground">
-							{t("chat:announcement.cloudAgents.prFixerDescription")}
-						</p>
-
-						<div className="mt-4">
-							<Button
-								onClick={() => {
-									vscode.postMessage({
-										type: "openExternal",
-										url: "https://roocode.com/pr-fixer?utm_source=roocode&utm_medium=extension&utm_campaign=announcement",
-									})
-									setOpen(false)
-									hideAnnouncement()
-								}}
-								className="w-full">
-								{t("chat:announcement.cloudAgents.tryPrFixerButton")}
-							</Button>
-						</div>
 					</div>
 
 					<div className="mt-4 text-sm text-center">

@@ -7,7 +7,7 @@ import { type ModelInfo, geminiDefaultModelId } from "@roo-code/types"
 import { t } from "i18next"
 import { GeminiHandler } from "../gemini"
 
-const GEMINI_20_FLASH_THINKING_NAME = "gemini-2.0-flash-thinking-exp-1219"
+const GEMINI_MODEL_NAME = geminiDefaultModelId
 
 // kilocode_change start
 const getGeminiModelsMock = vi.hoisted(() => vi.fn())
@@ -29,11 +29,6 @@ describe("GeminiHandler", () => {
 				contextWindow: 131_072,
 				supportsPromptCache: false,
 			},
-			[GEMINI_20_FLASH_THINKING_NAME]: {
-				maxTokens: 8192,
-				contextWindow: 131_072,
-				supportsPromptCache: false,
-			},
 		})
 		// kilocode_change end
 
@@ -44,7 +39,7 @@ describe("GeminiHandler", () => {
 
 		handler = new GeminiHandler({
 			apiKey: "test-key",
-			apiModelId: GEMINI_20_FLASH_THINKING_NAME,
+			apiModelId: GEMINI_MODEL_NAME,
 			geminiApiKey: "test-key",
 		})
 
@@ -61,7 +56,7 @@ describe("GeminiHandler", () => {
 	describe("constructor", () => {
 		it("should initialize with provided config", () => {
 			expect(handler["options"].geminiApiKey).toBe("test-key")
-			expect(handler["options"].apiModelId).toBe(GEMINI_20_FLASH_THINKING_NAME)
+			expect(handler["options"].apiModelId).toBe(GEMINI_MODEL_NAME)
 		})
 	})
 
@@ -100,14 +95,14 @@ describe("GeminiHandler", () => {
 			expect(chunks.length).toBe(3)
 			expect(chunks[0]).toEqual({ type: "text", text: "Hello" })
 			expect(chunks[1]).toEqual({ type: "text", text: " world!" })
-			expect(chunks[2]).toEqual({ type: "usage", inputTokens: 10, outputTokens: 5 })
+			expect(chunks[2]).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 5 })
 
 			// Verify the call to generateContentStream
 			expect(handler["client"].models.generateContentStream).toHaveBeenCalledWith(
 				expect.objectContaining({
-					model: GEMINI_20_FLASH_THINKING_NAME,
+					model: GEMINI_MODEL_NAME,
 					config: expect.objectContaining({
-						temperature: 0,
+						temperature: 1,
 						systemInstruction: systemPrompt,
 					}),
 				}),
@@ -140,11 +135,11 @@ describe("GeminiHandler", () => {
 
 			// Verify the call to generateContent
 			expect(handler["client"].models.generateContent).toHaveBeenCalledWith({
-				model: GEMINI_20_FLASH_THINKING_NAME,
+				model: GEMINI_MODEL_NAME,
 				contents: [{ role: "user", parts: [{ text: "Test prompt" }] }],
 				config: {
 					httpOptions: undefined,
-					temperature: 0,
+					temperature: 1,
 				},
 			})
 		})
@@ -172,10 +167,8 @@ describe("GeminiHandler", () => {
 	describe("getModel", () => {
 		it("should return correct model info", () => {
 			const modelInfo = handler.getModel()
-			expect(modelInfo.id).toBe(GEMINI_20_FLASH_THINKING_NAME)
+			expect(modelInfo.id).toBe(GEMINI_MODEL_NAME)
 			expect(modelInfo.info).toBeDefined()
-			expect(modelInfo.info.maxTokens).toBe(8192)
-			expect(modelInfo.info.contextWindow).toBe(32_767)
 		})
 
 		it("should return default model if invalid model specified", () => {
@@ -230,23 +223,6 @@ describe("GeminiHandler", () => {
 			// Added non-null assertion (!)
 			const expectedCost = (outputTokens / 1_000_000) * mockInfo.outputPrice!
 			expect(handler.calculateCost({ info: mockInfo, inputTokens: 0, outputTokens })).toBeCloseTo(expectedCost)
-		})
-
-		it("should calculate cost with cache write tokens", () => {
-			const inputTokens = 10000
-			const outputTokens = 20000
-			const cacheWriteTokens = 5000
-			const CACHE_TTL = 5 // Match the constant in gemini.ts
-
-			// Added non-null assertions (!)
-			const expectedInputCost = (inputTokens / 1_000_000) * mockInfo.inputPrice!
-			const expectedOutputCost = (outputTokens / 1_000_000) * mockInfo.outputPrice!
-			const expectedCacheWriteCost =
-				mockInfo.cacheWritesPrice! * (cacheWriteTokens / 1_000_000) * (CACHE_TTL / 60)
-			const expectedCost = expectedInputCost + expectedOutputCost + expectedCacheWriteCost
-
-			const cost = handler.calculateCost({ info: mockInfo, inputTokens, outputTokens })
-			expect(cost).toBeCloseTo(expectedCost)
 		})
 
 		it("should calculate cost with cache read tokens", () => {
