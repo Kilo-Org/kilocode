@@ -1,4 +1,4 @@
-import type { Session } from "../../shared/kilocode/cli-sessions/core/SessionClient"
+import type { Session } from "../../../shared/kilocode/cli-sessions/core/SessionClient"
 export type RemoteSession = Session
 
 /**
