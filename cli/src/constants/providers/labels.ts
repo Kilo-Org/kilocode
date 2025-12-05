@@ -45,6 +45,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"virtual-quota-fallback": "Virtual Quota Fallback",
 	"human-relay": "Human Relay",
 	"fake-ai": "Fake AI",
+	oca: "Oracle Code Assist",
 	ovhcloud: "OVHcloud AI Endpoints",
 	inception: "Inception",
 	synthetic: "Synthetic",

@@ -18,6 +18,7 @@ import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
+import { getOCAModels } from "./oca"
 import { GetModelsOptions } from "../../../shared/api"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { getOllamaModels } from "./ollama"
@@ -32,6 +33,7 @@ import { getSapAiCoreModels } from "./sap-ai-core"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
+import { DEFAULT_OCA_BASE_URL } from "../oca/utils/constants"
 import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
@@ -138,6 +140,10 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "huggingface":
 				models = await getHuggingFaceModels()
 				break
+			case "oca": {
+				models = await getOCAModels(options.baseUrl ?? DEFAULT_OCA_BASE_URL, options.apiKey)
+				break
+			}
 			// kilocode_change start
 			case "sap-ai-core":
 				models = await getSapAiCoreModels(

@@ -173,6 +173,11 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "interactionRequired"
 		| "organizationSwitchResult"
+		| "oca/show-auth-url"
+		| "oca/login-success"
+		| "oca/login-error"
+		| "oca/status"
+		| "oca/logout-success"
 		| "showTimestamps" // kilocode_change
 		| "apiMessagesSaved" // kilocode_change: File save event for API messages
 		| "taskMessagesSaved" // kilocode_change: File save event for task messages
@@ -266,6 +271,7 @@ export interface ExtensionMessage {
 		message: string
 	} // kilocode_change
 	url?: string // kilocode_change
+	authenticated?: boolean
 	keybindings?: Record<string, string> // kilocode_change
 	setting?: string
 	value?: any

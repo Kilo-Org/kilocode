@@ -117,6 +117,7 @@ import {
 	Featherless,
 	VercelAiGateway,
 	DeepInfra,
+	OCA,
 	MiniMax,
 } from "./providers"
 
@@ -466,6 +467,7 @@ const ApiOptions = ({
 			"zai",
 			"qwen-code",
 			"minimax",
+			"oca",
 		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
@@ -572,6 +574,15 @@ const ApiOptions = ({
 					selectedModelId={selectedModelId}
 					uriScheme={uriScheme}
 					fromWelcomeView={fromWelcomeView}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+
+			{selectedProvider === "oca" && (
+				<OCA
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>
