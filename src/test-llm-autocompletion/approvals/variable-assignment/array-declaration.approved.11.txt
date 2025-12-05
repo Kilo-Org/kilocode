@@ -1,0 +1,15 @@
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const evenNumbers = numbers.filter((number) => number % 2 === 0);
+
+console.log(evenNumbers); // [2, 4, 6, 8, 10]
+
+const users = [
+  { name: "John", age: 25 },
+  { name: "Jane", age: 30 },
+  { name: "Bob", age: 20 },
+];
+
+const adults = users.filter((user) => user.age >= 18);
+
+console.log(adults); // [{ name: 'John', age: 25 }, { name: 'Jane', age: 30 }]

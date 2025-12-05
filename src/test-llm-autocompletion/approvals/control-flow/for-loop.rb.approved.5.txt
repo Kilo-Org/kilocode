@@ -1,0 +1,12 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |item|
+	p item
+end
+
+arr.each { |item| p item }
+
+arr.each { |item| p item + 2 }
+
+arr.each do |item|
+	p item + 2
+end
