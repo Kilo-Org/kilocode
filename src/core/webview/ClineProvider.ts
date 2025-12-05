@@ -43,6 +43,7 @@ import {
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	DEFAULT_GLOBALLY_IGNORED_FILES,
 	getModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -2056,6 +2057,7 @@ ${prompt}
 			customInstructions,
 			alwaysAllowReadOnly,
 			alwaysAllowReadOnlyOutsideWorkspace,
+			globallyIgnoredFiles, // kilocode_change
 			alwaysAllowWrite,
 			alwaysAllowWriteOutsideWorkspace,
 			alwaysAllowWriteProtected,
@@ -2218,6 +2220,7 @@ ${prompt}
 			customInstructions,
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? true,
 			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? true,
+			globallyIgnoredFiles: globallyIgnoredFiles ?? DEFAULT_GLOBALLY_IGNORED_FILES, // kilocode_change
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
@@ -2498,6 +2501,7 @@ ${prompt}
 			apiModelId: stateValues.apiModelId,
 			alwaysAllowReadOnly: stateValues.alwaysAllowReadOnly ?? true,
 			alwaysAllowReadOnlyOutsideWorkspace: stateValues.alwaysAllowReadOnlyOutsideWorkspace ?? true,
+			globallyIgnoredFiles: stateValues.globallyIgnoredFiles ?? DEFAULT_GLOBALLY_IGNORED_FILES, // kilocode_change
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,

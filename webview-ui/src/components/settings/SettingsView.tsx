@@ -9,6 +9,7 @@ import React, {
 	useRef,
 	useState,
 } from "react"
+import { DEFAULT_GLOBALLY_IGNORED_FILES } from "@roo-code/types"
 import {
 	CheckCheck,
 	SquareMousePointer,
@@ -159,6 +160,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const {
 		alwaysAllowReadOnly,
 		alwaysAllowReadOnlyOutsideWorkspace,
+		globallyIgnoredFiles, // kilocode_change
 		allowedCommands,
 		deniedCommands,
 		allowedMaxRequests,
@@ -476,6 +478,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					language,
 					alwaysAllowReadOnly: alwaysAllowReadOnly ?? undefined,
 					alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? undefined,
+					globallyIgnoredFiles: globallyIgnoredFiles ?? DEFAULT_GLOBALLY_IGNORED_FILES, // kilocode_change
 					alwaysAllowWrite: alwaysAllowWrite ?? undefined,
 					alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? undefined,
 					alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? undefined,
@@ -952,6 +955,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							yoloGatekeeperApiConfigId={yoloGatekeeperApiConfigId} // kilocode_change: AI gatekeeper for YOLO mode
 							alwaysAllowReadOnly={alwaysAllowReadOnly}
 							alwaysAllowReadOnlyOutsideWorkspace={alwaysAllowReadOnlyOutsideWorkspace}
+							globallyIgnoredFiles={globallyIgnoredFiles ?? DEFAULT_GLOBALLY_IGNORED_FILES} // kilocode_change
 							alwaysAllowWrite={alwaysAllowWrite}
 							alwaysAllowWriteOutsideWorkspace={alwaysAllowWriteOutsideWorkspace}
 							alwaysAllowWriteProtected={alwaysAllowWriteProtected}
