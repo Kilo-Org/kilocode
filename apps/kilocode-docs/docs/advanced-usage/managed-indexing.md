@@ -2,6 +2,7 @@
 title: Managed Indexing
 sidebar_label: Managed Indexing
 ---
+
 Kilo's **Managed Indexing** feature provides semantic search across your repositories using cloud-hosted embeddings. When enabled, Kilo indexes your codebase to deliver more relevant, context-aware responses during development.
 
 ---
@@ -45,19 +46,19 @@ Codebase Indexing is currently in beta and requires opt-in configuration.
 
 ```json
 {
-  "projectId": "my-project-name",
-  "baseBranch": "main",
-  "managedIndexingEnabled": true
+	"projectId": "my-project-name",
+	"baseBranch": "main",
+	"managedIndexingEnabled": true
 }
 ```
 
 ### Configuration Options
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `projectId` | string | No | Custom name for your project. Defaults to the name from your Git origin remote. |
-| `baseBranch` | string | No | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`. |
-| `managedIndexingEnabled` | boolean | No | Set to `true` to enable indexing for individual accounts. Defaults to `false`. |
+| Field                    | Type    | Required | Description                                                                     |
+| ------------------------ | ------- | -------- | ------------------------------------------------------------------------------- |
+| `projectId`              | string  | No       | Custom name for your project. Defaults to the name from your Git origin remote. |
+| `baseBranch`             | string  | No       | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`.   |
+| `managedIndexingEnabled` | boolean | No       | Set to `true` to enable indexing for individual accounts. Defaults to `false`.  |
 
 For organization-wide shared indexing, contact support. This will be rolled out to all organizations within the coming week and will eventually be enabled by default for any account with an available balance.
 

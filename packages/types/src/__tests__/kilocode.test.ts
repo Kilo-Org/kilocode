@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from "vitest"
 import {
 	ghostServiceSettingsSchema,
 	getAppUrl,
+	getApiUrl,
 	getKiloUrlFromToken,
 	getExtensionConfigUrl,
 } from "../kilocode/kilocode.js"
@@ -65,6 +66,34 @@ describe("URL functions", () => {
 		})
 		it("should use subdomain structure for production", () => {
 			expect(getExtensionConfigUrl()).toBe("https://api.kilo.ai/extension-config.json")
+		})
+		it("should use path structure for custom backend URLs", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://192.168.200.70:3000"
+			expect(getExtensionConfigUrl()).toBe("http://192.168.200.70:3000/extension-config.json")
+		})
+	})
+
+	describe("getApiUrl", () => {
+		it("should handle production URLs with api subdomain", () => {
+			expect(getApiUrl()).toBe("https://api.kilo.ai/")
+			expect(getApiUrl("/trpc/cliSessions.get")).toBe("https://api.kilo.ai/trpc/cliSessions.get")
+			expect(getApiUrl("/api/profile")).toBe("https://api.kilo.ai/api/profile")
+		})
+
+		it("should handle localhost development URLs", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
+
+			expect(getApiUrl()).toBe("http://localhost:3000/")
+			expect(getApiUrl("/api/trpc/cliSessions.get")).toBe("http://localhost:3000/api/trpc/cliSessions.get")
+			expect(getApiUrl("/api/profile")).toBe("http://localhost:3000/api/profile")
+		})
+
+		it("should handle custom backend URLs (non-localhost)", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://192.168.200.70:3000"
+
+			expect(getApiUrl()).toBe("http://192.168.200.70:3000/")
+			expect(getApiUrl("/api/trpc/cliSessions.get")).toBe("http://192.168.200.70:3000/api/trpc/cliSessions.get")
+			expect(getApiUrl("/api/profile")).toBe("http://192.168.200.70:3000/api/profile")
 		})
 	})
 

@@ -50,6 +50,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	synthetic: "Synthetic",
 	"sap-ai-core": "SAP AI Core",
 	intelligent: "Intelligent Provider",
+	baseten: "BaseTen",
 }
 
 /**

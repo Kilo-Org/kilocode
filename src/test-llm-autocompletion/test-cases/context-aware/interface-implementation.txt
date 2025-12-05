@@ -1,0 +1,34 @@
+#### Description: Should autocomplete interface property based on type definition
+#### Filename: handlers/order-handler.ts
+import { Order, OrderStatus } from '../types/order';
+
+function processOrder(order: Order): void {
+  if (order.status === OrderStatus.<<<AUTOCOMPLETE_HERE>>>) {
+    // Process pending order
+  }
+}
+
+#### Filename: types/order.ts
+export interface Order {
+  id: string;
+  customerId: string;
+  items: OrderItem[];
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderItem {
+  productId: string;
+  quantity: number;
+  price: number;
+}
+
+export enum OrderStatus {
+  Pending = 'pending',
+  Processing = 'processing',
+  Shipped = 'shipped',
+  Delivered = 'delivered',
+  Cancelled = 'cancelled',
+}

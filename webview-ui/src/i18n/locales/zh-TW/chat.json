@@ -311,16 +311,15 @@
 			"goToSettingsButton": "前往設定"
 		},
 		"release": {
-			"heading": "擴充功能的新功能：",
-			"openRouterEmbeddings": "支援 OpenRouter 嵌入模型",
-			"chutesDynamic": "Chutes 現在動態載入最新模型",
-			"queuedMessagesFix": "修復佇列訊息遺失問題"
+			"heading": "最新功能：",
+			"browserUse": "Browser Use 2.0 升級了聊天內瀏覽體驗，支援持久會話、更清晰的回饋、專用瀏覽器面板以及更自然的動作描述",
+			"cloudPaid": "Roo Code Cloud 現已提供付費模型：購買點數即可同時用於雲端代理和推理服務"
 		},
 		"cloudAgents": {
 			"heading": "雲端的新功能：",
-			"prFixer": "推出 <bold>PR Fixer</bold> 雲端代理以補充 PR Reviewer。",
-			"prFixerDescription": "Roo Code 的 PR Fixer 直接從 GitHub 為您的 PR 套用高品質變更。透過 PR 留言呼叫，它會讀取整個留言歷史以理解內容、協議和權衡 - 然後實作正確的修復。",
-			"tryPrFixerButton": "試用 PR Fixer"
+			"specialized": "推出 <bold>Explainer</bold>、<bold>Planner</bold> 和 <bold>Coder</bold> - 三個專業雲端代理來增強你的工作流程。",
+			"description": "代理在雲端協同工作，可從網頁或透過 Slack 觸發。",
+			"tryButton": "試用雲端代理"
 		},
 		"careers": "此外，<careersLink>我們正在招募！</careersLink>",
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上關注我們 🚀"
@@ -335,6 +334,7 @@
 		"countdownDisplay": "{{count}} 秒"
 	},
 	"browser": {
+		"session": "瀏覽器會話",
 		"rooWantsToUse": "Kilo Code 想要使用瀏覽器",
 		"consoleLogs": "主控台記錄",
 		"noNewLogs": "（沒有新記錄）",
@@ -347,12 +347,14 @@
 		},
 		"sessionStarted": "瀏覽器工作階段已啟動",
 		"actions": {
-			"title": "瀏覽器動作",
+			"title": "瀏覽器動作：",
 			"launch": "在 {{url}} 啟動瀏覽器",
 			"click": "點選 ({{coordinate}})",
 			"type": "輸入「{{text}}」",
+			"press": "按下 {{key}}",
 			"scrollDown": "向下捲動",
 			"scrollUp": "向上捲動",
+			"hover": "懸停 ({{coordinate}})",
 			"close": "關閉瀏覽器"
 		}
 	},

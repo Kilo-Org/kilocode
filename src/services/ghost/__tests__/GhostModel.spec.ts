@@ -3,6 +3,7 @@ import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { AUTOCOMPLETE_PROVIDER_MODELS } from "../utils/kilocode-utils"
 import * as apiIndex from "../../../api"
+import { TelemetryService } from "../../../../packages/telemetry/src/TelemetryService"
 
 describe("GhostModel", () => {
 	let mockProviderSettingsManager: ProviderSettingsManager
@@ -114,11 +115,23 @@ describe("GhostModel", () => {
 		beforeEach(() => {
 			// Mock fetch globally for these tests
 			vi.stubGlobal("fetch", vi.fn())
+
+			// Mock TelemetryService
+			const mockTelemetryService = {
+				captureEvent: vi.fn(),
+				isTelemetryEnabled: vi.fn().mockReturnValue(false),
+				shutdown: vi.fn(),
+			}
+			vi.spyOn(TelemetryService, "hasInstance").mockReturnValue(true)
+			vi.spyOn(TelemetryService, "instance", "get").mockReturnValue(mockTelemetryService as any)
 		})
 
 		afterEach(() => {
 			// Restore fetch
 			vi.unstubAllGlobals()
+
+			// Restore TelemetryService mocks
+			vi.restoreAllMocks()
 		})
 
 		it("should skip kilocode provider when balance is zero and use openrouter instead", async () => {

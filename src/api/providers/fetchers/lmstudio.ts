@@ -18,8 +18,8 @@ export const forceFullModelDetailsLoad = async (baseUrl: string, modelId: string
 
 		const client = new LMStudioClient({ baseUrl: lmsUrl })
 		await client.llm.model(modelId)
-		await flushModels("lmstudio")
-		await getModels({ provider: "lmstudio" }) // Force cache update now.
+		// Flush and refresh cache to get updated model details
+		await flushModels("lmstudio", true)
 
 		// Mark this model as having full details loaded.
 		modelsWithLoadedDetails.add(modelId)

@@ -53,7 +53,7 @@ describe("CodeIndexConfigManager", () => {
 	describe("constructor", () => {
 		it("should initialize with ContextProxy", () => {
 			expect(configManager).toBeDefined()
-			expect(configManager.isFeatureEnabled).toBe(true)
+			expect(configManager.isFeatureEnabled).toBe(false)
 			expect(configManager.currentEmbedderProvider).toBe("openai")
 		})
 	})
@@ -81,13 +81,13 @@ describe("CodeIndexConfigManager", () => {
 			expect(configManager.isFeatureEnabled).toBe(true)
 		})
 
-		it("should default to true when codebaseIndexEnabled is not set", async () => {
+		it("should default to false when codebaseIndexEnabled is not set", async () => {
 			mockContextProxy.getGlobalState.mockReturnValue({})
 			mockContextProxy.getSecret.mockReturnValue(undefined)
 
 			// Re-create instance to load the configuration
 			configManager = new CodeIndexConfigManager(mockContextProxy)
-			expect(configManager.isFeatureEnabled).toBe(true)
+			expect(configManager.isFeatureEnabled).toBe(false)
 		})
 	})
 
@@ -104,6 +104,7 @@ describe("CodeIndexConfigManager", () => {
 				modelId: undefined,
 				openAiOptions: { openAiNativeApiKey: "" },
 				ollamaOptions: { ollamaBaseUrl: "" },
+				bedrockOptions: { region: "us-east-1", profile: undefined },
 				qdrantUrl: "http://localhost:6333",
 				qdrantApiKey: "",
 				searchMinScore: 0.4,
@@ -129,7 +130,7 @@ describe("CodeIndexConfigManager", () => {
 
 			const result = await configManager.loadConfiguration()
 
-			expect(result.currentConfig).toEqual({
+			expect(result.currentConfig).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai",
 				modelId: "text-embedding-3-large",
@@ -162,7 +163,7 @@ describe("CodeIndexConfigManager", () => {
 
 			const result = await configManager.loadConfiguration()
 
-			expect(result.currentConfig).toEqual({
+			expect(result.currentConfig).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "text-embedding-3-large",
@@ -199,7 +200,7 @@ describe("CodeIndexConfigManager", () => {
 
 			const result = await configManager.loadConfiguration()
 
-			expect(result.currentConfig).toEqual({
+			expect(result.currentConfig).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "custom-model",
@@ -237,7 +238,7 @@ describe("CodeIndexConfigManager", () => {
 
 			const result = await configManager.loadConfiguration()
 
-			expect(result.currentConfig).toEqual({
+			expect(result.currentConfig).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "custom-model",
@@ -275,7 +276,7 @@ describe("CodeIndexConfigManager", () => {
 
 			const result = await configManager.loadConfiguration()
 
-			expect(result.currentConfig).toEqual({
+			expect(result.currentConfig).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "custom-model",
@@ -1286,7 +1287,7 @@ describe("CodeIndexConfigManager", () => {
 
 		it("should return correct configuration via getConfig", () => {
 			const config = configManager.getConfig()
-			expect(config).toEqual({
+			expect(config).toMatchObject({
 				isConfigured: true,
 				embedderProvider: "openai",
 				modelId: "text-embedding-3-large",

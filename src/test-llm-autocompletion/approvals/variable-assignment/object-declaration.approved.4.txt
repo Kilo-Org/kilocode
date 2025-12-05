@@ -1,1 +1,0 @@
-const config = { /* Add configuration properties here */ }

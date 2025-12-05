@@ -73,6 +73,7 @@ interface ChatTextAreaProps {
 	isEditMode?: boolean
 	onCancel?: () => void
 	sendMessageOnEnter?: boolean // kilocode_change
+	showBrowserDockToggle?: boolean
 }
 
 // kilocode_change start

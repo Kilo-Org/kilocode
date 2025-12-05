@@ -307,16 +307,15 @@
 			"goToSettingsButton": "Go to Settings"
 		},
 		"release": {
-			"heading": "New in the Extension:",
-			"openRouterEmbeddings": "Support for OpenRouter embedding models",
-			"chutesDynamic": "Chutes now loads the latest models dynamically",
-			"queuedMessagesFix": "Fixes for queued messages getting lost"
+			"heading": "What's New:",
+			"browserUse": "Browser Use 2.0 upgrades the in-chat browsing experience with persistent sessions, clearer feedback, a dedicated browser panel, and more natural action descriptions",
+			"cloudPaid": "The Roo Code Cloud provider now offers paid models: buy credits and use them for both cloud agents and inference"
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
-			"prFixer": "Introducing the <bold>PR Fixer</bold> cloud agent to complement the PR Reviewer.",
-			"prFixerDescription": "The PR Fixer applies high-quality changes to your PRs, right from GitHub. Invoke via a PR comment and it will read the entire comment history to understand context, agreements, and tradeoffs - then implement the right fix.",
-			"tryPrFixerButton": "Try PR Fixer"
+			"specialized": "Introducing <bold>Explainer</bold>, <bold>Planner</bold>, and <bold>Coder</bold> - three specialized cloud agents to enhance your workflows.",
+			"description": "The agents work together in the cloud and can be triggered from the web or through Slack.",
+			"tryButton": "Try Cloud Agents"
 		},
 		"careers": "Also, <careersLink>we're hiring!</careersLink>",
 		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
@@ -331,6 +330,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
+		"session": "Browser Session",
 		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",
@@ -343,12 +343,14 @@
 		},
 		"sessionStarted": "Browser Session Started",
 		"actions": {
-			"title": "Browse Action: ",
+			"title": "Browser Action: ",
 			"launch": "Launch browser at {{url}}",
 			"click": "Click ({{coordinate}})",
 			"type": "Type \"{{text}}\"",
+			"press": "Press {{key}}",
 			"scrollDown": "Scroll down",
 			"scrollUp": "Scroll up",
+			"hover": "Hover ({{coordinate}})",
 			"close": "Close browser"
 		}
 	},

@@ -301,21 +301,21 @@
 			"goToSettingsButton": "Vai alle Impostazioni"
 		},
 		"release": {
-			"heading": "Novità nell'Estensione:",
-			"openRouterEmbeddings": "Supporto per i modelli di embedding di OpenRouter",
-			"chutesDynamic": "Chutes ora carica i modelli più recenti dinamicamente",
-			"queuedMessagesFix": "Correzioni per i messaggi in coda che si perdono"
+			"heading": "Novità in questa versione:",
+			"browserUse": "Browser Use 2.0 migliora l'esperienza di navigazione in chat con sessioni persistenti, feedback più chiaro, un pannello browser dedicato e descrizioni di azioni più naturali",
+			"cloudPaid": "Il provider Roo Code Cloud offre ora modelli a pagamento: acquista crediti e usali sia per gli agenti cloud che per l'inferenza"
 		},
 		"cloudAgents": {
 			"heading": "Novità nel Cloud:",
-			"prFixer": "Presentazione dell'agente cloud <bold>PR Fixer</bold> per completare il PR Reviewer.",
-			"prFixerDescription": "Il PR Fixer di Roo Code applica modifiche di alta qualità alle tue PR, direttamente da GitHub. Invocalo tramite un commento PR e leggerà l'intera cronologia dei commenti per comprendere il contesto, gli accordi e i compromessi - quindi implementerà la correzione giusta.",
-			"tryPrFixerButton": "Prova PR Fixer"
+			"specialized": "Presentazione di <bold>Explainer</bold>, <bold>Planner</bold> e <bold>Coder</bold> - tre agenti cloud specializzati per migliorare i tuoi flussi di lavoro.",
+			"description": "Gli agenti lavorano insieme nel cloud e possono essere attivati dal web o tramite Slack.",
+			"tryButton": "Prova gli Agenti Cloud"
 		},
 		"careers": "Inoltre, <careersLink>stiamo assumendo!</careersLink>",
 		"socialLinks": "Unisciti a noi su <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sessione del browser",
 		"rooWantsToUse": "Kilo Code vuole utilizzare il browser",
 		"consoleLogs": "Log della console",
 		"noNewLogs": "(Nessun nuovo log)",
@@ -332,8 +332,10 @@
 			"launch": "Avvia browser su {{url}}",
 			"click": "Clic ({{coordinate}})",
 			"type": "Digita \"{{text}}\"",
+			"press": "Premi {{key}}",
 			"scrollDown": "Scorri verso il basso",
 			"scrollUp": "Scorri verso l'alto",
+			"hover": "Passa il mouse ({{coordinate}})",
 			"close": "Chiudi browser"
 		}
 	},

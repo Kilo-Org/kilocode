@@ -60,8 +60,19 @@ describe("applyDiffTool experiment routing", () => {
 			diffViewProvider: {
 				reset: vi.fn(),
 			},
+			apiConfiguration: {
+				apiProvider: "anthropic",
+			},
 			api: {
-				getModel: vi.fn().mockReturnValue({ id: "test-model" }),
+				getModel: vi.fn().mockReturnValue({
+					id: "test-model",
+					info: {
+						maxTokens: 4096,
+						contextWindow: 128000,
+						supportsPromptCache: false,
+						supportsNativeTools: false,
+					},
+				}),
 			},
 			processQueuedMessages: vi.fn(),
 		} as any
@@ -104,6 +115,7 @@ describe("applyDiffTool experiment routing", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
 		})
 	})
 
@@ -127,6 +139,7 @@ describe("applyDiffTool experiment routing", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
 		})
 	})
 
@@ -151,12 +164,18 @@ describe("applyDiffTool experiment routing", () => {
 		expect(applyDiffToolClass.handle).not.toHaveBeenCalled()
 	})
 
-	it("should use class-based tool when native protocol is enabled regardless of experiment", async () => {
-		// Enable native protocol
-		const vscode = await import("vscode")
-		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-			get: vi.fn().mockReturnValue(TOOL_PROTOCOL.NATIVE),
-		} as any)
+	it("should use class-based tool when model defaults to native protocol", async () => {
+		// Update model to support native tools and default to native protocol
+		mockCline.api.getModel = vi.fn().mockReturnValue({
+			id: "test-model",
+			info: {
+				maxTokens: 4096,
+				contextWindow: 128000,
+				supportsPromptCache: false,
+				supportsNativeTools: true, // Model supports native tools
+				defaultToolProtocol: "native", // Model defaults to native protocol
+			},
+		})
 
 		mockProvider.getState.mockResolvedValue({
 			experiments: {

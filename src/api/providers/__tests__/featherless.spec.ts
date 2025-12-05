@@ -123,11 +123,9 @@ describe("FeatherlessHandler", () => {
 			chunks.push(chunk)
 		}
 
-		expect(chunks).toEqual([
-			{ type: "reasoning", text: "Thinking..." },
-			{ type: "text", text: "Hello" },
-			{ type: "usage", inputTokens: 10, outputTokens: 5 },
-		])
+		expect(chunks[0]).toEqual({ type: "reasoning", text: "Thinking..." })
+		expect(chunks[1]).toEqual({ type: "text", text: "Hello" })
+		expect(chunks[2]).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 5 })
 	})
 
 	it("should fall back to base provider for non-DeepSeek models", async () => {
@@ -145,10 +143,8 @@ describe("FeatherlessHandler", () => {
 			chunks.push(chunk)
 		}
 
-		expect(chunks).toEqual([
-			{ type: "text", text: "Test response" },
-			{ type: "usage", inputTokens: 10, outputTokens: 5 },
-		])
+		expect(chunks[0]).toEqual({ type: "text", text: "Test response" })
+		expect(chunks[1]).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 5 })
 	})
 
 	it("should return default model when no model is specified", () => {
@@ -226,7 +222,7 @@ describe("FeatherlessHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
 	it("createMessage should pass correct parameters to Featherless client for DeepSeek R1", async () => {

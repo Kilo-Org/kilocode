@@ -325,4 +325,108 @@ describe("Task reasoning preservation", () => {
 		expect(task.apiConversationHistory[0].content[0].text).toBe("Here is my response.")
 		expect(task.apiConversationHistory[0].content[0].text).not.toContain("<think>")
 	})
+
+	it("should embed encrypted reasoning as first assistant content block", async () => {
+		const task = new Task({
+			provider: mockProvider as ClineProvider,
+			apiConfiguration: mockApiConfiguration,
+			task: "Test task",
+			startTask: false,
+		})
+
+		// Avoid disk writes in this test
+		;(task as any).saveApiConversationHistory = vi.fn().mockResolvedValue(undefined)
+
+		// Mock API handler to provide encrypted reasoning data and response id
+		task.api = {
+			getEncryptedContent: vi.fn().mockReturnValue({
+				encrypted_content: "encrypted_payload",
+				id: "rs_test",
+			}),
+			getResponseId: vi.fn().mockReturnValue("resp_test"),
+		} as any
+
+		await (task as any).addToApiConversationHistory({
+			role: "assistant",
+			content: [{ type: "text", text: "Here is my response." }],
+		})
+
+		expect(task.apiConversationHistory).toHaveLength(1)
+		const stored = task.apiConversationHistory[0] as any
+
+		expect(stored.role).toBe("assistant")
+		expect(Array.isArray(stored.content)).toBe(true)
+		expect(stored.id).toBe("resp_test")
+
+		const [reasoningBlock, textBlock] = stored.content
+
+		expect(reasoningBlock).toMatchObject({
+			type: "reasoning",
+			encrypted_content: "encrypted_payload",
+			id: "rs_test",
+		})
+
+		expect(textBlock).toMatchObject({
+			type: "text",
+			text: "Here is my response.",
+		})
+	})
+
+	it("should store plain text reasoning from streaming for all providers", async () => {
+		const task = new Task({
+			provider: mockProvider as ClineProvider,
+			apiConfiguration: mockApiConfiguration,
+			task: "Test task",
+			startTask: false,
+		})
+
+		// Avoid disk writes in this test
+		;(task as any).saveApiConversationHistory = vi.fn().mockResolvedValue(undefined)
+
+		// Mock API handler without getEncryptedContent (like Anthropic, Gemini, etc.)
+		task.api = {
+			getModel: vi.fn().mockReturnValue({
+				id: "test-model",
+				info: {
+					contextWindow: 16000,
+					supportsPromptCache: true,
+				},
+			}),
+		} as any
+
+		// Simulate the new path: passing reasoning as a parameter
+		const reasoningText = "Let me analyze this carefully. First, I'll consider the requirements..."
+		const assistantText = "Here is my response."
+
+		await (task as any).addToApiConversationHistory(
+			{
+				role: "assistant",
+				content: [{ type: "text", text: assistantText }],
+			},
+			reasoningText,
+		)
+
+		expect(task.apiConversationHistory).toHaveLength(1)
+		const stored = task.apiConversationHistory[0] as any
+
+		expect(stored.role).toBe("assistant")
+		expect(Array.isArray(stored.content)).toBe(true)
+
+		const [reasoningBlock, textBlock] = stored.content
+
+		// Verify reasoning is stored with plain text, not encrypted
+		expect(reasoningBlock).toMatchObject({
+			type: "reasoning",
+			text: reasoningText,
+			summary: [],
+		})
+
+		// Verify there's no encrypted_content field (that's only for OpenAI Native)
+		expect(reasoningBlock.encrypted_content).toBeUndefined()
+
+		expect(textBlock).toMatchObject({
+			type: "text",
+			text: assistantText,
+		})
+	})
 })

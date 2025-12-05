@@ -3,6 +3,8 @@ import {
 	type ProviderSettings,
 	anthropicDefaultModelId,
 	anthropicModels,
+	basetenModels,
+	basetenDefaultModelId,
 	bedrockDefaultModelId,
 	bedrockModels,
 	deepSeekDefaultModelId,
@@ -307,6 +309,10 @@ export const getModelsByProvider = ({
 			return {
 				models: {},
 				defaultModel: "",
+		case "baseten": {
+			return {
+				models: basetenModels,
+				defaultModel: basetenDefaultModelId,
 			}
 		}
 		default:

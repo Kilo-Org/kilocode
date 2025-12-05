@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "No s'han pogut crear les incrustacions després de {{attempts}} intents",
 	"textExceedsTokenLimit": "El text a l'índex {{index}} supera el límit màxim de testimonis ({{itemTokens}} > {{maxTokens}}). S'està ometent.",
 	"rateLimitRetry": "S'ha assolit el límit de velocitat, es torna a intentar en {{delayMs}}ms (intent {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Format de resposta no vàlid d'Amazon Bedrock",
+		"invalidCredentials": "Credencials d'AWS no vàlides. Si us plau, comprova la teva configuració d'AWS.",
+		"accessDenied": "Accés denegat al servei d'Amazon Bedrock. Si us plau, comprova els teus permisos d'IAM.",
+		"modelNotFound": "Model {{model}} no trobat a Amazon Bedrock"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "No s'ha pogut llegir el cos de l'error",
 		"requestFailed": "La sol·licitud de l'API d'Ollama ha fallat amb l'estat {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Falta la configuració de Mistral per crear l'embedder",
 		"openRouterConfigMissing": "Falta la configuració d'OpenRouter per crear l'embedder",
 		"vercelAiGatewayConfigMissing": "Falta la configuració de Vercel AI Gateway per crear l'embedder",
+		"bedrockConfigMissing": "Falta la configuració d'Amazon Bedrock per crear l'embedder",
 		"invalidEmbedderType": "Tipus d'embedder configurat no vàlid: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "No s'ha pogut determinar la dimensió del vector per al model '{{modelId}}' amb el proveïdor '{{provider}}'. Assegura't que la 'Dimensió d'incrustació' estigui configurada correctament als paràmetres del proveïdor compatible amb OpenAI.",
 		"vectorDimensionNotDetermined": "No s'ha pogut determinar la dimensió del vector per al model '{{modelId}}' amb el proveïdor '{{provider}}'. Comprova els perfils del model o la configuració.",

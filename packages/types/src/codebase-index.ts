@@ -22,7 +22,16 @@ export const codebaseIndexConfigSchema = z.object({
 	codebaseIndexEnabled: z.boolean().optional(),
 	codebaseIndexQdrantUrl: z.string().optional(),
 	codebaseIndexEmbedderProvider: z
-		.enum(["openai", "ollama", "openai-compatible", "gemini", "mistral", "vercel-ai-gateway", "openrouter"])
+		.enum([
+			"openai",
+			"ollama",
+			"openai-compatible",
+			"gemini",
+			"mistral",
+			"vercel-ai-gateway",
+			"bedrock",
+			"openrouter",
+		])
 		.optional(),
 	// kilocode_change start
 	codebaseIndexVectorStoreProvider: z.enum(["lancedb", "qdrant"]).optional(),
@@ -40,6 +49,9 @@ export const codebaseIndexConfigSchema = z.object({
 	// OpenAI Compatible specific fields
 	codebaseIndexOpenAiCompatibleBaseUrl: z.string().optional(),
 	codebaseIndexOpenAiCompatibleModelDimension: z.number().optional(),
+	// Bedrock specific fields
+	codebaseIndexBedrockRegion: z.string().optional(),
+	codebaseIndexBedrockProfile: z.string().optional(),
 })
 
 export type CodebaseIndexConfig = z.infer<typeof codebaseIndexConfigSchema>
@@ -56,6 +68,7 @@ export const codebaseIndexModelsSchema = z.object({
 	mistral: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	"vercel-ai-gateway": z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	openrouter: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
+	bedrock: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 })
 
 export type CodebaseIndexModels = z.infer<typeof codebaseIndexModelsSchema>

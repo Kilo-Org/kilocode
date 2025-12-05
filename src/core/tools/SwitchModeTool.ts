@@ -23,7 +23,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 	async execute(params: SwitchModeParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { mode_slug, reason } = params
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 
 		try {
 			if (!mode_slug) {
@@ -40,6 +40,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 			if (!targetMode) {
 				task.recordToolError("switch_mode")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError(`Invalid mode: ${mode_slug}`))
 				return
 			}
@@ -49,6 +50,7 @@ export class SwitchModeTool extends BaseTool<"switch_mode"> {
 
 			if (currentMode === mode_slug) {
 				task.recordToolError("switch_mode")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(`Already in ${targetMode.name} mode.`)
 				return
 			}

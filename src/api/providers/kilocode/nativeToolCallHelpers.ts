@@ -12,16 +12,11 @@ import Anthropic from "@anthropic-ai/sdk"
 import { Package } from "../../../shared/package"
 import * as vscode from "vscode"
 import { ApiStreamToolCallChunk } from "../../transform/stream"
-
-const modelsDefaultingToNativeKeywords = [
-	"claude-haiku-4.5",
-	"claude-haiku-4-5",
-	"gpt-5-codex",
-	"gpt-5.1-codex",
-	"minimax-m2",
-]
-
-const providersDefaultingToNativeKeywords = ["synthetic", "inception"]
+import {
+	resolveToolProtocol,
+	modelsDefaultingToNativeKeywords,
+	providersDefaultingToNativeKeywords,
+} from "../../../utils/resolveToolProtocol"
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolProtocol {
 	const workspaceSetting =
@@ -66,7 +61,7 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
 	metadata?: ApiHandlerCreateMessageMetadata,
 ): T {
 	// When toolStyle is "native" and allowedTools exist, add them to params
-	if (getActiveToolUseStyle(options) === "native" && metadata?.tools) {
+	if (resolveToolProtocol(options) === "native" && metadata?.tools) {
 		params.tools = metadata.tools
 		//optimally we'd have tool_choice as 'required', but many providers, especially
 		// those using SGlang dont properly handle that setting and barf with a 400.
