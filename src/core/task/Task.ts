@@ -44,6 +44,7 @@ import {
 	MIN_CHECKPOINT_TIMEOUT_SECONDS,
 	TOOL_PROTOCOL,
 	ToolProtocol,
+	DEFAULT_GLOBALLY_IGNORED_FILES,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
@@ -392,13 +393,30 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.instanceId = crypto.randomUUID().slice(0, 8)
 		this.taskNumber = -1
 
-		this.rooIgnoreController = new RooIgnoreController(this.cwd)
+		// Initialize RooIgnoreController with default global ignore patterns
+		// Will be updated with actual settings after initialization
+		this.rooIgnoreController = new RooIgnoreController(this.cwd, DEFAULT_GLOBALLY_IGNORED_FILES)
 		this.rooProtectedController = new RooProtectedController(this.cwd)
 		this.fileContextTracker = new FileContextTracker(provider, this.taskId)
 
-		this.rooIgnoreController.initialize().catch((error) => {
-			console.error("Failed to initialize RooIgnoreController:", error)
-		})
+		// Initialize and update with actual settings
+		this.rooIgnoreController
+			.initialize()
+			.then(() => {
+				// Update with actual global ignore patterns from settings
+				provider
+					.getState()
+					.then((state) => {
+						const globallyIgnoredFiles = state?.globallyIgnoredFiles ?? DEFAULT_GLOBALLY_IGNORED_FILES
+						this.rooIgnoreController?.updateGlobalIgnorePatterns(globallyIgnoredFiles)
+					})
+					.catch((error) => {
+						console.error("Failed to update global ignore patterns:", error)
+					})
+			})
+			.catch((error) => {
+				console.error("Failed to initialize RooIgnoreController:", error)
+			})
 
 		this.apiConfiguration = apiConfiguration
 		this.api = buildApiHandler(apiConfiguration)

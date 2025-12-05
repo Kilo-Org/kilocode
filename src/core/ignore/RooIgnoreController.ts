@@ -15,13 +15,21 @@ export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 export class RooIgnoreController {
 	private cwd: string
 	private ignoreInstance: Ignore
+	private globalIgnoreInstance: Ignore
 	private disposables: vscode.Disposable[] = []
 	rooIgnoreContent: string | undefined
+	private globallyIgnoredFiles: string[]
 
-	constructor(cwd: string) {
+	constructor(cwd: string, globallyIgnoredFiles: string[] = []) {
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
+		this.globalIgnoreInstance = ignore()
 		this.rooIgnoreContent = undefined
+		this.globallyIgnoredFiles = globallyIgnoredFiles
+		// Initialize global ignore patterns
+		if (globallyIgnoredFiles.length > 0) {
+			this.globalIgnoreInstance.add(globallyIgnoredFiles)
+		}
 		// Set up file watcher for .kilocodeignore
 		this.setupFileWatcher()
 	}
@@ -87,10 +95,6 @@ export class RooIgnoreController {
 	 * @returns true if file is accessible, false if ignored
 	 */
 	validateAccess(filePath: string): boolean {
-		// Always allow access if .kilocodeignore does not exist
-		if (!this.rooIgnoreContent) {
-			return true
-		}
 		try {
 			const absolutePath = path.resolve(this.cwd, filePath)
 
@@ -104,14 +108,35 @@ export class RooIgnoreController {
 				realPath = absolutePath
 			}
 
-			// Convert real path to relative for .rooignore checking
+			// Convert real path to relative for checking
 			const relativePath = path.relative(this.cwd, realPath).toPosix()
 
-			// Check if the real path is ignored
-			return !this.ignoreInstance.ignores(relativePath)
+			// First check global ignore patterns (always active)
+			if (this.globallyIgnoredFiles.length > 0 && this.globalIgnoreInstance.ignores(relativePath)) {
+				return false
+			}
+
+			// Then check .kilocodeignore patterns if the file exists
+			if (this.rooIgnoreContent && this.ignoreInstance.ignores(relativePath)) {
+				return false
+			}
+
+			return true
 		} catch (error) {
 			// Allow access to files outside cwd or on errors (backward compatibility)
 			return true
+		}
+	}
+
+	/**
+	 * Update the global ignore patterns
+	 * @param patterns - Array of glob patterns to ignore globally
+	 */
+	updateGlobalIgnorePatterns(patterns: string[]): void {
+		this.globallyIgnoredFiles = patterns
+		this.globalIgnoreInstance = ignore()
+		if (patterns.length > 0) {
+			this.globalIgnoreInstance.add(patterns)
 		}
 	}
 

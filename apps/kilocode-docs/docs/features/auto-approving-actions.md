@@ -80,7 +80,33 @@ _Complete settings panel view_
 **Risk level:** Medium
 
 While this setting only allows reading files (not modifying them), it could potentially expose sensitive data. Still recommended as a starting point for most users, but be mindful of what files Kilo Code can access.
-:::
+
+#### Globally Ignored Files
+
+When auto-approve read is enabled, you can configure a list of file patterns that are **always ignored**, even without a `.kilocodeignore` file. This provides an extra layer of protection for sensitive files.
+
+**Default patterns include:**
+
+- Environment files: `.env`, `.env.*`
+- Keys and certificates: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`
+- SSH keys: `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, `*.ppk`
+- Encryption files: `*.gpg`, `*.asc`, `*.sig`
+
+**Key features:**
+
+- Works even without a `.kilocodeignore` file
+- Takes priority over `.kilocodeignore` patterns
+- Fully customizable - add or remove patterns as needed
+- Includes sensible defaults for common sensitive files
+
+**How to configure:**
+
+1. Enable "Always approve read-only operations"
+2. Scroll down to the "Globally ignored files" section
+3. Add custom patterns using glob syntax (e.g., `*.key`, `.env.*`)
+4. Click "Add Pattern" to save each pattern
+5. Remove patterns by clicking the X on pattern chips
+   :::
 
 ### Write Operations
 

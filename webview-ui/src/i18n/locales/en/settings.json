@@ -162,6 +162,12 @@
 			"outsideWorkspace": {
 				"label": "Include files outside workspace",
 				"description": "Allow Kilo Code to read files outside the current workspace without requiring approval."
+			},
+			"globalIgnore": {
+				"label": "Globally ignored files",
+				"description": "File patterns that are always ignored, even without a .kilocodeignore file. Common sensitive files like .env, keys, and credentials are included by default.",
+				"addButton": "Add Pattern",
+				"patternPlaceholder": "Enter glob pattern (e.g., '*.key', '.env.*')"
 			}
 		},
 		"write": {
