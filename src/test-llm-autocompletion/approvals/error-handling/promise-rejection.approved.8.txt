@@ -3,5 +3,6 @@ fetchUser(userId)
 		return processUser(user);
 	})
 	.catch((error) => {
-	handleError(error);
-}
+		console.error('Error fetching user:', error);
+		throw error;
+	})

@@ -63,36 +63,39 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(options?.shell).not.toBe(true)
 	})
 
-	it("flushes buffered CLI output on process exit", async () => {
-		await (provider as any).startAgentSession("test flush")
+	it("creates pending session and waits for session_created event", async () => {
+		await (provider as any).startAgentSession("test pending")
+
+		// Should have a pending session
+		expect((provider as any).registry.pendingSession).not.toBeNull()
+		expect((provider as any).registry.pendingSession.prompt).toBe("test pending")
+
+		// No sessions created yet
+		expect((provider as any).registry.getSessions()).toHaveLength(0)
+	})
+
+	it("creates session when session_created event is received", async () => {
+		await (provider as any).startAgentSession("test session created")
 		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
 		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
 
-		// Enable text handling
-		const sessionId = (provider as any).registry.getSessions()[0].id as string
-		;(provider as any).handleKilocodeEvent(sessionId, {
-			streamEventType: "kilocode",
-			payload: { type: "say", say: "api_req_started" },
-		})
+		// Emit session_created event
+		const sessionCreatedEvent = '{"event":"session_created","sessionId":"cli-session-123","timestamp":1234567890}\n'
+		proc.stdout.emit("data", Buffer.from(sessionCreatedEvent))
 
-		// Emit a JSON line without trailing newline to stay buffered
-		const partial = '{"timestamp":1,"source":"extension","type":"say","say":"text","content":"hi"}'
-		proc.stdout.emit("data", Buffer.from(partial))
+		// Pending session should be cleared
+		expect((provider as any).registry.pendingSession).toBeNull()
 
-		// No messages yet because the line lacked a newline
-		expect((provider as any).sessionMessages.get(sessionId)).toEqual([])
-
-		// Exit should flush the buffered line and deliver the message
-		proc.emit("exit", 0, null)
-
-		const messages = (provider as any).sessionMessages.get(sessionId)
-		expect(messages).toHaveLength(1)
-		expect(messages?.[0].text).toBe("hi")
+		// Session should be created with CLI's sessionId
+		const sessions = (provider as any).registry.getSessions()
+		expect(sessions).toHaveLength(1)
+		expect(sessions[0].sessionId).toBe("cli-session-123")
 	})
 
 	it("adds metadata text for tool requests and skips non chat events", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("meta").id
+		const sessionId = "test-session-meta"
+		registry.createSession(sessionId, "meta")
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Non-chat event should be logged but not added
@@ -120,7 +123,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("adds fallback text for checkpoint_saved", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("checkpoint").id
+		const sessionId = "test-session-checkpoint"
+		registry.createSession(sessionId, "checkpoint")
 		;(provider as any).sessionMessages.set(sessionId, [])
 		;(provider as any).handleKilocodeEvent(sessionId, {
 			streamEventType: "kilocode",
@@ -140,7 +144,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("dedupes repeated events with same ts/type/say/ask", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("dedupe").id
+		const sessionId = "test-session-dedupe"
+		registry.createSession(sessionId, "dedupe")
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Enable text handling
@@ -166,7 +171,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("skips user echo before api_req_started", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("echo").id
+		const sessionId = "test-session-echo"
+		registry.createSession(sessionId, "echo")
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// say:text before api_req_started -> skipped
@@ -205,7 +211,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 	it("drops empty partial messages and allows final to overwrite partial", async () => {
 		const registry = (provider as any).registry
-		const sessionId = registry.createSession("partial").id
+		const sessionId = "test-session-partial"
+		registry.createSession(sessionId, "partial")
 		;(provider as any).sessionMessages.set(sessionId, [])
 
 		// Enable text handling
@@ -255,31 +262,55 @@ describe("AgentManagerProvider CLI spawning", () => {
 	})
 
 	describe("dispose behavior", () => {
-		it("kills all running processes on dispose", async () => {
-			await (provider as any).startAgentSession("session 1")
-			await (provider as any).startAgentSession("session 2")
+		it("kills pending process on dispose", async () => {
+			await (provider as any).startAgentSession("pending session")
 
 			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
-			const proc1 = spawnMock.mock.results[0].value
-			const proc2 = spawnMock.mock.results[1].value
+			const proc = spawnMock.mock.results[0].value
 
-			expect((provider as any).processes.size).toBe(2)
+			const processHandler = (provider as any).processHandler
+			expect(processHandler.pendingProcess).not.toBeNull()
+
+			provider.dispose()
+
+			expect(proc.kill).toHaveBeenCalledWith("SIGTERM")
+			expect(processHandler.pendingProcess).toBeNull()
+		})
+
+		it("kills all running processes on dispose", async () => {
+			// Start two sessions and simulate session_created for both
+			await (provider as any).startAgentSession("session 1")
+			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
+			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			await (provider as any).startAgentSession("session 2")
+			const proc2 = spawnMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter; kill: Mock }
+			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
+
+			const processHandler = (provider as any).processHandler
+			expect(processHandler.activeSessions.size).toBe(2)
 
 			provider.dispose()
 
 			expect(proc1.kill).toHaveBeenCalledWith("SIGTERM")
 			expect(proc2.kill).toHaveBeenCalledWith("SIGTERM")
-			expect((provider as any).processes.size).toBe(0)
+			expect(processHandler.activeSessions.size).toBe(0)
 		})
 
 		it("clears all timeouts on dispose", async () => {
 			await (provider as any).startAgentSession("session with timeout")
+			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
-			expect((provider as any).timeouts.size).toBe(1)
+			const processHandler = (provider as any).processHandler
+			expect(processHandler.activeSessions.size).toBe(1)
 
 			provider.dispose()
 
-			expect((provider as any).timeouts.size).toBe(0)
+			// All active sessions (including their timeouts) should be cleared
+			expect(processHandler.activeSessions.size).toBe(0)
 		})
 	})
 
@@ -290,12 +321,23 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		it("returns true when a session is running", async () => {
 			await (provider as any).startAgentSession("running")
+			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
 			expect((provider as any).hasRunningSessions()).toBe(true)
 		})
 
 		it("returns count of running sessions", async () => {
 			await (provider as any).startAgentSession("running 1")
+			const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+			const proc1 = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
 			await (provider as any).startAgentSession("running 2")
+			const proc2 = spawnMock.mock.results[1].value as EventEmitter & { stdout: EventEmitter }
+			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
+
 			expect((provider as any).getRunningSessionCount()).toBe(2)
 		})
 	})

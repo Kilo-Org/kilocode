@@ -7,6 +7,6 @@ class ApiClient {
 			},
 			body: JSON.stringify(data),
 		});
-		const json = await response.json();
-		return json;
+		return response.json();
 	}
+}

@@ -7,5 +7,3 @@ end
 class Dog < Animal
 	def initialize(name, breed)
 		super(name)
-		@breed = breed
-	end

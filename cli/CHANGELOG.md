@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.12.1
+
+### Patch Changes
+
+- [#4204](https://github.com/Kilo-Org/kilocode/pull/4204) [`c200579`](https://github.com/Kilo-Org/kilocode/commit/c2005792b71ff8ea8d2e15286575294eb079066f) Thanks [@iscekic](https://github.com/iscekic)! - fixes session cleanup race conditions
+
 ## 0.12.0
 
 ### Minor Changes

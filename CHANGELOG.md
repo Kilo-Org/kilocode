@@ -1,5 +1,17 @@
 # kilo-code
 
+## 4.130.1
+
+### Patch Changes
+
+- [#4222](https://github.com/Kilo-Org/kilocode/pull/4222) [`fffff4d`](https://github.com/Kilo-Org/kilocode/commit/fffff4d73ec8168443e06b9dc1cfcfebfdbf58fb) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix Jetbrains webview
+
+- [#4176](https://github.com/Kilo-Org/kilocode/pull/4176) [`a71ee92`](https://github.com/Kilo-Org/kilocode/commit/a71ee92a8a35494a7693748951386c32e24b43ca) Thanks [@iscekic](https://github.com/iscekic)! - adds the /session show command
+
+- [#4227](https://github.com/Kilo-Org/kilocode/pull/4227) [`652ddda`](https://github.com/Kilo-Org/kilocode/commit/652ddda991e79ce8bcf4f9bf8af97b0c7a610bbc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix VSCode webview assets
+
+- [#4204](https://github.com/Kilo-Org/kilocode/pull/4204) [`c200579`](https://github.com/Kilo-Org/kilocode/commit/c2005792b71ff8ea8d2e15286575294eb079066f) Thanks [@iscekic](https://github.com/iscekic)! - fixes session cleanup race conditions
+
 ## 4.130.0
 
 ### Minor Changes

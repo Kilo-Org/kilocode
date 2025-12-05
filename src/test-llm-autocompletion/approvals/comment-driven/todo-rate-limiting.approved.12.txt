@@ -4,11 +4,14 @@ function handleAPIRequest(req, res) {
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later'
+    max: 100 // limit each IP to 100 requests per windowMs
   });
 
-  limiter(req, res, () => {
+  // Apply the rate limiting middleware to all requests
+  limiter(req, res, (err) => {
+    if (err) {
+      return res.status(429).json({ error: 'Too many requests, please try again later' });
+    }
     processRequest(req, res);
   });
 }

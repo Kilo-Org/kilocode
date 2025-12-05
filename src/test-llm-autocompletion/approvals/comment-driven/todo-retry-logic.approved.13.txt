@@ -2,7 +2,7 @@ async function fetchWithRetry(url) {
   // TODO: Implement retry logic with exponential backoff
   let retryCount = 0;
   const maxRetries = 3;
-  const baseDelay = 1000;
+  const initialDelay = 1000;
 
   while (retryCount < maxRetries) {
     try {
@@ -12,15 +12,14 @@ async function fetchWithRetry(url) {
       }
       return response.json();
     } catch (error) {
-      retryCount++;
-      if (retryCount === maxRetries) {
+      if (retryCount === maxRetries - 1) {
         throw error;
       }
-      const delay = baseDelay * Math.pow(2, retryCount - 1);
+      const delay = initialDelay * Math.pow(2, retryCount);
       await new Promise(resolve => setTimeout(resolve, delay));
+      retryCount++;
     }
   }
-
   const response = await fetch(url);
   return response.json();
 }

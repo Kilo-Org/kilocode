@@ -78,12 +78,28 @@
 
 /* Section header for Sessions list */
 .sidebar-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 	padding: 8px 12px 4px;
 	font-size: calc(var(--vscode-font-size) * 0.85);
 	font-weight: 600;
 	text-transform: uppercase;
 	color: var(--vscode-sideBarSectionHeader-foreground);
 	opacity: 0.8;
+}
+
+.sidebar-section-header .icon-btn {
+	opacity: 0.6;
+}
+
+.sidebar-section-header .icon-btn:hover:not(:disabled) {
+	opacity: 1;
+}
+
+.sidebar-section-header .icon-btn:disabled {
+	opacity: 0.4;
+	cursor: default;
 }
 
 .session-list {

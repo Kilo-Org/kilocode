@@ -2,15 +2,4 @@ fetchUser(userId)
 	.then(user => {
 		return processUser(user);
 	})
-	.catch(err => {
-		console.log(err);
-	});
-
-async function showUser(userId) {
-	try {
-		const user = await fetchUser(userId);
-		const processedUser = await processUser(user);
-	} catch (err) {
-		console.log(err);
-	}
-}
+	.catch(error => handleError(error))

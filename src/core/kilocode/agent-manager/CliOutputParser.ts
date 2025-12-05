@@ -65,6 +65,12 @@ export interface InterruptedStreamEvent {
 	sessionId?: string
 }
 
+export interface SessionCreatedStreamEvent {
+	streamEventType: "session_created"
+	sessionId: string
+	timestamp: number
+}
+
 export type StreamEvent =
 	| KilocodeStreamEvent
 	| StatusStreamEvent
@@ -72,6 +78,7 @@ export type StreamEvent =
 	| ErrorStreamEvent
 	| CompleteStreamEvent
 	| InterruptedStreamEvent
+	| SessionCreatedStreamEvent
 
 /**
  * Result of parsing a chunk of CLI output
@@ -198,6 +205,15 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 	const streamEventType = (parsed as { streamEventType?: unknown }).streamEventType
 	if (typeof streamEventType === "string") {
 		return parsed as unknown as StreamEvent
+	}
+
+	// Detect session_created event from CLI (format: { event: "session_created", sessionId: "...", timestamp: ... })
+	if (parsed.event === "session_created" && typeof parsed.sessionId === "string") {
+		return {
+			streamEventType: "session_created",
+			sessionId: parsed.sessionId as string,
+			timestamp: (parsed.timestamp as number) || Date.now(),
+		}
 	}
 
 	// Legacy format from CLI stdout: wrap parsed object as kilocode payload
