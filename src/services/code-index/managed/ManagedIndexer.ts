@@ -4,7 +4,6 @@ import * as vscode from "vscode"
 import * as path from "path"
 import { promises as fs } from "fs"
 import pMap from "p-map"
-import pLimit from "p-limit"
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { KiloOrganization } from "../../../shared/kilocode/organization"
 import { OrganizationService } from "../../kilocode/OrganizationService"
@@ -13,7 +12,6 @@ import { getCurrentBranch, isGitRepository, getCurrentCommitSha, getBaseBranch }
 import { getKilocodeConfig } from "../../../utils/kilo-config-file"
 import { getGitRepositoryInfo } from "../../../utils/git"
 import { getServerManifest, searchCode, upsertFile } from "./api-client"
-import { MANAGED_MAX_CONCURRENT_FILES } from "../constants"
 import { ServerManifest } from "./types"
 import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
@@ -75,8 +73,18 @@ export class ManagedIndexer implements vscode.Disposable {
 			// it IS null here. To mitigate that, we'll just create a new instance if needed. This dummy instance will
 			// be disabled and not respond as 'start' will never be called on it, but it wont blow up the extension.
 			console.warn("[ManagedIndexer] Warning: Previous ManagedIndexer instance was null, creating new instance")
-			TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER)
-			ManagedIndexer.prevInstance = new ManagedIndexer()
+			let proxy = null
+			try {
+				proxy = ContextProxy.instance
+				TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER, {
+					contextProxyMissing: "false",
+				})
+			} catch {
+				TelemetryService.instance.captureEvent(TelemetryEventName.MISSING_MANAGED_INDEXER, {
+					contextProxyMissing: "true",
+				})
+			}
+			ManagedIndexer.prevInstance = new ManagedIndexer(proxy)
 		}
 
 		return ManagedIndexer.prevInstance
