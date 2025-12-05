@@ -10,7 +10,7 @@ import {
 	startSessionFailedCounterAtom,
 	sessionOrderAtom,
 	setRemoteSessionsAtom,
-	setPendingSessionAtom,
+	pendingSessionAtom,
 	type AgentSession,
 	type RemoteSession,
 	type PendingSession,
@@ -66,7 +66,7 @@ export function useAgentManagerMessages() {
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const setStartSessionFailedCounter = useSetAtom(startSessionFailedCounterAtom)
 	const setRemoteSessions = useSetAtom(setRemoteSessionsAtom)
-	const setPendingSession = useSetAtom(setPendingSessionAtom)
+	const setPendingSession = useSetAtom(pendingSessionAtom)
 	const sessionOrder = useAtomValue(sessionOrderAtom)
 	const hasInitializedSelection = useRef(false)
 

@@ -5,7 +5,6 @@ import {
 	mergedSessionsAtom,
 	selectedSessionIdAtom,
 	isRefreshingRemoteSessionsAtom,
-	startRefreshingRemoteSessionsAtom,
 	pendingSessionAtom,
 	type AgentSession,
 } from "../state/atoms/sessions"
@@ -18,7 +17,7 @@ export function SessionSidebar() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const [selectedId, setSelectedId] = useAtom(selectedSessionIdAtom)
 	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
-	const startRefreshing = useSetAtom(startRefreshingRemoteSessionsAtom)
+	const setIsRefreshing = useSetAtom(isRefreshingRemoteSessionsAtom)
 
 	const handleNewSession = () => {
 		setSelectedId(null)
@@ -31,7 +30,7 @@ export function SessionSidebar() {
 
 	const handleRefresh = () => {
 		if (isRefreshing) return // Prevent multiple clicks while loading
-		startRefreshing()
+		setIsRefreshing(true)
 		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 

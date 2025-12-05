@@ -36,7 +36,13 @@ export class RemoteSessionService {
 			return null
 		}
 
-		return this.fetchMessagesFromBlobUrl(blobUrl)
+		const sessionManager = SessionManager.init()
+		const messages = (await sessionManager.fetchBlobFromSignedUrl(
+			blobUrl,
+			"ui_messages_blob_url",
+		)) as ClineMessage[]
+
+		return messages.filter((message) => message.say !== "checkpoint_saved")
 	}
 
 	private async getSessionMessageBlobUrl(sessionId: string): Promise<string | null> {
@@ -59,16 +65,6 @@ export class RemoteSessionService {
 		}
 
 		return blobUrl
-	}
-
-	private async fetchMessagesFromBlobUrl(blobUrl: string): Promise<ClineMessage[]> {
-		const response = await fetch(blobUrl)
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-		}
-
-		const messages = (await response.json()) as ClineMessage[]
-		return messages.filter((message) => message.say !== "checkpoint_saved")
 	}
 
 	private getSessionClient() {

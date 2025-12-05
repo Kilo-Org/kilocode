@@ -696,7 +696,7 @@ export class SessionManager {
 		return contents
 	}
 
-	private async fetchBlobFromSignedUrl(url: string, urlType: string) {
+	public async fetchBlobFromSignedUrl(url: string, urlType: string) {
 		try {
 			this.logger?.debug(`Fetching blob from signed URL`, "SessionManager", { url, urlType })
 
