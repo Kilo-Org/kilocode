@@ -30,7 +30,6 @@ _Prompt text box and Expanded toolbar with all options_
 | ------------------------------ | ------------------------------------------------ | ----------- |
 | **Read files and directories** | Lets Kilo Code access files without asking       | Medium      |
 | **Edit files**                 | Lets Kilo Code modify files without asking       | **High**    |
-| **Delete files**               | Lets Kilo Code delete files without asking       | **High**    |
 | **Execute approved commands**  | Runs whitelisted terminal commands automatically | **High**    |
 | **Use the browser**            | Allows headless browser interaction              | Medium      |
 | **Use MCP servers**            | Lets Kilo Code use configured MCP services       | Medium-High |
