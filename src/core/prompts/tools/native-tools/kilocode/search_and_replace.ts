@@ -16,7 +16,7 @@ export type SearchAndReplaceParameters = z.infer<typeof SearchAndReplaceParamete
 export default {
 	type: "function",
 	function: {
-		name: "apply_diff",
+		name: "search_and_replace",
 		description: "Replace a specific string in a file with a new string. This is used for making precise edits.",
 		strict: true,
 		parameters: z.toJSONSchema(SearchAndReplaceParametersSchema),

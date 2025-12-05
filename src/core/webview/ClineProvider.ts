@@ -1029,7 +1029,6 @@ ${prompt}
 
 		const {
 			apiConfiguration,
-			diffEnabled: enableDiff,
 			enableCheckpoints,
 			checkpointTimeout,
 			fuzzyMatchThreshold,
@@ -1037,6 +1036,8 @@ ${prompt}
 			cloudUserInfo,
 			taskSyncEnabled,
 		} = await this.getState()
+
+		const enableDiff = apiConfiguration.diffEnabled ?? false
 
 		const task = new Task({
 			context: this.context, // kilocode_change
@@ -2068,7 +2069,6 @@ ${prompt}
 			soundEnabled,
 			ttsEnabled,
 			ttsSpeed,
-			diffEnabled,
 			enableCheckpoints,
 			checkpointTimeout,
 			// taskHistory, // kilocode_change
@@ -2244,7 +2244,6 @@ ${prompt}
 			soundEnabled: soundEnabled ?? false,
 			ttsEnabled: ttsEnabled ?? false,
 			ttsSpeed: ttsSpeed ?? 1.0,
-			diffEnabled: diffEnabled ?? true,
 			enableCheckpoints: enableCheckpoints ?? true,
 			checkpointTimeout: checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			shouldShowAnnouncement: false, // kilocode_change
@@ -2515,7 +2514,6 @@ ${prompt}
 			soundEnabled: stateValues.soundEnabled ?? false,
 			ttsEnabled: stateValues.ttsEnabled ?? false,
 			ttsSpeed: stateValues.ttsSpeed ?? 1.0,
-			diffEnabled: stateValues.diffEnabled ?? true,
 			enableCheckpoints: stateValues.enableCheckpoints ?? true,
 			checkpointTimeout: stateValues.checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 			soundVolume: stateValues.soundVolume,
@@ -2993,7 +2991,6 @@ ${prompt}
 		const {
 			apiConfiguration,
 			organizationAllowList,
-			diffEnabled: enableDiff,
 			enableCheckpoints,
 			checkpointTimeout,
 			fuzzyMatchThreshold,
@@ -3001,6 +2998,8 @@ ${prompt}
 			cloudUserInfo,
 			remoteControlEnabled,
 		} = await this.getState()
+
+		const enableDiff = apiConfiguration.diffEnabled ?? false
 
 		if (!ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList)) {
 			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))

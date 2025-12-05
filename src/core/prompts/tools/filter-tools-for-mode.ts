@@ -97,6 +97,18 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("run_slash_command")
 	}
 
+	// Conditionally exclude run_slash_command if experiment is not enabled
+	if (!experiments?.runSlashCommand) {
+		allowedToolNames.delete("run_slash_command")
+	}
+
+	// Conditionally exclude apply_diff if disabled in settings
+	if (state?.apiConfiguration?.diffEnabled != true) {
+		allowedToolNames.delete("apply_diff")
+	} else {
+		allowedToolNames.add("search_and_replace")
+	}
+
 	// Conditionally exclude browser_action if disabled in settings
 	if (
 		settings?.browserToolEnabled === false ||

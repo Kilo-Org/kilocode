@@ -1,6 +1,6 @@
 import type OpenAI from "openai"
 
-export const apply_diff_single_file = {
+export const apply_diff = {
 	type: "function",
 	function: {
 		name: "apply_diff",

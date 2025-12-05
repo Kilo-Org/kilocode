@@ -76,7 +76,6 @@ describe("ProviderSettingsManager", () => {
 					modeApiConfigs: {},
 					migrations: {
 						rateLimitSecondsMigrated: true,
-						diffSettingsMigrated: true,
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,

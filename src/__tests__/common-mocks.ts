@@ -213,15 +213,7 @@ export function setupCommonMocks() {
 		Task: vi
 			.fn()
 			.mockImplementation(
-				(
-					_provider,
-					_apiConfiguration,
-					_customInstructions,
-					_diffEnabled,
-					_fuzzyMatchThreshold,
-					_task,
-					taskId,
-				) => ({
+				(_provider, _apiConfiguration, _customInstructions, _fuzzyMatchThreshold, _task, taskId) => ({
 					api: undefined,
 					abortTask: vi.fn(),
 					handleWebviewAskResponse: vi.fn(),
