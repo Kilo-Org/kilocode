@@ -1,0 +1,19 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_discount(items)
+	items.each do |item|
+		if item > 100
+			item = item * 0.9
+		end
+	end
+	return items
+end
+
+def calculate_total_with_discount(items)
+	items = calculate_discount(items)
+	return calculate_total(items)
+end

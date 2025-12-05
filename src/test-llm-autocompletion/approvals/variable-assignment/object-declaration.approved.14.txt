@@ -1,0 +1,23 @@
+const config = require('../config.json');
+const Discord = require('discord.js');
+const fs = require('fs');
+const { MessageEmbed } = require('discord.js');
+const { Client, Collection, Intents } = require('discord.js');
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+
+module.exports = {
+    name: 'help',
+    description: 'Shows all commands',
+    execute(message, args) {
+        const embed = new MessageEmbed()
+            .setColor('#0099ff')
+            .setTitle('Help')
+            .setDescription('All commands')
+            .addFields(
+                { name: '!help', value: 'Shows all commands' },
+                { name: '!ping', value: 'Pong!' },
+                { name: '!server', value: 'Shows server info' },
+                { name: '!user', value: 'Shows user info' },
+                { name: '!avatar', value: 'Shows your avatar' },
+                { name: '!kick', value: 'Kicks a user' },
+                { name: '!ban', value: '

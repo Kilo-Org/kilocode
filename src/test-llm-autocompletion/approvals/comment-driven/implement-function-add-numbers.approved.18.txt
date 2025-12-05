@@ -1,0 +1,14 @@
+// Implement functino to add two numbers
+// You are not allowed to use + and - operators
+
+// Solution 1: Using bitwise operators
+// Time: O(1)
+// Space: O(1)
+function add(a, b) {
+  while (b !== 0) {
+    let carry = a & b;
+    a = a ^ b;
+    b = carry << 1;
+  }
+  return a;
+}

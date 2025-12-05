@@ -1,0 +1,18 @@
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+arr.each { |n| puts n }
+
+arr.each { |n| puts n if n > 5 }
+
+odd = arr.select { |n| n.odd? }
+puts odd
+
+arr.push(11)
+arr.unshift(0)
+puts arr
+
+arr.pop
+arr.push(3)
+puts arr
+
+arr.uniq!
+puts arr

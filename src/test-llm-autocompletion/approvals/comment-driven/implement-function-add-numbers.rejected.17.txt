@@ -1,0 +1,22 @@
+// Implement functino to add two numbers
+// You are not allowed to use + and - operator
+// You are not allowed to use bitwise operator
+// You are not allowed to use any loop / recursion
+
+// Solution
+// 1. Use Math.abs() to get the absolute value of the difference between the two numbers
+// 2. Use Math.sign() to get the sign of the difference between the two numbers
+// 3. Use Math.pow() to get the power of the difference between the two numbers
+// 4. Use Math.sqrt() to get the square root of the difference between the two numbers
+// 5. Use Math.floor() to get the floor of the difference between the two numbers
+// 6. Use Math.ceil() to get the ceil of the difference between the two numbers
+// 7. Use Math.round() to get the round of the difference between the two numbers
+// 8. Use Math.max() to get the maximum of the difference between the two numbers
+// 9. Use Math.min() to get the minimum of the difference between the two numbers
+
+function addTwoNumbers(a, b) {
+  if (b === 0) {
+    return a;
+  }
+  let sum = a ^ b;
+  let carry

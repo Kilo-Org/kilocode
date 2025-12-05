@@ -1,0 +1,10 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_total_with_tax(items)
+	tax_rate = 1.07
+	calculate_total(items) * tax_rate
+end

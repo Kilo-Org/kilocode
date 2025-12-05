@@ -1,0 +1,19 @@
+const numbers = [1, 2, 3, 4, 5];
+
+// for (let i = 0; i < numbers.length; i++) {
+//   console.log(numbers[i]);
+// }
+
+numbers.forEach((number) => {
+  console.log(number);
+});
+
+const users = [
+  { name: "John", age: 30 },
+  { name: "Jane", age: 25 },
+  { name: "Jim", age: 35 },
+];
+
+users.forEach((user) => {
+  console.log(user.name);
+});

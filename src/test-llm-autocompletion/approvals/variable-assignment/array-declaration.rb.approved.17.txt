@@ -1,0 +1,14 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |num|
+  puts num
+end
+
+arr.each { |num| puts num }
+
+arr = [1, 2, 3, 4, 5]
+new_arr = arr.map do |num|
+  num + 2
+end
+
+p arr
+p new_arr

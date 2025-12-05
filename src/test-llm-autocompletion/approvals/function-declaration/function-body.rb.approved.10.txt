@@ -1,0 +1,15 @@
+def calculate_sum(a, b)
+	return a + b
+end
+
+def calculate_difference(a, b)
+	return a - b
+end
+
+def calculate_product(a, b)
+	return a * b
+end
+
+def calculate_quotient(a, b)
+	return a / b
+end

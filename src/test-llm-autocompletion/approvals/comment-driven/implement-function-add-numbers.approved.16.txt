@@ -1,0 +1,51 @@
+// Implement functino to add two numbers
+// Input: 2, 3
+// Output: 5
+
+function add(a, b) {
+  return a + b;
+}
+
+console.log(add(2, 3));
+
+// Implement function to subtract two numbers
+// Input: 2, 3
+// Output: -1
+
+function subtract(a, b) {
+  return a - b;
+}
+
+console.log(subtract(2, 3));
+
+// Implement function to multiply two numbers
+// Input: 2, 3
+// Output: 6
+
+function multiply(a, b) {
+  return a * b;
+}
+
+console.log(multiply(2, 3));
+
+// Implement function to divide two numbers
+// Input: 2, 3
+// Output: 0.6666666666666666
+
+function divide(a, b) {
+  return a / b;
+}
+
+console.log(divide(2, 3));
+
+// Implement function to calculate the remainder of two numbers
+// Input: 2, 3
+// Output: 2
+
+function remainder(a, b) {
+  return a % b;
+}
+
+console.log(remainder(2, 3));
+
+// Implement function to calculate the

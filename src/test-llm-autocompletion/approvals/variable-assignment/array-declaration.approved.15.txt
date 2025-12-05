@@ -1,0 +1,8 @@
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const evenNumbers = numbers.filter((number) => number % 2 === 0);
+
+console.log(evenNumbers); // [2, 4, 6, 8, 10]
+
+// The filter() method creates a new array with all elements that pass the test implemented by the provided function.
+// In this example, the filter() method is used to create a new array called evenNumbers that contains only the even numbers from the original array called numbers.

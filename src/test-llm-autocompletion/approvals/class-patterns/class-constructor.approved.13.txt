@@ -1,0 +1,32 @@
+class User {
+	constructor(username, email, role) {
+		this.username = username;
+		this.email = email;
+		this.role = role;
+	}
+}
+
+class Admin extends User {
+	constructor(username, email, role) {
+		super(username, email, role);
+		this.role = 'admin';
+	}
+}
+
+class UserFactory {
+	createUser(username, email, role) {
+		if (role === 'admin') {
+			return new Admin(username, email, role);
+		} else {
+			return new User(username, email, role);
+		}
+	}
+}
+
+const userFactory = new UserFactory();
+
+const user1 = userFactory.createUser('john_doe', 'john@example.com', 'user');
+const admin1 = userFactory.createUser('admin_user', 'admin@example.com', 'admin');
+
+console.log(user1);
+console.log(admin1);

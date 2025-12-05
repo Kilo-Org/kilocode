@@ -1,0 +1,12 @@
+x = 10
+if x > 5
+	puts "x is greater than 5"
+end
+
+if x > 8
+	puts "x is also greater than 8"
+end
+
+if x > 10
+	puts "x is also greater than 10"
+end

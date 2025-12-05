@@ -1,0 +1,11 @@
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const sum = numbers.reduce((acc, curr) => acc + curr, 0);
+
+console.log(sum); // 55
+
+// Explanation:
+// acc is the accumulator, which starts at 0 because we set the initial value of the accumulator to 0 in the second argument of reduce().
+// curr is the current element being processed in the array.
+// In each iteration, we add the current element to the accumulator, and the next iteration starts with this updated accumulator value.
+// After processing all elements, the accumulator contains the sum of all elements in the array.

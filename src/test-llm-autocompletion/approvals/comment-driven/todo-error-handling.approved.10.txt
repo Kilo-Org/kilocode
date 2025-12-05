@@ -1,0 +1,16 @@
+function processData(data) {
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
+  }
+
+  // TODO: Implement data processing logic
+  const processedData = {
+    id: data.id,
+    name: data.name,
+    age: data.age,
+    email: data.email,
+  };
+
+  return processedData;
+}

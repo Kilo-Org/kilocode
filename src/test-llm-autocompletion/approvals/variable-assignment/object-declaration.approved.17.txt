@@ -1,0 +1,10 @@
+const config = {
+  apiKey: "AIzaSyBj6m0j7Z8VU317QXJQZ5QZ5QZ5QZ5QZ5",
+  authDomain: "chat-app-123.firebaseapp.com",
+  projectId: "chat-app-123",
+  storageBucket: "chat-app-123.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:123456789",
+};
+
+export default config;

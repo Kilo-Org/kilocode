@@ -1,0 +1,13 @@
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+puts calculate_sum(1, 2)
+
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+puts calculate_sum(1, 2)

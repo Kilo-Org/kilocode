@@ -1,0 +1,14 @@
+x = 10
+y = 20
+
+print(x + y)
+
+# print(x + y + z) # NameError: name 'z' is not defined
+
+# print(x + y + "z") # TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+# print(x + y + z) # NameError: name 'z' is not defined
+
+# print(x + y + z) # NameError: name 'z' is not defined
+
+# print(x + y + z) # NameError: name 'z' is not defined

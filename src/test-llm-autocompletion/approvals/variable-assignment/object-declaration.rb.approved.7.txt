@@ -1,0 +1,13 @@
+user = {
+	name: 'John',
+	email: 'john@email.com',
+	password: 'password'
+}
+
+puts "Name: #{user[:name]}"
+puts "Email: #{user[:email]}"
+puts "Password: #{user[:password]}"
+
+user.each do |key, value|
+	puts "Key: #{key}, Value: #{value}"
+end
