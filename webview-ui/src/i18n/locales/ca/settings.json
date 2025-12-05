@@ -37,6 +37,26 @@
 		"about": "Sobre Kilo Code",
 		"autoPurge": "Auto-neteja"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Has trobat un error?",
+			"link": "Informa'n a GitHub"
+		},
+		"featureRequest": {
+			"label": "Tens una idea?",
+			"link": "Comparteix-la amb nosaltres"
+		},
+		"securityIssue": {
+			"label": "Has descobert una vulnerabilitat?",
+			"link": "Segueix el nostre procés de divulgació"
+		},
+		"contact": {
+			"label": "Necessites parlar amb nosaltres? Escriu"
+		},
+		"community": "Vols consells o simplement passar l'estona amb altres usuaris de Kilo Code? Uneix-te a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Contacte i Comunitat",
+		"manageSettings": "Gestionar Configuració"
+	},
 	"slashCommands": {
 		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
 	},
@@ -60,6 +80,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Clau API",
 		"vercelAiGatewayApiKeyPlaceholder": "Introduïu la vostra clau API de Vercel AI Gateway",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Regió d'AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Perfil d'AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Nom del perfil d'AWS de ~/.aws/credentials (obligatori).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clau de l'API d'OpenRouter",
 		"openRouterApiKeyPlaceholder": "Introduïu la vostra clau de l'API d'OpenRouter",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "Cal una clau d'API de Gemini",
 			"mistralApiKeyRequired": "La clau de l'API de Mistral és requerida",
 			"vercelAiGatewayApiKeyRequired": "Es requereix la clau API de Vercel AI Gateway",
+			"bedrockRegionRequired": "Es requereix la regió d'AWS",
+			"bedrockProfileRequired": "Es requereix el perfil d'AWS",
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
 			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0",
 			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida"
 		},
+		"optional": "opcional",
 		"advancedConfigLabel": "Configuració avançada",
 		"searchMinScoreLabel": "Llindar de puntuació de cerca",
 		"searchMinScoreDescription": "Puntuació mínima de similitud (0.0-1.0) requerida per als resultats de la cerca. Valors més baixos retornen més resultats però poden ser menys rellevants. Valors més alts retornen menys resultats però més rellevants.",
@@ -301,6 +330,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Introdueix el nom de desplegament...",
 		"awsBedrock1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"basetenApiKey": "Clau API de Baseten",
+		"getBasetenApiKey": "Obtenir clau API de Baseten",
 		"cerebrasApiKey": "Clau API de Cerebras",
 		"getCerebrasApiKey": "Obtenir clau API de Cerebras",
 		"chutesApiKey": "Clau API de Chutes",
@@ -756,6 +787,10 @@
 		"includeCurrentCost": {
 			"label": "Inclou el cost actual en el context",
 			"description": "Quan està activat, el cost d'ús actual de l'API s'inclourà a la indicació del sistema. Desactiveu-ho si els models deixen de funcionar per problemes amb el cost."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status màx. fitxers",
+			"description": "Nombre màxim d'entrades de fitxers a incloure en el context d'estat de git. Establiu a 0 per desactivar. La informació de la branca i els commits sempre es mostren quan és > 0."
 		}
 	},
 	"terminal": {
@@ -818,6 +853,14 @@
 	},
 	"advancedSettings": {
 		"title": "Configuració avançada"
+	},
+	"toolProtocol": {
+		"label": "Protocol de crida d'eines",
+		"description": "Trieu com es comunica en Kilo Code amb l'API. Natiu utilitza l'API de crida de funcions del proveïdor, mentre que XML utilitza definicions d'eines amb format XML.",
+		"default": "Per defecte",
+		"xml": "XML",
+		"native": "Natiu",
+		"currentDefault": "Per defecte: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -891,6 +934,8 @@
 			"name": "Habilitar generació d'imatges amb IA",
 			"description": "Quan estigui habilitat, Kilo Code pot generar imatges a partir de prompts de text. Requereix que es configuri una clau d'API de Kilo Code o OpenRouter.",
 			"apiProvider": "Proveïdor d'API",
+			"providerLabel": "Proveïdor",
+			"providerDescription": "Selecciona el proveïdor per a la generació d'imatges.",
 			"openRouterApiKeyLabel": "Clau API d'OpenRouter",
 			"openRouterApiKeyPlaceholder": "Introdueix la teva clau API d'OpenRouter",
 			"kiloCodeApiKeyLabel": "Clau API de Kilo Code",
@@ -927,6 +972,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Habilitar comandes de barra diagonal iniciades pel model",
 			"description": "Quan està habilitat, Kilo Code pot executar les vostres comandes de barra diagonal per executar fluxos de treball."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Crides paral·leles a eines",
+			"description": "Quan està activat, el protocol natiu pot executar múltiples eines en un sol torn de missatge de l'assistent."
 		}
 	},
 	"promptCaching": {

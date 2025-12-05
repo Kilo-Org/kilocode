@@ -1,45 +1,44 @@
 import { ClineAskUseMcpServer } from "../../shared/ExtensionMessage"
-import { ToolUse, RemoveClosingTag, AskApproval, HandleError, PushToolResult } from "../../shared/tools"
+import type { ToolUse } from "../../shared/tools"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
+import { BaseTool, ToolCallbacks } from "./BaseTool"
 
-export async function accessMcpResourceTool(
-	cline: Task,
-	block: ToolUse,
-	askApproval: AskApproval,
-	handleError: HandleError,
-	pushToolResult: PushToolResult,
-	removeClosingTag: RemoveClosingTag,
-) {
-	const server_name: string | undefined = block.params.server_name
-	const uri: string | undefined = block.params.uri
+interface AccessMcpResourceParams {
+	server_name: string
+	uri: string
+}
 
-	try {
-		if (block.partial) {
-			const partialMessage = JSON.stringify({
-				type: "access_mcp_resource",
-				serverName: removeClosingTag("server_name", server_name),
-				uri: removeClosingTag("uri", uri),
-			} satisfies ClineAskUseMcpServer)
+export class AccessMcpResourceTool extends BaseTool<"access_mcp_resource"> {
+	readonly name = "access_mcp_resource" as const
 
-			await cline.ask("use_mcp_server", partialMessage, block.partial).catch(() => {})
-			return
-		} else {
+	parseLegacy(params: Partial<Record<string, string>>): AccessMcpResourceParams {
+		return {
+			server_name: params.server_name || "",
+			uri: params.uri || "",
+		}
+	}
+
+	async execute(params: AccessMcpResourceParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
+		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
+		const { server_name, uri } = params
+
+		try {
 			if (!server_name) {
-				cline.consecutiveMistakeCount++
-				cline.recordToolError("access_mcp_resource")
-				pushToolResult(await cline.sayAndCreateMissingParamError("access_mcp_resource", "server_name"))
+				task.consecutiveMistakeCount++
+				task.recordToolError("access_mcp_resource")
+				pushToolResult(await task.sayAndCreateMissingParamError("access_mcp_resource", "server_name"))
 				return
 			}
 
 			if (!uri) {
-				cline.consecutiveMistakeCount++
-				cline.recordToolError("access_mcp_resource")
-				pushToolResult(await cline.sayAndCreateMissingParamError("access_mcp_resource", "uri"))
+				task.consecutiveMistakeCount++
+				task.recordToolError("access_mcp_resource")
+				pushToolResult(await task.sayAndCreateMissingParamError("access_mcp_resource", "uri"))
 				return
 			}
 
-			cline.consecutiveMistakeCount = 0
+			task.consecutiveMistakeCount = 0
 
 			const completeMessage = JSON.stringify({
 				type: "access_mcp_resource",
@@ -50,12 +49,13 @@ export async function accessMcpResourceTool(
 			const didApprove = await askApproval("use_mcp_server", completeMessage)
 
 			if (!didApprove) {
+				pushToolResult(formatResponse.toolDenied(toolProtocol))
 				return
 			}
 
 			// Now execute the tool
-			await cline.say("mcp_server_request_started")
-			const resourceResult = await cline.providerRef.deref()?.getMcpHub()?.readResource(server_name, uri)
+			await task.say("mcp_server_request_started")
+			const resourceResult = await task.providerRef.deref()?.getMcpHub()?.readResource(server_name, uri)
 
 			const resourceResultPretty =
 				resourceResult?.contents
@@ -81,13 +81,25 @@ export async function accessMcpResourceTool(
 				}
 			})
 
-			await cline.say("mcp_server_response", resourceResultPretty, images)
+			await task.say("mcp_server_response", resourceResultPretty, images)
 			pushToolResult(formatResponse.toolResult(resourceResultPretty, images))
-
-			return
+		} catch (error) {
+			await handleError("accessing MCP resource", error instanceof Error ? error : new Error(String(error)))
 		}
-	} catch (error) {
-		await handleError("accessing MCP resource", error)
-		return
+	}
+
+	override async handlePartial(task: Task, block: ToolUse<"access_mcp_resource">): Promise<void> {
+		const server_name = this.removeClosingTag("server_name", block.params.server_name, true)
+		const uri = this.removeClosingTag("uri", block.params.uri, true)
+
+		const partialMessage = JSON.stringify({
+			type: "access_mcp_resource",
+			serverName: server_name,
+			uri: uri,
+		} satisfies ClineAskUseMcpServer)
+
+		await task.ask("use_mcp_server", partialMessage, block.partial).catch(() => {})
 	}
 }
+
+export const accessMcpResourceTool = new AccessMcpResourceTool()

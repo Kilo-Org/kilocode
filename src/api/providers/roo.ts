@@ -1,7 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import { rooDefaultModelId, getApiProtocol } from "@roo-code/types"
+import { rooDefaultModelId, getApiProtocol, type ImageGenerationApiMethod } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -15,6 +15,20 @@ import type { ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
 import { getModels, getModelsFromCache } from "../providers/fetchers/modelCache"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import { generateImageWithProvider, generateImageWithImagesApi, ImageGenerationResult } from "./utils/image-generation"
+import { t } from "../../i18n"
+
+import type { ModelInfo } from "@roo-code/types"
+
+// Model-specific defaults that should be applied even when models come from API cache
+const MODEL_DEFAULTS: Record<string, Partial<ModelInfo>> = {
+	"minimax/minimax-m2": {
+		defaultToolProtocol: "native",
+	},
+	"anthropic/claude-haiku-4.5": {
+		defaultToolProtocol: "native",
+	},
+}
 
 // Extend OpenAI's CompletionUsage to include Roo specific fields
 interface RooUsage extends OpenAI.CompletionUsage {
@@ -126,12 +140,9 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 			)
 
 			let lastUsage: RooUsage | undefined = undefined
-			// Accumulate tool calls by index - similar to how reasoning accumulates
-			const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
-				const finishReason = chunk.choices[0]?.finish_reason
 
 				if (delta) {
 					// Check for reasoning content (similar to OpenRouter)
@@ -150,24 +161,15 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 						}
 					}
 
-					// Check for tool calls in delta
+					// Emit raw tool call chunks - NativeToolCallParser handles state management
 					if ("tool_calls" in delta && Array.isArray(delta.tool_calls)) {
 						for (const toolCall of delta.tool_calls) {
-							const index = toolCall.index
-							const existing = toolCallAccumulator.get(index)
-
-							if (existing) {
-								// Accumulate arguments for existing tool call
-								if (toolCall.function?.arguments) {
-									existing.arguments += toolCall.function.arguments
-								}
-							} else {
-								// Start new tool call accumulation
-								toolCallAccumulator.set(index, {
-									id: toolCall.id || "",
-									name: toolCall.function?.name || "",
-									arguments: toolCall.function?.arguments || "",
-								})
+							yield {
+								type: "tool_call_partial",
+								index: toolCall.index,
+								id: toolCall.id,
+								name: toolCall.function?.name,
+								arguments: toolCall.function?.arguments,
 							}
 						}
 					}
@@ -178,20 +180,6 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 							text: delta.content,
 						}
 					}
-				}
-
-				// When finish_reason is 'tool_calls', yield all accumulated tool calls
-				if (finishReason === "tool_calls" && toolCallAccumulator.size > 0) {
-					for (const [index, toolCall] of toolCallAccumulator.entries()) {
-						yield {
-							type: "tool_call",
-							id: toolCall.id,
-							name: toolCall.name,
-							arguments: toolCall.arguments,
-						}
-					}
-					// Clear accumulator after yielding
-					toolCallAccumulator.clear()
 				}
 
 				if (chunk.usage) {
@@ -269,23 +257,78 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 		const models = getModelsFromCache("roo") || {}
 		const modelInfo = models[modelId]
 
+		// Get model-specific defaults if they exist
+		const modelDefaults = MODEL_DEFAULTS[modelId]
+
 		if (modelInfo) {
-			return { id: modelId, info: modelInfo }
+			// Merge model-specific defaults with cached model info
+			const mergedInfo = modelDefaults ? { ...modelInfo, ...modelDefaults } : modelInfo
+			return { id: modelId, info: mergedInfo }
 		}
 
 		// Return the requested model ID even if not found, with fallback info.
+		const fallbackInfo = {
+			maxTokens: 16_384,
+			contextWindow: 262_144,
+			supportsImages: false,
+			supportsReasoningEffort: false,
+			supportsPromptCache: true,
+			supportsNativeTools: false,
+			inputPrice: 0,
+			outputPrice: 0,
+			isFree: false,
+		}
+
 		return {
 			id: modelId,
-			info: {
-				maxTokens: 16_384,
-				contextWindow: 262_144,
-				supportsImages: false,
-				supportsReasoningEffort: false,
-				supportsPromptCache: true,
-				supportsNativeTools: false,
-				inputPrice: 0,
-				outputPrice: 0,
-			},
+			info: fallbackInfo,
 		}
+	}
+
+	/**
+	 * Generate an image using Roo Code Cloud's image generation API
+	 * @param prompt The text prompt for image generation
+	 * @param model The model to use for generation
+	 * @param inputImage Optional base64 encoded input image data URL
+	 * @param apiMethod The API method to use (chat_completions or images_api)
+	 * @returns The generated image data and format, or an error
+	 */
+	async generateImage(
+		prompt: string,
+		model: string,
+		inputImage?: string,
+		apiMethod?: ImageGenerationApiMethod,
+	): Promise<ImageGenerationResult> {
+		const sessionToken = getSessionToken()
+
+		if (!sessionToken || sessionToken === "unauthenticated") {
+			return {
+				success: false,
+				error: t("tools:generateImage.roo.authRequired"),
+			}
+		}
+
+		const baseURL = `${this.fetcherBaseURL}/v1`
+
+		// Use the specified API method, defaulting to chat_completions for backward compatibility
+		if (apiMethod === "images_api") {
+			return generateImageWithImagesApi({
+				baseURL,
+				authToken: sessionToken,
+				model,
+				prompt,
+				inputImage,
+				outputFormat: "png",
+			})
+		}
+
+		// Default to chat completions approach
+		return generateImageWithProvider({
+			baseURL,
+			authToken: sessionToken,
+			model,
+			prompt,
+			inputImage,
+		})
 	}
 }

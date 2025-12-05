@@ -38,6 +38,30 @@
 		"about": "เกี่ยวกับ Kilo Code",
 		"autoPurge": "ทำความสะอาดอัตโนมัติ"
 	},
+	"about": {
+		"bugReport": {
+			"label": "พบข้อผิดพลาด?",
+			"link": "รายงานบน GitHub"
+		},
+		"featureRequest": {
+			"label": "มีไอเดีย?",
+			"link": "แบ่งปันกับเรา"
+		},
+		"securityIssue": {
+			"label": "ค้นพบช่องโหว่?",
+			"link": "ปฏิบัติตามกระบวนการเปิดเผยของเรา"
+		},
+		"contact": {
+			"label": "ต้องการพูดคุยกับเรา? เขียน"
+		},
+		"contactSupport": "ติดต่อฝ่ายสนับสนุน",
+		"contactSupportDesc": "สำหรับคำถามทั่วไป การแก้ไขปัญหา และความช่วยเหลือด้านเทคนิค",
+		"joinCommunity": "เข้าร่วมชุมชน",
+		"joinCommunityDesc": "ต้องการเทคนิคหรือแค่ใช้เวลาร่วมกับผู้ใช้ Kilo Code คนอื่นๆ? เข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>kilo.ai/discord</discordLink>",
+		"community": "ต้องการเทคนิคหรือแค่ใช้เวลาร่วมกับผู้ใช้ Kilo Code คนอื่นๆ? เข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "ติดต่อและชุมชน",
+		"manageSettings": "จัดการการตั้งค่า"
+	},
 	"slashCommands": {
 		"description": "จัดการคำสั่งแบบ slash ของคุณเพื่อดำเนินการเวิร์กโฟลว์และการกระทำแบบกำหนดเองอย่างรวดเร็ว <DocsLink>เรียนรู้เพิ่มเติม</DocsLink>"
 	},
@@ -72,6 +96,26 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "คีย์ API",
 		"vercelAiGatewayApiKeyPlaceholder": "ป้อนคีย์ API Vercel AI Gateway ของคุณ",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockConfigTitle": "การกำหนดค่า Amazon Bedrock",
+		"bedrockConfigDesc": "กำหนดค่าการตั้งค่า Amazon Bedrock สำหรับการสร้างดัชนี",
+		"bedrockEmbeddingModel": "โมเดล Embedding ของ Bedrock",
+		"bedrockEmbeddingModelDesc": "เลือกโมเดล embedding ของ Amazon Bedrock ที่จะใช้",
+		"bedrockEmbeddingModelPlaceholder": "เลือกโมเดล embedding",
+		"bedrockRegionLabel": "AWS Region",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS Profile",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "ชื่อโปรไฟล์ AWS จาก ~/.aws/credentials (จำเป็น)",
+		"bedrockAccessKeyId": "AWS Access Key ID",
+		"bedrockAccessKeyIdDesc": "รหัสคีย์การเข้าถึง AWS ของคุณ",
+		"bedrockAccessKeyIdPlaceholder": "ป้อน AWS Access Key ID",
+		"bedrockSecretAccessKey": "AWS Secret Access Key",
+		"bedrockSecretAccessKeyDesc": "คีย์การเข้าถึงลับ AWS ของคุณ",
+		"bedrockSecretAccessKeyPlaceholder": "ป้อน AWS Secret Access Key",
+		"bedrockSessionToken": "AWS Session Token",
+		"bedrockSessionTokenDesc": "โทเค็นเซสชัน AWS (ไม่บังคับ)",
+		"bedrockSessionTokenPlaceholder": "ป้อน AWS Session Token (ไม่บังคับ)",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "คีย์ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "ป้อนคีย์ API OpenRouter ของคุณ",
@@ -107,6 +151,7 @@
 		"searchMaxResultsLabel": "ผลการค้นหาสูงสุด",
 		"searchMaxResultsDescription": "จำนวนผลการค้นหาสูงสุดที่จะส่งคืนเมื่อสอบถามดัชนี codebase ค่าที่สูงขึ้นจะให้บริบทมากขึ้นแต่อาจรวมผลลัพธ์ที่เกี่ยวข้องน้อยลง",
 		"resetToDefault": "รีเซ็ตเป็นค่าเริ่มต้น",
+		"optional": "ไม่บังคับ",
 		"startIndexingButton": "เริ่มการสร้างดัชนี",
 		"clearIndexDataButton": "ล้างข้อมูลดัชนี",
 		"unsavedSettingsMessage": "โปรดบันทึกการตั้งค่าของคุณก่อนเริ่มกระบวนการสร้างดัชนี",
@@ -148,7 +193,9 @@
 			"ollamaBaseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน Ollama",
 			"baseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน",
 			"modelDimensionMinValue": "มิติโมเดลต้องมากกว่า 0",
-			"vercelAiGatewayApiKeyRequired": "จำเป็นต้องมีคีย์ API Vercel AI Gateway"
+			"vercelAiGatewayApiKeyRequired": "จำเป็นต้องมีคีย์ API Vercel AI Gateway",
+			"bedrockRegionRequired": "จำเป็นต้องมี AWS region",
+			"bedrockProfileRequired": "จำเป็นต้องมี AWS profile"
 		},
 		"cancelling": "กำลังยกเลิก...",
 		"cancelIndexingButton": "ยกเลิกการจัดทำดัชนี"
@@ -307,6 +354,8 @@
 		"anthropic1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "เปิดใช้งาน context window 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "ขยาย context window เป็น 1 ล้าน tokens สำหรับ Claude Sonnet 4",
+		"basetenApiKey": "คีย์ API ของ Baseten",
+		"getBasetenApiKey": "รับคีย์ API ของ Baseten",
 		"cerebrasApiKey": "คีย์ API ของ Cerebras",
 		"getCerebrasApiKey": "รับคีย์ API ของ Cerebras",
 		"chutesApiKey": "คีย์ API ของ Chutes",
@@ -813,6 +862,14 @@
 		"includeCurrentCost": {
 			"label": "รวมค่าใช้จ่ายปัจจุบันในบริบท",
 			"description": "เมื่อเปิดใช้งาน ค่าใช้จ่ายการใช้งาน API ปัจจุบันจะถูกรวมในพรอมต์ระบบ ปิดใช้งานหากโมเดลหยุดทำงานเนื่องจากข้อกังวลเรื่องค่าใช้จ่าย"
+		},
+		"maxGitStatusFiles": {
+			"label": "ไฟล์สถานะ Git สูงสุด",
+			"description": "จำนวนรายการไฟล์สูงสุดที่จะรวมไว้ในบริบทสถานะ git ตั้งค่าเป็น 0 เพื่อปิดใช้งาน ข้อมูลสาขาจะแสดงเสมอเมื่อ > 0"
+		},
+		"gitStatusIncludeUntracked": {
+			"label": "รวมไฟล์ที่ไม่ได้ติดตาม",
+			"description": "รวมไฟล์ที่ไม่ได้ติดตามใน git status ในบริบท"
 		}
 	},
 	"terminal": {
@@ -875,6 +932,20 @@
 	},
 	"advancedSettings": {
 		"title": "การตั้งค่าขั้นสูง"
+	},
+	"toolProtocol": {
+		"label": "โปรโตคอล Tool Call",
+		"description": "เลือกวิธีที่ Kilo Code สื่อสารกับ API Native ใช้ function calling API ของผู้ให้บริการ ในขณะที่ XML ใช้คำจำกัดความเครื่องมือในรูปแบบ XML",
+		"default": "ค่าเริ่มต้น",
+		"xml": "XML",
+		"native": "Native",
+		"currentDefault": "ค่าเริ่มต้น: {{protocol}}",
+		"toolProtocolAuto": "อัตโนมัติ",
+		"toolProtocolAutoDesc": "ใช้โปรโตคอลที่แนะนำสำหรับผู้ให้บริการนี้",
+		"toolProtocolFunctionCall": "Function Call",
+		"toolProtocolFunctionCallDesc": "ใช้ function calling API ของผู้ให้บริการ",
+		"toolProtocolToolUse": "Tool Use",
+		"toolProtocolToolUseDesc": "ใช้โปรโตคอล tool use ของ Anthropic"
 	},
 	"advanced": {
 		"diff": {
@@ -946,8 +1017,10 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "เปิดใช้งานการสร้างภาพด้วย AI",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถสร้างภาพจากข้อความ prompt ต้องการ API key ของ Kilo Code หรือ OpenRouter",
+			"description": "เมื่อเปิดใส้งาน Kilo Code สามารถสร้างภาพจากข้อความ prompt ต้องการ API key ของ Kilo Code หรือ OpenRouter",
 			"apiProvider": "ผู้ให้บริการ API",
+			"providerLabel": "ผู้ให้บริการ",
+			"providerDescription": "เลือกผู้ให้บริการที่จะใช้สำหรับการสร้างภาพ",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "ป้อน OpenRouter API key ของคุณ",
 			"kiloCodeApiKeyLabel": "Kilo Code API Key",
@@ -963,6 +1036,12 @@
 			"name": "เปิดใช้งานคำสั่ง slash ที่เริ่มต้นโดยโมเดล",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
 		},
+		"experimentalParallelToolCalls": {
+			"label": "การเรียกใช้เครื่องมือแบบขนาน",
+			"description": "เมื่อเปิดใช้งาน โปรโตคอล native สามารถดำเนินการเครื่องมือหลายรายการในข้อความของผู้ช่วยเดียว"
+		},
+		"experimentalParallelToolCallsInfo": "ฟีเจอร์นี้อนุญาตให้ประมวลผลเครื่องมือหลายรายการพร้อมกัน ซึ่งอาจปรับปรุงประสิทธิภาพได้",
+		"experimentalParallelToolCallsWarning": "⚠️ นี่เป็นฟีเจอร์เบต้า และอาจส่งผลต่อพฤติกรรมของแอปพลิเคชัน",
 		"MORPH_FAST_APPLY": {
 			"name": "เปิดใช้งาน Fast Apply",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Fast Apply กับโมเดลเฉพาะทางที่ปรับแต่งสำหรับการแก้ไขโค้ด ต้องใช้ Kilo Gateway Provider, OpenRouter หรือ Morph API key",
@@ -984,6 +1063,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "เปิดใช้งานฟีเจอร์ Autocomplete สำหรับคำแนะนำโค้ดที่รวดเร็วและการปรับปรุงโดยตรงในเอดิเตอร์ของคุณ รวมถึงงานด่วน (Cmd+I) สำหรับการเปลี่ยนแปลงที่เป็นเป้าหมายและ Autocomplete สำหรับการปรับปรุงตามบริบท"
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "การเรียกใช้เครื่องมือแบบขนาน",
+			"description": "เมื่อเปิดใช้งาน โปรโตคอล native สามารถดำเนินการเครื่องมือหลายรายการในข้อความของผู้ช่วยเดียว"
 		}
 	},
 	"promptCaching": {

@@ -1,29 +1,44 @@
 import React, { useState, useEffect } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
-import { selectedSessionAtom, selectedSessionIdAtom, startSessionFailedCounterAtom } from "../state/atoms/sessions"
+import {
+	selectedSessionAtom,
+	selectedSessionIdAtom,
+	startSessionFailedCounterAtom,
+	pendingSessionAtom,
+} from "../state/atoms/sessions"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
-import { SquareTerminal, Clock, Plus, Square, AlertCircle, Loader2, Zap, SendHorizontal } from "lucide-react"
+import { Clock, Plus, Square, Loader2, Zap, SendHorizontal, RefreshCw } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 
 export function SessionDetail() {
 	const { t } = useTranslation("agentManager")
 	const selectedSession = useAtomValue(selectedSessionAtom)
+	const pendingSession = useAtomValue(pendingSessionAtom)
 	const setSelectedId = useSetAtom(selectedSessionIdAtom)
+
+	// Show pending session view only when no other session is selected
+	if (pendingSession && !selectedSession) {
+		return <PendingSessionView pendingSession={pendingSession} />
+	}
 
 	if (!selectedSession) {
 		return <NewAgentForm />
 	}
 
 	const handleStop = () => {
-		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.id })
+		vscode.postMessage({ type: "agentManager.stopSession", sessionId: selectedSession.sessionId })
 	}
 
 	const handleNewAgent = () => {
 		setSelectedId(null)
+	}
+
+	const handleRefresh = () => {
+		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
 	}
 
 	const formatDuration = (start: number, end?: number) => {
@@ -34,7 +49,7 @@ export function SessionDetail() {
 		return `${seconds}s`
 	}
 
-	const isError = selectedSession.status === "error"
+	const isRunning = selectedSession.status === "running"
 
 	return (
 		<div className="session-detail">
@@ -44,12 +59,12 @@ export function SessionDetail() {
 						{selectedSession.label}
 					</div>
 					<div className="header-meta">
-						<div
-							style={{ display: "flex", alignItems: "center", gap: 4 }}
-							className={isError ? "status-error" : undefined}>
-							{isError ? <AlertCircle size={12} /> : <SquareTerminal size={12} />}
-							<span>{t(`status.${selectedSession.status}`)}</span>
-						</div>
+						{isRunning && (
+							<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+								<Loader2 size={12} className="spinning" />
+								<span>{t("status.running")}</span>
+							</div>
+						)}
 						<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
 							<Clock size={12} />
 							<span>{formatDuration(selectedSession.startTime, selectedSession.endTime)}</span>
@@ -58,13 +73,22 @@ export function SessionDetail() {
 				</div>
 
 				<div className="header-actions">
-					{selectedSession.status === "running" && (
+					{isRunning && (
 						<button
 							className="btn btn-danger"
 							onClick={handleStop}
 							aria-label={t("sessionDetail.stopButtonTitle")}
 							title={t("sessionDetail.stopButtonTitle")}>
 							<Square size={12} fill="currentColor" /> {t("sessionDetail.stopButton")}
+						</button>
+					)}
+					{!isRunning && (
+						<button
+							className="icon-btn"
+							onClick={handleRefresh}
+							aria-label={t("sessionDetail.refreshButtonTitle")}
+							title={t("sessionDetail.refreshButtonTitle")}>
+							<RefreshCw size={14} />
 						</button>
 					)}
 					<button
@@ -77,23 +101,51 @@ export function SessionDetail() {
 				</div>
 			</div>
 
-			{isError && selectedSession.error && (
-				<div className="session-error-banner" role="alert">
-					<AlertCircle size={16} />
-					<span>{selectedSession.error}</span>
-				</div>
-			)}
-
-			{selectedSession.status === "running" && (
+			{isRunning && (
 				<div className="full-auto-banner">
 					<Zap size={14} />
 					<span>{t("sessionDetail.autoModeWarning")}</span>
 				</div>
 			)}
 
-			<MessageList sessionId={selectedSession.id} />
+			<MessageList sessionId={selectedSession.sessionId} />
 
-			<ChatInput sessionId={selectedSession.id} disabled={selectedSession.status !== "running"} />
+			<ChatInput sessionId={selectedSession.sessionId} disabled={!isRunning} />
+		</div>
+	)
+}
+
+/**
+ * View shown while a session is being created (waiting for CLI's session_created event)
+ */
+function PendingSessionView({
+	pendingSession,
+}: {
+	pendingSession: { label: string; prompt: string; startTime: number }
+}) {
+	const { t } = useTranslation("agentManager")
+
+	return (
+		<div className="session-detail">
+			<div className="detail-header">
+				<div className="header-info">
+					<div className="header-title" title={pendingSession.prompt}>
+						{pendingSession.label}
+					</div>
+					<div className="header-meta">
+						<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+							<Loader2 size={12} className="spinning" />
+							<span>{t("status.creating")}</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="center-form">
+				<Loader2 size={48} className="spinning" style={{ opacity: 0.5 }} />
+				<h2 style={{ marginTop: 16 }}>{t("sessionDetail.creatingSession")}</h2>
+				<p>{t("sessionDetail.waitingForCli")}</p>
+			</div>
 		</div>
 	)
 }

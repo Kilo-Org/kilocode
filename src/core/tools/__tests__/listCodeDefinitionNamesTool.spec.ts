@@ -85,6 +85,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalledWith(mockDefinitions)
@@ -121,6 +122,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalledWith(mockDefinitions)
@@ -157,6 +159,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should only include definitions starting at or before line 25
@@ -196,6 +199,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should include foo (starts at 10) but not bar (starts at 60)
@@ -236,6 +240,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should include foo and bar but not baz
@@ -275,6 +280,7 @@ describe("listCodeDefinitionNamesTool", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should keep header but exclude all definitions beyond line 50
@@ -299,6 +305,7 @@ describe("listCodeDefinitionNamesTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
 		})
 
 		expect(mockTask.consecutiveMistakeCount).toBe(1)
@@ -328,6 +335,7 @@ describe("listCodeDefinitionNamesTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
 		})
 
 		expect(mockPushToolResult).toHaveBeenCalledWith(mockDefinitions)

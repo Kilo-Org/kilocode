@@ -21,8 +21,7 @@ import { CreateRun } from "@/lib/schemas"
 
 const EVALS_REPO_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../../evals")
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function createRun({ suite, exercises = [], systemPrompt, timeout, ...values }: CreateRun) {
+export async function createRun({ suite, exercises = [], timeout, ...values }: CreateRun) {
 	const run = await _createRun({
 		...values,
 		timeout,

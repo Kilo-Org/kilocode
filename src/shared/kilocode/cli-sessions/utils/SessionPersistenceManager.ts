@@ -75,7 +75,24 @@ export class SessionPersistenceManager {
 	getTaskSessionMap(): Record<string, string> {
 		const state = this.readWorkspaceState()
 
-		return state.taskSessionMap
+		return this.deduplicateTaskSessionMap(state.taskSessionMap)
+	}
+
+	private deduplicateTaskSessionMap(taskSessionMap: Record<string, string>): Record<string, string> {
+		const entries = Object.entries(taskSessionMap)
+		const sessionToLastTaskId = new Map<string, string>()
+
+		for (const [taskId, sessionId] of entries) {
+			sessionToLastTaskId.set(sessionId, taskId)
+		}
+
+		const result: Record<string, string> = {}
+
+		for (const [sessionId, taskId] of sessionToLastTaskId) {
+			result[taskId] = sessionId
+		}
+
+		return result
 	}
 
 	setTaskSessionMap(taskSessionMap: Record<string, string>): void {

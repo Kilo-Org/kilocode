@@ -6,7 +6,66 @@ import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
-import { maybeRemoveReasoningDetails_kilocode } from "../../api/transform/kilocode/reasoning-details"
+
+/**
+ * Checks if a message contains tool_result blocks.
+ * For native tools protocol, user messages with tool_result blocks require
+ * corresponding tool_use blocks from the previous assistant turn.
+ */
+function hasToolResultBlocks(message: ApiMessage): boolean {
+	if (message.role !== "user" || typeof message.content === "string") {
+		return false
+	}
+	return message.content.some((block) => block.type === "tool_result")
+}
+
+/**
+ * Gets the tool_use blocks from a message.
+ */
+function getToolUseBlocks(message: ApiMessage): Anthropic.Messages.ToolUseBlock[] {
+	if (message.role !== "assistant" || typeof message.content === "string") {
+		return []
+	}
+	return message.content.filter((block) => block.type === "tool_use") as Anthropic.Messages.ToolUseBlock[]
+}
+
+/**
+ * Extracts tool_use blocks that need to be preserved to match tool_result blocks in keepMessages.
+ * When the first kept message is a user message with tool_result blocks,
+ * we need to find the corresponding tool_use blocks from the preceding assistant message.
+ * These tool_use blocks will be appended to the summary message to maintain proper pairing.
+ *
+ * @param messages - The full conversation messages
+ * @param keepCount - The number of messages to keep from the end
+ * @returns Object containing keepMessages and any tool_use blocks to preserve
+ */
+export function getKeepMessagesWithToolBlocks(
+	messages: ApiMessage[],
+	keepCount: number,
+): { keepMessages: ApiMessage[]; toolUseBlocksToPreserve: Anthropic.Messages.ToolUseBlock[] } {
+	if (messages.length <= keepCount) {
+		return { keepMessages: messages, toolUseBlocksToPreserve: [] }
+	}
+
+	const startIndex = messages.length - keepCount
+	const keepMessages = messages.slice(startIndex)
+
+	// Check if the first kept message is a user message with tool_result blocks
+	if (keepMessages.length > 0 && hasToolResultBlocks(keepMessages[0])) {
+		// Look for the preceding assistant message with tool_use blocks
+		const precedingIndex = startIndex - 1
+		if (precedingIndex >= 0) {
+			const precedingMessage = messages[precedingIndex]
+			const toolUseBlocks = getToolUseBlocks(precedingMessage)
+			if (toolUseBlocks.length > 0) {
+				// Return the tool_use blocks to be merged into the summary message
+				return { keepMessages, toolUseBlocksToPreserve: toolUseBlocks }
+			}
+		}
+	}
+
+	return { keepMessages, toolUseBlocksToPreserve: [] }
+}
 
 export const N_MESSAGES_TO_KEEP = 3
 export const MIN_CONDENSE_THRESHOLD = 5 // Minimum percentage of context window to trigger condensing
@@ -81,6 +140,7 @@ export type SummarizeResponse = {
  * @param {boolean} isAutomaticTrigger - Whether the summarization is triggered automatically
  * @param {string} customCondensingPrompt - Optional custom prompt to use for condensing
  * @param {ApiHandler} condensingApiHandler - Optional specific API handler to use for condensing
+ * @param {boolean} useNativeTools - Whether native tools protocol is being used (requires tool_use/tool_result pairing)
  * @returns {SummarizeResponse} - The result of the summarization operation (see above)
  */
 export async function summarizeConversation(
@@ -92,6 +152,7 @@ export async function summarizeConversation(
 	isAutomaticTrigger?: boolean,
 	customCondensingPrompt?: string,
 	condensingApiHandler?: ApiHandler,
+	useNativeTools?: boolean,
 ): Promise<SummarizeResponse> {
 	TelemetryService.instance.captureContextCondensed(
 		taskId,
@@ -104,6 +165,13 @@ export async function summarizeConversation(
 
 	// Always preserve the first message (which may contain slash command content)
 	const firstMessage = messages[0]
+
+	// Get keepMessages and any tool_use blocks that need to be preserved for tool_result pairing
+	// Only preserve tool_use blocks when using native tools protocol (XML protocol doesn't need them)
+	const { keepMessages, toolUseBlocksToPreserve } = useNativeTools
+		? getKeepMessagesWithToolBlocks(messages, N_MESSAGES_TO_KEEP)
+		: { keepMessages: messages.slice(-N_MESSAGES_TO_KEEP), toolUseBlocksToPreserve: [] }
+
 	// Get messages to summarize, including the first message and excluding the last N messages
 	let messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP)) // kilocode_change: const=>let
 
@@ -133,19 +201,8 @@ export async function summarizeConversation(
 		return { ...response, error }
 	}
 
-	let keepMessages = messages.slice(-N_MESSAGES_TO_KEEP) // kilocode_change: const=>let
-
-	// kilocode_change start
-	// discard tool_result, because the corresponding tool_use will be removed
-	const firstKeepMessageContent = keepMessages.at(0)?.content
-	if (Array.isArray(firstKeepMessageContent) && firstKeepMessageContent.some((item) => item.type === "tool_result")) {
-		console.debug("[summarizeConversation] discarding tool_result", firstKeepMessageContent)
-		keepMessages = keepMessages.slice(1)
-	}
-	// kilocode_change end
-
 	// Check if there's a recent summary in the messages we're keeping
-	const recentSummaryExists = keepMessages.some((message) => message.isSummary)
+	const recentSummaryExists = keepMessages.some((message: ApiMessage) => message.isSummary)
 
 	if (recentSummaryExists) {
 		const error = t("common:errors.condensed_recently")
@@ -157,12 +214,8 @@ export async function summarizeConversation(
 		content: "Summarize the conversation so far, as described in the prompt instructions.",
 	}
 
-	const requestMessages = maybeRemoveReasoningDetails_kilocode(
-		maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(({ role, content }) => ({
-			role,
-			content,
-		})),
-		undefined,
+	const requestMessages = maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(
+		({ role, content }) => ({ role, content }),
 	)
 
 	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt
@@ -214,9 +267,21 @@ export async function summarizeConversation(
 		return { ...response, cost, error }
 	}
 
+	// Build the summary message content
+	// If there are tool_use blocks to preserve (for tool_result pairing), append them to the summary
+	let summaryContent: string | Anthropic.Messages.ContentBlockParam[]
+	if (toolUseBlocksToPreserve.length > 0) {
+		// Create content array with text block followed by tool_use blocks
+		// Use TextBlockParam which doesn't require citations field
+		const textBlock: Anthropic.Messages.TextBlockParam = { type: "text", text: summary }
+		summaryContent = [textBlock, ...toolUseBlocksToPreserve]
+	} else {
+		summaryContent = summary
+	}
+
 	const summaryMessage: ApiMessage = {
 		role: "assistant",
-		content: summary,
+		content: summaryContent,
 		ts: keepMessages[0].ts,
 		isSummary: true,
 	}

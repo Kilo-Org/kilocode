@@ -5,7 +5,8 @@
 		"sessionsSection": "Phiên",
 		"emptyState": "Chưa có agent nào đang hoạt động.",
 		"startAgent": "Khởi động Agent",
-		"removeSession": "Xóa"
+		"removeSession": "Xóa",
+		"refresh": "Làm mới"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -15,10 +16,13 @@
 		"newButton": "Mới",
 		"stopButtonTitle": "Dừng Agent",
 		"newButtonTitle": "Agent mới",
+		"refreshButtonTitle": "Làm mới tin nhắn",
 		"autoModeWarning": "Đang chạy ở chế độ tự động hoàn toàn - agent sẽ thực hiện các hành động mà không cần xác nhận",
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
-		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới"
+		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
+		"creatingSession": "Đang tạo phiên...",
+		"waitingForCli": "Đang khởi tạo phiên agent..."
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",
@@ -39,6 +43,7 @@
 		"running": "đang chạy",
 		"done": "hoàn thành",
 		"stopped": "đã dừng",
-		"error": "lỗi"
+		"error": "lỗi",
+		"creating": "đang tạo..."
 	}
 }

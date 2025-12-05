@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "由于策略限制，无法创建新任务。"
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "使用 OpenRouter 模型生成图像需要 OpenRouter API 密钥。请在图像生成实验设置中配置。",
+		"failedWithStatus": "图像生成失败：{{status}} {{statusText}}",
+		"failedWithMessage": "图像生成失败：{{message}}",
+		"noImageGenerated": "响应中未生成图像",
+		"invalidImageData": "响应中的图像数据无效",
+		"invalidImageFormat": "收到的图像格式无效",
+		"unknownError": "发生未知错误",
+		"roo": {
+			"authRequired": "图像生成需要 Roo Code Cloud 认证。请登录 Roo Code Cloud。"
+		}
 	}
 }

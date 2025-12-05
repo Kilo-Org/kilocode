@@ -355,3 +355,54 @@ export async function getWorkingState(cwd: string): Promise<string> {
 		return `Failed to get working state: ${error instanceof Error ? error.message : String(error)}`
 	}
 }
+
+/**
+ * Gets git status output with configurable file limit
+ * @param cwd The working directory to check git status in
+ * @param maxFiles Maximum number of file entries to include (0 = disabled)
+ * @returns Git status string or null if not a git repository
+ */
+export async function getGitStatus(cwd: string, maxFiles: number = 20): Promise<string | null> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			return null
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			return null
+		}
+
+		// Use porcelain v1 format with branch info
+		const { stdout } = await execAsync("git status --porcelain=v1 --branch", { cwd })
+
+		if (!stdout.trim()) {
+			return null
+		}
+
+		const lines = stdout.trim().split("\n")
+
+		// First line is always branch info (e.g., "## main...origin/main")
+		const branchLine = lines[0]
+		const fileLines = lines.slice(1)
+
+		// Build output with branch info and limited file entries
+		const output: string[] = [branchLine]
+
+		if (maxFiles > 0 && fileLines.length > 0) {
+			const filesToShow = fileLines.slice(0, maxFiles)
+			output.push(...filesToShow)
+
+			// Add truncation notice if needed
+			if (fileLines.length > maxFiles) {
+				output.push(`... ${fileLines.length - maxFiles} more files`)
+			}
+		}
+
+		return output.join("\n")
+	} catch (error) {
+		console.error("Error getting git status:", error)
+		return null
+	}
+}

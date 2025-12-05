@@ -16,6 +16,7 @@ import { safeJsonParse } from "../../shared/safeJsonParse"
 import { ApiStream } from "../transform/stream"
 import { addCacheBreakpoints } from "../transform/caching/vertex"
 import { getModelParams } from "../transform/model-params"
+import { filterNonAnthropicBlocks } from "../transform/anthropic-filter"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -72,6 +73,9 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 			reasoning: thinking,
 		} = this.getModel()
 
+		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
+		const sanitizedMessages = filterNonAnthropicBlocks(messages)
+
 		/**
 		 * Vertex API has specific limitations for prompt caching:
 		 * 1. Maximum of 4 blocks can have cache_control
@@ -94,7 +98,7 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 			system: supportsPromptCache
 				? [{ text: systemPrompt, type: "text" as const, cache_control: { type: "ephemeral" } }]
 				: systemPrompt,
-			messages: supportsPromptCache ? addCacheBreakpoints(messages) : messages,
+			messages: supportsPromptCache ? addCacheBreakpoints(sanitizedMessages) : sanitizedMessages,
 			stream: true,
 		}
 
@@ -158,6 +162,12 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 						}
 					}
 
+					break
+				}
+				case "content_block_stop": {
+					// Block complete - no action needed for now.
+					// Note: Signature for multi-turn thinking would require using stream.finalMessage()
+					// after iteration completes, which requires restructuring the streaming approach.
 					break
 				}
 			}

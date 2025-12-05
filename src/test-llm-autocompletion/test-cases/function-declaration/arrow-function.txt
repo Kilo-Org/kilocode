@@ -1,2 +1,3 @@
-# Description: Should complete arrow function syntax
+#### Description: Should complete arrow function syntax
+#### Filename: math-helpers.js
 const add = (a, b) <<<AUTOCOMPLETE_HERE>>>

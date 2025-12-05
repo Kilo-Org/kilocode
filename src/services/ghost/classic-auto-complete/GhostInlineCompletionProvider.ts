@@ -118,7 +118,7 @@ export function stringToInlineCompletions(text: string, position: vscode.Positio
 }
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
-	private suggestionsHistory: FillInAtCursorSuggestion[] = []
+	public suggestionsHistory: FillInAtCursorSuggestion[] = []
 	/** Tracks all pending/in-flight requests */
 	private pendingRequests: PendingRequest[] = []
 	private holeFiller: HoleFiller
@@ -193,7 +193,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 	}
 
-	private async getPrompt(
+	public async getPrompt(
 		document: vscode.TextDocument,
 		position: vscode.Position,
 	): Promise<{ prompt: GhostPrompt; prefix: string; suffix: string }> {
@@ -482,7 +482,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return requestPromise
 	}
 
-	private async fetchAndCacheSuggestion(
+	public async fetchAndCacheSuggestion(
 		prompt: GhostPrompt,
 		prefix: string,
 		suffix: string,

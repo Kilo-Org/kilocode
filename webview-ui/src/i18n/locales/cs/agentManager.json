@@ -5,7 +5,8 @@
 		"sessionsSection": "Relace",
 		"emptyState": "Zatím žádní aktivní agenti.",
 		"startAgent": "Spustit agenta",
-		"removeSession": "Odstranit"
+		"removeSession": "Odstranit",
+		"refresh": "Obnovit"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -15,10 +16,13 @@
 		"newButton": "Nový",
 		"stopButtonTitle": "Zastavit agenta",
 		"newButtonTitle": "Nový agent",
+		"refreshButtonTitle": "Obnovit zprávy",
 		"autoModeWarning": "Běží v plně automatickém režimu - agent bude provádět akce bez potvrzení",
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
-		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek"
+		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
+		"creatingSession": "Vytváření relace...",
+		"waitingForCli": "Inicializace relace agenta..."
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
@@ -39,6 +43,7 @@
 		"running": "běží",
 		"done": "hotovo",
 		"stopped": "zastaveno",
-		"error": "chyba"
+		"error": "chyba",
+		"creating": "vytváření..."
 	}
 }

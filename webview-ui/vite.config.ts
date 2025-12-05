@@ -28,9 +28,9 @@ const wasmPlugin = (): Plugin => ({
 			const wasmBinary = await import(id)
 
 			return `
-          			const wasmModule = new WebAssembly.Module(${wasmBinary.default});
-          			export default wasmModule;
-        		`
+           			const wasmModule = new WebAssembly.Module(${wasmBinary.default});
+           			export default wasmModule;
+         		`
 		}
 	},
 })
@@ -118,11 +118,13 @@ export default defineConfig(({ mode }) => {
 			sourcemap: true,
 			// Ensure source maps are properly included in the build
 			minify: mode === "production" ? "esbuild" : false,
-			cssCodeSplit: true, // kilocode_change: enable CSS code splitting so CSS files are generated
+			// Use a single combined CSS bundle so both webviews share styles
+			cssCodeSplit: false,
 			rollupOptions: {
 				input: {
-					index: resolve(__dirname, "index.html"),
+					main: resolve(__dirname, "index.html"),
 					"agent-manager": resolve(__dirname, "agent-manager.html"), // kilocode_change
+					"browser-panel": resolve(__dirname, "browser-panel.html"),
 				},
 				external: ["vscode"], // kilocode_change: we inadvertently import vscode into the webview: @roo/modes => src/shared/modes => ../core/prompts/sections/custom-instructions
 				output: {
@@ -135,16 +137,18 @@ export default defineConfig(({ mode }) => {
 						return `assets/chunk-[hash].js`
 					},
 					assetFileNames: (assetInfo) => {
-						if (
-							assetInfo.name &&
-							(assetInfo.name.endsWith(".woff2") ||
-								assetInfo.name.endsWith(".woff") ||
-								assetInfo.name.endsWith(".ttf"))
-						) {
+						const name = assetInfo.name || ""
+
+						// Force all CSS into a single predictable file used by both webviews
+						if (name.endsWith(".css")) {
+							return "assets/index.css"
+						}
+
+						if (name.endsWith(".woff2") || name.endsWith(".woff") || name.endsWith(".ttf")) {
 							return "assets/fonts/[name][extname]"
 						}
 						// Ensure source maps are included in the build
-						if (assetInfo.name && assetInfo.name.endsWith(".map")) {
+						if (name.endsWith(".map")) {
 							return "assets/[name]"
 						}
 						return "assets/[name][extname]"

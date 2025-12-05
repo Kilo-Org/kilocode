@@ -1,4 +1,5 @@
-# Description: Should complete Ruby class inheritance with super
+#### Description: Should complete Ruby class inheritance with super
+#### Filename: animals.rb
 class Animal
 	def initialize(name)
 		@name = name

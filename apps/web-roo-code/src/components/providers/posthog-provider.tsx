@@ -32,7 +32,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 		// Initialize PostHog immediately on the client side
 		if (typeof window !== "undefined" && !posthog.__loaded) {
 			const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
-			const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST
 
 			// Check if environment variables are set
 			if (!posthogKey) {
@@ -43,19 +42,13 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 				return
 			}
 
-			if (!posthogHost) {
-				console.warn(
-					"PostHog host URL is missing. Using default host. " +
-						"Please set NEXT_PUBLIC_POSTHOG_HOST in your .env file.",
-				)
-			}
-
 			// Check if user has already consented to cookies
 			const userHasConsented = hasConsent()
 
 			// Initialize PostHog with appropriate persistence based on consent
 			posthog.init(posthogKey, {
-				api_host: posthogHost || "https://us.i.posthog.com",
+				api_host: "https://ph.roocode.com",
+				ui_host: "https://us.posthog.com",
 				capture_pageview: false, // We handle pageview tracking manually
 				loaded: (posthogInstance) => {
 					if (process.env.NODE_ENV === "development") {

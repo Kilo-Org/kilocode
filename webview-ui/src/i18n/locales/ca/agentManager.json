@@ -5,7 +5,8 @@
 		"sessionsSection": "Sessions",
 		"emptyState": "Encara no hi ha agents actius.",
 		"startAgent": "Iniciar agent",
-		"removeSession": "Eliminar"
+		"removeSession": "Eliminar",
+		"refresh": "Actualitzar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -15,10 +16,13 @@
 		"newButton": "Nou",
 		"stopButtonTitle": "Aturar agent",
 		"newButtonTitle": "Agent nou",
+		"refreshButtonTitle": "Actualitzar missatges",
 		"autoModeWarning": "Executant en mode completament automàtic - l'agent executarà accions sense confirmació",
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
-		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia"
+		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
+		"creatingSession": "Creant sessió...",
+		"waitingForCli": "Inicialitzant la sessió de l'agent..."
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",
@@ -39,6 +43,7 @@
 		"running": "en execució",
 		"done": "fet",
 		"stopped": "aturat",
-		"error": "error"
+		"error": "error",
+		"creating": "creant..."
 	}
 }
