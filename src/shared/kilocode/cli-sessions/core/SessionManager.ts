@@ -12,6 +12,7 @@ import { SessionWithSignedUrls, CliSessionSharedState } from "./SessionClient.js
 import type { ClineMessage, HistoryItem } from "@roo-code/types"
 import { TrpcClient, TrpcClientDependencies } from "./TrpcClient.js"
 import { SessionPersistenceManager } from "../utils/SessionPersistenceManager.js"
+import { fetchSignedBlob } from "../utils/fetchBlobFromSignedUrl.js"
 
 const defaultPaths = {
 	apiConversationHistoryPath: null as null | string,
@@ -696,29 +697,8 @@ export class SessionManager {
 		return contents
 	}
 
-	public async fetchBlobFromSignedUrl(url: string, urlType: string) {
-		try {
-			this.logger?.debug(`Fetching blob from signed URL`, "SessionManager", { url, urlType })
-
-			const response = await fetch(url)
-
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-			}
-
-			const data = await response.json()
-
-			this.logger?.debug(`Successfully fetched blob`, "SessionManager", { url, urlType })
-
-			return data
-		} catch (error) {
-			this.logger?.error(`Failed to fetch blob from signed URL`, "SessionManager", {
-				url,
-				urlType,
-				error: error instanceof Error ? error.message : String(error),
-			})
-			throw error
-		}
+	private async fetchBlobFromSignedUrl(url: string, urlType: string) {
+		return fetchSignedBlob(url, urlType, this.logger, "SessionManager")
 	}
 
 	private pathKeyToBlobKey(pathKey: keyof typeof defaultPaths) {
