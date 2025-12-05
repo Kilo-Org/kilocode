@@ -80,6 +80,30 @@ describe("approvals", () => {
 
 			expect(files).toContain(`${TEST_NAME}.rejected.1.txt`)
 		})
+
+		it("should use globally unique numbers across approved and rejected", async () => {
+			let callCount = 0
+			vi.spyOn(readline, "createInterface").mockReturnValue({
+				question: (_prompt: string, callback: (answer: string) => void) => {
+					// First call: approve, second call: reject, third call: approve
+					callCount++
+					callback(callCount === 2 ? "n" : "y")
+				},
+				close: () => {},
+			} as any)
+
+			await checkApproval(TEST_CATEGORY, TEST_NAME, "input1", "output1") // approved.1
+			await checkApproval(TEST_CATEGORY, TEST_NAME, "input2", "output2") // rejected.2
+			await checkApproval(TEST_CATEGORY, TEST_NAME, "input3", "output3") // approved.3
+
+			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
+			const files = fs.readdirSync(categoryDir)
+
+			expect(files).toContain(`${TEST_NAME}.approved.1.txt`)
+			expect(files).toContain(`${TEST_NAME}.rejected.2.txt`)
+			expect(files).toContain(`${TEST_NAME}.approved.3.txt`)
+			expect(files).toHaveLength(3)
+		})
 	})
 
 	describe("matching existing files", () => {

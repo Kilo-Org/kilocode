@@ -1,9 +1,0 @@
-async function fetchWithRetry(url) {
-  // TODO: Implement retry logic with exponential backoff
-
-  const maxRetries = 3;
-  let retryCount = 0;
-  let delay = 1000;
-  const response = await fetch(url);
-  return response.json();
-}

@@ -1,12 +1,5 @@
 function processData(data) {
-  if (!data) {
-    throw new Error('Data is required');
-  }
-
-  if (typeof data !== 'object') {
-    throw new Error('Data must be an object');
-  }
-
-  // TODO: Implement error handling
+  try {
+    // TODO: Implement error handling<<<AUTOCOMPLETE_HERE>>>
   return processedData;
 }

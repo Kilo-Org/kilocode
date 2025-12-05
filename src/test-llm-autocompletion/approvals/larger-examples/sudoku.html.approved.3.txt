@@ -715,7 +715,7 @@
       const maxWidth = wrap.clientWidth;
       const side = Math.min(size, maxWidth);
       board.style.width  = side + 'px';
-      board.style.height = side + "px";
+      board.style.height = side + 'px'
     }
 
     window.addEventListener('resize', sizeBoardToViewport);

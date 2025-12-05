@@ -1,14 +1,23 @@
 import React from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
-import { sessionsArrayAtom, selectedSessionIdAtom, type AgentSession } from "../state/atoms/sessions"
+import {
+	mergedSessionsAtom,
+	selectedSessionIdAtom,
+	isRefreshingRemoteSessionsAtom,
+	pendingSessionAtom,
+	type AgentSession,
+} from "../state/atoms/sessions"
 import { vscode } from "../utils/vscode"
-import { Plus, Trash2, SquareTerminal, Loader2 } from "lucide-react"
+import { Plus, Loader2, RefreshCw } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
-	const sessions = useAtomValue(sessionsArrayAtom)
+	const sessions = useAtomValue(mergedSessionsAtom)
+	const pendingSession = useAtomValue(pendingSessionAtom)
 	const [selectedId, setSelectedId] = useAtom(selectedSessionIdAtom)
+	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
+	const setIsRefreshing = useSetAtom(isRefreshingRemoteSessionsAtom)
 
 	const handleNewSession = () => {
 		setSelectedId(null)
@@ -19,12 +28,13 @@ export function SessionSidebar() {
 		vscode.postMessage({ type: "agentManager.selectSession", sessionId: id })
 	}
 
-	const handleRemoveSession = (id: string, e: React.MouseEvent) => {
-		e.stopPropagation()
-		vscode.postMessage({ type: "agentManager.removeSession", sessionId: id })
+	const handleRefresh = () => {
+		if (isRefreshing) return // Prevent multiple clicks while loading
+		setIsRefreshing(true)
+		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 
-	const isNewAgentSelected = selectedId === null
+	const isNewAgentSelected = selectedId === null && !pendingSession
 
 	return (
 		<div className="sidebar">
@@ -42,24 +52,65 @@ export function SessionSidebar() {
 				<span>{t("sidebar.newAgent")}</span>
 			</div>
 
-			<div className="sidebar-section-header">{t("sidebar.sessionsSection")}</div>
+			<div className="sidebar-section-header">
+				<span>{t("sidebar.sessionsSection")}</span>
+				<button
+					className="icon-btn"
+					onClick={handleRefresh}
+					disabled={isRefreshing}
+					title={t("sidebar.refresh")}>
+					{isRefreshing ? <Loader2 size={14} className="spinning" /> : <RefreshCw size={14} />}
+				</button>
+			</div>
 
 			<div className="session-list">
-				{sessions.length === 0 ? (
+				{/* Show pending session at the top */}
+				{pendingSession && (
+					<PendingSessionItem
+						pendingSession={pendingSession}
+						isSelected={selectedId === null}
+						onSelect={() => setSelectedId(null)}
+					/>
+				)}
+
+				{sessions.length === 0 && !pendingSession ? (
 					<div className="no-sessions">
 						<p>{t("sidebar.emptyState")}</p>
 					</div>
 				) : (
 					sessions.map((session) => (
 						<SessionItem
-							key={session.id}
+							key={session.sessionId}
 							session={session}
-							isSelected={selectedId === session.id}
-							onSelect={() => handleSelectSession(session.id)}
-							onRemove={(e) => handleRemoveSession(session.id, e)}
+							isSelected={selectedId === session.sessionId}
+							onSelect={() => handleSelectSession(session.sessionId)}
 						/>
 					))
 				)}
+			</div>
+		</div>
+	)
+}
+
+function PendingSessionItem({
+	pendingSession,
+	isSelected,
+	onSelect,
+}: {
+	pendingSession: { label: string; startTime: number }
+	isSelected: boolean
+	onSelect: () => void
+}) {
+	const { t } = useTranslation("agentManager")
+
+	return (
+		<div className={`session-item pending ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+			<div className="status-icon creating" title={t("status.creating")}>
+				<Loader2 size={14} className="spinning" />
+			</div>
+			<div className="session-content">
+				<div className="session-label">{pendingSession.label}</div>
+				<div className="session-meta">{t("status.creating")}</div>
 			</div>
 		</div>
 	)
@@ -69,12 +120,10 @@ function SessionItem({
 	session,
 	isSelected,
 	onSelect,
-	onRemove,
 }: {
 	session: AgentSession
 	isSelected: boolean
 	onSelect: () => void
-	onRemove: (e: React.MouseEvent) => void
 }) {
 	const { t } = useTranslation("agentManager")
 
@@ -86,24 +135,20 @@ function SessionItem({
 		return `${seconds}s`
 	}
 
+	// Only show spinner for running sessions - all other sessions are resumable/idle
+	const isRunning = session.status === "running"
+
 	return (
 		<div className={`session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
-			<div className={`status-icon ${session.status}`} title={t(`status.${session.status}`)}>
-				{session.status === "running" ? (
+			{isRunning && (
+				<div className="status-icon running" title={t("status.running")}>
 					<Loader2 size={14} className="spinning" />
-				) : session.status === "done" ? (
-					<span className="codicon codicon-pass" />
-				) : (
-					<SquareTerminal size={14} />
-				)}
-			</div>
+				</div>
+			)}
 			<div className="session-content">
 				<div className="session-label">{session.label}</div>
 				<div className="session-meta">{formatDuration(session.startTime, session.endTime)}</div>
 			</div>
-			<button className="icon-btn" onClick={onRemove} title={t("sidebar.removeSession")}>
-				<Trash2 size={14} />
-			</button>
 		</div>
 	)
 }

@@ -1,2 +1,3 @@
-# Description: Should complete Ruby array declaration
+#### Description: Should complete Ruby array declaration
+#### Filename: data.rb
 arr = [1, 2, <<<AUTOCOMPLETE_HERE>>>

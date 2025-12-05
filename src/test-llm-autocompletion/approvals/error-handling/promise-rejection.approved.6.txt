@@ -3,5 +3,5 @@ fetchUser(userId)
 		return processUser(user);
 	})
 	.catch(error => {
-		console.error('Error:', error);
+		console.error('Error fetching user:', error);
 	})

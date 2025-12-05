@@ -1,7 +1,7 @@
 class DataService {
-  // TODO: Implement caching mechanism to reduce API calls
-  private cache = new Map();
+  private cache: Map<string, any> = new Map();
 
+  // TODO: Implement caching mechanism to reduce API calls
   async fetchData(id) {
     if (this.cache.has(id)) {
       return this.cache.get(id);
@@ -10,8 +10,5 @@ class DataService {
     const data = await api.get(`/data/${id}`);
     this.cache.set(id, data);
     return data;
-  }
-  async fetchData(id) {
-    return await api.get(`/data/${id}`);
   }
 }

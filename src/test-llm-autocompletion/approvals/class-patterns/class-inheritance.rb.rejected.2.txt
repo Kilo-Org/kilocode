@@ -7,4 +7,3 @@ end
 class Dog < Animal
 	def initialize(name, breed)
 		<<<AUTOCOMPLETE_HERE>>>
-		super(name)

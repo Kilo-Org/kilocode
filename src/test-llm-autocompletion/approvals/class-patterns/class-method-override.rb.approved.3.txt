@@ -13,3 +13,4 @@ class Rectangle < Shape
 	def area
 		@width * @height
 	end
+end

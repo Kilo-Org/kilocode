@@ -2,7 +2,7 @@ async function fetchWithRetry(url) {
   const maxRetries = 3;
   const baseDelay = 1000; // 1 second
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -10,10 +10,9 @@ async function fetchWithRetry(url) {
       }
       return response.json();
     } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      const delay = baseDelay * Math.pow(2, attempt - 1);
+      if (attempt === maxRetries - 1) throw error;
+
+      const delay = baseDelay * Math.pow(2, attempt);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

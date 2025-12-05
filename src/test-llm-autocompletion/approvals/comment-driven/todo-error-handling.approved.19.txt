@@ -1,0 +1,9 @@
+function processData(data) {
+  // TODO: Implement error handling
+  if (!data) {
+    throw new Error("Data is required");
+  }
+  const processedData = data.map(item => item * 2);
+
+  return processedData;
+}

@@ -3,4 +3,3 @@ class User
 		@username = username
 		@email = email
 		@role = role
-	end

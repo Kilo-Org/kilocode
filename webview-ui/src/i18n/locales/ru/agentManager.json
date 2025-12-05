@@ -5,7 +5,8 @@
 		"sessionsSection": "Сессии",
 		"emptyState": "Активных агентов пока нет.",
 		"startAgent": "Запустить агента",
-		"removeSession": "Удалить"
+		"removeSession": "Удалить",
+		"refresh": "Обновить"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -15,10 +16,13 @@
 		"newButton": "Новый",
 		"stopButtonTitle": "Остановить агента",
 		"newButtonTitle": "Новый агент",
+		"refreshButtonTitle": "Обновить сообщения",
 		"autoModeWarning": "Работает в полностью автоматическом режиме - агент будет выполнять действия без подтверждения",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустить агента с указанным промптом",
-		"keyboardHint": "Нажмите Enter для запуска, Shift+Enter для новой строки"
+		"keyboardHint": "Нажмите Enter для запуска, Shift+Enter для новой строки",
+		"creatingSession": "Создание сессии...",
+		"waitingForCli": "Инициализация сессии агента..."
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
@@ -39,6 +43,7 @@
 		"running": "выполняется",
 		"done": "завершено",
 		"stopped": "остановлен",
-		"error": "ошибка"
+		"error": "ошибка",
+		"creating": "создание..."
 	}
 }

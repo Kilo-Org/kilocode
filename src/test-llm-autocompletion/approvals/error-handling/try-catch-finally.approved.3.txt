@@ -2,4 +2,3 @@ function processData(data) {
 	try {
 		const result = JSON.parse(data);
 		return result;
-	}

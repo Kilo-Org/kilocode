@@ -1,13 +1,12 @@
 function processData(data) {
-  // TODO: Implement error handling
-
   if (!data) {
-    throw new Error("Data is required");
+    throw new Error('Data is required');
   }
 
-  const processedData = data.map(item => {
-    // Process each item
-    return item;
-  });
+  if (typeof data !== 'object') {
+    throw new Error('Data must be an object');
+  }
+
+  // TODO: Implement error handling
   return processedData;
 }

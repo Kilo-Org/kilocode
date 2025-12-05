@@ -1,6 +1,6 @@
 function divide(a, b) {
-  // FIXME: Handle division by zero\n  if (b === 0) {
-    throw new Error("Division by zero is not allowed");
-  }
+  // FIXME: Handle division by zeroif (b === 0) {
+  throw new Error("Division by zero");
+}
   return a / b;
 }

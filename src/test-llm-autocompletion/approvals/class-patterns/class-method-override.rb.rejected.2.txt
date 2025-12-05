@@ -11,6 +11,4 @@ class Rectangle < Shape
 	end
 	
 	def area
-		
-		@width * @height
-	end
+		<<<AUTOCOMPLETE_HERE>>>

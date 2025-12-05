@@ -5,7 +5,8 @@
 		"sessionsSection": "เซสชัน",
 		"emptyState": "ยังไม่มีเอเจนต์ที่ใช้งานอยู่",
 		"startAgent": "เริ่มเอเจนต์",
-		"removeSession": "ลบ"
+		"removeSession": "ลบ",
+		"refresh": "รีเฟรช"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -15,10 +16,13 @@
 		"newButton": "ใหม่",
 		"stopButtonTitle": "หยุดเอเจนต์",
 		"newButtonTitle": "เอเจนต์ใหม่",
+		"refreshButtonTitle": "รีเฟรชข้อความ",
 		"autoModeWarning": "ทำงานในโหมดอัตโนมัติเต็มรูปแบบ - เอเจนต์จะดำเนินการโดยไม่ต้องยืนยัน",
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
-		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่"
+		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
+		"creatingSession": "กำลังสร้างเซสชัน...",
+		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์..."
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -39,6 +43,7 @@
 		"running": "กำลังทำงาน",
 		"done": "เสร็จสิ้น",
 		"stopped": "หยุดแล้ว",
-		"error": "ข้อผิดพลาด"
+		"error": "ข้อผิดพลาด",
+		"creating": "กำลังสร้าง..."
 	}
 }

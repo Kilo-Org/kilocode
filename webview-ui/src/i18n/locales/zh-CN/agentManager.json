@@ -5,7 +5,8 @@
 		"sessionsSection": "会话",
 		"emptyState": "暂无活动代理。",
 		"startAgent": "启动代理",
-		"removeSession": "移除"
+		"removeSession": "移除",
+		"refresh": "刷新"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -15,10 +16,13 @@
 		"newButton": "新建",
 		"stopButtonTitle": "停止代理",
 		"newButtonTitle": "新建代理",
+		"refreshButtonTitle": "刷新消息",
 		"autoModeWarning": "正在全自动模式下运行 - 代理将在无需确认的情况下执行操作",
 		"starting": "正在启动...",
 		"startAriaLabel": "使用提供的提示启动代理",
-		"keyboardHint": "按 Enter 启动，Shift+Enter 换行"
+		"keyboardHint": "按 Enter 启动，Shift+Enter 换行",
+		"creatingSession": "正在创建会话...",
+		"waitingForCli": "正在初始化代理会话..."
 	},
 	"messages": {
 		"waiting": "等待代理响应...",
@@ -39,6 +43,7 @@
 		"running": "运行中",
 		"done": "完成",
 		"stopped": "已停止",
-		"error": "错误"
+		"error": "错误",
+		"creating": "创建中..."
 	}
 }
