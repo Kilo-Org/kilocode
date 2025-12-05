@@ -38,6 +38,26 @@
 		"autoPurge": "自動クリーンアップ",
 		"ghost": "Ghost"
 	},
+	"about": {
+		"bugReport": {
+			"label": "バグを見つけましたか？",
+			"link": "GitHubで報告"
+		},
+		"featureRequest": {
+			"label": "アイデアがありますか？",
+			"link": "共有してください"
+		},
+		"securityIssue": {
+			"label": "脆弱性を発見しましたか？",
+			"link": "開示プロセスに従ってください"
+		},
+		"contact": {
+			"label": "お問い合わせが必要ですか？メールを送信"
+		},
+		"community": "ヒントが欲しいですか、または他のKilo Codeユーザーと交流したいですか？<redditLink>reddit.com/r/kilocode</redditLink>または<discordLink>kilo.ai/discord</discordLink>に参加してください",
+		"contactAndCommunity": "お問い合わせとコミュニティ",
+		"manageSettings": "設定を管理"
+	},
 	"slashCommands": {
 		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
 	},
@@ -58,6 +78,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "APIキー",
 		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI GatewayのAPIキーを入力してください",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS リージョン",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS プロファイル",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "~/.aws/credentials の AWS プロファイル名（必須）。",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter APIキー",
 		"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
@@ -132,11 +158,14 @@
 			"geminiApiKeyRequired": "Gemini APIキーが必要です",
 			"mistralApiKeyRequired": "Mistral APIキーが必要です",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway APIキーが必要です",
+			"bedrockRegionRequired": "AWS リージョンは必須です",
+			"bedrockProfileRequired": "AWS プロファイルは必須です",
 			"ollamaBaseUrlRequired": "OllamaのベースURLが必要です",
 			"baseUrlRequired": "ベースURLが必要です",
 			"modelDimensionMinValue": "モデルの次元は0より大きくなければなりません",
 			"openRouterApiKeyRequired": "OpenRouter APIキーが必要です"
 		},
+		"optional": "オプション",
 		"advancedConfigLabel": "詳細設定",
 		"searchMinScoreLabel": "検索スコアのしきい値",
 		"searchMinScoreDescription": "検索結果に必要な最小類似度スコア（0.0-1.0）。値を低くするとより多くの結果が返されますが、関連性が低くなる可能性があります。値を高くすると返される結果は少なくなりますが、より関連性が高くなります。",
@@ -302,6 +331,8 @@
 		"anthropicAzureDeploymentPlaceholder": "デプロイメント名を入力...",
 		"awsBedrock1MContextBetaLabel": "1Mコンテキストウィンドウを有効にする（ベータ版）",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4のコンテキストウィンドウを100万トークンに拡張します",
+		"basetenApiKey": "Baseten APIキー",
+		"getBasetenApiKey": "Baseten APIキーを取得",
 		"cerebrasApiKey": "Cerebras APIキー",
 		"getCerebrasApiKey": "Cerebras APIキーを取得",
 		"chutesApiKey": "Chutes APIキー",
@@ -758,6 +789,10 @@
 		"includeCurrentCost": {
 			"label": "現在のコストをコンテキストに含める",
 			"description": "有効にすると、現在のAPI使用コストがシステムプロンプトに含まれます。モデルがコストに関する懸念で動作を停止する場合は無効にしてください。"
+		},
+		"maxGitStatusFiles": {
+			"label": "Gitステータス最大ファイル数",
+			"description": "gitステータスコンテキストに含めるファイルエントリの最大数。無効にするには0に設定します。ブランチ情報とコミットは、> 0の場合に常に表示されます。"
 		}
 	},
 	"terminal": {
@@ -820,6 +855,14 @@
 	},
 	"advancedSettings": {
 		"title": "詳細設定"
+	},
+	"toolProtocol": {
+		"label": "ツールコールプロトコル",
+		"description": "Kilo Code が API と通信する方法を選択します。ネイティブはプロバイダーの関数呼び出し API を使用し、XML は XML 形式のツール定義を使用します。",
+		"default": "デフォルト",
+		"xml": "XML",
+		"native": "ネイティブ",
+		"currentDefault": "デフォルト: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -890,6 +933,8 @@
 			"description": "有効にすると、new_taskツールはtodosパラメータの提供が必須になります。これにより、すべての新しいタスクが明確な目的のリストで開始されることが保証されます。無効（デフォルト）の場合、下位互換性のためにtodosパラメータはオプションのままです。"
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "プロバイダー",
+			"providerDescription": "画像生成に使用するプロバイダーを選択",
 			"name": "AI画像生成を有効にする",
 			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です。",
 			"apiProvider": "APIプロバイダー",
@@ -929,6 +974,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "モデル開始スラッシュコマンドを有効にする",
 			"description": "有効にすると、Kilo Codeがワークフローを実行するためにあなたのスラッシュコマンドを実行できます。"
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "並列ツール呼び出し",
+			"description": "有効にすると、ネイティブプロトコルは単一のアシスタントメッセージターンで複数のツールを実行できます。"
 		}
 	},
 	"promptCaching": {

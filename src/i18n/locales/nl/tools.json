@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Kan geen nieuwe taak aanmaken vanwege beleidsbeperkingen."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist voor het genereren van afbeeldingen met OpenRouter-modellen. Configureer deze in de Experimentele Instellingen voor Afbeeldingsgeneratie.",
+		"failedWithStatus": "Afbeelding genereren mislukt: {{status}} {{statusText}}",
+		"failedWithMessage": "Afbeelding genereren mislukt: {{message}}",
+		"noImageGenerated": "Er is geen afbeelding gegenereerd in het antwoord",
+		"invalidImageData": "Ongeldige afbeeldingsgegevens in het antwoord",
+		"invalidImageFormat": "Ongeldig afbeeldingsformaat ontvangen",
+		"unknownError": "Er is een onbekende fout opgetreden",
+		"roo": {
+			"authRequired": "Roo Code Cloud-authenticatie is vereist voor het genereren van afbeeldingen. Log in bij Roo Code Cloud."
+		}
 	}
 }

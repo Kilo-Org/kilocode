@@ -32,7 +32,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 	}
 
 	async execute(params: ApplyDiffParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 		let { path: relPath, diff: diffContent } = params
 
 		if (diffContent && !task.api.getModel().id.includes("claude")) {
@@ -58,7 +58,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 			if (!accessAllowed) {
 				await task.say("rooignore_error", relPath)
-				pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
+				pushToolResult(formatResponse.rooIgnoreError(relPath, toolProtocol))
 				return
 			}
 
@@ -70,6 +70,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				task.recordToolError("apply_diff")
 				const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
 				await task.say("error", formattedError)
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formattedError)
 				return
 			}

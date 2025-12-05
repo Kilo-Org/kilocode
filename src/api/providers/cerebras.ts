@@ -98,19 +98,11 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 	}
 
 	getModel(): { id: CerebrasModelId; info: (typeof cerebrasModels)[CerebrasModelId] } {
-		const originalModelId = (this.options.apiModelId as CerebrasModelId) || this.defaultProviderModelId
-
-		// Route both qwen coder models to the same actual model ID for API calls
-		// This allows them to have different rate limits/descriptions in the UI
-		// while using the same underlying model
-		let apiModelId = originalModelId
-		if (originalModelId === "qwen-3-coder-480b-free") {
-			apiModelId = "qwen-3-coder-480b"
-		}
+		const modelId = (this.options.apiModelId as CerebrasModelId) || this.defaultProviderModelId
 
 		return {
-			id: apiModelId,
-			info: this.providerModels[originalModelId], // Use original model info for rate limits/descriptions
+			id: modelId,
+			info: this.providerModels[modelId],
 		}
 	}
 

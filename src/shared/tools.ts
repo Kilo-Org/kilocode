@@ -95,6 +95,7 @@ export type ToolProtocol = "xml" | "native"
  * Tools not listed here will fall back to `any` for backward compatibility.
  */
 export type NativeToolArgs = {
+	access_mcp_resource: { server_name: string; uri: string }
 	read_file: { files: FileEntry[] }
 	attempt_completion: { result: string }
 	execute_command: { command: string; cwd?: string }
@@ -133,6 +134,26 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 	toolUseId?: string // kilocode_change
 	// nativeArgs is properly typed based on TName if it's in NativeToolArgs, otherwise never
 	nativeArgs?: TName extends keyof NativeToolArgs ? NativeToolArgs[TName] : never
+}
+
+/**
+ * Represents a native MCP tool call from the model.
+ * In native mode, MCP tools are called directly with their prefixed name (e.g., "mcp_serverName_toolName")
+ * rather than through the use_mcp_tool wrapper. This type preserves the original tool name
+ * so it appears correctly in API conversation history.
+ */
+export interface McpToolUse {
+	type: "mcp_tool_use"
+	id?: string // Tool call ID from the API
+	/** The original tool name from the API (e.g., "mcp_serverName_toolName") */
+	name: string
+	/** Extracted server name from the tool name */
+	serverName: string
+	/** Extracted tool name from the tool name */
+	toolName: string
+	/** Arguments passed to the MCP tool */
+	arguments: Record<string, unknown>
+	partial: boolean
 }
 
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {

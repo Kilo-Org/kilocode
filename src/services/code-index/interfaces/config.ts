@@ -19,6 +19,7 @@ export interface CodeIndexConfig {
 	geminiOptions?: { apiKey: string }
 	mistralOptions?: { apiKey: string }
 	vercelAiGatewayOptions?: { apiKey: string }
+	bedrockOptions?: { region: string; profile?: string }
 	openRouterOptions?: { apiKey: string }
 	qdrantUrl?: string
 	qdrantApiKey?: string
@@ -46,6 +47,8 @@ export type PreviousConfigSnapshot = {
 	geminiApiKey?: string
 	mistralApiKey?: string
 	vercelAiGatewayApiKey?: string
+	bedrockRegion?: string
+	bedrockProfile?: string
 	openRouterApiKey?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string

@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "{{attempts}}回試行しましたが、埋め込みの作成に失敗しました",
 	"textExceedsTokenLimit": "インデックス{{index}}のテキストが最大トークン制限を超えています（{{itemTokens}}> {{maxTokens}}）。スキップします。",
 	"rateLimitRetry": "レート制限に達しました。{{delayMs}}ミリ秒後に再試行します（試行{{attempt}}/{{maxRetries}}）",
+	"bedrock": {
+		"invalidResponseFormat": "Amazon Bedrockからの無効な応答形式",
+		"invalidCredentials": "無効なAWS認証情報です。AWSの設定を確認してください。",
+		"accessDenied": "Amazon Bedrockサービスへのアクセスが拒否されました。IAMの権限を確認してください。",
+		"modelNotFound": "モデル{{model}}がAmazon Bedrockに見つかりません"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "エラー本文を読み取れませんでした",
 		"requestFailed": "Ollama APIリクエストが失敗しました。ステータス {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "エンベッダー作成のためのMistral設定がありません",
 		"openRouterConfigMissing": "エンベッダー作成のためのOpenRouter設定がありません",
 		"vercelAiGatewayConfigMissing": "エンベッダー作成のためのVercel AI Gateway設定がありません",
+		"bedrockConfigMissing": "エンベッダー作成のためのAmazon Bedrock設定がありません",
 		"invalidEmbedderType": "無効なエンベッダータイプが設定されています: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "プロバイダー '{{provider}}' のモデル '{{modelId}}' の埋め込み次元を決定できませんでした。OpenAI互換プロバイダー設定で「埋め込み次元」が正しく設定されていることを確認してください。",
 		"vectorDimensionNotDetermined": "プロバイダー '{{provider}}' のモデル '{{modelId}}' の埋め込み次元を決定できませんでした。モデルプロファイルまたは設定を確認してください。",

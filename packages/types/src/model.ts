@@ -114,6 +114,8 @@ export const modelInfoSchema = z.object({
 	isFree: z.boolean().optional(),
 	// Flag to indicate if the model supports native tool calling (OpenAI-style function calling)
 	supportsNativeTools: z.boolean().optional(),
+	// Default tool protocol preferred by this model (if not specified, falls back to capability/provider defaults)
+	defaultToolProtocol: z.enum(["xml", "native"]).optional(),
 	/**
 	 * Service tiers with pricing information.
 	 * Each tier can have a name (for OpenAI service tiers) and pricing overrides.

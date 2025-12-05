@@ -305,7 +305,6 @@ describe("OpenRouterHandler", () => {
 				{
 					model: mockOptions.openRouterModelId,
 					max_tokens: 8192,
-					thinking: undefined,
 					temperature: 0,
 					messages: [{ role: "user", content: "test prompt" }],
 					stream: false,

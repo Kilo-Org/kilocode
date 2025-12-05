@@ -144,6 +144,7 @@ export interface ExtensionMessage {
 		| "authenticatedUser"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
+		| "rooCreditBalance"
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
@@ -172,6 +173,10 @@ export interface ExtensionMessage {
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
 		| "interactionRequired"
+		| "managedIndexerState" // kilocode_change
+		| "managedIndexerEnabled" // kilocode_change
+		| "browserSessionUpdate"
+		| "browserSessionNavigate"
 		| "organizationSwitchResult"
 		| "showTimestamps" // kilocode_change
 		| "apiMessagesSaved" // kilocode_change: File save event for API messages
@@ -327,6 +332,9 @@ export interface ExtensionMessage {
 			}
 		}
 	}> // kilocode_change end: Managed Indexer
+	browserSessionMessages?: ClineMessage[] // For browser session panel updates
+	isBrowserSessionActive?: boolean // For browser session panel updates
+	stepIndex?: number // For browserSessionNavigate: the target step index to display
 }
 
 export type ExtensionState = Pick<
@@ -417,11 +425,13 @@ export type ExtensionState = Pick<
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
+	| "imageGenerationProvider"
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
 	| "includeCurrentTime"
 	| "includeCurrentCost"
+	| "maxGitStatusFiles"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -480,6 +490,8 @@ export type ExtensionState = Pick<
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
 	organizationSettingsVersion?: number
+
+	isBrowserSessionActive: boolean // Actual browser session state
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
@@ -588,6 +600,7 @@ export const browserActions = [
 	"click",
 	"hover",
 	"type",
+	"press",
 	"scroll_down",
 	"scroll_up",
 	"resize",
@@ -601,6 +614,7 @@ export interface ClineSayBrowserAction {
 	coordinate?: string
 	size?: string
 	text?: string
+	executedCoordinate?: string
 }
 
 export type BrowserActionResult = {
@@ -608,6 +622,8 @@ export type BrowserActionResult = {
 	logs?: string
 	currentUrl?: string
 	currentMousePosition?: string
+	viewportWidth?: number
+	viewportHeight?: number
 }
 
 export interface ClineAskUseMcpServer {

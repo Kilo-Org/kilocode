@@ -1,0 +1,1 @@
+ALTER TABLE "runs" ADD COLUMN "jobToken" text;

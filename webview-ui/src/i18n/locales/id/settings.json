@@ -37,6 +37,26 @@
 		"about": "Tentang Kilo Code",
 		"autoPurge": "Pembersihan Otomatis"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Menemukan bug?",
+			"link": "Laporkan di GitHub"
+		},
+		"featureRequest": {
+			"label": "Punya ide?",
+			"link": "Bagikan dengan kami"
+		},
+		"securityIssue": {
+			"label": "Menemukan kerentanan?",
+			"link": "Ikuti proses pengungkapan kami"
+		},
+		"contact": {
+			"label": "Perlu bicara dengan kami? Tulis"
+		},
+		"community": "Ingin tips atau hanya nongkrong dengan pengguna Kilo Code lainnya? Bergabunglah dengan <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Kontak & Komunitas",
+		"manageSettings": "Kelola Pengaturan"
+	},
 	"slashCommands": {
 		"description": "Kelola perintah slash kamu untuk mengeksekusi alur kerja dan tindakan kustom dengan cepat. <DocsLink>Pelajari lebih lanjut</DocsLink>"
 	},
@@ -57,6 +77,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API Key",
 		"vercelAiGatewayApiKeyPlaceholder": "Masukkan kunci API Vercel AI Gateway Anda",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Wilayah AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Profil AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Nama profil AWS dari ~/.aws/credentials (wajib).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Kunci API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Masukkan kunci API OpenRouter Anda",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "Kunci API Gemini diperlukan",
 			"mistralApiKeyRequired": "Kunci API Mistral diperlukan",
 			"vercelAiGatewayApiKeyRequired": "Kunci API Vercel AI Gateway diperlukan",
+			"bedrockRegionRequired": "Wilayah AWS diperlukan",
+			"bedrockProfileRequired": "Profil AWS diperlukan",
 			"ollamaBaseUrlRequired": "URL dasar Ollama diperlukan",
 			"baseUrlRequired": "URL dasar diperlukan",
 			"modelDimensionMinValue": "Dimensi model harus lebih besar dari 0",
 			"openRouterApiKeyRequired": "Kunci API OpenRouter diperlukan"
 		},
+		"optional": "opsional",
 		"advancedConfigLabel": "Konfigurasi Lanjutan",
 		"searchMinScoreLabel": "Ambang Batas Skor Pencarian",
 		"searchMinScoreDescription": "Skor kesamaan minimum (0.0-1.0) yang diperlukan untuk hasil pencarian. Nilai yang lebih rendah mengembalikan lebih banyak hasil tetapi mungkin kurang relevan. Nilai yang lebih tinggi mengembalikan lebih sedikit hasil tetapi lebih relevan.",
@@ -301,6 +330,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Masukkan nama deployment...",
 		"awsBedrock1MContextBetaLabel": "Aktifkan jendela konteks 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Memperluas jendela konteks menjadi 1 juta token untuk Claude Sonnet 4",
+		"basetenApiKey": "Baseten API Key",
+		"getBasetenApiKey": "Dapatkan Baseten API Key",
 		"cerebrasApiKey": "Cerebras API Key",
 		"getCerebrasApiKey": "Dapatkan Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
@@ -757,6 +788,10 @@
 		"includeCurrentCost": {
 			"label": "Sertakan biaya saat ini dalam konteks",
 			"description": "Ketika diaktifkan, biaya penggunaan API saat ini akan disertakan dalam prompt sistem. Nonaktifkan ini jika model berhenti bekerja karena masalah biaya."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status maks file",
+			"description": "Jumlah maksimum entri file untuk disertakan dalam konteks status git. Atur ke 0 untuk menonaktifkan. Info cabang dan commit selalu ditampilkan saat > 0."
 		}
 	},
 	"terminal": {
@@ -819,6 +854,14 @@
 	},
 	"advancedSettings": {
 		"title": "Pengaturan lanjutan"
+	},
+	"toolProtocol": {
+		"label": "Protokol Panggilan Alat",
+		"description": "Pilih bagaimana Kilo Code berkomunikasi dengan API. Asli menggunakan API panggilan fungsi penyedia, sedangkan XML menggunakan definisi alat berformat XML.",
+		"default": "Default",
+		"xml": "XML",
+		"native": "Asli",
+		"currentDefault": "Default: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -931,6 +974,8 @@
 			"name": "Aktifkan pembuatan gambar AI",
 			"description": "Ketika diaktifkan, Kilo Code dapat menghasilkan gambar dari prompt teks. Memerlukan kunci API Kilo Code atau OpenRouter yang dikonfigurasi.",
 			"apiProvider": "Penyedia API",
+			"providerLabel": "Penyedia",
+			"providerDescription": "Pilih penyedia untuk menghasilkan gambar.",
 			"openRouterApiKeyLabel": "Kunci API OpenRouter",
 			"openRouterApiKeyPlaceholder": "Masukkan kunci API OpenRouter Anda",
 			"kiloCodeApiKeyLabel": "Kunci API Kilo Code",
@@ -949,6 +994,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Aktifkan perintah slash yang dimulai model",
 			"description": "Ketika diaktifkan, Kilo Code dapat menjalankan perintah slash Anda untuk mengeksekusi alur kerja."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Panggilan tool paralel",
+			"description": "Ketika diaktifkan, protokol native dapat mengeksekusi beberapa tool dalam satu giliran pesan asisten."
 		}
 	},
 	"promptCaching": {

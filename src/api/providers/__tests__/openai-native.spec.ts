@@ -159,6 +159,9 @@ describe("OpenAiNativeHandler", () => {
 						},
 					],
 				}),
+				expect.objectContaining({
+					signal: expect.any(Object),
+				}),
 			)
 		})
 
@@ -1135,6 +1138,9 @@ describe("GPT-5 streaming event coverage (additional)", () => {
 					model: "codex-mini-latest",
 					stream: false,
 					store: false,
+				}),
+				expect.objectContaining({
+					signal: expect.any(Object),
 				}),
 			)
 		})

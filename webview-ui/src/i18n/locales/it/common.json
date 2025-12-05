@@ -117,6 +117,7 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "Hai aspettato {{timeout}} secondi per l'inizializzazione del checkpoint. Se non ti serve questa funzione, disattivala nelle <settingsLink>impostazioni del checkpoint</settingsLink>.",
-		"init_checkpoint_fail_long_time": "L'inizializzazione del checkpoint ha impiegato più di {{timeout}} secondi, quindi i checkpoint sono disabilitati per questa attività. Puoi disattivare i checkpoint o aumentare il tempo di attesa nelle <settingsLink>impostazioni del checkpoint</settingsLink>."
+		"init_checkpoint_fail_long_time": "L'inizializzazione del checkpoint ha impiegato più di {{timeout}} secondi, quindi i checkpoint sono disabilitati per questa attività. Puoi disattivare i checkpoint o aumentare il tempo di attesa nelle <settingsLink>impostazioni del checkpoint</settingsLink>.",
+		"attempt_completion_tool_failed": "Non puoi eseguire attempt_completion perché una chiamata di strumento precedente è fallita in questo turno. Risolvi il problema dello strumento prima di tentare di completare."
 	}
 }

@@ -2,7 +2,7 @@ import * as path from "path"
 
 import type { MockedFunction } from "vitest"
 
-import { fileExistsAtPath } from "../../../utils/fs"
+import { fileExistsAtPath, createDirectoriesForFile } from "../../../utils/fs"
 import { detectCodeOmission } from "../../../integrations/editor/detect-omission"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 import { getReadablePath } from "../../../utils/path"
@@ -29,6 +29,7 @@ vi.mock("delay", () => ({
 
 vi.mock("../../../utils/fs", () => ({
 	fileExistsAtPath: vi.fn().mockResolvedValue(false),
+	createDirectoriesForFile: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock("../../prompts/responses", () => ({
@@ -101,6 +102,7 @@ describe("writeToFileTool", () => {
 
 	// Mocked functions with correct types
 	const mockedFileExistsAtPath = fileExistsAtPath as MockedFunction<typeof fileExistsAtPath>
+	const mockedCreateDirectoriesForFile = createDirectoriesForFile as MockedFunction<typeof createDirectoriesForFile>
 	const mockedDetectCodeOmission = detectCodeOmission as MockedFunction<typeof detectCodeOmission>
 	const mockedIsPathOutsideWorkspace = isPathOutsideWorkspace as MockedFunction<typeof isPathOutsideWorkspace>
 	const mockedGetReadablePath = getReadablePath as MockedFunction<typeof getReadablePath>
@@ -237,6 +239,7 @@ describe("writeToFileTool", () => {
 			handleError: mockHandleError,
 			pushToolResult: mockPushToolResult,
 			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
 		})
 
 		return toolResult
@@ -272,6 +275,48 @@ describe("writeToFileTool", () => {
 			await executeWriteFileTool({})
 
 			expect(mockedFileExistsAtPath).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("directory creation for new files", () => {
+		it.skipIf(process.platform === "win32")(
+			"creates parent directories early when file does not exist (execute)",
+			async () => {
+				await executeWriteFileTool({}, { fileExists: false })
+
+				expect(mockedCreateDirectoriesForFile).toHaveBeenCalledWith(absoluteFilePath)
+			},
+		)
+
+		it.skipIf(process.platform === "win32")(
+			"creates parent directories early when file does not exist (partial)",
+			async () => {
+				await executeWriteFileTool({}, { fileExists: false, isPartial: true })
+
+				expect(mockedCreateDirectoriesForFile).toHaveBeenCalledWith(absoluteFilePath)
+			},
+		)
+
+		it("does not create directories when file exists", async () => {
+			await executeWriteFileTool({}, { fileExists: true })
+
+			expect(mockedCreateDirectoriesForFile).not.toHaveBeenCalled()
+		})
+
+		it("does not create directories when editType is cached as modify", async () => {
+			mockCline.diffViewProvider.editType = "modify"
+
+			await executeWriteFileTool({})
+
+			expect(mockedCreateDirectoriesForFile).not.toHaveBeenCalled()
+		})
+
+		it.skipIf(process.platform === "win32")("creates directories when editType is cached as create", async () => {
+			mockCline.diffViewProvider.editType = "create"
+
+			await executeWriteFileTool({})
+
+			expect(mockedCreateDirectoriesForFile).toHaveBeenCalledWith(absoluteFilePath)
 		})
 	})
 

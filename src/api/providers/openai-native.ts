@@ -34,6 +34,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	private lastResponseOutput: any[] | undefined
 	// Last top-level response id from Responses API (for troubleshooting)
 	private lastResponseId: string | undefined
+	// Abort controller for cancelling ongoing requests
+	private abortController?: AbortController
 
 	// Event types handled by the shared event processor to avoid duplication
 	private readonly coreHandledEventTypes = new Set<string>([
@@ -47,6 +49,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		"response.output_item.added",
 		"response.done",
 		"response.completed",
+		"response.tool_call_arguments.delta",
+		"response.function_call_arguments.delta",
+		"response.tool_call_arguments.done",
+		"response.function_call_arguments.done",
 	])
 
 	constructor(options: ApiHandlerOptions) {
@@ -177,6 +183,38 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		reasoningEffort: ReasoningEffortExtended | undefined,
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): any {
+		// Ensure all properties are in the required array for OpenAI's strict mode
+		// This recursively processes nested objects and array items
+		const ensureAllRequired = (schema: any): any => {
+			if (!schema || typeof schema !== "object" || schema.type !== "object") {
+				return schema
+			}
+
+			const result = { ...schema }
+
+			if (result.properties) {
+				const allKeys = Object.keys(result.properties)
+				result.required = allKeys
+
+				// Recursively process nested objects
+				const newProps = { ...result.properties }
+				for (const key of allKeys) {
+					const prop = newProps[key]
+					if (prop.type === "object") {
+						newProps[key] = ensureAllRequired(prop)
+					} else if (prop.type === "array" && prop.items?.type === "object") {
+						newProps[key] = {
+							...prop,
+							items: ensureAllRequired(prop.items),
+						}
+					}
+				}
+				result.properties = newProps
+			}
+
+			return result
+		}
+
 		// Build a request body for the OpenAI Responses API.
 		// Ensure we explicitly pass max_output_tokens based on Roo's reserved model response calculation
 		// so requests do not default to very large limits (e.g., 120k).
@@ -194,6 +232,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			include?: string[]
 			/** Prompt cache retention policy: "in_memory" (default) or "24h" for extended caching */
 			prompt_cache_retention?: "in_memory" | "24h"
+			tools?: Array<{
+				type: "function"
+				name: string
+				description?: string
+				parameters?: any
+				strict?: boolean
+			}>
+			tool_choice?: any
+			parallel_tool_calls?: boolean
 		}
 
 		// Validate requested tier against model support; if not supported, omit.
@@ -238,6 +285,26 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Enable extended prompt cache retention for models that support it.
 			// This uses the OpenAI Responses API `prompt_cache_retention` parameter.
 			...(promptCacheRetention ? { prompt_cache_retention: promptCacheRetention } : {}),
+			...(metadata?.tools && {
+				tools: metadata.tools
+					.filter((tool) => tool.type === "function")
+					.map((tool) => ({
+						type: "function",
+						name: tool.function.name,
+						description: tool.function.description,
+						parameters: ensureAllRequired(tool.function.parameters),
+						strict: true,
+					})),
+			}),
+			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+		}
+
+		// For native tool protocol, control parallel tool calls based on the metadata flag.
+		// When parallelToolCalls is true, allow parallel tool calls (OpenAI's parallel_tool_calls=true).
+		// When false (default), explicitly disable parallel tool calls (false).
+		// For XML or when protocol is unset, omit the field entirely so the API default applies.
+		if (metadata?.toolProtocol === "native") {
+			body.parallel_tool_calls = metadata.parallelToolCalls ?? false
 		}
 
 		// Include text.verbosity only when the model explicitly supports it
@@ -255,9 +322,14 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		systemPrompt?: string,
 		messages?: Anthropic.Messages.MessageParam[],
 	): ApiStream {
+		// Create AbortController for cancellation
+		this.abortController = new AbortController()
+
 		try {
 			// Use the official SDK
-			const stream = (await (this.client as any).responses.create(requestBody)) as AsyncIterable<any>
+			const stream = (await (this.client as any).responses.create(requestBody, {
+				signal: this.abortController.signal,
+			})) as AsyncIterable<any>
 
 			if (typeof (stream as any)[Symbol.asyncIterator] !== "function") {
 				throw new Error(
@@ -266,6 +338,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			}
 
 			for await (const event of stream) {
+				// Check if request was aborted
+				if (this.abortController.signal.aborted) {
+					break
+				}
+
 				for await (const outChunk of this.processEvent(event, model)) {
 					yield outChunk
 				}
@@ -273,14 +350,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		} catch (sdkErr: any) {
 			// For errors, fallback to manual SSE via fetch
 			yield* this.makeResponsesApiRequest(requestBody, model, metadata, systemPrompt, messages)
+		} finally {
+			this.abortController = undefined
 		}
 	}
 
 	private formatFullConversation(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): any {
 		// Format the entire conversation history for the Responses API using structured format
-		// This supports both text and images
-		// Messages already include reasoning items from API history, so we just need to format them
-		const formattedMessages: any[] = []
+		// The Responses API (like Realtime API) accepts a list of items, which can be messages, function calls, or function call outputs.
+		const formattedInput: any[] = []
 
 		// Do NOT embed the system prompt as a developer message in the Responses API input.
 		// The Responses API treats roles as free-form; use the top-level `instructions` field instead.
@@ -290,54 +368,92 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			// Check if this is a reasoning item (already formatted in API history)
 			if ((message as any).type === "reasoning") {
 				// Pass through reasoning items as-is
-				formattedMessages.push(message)
+				formattedInput.push(message)
 				continue
 			}
 
-			const role = message.role === "user" ? "user" : "assistant"
-			const content: any[] = []
+			if (message.role === "user") {
+				const content: any[] = []
+				const toolResults: any[] = []
 
-			if (typeof message.content === "string") {
-				// For user messages, use input_text; for assistant messages, use output_text
-				if (role === "user") {
+				if (typeof message.content === "string") {
 					content.push({ type: "input_text", text: message.content })
-				} else {
-					content.push({ type: "output_text", text: message.content })
-				}
-			} else if (Array.isArray(message.content)) {
-				// For array content with potential images, format properly
-				for (const block of message.content) {
-					if (block.type === "text") {
-						// For user messages, use input_text; for assistant messages, use output_text
-						if (role === "user") {
-							content.push({ type: "input_text", text: (block as any).text })
-						} else {
-							content.push({ type: "output_text", text: (block as any).text })
+				} else if (Array.isArray(message.content)) {
+					for (const block of message.content) {
+						if (block.type === "text") {
+							content.push({ type: "input_text", text: block.text })
+						} else if (block.type === "image") {
+							const image = block as Anthropic.Messages.ImageBlockParam
+							// kilocode_change start
+							let imageUrl: string
+							if (image.source.type === "base64") {
+								// Base64ImageSource has media_type and data
+								imageUrl = `data:${image.source.media_type};base64,${image.source.data}`
+							} else {
+								// URLImageSource only has url
+								imageUrl = image.source.url
+							}
+							// kilocode_change end
+							content.push({ type: "input_image", image_url: imageUrl })
+						} else if (block.type === "tool_result") {
+							// Map Anthropic tool_result to Responses API function_call_output item
+							const result =
+								typeof block.content === "string"
+									? block.content
+									: block.content?.map((c) => (c.type === "text" ? c.text : "")).join("") || ""
+							toolResults.push({
+								type: "function_call_output",
+								call_id: block.tool_use_id,
+								output: result,
+							})
 						}
-					} else if (block.type === "image") {
-						const image = block as Anthropic.Messages.ImageBlockParam
-						// Format image with proper data URL - images are always input_image
-						// kilocode_change start
-						let imageUrl: string
-						if (image.source.type === "base64") {
-							// Base64ImageSource has media_type and data
-							imageUrl = `data:${image.source.media_type};base64,${image.source.data}`
-						} else {
-							// URLImageSource only has url
-							imageUrl = image.source.url
-						}
-						// kilocode_change end
-						content.push({ type: "input_image", image_url: imageUrl })
 					}
 				}
-			}
 
-			if (content.length > 0) {
-				formattedMessages.push({ role, content })
+				// Add user message first
+				if (content.length > 0) {
+					formattedInput.push({ role: "user", content })
+				}
+
+				// Add tool results as separate items
+				if (toolResults.length > 0) {
+					formattedInput.push(...toolResults)
+				}
+			} else if (message.role === "assistant") {
+				const content: any[] = []
+				const toolCalls: any[] = []
+
+				if (typeof message.content === "string") {
+					content.push({ type: "output_text", text: message.content })
+				} else if (Array.isArray(message.content)) {
+					for (const block of message.content) {
+						if (block.type === "text") {
+							content.push({ type: "output_text", text: block.text })
+						} else if (block.type === "tool_use") {
+							// Map Anthropic tool_use to Responses API function_call item
+							toolCalls.push({
+								type: "function_call",
+								call_id: block.id,
+								name: block.name,
+								arguments: JSON.stringify(block.input),
+							})
+						}
+					}
+				}
+
+				// Add assistant message if it has content
+				if (content.length > 0) {
+					formattedInput.push({ role: "assistant", content })
+				}
+
+				// Add tool calls as separate items
+				if (toolCalls.length > 0) {
+					formattedInput.push(...toolCalls)
+				}
 			}
 		}
 
-		return formattedMessages
+		return formattedInput
 	}
 
 	private async *makeResponsesApiRequest(
@@ -351,6 +467,9 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		const baseUrl = this.options.openAiNativeBaseUrl || "https://api.openai.com"
 		const url = `${baseUrl}/v1/responses`
 
+		// Create AbortController for cancellation
+		this.abortController = new AbortController()
+
 		try {
 			const response = await fetch(url, {
 				method: "POST",
@@ -360,6 +479,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					Accept: "text/event-stream",
 				},
 				body: JSON.stringify(requestBody),
+				signal: this.abortController.signal,
 			})
 
 			if (!response.ok) {
@@ -435,6 +555,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			}
 			// Handle non-Error objects
 			throw new Error(`Unexpected error connecting to Responses API`)
+		} finally {
+			this.abortController = undefined
 		}
 	}
 
@@ -455,6 +577,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 		try {
 			while (true) {
+				// Check if request was aborted
+				if (this.abortController?.signal.aborted) {
+					break
+				}
+
 				const { done, value } = await reader.read()
 				if (done) break
 
@@ -660,11 +787,16 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 								// Output item completed
 							}
 							// Handle function/tool call events
-							else if (parsed.type === "response.function_call_arguments.delta") {
-								// Function call arguments streaming
-								// We could yield this as a special type if needed for tool usage
-							} else if (parsed.type === "response.function_call_arguments.done") {
-								// Function call completed
+							else if (
+								parsed.type === "response.function_call_arguments.delta" ||
+								parsed.type === "response.tool_call_arguments.delta" ||
+								parsed.type === "response.function_call_arguments.done" ||
+								parsed.type === "response.tool_call_arguments.done"
+							) {
+								// Delegated to processEvent (handles accumulation and completion)
+								for await (const outChunk of this.processEvent(parsed, model)) {
+									yield outChunk
+								}
 							}
 							// Handle MCP (Model Context Protocol) tool events
 							else if (parsed.type === "response.mcp_call_arguments.delta") {
@@ -945,8 +1077,37 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			return
 		}
 
-		// Handle output item additions (SDK or Responses API alternative format)
-		if (event?.type === "response.output_item.added") {
+		// Handle tool/function call deltas - emit as partial chunks
+		if (
+			event?.type === "response.tool_call_arguments.delta" ||
+			event?.type === "response.function_call_arguments.delta"
+		) {
+			// Emit partial chunks directly - NativeToolCallParser handles state management
+			const callId = event.call_id || event.tool_call_id || event.id
+			const name = event.name || event.function_name
+			const args = event.delta || event.arguments
+
+			yield {
+				type: "tool_call_partial",
+				index: event.index ?? 0,
+				id: callId,
+				name,
+				arguments: args,
+			}
+			return
+		}
+
+		// Handle tool/function call completion events
+		if (
+			event?.type === "response.tool_call_arguments.done" ||
+			event?.type === "response.function_call_arguments.done"
+		) {
+			// Tool call complete - no action needed, NativeToolCallParser handles completion
+			return
+		}
+
+		// Handle output item additions/completions (SDK or Responses API alternative format)
+		if (event?.type === "response.output_item.added" || event?.type === "response.output_item.done") {
 			const item = event?.item
 			if (item) {
 				if (item.type === "text" && item.text) {
@@ -958,6 +1119,22 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 						// Some implementations send 'text'; others send 'output_text'
 						if ((content?.type === "text" || content?.type === "output_text") && content?.text) {
 							yield { type: "text", text: content.text }
+						}
+					}
+				} else if (
+					(item.type === "function_call" || item.type === "tool_call") &&
+					event.type === "response.output_item.done" // Only handle done events for tool calls to ensure arguments are complete
+				) {
+					// Handle complete tool/function call item
+					// Emit as tool_call for backward compatibility with non-streaming tool handling
+					const callId = item.call_id || item.tool_call_id || item.id
+					if (callId) {
+						const args = item.arguments || item.function?.arguments || item.function_arguments
+						yield {
+							type: "tool_call",
+							id: callId,
+							name: item.name || item.function?.name || item.function_name || "",
+							arguments: typeof args === "string" ? args : "{}",
 						}
 					}
 				}
@@ -1085,6 +1262,9 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
+		// Create AbortController for cancellation
+		this.abortController = new AbortController()
+
 		try {
 			const model = this.getModel()
 			const { verbosity, reasoning } = model
@@ -1144,7 +1324,9 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			}
 
 			// Make the non-streaming request
-			const response = await (this.client as any).responses.create(requestBody)
+			const response = await (this.client as any).responses.create(requestBody, {
+				signal: this.abortController.signal,
+			})
 
 			// Extract text from the response
 			if (response?.output && Array.isArray(response.output)) {
@@ -1170,6 +1352,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 				throw new Error(`OpenAI Native completion error: ${error.message}`)
 			}
 			throw error
+		} finally {
+			this.abortController = undefined
 		}
 	}
 }

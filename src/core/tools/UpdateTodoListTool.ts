@@ -23,7 +23,7 @@ export class UpdateTodoListTool extends BaseTool<"update_todo_list"> {
 	}
 
 	async execute(params: UpdateTodoListParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { pushToolResult, handleError, askApproval } = callbacks
+		const { pushToolResult, handleError, askApproval, toolProtocol } = callbacks
 
 		try {
 			const todosRaw = params.todos
@@ -34,6 +34,7 @@ export class UpdateTodoListTool extends BaseTool<"update_todo_list"> {
 			} catch {
 				task.consecutiveMistakeCount++
 				task.recordToolError("update_todo_list")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError("The todos parameter is not valid markdown checklist or JSON"))
 				return
 			}
@@ -42,6 +43,7 @@ export class UpdateTodoListTool extends BaseTool<"update_todo_list"> {
 			if (!valid) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("update_todo_list")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formatResponse.toolError(error || "todos parameter validation failed"))
 				return
 			}

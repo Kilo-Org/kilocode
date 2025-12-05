@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "尝试 {{attempts}} 次后创建嵌入失败",
 	"textExceedsTokenLimit": "索引 {{index}} 处的文本超过最大令牌限制 ({{itemTokens}} > {{maxTokens}})。正在跳过。",
 	"rateLimitRetry": "已达到速率限制，将在 {{delayMs}} 毫秒后重试（尝试次数 {{attempt}}/{{maxRetries}}）",
+	"bedrock": {
+		"invalidResponseFormat": "Amazon Bedrock 返回无效的响应格式",
+		"invalidCredentials": "AWS 凭证无效。请检查您的 AWS 配置。",
+		"accessDenied": "访问 Amazon Bedrock 服务被拒绝。请检查您的 IAM 权限。",
+		"modelNotFound": "在 Amazon Bedrock 中找不到模型 {{model}}"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "无法读取错误内容",
 		"requestFailed": "Ollama API 请求失败，状态码 {{status}} {{statusText}}：{{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "创建嵌入器时缺少 Mistral 配置",
 		"openRouterConfigMissing": "创建嵌入器时缺少 OpenRouter 配置",
 		"vercelAiGatewayConfigMissing": "创建嵌入器时缺少 Vercel AI Gateway 配置",
+		"bedrockConfigMissing": "创建嵌入器时缺少 Amazon Bedrock 配置",
 		"invalidEmbedderType": "配置的嵌入器类型无效：{{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "无法确定提供商 '{{provider}}' 的模型 '{{modelId}}' 的向量维度。请确保在 OpenAI 兼容提供商设置中正确设置了「嵌入维度」。",
 		"vectorDimensionNotDetermined": "无法确定提供商 '{{provider}}' 的模型 '{{modelId}}' 的向量维度。请检查模型配置文件或配置。",

@@ -11,9 +11,10 @@ export const vertexModels = {
 		contextWindow: 1_048_576,
 		supportsImages: true,
 		supportsPromptCache: true,
-		supportsReasoningEffort: true,
+		supportsReasoningEffort: ["low", "high"],
 		reasoningEffort: "low",
 		supportsTemperature: true,
+		defaultTemperature: 1,
 		inputPrice: 4.0,
 		outputPrice: 18.0,
 		tiers: [
@@ -220,7 +221,7 @@ export const vertexModels = {
 		supportsReasoningBudget: true,
 	},
 	"claude-opus-4-5@20251101": {
-		maxTokens: 64000,
+		maxTokens: 8192,
 		contextWindow: 200_000,
 		supportsImages: true,
 		supportsPromptCache: true,

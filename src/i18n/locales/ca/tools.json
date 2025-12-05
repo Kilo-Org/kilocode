@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "No s'ha pogut crear una nova tasca a causa de restriccions de política."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Es requereix la clau API d'OpenRouter per a la generació d'imatges amb models d'OpenRouter. Configura-la a la configuració experimental de Generació d'Imatges.",
+		"failedWithStatus": "Error en generar imatge: {{status}} {{statusText}}",
+		"failedWithMessage": "Error en generar imatge: {{message}}",
+		"noImageGenerated": "No s'ha generat cap imatge en la resposta",
+		"invalidImageData": "Dades d'imatge no vàlides en la resposta",
+		"invalidImageFormat": "Format d'imatge no vàlid rebut",
+		"unknownError": "S'ha produït un error desconegut",
+		"roo": {
+			"authRequired": "Es requereix autenticació de Roo Code Cloud per a la generació d'imatges. Inicia sessió a Roo Code Cloud."
+		}
 	}
 }

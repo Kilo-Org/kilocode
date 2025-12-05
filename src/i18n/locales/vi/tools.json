@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Không thể tạo nhiệm vụ mới do hạn chế chính sách."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Yêu cầu khóa API OpenRouter để tạo hình ảnh với các mô hình OpenRouter. Vui lòng cấu hình trong cài đặt thử nghiệm Tạo hình ảnh.",
+		"failedWithStatus": "Tạo hình ảnh thất bại: {{status}} {{statusText}}",
+		"failedWithMessage": "Tạo hình ảnh thất bại: {{message}}",
+		"noImageGenerated": "Không có hình ảnh nào được tạo trong phản hồi",
+		"invalidImageData": "Dữ liệu hình ảnh không hợp lệ trong phản hồi",
+		"invalidImageFormat": "Nhận được định dạng hình ảnh không hợp lệ",
+		"unknownError": "Đã xảy ra lỗi không xác định",
+		"roo": {
+			"authRequired": "Yêu cầu xác thực Roo Code Cloud để tạo hình ảnh. Vui lòng đăng nhập vào Roo Code Cloud."
+		}
 	}
 }
