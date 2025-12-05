@@ -5,6 +5,7 @@ export interface Session {
 	title: string
 	created_at: string
 	updated_at: string
+	git_url?: string
 }
 
 export interface SessionWithSignedUrls extends Session {

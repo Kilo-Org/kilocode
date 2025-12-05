@@ -20,6 +20,7 @@ export interface AgentSession {
 	logs: string[]
 	pid?: number
 	source: SessionSource
+	gitUrl?: string
 }
 
 /**
@@ -29,6 +30,7 @@ export interface PendingSession {
 	prompt: string
 	label: string
 	startTime: number
+	gitUrl?: string
 }
 
 export type AgentManagerState = {
