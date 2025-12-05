@@ -20,6 +20,7 @@ import { useAutoApprovalToggles } from "@/hooks/useAutoApprovalToggles"
 type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowReadOnly?: boolean
 	alwaysAllowReadOnlyOutsideWorkspace?: boolean
+	globallyIgnoredFiles?: string[]
 	alwaysAllowWrite?: boolean
 	alwaysAllowWriteOutsideWorkspace?: boolean
 	alwaysAllowWriteProtected?: boolean
@@ -43,6 +44,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
+		| "globallyIgnoredFiles"
 		| "alwaysAllowWrite"
 		| "alwaysAllowWriteOutsideWorkspace"
 		| "alwaysAllowWriteProtected"
@@ -70,6 +72,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 export const AutoApproveSettings = ({
 	alwaysAllowReadOnly,
 	alwaysAllowReadOnlyOutsideWorkspace,
+	globallyIgnoredFiles,
 	alwaysAllowWrite,
 	alwaysAllowWriteOutsideWorkspace,
 	alwaysAllowWriteProtected,
@@ -96,6 +99,7 @@ export const AutoApproveSettings = ({
 	const { t } = useAppTranslation()
 	const [commandInput, setCommandInput] = useState("")
 	const [deniedCommandInput, setDeniedCommandInput] = useState("")
+	const [globalIgnoreInput, setGlobalIgnoreInput] = useState("")
 	const { autoApprovalEnabled, setAutoApprovalEnabled, listApiConfigMeta } = useExtensionState() // kilocode_change: Add listApiConfigMeta for gatekeeper
 
 	const toggles = useAutoApprovalToggles()
@@ -121,6 +125,17 @@ export const AutoApproveSettings = ({
 			setCachedStateField("deniedCommands", newCommands)
 			setDeniedCommandInput("")
 			vscode.postMessage({ type: "updateSettings", updatedSettings: { deniedCommands: newCommands } })
+		}
+	}
+
+	const handleAddGlobalIgnorePattern = () => {
+		const currentPatterns = globallyIgnoredFiles ?? []
+
+		if (globalIgnoreInput && !currentPatterns.includes(globalIgnoreInput)) {
+			const newPatterns = [...currentPatterns, globalIgnoreInput]
+			setCachedStateField("globallyIgnoredFiles", newPatterns)
+			setGlobalIgnoreInput("")
+			vscode.postMessage({ type: "updateSettings", updatedSettings: { globallyIgnoredFiles: newPatterns } })
 		}
 	}
 
@@ -241,6 +256,59 @@ export const AutoApproveSettings = ({
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
 								{t("settings:autoApprove.readOnly.outsideWorkspace.description")}
 							</div>
+						</div>
+						<div>
+							<label className="block font-medium mb-1" data-testid="global-ignore-heading">
+								{t("settings:autoApprove.readOnly.globalIgnore.label")}
+							</label>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								{t("settings:autoApprove.readOnly.globalIgnore.description")}
+							</div>
+						</div>
+
+						<div className="flex gap-2">
+							<Input
+								value={globalIgnoreInput}
+								onChange={(e: any) => setGlobalIgnoreInput(e.target.value)}
+								onKeyDown={(e: any) => {
+									if (e.key === "Enter") {
+										e.preventDefault()
+										handleAddGlobalIgnorePattern()
+									}
+								}}
+								placeholder={t("settings:autoApprove.readOnly.globalIgnore.patternPlaceholder")}
+								className="grow"
+								data-testid="global-ignore-input"
+							/>
+							<Button
+								className="h-8"
+								onClick={handleAddGlobalIgnorePattern}
+								data-testid="add-global-ignore-button">
+								{t("settings:autoApprove.readOnly.globalIgnore.addButton")}
+							</Button>
+						</div>
+
+						<div className="flex flex-wrap gap-2">
+							{(globallyIgnoredFiles ?? []).map((pattern, index) => (
+								<Button
+									key={index}
+									variant="secondary"
+									data-testid={`remove-global-ignore-${index}`}
+									onClick={() => {
+										const newPatterns = (globallyIgnoredFiles ?? []).filter((_, i) => i !== index)
+										setCachedStateField("globallyIgnoredFiles", newPatterns)
+
+										vscode.postMessage({
+											type: "updateSettings",
+											updatedSettings: { globallyIgnoredFiles: newPatterns },
+										})
+									}}>
+									<div className="flex flex-row items-center gap-1">
+										<div>{pattern}</div>
+										<X className="text-foreground scale-75" />
+									</div>
+								</Button>
+							))}
 						</div>
 					</div>
 				)}

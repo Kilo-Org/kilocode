@@ -80,7 +80,33 @@ _Complete settings panel view_
 **Risk level:** Medium
 
 While this setting only allows reading files (not modifying them), it could potentially expose sensitive data. Still recommended as a starting point for most users, but be mindful of what files Kilo Code can access.
-:::
+
+#### Globally Ignored Files
+
+When auto-approve read is enabled, you can configure a list of file patterns that are **always ignored**, even without a `.kilocodeignore` file. This provides an initial layer of protection for sensitive files.
+
+**Default patterns include:**
+
+- Environment files: `.env*` (matches .env, .env.local, .env.production, etc.)
+- Keys and certificates: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`
+- SSH keys: `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, `*.ppk`
+- Encryption files: `*.gpg`, `*.asc`, `*.sig`
+
+**Key features:**
+
+- Works even without a `.kilocodeignore` file
+- Takes priority over `.kilocodeignore` patterns
+- Fully customizable - add or remove patterns as needed
+- Includes sensible defaults for common sensitive files
+
+**How to configure:**
+
+1. Enable "Always approve read-only operations"
+2. Scroll down to the "Globally ignored files" section
+3. Add custom patterns using glob syntax (e.g., `*.key`, `.env*`)
+4. Click "Add Pattern" to save each pattern
+5. Remove patterns by clicking the X on pattern chips
+   :::
 
 ### Write Operations
 
@@ -101,6 +127,23 @@ This setting allows Kilo Code to modify your files without confirmation. The del
 - Default (1000ms): Suitable for most projects
 - Lower values: Use only when speed is critical and you're in a controlled environment
 - Zero: No delay for diagnostics (not recommended for critical code)
+
+#### Protected Files
+
+Kilo Code has **two levels of file protection**:
+
+1. **Globally Ignored Files** (configured in Read settings above):
+
+    - Completely blocked from all operations (read AND write)
+    - Examples: `.env`, `*.key`, SSH keys, credentials
+    - These files cannot be accessed at all, regardless of any other settings
+
+2. **Write-Protected Configuration Files**:
+    - Can be read but require approval to modify by default
+    - Examples: `.kilocodeignore`, `.kilocode/`, `.vscode/`
+    - Can be auto-approved if you enable "Include protected files" checkbox below
+
+This layered protection ensures sensitive data files are completely inaccessible while configuration files remain readable. You can choose whether to auto-approve writes to configuration files based on your trust level.
 
 #### Write Delay & Problems Pane Integration
 

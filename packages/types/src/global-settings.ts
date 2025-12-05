@@ -46,6 +46,27 @@ export const MAX_CHECKPOINT_TIMEOUT_SECONDS = 60
 export const DEFAULT_CHECKPOINT_TIMEOUT_SECONDS = 15
 
 /**
+ * Default globally ignored file patterns
+ * These are common sensitive files that should be ignored even without a .kilocodeignore file
+ */
+export const DEFAULT_GLOBALLY_IGNORED_FILES = [
+	".env*", // Matches .env, .env.local, .env.production, etc.
+	"*.pem", // SSL certificates
+	"*.key", // Private keys
+	"*.p12", // PKCS#12 certificates
+	"*.pfx", // Windows certificates
+	"*.jks", // Java keystores
+	"id_rsa", // SSH private key (RSA)
+	"id_dsa", // SSH private key (DSA)
+	"id_ecdsa", // SSH private key (ECDSA)
+	"id_ed25519", // SSH private key (ED25519)
+	"*.ppk", // PuTTY private keys
+	"*.gpg", // GPG encrypted files
+	"*.asc", // ASCII-armored GPG files
+	"*.sig", // Signature files
+]
+
+/**
  * GlobalSettings
  */
 
@@ -72,6 +93,7 @@ export const globalSettingsSchema = z.object({
 	yoloGatekeeperApiConfigId: z.string().optional(), // kilocode_change: AI gatekeeper for YOLO mode
 	alwaysAllowReadOnly: z.boolean().optional(),
 	alwaysAllowReadOnlyOutsideWorkspace: z.boolean().optional(),
+	globallyIgnoredFiles: z.array(z.string()).optional(), // kilocode_change: Global ignore patterns
 	alwaysAllowWrite: z.boolean().optional(),
 	alwaysAllowWriteOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWriteProtected: z.boolean().optional(),
@@ -334,6 +356,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	autoApprovalEnabled: true,
 	alwaysAllowReadOnly: true,
 	alwaysAllowReadOnlyOutsideWorkspace: false,
+	globallyIgnoredFiles: DEFAULT_GLOBALLY_IGNORED_FILES, // kilocode_change
 	alwaysAllowWrite: true,
 	alwaysAllowWriteOutsideWorkspace: false,
 	alwaysAllowWriteProtected: false,
