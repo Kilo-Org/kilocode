@@ -92,6 +92,7 @@ export interface CreateTaskOptions {
 	consecutiveMistakeLimit?: number
 	experiments?: Record<string, boolean>
 	initialTodos?: TodoItem[]
+	preAssessedDifficulty?: "easy" | "medium" | "hard"
 }
 
 export enum TaskStatus {

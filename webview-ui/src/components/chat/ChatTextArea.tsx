@@ -62,7 +62,7 @@ interface ChatTextAreaProps {
 	placeholderText: string
 	selectedImages: string[]
 	setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>
-	onSend: () => void
+	onSend: (preAssessedDifficulty?: "easy" | "medium" | "hard") => void
 	onSelectImages: () => void
 	shouldDisableImages: boolean
 	onHeightChange?: (height: number) => void
@@ -310,6 +310,68 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			inputValue,
 			setInputValue,
 		})
+
+		// kilocode_change start: Intelligent Provider optimization - assess difficulty function
+		// Synchronous keyword-based assessment for immediate feedback for the Intelligent Provider
+		const assessDifficultyFrontend = useCallback((prompt: string): "easy" | "medium" | "hard" => {
+			// Synchronous keyword-based assessment for immediate feedback
+			const wordCount = prompt.trim().split(/\s+/).length
+			const easyThreshold = 50
+			const hardThreshold = 500
+
+			// Simple keyword check for complexity
+			const complexityKeywords = {
+				easy: [
+					"simple",
+					"basic",
+					"small",
+					"easy",
+					"quick",
+					"fast",
+					"short",
+					"brief",
+					"summarize",
+					"explain briefly",
+					"list",
+					"define",
+					"what is",
+					"how to",
+				],
+				hard: [
+					"complex",
+					"advanced",
+					"sophisticated",
+					"challenging",
+					"difficult",
+					"intricate",
+					"architecture",
+					"refactor",
+					"scalability",
+					"performance",
+					"security",
+					"optimization",
+				],
+			}
+
+			const lowerPrompt = prompt.toLowerCase()
+			let easyScore = 0,
+				hardScore = 0
+
+			Object.entries(complexityKeywords).forEach(([level, keywords]) => {
+				keywords.forEach((keyword) => {
+					if (lowerPrompt.includes(keyword)) {
+						if (level === "easy") easyScore++
+						else if (level === "hard") hardScore++
+					}
+				})
+			})
+
+			if (hardScore > easyScore) return "hard"
+			if (wordCount > hardThreshold) return "hard"
+			if (wordCount > easyThreshold) return "medium"
+			return "easy"
+		}, [])
+		// kilocode_change end
 
 		// Fetch git commits when Git is selected or when typing a hash.
 		useEffect(() => {
@@ -638,7 +700,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				const isComposing = event.nativeEvent?.isComposing ?? false
 
-				// kilocode_change start
 				const shouldSendMessage =
 					!isComposing &&
 					event.key === "Enter" &&
@@ -655,8 +716,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						return
 					}
 
+					// Pre-assess difficulty for Intelligent Provider before sending message
+					const preAssessedDifficulty = assessDifficultyFrontend(trimmedInput)
+
 					resetHistoryNavigation()
-					onSend()
+
+					setInputValue("")
+					setSelectedImages([])
+					onSend(preAssessedDifficulty)
 				}
 
 				// Handle prompt history navigation using custom hook
@@ -718,6 +785,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				handleSlashCommandsSelect,
 				selectedSlashCommandsIndex,
 				slashCommandsQuery,
+				assessDifficultyFrontend,
 				// kilocode_change end
 				onSend,
 				showContextMenu,
@@ -728,6 +796,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				inputValue,
 				cursorPosition,
 				setInputValue,
+				setSelectedImages,
 				justDeletedSpaceAfterMention,
 				queryItems,
 				allModes,
@@ -1506,7 +1575,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<button
 							aria-label={t("chat:sendMessage")}
 							disabled={sendingDisabled}
-							onClick={!sendingDisabled ? onSend : undefined}
+							onClick={() => {
+								if (!sendingDisabled) {
+									const trimmedInput = inputValue.trim()
+									const preAssessedDifficulty = assessDifficultyFrontend(trimmedInput)
+									resetHistoryNavigation()
+									setInputValue("")
+									setSelectedImages([])
+									onSend(preAssessedDifficulty)
+								}
+							}}
 							className={cn(
 								"relative inline-flex items-center justify-center",
 								"bg-transparent border-none p-1.5",

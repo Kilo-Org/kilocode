@@ -164,6 +164,7 @@ export interface TaskOptions extends CreateTaskOptions {
 	onCreated?: (task: Task) => void
 	initialTodos?: TodoItem[]
 	workspacePath?: string
+	preAssessedDifficulty?: "easy" | "medium" | "hard"
 }
 
 type UserContent = Array<Anthropic.ContentBlockParam> // kilocode_change
@@ -273,6 +274,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// Computer User
 	browserSession: BrowserSession
 
+	// Intelligent Provider
+	preAssessedDifficulty?: "easy" | "medium" | "hard"
+
 	// Editing
 	diffViewProvider: DiffViewProvider
 	diffStrategy?: DiffStrategy
@@ -353,6 +357,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		onCreated,
 		initialTodos,
 		workspacePath,
+		preAssessedDifficulty,
 	}: TaskOptions) {
 		super()
 		this.context = context // kilocode_change
@@ -403,7 +408,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		})
 
 		this.apiConfiguration = apiConfiguration
+		this.preAssessedDifficulty = preAssessedDifficulty
 		this.api = buildApiHandler(apiConfiguration)
+
+		// If this is an IntelligentHandler and we have pre-assessed difficulty, set it
+		if (this.api.constructor.name === "IntelligentHandler" && this.preAssessedDifficulty) {
+			;(this.api as any).preAssessedDifficulty = this.preAssessedDifficulty
+		}
 		// kilocode_change start: Listen for model changes in virtual quota fallback and intelligent provider
 		if (this.api instanceof VirtualQuotaFallbackHandler) {
 			;(this.api as any).on("handlerChanged", () => {
@@ -3453,11 +3464,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(shouldIncludeTools ? { tools: allTools, tool_choice: "auto", toolProtocol } : {}),
 			projectId: (await kiloConfig)?.project?.id, // kilocode_change: pass projectId for backend tracking (ignored by other providers)
 			rawUserPrompt: this.rawInputValue,
-			isInitialMessage: !this.assessmentDone, // Mark as initial message for difficulty assessment if not yet assessed
+			isInitialMessage: !this.preAssessedDifficulty && !this.assessmentDone, // Mark as initial message for difficulty assessment only if not pre-assessed and not yet assessed
 		}
 
-		// Mark assessment as done after first createMessage call
-		if (!this.assessmentDone) {
+		// Mark assessment as done after first createMessage call (unless pre-assessed)
+		if (!this.preAssessedDifficulty && !this.assessmentDone) {
 			this.assessmentDone = true
 		}
 

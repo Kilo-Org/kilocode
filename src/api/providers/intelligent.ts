@@ -3,6 +3,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import * as vscode from "vscode"
 import EventEmitter from "events"
 import type { ModelInfo, ProviderSettings } from "@roo-code/types"
+import { RooCodeEventName } from "@roo-code/types"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ApiStream } from "../transform/stream"
@@ -39,10 +40,16 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 	private activeDifficulty: "easy" | "medium" | "hard" | null = null
 	private lastNotificationMessage: string | null = null
 	private settingsHash: string | null = null
-	private cachedDifficulty: "easy" | "medium" | "hard" | null = null
-	private lastAssessedPrompt: string | null = null
 	private assessmentInProgress: boolean = false
 	private assessmentCount: number = 0
+	private lastResetPromptKey: string | null = null
+
+	// Event-driven assessment state
+	private assessmentCompleted: boolean = false
+	private lastAssessedPrompt: string | null = null
+	private assessmentCompletedTs: number | null = null
+	private taskMessageEventHandler?: (...args: any[]) => void
+	private currentTaskId: string | null = null
 
 	constructor(options: ProviderSettings) {
 		super()
@@ -111,6 +118,16 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 
 			// Get the user's prompt from metadata (set by Task.ts from UI inputValue)
 			const userPrompt = metadata?.rawUserPrompt ?? ""
+
+			// Check if this is a new user message - reset assessment state only for new messages
+			const isNewUserMessage =
+				metadata?.isInitialMessage || this.shouldResetAssessment(userPrompt, metadata?.taskId)
+
+			// Reset assessment state for new user messages
+			if (isNewUserMessage) {
+				this.resetAssessmentState(userPrompt, metadata?.taskId)
+			}
+
 			const difficulty = await this.assessDifficulty(userPrompt, metadata)
 
 			// Debug logging for difficulty assessment
@@ -125,11 +142,12 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			}
 
 			// Check if the active difficulty has changed and emit event if so
-			if (this.activeDifficulty !== difficulty) {
+			const wasCached = this.assessmentCompleted && !isNewUserMessage
+			if (this.activeDifficulty !== difficulty || !wasCached) {
 				this.activeDifficulty = difficulty
 				// Emit an event similar to how virtual quota fallback works
 				this.emit("handlerChanged", activeHandler)
-				// Show notification when difficulty changes
+				// Show notification when difficulty changes or when a new assessment was performed
 				await this.notifyDifficultySwitch(difficulty)
 			}
 
@@ -319,45 +337,50 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		prompt: string,
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): Promise<"easy" | "medium" | "hard"> {
-		// If we already have an active difficulty for this task, use it (assess only once per task)
-		if (this.activeDifficulty) {
-			console.debug(
-				`IntelligentHandler: Using existing task difficulty: ${this.activeDifficulty} (assessment count: ${this.assessmentCount})`,
-			)
+		// Return cached result if assessment is already completed for this conversation
+		if (this.assessmentCompleted && this.activeDifficulty !== null) {
+			console.debug(`IntelligentHandler: Using cached assessment result: ${this.activeDifficulty}`)
 			return this.activeDifficulty
 		}
 
-		// If assessment is already in progress, wait for it to complete
-		if (this.assessmentInProgress) {
-			console.debug(`IntelligentHandler: Waiting for assessment in progress...`)
-			// Simple polling wait - not ideal but prevents race conditions
-			while (this.assessmentInProgress && !this.activeDifficulty) {
-				await new Promise((resolve) => setTimeout(resolve, 10))
-			}
-			if (this.activeDifficulty) {
+		// Reset activeDifficulty for new user messages (when not an initial message)
+		// Only reset once per user message to avoid multiple logs
+		const currentPromptKey = this.getPromptKey(prompt)
+		if (metadata && !metadata.isInitialMessage) {
+			// Only reset if we haven't already reset for this prompt
+			if (this.lastResetPromptKey !== currentPromptKey) {
+				this.activeDifficulty = null
+				this.lastResetPromptKey = currentPromptKey
 				console.debug(
-					`IntelligentHandler: Using difficulty from completed assessment: ${this.activeDifficulty}`,
+					`IntelligentHandler: Reset activeDifficulty for new user message: "${prompt.substring(0, 50)}${prompt.length > 50 ? "..." : ""}"`,
 				)
-				return this.activeDifficulty
 			}
 		}
 
+		// Default to medium for empty prompts
 		if (!prompt.trim()) {
-			return "medium" // default to medium for empty prompts
+			const defaultDifficulty = "medium" as const
+			this.activeDifficulty = defaultDifficulty
+			this.markAssessmentCompleted()
+			return defaultDifficulty
 		}
 
 		// Set flag to prevent concurrent assessments
 		this.assessmentInProgress = true
 
 		try {
-			// Assess difficulty only on initial messages
-			const calculatedDifficulty = metadata?.isInitialMessage
-				? await this.assessDifficultyWithAI(prompt, metadata)
-				: await this.assessDifficultyWithKeywords(prompt)
+			console.debug(`IntelligentHandler: Starting AI assessment for prompt`)
 
-			// Set the active difficulty (maintained for the entire task)
+			// Perform AI assessment only if not already completed for this conversation
+			const calculatedDifficulty = await this.assessDifficultyWithAI(prompt, metadata)
+
+			// Set the active difficulty for this request and conversation
 			this.activeDifficulty = calculatedDifficulty
 
+			// Mark assessment as completed for this conversation
+			this.markAssessmentCompleted()
+
+			console.debug(`IntelligentHandler: AI assessment result: ${calculatedDifficulty}`)
 			return calculatedDifficulty
 		} finally {
 			this.assessmentInProgress = false
@@ -399,34 +422,54 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			classificationHandler = this.easyHandler
 		}
 
-		// If we don't have a classification handler, fallback to keyword-based assessment
+		// If we don't have a classification handler, throw an error
 		if (!classificationHandler) {
-			return this.assessDifficultyWithKeywords(prompt)
+			throw new Error("No classification handler available for intelligent assessment")
 		}
 
-		const classifierPrompt = `You are a Task Complexity Classifier for coding tasks. Classify the complexity as EASY, MEDIUM, or HARD.
+		const classifierPrompt = `You are an expert Task Complexity Classifier for software development tasks. Your role is to help route tasks to the appropriate AI model while minimizing costs.
 
-**Levels:**
-- EASY: 1-2 steps, simple edits, questions, single file changes
-- MEDIUM: 3-4 steps, feature implementation, moderate debugging, multiple file changes
-- HARD: 5+ steps, architecture design, complex refactoring, system-wide changes
+**Classification Framework:**
 
-**Rules:**
-- When uncertain, default to MEDIUM
-- Consider both the explicit request AND implied work
+EASY Tasks (Fast responses, basic understanding):
+- Single-step changes: rename variable, add console.log, fix typo
+- Questions about code: "what does this function do?", "explain this class"
+- Simple lookups: "how do I use this API?", "what's the syntax for..."
+- Basic operations: create file, delete function, edit import
+- Sum: 1-2 simple actions
+
+MEDIUM Tasks (Moderate complexity, balanced features):
+- Multi-step development: implement feature, create component, write tests
+- Analysis: debug issue, refactor function, optimize algorithm
+- Integration: connect to API, handle data flow, setup authentication
+- Configuration: modify settings, update dependencies, change architecture
+- Development workflow: create PR, merge code, deploy to staging
+- Sum: 3-5 related steps requiring context
+
+HARD Tasks (Complex thought processes, advanced reasoning):
+- System architecture: design plugin system, restructure application
+- Complex refactoring: multi-file changes across modules, design pattern implementation
+- Advanced debugging: diagnose race conditions, memory issues, performance bottlenecks
+- Enterprise features: authentication systems, real-time features, distributed systems
+- Strategy: codebase analysis, technology migrations, performance audits
+- Sum: 5+ interconnected steps requiring deep understanding
+
+**Classification Rules:**
+1. FOCUS ON COGNITIVE LOAD: Consider thinking time, domain knowledge, and complexity rather than code volume
+2. DEFAULT TO MEDIUM: When uncertain, choose medium to ensure capabilities
+3. SINGLE-DOMAIN vs MULTI-DOMAIN: Multi-system tasks are usually HARD
+4. TECHNICAL DEPTH: Tasks requiring advanced patterns, algorithms, or architectural decisions are HARD
+5. RESEARCH INTENSITY: Tasks needing investigation across unknown territory are HARD
 
 **Output:** JSON only: {"difficulty": "easy|medium|hard"}
 
 **Examples:**
-- "add a console.log" → easy
-- "rename this variable" → easy
-- "what does this function do?" → easy
-- "fix this bug" → medium
-- "add user authentication" → medium
-- "write tests for this module" → medium
-- "refactor to use dependency injection" → hard
-- "design a plugin system" → hard
-- "optimize database queries across the app" → hard`
+- "add error handling to this function" → easy (single edit)
+- "why does this code return undefined?" → easy (explanation requested)
+- "create a user registration form" → medium (multiple components, data flow)
+- "implement JWT authentication with refresh tokens" → hard (security critical, multi-system)
+- "optimize React component rendering performance" → hard (analysis + refactoring)
+- "migrate from REST to GraphQL" → hard (architecture change)`
 
 		const taskToClassify = `Task: "${prompt.substring(0, 500)}"`
 
@@ -460,95 +503,11 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 				return parsed.difficulty.toLowerCase()
 			}
 
-			// Fallback to keyword-based if AI parsing fails
-			return this.assessDifficultyWithKeywords(prompt)
+			throw new Error(`Invalid AI response: ${fullResponse}`)
 		} catch (error) {
-			console.error("AI classification failed, falling back to keywords:", error)
-			return this.assessDifficultyWithKeywords(prompt)
+			console.error("AI classification failed:", error)
+			throw error
 		}
-	}
-
-	private assessDifficultyWithKeywords(prompt: string): "easy" | "medium" | "hard" {
-		// Fallback keyword-based assessment (original logic)
-		const wordCount = prompt.trim().split(/\s+/).length
-		const easyThreshold = 50
-		const hardThreshold = 500
-
-		// Check for complexity keywords
-		const complexityKeywords = {
-			easy: [
-				"simple",
-				"basic",
-				"small",
-				"easy",
-				"quick",
-				"fast",
-				"short",
-				"brief",
-				"summarize",
-				"explain briefly",
-				"list",
-				"define",
-				"what is",
-				"how to",
-			],
-			medium: [
-				"analyze",
-				"compare",
-				"evaluate",
-				"implement",
-				"create",
-				"build",
-				"design",
-				"review",
-				"optimize",
-				"improve",
-				"modify",
-				"update",
-				"fix",
-				"debug",
-			],
-			hard: [
-				"complex",
-				"advanced",
-				"sophisticated",
-				"challenging",
-				"difficult",
-				"intricate",
-				"architecture",
-				"refactor",
-				"scalability",
-				"performance",
-				"security",
-				"optimization",
-				"algorithm",
-				"data structure",
-				"pattern",
-				"design pattern",
-			],
-		}
-
-		const lowerPrompt = prompt.toLowerCase()
-		let easyScore = 0,
-			mediumScore = 0,
-			hardScore = 0
-
-		Object.entries(complexityKeywords).forEach(([level, keywords]) => {
-			keywords.forEach((keyword) => {
-				if (lowerPrompt.includes(keyword.toLowerCase())) {
-					if (level === "easy") easyScore++
-					else if (level === "medium") mediumScore++
-					else if (level === "hard") hardScore++
-				}
-			})
-		})
-
-		// Determine difficulty
-		if (hardScore > mediumScore && hardScore > easyScore) return "hard"
-		if (mediumScore > easyScore) return "medium"
-		if (wordCount > hardThreshold) return "hard"
-		if (wordCount > easyThreshold) return "medium"
-		return "easy"
 	}
 
 	private getHandlerForDifficulty(difficulty: "easy" | "medium" | "hard"): ApiHandler | undefined {
@@ -562,5 +521,62 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			default:
 				return this.mediumHandler // default to medium
 		}
+	}
+
+	private getPromptKey(prompt: string): string {
+		// Create a unique key for the prompt to track reset events
+		// Use first 100 characters, trimmed and normalized
+		const normalized = prompt.substring(0, 100).trim().toLowerCase()
+		return btoa(normalized).replace(/=/g, "").substring(0, 32)
+	}
+
+	/**
+	 * Check if assessment should be reset for this prompt/task combination
+	 * Resets assessment when:
+	 * - Task ID changes (new conversation)
+	 * - User prompt changes significantly (new user message)
+	 * - Initial message flag is set
+	 */
+	private shouldResetAssessment(userPrompt: string, taskId?: string): boolean {
+		if (!userPrompt.trim()) {
+			return false
+		}
+
+		// Reset if task changed
+		if (taskId && taskId !== this.currentTaskId) {
+			return true
+		}
+
+		// Reset if prompt changed significantly
+		if (userPrompt !== this.lastAssessedPrompt) {
+			return true
+		}
+
+		return false
+	}
+
+	/**
+	 * Reset assessment state for a new user message
+	 */
+	private resetAssessmentState(userPrompt: string, taskId?: string): void {
+		console.debug(`IntelligentHandler: Resetting assessment state for new user message (task: ${taskId})`)
+
+		this.assessmentCompleted = false
+		this.lastAssessedPrompt = userPrompt
+		this.assessmentCompletedTs = null
+		this.currentTaskId = taskId || null
+
+		// Reset the active difficulty for the new message
+		this.activeDifficulty = null
+		this.lastResetPromptKey = null
+	}
+
+	/**
+	 * Mark assessment as completed for the current conversation
+	 */
+	private markAssessmentCompleted(): void {
+		this.assessmentCompleted = true
+		this.assessmentCompletedTs = Date.now()
+		console.debug(`IntelligentHandler: Assessment completed and cached`)
 	}
 }

@@ -273,6 +273,7 @@ export interface WebviewMessage {
 	askResponse?: ClineAskResponse
 	apiConfiguration?: ProviderSettings
 	images?: string[]
+	preAssessedDifficulty?: "easy" | "medium" | "hard"
 	bool?: boolean
 	value?: number
 	commands?: string[]
