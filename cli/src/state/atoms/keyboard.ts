@@ -959,8 +959,10 @@ async function handleClipboardImagePaste(get: Getter, set: Setter): Promise<void
 			logs.debug(`Inserted clipboard image #${refNumber}: ${result.filePath}`, "clipboard")
 
 			// Clean up old clipboard images in the background
-			cleanupOldClipboardImages().catch(() => {
-				// Ignore cleanup errors
+			cleanupOldClipboardImages().catch((cleanupError) => {
+				logs.debug("Clipboard cleanup failed", "clipboard", {
+					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+				})
 			})
 		} else {
 			setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
