@@ -7,6 +7,7 @@ import { ApiStreamChunk } from "../../api/transform/stream"
 import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
+import { ResponseMetaData } from "./types"
 
 // Convert PROVIDERS array to a lookup map for display names
 const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label }) => [value, label])) as Record<
@@ -99,13 +100,7 @@ export class GhostModel {
 		suffix: string,
 		onChunk: (text: string) => void,
 		taskId?: string,
-	): Promise<{
-		cost: number
-		inputTokens: number
-		outputTokens: number
-		cacheWriteTokens: number
-		cacheReadTokens: number
-	}> {
+	): Promise<ResponseMetaData> {
 		if (!this.apiHandler) {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")
@@ -150,13 +145,7 @@ export class GhostModel {
 		systemPrompt: string,
 		userPrompt: string,
 		onChunk: (chunk: ApiStreamChunk) => void,
-	): Promise<{
-		cost: number
-		inputTokens: number
-		outputTokens: number
-		cacheWriteTokens: number
-		cacheReadTokens: number
-	}> {
+	): Promise<ResponseMetaData> {
 		if (!this.apiHandler) {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")

@@ -1,9 +1,4 @@
 function processData(data) {
 	try {
 		const result = JSON.parse(data);
-				return result;
-	} catch (error) {
-		console.error('Error parsing data:', error);
-		throw error;
-	}
-}
+		<<<AUTOCOMPLETE_HERE>>>

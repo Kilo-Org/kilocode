@@ -1,19 +1,7 @@
 function processOrder(order) {
   // TODO: Add comprehensive logging for order processing
-
   console.log(`Processing order: ${JSON.stringify(order)}`);
-  const startTime = Date.now();
-
-  try {
-    const result = validateOrder(order);
-    const endTime = Date.now();
-    console.log(`Order processed successfully in ${endTime - startTime}ms`);
-    return result;
-  } catch (error) {
-    const endTime = Date.now();
-    console.error(`Order processing failed after ${endTime - startTime}ms: ${error.message}`);
-    throw error;
-  }
+  logger.info(`Order validation started for order ID: ${order.id}`);
   const result = validateOrder(order);
   return result;
 }

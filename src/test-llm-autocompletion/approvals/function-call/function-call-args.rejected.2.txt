@@ -1,2 +1,1 @@
-function greet(name) { return 'Hello ' + name; }
-greet("")];
+(no changes parsed)

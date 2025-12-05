@@ -684,7 +684,7 @@
     // --- New Game
     function newGame(){
       stopTimer();
-      const size = parseInt(sizeSel.value,10); const gameWidth = gameBoardSize = size * 50 + 15; gameState.size=size; gameState.notes.clear(); gameState.undo.length=0; gameState.redo.length=0; gameState.solved=false; boardEl.classList.remove('solved');
+      const size = parseInt(sizeSel.value,10); gameState.size=size; gameState.notes.clear(); gameState.undo.length=0; gameState.redo.length=0; gameState.solved=false; boardEl.classList.remove('solved');
       info('Generating puzzle…');
       setTimeout(() => {
         const solved = generateSolved();

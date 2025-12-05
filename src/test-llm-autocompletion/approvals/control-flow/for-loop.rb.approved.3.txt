@@ -1,4 +1,4 @@
 arr = [1, 2, 3, 4, 5]
 arr.each do |item|
-	puts item
+	# do something with item
 	<<<AUTOCOMPLETE_HERE>>>

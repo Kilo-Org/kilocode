@@ -1,5 +1,5 @@
 class DataService {
-  private cache: Map<string, any> = new Map();
+  private cache = new Map();
 
   // TODO: Implement caching mechanism to reduce API calls
   async fetchData(id) {

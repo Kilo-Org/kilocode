@@ -9,7 +9,5 @@ function handleAPIRequest(req, res) {
 
   // Apply the rate limiting middleware to all requests
   limiter(req, res, () => {
-    processRequest(req, res);
-  });
   processRequest(req, res);
 }

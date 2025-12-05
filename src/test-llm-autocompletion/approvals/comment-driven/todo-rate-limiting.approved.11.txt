@@ -1,24 +1,24 @@
 function handleAPIRequest(req, res) {
-  // Implement rate limiting to prevent abuse
-  const rateLimit = 100; // requests per minute
-  const windowMs = 60 * 1000; // 1 minute in milliseconds
+  // Rate limiting configuration
+  const MAX_REQUESTS = 100; // Maximum number of requests allowed
+  const TIME_WINDOW = 60 * 1000; // Time window in milliseconds (1 minute)
+
+  // Rate limiting implementation
   const now = Date.now();
-  const windowStart = now - windowMs;
+  const windowStart = now - TIME_WINDOW;
 
-  // Initialize or get the request count for this IP
-  let requestCount = req.ipRequestCounts.get(req.ip) || 0;
+  // Filter requests within the current time window
+  const requestsInWindow = requestTimestamps.filter(timestamp => timestamp > windowStart);
 
-  // Filter out requests that are outside the current window
-  req.ipRequestCounts.set(req.ip, requestCount.filter(timestamp => timestamp > windowStart).length);
-
-  // Check if the request count exceeds the rate limit
-  if (requestCount >= rateLimit) {
+  if (requestsInWindow.length >= MAX_REQUESTS) {
+    // Too many requests, return 429 Too Many Requests
     res.status(429).send('Too many requests, please try again later.');
     return;
   }
 
-  // Add the current request timestamp
-  req.ipRequestCounts.set(req.ip, [...req.ipRequestCounts.get(req.ip), now]);
+  // Add current request timestamp
+  requestTimestamps.push(now);
 
+  // Process the request if rate limit is not exceeded
   processRequest(req, res);
 }
