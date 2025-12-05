@@ -1,5 +1,8 @@
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
+import type { AutocompleteContext, CacheMatchType } from "../types"
+
+export type { AutocompleteContext, CacheMatchType }
 
 function captureAutocompleteTelemetry(event: TelemetryEventName, properties?: Record<string, unknown>): void {
 	// also log to console:
@@ -12,20 +15,6 @@ function captureAutocompleteTelemetry(event: TelemetryEventName, properties?: Re
 			console.log(`Autocomplete Telemetry event: ${event}`)
 		}
 	}
-}
-
-/**
- * Common context properties for autocomplete telemetry events
- */
-export interface AutocompleteContext {
-	/** The programming language of the file being edited */
-	languageId: string
-	/** The model ID used for completion (e.g., "codestral", "qwen-coder") */
-	modelId?: string
-	/** The provider name (e.g., "kilocode", "openrouter") */
-	provider?: string
-	/** The completion strategy used */
-	strategy?: "fim" | "hole_filler"
 }
 
 /**
@@ -60,11 +49,6 @@ export function captureSuggestionFiltered(
 		...context,
 	})
 }
-
-/**
- * Cache match type indicating how the suggestion was matched from history
- */
-export type CacheMatchType = "exact" | "partial_typing" | "backward_deletion"
 
 /**
  * Capture when a suggestion is found in cache/history

@@ -1954,6 +1954,179 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 	})
 
+	describe("adaptive debounce delay", () => {
+		it("should start with initial debounce delay of 300ms", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call - should be debounced with initial 300ms delay
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
+
+			// Advance 200ms - should still be waiting
+			await vi.advanceTimersByTimeAsync(200)
+			expect(callCount).toBe(1)
+
+			// Advance remaining 100ms to complete the 300ms debounce
+			await vi.advanceTimersByTimeAsync(100)
+			await promise2
+			expect(callCount).toBe(2)
+		})
+
+		it("should record latency and not update debounce delay until 10 samples collected", () => {
+			// Record 9 latencies - should not update debounce delay yet
+			for (let i = 0; i < 9; i++) {
+				provider.recordLatency(100 + i * 10) // 100, 110, 120, ..., 180
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(9)
+			expect(providerAny.debounceDelayMs).toBe(300) // Still initial value
+		})
+
+		it("should update debounce delay to average after exceeding 10 samples", () => {
+			// Record 10 latencies of 200ms each - debounce delay not updated yet
+			for (let i = 0; i < 10; i++) {
+				provider.recordLatency(200)
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(10)
+			expect(providerAny.debounceDelayMs).toBe(300) // Still initial value (not updated until > 10)
+
+			// Record 11th latency - now debounce delay is updated
+			provider.recordLatency(200)
+			expect(providerAny.latencyHistory.length).toBe(10) // Still 10 (oldest removed)
+			expect(providerAny.debounceDelayMs).toBe(200) // Now updated to average
+		})
+
+		it("should maintain rolling window of 10 latencies", () => {
+			// Record 15 latencies
+			for (let i = 0; i < 15; i++) {
+				provider.recordLatency(100 + i * 10) // 100, 110, 120, ..., 240
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(10) // Only last 10 kept
+
+			// Last 10 values should be 150, 160, 170, 180, 190, 200, 210, 220, 230, 240
+			// Average = (150+160+170+180+190+200+210+220+230+240) / 10 = 195
+			expect(providerAny.debounceDelayMs).toBe(195)
+		})
+
+		it("should update debounce delay on each new latency after exceeding 10 samples", () => {
+			// Record 11 latencies of 200ms each (need > 10 to trigger update)
+			for (let i = 0; i < 11; i++) {
+				provider.recordLatency(200)
+			}
+
+			const providerAny = provider as any
+			expect(providerAny.debounceDelayMs).toBe(200)
+
+			// Add one more latency of 300ms
+			// New average = (200*9 + 300) / 10 = 210
+			provider.recordLatency(300)
+			expect(providerAny.debounceDelayMs).toBe(210)
+
+			// Add another latency of 400ms
+			// New average = (200*8 + 300 + 400) / 10 = 230
+			provider.recordLatency(400)
+			expect(providerAny.debounceDelayMs).toBe(230)
+		})
+
+		it("should use adaptive debounce delay after collecting enough samples", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// Record 11 latencies of 150ms each to set debounce delay to 150ms
+			// (need > 10 to trigger update)
+			for (let i = 0; i < 11; i++) {
+				provider.recordLatency(150)
+			}
+
+			const providerAny = provider as any
+			expect(providerAny.debounceDelayMs).toBe(150)
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call - should be debounced with adaptive 150ms delay
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
+
+			// Advance 100ms - should still be waiting (150ms debounce)
+			await vi.advanceTimersByTimeAsync(100)
+			expect(callCount).toBe(1)
+
+			// Advance remaining 50ms to complete the 150ms debounce
+			await vi.advanceTimersByTimeAsync(50)
+			await promise2
+			expect(callCount).toBe(2)
+		})
+
+		it("should record latency from LLM requests", async () => {
+			// Mock the model to simulate a delay
+			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+				// Simulate some processing time
+				if (onChunk) {
+					onChunk({ type: "text", text: "<COMPLETION>" })
+					onChunk({ type: "text", text: "console.log('test');" })
+					onChunk({ type: "text", text: "</COMPLETION>" })
+				}
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(0)
+
+			// Make a request that will record latency
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Latency should have been recorded
+			expect(providerAny.latencyHistory.length).toBe(1)
+		})
+	})
+
 	describe("telemetry tracking", () => {
 		beforeEach(() => {
 			vi.mocked(telemetry.captureAcceptSuggestion).mockClear()

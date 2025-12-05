@@ -22,10 +22,12 @@ export class TestRunner {
 	private verbose: boolean
 	private results: TestResult[] = []
 	private skipApproval: boolean
+	private useOpusApproval: boolean
 
-	constructor(verbose: boolean = false, skipApproval: boolean = false) {
+	constructor(verbose: boolean = false, skipApproval: boolean = false, useOpusApproval: boolean = false) {
 		this.verbose = verbose
 		this.skipApproval = skipApproval
+		this.useOpusApproval = useOpusApproval
 		this.tester = new GhostProviderTester()
 	}
 
@@ -57,6 +59,7 @@ export class TestRunner {
 				testCase.input,
 				actualValue,
 				this.skipApproval,
+				this.useOpusApproval,
 			)
 
 			return {
@@ -90,6 +93,9 @@ export class TestRunner {
 		console.log("Strategy:", strategyName)
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
+		}
+		if (this.useOpusApproval) {
+			console.log("Opus Auto-Approval: enabled (using Claude Opus to judge completions)")
 		}
 		console.log("Total tests:", testCases.length)
 		console.log("Categories:", getCategories().join(", "))
@@ -403,10 +409,11 @@ async function main() {
 	const args = process.argv.slice(2)
 	const verbose = args.includes("--verbose") || args.includes("-v")
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
+	const useOpusApproval = args.includes("--opus-approval") || args.includes("-oa")
 
 	const command = args.find((arg) => !arg.startsWith("-"))
 
-	const runner = new TestRunner(verbose, skipApproval)
+	const runner = new TestRunner(verbose, skipApproval, useOpusApproval)
 
 	try {
 		if (command === "clean") {

@@ -1,12 +1,27 @@
 import fs from "fs"
 import path from "path"
 import readline from "readline"
+import { askOpusApproval } from "./opus-approval.js"
 
 const APPROVALS_DIR = "approvals"
 
 export interface ApprovalResult {
 	isApproved: boolean
 	newOutput: boolean
+}
+
+function getExistingOutputs(categoryDir: string, testName: string, type: "approved" | "rejected"): string[] {
+	if (!fs.existsSync(categoryDir)) {
+		return []
+	}
+
+	const pattern = new RegExp(`^${testName}\\.${type}\\.\\d+\\.txt$`)
+	const files = fs.readdirSync(categoryDir).filter((f) => pattern.test(f))
+
+	return files.map((file) => {
+		const filePath = path.join(categoryDir, file)
+		return fs.readFileSync(filePath, "utf-8")
+	})
 }
 
 function getCategoryPath(category: string): string {
@@ -88,6 +103,7 @@ export async function checkApproval(
 	input: string,
 	output: string,
 	skipApproval: boolean = false,
+	useOpusApproval: boolean = false,
 ): Promise<ApprovalResult> {
 	const categoryDir = getCategoryPath(category)
 
@@ -106,7 +122,15 @@ export async function checkApproval(
 		return { isApproved: false, newOutput: true }
 	}
 
-	const isApproved = await askUserApproval(category, testName, input, output)
+	// Use Opus for auto-approval if enabled, otherwise ask user
+	let isApproved: boolean
+	if (useOpusApproval) {
+		const previouslyApproved = getExistingOutputs(categoryDir, testName, "approved")
+		const previouslyRejected = getExistingOutputs(categoryDir, testName, "rejected")
+		isApproved = await askOpusApproval(input, output, previouslyApproved, previouslyRejected)
+	} else {
+		isApproved = await askUserApproval(category, testName, input, output)
+	}
 
 	const type: "approved" | "rejected" = isApproved ? "approved" : "rejected"
 
