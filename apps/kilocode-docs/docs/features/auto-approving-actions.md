@@ -295,9 +295,9 @@ Commands in this list will never run, even if `*` is in the allowed list. Use th
 
 **Description:** Automatically selects the first AI-suggested answer for a follow-up question after a configurable timeout. This speeds up your workflow by letting Kilo Code proceed without manual intervention.
 
-**Timeout slider:** Use the slider to set the wait time (Range: 1-300 seconds, Default: 60s).
-
 **Visual countdown:** When enabled, a countdown timer appears on the first suggestion button in the chat interface, showing the remaining time before auto-selection. The timer displays seconds remaining (e.g., "3s") and counts down in real-time.
+
+**Timeout slider:** Use the slider to set the wait time (Range: 1-300 seconds, Default: 60s).
 
 **Override options:** You can cancel the auto-selection at any time by:
 
