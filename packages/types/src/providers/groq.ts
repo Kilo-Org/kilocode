@@ -116,7 +116,7 @@ export const groqModels = {
 		maxTokens: 32766,
 		contextWindow: 131072,
 		supportsImages: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.15,
 		outputPrice: 0.75,
 		description:
@@ -126,7 +126,7 @@ export const groqModels = {
 		maxTokens: 32768,
 		contextWindow: 131072,
 		supportsImages: false,
-		supportsPromptCache: false,
+		supportsPromptCache: true,
 		inputPrice: 0.1,
 		outputPrice: 0.5,
 		description:

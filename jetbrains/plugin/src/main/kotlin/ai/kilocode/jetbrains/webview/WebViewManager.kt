@@ -378,7 +378,9 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                         """,
         )
 
-        logger.info("Received HTML update event: handle=${data.handle}, html length: ${data.htmlContent.length}")
+        logger.info("=== Received HTML update event ===")
+        logger.info("Handle: ${data.handle}")
+        logger.info("HTML length: ${data.htmlContent.length}")
 
         val webView = getLatestWebView()
 
@@ -386,20 +388,23 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
             try {
                 // If HTTP server is running
                 if (resourceRootDir != null) {
+                    logger.info("Resource root directory is set: ${resourceRootDir?.pathString}")
+                    
                     // Generate unique file name for WebView
                     val filename = "index.html"
 
                     // Save HTML content to file
-                    saveHtmlToResourceDir(data.htmlContent, filename)
+                    val savedPath = saveHtmlToResourceDir(data.htmlContent, filename)
+                    logger.info("HTML saved to: ${savedPath?.pathString}")
 
                     // Use HTTP URL to load WebView content
                     val url = "http://localhost:12345/$filename"
-                    logger.info("Load WebView HTML content via HTTP: $url")
+                    logger.info("Loading WebView via HTTP URL: $url")
 
                     webView.loadUrl(url)
                 } else {
                     // Fallback to direct HTML loading
-                    logger.warn("HTTP server not running or resource directory not set, loading HTML content directly")
+                    logger.warn("Resource root directory is NULL - loading HTML content directly")
                     webView.loadHtml(data.htmlContent)
                 }
 
@@ -552,8 +557,12 @@ class WebViewInstance(
     fun sendThemeConfigToWebView(themeConfig: JsonObject, bodyThemeClass: String) {
         currentThemeConfig = themeConfig
         this.bodyThemeClass = bodyThemeClass
-        if (isDisposed or !isPageLoaded) {
-            logger.warn("WebView has been disposed or not loaded, cannot send theme config:$isDisposed,$isPageLoaded")
+        if (isDisposed) {
+            logger.warn("WebView has been disposed, cannot send theme config")
+            return
+        }
+        if (!isPageLoaded) {
+            logger.debug("WebView page not yet loaded, theme will be injected after page load")
             return
         }
         injectTheme()

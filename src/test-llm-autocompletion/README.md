@@ -58,6 +58,11 @@ pnpm run test:verbose
 # Run without interactive approval (fail if not already approved)
 pnpm run test --skip-approval
 
+# Run with Opus auto-approval (uses Claude Opus to judge completions)
+pnpm run test --opus-approval
+# Or short form
+pnpm run test -oa
+
 # Run a single test
 pnpm run test closing-brace
 
@@ -66,6 +71,7 @@ pnpm run clean
 
 # Combine flags
 pnpm run test --verbose --skip-approval
+pnpm run test --verbose --opus-approval
 ```
 
 ### Completion Strategy
@@ -123,6 +129,40 @@ This is useful for:
 - Running tests in CI/CD pipelines
 - Regression testing to ensure outputs haven't changed
 - Validating that all test outputs have been reviewed
+
+### Opus Auto-Approval Mode
+
+Use `--opus-approval` (or `-oa`) to automatically judge completions using Claude Opus:
+
+```bash
+pnpm run test --opus-approval
+pnpm run test -oa
+```
+
+When a new output is detected that hasn't been previously approved/rejected:
+
+1. Opus evaluates whether the completion is useful (meaningful code) vs not useful (trivial like semicolons)
+2. Opus responds with APPROVED or REJECTED based on its judgment
+3. The result is saved to the approvals directory for later manual review
+
+Opus considers a suggestion **useful** if it:
+
+- Provides meaningful code that helps the developer
+- Completes a logical code pattern
+- Adds substantial functionality (not just trivial characters)
+- Is syntactically correct and contextually appropriate
+
+Opus considers a suggestion **not useful** if it:
+
+- Only adds trivial characters like semicolons, closing brackets, or single characters
+- Is empty or nearly empty
+- Is syntactically incorrect or doesn't make sense in context
+
+This is useful for:
+
+- Quickly processing large batches of new test outputs
+- Getting consistent, objective judgments on completion quality
+- Reducing manual review burden while still saving decisions for later audit
 
 ## User Interaction
 

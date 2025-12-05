@@ -160,6 +160,7 @@ const sidebars: SidebarsConfig = {
 				"advanced-usage/cloud-agent",
 				"advanced-usage/code-reviews",
 				"advanced-usage/deploy",
+				"advanced-usage/managed-indexing",
 				"features/experimental/experimental-features",
 			],
 		},

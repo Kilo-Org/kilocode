@@ -1,30 +1,16 @@
-import { AutocompleteInput, GhostContextProvider } from "../types"
+import {
+	AutocompleteInput,
+	GhostContextProvider,
+	HoleFillerGhostPrompt,
+	FillInAtCursorSuggestion,
+	ChatCompletionResult,
+} from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 
-export interface HoleFillerGhostPrompt {
-	strategy: "hole_filler"
-	autocompleteInput: AutocompleteInput
-	systemPrompt: string
-	userPrompt: string
-}
-
-export interface FillInAtCursorSuggestion {
-	text: string
-	prefix: string
-	suffix: string
-}
-
-export interface ChatCompletionResult {
-	suggestion: FillInAtCursorSuggestion
-	cost: number
-	inputTokens: number
-	outputTokens: number
-	cacheWriteTokens: number
-	cacheReadTokens: number
-}
+export type { HoleFillerGhostPrompt, FillInAtCursorSuggestion, ChatCompletionResult }
 
 /**
  * Parse the response - only handles responses with <COMPLETION> tags

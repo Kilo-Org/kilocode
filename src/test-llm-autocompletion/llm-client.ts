@@ -19,7 +19,7 @@ export interface FimResponse {
 	tokensUsed?: number
 }
 
-function getKiloBaseUriFromToken(kilocodeToken?: string): string {
+export function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 	if (kilocodeToken) {
 		try {
 			const payload_string = kilocodeToken.split(".")[1]
