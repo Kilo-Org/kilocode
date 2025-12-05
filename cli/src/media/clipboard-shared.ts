@@ -1,10 +1,25 @@
-import { execFile } from "child_process"
+import * as childProcess from "child_process"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import { promisify } from "util"
 
-export const execFileAsync = promisify(execFile)
+type ExecFileFn = typeof childProcess.execFile
+type ExecFileAsync = ReturnType<typeof promisify<ExecFileFn>>
+
+function createExecFileAsync(): ExecFileAsync {
+	const execFileImpl = childProcess.execFile
+	if (typeof execFileImpl === "function") {
+		return promisify(execFileImpl)
+	}
+
+	// Fallback for test environments that fully mock child_process without execFile
+	return (async (..._args: Parameters<ExecFileFn>) => {
+		throw new Error("execFile not available in this environment")
+	}) as ExecFileAsync
+}
+
+export const execFileAsync = createExecFileAsync()
 
 export const CLIPBOARD_DIR = "kilocode-clipboard"
 export const MAX_CLIPBOARD_IMAGE_AGE_MS = 60 * 60 * 1000
