@@ -1,2 +1,10 @@
 x = 10
-y = 0
+y = 20
+z = 30
+
+if x > y:
+    print("x is greater than y")
+elif y > z:
+    print("y is greater than z")
+else:
+    print("z is greater than x and y")

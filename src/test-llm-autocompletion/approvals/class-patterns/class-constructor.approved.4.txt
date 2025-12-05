@@ -1,0 +1,32 @@
+class User {
+	constructor(username, email, role) {
+		this.username = username;
+		this.email = email;
+		this.role = role;
+	}
+
+	login() {
+		console.log(`${this.username} has logged in`);
+		return this;
+	}
+
+	logout() {
+		console.log(`${this.username} has logged out`);
+		return this;
+	}
+}
+
+class Admin extends User {
+	deleteUser(user) {
+		users = users.filter((u) => u.username !== user.username);
+	}
+}
+
+const userOne = new User('mario', 'mario@thenetninja.co.uk', 'admin');
+const userTwo = new User('luigi', 'luigi@thenetninja.co.uk', 'moderator');
+const userThree = new Admin('shaun', 'shaun@thenetninja.co.uk', 'admin');
+
+let users = [userOne, userTwo, userThree];
+
+console.log(userThree.deleteUser(userTwo));
+console.log(users);

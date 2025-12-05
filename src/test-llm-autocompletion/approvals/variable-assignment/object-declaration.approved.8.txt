@@ -1,4 +1,13 @@
-const config = {
-  apiKey: process.env.OPENAI_API_KEY,
-  organization: process.env.OPENAI_ORGANIZATION,
-}
+const config = require('../config');
+
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  user: config.dbUser,
+  host: config.dbHost,
+  database: config.dbName,
+  password: config.dbPassword,
+  port: config.dbPort,
+});
+
+module.exports = pool;

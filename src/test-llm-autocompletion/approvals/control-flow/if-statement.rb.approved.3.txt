@@ -1,3 +1,18 @@
 x = 10
 if x > 5
-	console.log("x is greater than 5")
+	puts "x is greater than 5"
+end
+
+if x > 8
+	puts "x is greater than 8"
+else
+	puts "x is not greater than 8"
+end
+
+if x > 10
+	puts "x is greater than 10"
+elsif x < 10
+	puts "x is less than 10"
+else
+	puts "x is 10"
+end

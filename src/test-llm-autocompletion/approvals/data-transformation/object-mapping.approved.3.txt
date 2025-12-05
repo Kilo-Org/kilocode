@@ -1,4 +1,12 @@
 const users = [{id: 1, firstName: 'John', lastName: 'Doe'}, {id: 2, firstName: 'Jane', lastName: 'Smith'}];
 const userDTOs = users.map(user => ({
 	id: user.id,
-	fullName: user.firstName + ' ' + user.lastName
+	fullName: `${user.firstName} ${user.lastName}`
+}));
+
+console.log(userDTOs);
+// Output: [{id: 1, fullName: 'John Doe'}, {id: 2, fullName: 'Jane Smith'}]
+
+// 1. The map() method is used to iterate over the users array.
+// 2. For each user object, a new object is created with the id property and a new fullName property that combines the firstName and lastName properties of the user object.
+// 3. The resulting array of userDTOs is stored in the userDTOs variable and logged to the console.

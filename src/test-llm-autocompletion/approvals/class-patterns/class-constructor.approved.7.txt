@@ -4,4 +4,12 @@ class User {
 		this.email = email;
 		this.role = role;
 	}
+
+	getInfo() {
+		return `${this.username} ${this.email} ${this.role}`;
+	}
+
+	isAdmin() {
+		return this.role === 'admin';
+	}
 }

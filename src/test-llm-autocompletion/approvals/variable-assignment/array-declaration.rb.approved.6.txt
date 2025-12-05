@@ -1,1 +1,11 @@
-arr = [1, 2, 3, 
+arr = [1, 2, 3, 4, 5]
+arr2 = [1, 2, 3, 4, 5]
+
+def reverse(arr):
+    if len(arr) == 0:
+        return arr
+    else:
+        return reverse(arr[1:]) + arr[:1]
+
+print(reverse(arr))
+print(reverse(arr2))

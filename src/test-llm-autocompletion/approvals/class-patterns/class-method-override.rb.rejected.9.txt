@@ -1,0 +1,71 @@
+class Shape
+	def area
+		0
+	end
+end
+
+class Rectangle < Shape
+	def initialize(width, height)
+		@width = width
+		@height = height
+	end
+	
+	def area
+		@width * @height
+	end
+end
+
+class Square < Rectangle
+	def initialize(side)
+		super(side, side)
+	end
+end
+
+class Circle < Shape
+	def initialize(radius)
+		@radius = radius
+	end
+
+	def area
+		Math::PI * @radius * @radius
+	end
+end
+
+class Triangle < Shape
+	def initialize(base, height)
+		@base = base
+		@height = height
+	end
+
+	def area
+		@base * @height / 2
+	end
+end
+
+class Ellipse < Shape
+	def initialize(a, b)
+		@a = a
+		@b = b
+	end
+
+	def area
+		Math::PI * @a * @b
+	end
+end
+
+class Trapezoid < Shape
+	def initialize(base1, base2, height)
+		@base1 = base1
+		@base2 = base2
+		@height = height
+	end
+
+	def area
+		(@base1 + @base2) * @height / 2
+	end
+end
+
+class Parallelogram < Shape
+	def initialize(base, height)
+		@base = base
+		@height =

@@ -1,0 +1,12 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_total_2(items)
+	items.inject(0) { |sum, item| sum += item }
+end
+
+puts calculate_total([1, 2, 3, 4, 5])
+puts calculate_total_2([1, 2, 3, 4, 5])

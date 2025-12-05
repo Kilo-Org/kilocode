@@ -1,5 +1,8 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		result
-		<<<AUTOCOMPLETE_HERE>>>
+		puts result
+	rescue JSON::ParserError => e
+		puts "Bad JSON: #{e.message}"
+	end
+end

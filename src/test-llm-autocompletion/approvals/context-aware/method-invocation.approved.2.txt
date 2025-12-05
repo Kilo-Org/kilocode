@@ -1,0 +1,15 @@
+import { UserService } from './services/user-service';
+
+const userService = new UserService();
+const user = userService.getUser();
+
+const userName = document.querySelector('.user-name');
+const userEmail = document.querySelector('.user-email');
+
+if (userName) {
+  userName.innerHTML = user.name;
+}
+
+if (userEmail) {
+  userEmail.innerHTML = user.email;
+}

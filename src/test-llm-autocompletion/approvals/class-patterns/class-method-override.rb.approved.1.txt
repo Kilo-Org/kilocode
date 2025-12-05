@@ -12,3 +12,35 @@ class Rectangle < Shape
 	
 	def area
 		@width * @height
+	end
+end
+
+class Circle < Shape
+	def initialize(radius)
+		@radius = radius
+	end
+
+	def area
+		Math::PI * @radius * @radius
+	end
+end
+
+class Triangle < Shape
+	def initialize(base, height)
+		@base = base
+		@height = height
+	end
+
+	def area
+		@base * @height / 2
+	end
+end
+
+rectangle = Rectangle.new(5, 10)
+puts "Rectangle area: #{rectangle.area}"
+
+circle = Circle.new(7)
+puts "Circle area: #{circle.area}"
+
+triangle = Triangle.new(8, 6)
+puts "Triangle area: #{triangle.area}"

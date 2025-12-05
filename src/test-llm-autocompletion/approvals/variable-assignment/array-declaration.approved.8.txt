@@ -1,1 +1,25 @@
-const numbers = [
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+for (let i = 0; i < numbers.length; i++) {
+  if (numbers[i] % 2 === 0) {
+    console.log(numbers[i]);
+  }
+}
+
+const cars = ["BMW", "Volvo", "Saab", "Ford", "Fiat", "Audi"];
+
+let text = "";
+for (let i = 0; i < cars.length; i++) {
+  text += cars[i] + " ";
+}
+console.log(text);
+
+const cars2 = ["BMW", "Volvo", "Saab", "Ford"];
+let i = 0;
+let text2 = "";
+
+while (cars2[i]) {
+  text2 += cars2[i] + " ";
+  i++;
+}
+console.log(text2);

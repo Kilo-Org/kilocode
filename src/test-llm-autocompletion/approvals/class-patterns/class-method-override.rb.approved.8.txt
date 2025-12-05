@@ -1,0 +1,57 @@
+class Shape
+	def area
+		0
+	end
+end
+
+class Rectangle < Shape
+	def initialize(width, height)
+		@width = width
+		@height = height
+	end
+	
+	def area
+		@width * @height
+	end
+end
+
+class Square < Rectangle
+	def initialize(side)
+		super(side, side)
+	end
+end
+
+class Circle < Shape
+	def initialize(radius)
+		@radius = radius
+	end
+
+	def area
+		Math::PI * @radius**2
+	end
+end
+
+class Triangle < Shape
+	def initialize(base, height)
+		@base = base
+		@height = height
+	end
+
+	def area
+		(@base * @height) / 2
+	end
+end
+
+class AreaCalculator
+	def initialize(shapes)
+		@shapes = shapes
+	end
+
+	def sum
+		@shapes.sum(&:area)
+	end
+end
+
+shapes = [Rectangle.new(10, 20), Square.new(10), Circle.new(10), Triangle.new(10, 20)]
+calculator = AreaCalculator.new(shapes)
+puts calculator.sum

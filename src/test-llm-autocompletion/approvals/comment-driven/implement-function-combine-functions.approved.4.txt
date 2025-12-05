@@ -8,7 +8,9 @@ function multiplyBy5(a) {
 }
 
 // Implement function to combine above functions
+// addNumbers and multiplyBy5
+// such that the result of addNumbers is multiplied by 5
 
-function combineFunctions(a, b) {
-    return multiplyBy5(addNumbers(a, b));
+function combine(a, b) {
+    return multiplyBy5(addNumbers(a, b))
 }

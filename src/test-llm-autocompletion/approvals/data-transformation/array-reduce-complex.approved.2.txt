@@ -1,0 +1,12 @@
+const orders = [{id: 1, items: [{price: 10}, {price: 20}]}, {id: 2, items: [{price: 15}]}];
+const totalRevenue = orders.reduce((acc, order) => {
+	const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
+	return acc + orderTotal;
+}, 0);
+
+console.log(totalRevenue); // 45
+
+// Explanation:
+// 1. The outer reduce iterates over each order.
+// 2. For each order, the inner reduce calculates the total price of all items in that order.
+// 3. The outer reduce accumulates the total revenue by adding the total of each order to the accumulator.

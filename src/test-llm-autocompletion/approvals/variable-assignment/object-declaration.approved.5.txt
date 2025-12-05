@@ -1,3 +1,15 @@
-const config = {
-  // Configuration object
+const config = require('../config');
+
+const { get } = require('../utils/request');
+
+const getUserInfo = async (accessToken, openId) => {
+  const url = `${config.mpApiHost}/sns/userinfo?access_token=${accessToken}&openid=${openId}&lang=zh_CN`;
+
+  const result = await get(url);
+
+  return result;
+};
+
+module.exports = {
+  getUserInfo,
 };

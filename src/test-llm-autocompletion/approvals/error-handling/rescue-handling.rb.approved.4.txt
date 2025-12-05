@@ -1,0 +1,12 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		if result.is_a?(Hash)
+			return result
+		else
+			raise "Invalid JSON format: Expected a Hash"
+		end
+	rescue JSON::ParserError => e
+		raise "Invalid JSON: #{e.message}"
+	end
+end

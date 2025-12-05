@@ -1,1 +1,20 @@
-const config = {<<<AUTOCOMPLETE_HERE>>>}
+const config = require('../config');
+const mongoose = require('mongoose');
+
+const connectDB = async () => {
+    try {
+        const conn = await mongoose.connect(config.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            useFindAndModify: false,
+            useCreateIndex: true
+        });
+
+        console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline.bold);
+    } catch (error) {
+        console.error(`Error: ${error.message}`.red);
+        process.exit(1);
+    }
+}
+
+module.exports = connectDB;

@@ -1,1 +1,11 @@
-const config = {}
+const config = require('../config');
+const { get } = require('../utils/request');
+
+const getUser = async (id) => {
+  const url = `${config.apiUrl}/users/${id}`;
+  return get(url);
+};
+
+module.exports = {
+  getUser,
+};

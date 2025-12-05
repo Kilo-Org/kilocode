@@ -2,5 +2,14 @@ const config = {
 	server: {
 	  port: 3000,
 	  host: 'localhost',
-	  protocol: 'http',
-	  timeout: 30000
+	},
+	db: {
+	  host: 'localhost',
+	  port: 5432,
+	  database: 'postgres',
+	  user: 'postgres',
+	  password: 'postgres',
+	},
+  };
+
+  export default config;

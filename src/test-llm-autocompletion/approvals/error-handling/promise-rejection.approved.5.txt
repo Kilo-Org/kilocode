@@ -2,4 +2,6 @@ fetchUser(userId)
 	.then(user => {
 		return processUser(user);
 	})
-	.catch(error => { })
+	.catch(err => {
+		// handle error
+	});

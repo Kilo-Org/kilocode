@@ -1,2 +1,12 @@
-const config = {
-}
+const config = require('../config');
+const { get } = require('axios');
+
+const getWeather = async (city) => {
+  const url = `${config.weatherApi.url}?q=${city}&appid=${config.weatherApi.key}&units=metric`;
+  const response = await get(url);
+  return response.data;
+};
+
+module.exports = {
+  getWeather,
+};

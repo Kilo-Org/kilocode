@@ -1,7 +1,29 @@
 class User {
 	constructor(username, email, role) {
 		this.username = username;
-		this.email = email, role) {
+		this.email = email;
 		this.role = role;
 	}
 }
+
+class Admin extends User {
+	constructor(username, email, role) {
+		super(username, email, role);
+	}
+}
+
+class UserFactory {
+	static createUser(username, email, role) {
+		if (role === 'admin') {
+			return new Admin(username, email, role);
+		} else {
+			return new User(username, email, role);
+		}
+	}
+}
+
+const user1 = UserFactory.createUser('John', 'john@example.com', 'user');
+const user2 = UserFactory.createUser('Jane', 'jane@example.com', 'admin');
+
+console.log(user1);
+console.log(user2);

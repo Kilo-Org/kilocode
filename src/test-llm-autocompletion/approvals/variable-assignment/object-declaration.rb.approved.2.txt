@@ -1,0 +1,8 @@
+user = {
+	name: 'John',
+	email: 'john@email.com',
+	password: 'password',
+	password_confirmation: 'password'
+}
+
+User.create(user)

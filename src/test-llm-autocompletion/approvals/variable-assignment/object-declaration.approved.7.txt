@@ -1,3 +1,18 @@
-const config = {
-  // Your configuration properties here
-}
+const config = require('./config');
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const routes = require('./routes');
+
+mongoose.connect(config.db, { useNewUrlParser: true, useUnifiedTopology: true });
+
+app.use(bodyParser.json());
+app.use(cors());
+
+app.use('/api', routes);
+
+app.listen(config.port, () => {
+    console.log(`Server is running on port ${config.port}`);
+});

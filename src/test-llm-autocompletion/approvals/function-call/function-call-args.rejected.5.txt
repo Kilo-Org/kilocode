@@ -1,0 +1,10 @@
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+
+// Arrow function
+const greet = (name) => { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+
+// Arrow function with implicit return
+const greet = (name) => 'Hello ' + name;
+greet('World'); // 'Hello World'
