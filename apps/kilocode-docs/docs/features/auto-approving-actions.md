@@ -263,7 +263,7 @@ Enables Kilo Code to create and complete subtasks automatically. This relates to
 This setting allows terminal command execution with controls. While risky, the allowlist and denylist features limit what commands can run.
 
 - Allowlist specific command prefixes (recommended)
-- Never use `*` wildcard in production or with sensitive data
+- Never use \* wildcard in production or with sensitive data
 - Consider security implications of each allowed command
 - Consider including potentially dangerous common commands in the deny list
 - Always verify commands that interact with external systems
