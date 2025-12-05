@@ -165,7 +165,7 @@
 			},
 			"globalIgnore": {
 				"label": "Globally ignored files",
-				"description": "File patterns that are always ignored, even without a .kilocodeignore file. Common sensitive files like .env, keys, and credentials are included by default.",
+				"description": "File patterns that are always ignored, even without a .kilocodeignore file.",
 				"addButton": "Add Pattern",
 				"patternPlaceholder": "Enter glob pattern (e.g., '*.key', '.env.*')"
 			}
