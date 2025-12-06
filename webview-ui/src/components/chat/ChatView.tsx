@@ -1700,7 +1700,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				placeholderText={placeholderText}
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
-				onSend={(preAssessedDifficulty) => handleSendMessage(inputValue, selectedImages, preAssessedDifficulty)}
+				onSend={() => handleSendMessage(inputValue, selectedImages)}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
 				onHeightChange={() => {
