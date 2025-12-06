@@ -130,6 +130,7 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * IntelligentHandler only assesses difficulty once per user message.
 	 */
 	isInitialMessage?: boolean
+	/**
 	 * Controls whether the model can return multiple tool calls in a single response.
 	 * When true, parallel tool calls are enabled (OpenAI's parallel_tool_calls=true).
 	 * When false (default), only one tool call is returned per response.

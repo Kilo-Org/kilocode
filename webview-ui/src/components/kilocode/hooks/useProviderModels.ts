@@ -309,6 +309,8 @@ export const getModelsByProvider = ({
 			return {
 				models: {},
 				defaultModel: "",
+			}
+		}
 		case "baseten": {
 			return {
 				models: basetenModels,
