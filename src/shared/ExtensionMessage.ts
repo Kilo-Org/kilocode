@@ -85,6 +85,7 @@ export interface ExtensionMessage {
 	type:
 		| "action"
 		| "state"
+		| "settingsImported"
 		| "selectedImages"
 		| "theme"
 		| "workspaceUpdated"
