@@ -9,18 +9,12 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { ApiStream } from "../transform/stream"
 import { type ApiHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { buildApiHandler } from "../index"
-
-interface IntelligentProfileConfig {
-	profileId?: string
-	profileName?: string
-}
-
-interface IntelligentProviderConfig {
-	easyProfile?: IntelligentProfileConfig
-	mediumProfile?: IntelligentProfileConfig
-	hardProfile?: IntelligentProfileConfig
-	classifierProfile?: IntelligentProfileConfig
-}
+import {
+	IntelligentProfileConfig,
+	IntelligentProviderConfig,
+	DifficultyLevel,
+	ProfileMap,
+} from "../../shared/types/intelligent-provider"
 
 /**
  * Intelligent Provider API processor.
@@ -31,10 +25,12 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 	private settingsManager: ProviderSettingsManager
 	private settings: ProviderSettings
 
-	private easyHandler: ApiHandler | undefined
-	private mediumHandler: ApiHandler | undefined
-	private hardHandler: ApiHandler | undefined
-	private classifierHandler: ApiHandler | undefined
+	private handlers: ProfileMap = {
+		easy: undefined,
+		medium: undefined,
+		hard: undefined,
+		classifier: undefined,
+	}
 
 	private isInitialized: boolean = false
 	private activeDifficulty: "easy" | "medium" | "hard" | null = null
@@ -50,6 +46,50 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 	private assessmentCompletedTs: number | null = null
 	private taskMessageEventHandler?: (...args: any[]) => void
 	private currentTaskId: string | null = null
+
+	private readonly CLASSIFIER_PROMPT = `You are an expert Task Complexity Classifier for software development tasks. Your role is to help route tasks to the appropriate AI model while minimizing costs.
+
+**Classification Framework:**
+
+EASY Tasks (Fast responses, basic understanding):
+- Single-step changes: rename variable, add console.log, fix typo
+- Questions about code: "what does this function do?", "explain this class"
+- Simple lookups: "how do I use this API?", "what's the syntax for..."
+- Basic operations: create file, delete function, edit import
+- Sum: 1-2 simple actions
+
+MEDIUM Tasks (Moderate complexity, balanced features):
+- Multi-step development: implement feature, create component, write tests
+- Analysis: debug issue, refactor function, optimize algorithm
+- Integration: connect to API, handle data flow, setup authentication
+- Configuration: modify settings, update dependencies, change architecture
+- Development workflow: create PR, merge code, deploy to staging
+- Sum: 3-5 related steps requiring context
+
+HARD Tasks (Complex thought processes, advanced reasoning):
+- System architecture: design plugin system, restructure application
+- Complex refactoring: multi-file changes across modules, design pattern implementation
+- Advanced debugging: diagnose race conditions, memory issues, performance bottlenecks
+- Enterprise features: authentication systems, real-time features, distributed systems
+- Strategy: codebase analysis, technology migrations, performance audits
+- Sum: 5+ interconnected steps requiring deep understanding
+
+**Classification Rules:**
+1. FOCUS ON COGNITIVE LOAD: Consider thinking time, domain knowledge, and complexity rather than code volume
+2. DEFAULT TO MEDIUM: When uncertain, choose medium to ensure capabilities
+3. SINGLE-DOMAIN vs MULTI-DOMAIN: Multi-system tasks are usually HARD
+4. TECHNICAL DEPTH: Tasks requiring advanced patterns, algorithms, or architectural decisions are HARD
+5. RESEARCH INTENSITY: Tasks needing investigation across unknown territory are HARD
+
+**Output:** JSON only: {"difficulty": "easy|medium|hard"}
+
+**Examples:**
+- "add error handling to this function" → easy (single edit)
+- "why does this code return undefined?" → easy (explanation requested)
+- "create a user registration form" → medium (multiple components, data flow)
+- "implement JWT authentication with refresh tokens" → hard (security critical, multi-system)
+- "optimize React component rendering performance" → hard (analysis + refactoring)
+- "migrate from REST to GraphQL" → hard (architecture change)`
 
 	constructor(options: ProviderSettings) {
 		super()
@@ -77,10 +117,12 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		if (!this.isInitialized || this.settingsHash !== currentHash) {
 			try {
 				// Reset handlers when re-initializing with different settings
-				this.easyHandler = undefined
-				this.mediumHandler = undefined
-				this.hardHandler = undefined
-				this.classifierHandler = undefined
+				this.handlers = {
+					easy: undefined,
+					medium: undefined,
+					hard: undefined,
+					classifier: undefined,
+				}
 				await this.loadConfiguredProfiles()
 				this.isInitialized = true
 				this.settingsHash = currentHash
@@ -96,7 +138,7 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			await this.initialize()
 
 			// Use the most capable handler for token counting (hard > medium > easy)
-			const activeHandler = this.hardHandler || this.mediumHandler || this.easyHandler
+			const activeHandler = this.handlers.hard || this.handlers.medium || this.handlers.easy
 			if (!activeHandler) {
 				return 0
 			}
@@ -173,12 +215,12 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		}
 
 		// Fallback: Return the most capable model info if no active difficulty
-		if (this.hardHandler) {
-			return this.hardHandler.getModel()
-		} else if (this.mediumHandler) {
-			return this.mediumHandler.getModel()
-		} else if (this.easyHandler) {
-			return this.easyHandler.getModel()
+		if (this.handlers.hard) {
+			return this.handlers.hard.getModel()
+		} else if (this.handlers.medium) {
+			return this.handlers.medium.getModel()
+		} else if (this.handlers.easy) {
+			return this.handlers.easy.getModel()
 		}
 
 		return {
@@ -232,105 +274,61 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 	}
 
 	private async loadConfiguredProfiles(): Promise<void> {
-		// The profiles are stored in the settings with difficultyLevel information
 		const profiles = this.settings.profiles || []
+		const config = this.mapProfilesToConfig(profiles)
 
-		// Convert profiles array to our config structure
-		const intelligentConfig: IntelligentProviderConfig = {}
-		profiles.forEach((profile: any) => {
-			// Check if this profile has difficultyLevel (from our UI storage)
-			if (profile.difficultyLevel === "easy") {
-				intelligentConfig.easyProfile = {
-					profileId: profile.profileId,
-					profileName: profile.profileName,
-				}
-			} else if (profile.difficultyLevel === "medium") {
-				intelligentConfig.mediumProfile = {
-					profileId: profile.profileId,
-					profileName: profile.profileName,
-				}
-			} else if (profile.difficultyLevel === "hard") {
-				intelligentConfig.hardProfile = {
-					profileId: profile.profileId,
-					profileName: profile.profileName,
-				}
-			} else if (profile.difficultyLevel === "classifier") {
-				intelligentConfig.classifierProfile = {
-					profileId: profile.profileId,
-					profileName: profile.profileName,
-				}
+		// Validate required profiles in one place
+		const required = ["easy", "medium", "hard"] as const
+		const missing = required.filter((type) => !config[`${type}Profile` as keyof IntelligentProviderConfig])
+		if (missing.length > 0) {
+			throw new Error(`Required profiles missing: ${missing.join(", ")}`)
+		}
+
+		// Load all profiles in parallel
+		await Promise.all([
+			config.easyProfile && this.loadProfile(config.easyProfile, "easy"),
+			config.mediumProfile && this.loadProfile(config.mediumProfile, "medium"),
+			config.hardProfile && this.loadProfile(config.hardProfile, "hard"),
+			config.classifierProfile && this.loadProfile(config.classifierProfile, "classifier"),
+		])
+	}
+
+	private mapProfilesToConfig(profiles: any[]): IntelligentProviderConfig {
+		return profiles.reduce((config, profile) => {
+			const type = profile.difficultyLevel as DifficultyLevel
+			config[`${type}Profile` as keyof IntelligentProviderConfig] = {
+				profileId: profile.profileId,
+				profileName: profile.profileName,
 			}
-		})
+			return config
+		}, {} as IntelligentProviderConfig)
+	}
 
-		// Validate that easy, medium, and hard profiles are all present
-		if (!intelligentConfig.easyProfile) {
-			throw new Error("Easy profile is required for Intelligent Provider configuration")
-		}
-		if (!intelligentConfig.mediumProfile) {
-			throw new Error("Medium profile is required for Intelligent Provider configuration")
-		}
-		if (!intelligentConfig.hardProfile) {
-			throw new Error("Hard profile is required for Intelligent Provider configuration")
-		}
+	private async loadProfile(config: IntelligentProfileConfig, type: DifficultyLevel): Promise<void> {
+		if (!config?.profileId) return
 
-		// Load classifier profile
-		if (intelligentConfig.classifierProfile?.profileId) {
-			try {
-				const profileSettings = await this.settingsManager.getProfile({
-					id: intelligentConfig.classifierProfile.profileId,
-				})
-				this.classifierHandler = buildApiHandler(profileSettings)
-				console.debug(`Loaded classifier profile: ${intelligentConfig.classifierProfile.profileName}`)
-			} catch (error) {
-				console.error(
-					`Failed to load classifier profile ${intelligentConfig.classifierProfile.profileName}:`,
-					error,
-				)
-			}
+		try {
+			const profileSettings = await this.settingsManager.getProfile({
+				id: config.profileId,
+			})
+			const handler = buildApiHandler(profileSettings)
+
+			this.handlers[type] = handler
+
+			console.debug(`Loaded ${type} profile: ${config.profileName}`)
+		} catch (error) {
+			console.error(`Failed to load ${type} profile ${config.profileName}:`, error)
+		}
+	}
+
+	private parseDifficultyResponse(response: string): "easy" | "medium" | "hard" {
+		const jsonMatch = response.match(/\{[^}]+\}/)
+		if (!jsonMatch) {
+			throw new Error(`Invalid AI response: ${response}`)
 		}
 
-		// Load easy profile
-		if (intelligentConfig.easyProfile?.profileId) {
-			try {
-				const profileSettings = await this.settingsManager.getProfile({
-					id: intelligentConfig.easyProfile.profileId,
-				})
-				this.easyHandler = buildApiHandler(profileSettings)
-				console.debug(`Loaded easy profile: ${intelligentConfig.easyProfile.profileName}`)
-			} catch (error) {
-				console.error(`Failed to load easy profile ${intelligentConfig.easyProfile.profileName}:`, error)
-			}
-		}
-
-		// Load medium profile
-		if (intelligentConfig.mediumProfile?.profileId) {
-			try {
-				const profileSettings = await this.settingsManager.getProfile({
-					id: intelligentConfig.mediumProfile.profileId,
-				})
-				this.mediumHandler = buildApiHandler(profileSettings)
-				console.debug(`Loaded medium profile: ${intelligentConfig.mediumProfile.profileName}`)
-			} catch (error) {
-				console.error(`Failed to load medium profile ${intelligentConfig.mediumProfile.profileName}:`, error)
-			}
-		}
-
-		// Load hard profile
-		if (intelligentConfig.hardProfile?.profileId) {
-			try {
-				const profileSettings = await this.settingsManager.getProfile({
-					id: intelligentConfig.hardProfile.profileId,
-				})
-				this.hardHandler = buildApiHandler(profileSettings)
-				console.debug(`Loaded hard profile: ${intelligentConfig.hardProfile.profileName}`)
-			} catch (error) {
-				console.error(`Failed to load hard profile ${intelligentConfig.hardProfile.profileName}:`, error)
-			}
-		}
-
-		if (!this.easyHandler && !this.mediumHandler && !this.hardHandler) {
-			console.warn("No profiles configured for IntelligentHandler")
-		}
+		const parsed = JSON.parse(jsonMatch[0])
+		return parsed.difficulty.toLowerCase()
 	}
 
 	async assessDifficulty(
@@ -395,8 +393,8 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 		let classificationHandler: ApiHandler | undefined
 
 		// Prioritize the classifier handler if it's configured and no specific classifierProfileId is requested
-		if (this.classifierHandler && !metadata?.classifierProfileId) {
-			classificationHandler = this.classifierHandler
+		if (this.handlers.classifier && !metadata?.classifierProfileId) {
+			classificationHandler = this.handlers.classifier
 		} else if (metadata?.classifierProfileId) {
 			// Find the handler based on the classifier profile ID
 			// We need to match the profile ID with the actual profile settings
@@ -405,71 +403,20 @@ export class IntelligentHandler extends EventEmitter implements ApiHandler {
 			// Find which difficulty level the classifierProfileId belongs to
 			const profile = profiles.find((p) => p.profileId === metadata.classifierProfileId)
 			if (profile && profile.difficultyLevel) {
-				if (profile.difficultyLevel === "easy") {
-					classificationHandler = this.easyHandler
-				} else if (profile.difficultyLevel === "medium") {
-					classificationHandler = this.mediumHandler
-				} else if (profile.difficultyLevel === "hard") {
-					classificationHandler = this.hardHandler
-				} else if (profile.difficultyLevel === "classifier") {
-					classificationHandler = this.classifierHandler
-				}
+				const handlerType = profile.difficultyLevel as DifficultyLevel
+				classificationHandler = this.handlers[handlerType]
 			}
 		}
 
 		// If no specific classifier handler found or no metadata provided, use easy handler as default
 		if (!classificationHandler) {
-			classificationHandler = this.easyHandler
+			classificationHandler = this.handlers.easy
 		}
 
 		// If we don't have a classification handler, throw an error
 		if (!classificationHandler) {
 			throw new Error("No classification handler available for intelligent assessment")
 		}
-
-		const classifierPrompt = `You are an expert Task Complexity Classifier for software development tasks. Your role is to help route tasks to the appropriate AI model while minimizing costs.
-
-**Classification Framework:**
-
-EASY Tasks (Fast responses, basic understanding):
-- Single-step changes: rename variable, add console.log, fix typo
-- Questions about code: "what does this function do?", "explain this class"
-- Simple lookups: "how do I use this API?", "what's the syntax for..."
-- Basic operations: create file, delete function, edit import
-- Sum: 1-2 simple actions
-
-MEDIUM Tasks (Moderate complexity, balanced features):
-- Multi-step development: implement feature, create component, write tests
-- Analysis: debug issue, refactor function, optimize algorithm
-- Integration: connect to API, handle data flow, setup authentication
-- Configuration: modify settings, update dependencies, change architecture
-- Development workflow: create PR, merge code, deploy to staging
-- Sum: 3-5 related steps requiring context
-
-HARD Tasks (Complex thought processes, advanced reasoning):
-- System architecture: design plugin system, restructure application
-- Complex refactoring: multi-file changes across modules, design pattern implementation
-- Advanced debugging: diagnose race conditions, memory issues, performance bottlenecks
-- Enterprise features: authentication systems, real-time features, distributed systems
-- Strategy: codebase analysis, technology migrations, performance audits
-- Sum: 5+ interconnected steps requiring deep understanding
-
-**Classification Rules:**
-1. FOCUS ON COGNITIVE LOAD: Consider thinking time, domain knowledge, and complexity rather than code volume
-2. DEFAULT TO MEDIUM: When uncertain, choose medium to ensure capabilities
-3. SINGLE-DOMAIN vs MULTI-DOMAIN: Multi-system tasks are usually HARD
-4. TECHNICAL DEPTH: Tasks requiring advanced patterns, algorithms, or architectural decisions are HARD
-5. RESEARCH INTENSITY: Tasks needing investigation across unknown territory are HARD
-
-**Output:** JSON only: {"difficulty": "easy|medium|hard"}
-
-**Examples:**
-- "add error handling to this function" → easy (single edit)
-- "why does this code return undefined?" → easy (explanation requested)
-- "create a user registration form" → medium (multiple components, data flow)
-- "implement JWT authentication with refresh tokens" → hard (security critical, multi-system)
-- "optimize React component rendering performance" → hard (analysis + refactoring)
-- "migrate from REST to GraphQL" → hard (architecture change)`
 
 		const taskToClassify = `Task: "${prompt.substring(0, 500)}"`
 
@@ -479,7 +426,7 @@ HARD Tasks (Complex thought processes, advanced reasoning):
 
 			// Use the classification handler to perform classification
 			const response = await classificationHandler.createMessage(
-				classifierPrompt,
+				this.CLASSIFIER_PROMPT,
 				[{ role: "user", content: taskToClassify }],
 				{ taskId: "classification-task" } as ApiHandlerCreateMessageMetadata,
 			)
@@ -495,15 +442,7 @@ HARD Tasks (Complex thought processes, advanced reasoning):
 			// Debug: Log the raw AI response
 			console.debug(`IntelligentHandler: Classifier AI response: "${fullResponse.trim()}"`)
 
-			// Parse the JSON response
-			const jsonMatch = fullResponse.match(/\{[^}]+\}/)
-			if (jsonMatch) {
-				const parsed = JSON.parse(jsonMatch[0])
-				console.debug(`IntelligentHandler: Parsed difficulty: ${parsed.difficulty}`)
-				return parsed.difficulty.toLowerCase()
-			}
-
-			throw new Error(`Invalid AI response: ${fullResponse}`)
+			return this.parseDifficultyResponse(fullResponse)
 		} catch (error) {
 			console.error("AI classification failed:", error)
 			throw error
@@ -513,13 +452,13 @@ HARD Tasks (Complex thought processes, advanced reasoning):
 	private getHandlerForDifficulty(difficulty: "easy" | "medium" | "hard"): ApiHandler | undefined {
 		switch (difficulty) {
 			case "easy":
-				return this.easyHandler
+				return this.handlers.easy
 			case "medium":
-				return this.mediumHandler
+				return this.handlers.medium
 			case "hard":
-				return this.hardHandler
+				return this.handlers.hard
 			default:
-				return this.mediumHandler // default to medium
+				return this.handlers.medium // default to medium
 		}
 	}
 

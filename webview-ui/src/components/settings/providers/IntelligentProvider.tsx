@@ -3,6 +3,7 @@ import { type ProviderSettings, type ProviderSettingsEntry } from "@roo-code/typ
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { IntelligentProviderPresentation } from "./IntelligentProviderPresentation"
+import { useIntelligentProviderValidation } from "./hooks/useIntelligentProviderValidation"
 
 type IntelligentProviderProps = {
 	apiConfiguration: ProviderSettings
@@ -27,22 +28,7 @@ export const IntelligentProvider = memo(
 		const { listApiConfigMeta, currentApiConfigName } = useExtensionState()
 
 		// Show validation error in component UI for better user experience
-		const validationError = useMemo(() => {
-			const profiles = apiConfiguration.profiles || []
-			const difficultyLevels = profiles.map((p: any) => p.difficultyLevel)
-			const hasEasy = difficultyLevels.includes("easy")
-			const hasMedium = difficultyLevels.includes("medium")
-			const hasHard = difficultyLevels.includes("hard")
-
-			if (!hasEasy || !hasMedium || !hasHard) {
-				const missing = []
-				if (!hasEasy) missing.push("Easy")
-				if (!hasMedium) missing.push("Medium")
-				if (!hasHard) missing.push("Hard")
-				return `Required profiles missing: ${missing.join(", ")}. Please configure all three difficulty profiles before saving.`
-			}
-			return null
-		}, [apiConfiguration.profiles])
+		const validationError = useIntelligentProviderValidation(apiConfiguration.profiles || [])
 
 		// Notify parent component about validation state
 		const isValid = !validationError
