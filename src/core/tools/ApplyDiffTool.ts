@@ -6,6 +6,7 @@ import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
+import { parseParamsFromArgs } from "../../utils/pathUtils"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { fileExistsAtPath } from "../../utils/fs"
@@ -25,9 +26,13 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 	readonly name = "apply_diff" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): ApplyDiffParams {
+		const args = parseParamsFromArgs(params.args, ["path", "diff"])
+		const relPath = params.path || args.path || ""
+		const diff = params.diff || args.diff || ""
+
 		return {
-			path: params.path || "",
-			diff: params.diff || "",
+			path: relPath,
+			diff: diff,
 		}
 	}
 
