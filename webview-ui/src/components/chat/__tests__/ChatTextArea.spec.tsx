@@ -1,5 +1,7 @@
 import { defaultModeSlug } from "@roo/modes"
 
+import type { MockInstance } from "vitest"
+
 import { render, fireEvent, screen } from "@src/utils/test-utils"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
@@ -1064,6 +1066,88 @@ describe("ChatTextArea", () => {
 				'<mark class="mention-context-textarea-highlight">/setup</mark>',
 			)
 			expect(highlightLayer.innerHTML).toContain("/setup")
+		})
+	})
+
+	describe("auto-scroll behavior", () => {
+		const renderAutoScrollSubject = (overrideProps: Partial<typeof defaultProps> = {}) => {
+			const props = { ...defaultProps, ...overrideProps }
+			const utils = render(<ChatTextArea {...props} />)
+
+			const rerenderWithInputValue = (inputValue: string) => {
+				utils.rerender(<ChatTextArea {...props} inputValue={inputValue} />)
+			}
+
+			const getTextarea = () => utils.getByRole("textbox") as HTMLTextAreaElement
+
+			return { ...utils, getTextarea, rerenderWithInputValue }
+		}
+
+		type RequestAnimationFrameSpy = MockInstance<(callback: FrameRequestCallback) => number>
+		type CancelAnimationFrameSpy = MockInstance<(handle: number) => void>
+
+		let requestAnimationFrameSpy: RequestAnimationFrameSpy
+		let cancelAnimationFrameSpy: CancelAnimationFrameSpy
+
+		beforeEach(() => {
+			requestAnimationFrameSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+				callback(0)
+				return 1 as unknown as number
+			})
+			cancelAnimationFrameSpy = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {})
+		})
+
+		afterEach(() => {
+			requestAnimationFrameSpy.mockRestore()
+			cancelAnimationFrameSpy.mockRestore()
+		})
+
+		it("keeps the caret visible when new text is appended at the end", () => {
+			const longText = Array.from({ length: 40 }, (_, index) => `line ${index}`).join("\n")
+			const { getTextarea, rerenderWithInputValue } = renderAutoScrollSubject()
+			const textarea = getTextarea()
+
+			Object.defineProperty(textarea, "scrollHeight", {
+				configurable: true,
+				value: 800,
+			})
+			textarea.scrollTop = 0
+
+			fireEvent.change(textarea, {
+				target: {
+					value: longText,
+					selectionStart: longText.length,
+					selectionEnd: longText.length,
+				},
+			})
+			rerenderWithInputValue(longText)
+
+			expect(requestAnimationFrameSpy).toHaveBeenCalled()
+			expect(getTextarea().scrollTop).toBe(800)
+		})
+
+		it("does not auto-scroll when editing away from the caret end", () => {
+			const longText = Array.from({ length: 20 }, (_, index) => `line ${index}`).join("\n")
+			const { getTextarea, rerenderWithInputValue } = renderAutoScrollSubject()
+			const textarea = getTextarea()
+
+			Object.defineProperty(textarea, "scrollHeight", {
+				configurable: true,
+				value: 600,
+			})
+			textarea.scrollTop = 42
+
+			fireEvent.change(textarea, {
+				target: {
+					value: `prefix ${longText}`,
+					selectionStart: 1,
+					selectionEnd: 1,
+				},
+			})
+			rerenderWithInputValue(`prefix ${longText}`)
+
+			expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
+			expect(getTextarea().scrollTop).toBe(42)
 		})
 	})
 
