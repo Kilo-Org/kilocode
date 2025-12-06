@@ -25,7 +25,16 @@ import {
 	selectProviderAtom,
 	configAtom,
 } from "../atoms/config.js"
-import { routerModelsAtom, extensionStateAtom, isParallelModeAtom, chatMessagesAtom } from "../atoms/extension.js"
+import {
+	routerModelsAtom,
+	extensionStateAtom,
+	isParallelModeAtom,
+	chatMessagesAtom,
+	apiConfigurationAtom,
+	extensionModeAtom,
+	apiConfigurationLastLocalUpdateAtom,
+	extensionModeLastLocalUpdateAtom,
+} from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import {
@@ -44,6 +53,8 @@ import {
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
+import { mapConfigToExtensionState } from "../../config/mapper.js"
+import { logs } from "../../services/logs.js"
 
 const TERMINAL_CLEAR_DELAY_MS = 500
 
@@ -92,6 +103,10 @@ export function useCommandContext(): UseCommandContextReturn {
 	const setTheme = useSetAtom(setThemeAtom)
 	const updateProvider = useSetAtom(updateProviderAtom)
 	const selectProvider = useSetAtom(selectProviderAtom)
+	const setApiConfiguration = useSetAtom(apiConfigurationAtom)
+	const setApiConfigurationLastLocalUpdate = useSetAtom(apiConfigurationLastLocalUpdateAtom)
+	const setExtensionMode = useSetAtom(extensionModeAtom)
+	const setExtensionModeLastLocalUpdate = useSetAtom(extensionModeLastLocalUpdateAtom)
 	const refreshRouterModels = useSetAtom(requestRouterModelsAtom)
 	const setMessageCutoffTimestamp = useSetAtom(setMessageCutoffTimestampAtom)
 	const setCommittingParallelMode = useSetAtom(isCommittingParallelModeAtom)
@@ -210,6 +225,46 @@ export function useCommandContext(): UseCommandContextReturn {
 				// Provider selection function
 				selectProvider: async (providerId: string) => {
 					await selectProvider(providerId)
+					// Directly update UI atoms after provider selection to ensure StatusBar updates
+					// The config atom has been updated, so we can get the new provider and map it
+					const provider = config.providers.find((p) => p.id === providerId)
+					if (provider) {
+						const updatedConfig = { ...config, provider: providerId }
+						const mappedState = mapConfigToExtensionState(updatedConfig)
+						const now = Date.now()
+						if (mappedState.apiConfiguration) {
+							logs.debug(
+								"useCommandContext: Directly setting apiConfiguration with protection",
+								"useCommandContext",
+								{
+									apiProvider: mappedState.apiConfiguration.apiProvider,
+									providerId,
+									protectionTimestamp: now,
+								},
+							)
+							setApiConfiguration(mappedState.apiConfiguration)
+							setApiConfigurationLastLocalUpdate(now)
+						}
+						if (mappedState.mode) {
+							setExtensionMode(mappedState.mode)
+							setExtensionModeLastLocalUpdate(now)
+						}
+					}
+					// Wait for extension to fully process the provider change before clearing task
+					// This ensures the ContextProxy is fully updated with the new configuration
+					await new Promise((resolve) => setTimeout(resolve, 200))
+
+					// Explicitly activate the profile to ensure the extension switches to it
+					// This fixes an issue where upsertApiConfiguration alone might not trigger activation
+					await sendMessage({
+						type: "loadApiConfiguration",
+						text: providerId,
+					})
+
+					// Clear the current task so the next message creates a new task with the new provider
+					// Existing tasks use the configuration they were created with
+					await clearTask()
+					logs.info("Cleared task after provider change to ensure new provider is used", "useCommandContext")
 				},
 				// Profile data context
 				profileData,
@@ -252,6 +307,10 @@ export function useCommandContext(): UseCommandContextReturn {
 			kilocodeDefaultModel,
 			updateProvider,
 			selectProvider,
+			setApiConfiguration,
+			setApiConfigurationLastLocalUpdate,
+			setExtensionMode,
+			setExtensionModeLastLocalUpdate,
 			refreshRouterModels,
 			replaceMessages,
 			setMessageCutoffTimestamp,
