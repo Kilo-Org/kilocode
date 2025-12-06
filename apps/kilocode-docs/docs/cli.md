@@ -435,6 +435,171 @@ kilocode --continue
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous task in the workspace
 
+## ACP Mode (Agent Client Protocol)
+
+ACP mode enables Kilo Code to integrate with code editors that support the [Agent Client Protocol](https://agentclientprotocol.com/), such as [Zed](https://zed.dev/). This allows you to use Kilo Code as an AI coding agent directly within your editor.
+
+### What is ACP?
+
+The Agent Client Protocol (ACP) is a standardized protocol for communication between code editors and AI coding agents. It enables:
+
+- **Seamless editor integration**: Use Kilo Code directly in your editor's AI panel
+- **Human-in-the-loop approval**: Review and approve tool actions before they execute
+- **Streaming responses**: See agent responses as they're generated
+- **Context awareness**: The agent has access to your workspace and can read/write files
+
+### Running in ACP Mode
+
+```bash
+# Run the CLI in ACP mode
+kilocode --acp
+
+# Run with a specific workspace
+kilocode --acp --workspace /path/to/project
+```
+
+When running in ACP mode, the CLI:
+
+1. Communicates over stdin/stdout using JSON-RPC 2.0
+2. Waits for commands from the connected editor
+3. Requests permission from the user before executing tools
+4. Streams responses back to the editor in real-time
+
+### Testing with Zed Editor
+
+Follow these steps to test Kilo Code's ACP integration with Zed:
+
+#### Prerequisites
+
+1. **Install Kilo Code CLI globally**:
+
+    ```bash
+    npm install -g @kilocode/cli
+    ```
+
+2. **Verify the CLI is working**:
+
+    ```bash
+    kilocode --help | grep acp
+    # Should show: --acp  Run in ACP (Agent Client Protocol) mode...
+    ```
+
+3. **Ensure you have a provider configured**:
+
+    ```bash
+    kilocode config
+    # Configure your API provider (OpenRouter, Anthropic, etc.)
+    ```
+
+4. **Install Zed** (if not already installed):
+    - Download from [zed.dev](https://zed.dev/)
+    - Or on macOS: `brew install zed`
+
+#### Configure Zed
+
+1. Open Zed's settings file:
+
+    - macOS: `~/.config/zed/settings.json`
+    - Linux: `~/.config/zed/settings.json`
+    - Or open Zed and press `Cmd/Ctrl + ,` then click "Open Settings (JSON)"
+
+2. Add the Kilo Code agent configuration:
+
+```json
+{
+	"agent": {
+		"default_profile": "kilocode",
+		"profiles": {
+			"kilocode": {
+				"command": "kilocode",
+				"args": ["--acp"]
+			}
+		}
+	}
+}
+```
+
+3. Save the file and restart Zed
+
+#### Test the Integration
+
+1. **Open a project in Zed**:
+
+    ```bash
+    cd /path/to/your/project
+    zed .
+    ```
+
+2. **Open the AI panel**:
+
+    - Press `Ctrl/Cmd + Shift + A`
+    - Or use the menu: View → AI Panel
+
+3. **Select the Kilo Code agent**:
+
+    - Click the agent dropdown in the AI panel
+    - Select "kilocode"
+
+4. **Send a test message**:
+
+    - Type a message like "What files are in this project?"
+    - Press Enter to send
+
+5. **Verify the response**:
+    - You should see the agent streaming a response
+    - Tool calls (like reading files) will prompt for approval in the editor
+
+#### Troubleshooting
+
+**Agent not appearing in Zed:**
+
+- Ensure the CLI is installed globally and in your PATH
+- Try running `which kilocode` to verify installation
+- Check Zed's logs for error messages
+
+**Connection errors:**
+
+- Verify your provider API key is configured: `kilocode config`
+- Check network connectivity
+- Look at Zed's developer console for detailed errors
+
+**Permission prompts not appearing:**
+
+- Ensure you're using a recent version of Zed with ACP support
+- The agent requires approval for file operations and commands
+
+**Debugging mode:**
+
+- Run `kilocode --acp` directly in a terminal to see raw JSON-RPC messages
+- This can help identify protocol-level issues
+
+### Supported ACP Features
+
+| Feature             | Status | Description                                         |
+| ------------------- | ------ | --------------------------------------------------- |
+| `initialize`        | ✅     | Establish connection and negotiate capabilities     |
+| `newSession`        | ✅     | Create a new conversation session                   |
+| `prompt`            | ✅     | Send user messages and receive agent responses      |
+| `cancel`            | ✅     | Cancel an ongoing operation                         |
+| `sessionUpdate`     | ✅     | Stream agent responses in real-time                 |
+| `requestPermission` | ✅     | Request user approval for tool actions              |
+| `setSessionMode`    | ✅     | Switch between modes (architect, code, debug, etc.) |
+
+### How Tool Approval Works
+
+When Kilo Code needs to perform an action (like writing a file or running a command), it requests permission from the editor. The editor displays this to the user, who can:
+
+- **Allow**: Execute the action
+- **Deny**: Reject the action and continue
+
+This ensures you maintain control over what changes the agent makes to your codebase.
+
+### Notes
+
+- ACP mode is designed for editor integration, not direct terminal use
+- Your provider configuration from `kilocode config` is used for API access
+- The same modes (architect, code, debug, etc.) are available as in the standard CLI
+
 ## Environment Variable Overrides
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
