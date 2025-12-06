@@ -299,3 +299,23 @@ export const sendSecondaryButtonClickAtom = atom(null, async (get, set) => {
 
 	await set(sendWebviewMessageAtom, message)
 })
+
+/**
+ * Action atom to toggle YOLO mode
+ * Sends the yoloMode message to the extension to enable/disable auto-approval of all operations
+ */
+export const toggleYoloModeAtom = atom(null, async (get, set) => {
+	const { yoloModeAtom } = await import("./ui.js")
+
+	const currentValue = get(yoloModeAtom)
+	const newValue = !currentValue
+
+	set(yoloModeAtom, newValue)
+	logs.info(`YOLO mode ${newValue ? "enabled" : "disabled"}`, "actions")
+
+	const message: WebviewMessage = {
+		type: "yoloMode",
+		bool: newValue,
+	}
+	await set(sendWebviewMessageAtom, message)
+})

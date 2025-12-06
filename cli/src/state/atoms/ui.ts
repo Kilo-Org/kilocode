@@ -55,6 +55,12 @@ export const messageCutoffTimestampAtom = atom<number>(0)
 export const errorAtom = atom<string | null>(null)
 
 /**
+ * Atom to track YOLO mode state
+ * When enabled, all operations are auto-approved without confirmation
+ */
+export const yoloModeAtom = atom<boolean>(false)
+
+/**
  * Atom to track when parallel mode is committing changes
  * Used to disable input and show "Committing your changes..." message
  */
