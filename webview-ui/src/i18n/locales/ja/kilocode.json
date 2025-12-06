@@ -264,6 +264,21 @@
 		"perDay": "1日あたり",
 		"perHour": "1時間あたり"
 	},
+	"intelligentProvider": {
+		"title": "インテリジェントプロバイダー設定",
+		"description": "異なる難易度レベル用に3つのプロファイルを構成します。システムはリクエストの複雑さに基づいて適切なプロバイダーを自動的に選択します。",
+		"easyProfileLabel": "簡単プロファイル",
+		"mediumProfileLabel": "中程度プロファイル",
+		"hardProfileLabel": "難しいプロファイル",
+		"selectProfilePlaceholder": "プロファイルを選択...",
+		"clearProfile": "プロファイルをクリア",
+		"noProfilesAvailable": "利用可能なプロファイルがありません。最初に少なくとも1つの非インテリジェントプロファイルを構成してください。",
+		"classifierProfileLabel": "分類器プロファイル",
+		"classifierProfileDescription": "難易度分類に使用するプロファイルを指定します。設定されていない場合、簡単プロファイルの使用にデフォルトします。",
+		"easyProfileDescription": "簡単な説明、基本的な要約、または単純なコードスニペットなどの単純なリクエストに使用されます。",
+		"mediumProfileDescription": "コード分析、実装提案、または中程度の複雑さのタスクなどの中程度なリクエストに使用されます。",
+		"hardProfileDescription": "アーキテクチャ設計、複雑なデバッグ、または高度な問題解決などの複雑なリクエストに使用されます。"
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "画像は現在のモデルではサポートされていません。",
 		"maxImagesReached": "メッセージあたり最大20枚の画像。さらに追加するには一部の画像を削除してください。",

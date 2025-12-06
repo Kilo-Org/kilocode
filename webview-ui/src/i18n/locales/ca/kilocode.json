@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
+	},
+	"intelligentProvider": {
+		"title": "Configuració del Proveïdor Intel·ligent",
+		"description": "Configura tres perfils per a diferents nivells de dificultat. El sistema seleccionarà automàticament el proveïdor adequat segons la complexitat de la teva sol·licitud.",
+		"easyProfileLabel": "Perfil Fàcil",
+		"mediumProfileLabel": "Perfil Mitjà",
+		"hardProfileLabel": "Perfil Difícil",
+		"selectProfilePlaceholder": "Selecciona perfil...",
+		"clearProfile": "Esborrar perfil",
+		"noProfilesAvailable": "No hi ha perfils disponibles. Si us plau, configura primer almenys un perfil de proveïdor no intel·ligent.",
+		"classifierProfileLabel": "Perfil Classificador",
+		"classifierProfileDescription": "Especifica quin perfil utilitzar per a la classificació de dificultat. Si no s'estableix, per defecte s'utilitza el perfil fàcil.",
+		"easyProfileDescription": "S'utilitza per a sol·licituds senzilles com explicacions ràpides, resums bàsics o fragments de codi senzills.",
+		"mediumProfileDescription": "S'utilitza per a sol·licituds moderades com anàlisi de codi, suggeriments d'implementació o tasques de complexitat moderada.",
+		"hardProfileDescription": "S'utilitza per a sol·licituds complexes com disseny d'arquitectura, depuració complexa o resolució avançada de problemes."
 	}
 }

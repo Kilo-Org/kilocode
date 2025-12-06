@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nuevo: Comparte modos creando una organización"
+	},
+	"intelligentProvider": {
+		"title": "Configuración del Proveedor Inteligente",
+		"description": "Configura tres perfiles para diferentes niveles de dificultad. El sistema seleccionará automáticamente el proveedor apropiado basado en la complejidad de tu solicitud.",
+		"easyProfileLabel": "Perfil Fácil",
+		"mediumProfileLabel": "Perfil Medio",
+		"hardProfileLabel": "Perfil Difícil",
+		"selectProfilePlaceholder": "Seleccionar perfil...",
+		"clearProfile": "Limpiar perfil",
+		"noProfilesAvailable": "No hay perfiles disponibles. Por favor, configura al menos un perfil de proveedor no inteligente primero.",
+		"classifierProfileLabel": "Perfil Clasificador",
+		"classifierProfileDescription": "Especifica qué perfil usar para la clasificación de dificultad. Si no se establece, por defecto se usa el perfil fácil.",
+		"easyProfileDescription": "Se usa para solicitudes simples como explicaciones rápidas, resúmenes básicos o fragmentos de código simples.",
+		"mediumProfileDescription": "Se usa para solicitudes moderadas como análisis de código, sugerencias de implementación o tareas de complejidad moderada.",
+		"hardProfileDescription": "Se usa para solicitudes complejas como diseño de arquitectura, depuración compleja o resolución avanzada de problemas."
 	}
 }

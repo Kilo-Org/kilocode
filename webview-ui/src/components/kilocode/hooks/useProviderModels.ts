@@ -304,6 +304,13 @@ export const getModelsByProvider = ({
 				defaultModel: minimaxDefaultModelId,
 			}
 		}
+		case "intelligent": {
+			// Intelligent provider doesn't have its own models, it uses profiles
+			return {
+				models: {},
+				defaultModel: "",
+			}
+		}
 		case "baseten": {
 			return {
 				models: basetenModels,

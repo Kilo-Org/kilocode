@@ -257,6 +257,21 @@
 		"perDay": "Al Giorno",
 		"requestsLabel": "Richieste"
 	},
+	"intelligentProvider": {
+		"title": "Impostazioni Provider Intelligente",
+		"description": "Configura tre profili per diversi livelli di difficoltà. Il sistema selezionerà automaticamente il provider appropriato basandosi sulla complessità della tua richiesta.",
+		"easyProfileLabel": "Profilo Semplice",
+		"mediumProfileLabel": "Profilo Medio",
+		"hardProfileLabel": "Profilo Difficile",
+		"selectProfilePlaceholder": "Seleziona profilo...",
+		"clearProfile": "Cancella profilo",
+		"noProfilesAvailable": "Nessun profilo disponibile. Configura almeno un profilo non intelligente prima.",
+		"classifierProfileLabel": "Profilo Classificatore",
+		"classifierProfileDescription": "Specifica quale profilo utilizzare per la classificazione della difficoltà. Se non impostato, usa il profilo semplice.",
+		"easyProfileDescription": "Utilizzato per richieste semplici come spiegazioni rapide, riepiloghi di base o semplici frammenti di codice.",
+		"mediumProfileDescription": "Utilizzato per richieste moderate come analisi del codice, suggerimenti di implementazione o attività di complessità moderata.",
+		"hardProfileDescription": "Utilizzato per richieste complesse come progettazione dell'architettura, debug complesso o risoluzione avanzata dei problemi."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Le immagini non sono supportate dal modello attuale.",
 		"maxImagesReached": "Massimo 20 immagini per messaggio. Rimuovi alcune immagini per aggiungerne altre.",

@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
+	},
+	"intelligentProvider": {
+		"title": "智能提供商设置",
+		"description": "为不同难度级别配置三个配置文件。系统将根据您请求的复杂性自动选择合适的提供商。",
+		"easyProfileLabel": "简单配置文件",
+		"mediumProfileLabel": "中等配置文件",
+		"hardProfileLabel": "困难配置文件",
+		"selectProfilePlaceholder": "选择配置文件...",
+		"clearProfile": "清除配置文件",
+		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非智能提供商配置文件。",
+		"classifierProfileLabel": "分类器配置文件",
+		"classifierProfileDescription": "指定用于难度分类的配置文件。如果未设置，默认使用简单配置文件。",
+		"easyProfileDescription": "用于简单请求，如快速解释、基本摘要或简单代码片段。",
+		"mediumProfileDescription": "用于中等请求，如代码分析、实施建议或中等复杂度的任务。",
+		"hardProfileDescription": "用于复杂请求，如架构设计、复杂调试或高级问题解决。"
 	}
 }

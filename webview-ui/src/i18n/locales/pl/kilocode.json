@@ -257,6 +257,21 @@
 		"perHour": "Za godzinę",
 		"requestsLabel": "Prośby"
 	},
+	"intelligentProvider": {
+		"title": "Ustawienia Inteligentnego Dostawcy",
+		"description": "Skonfiguruj trzy profile dla różnych poziomów trudności. System automatycznie wybierze odpowiedniego dostawcę na podstawie złożoności Twojego żądania.",
+		"easyProfileLabel": "Profil Łatwy",
+		"mediumProfileLabel": "Profil Średni",
+		"hardProfileLabel": "Profil Trudny",
+		"selectProfilePlaceholder": "Wybierz profil...",
+		"clearProfile": "Wyczyść profil",
+		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil nieinteligentny.",
+		"classifierProfileLabel": "Profil Klasyfikatora",
+		"classifierProfileDescription": "Określa, który profil będzie używany do klasyfikacji trudności. Jeśli nie ustawiony, domyślnie używany jest profil łatwy.",
+		"easyProfileDescription": "Używany dla prostych żądań, takich jak szybkie wyjaśnienia, podstawowe podsumowania lub proste fragmenty kodu.",
+		"mediumProfileDescription": "Używany dla umiarkowanych żądań, takich jak analiza kodu, sugestie implementacji lub zadania o umiarkowanej złożoności.",
+		"hardProfileDescription": "Używany dla złożonych żądań, takich jak projektowanie architektury, złożone debugowanie lub zaawansowane rozwiązywanie problemów."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Obrazy nie są obsługiwane przez aktualny model.",
 		"maxImagesReached": "Maksymalnie 20 obrazów na wiadomość. Usuń niektóre obrazy, aby dodać więcej.",

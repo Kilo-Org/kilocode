@@ -264,6 +264,21 @@
 		"requestsLabel": "요청",
 		"perMinute": "분당"
 	},
+	"intelligentProvider": {
+		"title": "지능형 공급자 설정",
+		"description": "다양한 난이도 수준에 대한 세 개의 프로필을 구성합니다. 시스템은 요청의 복잡성에 따라 적절한 공급자를 자동으로 선택합니다.",
+		"easyProfileLabel": "쉬움 프로필",
+		"mediumProfileLabel": "중간 프로필",
+		"hardProfileLabel": "어려움 프로필",
+		"selectProfilePlaceholder": "프로필 선택...",
+		"clearProfile": "프로필 지우기",
+		"noProfilesAvailable": "사용 가능한 프로필이 없습니다. 먼저 비지능형 프로필을 하나 이상 구성하세요.",
+		"classifierProfileLabel": "분류기 프로필",
+		"classifierProfileDescription": "난이도 분류에 사용할 프로필을 지정합니다. 설정하지 않으면 쉬움 프로필을 사용하는 것을 기본값으로 합니다.",
+		"easyProfileDescription": "빠른 설명, 기본 요약, 또는 간단한 코드 스니펫과 같은 간단한 요청에 사용됩니다.",
+		"mediumProfileDescription": "코드 분석, 구현 제안, 또는 중간 복잡성 작업과 같은 중간 요청에 사용됩니다.",
+		"hardProfileDescription": "아키텍처 설계, 복잡한 디버깅, 또는 고급 문제 해결과 같은 복잡한 요청에 사용됩니다."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "현재 모델은 이미지를 지원하지 않습니다.",
 		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요.",

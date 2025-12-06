@@ -2174,9 +2174,14 @@ ${prompt}
 			isBrowserSessionActive,
 		} = await this.getState()
 
-		// kilocode_change start: Get active model for virtual quota fallback UI display
+		// kilocode_change start: Get active model for virtual quota fallback and intelligent provider UI display
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
+				: undefined
+
+		const intelligentActiveModel =
+			apiConfiguration?.apiProvider === "intelligent" && this.getCurrentTask()
 				? this.getCurrentTask()!.api.getModel()
 				: undefined
 		// kilocode_change end
@@ -2398,6 +2403,7 @@ ${prompt}
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			intelligentActiveModel, // kilocode_change: Include intelligent active model in state
 		}
 	}
 

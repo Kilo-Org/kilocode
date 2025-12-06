@@ -267,6 +267,21 @@
 	"memoryWarning": {
 		"message": "Geheugengebruik is {{percentage}}%. Start je IDE opnieuw op om crashes te voorkomen."
 	},
+	"intelligentProvider": {
+		"title": "Intelligente Provider Instellingen",
+		"description": "Configureer drie profielen voor verschillende moeilijkheidsniveaus. Het systeem selecteert automatisch de juiste provider op basis van de complexiteit van uw verzoek.",
+		"easyProfileLabel": "Eenvoudig Profiel",
+		"mediumProfileLabel": "Middelmatig Profiel",
+		"hardProfileLabel": "Moeilijk Profiel",
+		"selectProfilePlaceholder": "Selecteer profiel...",
+		"clearProfile": "Profiel wissen",
+		"noProfilesAvailable": "Geen profielen beschikbaar. Configureer eerst ten minste één niet-intelligent profiel.",
+		"classifierProfileLabel": "Classificatie Profiel",
+		"classifierProfileDescription": "Specificeert welk profiel te gebruiken voor moeilijkheidsclassificatie. Indien niet ingesteld, wordt standaard het eenvoudige profiel gebruikt.",
+		"easyProfileDescription": "Gebruikt voor eenvoudige verzoeken zoals snelle uitleggingen, basis samenvattingen, of eenvoudige codefragmenten.",
+		"mediumProfileDescription": "Gebruikt voor gematigde verzoeken zoals codeanalyse, implementatievoorstellen, of taken met gematigde complexiteit.",
+		"hardProfileDescription": "Gebruikt voor complexe verzoeken zoals architectuurontwerp, complexe debugging, of geavanceerde probleemoplossing."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
 		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",

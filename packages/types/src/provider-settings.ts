@@ -155,6 +155,7 @@ export const providerNames = [
 	"minimax",
 	"gemini-cli",
 	"virtual-quota-fallback",
+	"intelligent",
 	"synthetic",
 	"inception",
 	// kilocode_change end
@@ -479,6 +480,16 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+
+export const intelligentProfileSchema = z.object({
+	profileName: z.string().optional(),
+	profileId: z.string().optional(),
+	difficultyLevel: z.enum(["easy", "medium", "hard", "classifier"]).optional(),
+})
+
+const intelligentSchema = baseProviderSettingsSchema.extend({
+	profiles: z.array(intelligentProfileSchema).optional(),
+})
 // kilocode_change end
 
 export const zaiApiLineSchema = z.enum(["international_coding", "china_coding"])
@@ -571,6 +582,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
+	intelligentSchema.merge(z.object({ apiProvider: z.literal("intelligent") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
 	inceptionSchema.merge(z.object({ apiProvider: z.literal("inception") })),
 	// kilocode_change end
@@ -610,6 +622,7 @@ export const providerSettingsSchema = z.object({
 	...geminiCliSchema.shape,
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
+	...intelligentSchema.shape,
 	...syntheticSchema.shape,
 	...ovhcloudSchema.shape,
 	...inceptionSchema.shape,
@@ -702,7 +715,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	anthropic: "apiModelId",
 	"claude-code": "apiModelId",
 	glama: "glamaModelId",
-	"nano-gpt": "nanoGptModelId", // kilocode_change
+	"nano-gpt": "nanoGptModelId",
 	openrouter: "openRouterModelId",
 	kilocode: "kilocodeModel",
 	bedrock: "apiModelId",
@@ -727,6 +740,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	ovhcloud: "ovhCloudAiEndpointsModelId",
 	inception: "inceptionLabsModelId",
 	"sap-ai-core": "sapAiCoreModelId",
+	intelligent: "apiModelId",
 	// kilocode_change end
 	groq: "apiModelId",
 	baseten: "apiModelId",
@@ -887,6 +901,7 @@ export const MODELS_BY_PROVIDER: Record<
 	inception: { id: "inception", label: "Inception", models: [] },
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
+	intelligent: { id: "intelligent", label: "Intelligent Provider", models: [] },
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },

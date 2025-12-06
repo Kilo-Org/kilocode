@@ -250,6 +250,21 @@
 		"perDay": "Per Hari",
 		"requestsLabel": "Permintaan"
 	},
+	"intelligentProvider": {
+		"title": "Pengaturan Penyedia Cerdas",
+		"description": "Konfigurasikan tiga profil untuk tingkat kesulitan yang berbeda. Sistem akan secara otomatis memilih penyedia yang sesuai berdasarkan kompleksitas permintaan Anda.",
+		"easyProfileLabel": "Profil Mudah",
+		"mediumProfileLabel": "Profil Sedang",
+		"hardProfileLabel": "Profil Sulit",
+		"selectProfilePlaceholder": "Pilih profil...",
+		"clearProfile": "Hapus profil",
+		"noProfilesAvailable": "Tidak ada profil yang tersedia. Silakan konfigurasikan setidaknya satu profil non-cerdas terlebih dahulu.",
+		"classifierProfileLabel": "Profil Klasifikasi",
+		"classifierProfileDescription": "Menentukan profil yang akan digunakan untuk klasifikasi kesulitan. Jika tidak diatur, default ke menggunakan profil mudah.",
+		"easyProfileDescription": "Digunakan untuk permintaan sederhana seperti penjelasan cepat, ringkasan dasar, atau cuplikan kode sederhana.",
+		"mediumProfileDescription": "Digunakan untuk permintaan sedang seperti analisis kode, saran implementasi, atau tugas dengan kompleksitas sedang.",
+		"hardProfileDescription": "Digunakan untuk permintaan kompleks seperti desain arsitektur, debugging kompleks, atau pemecahan masalah lanjutan."
+	},
 	"imageWarnings": {
 		"maxImagesReached": "Maksimum 20 gambar per pesan. Hapus beberapa gambar untuk menambahkan lebih banyak.",
 		"modelNoImageSupport": "Gambar tidak didukung oleh model saat ini.",

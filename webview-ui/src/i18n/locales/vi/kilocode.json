@@ -282,5 +282,20 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Mới: Chia sẻ chế độ bằng cách tạo một tổ chức"
+	},
+	"intelligentProvider": {
+		"title": "Cài đặt Nhà Cung Cấp Thông Minh",
+		"description": "Cấu hình ba hồ sơ cho các cấp độ khó khác nhau. Hệ thống sẽ tự động chọn nhà cung cấp phù hợp dựa trên độ phức tạp của yêu cầu của bạn.",
+		"easyProfileLabel": "Hồ sơ Dễ dàng",
+		"mediumProfileLabel": "Hồ sơ Trung bình",
+		"hardProfileLabel": "Hồ sơ Khó khăn",
+		"selectProfilePlaceholder": "Chọn hồ sơ...",
+		"clearProfile": "Xóa hồ sơ",
+		"noProfilesAvailable": "Không có hồ sơ nào. Vui lòng cấu hình ít nhất một hồ sơ nhà cung cấp không thông minh trước.",
+		"classifierProfileLabel": "Hồ sơ Phân loại",
+		"classifierProfileDescription": "Chỉ định hồ sơ nào để sử dụng cho phân loại độ khó. Nếu không được đặt, mặc định sử dụng hồ sơ dễ dàng.",
+		"easyProfileDescription": "Sử dụng cho các yêu cầu đơn giản như giải thích nhanh, tóm tắt cơ bản hoặc các đoạn mã đơn giản.",
+		"mediumProfileDescription": "Sử dụng cho các yêu cầu vừa phải như phân tích mã, gợi ý triển khai hoặc các nhiệm vụ có độ phức tạp vừa phải.",
+		"hardProfileDescription": "Sử dụng cho các yêu cầu phức tạp như thiết kế kiến trúc, gỡ lỗi phức tạp hoặc giải quyết vấn đề nâng cao."
 	}
 }
