@@ -6,7 +6,11 @@
 		"emptyState": "ยังไม่มีเอเจนต์ที่ใช้งานอยู่",
 		"startAgent": "เริ่มเอเจนต์",
 		"removeSession": "ลบ",
-		"refresh": "รีเฟรช"
+		"refresh": "รีเฟรช",
+		"worktree": "Worktree",
+		"local": "ภายในเครื่อง",
+		"mainWorkspace": "พื้นที่ทำงานหลัก",
+		"readyToMerge": "พร้อมรวม"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -21,6 +25,12 @@
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
 		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
+		"runModeLocal": "ภายในเครื่อง",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "คลาวด์",
+		"runningInWorktree": "ทำงานใน worktree",
+		"runningLocally": "ทำงานภายในเครื่อง",
+		"branch": "สาขา",
 		"creatingSession": "กำลังสร้างเซสชัน...",
 		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์..."
 	},

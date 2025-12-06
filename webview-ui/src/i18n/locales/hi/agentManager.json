@@ -6,7 +6,11 @@
 		"emptyState": "अभी तक कोई सक्रिय एजेंट नहीं है।",
 		"startAgent": "एजेंट शुरू करें",
 		"removeSession": "हटाएं",
-		"refresh": "रीफ्रेश करें"
+		"refresh": "रीफ्रेश करें",
+		"worktree": "Worktree",
+		"local": "स्थानीय",
+		"mainWorkspace": "मुख्य कार्यक्षेत्र",
+		"readyToMerge": "मर्ज के लिए तैयार"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
@@ -21,6 +25,12 @@
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
 		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
+		"runModeLocal": "स्थानीय",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "क्लाउड",
+		"runningInWorktree": "Worktree में चल रहा है",
+		"runningLocally": "स्थानीय रूप से चल रहा है",
+		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
 		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है..."
 	},

@@ -6,7 +6,11 @@
 		"emptyState": "Nog geen actieve agenten.",
 		"startAgent": "Agent starten",
 		"removeSession": "Verwijderen",
-		"refresh": "Vernieuwen"
+		"refresh": "Vernieuwen",
+		"worktree": "Worktree",
+		"local": "Lokaal",
+		"mainWorkspace": "Hoofdwerkruimte",
+		"readyToMerge": "Klaar om samen te voegen"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -21,6 +25,12 @@
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
 		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
+		"runModeLocal": "Lokaal",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"runningInWorktree": "Draait in worktree",
+		"runningLocally": "Draait lokaal",
+		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
 		"waitingForCli": "Agent-sessie wordt geïnitialiseerd..."
 	},

@@ -6,7 +6,11 @@
 		"emptyState": "아직 활성 에이전트가 없습니다.",
 		"startAgent": "에이전트 시작",
 		"removeSession": "제거",
-		"refresh": "새로고침"
+		"refresh": "새로고침",
+		"worktree": "Worktree",
+		"local": "로컬",
+		"mainWorkspace": "메인 작업 공간",
+		"readyToMerge": "병합 준비 완료"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -21,6 +25,12 @@
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
 		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈",
+		"runModeLocal": "로컬",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "클라우드",
+		"runningInWorktree": "Worktree에서 실행 중",
+		"runningLocally": "로컬에서 실행 중",
+		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
 		"waitingForCli": "에이전트 세션 초기화 중..."
 	},

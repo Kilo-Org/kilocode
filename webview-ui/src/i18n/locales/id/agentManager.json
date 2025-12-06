@@ -6,7 +6,11 @@
 		"emptyState": "Belum ada agen aktif.",
 		"startAgent": "Mulai Agen",
 		"removeSession": "Hapus",
-		"refresh": "Refresh"
+		"refresh": "Refresh",
+		"worktree": "Worktree",
+		"local": "Lokal",
+		"mainWorkspace": "Ruang kerja utama",
+		"readyToMerge": "Siap untuk digabungkan"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -21,6 +25,12 @@
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
 		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
+		"runModeLocal": "Lokal",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"runningInWorktree": "Berjalan di worktree",
+		"runningLocally": "Berjalan secara lokal",
+		"branch": "Cabang",
 		"creatingSession": "Membuat sesi...",
 		"waitingForCli": "Menginisialisasi sesi agen..."
 	},

@@ -6,7 +6,11 @@
 		"emptyState": "لا توجد وكلاء نشطين بعد.",
 		"startAgent": "بدء الوكيل",
 		"removeSession": "إزالة",
-		"refresh": "تحديث"
+		"refresh": "تحديث",
+		"worktree": "Worktree",
+		"local": "محلي",
+		"mainWorkspace": "مساحة العمل الرئيسية",
+		"readyToMerge": "جاهز للدمج"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -21,6 +25,12 @@
 		"starting": "جاري البدء...",
 		"startAriaLabel": "بدء الوكيل بالأمر المقدم",
 		"keyboardHint": "اضغط Enter للبدء، Shift+Enter لسطر جديد",
+		"runModeLocal": "محلي",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "سحابي",
+		"runningInWorktree": "يعمل في Worktree",
+		"runningLocally": "يعمل محلياً",
+		"branch": "فرع",
 		"creatingSession": "جاري إنشاء الجلسة...",
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل..."
 	},

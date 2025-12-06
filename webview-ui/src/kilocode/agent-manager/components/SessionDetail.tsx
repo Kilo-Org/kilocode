@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from "react"
-import { useAtomValue, useSetAtom } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
 	selectedSessionAtom,
 	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	pendingSessionAtom,
+	preferredRunModeAtom,
+	type RunMode,
 } from "../state/atoms/sessions"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
-import { Clock, Plus, Square, Loader2, Zap, SendHorizontal, RefreshCw } from "lucide-react"
+import {
+	Clock,
+	Plus,
+	Square,
+	Loader2,
+	Zap,
+	SendHorizontal,
+	RefreshCw,
+	GitBranch,
+	Folder,
+	ChevronDown,
+} from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 
@@ -50,6 +63,8 @@ export function SessionDetail() {
 	}
 
 	const isRunning = selectedSession.status === "running"
+	const isWorktree = selectedSession.parallelMode?.enabled
+	const branchName = selectedSession.parallelMode?.branch
 
 	return (
 		<div className="session-detail">
@@ -69,6 +84,23 @@ export function SessionDetail() {
 							<Clock size={12} />
 							<span>{formatDuration(selectedSession.startTime, selectedSession.endTime)}</span>
 						</div>
+						{isWorktree ? (
+							<div
+								className="worktree-badge"
+								style={{ display: "flex", alignItems: "center", gap: 4 }}
+								title={branchName || t("sessionDetail.runningInWorktree")}>
+								<GitBranch size={12} />
+								<span>{branchName || t("sidebar.worktree")}</span>
+							</div>
+						) : (
+							<div
+								className="local-badge"
+								style={{ display: "flex", alignItems: "center", gap: 4 }}
+								title={t("sessionDetail.runningLocally")}>
+								<Folder size={12} />
+								<span>{t("sessionDetail.runModeLocal")}</span>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -153,8 +185,10 @@ function PendingSessionView({
 function NewAgentForm() {
 	const { t } = useTranslation("agentManager")
 	const [promptText, setPromptText] = useState("")
+	const [runMode, setRunMode] = useAtom(preferredRunModeAtom)
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
@@ -171,7 +205,11 @@ function NewAgentForm() {
 		if (isEmpty || isStarting) return
 
 		setIsStarting(true)
-		vscode.postMessage({ type: "agentManager.startSession", prompt: trimmedPrompt })
+		vscode.postMessage({
+			type: "agentManager.startSession",
+			prompt: trimmedPrompt,
+			parallelMode: runMode === "worktree",
+		})
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -179,6 +217,11 @@ function NewAgentForm() {
 			e.preventDefault()
 			handleStart()
 		}
+	}
+
+	const handleSelectMode = (mode: RunMode) => {
+		setRunMode(mode)
+		setIsDropdownOpen(false)
 	}
 
 	return (
@@ -205,6 +248,44 @@ function NewAgentForm() {
 						/>
 
 						<div className="new-agent-button-container">
+							<div className="run-mode-dropdown-inline">
+								<button
+									className="run-mode-trigger-inline"
+									onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+									disabled={isStarting}
+									type="button"
+									title={
+										runMode === "local"
+											? t("sessionDetail.runModeLocal")
+											: t("sessionDetail.runModeWorktree")
+									}>
+									{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+									<ChevronDown size={10} className={cn("chevron", isDropdownOpen && "open")} />
+								</button>
+								{isDropdownOpen && (
+									<div className="run-mode-menu-inline">
+										<button
+											className={cn("run-mode-option-inline", runMode === "local" && "selected")}
+											onClick={() => handleSelectMode("local")}
+											type="button">
+											<Folder size={12} />
+											<span>{t("sessionDetail.runModeLocal")}</span>
+											{runMode === "local" && <span className="checkmark">✓</span>}
+										</button>
+										<button
+											className={cn(
+												"run-mode-option-inline",
+												runMode === "worktree" && "selected",
+											)}
+											onClick={() => handleSelectMode("worktree")}
+											type="button">
+											<GitBranch size={12} />
+											<span>{t("sessionDetail.runModeWorktree")}</span>
+											{runMode === "worktree" && <span className="checkmark">✓</span>}
+										</button>
+									</div>
+								)}
+							</div>
 							<button
 								className="new-agent-send-btn"
 								onClick={handleStart}

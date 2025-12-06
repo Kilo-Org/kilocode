@@ -5,11 +5,12 @@ import {
 	mergedSessionsAtom,
 	selectedSessionIdAtom,
 	isRefreshingRemoteSessionsAtom,
+	startRefreshingRemoteSessionsAtom,
 	pendingSessionAtom,
 	type AgentSession,
 } from "../state/atoms/sessions"
 import { vscode } from "../utils/vscode"
-import { Plus, Loader2, RefreshCw } from "lucide-react"
+import { Plus, Loader2, RefreshCw, GitBranch, Folder } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
@@ -17,7 +18,7 @@ export function SessionSidebar() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const [selectedId, setSelectedId] = useAtom(selectedSessionIdAtom)
 	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
-	const setIsRefreshing = useSetAtom(isRefreshingRemoteSessionsAtom)
+	const startRefreshing = useSetAtom(startRefreshingRemoteSessionsAtom)
 
 	const handleNewSession = () => {
 		setSelectedId(null)
@@ -30,7 +31,7 @@ export function SessionSidebar() {
 
 	const handleRefresh = () => {
 		if (isRefreshing) return // Prevent multiple clicks while loading
-		setIsRefreshing(true)
+		startRefreshing()
 		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 
@@ -137,6 +138,9 @@ function SessionItem({
 
 	// Only show spinner for running sessions - all other sessions are resumable/idle
 	const isRunning = session.status === "running"
+	const isWorktree = session.parallelMode?.enabled
+	const branchName = session.parallelMode?.branch
+	const isCompleted = session.status === "done"
 
 	return (
 		<div className={`session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
@@ -147,7 +151,27 @@ function SessionItem({
 			)}
 			<div className="session-content">
 				<div className="session-label">{session.label}</div>
-				<div className="session-meta">{formatDuration(session.startTime, session.endTime)}</div>
+				<div className="session-meta">
+					{formatDuration(session.startTime, session.endTime)}
+					{isWorktree && (
+						<span className="worktree-indicator" title={branchName || t("sidebar.worktree")}>
+							<GitBranch size={10} />
+							{branchName ? (
+								<span className="branch-name">
+									{branchName.length > 20 ? branchName.slice(0, 20) + "..." : branchName}
+								</span>
+							) : (
+								<span>{t("sidebar.worktree")}</span>
+							)}
+						</span>
+					)}
+					{!isWorktree && (
+						<span className="workspace-indicator" title={t("sidebar.local")}>
+							<Folder size={10} />
+						</span>
+					)}
+				</div>
+				{isWorktree && isCompleted && <div className="ready-to-merge">{t("sidebar.readyToMerge")}</div>}
 			</div>
 		</div>
 	)

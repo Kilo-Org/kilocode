@@ -6,7 +6,11 @@
 		"emptyState": "Encara no hi ha agents actius.",
 		"startAgent": "Iniciar agent",
 		"removeSession": "Eliminar",
-		"refresh": "Actualitzar"
+		"refresh": "Actualitzar",
+		"worktree": "Worktree",
+		"local": "Local",
+		"mainWorkspace": "Espai de treball principal",
+		"readyToMerge": "Llest per fusionar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -21,6 +25,12 @@
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
 		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
+		"runModeLocal": "Local",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Núvol",
+		"runningInWorktree": "Executant en worktree",
+		"runningLocally": "Executant localment",
+		"branch": "Branca",
 		"creatingSession": "Creant sessió...",
 		"waitingForCli": "Inicialitzant la sessió de l'agent..."
 	},

@@ -6,7 +6,11 @@
 		"emptyState": "Chưa có agent nào đang hoạt động.",
 		"startAgent": "Khởi động Agent",
 		"removeSession": "Xóa",
-		"refresh": "Làm mới"
+		"refresh": "Làm mới",
+		"worktree": "Worktree",
+		"local": "Cục bộ",
+		"mainWorkspace": "Không gian làm việc chính",
+		"readyToMerge": "Sẵn sàng hợp nhất"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -21,6 +25,12 @@
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
 		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
+		"runModeLocal": "Cục bộ",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Đám mây",
+		"runningInWorktree": "Đang chạy trong worktree",
+		"runningLocally": "Đang chạy cục bộ",
+		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent..."
 	},

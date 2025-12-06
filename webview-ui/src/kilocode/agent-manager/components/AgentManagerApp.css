@@ -718,6 +718,9 @@
 	bottom: 8px;
 	right: 8px;
 	z-index: 30;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .new-agent-send-btn {
@@ -752,4 +755,131 @@
 	opacity: 0.4;
 	cursor: not-allowed;
 	filter: grayscale(30%);
+}
+
+/* Worktree/Local Mode Indicators */
+.session-meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.worktree-indicator,
+.workspace-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	opacity: 0.8;
+}
+
+.worktree-indicator .branch-name {
+	max-width: 100px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ready-to-merge {
+	font-size: calc(var(--vscode-font-size) * 0.8);
+	color: var(--vscode-charts-green);
+	font-weight: 500;
+	margin-top: 2px;
+}
+
+/* Worktree/Local badges in header */
+.worktree-badge,
+.local-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 11px;
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+}
+
+/* Inline Run Mode Dropdown (next to send button) */
+.run-mode-dropdown-inline {
+	position: relative;
+	display: inline-block;
+}
+
+.run-mode-trigger-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 4px 6px;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.15s;
+	opacity: 0.6;
+}
+
+.run-mode-trigger-inline:hover:not(:disabled) {
+	opacity: 1;
+	color: var(--vscode-foreground);
+	background-color: rgba(255, 255, 255, 0.03);
+	border-color: rgba(255, 255, 255, 0.15);
+}
+
+.run-mode-trigger-inline:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.run-mode-trigger-inline .chevron {
+	transition: transform 0.15s;
+	opacity: 0.7;
+}
+
+.run-mode-trigger-inline .chevron.open {
+	transform: rotate(180deg);
+}
+
+.run-mode-menu-inline {
+	position: absolute;
+	bottom: 100%;
+	right: 0;
+	margin-bottom: 4px;
+	min-width: 120px;
+	background: var(--vscode-dropdown-background);
+	border: 1px solid var(--vscode-dropdown-border);
+	border-radius: 4px;
+	box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+	z-index: 100;
+	overflow: hidden;
+}
+
+.run-mode-option-inline {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	padding: 6px 10px;
+	background: transparent;
+	border: none;
+	color: var(--vscode-dropdown-foreground);
+	font-size: 12px;
+	cursor: pointer;
+	text-align: left;
+	transition: background 0.1s;
+}
+
+.run-mode-option-inline:hover:not(:disabled) {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.run-mode-option-inline.selected {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+.run-mode-option-inline .checkmark {
+	margin-left: auto;
+	font-size: 10px;
 }
