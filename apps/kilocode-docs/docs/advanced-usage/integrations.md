@@ -9,9 +9,9 @@ Kilo Integrations lets you connect your GitHub account (and soon, GitLab and Bit
 
 ## What You Can Do With Integrations
 
-- **Connect GitHub to Kilo Code** in a few clicks  
-- **Authorize the KiloConnect App** for repo access  
-- **Enable advanced features** like Cloud Agents and Kilo Deploy 
+- **Connect GitHub to Kilo Code** in a few clicks
+- **Authorize the KiloConnect App** for repo access
+- **Enable advanced features** like Cloud Agents and Kilo Deploy
 
 ---
 
@@ -31,7 +31,6 @@ Before connecting:
 
 Go to your **Personal** or **Organization Dashboard**, and navigate to the [Integrations](https://app.kilo.ai/integrations) tab
 
-
 ### 2. Start the Connection Flow
 
 1. Click **Configure** on the GitHub panel.
@@ -42,7 +41,7 @@ Go to your **Personal** or **Organization Dashboard**, and navigate to the [Inte
 
 GitHub will ask which repositories you want Kilo to access:
 
-- **All repositories** (recommended if you plan to use Cloud Agents or Deploy across multiple projects)  
+- **All repositories** (recommended if you plan to use Cloud Agents or Deploy across multiple projects)
 - **Only selected repositories** (choose specific repos)
 
 Click **Install & Authorize** to continue.
@@ -62,16 +61,19 @@ Once approved:
 Once GitHub is connected, the following features will be enabled in Kilo:
 
 ### Cloud Agents
+
 - Run Kilo Code in the cloud from any device
-- Auto-create branches and push work continuously  
-- Work from anywhere while keeping your repo in sync 
+- Auto-create branches and push work continuously
+- Work from anywhere while keeping your repo in sync
 
 ### Kilo Deploy
-- Deploy Next.js 14 & 15 apps directly from Kilo  
-- Trigger rebuilds automatically on push  
+
+- Deploy Next.js 14 & 15 apps directly from Kilo
+- Trigger rebuilds automatically on push
 - Manage deployment logs and history
 
 ### Upcoming:
+
 - **GitLab Integration**
 - **Bitbucket Integration**
 
@@ -81,9 +83,9 @@ Once GitHub is connected, the following features will be enabled in Kilo:
 
 From the same **Integrations** page, you can click "Manage on Github" to:
 
-- View the GitHub account you connected  
-- Update which repositories Kilo has access to  
-- Disconnect GitHub entirely  
+- View the GitHub account you connected
+- Update which repositories Kilo has access to
+- Disconnect GitHub entirely
 - Reauthorize the app if permissions change
 
 ---
@@ -98,4 +100,3 @@ You may need an admin to approve installing GitHub Apps.
 
 **“Cloud Agents or Deploy can’t access my repo.”**  
 Revisit the GitHub app settings and confirm the app has the correct repo scope.
-
