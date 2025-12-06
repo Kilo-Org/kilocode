@@ -580,6 +580,9 @@ importers:
 
   cli:
     dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: ^0.7.0
+        version: 0.7.0(zod@3.25.76)
       '@anthropic-ai/bedrock-sdk':
         specifier: ^0.22.0
         version: 0.22.4
@@ -2379,6 +2382,11 @@ packages:
 
   '@adobe/css-tools@4.4.2':
     resolution: {integrity: sha512-baYZExFpsdkBNuvGKTKWCwKH57HRZLVtycZS05WTQNVOiXVSeAki3nU35zlRbToeMW8aHlJfyS+1C4BOv27q0A==}
+
+  '@agentclientprotocol/sdk@0.7.0':
+    resolution: {integrity: sha512-lZrBwaP7qpDgwvhZOl61te9bpigpOXJfVTwLWqjMsnZI7oe5rgHdxGWfTHcqiRy4ITg9qbz3ApgYsxKoZpYMhg==}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
 
   '@ai-sdk/gateway@2.0.9':
     resolution: {integrity: sha512-E6x4h5CPPPJ0za1r5HsLtHbeI+Tp3H+YFtcH8G3dSSPFE6w+PZINzB4NxLZmg1QqSeA5HTP3ZEzzsohp0o2GEw==}
@@ -19891,6 +19899,10 @@ packages:
 snapshots:
 
   '@adobe/css-tools@4.4.2': {}
+
+  '@agentclientprotocol/sdk@0.7.0(zod@3.25.76)':
+    dependencies:
+      zod: 3.25.76
 
   '@ai-sdk/gateway@2.0.9(zod@4.1.12)':
     dependencies:
