@@ -12,4 +12,10 @@ export const litellmDefaultModelInfo: ModelInfo = {
 	outputPrice: 15.0,
 	cacheWritesPrice: 3.75,
 	cacheReadsPrice: 0.3,
+	supportsTemperature: true, // kilocode_change
 }
+
+// kilocode_change start
+export const litellmDefaultMaxTokens = 8192
+export const litellmDefaultTemperature = 1.0
+// kilocode_change end
