@@ -87,6 +87,7 @@ export interface ExtensionState {
 	cwd?: string
 	organizationAllowList?: OrganizationAllowList
 	routerModels?: RouterModels
+	lastActivityTimestamp?: number // Track actual API stream activity for more accurate streaming detection
 	[key: string]: unknown
 }
 
