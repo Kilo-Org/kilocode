@@ -551,9 +551,7 @@ export const webviewMessageHandler = async (
 			// agentically running promises in old instance don't affect our new
 			// task. This essentially creates a fresh slate for the new task.
 			try {
-				await provider.createTask(message.text, message.images, undefined, {
-					preAssessedDifficulty: message.preAssessedDifficulty,
-				})
+				await provider.createTask(message.text, message.images, undefined, {})
 				// Task created successfully - notify the UI to reset
 				await provider.postMessageToWebview({ type: "invoke", invoke: "newChat" })
 			} catch (error) {

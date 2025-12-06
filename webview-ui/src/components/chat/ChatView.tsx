@@ -585,10 +585,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	 * Handles sending messages to the extension
 	 * @param text - The message text to send
 	 * @param images - Array of image data URLs to send with the message
-	 * @param preAssessedDifficulty - Optional pre-assessed difficulty level from frontend
 	 */
 	const handleSendMessage = useCallback(
-		(text: string, images: string[], _preAssessedDifficulty?: "easy" | "medium" | "hard") => {
+		(text: string, images: string[]) => {
 			text = text.trim()
 
 			if (text || images.length > 0) {
