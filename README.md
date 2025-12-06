@@ -8,7 +8,7 @@
 
 # 🚀 Kilo Code
 
-> Kilo is an open-source VS Code AI agent. We frequently merge features from open-source projects while building our own vision.
+> Kilo is an open-source AI coding agent.
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
