@@ -1,5 +1,23 @@
 # Changelog
 
+## [v4.123.1] - 2025-12-07
+
+### Changed
+
+- Refined chat UI components with improved styling and consistency
+- Updated todo list display with better iconography using CheckCircle components
+- Enhanced timestamp display with improved font sizing
+- Streamlined chat message layout by removing unnecessary borders
+- Improved color scheme consistency across UI components
+- Updated font weights and sizes for better visual hierarchy
+
+### Fixed
+
+- Better handling of todo list status indicators
+- Improved color variable references for consistent theming
+
+---
+
 ## [v4.123.0] - 2025-12-03
 
 ### Added

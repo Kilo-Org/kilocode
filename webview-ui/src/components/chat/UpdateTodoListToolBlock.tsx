@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react"
-import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
+import { CheckCircle } from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
 import MarkdownBlock from "../common/MarkdownBlock"
+import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 
 interface TodoItem {
 	id?: string
@@ -171,11 +172,11 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 			<ToolUseBlock>
 				<ToolUseBlockHeader>
 					<div className="flex items-center w-full" style={{ width: "100%" }}>
-						<span
+						{/* <span
 							className="codicon codicon-checklist mr-1.5"
 							style={{ color: "var(--vscode-foreground)" }}
-						/>
-						<span className="font-bold mr-2" style={{ fontWeight: "bold" }}>
+						/> */}
+						<span className="font-bold mr-2" style={{}}>
 							Todo List Updated
 						</span>
 						<div className="flex-grow" />
@@ -210,15 +211,12 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 								let icon
 								if (todo.status === "completed") {
 									icon = (
-										<span
+										<CheckCircle
+											size={10}
 											style={{
-												display: "inline-block",
-												width: 8,
-												height: 8,
-												borderRadius: "50%",
-												background: "var(--vscode-charts-green)",
+												color: "var(--color-matterai-green)",
 												marginRight: 6,
-												marginTop: 7,
+												marginTop: 6,
 												flexShrink: 0,
 											}}
 										/>
@@ -228,8 +226,8 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 										<span
 											style={{
 												display: "inline-block",
-												width: 8,
-												height: 8,
+												width: 10,
+												height: 10,
 												borderRadius: "50%",
 												background: "var(--vscode-charts-yellow)",
 												marginRight: 6,
@@ -298,10 +296,10 @@ const UpdateTodoListToolBlock: React.FC<UpdateTodoListToolBlockProps> = ({
 													fontWeight: 500,
 													color:
 														todo.status === "completed"
-															? "var(--vscode-charts-green)"
+															? "var(--vscode-foreground)"
 															: todo.status === "in_progress"
 																? "var(--vscode-charts-yellow)"
-																: "var(--vscode-foreground)",
+																: "var(--color-vscode-descriptionForeground)",
 													fontSize: 13,
 													marginRight: 6,
 													padding: "1px 3px",

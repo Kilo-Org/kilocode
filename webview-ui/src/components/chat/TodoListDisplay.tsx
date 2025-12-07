@@ -1,3 +1,4 @@
+import { CheckCircle } from "lucide-react"
 import { useState, useRef, useMemo, useEffect } from "react"
 
 export function TodoListDisplay({ todos }: { todos: any[] }) {
@@ -41,15 +42,11 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 	const getMostImportantTodoIcon = () => {
 		if (allCompleted) {
 			return (
-				<span
+				<CheckCircle
+					size={10}
 					style={{
-						display: "inline-block",
-						width: 8,
-						height: 8,
-						borderRadius: "50%",
-						background: "var(--color-matterai-green)",
-						marginRight: 8,
-						marginLeft: 2,
+						color: "var(--color-matterai-green)",
+						marginRight: 6,
 						flexShrink: 0,
 					}}
 				/>
@@ -113,7 +110,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 					width: 8,
 					height: 8,
 					borderRadius: "50%",
-					border: "1px solid var(--vscode-descriptionForeground)",
+					border: "1px solid var(--color-vscode-descriptionForeground)",
 					background: "transparent",
 					marginRight: 8,
 					marginLeft: 2,
@@ -161,13 +158,13 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 					{allCompleted ? "All tasks completed!" : mostImportantTodo?.content || "No pending tasks"}
 				</span>
 				<div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-					<span
+					{/* <span
 						className="codicon codicon-checklist"
 						style={{
 							color: "var(--vscode-descriptionForeground)",
 							fontSize: 12,
 						}}
-					/>
+					/> */}
 					<span
 						style={{
 							color: "var(--vscode-descriptionForeground)",
@@ -222,15 +219,15 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 								background: "var(--vscode-editor-background)",
 							}}>
 							<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-								<span
+								{/* <span
 									className="codicon codicon-checklist"
 									style={{ color: "var(--vscode-foreground)" }}
-								/>
-								<span style={{ fontWeight: "bold", fontSize: 14 }}>Todo List</span>
+								/> */}
+								<span style={{ fontSize: 12 }}>Todo List</span>
 								<span
 									style={{
 										color: "var(--vscode-descriptionForeground)",
-										fontSize: 13,
+										fontSize: 12,
 										fontWeight: 500,
 									}}>
 									{completedCount}/{totalCount}
@@ -274,15 +271,12 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 								let icon
 								if (todo.status === "completed") {
 									icon = (
-										<span
+										<CheckCircle
+											size={10}
 											style={{
-												display: "inline-block",
-												width: 8,
-												height: 8,
-												borderRadius: "50%",
-												background: "var(--color-matterai-green)",
-												marginRight: 8,
-												marginTop: 7,
+												color: "var(--color-matterai-green)",
+												marginRight: 6,
+												marginTop: 6,
 												flexShrink: 0,
 											}}
 										/>
@@ -336,10 +330,10 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 												fontWeight: 500,
 												color:
 													todo.status === "completed"
-														? "var(--color-matterai-green)"
+														? "var(--vscode-foreground)"
 														: todo.status === "in_progress"
 															? "var(--vscode-charts-yellow)"
-															: "var(--vscode-foreground)",
+															: "var(--color-vscode-descriptionForeground)",
 												wordBreak: "break-word",
 											}}>
 											{todo.content}

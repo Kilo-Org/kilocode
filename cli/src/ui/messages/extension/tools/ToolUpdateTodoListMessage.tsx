@@ -17,7 +17,7 @@ export const ToolUpdateTodoListMessage: React.FC<ToolMessageProps> = ({ toolData
 	const getStatusIcon = (status: string) => {
 		switch (status) {
 			case "completed":
-				return "✓"
+				return "●"
 			case "in_progress":
 				return "⋯"
 			case "pending":
@@ -41,9 +41,7 @@ export const ToolUpdateTodoListMessage: React.FC<ToolMessageProps> = ({ toolData
 	return (
 		<Box flexDirection="column" marginY={1}>
 			<Box>
-				<Text color={theme.messages.user} bold>
-					{icon} Todo List Updated
-				</Text>
+				<Text color={theme.messages.user}>{icon} Todo List Updated</Text>
 			</Box>
 
 			{toolData.todos && toolData.todos.length > 0 && (

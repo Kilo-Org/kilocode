@@ -2472,7 +2472,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.matterai.so/profile", kilocodeToken)
+				const url = "https://api.matterai.so/axoncode/profile"
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization

@@ -41,17 +41,6 @@ import ReportBugPreview from "./ReportBugPreview"
 
 import { cn } from "@/lib/utils"
 import { appendImages } from "@src/utils/imageUtils"
-import {
-	// User,
-	Edit,
-	Eye,
-	FileDiff,
-	FolderTree,
-	ListTree,
-	MessageCircleQuestionMark,
-	PocketKnife,
-	Trash2,
-} from "lucide-react"
 import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
 import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
 import { StandardTooltip } from "../ui" // kilocode_change
@@ -94,6 +83,7 @@ const headerStyle: React.CSSProperties = {
 	marginBottom: "2px",
 	wordBreak: "break-word",
 	color: "var(--vscode-descriptionForeground)",
+	flexShrink: 0,
 }
 
 const ChatRow = memo(
@@ -355,7 +345,7 @@ export const ChatRowContent = ({
 				]
 			case "followup":
 				return [
-					<MessageCircleQuestionMark className="w-4 shrink-0" aria-label="Question icon" />,
+					// <MessageCircleQuestionMark className="w-4 shrink-0" aria-label="Question icon" />,
 					<span style={{ color: normalColor }}>{t("chat:questions.hasQuestion")}</span>,
 				]
 			default:
@@ -406,7 +396,7 @@ export const ChatRowContent = ({
 					return (
 						<>
 							<div style={headerStyle}>
-								<FileDiff className="w-4 shrink-0" aria-label="Batch diff icon" />
+								{/* <FileDiff className="w-4 shrink-0" aria-label="Batch diff icon" /> */}
 								<span style={{}}>{t("chat:fileOperations.wantsToApplyBatchChanges")}</span>
 							</div>
 							<BatchDiffApproval files={tool.batchDiffs} ts={message.ts} />
@@ -640,7 +630,7 @@ export const ChatRowContent = ({
 					return (
 						<>
 							<div style={headerStyle}>
-								<Eye className="w-4 shrink-0" aria-label="View files icon" />
+								{/* <Eye className="w-4 shrink-0" aria-label="View files icon" /> */}
 								<span style={{}}>{t("chat:fileOperations.wantsToReadMultiple")}</span>
 							</div>
 							<BatchFilePermission
@@ -712,7 +702,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<ListTree className="w-4 shrink-0" aria-label="List files icon" />
+							{/* <ListTree className="w-4 shrink-0" aria-label="List files icon" /> */}
 							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -738,7 +728,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<FolderTree className="w-4 shrink-0" aria-label="Folder tree icon" />
+							{/* <FolderTree className="w-4 shrink-0" aria-label="Folder tree icon" /> */}
 							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -818,7 +808,7 @@ export const ChatRowContent = ({
 						</div>
 						<div className="">
 							<CodeAccordian
-								path={tool.path! + (tool.filePattern ? `/(${tool.filePattern})` : "")}
+								path={tool.path!}
 								code={tool.content}
 								language="shellsession"
 								isExpanded={isExpanded}
@@ -831,7 +821,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							<PocketKnife className="w-4 shrink-0" aria-label="Switch mode icon" />
+							{/* <PocketKnife className="w-4 shrink-0" aria-label="Switch mode icon" /> */}
 							<span style={{}}>
 								{message.type === "ask" ? (
 									<>
@@ -1266,7 +1256,7 @@ export const ChatRowContent = ({
 													e.stopPropagation()
 													handleEditClick()
 												}}>
-												<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
+												{/* <Edit className="w-4 shrink-0" aria-label="Edit message icon" /> */}
 											</div>
 											<div
 												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1275,7 +1265,7 @@ export const ChatRowContent = ({
 													e.stopPropagation()
 													vscode.postMessage({ type: "deleteMessage", value: message.ts })
 												}}>
-												<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
+												{/* <Trash2 className="w-4 shrink-0" aria-label="Delete message icon" /> */}
 											</div>
 										</div>
 									</div>
@@ -1314,7 +1304,7 @@ export const ChatRowContent = ({
 								</div>
 								{/* kilocode_change end */}
 							</div>
-							<div className="border-l border-green-600/30 ml-2 pl-4 pb-1">
+							<div className="pb-1">
 								<Markdown markdown={message.text} />
 							</div>
 							{

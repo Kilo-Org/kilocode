@@ -11,12 +11,12 @@ export const darkTheme: Theme = {
 	name: "Dark",
 
 	brand: {
-		primary: "#faf74f",
-		secondary: "#007acc",
+		primary: "#3affa3",
+		secondary: "#000000",
 	},
 
 	semantic: {
-		success: "#89d185",
+		success: "#3affa3",
 		error: "#f48771",
 		warning: "#cca700",
 		info: "#3794ff",
@@ -33,20 +33,20 @@ export const darkTheme: Theme = {
 
 	messages: {
 		user: "#3794ff",
-		assistant: "#89d185",
+		assistant: "#3affa3",
 		system: "#cccccc",
 		error: "#f48771",
 	},
 
 	actions: {
-		approve: "#89d185",
+		approve: "#3affa3",
 		reject: "#f48771",
 		cancel: "#858585",
 		pending: "#cca700",
 	},
 
 	code: {
-		addition: "#89d185",
+		addition: "#3affa3",
 		deletion: "#f48771",
 		modification: "#cca700",
 		context: "#858585",
@@ -73,7 +73,7 @@ export const darkTheme: Theme = {
 	},
 
 	status: {
-		online: "#89d185",
+		online: "#3affa3",
 		offline: "#f48771",
 		busy: "#cca700",
 		idle: "#858585",
