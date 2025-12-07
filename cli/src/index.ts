@@ -48,6 +48,7 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--acp", "Run in ACP (Agent Client Protocol) mode for editor integration", false)
+	.option("--acp-debug", "Enable debug logging for ACP mode (output to stderr)", false)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// ACP mode - run the ACP server and exit
@@ -55,6 +56,7 @@ program
 			const { runACPMode } = await import("./acp/index.js")
 			await runACPMode({
 				workspace: options.workspace,
+				debug: options.acpDebug,
 			})
 			return
 		}

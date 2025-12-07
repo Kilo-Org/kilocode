@@ -465,6 +465,27 @@ When running in ACP mode, the CLI:
 3. Requests permission from the user before executing tools
 4. Streams responses back to the editor in real-time
 
+### Full Build from Source
+
+If running from a fresh clone or the extension files are missing, build everything:
+
+```bash
+# 1. Install dependencies (from repo root)
+pnpm install
+
+# 2. Build the VS Code extension
+cd src && pnpm bundle
+
+# 3. Package and unpack the extension
+pnpm vsix && pnpm vsix:unpacked
+
+# 4. Build the CLI and copy extension files
+cd ../cli && pnpm build && pnpm copy:kilocode
+
+# 5. Run in ACP mode
+node dist/index.js --acp --workspace /path/to/project
+```
+
 ### Testing with Zed Editor
 
 Follow these steps to test Kilo Code's ACP integration with Zed:
@@ -503,17 +524,31 @@ Follow these steps to test Kilo Code's ACP integration with Zed:
     - Linux: `~/.config/zed/settings.json`
     - Or open Zed and press `Cmd/Ctrl + ,` then click "Open Settings (JSON)"
 
-2. Add the Kilo Code agent configuration:
+2. Add the Kilo Code agent server configuration:
 
 ```json
 {
-	"agent": {
-		"default_profile": "kilocode",
-		"profiles": {
-			"kilocode": {
-				"command": "kilocode",
-				"args": ["--acp"]
-			}
+	"agent_servers": {
+		"kilocode": {
+			"type": "custom",
+			"command": "kilocode",
+			"args": ["--acp"],
+			"env": {}
+		}
+	}
+}
+```
+
+For local development, use the full path to the built CLI:
+
+```json
+{
+	"agent_servers": {
+		"kilocode-dev": {
+			"type": "custom",
+			"command": "node",
+			"args": ["/path/to/kilocode/cli/dist/index.js", "--acp"],
+			"env": {}
 		}
 	}
 }
@@ -584,6 +619,25 @@ Follow these steps to test Kilo Code's ACP integration with Zed:
 | `sessionUpdate`     | ✅     | Stream agent responses in real-time                 |
 | `requestPermission` | ✅     | Request user approval for tool actions              |
 | `setSessionMode`    | ✅     | Switch between modes (architect, code, debug, etc.) |
+
+### Known Limitations
+
+#### State Synchronization Bridge
+
+The ACP implementation bridges two different communication models:
+
+- **Kilo Code Extension**: Uses state synchronization (full state snapshots on every update)
+- **ACP Protocol**: Expects incremental streaming (chunked content updates)
+
+To derive incremental updates from state snapshots, the agent tracks sent messages to avoid duplicates. This adds some complexity but works reliably.
+
+**Future Improvement:** A more efficient implementation would have the CLI emit streaming events directly from the LLM, rather than batching into full state updates.
+
+#### Other Current Limitations
+
+- **Image support**: Not yet implemented
+- **Session persistence**: Sessions are ephemeral (no `loadSession` support)
+- **MCP servers**: Connection parameters accepted but servers not automatically connected
 
 ### How Tool Approval Works
 
