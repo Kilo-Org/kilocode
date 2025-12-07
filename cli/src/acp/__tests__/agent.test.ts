@@ -24,6 +24,9 @@ function createMockConnection(): AgentSideConnection {
 // Mock ExtensionService
 function createMockExtensionService(): ExtensionService & { _emitter: EventEmitter } {
 	const emitter = new EventEmitter()
+	const mockExtensionHost = {
+		sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
+	}
 	const service = {
 		on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
 			emitter.on(event, handler)
@@ -39,6 +42,7 @@ function createMockExtensionService(): ExtensionService & { _emitter: EventEmitt
 		dispose: vi.fn().mockResolvedValue(undefined),
 		getState: vi.fn(() => null),
 		isReady: vi.fn(() => true),
+		getExtensionHost: vi.fn(() => mockExtensionHost),
 		// Expose emitter for testing
 		_emitter: emitter,
 	}
