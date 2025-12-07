@@ -165,8 +165,10 @@ export class KiloCodeAgent implements Agent {
 
 		// Extract prompt text from the prompt content blocks
 		const promptText = params.prompt
-			.filter((block): block is ContentBlock & { type: "text"; text: string } => block.type === "text")
-			.map((block) => block.text)
+			.filter(
+				(block: ContentBlock): block is ContentBlock & { type: "text"; text: string } => block.type === "text",
+			)
+			.map((block: ContentBlock & { type: "text"; text: string }) => block.text)
 			.join("\n")
 
 		acpDebug("Extracted prompt text:", promptText.substring(0, 200) + (promptText.length > 200 ? "..." : ""))
