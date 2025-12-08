@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import * as path from "path"
 import {
 	buildDataUrl,
 	ensureClipboardDir,
@@ -94,7 +95,7 @@ export async function saveClipboardImageLinux(): Promise<SaveClipboardResult> {
 
 		const clipboardDir = await ensureClipboardDir()
 		const filename = generateClipboardFilename(format)
-		const filePath = `${clipboardDir}/${filename}`
+		const filePath = path.join(clipboardDir, filename)
 
 		await fs.promises.writeFile(filePath, imageBuffer)
 
