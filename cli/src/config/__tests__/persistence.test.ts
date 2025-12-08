@@ -24,6 +24,15 @@ vi.mock("../../services/logs.js", () => ({
 	},
 }))
 
+// Mock env-config to control ephemeral mode behavior
+vi.mock("../env-config.js", async () => {
+	const actual = await vi.importActual<typeof import("../env-config.js")>("../env-config.js")
+	return {
+		...actual,
+		isEphemeralMode: vi.fn(() => false), // Default to false, tests can override
+	}
+})
+
 // Mock fs/promises to handle schema.json reads
 vi.mock("fs/promises", async () => {
 	const actual = await vi.importActual<typeof import("fs/promises")>("fs/promises")
@@ -356,6 +365,114 @@ describe("Config Persistence", () => {
 
 			const token = getKiloToken(config)
 			expect(token).toBeNull()
+		})
+	})
+
+	describe("ephemeral mode", () => {
+		it("should not write config file when in ephemeral mode", async () => {
+			// Import the mocked module to control ephemeral mode
+			const envConfig = await import("../env-config.js")
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(true)
+
+			const testConfig: CLIConfig = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: false,
+				provider: "test",
+				providers: [
+					{
+						id: "test",
+						provider: "kilocode",
+						kilocodeToken: "env-token-should-not-be-saved",
+						kilocodeModel: "test-model",
+					},
+				],
+			}
+
+			// This should NOT create a file because we're in ephemeral mode
+			await saveConfig(testConfig)
+
+			// Verify file was NOT created
+			const exists = await configExists()
+			expect(exists).toBe(false)
+
+			// Reset mock
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(false)
+		})
+
+		it("should write config file when not in ephemeral mode", async () => {
+			// Import the mocked module to control ephemeral mode
+			const envConfig = await import("../env-config.js")
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(false)
+
+			const testConfig: CLIConfig = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: false,
+				provider: "test",
+				providers: [
+					{
+						id: "test",
+						provider: "kilocode",
+						kilocodeToken: "real-token-should-be-saved",
+						kilocodeModel: "test-model",
+					},
+				],
+			}
+
+			// This should create a file because we're NOT in ephemeral mode
+			await saveConfig(testConfig)
+
+			// Verify file WAS created
+			const exists = await configExists()
+			expect(exists).toBe(true)
+
+			// Verify content was written correctly
+			const content = await fs.readFile(TEST_CONFIG_FILE, "utf-8")
+			const parsed = JSON.parse(content)
+			expect(parsed.providers[0].kilocodeToken).toBe("real-token-should-be-saved")
+		})
+
+		it("should not persist merged config during loadConfig when in ephemeral mode", async () => {
+			// Import the mocked module to control ephemeral mode
+			const envConfig = await import("../env-config.js")
+
+			// First, create a config file while NOT in ephemeral mode
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(false)
+
+			const initialConfig: CLIConfig = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "test",
+				providers: [
+					{
+						id: "test",
+						provider: "kilocode",
+						kilocodeToken: "original-token-1234567890",
+						kilocodeModel: "test-model",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+				customThemes: {},
+			}
+			await saveConfig(initialConfig)
+
+			// Now switch to ephemeral mode
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(true)
+
+			// Load the config - this would normally trigger a save after merging
+			const result = await loadConfig()
+			expect(result.config.providers[0]).toHaveProperty("kilocodeToken", "original-token-1234567890")
+
+			// Verify the file still has the original content (not re-saved in ephemeral mode)
+			const content = await fs.readFile(TEST_CONFIG_FILE, "utf-8")
+			const parsed = JSON.parse(content)
+			expect(parsed.providers[0].kilocodeToken).toBe("original-token-1234567890")
+
+			// Reset mock
+			vi.mocked(envConfig.isEphemeralMode).mockReturnValue(false)
 		})
 	})
 })

@@ -2,5 +2,5 @@
 #### Filename: total-calculator.js
 function calculateTotal(items) {
   const sum = items.reduce((a, b) => a + b, 0);
-<<<CURSOR>>>
+<<<AUTOCOMPLETE_HERE>>>
 }
