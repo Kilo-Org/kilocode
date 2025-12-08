@@ -2,7 +2,7 @@
 #### Filename: value-checker.js
 function checkValue(value) {
   if (value > 0) {
-<<<CURSOR>>>
+<<<AUTOCOMPLETE_HERE>>>
   }
   return false;
 }
