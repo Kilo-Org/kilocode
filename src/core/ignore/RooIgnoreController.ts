@@ -20,7 +20,7 @@ export class RooIgnoreController {
 	private disposables: vscode.Disposable[] = []
 	rooIgnoreContent: string | undefined
 
-	constructor(cwd: string, globallyIgnoredFiles: string[] = []) {
+	constructor(cwd: string, globallyIgnoredFiles: string[] = []) { // kilocode_change
 		// kilocode_change
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
