@@ -31,6 +31,7 @@ function createMockProcess() {
  */
 function createMockCallbacks(): CliProcessHandlerCallbacks & {
 	onLog: ReturnType<typeof vi.fn>
+	onDebugLog: ReturnType<typeof vi.fn>
 	onSessionLog: ReturnType<typeof vi.fn>
 	onStateChanged: ReturnType<typeof vi.fn>
 	onPendingSessionChanged: ReturnType<typeof vi.fn>
@@ -40,6 +41,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 } {
 	return {
 		onLog: vi.fn(),
+		onDebugLog: vi.fn(),
 		onSessionLog: vi.fn(),
 		onStateChanged: vi.fn(),
 		onPendingSessionChanged: vi.fn(),
@@ -111,13 +113,13 @@ describe("CliProcessHandler", () => {
 			)
 		})
 
-		it("logs spawn information", () => {
+		it("logs spawn information to debug log", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Command:"))
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Working dir:"))
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Process PID:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Command:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Working dir:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Process PID:"))
 		})
 
 		it("resumes session with provided sessionId and marks running", () => {
@@ -298,7 +300,7 @@ describe("CliProcessHandler", () => {
 			// Emit status event before session_created
 			mockProcess.stdout.emit("data", Buffer.from('{"streamEventType":"status","message":"Initializing..."}\n'))
 
-			expect(callbacks.onLog).toHaveBeenCalledWith("Pending session status: Initializing...")
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith("Pending session status: Initializing...")
 		})
 	})
 
@@ -504,13 +506,13 @@ describe("CliProcessHandler", () => {
 	})
 
 	describe("stderr handling", () => {
-		it("logs stderr output", () => {
+		it("logs stderr output to debug log", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			mockProcess.stderr.emit("data", Buffer.from("Warning: something happened"))
 
-			expect(callbacks.onLog).toHaveBeenCalledWith("stderr: Warning: something happened")
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith("stderr: Warning: something happened")
 		})
 	})
 

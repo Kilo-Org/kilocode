@@ -7,7 +7,7 @@ let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerP
 
 describe("AgentManagerProvider CLI spawning", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
-	const mockContext = { extensionUri: {}, extensionPath: "" } as any
+	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
 
 	beforeEach(async () => {
@@ -22,6 +22,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 			env: { openExternal: vi.fn() },
 			Uri: { parse: vi.fn(), joinPath: vi.fn() },
 			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
 		}))
 
 		vi.doMock("../../../../utils/fs", () => ({
@@ -350,7 +351,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 describe("AgentManagerProvider gitUrl filtering", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
-	const mockContext = { extensionUri: {}, extensionPath: "" } as any
+	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
 	let mockGetRemoteUrl: Mock
 
@@ -366,6 +367,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			env: { openExternal: vi.fn() },
 			Uri: { parse: vi.fn(), joinPath: vi.fn() },
 			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
 		}))
 
 		vi.doMock("../../../../utils/fs", () => ({

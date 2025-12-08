@@ -53,8 +53,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// Initialize currentGitUrl from workspace
 		void this.initializeCurrentGitUrl()
 
+		const isDevelopment = this.context.extensionMode === vscode.ExtensionMode.Development
+
 		const callbacks: CliProcessHandlerCallbacks = {
 			onLog: (message) => this.outputChannel.appendLine(`[AgentManager] ${message}`),
+			// Only enable verbose debug logging in development mode
+			onDebugLog: isDevelopment
+				? (message) => this.outputChannel.appendLine(`[AgentManager] ${message}`)
+				: undefined,
 			onSessionLog: (sessionId, line) => this.log(sessionId, line),
 			onStateChanged: () => this.postStateToWebview(),
 			onPendingSessionChanged: (pendingSession) => {

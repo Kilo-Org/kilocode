@@ -35,6 +35,7 @@ interface ActiveProcessInfo {
 
 export interface CliProcessHandlerCallbacks {
 	onLog: (message: string) => void
+	onDebugLog?: (message: string) => void // Verbose logging, disabled in production
 	onSessionLog: (sessionId: string, line: string) => void
 	onStateChanged: () => void
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
@@ -51,6 +52,11 @@ export class CliProcessHandler {
 		private readonly registry: AgentRegistry,
 		private readonly callbacks: CliProcessHandlerCallbacks,
 	) {}
+
+	/** Log verbose/debug messages (only when onDebugLog callback is provided) */
+	private debugLog(message: string): void {
+		this.callbacks.onDebugLog?.(message)
+	}
 
 	public spawnProcess(
 		cliPath: string,
@@ -76,7 +82,7 @@ export class CliProcessHandler {
 				})
 				this.registry.updateSessionStatus(options!.sessionId!, "creating")
 			}
-			this.callbacks.onLog(`Resuming session ${options!.sessionId}, setting to creating state`)
+			this.debugLog(`Resuming session ${options!.sessionId}, setting to creating state`)
 			this.callbacks.onStateChanged()
 		} else {
 			// New session - create pending session state
@@ -84,7 +90,7 @@ export class CliProcessHandler {
 				parallelMode: options?.parallelMode,
 				gitUrl: options?.gitUrl,
 			})
-			this.callbacks.onLog(`Pending session created, waiting for CLI session_created event`)
+			this.debugLog(`Pending session created, waiting for CLI session_created event`)
 			this.callbacks.onPendingSessionChanged(pendingSession)
 		}
 
@@ -93,8 +99,8 @@ export class CliProcessHandler {
 			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
 		})
-		this.callbacks.onLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
-		this.callbacks.onLog(`Working dir: ${workspace}`)
+		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
+		this.debugLog(`Working dir: ${workspace}`)
 
 		// Spawn CLI process
 		const proc = spawn(cliPath, cliArgs, {
@@ -105,13 +111,13 @@ export class CliProcessHandler {
 		})
 
 		if (proc.pid) {
-			this.callbacks.onLog(`Process PID: ${proc.pid}`)
+			this.debugLog(`Process PID: ${proc.pid}`)
 		} else {
 			this.callbacks.onLog(`WARNING: No PID - spawn may have failed`)
 		}
 
-		this.callbacks.onLog(`stdout exists: ${!!proc.stdout}`)
-		this.callbacks.onLog(`stderr exists: ${!!proc.stderr}`)
+		this.debugLog(`stdout exists: ${!!proc.stdout}`)
+		this.debugLog(`stderr exists: ${!!proc.stderr}`)
 
 		// Create parser for the process
 		const parser = new CliOutputParser()
@@ -128,7 +134,7 @@ export class CliProcessHandler {
 			if (proc.pid) {
 				this.registry.setSessionPid(sessionId, proc.pid)
 			}
-			this.callbacks.onLog(`Resume session ${sessionId} is now active`)
+			this.debugLog(`Resume session ${sessionId} is now active`)
 			this.callbacks.onStateChanged()
 		} else {
 			// Store pending process info for new sessions
@@ -148,7 +154,7 @@ export class CliProcessHandler {
 		// Parse nd-json output from stdout
 		proc.stdout?.on("data", (chunk) => {
 			const chunkStr = chunk.toString()
-			this.callbacks.onLog(`stdout chunk (${chunkStr.length} bytes): ${chunkStr.slice(0, 200)}`)
+			this.debugLog(`stdout chunk (${chunkStr.length} bytes): ${chunkStr.slice(0, 200)}`)
 
 			const { events } = parser.parse(chunkStr)
 
@@ -160,7 +166,7 @@ export class CliProcessHandler {
 		// Handle stderr
 		proc.stderr?.on("data", (data) => {
 			const stderrStr = String(data).trim()
-			this.callbacks.onLog(`stderr: ${stderrStr}`)
+			this.debugLog(`stderr: ${stderrStr}`)
 
 			// Capture stderr for pending process to detect CLI errors
 			if (this.pendingProcess && this.pendingProcess.process === proc) {
@@ -170,7 +176,7 @@ export class CliProcessHandler {
 
 		// Handle process exit - pass the process reference so we know which one exited
 		proc.on("exit", (code, signal) => {
-			this.callbacks.onLog(`Process exited: code=${code}, signal=${signal}`)
+			this.debugLog(`Process exited: code=${code}, signal=${signal}`)
 			this.handleProcessExit(proc, code, signal, onCliEvent)
 		})
 
@@ -179,7 +185,7 @@ export class CliProcessHandler {
 			this.handleProcessError(proc, error)
 		})
 
-		this.callbacks.onLog(`spawned CLI process pid=${proc.pid}`)
+		this.debugLog(`spawned CLI process pid=${proc.pid}`)
 	}
 
 	public stopProcess(sessionId: string): void {
@@ -259,7 +265,7 @@ export class CliProcessHandler {
 				const welcomeEvent = event as WelcomeStreamEvent
 				if (welcomeEvent.worktreeBranch) {
 					this.pendingProcess.worktreeBranch = welcomeEvent.worktreeBranch
-					this.callbacks.onLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
+					this.debugLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
 				}
 				return
 			}
@@ -269,12 +275,12 @@ export class CliProcessHandler {
 				const payload = (event as KilocodeStreamEvent).payload
 				if (payload?.say === "api_req_started") {
 					this.pendingProcess.sawApiReqStarted = true
-					this.callbacks.onLog(`Captured api_req_started before session_created`)
+					this.debugLog(`Captured api_req_started before session_created`)
 				}
 			}
 			// Events before session_created are typically status messages
 			if (event.streamEventType === "status") {
-				this.callbacks.onLog(`Pending session status: ${event.message}`)
+				this.debugLog(`Pending session status: ${event.message}`)
 			}
 			return
 		}
@@ -289,7 +295,7 @@ export class CliProcessHandler {
 
 	private handleSessionCreated(event: SessionCreatedStreamEvent): void {
 		if (!this.pendingProcess) {
-			this.callbacks.onLog(`Received session_created but no pending process`)
+			this.debugLog(`Received session_created but no pending process`)
 			return
 		}
 
@@ -317,7 +323,7 @@ export class CliProcessHandler {
 			this.registry.updateSessionStatus(sessionId, "running")
 			this.registry.selectedId = sessionId
 			session = existing
-			this.callbacks.onLog(`Resuming existing session: ${sessionId}`)
+			this.debugLog(`Resuming existing session: ${sessionId}`)
 		} else {
 			// Create new session (also sets selectedId)
 			session = this.registry.createSession(sessionId, prompt, startTime, {
@@ -325,15 +331,15 @@ export class CliProcessHandler {
 				labelOverride: desiredLabel,
 				gitUrl,
 			})
-			this.callbacks.onLog(`Created new session: ${sessionId}`)
+			this.debugLog(`Created new session: ${sessionId}`)
 		}
 
-		this.callbacks.onLog(`Session created with CLI sessionId: ${event.sessionId}, mapped to: ${session.sessionId}`)
+		this.debugLog(`Session created with CLI sessionId: ${event.sessionId}, mapped to: ${session.sessionId}`)
 
 		// Apply worktree branch if captured from welcome event
 		if (worktreeBranch && parallelMode) {
 			this.registry.updateParallelModeInfo(session.sessionId, { branch: worktreeBranch })
-			this.callbacks.onLog(`Applied worktree branch: ${worktreeBranch}`)
+			this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
 		}
 
 		// Clear pending session state
