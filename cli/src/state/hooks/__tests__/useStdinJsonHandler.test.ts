@@ -1,279 +1,248 @@
 /**
  * Tests for useStdinJsonHandler hook
  *
- * This hook handles JSON messages from stdin in jsonInteractive mode,
- * enabling bidirectional communication.
+ * Tests the handleStdinMessage function which handles JSON messages
+ * from stdin in jsonInteractive mode.
  */
 
-import { describe, it, expect, vi } from "vitest"
-import { Readable } from "stream"
-import { createInterface } from "readline"
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { handleStdinMessage, type StdinMessage, type StdinMessageHandlers } from "../useStdinJsonHandler.js"
 
-// Mock the atoms
-vi.mock("../../atoms/actions.js", () => ({
-	sendAskResponseAtom: { write: vi.fn() },
-	cancelTaskAtom: { write: vi.fn() },
-	respondToToolAtom: { write: vi.fn() },
-}))
+describe("handleStdinMessage", () => {
+	let handlers: StdinMessageHandlers
+	let sendAskResponse: ReturnType<typeof vi.fn>
+	let cancelTask: ReturnType<typeof vi.fn>
+	let respondToTool: ReturnType<typeof vi.fn>
 
-// Mock the logs service
-vi.mock("../../../services/logs.js", () => ({
-	logs: {
-		debug: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-	},
-}))
+	beforeEach(() => {
+		sendAskResponse = vi.fn().mockResolvedValue(undefined)
+		cancelTask = vi.fn().mockResolvedValue(undefined)
+		respondToTool = vi.fn().mockResolvedValue(undefined)
 
-describe("useStdinJsonHandler", () => {
-	describe("Message Parsing", () => {
-		it("should parse valid JSON messages", () => {
-			const validMessages = [
-				{ type: "askResponse", askResponse: "messageResponse", text: "hello" },
-				{ type: "cancelTask" },
-				{ type: "respondToApproval", approved: true },
-				{ type: "respondToApproval", approved: false, text: "rejected" },
-			]
+		handlers = {
+			sendAskResponse,
+			cancelTask,
+			respondToTool,
+		}
+	})
 
-			for (const msg of validMessages) {
-				expect(() => JSON.parse(JSON.stringify(msg))).not.toThrow()
+	describe("askResponse messages", () => {
+		it("should call sendAskResponse for messageResponse", async () => {
+			const message: StdinMessage = {
+				type: "askResponse",
+				askResponse: "messageResponse",
+				text: "hello world",
 			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "hello world",
+			})
+			expect(respondToTool).not.toHaveBeenCalled()
 		})
 
-		it("should handle askResponse with yesButtonClicked", () => {
-			const message = {
+		it("should call sendAskResponse with images when provided", async () => {
+			const message: StdinMessage = {
+				type: "askResponse",
+				askResponse: "messageResponse",
+				text: "check this",
+				images: ["img1.png", "img2.png"],
+			}
+
+			await handleStdinMessage(message, handlers)
+
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "check this",
+				images: ["img1.png", "img2.png"],
+			})
+		})
+
+		it("should default to messageResponse when askResponse is undefined", async () => {
+			const message: StdinMessage = {
+				type: "askResponse",
+				text: "hello",
+			}
+
+			await handleStdinMessage(message, handlers)
+
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+				text: "hello",
+			})
+		})
+
+		it("should call respondToTool for yesButtonClicked", async () => {
+			const message: StdinMessage = {
 				type: "askResponse",
 				askResponse: "yesButtonClicked",
 				text: "approved",
 			}
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("askResponse")
-			expect(parsed.askResponse).toBe("yesButtonClicked")
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+				text: "approved",
+			})
+			expect(sendAskResponse).not.toHaveBeenCalled()
 		})
 
-		it("should handle askResponse with noButtonClicked", () => {
-			const message = {
+		it("should call respondToTool for noButtonClicked", async () => {
+			const message: StdinMessage = {
 				type: "askResponse",
 				askResponse: "noButtonClicked",
 				text: "rejected",
 			}
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("askResponse")
-			expect(parsed.askResponse).toBe("noButtonClicked")
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+				text: "rejected",
+			})
 		})
 
-		it("should handle askResponse with messageResponse", () => {
-			const message = {
+		it("should include images for yesButtonClicked", async () => {
+			const message: StdinMessage = {
 				type: "askResponse",
-				askResponse: "messageResponse",
-				text: "user message",
-				images: ["image1.png"],
+				askResponse: "yesButtonClicked",
+				images: ["screenshot.png"],
 			}
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("askResponse")
-			expect(parsed.askResponse).toBe("messageResponse")
-			expect(parsed.text).toBe("user message")
-			expect(parsed.images).toEqual(["image1.png"])
+
+			await handleStdinMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+				images: ["screenshot.png"],
+			})
+		})
+	})
+
+	describe("cancelTask messages", () => {
+		it("should call cancelTask handler", async () => {
+			const message: StdinMessage = {
+				type: "cancelTask",
+			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(cancelTask).toHaveBeenCalled()
+			expect(sendAskResponse).not.toHaveBeenCalled()
+			expect(respondToTool).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("respondToApproval messages", () => {
+		it("should call respondToTool with yesButtonClicked when approved is true", async () => {
+			const message: StdinMessage = {
+				type: "respondToApproval",
+				approved: true,
+			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+			})
 		})
 
-		it("should handle cancelTask message", () => {
-			const message = { type: "cancelTask" }
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("cancelTask")
+		it("should call respondToTool with noButtonClicked when approved is false", async () => {
+			const message: StdinMessage = {
+				type: "respondToApproval",
+				approved: false,
+			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+			})
 		})
 
-		it("should handle respondToApproval with approved=true", () => {
-			const message = {
+		it("should include text when provided with approval", async () => {
+			const message: StdinMessage = {
 				type: "respondToApproval",
 				approved: true,
 				text: "go ahead",
 			}
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("respondToApproval")
-			expect(parsed.approved).toBe(true)
-			expect(parsed.text).toBe("go ahead")
+
+			await handleStdinMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "yesButtonClicked",
+				text: "go ahead",
+			})
 		})
 
-		it("should handle respondToApproval with approved=false", () => {
-			const message = {
+		it("should include text when rejecting", async () => {
+			const message: StdinMessage = {
 				type: "respondToApproval",
 				approved: false,
-				text: "denied",
+				text: "not allowed",
 			}
-			const parsed = JSON.parse(JSON.stringify(message))
-			expect(parsed.type).toBe("respondToApproval")
-			expect(parsed.approved).toBe(false)
-			expect(parsed.text).toBe("denied")
+
+			await handleStdinMessage(message, handlers)
+
+			expect(respondToTool).toHaveBeenCalledWith({
+				response: "noButtonClicked",
+				text: "not allowed",
+			})
 		})
 	})
 
-	describe("Message Type Validation", () => {
-		it("should identify valid message types", () => {
-			const validTypes = ["askResponse", "cancelTask", "respondToApproval"]
-			for (const type of validTypes) {
-				expect(validTypes.includes(type)).toBe(true)
+	describe("unknown message types", () => {
+		it("should return handled: false for unknown types", async () => {
+			const message: StdinMessage = {
+				type: "unknownType",
 			}
-		})
 
-		it("should identify unknown message types", () => {
-			const validTypes = ["askResponse", "cancelTask", "respondToApproval"]
-			const unknownTypes = ["unknown", "invalid", "foo", "bar"]
-			for (const type of unknownTypes) {
-				expect(validTypes.includes(type)).toBe(false)
-			}
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(false)
+			expect(result.error).toBe("Unknown message type: unknownType")
+			expect(sendAskResponse).not.toHaveBeenCalled()
+			expect(cancelTask).not.toHaveBeenCalled()
+			expect(respondToTool).not.toHaveBeenCalled()
 		})
 	})
 
-	describe("JSON Parsing Error Handling", () => {
-		it("should handle invalid JSON gracefully", () => {
-			const invalidJsonStrings = ["not json", "{invalid}", "{'single': 'quotes'}", "", "   ", "null", "undefined"]
-
-			for (const str of invalidJsonStrings) {
-				if (str.trim() === "" || str === "null" || str === "undefined") {
-					// Empty strings and null/undefined should be handled specially
-					continue
-				}
-				try {
-					JSON.parse(str)
-				} catch (e) {
-					expect(e).toBeInstanceOf(SyntaxError)
-				}
-			}
-		})
-
-		it("should handle empty lines", () => {
-			const emptyLines = ["", "   ", "\t", "\n"]
-			for (const line of emptyLines) {
-				expect(line.trim()).toBe("")
-			}
-		})
-	})
-
-	describe("Readline Interface", () => {
-		it("should create readline interface with correct options", () => {
-			const mockStdin = new Readable({
-				read() {},
-			})
-
-			const rl = createInterface({
-				input: mockStdin,
-				terminal: false,
-			})
-
-			expect(rl).toBeDefined()
-			rl.close()
-		})
-
-		it("should handle line events", async () => {
-			const mockStdin = new Readable({
-				read() {},
-			})
-
-			const rl = createInterface({
-				input: mockStdin,
-				terminal: false,
-			})
-
-			const lines: string[] = []
-			rl.on("line", (line) => {
-				lines.push(line)
-			})
-
-			// Simulate pushing data
-			mockStdin.push('{"type":"cancelTask"}\n')
-			mockStdin.push(null) // End of stream
-
-			// Wait for processing
-			await new Promise((resolve) => setTimeout(resolve, 10))
-
-			expect(lines).toContain('{"type":"cancelTask"}')
-			rl.close()
-		})
-
-		it("should handle close events", async () => {
-			const mockStdin = new Readable({
-				read() {},
-			})
-
-			const rl = createInterface({
-				input: mockStdin,
-				terminal: false,
-			})
-
-			let closed = false
-			rl.on("close", () => {
-				closed = true
-			})
-
-			rl.close()
-
-			expect(closed).toBe(true)
-		})
-	})
-
-	describe("Message Structure", () => {
-		it("should support optional text field", () => {
-			const withText = { type: "askResponse", askResponse: "messageResponse", text: "hello" }
-			const withoutText = { type: "askResponse", askResponse: "messageResponse" }
-
-			expect(withText.text).toBe("hello")
-			expect(withoutText.text).toBeUndefined()
-		})
-
-		it("should support optional images field", () => {
-			const withImages = {
+	describe("optional fields", () => {
+		it("should not include text when undefined", async () => {
+			const message: StdinMessage = {
 				type: "askResponse",
 				askResponse: "messageResponse",
-				images: ["img1.png", "img2.png"],
 			}
-			const withoutImages = { type: "askResponse", askResponse: "messageResponse" }
 
-			expect(withImages.images).toEqual(["img1.png", "img2.png"])
-			expect(withoutImages.images).toBeUndefined()
+			await handleStdinMessage(message, handlers)
+
+			expect(sendAskResponse).toHaveBeenCalledWith({
+				response: "messageResponse",
+			})
+			// Verify text is not in the call
+			const call = sendAskResponse.mock.calls[0][0]
+			expect("text" in call).toBe(false)
 		})
 
-		it("should support approved boolean field for respondToApproval", () => {
-			const approved = { type: "respondToApproval", approved: true }
-			const rejected = { type: "respondToApproval", approved: false }
+		it("should not include images when undefined", async () => {
+			const message: StdinMessage = {
+				type: "askResponse",
+				askResponse: "messageResponse",
+				text: "hello",
+			}
 
-			expect(approved.approved).toBe(true)
-			expect(rejected.approved).toBe(false)
+			await handleStdinMessage(message, handlers)
+
+			const call = sendAskResponse.mock.calls[0][0]
+			expect("images" in call).toBe(false)
 		})
-	})
-})
-
-describe("StdinMessage Interface", () => {
-	interface StdinMessage {
-		type: string
-		askResponse?: string
-		text?: string
-		images?: string[]
-		approved?: boolean
-	}
-
-	it("should match expected interface structure", () => {
-		const message: StdinMessage = {
-			type: "askResponse",
-			askResponse: "messageResponse",
-			text: "test",
-			images: ["img.png"],
-		}
-
-		expect(message.type).toBe("askResponse")
-		expect(message.askResponse).toBe("messageResponse")
-		expect(message.text).toBe("test")
-		expect(message.images).toEqual(["img.png"])
-	})
-
-	it("should allow minimal message with only type", () => {
-		const message: StdinMessage = {
-			type: "cancelTask",
-		}
-
-		expect(message.type).toBe("cancelTask")
-		expect(message.askResponse).toBeUndefined()
-		expect(message.text).toBeUndefined()
-		expect(message.images).toBeUndefined()
-		expect(message.approved).toBeUndefined()
 	})
 })

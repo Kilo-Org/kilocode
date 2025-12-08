@@ -9,12 +9,73 @@ import { createInterface } from "readline"
 import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
 import { logs } from "../../services/logs.js"
 
-interface StdinMessage {
+export interface StdinMessage {
 	type: string
 	askResponse?: string
 	text?: string
 	images?: string[]
 	approved?: boolean
+}
+
+export interface StdinMessageHandlers {
+	sendAskResponse: (params: { response: "messageResponse"; text?: string; images?: string[] }) => Promise<void>
+	cancelTask: () => Promise<void>
+	respondToTool: (params: {
+		response: "yesButtonClicked" | "noButtonClicked"
+		text?: string
+		images?: string[]
+	}) => Promise<void>
+}
+
+/**
+ * Handles a parsed stdin message by calling the appropriate handler.
+ * Exported for testing purposes.
+ */
+export async function handleStdinMessage(
+	message: StdinMessage,
+	handlers: StdinMessageHandlers,
+): Promise<{ handled: boolean; error?: string }> {
+	switch (message.type) {
+		case "askResponse":
+			// Handle ask response (user message, approval response, etc.)
+			if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
+				await handlers.respondToTool({
+					response: message.askResponse,
+					...(message.text !== undefined && { text: message.text }),
+					...(message.images !== undefined && { images: message.images }),
+				})
+			} else {
+				await handlers.sendAskResponse({
+					response: (message.askResponse as "messageResponse") ?? "messageResponse",
+					...(message.text !== undefined && { text: message.text }),
+					...(message.images !== undefined && { images: message.images }),
+				})
+			}
+			return { handled: true }
+
+		case "cancelTask":
+			await handlers.cancelTask()
+			return { handled: true }
+
+		case "respondToApproval":
+			// Handle approval response (yes/no for tool use)
+			// This is a convenience API that maps approved: boolean to the internal response format
+			if (message.approved) {
+				await handlers.respondToTool({
+					response: "yesButtonClicked",
+					...(message.text !== undefined && { text: message.text }),
+				})
+			} else {
+				await handlers.respondToTool({
+					response: "noButtonClicked",
+					...(message.text !== undefined && { text: message.text }),
+				})
+			}
+			return { handled: true }
+
+		default:
+			return { handled: false, error: `Unknown message type: ${message.type}` }
+	}
 }
 
 export function useStdinJsonHandler(enabled: boolean) {
@@ -34,6 +95,18 @@ export function useStdinJsonHandler(enabled: boolean) {
 			terminal: false,
 		})
 
+		const handlers: StdinMessageHandlers = {
+			sendAskResponse: async (params) => {
+				await sendAskResponse(params)
+			},
+			cancelTask: async () => {
+				await cancelTask()
+			},
+			respondToTool: async (params) => {
+				await respondToTool(params)
+			},
+		}
+
 		const handleLine = async (line: string) => {
 			const trimmed = line.trim()
 			if (!trimmed) return
@@ -42,46 +115,9 @@ export function useStdinJsonHandler(enabled: boolean) {
 				const message: StdinMessage = JSON.parse(trimmed)
 				logs.debug("Received stdin message", "useStdinJsonHandler", { type: message.type })
 
-				switch (message.type) {
-					case "askResponse":
-						// Handle ask response (user message, approval response, etc.)
-						if (message.askResponse === "yesButtonClicked" || message.askResponse === "noButtonClicked") {
-							await respondToTool({
-								response: message.askResponse,
-								...(message.text !== undefined && { text: message.text }),
-								...(message.images !== undefined && { images: message.images }),
-							})
-						} else {
-							await sendAskResponse({
-								response: (message.askResponse as "messageResponse") ?? "messageResponse",
-								...(message.text !== undefined && { text: message.text }),
-								...(message.images !== undefined && { images: message.images }),
-							})
-						}
-						break
-
-					case "cancelTask":
-						logs.debug("Canceling task via stdin", "useStdinJsonHandler")
-						await cancelTask()
-						break
-
-					case "respondToApproval":
-						// Handle approval response (yes/no for tool use)
-						if (message.approved) {
-							await respondToTool({
-								response: "yesButtonClicked",
-								...(message.text !== undefined && { text: message.text }),
-							})
-						} else {
-							await respondToTool({
-								response: "noButtonClicked",
-								...(message.text !== undefined && { text: message.text }),
-							})
-						}
-						break
-
-					default:
-						logs.warn("Unknown stdin message type", "useStdinJsonHandler", { type: message.type })
+				const result = await handleStdinMessage(message, handlers)
+				if (!result.handled) {
+					logs.warn("Unknown stdin message type", "useStdinJsonHandler", { type: message.type })
 				}
 			} catch (error) {
 				logs.error("Failed to parse stdin JSON", "useStdinJsonHandler", {
