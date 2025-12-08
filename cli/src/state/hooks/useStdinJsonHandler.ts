@@ -53,7 +53,7 @@ export function useStdinJsonHandler(enabled: boolean) {
 							})
 						} else {
 							await sendAskResponse({
-								response: (message.askResponse as "messageResponse") || "messageResponse",
+								response: (message.askResponse as "messageResponse") ?? "messageResponse",
 								...(message.text !== undefined && { text: message.text }),
 								...(message.images !== undefined && { images: message.images }),
 							})
