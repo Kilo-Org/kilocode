@@ -30,6 +30,7 @@ export interface CLIOptions {
 	workspace?: string
 	ci?: boolean
 	json?: boolean
+	jsonInteractive?: boolean
 	prompt?: string
 	timeout?: number
 	customModes?: ModeConfig[]
