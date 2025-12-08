@@ -9,7 +9,6 @@
 export const MODEL_SELECTION_ENABLED = process.env.NODE_ENV === "development"
 
 /**
- * Enable the Agent Manager feature in development mode.
- * This allows developers to test the multi-agent orchestration functionality.
+ * Enable the Agent Manager feature.
  */
-export const AGENT_MANAGER_ENABLED = process.env.NODE_ENV === "development"
+export const AGENT_MANAGER_ENABLED = true
