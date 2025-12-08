@@ -98,13 +98,16 @@ export async function saveClipboardImageMacOS(): Promise<SaveClipboardResult> {
 	const filename = generateClipboardFilename(parsed.format)
 	const filePath = path.join(clipboardDir, filename)
 
+	// Escape backslashes and quotes for AppleScript string interpolation
+	const escapedPath = filePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+
 	const script = `
 set imageData to the clipboard as «class ${appleClass}»
-set filePath to POSIX file "${filePath}"
+set filePath to POSIX file "${escapedPath}"
 set fileRef to open for access filePath with write permission
 write imageData to fileRef
 close access fileRef
-return "${filePath}"
+return "${escapedPath}"
 `
 
 	try {
