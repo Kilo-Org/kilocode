@@ -45,8 +45,7 @@ export const MAX_CHECKPOINT_TIMEOUT_SECONDS = 60
  */
 export const DEFAULT_CHECKPOINT_TIMEOUT_SECONDS = 15
 
-// kilocode_change start
-/**
+/** kilocode_change start
  * Default globally ignored file patterns
  * These are common sensitive files that should be ignored even without a .kilocodeignore file
  */
@@ -65,8 +64,8 @@ export const DEFAULT_GLOBALLY_IGNORED_FILES = [
 	"*.gpg", // GPG encrypted files
 	"*.asc", // ASCII-armored GPG files
 	"*.sig", // Signature files
-]
-// kilocode_change end
+] // kilocode_change end
+
 /**
  * GlobalSettings
  */
