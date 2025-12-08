@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "無法顯示新變更，檢查點不可用。",
 		"noChanges": "無法顯示新變更，找不到任何變更。",
 		"error": "無法顯示新變更，發生錯誤。"
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "你的 Kilocode CLI 版本已過時且不支援 Agent Manager。請更新至最新版本。",
+			"cliNotFound": "找不到 Kilocode CLI。請安裝以使用 Agent Manager。",
+			"sessionFailed": "啟動代理工作階段失敗",
+			"sessionFailedWithMessage": "啟動代理工作階段失敗: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "更新說明",
+			"installInstructions": "安裝說明",
+			"getHelp": "取得協助"
+		}
 	}
 }

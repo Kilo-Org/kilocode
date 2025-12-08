@@ -1,5 +1,19 @@
 /* Agent Manager Styles - Scoped with am- prefix to avoid conflicts with main sidebar */
 
+/* Wrapper that provides padding only when error boundary shows error UI */
+.am-app-wrapper {
+	min-height: 100vh;
+	background: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+}
+
+/* Add padding when error boundary catches an error (no .agent-manager-container inside) */
+.am-app-wrapper:not(:has(.agent-manager-container)) {
+	padding: 20px;
+}
+
 .agent-manager-container {
 	/* Scoped CSS variables */
 	--am-sidebar-width: 250px;

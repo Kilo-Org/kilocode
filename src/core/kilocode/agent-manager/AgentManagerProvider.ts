@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { t } from "i18next"
 import { AgentRegistry } from "./AgentRegistry"
 import {
 	parseParallelModeBranch,
@@ -59,8 +60,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			onPendingSessionChanged: (pendingSession) => {
 				this.postMessage({ type: "agentManager.pendingSession", pendingSession })
 			},
-			onStartSessionFailed: () => {
+			onStartSessionFailed: (error) => {
 				this.postMessage({ type: "agentManager.startSessionFailed" })
+				this.showCliError(error)
 			},
 			onChatMessages: (sessionId, messages) => {
 				this.postMessage({ type: "agentManager.chatMessages", sessionId, messages })
@@ -713,16 +715,35 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private showCliNotFoundError(): void {
-		vscode.window
-			.showErrorMessage(
-				"Kilocode CLI not found. Please install it to use the Agent Manager.",
-				"Install Instructions",
-			)
-			.then((selection) => {
-				if (selection === "Install Instructions") {
-					void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
-				}
-			})
+		this.showCliError({ type: "spawn_error", message: "CLI not found" })
+	}
+
+	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
+		let errorMessage: string
+		let actionLabel: string
+
+		switch (error?.type) {
+			case "cli_outdated":
+				errorMessage = t("kilocode:agentManager.errors.cliOutdated")
+				actionLabel = t("kilocode:agentManager.actions.updateInstructions")
+				break
+			case "spawn_error":
+				errorMessage = t("kilocode:agentManager.errors.cliNotFound")
+				actionLabel = t("kilocode:agentManager.actions.installInstructions")
+				break
+			default:
+				errorMessage = error?.message
+					? t("kilocode:agentManager.errors.sessionFailedWithMessage", { message: error.message })
+					: t("kilocode:agentManager.errors.sessionFailed")
+				actionLabel = t("kilocode:agentManager.actions.getHelp")
+				break
+		}
+
+		vscode.window.showErrorMessage(errorMessage, actionLabel).then((selection) => {
+			if (selection === actionLabel) {
+				void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+			}
+		})
 	}
 
 	/**

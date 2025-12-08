@@ -25,6 +25,7 @@ interface PendingProcessInfo {
 	worktreeBranch?: string // Captured from welcome event before session_created
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
+	stderrBuffer: string[] // Capture stderr for error detection
 }
 
 interface ActiveProcessInfo {
@@ -37,7 +38,7 @@ export interface CliProcessHandlerCallbacks {
 	onSessionLog: (sessionId: string, line: string) => void
 	onStateChanged: () => void
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
-	onStartSessionFailed: () => void
+	onStartSessionFailed: (error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }) => void
 	onChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	onSessionCreated: (sawApiReqStarted: boolean) => void
 }
@@ -140,6 +141,7 @@ export class CliProcessHandler {
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
+				stderrBuffer: [],
 			}
 		}
 
@@ -159,6 +161,11 @@ export class CliProcessHandler {
 		proc.stderr?.on("data", (data) => {
 			const stderrStr = String(data).trim()
 			this.callbacks.onLog(`stderr: ${stderrStr}`)
+
+			// Capture stderr for pending process to detect CLI errors
+			if (this.pendingProcess && this.pendingProcess.process === proc) {
+				this.pendingProcess.stderrBuffer.push(stderrStr)
+			}
 		})
 
 		// Handle process exit - pass the process reference so we know which one exited
@@ -357,12 +364,15 @@ export class CliProcessHandler {
 	): void {
 		// Check if this is the pending process (only for NEW sessions, not resumes)
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
 
 			if (code !== 0) {
-				this.callbacks.onStartSessionFailed()
+				// Detect CLI version/compatibility issues from stderr
+				const errorInfo = this.detectCliError(stderrOutput, code)
+				this.callbacks.onStartSessionFailed(errorInfo)
 			}
 			this.callbacks.onStateChanged()
 			return
@@ -407,7 +417,10 @@ export class CliProcessHandler {
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
-			this.callbacks.onStartSessionFailed()
+			this.callbacks.onStartSessionFailed({
+				type: "spawn_error",
+				message: error.message,
+			})
 			this.callbacks.onStateChanged()
 			return
 		}
@@ -428,5 +441,42 @@ export class CliProcessHandler {
 			}
 		}
 		return null
+	}
+
+	/**
+	 * Detect CLI error type from stderr output.
+	 * Used to provide helpful error messages for version mismatches.
+	 */
+	private detectCliError(
+		stderrOutput: string,
+		_exitCode: number | null,
+	): { type: "cli_outdated" | "spawn_error" | "unknown"; message: string } {
+		const lowerStderr = stderrOutput.toLowerCase()
+
+		// Detect unknown option errors (indicates CLI version doesn't support --json-io)
+		if (
+			lowerStderr.includes("unknown option") ||
+			lowerStderr.includes("unrecognized option") ||
+			lowerStderr.includes("invalid option") ||
+			lowerStderr.includes("--json-io")
+		) {
+			return {
+				type: "cli_outdated",
+				message: stderrOutput || "CLI does not support required options",
+			}
+		}
+
+		// Detect command not found (shouldn't happen since we check path, but just in case)
+		if (lowerStderr.includes("command not found") || lowerStderr.includes("not recognized")) {
+			return {
+				type: "spawn_error",
+				message: stderrOutput || "CLI command not found",
+			}
+		}
+
+		return {
+			type: "unknown",
+			message: stderrOutput || "Unknown error",
+		}
 	}
 }

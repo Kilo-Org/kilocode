@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Неможливо показати нові зміни, контрольні точки недоступні.",
 		"noChanges": "Неможливо показати нові зміни, змін не знайдено.",
 		"error": "Неможливо показати нові зміни, сталася помилка."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Твоя версія Kilocode CLI застаріла і не підтримує Agent Manager. Будь ласка, оновись до останньої версії.",
+			"cliNotFound": "Kilocode CLI не знайдено. Будь ласка, встанови його для використання Agent Manager.",
+			"sessionFailed": "Не вдалося запустити сесію агента",
+			"sessionFailedWithMessage": "Не вдалося запустити сесію агента: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Інструкції з Оновлення",
+			"installInstructions": "Інструкції з Встановлення",
+			"getHelp": "Отримати Допомогу"
+		}
 	}
 }

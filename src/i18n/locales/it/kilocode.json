@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Impossibile mostrare le nuove modifiche, i checkpoint non sono disponibili.",
 		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
 		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "La tua versione di Kilocode CLI è obsoleta e non supporta l'Agent Manager. Aggiorna all'ultima versione.",
+			"cliNotFound": "Kilocode CLI non trovato. Installalo per utilizzare l'Agent Manager.",
+			"sessionFailed": "Impossibile avviare la sessione dell'agente",
+			"sessionFailedWithMessage": "Impossibile avviare la sessione dell'agente: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Istruzioni di Aggiornamento",
+			"installInstructions": "Istruzioni di Installazione",
+			"getHelp": "Ottieni Aiuto"
+		}
 	}
 }

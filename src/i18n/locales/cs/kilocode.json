@@ -102,6 +102,19 @@
 		"noChanges": "Nelze zobrazit nové změny, nebyly nalezeny žádné změny.",
 		"error": "Nelze zobrazit nové změny, došlo k chybě."
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Tvoje verze Kilocode CLI je zastaralá a nepodporuje Agent Manager. Prosím aktualizuj na nejnovější verzi.",
+			"cliNotFound": "Kilocode CLI nenalezeno. Prosím nainstaluj ho pro použití Agent Manageru.",
+			"sessionFailed": "Nepodařilo se spustit relaci agenta",
+			"sessionFailedWithMessage": "Nepodařilo se spustit relaci agenta: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Instrukce k Aktualizaci",
+			"installInstructions": "Instrukce k Instalaci",
+			"getHelp": "Získat Pomoc"
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
