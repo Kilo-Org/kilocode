@@ -640,9 +640,7 @@ describe("CliProcessHandler", () => {
 
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
-			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), {
-				gitUrl: undefined,
-			})
+			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), undefined)
 		})
 	})
 })

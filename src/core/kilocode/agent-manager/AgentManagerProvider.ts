@@ -200,7 +200,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			(sessionId, event) => {
 				this.handleCliEvent(sessionId, event)
 			},
-			{ gitUrl },
+			gitUrl ? { gitUrl } : undefined,
 		)
 	}
 
@@ -459,14 +459,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private filterRemoteSessionsByGitUrl(sessions: RemoteSession[]): RemoteSession[] {
-		// If current workspace has no git URL, show sessions without git_url
 		if (!this.currentGitUrl) {
 			return sessions.filter((s) => !s.git_url)
 		}
-
-		// Filter to sessions matching current git_url, or sessions without git_url
-		// (sessions without git_url are included because the API may not return git_url yet)
-		return sessions.filter((s) => !s.git_url || s.git_url === this.currentGitUrl)
+		return sessions.filter((s) => s.git_url === this.currentGitUrl)
 	}
 
 	private postMessage(message: unknown): void {

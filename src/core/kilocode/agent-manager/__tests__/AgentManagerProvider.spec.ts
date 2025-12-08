@@ -433,7 +433,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			"/tmp/workspace",
 			"test prompt",
 			expect.any(Function),
-			{ gitUrl: undefined },
+			undefined,
 		)
 	})
 
@@ -507,5 +507,61 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		expect(state.sessions).toHaveLength(1)
 		expect(state.sessions[0].sessionId).toBe("session-2")
+	})
+
+	describe("filterRemoteSessionsByGitUrl", () => {
+		it("returns only sessions with matching git_url when currentGitUrl is set", () => {
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: "https://github.com/org/other.git" },
+				{ session_id: "3", git_url: "https://github.com/org/repo.git" },
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(2)
+			expect(filtered.map((s: any) => s.session_id)).toEqual(["1", "3"])
+		})
+
+		it("excludes sessions without git_url when currentGitUrl is set", () => {
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: undefined },
+				{ session_id: "3" }, // no git_url property
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(1)
+			expect(filtered[0].session_id).toBe("1")
+		})
+
+		it("returns only sessions without git_url when currentGitUrl is undefined", () => {
+			;(provider as any).currentGitUrl = undefined
+
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: undefined },
+				{ session_id: "3" }, // no git_url property
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(2)
+			expect(filtered.map((s: any) => s.session_id)).toEqual(["2", "3"])
+		})
+
+		it("excludes sessions with git_url when currentGitUrl is undefined", () => {
+			;(provider as any).currentGitUrl = undefined
+
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: "https://github.com/org/other.git" },
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(0)
+		})
 	})
 })

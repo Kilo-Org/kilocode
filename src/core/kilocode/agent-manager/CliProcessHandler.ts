@@ -52,7 +52,7 @@ export class CliProcessHandler {
 		options?: SpawnOptions,
 	): void {
 		// Set pending session state
-		const pendingSession = this.registry.setPendingSession(prompt, options ? { gitUrl: options.gitUrl } : undefined)
+		const pendingSession = this.registry.setPendingSession(prompt, options)
 		this.callbacks.onLog(`Pending session created, waiting for CLI session_created event`)
 		this.callbacks.onPendingSessionChanged(pendingSession)
 
@@ -205,7 +205,7 @@ export class CliProcessHandler {
 		clearTimeout(timeout)
 
 		// Create the actual session with CLI's sessionId
-		const session = this.registry.createSession(event.sessionId, prompt, startTime, { gitUrl })
+		const session = this.registry.createSession(event.sessionId, prompt, startTime, gitUrl ? { gitUrl } : undefined)
 		this.callbacks.onLog(`Session created with CLI sessionId: ${session.sessionId}`)
 
 		// Clear pending session state
