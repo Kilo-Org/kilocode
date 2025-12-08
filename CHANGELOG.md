@@ -1,5 +1,15 @@
 # kilo-code
 
+## 4.131.1
+
+### Patch Changes
+
+- [#4278](https://github.com/Kilo-Org/kilocode/pull/4278) [`a389603`](https://github.com/Kilo-Org/kilocode/commit/a3896030e963d4c94200716035cce446e838be35) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix webview assets build
+
+- [#4275](https://github.com/Kilo-Org/kilocode/pull/4275) [`ce50373`](https://github.com/Kilo-Org/kilocode/commit/ce50373dd6ff4f011783e2f44dd41e6a9b77a8d3) Thanks [@iscekic](https://github.com/iscekic)! - use new endpoint for uploading session blobs via presigned r2 urls
+
+- [#4270](https://github.com/Kilo-Org/kilocode/pull/4270) [`bdb7ed4`](https://github.com/Kilo-Org/kilocode/commit/bdb7ed4f2a148b297a21c39457fe13ddc38de3de) Thanks [@iscekic](https://github.com/iscekic)! - fix an issue where a session was duplicated instead of restored
+
 ## 4.131.0
 
 ### Minor Changes
