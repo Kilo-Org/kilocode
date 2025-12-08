@@ -28,6 +28,7 @@
 		"runModeLocal": "Lokální",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
+		"comingSoon": "Již brzy",
 		"runningInWorktree": "Běží ve worktree",
 		"runningLocally": "Běží lokálně",
 		"branch": "Větev",

@@ -28,6 +28,7 @@
 		"runModeLocal": "Lokaal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
+		"comingSoon": "Binnenkort beschikbaar",
 		"runningInWorktree": "Draait in worktree",
 		"runningLocally": "Draait lokaal",
 		"branch": "Branch",

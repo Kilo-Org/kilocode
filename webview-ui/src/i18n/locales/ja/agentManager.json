@@ -28,6 +28,7 @@
 		"runModeLocal": "ローカル",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "クラウド",
+		"comingSoon": "近日公開",
 		"runningInWorktree": "Worktreeで実行中",
 		"runningLocally": "ローカルで実行中",
 		"branch": "ブランチ",

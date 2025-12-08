@@ -28,6 +28,7 @@
 		"runModeLocal": "Locale",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
+		"comingSoon": "Prossimamente",
 		"runningInWorktree": "In esecuzione nel worktree",
 		"runningLocally": "In esecuzione localmente",
 		"branch": "Branch",

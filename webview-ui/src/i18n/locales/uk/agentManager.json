@@ -28,6 +28,7 @@
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Хмара",
+		"comingSoon": "Незабаром",
 		"runningInWorktree": "Виконується в worktree",
 		"runningLocally": "Виконується локально",
 		"branch": "Гілка",

@@ -28,6 +28,7 @@
 		"runModeLocal": "本地",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "云端",
+		"comingSoon": "即将推出",
 		"runningInWorktree": "在 Worktree 中运行",
 		"runningLocally": "本地运行",
 		"branch": "分支",

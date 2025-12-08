@@ -28,6 +28,7 @@
 		"runModeLocal": "محلي",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "سحابي",
+		"comingSoon": "قريباً",
 		"runningInWorktree": "يعمل في Worktree",
 		"runningLocally": "يعمل محلياً",
 		"branch": "فرع",

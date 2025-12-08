@@ -28,6 +28,7 @@
 		"runModeLocal": "Yerel",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Bulut",
+		"comingSoon": "Yakında",
 		"runningInWorktree": "Worktree'de çalışıyor",
 		"runningLocally": "Yerel olarak çalışıyor",
 		"branch": "Dal",

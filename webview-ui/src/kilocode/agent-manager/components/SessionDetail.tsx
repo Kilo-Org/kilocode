@@ -16,6 +16,7 @@ import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils
 import { Loader2, SendHorizontal, RefreshCw, GitBranch, Folder, ChevronDown, AlertCircle, Zap } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
+import { StandardTooltip } from "../../../components/ui"
 import { KiloLogo } from "./KiloLogo"
 
 export function SessionDetail() {
@@ -292,14 +293,18 @@ function NewAgentForm() {
 										<span>{t("sessionDetail.runModeLocal")}</span>
 										{runMode === "local" && <span className="am-checkmark">✓</span>}
 									</button>
-									<button
-										className={cn("am-run-mode-option-inline", "disabled")}
-										onClick={() => handleSelectMode("worktree")}
-										type="button"
-										disabled>
-										<GitBranch size={12} />
-										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
-									</button>
+									<StandardTooltip content={t("sessionDetail.comingSoon")}>
+										<button
+											className={cn("am-run-mode-option-inline", "disabled")}
+											onClick={() => handleSelectMode("worktree")}
+											type="button"
+											disabled>
+											<GitBranch size={12} />
+											<span className="am-run-mode-label">
+												{t("sessionDetail.runModeWorktree")}
+											</span>
+										</button>
+									</StandardTooltip>
 								</div>
 							)}
 						</div>
