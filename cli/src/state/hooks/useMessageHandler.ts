@@ -94,12 +94,10 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 					}
 				}
 
-				const hasAnyImages = processed.images.length > 0
-
 				// Track telemetry
 				getTelemetryService().trackUserMessageSent(
 					processed.text.length,
-					hasAnyImages,
+					processed.hasImages,
 					hasActiveTask,
 					undefined,
 				)
@@ -107,7 +105,7 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				// Build message payload
 				const payload = {
 					text: processed.text,
-					...(hasAnyImages && { images: processed.images }),
+					...(processed.hasImages && { images: processed.images }),
 				}
 
 				// Clear image references after processing
