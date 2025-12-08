@@ -16,7 +16,12 @@ vi.mock("vscode", () => {
 		workspaceFolders: [],
 		getConfiguration: vi.fn(() => ({ get: vi.fn() })),
 	}
-	return { window, Uri, workspace }
+	const ExtensionMode = {
+		Development: 1,
+		Production: 2,
+		Test: 3,
+	}
+	return { window, Uri, workspace, ExtensionMode }
 })
 
 describe("AgentManagerProvider IPC paths", () => {
@@ -56,6 +61,7 @@ describe("AgentManagerProvider IPC paths", () => {
 		const context = {
 			extensionUri: vscode.Uri.joinPath({} as any, "") as any,
 			asAbsolutePath: (p: string) => p,
+			extensionMode: 1, // Development mode
 		} as unknown as vscode.ExtensionContext
 
 		provider = new AgentManagerProvider(context, outputChannel)
