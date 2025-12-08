@@ -8,8 +8,9 @@ import {
 	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	sessionOrderAtom,
-	setRemoteSessionsAtom,
-	setPendingSessionAtom,
+	remoteSessionsAtom,
+	pendingSessionAtom,
+	isRefreshingRemoteSessionsAtom,
 	type AgentSession,
 	type RemoteSession,
 	type PendingSession,
@@ -118,8 +119,9 @@ export function useAgentManagerMessages() {
 	const removeSession = useSetAtom(removeSessionAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const setStartSessionFailedCounter = useSetAtom(startSessionFailedCounterAtom)
-	const setRemoteSessions = useSetAtom(setRemoteSessionsAtom)
-	const setPendingSession = useSetAtom(setPendingSessionAtom)
+	const setRemoteSessions = useSetAtom(remoteSessionsAtom)
+	const setPendingSession = useSetAtom(pendingSessionAtom)
+	const setIsRefreshingRemoteSessions = useSetAtom(isRefreshingRemoteSessionsAtom)
 	const sendSessionEvent = useSetAtom(sendSessionEventAtom)
 	const cleanupSessionMachine = useSetAtom(cleanupSessionMachineAtom)
 	const sessionOrder = useAtomValue(sessionOrderAtom)
@@ -194,6 +196,7 @@ export function useAgentManagerMessages() {
 				case "agentManager.remoteSessions": {
 					const { sessions } = message as RemoteSessionsMessage
 					setRemoteSessions(sessions)
+					setIsRefreshingRemoteSessions(false)
 					break
 				}
 
@@ -225,6 +228,7 @@ export function useAgentManagerMessages() {
 		setStartSessionFailedCounter,
 		setRemoteSessions,
 		setPendingSession,
+		setIsRefreshingRemoteSessions,
 		sendSessionEvent,
 		cleanupSessionMachine,
 		sessionOrder,

@@ -1,3 +1,5 @@
+import type { Session as RemoteSession } from "../../../shared/kilocode/cli-sessions/core/SessionClient"
+
 /**
  * Agent Manager Types
  */
@@ -42,13 +44,8 @@ export interface PendingSession {
 	gitUrl?: string
 }
 
-export interface RemoteSession {
-	session_id: string
-	title: string
-	created_at: string
-	updated_at: string
-	git_url?: string
-}
+// Re-export remote session shape from shared session client for consistency
+export type { RemoteSession }
 
 export interface AgentManagerState {
 	sessions: AgentSession[]

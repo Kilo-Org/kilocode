@@ -12,7 +12,11 @@ vi.mock("vscode", () => {
 	const Uri = {
 		joinPath: vi.fn(),
 	}
-	return { window, Uri }
+	const workspace = {
+		workspaceFolders: [],
+		getConfiguration: vi.fn(() => ({ get: vi.fn() })),
+	}
+	return { window, Uri, workspace }
 })
 
 describe("AgentManagerProvider IPC paths", () => {

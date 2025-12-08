@@ -143,10 +143,6 @@ export const removeSessionAtom = atom(null, (get, set, sessionId: string) => {
 	}
 })
 
-export const setPendingSessionAtom = atom(null, (_get, set, pending: PendingSession | null) => {
-	set(pendingSessionAtom, pending)
-})
-
 export const updateSessionStatusAtom = atom(
 	null,
 	(
@@ -179,8 +175,4 @@ export const updateSessionStatusAtom = atom(
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)
 	set(isRefreshingRemoteSessionsAtom, false)
-})
-
-export const startRefreshingRemoteSessionsAtom = atom(null, (_get, set) => {
-	set(isRefreshingRemoteSessionsAtom, true)
 })
