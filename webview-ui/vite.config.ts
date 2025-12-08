@@ -122,7 +122,7 @@ export default defineConfig(({ mode }) => {
 			cssCodeSplit: false,
 			rollupOptions: {
 				input: {
-					main: resolve(__dirname, "index.html"),
+					index: resolve(__dirname, "index.html"),
 					"agent-manager": resolve(__dirname, "agent-manager.html"), // kilocode_change
 					"browser-panel": resolve(__dirname, "browser-panel.html"),
 				},
