@@ -340,7 +340,7 @@ export type ExtensionState = Pick<
 	| "yoloMode" // kilocode_change
 	| "alwaysAllowReadOnly"
 	| "alwaysAllowReadOnlyOutsideWorkspace"
-	| "globallyIgnoredFiles"
+	| "globallyIgnoredFiles" // kilocode_change
 	| "alwaysAllowWrite"
 	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
