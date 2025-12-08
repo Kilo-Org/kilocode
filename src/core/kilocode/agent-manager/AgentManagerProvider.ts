@@ -9,6 +9,7 @@ import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
+import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
 
 /**
@@ -148,7 +149,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		try {
-			this.currentGitUrl = await getRemoteUrl(workspaceFolder)
+			const rawGitUrl = await getRemoteUrl(workspaceFolder)
+			this.currentGitUrl = normalizeGitUrl(rawGitUrl)
 			this.outputChannel.appendLine(`[AgentManager] Current git URL: ${this.currentGitUrl}`)
 		} catch (error) {
 			this.outputChannel.appendLine(
@@ -186,7 +188,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// Get git URL for the workspace (used for filtering sessions)
 		let gitUrl: string | undefined
 		try {
-			gitUrl = await getRemoteUrl(workspaceFolder)
+			gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
 		} catch (error) {
 			this.outputChannel.appendLine(
 				`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
