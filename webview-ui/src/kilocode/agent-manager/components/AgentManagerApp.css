@@ -663,6 +663,22 @@
 	transition: background 0.1s;
 }
 
+.run-mode-option-inline .run-mode-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.run-mode-option-inline.disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+	color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+.run-mode-option-inline.disabled:hover {
+	background: transparent;
+}
+
 .run-mode-option-inline:hover:not(:disabled) {
 	background: var(--vscode-list-hoverBackground);
 }

@@ -293,13 +293,12 @@ function NewAgentForm() {
 										{runMode === "local" && <span className="checkmark">✓</span>}
 									</button>
 									<button
-										className={cn("run-mode-option-inline", runMode === "worktree" && "selected")}
+										className={cn("run-mode-option-inline", "disabled")}
 										onClick={() => handleSelectMode("worktree")}
 										type="button"
 										disabled>
 										<GitBranch size={12} />
-										<span>{t("sessionDetail.runModeWorktree")} (coming soon)</span>
-										{runMode === "worktree" && <span className="checkmark">✓</span>}
+										<span className="run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
 									</button>
 								</div>
 							)}
