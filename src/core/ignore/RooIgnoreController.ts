@@ -21,7 +21,6 @@ export class RooIgnoreController {
 	rooIgnoreContent: string | undefined
 
 	constructor(cwd: string, globallyIgnoredFiles: string[] = []) { // kilocode_change
-		// kilocode_change
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
 		this.globalIgnoreInstance = ignore() // kilocode_change
