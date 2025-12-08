@@ -618,6 +618,8 @@ describe("ManagedIndexer", () => {
 			})
 
 			it("should handle file deletions", async () => {
+				vi.mocked(apiClient.deleteFiles).mockResolvedValue(undefined)
+
 				const mockFiles = async function* (): AsyncIterable<GitWatcherFile> {
 					yield { type: "file-deleted", filePath: "deleted.ts" }
 				}
@@ -634,7 +636,129 @@ describe("ManagedIndexer", () => {
 
 				await indexer.onEvent(event)
 
-				// Should not throw, deletion handling is TODO
+				// Wait for async processing
+				await new Promise((resolve) => setTimeout(resolve, 50))
+
+				expect(apiClient.deleteFiles).toHaveBeenCalledWith(
+					expect.objectContaining({
+						organizationId: "test-org-id",
+						projectId: "test-project-id",
+						gitBranch: "feature/test",
+						filePaths: ["deleted.ts"],
+					}),
+					expect.any(Object), // AbortSignal
+				)
+				expect(state.isIndexing).toBe(false)
+			})
+
+			it("should delete files that are in manifest but not in git", async () => {
+				const fs = await import("fs")
+				vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+				vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
+				vi.mocked(apiClient.upsertFile).mockResolvedValue(undefined)
+				vi.mocked(apiClient.deleteFiles).mockResolvedValue(undefined)
+
+				// Manifest has files that are no longer in git
+				const manifestWithOldFiles = {
+					files: {
+						oldHash1: "old-file1.ts",
+						oldHash2: "old-file2.ts",
+						currentHash: "current-file.ts",
+					},
+				}
+				vi.mocked(apiClient.getServerManifest).mockResolvedValue(manifestWithOldFiles as any)
+
+				// Git only has current-file.ts
+				const mockFiles = async function* (): AsyncIterable<GitWatcherFile> {
+					yield { type: "file", filePath: "current-file.ts", fileHash: "newHash" }
+				}
+
+				const event: GitWatcherEvent = {
+					type: "branch-changed",
+					previousBranch: "main",
+					newBranch: "feature/test",
+					branch: "feature/test",
+					isBaseBranch: false,
+					watcher: mockWatcher,
+					files: mockFiles(),
+				}
+
+				await indexer.onEvent(event)
+
+				// Wait for async processing
+				await new Promise((resolve) => setTimeout(resolve, 50))
+
+				// Should delete the files that are in manifest but not in git
+				expect(apiClient.deleteFiles).toHaveBeenCalledWith(
+					expect.objectContaining({
+						filePaths: expect.arrayContaining(["old-file1.ts", "old-file2.ts"]),
+					}),
+					expect.any(Object),
+				)
+			})
+
+			it("should not call deleteFiles when no files need deletion", async () => {
+				const fs = await import("fs")
+				vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+				vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
+				vi.mocked(apiClient.upsertFile).mockResolvedValue(undefined)
+				vi.mocked(apiClient.deleteFiles).mockResolvedValue(undefined)
+
+				const manifestWithCurrentFiles = {
+					files: {
+						hash1: "file1.ts",
+					},
+				}
+				vi.mocked(apiClient.getServerManifest).mockResolvedValue(manifestWithCurrentFiles as any)
+
+				const mockFiles = async function* (): AsyncIterable<GitWatcherFile> {
+					yield { type: "file", filePath: "file1.ts", fileHash: "hash1" }
+				}
+
+				const event: GitWatcherEvent = {
+					type: "branch-changed",
+					previousBranch: "main",
+					newBranch: "feature/test",
+					branch: "feature/test",
+					isBaseBranch: false,
+					watcher: mockWatcher,
+					files: mockFiles(),
+				}
+
+				await indexer.onEvent(event)
+
+				// Wait for async processing
+				await new Promise((resolve) => setTimeout(resolve, 50))
+
+				// Should not call deleteFiles when all manifest files are still in git
+				expect(apiClient.deleteFiles).not.toHaveBeenCalled()
+			})
+
+			it("should handle deleteFiles errors gracefully", async () => {
+				vi.mocked(apiClient.deleteFiles).mockRejectedValue(new Error("Delete failed"))
+
+				const mockFiles = async function* (): AsyncIterable<GitWatcherFile> {
+					yield { type: "file-deleted", filePath: "deleted.ts" }
+				}
+
+				const event: GitWatcherEvent = {
+					type: "branch-changed",
+					previousBranch: "main",
+					newBranch: "feature/test",
+					branch: "feature/test",
+					isBaseBranch: false,
+					watcher: mockWatcher,
+					files: mockFiles(),
+				}
+
+				await indexer.onEvent(event)
+
+				// Wait for async processing
+				await new Promise((resolve) => setTimeout(resolve, 50))
+
+				// Should set error state
+				expect(state.error).toBeDefined()
+				expect(state.error?.message).toContain("Failed to delete files")
 				expect(state.isIndexing).toBe(false)
 			})
 
