@@ -131,7 +131,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		listApiConfigMeta,
 		uriScheme,
 		kiloCodeWrapperProperties, // kilocode_change
-		settingsImportedAt,
 	} = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
@@ -335,13 +334,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	}, [extensionState, isChangeDetected, editingApiConfigName, currentApiConfigName])
 	// kilocode_change end
 
-	// Bust the cache when settings are imported.
 	useEffect(() => {
-		if (settingsImportedAt) {
-			setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
-			setChangeDetected(false)
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data
+			if (message.type === "settingsImported") {
+				setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
+				setChangeDetected(false)
+			}
 		}
-	}, [settingsImportedAt, extensionState])
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	})
 
 	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback((field, value) => {
 		setCachedState((prevState) => {
