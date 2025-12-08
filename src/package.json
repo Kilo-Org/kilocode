@@ -296,10 +296,7 @@
 			{
 				"command": "kilo-code.agentManagerOpen",
 				"title": "Open Agent Manager",
-				"icon": {
-					"light": "assets/icons/kilo-light.svg",
-					"dark": "assets/icons/kilo-dark.svg"
-				},
+				"icon": "$(circuit-board)",
 				"category": "%configuration.title%"
 			}
 		],

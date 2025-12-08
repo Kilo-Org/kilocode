@@ -56,7 +56,8 @@ export const startSessionFailedCounterAtom = atom(0)
 
 // User preference for run mode (persisted across new agent forms)
 export type RunMode = "local" | "worktree"
-export const preferredRunModeAtom = atom<RunMode>("worktree")
+// Default to local until worktree mode is ready to ship
+export const preferredRunModeAtom = atom<RunMode>("local")
 
 // Derived - local sessions only
 export const sessionsArrayAtom = atom((get) => {

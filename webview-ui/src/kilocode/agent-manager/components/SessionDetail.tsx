@@ -192,6 +192,10 @@ function NewAgentForm() {
 	}
 
 	const handleSelectMode = (mode: RunMode) => {
+		if (mode === "worktree") {
+			// Worktree mode is not yet available for users
+			return
+		}
 		setRunMode(mode)
 		setIsDropdownOpen(false)
 	}
@@ -291,9 +295,10 @@ function NewAgentForm() {
 									<button
 										className={cn("run-mode-option-inline", runMode === "worktree" && "selected")}
 										onClick={() => handleSelectMode("worktree")}
-										type="button">
+										type="button"
+										disabled>
 										<GitBranch size={12} />
-										<span>{t("sessionDetail.runModeWorktree")}</span>
+										<span>{t("sessionDetail.runModeWorktree")} (coming soon)</span>
 										{runMode === "worktree" && <span className="checkmark">✓</span>}
 									</button>
 								</div>
