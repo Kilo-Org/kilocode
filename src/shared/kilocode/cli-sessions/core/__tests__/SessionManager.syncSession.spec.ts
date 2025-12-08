@@ -212,10 +212,7 @@ describe("SessionManager.syncSession", () => {
 				updated_at: new Date().toISOString(),
 			})
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -240,10 +237,7 @@ describe("SessionManager.syncSession", () => {
 				updated_at: new Date().toISOString(),
 			})
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -259,10 +253,7 @@ describe("SessionManager.syncSession", () => {
 		it("should use existing session when task already has one", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("existing-session-456")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "existing-session-456",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -280,10 +271,7 @@ describe("SessionManager.syncSession", () => {
 	describe("blob uploads", () => {
 		beforeEach(() => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 		})
 
 		it("should upload ui_messages blob", async () => {
@@ -392,10 +380,7 @@ describe("SessionManager.syncSession", () => {
 		beforeEach(() => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 		})
 
 		it("should upload git state when it changes", async () => {
@@ -444,10 +429,7 @@ describe("SessionManager.syncSession", () => {
 		it("should update session when git URL changes", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 			vi.mocked(manager.sessionClient!.update).mockResolvedValue({
 				session_id: "session-123",
 				title: "",
@@ -471,10 +453,7 @@ describe("SessionManager.syncSession", () => {
 	describe("title generation", () => {
 		beforeEach(() => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 		})
 
 		it("should check for title generation when uploading ui_messages blob", async () => {
@@ -529,10 +508,7 @@ describe("SessionManager.syncSession", () => {
 				.mockReturnValueOnce("session-1")
 				.mockReturnValueOnce("session-2")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-1",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-1", "uiMessagesPath", "/path/to/file1.json")
 			manager.handleFileUpdate("task-2", "uiMessagesPath", "/path/to/file2.json")
@@ -557,10 +533,7 @@ describe("SessionManager.syncSession", () => {
 				.mockReturnValueOnce("session-2")
 				.mockReturnValueOnce("session-2")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-2",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-1", "uiMessagesPath", "/path/to/file1.json")
 			manager.handleFileUpdate("task-2", "uiMessagesPath", "/path/to/file2.json")
@@ -575,10 +548,7 @@ describe("SessionManager.syncSession", () => {
 		it("should reset isSyncing to false after sync completes", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -613,10 +583,7 @@ describe("SessionManager.syncSession", () => {
 				})
 				.mockReturnValueOnce(JSON.stringify([]))
 
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-2",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-1", "uiMessagesPath", "/path/to/file1.json")
 			manager.handleFileUpdate("task-2", "uiMessagesPath", "/path/to/file2.json")
@@ -660,10 +627,7 @@ describe("SessionManager.syncSession", () => {
 		describe("title generation race conditions", () => {
 			beforeEach(() => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-123",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 			})
 
 			it("should not trigger multiple title generations for the same session", async () => {
@@ -790,10 +754,6 @@ describe("SessionManager.syncSession", () => {
 					uploadStarted = true
 					await new Promise((resolve) => setTimeout(resolve, 100))
 					uploadCompleted = true
-					return {
-						session_id: "session-123",
-						updated_at: new Date().toISOString(),
-					}
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
@@ -821,10 +781,6 @@ describe("SessionManager.syncSession", () => {
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
 				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async () => {
 					await new Promise((resolve) => setTimeout(resolve, 50))
-					return {
-						session_id: "session-123",
-						updated_at: new Date().toISOString(),
-					}
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
@@ -857,10 +813,6 @@ describe("SessionManager.syncSession", () => {
 					syncInProgress = true
 					await new Promise((resolve) => setTimeout(resolve, 50))
 					syncInProgress = false
-					return {
-						session_id: "session-123",
-						updated_at: new Date().toISOString(),
-					}
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
@@ -886,10 +838,6 @@ describe("SessionManager.syncSession", () => {
 				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async () => {
 					uploadTimestamps.push(Date.now())
 					await new Promise((resolve) => setTimeout(resolve, 30))
-					return {
-						session_id: "session-123",
-						updated_at: new Date().toISOString(),
-					}
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
@@ -925,10 +873,7 @@ describe("SessionManager.syncSession", () => {
 						updated_at: new Date().toISOString(),
 					}
 				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-1",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
 
@@ -959,10 +904,7 @@ describe("SessionManager.syncSession", () => {
 						updated_at: new Date().toISOString(),
 					}
 				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-1",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				manager.handleFileUpdate("task-1", "uiMessagesPath", "/path/to/file1.json")
 				manager.handleFileUpdate("task-2", "uiMessagesPath", "/path/to/file2.json")
@@ -990,10 +932,7 @@ describe("SessionManager.syncSession", () => {
 					return `diff-${gitCallCount}`
 				})
 
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-123",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -1010,10 +949,7 @@ describe("SessionManager.syncSession", () => {
 			it("should use consistent git state hash for deduplication", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-123",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				mockGit.revparse.mockResolvedValue("same-commit")
 				mockGit.diff.mockResolvedValue("same-diff")
@@ -1042,10 +978,7 @@ describe("SessionManager.syncSession", () => {
 			it("should skip interval sync when pendingSync exists", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-123",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				const existingPromise = new Promise<void>((resolve) => setTimeout(resolve, 200))
 				setPendingSync(existingPromise)
@@ -1060,10 +993,7 @@ describe("SessionManager.syncSession", () => {
 			it("should clear pendingSync after sync completes via direct call", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-					session_id: "session-123",
-					updated_at: new Date().toISOString(),
-				})
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -1082,10 +1012,6 @@ describe("SessionManager.syncSession", () => {
 				let pendingSyncDuringUpload: Promise<void> | null = null
 				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async () => {
 					pendingSyncDuringUpload = getIsSyncing() ? Promise.resolve() : null
-					return {
-						session_id: "session-123",
-						updated_at: new Date().toISOString(),
-					}
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
@@ -1101,10 +1027,7 @@ describe("SessionManager.syncSession", () => {
 		it("should trigger final sync on destroy", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -1131,10 +1054,7 @@ describe("SessionManager.syncSession", () => {
 		it("should flush queue items during destroy", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "session-123",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue(undefined)
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
 			manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/file2.json")

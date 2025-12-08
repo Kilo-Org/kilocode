@@ -180,30 +180,58 @@ export class SessionClient {
 	}
 
 	/**
-	 * Upload a blob for a session
+	 * Upload a blob for a session using signed URL
 	 */
 	async uploadBlob(
 		sessionId: string,
 		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
 		blobData: unknown,
-	): Promise<{ session_id: string; updated_at: string }> {
+	): Promise<void> {
+		const blobBody = JSON.stringify(blobData)
+		const contentLength = new TextEncoder().encode(blobBody).length
+
+		const signedUrlResponse = await this.getSignedUploadUrl(sessionId, blobType, contentLength)
+
+		const uploadResponse = await fetch(signedUrlResponse.signed_url, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: blobBody,
+		})
+
+		if (!uploadResponse.ok) {
+			throw new Error(`uploadBlob failed: upload to signed URL returned ${uploadResponse.status}`)
+		}
+	}
+
+	/**
+	 * Get a signed URL for uploading a blob
+	 */
+	private async getSignedUploadUrl(
+		sessionId: string,
+		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
+		contentLength: number,
+	): Promise<{ signed_url: string }> {
 		const { endpoint, getToken } = this.trpcClient
 
-		const url = new URL("/api/upload-cli-session-blob", endpoint)
-		url.searchParams.set("session_id", sessionId)
-		url.searchParams.set("blob_type", blobType)
+		const url = new URL("/api/upload-cli-session-blob-v2", endpoint)
 
 		const response = await fetch(url.toString(), {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
 				Authorization: `Bearer ${await getToken()}`,
+				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(blobData),
+			body: JSON.stringify({
+				session_id: sessionId,
+				blob_type: blobType,
+				content_length: contentLength,
+			}),
 		})
 
 		if (!response.ok) {
-			throw new Error(`uploadBlob failed: ${url.toString()} ${response.status}`)
+			throw new Error(`getSignedUploadUrl failed: ${url.toString()} ${response.status}`)
 		}
 
 		return response.json()
