@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.131.2
+
+### Patch Changes
+
+- [#4281](https://github.com/Kilo-Org/kilocode/pull/4281) [`e0ed242`](https://github.com/Kilo-Org/kilocode/commit/e0ed24298b6dc33b8f1c52124b613503d85498aa) Thanks [@iscekic](https://github.com/iscekic)! - force release workflow run
+
 ## 4.131.1
 
 ### Patch Changes
