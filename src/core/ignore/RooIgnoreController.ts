@@ -15,21 +15,22 @@ export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 export class RooIgnoreController {
 	private cwd: string
 	private ignoreInstance: Ignore
-	private globalIgnoreInstance: Ignore
+	private globalIgnoreInstance: Ignore // kilocode_change
+	private globallyIgnoredFiles: string[] // kilocode_change
 	private disposables: vscode.Disposable[] = []
 	rooIgnoreContent: string | undefined
-	private globallyIgnoredFiles: string[]
 
 	constructor(cwd: string, globallyIgnoredFiles: string[] = []) {
+		// kilocode_change
 		this.cwd = cwd
 		this.ignoreInstance = ignore()
-		this.globalIgnoreInstance = ignore()
+		this.globalIgnoreInstance = ignore() // kilocode_change
 		this.rooIgnoreContent = undefined
-		this.globallyIgnoredFiles = globallyIgnoredFiles
+		this.globallyIgnoredFiles = globallyIgnoredFiles // kilocode_change start
 		// Initialize global ignore patterns
 		if (globallyIgnoredFiles.length > 0) {
 			this.globalIgnoreInstance.add(globallyIgnoredFiles)
-		}
+		} // kilocode_change end
 		// Set up file watcher for .kilocodeignore
 		this.setupFileWatcher()
 	}
@@ -108,10 +109,10 @@ export class RooIgnoreController {
 				realPath = absolutePath
 			}
 
-			// Convert real path to relative for checking
+			// Convert real path to relative for .rooignore checking
 			const relativePath = path.relative(this.cwd, realPath).toPosix()
 
-			// First check global ignore patterns (always active)
+			// First check global ignore patterns (always active) // kilocode_change start
 			if (this.globallyIgnoredFiles.length > 0 && this.globalIgnoreInstance.ignores(relativePath)) {
 				return false
 			}
@@ -121,7 +122,7 @@ export class RooIgnoreController {
 				return false
 			}
 
-			return true
+			return true // kilocode_change end
 		} catch (error) {
 			// Allow access to files outside cwd or on errors (backward compatibility)
 			return true

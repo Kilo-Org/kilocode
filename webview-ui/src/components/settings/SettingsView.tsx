@@ -9,7 +9,7 @@ import React, {
 	useRef,
 	useState,
 } from "react"
-import { DEFAULT_GLOBALLY_IGNORED_FILES } from "@roo-code/types"
+import { DEFAULT_GLOBALLY_IGNORED_FILES } from "@roo-code/types" // kilocode_change
 import {
 	CheckCheck,
 	SquareMousePointer,

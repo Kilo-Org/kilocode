@@ -43,7 +43,7 @@ import {
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
-	DEFAULT_GLOBALLY_IGNORED_FILES,
+	DEFAULT_GLOBALLY_IGNORED_FILES, // kilocode_change
 	getModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"

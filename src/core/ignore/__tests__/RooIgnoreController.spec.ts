@@ -528,6 +528,7 @@ describe("RooIgnoreController", () => {
 	})
 
 	describe("global ignore patterns", () => {
+		// kilocode_change start
 		/**
 		 * Tests that global patterns work without .kilocodeignore
 		 */
@@ -717,4 +718,4 @@ describe("RooIgnoreController", () => {
 			expect(controllerWithDefaults.validateAccess("README.md")).toBe(true)
 		})
 	})
-})
+}) // kilocode_change end
