@@ -129,7 +129,7 @@ export class RooIgnoreController {
 		}
 	}
 
-	/**
+	/** kilocode_change start
 	 * Update the global ignore patterns
 	 * @param patterns - Array of glob patterns to ignore globally
 	 */
@@ -139,7 +139,7 @@ export class RooIgnoreController {
 		if (patterns.length > 0) {
 			this.globalIgnoreInstance.add(patterns)
 		}
-	}
+	} // kilocode_change end
 
 	/**
 	 * Check if a terminal command should be allowed to execute based on file access patterns
