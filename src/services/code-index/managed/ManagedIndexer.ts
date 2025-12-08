@@ -19,6 +19,7 @@ import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
+import { shouldIgnoreFile } from "./ignore-list"
 
 interface ManagedIndexerConfig {
 	kilocodeToken: string | null
@@ -658,8 +659,14 @@ export class ManagedIndexer implements vscode.Disposable {
 							const fileBuffer = await fs.readFile(absoluteFilePath)
 							const relativeFilePath = path.relative(event.watcher.config.cwd, absoluteFilePath)
 
+							// Check RooIgnoreController
 							const ignore = state.ignoreController
 							if (ignore && !ignore.validateAccess(relativeFilePath)) {
+								return
+							}
+
+							// Check hardcoded ignore list
+							if (shouldIgnoreFile(relativeFilePath)) {
 								return
 							}
 
