@@ -665,6 +665,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			"assets",
 			"agent-manager.js",
 		])
+		// Include both shared base styles (index.css) and agent-manager specific styles
+		const baseStylesUri = getUri(webview, this.context.extensionUri, ["webview-ui", "build", "assets", "index.css"])
 		const stylesUri = getUri(webview, this.context.extensionUri, [
 			"webview-ui",
 			"build",
@@ -681,6 +683,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; script-src ${webview.cspSource} 'nonce-${nonce}';">
 	<title>Agent Manager</title>
+	<link rel="stylesheet" type="text/css" href="${baseStylesUri}">
 	<link rel="stylesheet" type="text/css" href="${stylesUri}">
 </head>
 <body>
