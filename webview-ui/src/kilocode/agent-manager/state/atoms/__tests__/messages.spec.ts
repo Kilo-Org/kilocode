@@ -25,7 +25,8 @@ describe("messages atom helpers", () => {
 		})
 
 		it("returns null for unknown ask types", () => {
-			const msg: ClineMessage = { ts: 1, type: "ask", ask: "unknown_type" }
+			// Cast through unknown so we can simulate a malformed ask value
+			const msg = { ts: 1, type: "ask", ask: "unknown_type" } as unknown as ClineMessage
 			expect(messageToEvent(msg)).toBeNull()
 		})
 	})
