@@ -865,7 +865,9 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 	// This is how Ctrl+V appears in most terminals
 	if (key.sequence === "\x16") {
 		logs.debug("Detected Ctrl+V via sequence \\x16", "clipboard")
-		handleClipboardImagePaste(get, set)
+		handleClipboardImagePaste(get, set).catch((err) =>
+			logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+		)
 		return true
 	}
 
@@ -880,7 +882,9 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 			if (key.ctrl) {
 				logs.debug("Detected Ctrl+V via key.name", "clipboard")
 				// Handle clipboard image paste asynchronously
-				handleClipboardImagePaste(get, set)
+				handleClipboardImagePaste(get, set).catch((err) =>
+					logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+				)
 				return true
 			}
 			break
