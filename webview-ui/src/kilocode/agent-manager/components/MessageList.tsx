@@ -40,7 +40,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	if (messages.length === 0) {
 		return (
-			<div className="messages-empty">
+			<div className="am-messages-empty">
 				<MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
 				<p>{t("messages.waiting")}</p>
 			</div>
@@ -48,8 +48,8 @@ export function MessageList({ sessionId }: MessageListProps) {
 	}
 
 	return (
-		<div className="messages-container" ref={containerRef}>
-			<div className="messages-list">
+		<div className="am-messages-container" ref={containerRef}>
+			<div className="am-messages-list">
 				{messages.map((msg, idx) => (
 					<MessageItem key={msg.ts || idx} message={msg} />
 				))}
@@ -89,7 +89,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 				title = t("messages.apiRequest")
 				const info = safeJsonParse<{ cost?: number }>(messageText)
 				if (info?.cost !== undefined) {
-					extraInfo = <span className="message-cost">${info.cost.toFixed(4)}</span>
+					extraInfo = <span className="am-message-cost">${info.cost.toFixed(4)}</span>
 				}
 				// Don't show content for API req started, just header
 				content = null
@@ -174,15 +174,16 @@ function MessageItem({ message }: { message: ClineMessage }) {
 	}
 
 	return (
-		<div className={`message-item ${message.type === "say" && message.say === "api_req_started" ? "api-req" : ""}`}>
-			<div className="message-icon">{icon}</div>
-			<div className="message-content-wrapper">
-				<div className="message-header">
-					<span className="message-author">{title}</span>
-					<span className="message-ts">{new Date(message.ts).toLocaleTimeString()}</span>
+		<div
+			className={`am-message-item ${message.type === "say" && message.say === "api_req_started" ? "api-req" : ""}`}>
+			<div className="am-message-icon">{icon}</div>
+			<div className="am-message-content-wrapper">
+				<div className="am-message-header">
+					<span className="am-message-author">{title}</span>
+					<span className="am-message-ts">{new Date(message.ts).toLocaleTimeString()}</span>
 					{extraInfo}
 				</div>
-				{content && <div className="message-body">{content}</div>}
+				{content && <div className="am-message-body">{content}</div>}
 			</div>
 		</div>
 	)

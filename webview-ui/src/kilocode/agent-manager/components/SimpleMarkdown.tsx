@@ -8,7 +8,7 @@ interface SimpleMarkdownProps {
 
 export const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ content }) => {
 	return (
-		<div className="markdown-content">
+		<div className="am-markdown-content">
 			<ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
 		</div>
 	)

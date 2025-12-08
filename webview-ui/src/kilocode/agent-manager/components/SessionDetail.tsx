@@ -49,16 +49,16 @@ export function SessionDetail() {
 	const branchName = selectedSession.parallelMode?.branch
 
 	return (
-		<div className="session-detail">
-			<div className="detail-header">
-				<div className="header-info">
-					<div className="header-title" title={selectedSession.prompt}>
+		<div className="am-session-detail">
+			<div className="am-detail-header">
+				<div className="am-header-info">
+					<div className="am-header-title" title={selectedSession.prompt}>
 						{selectedSession.label}
 					</div>
-					<div className="header-meta">
+					<div className="am-header-meta">
 						{showSpinner && (
 							<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-								<Loader2 size={12} className="spinning" />
+								<Loader2 size={12} className="am-spinning" />
 								<span>
 									{selectedSessionState === "creating" ? t("status.creating") : t("status.running")}
 								</span>
@@ -67,7 +67,7 @@ export function SessionDetail() {
 						<span>{formatRelativeTime(selectedSession.startTime, timeLabels)}</span>
 						{isWorktree ? (
 							<div
-								className="worktree-badge"
+								className="am-worktree-badge"
 								style={{ display: "flex", alignItems: "center", gap: 4 }}
 								title={branchName || t("sessionDetail.runningInWorktree")}>
 								<GitBranch size={12} />
@@ -75,7 +75,7 @@ export function SessionDetail() {
 							</div>
 						) : (
 							<div
-								className="local-badge"
+								className="am-local-badge"
 								style={{ display: "flex", alignItems: "center", gap: 4 }}
 								title={t("sessionDetail.runningLocally")}>
 								<Folder size={12} />
@@ -85,10 +85,10 @@ export function SessionDetail() {
 					</div>
 				</div>
 
-				<div className="header-actions">
+				<div className="am-header-actions">
 					{!isActive && (
 						<button
-							className="icon-btn"
+							className="am-icon-btn"
 							onClick={handleRefresh}
 							aria-label={t("sessionDetail.refreshButtonTitle")}
 							title={t("sessionDetail.refreshButtonTitle")}>
@@ -99,14 +99,14 @@ export function SessionDetail() {
 			</div>
 
 			{selectedSession.status === "error" && selectedSession.error && (
-				<div className="session-error-banner" role="alert">
+				<div className="am-session-error-banner" role="alert">
 					<AlertCircle size={16} />
 					<span>{selectedSession.error}</span>
 				</div>
 			)}
 
 			{isActive && (
-				<div className="full-auto-banner">
+				<div className="am-full-auto-banner">
 					<Zap size={14} />
 					<span>{t("sessionDetail.autoModeWarning")}</span>
 				</div>
@@ -130,23 +130,23 @@ function PendingSessionView({
 	const { t } = useTranslation("agentManager")
 
 	return (
-		<div className="session-detail">
-			<div className="detail-header">
-				<div className="header-info">
-					<div className="header-title" title={pendingSession.prompt}>
+		<div className="am-session-detail">
+			<div className="am-detail-header">
+				<div className="am-header-info">
+					<div className="am-header-title" title={pendingSession.prompt}>
 						{pendingSession.label}
 					</div>
-					<div className="header-meta">
+					<div className="am-header-meta">
 						<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-							<Loader2 size={12} className="spinning" />
+							<Loader2 size={12} className="am-spinning" />
 							<span>{t("status.creating")}</span>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div className="center-form">
-				<Loader2 size={48} className="spinning" style={{ opacity: 0.5 }} />
+			<div className="am-center-form">
+				<Loader2 size={48} className="am-spinning" style={{ opacity: 0.5 }} />
 				<h2 style={{ marginTop: 16 }}>{t("sessionDetail.creatingSession")}</h2>
 				<p>{t("sessionDetail.waitingForCli")}</p>
 			</div>
@@ -201,7 +201,7 @@ function NewAgentForm() {
 	}
 
 	return (
-		<div className="center-form">
+		<div className="am-center-form">
 			<div
 				className="text-[var(--vscode-editor-foreground)]"
 				style={{ width: 48, height: 48, margin: "0 auto 16px auto" }}>
@@ -268,9 +268,9 @@ function NewAgentForm() {
 
 					{/* Controls Container */}
 					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
-						<div className="run-mode-dropdown-inline relative">
+						<div className="am-run-mode-dropdown-inline relative">
 							<button
-								className="run-mode-trigger-inline"
+								className="am-run-mode-trigger-inline"
 								onClick={() => setIsDropdownOpen(!isDropdownOpen)}
 								disabled={isStarting}
 								type="button"
@@ -280,25 +280,25 @@ function NewAgentForm() {
 										: t("sessionDetail.runModeWorktree")
 								}>
 								{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-								<ChevronDown size={10} className={cn("chevron", isDropdownOpen && "open")} />
+								<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "open")} />
 							</button>
 							{isDropdownOpen && (
-								<div className="run-mode-menu-inline">
+								<div className="am-run-mode-menu-inline">
 									<button
-										className={cn("run-mode-option-inline", runMode === "local" && "selected")}
+										className={cn("am-run-mode-option-inline", runMode === "local" && "selected")}
 										onClick={() => handleSelectMode("local")}
 										type="button">
 										<Folder size={12} />
 										<span>{t("sessionDetail.runModeLocal")}</span>
-										{runMode === "local" && <span className="checkmark">✓</span>}
+										{runMode === "local" && <span className="am-checkmark">✓</span>}
 									</button>
 									<button
-										className={cn("run-mode-option-inline", "disabled")}
+										className={cn("am-run-mode-option-inline", "disabled")}
 										onClick={() => handleSelectMode("worktree")}
 										type="button"
 										disabled>
 										<GitBranch size={12} />
-										<span className="run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
+										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
 									</button>
 								</div>
 							)}
@@ -321,7 +321,7 @@ function NewAgentForm() {
 							onClick={handleStart}
 							disabled={isEmpty || isStarting}
 							aria-label={isStarting ? t("sessionDetail.starting") : t("sessionDetail.startAriaLabel")}>
-							{isStarting ? <Loader2 size={16} className="spinning" /> : <SendHorizontal size={16} />}
+							{isStarting ? <Loader2 size={16} className="am-spinning" /> : <SendHorizontal size={16} />}
 						</button>
 					</div>
 

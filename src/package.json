@@ -347,14 +347,14 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.agentManagerOpen",
+					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@0",
-					"when": "view == kilo-code.SidebarProvider && kilo-code.agentManagerEnabled"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.plusButtonClicked",
+					"command": "kilo-code.agentManagerOpen",
 					"group": "navigation@1",
-					"when": "view == kilo-code.SidebarProvider"
+					"when": "view == kilo-code.SidebarProvider && kilo-code.agentManagerEnabled"
 				},
 				{
 					"command": "kilo-code.mcpButtonClicked",

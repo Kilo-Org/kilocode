@@ -50,7 +50,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 	}
 
 	return (
-		<div className="chat-input-container">
+		<div className="am-chat-input-container">
 			<div
 				className={cn(
 					"relative",

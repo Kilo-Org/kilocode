@@ -40,13 +40,13 @@ export function SessionSidebar() {
 	const isNewAgentSelected = selectedId === null && !pendingSession
 
 	return (
-		<div className="sidebar">
-			<div className="sidebar-header">
+		<div className="am-sidebar">
+			<div className="am-sidebar-header">
 				<span>{t("sidebar.title")}</span>
 			</div>
 
 			<div
-				className={`new-agent-item ${isNewAgentSelected ? "selected" : ""}`}
+				className={`am-new-agent-item ${isNewAgentSelected ? "selected" : ""}`}
 				onClick={handleNewSession}
 				role="button"
 				tabIndex={0}
@@ -55,18 +55,18 @@ export function SessionSidebar() {
 				<span>{t("sidebar.newAgent")}</span>
 			</div>
 
-			<div className="sidebar-section-header">
+			<div className="am-sidebar-section-header">
 				<span>{t("sidebar.sessionsSection")}</span>
 				<button
-					className="icon-btn"
+					className="am-icon-btn"
 					onClick={handleRefresh}
 					disabled={isRefreshing}
 					title={t("sidebar.refresh")}>
-					{isRefreshing ? <Loader2 size={14} className="spinning" /> : <RefreshCw size={14} />}
+					{isRefreshing ? <Loader2 size={14} className="am-spinning" /> : <RefreshCw size={14} />}
 				</button>
 			</div>
 
-			<div className="session-list">
+			<div className="am-session-list">
 				{/* Show pending session at the top */}
 				{pendingSession && (
 					<PendingSessionItem
@@ -77,7 +77,7 @@ export function SessionSidebar() {
 				)}
 
 				{sessions.length === 0 && !pendingSession ? (
-					<div className="no-sessions">
+					<div className="am-no-sessions">
 						<p>{t("sidebar.emptyState")}</p>
 					</div>
 				) : (
@@ -108,13 +108,13 @@ function PendingSessionItem({
 	const { t } = useTranslation("agentManager")
 
 	return (
-		<div className={`session-item pending ${isSelected ? "selected" : ""}`} onClick={onSelect}>
-			<div className="status-icon creating" title={t("status.creating")}>
-				<Loader2 size={14} className="spinning" />
+		<div className={`am-session-item pending ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+			<div className="am-status-icon creating" title={t("status.creating")}>
+				<Loader2 size={14} className="am-spinning" />
 			</div>
-			<div className="session-content">
-				<div className="session-label">{pendingSession.label}</div>
-				<div className="session-meta">{t("status.creating")}</div>
+			<div className="am-session-content">
+				<div className="am-session-label">{pendingSession.label}</div>
+				<div className="am-session-meta">{t("status.creating")}</div>
 			</div>
 		</div>
 	)
@@ -141,28 +141,28 @@ function SessionItem({
 	const isCompleted = session.status === "done"
 
 	return (
-		<div className={`session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+		<div className={`am-session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
 			{session.status === "creating" && (
-				<div className="status-icon creating" title={t("status.creating")}>
-					<Loader2 size={14} className="spinning" />
+				<div className="am-status-icon creating" title={t("status.creating")}>
+					<Loader2 size={14} className="am-spinning" />
 				</div>
 			)}
 			{showSpinner && (
-				<div className="status-icon running" title={t("status.running")}>
-					<Loader2 size={14} className="spinning" />
+				<div className="am-status-icon running" title={t("status.running")}>
+					<Loader2 size={14} className="am-spinning" />
 				</div>
 			)}
-			<div className="session-content">
-				<div className="session-label">{session.label}</div>
-				<div className="session-meta">
+			<div className="am-session-content">
+				<div className="am-session-label">{session.label}</div>
+				<div className="am-session-meta">
 					{session.status === "creating" && isActive
 						? t("status.creating")
 						: formatRelativeTime(session.startTime, timeLabels)}
 					{isWorktree && (
-						<span className="worktree-indicator" title={branchName || t("sidebar.worktree")}>
+						<span className="am-worktree-indicator" title={branchName || t("sidebar.worktree")}>
 							<GitBranch size={10} />
 							{branchName ? (
-								<span className="branch-name">
+								<span className="am-branch-name">
 									{branchName.length > 20 ? branchName.slice(0, 20) + "..." : branchName}
 								</span>
 							) : (
@@ -171,12 +171,12 @@ function SessionItem({
 						</span>
 					)}
 					{!isWorktree && (
-						<span className="workspace-indicator" title={t("sidebar.local")}>
+						<span className="am-workspace-indicator" title={t("sidebar.local")}>
 							<Folder size={10} />
 						</span>
 					)}
 				</div>
-				{isWorktree && isCompleted && <div className="ready-to-merge">{t("sidebar.readyToMerge")}</div>}
+				{isWorktree && isCompleted && <div className="am-ready-to-merge">{t("sidebar.readyToMerge")}</div>}
 			</div>
 		</div>
 	)
