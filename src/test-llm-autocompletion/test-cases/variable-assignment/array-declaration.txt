@@ -1,3 +1,0 @@
-#### Description: Should suggest array initialization
-#### Filename: data.js
-const numbers = <<<AUTOCOMPLETE_HERE>>>

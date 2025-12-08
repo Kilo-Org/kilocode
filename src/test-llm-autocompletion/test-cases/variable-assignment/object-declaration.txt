@@ -1,3 +1,0 @@
-#### Description: Should suggest object initialization
-#### Filename: config.js
-const config = <<<AUTOCOMPLETE_HERE>>>

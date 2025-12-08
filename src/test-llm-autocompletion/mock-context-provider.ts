@@ -8,8 +8,13 @@ import {
 import { HoleFiller } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
 import type { GhostServiceSettings } from "@roo-code/types"
-import type { AutocompleteCodeSnippet } from "../services/continuedev/core/autocomplete/snippets/types.js"
+import {
+	AutocompleteSnippetType,
+	type AutocompleteCodeSnippet,
+	type AutocompleteStaticSnippet,
+} from "../services/continuedev/core/autocomplete/snippets/types.js"
 import type { RecentlyEditedRange } from "../services/continuedev/core/autocomplete/util/types.js"
+import type { ContextFile } from "./test-cases.js"
 
 /**
  * Check if a model supports FIM (Fill-In-Middle) completions.
@@ -79,7 +84,15 @@ export function createMockContextProvider(
 	suffix: string,
 	filepath: string,
 	ghostModel: GhostModel,
+	contextFiles: ContextFile[] = [],
 ): GhostContextProvider {
+	// Convert context files to AutocompleteStaticSnippet format
+	const staticSnippets: AutocompleteStaticSnippet[] = contextFiles.map((file) => ({
+		type: AutocompleteSnippetType.Static,
+		filepath: file.filepath,
+		content: file.content,
+	}))
+
 	return {
 		ide: {
 			readFile: async () => prefix + suffix,
@@ -90,7 +103,7 @@ export function createMockContextProvider(
 			initializeForFile: async () => {},
 			getRootPathSnippets: async () => [],
 			getSnippetsFromImportDefinitions: async () => [],
-			getStaticContextSnippets: async () => [],
+			getStaticContextSnippets: async () => staticSnippets,
 		},
 		model: ghostModel,
 	} as unknown as GhostContextProvider
