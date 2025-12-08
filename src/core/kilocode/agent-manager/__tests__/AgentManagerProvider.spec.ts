@@ -416,8 +416,8 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			expect.any(String),
 			"/tmp/workspace",
 			"test prompt",
+			expect.objectContaining({ gitUrl: "https://github.com/org/repo.git" }),
 			expect.any(Function),
-			{ gitUrl: "https://github.com/org/repo.git" },
 		)
 	})
 
@@ -432,8 +432,8 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			expect.any(String),
 			"/tmp/workspace",
 			"test prompt",
+			expect.objectContaining({ gitUrl: undefined }),
 			expect.any(Function),
-			undefined,
 		)
 	})
 

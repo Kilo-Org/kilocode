@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { AgentRegistry } from "../AgentRegistry"
+import type { ParallelModeInfo } from "../types"
 
 describe("AgentRegistry", () => {
 	let registry: AgentRegistry
@@ -219,6 +220,90 @@ describe("AgentRegistry", () => {
 			const session = registry.createSession("session-1", "test")
 			registry.updateSessionStatus(session.sessionId, "done")
 			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+	})
+
+	describe("parallelMode", () => {
+		it("creates session without parallelMode by default", () => {
+			const session = registry.createSession("session-1", "no parallel")
+			expect(session.parallelMode).toBeUndefined()
+		})
+
+		it("creates session with parallelMode enabled when option is provided", () => {
+			const session = registry.createSession("session-1", "with parallel", undefined, { parallelMode: true })
+			expect(session.parallelMode).toEqual({ enabled: true })
+		})
+
+		it("creates session with parallelMode disabled when option is false", () => {
+			const session = registry.createSession("session-1", "without parallel", undefined, { parallelMode: false })
+			expect(session.parallelMode).toBeUndefined()
+		})
+
+		it("updates parallelMode info with branch name", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				branch: "add-feature-1702734891234",
+			})
+
+			expect(updated?.parallelMode?.branch).toBe("add-feature-1702734891234")
+			expect(updated?.parallelMode?.enabled).toBe(true)
+		})
+
+		it("updates parallelMode info with worktree path", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				worktreePath: "/tmp/kilocode-worktree-add-feature",
+			})
+
+			expect(updated?.parallelMode?.worktreePath).toBe("/tmp/kilocode-worktree-add-feature")
+		})
+
+		it("updates parallelMode info with completion message", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				completionMessage: "Changes committed to: add-feature\ngit merge add-feature",
+			})
+
+			expect(updated?.parallelMode?.completionMessage).toBe(
+				"Changes committed to: add-feature\ngit merge add-feature",
+			)
+		})
+
+		it("accumulates multiple parallelMode updates", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+
+			registry.updateParallelModeInfo(session.sessionId, { branch: "my-branch" })
+			registry.updateParallelModeInfo(session.sessionId, { worktreePath: "/tmp/worktree" })
+			const final = registry.updateParallelModeInfo(session.sessionId, { completionMessage: "done" })
+
+			expect(final?.parallelMode).toEqual({
+				enabled: true,
+				branch: "my-branch",
+				worktreePath: "/tmp/worktree",
+				completionMessage: "done",
+			})
+		})
+
+		it("returns undefined when updating non-existent session", () => {
+			const result = registry.updateParallelModeInfo("non-existent", { branch: "test" })
+			expect(result).toBeUndefined()
+		})
+
+		it("returns undefined when updating session without parallelMode enabled", () => {
+			const session = registry.createSession("session-1", "no parallel mode")
+			const result = registry.updateParallelModeInfo(session.sessionId, { branch: "test" })
+			expect(result).toBeUndefined()
+		})
+
+		it("preserves parallelMode info in getState", () => {
+			const session = registry.createSession("session-1", "parallel", undefined, { parallelMode: true })
+			registry.updateParallelModeInfo(session.sessionId, { branch: "feature-branch" })
+
+			const state = registry.getState()
+			expect(state.sessions[0].parallelMode).toEqual({
+				enabled: true,
+				branch: "feature-branch",
+			})
 		})
 	})
 

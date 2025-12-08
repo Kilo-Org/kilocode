@@ -73,6 +73,8 @@ function MessageItem({ message }: { message: ClineMessage }) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
+	// Note: CLI JSON output uses "content" instead of "text" for message body
+	const messageText = message.text || (message as any).content || ""
 
 	let icon = <MessageCircle size={16} />
 	let title = t("messages.kiloSaid")
@@ -85,7 +87,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "api_req_started": {
 				icon = <ArrowRightLeft size={16} className="opacity-70" />
 				title = t("messages.apiRequest")
-				const info = safeJsonParse<{ cost?: number }>(message.text)
+				const info = safeJsonParse<{ cost?: number }>(messageText)
 				if (info?.cost !== undefined) {
 					extraInfo = <span className="message-cost">${info.cost.toFixed(4)}</span>
 				}
@@ -96,31 +98,32 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "text": {
 				icon = <MessageCircle size={16} />
 				title = t("messages.kiloSaid")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "user_feedback": {
 				icon = <User size={16} />
 				title = t("messages.youSaid")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "completion_result": {
 				icon = <CheckCircle2 size={16} className="text-green-500" />
 				title = t("messages.taskCompleted")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "error": {
 				icon = <AlertCircle size={16} className="text-red-500" />
 				title = t("messages.error")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "api_req_finished":
-				return null // Skip
+			case "checkpoint_saved":
+				return null // Skip internal messages
 			default:
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 		}
 	}
 
@@ -130,11 +133,13 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "followup": {
 				icon = <MessageCircleQuestion size={16} />
 				title = t("messages.question")
-				const info = safeJsonParse<{ question: string; suggest?: string[] }>(message.text)
+				// Question can be in metadata.question (from CLI) or parsed from text (legacy)
+				const metadataQuestion = (message as any).metadata?.question
+				const parsedInfo = safeJsonParse<{ question: string; suggest?: string[] }>(messageText)
+				const questionText = metadataQuestion || parsedInfo?.question || messageText
 				content = (
 					<div>
-						<SimpleMarkdown content={info?.question || message.text || ""} />
-						{/* We could render suggestions here, but for MVP text is fine */}
+						<SimpleMarkdown content={questionText} />
 					</div>
 				)
 				break
@@ -142,7 +147,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "command": {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.command")
-				content = <SimpleMarkdown content={`\`${message.text}\``} />
+				content = <SimpleMarkdown content={`\`${messageText}\``} />
 				break
 			}
 			case "tool": {
@@ -150,7 +155,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.tool")
 				// Try to parse tool use for better display
-				const toolInfo = safeJsonParse<{ tool: string; path?: string }>(message.text)
+				const toolInfo = safeJsonParse<{ tool: string; path?: string }>(messageText)
 				if (toolInfo) {
 					const toolDetails = toolInfo.path ? `(${toolInfo.path})` : ""
 					content = (
@@ -159,12 +164,12 @@ function MessageItem({ message }: { message: ClineMessage }) {
 						/>
 					)
 				} else {
-					content = <SimpleMarkdown content={message.text || ""} />
+					content = <SimpleMarkdown content={messageText} />
 				}
 				break
 			}
 			default:
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 		}
 	}
 

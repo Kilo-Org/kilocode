@@ -3,6 +3,13 @@ import { atom } from "jotai"
 export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
 
+export interface ParallelModeInfo {
+	enabled: boolean
+	branch?: string
+	worktreePath?: string
+	completionMessage?: string
+}
+
 export interface AgentSession {
 	sessionId: string
 	label: string
@@ -14,6 +21,7 @@ export interface AgentSession {
 	error?: string
 	pid?: number
 	source: SessionSource
+	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 }
 
@@ -24,6 +32,7 @@ export interface PendingSession {
 	prompt: string
 	label: string
 	startTime: number
+	parallelMode?: boolean
 	gitUrl?: string
 }
 
@@ -45,6 +54,10 @@ export const pendingSessionAtom = atom<PendingSession | null>(null)
 
 export const startSessionFailedCounterAtom = atom(0)
 
+// User preference for run mode (persisted across new agent forms)
+export type RunMode = "local" | "worktree"
+export const preferredRunModeAtom = atom<RunMode>("worktree")
+
 // Derived - local sessions only
 export const sessionsArrayAtom = atom((get) => {
 	const map = get(sessionsMapAtom)
@@ -53,13 +66,18 @@ export const sessionsArrayAtom = atom((get) => {
 })
 
 function toAgentSession(remote: RemoteSession): AgentSession {
+	// Parse dates safely - invalid dates will produce NaN from getTime()
+	const createdTime = remote.created_at ? new Date(remote.created_at).getTime() : 0
+	const updatedTime = remote.updated_at ? new Date(remote.updated_at).getTime() : 0
+
 	return {
 		sessionId: remote.session_id,
 		label: remote.title || "Untitled",
 		prompt: "",
 		status: "done",
-		startTime: new Date(remote.created_at).getTime(),
-		endTime: new Date(remote.updated_at).getTime(),
+		// Use 0 as fallback if dates are invalid (NaN)
+		startTime: Number.isNaN(createdTime) ? 0 : createdTime,
+		endTime: Number.isNaN(updatedTime) ? 0 : updatedTime,
 		source: "remote",
 		gitUrl: remote.git_url,
 	}
@@ -125,6 +143,10 @@ export const removeSessionAtom = atom(null, (get, set, sessionId: string) => {
 	}
 })
 
+export const setPendingSessionAtom = atom(null, (_get, set, pending: PendingSession | null) => {
+	set(pendingSessionAtom, pending)
+})
+
 export const updateSessionStatusAtom = atom(
 	null,
 	(
@@ -157,4 +179,8 @@ export const updateSessionStatusAtom = atom(
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)
 	set(isRefreshingRemoteSessionsAtom, false)
+})
+
+export const startRefreshingRemoteSessionsAtom = atom(null, (_get, set) => {
+	set(isRefreshingRemoteSessionsAtom, true)
 })
