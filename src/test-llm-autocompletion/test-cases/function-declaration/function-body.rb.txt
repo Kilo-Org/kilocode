@@ -1,4 +1,11 @@
-#### Description: Should complete Ruby method body
+#### Description: Should complete Ruby method body with return statement
 #### Filename: calculator.rb
-def calculate_sum(a, b)
-	<<<AUTOCOMPLETE_HERE>>>
+class Calculator
+  def calculate_sum(a, b)
+    <<<AUTOCOMPLETE_HERE>>>
+  end
+
+  def calculate_product(a, b)
+    a * b
+  end
+end
