@@ -9,6 +9,7 @@ import { postprocessCompletion } from "../../continuedev/core/autocomplete/postp
  * @param params.prefix - The text before the cursor position
  * @param params.suffix - The text after the cursor position
  * @param params.model - The model string (e.g., "codestral", "qwen3", etc.)
+ * @param params.multiline - Whether to allow multi-line completions (default: true)
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */
 export function postprocessGhostSuggestion(params: {
@@ -16,8 +17,9 @@ export function postprocessGhostSuggestion(params: {
 	prefix: string
 	suffix: string
 	model: string
+	multiline?: boolean
 }): string | undefined {
-	const { suggestion, prefix, suffix, model } = params
+	const { suggestion, prefix, suffix, model, multiline = true } = params
 
 	// First, run through the continuedev postprocessing pipeline
 	const processed = postprocessCompletion({
@@ -45,6 +47,19 @@ export function postprocessGhostSuggestion(params: {
 	const trimmedSuffix = suffix.trimStart()
 	if (trimmedSuffix.startsWith(trimmed)) {
 		return undefined
+	}
+
+	// Truncate at first newline for single-line mode
+	if (!multiline) {
+		const newlineIndex = processed.indexOf("\n")
+		if (newlineIndex >= 0) {
+			const truncated = processed.slice(0, newlineIndex)
+			// Return undefined if truncation results in empty or whitespace-only string
+			if (truncated.trim().length === 0) {
+				return undefined
+			}
+			return truncated
+		}
 	}
 
 	return processed

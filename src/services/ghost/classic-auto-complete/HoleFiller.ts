@@ -9,6 +9,7 @@ import { getProcessedSnippets } from "./getProcessedSnippets"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+import { shouldCompleteMultiline } from "../../continuedev/core/autocomplete/classification/shouldCompleteMultiline"
 
 export type { HoleFillerGhostPrompt, FillInAtCursorSuggestion, ChatCompletionResult }
 
@@ -41,11 +42,15 @@ export class HoleFiller {
 	constructor(private contextProvider: GhostContextProvider) {}
 
 	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
+		const { helper, userPrompt } = await this.getUserPromptWithHelper(autocompleteInput, languageId)
+		const multiline = shouldCompleteMultiline(helper)
+
 		return {
 			strategy: "hole_filler",
 			systemPrompt: this.getSystemInstructions(),
-			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
+			userPrompt,
 			autocompleteInput,
+			multiline,
 		}
 	}
 
@@ -152,8 +157,12 @@ Provide a subtle, non-intrusive completion after a typing pause.
 
 	/**
 	 * Build minimal prompt for auto-trigger with optional context
+	 * Returns both the prompt and the helper for multiline detection
 	 */
-	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
+	async getUserPromptWithHelper(
+		autocompleteInput: AutocompleteInput,
+		languageId: string,
+	): Promise<{ helper: any; userPrompt: string }> {
 		const { helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
@@ -164,7 +173,7 @@ Provide a subtle, non-intrusive completion after a typing pause.
 		)
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
-		return (
+		const userPrompt =
 			`<LANGUAGE>${languageId}</LANGUAGE>\n\n` +
 			`<QUERY>
 ${formattedContext}${formattedContext ? "\n" : ""}${helper.prunedPrefix}{{FILL_HERE}}${helper.prunedSuffix}
@@ -172,7 +181,17 @@ ${formattedContext}${formattedContext ? "\n" : ""}${helper.prunedPrefix}{{FILL_H
 
 TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.
 Return the COMPLETION tags`
-		)
+
+		return { helper, userPrompt }
+	}
+
+	/**
+	 * Build minimal prompt for auto-trigger with optional context
+	 * @deprecated Use getUserPromptWithHelper instead for multiline detection
+	 */
+	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
+		const { userPrompt } = await this.getUserPromptWithHelper(autocompleteInput, languageId)
+		return userPrompt
 	}
 
 	/**

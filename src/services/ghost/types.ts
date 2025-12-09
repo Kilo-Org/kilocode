@@ -125,6 +125,7 @@ export interface FimGhostPrompt {
 	autocompleteInput: AutocompleteInput
 	formattedPrefix: string
 	prunedSuffix: string
+	multiline: boolean
 }
 
 export interface HoleFillerGhostPrompt {
@@ -132,6 +133,7 @@ export interface HoleFillerGhostPrompt {
 	autocompleteInput: AutocompleteInput
 	systemPrompt: string
 	userPrompt: string
+	multiline: boolean
 }
 
 export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
