@@ -96,6 +96,12 @@
 				},
 				"provider": "終端機命令產生器供應商"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding 批次大小",
+			"embeddingBatchSizeDescription": "用於 Embedding 生成和向量儲存更新的程式碼片段批次數量。較大的值可以提高索引速度，但可能增加記憶體使用量。較小的值可以減少記憶體使用量，但可能降低索引速度。",
+			"scannerMaxBatchRetriesLabel": "掃描器最大批次重試次數",
+			"scannerMaxBatchRetriesDescription": "目錄掃描期間重試失敗批次的最大次數。較大的值可以提高對暫時性錯誤的容錯能力，但如果錯誤持續存在可能會降低索引速度。較小的值會更快失敗，但可能在暫時性問題時跳過內容。"
 		}
 	},
 	"toolCallStyle": {

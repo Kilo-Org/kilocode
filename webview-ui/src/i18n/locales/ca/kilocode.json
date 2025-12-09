@@ -78,6 +78,12 @@
 				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Mida del Lot d'Incrustació",
+			"embeddingBatchSizeDescription": "Nombre de segments de codi a agrupar per a la generació d'incrustacions i actualitzacions del magatzem vectorial. Valors més alts poden millorar la velocitat d'indexació però poden augmentar l'ús de memòria. Valors més baixos redueixen l'ús de memòria però poden alentir la indexació.",
+			"scannerMaxBatchRetriesLabel": "Nombre Màxim de Reintents de Lot de l'Escàner",
+			"scannerMaxBatchRetriesDescription": "Nombre màxim de vegades per reintentar un lot fallit durant l'escaneig de directoris. Valors més alts augmenten la resiliència als errors transitoris però poden alentir la indexació si els errors persisteixen. Valors més baixos fallen més ràpidament però poden ometre contingut en problemes temporals."
+		},
 		"systemNotifications": {
 			"label": "Activar notificacions del sistema",
 			"description": "Quan està activat, Kilo Code enviarà notificacions del sistema per a esdeveniments importants com la finalització de tasques o errors.",

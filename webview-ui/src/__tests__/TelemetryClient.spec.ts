@@ -55,7 +55,7 @@ describe("TelemetryClient", () => {
 			expect(posthog.init).toHaveBeenCalledWith(
 				API_KEY,
 				expect.objectContaining({
-					api_host: "https://ph.roocode.com",
+					api_host: "https://us.i.posthog.com", // kilocode_change
 					persistence: "localStorage",
 					loaded: expect.any(Function),
 				}),

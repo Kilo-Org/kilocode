@@ -3087,10 +3087,23 @@ export const webviewMessageHandler = async (
 					codebaseIndexBedrockProfile: settings.codebaseIndexBedrockProfile,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
 					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
+					// kilocode_change start
+					codebaseIndexEmbeddingBatchSize: settings.codebaseIndexEmbeddingBatchSize,
+					codebaseIndexScannerMaxBatchRetries: settings.codebaseIndexScannerMaxBatchRetries,
+					// kilocode_change end
 				}
 
 				// Save global state first
 				await updateGlobalState("codebaseIndexConfig", globalStateConfig)
+
+				// kilocode_change start: Update the batch size in the running scanner and file watcher
+				if (settings.codebaseIndexEmbeddingBatchSize !== undefined) {
+					const currentCodeIndexManager = provider.getCurrentWorkspaceCodeIndexManager()
+					if (currentCodeIndexManager) {
+						currentCodeIndexManager.updateBatchSegmentThreshold(settings.codebaseIndexEmbeddingBatchSize)
+					}
+				}
+				// kilocode_change end
 
 				// Save secrets directly using context proxy
 				if (settings.codeIndexOpenAiKey !== undefined) {
