@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
@@ -163,6 +163,12 @@ function NewAgentForm() {
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
+	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+	// Auto-focus the textarea when the form mounts (new session view)
+	useEffect(() => {
+		textareaRef.current?.focus()
+	}, [])
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
 	useEffect(() => {
@@ -219,6 +225,7 @@ function NewAgentForm() {
 						"rounded",
 					)}>
 					<DynamicTextArea
+						ref={textareaRef}
 						value={promptText}
 						onChange={(e) => setPromptText(e.target.value)}
 						onKeyDown={handleKeyDown}
