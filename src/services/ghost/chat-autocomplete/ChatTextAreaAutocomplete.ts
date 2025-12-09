@@ -19,8 +19,12 @@ export class ChatTextAreaAutocomplete {
 		return this.model.reload(this.providerSettingsManager)
 	}
 
+	/**
+	 * Check if we can successfully make a FIM request.
+	 * Validates that model is loaded, has valid API handler, and supports FIM.
+	 */
 	isFimAvailable(): boolean {
-		return this.model.loaded && this.model.supportsFim()
+		return this.model.hasValidCredentials() && this.model.supportsFim()
 	}
 
 	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
@@ -31,8 +35,9 @@ export class ChatTextAreaAutocomplete {
 			}
 		}
 
-		if (!this.model.supportsFim()) {
-			console.log("[ChatTextAreaAutocomplete] FIM not supported by current model")
+		// Now check if we can make FIM requests
+		if (!this.isFimAvailable()) {
+			console.log("[ChatTextAreaAutocomplete] FIM not available - no valid handler or model doesn't support FIM")
 			return { suggestion: "" }
 		}
 

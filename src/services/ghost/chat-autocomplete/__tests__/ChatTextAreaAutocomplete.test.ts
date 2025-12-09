@@ -10,6 +10,13 @@ describe("ChatTextAreaAutocomplete", () => {
 		autocomplete = new ChatTextAreaAutocomplete(mockProviderSettingsManager)
 	})
 
+	describe("isFimAvailable", () => {
+		it("should return false when model is not loaded", () => {
+			const result = autocomplete.isFimAvailable()
+			expect(result).toBe(false)
+		})
+	})
+
 	describe("isUnwantedSuggestion", () => {
 		it("should filter code patterns (comments, preprocessor, short/empty)", () => {
 			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
