@@ -366,6 +366,10 @@ export interface WebviewMessage {
 		codebaseIndexBedrockProfile?: string
 		codebaseIndexSearchMaxResults?: number
 		codebaseIndexSearchMinScore?: number
+		// kilocode_change start
+		codebaseIndexEmbeddingBatchSize?: number
+		codebaseIndexScannerMaxBatchRetries?: number
+		// kilocode_change end
 
 		// Secret settings
 		codeIndexOpenAiKey?: string

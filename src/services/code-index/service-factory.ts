@@ -191,17 +191,20 @@ export class CodeIndexServiceFactory {
 		parser: ICodeParser,
 		ignoreInstance: Ignore,
 	): DirectoryScanner {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
-		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance, batchSize)
+		// kilocode_change start: Get the configurable batch size and max retries from config manager
+		const config = this.configManager.getConfig()
+		const batchSize = config.embeddingBatchSize
+		const maxBatchRetries = config.scannerMaxBatchRetries
+		return new DirectoryScanner(
+			embedder,
+			vectorStore,
+			parser,
+			this.cacheManager,
+			ignoreInstance,
+			batchSize,
+			maxBatchRetries,
+		)
+		// kilocode_change end
 	}
 
 	/**
@@ -215,16 +218,11 @@ export class CodeIndexServiceFactory {
 		ignoreInstance: Ignore,
 		rooIgnoreController?: RooIgnoreController,
 	): IFileWatcher {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
+		// kilocode_change start: Get the configurable batch size from config manager
+		const config = this.configManager.getConfig()
+		const batchSize = config.embeddingBatchSize
+		const maxBatchRetries = config.scannerMaxBatchRetries
+
 		return new FileWatcher(
 			this.workspacePath,
 			context,
@@ -234,7 +232,9 @@ export class CodeIndexServiceFactory {
 			ignoreInstance,
 			rooIgnoreController,
 			batchSize,
+			maxBatchRetries,
 		)
+		// kilocode_change end
 	}
 
 	/**
