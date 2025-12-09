@@ -46,6 +46,11 @@ export async function listFiles(dirPath: string, recursive: boolean, limit: numb
 	// Get ripgrep path
 	const rgPath = await getRipgrepPath()
 
+	// If ripgrep is not available, use fallback method
+	if (!rgPath) {
+		return await listFilesWithFallback(dirPath, recursive, limit)
+	}
+
 	if (!recursive) {
 		// For non-recursive, use the existing approach
 		const files = await listFilesWithRipgrep(rgPath, dirPath, false, limit)
@@ -182,13 +187,15 @@ async function handleSpecialDirectories(dirPath: string): Promise<[string[], boo
 
 /**
  * Get the path to the ripgrep binary
+ * Returns undefined if ripgrep is not available
  */
-async function getRipgrepPath(): Promise<string> {
+async function getRipgrepPath(): Promise<string | undefined> {
 	const vscodeAppRoot = vscode.env.appRoot
 	const rgPath = await getBinPath(vscodeAppRoot)
 
 	if (!rgPath) {
-		throw new Error("Could not find ripgrep binary")
+		console.warn("Could not find ripgrep binary, using fallback file listing method")
+		return undefined
 	}
 
 	return rgPath
@@ -724,4 +731,77 @@ async function execRipgrep(rgPath: string, args: string[], limit: number): Promi
 			}
 		}
 	})
+}
+
+/**
+ * Fallback method to list files when ripgrep is not available
+ * Uses native Node.js fs methods to list files recursively
+ */
+async function listFilesWithFallback(dirPath: string, recursive: boolean, limit: number): Promise<[string[], boolean]> {
+	const absolutePath = path.resolve(dirPath)
+	const files: string[] = []
+	const directories: string[] = []
+	let fileCount = 0
+	let dirCount = 0
+	const ignoreInstance = await createIgnoreInstance(dirPath)
+
+	async function scanDirectory(currentPath: string, depth: number): Promise<boolean> {
+		if (fileCount + dirCount >= limit) {
+			return true // Signal that limit was reached
+		}
+
+		try {
+			const entries = await fs.promises.readdir(currentPath, { withFileTypes: true })
+
+			for (const entry of entries) {
+				if (fileCount + dirCount >= limit) {
+					return true
+				}
+
+				const fullPath = path.join(currentPath, entry.name)
+				const relativePath = path.relative(absolutePath, fullPath)
+
+				// Check if should be ignored
+				const normalizedPath = relativePath.replace(/\\/g, "/")
+				if (ignoreInstance.ignores(normalizedPath) || ignoreInstance.ignores(normalizedPath + "/")) {
+					continue
+				}
+
+				// Skip common directories to ignore
+				if (entry.isDirectory() && DIRS_TO_IGNORE.includes(entry.name)) {
+					continue
+				}
+
+				// Skip hidden files/directories unless at root level
+				if (entry.name.startsWith(".") && depth > 0) {
+					continue
+				}
+
+				if (entry.isDirectory() && !entry.isSymbolicLink()) {
+					const formattedPath = fullPath.endsWith("/") ? fullPath : `${fullPath}/`
+					directories.push(formattedPath)
+					dirCount++
+
+					// Recurse if in recursive mode and depth allows
+					if (recursive) {
+						const limitReached = await scanDirectory(fullPath, depth + 1)
+						if (limitReached) {
+							return true
+						}
+					}
+				} else if (entry.isFile()) {
+					files.push(fullPath)
+					fileCount++
+				}
+			}
+		} catch (err) {
+			console.warn(`Could not read directory ${currentPath}: ${err}`)
+		}
+
+		return false
+	}
+
+	await scanDirectory(absolutePath, 0)
+
+	return formatAndCombineResults(files, directories, limit)
 }

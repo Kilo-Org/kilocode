@@ -420,7 +420,30 @@ export class KiloCodeAgent implements Agent {
 
 			// Handle task completion
 			if (chatMessage.say === "completion_result" || chatMessage.say === "error") {
-				acpDebug("Task completed with:", chatMessage.say)
+				acpDebug("Task completed with:", chatMessage.say, "text:", chatMessage.text?.substring(0, 100))
+
+				// Send the completion result text to the client before completing
+				if (chatMessage.text && session.lastSentText !== chatMessage.text) {
+					session.lastSentText = chatMessage.text
+					session.hasReceivedAssistantResponse = true
+					try {
+						await this.connection.sessionUpdate({
+							sessionId: session.id,
+							update: {
+								sessionUpdate: "agent_message_chunk",
+								content: {
+									type: "text",
+									text: chatMessage.text,
+								},
+							},
+						})
+						acpDebug("Sent completion result text to client")
+					} catch (error) {
+						const err = error as Error
+						acpDebug("Failed to send completion text:", err.message)
+					}
+				}
+
 				if (session.taskCompletionPromise) {
 					session.taskCompletionPromise.resolve()
 				}

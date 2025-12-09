@@ -152,11 +152,6 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 					this.removeClosingTag("result", result, block.partial),
 					undefined,
 					false,
-					// kilocode_change start
-					undefined,
-					undefined,
-					await getClineMessageOptions(task),
-					// kilocode_change end
 				)
 
 				TelemetryService.instance.captureTaskCompleted(task.taskId)
@@ -172,11 +167,6 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				this.removeClosingTag("result", result, block.partial),
 				undefined,
 				block.partial,
-				// kilocode_change start
-				undefined,
-				undefined,
-				await getClineMessageOptions(task),
-				// kilocode_change end
 			)
 		}
 	}

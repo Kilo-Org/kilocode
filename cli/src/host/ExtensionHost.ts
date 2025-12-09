@@ -626,8 +626,26 @@ export class ExtensionHost extends EventEmitter {
 					},
 				) => {
 					this.safeExecute(() => {
-						// Create a unique ID for this message to prevent loops
-						const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
+						// For messageUpdated, use timestamp from the message itself for deduplication
+						// This allows streaming updates to the same message while preventing true duplicates
+						let messageId: string
+						if (message.type === "messageUpdated") {
+							const chatMessage = message.clineMessage || message.chatMessage
+							const ts =
+								chatMessage && typeof chatMessage === "object" && "ts" in chatMessage
+									? chatMessage.ts
+									: Date.now()
+							const partial =
+								chatMessage && typeof chatMessage === "object" && "partial" in chatMessage
+									? chatMessage.partial
+									: false
+							// Include partial flag and content hash to allow updates to same message
+							const contentHash = JSON.stringify(message).slice(0, 100)
+							messageId = `${message.type}_${ts}_${partial}_${contentHash}`
+						} else {
+							// For other message types, use timestamp and content
+							messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
+						}
 
 						if (processedMessageIds.has(messageId)) {
 							logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
