@@ -45,7 +45,8 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 
 export class SessionManager {
 	static readonly SYNC_INTERVAL = 3000
-	static readonly MAX_PATCH_SIZE_BYTES = 1024 * 1024
+	static readonly MAX_PATCH_SIZE_BYTES = 5 * 1024 * 1024
+	static readonly VERSION = 1
 
 	private static instance = new SessionManager()
 
@@ -207,6 +208,16 @@ export class SessionManager {
 				throw new Error("Failed to obtain session")
 			}
 
+			if (session.version !== SessionManager.VERSION) {
+				this.logger?.warn("Session version mismatch", "SessionManager", {
+					sessionId,
+					expectedVersion: SessionManager.VERSION,
+					actualVersion: session.version,
+				})
+			}
+
+			this.logger?.debug("Obtained session", "SessionManager", { sessionId, session })
+
 			const sessionDirectoryPath = path.join(this.pathProvider.getTasksDir(), sessionId)
 
 			mkdirSync(sessionDirectoryPath, { recursive: true })
@@ -289,6 +300,7 @@ export class SessionManager {
 			}
 
 			this.sessionPersistenceManager.setSessionForTask(historyItem.id, sessionId)
+			this.lastActiveSessionId = sessionId
 
 			await this.extensionMessenger.sendWebviewMessage({
 				type: "addTaskToHistory",
@@ -406,6 +418,7 @@ export class SessionManager {
 				const session = await this.sessionClient.create({
 					title,
 					created_on_platform: this.platform,
+					version: SessionManager.VERSION,
 				})
 
 				sessionId = session.session_id
@@ -505,10 +518,7 @@ export class SessionManager {
 						itemCount: taskItems.length,
 					})
 
-					const basePayload: Omit<
-						Parameters<NonNullable<typeof this.sessionClient>["create"]>[0],
-						"created_on_platform"
-					> = {}
+					const basePayload: Partial<Parameters<NonNullable<typeof this.sessionClient>["create"]>[0]> = {}
 
 					if (gitInfo?.repoUrl) {
 						basePayload.git_url = gitInfo.repoUrl
@@ -542,6 +552,7 @@ export class SessionManager {
 						const createdSession = await this.sessionClient.create({
 							...basePayload,
 							created_on_platform: this.platform,
+							version: SessionManager.VERSION,
 						})
 
 						sessionId = createdSession.session_id

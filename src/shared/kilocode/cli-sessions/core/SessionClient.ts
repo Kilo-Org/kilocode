@@ -6,6 +6,7 @@ export interface Session {
 	created_at: string
 	updated_at: string
 	git_url?: string
+	version: number
 }
 
 export interface SessionWithSignedUrls extends Session {
@@ -26,6 +27,7 @@ export interface CreateSessionInput {
 	title?: string
 	git_url?: string
 	created_on_platform: string
+	version: number
 }
 
 export type CreateSessionOutput = Session
@@ -34,12 +36,14 @@ export interface UpdateSessionInput {
 	session_id: string
 	title?: string
 	git_url?: string
+	version?: number
 }
 
 export interface UpdateSessionOutput {
 	session_id: string
 	title: string
 	updated_at: string
+	version: number
 }
 
 export interface ListSessionsInput {
