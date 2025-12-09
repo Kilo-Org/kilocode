@@ -27,20 +27,22 @@ describe("SessionClient", () => {
 
 		it("should get signed URL and upload blob successfully", async () => {
 			const signedUrl = "https://storage.example.com/signed-upload-url"
+			const updatedAt = "2024-01-01T00:00:00.000Z"
 			const blobBody = JSON.stringify(blobData)
 			const contentLength = new TextEncoder().encode(blobBody).length
 
 			mockFetch
 				.mockResolvedValueOnce({
 					ok: true,
-					json: () => Promise.resolve({ signed_url: signedUrl }),
+					json: () => Promise.resolve({ signed_url: signedUrl, updated_at: updatedAt }),
 				})
 				.mockResolvedValueOnce({
 					ok: true,
 				})
 
-			await sessionClient.uploadBlob(sessionId, blobType, blobData)
+			const result = await sessionClient.uploadBlob(sessionId, blobType, blobData)
 
+			expect(result).toEqual({ updated_at: updatedAt })
 			expect(mockFetch).toHaveBeenCalledTimes(2)
 
 			expect(mockFetch).toHaveBeenNthCalledWith(1, "https://api.example.com/api/upload-cli-session-blob-v2", {
@@ -80,11 +82,12 @@ describe("SessionClient", () => {
 
 		it("should throw error when upload to signed URL fails", async () => {
 			const signedUrl = "https://storage.example.com/signed-upload-url"
+			const updatedAt = "2024-01-01T00:00:00.000Z"
 
 			mockFetch
 				.mockResolvedValueOnce({
 					ok: true,
-					json: () => Promise.resolve({ signed_url: signedUrl }),
+					json: () => Promise.resolve({ signed_url: signedUrl, updated_at: updatedAt }),
 				})
 				.mockResolvedValueOnce({
 					ok: false,
@@ -100,13 +103,14 @@ describe("SessionClient", () => {
 
 		it("should work with different blob types", async () => {
 			const signedUrl = "https://storage.example.com/signed-upload-url"
+			const updatedAt = "2024-01-01T00:00:00.000Z"
 			const blobBody = JSON.stringify(blobData)
 			const contentLength = new TextEncoder().encode(blobBody).length
 
 			mockFetch
 				.mockResolvedValueOnce({
 					ok: true,
-					json: () => Promise.resolve({ signed_url: signedUrl }),
+					json: () => Promise.resolve({ signed_url: signedUrl, updated_at: updatedAt }),
 				})
 				.mockResolvedValueOnce({
 					ok: true,
@@ -130,6 +134,7 @@ describe("SessionClient", () => {
 
 		it("should work with task_metadata blob type", async () => {
 			const signedUrl = "https://storage.example.com/signed-upload-url"
+			const updatedAt = "2024-01-01T00:00:00.000Z"
 			const taskData = { task: "test" }
 			const blobBody = JSON.stringify(taskData)
 			const contentLength = new TextEncoder().encode(blobBody).length
@@ -137,7 +142,7 @@ describe("SessionClient", () => {
 			mockFetch
 				.mockResolvedValueOnce({
 					ok: true,
-					json: () => Promise.resolve({ signed_url: signedUrl }),
+					json: () => Promise.resolve({ signed_url: signedUrl, updated_at: updatedAt }),
 				})
 				.mockResolvedValueOnce({
 					ok: true,
@@ -161,6 +166,7 @@ describe("SessionClient", () => {
 
 		it("should work with git_state blob type", async () => {
 			const signedUrl = "https://storage.example.com/signed-upload-url"
+			const updatedAt = "2024-01-01T00:00:00.000Z"
 			const gitData = { head: "abc123" }
 			const blobBody = JSON.stringify(gitData)
 			const contentLength = new TextEncoder().encode(blobBody).length
@@ -168,7 +174,7 @@ describe("SessionClient", () => {
 			mockFetch
 				.mockResolvedValueOnce({
 					ok: true,
-					json: () => Promise.resolve({ signed_url: signedUrl }),
+					json: () => Promise.resolve({ signed_url: signedUrl, updated_at: updatedAt }),
 				})
 				.mockResolvedValueOnce({
 					ok: true,

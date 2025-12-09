@@ -158,6 +158,11 @@ export class CLI {
 							this.store.set(taskResumedViaContinueOrSessionAtom, true)
 						}
 					},
+					onSessionSynced: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
 					platform: "cli",
 				})
 				logs.debug("SessionManager initialized with dependencies", "CLI")

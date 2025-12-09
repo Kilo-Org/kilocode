@@ -186,7 +186,7 @@ export class SessionClient {
 		sessionId: string,
 		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
 		blobData: unknown,
-	): Promise<void> {
+	): Promise<{ updated_at: string }> {
 		const blobBody = JSON.stringify(blobData)
 		const contentLength = new TextEncoder().encode(blobBody).length
 
@@ -203,6 +203,8 @@ export class SessionClient {
 		if (!uploadResponse.ok) {
 			throw new Error(`uploadBlob failed: upload to signed URL returned ${uploadResponse.status}`)
 		}
+
+		return { updated_at: signedUrlResponse.updated_at }
 	}
 
 	/**
@@ -212,7 +214,7 @@ export class SessionClient {
 		sessionId: string,
 		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
 		contentLength: number,
-	): Promise<{ signed_url: string }> {
+	): Promise<{ signed_url: string; updated_at: string }> {
 		const { endpoint, getToken } = this.trpcClient
 
 		const url = new URL("/api/upload-cli-session-blob-v2", endpoint)
@@ -234,6 +236,19 @@ export class SessionClient {
 			throw new Error(`getSignedUploadUrl failed: ${url.toString()} ${response.status}`)
 		}
 
-		return response.json()
+		const signedUrlResponse = (await response.json()) as { signed_url?: string; updated_at?: string }
+
+		if (!signedUrlResponse.signed_url) {
+			throw new Error("getSignedUploadUrl failed: missing signed_url in response")
+		}
+
+		if (!signedUrlResponse.updated_at) {
+			throw new Error("getSignedUploadUrl failed: missing updated_at in response")
+		}
+
+		return {
+			signed_url: signedUrlResponse.signed_url,
+			updated_at: signedUrlResponse.updated_at,
+		}
 	}
 }

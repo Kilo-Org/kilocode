@@ -588,7 +588,7 @@ describe("SessionManager", () => {
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue()
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
 
 			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 
@@ -612,7 +612,7 @@ describe("SessionManager", () => {
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue()
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
 
 			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 
