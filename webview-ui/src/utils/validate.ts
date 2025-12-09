@@ -297,6 +297,11 @@ function validateDynamicProviderModelId(
 		return undefined
 	}
 
+	// Allow OCA to pass without a model id; models are fetched after auth
+	if (provider === "oca") {
+		return undefined
+	}
+
 	const modelId = getModelIdForProvider(apiConfiguration, provider)
 
 	if (!modelId) {
@@ -334,6 +339,11 @@ export function getModelValidationError(
 
 	if (orgError && orgError.code === "MODEL_NOT_ALLOWED") {
 		return orgError.message
+	}
+
+	// Skip model-id validation for OCA to keep Settings Save/Done usable on first setup
+	if (apiConfiguration.apiProvider === "oca") {
+		return undefined
 	}
 
 	return validateDynamicProviderModelId(configWithModelId, routerModels)

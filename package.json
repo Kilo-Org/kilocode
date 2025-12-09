@@ -82,7 +82,8 @@
 			"bluebird": ">=3.7.2",
 			"glob": ">=11.1.0",
 			"@types/react": "^18.3.23",
-			"@types/react-dom": "^18.3.5"
+			"@types/react-dom": "^18.3.5",
+			"fsevents": "^2.3.3"
 		}
 	}
 }
