@@ -1,8 +1,0 @@
-function handleAPIRequest(req, res) {
-  // TODO: Implement rate limiting to prevent abuse
-  // Check if the user has exceeded the rate limit
-  if (isRateLimited(req)) {
-    return res.status(429).send('Too many requests');
-  }
-  processRequest(req, res);
-}
