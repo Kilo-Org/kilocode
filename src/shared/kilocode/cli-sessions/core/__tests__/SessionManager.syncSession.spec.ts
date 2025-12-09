@@ -992,6 +992,149 @@ describe("SessionManager.syncSession", () => {
 			})
 		})
 
+		describe("sessionUpdatedAt high-water mark", () => {
+			beforeEach(() => {
+				// Reset mocks that were set by global beforeEach
+				vi.mocked(manager.sessionClient!.uploadBlob).mockReset()
+
+				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
+				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
+				// Clear sessionUpdatedAt from previous tests
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+				delete sessionUpdatedAt["session-123"]
+				// Disable git state uploads by pre-setting the hash to match
+				const taskGitHashes = (manager as unknown as { taskGitHashes: Record<string, string> }).taskGitHashes
+				taskGitHashes["task-123"] = "fixed-hash-to-skip-git-upload"
+				// Pre-set git URL to prevent update calls that would set timestamps
+				const taskGitUrls = (manager as unknown as { taskGitUrls: Record<string, string> }).taskGitUrls
+				taskGitUrls["task-123"] = "https://github.com/test/repo.git"
+				// Pre-set session title to prevent title generation (which would call update and set timestamp)
+				const sessionTitles = (manager as unknown as { sessionTitles: Record<string, string> }).sessionTitles
+				sessionTitles["session-123"] = "Existing title"
+			})
+
+			it("should track the highest timestamp when multiple uploads complete", async () => {
+				// Return timestamps based on blob type to simulate concurrent uploads
+				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async (_sessionId, blobType) => {
+					switch (blobType) {
+						case "ui_messages":
+							return { updated_at: "2024-01-01T10:00:00.000Z" }
+						case "api_conversation_history":
+							return { updated_at: "2024-01-01T12:00:00.000Z" } // This is the highest
+						case "task_metadata":
+							return { updated_at: "2024-01-01T11:00:00.000Z" }
+						default:
+							return { updated_at: "2024-01-01T08:00:00.000Z" }
+					}
+				})
+
+				// Queue multiple blob types to trigger multiple uploads
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+				manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/api.json")
+				manager.handleFileUpdate("task-123", "taskMetadataPath", "/path/to/meta.json")
+
+				await triggerSync()
+
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+				expect(sessionUpdatedAt["session-123"]).toBe("2024-01-01T12:00:00.000Z")
+			})
+
+			it("should not overwrite with older timestamp when newer already exists", async () => {
+				// Pre-set a newer timestamp
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+				sessionUpdatedAt["session-123"] = "2024-01-01T15:00:00.000Z"
+
+				// Upload returns an older timestamp
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
+					updated_at: "2024-01-01T10:00:00.000Z",
+				})
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+
+				await triggerSync()
+
+				// Should still have the newer timestamp
+				expect(sessionUpdatedAt["session-123"]).toBe("2024-01-01T15:00:00.000Z")
+			})
+
+			it("should update timestamp when newer value arrives", async () => {
+				// Pre-set an older timestamp
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+				sessionUpdatedAt["session-123"] = "2024-01-01T10:00:00.000Z"
+
+				// Upload returns a newer timestamp
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
+					updated_at: "2024-01-01T15:00:00.000Z",
+				})
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+
+				await triggerSync()
+
+				// Should have the newer timestamp
+				expect(sessionUpdatedAt["session-123"]).toBe("2024-01-01T15:00:00.000Z")
+			})
+
+			it("should handle concurrent uploads with race conditions correctly", async () => {
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+
+				// Simulate concurrent uploads completing in different order with explicit timestamps
+				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async (_sessionId, blobType) => {
+					// Return different timestamps based on blob type to simulate race conditions
+					switch (blobType) {
+						case "ui_messages":
+							return { updated_at: "2024-01-01T10:00:00.000Z" } // oldest
+						case "api_conversation_history":
+							return { updated_at: "2024-01-01T15:00:00.000Z" } // newest
+						case "task_metadata":
+							return { updated_at: "2024-01-01T12:00:00.000Z" } // middle
+						default:
+							return { updated_at: "2024-01-01T08:00:00.000Z" }
+					}
+				})
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+				manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/api.json")
+				manager.handleFileUpdate("task-123", "taskMetadataPath", "/path/to/meta.json")
+
+				await triggerSync()
+
+				// High-water mark should keep the highest timestamp
+				expect(sessionUpdatedAt["session-123"]).toBe("2024-01-01T15:00:00.000Z")
+			})
+
+			it("should track high-water mark for git state uploads", async () => {
+				// Clear git hash to allow git state upload for this test
+				const taskGitHashes = (manager as unknown as { taskGitHashes: Record<string, string> }).taskGitHashes
+				delete taskGitHashes["task-123"]
+
+				const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+					.sessionUpdatedAt
+
+				// Set initial timestamp from blob upload
+				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async (_sessionId, blobType) => {
+					if (blobType === "git_state") {
+						// Git state upload returns newer timestamp
+						return { updated_at: "2024-01-01T18:00:00.000Z" }
+					}
+					// Other uploads return older timestamp
+					return { updated_at: "2024-01-01T10:00:00.000Z" }
+				})
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+
+				await triggerSync()
+
+				// Git state upload should update to the highest timestamp
+				expect(sessionUpdatedAt["session-123"]).toBe("2024-01-01T18:00:00.000Z")
+			})
+		})
+
 		describe("pendingSync tracking in interval", () => {
 			it("should skip interval sync when pendingSync exists", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")

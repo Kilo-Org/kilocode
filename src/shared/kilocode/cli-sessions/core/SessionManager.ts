@@ -20,9 +20,15 @@ interface SessionCreatedMessage {
 	event: "session_created"
 }
 
+/**
+ * Message emitted when a session has been synced to the cloud.
+ * Contains timing information for tracking sync state and detecting stale data.
+ */
 interface SessionSyncedMessage {
 	sessionId: string
+	/** The server-side updated_at timestamp (as Unix milliseconds) from the most recent sync operation */
 	updatedAt: number
+	/** The local timestamp (Unix milliseconds) when this sync event was emitted */
 	timestamp: number
 	event: "session_synced"
 }
@@ -354,7 +360,7 @@ export class SessionManager {
 		})
 
 		this.sessionTitles[sessionId] = trimmedTitle
-		this.sessionUpdatedAt[sessionId] = updateResult.updated_at
+		this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 
 		this.logger?.info("Session renamed successfully", "SessionManager", {
 			sessionId,
@@ -503,7 +509,7 @@ export class SessionManager {
 								...basePayload,
 							})
 
-							this.sessionUpdatedAt[sessionId] = updateResult.updated_at
+							this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 						}
 					} else {
 						this.logger?.debug("Creating new session for task", "SessionManager", { taskId })
@@ -567,8 +573,8 @@ export class SessionManager {
 										blobName,
 									})
 
-									// Track the updated_at timestamp from the upload
-									this.sessionUpdatedAt[sessionId] = result.updated_at
+									// Track the updated_at timestamp from the upload using high-water mark
+									this.updateSessionTimestamp(sessionId, result.updated_at)
 
 									for (let i = 0; i < this.queue.length; i++) {
 										const item = this.queue[i]
@@ -635,7 +641,7 @@ export class SessionManager {
 									})
 
 									this.sessionTitles[sessionId] = generatedTitle
-									this.sessionUpdatedAt[sessionId] = updateResult.updated_at
+									this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 
 									this.logger?.debug("Updated session title", "SessionManager", {
 										sessionId,
@@ -674,8 +680,8 @@ export class SessionManager {
 								this.sessionClient
 									.uploadBlob(sessionId, "git_state", gitStateData)
 									.then((result) => {
-										// Track the updated_at timestamp from git state upload
-										this.sessionUpdatedAt[sessionId] = result.updated_at
+										// Track the updated_at timestamp from git state upload using high-water mark
+										this.updateSessionTimestamp(sessionId, result.updated_at)
 									})
 									.catch((error) => {
 										this.logger?.error("Failed to upload git state", "SessionManager", {
@@ -753,6 +759,18 @@ export class SessionManager {
 
 	private async fetchBlobFromSignedUrl(url: string, urlType: string) {
 		return fetchSignedBlob(url, urlType, this.logger, "SessionManager")
+	}
+
+	/**
+	 * Updates the session timestamp using high-water mark logic.
+	 * Only updates if the new timestamp is greater than the current one,
+	 * preventing race conditions when multiple concurrent uploads complete.
+	 */
+	private updateSessionTimestamp(sessionId: string, updatedAt: string): void {
+		const currentUpdatedAt = this.sessionUpdatedAt[sessionId]
+		if (!currentUpdatedAt || updatedAt > currentUpdatedAt) {
+			this.sessionUpdatedAt[sessionId] = updatedAt
+		}
 	}
 
 	private pathKeyToBlobKey(pathKey: string) {
