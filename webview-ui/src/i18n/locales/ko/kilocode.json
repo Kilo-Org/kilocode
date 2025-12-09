@@ -288,5 +288,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "신규: 조직을 생성하여 모드 공유하기"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code에 로그인",
+		"step1": "브라우저에서 다음 URL을 여세요",
+		"step2": "코드를 확인하고 브라우저에서 이 기기를 승인하세요",
+		"scanQr": "또는 휴대폰으로 이 QR 코드를 스캔하세요",
+		"openBrowser": "브라우저 열기",
+		"copyUrl": "URL 복사",
+		"waiting": "승인 대기 중...",
+		"timeRemaining": "코드가 {{time}} 후에 만료됩니다",
+		"success": "로그인에 성공했습니다!",
+		"authenticatedAs": "{{email}}(으)로 인증됨",
+		"error": "인증 오류",
+		"unknownError": "오류가 발생했습니다. 다시 시도해 주세요.",
+		"cancel": "취소",
+		"retry": "다시 시도",
+		"tryAgain": "다시 시도",
+		"cancelled": "인증이 취소되었습니다",
+		"initiating": "인증을 시작하는 중..."
 	}
 }

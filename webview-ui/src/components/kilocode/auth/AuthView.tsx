@@ -1,21 +1,16 @@
-import React, { useEffect, useState } from "react"
-import { ButtonSecondary } from "./ButtonSecondary"
-import { ButtonPrimary } from "./ButtonPrimary"
-import Logo from "./Logo"
-import { useAppTranslation } from "@/i18n/TranslationContext"
+import { useEffect, useState } from "react"
 import { vscode } from "@/utils/vscode"
-import DeviceAuthCard from "./DeviceAuthCard"
+import { Tab, TabContent } from "../../common/Tab"
+import DeviceAuthCard from "../common/DeviceAuthCard"
 
-interface KiloCodeAuthProps {
-	onManualConfigClick?: () => void
-	onLoginClick?: () => void
-	className?: string
+interface AuthViewProps {
+	returnTo?: "chat" | "settings"
+	profileName?: string
 }
 
 type DeviceAuthStatus = "idle" | "initiating" | "pending" | "success" | "error" | "cancelled"
 
-const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, onLoginClick, className = "" }) => {
-	const { t } = useAppTranslation()
+const AuthView: React.FC<AuthViewProps> = ({ returnTo = "chat", profileName }) => {
 	const [deviceAuthStatus, setDeviceAuthStatus] = useState<DeviceAuthStatus>("idle")
 	const [deviceAuthCode, setDeviceAuthCode] = useState<string>()
 	const [deviceAuthVerificationUrl, setDeviceAuthVerificationUrl] = useState<string>()
@@ -41,24 +36,35 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, onLogi
 					setDeviceAuthTimeRemaining(message.deviceAuthTimeRemaining)
 					break
 				case "deviceAuthComplete":
+					console.log("[AuthView] Device auth complete received", {
+						profileName,
+						token: message.deviceAuthToken ? "present" : "missing",
+						userEmail: message.deviceAuthUserEmail,
+					})
 					setDeviceAuthStatus("success")
 					setDeviceAuthUserEmail(message.deviceAuthUserEmail)
 
-					// Save token to current profile
+					// Always send profile-specific message to prevent double-save
+					// If no profileName, backend will use current profile
+					console.log(
+						"[AuthView] Sending deviceAuthCompleteWithProfile to profile:",
+						profileName || "current",
+					)
 					vscode.postMessage({
 						type: "deviceAuthCompleteWithProfile",
-						text: "", // Empty string means use current profile
+						text: profileName || "", // Empty string means use current profile
 						values: {
 							token: message.deviceAuthToken,
 							userEmail: message.deviceAuthUserEmail,
 						},
 					})
 
-					// Navigate to chat tab after 2 seconds
+					// Navigate back after 2 seconds
 					setTimeout(() => {
 						vscode.postMessage({
 							type: "switchTab",
-							tab: "chat",
+							tab: returnTo,
+							values: profileName ? { editingProfile: profileName } : undefined,
 						})
 					}, 2000)
 					break
@@ -67,49 +73,43 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, onLogi
 					setDeviceAuthError(message.deviceAuthError)
 					break
 				case "deviceAuthCancelled":
-					setDeviceAuthStatus("idle")
-					setDeviceAuthCode(undefined)
-					setDeviceAuthVerificationUrl(undefined)
-					setDeviceAuthExpiresIn(undefined)
-					setDeviceAuthTimeRemaining(undefined)
-					setDeviceAuthError(undefined)
+					// Navigate back immediately on cancel
+					vscode.postMessage({
+						type: "switchTab",
+						tab: returnTo,
+						values: profileName ? { editingProfile: profileName } : undefined,
+					})
 					break
 			}
 		}
 
 		window.addEventListener("message", handleMessage)
 		return () => window.removeEventListener("message", handleMessage)
+	}, [returnTo, profileName])
+
+	// Auto-start device auth when component mounts
+	useEffect(() => {
+		setDeviceAuthStatus("initiating")
+		vscode.postMessage({ type: "startDeviceAuth" })
 	}, [])
 
-	const handleStartDeviceAuth = () => {
-		if (onLoginClick) {
-			onLoginClick()
-		} else {
-			setDeviceAuthStatus("initiating")
-			vscode.postMessage({ type: "startDeviceAuth" })
-		}
-	}
-
 	const handleCancelDeviceAuth = () => {
-		setDeviceAuthStatus("idle")
-		setDeviceAuthCode(undefined)
-		setDeviceAuthVerificationUrl(undefined)
-		setDeviceAuthExpiresIn(undefined)
-		setDeviceAuthTimeRemaining(undefined)
-		setDeviceAuthError(undefined)
+		// Navigation will be handled by deviceAuthCancelled message
 	}
 
 	const handleRetryDeviceAuth = () => {
 		setDeviceAuthStatus("idle")
 		setDeviceAuthError(undefined)
 		// Automatically start again
-		setTimeout(() => handleStartDeviceAuth(), 100)
+		setTimeout(() => {
+			setDeviceAuthStatus("initiating")
+			vscode.postMessage({ type: "startDeviceAuth" })
+		}, 100)
 	}
 
-	// Show device auth card if auth is in progress
-	if (deviceAuthStatus !== "idle") {
-		return (
-			<div className={`flex flex-col items-center ${className}`}>
+	return (
+		<Tab>
+			<TabContent className="flex flex-col items-center justify-center min-h-screen p-6">
 				<DeviceAuthCard
 					code={deviceAuthCode}
 					verificationUrl={deviceAuthVerificationUrl}
@@ -121,31 +121,9 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, onLogi
 					onCancel={handleCancelDeviceAuth}
 					onRetry={handleRetryDeviceAuth}
 				/>
-			</div>
-		)
-	}
-
-	// Default welcome screen
-	return (
-		<div className={`flex flex-col items-center ${className}`}>
-			<Logo />
-
-			<h2 className="m-0 p-0 mb-4">{t("kilocode:welcome.greeting")}</h2>
-			<p className="text-center mb-2">{t("kilocode:welcome.introText1")}</p>
-			<p className="text-center mb-2">{t("kilocode:welcome.introText2")}</p>
-			<p className="text-center mb-5">{t("kilocode:welcome.introText3")}</p>
-
-			<div className="w-full flex flex-col gap-5">
-				<ButtonPrimary onClick={handleStartDeviceAuth}>{t("kilocode:welcome.ctaButton")}</ButtonPrimary>
-
-				{!!onManualConfigClick && (
-					<ButtonSecondary onClick={() => onManualConfigClick && onManualConfigClick()}>
-						{t("kilocode:welcome.manualModeButton")}
-					</ButtonSecondary>
-				)}
-			</div>
-		</div>
+			</TabContent>
+		</Tab>
 	)
 }
 
-export default KiloCodeAuth
+export default AuthView

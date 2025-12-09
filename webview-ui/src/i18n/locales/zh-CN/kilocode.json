@@ -288,5 +288,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
+	},
+	"deviceAuth": {
+		"title": "登录 Kilo Code",
+		"step1": "在浏览器中打开以下 URL",
+		"step2": "验证代码并在浏览器中授权此设备",
+		"scanQr": "或用手机扫描此二维码",
+		"openBrowser": "打开浏览器",
+		"copyUrl": "复制 URL",
+		"waiting": "等待授权...",
+		"timeRemaining": "代码将在 {{time}} 后过期",
+		"success": "登录成功！",
+		"authenticatedAs": "已验证为 {{email}}",
+		"error": "验证错误",
+		"unknownError": "发生错误。请重试。",
+		"cancel": "取消",
+		"retry": "重试",
+		"tryAgain": "重试",
+		"cancelled": "验证已取消",
+		"initiating": "正在启动验证..."
 	}
 }

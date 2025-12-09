@@ -287,5 +287,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Neu: Modi teilen durch Erstellen einer Organisation"
+	},
+	"deviceAuth": {
+		"title": "Bei Kilo Code anmelden",
+		"step1": "Öffne die folgende URL in deinem Browser",
+		"step2": "Überprüfe den Code und autorisiere dieses Gerät in deinem Browser",
+		"scanQr": "Oder scanne diesen QR-Code mit deinem Handy",
+		"openBrowser": "Browser öffnen",
+		"copyUrl": "URL kopieren",
+		"waiting": "Warte auf Autorisierung...",
+		"timeRemaining": "Code läuft ab in {{time}}",
+		"success": "Erfolgreich angemeldet!",
+		"authenticatedAs": "Authentifiziert als {{email}}",
+		"error": "Authentifizierungsfehler",
+		"unknownError": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+		"cancel": "Abbrechen",
+		"retry": "Erneut versuchen",
+		"tryAgain": "Erneut versuchen",
+		"cancelled": "Authentifizierung abgebrochen",
+		"initiating": "Authentifizierung wird gestartet..."
 	}
 }

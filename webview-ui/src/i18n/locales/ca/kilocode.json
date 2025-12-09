@@ -288,5 +288,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
+	},
+	"deviceAuth": {
+		"title": "Inicia sessió a Kilo Code",
+		"step1": "Obre la següent URL al teu navegador",
+		"step2": "Verifica el codi i autoritza aquest dispositiu al teu navegador",
+		"scanQr": "O escaneja aquest codi QR amb el teu telèfon",
+		"openBrowser": "Obre el navegador",
+		"copyUrl": "Copia l'URL",
+		"waiting": "Esperant autorització...",
+		"timeRemaining": "El codi caduca en {{time}}",
+		"success": "Sessió iniciada correctament!",
+		"authenticatedAs": "Autenticat com a {{email}}",
+		"error": "Error d'autenticació",
+		"unknownError": "S'ha produït un error. Torna-ho a provar.",
+		"cancel": "Cancel·la",
+		"retry": "Torna-ho a provar",
+		"tryAgain": "Torna-ho a provar",
+		"cancelled": "Autenticació cancel·lada",
+		"initiating": "Iniciant autenticació..."
 	}
 }
