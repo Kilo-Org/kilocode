@@ -16,7 +16,10 @@ export async function handleChatCompletionRequest(
 		const userText = message.text || ""
 		const requestId = message.requestId || ""
 
-		const tracker = new VisibleCodeTracker(getCurrentCwd())
+		// Pass RooIgnoreController to respect .kilocodeignore patterns
+		const currentTask = provider.getCurrentTask()
+		const tracker = new VisibleCodeTracker(getCurrentCwd(), currentTask?.rooIgnoreController ?? null)
+
 		const visibleContext = await tracker.captureVisibleCode()
 
 		const autocomplete = new ChatTextAreaAutocomplete(provider.providerSettingsManager)

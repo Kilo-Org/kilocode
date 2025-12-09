@@ -11,6 +11,8 @@
 import * as vscode from "vscode"
 
 import { toRelativePath } from "../../../utils/path"
+import { isSecurityConcern } from "../../continuedev/core/indexing/ignore"
+import type { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 
 import { VisibleCodeContext, VisibleEditorInfo, VisibleRange, DiffInfo } from "../types"
 
@@ -20,10 +22,14 @@ const GIT_SCHEMES = ["git", "gitfs", "file", "vscode-remote"]
 export class VisibleCodeTracker {
 	private lastContext: VisibleCodeContext | null = null
 
-	constructor(private workspacePath: string) {}
+	constructor(
+		private workspacePath: string,
+		private rooIgnoreController: RooIgnoreController | null = null,
+	) {}
 
 	/**
 	 * Captures the currently visible code across all visible editors.
+	 * Excludes files matching security patterns or .kilocodeignore rules.
 	 *
 	 * @returns VisibleCodeContext containing information about all visible editors
 	 * and their visible code ranges
@@ -40,6 +46,18 @@ export class VisibleCodeTracker {
 
 			// Skip non-code documents (output panels, extension host output, etc.)
 			if (!GIT_SCHEMES.includes(scheme)) {
+				continue
+			}
+
+			const filePath = document.uri.fsPath
+			const relativePath = toRelativePath(filePath, this.workspacePath)
+
+			if (isSecurityConcern(filePath)) {
+				console.log(`[VisibleCodeTracker] Filtered (security): ${relativePath}`)
+				continue
+			}
+			if (this.rooIgnoreController && !this.rooIgnoreController.validateAccess(relativePath)) {
+				console.log(`[VisibleCodeTracker] Filtered (.kilocodeignore): ${relativePath}`)
 				continue
 			}
 
@@ -60,8 +78,8 @@ export class VisibleCodeTracker {
 			const diffInfo = this.extractDiffInfo(document.uri)
 
 			editorInfos.push({
-				filePath: document.uri.fsPath,
-				relativePath: toRelativePath(document.uri.fsPath, this.workspacePath),
+				filePath,
+				relativePath,
 				languageId: document.languageId,
 				isActive,
 				visibleRanges,
@@ -83,10 +101,6 @@ export class VisibleCodeTracker {
 			timestamp: Date.now(),
 			editors: editorInfos,
 		}
-
-		// Log a brief summary
-		const fileNames = editorInfos.map((e) => e.relativePath).join(", ")
-		console.log(`[VisibleCodeTracker] Captured ${editorInfos.length} editor(s): ${fileNames || "(none)"}`)
 
 		return this.lastContext
 	}
