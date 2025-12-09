@@ -1,25 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest"
 import { EventEmitter } from "node:events"
-import { TelemetryService } from "@roo-code/telemetry"
+import * as telemetry from "../telemetry"
 
 const MOCK_CLI_PATH = "/mock/path/to/kilocode"
 
-// Mock TelemetryService
-vi.mock("@roo-code/telemetry", () => {
-	const mockTelemetryService = {
-		captureAgentManagerOpened: vi.fn(),
-		captureAgentManagerSessionStarted: vi.fn(),
-		captureAgentManagerSessionCompleted: vi.fn(),
-		captureAgentManagerSessionStopped: vi.fn(),
-		captureAgentManagerSessionError: vi.fn(),
-	}
-	return {
-		TelemetryService: {
-			hasInstance: vi.fn(() => true),
-			instance: mockTelemetryService,
-		},
-	}
-})
+// Mock the local telemetry module
+vi.mock("../telemetry", () => ({
+	captureAgentManagerOpened: vi.fn(),
+	captureAgentManagerSessionStarted: vi.fn(),
+	captureAgentManagerSessionCompleted: vi.fn(),
+	captureAgentManagerSessionStopped: vi.fn(),
+	captureAgentManagerSessionError: vi.fn(),
+}))
 
 let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerProvider
 
@@ -647,7 +639,7 @@ describe("AgentManagerProvider telemetry", () => {
 		// Emit session_created event
 		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-telemetry-1"}\n'))
 
-		expect(TelemetryService.instance.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
 			"session-telemetry-1",
 			false, // useWorktree = false (no parallel mode)
 		)
@@ -661,7 +653,7 @@ describe("AgentManagerProvider telemetry", () => {
 		// Emit session_created event
 		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-parallel-1"}\n'))
 
-		expect(TelemetryService.instance.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
 			"session-parallel-1",
 			true, // useWorktree = true (parallel mode enabled)
 		)
@@ -680,7 +672,7 @@ describe("AgentManagerProvider telemetry", () => {
 			exitCode: 0,
 		})
 
-		expect(TelemetryService.instance.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
 			sessionId,
 			false, // useWorktree = false
 		)
@@ -696,7 +688,7 @@ describe("AgentManagerProvider telemetry", () => {
 		// Stop the session
 		;(provider as any).stopAgentSession(sessionId)
 
-		expect(TelemetryService.instance.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
 			sessionId,
 			false, // useWorktree = false
 		)
@@ -714,7 +706,7 @@ describe("AgentManagerProvider telemetry", () => {
 			reason: "User cancelled",
 		})
 
-		expect(TelemetryService.instance.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
 			sessionId,
 			false, // useWorktree = false
 		)
@@ -732,7 +724,7 @@ describe("AgentManagerProvider telemetry", () => {
 			error: "Something went wrong",
 		})
 
-		expect(TelemetryService.instance.captureAgentManagerSessionError).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionError).toHaveBeenCalledWith(
 			sessionId,
 			false, // useWorktree = false
 			"Something went wrong",
@@ -751,7 +743,7 @@ describe("AgentManagerProvider telemetry", () => {
 			exitCode: 0,
 		})
 
-		expect(TelemetryService.instance.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
+		expect(telemetry.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
 			sessionId,
 			true, // useWorktree = true (parallel mode)
 		)

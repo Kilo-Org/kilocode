@@ -21,7 +21,13 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+import {
+	captureAgentManagerOpened,
+	captureAgentManagerSessionStarted,
+	captureAgentManagerSessionCompleted,
+	captureAgentManagerSessionStopped,
+	captureAgentManagerSessionError,
+} from "./telemetry"
 
 /**
  * AgentManagerProvider
@@ -96,13 +102,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 					}
 
 					// Track session started telemetry
-					if (TelemetryService.hasInstance()) {
-						const useWorktree = latestSession.parallelMode?.enabled ?? false
-						TelemetryService.instance.captureAgentManagerSessionStarted(
-							latestSession.sessionId,
-							useWorktree,
-						)
-					}
+					captureAgentManagerSessionStarted(
+						latestSession.sessionId,
+						latestSession.parallelMode?.enabled ?? false,
+					)
 				}
 			},
 		}
@@ -166,9 +169,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.outputChannel.appendLine("Agent Manager panel opened")
 
 		// Track Agent Manager panel opened
-		if (TelemetryService.hasInstance()) {
-			TelemetryService.instance.captureAgentManagerOpened()
-		}
+		captureAgentManagerOpened()
 	}
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
@@ -329,39 +330,30 @@ export class AgentManagerProvider implements vscode.Disposable {
 				break
 			case "error": {
 				const session = this.registry.getSession(sessionId)
-				const useWorktree = session?.parallelMode?.enabled ?? false
 				this.registry.updateSessionStatus(sessionId, "error", undefined, event.error)
 				this.log(sessionId, `Error: ${event.error}`)
 				if (event.details) {
 					this.log(sessionId, `Details: ${JSON.stringify(event.details)}`)
 				}
 				// Track session error telemetry
-				if (TelemetryService.hasInstance()) {
-					TelemetryService.instance.captureAgentManagerSessionError(sessionId, useWorktree, event.error)
-				}
+				captureAgentManagerSessionError(sessionId, session?.parallelMode?.enabled ?? false, event.error)
 				break
 			}
 			case "complete": {
 				const session = this.registry.getSession(sessionId)
-				const useWorktree = session?.parallelMode?.enabled ?? false
 				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
 				this.log(sessionId, "Agent completed")
 				void this.fetchAndPostRemoteSessions()
 				// Track session completed telemetry
-				if (TelemetryService.hasInstance()) {
-					TelemetryService.instance.captureAgentManagerSessionCompleted(sessionId, useWorktree)
-				}
+				captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
 				break
 			}
 			case "interrupted": {
 				const session = this.registry.getSession(sessionId)
-				const useWorktree = session?.parallelMode?.enabled ?? false
 				this.registry.updateSessionStatus(sessionId, "stopped", undefined, event.reason)
 				this.log(sessionId, event.reason || "Execution interrupted")
 				// Track session stopped telemetry
-				if (TelemetryService.hasInstance()) {
-					TelemetryService.instance.captureAgentManagerSessionStopped(sessionId, useWorktree)
-				}
+				captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
 				break
 			}
 			case "session_created":
@@ -505,7 +497,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private stopAgentSession(sessionId: string): void {
 		const session = this.registry.getSession(sessionId)
-		const useWorktree = session?.parallelMode?.enabled ?? false
 
 		this.processHandler.stopProcess(sessionId)
 
@@ -516,9 +507,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.firstApiReqStarted.delete(sessionId)
 
 		// Track session stopped telemetry
-		if (TelemetryService.hasInstance()) {
-			TelemetryService.instance.captureAgentManagerSessionStopped(sessionId, useWorktree)
-		}
+		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
 	}
 
 	/**
