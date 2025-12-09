@@ -111,7 +111,7 @@ export class RooIgnoreController {
 			// Convert real path to relative for .rooignore checking
 			const relativePath = path.relative(this.cwd, realPath).toPosix()
 
-			// First check global ignore patterns (always active) // kilocode_change start
+			// kilocode_change start: First check global ignore patterns (always active)
 			if (this.globallyIgnoredFiles.length > 0 && this.globalIgnoreInstance.ignores(relativePath)) {
 				return false
 			}
