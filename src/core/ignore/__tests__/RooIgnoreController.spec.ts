@@ -528,7 +528,6 @@ describe("RooIgnoreController", () => {
 	})
 
 	describe("global ignore patterns", () => {
-		// kilocode_change start
 		/**
 		 * Tests that global patterns work without .kilocodeignore
 		 */
