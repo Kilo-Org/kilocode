@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.13.1
+
+### Patch Changes
+
+- [#4267](https://github.com/Kilo-Org/kilocode/pull/4267) [`a475394`](https://github.com/Kilo-Org/kilocode/commit/a47539442de1addacf55f9647471411fb55b50ee) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add JSON stdin handler for bidirectional CLI communication
+
 ## 0.13.0
 
 ### Minor Changes
