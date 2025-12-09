@@ -1,5 +1,11 @@
-#### Description: Should complete Ruby loop iteration
-#### Filename: loop_example.rb
-arr = [1, 2, 3, 4, 5]
-arr.each do |item|
-	<<<AUTOCOMPLETE_HERE>>>
+#### Description: Should complete Ruby loop iteration with sum calculation
+#### Filename: sum_calculator.rb
+# Calculate the sum of all numbers in the array
+numbers = [1, 2, 3, 4, 5]
+total = 0
+
+numbers.each do |num|
+  total <<<AUTOCOMPLETE_HERE>>>
+end
+
+puts "Sum: #{total}"
