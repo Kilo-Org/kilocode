@@ -198,6 +198,52 @@ export class TelemetryService {
 		this.captureEvent(TelemetryEventName.CUSTOM_MODE_CREATED, { modeSlug, modeName })
 	}
 
+	// kilocode_change start - Agent Manager telemetry
+	/**
+	 * Captures when the Agent Manager panel is opened
+	 */
+	public captureAgentManagerOpened(): void {
+		this.captureEvent(TelemetryEventName.AGENT_MANAGER_OPENED)
+	}
+
+	/**
+	 * Captures when an agent session is started
+	 * @param sessionId The unique session identifier
+	 * @param useWorktree Whether the session uses a git worktree (parallel mode)
+	 */
+	public captureAgentManagerSessionStarted(sessionId: string, useWorktree: boolean): void {
+		this.captureEvent(TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, { sessionId, useWorktree })
+	}
+
+	/**
+	 * Captures when an agent session completes successfully
+	 * @param sessionId The unique session identifier
+	 * @param useWorktree Whether the session used a git worktree (parallel mode)
+	 */
+	public captureAgentManagerSessionCompleted(sessionId: string, useWorktree: boolean): void {
+		this.captureEvent(TelemetryEventName.AGENT_MANAGER_SESSION_COMPLETED, { sessionId, useWorktree })
+	}
+
+	/**
+	 * Captures when an agent session is stopped by the user
+	 * @param sessionId The unique session identifier
+	 * @param useWorktree Whether the session used a git worktree (parallel mode)
+	 */
+	public captureAgentManagerSessionStopped(sessionId: string, useWorktree: boolean): void {
+		this.captureEvent(TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, { sessionId, useWorktree })
+	}
+
+	/**
+	 * Captures when an agent session encounters an error
+	 * @param sessionId The unique session identifier
+	 * @param useWorktree Whether the session used a git worktree (parallel mode)
+	 * @param error Optional error message
+	 */
+	public captureAgentManagerSessionError(sessionId: string, useWorktree: boolean, error?: string): void {
+		this.captureEvent(TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, { sessionId, useWorktree, error })
+	}
+	// kilocode_change end
+
 	/**
 	 * Captures a marketplace item installation event
 	 * @param itemId The unique identifier of the marketplace item
