@@ -347,6 +347,28 @@ describe("SessionManager", () => {
 			expect(mockDependencies.onSessionRestored).toHaveBeenCalled()
 		})
 
+		it("should persist task-to-session mapping when restoring session", async () => {
+			const mockSession: SessionWithSignedUrls = {
+				session_id: "session-123",
+				title: "Test Session",
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+				api_conversation_history_blob_url: null,
+				task_metadata_blob_url: null,
+				ui_messages_blob_url: null,
+				git_state_blob_url: null,
+			}
+
+			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+
+			await manager.restoreSession("session-123")
+
+			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
+				"session-123",
+				"session-123",
+			)
+		})
+
 		it("should fetch and write blobs when URLs are provided", async () => {
 			const mockSession: SessionWithSignedUrls = {
 				session_id: "session-123",
@@ -566,10 +588,7 @@ describe("SessionManager", () => {
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-456",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue()
 
 			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 
@@ -593,10 +612,7 @@ describe("SessionManager", () => {
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-456",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue()
 
 			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 

@@ -577,4 +577,70 @@ describe("CliProcessHandler", () => {
 			)
 		})
 	})
+
+	describe("gitUrl support", () => {
+		it("passes gitUrl to registry when creating pending session", () => {
+			const onCliEvent = vi.fn()
+			const setPendingSessionSpy = vi.spyOn(registry, "setPendingSession")
+
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
+				gitUrl: "https://github.com/org/repo.git",
+			})
+
+			expect(setPendingSessionSpy).toHaveBeenCalledWith("test prompt", {
+				gitUrl: "https://github.com/org/repo.git",
+			})
+		})
+
+		it("passes gitUrl to registry when session is created", () => {
+			const onCliEvent = vi.fn()
+			const createSessionSpy = vi.spyOn(registry, "createSession")
+
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
+				gitUrl: "https://github.com/org/repo.git",
+			})
+
+			// Emit session_created event
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), {
+				gitUrl: "https://github.com/org/repo.git",
+			})
+		})
+
+		it("includes gitUrl in pending session notification", () => {
+			const onCliEvent = vi.fn()
+
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
+				gitUrl: "https://github.com/org/repo.git",
+			})
+
+			expect(callbacks.onPendingSessionChanged).toHaveBeenCalledWith(
+				expect.objectContaining({
+					prompt: "test prompt",
+					gitUrl: "https://github.com/org/repo.git",
+				}),
+			)
+		})
+
+		it("spawns process without gitUrl when not provided", () => {
+			const onCliEvent = vi.fn()
+			const setPendingSessionSpy = vi.spyOn(registry, "setPendingSession")
+
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+
+			expect(setPendingSessionSpy).toHaveBeenCalledWith("test prompt", undefined)
+		})
+
+		it("creates session without gitUrl when not provided", () => {
+			const onCliEvent = vi.fn()
+			const createSessionSpy = vi.spyOn(registry, "createSession")
+
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), undefined)
+		})
+	})
 })

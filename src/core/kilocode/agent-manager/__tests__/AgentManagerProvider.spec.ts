@@ -28,6 +28,11 @@ describe("AgentManagerProvider CLI spawning", () => {
 			fileExistsAtPath: vi.fn().mockResolvedValue(false),
 		}))
 
+		// Mock getRemoteUrl for gitUrl support
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
@@ -339,6 +344,224 @@ describe("AgentManagerProvider CLI spawning", () => {
 			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
 
 			expect((provider as any).getRunningSessionCount()).toBe(2)
+		})
+	})
+})
+
+describe("AgentManagerProvider gitUrl filtering", () => {
+	let provider: InstanceType<typeof AgentManagerProvider>
+	const mockContext = { extensionUri: {}, extensionPath: "" } as any
+	const mockOutputChannel = { appendLine: vi.fn() } as any
+	let mockGetRemoteUrl: Mock
+
+	beforeEach(async () => {
+		vi.resetModules()
+
+		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+
+		vi.doMock("vscode", () => ({
+			workspace: { workspaceFolders: [mockWorkspaceFolder] },
+			window: mockWindow,
+			env: { openExternal: vi.fn() },
+			Uri: { parse: vi.fn(), joinPath: vi.fn() },
+			ViewColumn: { One: 1 },
+		}))
+
+		vi.doMock("../../../../utils/fs", () => ({
+			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+		}))
+
+		mockGetRemoteUrl = vi.fn().mockResolvedValue("https://github.com/org/repo.git")
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: mockGetRemoteUrl,
+		}))
+
+		class TestProc extends EventEmitter {
+			stdout = new EventEmitter()
+			stderr = new EventEmitter()
+			kill = vi.fn()
+			pid = 1234
+		}
+
+		const spawnMock = vi.fn(() => new TestProc())
+		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
+
+		vi.doMock("node:child_process", () => ({
+			spawn: spawnMock,
+			execSync: execSyncMock,
+		}))
+
+		const module = await import("../AgentManagerProvider")
+		AgentManagerProvider = module.AgentManagerProvider
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+	})
+
+	afterEach(() => {
+		provider.dispose()
+	})
+
+	it("captures gitUrl from workspace when starting a session", async () => {
+		await (provider as any).startAgentSession("test prompt")
+
+		expect(mockGetRemoteUrl).toHaveBeenCalledWith("/tmp/workspace")
+	})
+
+	it("passes gitUrl to process handler when starting session", async () => {
+		const spawnProcessSpy = vi.spyOn((provider as any).processHandler, "spawnProcess")
+
+		await (provider as any).startAgentSession("test prompt")
+
+		expect(spawnProcessSpy).toHaveBeenCalledWith(
+			expect.any(String),
+			"/tmp/workspace",
+			"test prompt",
+			expect.any(Function),
+			{ gitUrl: "https://github.com/org/repo.git" },
+		)
+	})
+
+	it("handles git URL retrieval errors gracefully", async () => {
+		mockGetRemoteUrl.mockRejectedValue(new Error("No remote configured"))
+		const spawnProcessSpy = vi.spyOn((provider as any).processHandler, "spawnProcess")
+
+		await (provider as any).startAgentSession("test prompt")
+
+		// Should still spawn process without gitUrl
+		expect(spawnProcessSpy).toHaveBeenCalledWith(
+			expect.any(String),
+			"/tmp/workspace",
+			"test prompt",
+			expect.any(Function),
+			undefined,
+		)
+	})
+
+	it("stores gitUrl on created session", async () => {
+		await (provider as any).startAgentSession("test prompt")
+		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+
+		// Emit session_created event
+		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+		const sessions = (provider as any).registry.getSessions()
+		expect(sessions[0].gitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("sets currentGitUrl on provider initialization", async () => {
+		// The provider should have set the current git URL
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("filters sessions by currentGitUrl when broadcasting state", async () => {
+		// Create sessions with different gitUrls
+		const registry = (provider as any).registry
+		registry.createSession("session-1", "prompt 1", undefined, {
+			gitUrl: "https://github.com/org/repo.git",
+		})
+		registry.createSession("session-2", "prompt 2", undefined, {
+			gitUrl: "https://github.com/org/other-repo.git",
+		})
+		registry.createSession("session-3", "prompt 3", undefined, {
+			gitUrl: "https://github.com/org/repo.git",
+		})
+
+		// Get state (which should be filtered)
+		const state = (provider as any).getFilteredState()
+
+		// Should only include sessions matching currentGitUrl
+		expect(state.sessions).toHaveLength(2)
+		expect(state.sessions.map((s: any) => s.sessionId)).toContain("session-1")
+		expect(state.sessions.map((s: any) => s.sessionId)).toContain("session-3")
+		expect(state.sessions.map((s: any) => s.sessionId)).not.toContain("session-2")
+	})
+
+	it("excludes sessions without gitUrl when filtering by gitUrl", async () => {
+		const registry = (provider as any).registry
+		registry.createSession("session-1", "prompt 1", undefined, {
+			gitUrl: "https://github.com/org/repo.git",
+		})
+		registry.createSession("session-2", "prompt 2") // no gitUrl
+		registry.createSession("session-3", "prompt 3", undefined, {
+			gitUrl: "https://github.com/org/other-repo.git",
+		})
+
+		const state = (provider as any).getFilteredState()
+
+		// Should only include session-1 (matches exactly)
+		expect(state.sessions).toHaveLength(1)
+		expect(state.sessions[0].sessionId).toBe("session-1")
+	})
+
+	it("shows only sessions without gitUrl when currentGitUrl is not set", async () => {
+		;(provider as any).currentGitUrl = undefined
+
+		const registry = (provider as any).registry
+		registry.createSession("session-1", "prompt 1", undefined, {
+			gitUrl: "https://github.com/org/repo1.git",
+		})
+		registry.createSession("session-2", "prompt 2") // no gitUrl
+
+		const state = (provider as any).getFilteredState()
+
+		expect(state.sessions).toHaveLength(1)
+		expect(state.sessions[0].sessionId).toBe("session-2")
+	})
+
+	describe("filterRemoteSessionsByGitUrl", () => {
+		it("returns only sessions with matching git_url when currentGitUrl is set", () => {
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: "https://github.com/org/other.git" },
+				{ session_id: "3", git_url: "https://github.com/org/repo.git" },
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(2)
+			expect(filtered.map((s: any) => s.session_id)).toEqual(["1", "3"])
+		})
+
+		it("excludes sessions without git_url when currentGitUrl is set", () => {
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: undefined },
+				{ session_id: "3" }, // no git_url property
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(1)
+			expect(filtered[0].session_id).toBe("1")
+		})
+
+		it("returns only sessions without git_url when currentGitUrl is undefined", () => {
+			;(provider as any).currentGitUrl = undefined
+
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: undefined },
+				{ session_id: "3" }, // no git_url property
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(2)
+			expect(filtered.map((s: any) => s.session_id)).toEqual(["2", "3"])
+		})
+
+		it("excludes sessions with git_url when currentGitUrl is undefined", () => {
+			;(provider as any).currentGitUrl = undefined
+
+			const remoteSessions = [
+				{ session_id: "1", git_url: "https://github.com/org/repo.git" },
+				{ session_id: "2", git_url: "https://github.com/org/other.git" },
+			] as any[]
+
+			const filtered = (provider as any).filterRemoteSessionsByGitUrl(remoteSessions)
+
+			expect(filtered).toHaveLength(0)
 		})
 	})
 })

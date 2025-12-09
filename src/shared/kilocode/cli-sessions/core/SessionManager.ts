@@ -268,6 +268,8 @@ export class SessionManager {
 				totalCost: 0,
 			}
 
+			this.sessionPersistenceManager.setSessionForTask(historyItem.id, sessionId)
+
 			await this.extensionMessenger.sendWebviewMessage({
 				type: "addTaskToHistory",
 				historyItem,

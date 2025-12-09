@@ -14,6 +14,7 @@ export interface AgentSession {
 	error?: string
 	pid?: number
 	source: SessionSource
+	gitUrl?: string
 }
 
 /**
@@ -23,6 +24,7 @@ export interface PendingSession {
 	prompt: string
 	label: string
 	startTime: number
+	gitUrl?: string
 }
 
 export interface RemoteSession {
@@ -30,6 +32,7 @@ export interface RemoteSession {
 	title: string
 	created_at: string
 	updated_at: string
+	git_url?: string
 }
 
 // Core atoms
@@ -58,6 +61,7 @@ function toAgentSession(remote: RemoteSession): AgentSession {
 		startTime: new Date(remote.created_at).getTime(),
 		endTime: new Date(remote.updated_at).getTime(),
 		source: "remote",
+		gitUrl: remote.git_url,
 	}
 }
 

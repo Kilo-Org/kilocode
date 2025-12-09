@@ -221,4 +221,181 @@ describe("AgentRegistry", () => {
 			expect(registry.hasPendingOrRunningSessions()).toBe(false)
 		})
 	})
+
+	describe("gitUrl support", () => {
+		describe("createSession with gitUrl", () => {
+			it("stores gitUrl when provided in options", () => {
+				const session = registry.createSession("session-1", "test prompt", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				expect(session.gitUrl).toBe("https://github.com/org/repo.git")
+			})
+
+			it("creates session without gitUrl when not provided", () => {
+				const session = registry.createSession("session-1", "test prompt")
+
+				expect(session.gitUrl).toBeUndefined()
+			})
+
+			it("creates session without gitUrl when options is empty", () => {
+				const session = registry.createSession("session-1", "test prompt", undefined, {})
+
+				expect(session.gitUrl).toBeUndefined()
+			})
+		})
+
+		describe("setPendingSession with gitUrl", () => {
+			it("stores gitUrl in pending session when provided", () => {
+				const pending = registry.setPendingSession("test prompt", {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				expect(pending.gitUrl).toBe("https://github.com/org/repo.git")
+				expect(registry.pendingSession?.gitUrl).toBe("https://github.com/org/repo.git")
+			})
+
+			it("creates pending session without gitUrl when not provided", () => {
+				const pending = registry.setPendingSession("test prompt")
+
+				expect(pending.gitUrl).toBeUndefined()
+			})
+		})
+
+		describe("getState includes gitUrl", () => {
+			it("includes gitUrl in session state", () => {
+				registry.createSession("session-1", "test prompt", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				const state = registry.getState()
+
+				expect(state.sessions[0].gitUrl).toBe("https://github.com/org/repo.git")
+			})
+		})
+
+		describe("getSessionsForGitUrl", () => {
+			it("returns only sessions without gitUrl when filter is undefined", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				registry.createSession("session-3", "prompt 3") // no gitUrl
+
+				const sessions = registry.getSessionsForGitUrl(undefined)
+
+				expect(sessions).toHaveLength(1)
+				expect(sessions[0].sessionId).toBe("session-3")
+			})
+
+			it("returns only sessions matching the gitUrl exactly", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo1.git")
+
+				expect(sessions).toHaveLength(2)
+				expect(sessions.map((s) => s.sessionId)).toEqual(["session-3", "session-1"])
+			})
+
+			it("excludes sessions without gitUrl when filtering by gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2") // no gitUrl
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo1.git")
+
+				expect(sessions).toHaveLength(1)
+				expect(sessions[0].sessionId).toBe("session-1")
+			})
+
+			it("returns sessions sorted by most recent start time", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo.git")
+
+				expect(sessions.map((s) => s.sessionId)).toEqual(["session-3", "session-2", "session-1"])
+			})
+
+			it("returns empty array when no sessions match gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/other-repo.git")
+
+				expect(sessions).toHaveLength(0)
+			})
+		})
+
+		describe("getStateForGitUrl", () => {
+			it("returns state filtered by gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.sessions).toHaveLength(1)
+				expect(state.sessions[0].sessionId).toBe("session-1")
+			})
+
+			it("preserves selectedId if session is in filtered results", () => {
+				const session1 = registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				registry.selectedId = session1.sessionId
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.selectedId).toBe("session-1")
+			})
+
+			it("clears selectedId if session is not in filtered results", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				const session2 = registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				registry.selectedId = session2.sessionId
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.selectedId).toBeNull()
+			})
+		})
+	})
 })

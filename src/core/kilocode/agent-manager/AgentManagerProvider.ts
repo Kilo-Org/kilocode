@@ -4,9 +4,12 @@ import { findKilocodeCli } from "./CliPathResolver"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload } from "./CliOutputParser"
 import { RemoteSessionService } from "./RemoteSessionService"
+import type { RemoteSession } from "./types"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
+import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
+import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
 
 /**
@@ -26,6 +29,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
 	// Track first api_req_started per session to filter user-input echoes
 	private firstApiReqStarted: Map<string, boolean> = new Map()
+	// Track the current workspace's git URL for filtering sessions
+	private currentGitUrl: string | undefined
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -33,6 +38,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 	) {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
+
+		// Initialize currentGitUrl from workspace
+		void this.initializeCurrentGitUrl()
 
 		const callbacks: CliProcessHandlerCallbacks = {
 			onLog: (message) => this.outputChannel.appendLine(`[AgentManager] ${message}`),
@@ -134,6 +142,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 	}
 
+	private async initializeCurrentGitUrl(): Promise<void> {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		if (!workspaceFolder) {
+			return
+		}
+
+		try {
+			const rawGitUrl = await getRemoteUrl(workspaceFolder)
+			this.currentGitUrl = normalizeGitUrl(rawGitUrl)
+			this.outputChannel.appendLine(`[AgentManager] Current git URL: ${this.currentGitUrl}`)
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Could not get git URL for workspace: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
 	/**
 	 * Start a new agent session using the kilocode CLI
 	 */
@@ -160,9 +185,25 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		this.processHandler.spawnProcess(cliPath, workspaceFolder, prompt, (sessionId, event) => {
-			this.handleCliEvent(sessionId, event)
-		})
+		// Get git URL for the workspace (used for filtering sessions)
+		let gitUrl: string | undefined
+		try {
+			gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
+		this.processHandler.spawnProcess(
+			cliPath,
+			workspaceFolder,
+			prompt,
+			(sessionId, event) => {
+				this.handleCliEvent(sessionId, event)
+			},
+			gitUrl ? { gitUrl } : undefined,
+		)
 	}
 
 	/**
@@ -392,27 +433,38 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.firstApiReqStarted.delete(sessionId)
 	}
 
+	private getFilteredState() {
+		return this.registry.getStateForGitUrl(this.currentGitUrl)
+	}
+
 	private postStateToWebview(): void {
 		this.postMessage({
 			type: "agentManager.state",
-			state: this.registry.getState(),
+			state: this.getFilteredState(),
 		})
 	}
 
-	/**
-	 * Fetch remote sessions and post them to the webview
-	 */
 	private async fetchAndPostRemoteSessions(): Promise<void> {
 		try {
 			const remoteSessions = await this.remoteSessionService.fetchRemoteSessions()
 
+			// Filter remote sessions by git_url (only if git_url is available from API)
+			const filteredSessions = this.filterRemoteSessionsByGitUrl(remoteSessions)
+
 			this.postMessage({
 				type: "agentManager.remoteSessions",
-				sessions: remoteSessions,
+				sessions: filteredSessions,
 			})
 		} catch (error) {
 			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote sessions: ${error}`)
 		}
+	}
+
+	private filterRemoteSessionsByGitUrl(sessions: RemoteSession[]): RemoteSession[] {
+		if (!this.currentGitUrl) {
+			return sessions.filter((s) => !s.git_url)
+		}
+		return sessions.filter((s) => s.git_url === this.currentGitUrl)
 	}
 
 	private postMessage(message: unknown): void {

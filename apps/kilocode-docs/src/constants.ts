@@ -3,7 +3,7 @@
  */
 
 // GitHub repository information
-export const GITHUB_REPO_URL = "https://github.com/Kilo-Org/docs"
+export const GITHUB_REPO_URL = "https://github.com/Kilo-Org/kilocode/tree/main/apps/kilocode-docs"
 export const GITHUB_ISSUES_URL = `${GITHUB_REPO_URL}/issues`
 export const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`
 

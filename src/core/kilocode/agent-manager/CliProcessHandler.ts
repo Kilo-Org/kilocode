@@ -6,29 +6,25 @@ import type { ClineMessage } from "@roo-code/types"
 
 const SESSION_TIMEOUT_MS = 120_000 // 2 minutes
 
-/**
- * Tracks a pending session while waiting for CLI's session_created event
- */
+export interface SpawnOptions {
+	gitUrl?: string
+}
+
 interface PendingProcessInfo {
 	process: ChildProcess
 	parser: CliOutputParser
 	prompt: string
 	startTime: number
 	timeout: NodeJS.Timeout
+	gitUrl?: string
 }
 
-/**
- * Tracks an active session's process info
- */
 interface ActiveProcessInfo {
 	process: ChildProcess
 	parser: CliOutputParser
 	timeout: NodeJS.Timeout
 }
 
-/**
- * Callbacks for process events that need to be handled by the provider
- */
 export interface CliProcessHandlerCallbacks {
 	onLog: (message: string) => void
 	onSessionLog: (sessionId: string, line: string) => void
@@ -39,9 +35,6 @@ export interface CliProcessHandlerCallbacks {
 	onSessionCreated: () => void
 }
 
-/**
- * Handles CLI process lifecycle for agent sessions
- */
 export class CliProcessHandler {
 	private activeSessions: Map<string, ActiveProcessInfo> = new Map()
 	private pendingProcess: PendingProcessInfo | null = null
@@ -56,9 +49,10 @@ export class CliProcessHandler {
 		workspace: string,
 		prompt: string,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
+		options?: SpawnOptions,
 	): void {
 		// Set pending session state
-		const pendingSession = this.registry.setPendingSession(prompt)
+		const pendingSession = this.registry.setPendingSession(prompt, options)
 		this.callbacks.onLog(`Pending session created, waiting for CLI session_created event`)
 		this.callbacks.onPendingSessionChanged(pendingSession)
 
@@ -103,6 +97,7 @@ export class CliProcessHandler {
 			prompt,
 			startTime: pendingSession.startTime,
 			timeout,
+			gitUrl: options?.gitUrl,
 		}
 
 		// Parse nd-json output from stdout
@@ -204,13 +199,13 @@ export class CliProcessHandler {
 			return
 		}
 
-		const { process: proc, prompt, startTime, timeout, parser } = this.pendingProcess
+		const { process: proc, prompt, startTime, timeout, parser, gitUrl } = this.pendingProcess
 
 		// Clear pending timeout
 		clearTimeout(timeout)
 
 		// Create the actual session with CLI's sessionId
-		const session = this.registry.createSession(event.sessionId, prompt, startTime)
+		const session = this.registry.createSession(event.sessionId, prompt, startTime, gitUrl ? { gitUrl } : undefined)
 		this.callbacks.onLog(`Session created with CLI sessionId: ${session.sessionId}`)
 
 		// Clear pending session state

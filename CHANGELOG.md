@@ -1,5 +1,117 @@
 # kilo-code
 
+## 4.131.2
+
+### Patch Changes
+
+- [#4281](https://github.com/Kilo-Org/kilocode/pull/4281) [`e0ed242`](https://github.com/Kilo-Org/kilocode/commit/e0ed24298b6dc33b8f1c52124b613503d85498aa) Thanks [@iscekic](https://github.com/iscekic)! - force release workflow run
+
+## 4.131.1
+
+### Patch Changes
+
+- [#4278](https://github.com/Kilo-Org/kilocode/pull/4278) [`a389603`](https://github.com/Kilo-Org/kilocode/commit/a3896030e963d4c94200716035cce446e838be35) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix webview assets build
+
+- [#4275](https://github.com/Kilo-Org/kilocode/pull/4275) [`ce50373`](https://github.com/Kilo-Org/kilocode/commit/ce50373dd6ff4f011783e2f44dd41e6a9b77a8d3) Thanks [@iscekic](https://github.com/iscekic)! - use new endpoint for uploading session blobs via presigned r2 urls
+
+- [#4270](https://github.com/Kilo-Org/kilocode/pull/4270) [`bdb7ed4`](https://github.com/Kilo-Org/kilocode/commit/bdb7ed4f2a148b297a21c39457fe13ddc38de3de) Thanks [@iscekic](https://github.com/iscekic)! - fix an issue where a session was duplicated instead of restored
+
+## 4.131.0
+
+### Minor Changes
+
+- [#4083](https://github.com/Kilo-Org/kilocode/pull/4083) [`5696916`](https://github.com/Kilo-Org/kilocode/commit/5696916cb3e24175e3d48dff15d2609126d2c3d0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.32.1-v3.34.7
+
+    - Enable native tool calling for Moonshot models (PR #9646 by @mrubens)
+    - Fix: OpenRouter tool calls handling improvements (PR #9642 by @mrubens)
+    - Fix: OpenRouter GPT-5 strict schema validation for read_file tool (PR #9633 by @daniel-lxs)
+    - Fix: Create parent directories early in write_to_file to prevent ENOENT errors (#9634 by @ivanenev, PR #9640 by @daniel-lxs)
+    - Fix: Disable native tools and temperature support for claude-code provider (PR #9643 by @hannesrudolph)
+    - Add 'taking you to cloud' screen after provider welcome for improved onboarding (PR #9652 by @mrubens)
+    - Add support for AWS Bedrock embeddings in code indexing (#8658 by @kyle-hobbs, PR #9475 by @ggoranov-smar)
+    - Add native tool calling support for Mistral provider (PR #9625 by @hannesrudolph)
+    - Wire MULTIPLE_NATIVE_TOOL_CALLS experiment to OpenAI parallel_tool_calls for parallel tool execution (PR #9621 by @hannesrudolph)
+    - Add fine grained tool streaming for OpenRouter Anthropic (PR #9629 by @mrubens)
+    - Allow global inference selection for Bedrock when cross-region is enabled (PR #9616 by @roomote)
+    - Fix: Filter non-Anthropic content blocks before sending to Vertex API (#9583 by @cardil, PR #9618 by @hannesrudolph)
+    - Fix: Restore content undefined check in WriteToFileTool.handlePartial() (#9611 by @Lissanro, PR #9614 by @daniel-lxs)
+    - Fix: Prevent model cache from persisting empty API responses (#9597 by @zx2021210538, PR #9623 by @daniel-lxs)
+    - Fix: Exclude access_mcp_resource tool when MCP has no resources (PR #9615 by @daniel-lxs)
+    - Fix: Update default settings for inline terminal and codebase indexing (PR #9622 by @roomote)
+    - Fix: Convert line_ranges strings to lineRanges objects in native tool calls (PR #9627 by @daniel-lxs)
+    - Fix: Defer new_task tool_result until subtask completes for native protocol (PR #9628 by @daniel-lxs)
+    - Experimental feature to enable multiple native tool calls per turn (PR #9273 by @daniel-lxs)
+    - Add Bedrock Opus 4.5 to global inference model list (PR #9595 by @roomote)
+    - Fix: Update API handler when toolProtocol changes (PR #9599 by @mrubens)
+    - Make single file read only apply to XML tools (PR #9600 by @mrubens)
+    - Add new Black Forest Labs image generation models, available on OpenRouter (PR #9587 and #9589 by @mrubens)
+    - Fix: Preserve dynamic MCP tool names in native mode API history to prevent tool name mismatches (PR #9559 by @daniel-lxs)
+    - Fix: Preserve tool_use blocks in summary message during condensing with native tools to maintain conversation context (PR #9582 by @daniel-lxs)
+    - Implement streaming for native tool calls, providing real-time feedback during tool execution (PR #9542 by @daniel-lxs)
+    - Fix ask_followup_question streaming issue and add missing tool cases (PR #9561 by @daniel-lxs)
+    - Switch from asdf to mise-en-place in bare-metal evals setup script (PR #9548 by @cte)
+    - Fix: Gracefully skip unsupported content blocks in Gemini transformer (PR #9537 by @daniel-lxs)
+    - Fix: Flush LiteLLM cache when credentials change on refresh (PR #9536 by @daniel-lxs)
+    - Fix: Ensure XML parser state matches tool protocol on config update (PR #9535 by @daniel-lxs)
+    - Fix: Support reasoning_details format for Gemini 3 models (PR #9506 by @daniel-lxs)
+    - Show the prompt for image generation in the UI (PR #9505 by @mrubens)
+    - Fix double todo list display issue (PR #9517 by @mrubens)
+    - Add Browser Use 2.0 with enhanced browser interaction capabilities (PR #8941 by @hannesrudolph)
+    - Add support for Baseten as a new AI provider (PR #9461 by @AlexKer)
+    - Improve base OpenAI compatible provider with better error handling and configuration (PR #9462 by @mrubens)
+    - Add provider-oriented welcome screen to improve onboarding experience (PR #9484 by @mrubens)
+    - Enhance native tool descriptions with examples and clarifications for better AI understanding (PR #9486 by @daniel-lxs)
+    - Fix: Make cancel button immediately responsive during streaming (#9435 by @jwadow, PR #9448 by @daniel-lxs)
+    - Fix: Resolve apply_diff performance regression from earlier changes (PR #9474 by @daniel-lxs)
+    - Fix: Implement model cache refresh to prevent stale disk cache issues (PR #9478 by @daniel-lxs)
+    - Fix: Copy model-level capabilities to OpenRouter endpoint models correctly (PR #9483 by @daniel-lxs)
+    - Fix: Add fallback to yield tool calls regardless of finish_reason (PR #9476 by @daniel-lxs)
+    - Store reasoning in conversation history for all providers (PR #9451 by @daniel-lxs)
+    - Fix: Improve preserveReasoning flag to control API reasoning inclusion (PR #9453 by @daniel-lxs)
+    - Fix: Prevent OpenAI Native parallel tool calls for native tool calling (PR #9433 by @hannesrudolph)
+    - Fix: Improve search and replace symbol parsing (PR #9456 by @daniel-lxs)
+    - Fix: Send tool_result blocks for skipped tools in native protocol (PR #9457 by @daniel-lxs)
+    - Fix: Improve markdown formatting and add reasoning support (PR #9458 by @daniel-lxs)
+    - Fix: Prevent duplicate environment_details when resuming cancelled tasks (PR #9442 by @daniel-lxs)
+    - Improve read_file tool description with examples (PR #9422 by @daniel-lxs)
+    - Update glob dependency to ^11.1.0 (PR #9449 by @jr)
+    - Update tar-fs to 3.1.1 via pnpm override (PR #9450 by @app/roomote)
+    - Add RCC credit balance display (PR #9386 by @jr)
+    - Fix: Preserve user images in native tool call results (PR #9401 by @daniel-lxs)
+    - Perf: Reduce excessive getModel() calls and implement disk cache fallback (PR #9410 by @daniel-lxs)
+    - Show zero price for free models (PR #9419 by @mrubens)
+    - Fix: Resolve native tool protocol race condition causing 400 errors (PR #9363 by @daniel-lxs)
+    - Fix: Update tools to return structured JSON for native protocol (PR #9373 by @daniel-lxs)
+    - Fix: Include nativeArgs in tool repetition detection (PR #9377 by @daniel-lxs)
+    - Fix: Ensure no XML parsing when protocol is native (PR #9371 by @daniel-lxs)
+    - Fix: Gemini maxOutputTokens and reasoning config (PR #9375 by @hannesrudolph)
+    - Fix: Gemini thought signature validation and token counting errors (PR #9380 by @hannesrudolph)
+    - Fix: Exclude XML tool examples from MODES section when native protocol enabled (PR #9367 by @daniel-lxs)
+    - Retry eval tasks if API instability detected (PR #9365 by @cte)
+    - Add toolProtocol property to PostHog tool usage telemetry (PR #9374 by @app/roomote)
+    - Improve Google Gemini defaults with better temperature and cost reporting (PR #9327 by @hannesrudolph)
+    - Add git status information to environment details (PR #9310 by @daniel-lxs)
+    - Add tool protocol selector to advanced settings (PR #9324 by @daniel-lxs)
+    - Implement dynamic tool protocol resolution with proper precedence hierarchy (PR #9286 by @daniel-lxs)
+    - Move Import/Export functionality to Modes view toolbar and cleanup Mode Edit view (PR #9077 by @hannesrudolph)
+    - Fix: Prevent duplicate tool_result blocks in native tool protocol (PR #9248 by @daniel-lxs)
+    - Fix: Format tool responses properly for native protocol (PR #9270 by @daniel-lxs)
+    - Fix: Centralize toolProtocol configuration checks (PR #9279 by @daniel-lxs)
+    - Fix: Preserve tool blocks for native protocol in conversation history (PR #9319 by @daniel-lxs)
+    - Fix: Prevent infinite loop when task_done succeeds (PR #9325 by @daniel-lxs)
+    - Fix: Sync parser state with profile/model changes (PR #9355 by @daniel-lxs)
+    - Fix: Pass tool protocol parameter to lineCountTruncationError (PR #9358 by @daniel-lxs)
+    - Use VSCode theme color for outline button borders (PR #9336 by @app/roomote)
+    - Fix: Add abort controller for request cancellation in OpenAI native protocol (PR #9276 by @daniel-lxs)
+    - Fix: Resolve duplicate tool blocks causing 'tool has already been used' error in native protocol mode (PR #9275 by @daniel-lxs)
+    - Fix: Prevent duplicate tool_result blocks in native protocol mode for read_file (PR #9272 by @daniel-lxs)
+    - Fix: Correct OpenAI Native handling of encrypted reasoning blocks to prevent errors during condensing (PR #9263 by @hannesrudolph)
+    - Fix: Disable XML parser for native tool protocol to prevent parsing conflicts (PR #9277 by @daniel-lxs)
+
+### Patch Changes
+
+- [#4211](https://github.com/Kilo-Org/kilocode/pull/4211) [`489b366`](https://github.com/Kilo-Org/kilocode/commit/489b3669c34f437dfd7c4b9a692cf7d84fff73a1) Thanks [@iscekic](https://github.com/iscekic)! - refactor session manager to better handle asynchronicity of file save events
+
 ## 4.130.1
 
 ### Patch Changes

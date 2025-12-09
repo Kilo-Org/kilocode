@@ -262,8 +262,8 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [configValidation])
 
 	// If JSON mode is enabled, use JSON renderer instead of UI components
-	if (options.json && options.ci) {
-		return <JsonRenderer />
+	if (options.json && (options.ci || options.jsonInteractive)) {
+		return <JsonRenderer jsonInteractive={options.jsonInteractive === true} />
 	}
 
 	return (

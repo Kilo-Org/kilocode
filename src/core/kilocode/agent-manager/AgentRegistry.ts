@@ -23,12 +23,13 @@ export class AgentRegistry {
 	/**
 	 * Set a pending session while waiting for CLI's session_created event
 	 */
-	public setPendingSession(prompt: string): PendingSession {
+	public setPendingSession(prompt: string, options?: { gitUrl?: string }): PendingSession {
 		const label = this.truncatePrompt(prompt)
 		this._pendingSession = {
 			prompt,
 			label,
 			startTime: Date.now(),
+			gitUrl: options?.gitUrl,
 		}
 		return this._pendingSession
 	}
@@ -43,7 +44,12 @@ export class AgentRegistry {
 	/**
 	 * Create a session with the CLI-provided sessionId
 	 */
-	public createSession(sessionId: string, prompt: string, startTime?: number): AgentSession {
+	public createSession(
+		sessionId: string,
+		prompt: string,
+		startTime?: number,
+		options?: { gitUrl?: string },
+	): AgentSession {
 		const label = this.truncatePrompt(prompt)
 
 		const session: AgentSession = {
@@ -54,6 +60,7 @@ export class AgentRegistry {
 			startTime: startTime ?? Date.now(),
 			logs: ["Starting agent..."],
 			source: "local",
+			gitUrl: options?.gitUrl,
 		}
 
 		this.sessions.set(sessionId, session)
@@ -99,6 +106,16 @@ export class AgentRegistry {
 		return Array.from(this.sessions.values()).sort((a, b) => b.startTime - a.startTime)
 	}
 
+	public getSessionsForGitUrl(gitUrl: string | undefined): AgentSession[] {
+		const allSessions = this.getSessions()
+
+		if (!gitUrl) {
+			return allSessions.filter((session) => !session.gitUrl)
+		}
+
+		return allSessions.filter((session) => session.gitUrl === gitUrl)
+	}
+
 	public appendLog(sessionId: string, line: string): void {
 		const session = this.sessions.get(sessionId)
 		if (!session) return
@@ -120,6 +137,16 @@ export class AgentRegistry {
 		return {
 			sessions: this.getSessions(),
 			selectedId: this.selectedId,
+		}
+	}
+
+	public getStateForGitUrl(gitUrl: string | undefined): AgentManagerState {
+		const sessions = this.getSessionsForGitUrl(gitUrl)
+		const sessionIds = new Set(sessions.map((s) => s.sessionId))
+
+		return {
+			sessions,
+			selectedId: this.selectedId && sessionIds.has(this.selectedId) ? this.selectedId : null,
 		}
 	}
 
