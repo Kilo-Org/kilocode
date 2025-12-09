@@ -100,6 +100,7 @@ describe("SessionManager", () => {
 				privateInstance as unknown as { sessionPersistenceManager: SessionPersistenceManager | undefined }
 			).sessionPersistenceManager = undefined
 			;(privateInstance as unknown as { queue: unknown[] }).queue = []
+			;(privateInstance as unknown as { lastActiveSessionId: string | null }).lastActiveSessionId = null
 		}
 
 		manager = SessionManager.init(mockDependencies)
@@ -347,7 +348,7 @@ describe("SessionManager", () => {
 			expect(mockDependencies.onSessionRestored).toHaveBeenCalled()
 		})
 
-		it("should persist task-to-session mapping when restoring session", async () => {
+		it("should persist task-to-session mapping and set lastActiveSessionId when restoring session", async () => {
 			const mockSession: SessionWithSignedUrls = {
 				session_id: "session-123",
 				title: "Test Session",
@@ -367,6 +368,9 @@ describe("SessionManager", () => {
 				"session-123",
 				"session-123",
 			)
+			// Verify that sessionId getter returns the restored session ID
+			// This ensures lastActiveSessionId was properly set during restoration
+			expect(manager.sessionId).toBe("session-123")
 		})
 
 		it("should fetch and write blobs when URLs are provided", async () => {
