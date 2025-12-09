@@ -6,12 +6,16 @@
 		"emptyState": "Noch keine aktiven Agenten.",
 		"startAgent": "Agent starten",
 		"removeSession": "Entfernen",
-		"refresh": "Aktualisieren"
+		"refresh": "Aktualisieren",
+		"worktree": "Worktree",
+		"local": "Lokal",
+		"mainWorkspace": "Haupt-Workspace",
+		"readyToMerge": "Bereit zum Mergen"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Einen neuen Agenten starten",
 		"describeTask": "Beschreiben Sie die Aufgabe, die der Agent ausführen soll.",
-		"placeholderTask": "z.B. Eine neue React-Komponente für einen Button erstellen...",
+		"placeholderTask": "Schreibe deine Aufgabe hier...",
 		"stopButton": "Stoppen",
 		"newButton": "Neu",
 		"stopButtonTitle": "Agent stoppen",
@@ -21,6 +25,13 @@
 		"starting": "Wird gestartet...",
 		"startAriaLabel": "Agent mit angegebenem Prompt starten",
 		"keyboardHint": "Enter zum Starten, Shift+Enter für neue Zeile",
+		"runModeLocal": "Lokal",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Demnächst",
+		"runningInWorktree": "Läuft in Worktree",
+		"runningLocally": "Läuft lokal",
+		"branch": "Branch",
 		"creatingSession": "Sitzung wird erstellt...",
 		"waitingForCli": "Agent-Sitzung wird initialisiert..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent läuft im autonomen Modus"
+		"autonomous": "Agent läuft im autonomen Modus",
+		"placeholderTypeTask": "Schreibe deine Aufgabe hier...",
+		"ariaLabel": "Nachrichteneingabe",
+		"cancelTitle": "Agent abbrechen",
+		"sendTitle": "Nachricht senden",
+		"resumeTitle": "Agent fortsetzen",
+		"hint": "Enter zum Senden, Shift+Enter für neue Zeile"
 	},
 	"status": {
 		"running": "läuft",
@@ -45,5 +62,16 @@
 		"stopped": "gestoppt",
 		"error": "Fehler",
 		"creating": "wird erstellt..."
+	},
+	"time": {
+		"justNow": "Gerade eben",
+		"minuteAgo": "Vor einer Minute",
+		"minutesAgo": "Vor {{count}} Minuten",
+		"hourAgo": "Vor einer Stunde",
+		"hoursAgo": "Vor {{count}} Stunden",
+		"dayAgo": "Vor einem Tag",
+		"daysAgo": "Vor {{count}} Tagen",
+		"weekAgo": "Vor einer Woche",
+		"weeksAgo": "Vor {{count}} Wochen"
 	}
 }

@@ -6,12 +6,16 @@
 		"emptyState": "目前沒有活動中的代理。",
 		"startAgent": "啟動代理",
 		"removeSession": "移除",
-		"refresh": "重新整理"
+		"refresh": "重新整理",
+		"worktree": "Worktree",
+		"local": "本機",
+		"mainWorkspace": "主要工作區",
+		"readyToMerge": "準備合併"
 	},
 	"sessionDetail": {
 		"startNewAgent": "啟動新代理",
 		"describeTask": "描述您希望代理執行的任務。",
-		"placeholderTask": "例如：為按鈕建立一個新的 React 元件...",
+		"placeholderTask": "在此輸入你的工作...",
 		"stopButton": "停止",
 		"newButton": "新增",
 		"stopButtonTitle": "停止代理",
@@ -21,6 +25,13 @@
 		"starting": "正在啟動...",
 		"startAriaLabel": "使用提供的提示啟動代理",
 		"keyboardHint": "按 Enter 啟動，Shift+Enter 換行",
+		"runModeLocal": "本機",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "雲端",
+		"comingSoon": "即將推出",
+		"runningInWorktree": "在 Worktree 中執行",
+		"runningLocally": "本機執行",
+		"branch": "分支",
 		"creatingSession": "正在建立工作階段...",
 		"waitingForCli": "正在初始化代理工作階段..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "正在使用工具：**{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "代理正在自主模式下執行"
+		"autonomous": "代理正在自主模式下執行",
+		"placeholderTypeTask": "在此輸入你的任務...",
+		"ariaLabel": "訊息輸入",
+		"cancelTitle": "取消代理",
+		"sendTitle": "傳送訊息",
+		"resumeTitle": "繼續代理",
+		"hint": "按 Enter 傳送，Shift+Enter 換行"
 	},
 	"status": {
 		"running": "執行中",
@@ -45,5 +62,16 @@
 		"stopped": "已停止",
 		"error": "錯誤",
 		"creating": "建立中..."
+	},
+	"time": {
+		"justNow": "剛剛",
+		"minuteAgo": "1 分鐘前",
+		"minutesAgo": "{{count}} 分鐘前",
+		"hourAgo": "1 小時前",
+		"hoursAgo": "{{count}} 小時前",
+		"dayAgo": "1 天前",
+		"daysAgo": "{{count}} 天前",
+		"weekAgo": "1 週前",
+		"weeksAgo": "{{count}} 週前"
 	}
 }

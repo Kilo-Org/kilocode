@@ -1,5 +1,0 @@
-function registerUser(email, password) {
-  // TODO: Add input validation for email and password
-// Check if email is valid and password meets requirements
-  return createUser(email, password);
-}

@@ -175,5 +175,18 @@
 		"checkpointsUnavailable": "لا يمكن عرض التغييرات الجديدة، نقاط الحفظ غير متاحة.",
 		"noChanges": "لا يمكن عرض التغييرات الجديدة، لم يتم العثور على أي تغييرات.",
 		"error": "لا يمكن عرض التغييرات الجديدة، حدث خطأ."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "إصدار Kilocode CLI لديك قديم ولا يدعم مدير الوكلاء. يرجى التحديث إلى أحدث إصدار.",
+			"cliNotFound": "لم يتم العثور على Kilocode CLI. يرجى تثبيته لاستخدام مدير الوكلاء.",
+			"sessionFailed": "فشل بدء جلسة الوكيل",
+			"sessionFailedWithMessage": "فشل بدء جلسة الوكيل: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "تعليمات التحديث",
+			"installInstructions": "تعليمات التثبيت",
+			"getHelp": "الحصول على المساعدة"
+		}
 	}
 }

@@ -6,12 +6,16 @@
 		"emptyState": "Encara no hi ha agents actius.",
 		"startAgent": "Iniciar agent",
 		"removeSession": "Eliminar",
-		"refresh": "Actualitzar"
+		"refresh": "Actualitzar",
+		"worktree": "Worktree",
+		"local": "Local",
+		"mainWorkspace": "Espai de treball principal",
+		"readyToMerge": "Llest per fusionar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
 		"describeTask": "Descriu la tasca que vols que l'agent realitzi.",
-		"placeholderTask": "p. ex. Crear un nou component React per a un botó...",
+		"placeholderTask": "Escriu la teva tasca aquí...",
 		"stopButton": "Aturar",
 		"newButton": "Nou",
 		"stopButtonTitle": "Aturar agent",
@@ -21,6 +25,13 @@
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
 		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
+		"runModeLocal": "Local",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Núvol",
+		"comingSoon": "Pròximament",
+		"runningInWorktree": "Executant en worktree",
+		"runningLocally": "Executant localment",
+		"branch": "Branca",
 		"creatingSession": "Creant sessió...",
 		"waitingForCli": "Inicialitzant la sessió de l'agent..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent executant en mode autònom"
+		"autonomous": "Agent executant en mode autònom",
+		"placeholderTypeTask": "Escriu la teva tasca aquí...",
+		"ariaLabel": "Entrada de missatge",
+		"cancelTitle": "Cancel·lar agent",
+		"sendTitle": "Enviar missatge",
+		"resumeTitle": "Reprendre agent",
+		"hint": "Prem Enter per enviar, Shift+Enter per nova línia"
 	},
 	"status": {
 		"running": "en execució",
@@ -45,5 +62,16 @@
 		"stopped": "aturat",
 		"error": "error",
 		"creating": "creant..."
+	},
+	"time": {
+		"justNow": "Ara mateix",
+		"minuteAgo": "Fa un minut",
+		"minutesAgo": "Fa {{count}} minuts",
+		"hourAgo": "Fa una hora",
+		"hoursAgo": "Fa {{count}} hores",
+		"dayAgo": "Fa un dia",
+		"daysAgo": "Fa {{count}} dies",
+		"weekAgo": "Fa una setmana",
+		"weeksAgo": "Fa {{count}} setmanes"
 	}
 }

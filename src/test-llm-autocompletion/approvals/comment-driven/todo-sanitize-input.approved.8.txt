@@ -1,5 +1,0 @@
-function renderUserComment(comment) {
-  // TODO: Sanitize input to prevent XSS attacks
-  comment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  document.getElementById('comments').innerHTML = comment;
-}

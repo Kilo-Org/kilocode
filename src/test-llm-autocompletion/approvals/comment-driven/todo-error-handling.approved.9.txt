@@ -1,6 +1,0 @@
-function processData(data) {
-  if (!data) {
-    throw new Error('Data is required');
-  }<<<AUTOCOMPLETE_HERE>>>
-  return processedData;
-}

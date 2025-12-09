@@ -1,9 +1,0 @@
-class Animal {
-	constructor(name) {
-		this.name = name;
-	}
-}
-
-class Dog extends Animal {
-	constructor(name, breed) {
-		<<<AUTOCOMPLETE_HERE>>>

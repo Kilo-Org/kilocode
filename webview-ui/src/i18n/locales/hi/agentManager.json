@@ -6,12 +6,16 @@
 		"emptyState": "अभी तक कोई सक्रिय एजेंट नहीं है।",
 		"startAgent": "एजेंट शुरू करें",
 		"removeSession": "हटाएं",
-		"refresh": "रीफ्रेश करें"
+		"refresh": "रीफ्रेश करें",
+		"worktree": "Worktree",
+		"local": "स्थानीय",
+		"mainWorkspace": "मुख्य कार्यक्षेत्र",
+		"readyToMerge": "मर्ज के लिए तैयार"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
 		"describeTask": "वह कार्य बताएं जो आप एजेंट से करवाना चाहते हैं।",
-		"placeholderTask": "उदा. एक बटन के लिए नया React कंपोनेंट बनाएं...",
+		"placeholderTask": "अपना कार्य यहाँ लिखें...",
 		"stopButton": "रोकें",
 		"newButton": "नया",
 		"stopButtonTitle": "एजेंट रोकें",
@@ -21,6 +25,13 @@
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
 		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
+		"runModeLocal": "स्थानीय",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "क्लाउड",
+		"comingSoon": "जल्द आ रहा है",
+		"runningInWorktree": "Worktree में चल रहा है",
+		"runningLocally": "स्थानीय रूप से चल रहा है",
+		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
 		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "एजेंट स्वायत्त मोड में चल रहा है"
+		"autonomous": "एजेंट स्वायत्त मोड में चल रहा है",
+		"placeholderTypeTask": "अपना कार्य यहाँ लिखें...",
+		"ariaLabel": "संदेश इनपुट",
+		"cancelTitle": "एजेंट रद्द करें",
+		"sendTitle": "संदेश भेजें",
+		"resumeTitle": "एजेंट फिर से शुरू करें",
+		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"
 	},
 	"status": {
 		"running": "चल रहा है",
@@ -45,5 +62,16 @@
 		"stopped": "रुका हुआ",
 		"error": "त्रुटि",
 		"creating": "बनाया जा रहा है..."
+	},
+	"time": {
+		"justNow": "अभी अभी",
+		"minuteAgo": "एक मिनट पहले",
+		"minutesAgo": "{{count}} मिनट पहले",
+		"hourAgo": "एक घंटा पहले",
+		"hoursAgo": "{{count}} घंटे पहले",
+		"dayAgo": "एक दिन पहले",
+		"daysAgo": "{{count}} दिन पहले",
+		"weekAgo": "एक सप्ताह पहले",
+		"weeksAgo": "{{count}} सप्ताह पहले"
 	}
 }

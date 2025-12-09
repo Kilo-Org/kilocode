@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Impossible d'afficher les nouveaux changements, les points de contrôle ne sont pas disponibles.",
 		"noChanges": "Impossible d'afficher les nouveaux changements, aucun changement trouvé.",
 		"error": "Impossible d'afficher les nouveaux changements, une erreur s'est produite."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Ta version de Kilocode CLI est obsolète et ne prend pas en charge le Gestionnaire d'Agents. Mets-la à jour vers la dernière version.",
+			"cliNotFound": "Kilocode CLI introuvable. Installe-le pour utiliser le Gestionnaire d'Agents.",
+			"sessionFailed": "Échec du démarrage de la session de l'agent",
+			"sessionFailedWithMessage": "Échec du démarrage de la session de l'agent : {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Instructions de Mise à Jour",
+			"installInstructions": "Instructions d'Installation",
+			"getHelp": "Obtenir de l'Aide"
+		}
 	}
 }
