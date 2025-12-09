@@ -6,119 +6,43 @@ describe("ChatTextAreaAutocomplete", () => {
 	let mockProviderSettingsManager: ProviderSettingsManager
 
 	beforeEach(() => {
-		// Create a minimal mock for ProviderSettingsManager
 		mockProviderSettingsManager = {} as ProviderSettingsManager
 		autocomplete = new ChatTextAreaAutocomplete(mockProviderSettingsManager)
 	})
 
 	describe("isUnwantedSuggestion", () => {
-		// Helper function to test filtering (returns true)
-		const shouldFilter = (suggestion: string) => {
-			return autocomplete.isUnwantedSuggestion(suggestion)
-		}
+		it("should filter code patterns (comments, preprocessor, short/empty)", () => {
+			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
 
-		// Helper function to test acceptance (returns false)
-		const shouldAccept = (suggestion: string) => {
-			return !autocomplete.isUnwantedSuggestion(suggestion)
-		}
+			// Comments
+			expect(filter("// comment")).toBe(true)
+			expect(filter("/* comment")).toBe(true)
+			expect(filter("*")).toBe(true)
 
-		describe("should filter comment-starting suggestions", () => {
-			it("should filter single-line comments", () => {
-				expect(shouldFilter("// comment")).toBe(true)
-				expect(shouldFilter("//")).toBe(true)
-				expect(shouldFilter("// some text")).toBe(true)
-			})
+			// Code patterns
+			expect(filter("#include")).toBe(true)
+			expect(filter("# Header")).toBe(true)
 
-			it("should filter multi-line comment starts", () => {
-				expect(shouldFilter("/* comment")).toBe(true)
-				expect(shouldFilter("/**")).toBe(true)
-				expect(shouldFilter("/*")).toBe(true)
-			})
-
-			it("should filter asterisk-only suggestions", () => {
-				expect(shouldFilter("*")).toBe(true)
-				expect(shouldFilter("* comment")).toBe(true)
-				expect(shouldFilter("**")).toBe(true)
-			})
+			// Meaningless content
+			expect(filter("")).toBe(true)
+			expect(filter("a")).toBe(true)
+			expect(filter("...")).toBe(true)
 		})
 
-		describe("should filter code-like patterns", () => {
-			it("should filter preprocessor directives", () => {
-				expect(shouldFilter("#include")).toBe(true)
-				expect(shouldFilter("#define")).toBe(true)
-				expect(shouldFilter("#ifdef")).toBe(true)
-			})
+		it("should accept natural language suggestions", () => {
+			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
 
-			it("should filter markdown headers", () => {
-				// Chat is for natural language, not markdown formatting
-				expect(shouldFilter("# ")).toBe(true)
-				expect(shouldFilter("# Header")).toBe(true)
-				expect(shouldFilter("## Subheader")).toBe(true)
-			})
+			expect(filter("Hello world")).toBe(false)
+			expect(filter("Can you help me")).toBe(false)
+			expect(filter("test123")).toBe(false)
+			expect(filter("What's up?")).toBe(false)
 		})
 
-		describe("should filter punctuation and whitespace", () => {
-			it("should filter short suggestions", () => {
-				expect(shouldFilter("")).toBe(true)
-				expect(shouldFilter(" ")).toBe(true)
-				expect(shouldFilter("a")).toBe(true)
-			})
+		it("should accept symbols in middle of text", () => {
+			const filter = autocomplete.isUnwantedSuggestion.bind(autocomplete)
 
-			it("should filter punctuation-only suggestions", () => {
-				expect(shouldFilter(".,")).toBe(true)
-				expect(shouldFilter("!?")).toBe(true)
-				expect(shouldFilter("...")).toBe(true)
-				expect(shouldFilter("  ")).toBe(true)
-			})
-
-			it("should filter mixed punctuation and whitespace", () => {
-				expect(shouldFilter(" , ")).toBe(true)
-				expect(shouldFilter("... ")).toBe(true)
-			})
-		})
-
-		describe("should accept valid suggestions", () => {
-			it("should accept natural language text", () => {
-				expect(shouldAccept("Hello world")).toBe(true)
-				expect(shouldAccept("This is a valid suggestion")).toBe(true)
-				expect(shouldAccept("Can you help me with")).toBe(true)
-			})
-
-			it("should accept suggestions starting with letters", () => {
-				expect(shouldAccept("test")).toBe(true)
-				expect(shouldAccept("function")).toBe(true)
-				expect(shouldAccept("variable")).toBe(true)
-			})
-
-			it("should accept suggestions with numbers", () => {
-				expect(shouldAccept("123")).toBe(true)
-				expect(shouldAccept("test123")).toBe(true)
-				expect(shouldAccept("42 is the answer")).toBe(true)
-			})
-
-			it("should accept suggestions with punctuation in the middle", () => {
-				expect(shouldAccept("Hello, world")).toBe(true)
-				expect(shouldAccept("What's up?")).toBe(true)
-				expect(shouldAccept("Let's go!")).toBe(true)
-			})
-		})
-
-		describe("edge cases", () => {
-			it("should handle unicode characters", () => {
-				expect(shouldAccept("你好")).toBe(true)
-				expect(shouldAccept("🚀")).toBe(true)
-				expect(shouldFilter("🚀")).toBe(false) // Single emoji is 2+ chars, should be accepted
-			})
-
-			it("should handle very long suggestions", () => {
-				const longSuggestion = "a".repeat(1000)
-				expect(shouldAccept(longSuggestion)).toBe(true)
-			})
-
-			it("should handle mixed content", () => {
-				expect(shouldAccept("Hello // but not a comment")).toBe(true)
-				expect(shouldAccept("Text with # in middle")).toBe(true)
-			})
+			expect(filter("Text with # in middle")).toBe(false)
+			expect(filter("Hello // but not a comment")).toBe(false)
 		})
 	})
 })

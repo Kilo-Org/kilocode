@@ -169,7 +169,7 @@ describe("VisibleCodeTracker", () => {
 	})
 
 	describe("security filtering", () => {
-		it("should filter out .env files", async () => {
+		it("should filter security-sensitive files", async () => {
 			const mockEnvDocument = {
 				uri: {
 					fsPath: "/workspace/.env",
