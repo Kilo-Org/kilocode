@@ -1,5 +1,5 @@
 ---
-"kilo-code": patch
+"kilo-code": minor
 ---
 
 Add agent manager
