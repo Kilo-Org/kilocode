@@ -281,12 +281,15 @@ function NewAgentForm() {
 										: t("sessionDetail.runModeWorktree")
 								}>
 								{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-								<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "open")} />
+								<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "am-open")} />
 							</button>
 							{isDropdownOpen && (
 								<div className="am-run-mode-menu-inline">
 									<button
-										className={cn("am-run-mode-option-inline", runMode === "local" && "selected")}
+										className={cn(
+											"am-run-mode-option-inline",
+											runMode === "local" && "am-selected",
+										)}
 										onClick={() => handleSelectMode("local")}
 										type="button">
 										<Folder size={12} />
@@ -295,7 +298,7 @@ function NewAgentForm() {
 									</button>
 									<StandardTooltip content={t("sessionDetail.comingSoon")}>
 										<button
-											className={cn("am-run-mode-option-inline", "disabled")}
+											className={cn("am-run-mode-option-inline", "am-disabled")}
 											onClick={() => handleSelectMode("worktree")}
 											type="button"
 											disabled>

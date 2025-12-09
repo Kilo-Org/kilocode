@@ -46,7 +46,7 @@ export function SessionSidebar() {
 			</div>
 
 			<div
-				className={`am-new-agent-item ${isNewAgentSelected ? "selected" : ""}`}
+				className={`am-new-agent-item ${isNewAgentSelected ? "am-selected" : ""}`}
 				onClick={handleNewSession}
 				role="button"
 				tabIndex={0}
@@ -108,7 +108,7 @@ function PendingSessionItem({
 	const { t } = useTranslation("agentManager")
 
 	return (
-		<div className={`am-session-item pending ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+		<div className={`am-session-item pending ${isSelected ? "am-selected" : ""}`} onClick={onSelect}>
 			<div className="am-status-icon creating" title={t("status.creating")}>
 				<Loader2 size={14} className="am-spinning" />
 			</div>
@@ -141,7 +141,7 @@ function SessionItem({
 	const isCompleted = session.status === "done"
 
 	return (
-		<div className={`am-session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
+		<div className={`am-session-item ${isSelected ? "am-selected" : ""}`} onClick={onSelect}>
 			{session.status === "creating" && (
 				<div className="am-status-icon creating" title={t("status.creating")}>
 					<Loader2 size={14} className="am-spinning" />
