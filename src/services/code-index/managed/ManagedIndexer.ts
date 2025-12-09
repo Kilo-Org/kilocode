@@ -65,7 +65,7 @@ interface ManagedIndexerWorkspaceFolderState {
 
 export class ManagedIndexer implements vscode.Disposable {
 	private static prevInstance: ManagedIndexer | null = null
-	private enabledViaConfig: boolean = false
+	private disabledViaConfig: boolean = false
 	private enabledViaApi: boolean = false
 
 	static getInstance(): ManagedIndexer {
@@ -142,8 +142,8 @@ export class ManagedIndexer implements vscode.Disposable {
 	}
 
 	isEnabled(): boolean {
-		if (this.enabledViaConfig) {
-			return true
+		if (this.disabledViaConfig) {
+			return false
 		}
 
 		if (this.enabledViaApi) {
@@ -228,17 +228,17 @@ export class ManagedIndexer implements vscode.Disposable {
 			return
 		}
 
-		// TODO: (bmc) - once we fully controll enablement via the api we can remove this & default it to only respond to the API
-		// since below we skip indexing on workspace roots which are configured to _not_ be indexed via their individual configs.
 		for (const folder of vscode.workspace.workspaceFolders ?? []) {
 			const config = await getKilocodeConfig(folder.uri.fsPath)
-			if (config?.project?.managedIndexingEnabled) {
-				this.enabledViaConfig = true
+			if (config?.project?.managedIndexingEnabled === false) {
+				this.disabledViaConfig = true
 			}
 		}
 
 		this.enabledViaApi = await isEnabled(kilocodeToken, kilocodeOrganizationId ?? null)
-		console.debug(`[ManagedIndexer] Starting indexer. config: ${this.enabledViaConfig}, API: ${this.enabledViaApi}`)
+		console.debug(
+			`[ManagedIndexer] Starting indexer. config disabled: ${this.disabledViaConfig}, API: ${this.enabledViaApi}`,
+		)
 
 		this.sendStateToWebview()
 
