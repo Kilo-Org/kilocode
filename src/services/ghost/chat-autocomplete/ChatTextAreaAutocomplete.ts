@@ -37,28 +37,18 @@ export class ChatTextAreaAutocomplete {
 
 		// Now check if we can make FIM requests
 		if (!this.isFimAvailable()) {
-			console.log("[ChatTextAreaAutocomplete] FIM not available - no valid handler or model doesn't support FIM")
 			return { suggestion: "" }
 		}
 
 		const prefix = await this.buildPrefix(userText, visibleCodeContext)
 		const suffix = ""
 
-		console.log("[ChatTextAreaAutocomplete] === FIM Request ===")
-		console.log("[ChatTextAreaAutocomplete] User text:", JSON.stringify(userText))
-		console.log("[ChatTextAreaAutocomplete] Full prefix:\n", prefix)
-
 		let response = ""
 		await this.model.generateFimResponse(prefix, suffix, (chunk) => {
 			response += chunk
 		})
 
-		console.log("[ChatTextAreaAutocomplete] === FIM Response ===")
-		console.log("[ChatTextAreaAutocomplete] Raw response:", JSON.stringify(response))
-
 		const cleanedSuggestion = this.cleanSuggestion(response, userText)
-
-		console.log("[ChatTextAreaAutocomplete] Cleaned suggestion:", JSON.stringify(cleanedSuggestion))
 
 		return { suggestion: cleanedSuggestion }
 	}
@@ -105,8 +95,8 @@ export class ChatTextAreaAutocomplete {
 			if (text && text.length > 5 && text.length < 500) {
 				return text
 			}
-		} catch (error) {
-			console.log("[ChatTextAreaAutocomplete] Error getting clipboard:", error)
+		} catch {
+			// Silently ignore clipboard errors
 		}
 		return null
 	}
