@@ -1,0 +1,10 @@
+const users = [{id: 1, firstName: 'John', lastName: 'Doe'}, {id: 2, firstName: 'Jane', lastName: 'Smith'}];
+const userDTOs = users.map(user => ({
+	id: user.id,
+	fullName: `${user.firstName} ${user.lastName}`
+}));
+
+console.log(userDTOs);
+// Output: [{id: 1, fullName: 'John Doe'}, {id: 2, fullName: 'Jane Smith'}]
+
+// In this example, we have an array of user objects, and we want to transform them into a new array of user DTOs (Data Transfer Objects) that only contain the id and fullName properties. We use the map method to iterate over the users array and create a new object for each user with the desired properties. The resulting array of user DTOs is then logged to the console.

@@ -1,6 +1,9 @@
 function processOrder(order) {
   // TODO: Add comprehensive logging for order processing
-  console.log(`Processing order: ${JSON.stringify(order)}`);
+  console.log(`Processing order: ${order.id}`);
+  console.log(`Customer: ${order.customerName}`);
+  console.log(`Items: ${order.items.map(item => item.name).join(', ')}`);
+  console.log(`Total: $${order.total}`);
 
   const result = validateOrder(order);
   return result;

@@ -1,0 +1,10 @@
+function greet(name) { return 'Hello ' + name; }
+greet('James'); // returns 'Hello James'
+
+// function expression
+const greet = function(name) { return 'Hello ' + name; }
+greet('James'); // returns 'Hello James'
+
+// arrow function
+const greet = (name) => { return 'Hello ' + name; }
+greet('James'); // returns 'Hello James'

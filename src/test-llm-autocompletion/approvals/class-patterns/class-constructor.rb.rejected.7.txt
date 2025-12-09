@@ -1,0 +1,43 @@
+class User
+	def initialize(username, email, role)
+		@username = username
+		@email = email
+		@role = role
+	end
+
+	def to_s
+		"#{@username} #{@email} #{@role}"
+	end
+end
+
+class Admin < User
+	def initialize(username, email, role)
+		super(username, email, role)
+	end
+end
+
+class Moderator < User
+	def initialize(username, email, role)
+		super(username, email, role)
+	end
+end
+
+class UserFactory
+	def self.create_user(username, email, role)
+		if role == "admin"
+			Admin.new(username, email, role)
+		elsif role == "moderator"
+			Moderator.new(username, email, role)
+		else
+			User.new(username, email, role)
+		end
+	end
+end
+
+user1 = UserFactory.create_user("John", "john@example.com", "admin")
+user2 = UserFactory.create_user("Jane", "jane@example.com", "moderator")
+user3 = UserFactory.create_user("Bob", "bob@example.com", "user")
+
+puts user1
+puts user2
+puts user3

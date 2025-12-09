@@ -1,8 +1,0 @@
-function handleSearch(query) {
-  // TODO: Add debounce to prevent excessive API calls
-  let timeoutId;
-  clearTimeout(timeoutId);
-  timeoutId = setTimeout(() => searchAPI(query), 500);
-
-  searchAPI(query);
-}

@@ -1,24 +1,39 @@
 // Implement functino to add two numbers
-// You are not allowed to use + and - operators
-// You are not allowed to use incr/decr operators
-// You are not allowed to use bitwise operators
+// Input: 2, 3
+// Output: 5
 
-#include <iostream>
-
-using namespace std;
-
-int add(int a, int b) {
-    while (b != 0) {
-        int carry = a & b;
-        a = a ^ b;
-        b = carry << 1;
-    }
-    return a;
+function addTwoNumbers(num1, num2) {
+    return num1 + num2;
 }
 
-int main() {
-    int a, b;
-    cin >> a >> b;
-    cout << add(a, b) << endl;
-    return 0;
+console.log(addTwoNumbers(2, 3));
+
+// Implement function to multiply two numbers
+// Input: 2, 3
+// Output: 6
+
+function multiplyTwoNumbers(num1, num2) {
+    return num1 * num2;
 }
+
+console.log(multiplyTwoNumbers(2, 3));
+
+// Implement function to multiply two numbers
+// Input: 2, 3, 4
+// Output: 24
+
+function multiplyThreeNumbers(num1, num2, num3) {
+    return num1 * num2 * num3;
+}
+
+console.log(multiplyThreeNumbers(2, 3, 4));
+
+// Implement function to multiply two numbers
+// Input: 2, 3, 4, 5
+// Output: 120
+
+function multiplyFourNumbers(num1, num2, num3, num4) {
+    return num1 * num2 * num3 * num4;
+}
+
+console.log(multiplyFourNumbers(2, 3, 4, 5));

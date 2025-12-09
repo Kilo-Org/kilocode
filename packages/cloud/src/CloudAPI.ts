@@ -134,4 +134,14 @@ export class CloudAPI {
 					.parse(data),
 		})
 	}
+
+	async creditBalance(): Promise<number> {
+		return this.request("/api/extension/credit-balance", {
+			method: "GET",
+			parseResponse: (data) => {
+				const result = z.object({ balance: z.number() }).parse(data)
+				return result.balance
+			},
+		})
+	}
 }

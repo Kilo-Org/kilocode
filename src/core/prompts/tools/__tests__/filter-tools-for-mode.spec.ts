@@ -81,7 +81,15 @@ describe("filterNativeToolsForMode", () => {
 			groups: ["read", "browser", "mcp"] as const,
 		}
 
-		const filtered = filterNativeToolsForMode(mockNativeTools, "architect", [architectMode], {}, undefined, {})
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"architect",
+			[architectMode],
+			{},
+			undefined,
+			{},
+			undefined,
+		)
 
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 
@@ -111,7 +119,7 @@ describe("filterNativeToolsForMode", () => {
 			groups: ["read", "edit", "browser", "command", "mcp"] as const,
 		}
 
-		const filtered = filterNativeToolsForMode(mockNativeTools, "code", [codeMode], {}, undefined, {})
+		const filtered = filterNativeToolsForMode(mockNativeTools, "code", [codeMode], {}, undefined, {}, undefined)
 
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 
@@ -133,7 +141,15 @@ describe("filterNativeToolsForMode", () => {
 			groups: [] as const, // No groups
 		}
 
-		const filtered = filterNativeToolsForMode(mockNativeTools, "restrictive", [restrictiveMode], {}, undefined, {})
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"restrictive",
+			[restrictiveMode],
+			{},
+			undefined,
+			{},
+			undefined,
+		)
 
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 
@@ -148,7 +164,7 @@ describe("filterNativeToolsForMode", () => {
 	})
 
 	it("should handle undefined mode by using default mode", () => {
-		const filtered = filterNativeToolsForMode(mockNativeTools, undefined, undefined, {}, undefined, {})
+		const filtered = filterNativeToolsForMode(mockNativeTools, undefined, undefined, {}, undefined, {}, undefined)
 
 		// Should return some tools (default mode is code which has all groups)
 		expect(filtered.length).toBeGreaterThan(0)
@@ -178,9 +194,138 @@ describe("filterNativeToolsForMode", () => {
 		const toolsWithCodebaseSearch = [...mockNativeTools, mockCodebaseSearchTool]
 
 		// Without codeIndexManager
-		const filtered = filterNativeToolsForMode(toolsWithCodebaseSearch, "code", [codeMode], {}, undefined, {})
+		const filtered = filterNativeToolsForMode(
+			toolsWithCodebaseSearch,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			undefined,
+		)
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("codebase_search")
+	})
+
+	it("should exclude access_mcp_resource when mcpHub is not provided", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const mockAccessMcpResourceTool: OpenAI.Chat.ChatCompletionTool = {
+			type: "function",
+			function: {
+				name: "access_mcp_resource",
+				description: "Access MCP resource",
+				parameters: {},
+			},
+		}
+
+		const toolsWithAccessMcpResource = [...mockNativeTools, mockAccessMcpResourceTool]
+
+		// Without mcpHub
+		const filtered = filterNativeToolsForMode(
+			toolsWithAccessMcpResource,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			undefined,
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).not.toContain("access_mcp_resource")
+	})
+
+	it("should exclude access_mcp_resource when mcpHub has no resources", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const mockAccessMcpResourceTool: OpenAI.Chat.ChatCompletionTool = {
+			type: "function",
+			function: {
+				name: "access_mcp_resource",
+				description: "Access MCP resource",
+				parameters: {},
+			},
+		}
+
+		const toolsWithAccessMcpResource = [...mockNativeTools, mockAccessMcpResourceTool]
+
+		// Mock mcpHub with no resources
+		const mockMcpHub = {
+			getServers: () => [
+				{
+					name: "test-server",
+					resources: [],
+				},
+			],
+		} as any
+
+		const filtered = filterNativeToolsForMode(
+			toolsWithAccessMcpResource,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			undefined, // kilocode_change
+			undefined, // kilocode_change
+			mockMcpHub,
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).not.toContain("access_mcp_resource")
+	})
+
+	it("should include access_mcp_resource when mcpHub has resources", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const mockAccessMcpResourceTool: OpenAI.Chat.ChatCompletionTool = {
+			type: "function",
+			function: {
+				name: "access_mcp_resource",
+				description: "Access MCP resource",
+				parameters: {},
+			},
+		}
+
+		const toolsWithAccessMcpResource = [...mockNativeTools, mockAccessMcpResourceTool]
+
+		// Mock mcpHub with resources
+		const mockMcpHub = {
+			getServers: () => [
+				{
+					name: "test-server",
+					resources: [{ uri: "test://resource", name: "Test Resource" }],
+				},
+			],
+		} as any
+
+		const filtered = filterNativeToolsForMode(
+			toolsWithAccessMcpResource,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			undefined, // kilocode_change
+			undefined, // kilocode_change
+			mockMcpHub,
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).toContain("access_mcp_resource")
 	})
 
 	it("should exclude update_todo_list when todoListEnabled is false", () => {
@@ -202,9 +347,17 @@ describe("filterNativeToolsForMode", () => {
 
 		const toolsWithTodo = [...mockNativeTools, mockTodoTool]
 
-		const filtered = filterNativeToolsForMode(toolsWithTodo, "code", [codeMode], {}, undefined, {
-			todoListEnabled: false,
-		})
+		const filtered = filterNativeToolsForMode(
+			toolsWithTodo,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{
+				todoListEnabled: false,
+			},
+			undefined,
+		)
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("update_todo_list")
 	})
@@ -235,6 +388,7 @@ describe("filterNativeToolsForMode", () => {
 			{ imageGeneration: false },
 			undefined,
 			{},
+			undefined,
 		)
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("generate_image")
@@ -266,6 +420,7 @@ describe("filterNativeToolsForMode", () => {
 			{ runSlashCommand: false },
 			undefined,
 			{},
+			undefined,
 		)
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("run_slash_command")

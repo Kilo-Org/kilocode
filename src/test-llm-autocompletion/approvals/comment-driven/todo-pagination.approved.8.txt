@@ -1,4 +1,0 @@
-function fetchUsers(page, limit) {
-  // TODO: Implement pagination with offset and limit
-  return db.query('SELECT * FROM users LIMIT ? OFFSET ?', [limit, (page - 1) * limit]);
-}

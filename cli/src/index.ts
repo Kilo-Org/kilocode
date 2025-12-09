@@ -34,6 +34,7 @@ program
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
 	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
+	.option("-i, --json-io", "Bidirectional JSON mode (no TUI, stdin/stdout enabled)", false)
 	.option("-c, --continue", "Resume the last conversation from this workspace", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.option(
@@ -68,18 +69,6 @@ program
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
 			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
-			process.exit(1)
-		}
-
-		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
-			console.error("Error: Piped input requires --auto flag to be enabled")
-			process.exit(1)
-		}
-
-		// Validate that JSON mode requires autonomous mode
-		if (options.json && !options.auto) {
-			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -129,6 +118,18 @@ program
 		// Validate that --fork and --session are not used together
 		if (options.fork && options.session) {
 			console.error("Error: --fork and --session options cannot be used together")
+			process.exit(1)
+		}
+
+		// Validate that piped stdin requires autonomous mode or json-io mode
+		if (!process.stdin.isTTY && !options.auto && !options.jsonIo) {
+			console.error("Error: Piped input requires --auto or --json-io flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that --json requires --auto (--json-io is independent)
+		if (options.json && !options.auto) {
+			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -205,11 +206,15 @@ program
 
 		logs.debug("Starting Kilo Code CLI", "Index", { options })
 
+		const jsonIoMode = options.jsonIo
+
 		cli = new CLI({
 			mode: options.mode,
 			workspace: finalWorkspace,
 			ci: options.auto,
-			json: options.json,
+			// json-io mode implies json output (both modes output JSON to stdout)
+			json: options.json || jsonIoMode,
+			jsonInteractive: jsonIoMode,
 			prompt: finalPrompt,
 			timeout: options.timeout,
 			customModes: customModes,

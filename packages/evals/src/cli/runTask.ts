@@ -38,7 +38,15 @@ class SubprocessTimeoutError extends Error {
 	}
 }
 
-export const processTask = async ({ taskId, logger }: { taskId: number; logger?: Logger }) => {
+export const processTask = async ({
+	taskId,
+	jobToken,
+	logger,
+}: {
+	taskId: number
+	jobToken: string | null
+	logger?: Logger
+}) => {
 	const task = await findTask(taskId)
 	const { language, exercise } = task
 	const run = await findRun(task.runId)
@@ -61,7 +69,7 @@ export const processTask = async ({ taskId, logger }: { taskId: number; logger?:
 		}
 
 		logger.info(`running task ${task.id} (${language}/${exercise})...`)
-		await runTask({ run, task, publish, logger })
+		await runTask({ run, task, jobToken, publish, logger })
 
 		logger.info(`testing task ${task.id} (${language}/${exercise})...`)
 		const passed = await runUnitTest({ task, logger })
@@ -80,10 +88,12 @@ export const processTask = async ({ taskId, logger }: { taskId: number; logger?:
 
 export const processTaskInContainer = async ({
 	taskId,
+	jobToken,
 	logger,
 	maxRetries = 10,
 }: {
 	taskId: number
+	jobToken: string | null
 	logger: Logger
 	maxRetries?: number
 }) => {
@@ -94,6 +104,10 @@ export const processTaskInContainer = async ({
 		"-v /tmp/evals:/var/log/evals",
 		"-e HOST_EXECUTION_METHOD=docker",
 	]
+
+	if (jobToken) {
+		baseArgs.push(`-e ROO_CODE_CLOUD_TOKEN=${jobToken}`)
+	}
 
 	const command = `pnpm --filter @roo-code/evals cli --taskId ${taskId}`
 	logger.info(command)
@@ -144,11 +158,12 @@ export const processTaskInContainer = async ({
 type RunTaskOptions = {
 	run: Run
 	task: Task
+	jobToken: string | null
 	publish: (taskEvent: TaskEvent) => Promise<void>
 	logger: Logger
 }
 
-export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) => {
+export const runTask = async ({ run, task, publish, logger, jobToken }: RunTaskOptions) => {
 	const { language, exercise } = task
 	const prompt = fs.readFileSync(path.resolve(EVALS_REPO_PATH, `prompts/${language}.md`), "utf-8")
 	const workspacePath = path.resolve(EVALS_REPO_PATH, language, exercise)
@@ -158,9 +173,13 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 	const cancelSignal = controller.signal
 	const containerized = isDockerContainer()
 
-	const codeCommand = containerized
+	let codeCommand = containerized
 		? `xvfb-run --auto-servernum --server-num=1 code --wait --log trace --disable-workspace-trust --disable-gpu --disable-lcd-text --no-sandbox --user-data-dir /roo/.vscode --password-store="basic" -n ${workspacePath}`
 		: `code --disable-workspace-trust -n ${workspacePath}`
+
+	if (jobToken) {
+		codeCommand = `ROO_CODE_CLOUD_TOKEN=${jobToken} ${codeCommand}`
+	}
 
 	logger.info(codeCommand)
 
@@ -217,10 +236,22 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 		"diff_error",
 		"condense_context",
 		"condense_context_error",
+		"api_req_retry_delayed",
+		"api_req_retried",
 	]
+
+	let isApiUnstable = false
 
 	client.on(IpcMessageType.TaskEvent, async (taskEvent) => {
 		const { eventName, payload } = taskEvent
+
+		if (
+			eventName === RooCodeEventName.Message &&
+			payload[0].message.say &&
+			["api_req_retry_delayed", "api_req_retried"].includes(payload[0].message.say)
+		) {
+			isApiUnstable = true
+		}
 
 		// Publish all events except for these to Redis.
 		if (!ignoreEvents.broadcast.includes(eventName)) {
@@ -388,4 +419,8 @@ export const runTask = async ({ run, task, publish, logger }: RunTaskOptions) =>
 	}
 
 	logger.close()
+
+	if (isApiUnstable) {
+		throw new Error("API is unstable, throwing to trigger a retry.")
+	}
 }

@@ -5,6 +5,8 @@ def process_data(data)
 			result.each do |key, value|
 				puts "#{key}: #{value}"
 			end
+		else
+			puts "Invalid JSON data: Expected a Hash"
 		end
 	rescue JSON::ParserError => e
 		puts "Invalid JSON data: #{e.message}"

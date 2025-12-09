@@ -6,9 +6,11 @@ const result = data
 
 console.log(result);
 
-const result2 = data
-	.filter(n => n % 2 === 0)
-	.map(n => n * 2)
-	.reduce((acc, n) => acc + n, 0);
+const result2 = data.reduce((acc, n) => {
+	if (n % 2 === 0) {
+		acc += n * 2;
+	}
+	return acc;
+}, 0);
 
 console.log(result2);

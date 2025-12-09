@@ -14,5 +14,17 @@
 		"errors": {
 			"policy_restriction": "Nie udało się utworzyć nowego zadania z powodu ograniczeń polityki."
 		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Klucz API OpenRouter jest wymagany do generowania obrazów z modelami OpenRouter. Skonfiguruj go w eksperymentalnych ustawieniach generowania obrazów.",
+		"failedWithStatus": "Nie udało się wygenerować obrazu: {{status}} {{statusText}}",
+		"failedWithMessage": "Nie udało się wygenerować obrazu: {{message}}",
+		"noImageGenerated": "W odpowiedzi nie wygenerowano żadnego obrazu",
+		"invalidImageData": "Nieprawidłowe dane obrazu w odpowiedzi",
+		"invalidImageFormat": "Otrzymano nieprawidłowy format obrazu",
+		"unknownError": "Wystąpił nieznany błąd",
+		"roo": {
+			"authRequired": "Uwierzytelnienie Roo Code Cloud jest wymagane do generowania obrazów. Zaloguj się do Roo Code Cloud."
+		}
 	}
 }

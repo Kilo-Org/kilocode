@@ -6,12 +6,16 @@
 		"emptyState": "Nog geen actieve agenten.",
 		"startAgent": "Agent starten",
 		"removeSession": "Verwijderen",
-		"refresh": "Vernieuwen"
+		"refresh": "Vernieuwen",
+		"worktree": "Worktree",
+		"local": "Lokaal",
+		"mainWorkspace": "Hoofdwerkruimte",
+		"readyToMerge": "Klaar om samen te voegen"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
 		"describeTask": "Beschrijf de taak die je de agent wilt laten uitvoeren.",
-		"placeholderTask": "bijv. Maak een nieuw React-component voor een knop...",
+		"placeholderTask": "Typ je taak hier...",
 		"stopButton": "Stoppen",
 		"newButton": "Nieuw",
 		"stopButtonTitle": "Agent stoppen",
@@ -21,6 +25,13 @@
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
 		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
+		"runModeLocal": "Lokaal",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Binnenkort beschikbaar",
+		"runningInWorktree": "Draait in worktree",
+		"runningLocally": "Draait lokaal",
+		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
 		"waitingForCli": "Agent-sessie wordt geïnitialiseerd..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent draait in autonome modus"
+		"autonomous": "Agent draait in autonome modus",
+		"placeholderTypeTask": "Typ je taak hier...",
+		"ariaLabel": "Berichtinvoer",
+		"cancelTitle": "Agent annuleren",
+		"sendTitle": "Bericht verzenden",
+		"resumeTitle": "Agent hervatten",
+		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel"
 	},
 	"status": {
 		"running": "actief",
@@ -45,5 +62,16 @@
 		"stopped": "gestopt",
 		"error": "fout",
 		"creating": "aanmaken..."
+	},
+	"time": {
+		"justNow": "Zojuist",
+		"minuteAgo": "Een minuut geleden",
+		"minutesAgo": "{{count}} minuten geleden",
+		"hourAgo": "Een uur geleden",
+		"hoursAgo": "{{count}} uur geleden",
+		"dayAgo": "Een dag geleden",
+		"daysAgo": "{{count}} dagen geleden",
+		"weekAgo": "Een week geleden",
+		"weeksAgo": "{{count}} weken geleden"
 	}
 }

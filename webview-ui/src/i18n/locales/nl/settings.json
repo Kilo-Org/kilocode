@@ -37,6 +37,26 @@
 		"about": "Over Kilo Code",
 		"autoPurge": "Auto-opruimen"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Bug gevonden?",
+			"link": "Rapporteer op GitHub"
+		},
+		"featureRequest": {
+			"label": "Heb je een idee?",
+			"link": "Deel het met ons"
+		},
+		"securityIssue": {
+			"label": "Kwetsbaarheid ontdekt?",
+			"link": "Volg ons openbaarmakingsproces"
+		},
+		"contact": {
+			"label": "Moet je met ons praten? Schrijf"
+		},
+		"community": "Wil je tips of gewoon even hangen met andere Kilo Code-gebruikers? Sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Contact & Gemeenschap",
+		"manageSettings": "Instellingen Beheren"
+	},
 	"slashCommands": {
 		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
 	},
@@ -57,6 +77,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API-sleutel",
 		"vercelAiGatewayApiKeyPlaceholder": "Voer uw Vercel AI Gateway API-sleutel in",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS-regio",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS-profiel",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "AWS-profielnaam uit ~/.aws/credentials (vereist).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API-sleutel",
 		"openRouterApiKeyPlaceholder": "Voer uw OpenRouter API-sleutel in",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "Gemini API-sleutel is vereist",
 			"mistralApiKeyRequired": "Mistral API-sleutel is vereist",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API-sleutel is vereist",
+			"bedrockRegionRequired": "AWS-regio is vereist",
+			"bedrockProfileRequired": "AWS-profiel is vereist",
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
 			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0",
 			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist"
 		},
+		"optional": "optioneel",
 		"advancedConfigLabel": "Geavanceerde configuratie",
 		"searchMinScoreLabel": "Zoekscore drempel",
 		"searchMinScoreDescription": "Minimale overeenkomstscore (0.0-1.0) vereist voor zoekresultaten. Lagere waarden leveren meer resultaten op, maar zijn mogelijk minder relevant. Hogere waarden leveren minder, maar relevantere resultaten op.",
@@ -301,6 +330,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Voer deployment naam in...",
 		"awsBedrock1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"awsBedrock1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
+		"basetenApiKey": "Baseten API-sleutel",
+		"getBasetenApiKey": "Baseten API-sleutel verkrijgen",
 		"cerebrasApiKey": "Cerebras API-sleutel",
 		"getCerebrasApiKey": "Cerebras API-sleutel verkrijgen",
 		"chutesApiKey": "Chutes API-sleutel",
@@ -757,6 +788,10 @@
 		"includeCurrentCost": {
 			"label": "Huidige kosten opnemen in context",
 			"description": "Indien ingeschakeld, worden de huidige API-gebruikskosten opgenomen in de systeemprompt. Schakel dit uit als modellen stoppen met werken vanwege kostenproblemen."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status max bestanden",
+			"description": "Maximum aantal bestandsvermeldingen dat in de git-statuscontext moet worden opgenomen. Stel in op 0 om uit te schakelen. Branch-info en commits worden altijd getoond wanneer > 0."
 		}
 	},
 	"terminal": {
@@ -819,6 +854,14 @@
 	},
 	"advancedSettings": {
 		"title": "Geavanceerde instellingen"
+	},
+	"toolProtocol": {
+		"label": "Tool Call Protocol",
+		"description": "Kies hoe Kilo Code communiceert met de API. Native gebruikt de functie-aanroep API van de provider, terwijl XML gebruikmaakt van XML-geformatteerde tooldefinities.",
+		"default": "Standaard",
+		"xml": "XML",
+		"native": "Native",
+		"currentDefault": "Standaard: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -907,6 +950,8 @@
 			"description": "Wanneer ingeschakeld, vereist de new_task-tool dat een todos-parameter wordt opgegeven. Dit zorgt ervoor dat alle nieuwe taken beginnen met een duidelijke lijst met doelstellingen. Wanneer uitgeschakeld (standaard), blijft de todos-parameter optioneel voor achterwaartse compatibiliteit."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Provider",
+			"providerDescription": "Selecteer de provider voor het genereren van afbeeldingen.",
 			"name": "AI-afbeeldingsgeneratie inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code afbeeldingen genereren van tekstprompts. Vereist een geconfigureerde Kilo Code of OpenRouter API-sleutel.",
 			"apiProvider": "API-provider",
@@ -928,6 +973,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Model-geïnitieerde slash-commando's inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code je slash-commando's uitvoeren om workflows uit te voeren."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Parallelle tool-aanroepen",
+			"description": "Wanneer ingeschakeld, kan het native protocol meerdere tools uitvoeren in één enkele assistent-berichtbeurt."
 		}
 	},
 	"promptCaching": {

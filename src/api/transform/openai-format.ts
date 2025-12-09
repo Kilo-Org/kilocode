@@ -1,6 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import { consolidateReasoningDetails, ReasoningDetail } from "./kilocode/reasoning-details"
 
 export function convertToOpenAiMessages(
 	anthropicMessages: Anthropic.Messages.MessageParam[],
@@ -118,19 +117,7 @@ export function convertToOpenAiMessages(
 
 				// Process non-tool messages
 				let content: string | undefined
-				const reasoningDetails = new Array<ReasoningDetail>() // kilocode_change
 				if (nonToolMessages.length > 0) {
-					// kilocode_change start
-					nonToolMessages.forEach((part) => {
-						if (part.type === "text" && "reasoning_details" in part && part.reasoning_details) {
-							if (Array.isArray(part.reasoning_details)) {
-								reasoningDetails.push(...part.reasoning_details)
-							} else {
-								reasoningDetails.push(part.reasoning_details as ReasoningDetail)
-							}
-						}
-					})
-					// kilocode_change end
 					content = nonToolMessages
 						.map((part) => {
 							if (part.type === "image") {
@@ -152,17 +139,21 @@ export function convertToOpenAiMessages(
 					},
 				}))
 
-				openAiMessages.push({
+				// Check if the message has reasoning_details (used by Gemini 3, etc.)
+				const messageWithDetails = anthropicMessage as any
+				const baseMessage: OpenAI.Chat.ChatCompletionAssistantMessageParam = {
 					role: "assistant",
 					content,
 					// Cannot be an empty array. API expects an array with minimum length 1, and will respond with an error if it's empty
 					tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
-					// kilocode_change start
-					// @ts-ignore-next-line: property is OpenRouter-specific
-					reasoning_details:
-						reasoningDetails.length > 0 ? consolidateReasoningDetails(reasoningDetails) : undefined,
-					// kilocode_change end
-				})
+				}
+
+				// Preserve reasoning_details if present (will be processed by provider if needed)
+				if (messageWithDetails.reasoning_details && Array.isArray(messageWithDetails.reasoning_details)) {
+					;(baseMessage as any).reasoning_details = messageWithDetails.reasoning_details
+				}
+
+				openAiMessages.push(baseMessage)
 			}
 		}
 	}

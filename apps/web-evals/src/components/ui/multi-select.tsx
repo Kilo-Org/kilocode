@@ -48,7 +48,10 @@ interface MultiSelectProps extends React.HTMLAttributes<HTMLDivElement>, Variant
 	 */
 	onValueChange: (value: string[]) => void
 
-	/** The default selected values when the component mounts. */
+	/** The controlled selected values. When provided, the component becomes controlled. */
+	value?: string[]
+
+	/** The default selected values when the component mounts (uncontrolled mode). */
 	defaultValue?: string[]
 
 	/**
@@ -89,6 +92,7 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 			options,
 			onValueChange,
 			variant,
+			value,
 			defaultValue = [],
 			placeholder = "Select options",
 			maxCount = 3,
@@ -98,17 +102,30 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 		},
 		ref,
 	) => {
-		const [selectedValues, setSelectedValues] = React.useState<string[]>(defaultValue)
+		const [internalSelectedValues, setInternalSelectedValues] = React.useState<string[]>(defaultValue)
 		const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
+
+		// Use controlled value if provided, otherwise use internal state
+		const isControlled = value !== undefined
+		const selectedValues = isControlled ? value : internalSelectedValues
+
+		const setSelectedValues = React.useCallback(
+			(newValues: string[]) => {
+				if (!isControlled) {
+					setInternalSelectedValues(newValues)
+				}
+				onValueChange(newValues)
+			},
+			[isControlled, onValueChange],
+		)
 
 		const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
 			if (event.key === "Enter") {
 				setIsPopoverOpen(true)
 			} else if (event.key === "Backspace" && !event.currentTarget.value) {
-				const newSelectedValues = [...selectedValues]
-				newSelectedValues.pop()
+				if (!selectedValues.length) return
+				const newSelectedValues = selectedValues.slice(0, -1)
 				setSelectedValues(newSelectedValues)
-				onValueChange(newSelectedValues)
 			}
 		}
 
@@ -117,7 +134,6 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 				? selectedValues.filter((value) => value !== option)
 				: [...selectedValues, option]
 			setSelectedValues(newSelectedValues)
-			onValueChange(newSelectedValues)
 		}
 
 		const handleTogglePopover = () => {
@@ -127,7 +143,6 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 		const clearExtraOptions = () => {
 			const newSelectedValues = selectedValues.slice(0, maxCount)
 			setSelectedValues(newSelectedValues)
-			onValueChange(newSelectedValues)
 		}
 
 		const searchResultsRef = React.useRef<Map<string, number>>(new Map())
@@ -141,12 +156,10 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 				selectedValues.sort().join(",") === values.sort().join(",")
 			) {
 				setSelectedValues([])
-				onValueChange([])
 				return
 			}
 
 			setSelectedValues(values)
-			onValueChange(values)
 		}
 
 		const onFilter = React.useCallback(

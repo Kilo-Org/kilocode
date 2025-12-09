@@ -5,4 +5,6 @@ const userDTOs = users.map(user => ({
 }));
 
 console.log(userDTOs);
-// Output: [{ id: 1, fullName: 'John Doe' }, { id: 2, fullName: 'Jane Smith' }]
+// Output: [{id: 1, fullName: 'John Doe'}, {id: 2, fullName: 'Jane Smith'}]
+
+// In this example, we have an array of user objects, and we want to transform them into a simpler format (DTOs) that only includes the user's ID and full name. We use the map() method to iterate over the users array and create a new array of user DTOs.

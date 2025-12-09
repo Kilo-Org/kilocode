@@ -38,6 +38,30 @@
 		"autoPurge": "Авто-очищення",
 		"ghost": "Ghost"
 	},
+	"about": {
+		"contactSupport": "Зв'язатися зі службою підтримки",
+		"contactSupportDesc": "Потребуєш допомоги? Зв'яжися з нашою службою підтримки клієнтів для отримання персоналізованої допомоги.",
+		"joinCommunity": "Приєднатися до спільноти",
+		"joinCommunityDesc": "Зв'яжись з іншими користувачами Kilo Code, поділися порадами і отримай допомогу від спільноти.",
+		"contactAndCommunity": "Контакти та спільнота",
+		"manageSettings": "Керувати налаштуваннями",
+		"bugReport": {
+			"label": "Знайшов помилку?",
+			"link": "Повідом на GitHub"
+		},
+		"featureRequest": {
+			"label": "Є ідея?",
+			"link": "Поділися з нами"
+		},
+		"securityIssue": {
+			"label": "Виявив вразливість?",
+			"link": "Дотримуйся нашого процесу розкриття"
+		},
+		"contact": {
+			"label": "Потрібно поговорити з нами? Напиши"
+		},
+		"community": "Хочеш отримати поради або просто поспілкуватися з іншими користувачами Roo Code? Приєднуйся до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilo.ai/discord</discordLink>"
+	},
 	"slashCommands": {
 		"description": "Керуйте своїми slash командами для швидкого виконання власних робочих процесів та дій. <DocsLink>Дізнатися більше</DocsLink>"
 	},
@@ -63,6 +87,12 @@
 		"selectProfilePlaceholder": "Виберіть постачальника",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Регіон AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Профіль AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Назва профілю AWS з ~/.aws/credentials (обов'язково).",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Ключ API:",
 		"geminiApiKeyPlaceholder": "Введіть ваш ключ API Gemini",
@@ -72,6 +102,21 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockConfigTitle": "Конфігурація Amazon Bedrock",
+		"bedrockConfigDesc": "Налаштуйте Amazon Bedrock для використання моделей вбудовувань AWS",
+		"bedrockEmbeddingModel": "Модель вбудовувань Bedrock",
+		"bedrockEmbeddingModelDesc": "Виберіть модель вбудовувань Amazon Bedrock для використання",
+		"bedrockEmbeddingModelPlaceholder": "Виберіть модель вбудовувань",
+		"bedrockAccessKeyId": "ID ключа доступу AWS",
+		"bedrockAccessKeyIdDesc": "Ваш ID ключа доступу AWS для Amazon Bedrock",
+		"bedrockAccessKeyIdPlaceholder": "Введіть ваш ID ключа доступу AWS",
+		"bedrockSecretAccessKey": "Секретний ключ доступу AWS",
+		"bedrockSecretAccessKeyDesc": "Ваш секретний ключ доступу AWS для Amazon Bedrock",
+		"bedrockSecretAccessKeyPlaceholder": "Введіть ваш секретний ключ доступу AWS",
+		"bedrockSessionToken": "Токен сесії AWS",
+		"bedrockSessionTokenDesc": "Необов'язковий токен сесії AWS для тимчасових облікових даних",
+		"bedrockSessionTokenPlaceholder": "Введіть ваш токен сесії AWS (необов'язково)",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Ключ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
@@ -154,8 +199,11 @@
 			"baseUrlRequired": "Базовий URL є обов'язковим",
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
 			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим",
-			"openRouterApiKeyRequired": "Ключ API OpenRouter є обов'язковим"
+			"openRouterApiKeyRequired": "Ключ API OpenRouter є обов'язковим",
+			"bedrockRegionRequired": "Регіон AWS є обов'язковим",
+			"bedrockProfileRequired": "Профіль AWS є обов'язковий"
 		},
+		"optional": "необов'язково",
 		"cancelling": "Скасування...",
 		"cancelIndexingButton": "Скасувати індексацію"
 	},
@@ -313,6 +361,8 @@
 		"awsBedrock1MContextBetaDescription": "Розширити контекстне вікно до 1 мільйона токенів для Claude Sonnet 4",
 		"anthropicUseAzureDeployment": "Використовувати ім'я розгортання Azure",
 		"anthropicAzureDeploymentPlaceholder": "Введіть ім'я розгортання...",
+		"basetenApiKey": "Ключ API Baseten",
+		"getBasetenApiKey": "Отримати ключ API Baseten",
 		"cerebrasApiKey": "Ключ API Cerebras",
 		"getCerebrasApiKey": "Отримати ключ API Cerebras",
 		"chutesApiKey": "Ключ API Chutes",
@@ -828,6 +878,15 @@
 		"includeCurrentCost": {
 			"label": "Включати поточну вартість у контекст",
 			"description": "Якщо ввімкнено, поточна вартість використання API буде включена в системну підказку. Вимкніть це, якщо моделі припиняють роботу через занепокоєння вартістю."
+		},
+		"gitStatusIncludeUntracked": {
+			"label": "Включати невідстежені файли в git status",
+			"description": "Коли увімкнено, невідстежені файли будуть включені в інформацію про статус git у контексті"
+		},
+		"gitStatusIncludeUntrackedDesc": "Показувати невідстежені файли в контексті git status для кращого розуміння стану репозиторію",
+		"maxGitStatusFiles": {
+			"label": "Макс. файлів статусу Git",
+			"description": "Максимальна кількість записів файлів для включення в контекст статусу git. Встановіть 0 для вимкнення. Інформація про гілку завжди показується, коли > 0."
 		}
 	},
 	"terminal": {
@@ -890,6 +949,20 @@
 	},
 	"advancedSettings": {
 		"title": "Розширені налаштування"
+	},
+	"toolProtocol": {
+		"label": "Протокол виклику інструментів",
+		"description": "Виберіть, як Kilo Code спілкується з API. Native використовує API виклику функцій провайдера, тоді як XML використовує визначення інструментів у форматі XML.",
+		"toolProtocolAuto": "Автоматично",
+		"toolProtocolAutoDesc": "Дозволити Kilo Code автоматично вибирати найкращий протокол для кожної моделі",
+		"toolProtocolFunctionCall": "Нативний",
+		"toolProtocolFunctionCallDesc": "Використовувати вбудований API виклику функцій провайдера",
+		"toolProtocolToolUse": "XML",
+		"toolProtocolToolUseDesc": "Використовувати визначення інструментів у форматі XML",
+		"default": "За замовчуванням",
+		"xml": "XML",
+		"native": "Нативний",
+		"currentDefault": "За замовчуванням: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -963,6 +1036,8 @@
 			"name": "Увімкнути генерацію зображень ШІ",
 			"description": "Коли увімкнено, Kilo Code може генерувати зображення з текстових запитів. Потребує Kilo Code або OpenRouter API ключ.",
 			"apiProvider": "Провайдер API",
+			"providerLabel": "Провайдер",
+			"providerDescription": "Вибери провайдера для генерації зображень.",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Введіть свій OpenRouter API ключ",
 			"kiloCodeApiKeyLabel": "Kilo Code API ключ",
@@ -999,7 +1074,15 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Увімкни функції Autocomplete для швидких пропозицій коду та покращень безпосередньо у твоєму редакторі. Включає Швидке Завдання (Cmd+I) для цільових змін та Autocomplete для контекстуальних покращень."
-		}
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Паралельні виклики інструментів",
+			"description": "Коли увімкнено, нативний протокол може виконувати кілька інструментів у одному повідомленні асистента."
+		},
+		"experimentalParallelToolCalls": "Експериментальні паралельні виклики інструментів",
+		"experimentalParallelToolCallsDesc": "Дозволяє моделі викликати кілька інструментів одночасно для покращення ефективності",
+		"experimentalParallelToolCallsInfo": "Ця функція може покращити швидкість виконання завдань, але може бути нестабільною з деякими моделями",
+		"experimentalParallelToolCallsWarning": "Використовуйте з обережністю: може призвести до неочікуваної поведінки"
 	},
 	"promptCaching": {
 		"label": "Вимкнути кешування підказок",

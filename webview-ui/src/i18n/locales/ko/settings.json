@@ -37,6 +37,26 @@
 		"about": "Kilo Code 정보",
 		"autoPurge": "자동 정리"
 	},
+	"about": {
+		"bugReport": {
+			"label": "버그를 발견하셨나요?",
+			"link": "GitHub에서 보고"
+		},
+		"featureRequest": {
+			"label": "아이디어가 있으신가요?",
+			"link": "공유해 주세요"
+		},
+		"securityIssue": {
+			"label": "취약점을 발견하셨나요?",
+			"link": "공개 프로세스 따르기"
+		},
+		"contact": {
+			"label": "문의가 필요하신가요? 이메일 보내기"
+		},
+		"community": "팁을 얻거나 다른 Kilo Code 사용자들과 교류하고 싶으신가요? <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilo.ai/discord</discordLink>에 참여하세요",
+		"contactAndCommunity": "문의 및 커뮤니티",
+		"manageSettings": "설정 관리"
+	},
 	"slashCommands": {
 		"description": "사용자 지정 워크플로와 작업을 신속하게 실행하기 위해 슬래시 명령을 관리합니다. <DocsLink>더 알아보기</DocsLink>"
 	},
@@ -60,6 +80,12 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 키",
 		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API 키를 입력하세요",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS 리전",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS 프로필",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "~/.aws/credentials의 AWS 프로필 이름(필수).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 키",
 		"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
@@ -131,11 +157,14 @@
 			"geminiApiKeyRequired": "Gemini API 키가 필요합니다",
 			"mistralApiKeyRequired": "Mistral API 키가 필요합니다",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API 키가 필요합니다",
+			"bedrockRegionRequired": "AWS 리전이 필요합니다",
+			"bedrockProfileRequired": "AWS 프로필이 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
 			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다",
 			"openRouterApiKeyRequired": "OpenRouter API 키가 필요합니다"
 		},
+		"optional": "선택 사항",
 		"advancedConfigLabel": "고급 구성",
 		"searchMinScoreLabel": "검색 점수 임계값",
 		"searchMinScoreDescription": "검색 결과에 필요한 최소 유사도 점수(0.0-1.0). 값이 낮을수록 더 많은 결과가 반환되지만 관련성이 떨어질 수 있습니다. 값이 높을수록 결과는 적지만 관련성이 높은 결과가 반환됩니다.",
@@ -301,6 +330,8 @@
 		"anthropic1MContextBetaDescription": "Claude Sonnet 4의 컨텍스트 창을 100만 토큰으로 확장",
 		"awsBedrock1MContextBetaLabel": "1M 컨텍스트 창 활성화 (베타)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4의 컨텍스트 창을 100만 토큰으로 확장",
+		"basetenApiKey": "Baseten API 키",
+		"getBasetenApiKey": "Baseten API 키 가져오기",
 		"cerebrasApiKey": "Cerebras API 키",
 		"getCerebrasApiKey": "Cerebras API 키 가져오기",
 		"chutesApiKey": "Chutes API 키",
@@ -757,6 +788,10 @@
 		"includeCurrentCost": {
 			"label": "컨텍스트에 현재 비용 포함",
 			"description": "활성화하면 현재 API 사용 비용이 시스템 프롬프트에 포함됩니다. 비용 문제로 모델이 작동을 멈추면 비활성화하세요."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git 상태 최대 파일",
+			"description": "git 상태 컨텍스트에 포함할 최대 파일 항목 수입니다. 비활성화하려면 0으로 설정하세요. 분기 정보와 커밋은 > 0일 때 항상 표시됩니다."
 		}
 	},
 	"terminal": {
@@ -819,6 +854,14 @@
 	},
 	"advancedSettings": {
 		"title": "고급 설정"
+	},
+	"toolProtocol": {
+		"label": "도구 호출 프로토콜",
+		"description": "Kilo Code가 API와 통신하는 방법을 선택합니다. 네이티브는 공급자의 함수 호출 API를 사용하고 XML은 XML 형식의 도구 정의를 사용합니다.",
+		"default": "기본값",
+		"xml": "XML",
+		"native": "네이티브",
+		"currentDefault": "기본값: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -907,6 +950,8 @@
 			"description": "활성화하면 new_task 도구에 todos 매개변수를 제공해야 합니다. 이렇게 하면 모든 새 작업이 명확한 목표 목록으로 시작됩니다. 비활성화하면(기본값) 이전 버전과의 호환성을 위해 todos 매개변수는 선택 사항으로 유지됩니다."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "제공업체",
+			"providerDescription": "이미지 생성에 사용할 제공업체를 선택하세요.",
 			"name": "AI 이미지 생성 활성화",
 			"description": "활성화하면 Kilo Code는 텍스트 프롬프트에서 이미지를 생성할 수 있습니다. Kilo Code 또는 OpenRouter API 키 구성이 필요합니다.",
 			"apiProvider": "API 제공자",
@@ -928,6 +973,10 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "모델 시작 슬래시 명령 활성화",
 			"description": "활성화되면 Kilo Code가 워크플로를 실행하기 위해 슬래시 명령을 실행할 수 있습니다."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "병렬 도구 호출",
+			"description": "활성화되면 네이티브 프로토콜이 단일 어시스턴트 메시지 턴에서 여러 도구를 실행할 수 있습니다."
 		}
 	},
 	"promptCaching": {

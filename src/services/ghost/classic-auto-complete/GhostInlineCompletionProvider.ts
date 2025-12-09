@@ -5,15 +5,12 @@ import {
 	contextToAutocompleteInput,
 	GhostContextProvider,
 	FillInAtCursorSuggestion,
-	FimGhostPrompt,
-	HoleFillerGhostPrompt,
 	GhostPrompt,
 	MatchingSuggestionResult,
 	CostTrackingCallback,
 	LLMRetrievalResult,
 	PendingRequest,
 	AutocompleteContext,
-	CacheMatchType,
 } from "../types"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
@@ -87,7 +84,12 @@ export function findMatchingSuggestion(
 
 		// Check for backward deletion: user deleted characters from the end of the prefix
 		// The stored prefix should start with the current prefix (current is shorter)
-		if (fillInAtCursor.prefix.startsWith(prefix) && suffix === fillInAtCursor.suffix) {
+		// Only use this logic if the original suggestion is non-empty
+		if (
+			fillInAtCursor.text !== "" &&
+			fillInAtCursor.prefix.startsWith(prefix) &&
+			suffix === fillInAtCursor.suffix
+		) {
 			// Extract the deleted portion of the prefix
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
@@ -118,7 +120,7 @@ export function stringToInlineCompletions(text: string, position: vscode.Positio
 }
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
-	private suggestionsHistory: FillInAtCursorSuggestion[] = []
+	public suggestionsHistory: FillInAtCursorSuggestion[] = []
 	/** Tracks all pending/in-flight requests */
 	private pendingRequests: PendingRequest[] = []
 	private holeFiller: HoleFiller
@@ -193,7 +195,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 	}
 
-	private async getPrompt(
+	public async getPrompt(
 		document: vscode.TextDocument,
 		position: vscode.Position,
 	): Promise<{ prompt: GhostPrompt; prefix: string; suffix: string }> {
@@ -482,7 +484,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return requestPromise
 	}
 
-	private async fetchAndCacheSuggestion(
+	public async fetchAndCacheSuggestion(
 		prompt: GhostPrompt,
 		prefix: string,
 		suffix: string,

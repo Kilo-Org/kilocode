@@ -6,12 +6,16 @@
 		"emptyState": "Belum ada agen aktif.",
 		"startAgent": "Mulai Agen",
 		"removeSession": "Hapus",
-		"refresh": "Refresh"
+		"refresh": "Refresh",
+		"worktree": "Worktree",
+		"local": "Lokal",
+		"mainWorkspace": "Ruang kerja utama",
+		"readyToMerge": "Siap untuk digabungkan"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
 		"describeTask": "Jelaskan tugas yang ingin Anda lakukan oleh agen.",
-		"placeholderTask": "contoh: Buat komponen React baru untuk tombol...",
+		"placeholderTask": "Ketik tugas kamu di sini...",
 		"stopButton": "Hentikan",
 		"newButton": "Baru",
 		"stopButtonTitle": "Hentikan Agen",
@@ -21,6 +25,13 @@
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
 		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
+		"runModeLocal": "Lokal",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Segera hadir",
+		"runningInWorktree": "Berjalan di worktree",
+		"runningLocally": "Berjalan secara lokal",
+		"branch": "Cabang",
 		"creatingSession": "Membuat sesi...",
 		"waitingForCli": "Menginisialisasi sesi agen..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agen berjalan dalam mode otonom"
+		"autonomous": "Agen berjalan dalam mode otonom",
+		"placeholderTypeTask": "Ketik tugas Anda di sini...",
+		"ariaLabel": "Input pesan",
+		"cancelTitle": "Batalkan agen",
+		"sendTitle": "Kirim pesan",
+		"resumeTitle": "Lanjutkan agen",
+		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"
 	},
 	"status": {
 		"running": "berjalan",
@@ -45,5 +62,16 @@
 		"stopped": "dihentikan",
 		"error": "kesalahan",
 		"creating": "membuat..."
+	},
+	"time": {
+		"justNow": "Baru saja",
+		"minuteAgo": "Satu menit yang lalu",
+		"minutesAgo": "{{count}} menit yang lalu",
+		"hourAgo": "Satu jam yang lalu",
+		"hoursAgo": "{{count}} jam yang lalu",
+		"dayAgo": "Satu hari yang lalu",
+		"daysAgo": "{{count}} hari yang lalu",
+		"weekAgo": "Satu minggu yang lalu",
+		"weeksAgo": "{{count}} minggu yang lalu"
 	}
 }

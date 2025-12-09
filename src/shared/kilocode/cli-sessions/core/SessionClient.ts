@@ -5,6 +5,8 @@ export interface Session {
 	title: string
 	created_at: string
 	updated_at: string
+	git_url?: string
+	version: number
 }
 
 export interface SessionWithSignedUrls extends Session {
@@ -25,6 +27,7 @@ export interface CreateSessionInput {
 	title?: string
 	git_url?: string
 	created_on_platform: string
+	version: number
 }
 
 export type CreateSessionOutput = Session
@@ -33,12 +36,14 @@ export interface UpdateSessionInput {
 	session_id: string
 	title?: string
 	git_url?: string
+	version?: number
 }
 
 export interface UpdateSessionOutput {
 	session_id: string
 	title: string
 	updated_at: string
+	version: number
 }
 
 export interface ListSessionsInput {
@@ -179,32 +184,139 @@ export class SessionClient {
 	}
 
 	/**
-	 * Upload a blob for a session
+	 * Upload a blob for a session using signed URL
 	 */
 	async uploadBlob(
 		sessionId: string,
 		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
 		blobData: unknown,
-	): Promise<{ session_id: string; updated_at: string }> {
+	): Promise<{ updated_at: string }> {
+		const blobBody = JSON.stringify(blobData)
+		const contentLength = new TextEncoder().encode(blobBody).length
+
+		const signedUrlResponse = await this.getSignedUploadUrl(sessionId, blobType, contentLength)
+
+		const uploadResponse = await fetch(signedUrlResponse.signed_url, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: blobBody,
+		})
+
+		if (!uploadResponse.ok) {
+			throw new Error(`uploadBlob failed: upload to signed URL returned ${uploadResponse.status}`)
+		}
+
+		return { updated_at: signedUrlResponse.updated_at }
+	}
+
+	/**
+	 * Get a signed URL for uploading a blob
+	 */
+	private async getSignedUploadUrl(
+		sessionId: string,
+		blobType: "api_conversation_history" | "task_metadata" | "ui_messages" | "git_state",
+		contentLength: number,
+	): Promise<{ signed_url: string; updated_at: string }> {
 		const { endpoint, getToken } = this.trpcClient
 
-		const url = new URL("/api/upload-cli-session-blob", endpoint)
-		url.searchParams.set("session_id", sessionId)
-		url.searchParams.set("blob_type", blobType)
+		const url = new URL("/api/upload-cli-session-blob-v2", endpoint)
 
 		const response = await fetch(url.toString(), {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
 				Authorization: `Bearer ${await getToken()}`,
+				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(blobData),
+			body: JSON.stringify({
+				session_id: sessionId,
+				blob_type: blobType,
+				content_length: contentLength,
+			}),
 		})
 
 		if (!response.ok) {
-			throw new Error(`uploadBlob failed: ${url.toString()} ${response.status}`)
+			throw new Error(`getSignedUploadUrl failed: ${url.toString()} ${response.status}`)
 		}
 
-		return response.json()
+		const signedUrlResponse = (await response.json()) as { signed_url?: string; updated_at?: string }
+
+		if (!signedUrlResponse.signed_url) {
+			throw new Error("getSignedUploadUrl failed: missing signed_url in response")
+		}
+
+		if (!signedUrlResponse.updated_at) {
+			throw new Error("getSignedUploadUrl failed: missing updated_at in response")
+		}
+
+		return {
+			signed_url: signedUrlResponse.signed_url,
+			updated_at: signedUrlResponse.updated_at,
+		}
+	}
+
+	async tokenValid() {
+		const { endpoint, getToken } = this.trpcClient
+
+		const token = await getToken()
+
+		if (!this.isTokenValidLocally(token)) {
+			return false
+		}
+
+		const url = new URL("/api/user", endpoint)
+
+		const response = await fetch(url.toString(), {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+		})
+
+		return response.ok
+	}
+
+	private isTokenValidLocally(token: string): boolean {
+		try {
+			const parts = token.split(".")
+
+			if (parts.length !== 3) {
+				return false
+			}
+
+			const payloadBase64 = parts[1]
+
+			if (!payloadBase64) {
+				return false
+			}
+
+			const payloadJson = Buffer.from(payloadBase64, "base64").toString("utf-8")
+			const payload = JSON.parse(payloadJson) as {
+				kiloUserId?: string
+				version?: number
+				exp?: number
+			}
+
+			if (typeof payload.kiloUserId !== "string" || payload.kiloUserId.length === 0) {
+				return false
+			}
+
+			if (typeof payload.version !== "number") {
+				return false
+			}
+
+			if (typeof payload.exp === "number") {
+				const nowInSeconds = Math.floor(Date.now() / 1000)
+				if (payload.exp < nowInSeconds) {
+					return false
+				}
+			}
+
+			return true
+		} catch {
+			return false
+		}
 	}
 }

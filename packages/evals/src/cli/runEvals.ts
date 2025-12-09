@@ -44,9 +44,9 @@ export const runEvals = async (runId: number) => {
 				.map((task) => async () => {
 					try {
 						if (containerized) {
-							await processTaskInContainer({ taskId: task.id, logger })
+							await processTaskInContainer({ taskId: task.id, jobToken: run.jobToken, logger })
 						} else {
-							await processTask({ taskId: task.id, logger })
+							await processTask({ taskId: task.id, jobToken: run.jobToken, logger })
 						}
 					} catch (error) {
 						logger.error("error processing task", error)

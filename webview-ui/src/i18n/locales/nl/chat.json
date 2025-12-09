@@ -286,16 +286,15 @@
 			"goToSettingsButton": "Ga naar Instellingen"
 		},
 		"release": {
-			"heading": "Nieuw in de extensie:",
-			"openRouterEmbeddings": "Ondersteuning voor OpenRouter embedding-modellen",
-			"chutesDynamic": "Chutes laadt nu dynamisch de nieuwste modellen",
-			"queuedMessagesFix": "Oplossingen voor berichten in de wachtrij die verloren gaan"
+			"heading": "Nieuw:",
+			"browserUse": "Browser Use 2.0 verbetert de browse-ervaring in chat met persistente sessies, duidelijkere feedback, een toegewijd browserpaneel en natuurlijkere actiebeschrijvingen",
+			"cloudPaid": "De Roo Code Cloud provider biedt nu betaalde modellen: koop credits en gebruik ze voor zowel cloud agents als inference"
 		},
 		"cloudAgents": {
 			"heading": "Nieuw in de Cloud:",
-			"prFixer": "Introductie van de <bold>PR Fixer</bold> cloud-agent als aanvulling op de PR Reviewer.",
-			"prFixerDescription": "De PR Fixer van Roo Code past hoogwaardige wijzigingen toe op je PR's, direct vanuit GitHub. Roep het aan via een PR-opmerking en het leest de volledige opmerkingengeschiedenis om context, afspraken en afwegingen te begrijpen - en implementeert vervolgens de juiste oplossing.",
-			"tryPrFixerButton": "Probeer PR Fixer"
+			"specialized": "Introductie van <bold>Explainer</bold>, <bold>Planner</bold> en <bold>Coder</bold> - drie gespecialiseerde cloud-agents om je workflows te verbeteren.",
+			"description": "De agents werken samen in de cloud en kunnen worden geactiveerd vanaf het web of via Slack.",
+			"tryButton": "Probeer Cloud-agents"
 		},
 		"careers": "Ook, <careersLink>we nemen aan!</careersLink>",
 		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink> 🚀"
@@ -316,6 +315,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
+		"session": "Browsersessie",
 		"rooWantsToUse": "Kilo Code wil de browser gebruiken",
 		"consoleLogs": "Console-logboeken",
 		"noNewLogs": "(Geen nieuwe logboeken)",
@@ -328,12 +328,14 @@
 		},
 		"sessionStarted": "Browsersessie gestart",
 		"actions": {
-			"title": "Browse-actie: ",
+			"title": "Browseractie: ",
 			"launch": "Browser starten op {{url}}",
 			"click": "Klik ({{coordinate}})",
 			"type": "Typ \"{{text}}\"",
+			"press": "Druk op {{key}}",
 			"scrollDown": "Scroll naar beneden",
 			"scrollUp": "Scroll naar boven",
+			"hover": "Zweven ({{coordinate}})",
 			"close": "Browser sluiten"
 		}
 	},

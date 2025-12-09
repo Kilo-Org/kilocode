@@ -5,6 +5,7 @@ import { SessionPersistenceManager } from "../../utils/SessionPersistenceManager
 import type { ITaskDataProvider } from "../../types/ITaskDataProvider"
 import type { ClineMessage } from "@roo-code/types"
 import { readFileSync, writeFileSync, mkdirSync } from "fs"
+import simpleGit from "simple-git"
 
 vi.mock("fs", () => ({
 	readFileSync: vi.fn(),
@@ -100,6 +101,7 @@ describe("SessionManager", () => {
 				privateInstance as unknown as { sessionPersistenceManager: SessionPersistenceManager | undefined }
 			).sessionPersistenceManager = undefined
 			;(privateInstance as unknown as { queue: unknown[] }).queue = []
+			;(privateInstance as unknown as { lastActiveSessionId: string | null }).lastActiveSessionId = null
 		}
 
 		manager = SessionManager.init(mockDependencies)
@@ -232,6 +234,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: SessionManager.VERSION,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -292,6 +295,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: SessionManager.VERSION,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -311,6 +315,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: SessionManager.VERSION,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -338,6 +343,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: SessionManager.VERSION,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -345,6 +351,32 @@ describe("SessionManager", () => {
 			await manager.restoreSession("session-123")
 
 			expect(mockDependencies.onSessionRestored).toHaveBeenCalled()
+		})
+
+		it("should persist task-to-session mapping and set lastActiveSessionId when restoring session", async () => {
+			const mockSession: SessionWithSignedUrls = {
+				session_id: "session-123",
+				title: "Test Session",
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+				api_conversation_history_blob_url: null,
+				task_metadata_blob_url: null,
+				ui_messages_blob_url: null,
+				git_state_blob_url: null,
+				version: SessionManager.VERSION,
+			}
+
+			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+
+			await manager.restoreSession("session-123")
+
+			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
+				"session-123",
+				"session-123",
+			)
+			// Verify that sessionId getter returns the restored session ID
+			// This ensures lastActiveSessionId was properly set during restoration
+			expect(manager.sessionId).toBe("session-123")
 		})
 
 		it("should fetch and write blobs when URLs are provided", async () => {
@@ -357,6 +389,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: 1,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -382,6 +415,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: "https://storage.example.com/ui_messages.json",
 				git_state_blob_url: null,
+				version: 1,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -478,6 +512,7 @@ describe("SessionManager", () => {
 				session_id: "session-123",
 				title: "New Title",
 				updated_at: new Date().toISOString(),
+				version: SessionManager.VERSION,
 			})
 
 			await manager.renameSession("session-123", "  New Title  ")
@@ -510,6 +545,7 @@ describe("SessionManager", () => {
 				task_metadata_blob_url: null,
 				ui_messages_blob_url: null,
 				git_state_blob_url: null,
+				version: SessionManager.VERSION,
 			}
 
 			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
@@ -565,11 +601,9 @@ describe("SessionManager", () => {
 				title: "Test task",
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
+				version: SessionManager.VERSION,
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-456",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
 
 			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 
@@ -577,6 +611,7 @@ describe("SessionManager", () => {
 			expect(manager.sessionClient!.create).toHaveBeenCalledWith({
 				title: "Test task",
 				created_on_platform: "vscode",
+				version: SessionManager.VERSION,
 			})
 			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
 				"task-123",
@@ -592,11 +627,9 @@ describe("SessionManager", () => {
 				title: "Test task",
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
+				version: SessionManager.VERSION,
 			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
-				session_id: "new-session-456",
-				updated_at: new Date().toISOString(),
-			})
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
 
 			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
 
@@ -793,16 +826,19 @@ describe("SessionManager", () => {
 
 	describe("getGitState patch size limit", () => {
 		it("should return patch when size is under the limit", async () => {
-			const simpleGit = await import("simple-git")
 			const smallPatch = "a".repeat(1000)
 
 			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit.default).mockReturnValue({
+			vi.mocked(simpleGit).mockReturnValue({
 				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
 				revparse: vi.fn().mockResolvedValue("abc123def456"),
 				raw: mockRaw,
 				diff: vi.fn().mockResolvedValue(smallPatch),
-			} as unknown as ReturnType<typeof simpleGit.default>)
+				stash: vi.fn().mockResolvedValue(undefined),
+				stashList: vi.fn().mockResolvedValue({ total: 0 }),
+				checkout: vi.fn().mockResolvedValue(undefined),
+				applyPatch: vi.fn().mockResolvedValue(undefined),
+			} as unknown as ReturnType<typeof simpleGit>)
 
 			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
 			const result = await getGitState.call(manager)
@@ -811,16 +847,19 @@ describe("SessionManager", () => {
 		})
 
 		it("should return empty string patch when size exceeds the limit", async () => {
-			const simpleGit = await import("simple-git")
-			const largePatch = "a".repeat(2 * 1024 * 1024)
+			const largePatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
 
 			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit.default).mockReturnValue({
+			vi.mocked(simpleGit).mockReturnValue({
 				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
 				revparse: vi.fn().mockResolvedValue("abc123def456"),
 				raw: mockRaw,
 				diff: vi.fn().mockResolvedValue(largePatch),
-			} as unknown as ReturnType<typeof simpleGit.default>)
+				stash: vi.fn().mockResolvedValue(undefined),
+				stashList: vi.fn().mockResolvedValue({ total: 0 }),
+				checkout: vi.fn().mockResolvedValue(undefined),
+				applyPatch: vi.fn().mockResolvedValue(undefined),
+			} as unknown as ReturnType<typeof simpleGit>)
 
 			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
 			const result = await getGitState.call(manager)
@@ -829,16 +868,19 @@ describe("SessionManager", () => {
 		})
 
 		it("should log warning when patch exceeds size limit", async () => {
-			const simpleGit = await import("simple-git")
-			const largePatch = "a".repeat(2 * 1024 * 1024)
+			const largePatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
 
 			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit.default).mockReturnValue({
+			vi.mocked(simpleGit).mockReturnValue({
 				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
 				revparse: vi.fn().mockResolvedValue("abc123def456"),
 				raw: mockRaw,
 				diff: vi.fn().mockResolvedValue(largePatch),
-			} as unknown as ReturnType<typeof simpleGit.default>)
+				stash: vi.fn().mockResolvedValue(undefined),
+				stashList: vi.fn().mockResolvedValue({ total: 0 }),
+				checkout: vi.fn().mockResolvedValue(undefined),
+				applyPatch: vi.fn().mockResolvedValue(undefined),
+			} as unknown as ReturnType<typeof simpleGit>)
 
 			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
 			await getGitState.call(manager)
@@ -850,16 +892,19 @@ describe("SessionManager", () => {
 		})
 
 		it("should return patch when size is exactly at the limit", async () => {
-			const simpleGit = await import("simple-git")
-			const exactLimitPatch = "a".repeat(1024 * 1024)
+			const exactLimitPatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES)
 
 			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit.default).mockReturnValue({
+			vi.mocked(simpleGit).mockReturnValue({
 				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
 				revparse: vi.fn().mockResolvedValue("abc123def456"),
 				raw: mockRaw,
 				diff: vi.fn().mockResolvedValue(exactLimitPatch),
-			} as unknown as ReturnType<typeof simpleGit.default>)
+				stash: vi.fn().mockResolvedValue(undefined),
+				stashList: vi.fn().mockResolvedValue({ total: 0 }),
+				checkout: vi.fn().mockResolvedValue(undefined),
+				applyPatch: vi.fn().mockResolvedValue(undefined),
+			} as unknown as ReturnType<typeof simpleGit>)
 
 			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
 			const result = await getGitState.call(manager)
@@ -868,16 +913,19 @@ describe("SessionManager", () => {
 		})
 
 		it("should return empty string patch when size is one byte over the limit", async () => {
-			const simpleGit = await import("simple-git")
-			const overLimitPatch = "a".repeat(1024 * 1024 + 1)
+			const overLimitPatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
 
 			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit.default).mockReturnValue({
+			vi.mocked(simpleGit).mockReturnValue({
 				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
 				revparse: vi.fn().mockResolvedValue("abc123def456"),
 				raw: mockRaw,
 				diff: vi.fn().mockResolvedValue(overLimitPatch),
-			} as unknown as ReturnType<typeof simpleGit.default>)
+				stash: vi.fn().mockResolvedValue(undefined),
+				stashList: vi.fn().mockResolvedValue({ total: 0 }),
+				checkout: vi.fn().mockResolvedValue(undefined),
+				applyPatch: vi.fn().mockResolvedValue(undefined),
+			} as unknown as ReturnType<typeof simpleGit>)
 
 			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
 			const result = await getGitState.call(manager)

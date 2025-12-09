@@ -5,6 +5,7 @@ import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
 import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
+import { BedrockEmbedder } from "./embedders/bedrock"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
@@ -83,6 +84,12 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.vercelAiGatewayConfigMissing"))
 			}
 			return new VercelAiGatewayEmbedder(config.vercelAiGatewayOptions.apiKey, config.modelId)
+		} else if (provider === "bedrock") {
+			// Only region is required for Bedrock (profile is optional)
+			if (!config.bedrockOptions?.region) {
+				throw new Error(t("embeddings:serviceFactory.bedrockConfigMissing"))
+			}
+			return new BedrockEmbedder(config.bedrockOptions.region, config.bedrockOptions.profile, config.modelId)
 		} else if (provider === "openrouter") {
 			if (!config.openRouterOptions?.apiKey) {
 				throw new Error(t("embeddings:serviceFactory.openRouterConfigMissing"))
@@ -184,17 +191,20 @@ export class CodeIndexServiceFactory {
 		parser: ICodeParser,
 		ignoreInstance: Ignore,
 	): DirectoryScanner {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
-		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance, batchSize)
+		// kilocode_change start: Get the configurable batch size and max retries from config manager
+		const config = this.configManager.getConfig()
+		const batchSize = config.embeddingBatchSize
+		const maxBatchRetries = config.scannerMaxBatchRetries
+		return new DirectoryScanner(
+			embedder,
+			vectorStore,
+			parser,
+			this.cacheManager,
+			ignoreInstance,
+			batchSize,
+			maxBatchRetries,
+		)
+		// kilocode_change end
 	}
 
 	/**
@@ -208,16 +218,11 @@ export class CodeIndexServiceFactory {
 		ignoreInstance: Ignore,
 		rooIgnoreController?: RooIgnoreController,
 	): IFileWatcher {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
+		// kilocode_change start: Get the configurable batch size from config manager
+		const config = this.configManager.getConfig()
+		const batchSize = config.embeddingBatchSize
+		const maxBatchRetries = config.scannerMaxBatchRetries
+
 		return new FileWatcher(
 			this.workspacePath,
 			context,
@@ -227,7 +232,9 @@ export class CodeIndexServiceFactory {
 			ignoreInstance,
 			rooIgnoreController,
 			batchSize,
+			maxBatchRetries,
 		)
+		// kilocode_change end
 	}
 
 	/**

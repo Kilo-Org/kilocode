@@ -71,6 +71,12 @@ export interface SessionCreatedStreamEvent {
 	timestamp: number
 }
 
+export interface WelcomeStreamEvent {
+	streamEventType: "welcome"
+	worktreeBranch?: string
+	timestamp: number
+}
+
 export type StreamEvent =
 	| KilocodeStreamEvent
 	| StatusStreamEvent
@@ -79,6 +85,7 @@ export type StreamEvent =
 	| CompleteStreamEvent
 	| InterruptedStreamEvent
 	| SessionCreatedStreamEvent
+	| WelcomeStreamEvent
 
 /**
  * Result of parsing a chunk of CLI output
@@ -212,6 +219,17 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 		return {
 			streamEventType: "session_created",
 			sessionId: parsed.sessionId as string,
+			timestamp: (parsed.timestamp as number) || Date.now(),
+		}
+	}
+
+	// Detect welcome event from CLI (format: { type: "welcome", metadata: { welcomeOptions: { worktreeBranch: "..." } }, ... })
+	if (parsed.type === "welcome") {
+		const metadata = parsed.metadata as Record<string, unknown> | undefined
+		const welcomeOptions = metadata?.welcomeOptions as Record<string, unknown> | undefined
+		return {
+			streamEventType: "welcome",
+			worktreeBranch: welcomeOptions?.worktreeBranch as string | undefined,
 			timestamp: (parsed.timestamp as number) || Date.now(),
 		}
 	}

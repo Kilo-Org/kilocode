@@ -37,6 +37,30 @@
 		"about": "O Kilo Code",
 		"autoPurge": "Automatické čištění"
 	},
+	"about": {
+		"bugReport": {
+			"label": "Našel jsi chybu?",
+			"link": "Nahlásit na GitHubu"
+		},
+		"featureRequest": {
+			"label": "Máš nápad?",
+			"link": "Podělte se s námi"
+		},
+		"securityIssue": {
+			"label": "Objevil jsi zranitelnost?",
+			"link": "Následuj náš proces hlášení"
+		},
+		"contact": {
+			"label": "Potřebuješ s námi mluvit? Napiš"
+		},
+		"contactSupport": "Kontaktovat podporu",
+		"contactSupportDesc": "Získat pomoc s technickými problémy nebo dotazy k účtu",
+		"joinCommunity": "Připojit se ke komunitě",
+		"joinCommunityDesc": "Připoj se k ostatním uživatelům pro tipy a diskuse",
+		"community": "Chceš tipy nebo si jen popovídat s ostatními uživateli Kilo Code? Připoj se na <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Kontakt a komunita",
+		"manageSettings": "Spravovat nastavení"
+	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
 	},
@@ -62,6 +86,12 @@
 		"selectProfilePlaceholder": "Vyberte poskytovatele",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS Region",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS Profil",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Název AWS profilu z ~/.aws/credentials (povinné).",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Klíč API:",
 		"geminiApiKeyPlaceholder": "Zadejte svůj klíč API Gemini",
@@ -147,8 +177,11 @@
 			"openRouterApiKeyRequired": "Klíč API OpenRouter je povinný",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
-			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
+			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0",
+			"bedrockRegionRequired": "AWS region je povinný",
+			"bedrockProfileRequired": "AWS profil je povinný"
 		},
+		"optional": "volitelné",
 		"cancelling": "Probíhá rušení...",
 		"cancelIndexingButton": "Zrušit indexování"
 	},
@@ -308,6 +341,9 @@
 		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
 		"awsBedrock1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
+		"basetenApiKey": "Klíč API Baseten",
+		"basetenApiKeyPlaceholder": "Zadejte svůj klíč API Baseten",
+		"getBasetenApiKey": "Získat klíč API Baseten",
 		"cerebrasApiKey": "Klíč API Cerebras",
 		"getCerebrasApiKey": "Získat klíč API Cerebras",
 		"chutesApiKey": "Klíč API Chutes",
@@ -772,6 +808,10 @@
 			"label": "Limit kontextu souborů pracovního prostoru",
 			"description": "Maximální počet souborů, které se mají zahrnout do podrobností aktuálního pracovního adresáře. Vyšší hodnoty poskytují více kontextu, ale zvyšují využití tokenů."
 		},
+		"maxGitStatusFiles": {
+			"label": "Maximální počet souborů Git stavu",
+			"description": "Maximální počet souborových záznamů, které se zahrnou do kontextu Git stavu. Nastavte na 0 pro vypnutí. Informace o větvi se vždy zobrazí, když je > 0."
+		},
 		"rooignore": {
 			"label": "Zobrazit soubory ignorované .kilocodeignore v seznamech a vyhledáváních",
 			"description": "Pokud je povoleno, soubory odpovídající vzorům v .kilocodeignore se zobrazí v seznamech se symbolem zámku. Pokud je zakázáno, tyto soubory budou zcela skryty ze seznamů souborů a vyhledávání."
@@ -992,6 +1032,8 @@
 			"name": "Povolit AI generování obrázků",
 			"description": "Když je povoleno, Kilo Code může generovat obrázky z textových podnětů. Vyžaduje Kilo Code nebo OpenRouter API klíč.",
 			"apiProvider": "Poskytovatel API",
+			"providerLabel": "Poskytovatel",
+			"providerDescription": "Vyberte poskytovatele pro generování obrázků.",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Zadejte svůj OpenRouter API klíč",
 			"kiloCodeApiKeyLabel": "Kilo Code API klíč",
@@ -1010,6 +1052,10 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Povolit funkce Autocomplete pro rychlé návrhy kódu a vylepšení přímo ve tvém editoru. Zahrnuje Rychlý úkol (Cmd+I) pro cílené změny a Autocomplete pro kontextová vylepšení."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Paralelní volání nástrojů",
+			"description": "Pokud je povoleno, nativní protokol může provádět více nástrojů v jednom obratu zprávy asistenta."
 		}
 	},
 	"promptCaching": {
@@ -1140,5 +1186,26 @@
 			"output": "Výstup",
 			"cacheReads": "Čtení cache"
 		}
-	}
+	},
+	"toolProtocol": {
+		"label": "Protokol volání nástrojů",
+		"description": "Vyberte, jak Kilo Code komunikuje s API. Nativní používá API pro volání funkcí poskytovatele, zatímco XML používá definice nástrojů ve formátu XML.",
+		"toolProtocolDesc": "Řídí způsob, jakým AI komunikuje s nástroji a API",
+		"toolProtocolAuto": "Automatické",
+		"toolProtocolAutoDesc": "Nechat systém automaticky vybrat nejlepší protokol",
+		"toolProtocolFunctionCall": "Volání funkcí",
+		"toolProtocolFunctionCallDesc": "Použít nativní API pro volání funkcí od poskytovatele",
+		"toolProtocolToolUse": "Použití nástrojů (XML)",
+		"toolProtocolToolUseDesc": "Použít XML formátované definice nástrojů",
+		"default": "Výchozí",
+		"xml": "XML",
+		"native": "Nativní",
+		"currentDefault": "Výchozí: {{protocol}}"
+	},
+	"gitStatusIncludeUntracked": "Zahrnout nesledované soubory do Git stavu",
+	"gitStatusIncludeUntrackedDesc": "Zobrazit nesledované soubory v informacích o Git stavu",
+	"experimentalParallelToolCalls": "Experimentální paralelní volání nástrojů",
+	"experimentalParallelToolCallsDesc": "Povolit souběžné provádění více operací nástrojů",
+	"experimentalParallelToolCallsInfo": "Tato funkce může zrychlit provádění úkolů, ale je experimentální",
+	"experimentalParallelToolCallsWarning": "⚠️ Experimentální funkce - může způsobit neočekávané chování"
 }

@@ -18,6 +18,6 @@ class User
 	end
 
 	def to_s
-		"#{@username} (#{@email})"
+		"#{@username} (#{@email}) - #{@role}"
 	end
 end

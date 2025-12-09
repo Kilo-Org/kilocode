@@ -1,3 +1,10 @@
 user = {
 	name: 'John',
-	email: 'john@example.com',
+	email: 'john@email.com',
+	password: 'password',
+	password_confirmation: 'password'
+}
+
+User.create(user)
+
+puts "1 user created"

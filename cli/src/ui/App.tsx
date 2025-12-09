@@ -12,6 +12,7 @@ export interface AppOptions {
 	workspace?: string
 	ci?: boolean
 	json?: boolean
+	jsonInteractive?: boolean
 	prompt?: string
 	timeout?: number
 	parallel?: boolean

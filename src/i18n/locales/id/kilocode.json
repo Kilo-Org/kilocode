@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Tidak dapat menampilkan perubahan baru, checkpoint tidak tersedia.",
 		"noChanges": "Tidak dapat menampilkan perubahan baru, tidak ada perubahan yang ditemukan.",
 		"error": "Tidak dapat menampilkan perubahan baru, terjadi kesalahan."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Versi Kilocode CLI kamu sudah usang dan tidak mendukung Agent Manager. Harap perbarui ke versi terbaru.",
+			"cliNotFound": "Kilocode CLI tidak ditemukan. Harap instal untuk menggunakan Agent Manager.",
+			"sessionFailed": "Gagal memulai sesi agen",
+			"sessionFailedWithMessage": "Gagal memulai sesi agen: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Petunjuk Pembaruan",
+			"installInstructions": "Petunjuk Instalasi",
+			"getHelp": "Dapatkan Bantuan"
+		}
 	}
 }

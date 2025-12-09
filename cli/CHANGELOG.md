@@ -1,5 +1,21 @@
 # @kilocode/cli
 
+## 0.13.1
+
+### Patch Changes
+
+- [#4267](https://github.com/Kilo-Org/kilocode/pull/4267) [`a475394`](https://github.com/Kilo-Org/kilocode/commit/a47539442de1addacf55f9647471411fb55b50ee) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add JSON stdin handler for bidirectional CLI communication
+
+## 0.13.0
+
+### Minor Changes
+
+- [#4251](https://github.com/Kilo-Org/kilocode/pull/4251) [`1c5e35b`](https://github.com/Kilo-Org/kilocode/commit/1c5e35b52959690b181800cdc4b9bccdf4606c91) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix cli ephemeral mode config leak
+
+### Patch Changes
+
+- [#4211](https://github.com/Kilo-Org/kilocode/pull/4211) [`489b366`](https://github.com/Kilo-Org/kilocode/commit/489b3669c34f437dfd7c4b9a692cf7d84fff73a1) Thanks [@iscekic](https://github.com/iscekic)! - refactor session manager to better handle asynchronicity of file save events
+
 ## 0.12.1
 
 ### Patch Changes

@@ -1,0 +1,17 @@
+function processData(data) {
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
+  }
+
+  // TODO: Implement data processing logic
+  const processedData = data.map(item => {
+    // Example processing: Convert string values to uppercase
+    if (typeof item === 'string') {
+      return item.toUpperCase();
+    }
+    return item;
+  });
+
+  return processedData;
+}

@@ -1,5 +1,17 @@
 import { type ToolName, toolNames, type FileEntry } from "@roo-code/types"
-import { type ToolUse, type ToolParamName, toolParamNames, type NativeToolArgs } from "../../shared/tools"
+import {
+	type ToolUse,
+	type McpToolUse,
+	type ToolParamName,
+	toolParamNames,
+	type NativeToolArgs,
+} from "../../shared/tools"
+import { parseJSON } from "partial-json"
+import type {
+	ApiStreamToolCallStartChunk,
+	ApiStreamToolCallDeltaChunk,
+	ApiStreamToolCallEndChunk,
+} from "../../api/transform/stream"
 
 /**
  * Helper type to extract properly typed native arguments for a given tool.
@@ -16,7 +28,511 @@ type NativeArgsFor<TName extends ToolName> = TName extends keyof NativeToolArgs 
  * typed arguments via nativeArgs. Tool-specific handlers should consume
  * nativeArgs directly rather than relying on synthesized legacy params.
  */
+/**
+ * Event types returned from raw chunk processing.
+ */
+export type ToolCallStreamEvent = ApiStreamToolCallStartChunk | ApiStreamToolCallDeltaChunk | ApiStreamToolCallEndChunk
+
+/**
+ * Parser for native tool calls (OpenAI-style function calling).
+ * Converts native tool call format to ToolUse format for compatibility
+ * with existing tool execution infrastructure.
+ *
+ * For tools with refactored parsers (e.g., read_file), this parser provides
+ * typed arguments via nativeArgs. Tool-specific handlers should consume
+ * nativeArgs directly rather than relying on synthesized legacy params.
+ *
+ * This class also handles raw tool call chunk processing, converting
+ * provider-level raw chunks into start/delta/end events.
+ */
 export class NativeToolCallParser {
+	// Streaming state management for argument accumulation (keyed by tool call id)
+	// Note: name is string to accommodate dynamic MCP tools (mcp_serverName_toolName)
+	private static streamingToolCalls = new Map<
+		string,
+		{
+			id: string
+			name: string
+			argumentsAccumulator: string
+		}
+	>()
+
+	// Raw chunk tracking state (keyed by index from API stream)
+	private static rawChunkTracker = new Map<
+		number,
+		{
+			id: string
+			name: string
+			hasStarted: boolean
+			deltaBuffer: string[]
+		}
+	>()
+
+	/**
+	 * Process a raw tool call chunk from the API stream.
+	 * Handles tracking, buffering, and emits start/delta/end events.
+	 *
+	 * This is the entry point for providers that emit tool_call_partial chunks.
+	 * Returns an array of events to be processed by the consumer.
+	 */
+	public static processRawChunk(chunk: {
+		index: number
+		id?: string
+		name?: string
+		arguments?: string
+	}): ToolCallStreamEvent[] {
+		const events: ToolCallStreamEvent[] = []
+		const { index, id, name, arguments: args } = chunk
+
+		let tracked = this.rawChunkTracker.get(index)
+
+		// Initialize new tool call tracking when we receive an id
+		if (id && !tracked) {
+			tracked = {
+				id,
+				name: name || "",
+				hasStarted: false,
+				deltaBuffer: [],
+			}
+			this.rawChunkTracker.set(index, tracked)
+		}
+
+		if (!tracked) {
+			return events
+		}
+
+		// Update name if present in chunk and not yet set
+		if (name) {
+			tracked.name = name
+		}
+
+		// Emit start event when we have the name
+		if (!tracked.hasStarted && tracked.name) {
+			events.push({
+				type: "tool_call_start",
+				id: tracked.id,
+				name: tracked.name,
+			})
+			tracked.hasStarted = true
+
+			// Flush buffered deltas
+			for (const bufferedDelta of tracked.deltaBuffer) {
+				events.push({
+					type: "tool_call_delta",
+					id: tracked.id,
+					delta: bufferedDelta,
+				})
+			}
+			tracked.deltaBuffer = []
+		}
+
+		// Emit delta event for argument chunks
+		if (args) {
+			if (tracked.hasStarted) {
+				events.push({
+					type: "tool_call_delta",
+					id: tracked.id,
+					delta: args,
+				})
+			} else {
+				tracked.deltaBuffer.push(args)
+			}
+		}
+
+		return events
+	}
+
+	/**
+	 * Process stream finish reason.
+	 * Emits end events when finish_reason is 'tool_calls'.
+	 */
+	public static processFinishReason(finishReason: string | null | undefined): ToolCallStreamEvent[] {
+		const events: ToolCallStreamEvent[] = []
+
+		if (finishReason === "tool_calls" && this.rawChunkTracker.size > 0) {
+			for (const [, tracked] of this.rawChunkTracker.entries()) {
+				events.push({
+					type: "tool_call_end",
+					id: tracked.id,
+				})
+			}
+			this.rawChunkTracker.clear()
+		}
+
+		return events
+	}
+
+	/**
+	 * Finalize any remaining tool calls that weren't explicitly ended.
+	 * Should be called at the end of stream processing.
+	 */
+	public static finalizeRawChunks(): ToolCallStreamEvent[] {
+		const events: ToolCallStreamEvent[] = []
+
+		if (this.rawChunkTracker.size > 0) {
+			for (const [, tracked] of this.rawChunkTracker.entries()) {
+				if (tracked.hasStarted) {
+					events.push({
+						type: "tool_call_end",
+						id: tracked.id,
+					})
+				}
+			}
+			this.rawChunkTracker.clear()
+		}
+
+		return events
+	}
+
+	/**
+	 * Clear all raw chunk tracking state.
+	 * Should be called when a new API request starts.
+	 */
+	public static clearRawChunkState(): void {
+		this.rawChunkTracker.clear()
+	}
+
+	/**
+	 * Start streaming a new tool call.
+	 * Initializes tracking for incremental argument parsing.
+	 * Accepts string to support both ToolName and dynamic MCP tools (mcp_serverName_toolName).
+	 */
+	public static startStreamingToolCall(id: string, name: string): void {
+		this.streamingToolCalls.set(id, {
+			id,
+			name,
+			argumentsAccumulator: "",
+		})
+	}
+
+	/**
+	 * Clear all streaming tool call state.
+	 * Should be called when a new API request starts to prevent memory leaks
+	 * from interrupted streams.
+	 */
+	public static clearAllStreamingToolCalls(): void {
+		this.streamingToolCalls.clear()
+	}
+
+	/**
+	 * Check if there are any active streaming tool calls.
+	 * Useful for debugging and testing.
+	 */
+	public static hasActiveStreamingToolCalls(): boolean {
+		return this.streamingToolCalls.size > 0
+	}
+
+	/**
+	 * Process a chunk of JSON arguments for a streaming tool call.
+	 * Uses partial-json-parser to extract values from incomplete JSON immediately.
+	 * Returns a partial ToolUse with currently parsed parameters.
+	 */
+	public static processStreamingChunk(id: string, chunk: string): ToolUse | null {
+		const toolCall = this.streamingToolCalls.get(id)
+		if (!toolCall) {
+			console.warn(`[NativeToolCallParser] Received chunk for unknown tool call: ${id}`)
+			return null
+		}
+
+		// Accumulate the JSON string
+		toolCall.argumentsAccumulator += chunk
+
+		// For dynamic MCP tools, we don't return partial updates - wait for final
+		if (toolCall.name.startsWith("mcp_")) {
+			return null
+		}
+
+		// Parse whatever we can from the incomplete JSON!
+		// partial-json-parser extracts partial values (strings, arrays, objects) immediately
+		try {
+			const partialArgs = parseJSON(toolCall.argumentsAccumulator)
+
+			// Create partial ToolUse with extracted values
+			return this.createPartialToolUse(
+				toolCall.id,
+				toolCall.name as ToolName,
+				partialArgs || {},
+				true, // partial
+			)
+		} catch {
+			// Even partial-json-parser can fail on severely malformed JSON
+			// Return null and wait for next chunk
+			return null
+		}
+	}
+
+	/**
+	 * Finalize a streaming tool call.
+	 * Parses the complete JSON and returns the final ToolUse or McpToolUse.
+	 */
+	public static finalizeStreamingToolCall(id: string): ToolUse | McpToolUse | null {
+		const toolCall = this.streamingToolCalls.get(id)
+		if (!toolCall) {
+			console.warn(`[NativeToolCallParser] Attempting to finalize unknown tool call: ${id}`)
+			return null
+		}
+
+		// Parse the complete accumulated JSON
+		// Cast to any for the name since parseToolCall handles both ToolName and dynamic MCP tools
+		const finalToolUse = this.parseToolCall({
+			id: toolCall.id,
+			name: toolCall.name as ToolName,
+			arguments: toolCall.argumentsAccumulator,
+		})
+
+		// Clean up streaming state
+		this.streamingToolCalls.delete(id)
+
+		return finalToolUse
+	}
+
+	/**
+	 * Convert raw file entries from API (with line_ranges) to FileEntry objects
+	 * (with lineRanges). Handles multiple formats for compatibility:
+	 *
+	 * New tuple format: { path: string, line_ranges: [[1, 50], [100, 150]] }
+	 * Object format: { path: string, line_ranges: [{ start: 1, end: 50 }] }
+	 * Legacy string format: { path: string, line_ranges: ["1-50"] }
+	 *
+	 * Returns: { path: string, lineRanges: [{ start: 1, end: 50 }] }
+	 */
+	private static convertFileEntries(files: any[]): FileEntry[] {
+		return files.map((file: any) => {
+			const entry: FileEntry = { path: file.path }
+			if (file.line_ranges && Array.isArray(file.line_ranges)) {
+				entry.lineRanges = file.line_ranges
+					.map((range: any) => {
+						// Handle tuple format: [start, end]
+						if (Array.isArray(range) && range.length >= 2) {
+							return { start: Number(range[0]), end: Number(range[1]) }
+						}
+						// Handle object format: { start: number, end: number }
+						if (typeof range === "object" && range !== null && "start" in range && "end" in range) {
+							return { start: Number(range.start), end: Number(range.end) }
+						}
+						// Handle legacy string format: "1-50"
+						if (typeof range === "string") {
+							const match = range.match(/^(\d+)-(\d+)$/)
+							if (match) {
+								return { start: parseInt(match[1], 10), end: parseInt(match[2], 10) }
+							}
+						}
+						return null
+					})
+					.filter(Boolean)
+			}
+			return entry
+		})
+	}
+
+	/**
+	 * Create a partial ToolUse from currently parsed arguments.
+	 * Used during streaming to show progress.
+	 */
+	private static createPartialToolUse(
+		id: string,
+		name: ToolName,
+		partialArgs: Record<string, any>,
+		partial: boolean,
+	): ToolUse | null {
+		// Build legacy params for display
+		// NOTE: For streaming partial updates, we MUST populate params even for complex types
+		// because tool.handlePartial() methods rely on params to show UI updates
+		const params: Partial<Record<ToolParamName, string>> = {}
+
+		for (const [key, value] of Object.entries(partialArgs)) {
+			if (toolParamNames.includes(key as ToolParamName)) {
+				params[key as ToolParamName] = typeof value === "string" ? value : JSON.stringify(value)
+			}
+		}
+
+		// Build partial nativeArgs based on what we have so far
+		let nativeArgs: any = undefined
+
+		switch (name) {
+			case "read_file":
+				if (partialArgs.files && Array.isArray(partialArgs.files)) {
+					nativeArgs = { files: this.convertFileEntries(partialArgs.files) }
+				}
+				break
+
+			case "attempt_completion":
+				if (partialArgs.result) {
+					nativeArgs = { result: partialArgs.result }
+				}
+				break
+
+			case "execute_command":
+				if (partialArgs.command) {
+					nativeArgs = {
+						command: partialArgs.command,
+						cwd: partialArgs.cwd,
+					}
+				}
+				break
+
+			case "insert_content":
+				// For partial tool calls, we build nativeArgs incrementally as fields arrive.
+				// Unlike parseToolCall which validates all required fields, partial parsing
+				// needs to show progress as each field streams in.
+				if (
+					partialArgs.path !== undefined ||
+					partialArgs.line !== undefined ||
+					partialArgs.content !== undefined
+				) {
+					nativeArgs = {
+						path: partialArgs.path,
+						line:
+							typeof partialArgs.line === "number"
+								? partialArgs.line
+								: partialArgs.line !== undefined
+									? parseInt(String(partialArgs.line), 10)
+									: undefined,
+						content: partialArgs.content,
+					}
+				}
+				break
+
+			case "write_to_file":
+				if (partialArgs.path || partialArgs.content || partialArgs.line_count !== undefined) {
+					nativeArgs = {
+						path: partialArgs.path,
+						content: partialArgs.content,
+						line_count:
+							typeof partialArgs.line_count === "number"
+								? partialArgs.line_count
+								: partialArgs.line_count
+									? parseInt(String(partialArgs.line_count), 10)
+									: undefined,
+					}
+				}
+				break
+
+			case "ask_followup_question":
+				if (partialArgs.question !== undefined || partialArgs.follow_up !== undefined) {
+					nativeArgs = {
+						question: partialArgs.question,
+						follow_up: Array.isArray(partialArgs.follow_up) ? partialArgs.follow_up : undefined,
+					}
+				}
+				break
+
+			case "apply_diff":
+				if (partialArgs.path !== undefined || partialArgs.diff !== undefined) {
+					nativeArgs = {
+						path: partialArgs.path,
+						diff: partialArgs.diff,
+					}
+				}
+				break
+
+			case "browser_action":
+				if (partialArgs.action !== undefined) {
+					nativeArgs = {
+						action: partialArgs.action,
+						url: partialArgs.url,
+						coordinate: partialArgs.coordinate,
+						size: partialArgs.size,
+						text: partialArgs.text,
+					}
+				}
+				break
+
+			case "codebase_search":
+				if (partialArgs.query !== undefined) {
+					nativeArgs = {
+						query: partialArgs.query,
+						path: partialArgs.path,
+					}
+				}
+				break
+
+			case "fetch_instructions":
+				if (partialArgs.task !== undefined) {
+					nativeArgs = {
+						task: partialArgs.task,
+					}
+				}
+				break
+
+			case "generate_image":
+				if (partialArgs.prompt !== undefined || partialArgs.path !== undefined) {
+					nativeArgs = {
+						prompt: partialArgs.prompt,
+						path: partialArgs.path,
+						image: partialArgs.image,
+					}
+				}
+				break
+
+			case "list_code_definition_names":
+				if (partialArgs.path !== undefined) {
+					nativeArgs = {
+						path: partialArgs.path,
+					}
+				}
+				break
+
+			case "run_slash_command":
+				if (partialArgs.command !== undefined) {
+					nativeArgs = {
+						command: partialArgs.command,
+						args: partialArgs.args,
+					}
+				}
+				break
+
+			case "search_files":
+				if (partialArgs.path !== undefined || partialArgs.regex !== undefined) {
+					nativeArgs = {
+						path: partialArgs.path,
+						regex: partialArgs.regex,
+						file_pattern: partialArgs.file_pattern,
+					}
+				}
+				break
+
+			case "switch_mode":
+				if (partialArgs.mode_slug !== undefined || partialArgs.reason !== undefined) {
+					nativeArgs = {
+						mode_slug: partialArgs.mode_slug,
+						reason: partialArgs.reason,
+					}
+				}
+				break
+
+			case "update_todo_list":
+				if (partialArgs.todos !== undefined) {
+					nativeArgs = {
+						todos: partialArgs.todos,
+					}
+				}
+				break
+
+			case "use_mcp_tool":
+				if (partialArgs.server_name !== undefined || partialArgs.tool_name !== undefined) {
+					nativeArgs = {
+						server_name: partialArgs.server_name,
+						tool_name: partialArgs.tool_name,
+						arguments: partialArgs.arguments,
+					}
+				}
+				break
+
+			// Add other tools as needed
+			default:
+				break
+		}
+
+		return {
+			type: "tool_use" as const,
+			name,
+			params,
+			partial,
+			nativeArgs,
+		}
+	}
+
 	/**
 	 * Convert a native tool call chunk to a ToolUse object.
 	 *
@@ -27,10 +543,10 @@ export class NativeToolCallParser {
 		id: string
 		name: TName
 		arguments: string
-	}): ToolUse<TName> | null {
+	}): ToolUse<TName> | McpToolUse | null {
 		// Check if this is a dynamic MCP tool (mcp_serverName_toolName)
 		if (typeof toolCall.name === "string" && toolCall.name.startsWith("mcp_")) {
-			return this.parseDynamicMcpTool(toolCall) as ToolUse<TName> | null
+			return this.parseDynamicMcpTool(toolCall)
 		}
 
 		// Validate tool name
@@ -81,7 +597,7 @@ export class NativeToolCallParser {
 			switch (toolCall.name) {
 				case "read_file":
 					if (args.files && Array.isArray(args.files)) {
-						nativeArgs = { files: args.files } as NativeArgsFor<TName>
+						nativeArgs = { files: this.convertFileEntries(args.files) } as NativeArgsFor<TName>
 					}
 					break
 
@@ -236,6 +752,15 @@ export class NativeToolCallParser {
 					}
 					break
 
+				case "access_mcp_resource":
+					if (args.server_name !== undefined && args.uri !== undefined) {
+						nativeArgs = {
+							server_name: args.server_name,
+							uri: args.uri,
+						} as NativeArgsFor<TName>
+					}
+					break
+
 				default:
 					break
 			}
@@ -258,51 +783,44 @@ export class NativeToolCallParser {
 
 	/**
 	 * Parse dynamic MCP tools (named mcp_serverName_toolName).
-	 * These are generated dynamically by getMcpServerTools() and need to be
-	 * converted back to use_mcp_tool format.
+	 * These are generated dynamically by getMcpServerTools() and are returned
+	 * as McpToolUse objects that preserve the original tool name.
+	 *
+	 * In native mode, MCP tools are NOT converted to use_mcp_tool - they keep
+	 * their original name so it appears correctly in API conversation history.
+	 * The use_mcp_tool wrapper is only used in XML mode.
 	 */
-	private static parseDynamicMcpTool(toolCall: {
-		id: string
-		name: string
-		arguments: string
-	}): ToolUse<"use_mcp_tool"> | null {
+	public static parseDynamicMcpTool(toolCall: { id: string; name: string; arguments: string }): McpToolUse | null {
 		try {
-			const args = JSON.parse(toolCall.arguments)
+			// Parse the arguments - these are the actual tool arguments passed directly
+			const args = JSON.parse(toolCall.arguments || "{}")
 
-			// Extract server_name and tool_name from the arguments
-			// The dynamic tool schema includes these as const properties
-			const serverName = args.server_name
-			const toolName = args.tool_name
-			const toolInputProps = args.toolInputProps
-
-			if (!serverName || !toolName) {
-				console.error(`Missing server_name or tool_name in dynamic MCP tool`)
+			// Extract server_name and tool_name from the tool name itself
+			// Format: mcp_serverName_toolName
+			const nameParts = toolCall.name.split("_")
+			if (nameParts.length < 3 || nameParts[0] !== "mcp") {
+				console.error(`Invalid dynamic MCP tool name format: ${toolCall.name}`)
 				return null
 			}
 
-			// Build params for backward compatibility with XML protocol
-			const params: Partial<Record<string, string>> = {
-				server_name: serverName,
-				tool_name: toolName,
+			// Server name is the second part, tool name is everything after
+			const serverName = nameParts[1]
+			const toolName = nameParts.slice(2).join("_")
+
+			if (!serverName || !toolName) {
+				console.error(`Could not extract server_name or tool_name from: ${toolCall.name}`)
+				return null
 			}
 
-			if (toolInputProps) {
-				params.arguments = JSON.stringify(toolInputProps)
-			}
-
-			// Build nativeArgs with properly typed structure
-			const nativeArgs: NativeToolArgs["use_mcp_tool"] = {
-				server_name: serverName,
-				tool_name: toolName,
-				arguments: toolInputProps,
-			}
-
-			const result: ToolUse<"use_mcp_tool"> = {
-				type: "tool_use" as const,
-				name: "use_mcp_tool",
-				params,
+			const result: McpToolUse = {
+				type: "mcp_tool_use" as const,
+				id: toolCall.id,
+				// Keep the original tool name (e.g., "mcp_serverName_toolName") for API history
+				name: toolCall.name,
+				serverName,
+				toolName,
+				arguments: args,
 				partial: false,
-				nativeArgs,
 			}
 
 			return result

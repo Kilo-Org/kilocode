@@ -178,6 +178,10 @@ export function isToolAllowedForMode(
 	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
 		return true
 	}
+
+	// Check if this is a dynamic MCP tool (mcp_serverName_toolName)
+	// These should be allowed if the mcp group is allowed for the mode
+	const isDynamicMcpTool = tool.startsWith("mcp_")
 	if (experiments && Object.values(EXPERIMENT_IDS).includes(tool as ExperimentId)) {
 		if (!experiments[tool]) {
 			return false
@@ -205,6 +209,12 @@ export function isToolAllowedForMode(
 		const options = getGroupOptions(group)
 
 		const groupConfig = TOOL_GROUPS[groupName]
+
+		// Check if this is a dynamic MCP tool and the mcp group is allowed
+		if (isDynamicMcpTool && groupName === "mcp") {
+			// Dynamic MCP tools are allowed if the mcp group is in the mode's groups
+			return true
+		}
 
 		// If the tool isn't in this group's tools, continue to next group
 		if (!groupConfig.tools.includes(tool)) {

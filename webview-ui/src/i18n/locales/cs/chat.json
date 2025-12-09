@@ -332,13 +332,18 @@
 			"heading": "Nové v rozšíření:",
 			"openRouterEmbeddings": "Podpora pro embedding modely OpenRouter",
 			"chutesDynamic": "Chutes nyní dynamicky načítá nejnovější modely",
-			"queuedMessagesFix": "Opravy pro ztracené zprávy ve frontě"
+			"queuedMessagesFix": "Opravy pro ztracené zprávy ve frontě",
+			"browserUse": "Browser Use 2.0 vylepšuje chatové procházení s trvalými relacemi, jasnější zpětnou vazbou, vyhrazeným panelem prohlížeče a přirozenějšími popisy akcí",
+			"cloudPaid": "Poskytovatel Roo Code Cloud nyní nabízí placené modely: kup si kredity a používej je jak pro cloudové agenty, tak pro inferenci"
 		},
 		"cloudAgents": {
 			"heading": "Nové v cloudu:",
 			"prFixer": "Představujeme cloudového agenta <bold>PR Fixer</bold> jako doplněk k PR Reviewer.",
 			"prFixerDescription": "PR Fixer aplikuje vysoce kvalitní změny na tvé PR přímo z GitHubu. Vyvolej ho pomocí komentáře k PR a přečte si celou historii komentářů, aby pochopil kontext, dohody a kompromisy - a pak implementuje správnou opravu.",
-			"tryPrFixerButton": "Vyzkoušet PR Fixer"
+			"tryPrFixerButton": "Vyzkoušet PR Fixer",
+			"specialized": "Představujeme <bold>Explainer</bold>, <bold>Planner</bold> a <bold>Coder</bold> - tři specializované cloudové agenty pro vylepšení tvých pracovních postupů.",
+			"description": "Agenti spolupracují v cloudu a lze je spustit z webu nebo přes Slack.",
+			"tryButton": "Vyzkoušet cloudové agenty"
 		},
 		"careers": "Také <careersLink>nabíráme!</careersLink>",
 		"socialLinks": "Připoj se k nám na <xLink>X</xLink>, <discordLink>Discord</discordLink> nebo <redditLink>r/RooCode</redditLink> 🚀"
@@ -353,6 +358,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
+		"session": "Relace prohlížeče",
 		"rooWantsToUse": "Kilo Code chce použít prohlížeč:",
 		"consoleLogs": "Záznamy konzole",
 		"noNewLogs": "(Žádné nové záznamy)",
@@ -369,10 +375,26 @@
 			"launch": "Spustit prohlížeč na {{url}}",
 			"click": "Kliknout ({{coordinate}})",
 			"type": "Napsat \"{{text}}\"",
+			"press": "Stisknout {{key}}",
 			"scrollDown": "Posunout dolů",
 			"scrollUp": "Posunout nahoru",
+			"hover": "Přejet kurzorem ({{coordinate}})",
 			"close": "Zavřít prohlížeč"
 		}
+	},
+	"browserAnnouncement": {
+		"title": "🌐 Vylepšení Procházení 2.0",
+		"description": "Nová aktualizace přináší vylepšené procházení s trvalými relacemi a jasnějšími popisky akcí."
+	},
+	"browserAnnouncementDesc": "Prozkoumej vylepšené možnosti procházení s lepším ovládáním a zpětnou vazbou.",
+	"browserSession": "Relace prohlížeče",
+	"browserActionPress": "Stisknout klávesy",
+	"browserActionPressDesc": "Stisknout konkrétní klávesy na klávesnici",
+	"browserActionHover": "Přejetí kurzorem",
+	"browserActionHoverDesc": "Přejetí kurzorem přes prvky na stránce",
+	"rooCloudAnnouncement": {
+		"title": "☁️ Roo Code Cloud nyní aktivní!",
+		"description": "Přístup ke cloudovým agentům a pokročilým funkcím prostřednictvím Roo Code Cloud."
 	},
 	"codeblock": {
 		"tooltips": {

@@ -2,4 +2,18 @@ fetchUser(userId)
 	.then(user => {
 		return processUser(user);
 	})
-	.catch(<<<AUTOCOMPLETE_HERE>>>
+	.catch(error => {
+		console.error(error);
+	});
+
+async function fetchUser(userId) {
+	const response = await fetch(`https://api.example.com/users/${userId}`);
+	if (!response.ok) {
+		throw new Error('Failed to fetch user');
+	}
+	return response.json();
+}
+
+async function processUser(user) {
+	console.log(user);
+}

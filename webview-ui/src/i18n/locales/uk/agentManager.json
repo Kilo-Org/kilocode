@@ -6,12 +6,16 @@
 		"emptyState": "Активних агентів поки немає.",
 		"startAgent": "Запустити агента",
 		"removeSession": "Видалити",
-		"refresh": "Оновити"
+		"refresh": "Оновити",
+		"worktree": "Worktree",
+		"local": "Локально",
+		"mainWorkspace": "Основний робочий простір",
+		"readyToMerge": "Готово до злиття"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустити нового агента",
 		"describeTask": "Опишіть завдання, яке має виконати агент.",
-		"placeholderTask": "напр. Створити новий React-компонент для кнопки...",
+		"placeholderTask": "Напиши своє завдання тут...",
 		"stopButton": "Зупинити",
 		"newButton": "Новий",
 		"stopButtonTitle": "Зупинити агента",
@@ -21,6 +25,13 @@
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустити агента з наданим промптом",
 		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка",
+		"runModeLocal": "Локально",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Хмара",
+		"comingSoon": "Незабаром",
+		"runningInWorktree": "Виконується в worktree",
+		"runningLocally": "Виконується локально",
+		"branch": "Гілка",
 		"creatingSession": "Створення сесії...",
 		"waitingForCli": "Ініціалізація сесії агента..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Використання інструменту: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Агент працює в автономному режимі"
+		"autonomous": "Агент працює в автономному режимі",
+		"placeholderTypeTask": "Введи своє завдання тут...",
+		"ariaLabel": "Введення повідомлення",
+		"cancelTitle": "Скасувати агента",
+		"sendTitle": "Надіслати повідомлення",
+		"resumeTitle": "Відновити агента",
+		"hint": "Enter для надсилання, Shift+Enter для нового рядка"
 	},
 	"status": {
 		"running": "виконується",
@@ -45,5 +62,16 @@
 		"stopped": "зупинено",
 		"error": "помилка",
 		"creating": "створення..."
+	},
+	"time": {
+		"justNow": "Щойно",
+		"minuteAgo": "Хвилину тому",
+		"minutesAgo": "{{count}} хвилин тому",
+		"hourAgo": "Годину тому",
+		"hoursAgo": "{{count}} годин тому",
+		"dayAgo": "День тому",
+		"daysAgo": "{{count}} днів тому",
+		"weekAgo": "Тиждень тому",
+		"weeksAgo": "{{count}} тижнів тому"
 	}
 }

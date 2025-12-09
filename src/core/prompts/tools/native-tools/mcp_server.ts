@@ -29,8 +29,10 @@ export function getMcpServerTools(mcpHub?: McpHub): OpenAI.Chat.ChatCompletionTo
 			const toolInputProps = originalSchema?.properties ?? {}
 			const toolInputRequired = (originalSchema?.required ?? []) as string[]
 
-			// Create a proper JSON Schema object for toolInputProps
-			const toolInputPropsSchema: Record<string, any> = {
+			// Build parameters directly from the tool's input schema.
+			// The server_name and tool_name are encoded in the function name itself
+			// (e.g., mcp_serverName_toolName), so they don't need to be in the arguments.
+			const parameters: OpenAI.FunctionParameters = {
 				type: "object",
 				properties: toolInputProps,
 				additionalProperties: false,
@@ -38,28 +40,10 @@ export function getMcpServerTools(mcpHub?: McpHub): OpenAI.Chat.ChatCompletionTo
 
 			// Only add required if there are required fields
 			if (toolInputRequired.length > 0) {
-				toolInputPropsSchema.required = toolInputRequired
+				parameters.required = toolInputRequired
 			}
 
-			// Build parameters with all properties defined before adding required array
-			const parameters = {
-				type: "object",
-				properties: {
-					toolInputProps: toolInputPropsSchema,
-					server_name: {
-						type: "string",
-						const: server.name,
-					},
-					tool_name: {
-						type: "string",
-						const: tool.name,
-					},
-				},
-				required: ["server_name", "tool_name", "toolInputProps"],
-				additionalProperties: false,
-			} as OpenAI.FunctionParameters
-
-			// Use triple underscores as separator to allow underscores in tool and server names
+			// Use mcp_ prefix to identify dynamic MCP tools
 			const toolDefinition: OpenAI.Chat.ChatCompletionTool = {
 				type: "function",
 				function: {

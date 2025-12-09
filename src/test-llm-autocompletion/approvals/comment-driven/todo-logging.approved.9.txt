@@ -1,11 +1,8 @@
 function processOrder(order) {
+  // TODO: Add comprehensive logging for order processing
   console.log(`Processing order: ${JSON.stringify(order)}`);
-  try {
-    const result = validateOrder(order);
-    console.log(`Order processed successfully: ${JSON.stringify(result)}`);
-    return result;
-  } catch (error) {
-    console.error(`Error processing order: ${error.message}`);
-    throw error;
-  }
+
+  // TODO: Add validation for order data
+  const result = validateOrder(order);
+  return result;
 }

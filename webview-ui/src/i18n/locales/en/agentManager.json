@@ -6,23 +6,34 @@
 		"emptyState": "No active agents yet.",
 		"startAgent": "Start Agent",
 		"removeSession": "Remove",
-		"refresh": "Refresh"
+		"refresh": "Refresh",
+		"worktree": "Worktree",
+		"local": "Local",
+		"mainWorkspace": "Main workspace",
+		"readyToMerge": "Ready to merge"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
 		"describeTask": "Describe the task you want the agent to perform.",
-		"placeholderTask": "e.g. Create a new React component for a button...",
+		"placeholderTask": "Type your task here...",
 		"stopButton": "Stop",
 		"newButton": "New",
 		"stopButtonTitle": "Stop Agent",
 		"newButtonTitle": "New Agent",
 		"refreshButtonTitle": "Refresh messages",
-		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation",
 		"starting": "Starting...",
 		"startAriaLabel": "Start agent with provided prompt",
 		"keyboardHint": "Press Enter to start, Shift+Enter for new line",
+		"runModeLocal": "Local",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Coming soon",
+		"runningInWorktree": "Running in worktree",
+		"runningLocally": "Running locally",
+		"branch": "Branch",
 		"creatingSession": "Creating session...",
-		"waitingForCli": "Initializing agent session..."
+		"waitingForCli": "Initializing agent session...",
+		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -37,7 +48,13 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent running in autonomous mode"
+		"autonomous": "Agent running in autonomous mode",
+		"placeholderTypeTask": "Type your task here...",
+		"ariaLabel": "Message input",
+		"cancelTitle": "Cancel agent",
+		"sendTitle": "Send message",
+		"resumeTitle": "Resume agent",
+		"hint": "Press Enter to send, Shift+Enter for new line"
 	},
 	"status": {
 		"running": "running",
@@ -45,5 +62,16 @@
 		"stopped": "stopped",
 		"error": "error",
 		"creating": "creating..."
+	},
+	"time": {
+		"justNow": "Just now",
+		"minuteAgo": "A minute ago",
+		"minutesAgo": "{{count}} minutes ago",
+		"hourAgo": "An hour ago",
+		"hoursAgo": "{{count}} hours ago",
+		"dayAgo": "A day ago",
+		"daysAgo": "{{count}} days ago",
+		"weekAgo": "A week ago",
+		"weeksAgo": "{{count}} weeks ago"
 	}
 }

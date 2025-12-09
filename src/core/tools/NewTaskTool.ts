@@ -30,13 +30,14 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { mode, message, todos } = params
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol, toolCallId } = callbacks
 
 		try {
 			// Validate required parameters.
 			if (!mode) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "mode"))
 				return
 			}
@@ -44,6 +45,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (!message) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "message"))
 				return
 			}
@@ -69,6 +71,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (requireTodos && todos === undefined) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "todos"))
 				return
 			}
@@ -81,6 +84,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("new_task")
+					task.didToolFailInCurrentTurn = true
 					pushToolResult(formatResponse.toolError("Invalid todos format: must be a markdown checklist"))
 					return
 				}
@@ -129,9 +133,20 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				return
 			}
 
-			pushToolResult(
-				`Successfully created new task in ${targetMode.name} mode with message: ${unescapedMessage} and ${todoItems.length} todo items`,
-			)
+			// For native protocol, defer the tool_result until the subtask completes.
+			// The actual result (including what the subtask accomplished) will be pushed
+			// by completeSubtask. This gives the parent task useful information about
+			// what the subtask actually did.
+			if (toolProtocol === "native" && toolCallId) {
+				task.pendingNewTaskToolCallId = toolCallId
+				// Don't push tool_result here - it will come from completeSubtask with the actual result.
+				// The task loop will stay alive because isPaused is true (see Task.ts stack push condition).
+			} else {
+				// For XML protocol, push the result immediately (existing behavior)
+				pushToolResult(
+					`Successfully created new task in ${targetMode.name} mode with message: ${unescapedMessage} and ${todoItems.length} todo items`,
+				)
+			}
 
 			return
 		} catch (error) {

@@ -37,6 +37,30 @@
 		"about": "عن Kilo Code",
 		"autoPurge": "التنظيف التلقائي"
 	},
+	"about": {
+		"bugReport": {
+			"label": "وجدت خطأ؟",
+			"link": "أبلغ عنه على GitHub"
+		},
+		"featureRequest": {
+			"label": "عندك فكرة؟",
+			"link": "شاركها معنا"
+		},
+		"securityIssue": {
+			"label": "اكتشفت ثغرة أمنية؟",
+			"link": "اتبع عملية الإفصاح"
+		},
+		"contact": {
+			"label": "تحتاج تتواصل معنا؟ راسلنا"
+		},
+		"community": "تبي نصائح أو تتسولف مع مستخدمين آخرين؟ انضم لـ <redditLink>reddit.com/r/kilocode</redditLink> أو <discordLink>kilo.ai/discord</discordLink>",
+		"contactSupport": "تواصل مع الدعم",
+		"contactSupportDesc": "احصل على مساعدة من فريق دعم العملاء",
+		"joinCommunity": "انضم للمجتمع",
+		"joinCommunityDesc": "تواصل مع مستخدمين آخرين وشارك الأفكار",
+		"contactAndCommunity": "التواصل والمجتمع",
+		"manageSettings": "إدارة الإعدادات"
+	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
 	},
@@ -71,6 +95,26 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "مفتاح API",
 		"vercelAiGatewayApiKeyPlaceholder": "أدخل مفتاح Vercel AI Gateway API",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "منطقة AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "ملف AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "اسم ملف AWS من ~/.aws/credentials (مطلوب).",
+		"bedrockConfigTitle": "إعدادات Amazon Bedrock",
+		"bedrockConfigDesc": "اضبط بيانات اعتماد AWS والمنطقة لاستخدام نماذج التضمين من Amazon Bedrock",
+		"bedrockEmbeddingModel": "نموذج التضمين",
+		"bedrockEmbeddingModelDesc": "اختر نموذج التضمين من Amazon Bedrock",
+		"bedrockEmbeddingModelPlaceholder": "اختر نموذج التضمين",
+		"bedrockAccessKeyId": "معرّف مفتاح الوصول",
+		"bedrockAccessKeyIdDesc": "معرّف مفتاح وصول AWS الخاص بك",
+		"bedrockAccessKeyIdPlaceholder": "أدخل معرّف مفتاح الوصول",
+		"bedrockSecretAccessKey": "مفتاح الوصول السري",
+		"bedrockSecretAccessKeyDesc": "مفتاح الوصول السري لـ AWS الخاص بك",
+		"bedrockSecretAccessKeyPlaceholder": "أدخل مفتاح الوصول السري",
+		"bedrockSessionToken": "رمز الجلسة",
+		"bedrockSessionTokenDesc": "رمز جلسة AWS (اختياري)",
+		"bedrockSessionTokenPlaceholder": "أدخل رمز الجلسة",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "مفتاح OpenRouter API",
 		"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
@@ -144,13 +188,16 @@
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
 			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
+			"bedrockRegionRequired": "منطقة AWS مطلوبة",
+			"bedrockProfileRequired": "ملف AWS مطلوب",
 			"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
 		},
 		"cancelling": "جارٍ الإلغاء...",
-		"cancelIndexingButton": "إلغاء الفهرسة"
+		"cancelIndexingButton": "إلغاء الفهرسة",
+		"optional": "اختياري"
 	},
 	"autoApproval": {
 		"title": "الموافقة التلقائية",
@@ -310,6 +357,8 @@
 		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
 		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"basetenApiKey": "مفتاح Baseten API",
+		"getBasetenApiKey": "احصل على مفتاح Baseten API",
 		"cerebrasApiKey": "مفتاح Cerebras API",
 		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
 		"chutesApiKey": "مفتاح Chutes",
@@ -828,6 +877,14 @@
 				"label": "تأخير بعد الكتابة للسماح للتشخيصات باكتشاف المشاكل المحتملة",
 				"description": "الوقت للانتظار بعد كتابة الملفات قبل المتابعة، مما يسمح لأدوات التشخيص بمعالجة التغييرات واكتشاف المشاكل."
 			}
+		},
+		"maxGitStatusFiles": {
+			"label": "أقصى ملفات Git",
+			"description": "أقصى عدد ملفات تُدرج في سياق git status. 0 للتعطيل. معلومات الفرع تُعرض دومًا عند > 0."
+		},
+		"gitStatusIncludeUntracked": {
+			"label": "تضمين الملفات غير المتتبعة في Git",
+			"gitStatusIncludeUntrackedDesc": "عند التفعيل، سيتم تضمين الملفات غير المتتبعة في سياق git status"
 		}
 	},
 	"terminal": {
@@ -890,6 +947,20 @@
 	},
 	"advancedSettings": {
 		"title": "الإعدادات المتقدمة"
+	},
+	"toolProtocol": {
+		"label": "بروتوكول استدعاء الأدوات",
+		"description": "اختر كيف يتواصل Kilo Codeo مع API. Native يستخدم API لاستدعاء الدوال الخاص بالمزود، بينما XML يستخدم تعريفات الأدوات بـ XML.",
+		"default": "افتراضي",
+		"xml": "XML",
+		"native": "Native",
+		"currentDefault": "افتراضي: {{protocol}}",
+		"toolProtocolAuto": "تلقائي",
+		"toolProtocolAutoDesc": "يختار البروتوكول الأفضل تلقائيًا بناءً على المزود والنموذج",
+		"toolProtocolFunctionCall": "استدعاء الدالة",
+		"toolProtocolFunctionCallDesc": "يستخدم API لاستدعاء الدوال الأصلي للمزود",
+		"toolProtocolToolUse": "استخدام الأداة",
+		"toolProtocolToolUseDesc": "يستخدم تنسيق XML لاستدعاء الأدوات"
 	},
 	"advanced": {
 		"diff": {
@@ -981,6 +1052,8 @@
 			"name": "تمكين إنشاء صور بالذكاء الاصطناعي",
 			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء صور من النصوص. يتطلب مفتاح Kilo Code أو OpenRouter API.",
 			"apiProvider": "مزود API",
+			"providerLabel": "المزوّد",
+			"providerDescription": "اختر المزوّد المراد استخدامه لإنشاء الصور.",
 			"openRouterApiKeyLabel": "مفتاح OpenRouter API",
 			"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 			"kiloCodeApiKeyLabel": "مفتاح Kilo Code API",
@@ -996,6 +1069,14 @@
 			"name": "تمكين أوامر الشرطة المدفوعة بالنموذج",
 			"description": "عند التمكين، يمكن لـ Kilo Code تشغيل أوامر الشرطة الخاصة بك لتنفيذ سير العمل."
 		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "استدعاءات أدوات متوازية",
+			"description": "عند التفعيل، يمكن للبروتوكول الأصلي تنفيذ عدة أدوات في دور رسالة واحدة."
+		},
+		"experimentalParallelToolCalls": "استدعاءات أدوات متوازية تجريبية",
+		"experimentalParallelToolCallsDesc": "يسمح بتنفيذ عدة أدوات في نفس الوقت",
+		"experimentalParallelToolCallsInfo": "هذه الميزة تجريبية وقد تسبب سلوكًا غير متوقع",
+		"experimentalParallelToolCallsWarning": "⚠️ قد تسبب هذه الميزة سلوكًا غير متوقع",
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "تمكين ميزات الإكمال التلقائي للحصول على اقتراحات كود سريعة وتحسينات مباشرة في محررك. يتضمن المهمة السريعة (Cmd+I) للتغييرات المستهدفة والإكمال التلقائي للتحسينات السياقية."

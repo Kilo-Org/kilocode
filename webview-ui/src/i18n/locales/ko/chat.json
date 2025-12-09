@@ -301,21 +301,21 @@
 			"goToSettingsButton": "설정으로 이동"
 		},
 		"release": {
-			"heading": "확장 프로그램의 새로운 기능:",
-			"openRouterEmbeddings": "OpenRouter 임베딩 모델 지원",
-			"chutesDynamic": "Chutes가 이제 최신 모델을 동적으로 로드합니다",
-			"queuedMessagesFix": "대기 중인 메시지가 손실되는 문제 수정"
+			"heading": "이 버전의 새로운 기능:",
+			"browserUse": "Browser Use 2.0은 지속적인 세션, 더 명확한 피드백, 전용 브라우저 패널, 더 자연스러운 작업 설명을 통해 채팅 내 브라우징 경험을 업그레이드합니다",
+			"cloudPaid": "Roo Code Cloud 제공업체는 이제 클라우드 에이전트와 추론 모두에 사용할 수 있는 크레딧을 구매할 수 있도록 지원합니다"
 		},
 		"cloudAgents": {
 			"heading": "클라우드의 새로운 기능:",
-			"prFixer": "PR 리뷰어를 보완하는 <bold>PR Fixer</bold> 클라우드 에이전트를 소개합니다.",
-			"prFixerDescription": "Roo Code의 PR Fixer는 GitHub에서 직접 PR에 고품질 변경사항을 적용합니다. PR 댓글을 통해 호출하면 전체 댓글 기록을 읽어 컨텍스트, 합의사항 및 트레이드오프를 이해한 다음 올바른 수정을 구현합니다.",
-			"tryPrFixerButton": "PR Fixer 사용해보기"
+			"specialized": "<bold>Explainer</bold>, <bold>Planner</bold>, <bold>Coder</bold> 세 가지 전문 클라우드 에이전트를 소개합니다. 워크플로우를 향상시킵니다.",
+			"description": "에이전트는 클라우드에서 함께 작동하며 웹 또는 Slack을 통해 트리거할 수 있습니다.",
+			"tryButton": "클라우드 에이전트 사용해보기"
 		},
 		"careers": "그리고, <careersLink>채용 중입니다!</careersLink>",
 		"socialLinks": "<xLink>X</xLink>, <discordLink>Discord</discordLink>, 또는 <redditLink>r/RooCode</redditLink>에서 만나요 🚀"
 	},
 	"browser": {
+		"session": "브라우저 세션",
 		"rooWantsToUse": "Kilo Code가 브라우저를 사용하고 싶어합니다",
 		"consoleLogs": "콘솔 로그",
 		"noNewLogs": "(새 로그 없음)",
@@ -332,8 +332,10 @@
 			"launch": "{{url}}에서 브라우저 실행",
 			"click": "클릭 ({{coordinate}})",
 			"type": "입력 \"{{text}}\"",
+			"press": "{{key}} 누르기",
 			"scrollDown": "아래로 스크롤",
 			"scrollUp": "위로 스크롤",
+			"hover": "가리키기 ({{coordinate}})",
 			"close": "브라우저 닫기"
 		}
 	},

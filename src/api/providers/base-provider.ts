@@ -19,6 +19,75 @@ export abstract class BaseProvider implements ApiHandler {
 	abstract getModel(): { id: string; info: ModelInfo }
 
 	/**
+	 * Converts an array of tools to be compatible with OpenAI's strict mode.
+	 * Filters for function tools and applies schema conversion to their parameters.
+	 */
+	protected convertToolsForOpenAI(tools: any[] | undefined): any[] | undefined {
+		if (!tools) {
+			return undefined
+		}
+
+		return tools.map((tool) =>
+			tool.type === "function"
+				? {
+						...tool,
+						function: {
+							...tool.function,
+							parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
+						},
+					}
+				: tool,
+		)
+	}
+
+	/**
+	 * Converts tool schemas to be compatible with OpenAI's strict mode by:
+	 * - Ensuring all properties are in the required array (strict mode requirement)
+	 * - Converting nullable types (["type", "null"]) to non-nullable ("type")
+	 * - Recursively processing nested objects and arrays
+	 *
+	 * This matches the behavior of ensureAllRequired in openai-native.ts
+	 */
+	protected convertToolSchemaForOpenAI(schema: any): any {
+		if (!schema || typeof schema !== "object" || schema.type !== "object") {
+			return schema
+		}
+
+		const result = { ...schema }
+
+		if (result.properties) {
+			const allKeys = Object.keys(result.properties)
+			// OpenAI strict mode requires ALL properties to be in required array
+			result.required = allKeys
+
+			// Recursively process nested objects and convert nullable types
+			const newProps = { ...result.properties }
+			for (const key of allKeys) {
+				const prop = newProps[key]
+
+				// Handle nullable types by removing null
+				if (prop && Array.isArray(prop.type) && prop.type.includes("null")) {
+					const nonNullTypes = prop.type.filter((t: string) => t !== "null")
+					prop.type = nonNullTypes.length === 1 ? nonNullTypes[0] : nonNullTypes
+				}
+
+				// Recursively process nested objects
+				if (prop && prop.type === "object") {
+					newProps[key] = this.convertToolSchemaForOpenAI(prop)
+				} else if (prop && prop.type === "array" && prop.items?.type === "object") {
+					newProps[key] = {
+						...prop,
+						items: this.convertToolSchemaForOpenAI(prop.items),
+					}
+				}
+			}
+			result.properties = newProps
+		}
+
+		return result
+	}
+
+	/**
 	 * Default token counting implementation using tiktoken.
 	 * Providers can override this to use their native token counting endpoints.
 	 *
