@@ -158,7 +158,15 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				}
 			}
 		}
-	}, [options.prompt, taskResumedViaSession, hasActiveTask])
+	}, [
+		options.prompt,
+		taskResumedViaSession,
+		hasActiveTask,
+		configValidation.valid,
+		executeCommand,
+		sendUserMessage,
+		onExit,
+	])
 
 	// Simplified submit handler that delegates to appropriate hook
 	const handleSubmit = useCallback(
