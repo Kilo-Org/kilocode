@@ -11,7 +11,7 @@ import { logger } from "../../../utils/logging"
 import { getKiloBaseUriFromToken } from "../../../../packages/types/src/kilocode/kilocode"
 import { fetchWithRetries } from "../../../shared/http"
 
-export async function isEnabled(organizationId: string | null, kilocodeToken: string): Promise<boolean> {
+export async function isEnabled(kilocodeToken: string, organizationId: string | null): Promise<boolean> {
 	try {
 		const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 		let url = `${baseUrl}/api/code-indexing/enabled`

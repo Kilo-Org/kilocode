@@ -201,7 +201,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	async start() {
 		console.log("[ManagedIndexer] Starting ManagedIndexer")
 
-		const config = this.fetchConfig()
+		this.fetchConfig()
 		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
 
 		if (!kilocodeToken) {
@@ -237,7 +237,7 @@ export class ManagedIndexer implements vscode.Disposable {
 			}
 		}
 
-		this.enabledViaApi = await isEnabled(config.kilocodeOrganizationId, kilocodeToken)
+		this.enabledViaApi = await isEnabled(kilocodeToken, kilocodeOrganizationId ?? null)
 		console.debug(`[ManagedIndexer] Starting indexer. config: ${this.enabledViaConfig}, API: ${this.enabledViaApi}`)
 
 		this.sendStateToWebview()
