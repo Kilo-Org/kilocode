@@ -1,0 +1,22 @@
+class User {
+	constructor(username, email, role) {
+		this.username = username;
+		this.email = email;
+		this.role = role;
+	}
+}
+
+class Admin extends User {
+	constructor(username, email, role, permissions) {
+		super(username, email, role);
+		this.permissions = permissions;
+	}
+}
+
+const userOne = new User("mario", "mario@thenetninja.co.uk", "admin");
+const userTwo = new User("luigi", "luigi@thenetninja.co.uk", "user");
+const userThree = new Admin("shaun", "shaun@thenetninja.co.uk", "admin", [
+	"delete",
+]);
+
+console.log(userOne, userTwo, userThree);

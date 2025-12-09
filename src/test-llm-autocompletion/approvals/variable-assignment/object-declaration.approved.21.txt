@@ -1,0 +1,10 @@
+const config = require('../config/config');
+const jwt = require('jsonwebtoken');
+
+const generateToken = (user) => {
+    return jwt.sign(user, config.secret, {
+        expiresIn: 86400 // expires in 24 hours
+    });
+}
+
+module.exports = generateToken;

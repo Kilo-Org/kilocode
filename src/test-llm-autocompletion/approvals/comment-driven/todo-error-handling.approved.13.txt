@@ -1,0 +1,10 @@
+function processData(data) {
+  // TODO: Implement error handling for invalid data
+  const processedData = data.map((item) => {
+    if (typeof item !== 'number') {
+      throw new Error('Invalid data type. Expected number.');
+    }
+    return item * 2;
+  });
+  return processedData;
+}

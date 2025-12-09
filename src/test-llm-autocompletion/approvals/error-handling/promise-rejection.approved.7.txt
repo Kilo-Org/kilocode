@@ -1,0 +1,10 @@
+fetchUser(userId)
+	.then(user => {
+		return processUser(user);
+	})
+	.catch(err => {
+		return fetchAdmin();
+	})
+	.then(helpdeskMember => {
+		console.log('Helpdesk: ', helpdeskMember.name);
+	});

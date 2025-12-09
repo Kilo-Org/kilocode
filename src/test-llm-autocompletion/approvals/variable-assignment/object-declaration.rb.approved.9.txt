@@ -1,0 +1,10 @@
+user = {
+	name: 'John',
+	email: 'john@doe.com',
+	password: 'password'
+}
+
+user[:name] = 'Jane'
+user[:email] = 'jane@doe.com'
+
+puts user
