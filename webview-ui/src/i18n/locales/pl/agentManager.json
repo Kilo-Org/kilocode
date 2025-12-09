@@ -6,12 +6,16 @@
 		"emptyState": "Brak aktywnych agentów.",
 		"startAgent": "Uruchom agenta",
 		"removeSession": "Usuń",
-		"refresh": "Odśwież"
+		"refresh": "Odśwież",
+		"worktree": "Worktree",
+		"local": "Lokalny",
+		"mainWorkspace": "Główny obszar roboczy",
+		"readyToMerge": "Gotowy do scalenia"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
 		"describeTask": "Opisz zadanie, które agent ma wykonać.",
-		"placeholderTask": "np. Utwórz nowy komponent React dla przycisku...",
+		"placeholderTask": "Wpisz swoje zadanie tutaj...",
 		"stopButton": "Zatrzymaj",
 		"newButton": "Nowy",
 		"stopButtonTitle": "Zatrzymaj agenta",
@@ -21,6 +25,13 @@
 		"starting": "Uruchamianie...",
 		"startAriaLabel": "Uruchom agenta z podanym poleceniem",
 		"keyboardHint": "Naciśnij Enter, aby uruchomić, Shift+Enter dla nowej linii",
+		"runModeLocal": "Lokalny",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Chmura",
+		"comingSoon": "Wkrótce",
+		"runningInWorktree": "Działa w worktree",
+		"runningLocally": "Działa lokalnie",
+		"branch": "Gałąź",
 		"creatingSession": "Tworzenie sesji...",
 		"waitingForCli": "Inicjalizacja sesji agenta..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent działa w trybie autonomicznym"
+		"autonomous": "Agent działa w trybie autonomicznym",
+		"placeholderTypeTask": "Wpisz swoje zadanie tutaj...",
+		"ariaLabel": "Pole wiadomości",
+		"cancelTitle": "Anuluj agenta",
+		"sendTitle": "Wyślij wiadomość",
+		"resumeTitle": "Wznów agenta",
+		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"
 	},
 	"status": {
 		"running": "działa",
@@ -45,5 +62,16 @@
 		"stopped": "zatrzymano",
 		"error": "błąd",
 		"creating": "tworzenie..."
+	},
+	"time": {
+		"justNow": "Przed chwilą",
+		"minuteAgo": "Minutę temu",
+		"minutesAgo": "{{count}} minut temu",
+		"hourAgo": "Godzinę temu",
+		"hoursAgo": "{{count}} godzin temu",
+		"dayAgo": "Dzień temu",
+		"daysAgo": "{{count}} dni temu",
+		"weekAgo": "Tydzień temu",
+		"weeksAgo": "{{count}} tygodni temu"
 	}
 }

@@ -3,6 +3,8 @@ import { Provider } from "jotai"
 import { useAgentManagerMessages } from "../state/hooks"
 import { SessionSidebar } from "./SessionSidebar"
 import { SessionDetail } from "./SessionDetail"
+import { TooltipProvider } from "../../../components/ui/tooltip"
+import { STANDARD_TOOLTIP_DELAY } from "../../../components/ui/standard-tooltip"
 import "./AgentManagerApp.css"
 
 /**
@@ -12,7 +14,9 @@ import "./AgentManagerApp.css"
 export function AgentManagerApp() {
 	return (
 		<Provider>
-			<AgentManagerContent />
+			<TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>
+				<AgentManagerContent />
+			</TooltipProvider>
 		</Provider>
 	)
 }

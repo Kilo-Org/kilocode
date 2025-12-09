@@ -87,7 +87,7 @@ export class TestRunner {
 		return !result.isApproved && result.newOutput === true && this.skipApproval
 	}
 
-	async runAllTests(): Promise<void> {
+	async runAllTests(numRuns: number = 1): Promise<void> {
 		const model = process.env.LLM_MODEL || "mistralai/codestral-2508"
 		const strategyName = this.tester.getName()
 
@@ -95,6 +95,9 @@ export class TestRunner {
 		console.log("Provider: kilocode")
 		console.log("Model:", model)
 		console.log("Strategy:", strategyName)
+		if (numRuns > 1) {
+			console.log("Runs per test:", numRuns)
+		}
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
 		}
@@ -112,53 +115,84 @@ export class TestRunner {
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
-
-				const result = await this.runTest(testCase)
-				result.strategyName = strategyName
-				this.results.push(result)
-
-				if (result.isApproved) {
-					console.log("✓ PASSED")
-					if (result.newOutput) {
-						console.log(`    (New output approved)`)
-					}
-				} else if (this.isUnknownResult(result)) {
-					console.log("? UNKNOWN")
-					console.log(`    (New output without approval)`)
+				if (numRuns > 1) {
+					console.log(`  Running ${testCase.name} [${strategyName}] (${numRuns} runs)...`)
 				} else {
-					console.log("✗ FAILED")
-					if (result.error) {
-						console.log(`    Error: ${result.error}`)
-					} else {
-						console.log(`    Input:`)
-						console.log("    " + "─".repeat(76))
-						console.log(
-							testCase.input
-								.split("\n")
-								.map((l) => "    " + l)
-								.join("\n"),
-						)
-						console.log("    " + "─".repeat(76))
-						console.log(`    Got:`)
-						console.log("    " + "─".repeat(76))
-						console.log(
-							(result.actualValue || "")
-								.split("\n")
-								.map((l) => "    " + l)
-								.join("\n"),
-						)
-						console.log("    " + "─".repeat(76))
+					process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
+				}
 
-						if (this.verbose && result.completion) {
-							console.log("    Full LLM Response:")
+				const runResults: TestResult[] = []
+				for (let run = 0; run < numRuns; run++) {
+					const result = await this.runTest(testCase)
+					result.strategyName = strategyName
+					runResults.push(result)
+					this.results.push(result)
+
+					if (numRuns > 1) {
+						const status = result.isApproved ? "✓" : this.isUnknownResult(result) ? "?" : "✗"
+						process.stdout.write(`    Run ${run + 1}/${numRuns}: ${status}`)
+						if (result.llmRequestDuration) {
+							process.stdout.write(` (${result.llmRequestDuration.toFixed(0)}ms)`)
+						}
+						console.log()
+					}
+				}
+
+				// For single run, show result inline; for multiple runs, show summary
+				if (numRuns === 1) {
+					const result = runResults[0]
+					if (result.isApproved) {
+						console.log("✓ PASSED")
+						if (result.newOutput) {
+							console.log(`    (New output approved)`)
+						}
+					} else if (this.isUnknownResult(result)) {
+						console.log("? UNKNOWN")
+						console.log(`    (New output without approval)`)
+					} else {
+						console.log("✗ FAILED")
+						if (result.error) {
+							console.log(`    Error: ${result.error}`)
+						} else {
+							console.log(`    Input:`)
+							console.log("    " + "─".repeat(76))
 							console.log(
-								result.completion
+								testCase.input
 									.split("\n")
-									.map((l) => "      " + l)
+									.map((l) => "    " + l)
 									.join("\n"),
 							)
+							console.log("    " + "─".repeat(76))
+							console.log(`    Got:`)
+							console.log("    " + "─".repeat(76))
+							console.log(
+								(result.actualValue || "")
+									.split("\n")
+									.map((l) => "    " + l)
+									.join("\n"),
+							)
+							console.log("    " + "─".repeat(76))
+
+							if (this.verbose && result.completion) {
+								console.log("    Full LLM Response:")
+								console.log(
+									result.completion
+										.split("\n")
+										.map((l) => "      " + l)
+										.join("\n"),
+								)
+							}
 						}
+					}
+				} else {
+					// Summary for multiple runs
+					const passed = runResults.filter((r) => r.isApproved).length
+					const failed = runResults.filter((r) => !r.isApproved && !this.isUnknownResult(r)).length
+					const unknown = runResults.filter((r) => this.isUnknownResult(r)).length
+					const passRate = ((passed / numRuns) * 100).toFixed(0)
+					console.log(`    Summary: ${passed}/${numRuns} passed (${passRate}%)`)
+					if (failed > 0) {
+						console.log(`    Failed: ${failed}, Unknown: ${unknown}`)
 					}
 				}
 
@@ -259,7 +293,7 @@ export class TestRunner {
 		process.exit(failed > 0 ? 1 : 0)
 	}
 
-	async runSingleTest(testName: string): Promise<void> {
+	async runSingleTest(testName: string, numRuns: number = 10): Promise<void> {
 		const testCase = testCases.find((tc) => tc.name === testName)
 		if (!testCase) {
 			console.error(`Test "${testName}" not found`)
@@ -267,8 +301,6 @@ export class TestRunner {
 			testCases.forEach((tc) => console.log(`  - ${tc.name}`))
 			process.exit(1)
 		}
-
-		const numRuns = 10
 
 		console.log(`\n🧪 Running Single Test: ${testName} (${numRuns} times)\n`)
 		console.log("Category:", testCase.category)
@@ -415,7 +447,17 @@ async function main() {
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
 	const useOpusApproval = args.includes("--opus-approval") || args.includes("-oa")
 
-	const command = args.find((arg) => !arg.startsWith("-"))
+	// Parse --runs or -r option
+	let numRuns = 1
+	const runsIndex = args.findIndex((arg) => arg === "--runs" || arg === "-r")
+	if (runsIndex !== -1 && args[runsIndex + 1]) {
+		const parsedRuns = parseInt(args[runsIndex + 1], 10)
+		if (!isNaN(parsedRuns) && parsedRuns > 0) {
+			numRuns = parsedRuns
+		}
+	}
+
+	const command = args.find((arg) => !arg.startsWith("-") && args.indexOf(arg) !== runsIndex + 1)
 
 	const runner = new TestRunner(verbose, skipApproval, useOpusApproval)
 
@@ -423,9 +465,9 @@ async function main() {
 		if (command === "clean") {
 			await runner.cleanApprovals()
 		} else if (command) {
-			await runner.runSingleTest(command)
+			await runner.runSingleTest(command, numRuns)
 		} else {
-			await runner.runAllTests()
+			await runner.runAllTests(numRuns)
 		}
 	} catch (error) {
 		console.error("\n❌ Fatal Error:", error)

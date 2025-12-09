@@ -6,12 +6,16 @@
 		"emptyState": "لا توجد وكلاء نشطين بعد.",
 		"startAgent": "بدء الوكيل",
 		"removeSession": "إزالة",
-		"refresh": "تحديث"
+		"refresh": "تحديث",
+		"worktree": "Worktree",
+		"local": "محلي",
+		"mainWorkspace": "مساحة العمل الرئيسية",
+		"readyToMerge": "جاهز للدمج"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
 		"describeTask": "صف المهمة التي تريد أن يقوم بها الوكيل.",
-		"placeholderTask": "مثال: إنشاء مكون React جديد لزر...",
+		"placeholderTask": "اكتب مهمتك هنا...",
 		"stopButton": "إيقاف",
 		"newButton": "جديد",
 		"stopButtonTitle": "إيقاف الوكيل",
@@ -21,6 +25,13 @@
 		"starting": "جاري البدء...",
 		"startAriaLabel": "بدء الوكيل بالأمر المقدم",
 		"keyboardHint": "اضغط Enter للبدء، Shift+Enter لسطر جديد",
+		"runModeLocal": "محلي",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "سحابي",
+		"comingSoon": "قريباً",
+		"runningInWorktree": "يعمل في Worktree",
+		"runningLocally": "يعمل محلياً",
+		"branch": "فرع",
 		"creatingSession": "جاري إنشاء الجلسة...",
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "الوكيل يعمل في الوضع المستقل"
+		"autonomous": "الوكيل يعمل في الوضع المستقل",
+		"placeholderTypeTask": "اكتب مهمتك هنا...",
+		"ariaLabel": "إدخال الرسالة",
+		"cancelTitle": "إلغاء الوكيل",
+		"sendTitle": "إرسال الرسالة",
+		"resumeTitle": "استئناف الوكيل",
+		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد"
 	},
 	"status": {
 		"running": "قيد التشغيل",
@@ -45,5 +62,16 @@
 		"stopped": "متوقف",
 		"error": "خطأ",
 		"creating": "جاري الإنشاء..."
+	},
+	"time": {
+		"justNow": "الآن",
+		"minuteAgo": "قبل دقيقة",
+		"minutesAgo": "قبل {{count}} دقائق",
+		"hourAgo": "قبل ساعة",
+		"hoursAgo": "قبل {{count}} ساعات",
+		"dayAgo": "قبل يوم",
+		"daysAgo": "قبل {{count}} أيام",
+		"weekAgo": "قبل أسبوع",
+		"weeksAgo": "قبل {{count}} أسابيع"
 	}
 }

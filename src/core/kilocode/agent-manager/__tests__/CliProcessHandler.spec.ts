@@ -31,6 +31,7 @@ function createMockProcess() {
  */
 function createMockCallbacks(): CliProcessHandlerCallbacks & {
 	onLog: ReturnType<typeof vi.fn>
+	onDebugLog: ReturnType<typeof vi.fn>
 	onSessionLog: ReturnType<typeof vi.fn>
 	onStateChanged: ReturnType<typeof vi.fn>
 	onPendingSessionChanged: ReturnType<typeof vi.fn>
@@ -40,6 +41,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 } {
 	return {
 		onLog: vi.fn(),
+		onDebugLog: vi.fn(),
 		onSessionLog: vi.fn(),
 		onStateChanged: vi.fn(),
 		onPendingSessionChanged: vi.fn(),
@@ -78,11 +80,11 @@ describe("CliProcessHandler", () => {
 	describe("spawnProcess", () => {
 		it("spawns a CLI process with correct arguments", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			expect(spawnMock).toHaveBeenCalledWith(
 				"/path/to/kilocode",
-				["--auto", "--json", "--workspace=/workspace", "test prompt"],
+				["--json-io", "--workspace=/workspace", "test prompt"],
 				expect.objectContaining({
 					cwd: "/workspace",
 					stdio: ["pipe", "pipe", "pipe"],
@@ -93,7 +95,7 @@ describe("CliProcessHandler", () => {
 
 		it("sets pending session in registry", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			expect(registry.pendingSession).not.toBeNull()
 			expect(registry.pendingSession?.prompt).toBe("test prompt")
@@ -101,7 +103,7 @@ describe("CliProcessHandler", () => {
 
 		it("notifies callbacks about pending session", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			expect(callbacks.onPendingSessionChanged).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -111,18 +113,33 @@ describe("CliProcessHandler", () => {
 			)
 		})
 
-		it("logs spawn information", () => {
+		it("logs spawn information to debug log", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Command:"))
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Working dir:"))
-			expect(callbacks.onLog).toHaveBeenCalledWith(expect.stringContaining("Process PID:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Command:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Working dir:"))
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith(expect.stringContaining("Process PID:"))
+		})
+
+		it("resumes session with provided sessionId and marks running", () => {
+			const onCliEvent = vi.fn()
+
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"resume prompt",
+				{ sessionId: "sess-1" },
+				onCliEvent,
+			)
+
+			expect(registry.getSession("sess-1")?.status).toBe("running")
+			expect(callbacks.onStateChanged).toHaveBeenCalled()
 		})
 
 		it("sets environment variables to disable colors", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			expect(spawnMock).toHaveBeenCalledWith(
 				expect.any(String),
@@ -140,7 +157,7 @@ describe("CliProcessHandler", () => {
 	describe("session_created event handling", () => {
 		it("creates session when session_created event is received", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Emit session_created event
 			const sessionCreatedEvent =
@@ -159,7 +176,7 @@ describe("CliProcessHandler", () => {
 
 		it("clears pending session and notifies callbacks", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			const sessionCreatedEvent = '{"event":"session_created","sessionId":"cli-session-123"}\n'
 			mockProcess.stdout.emit("data", Buffer.from(sessionCreatedEvent))
@@ -169,9 +186,22 @@ describe("CliProcessHandler", () => {
 			expect(callbacks.onStateChanged).toHaveBeenCalled()
 		})
 
+		it("captures api_req_started before session_created and forwards flag", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const apiStartedChunk = JSON.stringify({ streamEventType: "kilocode", payload: { say: "api_req_started" } })
+			mockProcess.stdout.emit("data", Buffer.from(apiStartedChunk + "\n"))
+
+			const sessionCreated = '{"event":"session_created","sessionId":"session-1"}\n'
+			mockProcess.stdout.emit("data", Buffer.from(sessionCreated))
+
+			expect(callbacks.onSessionCreated).toHaveBeenCalledWith(true)
+		})
+
 		it("sets session PID from process", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			const sessionCreatedEvent = '{"event":"session_created","sessionId":"cli-session-123"}\n'
 			mockProcess.stdout.emit("data", Buffer.from(sessionCreatedEvent))
@@ -186,7 +216,7 @@ describe("CliProcessHandler", () => {
 
 			// This should not throw and should log a warning
 			// We need to simulate receiving the event without a pending process
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Clear the pending process manually to simulate edge case
 			;(handler as any).pendingProcess = null
@@ -197,12 +227,52 @@ describe("CliProcessHandler", () => {
 
 			expect(registry.getSessions()).toHaveLength(0)
 		})
+
+		it("captures worktree branch from welcome event and applies it on session creation", () => {
+			const onCliEvent = vi.fn()
+			// Start in parallel mode
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			// First, emit welcome event with worktree branch (this arrives before session_created)
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Verify branch was captured in pending process
+			expect((handler as any).pendingProcess.worktreeBranch).toBe("feature/test-branch")
+
+			// Then emit session_created
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			// Verify session was created with the branch info
+			const session = registry.getSession("session-1")
+			expect(session?.parallelMode?.enabled).toBe(true)
+			expect(session?.parallelMode?.branch).toBe("feature/test-branch")
+		})
+
+		it("does not apply worktree branch when not in parallel mode", () => {
+			const onCliEvent = vi.fn()
+			// Start without parallel mode
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event with worktree branch
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Then emit session_created
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			// Session should not have parallelMode info
+			const session = registry.getSession("session-1")
+			expect(session?.parallelMode).toBeUndefined()
+		})
 	})
 
 	describe("event forwarding to active sessions", () => {
 		it("forwards kilocode events to onCliEvent callback", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// First, create the session
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
@@ -225,19 +295,19 @@ describe("CliProcessHandler", () => {
 
 		it("logs status events for pending sessions", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Emit status event before session_created
 			mockProcess.stdout.emit("data", Buffer.from('{"streamEventType":"status","message":"Initializing..."}\n'))
 
-			expect(callbacks.onLog).toHaveBeenCalledWith("Pending session status: Initializing...")
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith("Pending session status: Initializing...")
 		})
 	})
 
 	describe("stopProcess", () => {
 		it("kills the process for a given session", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Create the session
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
@@ -249,7 +319,7 @@ describe("CliProcessHandler", () => {
 
 		it("removes session from active sessions", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -269,7 +339,7 @@ describe("CliProcessHandler", () => {
 	describe("stopAllProcesses", () => {
 		it("kills pending process if exists", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			handler.stopAllProcesses()
 
@@ -281,14 +351,14 @@ describe("CliProcessHandler", () => {
 			const onCliEvent = vi.fn()
 
 			// Start first session
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", undefined, onCliEvent)
 			const proc1 = mockProcess
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			// Start second session
 			const proc2 = createMockProcess()
 			spawnMock.mockReturnValue(proc2)
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", undefined, onCliEvent)
 			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
 
 			handler.stopAllProcesses()
@@ -299,7 +369,7 @@ describe("CliProcessHandler", () => {
 
 		it("clears all active sessions", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			expect(handler.hasProcess("session-1")).toBe(true)
@@ -317,7 +387,7 @@ describe("CliProcessHandler", () => {
 
 		it("returns true for active session", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			expect(handler.hasProcess("session-1")).toBe(true)
@@ -327,7 +397,7 @@ describe("CliProcessHandler", () => {
 	describe("process exit handling", () => {
 		it("handles successful exit (code 0)", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			mockProcess.emit("exit", 0, null)
@@ -340,7 +410,7 @@ describe("CliProcessHandler", () => {
 
 		it("handles error exit (non-zero code)", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			mockProcess.emit("exit", 1, null)
@@ -356,7 +426,7 @@ describe("CliProcessHandler", () => {
 
 		it("handles exit with signal", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			mockProcess.emit("exit", null, "SIGTERM")
@@ -368,7 +438,7 @@ describe("CliProcessHandler", () => {
 
 		it("flushes parser buffer on exit", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			// Send partial data without newline
@@ -387,7 +457,7 @@ describe("CliProcessHandler", () => {
 
 		it("handles pending process exit with error", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Exit before session_created
 			mockProcess.emit("exit", 1, null)
@@ -399,7 +469,7 @@ describe("CliProcessHandler", () => {
 
 		it("handles pending process exit with success (no session created)", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			// Exit with code 0 before session_created (unusual but possible)
 			mockProcess.emit("exit", 0, null)
@@ -412,7 +482,7 @@ describe("CliProcessHandler", () => {
 	describe("process error handling", () => {
 		it("handles spawn error for pending process", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			mockProcess.emit("error", new Error("spawn ENOENT"))
 
@@ -423,7 +493,7 @@ describe("CliProcessHandler", () => {
 
 		it("handles error for active session", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			mockProcess.emit("error", new Error("connection reset"))
@@ -435,79 +505,21 @@ describe("CliProcessHandler", () => {
 		})
 	})
 
-	describe("timeout handling", () => {
-		it("times out pending session after 2 minutes", () => {
-			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
-
-			// Advance time by 2 minutes
-			vi.advanceTimersByTime(120_000)
-
-			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
-			expect(registry.pendingSession).toBeNull()
-			expect(callbacks.onPendingSessionChanged).toHaveBeenLastCalledWith(null)
-			expect(callbacks.onStartSessionFailed).toHaveBeenCalled()
-		})
-
-		it("times out active session after 2 minutes", () => {
-			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
-			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
-
-			// Advance time by 2 minutes
-			vi.advanceTimersByTime(120_000)
-
-			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
-			const session = registry.getSession("session-1")
-			expect(session?.status).toBe("error")
-			expect(session?.error).toBe("Timeout")
-			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", "Timed out. Killing agent.")
-		})
-
-		it("clears pending timeout when session is created", () => {
-			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
-
-			// Create session before timeout
-			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
-
-			// Advance time - should not trigger pending timeout
-			vi.advanceTimersByTime(60_000)
-
-			// Session should still be running (not timed out from pending)
-			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
-		})
-
-		it("clears active timeout when process is stopped", () => {
-			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
-			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
-
-			handler.stopProcess("session-1")
-
-			// Advance time - should not trigger timeout callback
-			vi.advanceTimersByTime(120_000)
-
-			// The session log for timeout should not be called
-			expect(callbacks.onSessionLog).not.toHaveBeenCalledWith("session-1", "Timed out. Killing agent.")
-		})
-	})
-
 	describe("stderr handling", () => {
-		it("logs stderr output", () => {
+		it("logs stderr output to debug log", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			mockProcess.stderr.emit("data", Buffer.from("Warning: something happened"))
 
-			expect(callbacks.onLog).toHaveBeenCalledWith("stderr: Warning: something happened")
+			expect(callbacks.onDebugLog).toHaveBeenCalledWith("stderr: Warning: something happened")
 		})
 	})
 
 	describe("dispose", () => {
 		it("stops all processes on dispose", () => {
 			const onCliEvent = vi.fn()
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			handler.dispose()
@@ -522,7 +534,7 @@ describe("CliProcessHandler", () => {
 			const onCliEvent = vi.fn()
 
 			// Start first session
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", undefined, onCliEvent)
 			const proc1 = mockProcess
 			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
@@ -530,7 +542,7 @@ describe("CliProcessHandler", () => {
 			const proc2 = createMockProcess()
 			;(proc2 as any).pid = 54321
 			spawnMock.mockReturnValue(proc2)
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", undefined, onCliEvent)
 			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
 
 			expect(handler.hasProcess("session-1")).toBe(true)
@@ -547,14 +559,14 @@ describe("CliProcessHandler", () => {
 			const onCliEvent = vi.fn()
 
 			// Start first session
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 1", undefined, onCliEvent)
 			const proc1 = mockProcess
 			proc1.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
 			// Start second session
 			const proc2 = createMockProcess()
 			spawnMock.mockReturnValue(proc2)
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "prompt 2", undefined, onCliEvent)
 			proc2.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-2"}\n'))
 
 			// Emit event from first process
@@ -583,37 +595,57 @@ describe("CliProcessHandler", () => {
 			const onCliEvent = vi.fn()
 			const setPendingSessionSpy = vi.spyOn(registry, "setPendingSession")
 
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
-				gitUrl: "https://github.com/org/repo.git",
-			})
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{ gitUrl: "https://github.com/org/repo.git" },
+				onCliEvent,
+			)
 
-			expect(setPendingSessionSpy).toHaveBeenCalledWith("test prompt", {
-				gitUrl: "https://github.com/org/repo.git",
-			})
+			expect(setPendingSessionSpy).toHaveBeenCalledWith(
+				"test prompt",
+				expect.objectContaining({
+					gitUrl: "https://github.com/org/repo.git",
+				}),
+			)
 		})
 
 		it("passes gitUrl to registry when session is created", () => {
 			const onCliEvent = vi.fn()
 			const createSessionSpy = vi.spyOn(registry, "createSession")
 
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
-				gitUrl: "https://github.com/org/repo.git",
-			})
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{ gitUrl: "https://github.com/org/repo.git" },
+				onCliEvent,
+			)
 
 			// Emit session_created event
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
-			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), {
-				gitUrl: "https://github.com/org/repo.git",
-			})
+			expect(createSessionSpy).toHaveBeenCalledWith(
+				"session-1",
+				"test prompt",
+				expect.any(Number),
+				expect.objectContaining({
+					gitUrl: "https://github.com/org/repo.git",
+				}),
+			)
 		})
 
 		it("includes gitUrl in pending session notification", () => {
 			const onCliEvent = vi.fn()
 
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent, {
-				gitUrl: "https://github.com/org/repo.git",
-			})
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{ gitUrl: "https://github.com/org/repo.git" },
+				onCliEvent,
+			)
 
 			expect(callbacks.onPendingSessionChanged).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -627,20 +659,27 @@ describe("CliProcessHandler", () => {
 			const onCliEvent = vi.fn()
 			const setPendingSessionSpy = vi.spyOn(registry, "setPendingSession")
 
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
-			expect(setPendingSessionSpy).toHaveBeenCalledWith("test prompt", undefined)
+			expect(setPendingSessionSpy).toHaveBeenCalledWith("test prompt", expect.objectContaining({}))
 		})
 
 		it("creates session without gitUrl when not provided", () => {
 			const onCliEvent = vi.fn()
 			const createSessionSpy = vi.spyOn(registry, "createSession")
 
-			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", onCliEvent)
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
 
-			expect(createSessionSpy).toHaveBeenCalledWith("session-1", "test prompt", expect.any(Number), undefined)
+			expect(createSessionSpy).toHaveBeenCalledWith(
+				"session-1",
+				"test prompt",
+				expect.any(Number),
+				expect.objectContaining({
+					gitUrl: undefined,
+				}),
+			)
 		})
 	})
 })

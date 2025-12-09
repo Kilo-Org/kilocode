@@ -40,7 +40,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	if (messages.length === 0) {
 		return (
-			<div className="messages-empty">
+			<div className="am-messages-empty">
 				<MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
 				<p>{t("messages.waiting")}</p>
 			</div>
@@ -48,8 +48,8 @@ export function MessageList({ sessionId }: MessageListProps) {
 	}
 
 	return (
-		<div className="messages-container" ref={containerRef}>
-			<div className="messages-list">
+		<div className="am-messages-container" ref={containerRef}>
+			<div className="am-messages-list">
 				{messages.map((msg, idx) => (
 					<MessageItem key={msg.ts || idx} message={msg} />
 				))}
@@ -73,6 +73,8 @@ function MessageItem({ message }: { message: ClineMessage }) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
+	// Note: CLI JSON output uses "content" instead of "text" for message body
+	const messageText = message.text || (message as any).content || ""
 
 	let icon = <MessageCircle size={16} />
 	let title = t("messages.kiloSaid")
@@ -85,9 +87,9 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "api_req_started": {
 				icon = <ArrowRightLeft size={16} className="opacity-70" />
 				title = t("messages.apiRequest")
-				const info = safeJsonParse<{ cost?: number }>(message.text)
+				const info = safeJsonParse<{ cost?: number }>(messageText)
 				if (info?.cost !== undefined) {
-					extraInfo = <span className="message-cost">${info.cost.toFixed(4)}</span>
+					extraInfo = <span className="am-message-cost">${info.cost.toFixed(4)}</span>
 				}
 				// Don't show content for API req started, just header
 				content = null
@@ -96,31 +98,32 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "text": {
 				icon = <MessageCircle size={16} />
 				title = t("messages.kiloSaid")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "user_feedback": {
 				icon = <User size={16} />
 				title = t("messages.youSaid")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "completion_result": {
 				icon = <CheckCircle2 size={16} className="text-green-500" />
 				title = t("messages.taskCompleted")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "error": {
 				icon = <AlertCircle size={16} className="text-red-500" />
 				title = t("messages.error")
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 				break
 			}
 			case "api_req_finished":
-				return null // Skip
+			case "checkpoint_saved":
+				return null // Skip internal messages
 			default:
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 		}
 	}
 
@@ -130,11 +133,13 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "followup": {
 				icon = <MessageCircleQuestion size={16} />
 				title = t("messages.question")
-				const info = safeJsonParse<{ question: string; suggest?: string[] }>(message.text)
+				// Question can be in metadata.question (from CLI) or parsed from text (legacy)
+				const metadataQuestion = (message as any).metadata?.question
+				const parsedInfo = safeJsonParse<{ question: string; suggest?: string[] }>(messageText)
+				const questionText = metadataQuestion || parsedInfo?.question || messageText
 				content = (
 					<div>
-						<SimpleMarkdown content={info?.question || message.text || ""} />
-						{/* We could render suggestions here, but for MVP text is fine */}
+						<SimpleMarkdown content={questionText} />
 					</div>
 				)
 				break
@@ -142,7 +147,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 			case "command": {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.command")
-				content = <SimpleMarkdown content={`\`${message.text}\``} />
+				content = <SimpleMarkdown content={`\`${messageText}\``} />
 				break
 			}
 			case "tool": {
@@ -150,7 +155,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.tool")
 				// Try to parse tool use for better display
-				const toolInfo = safeJsonParse<{ tool: string; path?: string }>(message.text)
+				const toolInfo = safeJsonParse<{ tool: string; path?: string }>(messageText)
 				if (toolInfo) {
 					const toolDetails = toolInfo.path ? `(${toolInfo.path})` : ""
 					content = (
@@ -159,25 +164,26 @@ function MessageItem({ message }: { message: ClineMessage }) {
 						/>
 					)
 				} else {
-					content = <SimpleMarkdown content={message.text || ""} />
+					content = <SimpleMarkdown content={messageText} />
 				}
 				break
 			}
 			default:
-				content = <SimpleMarkdown content={message.text || ""} />
+				content = <SimpleMarkdown content={messageText} />
 		}
 	}
 
 	return (
-		<div className={`message-item ${message.type === "say" && message.say === "api_req_started" ? "api-req" : ""}`}>
-			<div className="message-icon">{icon}</div>
-			<div className="message-content-wrapper">
-				<div className="message-header">
-					<span className="message-author">{title}</span>
-					<span className="message-ts">{new Date(message.ts).toLocaleTimeString()}</span>
+		<div
+			className={`am-message-item ${message.type === "say" && message.say === "api_req_started" ? "api-req" : ""}`}>
+			<div className="am-message-icon">{icon}</div>
+			<div className="am-message-content-wrapper">
+				<div className="am-message-header">
+					<span className="am-message-author">{title}</span>
+					<span className="am-message-ts">{new Date(message.ts).toLocaleTimeString()}</span>
 					{extraInfo}
 				</div>
-				{content && <div className="message-body">{content}</div>}
+				{content && <div className="am-message-body">{content}</div>}
 			</div>
 		</div>
 	)

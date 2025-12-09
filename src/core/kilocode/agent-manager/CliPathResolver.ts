@@ -6,15 +6,44 @@ import { fileExistsAtPath } from "../../../utils/fs"
  * Find the kilocode CLI executable.
  *
  * Resolution order:
- * 1. Check PATH using `which` (Unix) or `where` (Windows)
- * 2. Check common npm installation paths as fallback
+ * 1. VS Code setting `kiloCode.agentManager.cliPath`
+ * 2. Workspace-local build at <workspace>/cli/dist/index.js
+ * 3. PATH using `which`/`where`
+ * 4. Common npm installation paths
  */
 export async function findKilocodeCli(log?: (msg: string) => void): Promise<string | null> {
-	// Try PATH first
+	// 1) Explicit override from settings
+	try {
+		// Lazy import avoids hard dep when running in non-extension contexts
+		const vscode = await import("vscode")
+		const config = vscode.workspace.getConfiguration("kiloCode")
+		const overridePath = config.get<string>("agentManager.cliPath")
+		if (overridePath) {
+			log?.(`Using CLI path override from settings: ${overridePath}`)
+			if (await fileExistsAtPath(overridePath)) {
+				return overridePath
+			}
+			log?.(`WARNING: Override path does not exist: ${overridePath}`)
+		}
+
+		// 2) Workspace-local build (useful during development)
+		const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		if (workspacePath) {
+			const localCli = path.join(workspacePath, "cli", "dist", "index.js")
+			if (await fileExistsAtPath(localCli)) {
+				log?.(`Using workspace CLI: ${localCli}`)
+				return localCli
+			}
+		}
+	} catch (error) {
+		log?.(`findKilocodeCli: vscode lookup failed, falling back to PATH. Error: ${String(error)}`)
+	}
+
+	// 3) PATH
 	const pathResult = findInPath(log)
 	if (pathResult) return pathResult
 
-	// Fallback to common npm installation paths
+	// 4) Common npm installation paths
 	for (const candidate of getNpmPaths()) {
 		try {
 			if (await fileExistsAtPath(candidate)) return candidate

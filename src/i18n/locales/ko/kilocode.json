@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "새로운 변경사항을 표시할 수 없습니다. 체크포인트를 사용할 수 없습니다.",
 		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
 		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Kilocode CLI 버전이 오래되어 Agent Manager를 지원하지 않습니다. 최신 버전으로 업데이트하세요.",
+			"cliNotFound": "Kilocode CLI를 찾을 수 없습니다. Agent Manager를 사용하려면 설치하세요.",
+			"sessionFailed": "에이전트 세션 시작 실패",
+			"sessionFailedWithMessage": "에이전트 세션 시작 실패: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "업데이트 지침",
+			"installInstructions": "설치 지침",
+			"getHelp": "도움말 보기"
+		}
 	}
 }

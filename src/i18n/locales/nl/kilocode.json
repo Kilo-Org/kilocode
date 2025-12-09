@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Kan nieuwe wijzigingen niet weergeven, controlepunten zijn niet beschikbaar.",
 		"noChanges": "Kan nieuwe wijzigingen niet weergeven, er zijn geen wijzigingen gevonden.",
 		"error": "Kan nieuwe wijzigingen niet weergeven, er is een fout opgetreden."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Je Kilocode CLI-versie is verouderd en ondersteunt de Agent Manager niet. Update naar de nieuwste versie.",
+			"cliNotFound": "Kilocode CLI niet gevonden. Installeer het om de Agent Manager te gebruiken.",
+			"sessionFailed": "Kon agentsessie niet starten",
+			"sessionFailedWithMessage": "Kon agentsessie niet starten: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Update-instructies",
+			"installInstructions": "Installatie-instructies",
+			"getHelp": "Hulp krijgen"
+		}
 	}
 }

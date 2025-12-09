@@ -6,12 +6,16 @@
 		"emptyState": "ยังไม่มีเอเจนต์ที่ใช้งานอยู่",
 		"startAgent": "เริ่มเอเจนต์",
 		"removeSession": "ลบ",
-		"refresh": "รีเฟรช"
+		"refresh": "รีเฟรช",
+		"worktree": "Worktree",
+		"local": "ภายในเครื่อง",
+		"mainWorkspace": "พื้นที่ทำงานหลัก",
+		"readyToMerge": "พร้อมรวม"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
 		"describeTask": "อธิบายงานที่คุณต้องการให้เอเจนต์ทำ",
-		"placeholderTask": "เช่น สร้างคอมโพเนนต์ React ใหม่สำหรับปุ่ม...",
+		"placeholderTask": "พิมพ์งานของคุณที่นี่...",
 		"stopButton": "หยุด",
 		"newButton": "ใหม่",
 		"stopButtonTitle": "หยุดเอเจนต์",
@@ -21,6 +25,13 @@
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
 		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
+		"runModeLocal": "ภายในเครื่อง",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "คลาวด์",
+		"comingSoon": "เร็วๆ นี้",
+		"runningInWorktree": "ทำงานใน worktree",
+		"runningLocally": "ทำงานภายในเครื่อง",
+		"branch": "สาขา",
 		"creatingSession": "กำลังสร้างเซสชัน...",
 		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "เอเจนต์ทำงานในโหมดอัตโนมัติ"
+		"autonomous": "เอเจนต์ทำงานในโหมดอัตโนมัติ",
+		"placeholderTypeTask": "พิมพ์งานของคุณที่นี่...",
+		"ariaLabel": "ช่องใส่ข้อความ",
+		"cancelTitle": "ยกเลิกเอเจนต์",
+		"sendTitle": "ส่งข้อความ",
+		"resumeTitle": "ดำเนินการต่อ",
+		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"
 	},
 	"status": {
 		"running": "กำลังทำงาน",
@@ -45,5 +62,16 @@
 		"stopped": "หยุดแล้ว",
 		"error": "ข้อผิดพลาด",
 		"creating": "กำลังสร้าง..."
+	},
+	"time": {
+		"justNow": "เมื่อสักครู่",
+		"minuteAgo": "เมื่อ 1 นาทีที่แล้ว",
+		"minutesAgo": "{{count}} นาทีที่แล้ว",
+		"hourAgo": "เมื่อ 1 ชั่วโมงที่แล้ว",
+		"hoursAgo": "{{count}} ชั่วโมงที่แล้ว",
+		"dayAgo": "เมื่อ 1 วันที่แล้ว",
+		"daysAgo": "{{count}} วันที่แล้ว",
+		"weekAgo": "เมื่อ 1 สัปดาห์ที่แล้ว",
+		"weeksAgo": "{{count}} สัปดาห์ที่แล้ว"
 	}
 }

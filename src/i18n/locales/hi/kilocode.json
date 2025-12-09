@@ -102,6 +102,19 @@
 		"noChanges": "नए परिवर्तन नहीं दिखाए जा सकते, कोई परिवर्तन नहीं मिले।",
 		"error": "नए परिवर्तन नहीं दिखाए जा सकते, एक त्रुटि हुई।"
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "आपका Kilocode CLI संस्करण पुराना है और Agent Manager का समर्थन नहीं करता। कृपया नवीनतम संस्करण में अपडेट करें।",
+			"cliNotFound": "Kilocode CLI नहीं मिला। Agent Manager का उपयोग करने के लिए कृपया इसे इंस्टॉल करें।",
+			"sessionFailed": "एजेंट सत्र प्रारंभ करने में विफल",
+			"sessionFailedWithMessage": "एजेंट सत्र प्रारंभ करने में विफल: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "अपडेट निर्देश",
+			"installInstructions": "इंस्टॉल निर्देश",
+			"getHelp": "सहायता प्राप्त करें"
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",

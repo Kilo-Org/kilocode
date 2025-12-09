@@ -1,5 +1,0 @@
-def process_data(data)
-	begin
-		result = JSON.parse(data)
-		result = JSON.parse(data)
-		<<<AUTOCOMPLETE_HERE>>>
