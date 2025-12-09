@@ -722,6 +722,7 @@
 		"node-machine-id": "^1.1.12",
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
+		"openid-client": "^6.8.1",
 		"os-name": "^6.0.0",
 		"p-limit": "^6.2.0",
 		"p-map": "^7.0.3",
