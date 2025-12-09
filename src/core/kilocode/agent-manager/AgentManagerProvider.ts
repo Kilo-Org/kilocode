@@ -21,6 +21,13 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
+import {
+	captureAgentManagerOpened,
+	captureAgentManagerSessionStarted,
+	captureAgentManagerSessionCompleted,
+	captureAgentManagerSessionStopped,
+	captureAgentManagerSessionError,
+} from "./telemetry"
 
 /**
  * AgentManagerProvider
@@ -93,6 +100,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 					if (sawApiReqStarted) {
 						this.firstApiReqStarted.set(latestSession.sessionId, true)
 					}
+
+					// Track session started telemetry
+					captureAgentManagerSessionStarted(
+						latestSession.sessionId,
+						latestSession.parallelMode?.enabled ?? false,
+					)
 				}
 			},
 		}
@@ -154,6 +167,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 		)
 
 		this.outputChannel.appendLine("Agent Manager panel opened")
+
+		// Track Agent Manager panel opened
+		captureAgentManagerOpened()
 	}
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
@@ -312,22 +328,34 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.parseParallelModeOutput(sessionId, event.content)
 				this.log(sessionId, `[${event.source}] ${event.content}`)
 				break
-			case "error":
+			case "error": {
+				const session = this.registry.getSession(sessionId)
 				this.registry.updateSessionStatus(sessionId, "error", undefined, event.error)
 				this.log(sessionId, `Error: ${event.error}`)
 				if (event.details) {
 					this.log(sessionId, `Details: ${JSON.stringify(event.details)}`)
 				}
+				// Track session error telemetry
+				captureAgentManagerSessionError(sessionId, session?.parallelMode?.enabled ?? false, event.error)
 				break
-			case "complete":
+			}
+			case "complete": {
+				const session = this.registry.getSession(sessionId)
 				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
 				this.log(sessionId, "Agent completed")
 				void this.fetchAndPostRemoteSessions()
+				// Track session completed telemetry
+				captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
 				break
-			case "interrupted":
+			}
+			case "interrupted": {
+				const session = this.registry.getSession(sessionId)
 				this.registry.updateSessionStatus(sessionId, "stopped", undefined, event.reason)
 				this.log(sessionId, event.reason || "Execution interrupted")
+				// Track session stopped telemetry
+				captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
 				break
+			}
 			case "session_created":
 				// Handled by CliProcessManager
 				break
@@ -468,6 +496,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Stop a running agent session
 	 */
 	private stopAgentSession(sessionId: string): void {
+		const session = this.registry.getSession(sessionId)
+
 		this.processHandler.stopProcess(sessionId)
 
 		this.registry.updateSessionStatus(sessionId, "stopped", undefined, "Stopped by user")
@@ -475,6 +505,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.postStateToWebview()
 
 		this.firstApiReqStarted.delete(sessionId)
+
+		// Track session stopped telemetry
+		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
 	}
 
 	/**
