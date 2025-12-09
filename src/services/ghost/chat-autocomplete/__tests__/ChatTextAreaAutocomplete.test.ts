@@ -49,10 +49,11 @@ describe("ChatTextAreaAutocomplete", () => {
 				expect(shouldFilter("#ifdef")).toBe(true)
 			})
 
-			it("should allow markdown headers", () => {
-				expect(shouldAccept("# ")).toBe(true)
-				expect(shouldAccept("# Header")).toBe(true)
-				expect(shouldAccept("# Title here")).toBe(true)
+			it("should filter markdown headers", () => {
+				// Chat is for natural language, not markdown formatting
+				expect(shouldFilter("# ")).toBe(true)
+				expect(shouldFilter("# Header")).toBe(true)
+				expect(shouldFilter("## Subheader")).toBe(true)
 			})
 		})
 
@@ -93,11 +94,6 @@ describe("ChatTextAreaAutocomplete", () => {
 				expect(shouldAccept("123")).toBe(true)
 				expect(shouldAccept("test123")).toBe(true)
 				expect(shouldAccept("42 is the answer")).toBe(true)
-			})
-
-			it("should accept markdown headers", () => {
-				expect(shouldAccept("# Header")).toBe(true)
-				expect(shouldAccept("## Subheader")).toBe(true)
 			})
 
 			it("should accept suggestions with punctuation in the middle", () => {

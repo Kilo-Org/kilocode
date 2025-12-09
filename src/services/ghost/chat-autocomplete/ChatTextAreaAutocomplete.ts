@@ -143,9 +143,9 @@ export class ChatTextAreaAutocomplete {
 		}
 
 		// Filter suggestions that look like code rather than natural language
-		// These patterns indicate the model is completing code, not a user message
-		if (suggestion.startsWith("#") && !suggestion.startsWith("# ")) {
-			// Allow "# " as it might be markdown header, but filter "#include" etc.
+		// This includes preprocessor directives (#include) and markdown headers
+		// Chat is for natural language, not formatted documents
+		if (suggestion.startsWith("#")) {
 			return true
 		}
 

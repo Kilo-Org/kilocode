@@ -312,8 +312,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			handleKeyDown: handleGhostTextKeyDown,
 			handleInputChange: handleGhostTextInputChange,
 		} = useChatGhostText({
-			inputValue,
-			setInputValue,
 			textAreaRef,
 			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
 		})

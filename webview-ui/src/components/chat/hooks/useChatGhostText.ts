@@ -5,8 +5,6 @@ import { vscode } from "@/utils/vscode"
 import { generateRequestId } from "@roo/id"
 
 interface UseChatGhostTextOptions {
-	inputValue: string
-	setInputValue: (value: string) => void
 	textAreaRef: React.RefObject<HTMLTextAreaElement>
 	enableChatAutocomplete?: boolean
 }
@@ -20,11 +18,9 @@ interface UseChatGhostTextReturn {
 
 /**
  * Hook for managing FIM autocomplete ghost text in the chat text area.
- * Handles completion requests, ghost text display, and Tab/Escape interactions.
+ * Handles completion requests, ghost text display, and Tab/Escape/ArrowRight interactions.
  */
 export function useChatGhostText({
-	inputValue,
-	setInputValue,
 	textAreaRef,
 	enableChatAutocomplete = false,
 }: UseChatGhostTextOptions): UseChatGhostTextReturn {
@@ -55,35 +51,47 @@ export function useChatGhostText({
 
 	const handleKeyDown = useCallback(
 		(event: React.KeyboardEvent<HTMLTextAreaElement>): boolean => {
-			// Tab to accept ghost text
-			if (event.key === "Tab" && ghostText && !event.shiftKey) {
-				event.preventDefault()
-				// Skip the next completion request since we just accepted a suggestion
-				skipNextCompletionRef.current = true
-				try {
-					// Use execCommand to insert text while preserving undo history
-					if (document.execCommand && textAreaRef.current) {
-						const textarea = textAreaRef.current
-						// Move cursor to end and insert the ghost text
-						textarea.setSelectionRange(textarea.value.length, textarea.value.length)
-						document.execCommand("insertText", false, ghostText)
-					} else {
-						setInputValue(inputValue + ghostText)
-					}
-				} catch {
-					setInputValue(inputValue + ghostText)
-				}
-				setGhostText("")
-				return true // Event was handled, stop propagation
+			const textArea = textAreaRef.current
+			if (!textArea) {
+				return false
 			}
-			// Clear ghost text on Escape
+
+			const hasSelection = textArea.selectionStart !== textArea.selectionEnd
+			const isCursorAtEnd = textArea.selectionStart === textArea.value.length
+			const canAcceptCompletion = ghostText && !hasSelection && isCursorAtEnd
+
+			// Tab: Accept full ghost text
+			if (event.key === "Tab" && !event.shiftKey && canAcceptCompletion) {
+				event.preventDefault()
+				skipNextCompletionRef.current = true
+				insertTextAtCursor(textArea, ghostText)
+				setGhostText("")
+				return true
+			}
+
+			// ArrowRight: Accept next word only
+			if (
+				event.key === "ArrowRight" &&
+				!event.shiftKey &&
+				!event.ctrlKey &&
+				!event.metaKey &&
+				canAcceptCompletion
+			) {
+				event.preventDefault()
+				skipNextCompletionRef.current = true
+				const { word, remainder } = extractNextWord(ghostText)
+				insertTextAtCursor(textArea, word)
+				setGhostText(remainder)
+				return true
+			}
+
+			// Escape: Clear ghost text
 			if (event.key === "Escape" && ghostText) {
 				setGhostText("")
-				// Don't return true - let other handlers process Escape too
 			}
-			return false // Event was not handled by this hook
+			return false
 		},
-		[ghostText, inputValue, setInputValue, textAreaRef],
+		[ghostText, textAreaRef],
 	)
 
 	const handleInputChange = useCallback(
@@ -123,7 +131,6 @@ export function useChatGhostText({
 		[enableChatAutocomplete],
 	)
 
-	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
 			if (completionDebounceRef.current) {
@@ -138,4 +145,30 @@ export function useChatGhostText({
 		handleInputChange,
 		clearGhostText,
 	}
+}
+
+/**
+ * Extracts the first word from ghost text, including surrounding whitespace.
+ * Mimics VS Code's word acceptance behavior: accepts leading space + word + trailing space as a unit.
+ * Returns the word and the remaining text.
+ */
+function extractNextWord(text: string): { word: string; remainder: string } {
+	if (!text) {
+		return { word: "", remainder: "" }
+	}
+
+	// Match: optional leading whitespace + non-whitespace characters + optional trailing whitespace
+	// This captures " word " or "word " or " word" as complete units
+	const match = text.match(/^(\s*\S+\s*)/)
+	if (match) {
+		return { word: match[1], remainder: text.slice(match[1].length) }
+	}
+
+	// If text is only whitespace, return all of it
+	return { word: text, remainder: "" }
+}
+
+function insertTextAtCursor(textArea: HTMLTextAreaElement, text: string): void {
+	textArea.setSelectionRange(textArea.value.length, textArea.value.length)
+	document?.execCommand("insertText", false, text)
 }
