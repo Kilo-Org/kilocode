@@ -1,9 +1,11 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useCallback } from "react"
 import { useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
-import type { ClineMessage } from "@roo-code/types"
+import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
 import { SimpleMarkdown } from "./SimpleMarkdown"
+import { FollowUpSuggestions } from "./FollowUpSuggestions"
+import { vscode } from "../utils/vscode"
 import {
 	MessageCircle,
 	MessageCircleQuestion,
@@ -38,6 +40,23 @@ export function MessageList({ sessionId }: MessageListProps) {
 		}
 	}, [messages])
 
+	const handleSuggestionClick = useCallback(
+		(suggestion: SuggestionItem) => {
+			// Send the answer to the backend
+			vscode.postMessage({
+				type: "agentManager.sendMessage",
+				sessionId,
+				content: suggestion.answer,
+			})
+		},
+		[sessionId],
+	)
+
+	const handleCopyToInput = useCallback((suggestion: SuggestionItem) => {
+		// Copy the suggestion text to clipboard
+		navigator.clipboard.writeText(suggestion.answer)
+	}, [])
+
 	if (messages.length === 0) {
 		return (
 			<div className="am-messages-empty">
@@ -51,7 +70,12 @@ export function MessageList({ sessionId }: MessageListProps) {
 		<div className="am-messages-container" ref={containerRef}>
 			<div className="am-messages-list">
 				{messages.map((msg, idx) => (
-					<MessageItem key={msg.ts || idx} message={msg} />
+					<MessageItem
+						key={msg.ts || idx}
+						message={msg}
+						onSuggestionClick={handleSuggestionClick}
+						onCopyToInput={handleCopyToInput}
+					/>
 				))}
 			</div>
 		</div>
@@ -69,7 +93,13 @@ function safeJsonParse<T>(text: string | undefined): T | null {
 	}
 }
 
-function MessageItem({ message }: { message: ClineMessage }) {
+interface MessageItemProps {
+	message: ClineMessage
+	onSuggestionClick?: (suggestion: SuggestionItem) => void
+	onCopyToInput?: (suggestion: SuggestionItem) => void
+}
+
+function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
@@ -80,6 +110,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 	let title = t("messages.kiloSaid")
 	let content: React.ReactNode = null
 	let extraInfo: React.ReactNode = null
+	let suggestions: SuggestionItem[] | undefined
 
 	// --- SAY ---
 	if (message.type === "say") {
@@ -135,8 +166,11 @@ function MessageItem({ message }: { message: ClineMessage }) {
 				title = t("messages.question")
 				// Question can be in metadata.question (from CLI) or parsed from text (legacy)
 				const metadataQuestion = (message as any).metadata?.question
-				const parsedInfo = safeJsonParse<{ question: string; suggest?: string[] }>(messageText)
+				const metadataSuggest = (message as any).metadata?.suggest as SuggestionItem[] | undefined
+				const parsedInfo = safeJsonParse<FollowUpData>(messageText)
 				const questionText = metadataQuestion || parsedInfo?.question || messageText
+				// Extract suggestions from metadata or parsed JSON
+				suggestions = metadataSuggest || parsedInfo?.suggest
 				content = (
 					<div>
 						<SimpleMarkdown content={questionText} />
@@ -184,6 +218,13 @@ function MessageItem({ message }: { message: ClineMessage }) {
 					{extraInfo}
 				</div>
 				{content && <div className="am-message-body">{content}</div>}
+				{suggestions && suggestions.length > 0 && onSuggestionClick && (
+					<FollowUpSuggestions
+						suggestions={suggestions}
+						onSuggestionClick={onSuggestionClick}
+						onCopyToInput={onCopyToInput}
+					/>
+				)}
 			</div>
 		</div>
 	)
