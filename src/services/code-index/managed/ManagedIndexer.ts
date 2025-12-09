@@ -11,7 +11,7 @@ import { GitWatcher, GitWatcherEvent } from "../../../shared/GitWatcher"
 import { getCurrentBranch, isGitRepository, getCurrentCommitSha, getBaseBranch } from "./git-utils"
 import { getKilocodeConfig } from "../../../utils/kilo-config-file"
 import { getGitRepositoryInfo } from "../../../utils/git"
-import { getServerManifest, searchCode, upsertFile } from "./api-client"
+import { getServerManifest, searchCode, upsertFile, deleteFiles } from "./api-client"
 import { ServerManifest } from "./types"
 import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
@@ -602,6 +602,10 @@ export class ManagedIndexer implements vscode.Disposable {
 				return
 			}
 
+			// Start with all files from manifest - we'll remove entries as we encounter them in git
+			const manifestFilesToCheck = new Set<string>(Object.values(manifest.files))
+			const filesToDelete: string[] = []
+
 			await pMap(
 				event.files,
 				async (file) => {
@@ -614,12 +618,20 @@ export class ManagedIndexer implements vscode.Disposable {
 						throw new Error("ManagedIndexing is not enabled")
 					}
 
+					const { filePath } = file
+
 					if (file.type === "file-deleted") {
-						// TODO: Implement file deletion handling if needed
+						// Track deleted files for removal from backend
+						filesToDelete.push(filePath)
+						// Also remove from manifest check set if present
+						manifestFilesToCheck.delete(filePath)
 						return
 					}
 
-					const { filePath, fileHash } = file
+					const { fileHash } = file
+
+					// Remove this file from the manifest check set since we encountered it in git
+					manifestFilesToCheck.delete(filePath)
 
 					// Check if file extension is supported
 					const ext = path.extname(filePath).toLowerCase()
@@ -717,6 +729,51 @@ export class ManagedIndexer implements vscode.Disposable {
 				},
 				{ concurrency: 5 },
 			)
+
+			// Any files remaining in manifestFilesToCheck were not encountered in git
+			// and should be deleted from the backend
+			for (const manifestFile of manifestFilesToCheck) {
+				filesToDelete.push(manifestFile)
+			}
+
+			// Delete files that are no longer in git or were explicitly deleted
+			if (filesToDelete.length > 0) {
+				console.info(`[ManagedIndexer] Deleting ${filesToDelete.length} files from manifest`)
+				try {
+					await deleteFiles(
+						{
+							organizationId: this.config.kilocodeOrganizationId,
+							projectId: state.projectId,
+							gitBranch: event.branch,
+							filePaths: filesToDelete,
+							kilocodeToken: this.config.kilocodeToken,
+						},
+						signal,
+					)
+					console.info(`[ManagedIndexer] Successfully deleted ${filesToDelete.length} files`)
+				} catch (error) {
+					// Don't log abort errors as failures
+					if (error instanceof Error && error.message === "AbortError") {
+						throw error
+					}
+
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					console.error(`[ManagedIndexer] Failed to delete files: ${errorMessage}`)
+
+					// Store the error in state
+					state.error = {
+						type: "file-upsert",
+						message: `Failed to delete files: ${errorMessage}`,
+						timestamp: new Date().toISOString(),
+						context: {
+							branch: event.branch,
+							operation: "file-delete",
+						},
+						details: error instanceof Error ? error.stack : undefined,
+					}
+					this.sendStateToWebview()
+				}
+			}
 
 			// Force a re-fetch of the manifest
 			await this.getManifest(state, event.branch, true)

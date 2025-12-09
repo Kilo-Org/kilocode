@@ -235,6 +235,35 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### DevTools
+### Getting Started
+
+To build and run the CLI locally off your branch:
+
+#### Install dependencies
+
+```shell
+pnpm install
+pnpm deps:install
+```
+
+#### Build the CLI
+
+```shell
+pnpm build
+```
+
+#### Configure the settings
+
+```shell
+pnpm start config
+```
+
+#### Run the built CLI
+
+```shell
+pnpm start
+```
+
+### Using DevTools
 
 In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
