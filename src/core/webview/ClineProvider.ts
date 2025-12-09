@@ -2353,6 +2353,10 @@ ${prompt}
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
 				codebaseIndexSearchMaxResults: codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: codebaseIndexConfig?.codebaseIndexSearchMinScore,
+				// kilocode_change start
+				codebaseIndexEmbeddingBatchSize: codebaseIndexConfig?.codebaseIndexEmbeddingBatchSize,
+				codebaseIndexScannerMaxBatchRetries: codebaseIndexConfig?.codebaseIndexScannerMaxBatchRetries,
+				// kilocode_change end
 				codebaseIndexBedrockRegion: codebaseIndexConfig?.codebaseIndexBedrockRegion,
 				codebaseIndexBedrockProfile: codebaseIndexConfig?.codebaseIndexBedrockProfile,
 			},
@@ -2645,6 +2649,11 @@ ${prompt}
 					stateValues.codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
 				codebaseIndexSearchMaxResults: stateValues.codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
+				// kilocode_change start
+				codebaseIndexEmbeddingBatchSize: stateValues.codebaseIndexConfig?.codebaseIndexEmbeddingBatchSize,
+				codebaseIndexScannerMaxBatchRetries:
+					stateValues.codebaseIndexConfig?.codebaseIndexScannerMaxBatchRetries,
+				// kilocode_change end
 				codebaseIndexBedrockRegion: stateValues.codebaseIndexConfig?.codebaseIndexBedrockRegion,
 				codebaseIndexBedrockProfile: stateValues.codebaseIndexConfig?.codebaseIndexBedrockProfile,
 			},

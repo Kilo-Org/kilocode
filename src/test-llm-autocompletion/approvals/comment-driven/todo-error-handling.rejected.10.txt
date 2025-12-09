@@ -1,18 +1,14 @@
 function processData(data) {
-  // TODO: Implement error handling```
-  try {
-    const processedData = data.map(item => {
-      if (!item || typeof item !== 'object') {
-        throw new Error('Invalid data item');
-      }
-      // Process the item here
-      return processedItem;
-    });
-    return processedData;
-  } catch (error) {
-    console.error('Error processing data:', error);
-    throw error; // Re-throw the error for the caller to handle
-  }
-```
+  // TODO: Implement error handling for invalid data
+  // TODO: Implement data validation
+  // TODO: Implement data transformation
+  // TODO: Implement data filtering
+  // TODO: Implement data aggregation
+  // TODO: Implement data sorting
+  // TODO: Implement data pagination
+
+  // Example: Transform data to uppercase
+  const processedData = data.map(item => item.toUpperCase());
+
   return processedData;
 }

@@ -1,0 +1,11 @@
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+greet('TypeScript'); // 'Hello TypeScript'
+
+function greet(name: string) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+greet('TypeScript'); // 'Hello TypeScript'
+
+function greet(name: string) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+greet('TypeScript'); // 'Hello TypeScript'

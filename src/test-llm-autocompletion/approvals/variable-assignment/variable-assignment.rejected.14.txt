@@ -1,0 +1,24 @@
+const userName = document.getElementById("userName");
+const userEmail = document.getElementById("userEmail");
+const userPhone = document.getElementById("userPhone");
+const userMessage = document.getElementById("userMessage");
+const submitBtn = document.getElementById("submitBtn");
+
+submitBtn.addEventListener("click", () => {
+  let ebody = `
+    <b>Name: </b>${userName.value}
+    <br>
+    <b>Email: </b>${userEmail.value}
+    <br>
+    <b>Phone: </b>${userPhone.value}
+    <br>
+    <b>Message: </b>${userMessage.value}
+    `;
+
+  Email.send({
+    SecureToken: "25d85226-549f-4717-872b-64448573527f",
+    To: "soumyadeepdutta12345@gmail.com",
+    From: "soumyadeepdutta12345@gmail.com",
+    Subject: "Someone sent a message from portfolio website",
+    Body: ebody,
+  }).then((message) => alert(message

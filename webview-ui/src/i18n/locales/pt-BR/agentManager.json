@@ -6,12 +6,16 @@
 		"emptyState": "Nenhum agente ativo ainda.",
 		"startAgent": "Iniciar Agente",
 		"removeSession": "Remover",
-		"refresh": "Atualizar"
+		"refresh": "Atualizar",
+		"worktree": "Worktree",
+		"local": "Local",
+		"mainWorkspace": "Espaço de trabalho principal",
+		"readyToMerge": "Pronto para mesclar"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar um novo agente",
 		"describeTask": "Descreva a tarefa que você deseja que o agente execute.",
-		"placeholderTask": "ex. Criar um novo componente React para um botão...",
+		"placeholderTask": "Digite sua tarefa aqui...",
 		"stopButton": "Parar",
 		"newButton": "Novo",
 		"stopButtonTitle": "Parar Agente",
@@ -21,6 +25,13 @@
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente com o prompt fornecido",
 		"keyboardHint": "Pressione Enter para iniciar, Shift+Enter para nova linha",
+		"runModeLocal": "Local",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Nuvem",
+		"comingSoon": "Em breve",
+		"runningInWorktree": "Executando em worktree",
+		"runningLocally": "Executando localmente",
+		"branch": "Branch",
 		"creatingSession": "Criando sessão...",
 		"waitingForCli": "Inicializando sessão do agente..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Usando ferramenta: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agente executando em modo autônomo"
+		"autonomous": "Agente executando em modo autônomo",
+		"placeholderTypeTask": "Digite sua tarefa aqui...",
+		"ariaLabel": "Entrada de mensagem",
+		"cancelTitle": "Cancelar agente",
+		"sendTitle": "Enviar mensagem",
+		"resumeTitle": "Retomar agente",
+		"hint": "Pressione Enter para enviar, Shift+Enter para nova linha"
 	},
 	"status": {
 		"running": "em execução",
@@ -45,5 +62,16 @@
 		"stopped": "parado",
 		"error": "erro",
 		"creating": "criando..."
+	},
+	"time": {
+		"justNow": "Agora mesmo",
+		"minuteAgo": "Há um minuto",
+		"minutesAgo": "Há {{count}} minutos",
+		"hourAgo": "Há uma hora",
+		"hoursAgo": "Há {{count}} horas",
+		"dayAgo": "Há um dia",
+		"daysAgo": "Há {{count}} dias",
+		"weekAgo": "Há uma semana",
+		"weeksAgo": "Há {{count}} semanas"
 	}
 }

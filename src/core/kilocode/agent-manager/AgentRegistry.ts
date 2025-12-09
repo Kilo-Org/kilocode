@@ -1,4 +1,8 @@
-import { AgentSession, AgentStatus, AgentManagerState, PendingSession } from "./types"
+import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelModeInfo } from "./types"
+
+export interface CreateSessionOptions {
+	parallelMode?: boolean
+}
 
 const MAX_SESSIONS = 10
 const MAX_LOGS = 100
@@ -23,12 +27,13 @@ export class AgentRegistry {
 	/**
 	 * Set a pending session while waiting for CLI's session_created event
 	 */
-	public setPendingSession(prompt: string, options?: { gitUrl?: string }): PendingSession {
+	public setPendingSession(prompt: string, options?: CreateSessionOptions & { gitUrl?: string }): PendingSession {
 		const label = this.truncatePrompt(prompt)
 		this._pendingSession = {
 			prompt,
 			label,
 			startTime: Date.now(),
+			parallelMode: options?.parallelMode,
 			gitUrl: options?.gitUrl,
 		}
 		return this._pendingSession
@@ -48,9 +53,9 @@ export class AgentRegistry {
 		sessionId: string,
 		prompt: string,
 		startTime?: number,
-		options?: { gitUrl?: string },
+		options?: CreateSessionOptions & { labelOverride?: string; gitUrl?: string },
 	): AgentSession {
-		const label = this.truncatePrompt(prompt)
+		const label = options?.labelOverride ?? this.truncatePrompt(prompt)
 
 		const session: AgentSession = {
 			sessionId,
@@ -60,6 +65,7 @@ export class AgentRegistry {
 			startTime: startTime ?? Date.now(),
 			logs: ["Starting agent..."],
 			source: "local",
+			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
 		}
 
@@ -85,8 +91,13 @@ export class AgentRegistry {
 		if (!session) return undefined
 
 		session.status = status
-		if (status === "done" || status === "error") {
+		if (status === "done" || status === "error" || status === "stopped") {
 			session.endTime = Date.now()
+		} else if (status === "running") {
+			// Clear end state when resuming
+			session.endTime = undefined
+			session.exitCode = undefined
+			session.error = undefined
 		}
 		if (exitCode !== undefined) {
 			session.exitCode = exitCode
@@ -133,6 +144,23 @@ export class AgentRegistry {
 		}
 	}
 
+	public updateParallelModeInfo(
+		id: string,
+		info: Partial<Omit<ParallelModeInfo, "enabled">>,
+	): AgentSession | undefined {
+		const session = this.sessions.get(id)
+		if (!session || !session.parallelMode?.enabled) {
+			return undefined
+		}
+
+		session.parallelMode = {
+			...session.parallelMode,
+			...info,
+		}
+
+		return session
+	}
+
 	public getState(): AgentManagerState {
 		return {
 			sessions: this.getSessions(),
@@ -166,6 +194,16 @@ export class AgentRegistry {
 			}
 		}
 		return count
+	}
+
+	/**
+	 * Remove a session from the registry
+	 */
+	public removeSession(sessionId: string): boolean {
+		if (this._selectedId === sessionId) {
+			this._selectedId = null
+		}
+		return this.sessions.delete(sessionId)
 	}
 
 	private pruneOldSessions(): void {

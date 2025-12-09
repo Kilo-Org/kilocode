@@ -1,5 +1,10 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		rescue JSON::ParserError => e
-		<<<AUTOCOMPLETE_HERE>>>
+		result.each do |key, value|
+			puts "#{key}: #{value}"
+		end
+	rescue JSON::ParserError => e
+		puts "Error parsing JSON: #{e.message}"
+	end
+end

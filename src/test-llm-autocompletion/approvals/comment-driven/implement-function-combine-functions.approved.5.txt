@@ -8,6 +8,6 @@ function multiplyBy5(a) {
 }
 
 // Implement function to combine above functions
-function combine(a, b) {
-    return multiplyBy5(addNumbers(a, b))
+function combineFunctions(a, b, func) {
+    return func(a, b)
 }

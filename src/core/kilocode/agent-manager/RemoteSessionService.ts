@@ -1,8 +1,8 @@
 import type * as vscode from "vscode"
 import type { ClineMessage } from "@roo-code/types"
-import type { RemoteSession } from "./types"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 import { fetchSignedBlob } from "../../../shared/kilocode/cli-sessions/utils/fetchBlobFromSignedUrl"
+import type { RemoteSession } from "./types"
 
 const REMOTE_SESSIONS_FETCH_LIMIT = 50
 
@@ -37,9 +37,7 @@ export class RemoteSessionService {
 			return null
 		}
 
-		const messages = (await fetchSignedBlob(blobUrl, "ui_messages_blob_url")) as ClineMessage[]
-
-		return messages.filter((message) => message.say !== "checkpoint_saved")
+		return this.fetchMessagesFromBlobUrl(blobUrl)
 	}
 
 	private async getSessionMessageBlobUrl(sessionId: string): Promise<string | null> {
@@ -62,6 +60,11 @@ export class RemoteSessionService {
 		}
 
 		return blobUrl
+	}
+
+	private async fetchMessagesFromBlobUrl(blobUrl: string): Promise<ClineMessage[]> {
+		const messages = (await fetchSignedBlob(blobUrl, "ui_messages_blob_url")) as ClineMessage[]
+		return messages.filter((message) => message.say !== "checkpoint_saved")
 	}
 
 	private getSessionClient() {

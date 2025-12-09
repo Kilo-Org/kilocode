@@ -1,5 +1,25 @@
 function processData(data) {
-  try {
-    // TODO: Implement error handling<<<AUTOCOMPLETE_HERE>>>
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
+  }
+
+  // TODO: Implement data processing logic
+  const processedData = {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    // Add more fields as needed
+  };
+
+  // TODO: Implement data validation
+  if (!processedData.id || !processedData.name || !processedData.email) {
+    throw new Error('Missing required fields');
+  }
+
+  // TODO: Implement data transformation
+  processedData.name = processedData.name.toUpperCase();
+  processedData.email = processedData.email.toLowerCase();
+
   return processedData;
 }

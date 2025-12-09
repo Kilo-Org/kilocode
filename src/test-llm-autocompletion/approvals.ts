@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import readline from "readline"
 import { askOpusApproval } from "./opus-approval.js"
+import { ContextFile } from "./test-cases.js"
 
 const APPROVALS_DIR = "approvals"
 
@@ -103,6 +104,9 @@ export async function checkApproval(
 	testName: string,
 	input: string,
 	output: string,
+	completion: string,
+	testFilename: string,
+	contextFiles: ContextFile[],
 	skipApproval: boolean = false,
 	useOpusApproval: boolean = false,
 ): Promise<ApprovalResult> {
@@ -128,7 +132,17 @@ export async function checkApproval(
 	if (useOpusApproval) {
 		const previouslyApproved = getExistingOutputs(categoryDir, testName, "approved")
 		const previouslyRejected = getExistingOutputs(categoryDir, testName, "rejected")
-		isApproved = await askOpusApproval(input, output, previouslyApproved, previouslyRejected)
+		const opusResult = await askOpusApproval(
+			input,
+			output,
+			completion,
+			testFilename,
+			contextFiles,
+			previouslyApproved,
+			previouslyRejected,
+		)
+		// UNCERTAIN is treated as rejected
+		isApproved = opusResult === "APPROVED"
 	} else {
 		isApproved = await askUserApproval(category, testName, input, output)
 	}

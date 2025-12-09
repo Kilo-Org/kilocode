@@ -1,3 +1,8 @@
 arr = [1, 2, 3, 4, 5]
 arr.each do |item|
-	<<<AUTOCOMPLETE_HERE>>>
+	puts item
+end
+
+arr.each { |item| puts item }
+
+arr.each { |item| puts item }

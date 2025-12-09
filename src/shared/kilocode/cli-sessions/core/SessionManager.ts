@@ -20,6 +20,19 @@ interface SessionCreatedMessage {
 	event: "session_created"
 }
 
+/**
+ * Message emitted when a session has been synced to the cloud.
+ * Contains timing information for tracking sync state and detecting stale data.
+ */
+interface SessionSyncedMessage {
+	sessionId: string
+	/** The server-side updated_at timestamp (as Unix milliseconds) from the most recent sync operation */
+	updatedAt: number
+	/** The local timestamp (Unix milliseconds) when this sync event was emitted */
+	timestamp: number
+	event: "session_synced"
+}
+
 export interface SessionManagerDependencies extends TrpcClientDependencies {
 	platform: string
 	pathProvider: IPathProvider
@@ -27,11 +40,13 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 	extensionMessenger: IExtensionMessenger
 	onSessionCreated?: (message: SessionCreatedMessage) => void
 	onSessionRestored?: () => void
+	onSessionSynced?: (message: SessionSyncedMessage) => void
 }
 
 export class SessionManager {
 	static readonly SYNC_INTERVAL = 3000
-	static readonly MAX_PATCH_SIZE_BYTES = 1024 * 1024
+	static readonly MAX_PATCH_SIZE_BYTES = 5 * 1024 * 1024
+	static readonly VERSION = 1
 
 	private static instance = new SessionManager()
 
@@ -47,6 +62,8 @@ export class SessionManager {
 	private taskGitUrls: Record<string, string> = {}
 	private taskGitHashes: Record<string, string> = {}
 	private sessionTitles: Record<string, string> = {}
+	private sessionUpdatedAt: Record<string, string> = {}
+	private tokenValid: Record<string, boolean | undefined> = {}
 
 	public get sessionId() {
 		return this.lastActiveSessionId || this.sessionPersistenceManager?.getLastSession()?.sessionId
@@ -63,7 +80,9 @@ export class SessionManager {
 	public sessionClient: SessionClient | undefined
 	private onSessionCreated: ((message: SessionCreatedMessage) => void) | undefined
 	private onSessionRestored: (() => void) | undefined
+	private onSessionSynced: ((message: SessionSyncedMessage) => void) | undefined
 	private platform: string | undefined
+	private getToken: (() => Promise<string>) | undefined
 
 	private constructor() {}
 
@@ -73,7 +92,9 @@ export class SessionManager {
 		this.extensionMessenger = dependencies.extensionMessenger
 		this.onSessionCreated = dependencies.onSessionCreated ?? (() => {})
 		this.onSessionRestored = dependencies.onSessionRestored ?? (() => {})
+		this.onSessionSynced = dependencies.onSessionSynced ?? (() => {})
 		this.platform = dependencies.platform
+		this.getToken = dependencies.getToken
 
 		const trpcClient = new TrpcClient({
 			getToken: dependencies.getToken,
@@ -187,6 +208,16 @@ export class SessionManager {
 				throw new Error("Failed to obtain session")
 			}
 
+			if (session.version !== SessionManager.VERSION) {
+				this.logger?.warn("Session version mismatch", "SessionManager", {
+					sessionId,
+					expectedVersion: SessionManager.VERSION,
+					actualVersion: session.version,
+				})
+			}
+
+			this.logger?.debug("Obtained session", "SessionManager", { sessionId, session })
+
 			const sessionDirectoryPath = path.join(this.pathProvider.getTasksDir(), sessionId)
 
 			mkdirSync(sessionDirectoryPath, { recursive: true })
@@ -269,6 +300,7 @@ export class SessionManager {
 			}
 
 			this.sessionPersistenceManager.setSessionForTask(historyItem.id, sessionId)
+			this.lastActiveSessionId = sessionId
 
 			await this.extensionMessenger.sendWebviewMessage({
 				type: "addTaskToHistory",
@@ -337,12 +369,13 @@ export class SessionManager {
 			throw new Error("Session title cannot be empty")
 		}
 
-		await this.sessionClient.update({
+		const updateResult = await this.sessionClient.update({
 			session_id: sessionId,
 			title: trimmedTitle,
 		})
 
 		this.sessionTitles[sessionId] = trimmedTitle
+		this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 
 		this.logger?.info("Session renamed successfully", "SessionManager", {
 			sessionId,
@@ -385,6 +418,7 @@ export class SessionManager {
 				const session = await this.sessionClient.create({
 					title,
 					created_on_platform: this.platform,
+					version: SessionManager.VERSION,
 				})
 
 				sessionId = session.session_id
@@ -435,6 +469,28 @@ export class SessionManager {
 		try {
 			this.isSyncing = true
 
+			const token = await this.getToken?.()
+
+			if (!token) {
+				this.logger?.debug("No token available for session sync, skipping", "SessionManager")
+				return
+			}
+
+			if (this.tokenValid[token] === undefined) {
+				this.logger?.debug("Checking token validity", "SessionManager")
+
+				const tokenValid = await this.sessionClient.tokenValid()
+
+				this.tokenValid[token] = tokenValid
+
+				this.logger?.debug("Token validity checked", "SessionManager", { tokenValid })
+			}
+
+			if (!this.tokenValid[token]) {
+				this.logger?.debug("Token is invalid, skipping sync", "SessionManager")
+				return
+			}
+
 			const taskIds = new Set<string>(this.queue.map((item) => item.taskId))
 			const lastItem = this.queue[this.queue.length - 1]
 
@@ -462,10 +518,7 @@ export class SessionManager {
 						itemCount: taskItems.length,
 					})
 
-					const basePayload: Omit<
-						Parameters<NonNullable<typeof this.sessionClient>["create"]>[0],
-						"created_on_platform"
-					> = {}
+					const basePayload: Partial<Parameters<NonNullable<typeof this.sessionClient>["create"]>[0]> = {}
 
 					if (gitInfo?.repoUrl) {
 						basePayload.git_url = gitInfo.repoUrl
@@ -486,10 +539,12 @@ export class SessionManager {
 								newGitUrl: gitInfo.repoUrl,
 							})
 
-							await this.sessionClient.update({
+							const updateResult = await this.sessionClient.update({
 								session_id: sessionId,
 								...basePayload,
 							})
+
+							this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 						}
 					} else {
 						this.logger?.debug("Creating new session for task", "SessionManager", { taskId })
@@ -497,6 +552,7 @@ export class SessionManager {
 						const createdSession = await this.sessionClient.create({
 							...basePayload,
 							created_on_platform: this.platform,
+							version: SessionManager.VERSION,
 						})
 
 						sessionId = createdSession.session_id
@@ -547,11 +603,14 @@ export class SessionManager {
 									lastBlobItem.blobName as Parameters<typeof this.sessionClient.uploadBlob>[1],
 									fileContents,
 								)
-								.then(() => {
+								.then((result) => {
 									this.logger?.debug("Blob uploaded successfully", "SessionManager", {
 										sessionId,
 										blobName,
 									})
+
+									// Track the updated_at timestamp from the upload using high-water mark
+									this.updateSessionTimestamp(sessionId, result.updated_at)
 
 									for (let i = 0; i < this.queue.length; i++) {
 										const item = this.queue[i]
@@ -612,12 +671,13 @@ export class SessionManager {
 										throw new Error("Failed to generate session title")
 									}
 
-									await this.sessionClient.update({
+									const updateResult = await this.sessionClient.update({
 										session_id: sessionId,
 										title: generatedTitle,
 									})
 
 									this.sessionTitles[sessionId] = generatedTitle
+									this.updateSessionTimestamp(sessionId, updateResult.updated_at)
 
 									this.logger?.debug("Updated session title", "SessionManager", {
 										sessionId,
@@ -653,12 +713,18 @@ export class SessionManager {
 							this.taskGitHashes[taskId] = gitStateHash
 
 							blobUploads.push(
-								this.sessionClient.uploadBlob(sessionId, "git_state", gitStateData).catch((error) => {
-									this.logger?.error("Failed to upload git state", "SessionManager", {
-										sessionId,
-										error: error instanceof Error ? error.message : String(error),
+								this.sessionClient
+									.uploadBlob(sessionId, "git_state", gitStateData)
+									.then((result) => {
+										// Track the updated_at timestamp from git state upload using high-water mark
+										this.updateSessionTimestamp(sessionId, result.updated_at)
 									})
-								}),
+									.catch((error) => {
+										this.logger?.error("Failed to upload git state", "SessionManager", {
+											sessionId,
+											error: error instanceof Error ? error.message : String(error),
+										})
+									}),
 							)
 						} else {
 							this.logger?.debug("Git state unchanged, skipping upload", "SessionManager", { sessionId })
@@ -672,11 +738,34 @@ export class SessionManager {
 						sessionId,
 						uploadCount: blobUploads.length,
 					})
+
+					// Emit session synced event with the latest updated_at timestamp
+					const latestUpdatedAt = this.sessionUpdatedAt[sessionId]
+					if (latestUpdatedAt) {
+						const updatedAtTimestamp = new Date(latestUpdatedAt).getTime()
+						this.onSessionSynced?.({
+							sessionId,
+							updatedAt: updatedAtTimestamp,
+							timestamp: Date.now(),
+							event: "session_synced",
+						})
+
+						this.logger?.debug("Emitted session_synced event", "SessionManager", {
+							sessionId,
+							updatedAt: updatedAtTimestamp,
+						})
+					}
 				} catch (error) {
 					this.logger?.error("Failed to sync session", "SessionManager", {
 						taskId,
 						error: error instanceof Error ? error.message : String(error),
 					})
+
+					const token = await this.getToken?.()
+
+					if (token) {
+						this.tokenValid[token] = undefined
+					}
 				}
 			}
 
@@ -712,6 +801,18 @@ export class SessionManager {
 
 	private async fetchBlobFromSignedUrl(url: string, urlType: string) {
 		return fetchSignedBlob(url, urlType, this.logger, "SessionManager")
+	}
+
+	/**
+	 * Updates the session timestamp using high-water mark logic.
+	 * Only updates if the new timestamp is greater than the current one,
+	 * preventing race conditions when multiple concurrent uploads complete.
+	 */
+	private updateSessionTimestamp(sessionId: string, updatedAt: string): void {
+		const currentUpdatedAt = this.sessionUpdatedAt[sessionId]
+		if (!currentUpdatedAt || updatedAt > currentUpdatedAt) {
+			this.sessionUpdatedAt[sessionId] = updatedAt
+		}
 	}
 
 	private pathKeyToBlobKey(pathKey: string) {

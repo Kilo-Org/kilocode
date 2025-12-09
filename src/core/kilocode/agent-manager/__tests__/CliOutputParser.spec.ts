@@ -73,6 +73,50 @@ describe("parseCliChunk", () => {
 		expect(event.timestamp).toBeLessThanOrEqual(after)
 	})
 
+	it("should parse welcome event with worktree branch", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}},"timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: "feature/test-branch",
+			timestamp: 1234567890,
+		})
+	})
+
+	it("should parse welcome event without worktree branch", () => {
+		const result = parseCliChunk('{"type":"welcome","metadata":{},"timestamp":1234567890}\n')
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: undefined,
+			timestamp: 1234567890,
+		})
+	})
+
+	it("should handle welcome event split across chunks", () => {
+		// Simulate the exact scenario from production logs where welcome event is split
+		const chunk1 = '{"timestamp":1,"source":"cli","type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":'
+		const chunk2 = '"feature/test-branch"}}}\n{"timestamp":2,"source":"extension","type":"say"}\n'
+
+		// First chunk should buffer the partial JSON
+		const result1 = parseCliChunk(chunk1)
+		expect(result1.events).toHaveLength(0)
+		expect(result1.remainingBuffer).toBe(chunk1)
+
+		// Second chunk completes the welcome event and includes another event
+		const result2 = parseCliChunk(chunk2, result1.remainingBuffer)
+		expect(result2.events).toHaveLength(2)
+		expect(result2.events[0]).toMatchObject({
+			streamEventType: "welcome",
+			worktreeBranch: "feature/test-branch",
+		})
+		expect(result2.events[1]).toMatchObject({
+			streamEventType: "kilocode",
+		})
+	})
+
 	it("should parse multiple JSON lines", () => {
 		const input =
 			'{"timestamp":1,"source":"cli","type":"info"}\n{"timestamp":2,"source":"extension","type":"ask"}\n'

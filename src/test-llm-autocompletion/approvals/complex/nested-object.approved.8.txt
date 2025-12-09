@@ -2,4 +2,10 @@ const config = {
 	server: {
 	  port: 3000,
 	  host: 'localhost',
-		protocol: 'http'
+	},
+	api: {
+	  url: 'https://api.example.com',
+	},
+  };
+
+  export default config;

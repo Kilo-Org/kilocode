@@ -1,0 +1,7 @@
+function registerUser(email, password) {
+  // TODO: Add input validation for email and password
+  // TODO: Add error handling for duplicate email
+  // TODO: Add password hashing for security
+
+  return createUser(email, password);
+}

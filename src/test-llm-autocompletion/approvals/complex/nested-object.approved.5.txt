@@ -1,4 +1,11 @@
 const config = {
 	server: {
 	  port: 3000,
-	  <<<AUTOCOMPLETE_HERE>>>host: 'localhost',
+	  host: 'localhost'
+	},
+	api: {
+	  url: 'https://api.mercadolibre.com/sites/MLA/search?q='
+	}
+  };
+
+  module.exports = config;

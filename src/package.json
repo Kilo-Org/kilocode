@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.131.2",
+	"version": "4.132.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -347,12 +347,12 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.agentManagerOpen",
+					"command": "kilo-code.plusButtonClicked",
 					"group": "navigation@0",
-					"when": "view == kilo-code.SidebarProvider && kilo-code.agentManagerEnabled"
+					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.plusButtonClicked",
+					"command": "kilo-code.agentManagerOpen",
 					"group": "navigation@1",
 					"when": "view == kilo-code.SidebarProvider"
 				},

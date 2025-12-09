@@ -1,9 +1,6 @@
 function handleSearch(query) {
   // TODO: Add debounce to prevent excessive API calls
-  const debounceTimer = setTimeout(() => {
-    searchAPI(query);
-  }, 500);
-  return () => clearTimeout(debounceTimer);
-}
+  // TODO: Add a loading state
+  // TODO: Add error handling
   searchAPI(query);
 }

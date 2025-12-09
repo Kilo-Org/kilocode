@@ -1,5 +1,4 @@
-import type { Session } from "../../../shared/kilocode/cli-sessions/core/SessionClient"
-export type RemoteSession = Session
+import type { Session as RemoteSession } from "../../../shared/kilocode/cli-sessions/core/SessionClient"
 
 /**
  * Agent Manager Types
@@ -7,6 +6,16 @@ export type RemoteSession = Session
 
 export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
+
+/**
+ * Parallel mode (worktree) information for a session
+ */
+export interface ParallelModeInfo {
+	enabled: boolean
+	branch?: string // e.g., "add-authentication-1702734891234"
+	worktreePath?: string // e.g., "/tmp/kilocode-worktree-add-auth..."
+	completionMessage?: string // Merge instructions from CLI on completion
+}
 
 export interface AgentSession {
 	sessionId: string
@@ -20,6 +29,7 @@ export interface AgentSession {
 	logs: string[]
 	pid?: number
 	source: SessionSource
+	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 }
 
@@ -30,10 +40,14 @@ export interface PendingSession {
 	prompt: string
 	label: string
 	startTime: number
+	parallelMode?: boolean
 	gitUrl?: string
 }
 
-export type AgentManagerState = {
+// Re-export remote session shape from shared session client for consistency
+export type { RemoteSession }
+
+export interface AgentManagerState {
 	sessions: AgentSession[]
 	selectedId: string | null
 }
@@ -43,7 +57,7 @@ export type AgentManagerState = {
  */
 export type AgentManagerMessage =
 	| { type: "agentManager.webviewReady" }
-	| { type: "agentManager.startSession"; prompt: string }
+	| { type: "agentManager.startSession"; prompt: string; parallelMode?: boolean }
 	| { type: "agentManager.stopSession"; sessionId: string }
 	| { type: "agentManager.selectSession"; sessionId: string }
 	| { type: "agentManager.refreshRemoteSessions" }

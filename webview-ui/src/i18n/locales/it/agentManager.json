@@ -6,12 +6,16 @@
 		"emptyState": "Nessun agente attivo ancora.",
 		"startAgent": "Avvia agente",
 		"removeSession": "Rimuovi",
-		"refresh": "Aggiorna"
+		"refresh": "Aggiorna",
+		"worktree": "Worktree",
+		"local": "Locale",
+		"mainWorkspace": "Area di lavoro principale",
+		"readyToMerge": "Pronto per l'unione"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Avvia un nuovo agente",
 		"describeTask": "Descrivi il compito che vuoi far eseguire all'agente.",
-		"placeholderTask": "es. Creare un nuovo componente React per un pulsante...",
+		"placeholderTask": "Scrivi il tuo compito qui...",
 		"stopButton": "Ferma",
 		"newButton": "Nuovo",
 		"stopButtonTitle": "Ferma agente",
@@ -21,6 +25,13 @@
 		"starting": "Avvio in corso...",
 		"startAriaLabel": "Avvia agente con il prompt fornito",
 		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga",
+		"runModeLocal": "Locale",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Prossimamente",
+		"runningInWorktree": "In esecuzione nel worktree",
+		"runningLocally": "In esecuzione localmente",
+		"branch": "Branch",
 		"creatingSession": "Creazione sessione...",
 		"waitingForCli": "Inizializzazione della sessione dell'agente..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agente in esecuzione in modalità autonoma"
+		"autonomous": "Agente in esecuzione in modalità autonoma",
+		"placeholderTypeTask": "Scrivi il tuo compito qui...",
+		"ariaLabel": "Input messaggio",
+		"cancelTitle": "Annulla agente",
+		"sendTitle": "Invia messaggio",
+		"resumeTitle": "Riprendi agente",
+		"hint": "Premi Invio per inviare, Shift+Invio per nuova riga"
 	},
 	"status": {
 		"running": "in esecuzione",
@@ -45,5 +62,16 @@
 		"stopped": "fermato",
 		"error": "errore",
 		"creating": "creazione..."
+	},
+	"time": {
+		"justNow": "Proprio adesso",
+		"minuteAgo": "Un minuto fa",
+		"minutesAgo": "{{count}} minuti fa",
+		"hourAgo": "Un’ora fa",
+		"hoursAgo": "{{count}} ore fa",
+		"dayAgo": "Un giorno fa",
+		"daysAgo": "{{count}} giorni fa",
+		"weekAgo": "Una settimana fa",
+		"weeksAgo": "{{count}} settimane fa"
 	}
 }

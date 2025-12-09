@@ -1,0 +1,6 @@
+async function fetchWithRetry(url) {
+  // TODO: Implement retry logic with exponential backoff
+  // TODO: Implement timeout logic
+  const response = await fetch(url);
+  return response.json();
+}

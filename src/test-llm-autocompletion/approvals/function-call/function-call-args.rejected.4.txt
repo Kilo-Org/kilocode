@@ -1,2 +1,8 @@
 function greet(name) { return 'Hello ' + name; }
-greet("")];
+greet('John'); // returns 'Hello John'
+greet(5); // returns 'Hello 5'
+
+// TypeScript
+function greet(name: string) { return 'Hello ' + name; }
+greet('John'); // returns 'Hello John'
+greet(5); // Error: Argument of type 'number' is not assignable to parameter of type 'string'.

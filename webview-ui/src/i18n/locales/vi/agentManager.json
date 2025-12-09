@@ -6,12 +6,16 @@
 		"emptyState": "Chưa có agent nào đang hoạt động.",
 		"startAgent": "Khởi động Agent",
 		"removeSession": "Xóa",
-		"refresh": "Làm mới"
+		"refresh": "Làm mới",
+		"worktree": "Worktree",
+		"local": "Cục bộ",
+		"mainWorkspace": "Không gian làm việc chính",
+		"readyToMerge": "Sẵn sàng hợp nhất"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
 		"describeTask": "Mô tả nhiệm vụ bạn muốn agent thực hiện.",
-		"placeholderTask": "ví dụ: Tạo một component React mới cho nút bấm...",
+		"placeholderTask": "Nhập nhiệm vụ của bạn ở đây...",
 		"stopButton": "Dừng",
 		"newButton": "Mới",
 		"stopButtonTitle": "Dừng Agent",
@@ -21,6 +25,13 @@
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
 		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
+		"runModeLocal": "Cục bộ",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Đám mây",
+		"comingSoon": "Sắp ra mắt",
+		"runningInWorktree": "Đang chạy trong worktree",
+		"runningLocally": "Đang chạy cục bộ",
+		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent đang chạy ở chế độ tự động"
+		"autonomous": "Agent đang chạy ở chế độ tự động",
+		"placeholderTypeTask": "Nhập nhiệm vụ của bạn ở đây...",
+		"ariaLabel": "Nhập tin nhắn",
+		"cancelTitle": "Hủy agent",
+		"sendTitle": "Gửi tin nhắn",
+		"resumeTitle": "Tiếp tục agent",
+		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"
 	},
 	"status": {
 		"running": "đang chạy",
@@ -45,5 +62,16 @@
 		"stopped": "đã dừng",
 		"error": "lỗi",
 		"creating": "đang tạo..."
+	},
+	"time": {
+		"justNow": "Vừa xong",
+		"minuteAgo": "1 phút trước",
+		"minutesAgo": "{{count}} phút trước",
+		"hourAgo": "1 giờ trước",
+		"hoursAgo": "{{count}} giờ trước",
+		"dayAgo": "1 ngày trước",
+		"daysAgo": "{{count}} ngày trước",
+		"weekAgo": "1 tuần trước",
+		"weeksAgo": "{{count}} tuần trước"
 	}
 }

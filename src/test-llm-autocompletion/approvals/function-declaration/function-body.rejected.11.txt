@@ -1,0 +1,25 @@
+function calculateSum(a, b) {
+    return a + b;
+}
+
+function calculateDifference(a, b) {
+    return a - b;
+}
+
+function calculateProduct(a, b) {
+    return a * b;
+}
+
+function calculateQuotient(a, b) {
+    if (b === 0) {
+        throw new Error("Cannot divide by zero");
+    }
+    return a / b;
+}
+
+module.exports = {
+    calculateSum,
+    calculateDifference,
+    calculateProduct,
+    calculateQuotient
+};

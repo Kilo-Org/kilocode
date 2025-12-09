@@ -294,6 +294,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
 		const [isMouseDownOnMenu, setIsMouseDownOnMenu] = useState(false)
 		const highlightLayerRef = useRef<HTMLDivElement>(null)
+		const shouldAutoScrollToCaretRef = useRef(false) // kilocode_change
 		const [selectedMenuIndex, setSelectedMenuIndex] = useState(-1)
 		const [selectedType, setSelectedType] = useState<ContextMenuOptionType | null>(null)
 		const [justDeletedSpaceAfterMention, setJustDeletedSpaceAfterMention] = useState(false)
@@ -751,13 +752,20 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const handleInputChange = useCallback(
 			(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-				const newValue = e.target.value
+				// kilocode_change start
+				const target = e.target
+				const newValue = target.value
+				const cursorAtEnd =
+					target.selectionStart === target.selectionEnd && target.selectionEnd === newValue.length
+				shouldAutoScrollToCaretRef.current = cursorAtEnd
+				// kilocode_change end
+
 				setInputValue(newValue)
 
 				// Reset history navigation when user types
 				resetOnInputChange()
 
-				const newCursorPosition = e.target.selectionStart
+				const newCursorPosition = target.selectionStart // kilocode_change
 				setCursorPosition(newCursorPosition)
 
 				// kilocode_change start: pull slash commands from Cline
@@ -999,6 +1007,29 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		useLayoutEffect(() => {
 			updateHighlights()
+
+			// kilocode_change start
+			if (!shouldAutoScrollToCaretRef.current) {
+				return
+			}
+
+			shouldAutoScrollToCaretRef.current = false
+
+			if (!textAreaRef.current) {
+				return
+			}
+
+			const rafId = requestAnimationFrame(() => {
+				if (!textAreaRef.current) {
+					return
+				}
+
+				textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight
+				updateHighlights()
+			})
+
+			return () => cancelAnimationFrame(rafId)
+			// kilocode_change end
 		}, [inputValue, updateHighlights])
 
 		const updateCursorPosition = useCallback(() => {

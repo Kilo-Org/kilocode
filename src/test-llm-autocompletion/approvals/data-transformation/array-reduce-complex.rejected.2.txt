@@ -1,3 +1,14 @@
 const orders = [{id: 1, items: [{price: 10}, {price: 20}]}, {id: 2, items: [{price: 15}]}];
 const totalRevenue = orders.reduce((acc, order) => {
-	const orderTotal = order.items.reduce((sum, item) => sum + item.price;
+	const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
+	return acc + orderTotal;
+}, 0);
+console.log(totalRevenue); // 45
+
+// 1. acc = 0, order = {id: 1, items: [{price: 10}, {price: 20}]}
+// 2. orderTotal = 10 + 20 = 30
+// 3. acc = 0 + 30 = 30
+// 4. acc = 30, order = {id: 2, items: [{price: 15}]}
+// 5. orderTotal = 15
+// 6. acc = 30 + 15 = 45
+// 7. acc = 45
