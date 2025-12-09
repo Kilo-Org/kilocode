@@ -22,7 +22,7 @@ interface UseChatGhostTextReturn {
  */
 export function useChatGhostText({
 	textAreaRef,
-	enableChatAutocomplete = false,
+	enableChatAutocomplete = true,
 }: UseChatGhostTextOptions): UseChatGhostTextReturn {
 	const [ghostText, setGhostText] = useState<string>("")
 	const completionDebounceRef = useRef<NodeJS.Timeout | null>(null)
