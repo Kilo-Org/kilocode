@@ -154,7 +154,13 @@ export interface AutocompleteContext {
 	strategy?: "fim" | "hole_filler"
 }
 
-export type CacheMatchType = "exact" | "partial_typing" | "backward_deletion"
+export type CacheMatchType =
+	| "exact"
+	| "partial_typing"
+	| "backward_deletion"
+	| "fuzzy_prefix"
+	| "context_similarity"
+	| "multi_line_partial"
 
 export type CostTrackingCallback = (cost: number, inputTokens: number, outputTokens: number) => void
 

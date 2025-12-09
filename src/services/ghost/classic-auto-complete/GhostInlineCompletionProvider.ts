@@ -11,7 +11,14 @@ import {
 	LLMRetrievalResult,
 	PendingRequest,
 	AutocompleteContext,
+	CacheMatchType,
 } from "../types"
+import {
+	findEnhancedMatchingSuggestion,
+	toStandardMatchResult,
+	EnhancedCacheMatchingConfig,
+	EnhancedMatchingSuggestionResult,
+} from "./enhancedCacheMatching"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
 import { GhostModel } from "../GhostModel"
@@ -26,6 +33,18 @@ import { ClineProvider } from "../../../core/webview/ClineProvider"
 import * as telemetry from "./AutocompleteTelemetry"
 
 const MAX_SUGGESTIONS_HISTORY = 20
+
+/**
+ * Default configuration for enhanced cache matching
+ */
+const DEFAULT_ENHANCED_CACHE_CONFIG: EnhancedCacheMatchingConfig = {
+	enableFuzzyMatching: true,
+	maxEditDistance: 2,
+	enableContextSimilarity: true,
+	minSimilarityScore: 0.7,
+	enableMultiLineAwareness: true,
+	maxMultiLineContext: 5,
+}
 
 /**
  * Initial debounce delay in milliseconds.
@@ -102,6 +121,45 @@ export function findMatchingSuggestion(
 }
 
 /**
+ * Find a matching suggestion using enhanced cache matching with fuzzy prefix matching,
+ * multi-line awareness, and context similarity scoring.
+ *
+ * @param prefix - The text before the cursor position
+ * @param suffix - The text after the cursor position
+ * @param suggestionsHistory - Array of previous suggestions (most recent last)
+ * @param config - Optional configuration for enhanced matching
+ * @returns The matching suggestion with match type, or null if no match found
+ */
+export function findMatchingSuggestionEnhanced(
+	prefix: string,
+	suffix: string,
+	suggestionsHistory: FillInAtCursorSuggestion[],
+	config?: Partial<EnhancedCacheMatchingConfig>,
+): MatchingSuggestionResult | null {
+	const enhancedResult = findEnhancedMatchingSuggestion(prefix, suffix, suggestionsHistory, config)
+	return toStandardMatchResult(enhancedResult)
+}
+
+/**
+ * Find a matching suggestion using enhanced cache matching, returning the full enhanced result
+ * with confidence score.
+ *
+ * @param prefix - The text before the cursor position
+ * @param suffix - The text after the cursor position
+ * @param suggestionsHistory - Array of previous suggestions (most recent last)
+ * @param config - Optional configuration for enhanced matching
+ * @returns The enhanced matching result with confidence, or null if no match found
+ */
+export function findMatchingSuggestionWithConfidence(
+	prefix: string,
+	suffix: string,
+	suggestionsHistory: FillInAtCursorSuggestion[],
+	config?: Partial<EnhancedCacheMatchingConfig>,
+): EnhancedMatchingSuggestionResult | null {
+	return findEnhancedMatchingSuggestion(prefix, suffix, suggestionsHistory, config)
+}
+
+/**
  * Command ID for tracking inline completion acceptance.
  * This command is executed after the user accepts an inline completion.
  */
@@ -136,6 +194,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private acceptedCommand: vscode.Disposable | null = null
 	private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
 	private latencyHistory: number[] = []
+	private enhancedCacheConfig: EnhancedCacheMatchingConfig = DEFAULT_ENHANCED_CACHE_CONFIG
+	private useEnhancedCacheMatching: boolean = false
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -266,6 +326,29 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 *
 	 * @param latencyMs - The latency of the most recent request in milliseconds
 	 */
+	/**
+	 * Configure enhanced cache matching behavior
+	 * @param config - Partial configuration to merge with defaults
+	 */
+	public setEnhancedCacheConfig(config: Partial<EnhancedCacheMatchingConfig>): void {
+		this.enhancedCacheConfig = { ...this.enhancedCacheConfig, ...config }
+	}
+
+	/**
+	 * Enable or disable enhanced cache matching
+	 * @param enabled - Whether to use enhanced cache matching
+	 */
+	public setUseEnhancedCacheMatching(enabled: boolean): void {
+		this.useEnhancedCacheMatching = enabled
+	}
+
+	/**
+	 * Get the current enhanced cache matching configuration
+	 */
+	public getEnhancedCacheConfig(): EnhancedCacheMatchingConfig {
+		return { ...this.enhancedCacheConfig }
+	}
+
 	public recordLatency(latencyMs: number): void {
 		// Add the new latency to the history
 		this.latencyHistory.push(latencyMs)
@@ -364,7 +447,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
-			const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			// Use enhanced cache matching if enabled, otherwise fall back to basic matching
+			const matchingResult = this.useEnhancedCacheMatching
+				? findMatchingSuggestionEnhanced(prefix, suffix, this.suggestionsHistory, this.enhancedCacheConfig)
+				: findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 			if (matchingResult !== null) {
 				telemetry.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
