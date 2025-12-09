@@ -234,6 +234,7 @@
 	flex-direction: column;
 	overflow: hidden;
 	background: var(--vscode-editor-background);
+	min-width: 280px;
 }
 
 .am-detail-header {

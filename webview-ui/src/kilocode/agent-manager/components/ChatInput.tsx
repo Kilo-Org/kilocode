@@ -154,7 +154,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 				{/* Hint Text inside input */}
 				{!messageText && (
 					<div
-						className="absolute left-3 z-30 pr-9 flex items-center h-8"
+						className="absolute left-3 right-[70px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 						style={{
 							bottom: "0.25rem",
 							color: "var(--vscode-descriptionForeground)",
