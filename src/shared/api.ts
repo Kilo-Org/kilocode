@@ -195,6 +195,7 @@ const dynamicProviderExtras = {
 	"nano-gpt": {} as { nanoGptModelList?: "all" | "personalized" | "subscription" }, // kilocode_change
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	oca: {} as { apiKey: string; baseUrl?: string },
 	ovhcloud: {} as { apiKey?: string }, // kilocode_change
 	inception: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	synthetic: {} as { apiKey?: string }, // kilocode_change

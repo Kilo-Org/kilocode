@@ -44,6 +44,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	"human-relay": ["apiModelId"],
 	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
 	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
+	oca: [],
 	synthetic: ["syntheticApiKey", "apiModelId"],
 	"sap-ai-core": ["sapAiCoreServiceKey", "sapAiCoreResourceGroup", "sapAiCoreDeploymentId", "sapAiCoreModelId"],
 	// Special cases handled separately in handleSpecialValidations

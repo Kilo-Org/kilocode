@@ -241,6 +241,11 @@ export interface ExtensionMessage {
 		| "browserSessionUpdate"
 		| "browserSessionNavigate"
 		| "organizationSwitchResult"
+		| "oca/show-auth-url"
+		| "oca/login-success"
+		| "oca/login-error"
+		| "oca/status"
+		| "oca/logout-success"
 		| "showTimestamps" // kilocode_change
 		| "showDiffStats" // kilocode_change
 		| "apiMessagesSaved" // kilocode_change: File save event for API messages
@@ -358,6 +363,7 @@ export interface ExtensionMessage {
 		message: string
 	} // kilocode_change
 	url?: string // kilocode_change
+	authenticated?: boolean
 	keybindings?: Record<string, string> // kilocode_change
 	setting?: string
 	value?: any // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -928,6 +934,13 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		| "oca/login"
+		| "oca/logout"
+		| "oca/show-auth-url"
+		| "oca/login-success"
+		| "oca/login-error"
+		| "oca/status"
+		| "oca/logout-success"
 		| "openMarkdownPreview"
 		| "updateSettings"
 		| "requestManagedIndexerState" // kilocode_change
@@ -1033,6 +1046,7 @@ export interface WebviewMessage {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	settings?: any
 	url?: string // For openExternal
+	authenticated?: boolean
 	mpItem?: MarketplaceItem
 	mpInstallOptions?: InstallMarketplaceItemOptions
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
