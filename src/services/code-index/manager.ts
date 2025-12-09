@@ -228,6 +228,16 @@ export class CodeIndexManager {
 			this._orchestrator.cancelIndexing()
 		}
 	}
+
+	/**
+	 * Updates the batch segment threshold for indexing operations
+	 * @param newThreshold New batch segment threshold value
+	 */
+	public updateBatchSegmentThreshold(newThreshold: number): void {
+		if (this._orchestrator) {
+			this._orchestrator.updateBatchSegmentThreshold(newThreshold)
+		}
+	}
 	// kilocode_change end
 
 	/**

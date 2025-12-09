@@ -45,6 +45,10 @@ import {
 } from "@src/components/ui"
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
+// kilocode_change start
+import { EmbeddingBatchSizeSlider } from "./kilocode/EmbeddingBatchSizeSlider"
+import { MaxBatchRetriesSlider } from "./kilocode/MaxBatchRetriesSlider"
+// kilocode_change end
 
 // Default URLs for providers
 const DEFAULT_QDRANT_URL = "http://localhost:6333"
@@ -75,6 +79,8 @@ interface LocalCodeIndexSettings {
 	codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 	codebaseIndexSearchMaxResults?: number
 	codebaseIndexSearchMinScore?: number
+	codebaseIndexEmbeddingBatchSize?: number
+	codebaseIndexScannerMaxBatchRetries?: number
 
 	// Bedrock-specific settings
 	codebaseIndexBedrockRegion?: string
@@ -241,6 +247,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEmbedderModelDimension: undefined,
 		codebaseIndexSearchMaxResults: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+		codebaseIndexEmbeddingBatchSize: CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+		codebaseIndexScannerMaxBatchRetries: CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
 		codebaseIndexBedrockRegion: "",
 		codebaseIndexBedrockProfile: "",
 		codeIndexOpenAiKey: "",
@@ -291,6 +299,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					codebaseIndexConfig.codebaseIndexSearchMaxResults ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 				codebaseIndexSearchMinScore:
 					codebaseIndexConfig.codebaseIndexSearchMinScore ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+				codebaseIndexEmbeddingBatchSize:
+					codebaseIndexConfig.codebaseIndexEmbeddingBatchSize ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+				codebaseIndexScannerMaxBatchRetries:
+					codebaseIndexConfig.codebaseIndexScannerMaxBatchRetries ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
 				codebaseIndexBedrockRegion: codebaseIndexConfig.codebaseIndexBedrockRegion || "",
 				codebaseIndexBedrockProfile: codebaseIndexConfig.codebaseIndexBedrockProfile || "",
 				codeIndexOpenAiKey: "",
@@ -1681,6 +1695,20 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 											</VSCodeButton>
 										</div>
 									</div>
+
+									{/* kilocode_change start */}
+									<EmbeddingBatchSizeSlider
+										value={currentSettings.codebaseIndexEmbeddingBatchSize}
+										onChange={(value) => updateSetting("codebaseIndexEmbeddingBatchSize", value)}
+									/>
+
+									<MaxBatchRetriesSlider
+										value={currentSettings.codebaseIndexScannerMaxBatchRetries}
+										onChange={(value) =>
+											updateSetting("codebaseIndexScannerMaxBatchRetries", value)
+										}
+									/>
+									{/* kilocode_change end */}
 								</div>
 							)}
 						</div>

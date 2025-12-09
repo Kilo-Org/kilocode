@@ -25,6 +25,10 @@ export interface CodeIndexConfig {
 	qdrantApiKey?: string
 	searchMinScore?: number
 	searchMaxResults?: number
+	// kilocode_change start
+	embeddingBatchSize?: number
+	scannerMaxBatchRetries?: number
+	// kilocode_change end
 }
 
 /**
