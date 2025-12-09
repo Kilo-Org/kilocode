@@ -33,7 +33,9 @@
 		"runningLocally": "Běží lokálně",
 		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
-		"waitingForCli": "Inicializace relace agenta..."
+		"waitingForCli": "Inicializace relace agenta...",
+		"cancelCreating": "Zrušit vytváření relace",
+		"cancelButton": "Zrušit"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",

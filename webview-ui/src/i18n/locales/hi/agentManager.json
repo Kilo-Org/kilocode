@@ -33,7 +33,9 @@
 		"runningLocally": "स्थानीय रूप से चल रहा है",
 		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
-		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है..."
+		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है...",
+		"cancelCreating": "सत्र निर्माण रद्द करें",
+		"cancelButton": "रद्द करें"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",

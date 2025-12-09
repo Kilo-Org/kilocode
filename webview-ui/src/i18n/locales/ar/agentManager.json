@@ -33,7 +33,9 @@
 		"runningLocally": "يعمل محلياً",
 		"branch": "فرع",
 		"creatingSession": "جاري إنشاء الجلسة...",
-		"waitingForCli": "جارٍ تهيئة جلسة الوكيل..."
+		"waitingForCli": "جارٍ تهيئة جلسة الوكيل...",
+		"cancelCreating": "إلغاء إنشاء الجلسة",
+		"cancelButton": "إلغاء"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",

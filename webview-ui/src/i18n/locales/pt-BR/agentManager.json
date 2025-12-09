@@ -33,7 +33,9 @@
 		"runningLocally": "Executando localmente",
 		"branch": "Branch",
 		"creatingSession": "Criando sessão...",
-		"waitingForCli": "Inicializando sessão do agente..."
+		"waitingForCli": "Inicializando sessão do agente...",
+		"cancelCreating": "Cancelar criação de sessão",
+		"cancelButton": "Cancelar"
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",

@@ -33,7 +33,9 @@
 		"runningLocally": "本地运行",
 		"branch": "分支",
 		"creatingSession": "正在创建会话...",
-		"waitingForCli": "正在初始化代理会话..."
+		"waitingForCli": "正在初始化代理会话...",
+		"cancelCreating": "取消创建会话",
+		"cancelButton": "取消"
 	},
 	"messages": {
 		"waiting": "等待代理响应...",

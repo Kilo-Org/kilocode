@@ -33,7 +33,9 @@
 		"runningLocally": "Đang chạy cục bộ",
 		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
-		"waitingForCli": "Đang khởi tạo phiên agent..."
+		"waitingForCli": "Đang khởi tạo phiên agent...",
+		"cancelCreating": "Hủy tạo phiên",
+		"cancelButton": "Hủy"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

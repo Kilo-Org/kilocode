@@ -33,7 +33,9 @@
 		"runningLocally": "ทำงานภายในเครื่อง",
 		"branch": "สาขา",
 		"creatingSession": "กำลังสร้างเซสชัน...",
-		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์..."
+		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์...",
+		"cancelCreating": "ยกเลิกการสร้างเซสชัน",
+		"cancelButton": "ยกเลิก"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",

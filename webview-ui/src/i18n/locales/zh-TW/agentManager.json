@@ -33,7 +33,9 @@
 		"runningLocally": "本機執行",
 		"branch": "分支",
 		"creatingSession": "正在建立工作階段...",
-		"waitingForCli": "正在初始化代理工作階段..."
+		"waitingForCli": "正在初始化代理工作階段...",
+		"cancelCreating": "取消建立工作階段",
+		"cancelButton": "取消"
 	},
 	"messages": {
 		"waiting": "等待代理回應...",

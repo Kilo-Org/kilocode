@@ -33,7 +33,9 @@
 		"runningLocally": "Berjalan secara lokal",
 		"branch": "Cabang",
 		"creatingSession": "Membuat sesi...",
-		"waitingForCli": "Menginisialisasi sesi agen..."
+		"waitingForCli": "Menginisialisasi sesi agen...",
+		"cancelCreating": "Batalkan pembuatan sesi",
+		"cancelButton": "Batal"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

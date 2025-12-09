@@ -33,7 +33,9 @@
 		"runningLocally": "ローカルで実行中",
 		"branch": "ブランチ",
 		"creatingSession": "セッションを作成中...",
-		"waitingForCli": "エージェントセッションを初期化中..."
+		"waitingForCli": "エージェントセッションを初期化中...",
+		"cancelCreating": "セッション作成をキャンセル",
+		"cancelButton": "キャンセル"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

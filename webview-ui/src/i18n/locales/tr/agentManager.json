@@ -33,7 +33,9 @@
 		"runningLocally": "Yerel olarak çalışıyor",
 		"branch": "Dal",
 		"creatingSession": "Oturum oluşturuluyor...",
-		"waitingForCli": "Ajan oturumu başlatılıyor..."
+		"waitingForCli": "Ajan oturumu başlatılıyor...",
+		"cancelCreating": "Oturum oluşturmayı iptal et",
+		"cancelButton": "İptal"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

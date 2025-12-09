@@ -193,6 +193,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.removeSession":
 					this.removeSession(message.sessionId as string)
 					break
+				case "agentManager.cancelPendingSession":
+					this.cancelPendingSession()
+					break
 				case "agentManager.selectSession":
 					this.selectSession(message.sessionId as string | null)
 					break
@@ -560,6 +563,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 			void vscode.window.showErrorMessage(`Failed to send ${label} to agent: ${errorMessage}`)
 			throw error
 		}
+	}
+
+	/**
+	 * Cancel a pending session that is stuck in "Creating session..." state
+	 */
+	private cancelPendingSession(): void {
+		this.processHandler.cancelPendingSession()
 	}
 
 	/**

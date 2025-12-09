@@ -590,6 +590,139 @@ describe("CliProcessHandler", () => {
 		})
 	})
 
+	describe("pending session timeout", () => {
+		it("times out pending session after 30 seconds if no session_created event", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			expect(registry.pendingSession).not.toBeNull()
+
+			// Advance time by 30 seconds
+			vi.advanceTimersByTime(30_000)
+
+			// Pending session should be cleared
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onPendingSessionChanged).toHaveBeenLastCalledWith(null)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "Session creation timed out - CLI did not respond",
+			})
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("includes stderr output in timeout error message", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit some stderr output before timeout
+			mockProcess.stderr.emit("data", Buffer.from("Some error output"))
+
+			// Advance time by 30 seconds
+			vi.advanceTimersByTime(30_000)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "Some error output",
+			})
+		})
+
+		it("does not timeout if session_created event arrives in time", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Advance time by 15 seconds (half the timeout)
+			vi.advanceTimersByTime(15_000)
+
+			// Emit session_created event
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			// Advance time past the original timeout
+			vi.advanceTimersByTime(20_000)
+
+			// Session should still exist and not be timed out
+			expect(registry.getSession("session-1")).toBeDefined()
+			expect(registry.getSession("session-1")?.status).toBe("running")
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+		})
+
+		it("clears timeout when process exits before timeout", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Process exits with error before timeout
+			mockProcess.emit("exit", 1, null)
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should only have been called once (from exit, not timeout)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledTimes(1)
+		})
+
+		it("clears timeout when process errors before timeout", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Process errors before timeout
+			mockProcess.emit("error", new Error("spawn ENOENT"))
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should only have been called once (from error, not timeout)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledTimes(1)
+		})
+
+		it("clears timeout when stopAllProcesses is called", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			handler.stopAllProcesses()
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should not have been called (stopAllProcesses doesn't call it)
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("cancelPendingSession", () => {
+		it("cancels a pending session and kills the process", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			expect(registry.pendingSession).not.toBeNull()
+
+			handler.cancelPendingSession()
+
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+			expect(callbacks.onPendingSessionChanged).toHaveBeenLastCalledWith(null)
+			expect(callbacks.onStateChanged).toHaveBeenCalled()
+		})
+
+		it("does nothing when no pending session exists", () => {
+			handler.cancelPendingSession()
+
+			expect(mockProcess.kill).not.toHaveBeenCalled()
+			expect(callbacks.onPendingSessionChanged).not.toHaveBeenCalled()
+		})
+
+		it("clears the timeout when canceling", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			handler.cancelPendingSession()
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should not have been called (cancel doesn't trigger failure)
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+		})
+	})
+
 	describe("gitUrl support", () => {
 		it("passes gitUrl to registry when creating pending session", () => {
 			const onCliEvent = vi.fn()

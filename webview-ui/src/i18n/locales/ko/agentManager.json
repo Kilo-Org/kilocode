@@ -33,7 +33,9 @@
 		"runningLocally": "로컬에서 실행 중",
 		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
-		"waitingForCli": "에이전트 세션 초기화 중..."
+		"waitingForCli": "에이전트 세션 초기화 중...",
+		"cancelCreating": "세션 생성 취소",
+		"cancelButton": "취소"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",

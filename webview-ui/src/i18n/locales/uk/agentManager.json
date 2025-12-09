@@ -33,7 +33,9 @@
 		"runningLocally": "Виконується локально",
 		"branch": "Гілка",
 		"creatingSession": "Створення сесії...",
-		"waitingForCli": "Ініціалізація сесії агента..."
+		"waitingForCli": "Ініціалізація сесії агента...",
+		"cancelCreating": "Скасувати створення сесії",
+		"cancelButton": "Скасувати"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",

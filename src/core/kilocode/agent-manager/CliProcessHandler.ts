@@ -11,6 +11,12 @@ import { buildCliArgs } from "./CliArgsBuilder"
 import type { ClineMessage } from "@roo-code/types"
 
 /**
+ * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
+ * the session is considered failed. This prevents the UI from getting stuck in "Creating session..." state.
+ */
+const PENDING_SESSION_TIMEOUT_MS = 30_000
+
+/**
  * Tracks a pending session while waiting for CLI's session_created event.
  * Note: This is only used for NEW sessions. Resume sessions go directly to activeSessions.
  */
@@ -26,6 +32,7 @@ interface PendingProcessInfo {
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
+	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
 }
 
 interface ActiveProcessInfo {
@@ -148,6 +155,7 @@ export class CliProcessHandler {
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
 				stderrBuffer: [],
+				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
 			}
 		}
 
@@ -199,6 +207,9 @@ export class CliProcessHandler {
 	public stopAllProcesses(): void {
 		// Stop pending process if any
 		if (this.pendingProcess) {
+			if (this.pendingProcess.timeoutId) {
+				clearTimeout(this.pendingProcess.timeoutId)
+			}
 			this.pendingProcess.process.kill("SIGTERM")
 			this.registry.clearPendingSession()
 			this.pendingProcess = null
@@ -208,6 +219,28 @@ export class CliProcessHandler {
 			info.process.kill("SIGTERM")
 		}
 		this.activeSessions.clear()
+	}
+
+	/**
+	 * Cancel a pending session that hasn't received session_created yet.
+	 * This allows users to manually cancel stuck session creation.
+	 */
+	public cancelPendingSession(): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		this.debugLog(`Canceling pending session`)
+
+		if (this.pendingProcess.timeoutId) {
+			clearTimeout(this.pendingProcess.timeoutId)
+		}
+		this.pendingProcess.process.kill("SIGTERM")
+		this.registry.clearPendingSession()
+		this.pendingProcess = null
+
+		this.callbacks.onPendingSessionChanged(null)
+		this.callbacks.onStateChanged()
 	}
 
 	public hasProcess(sessionId: string): boolean {
@@ -293,10 +326,45 @@ export class CliProcessHandler {
 		}
 	}
 
+	/**
+	 * Handle timeout for pending sessions - called when session_created event doesn't arrive in time.
+	 * This prevents the UI from getting stuck in "Creating session..." state.
+	 */
+	private handlePendingTimeout(): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		this.callbacks.onLog(
+			`Pending session timed out after ${PENDING_SESSION_TIMEOUT_MS / 1000}s - no session_created event received`,
+		)
+		this.debugLog(`Pending session timed out`)
+
+		const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
+
+		// Kill the process
+		this.pendingProcess.process.kill("SIGTERM")
+		this.registry.clearPendingSession()
+		this.pendingProcess = null
+
+		// Notify callbacks about the failure
+		this.callbacks.onPendingSessionChanged(null)
+		this.callbacks.onStartSessionFailed({
+			type: "unknown",
+			message: stderrOutput || "Session creation timed out - CLI did not respond",
+		})
+		this.callbacks.onStateChanged()
+	}
+
 	private handleSessionCreated(event: SessionCreatedStreamEvent): void {
 		if (!this.pendingProcess) {
 			this.debugLog(`Received session_created but no pending process`)
 			return
+		}
+
+		// Clear the timeout since we received session_created
+		if (this.pendingProcess.timeoutId) {
+			clearTimeout(this.pendingProcess.timeoutId)
 		}
 
 		const {
@@ -370,6 +438,11 @@ export class CliProcessHandler {
 	): void {
 		// Check if this is the pending process (only for NEW sessions, not resumes)
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			// Clear the timeout since the process has exited
+			if (this.pendingProcess.timeoutId) {
+				clearTimeout(this.pendingProcess.timeoutId)
+			}
+
 			const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
@@ -420,6 +493,11 @@ export class CliProcessHandler {
 	private handleProcessError(proc: ChildProcess, error: Error): void {
 		// Check if this is the pending process (only for NEW sessions, not resumes)
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			// Clear the timeout since the process has errored
+			if (this.pendingProcess.timeoutId) {
+				clearTimeout(this.pendingProcess.timeoutId)
+			}
+
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null

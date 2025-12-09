@@ -33,7 +33,9 @@
 		"runningLocally": "Exécution locale",
 		"branch": "Branche",
 		"creatingSession": "Création de la session...",
-		"waitingForCli": "Initialisation de la session de l'agent..."
+		"waitingForCli": "Initialisation de la session de l'agent...",
+		"cancelCreating": "Annuler la création de session",
+		"cancelButton": "Annuler"
 	},
 	"messages": {
 		"waiting": "En attente de la réponse de l'agent...",

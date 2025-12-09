@@ -33,7 +33,9 @@
 		"runningLocally": "Läuft lokal",
 		"branch": "Branch",
 		"creatingSession": "Sitzung wird erstellt...",
-		"waitingForCli": "Agent-Sitzung wird initialisiert..."
+		"waitingForCli": "Agent-Sitzung wird initialisiert...",
+		"cancelCreating": "Sitzungserstellung abbrechen",
+		"cancelButton": "Abbrechen"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",

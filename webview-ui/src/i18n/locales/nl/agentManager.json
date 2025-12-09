@@ -33,7 +33,9 @@
 		"runningLocally": "Draait lokaal",
 		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
-		"waitingForCli": "Agent-sessie wordt geïnitialiseerd..."
+		"waitingForCli": "Agent-sessie wordt geïnitialiseerd...",
+		"cancelCreating": "Sessie aanmaken annuleren",
+		"cancelButton": "Annuleren"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

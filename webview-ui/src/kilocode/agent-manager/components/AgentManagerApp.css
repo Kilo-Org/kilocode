@@ -704,3 +704,28 @@
 	margin-left: auto;
 	font-size: 10px;
 }
+
+/* Cancel button for pending session */
+.am-cancel-btn {
+	padding: 6px 16px;
+	border-radius: 4px;
+	font-size: var(--vscode-font-size);
+	cursor: pointer;
+	border: 1px solid var(--vscode-button-border, transparent);
+	background: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	transition: background-color 0.1s;
+}
+
+.am-cancel-btn:hover {
+	background: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* Header icon button always visible (not just on hover) */
+.am-detail-header .am-icon-btn {
+	opacity: 0.7;
+}
+
+.am-detail-header .am-icon-btn:hover {
+	opacity: 1;
+}
