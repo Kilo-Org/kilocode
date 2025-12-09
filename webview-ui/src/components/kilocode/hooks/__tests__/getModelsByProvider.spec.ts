@@ -28,6 +28,7 @@ describe("getModelsByProvider", () => {
 			deepinfra: { "test-model": testModel },
 			"vercel-ai-gateway": { "test-model": testModel },
 			huggingface: { "test-model": testModel },
+			oca: { "test-model": testModel },
 			gemini: { "test-model": testModel },
 			ovhcloud: { "test-model": testModel },
 			chutes: { "test-model": testModel },

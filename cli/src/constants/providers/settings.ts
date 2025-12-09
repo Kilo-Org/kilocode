@@ -1086,6 +1086,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	unbound: "gpt-4o",
 	requesty: "gpt-4o",
 	roo: "gpt-4o",
+	oca: "",
 	"vercel-ai-gateway": "gpt-4o",
 	"virtual-quota-fallback": "gpt-4o",
 	"human-relay": "human",
