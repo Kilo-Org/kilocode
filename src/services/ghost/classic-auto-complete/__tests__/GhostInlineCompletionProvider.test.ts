@@ -8,7 +8,7 @@ import {
 import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
-import * as telemetry from "../AutocompleteTelemetry"
+import { AutocompleteTelemetry } from "../AutocompleteTelemetry"
 import * as GhostContextProviderModule from "../getProcessedSnippets"
 
 // Mock RooIgnoreController to prevent vscode.RelativePattern errors
@@ -22,16 +22,8 @@ vi.mock("../../../../core/ignore/RooIgnoreController", () => {
 	}
 })
 
-// Mock AutocompleteTelemetry module
-vi.mock("../AutocompleteTelemetry", () => ({
-	captureSuggestionRequested: vi.fn(),
-	captureSuggestionFiltered: vi.fn(),
-	captureCacheHit: vi.fn(),
-	captureLlmSuggestionReturned: vi.fn(),
-	captureLlmRequestCompleted: vi.fn(),
-	captureLlmRequestFailed: vi.fn(),
-	captureAcceptSuggestion: vi.fn(),
-}))
+// Mock AutocompleteTelemetry class - don't mock it, let it be created normally
+// The tests will create real instances or null as needed
 
 // Mock vscode InlineCompletionTriggerKind enum and event listeners
 vi.mock("vscode", async () => {
@@ -523,6 +515,7 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockSettings: { enableAutoTrigger: boolean } | null
 	let mockExtensionContext: vscode.ExtensionContext
 	let mockClineProvider: { cwd: string }
+	let mockTelemetry: AutocompleteTelemetry
 
 	// Helper to call provideInlineCompletionItems and advance timers
 	// With leading edge debounce, first call executes immediately, subsequent calls wait for 300ms of inactivity
@@ -611,6 +604,7 @@ describe("GhostInlineCompletionProvider", () => {
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 		mockClineProvider = { cwd: "/test/workspace" }
+		mockTelemetry = new AutocompleteTelemetry()
 
 		provider = new GhostInlineCompletionProvider(
 			mockExtensionContext,
@@ -618,6 +612,7 @@ describe("GhostInlineCompletionProvider", () => {
 			mockCostTrackingCallback,
 			() => mockSettings,
 			mockClineProvider as any,
+			mockTelemetry,
 		)
 	})
 
@@ -2128,10 +2123,6 @@ describe("GhostInlineCompletionProvider", () => {
 	})
 
 	describe("telemetry tracking", () => {
-		beforeEach(() => {
-			vi.mocked(telemetry.captureAcceptSuggestion).mockClear()
-		})
-
 		it("should track acceptance when suggestion is accepted via command", async () => {
 			// Capture the registered command callback by setting up mock before provider creation
 			let acceptCallback: (() => void) | undefined
@@ -2143,6 +2134,10 @@ describe("GhostInlineCompletionProvider", () => {
 				return { dispose: vi.fn() }
 			})
 
+			// Create new telemetry instance for this test
+			const testTelemetry = new AutocompleteTelemetry()
+			vi.spyOn(testTelemetry, "captureAcceptSuggestion")
+
 			// Create new provider to capture the command
 			const testProvider = new GhostInlineCompletionProvider(
 				mockExtensionContext,
@@ -2150,6 +2145,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockClineProvider as any,
+				testTelemetry,
 			)
 
 			// Verify callback was captured
@@ -2178,7 +2174,42 @@ describe("GhostInlineCompletionProvider", () => {
 			// Simulate accepting the suggestion
 			acceptCallback!()
 
-			expect(telemetry.captureAcceptSuggestion).toHaveBeenCalled()
+			expect(testTelemetry.captureAcceptSuggestion).toHaveBeenCalled()
+
+			// Cleanup
+			testProvider.dispose()
+		})
+
+		it("should work without telemetry when null is passed", async () => {
+			// Create provider without telemetry
+			const testProvider = new GhostInlineCompletionProvider(
+				mockExtensionContext,
+				mockModel,
+				mockCostTrackingCallback,
+				() => mockSettings,
+				mockClineProvider as any,
+				null,
+			)
+
+			// Set up a suggestion
+			testProvider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			// Should work without errors
+			const promise = testProvider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+			await vi.advanceTimersByTimeAsync(300)
+			const result = await promise
+
+			// Should still return suggestions
+			expect(Array.isArray(result) ? result.length : 0).toBeGreaterThan(0)
 
 			// Cleanup
 			testProvider.dispose()
