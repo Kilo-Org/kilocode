@@ -9,6 +9,8 @@ import {
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
 import type { ClineMessage } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
+import { buildProviderEnvOverrides } from "./providerEnvMapper"
 
 /**
  * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
@@ -72,11 +74,38 @@ export class CliProcessHandler {
 		}
 	}
 
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+		const baseEnv = { ...process.env }
+
+		const overrides = buildProviderEnvOverrides(
+			apiConfiguration,
+			baseEnv,
+			(message) => this.callbacks.onLog(message),
+			(message) => this.debugLog(message),
+		)
+
+		return {
+			...baseEnv,
+			...overrides,
+			NO_COLOR: "1",
+			FORCE_COLOR: "0",
+			KILO_PLATFORM: "agent-manager",
+		}
+	}
+
 	public spawnProcess(
 		cliPath: string,
 		workspace: string,
 		prompt: string,
-		options: { parallelMode?: boolean; sessionId?: string; label?: string; gitUrl?: string } | undefined,
+		options:
+			| {
+					parallelMode?: boolean
+					sessionId?: string
+					label?: string
+					gitUrl?: string
+					apiConfiguration?: ProviderSettings
+			  }
+			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		// Check if we're resuming an existing session (sessionId explicitly provided)
@@ -116,11 +145,13 @@ export class CliProcessHandler {
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
+
 		// Spawn CLI process
 		const proc = spawn(cliPath, cliArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", KILO_PLATFORM: "agent-manager" },
+			env,
 			shell: false,
 		})
 

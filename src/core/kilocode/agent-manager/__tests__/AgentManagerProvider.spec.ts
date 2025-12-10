@@ -25,6 +25,9 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
 		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -61,7 +64,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {
@@ -370,6 +373,9 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
 		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -406,7 +412,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {
@@ -589,6 +595,9 @@ describe("AgentManagerProvider telemetry", () => {
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
 		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -624,7 +633,7 @@ describe("AgentManagerProvider telemetry", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {

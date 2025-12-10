@@ -22,6 +22,7 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -29,6 +30,7 @@ import {
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
 } from "./telemetry"
+import type { ClineProvider } from "../../webview/ClineProvider"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 
 /**
@@ -55,6 +57,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly outputChannel: vscode.OutputChannel,
+		private readonly provider: ClineProvider,
 	) {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
@@ -317,6 +320,17 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		let apiConfiguration: ProviderSettings | undefined
+		try {
+			apiConfiguration = await this.getApiConfigurationForCli()
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to read provider settings for CLI: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
+
 		this.processHandler.spawnProcess(
 			cliPath,
 			workspaceFolder,
@@ -326,11 +340,17 @@ export class AgentManagerProvider implements vscode.Disposable {
 				sessionId: options?.resumeSessionId,
 				label: existingLabel,
 				gitUrl,
+				apiConfiguration,
 			},
 			(sessionId, event) => {
 				this.handleCliEvent(sessionId, event)
 			},
 		)
+	}
+
+	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
+		const { apiConfiguration } = await this.provider.getState()
+		return apiConfiguration
 	}
 
 	/**

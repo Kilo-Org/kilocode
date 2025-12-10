@@ -167,6 +167,84 @@ describe("CliProcessHandler", () => {
 				}),
 			)
 		})
+
+		it("injects kilocode provider configuration into env", () => {
+			process.env.EXISTING_VAR = "keep-me"
+			const onCliEvent = vi.fn()
+
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{
+					apiConfiguration: {
+						apiProvider: "kilocode",
+						kilocodeToken: "abc123",
+						kilocodeModel: "kilo-model",
+					},
+				},
+				onCliEvent,
+			)
+
+			const env = (spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, any>])[2].env
+			expect(env.KILO_PROVIDER_TYPE).toBe("kilocode")
+			expect(env.KILOCODE_TOKEN).toBe("abc123")
+			expect(env.KILOCODE_MODEL).toBe("kilo-model")
+			expect(env.KILO_PLATFORM).toBe("agent-manager")
+			expect(env.EXISTING_VAR).toBe("keep-me")
+
+			delete process.env.EXISTING_VAR
+		})
+
+		it("maps openrouter provider settings to CLI env vars", () => {
+			const onCliEvent = vi.fn()
+
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{
+					apiConfiguration: {
+						apiProvider: "openrouter",
+						openRouterApiKey: "or-key",
+						openRouterModelId: "openai/gpt-4",
+						openRouterBaseUrl: "https://openrouter.ai",
+					},
+				},
+				onCliEvent,
+			)
+
+			const env = (spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, any>])[2].env
+			expect(env.KILO_PROVIDER_TYPE).toBe("openrouter")
+			expect(env.KILO_OPENROUTER_API_KEY).toBe("or-key")
+			expect(env.KILO_OPENROUTER_MODEL_ID).toBe("openai/gpt-4")
+			expect(env.KILO_OPENROUTER_BASE_URL).toBe("https://openrouter.ai")
+		})
+
+		it("preserves user env when extension config is partial for anthropic", () => {
+			process.env.KILO_API_KEY = "user-api-key"
+			const onCliEvent = vi.fn()
+
+			handler.spawnProcess(
+				"/path/to/kilocode",
+				"/workspace",
+				"test prompt",
+				{
+					apiConfiguration: {
+						apiProvider: "anthropic",
+						apiModelId: "claude-3-sonnet",
+					},
+				},
+				onCliEvent,
+			)
+
+			const env = (spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, any>])[2].env
+			expect(env.KILO_PROVIDER_TYPE).toBe("anthropic")
+			expect(env.KILO_API_KEY).toBe("user-api-key")
+			expect(env.KILO_API_MODEL_ID).toBe("claude-3-sonnet")
+
+			delete process.env.KILO_API_KEY
+		})
 	})
 
 	describe("session_created event handling", () => {
