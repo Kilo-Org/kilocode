@@ -3441,6 +3441,10 @@ ${prompt}
 			...getFastApply(),
 			...getOpenRouter(),
 			...getAutoApproveSettings(),
+			// Add organization ID if available
+			...(apiConfiguration.kilocodeOrganizationId && {
+				kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
+			}),
 			// kilocode_change end
 			...(await this.getTaskProperties()),
 			...(await this.getGitProperties()),
