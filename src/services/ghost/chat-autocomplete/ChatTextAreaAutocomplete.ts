@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { VisibleCodeContext } from "../types"
+import { ApiStreamChunk } from "../../../api/transform/stream"
 
 /**
  * Service for providing FIM-based autocomplete suggestions in ChatTextArea
@@ -35,8 +36,8 @@ export class ChatTextAreaAutocomplete {
 			}
 		}
 
-		// Now check if we can make FIM requests
-		if (!this.isFimAvailable()) {
+		// Check if model has valid credentials (but don't require FIM)
+		if (!this.model.hasValidCredentials()) {
 			return { suggestion: "" }
 		}
 
@@ -44,13 +45,52 @@ export class ChatTextAreaAutocomplete {
 		const suffix = ""
 
 		let response = ""
-		await this.model.generateFimResponse(prefix, suffix, (chunk) => {
-			response += chunk
-		})
+
+		// Use FIM if supported, otherwise fall back to chat-based completion
+		if (this.model.supportsFim()) {
+			await this.model.generateFimResponse(prefix, suffix, (chunk) => {
+				response += chunk
+			})
+		} else {
+			// Fall back to chat-based completion for models without FIM support
+			const systemPrompt = this.getChatSystemPrompt()
+			const userPrompt = this.getChatUserPrompt(prefix)
+
+			await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
+				if (chunk.type === "text") {
+					response += chunk.text
+				}
+			})
+		}
 
 		const cleanedSuggestion = this.cleanSuggestion(response, userText)
 
 		return { suggestion: cleanedSuggestion }
+	}
+
+	/**
+	 * Get system prompt for chat-based completion
+	 */
+	private getChatSystemPrompt(): string {
+		return `You are an intelligent code completion assistant. Your task is to complete the user's message naturally based on the provided context.
+
+## RULES
+- Provide a natural, conversational completion
+- Be concise - typically 1-15 words
+- Match the user's tone and style
+- Use context from visible code if relevant
+- NEVER repeat what the user already typed
+- NEVER start with comments (//, /*, #)
+- Return ONLY the completion text, no explanations or formatting`
+	}
+
+	/**
+	 * Get user prompt for chat-based completion
+	 */
+	private getChatUserPrompt(prefix: string): string {
+		return `${prefix}
+
+TASK: Complete the user's message naturally. Return ONLY the completion text (what comes next), no explanations.`
 	}
 
 	/**
