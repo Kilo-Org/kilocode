@@ -543,12 +543,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const handleKeyDown = useCallback(
 			(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
-				if (handleGhostTextKeyDown(event)) {
-					return // Event was handled by ghost text hook, stop here
-				}
-				// kilocode_change end: FIM autocomplete
-
 				// kilocode_change start: pull slash commands from Cline
 				if (showSlashCommandsMenu) {
 					if (event.key === "Escape") {
@@ -594,6 +588,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// kilocode_change end
 				if (showContextMenu) {
 					if (event.key === "Escape") {
+						setShowContextMenu(false)
 						setSelectedType(null)
 						setSelectedMenuIndex(3) // File by default
 						return
@@ -656,6 +651,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						return
 					}
 				}
+
+				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
+				if (handleGhostTextKeyDown(event)) {
+					return // Event was handled by ghost text hook, stop here
+				}
+				// kilocode_change end: FIM autocomplete
 
 				const isComposing = event.nativeEvent?.isComposing ?? false
 
