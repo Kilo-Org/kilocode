@@ -1,44 +1,18 @@
-import { useEffect, useState } from "react"
-import { ProfileDataResponsePayload } from "@roo/WebviewMessage"
-import { vscode } from "@/utils/vscode"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 
-export function useKiloIdentity(kilocodeToken: string, machineId: string) {
-	const [kiloIdentity, setKiloIdentity] = useState("")
-	useEffect(() => {
-		const handleMessage = (event: MessageEvent) => {
-			if (event.data.type === "profileDataResponse") {
-				const payload = event.data.payload as ProfileDataResponsePayload | undefined
-				const success = payload?.success || false
-				const tokenFromMessage = payload?.data?.kilocodeToken || ""
-				const email = payload?.data?.user?.email || ""
-				if (!success) {
-					console.error("KILOTEL: Failed to identify Kilo user, message doesn't indicate success:", payload)
-				} else if (tokenFromMessage !== kilocodeToken) {
-					console.error("KILOTEL: Failed to identify Kilo user, token mismatch:", payload)
-				} else if (!email) {
-					console.error("KILOTEL: Failed to identify Kilo user, email missing:", payload)
-				} else {
-					console.debug("KILOTEL: Kilo user identified:", email)
-					setKiloIdentity(email)
-					window.removeEventListener("message", handleMessage)
-				}
-			}
-		}
+/**
+ * Hook to get the Kilo user identity for telemetry.
+ * Returns the user's email if authenticated with Kilocode, otherwise returns the machine ID.
+ *
+ * The Kilo user is resolved globally based on priority rules:
+ * 1. Active profile if it's a kilocode provider
+ * 2. First kilocode provider found in profiles list
+ * 3. Fallback to unauthenticated (uses machineId)
+ */
+export function useKiloIdentity(machineId: string) {
+	const { kiloUser } = useExtensionState()
 
-		if (kilocodeToken) {
-			console.debug("KILOTEL: fetching profile...")
-			window.addEventListener("message", handleMessage)
-			vscode.postMessage({
-				type: "fetchProfileDataRequest",
-			})
-		} else {
-			console.debug("KILOTEL: no Kilo user")
-			setKiloIdentity("")
-		}
-
-		return () => {
-			window.removeEventListener("message", handleMessage)
-		}
-	}, [kilocodeToken])
-	return kiloIdentity || machineId
+	// If we have a global kilo user with email, use that for telemetry identity
+	// Otherwise fall back to machineId
+	return kiloUser?.email || machineId
 }

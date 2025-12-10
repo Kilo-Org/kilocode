@@ -43,8 +43,8 @@ export const KiloCode = ({
 		[setApiConfigurationField],
 	)
 
-	// Use the existing hook to get user identity
-	const userIdentity = useKiloIdentity(apiConfiguration.kilocodeToken || "", "")
+	// Use the existing hook to get user identity from global kilo user
+	const userIdentity = useKiloIdentity("")
 	const isKiloCodeAiUser = userIdentity.endsWith("@kilo.ai")
 
 	const areKilocodeWarningsDisabled = apiConfiguration.kilocodeTesterWarningsDisabledUntil
@@ -107,7 +107,14 @@ export const KiloCode = ({
 				</div>
 			</VSCodeTextField>
 
-			<OrganizationSelector showLabel />
+			<OrganizationSelector
+				showLabel
+				apiConfiguration={apiConfiguration}
+				profileName={currentApiConfigName}
+				onChange={(organizationId) => {
+					setApiConfigurationField("kilocodeOrganizationId", organizationId)
+				}}
+			/>
 
 			<ModelPicker
 				apiConfiguration={apiConfiguration}

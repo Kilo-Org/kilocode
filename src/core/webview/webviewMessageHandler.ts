@@ -5,12 +5,10 @@ import * as fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
-import axios from "axios"
-import { fastApplyApiProviderSchema, getKiloUrlFromToken, isGlobalStateKey } from "@roo-code/types"
+import { fastApplyApiProviderSchema, isGlobalStateKey } from "@roo-code/types"
 import { getAppUrl } from "@roo-code/types"
 import {
 	MaybeTypedWebviewMessage,
-	ProfileData,
 	SeeNewChangesPayload,
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
@@ -82,11 +80,13 @@ import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
 // kilocode_change start
+import { editMessageHandler, deviceAuthMessageHandler } from "../kilocode/webview/webviewMessageHandlerUtils"
 import {
-	editMessageHandler,
-	fetchKilocodeNotificationsHandler,
-	deviceAuthMessageHandler,
-} from "../kilocode/webview/webviewMessageHandlerUtils"
+	handleFetchProfileDataRequest,
+	handleFetchBalanceDataRequest,
+	handleShopBuyCredits,
+	handleFetchKilocodeNotifications,
+} from "../kilocode/webview/kiloUserHandler"
 // kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
@@ -2652,189 +2652,15 @@ export const webviewMessageHandler = async (
 
 		// kilocode_change_start
 		case "fetchProfileDataRequest":
-			try {
-				const { apiConfiguration, currentApiConfigName } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
-
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state.")
-					provider.postMessageToWebview({
-						type: "profileDataResponse",
-						payload: { success: false, error: "KiloCode API token not configured." },
-					})
-					break
-				}
-
-				// Changed to /api/profile
-				const headers: Record<string, string> = {
-					Authorization: `Bearer ${kilocodeToken}`,
-					"Content-Type": "application/json",
-				}
-
-				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-				if (
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-				) {
-					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-				}
-
-				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile", kilocodeToken)
-				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
-
-				// Go back to Personal when no longer part of the current set organization
-				const organizationExists = (response.data.organizations ?? []).some(
-					({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
-				)
-				if (apiConfiguration?.kilocodeOrganizationId && !organizationExists) {
-					provider.upsertProviderProfile(currentApiConfigName ?? "default", {
-						...apiConfiguration,
-						kilocodeOrganizationId: undefined,
-					})
-				}
-
-				try {
-					// Skip auto-switch in YOLO mode (cloud agents, CI) to prevent usage billing issues
-					const shouldAutoSwitch =
-						!getGlobalState("yoloMode") &&
-						response.data.organizations &&
-						response.data.organizations.length > 0 &&
-						!apiConfiguration.kilocodeOrganizationId &&
-						!getGlobalState("hasPerformedOrganizationAutoSwitch")
-
-					if (shouldAutoSwitch) {
-						const firstOrg = response.data.organizations![0]
-						provider.log(
-							`[Auto-switch] Performing automatic organization switch to: ${firstOrg.name} (${firstOrg.id})`,
-						)
-
-						const upsertMessage: WebviewMessage = {
-							type: "upsertApiConfiguration",
-							text: currentApiConfigName ?? "default",
-							apiConfiguration: {
-								...apiConfiguration,
-								kilocodeOrganizationId: firstOrg.id,
-							},
-						}
-
-						await webviewMessageHandler(provider, upsertMessage)
-						await updateGlobalState("hasPerformedOrganizationAutoSwitch", true)
-
-						vscode.window.showInformationMessage(`Automatically switched to organization: ${firstOrg.name}`)
-
-						provider.log(`[Auto-switch] Successfully switched to organization: ${firstOrg.name}`)
-					}
-				} catch (error) {
-					provider.log(
-						`[Auto-switch] Error during automatic organization switch: ${error instanceof Error ? error.message : String(error)}`,
-					)
-				}
-
-				provider.postMessageToWebview({
-					type: "profileDataResponse",
-					payload: { success: true, data: { kilocodeToken, ...response.data } },
-				})
-			} catch (error: any) {
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch general profile data from backend."
-				provider.log(`Error fetching general profile data: ${errorMessage}`)
-				provider.postMessageToWebview({
-					type: "profileDataResponse",
-					payload: { success: false, error: errorMessage },
-				})
-			}
+			await handleFetchProfileDataRequest(provider, message, getGlobalState, updateGlobalState)
 			break
-		case "fetchBalanceDataRequest": // New handler
-			try {
-				const { apiConfiguration } = await provider.getState()
-				const { kilocodeToken, kilocodeOrganizationId } = apiConfiguration ?? {}
-
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state for balance data.")
-					provider.postMessageToWebview({
-						type: "balanceDataResponse", // New response type
-						payload: { success: false, error: "KiloCode API token not configured." },
-					})
-					break
-				}
-
-				const headers: Record<string, string> = {
-					Authorization: `Bearer ${kilocodeToken}`,
-					"Content-Type": "application/json",
-				}
-
-				if (kilocodeOrganizationId) {
-					headers["X-KiloCode-OrganizationId"] = kilocodeOrganizationId
-				}
-
-				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-				if (
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-				) {
-					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-				}
-
-				const url = getKiloUrlFromToken("https://api.kilo.ai/api/profile/balance", kilocodeToken)
-				const response = await axios.get(url, { headers })
-				provider.postMessageToWebview({
-					type: "balanceDataResponse", // New response type
-					payload: { success: true, data: response.data },
-				})
-			} catch (error: any) {
-				const errorMessage =
-					error.response?.data?.message || error.message || "Failed to fetch balance data from backend."
-				provider.log(`Error fetching balance data: ${errorMessage}`)
-				provider.postMessageToWebview({
-					type: "balanceDataResponse", // New response type
-					payload: { success: false, error: errorMessage },
-				})
-			}
+		case "fetchBalanceDataRequest":
+			await handleFetchBalanceDataRequest(provider)
 			break
-		case "shopBuyCredits": // New handler
-			try {
-				const { apiConfiguration } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state for buy credits.")
-					break
-				}
-				const credits = message.values?.credits || 50
-				const uriScheme = message.values?.uriScheme || "vscode"
-				const uiKind = message.values?.uiKind || "Desktop"
-				const source = uiKind === "Web" ? "web" : uriScheme
-
-				const url = getKiloUrlFromToken(
-					`https://api.kilo.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
-					kilocodeToken,
-				)
-				const response = await axios.post(
-					url,
-					{},
-					{
-						headers: {
-							Authorization: `Bearer ${kilocodeToken}`,
-							"Content-Type": "application/json",
-						},
-						maxRedirects: 0, // Prevent axios from following redirects automatically
-						validateStatus: (status) => status < 400, // Accept 3xx status codes
-					},
-				)
-				if (response.status !== 303 || !response.headers.location) {
-					return
-				}
-				await vscode.env.openExternal(vscode.Uri.parse(response.headers.location))
-			} catch (error: any) {
-				const errorMessage = error?.message || "Unknown error"
-				const errorStack = error?.stack ? ` Stack: ${error.stack}` : ""
-				provider.log(`Error redirecting to payment page: ${errorMessage}.${errorStack}`)
-				provider.postMessageToWebview({
-					type: "updateProfileData",
-				})
-			}
+		case "shopBuyCredits":
+			await handleShopBuyCredits(provider, message)
 			break
+		// kilocode_change_end
 
 		case "fetchMcpMarketplace": {
 			await provider.fetchMcpMarketplace(message.bool)
@@ -3632,7 +3458,7 @@ export const webviewMessageHandler = async (
 			break
 		}
 		case "fetchKilocodeNotifications": {
-			await fetchKilocodeNotificationsHandler(provider)
+			await handleFetchKilocodeNotifications(provider)
 			break
 		}
 		case "dismissNotificationId": {

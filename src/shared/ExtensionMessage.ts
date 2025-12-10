@@ -15,6 +15,7 @@ import type {
 	OrganizationAllowList,
 	ShareVisibility,
 	QueuedMessage,
+	KiloUser, // kilocode_change
 } from "@roo-code/types"
 
 import { GitCommit } from "../utils/git"
@@ -527,6 +528,7 @@ export type ExtensionState = Pick<
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	kiloUser: KiloUser // kilocode_change: Global Kilo user resolved from profiles
 }
 
 export interface ClineSayTool {

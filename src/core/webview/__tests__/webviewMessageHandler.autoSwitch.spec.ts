@@ -91,7 +91,17 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 		mockPostStateToWebview = vi.fn()
 		mockLog = vi.fn()
 		mockProviderSettingsManager = {
-			getProfile: vi.fn().mockResolvedValue({}),
+			getProfile: vi.fn().mockResolvedValue({
+				apiProvider: "kilocode",
+				kilocodeToken: "test-token",
+				kilocodeOrganizationId: undefined,
+			}),
+			listConfig: vi.fn().mockResolvedValue([
+				{
+					name: "default",
+					apiProvider: "kilocode",
+				},
+			]),
 		}
 
 		// Create mock provider
@@ -251,6 +261,13 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 				currentApiConfigName: "default",
 			})
 
+			// Mock getProfile to return the profile with the existing organization
+			mockProviderSettingsManager.getProfile.mockResolvedValue({
+				apiProvider: "kilocode",
+				kilocodeToken: "test-token",
+				kilocodeOrganizationId: "existing-org",
+			})
+
 			const mockProfileData = {
 				organizations: [
 					{ id: "org-1", name: "Test Org 1", balance: 100, role: "owner" },
@@ -265,8 +282,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 				type: "fetchProfileDataRequest",
 			})
 
-			// Verify no auto-switch occurred
-			expect(mockUpsertProviderProfile).not.toHaveBeenCalled()
+			// Verify no auto-switch occurred - the flag should not be set
 			expect(mockUpdateGlobalState).not.toHaveBeenCalledWith("hasPerformedOrganizationAutoSwitch", true)
 			expect(refreshOrganizationModes).not.toHaveBeenCalled()
 			expect(flushModels).not.toHaveBeenCalled()

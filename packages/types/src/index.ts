@@ -29,6 +29,7 @@ export * from "./type-fu.js"
 export * from "./vscode.js"
 export * from "./kilocode/kilocode.js"
 export * from "./kilocode/device-auth.js" // kilocode_change
+export * from "./kilocode/kilo-user.js" // kilocode_change
 export * from "./kilocode/nativeFunctionCallingProviders.js"
 export * from "./usage-tracker.js" // kilocode_change
 

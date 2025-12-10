@@ -14,6 +14,7 @@ import {
 	type CloudOrganizationMembership,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	EMPTY_KILO_USER, // kilocode_change
 } from "@roo-code/types"
 
 import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata, Command } from "@roo/ExtensionMessage"
@@ -353,6 +354,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		openRouterImageGenerationSelectedModel: "",
 		includeCurrentTime: true,
 		includeCurrentCost: true,
+		kiloUser: EMPTY_KILO_USER, // kilocode_change: Initialize with empty kilo user
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)

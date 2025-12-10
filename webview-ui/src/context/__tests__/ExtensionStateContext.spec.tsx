@@ -5,6 +5,7 @@ import {
 	ExperimentId,
 	openRouterDefaultModelId, // kilocode_change
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	EMPTY_KILO_USER, // kilocode_change
 } from "@roo-code/types"
 
 import { ExtensionState } from "@roo/ExtensionMessage"
@@ -264,6 +265,7 @@ describe("mergeExtensionState", () => {
 			featureRoomoteControlEnabled: false,
 			isBrowserSessionActive: false,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS, // Add the checkpoint timeout property
+			kiloUser: EMPTY_KILO_USER, // kilocode_change: Add kiloUser to mock state
 		}
 
 		const prevState: ExtensionState = {
