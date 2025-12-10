@@ -1032,7 +1032,7 @@ importers:
         specifier: ^0.10.0-beta.99
         version: 0.10.0-beta.137(@xterm/xterm@5.6.0-beta.137)
       '@xterm/addon-progress':
-        specifier: ^0.2.0-beta.46
+        specifier: ^0.2.0-beta.5
         version: 0.2.0-beta.46(@xterm/xterm@5.6.0-beta.137)
       '@xterm/addon-search':
         specifier: ^0.16.0-beta.99
@@ -1162,8 +1162,8 @@ importers:
         specifier: ^5.28.5
         version: 5.28.5(@swc/core@1.15.1(@swc/helpers@0.5.17))(esbuild@0.25.9)(webpack-cli@5.1.4)
       '@types/wicg-file-system-access':
-        specifier: ^2023.10.7
-        version: 2023.10.7
+        specifier: ^2020.9.6
+        version: 2020.9.8
       '@types/windows-foreground-love':
         specifier: ^0.3.0
         version: 0.3.1
@@ -8124,8 +8124,8 @@ packages:
   '@types/webpack@5.28.5':
     resolution: {integrity: sha512-wR87cgvxj3p6D0Crt1r5avwqffqPXUkNlnQ1mjU93G7gCuFjufZR4I6j8cz5g1F1tTYpfOOFvly+cmIQwL9wvw==}
 
-  '@types/wicg-file-system-access@2023.10.7':
-    resolution: {integrity: sha512-g49ijasEJvCd7ifmAY2D0wdEtt1xRjBbA33PJTiv8mKBr7DoMsPeISoJ8oQOTopSRi+FBWPpPW5ouDj2QPKtGA==}
+  '@types/wicg-file-system-access@2020.9.8':
+    resolution: {integrity: sha512-ggMz8nOygG7d/stpH40WVaNvBwuyYLnrg5Mbyf6bmsj/8+gb6Ei4ZZ9/4PNpcPNTT8th9Q8sM8wYmWGjMWLX/A==}
 
   '@types/windows-foreground-love@0.3.1':
     resolution: {integrity: sha512-aN6wdcro6KOUinabIbY8EeWnk4BzXLbUTcS3YGUDIh5lmHYif0z3gsaqi3Dg2Nk7GpRIjqVutwPMeAdn/YfChA==}
@@ -27608,7 +27608,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@types/wicg-file-system-access@2023.10.7': {}
+  '@types/wicg-file-system-access@2020.9.8': {}
 
   '@types/windows-foreground-love@0.3.1':
     dependencies:

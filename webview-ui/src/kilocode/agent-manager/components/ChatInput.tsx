@@ -8,7 +8,7 @@ import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodosAtomFamily } from "../state/atoms/todos"
-import { TodoListDisplay } from "../../../components/chat/TodoListDisplay"
+import { AgentTodoList } from "./AgentTodoList"
 
 interface ChatInputProps {
 	sessionId: string
@@ -60,130 +60,134 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 		}
 	}
 
+	const hasTodos = todos.length > 0
+
 	return (
 		<div className="am-chat-input-container">
-			{/* Todo list above input - collapsible like Claude Code */}
-			{todos.length > 0 && (
-				<div className="px-2 pb-1">
-					<TodoListDisplay todos={todos} />
-				</div>
-			)}
+			{/* Unified wrapper when todos present - handles border and focus state */}
 			<div
 				className={cn(
-					"relative",
-					"flex-1",
-					"flex",
-					"flex-col-reverse",
-					"min-h-0",
-					"overflow-hidden",
-					"rounded",
-				)}>
-				<DynamicTextArea
-					ref={textareaRef}
-					value={messageText}
-					onChange={(e) => setMessageText(e.target.value)}
-					onKeyDown={handleKeyDown}
-					onFocus={() => setIsFocused(true)}
-					onBlur={() => setIsFocused(false)}
-					aria-label={t("chatInput.ariaLabel")}
-					placeholder={t("chatInput.placeholderTypeTask")}
-					minRows={3}
-					maxRows={15}
-					className={cn(
-						"w-full",
-						"text-vscode-input-foreground",
-						"font-vscode-font-family",
-						"text-vscode-editor-font-size",
-						"leading-vscode-editor-line-height",
-						"cursor-text",
-						"!py-3 !pl-3 pr-9", // Increased padding to fix "no distance" issue
+					"relative flex-1 flex flex-col min-h-0 overflow-hidden rounded",
+					hasTodos && [
+						"border bg-vscode-input-background",
 						isFocused
-							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
-							: "border border-vscode-input-border", // Default border
-						"bg-vscode-input-background",
-						"transition-background-color duration-150 ease-in-out",
-						"will-change-background-color",
-						"min-h-[90px]", // Match sidebar min-height
-						"box-border",
-						"rounded",
-						"resize-none",
-						"overflow-x-hidden",
-						"overflow-y-auto",
-						"pb-10", // Bottom padding for floating buttons
-						"flex-none flex-grow",
-						"z-[2]",
-						"scrollbar-none",
-						"scrollbar-hide",
-					)}
-				/>
+							? "border-vscode-focusBorder outline outline-vscode-focusBorder"
+							: "border-vscode-input-border",
+					],
+				)}>
+				{/* Todo list above input */}
+				{hasTodos && <AgentTodoList todos={todos} isIntegrated />}
+				<div className={cn("relative", "flex-1", "flex", "flex-col-reverse", "min-h-0", "overflow-hidden")}>
+					<DynamicTextArea
+						ref={textareaRef}
+						value={messageText}
+						onChange={(e) => setMessageText(e.target.value)}
+						onKeyDown={handleKeyDown}
+						onFocus={() => setIsFocused(true)}
+						onBlur={() => setIsFocused(false)}
+						aria-label={t("chatInput.ariaLabel")}
+						placeholder={t("chatInput.placeholderTypeTask")}
+						minRows={3}
+						maxRows={15}
+						className={cn(
+							"w-full",
+							"text-vscode-input-foreground",
+							"font-vscode-font-family",
+							"text-vscode-editor-font-size",
+							"leading-vscode-editor-line-height",
+							"cursor-text",
+							"!py-3 !pl-3 pr-9",
+							// Only show border when no todos (standalone mode)
+							!hasTodos && [
+								isFocused
+									? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
+									: "border border-vscode-input-border",
+								"rounded",
+							],
+							"bg-vscode-input-background",
+							"transition-background-color duration-150 ease-in-out",
+							"will-change-background-color",
+							"min-h-[90px]",
+							"box-border",
+							"resize-none",
+							"overflow-x-hidden",
+							"overflow-y-auto",
+							"pb-10",
+							"flex-none flex-grow",
+							"z-[2]",
+							"scrollbar-none",
+							"scrollbar-hide",
+						)}
+					/>
 
-				{/* Transparent overlay at bottom */}
-				<div
-					className="absolute bottom-[1px] left-2 right-2 h-10 bg-gradient-to-t from-[var(--vscode-input-background)] via-[var(--vscode-input-background)] to-transparent pointer-events-none z-[2]"
-					aria-hidden="true"
-				/>
+					{/* Transparent overlay at bottom */}
+					<div
+						className="absolute bottom-[1px] left-2 right-2 h-10 bg-gradient-to-t from-[var(--vscode-input-background)] via-[var(--vscode-input-background)] to-transparent pointer-events-none z-[2]"
+						aria-hidden="true"
+					/>
 
-				{/* Floating Actions */}
-				<div className="absolute bottom-2 right-2 z-30 flex gap-1">
-					{isActive && (
-						<StandardTooltip content={t("chatInput.cancelTitle")}>
+					{/* Floating Actions */}
+					<div className="absolute bottom-2 right-2 z-30 flex gap-1">
+						{isActive && (
+							<StandardTooltip content={t("chatInput.cancelTitle")}>
+								<button
+									aria-label={t("chatInput.cancelTitle")}
+									onClick={handleCancel}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-errorForeground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<Square size={14} fill="currentColor" />
+								</button>
+							</StandardTooltip>
+						)}
+						<StandardTooltip content={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}>
 							<button
-								aria-label={t("chatInput.cancelTitle")}
-								onClick={handleCancel}
+								aria-label={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}
+								disabled={isEmpty}
+								onClick={handleSend}
 								className={cn(
 									"relative inline-flex items-center justify-center",
 									"bg-transparent border-none p-1.5",
 									"rounded-md min-w-[28px] min-h-[28px]",
-									"opacity-60 hover:opacity-100 text-vscode-errorForeground",
+									"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
 									"transition-all duration-150",
 									"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
 									"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 									"active:bg-[rgba(255,255,255,0.1)]",
-									"cursor-pointer",
+									!isEmpty && "cursor-pointer",
+									isEmpty &&
+										"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
 								)}>
-								<Square size={14} fill="currentColor" />
+								{/* rtl support */}
+								<SendHorizontal className="w-4 h-4 rtl:-scale-x-100" />
 							</button>
 						</StandardTooltip>
-					)}
-					<StandardTooltip content={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}>
-						<button
-							aria-label={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}
-							disabled={isEmpty}
-							onClick={handleSend}
-							className={cn(
-								"relative inline-flex items-center justify-center",
-								"bg-transparent border-none p-1.5",
-								"rounded-md min-w-[28px] min-h-[28px]",
-								"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
-								"transition-all duration-150",
-								"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-								"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-								"active:bg-[rgba(255,255,255,0.1)]",
-								!isEmpty && "cursor-pointer",
-								isEmpty &&
-									"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
-							)}>
-							{/* rtl support */}
-							<SendHorizontal className="w-4 h-4 rtl:-scale-x-100" />
-						</button>
-					</StandardTooltip>
-				</div>
-
-				{/* Hint Text inside input */}
-				{!messageText && (
-					<div
-						className="absolute left-3 right-[70px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
-						style={{
-							bottom: "0.25rem",
-							color: "var(--vscode-descriptionForeground)",
-							opacity: 0.7,
-							fontSize: "11px",
-							userSelect: "none",
-							pointerEvents: "none",
-						}}>
-						{t("chatInput.hint")}
 					</div>
-				)}
+
+					{/* Hint Text inside input */}
+					{!messageText && (
+						<div
+							className="absolute left-3 right-[70px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							style={{
+								bottom: "0.25rem",
+								color: "var(--vscode-descriptionForeground)",
+								opacity: 0.7,
+								fontSize: "11px",
+								userSelect: "none",
+								pointerEvents: "none",
+							}}>
+							{t("chatInput.hint")}
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	)
