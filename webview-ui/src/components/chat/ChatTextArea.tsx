@@ -20,6 +20,8 @@ import {
 	SearchResult,
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
+import { escapeHtml } from "@/utils/highlight" // kilocode_change - FIM autocomplete
+import { useChatGhostText } from "./hooks/useChatGhostText" // kilocode_change: FIM autocomplete
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
@@ -151,6 +153,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			globalWorkflows, // kilocode_change
 			taskHistoryVersion, // kilocode_change
 			clineMessages,
+			ghostServiceSettings, // kilocode_change
 		} = useExtensionState()
 
 		// kilocode_change start - autocomplete profile type system
@@ -303,6 +306,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
 		const [isFocused, setIsFocused] = useState(false)
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
+		// kilocode_change start: FIM autocomplete ghost text
+		const {
+			ghostText,
+			handleKeyDown: handleGhostTextKeyDown,
+			handleInputChange: handleGhostTextInputChange,
+		} = useChatGhostText({
+			textAreaRef,
+			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
+		})
+		// kilocode_change end: FIM autocomplete ghost text
 
 		// Use custom hook for prompt history navigation
 		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
@@ -575,6 +588,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// kilocode_change end
 				if (showContextMenu) {
 					if (event.key === "Escape") {
+						setShowContextMenu(false)
 						setSelectedType(null)
 						setSelectedMenuIndex(3) // File by default
 						return
@@ -637,6 +651,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						return
 					}
 				}
+
+				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
+				if (handleGhostTextKeyDown(event)) {
+					return // Event was handled by ghost text hook, stop here
+				}
+				// kilocode_change end: FIM autocomplete
 
 				const isComposing = event.nativeEvent?.isComposing ?? false
 
@@ -720,6 +740,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				handleSlashCommandsSelect,
 				selectedSlashCommandsIndex,
 				slashCommandsQuery,
+				handleGhostTextKeyDown, // kilocode_change: FIM autocomplete
 				// kilocode_change end
 				onSend,
 				showContextMenu,
@@ -765,7 +786,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// Reset history navigation when user types
 				resetOnInputChange()
 
-				const newCursorPosition = target.selectionStart // kilocode_change
+				handleGhostTextInputChange(e) // kilocode_change - FIM autocomplete
+
+				const newCursorPosition = target.selectionStart // Use target for consistency
 				setCursorPosition(newCursorPosition)
 
 				// kilocode_change start: pull slash commands from Cline
@@ -846,7 +869,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					setFileSearchResults([]) // Clear file search results.
 				}
 			},
-			[setInputValue, setSearchRequestId, setFileSearchResults, setSearchLoading, resetOnInputChange],
+			[
+				setInputValue,
+				setSearchRequestId,
+				setFileSearchResults,
+				setSearchLoading,
+				resetOnInputChange,
+				handleGhostTextInputChange, // kilocode_change: FIM autocomplete
+			],
 		)
 
 		useEffect(() => {
@@ -998,12 +1028,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
 				}
 			}
-			// kilocode_change end
+			// kilocode_change start - autocomplete ghost text display
+			if (ghostText) {
+				processedText += `<span class="text-vscode-editor-foreground opacity-60 pointer-events-none">${escapeHtml(ghostText)}</span>`
+			}
+			// kilocode_change end - autocomplete ghost text display
 
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes])
+		}, [customModes, ghostText])
 
 		useLayoutEffect(() => {
 			updateHighlights()

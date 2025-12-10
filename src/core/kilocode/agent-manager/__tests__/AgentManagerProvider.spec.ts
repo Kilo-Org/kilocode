@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest"
 import { EventEmitter } from "node:events"
+import * as telemetry from "../telemetry"
 
 const MOCK_CLI_PATH = "/mock/path/to/kilocode"
+
+// Mock the local telemetry module
+vi.mock("../telemetry", () => ({
+	captureAgentManagerOpened: vi.fn(),
+	captureAgentManagerSessionStarted: vi.fn(),
+	captureAgentManagerSessionCompleted: vi.fn(),
+	captureAgentManagerSessionStopped: vi.fn(),
+	captureAgentManagerSessionError: vi.fn(),
+}))
 
 let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerProvider
 
@@ -565,5 +575,177 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 			expect(filtered).toHaveLength(0)
 		})
+	})
+})
+
+describe("AgentManagerProvider telemetry", () => {
+	let provider: InstanceType<typeof AgentManagerProvider>
+	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
+	const mockOutputChannel = { appendLine: vi.fn() } as any
+
+	beforeEach(async () => {
+		vi.resetModules()
+		vi.clearAllMocks()
+
+		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+
+		vi.doMock("vscode", () => ({
+			workspace: { workspaceFolders: [mockWorkspaceFolder] },
+			window: mockWindow,
+			env: { openExternal: vi.fn() },
+			Uri: { parse: vi.fn(), joinPath: vi.fn() },
+			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+		}))
+
+		vi.doMock("../../../../utils/fs", () => ({
+			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+		}))
+
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+		}))
+
+		class TestProc extends EventEmitter {
+			stdout = new EventEmitter()
+			stderr = new EventEmitter()
+			kill = vi.fn()
+			pid = 1234
+		}
+
+		const spawnMock = vi.fn(() => new TestProc())
+		const execSyncMock = vi.fn(() => MOCK_CLI_PATH)
+
+		vi.doMock("node:child_process", () => ({
+			spawn: spawnMock,
+			execSync: execSyncMock,
+		}))
+
+		const module = await import("../AgentManagerProvider")
+		AgentManagerProvider = module.AgentManagerProvider
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+	})
+
+	afterEach(() => {
+		provider.dispose()
+	})
+
+	it("tracks session started telemetry when session_created event is received", async () => {
+		await (provider as any).startAgentSession("test telemetry")
+		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+
+		// Emit session_created event
+		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-telemetry-1"}\n'))
+
+		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
+			"session-telemetry-1",
+			false, // useWorktree = false (no parallel mode)
+		)
+	})
+
+	it("tracks session started with worktree flag for parallel mode sessions", async () => {
+		await (provider as any).startAgentSession("test parallel", { parallelMode: true })
+		const spawnMock = (await import("node:child_process")).spawn as unknown as Mock
+		const proc = spawnMock.mock.results[0].value as EventEmitter & { stdout: EventEmitter }
+
+		// Emit session_created event
+		proc.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-parallel-1"}\n'))
+
+		expect(telemetry.captureAgentManagerSessionStarted).toHaveBeenCalledWith(
+			"session-parallel-1",
+			true, // useWorktree = true (parallel mode enabled)
+		)
+	})
+
+	it("tracks session completed telemetry when complete event is received", async () => {
+		// Create a session directly in the registry
+		const registry = (provider as any).registry
+		const sessionId = "session-complete-1"
+		registry.createSession(sessionId, "test complete")
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		// Handle complete event
+		;(provider as any).handleCliEvent(sessionId, {
+			streamEventType: "complete",
+			exitCode: 0,
+		})
+
+		expect(telemetry.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
+			sessionId,
+			false, // useWorktree = false
+		)
+	})
+
+	it("tracks session stopped telemetry when user stops a session", async () => {
+		// Create a session directly in the registry
+		const registry = (provider as any).registry
+		const sessionId = "session-stop-1"
+		registry.createSession(sessionId, "test stop")
+		registry.updateSessionStatus(sessionId, "running")
+
+		// Stop the session
+		;(provider as any).stopAgentSession(sessionId)
+
+		expect(telemetry.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
+			sessionId,
+			false, // useWorktree = false
+		)
+	})
+
+	it("tracks session stopped telemetry when interrupted event is received", async () => {
+		const registry = (provider as any).registry
+		const sessionId = "session-interrupted-1"
+		registry.createSession(sessionId, "test interrupted")
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		// Handle interrupted event
+		;(provider as any).handleCliEvent(sessionId, {
+			streamEventType: "interrupted",
+			reason: "User cancelled",
+		})
+
+		expect(telemetry.captureAgentManagerSessionStopped).toHaveBeenCalledWith(
+			sessionId,
+			false, // useWorktree = false
+		)
+	})
+
+	it("tracks session error telemetry when error event is received", async () => {
+		const registry = (provider as any).registry
+		const sessionId = "session-error-1"
+		registry.createSession(sessionId, "test error")
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		// Handle error event
+		;(provider as any).handleCliEvent(sessionId, {
+			streamEventType: "error",
+			error: "Something went wrong",
+		})
+
+		expect(telemetry.captureAgentManagerSessionError).toHaveBeenCalledWith(
+			sessionId,
+			false, // useWorktree = false
+			"Something went wrong",
+		)
+	})
+
+	it("tracks worktree flag correctly for parallel mode sessions in completion", async () => {
+		const registry = (provider as any).registry
+		const sessionId = "session-parallel-complete-1"
+		registry.createSession(sessionId, "test parallel complete", undefined, { parallelMode: true })
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		// Handle complete event
+		;(provider as any).handleCliEvent(sessionId, {
+			streamEventType: "complete",
+			exitCode: 0,
+		})
+
+		expect(telemetry.captureAgentManagerSessionCompleted).toHaveBeenCalledWith(
+			sessionId,
+			true, // useWorktree = true (parallel mode)
+		)
 	})
 })

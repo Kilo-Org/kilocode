@@ -238,7 +238,11 @@
 			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
 			"configureAutocompleteProfile": "Użyj dowolnego modelu, przechodząc do profili i konfigurując Profil typu Autouzupełnianie.",
 			"model": "Model",
-			"provider": "Dostawca"
+			"provider": "Dostawca",
+			"enableChatAutocomplete": {
+				"label": "Automatyczne uzupełnianie wpisów czatu",
+				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
+	},
+	"deviceAuth": {
+		"title": "Zaloguj się do Kilo Code",
+		"step1": "Otwórz następujący adres URL w przeglądarce",
+		"step2": "Zweryfikuj kod i autoryzuj to urządzenie w przeglądarce",
+		"scanQr": "Lub zeskanuj ten kod QR telefonem",
+		"openBrowser": "Otwórz przeglądarkę",
+		"copyUrl": "Kopiuj URL",
+		"waiting": "Oczekiwanie na autoryzację...",
+		"timeRemaining": "Kod wygasa za {{time}}",
+		"success": "Pomyślnie zalogowano!",
+		"authenticatedAs": "Uwierzytelniono jako {{email}}",
+		"error": "Błąd uwierzytelniania",
+		"unknownError": "Wystąpił błąd. Spróbuj ponownie.",
+		"cancel": "Anuluj",
+		"retry": "Spróbuj ponownie",
+		"tryAgain": "Spróbuj ponownie",
+		"cancelled": "Uwierzytelnianie anulowane",
+		"initiating": "Rozpoczynanie uwierzytelniania..."
 	}
 }

@@ -81,7 +81,13 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
+// kilocode_change start
+import {
+	editMessageHandler,
+	fetchKilocodeNotificationsHandler,
+	deviceAuthMessageHandler,
+} from "../kilocode/webview/webviewMessageHandlerUtils"
+// kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -3692,7 +3698,19 @@ export const webviewMessageHandler = async (
 				await provider.postMessageToWebview({ type: "keybindingsResponse", keybindings: {} })
 			}
 			break
+		} // kilocode_change start: Chat text area FIM autocomplete
+		case "requestChatCompletion": {
+			const { handleChatCompletionRequest } = await import(
+				"../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
+			)
+			await handleChatCompletionRequest(
+				message as WebviewMessage & { type: "requestChatCompletion" },
+				provider,
+				getCurrentCwd,
+			)
+			break
 		}
+		// kilocode_change end: Chat text area FIM autocomplete
 		case "openCommandFile": {
 			try {
 				if (message.text) {
@@ -4118,6 +4136,14 @@ export const webviewMessageHandler = async (
 		// kilocode_change start - ManagedIndexer state
 		case "requestManagedIndexerState": {
 			ManagedIndexer.getInstance()?.sendStateToWebview()
+			break
+		}
+		// kilocode_change end
+		// kilocode_change start - Device Auth handlers
+		case "startDeviceAuth":
+		case "cancelDeviceAuth":
+		case "deviceAuthCompleteWithProfile": {
+			await deviceAuthMessageHandler(provider, message)
 			break
 		}
 		// kilocode_change end

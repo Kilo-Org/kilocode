@@ -238,7 +238,11 @@
 			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
 			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
 			"model": "Model",
-			"provider": "Sağlayıcı"
+			"provider": "Sağlayıcı",
+			"enableChatAutocomplete": {
+				"label": "Sohbet Girişi Otomatik Tamamlama",
+				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code'a giriş yap",
+		"step1": "Tarayıcında aşağıdaki URL'yi aç",
+		"step2": "Kodu doğrula ve bu cihazı tarayıcında yetkilendir",
+		"scanQr": "Veya bu QR kodunu telefonunla tara",
+		"openBrowser": "Tarayıcıyı Aç",
+		"copyUrl": "URL'yi Kopyala",
+		"waiting": "Yetkilendirme bekleniyor...",
+		"timeRemaining": "Kod {{time}} içinde sona erecek",
+		"success": "Başarıyla giriş yapıldı!",
+		"authenticatedAs": "{{email}} olarak kimlik doğrulandı",
+		"error": "Kimlik Doğrulama Hatası",
+		"unknownError": "Bir hata oluştu. Lütfen tekrar dene.",
+		"cancel": "İptal",
+		"retry": "Tekrar Dene",
+		"tryAgain": "Tekrar Dene",
+		"cancelled": "Kimlik Doğrulama İptal Edildi",
+		"initiating": "Kimlik doğrulama başlatılıyor..."
 	}
 }

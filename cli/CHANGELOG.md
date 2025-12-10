@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.14.0
+
+### Minor Changes
+
+- [#4291](https://github.com/Kilo-Org/kilocode/pull/4291) [`215c48f`](https://github.com/Kilo-Org/kilocode/commit/215c48f68dca37df435ea619ba8496912e2b4c22) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Fix race during session restoration
+
 ## 0.13.1
 
 ### Patch Changes
