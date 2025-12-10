@@ -31,6 +31,7 @@
 		"comingSoon": "Již brzy",
 		"runningInWorktree": "Běží ve worktree",
 		"runningLocally": "Běží lokálně",
+		"runMode": "Režim spuštění",
 		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
 		"waitingForCli": "Inicializace relace agenta...",

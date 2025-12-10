@@ -31,6 +31,7 @@
 		"comingSoon": "Незабаром",
 		"runningInWorktree": "Виконується в worktree",
 		"runningLocally": "Виконується локально",
+		"runMode": "Режим запуску",
 		"branch": "Гілка",
 		"creatingSession": "Створення сесії...",
 		"waitingForCli": "Ініціалізація сесії агента...",

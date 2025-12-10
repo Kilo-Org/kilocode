@@ -31,6 +31,7 @@
 		"comingSoon": "출시 예정",
 		"runningInWorktree": "Worktree에서 실행 중",
 		"runningLocally": "로컬에서 실행 중",
+		"runMode": "실행 모드",
 		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
 		"waitingForCli": "에이전트 세션 초기화 중...",

@@ -31,6 +31,7 @@
 		"comingSoon": "即将推出",
 		"runningInWorktree": "在 Worktree 中运行",
 		"runningLocally": "本地运行",
+		"runMode": "运行模式",
 		"branch": "分支",
 		"creatingSession": "正在创建会话...",
 		"waitingForCli": "正在初始化代理会话...",

@@ -31,6 +31,7 @@
 		"comingSoon": "जल्द आ रहा है",
 		"runningInWorktree": "Worktree में चल रहा है",
 		"runningLocally": "स्थानीय रूप से चल रहा है",
+		"runMode": "रन मोड",
 		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
 		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है...",

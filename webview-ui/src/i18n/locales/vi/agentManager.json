@@ -31,6 +31,7 @@
 		"comingSoon": "Sắp ra mắt",
 		"runningInWorktree": "Đang chạy trong worktree",
 		"runningLocally": "Đang chạy cục bộ",
+		"runMode": "Chế độ chạy",
 		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent...",

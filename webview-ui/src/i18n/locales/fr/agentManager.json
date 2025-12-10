@@ -31,6 +31,7 @@
 		"comingSoon": "Bientôt disponible",
 		"runningInWorktree": "Exécution dans worktree",
 		"runningLocally": "Exécution locale",
+		"runMode": "Mode d'exécution",
 		"branch": "Branche",
 		"creatingSession": "Création de la session...",
 		"waitingForCli": "Initialisation de la session de l'agent...",

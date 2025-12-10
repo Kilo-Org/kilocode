@@ -31,6 +31,7 @@
 		"comingSoon": "Demnächst",
 		"runningInWorktree": "Läuft in Worktree",
 		"runningLocally": "Läuft lokal",
+		"runMode": "Ausführungsmodus",
 		"branch": "Branch",
 		"creatingSession": "Sitzung wird erstellt...",
 		"waitingForCli": "Agent-Sitzung wird initialisiert...",

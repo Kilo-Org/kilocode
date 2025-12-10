@@ -31,6 +31,7 @@
 		"comingSoon": "قريباً",
 		"runningInWorktree": "يعمل في Worktree",
 		"runningLocally": "يعمل محلياً",
+		"runMode": "وضع التشغيل",
 		"branch": "فرع",
 		"creatingSession": "جاري إنشاء الجلسة...",
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل...",
