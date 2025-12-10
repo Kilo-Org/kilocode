@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"
-import { useAtom } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
 import { SendHorizontal, Square } from "lucide-react"
@@ -7,6 +7,8 @@ import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
+import { sessionTodosAtomFamily } from "../state/atoms/todos"
+import { TodoListDisplay } from "../../../components/chat/TodoListDisplay"
 
 interface ChatInputProps {
 	sessionId: string
@@ -17,6 +19,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, isActive = false }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
+	const todos = useAtomValue(sessionTodosAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -59,6 +62,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 
 	return (
 		<div className="am-chat-input-container">
+			{/* Todo list above input - collapsible like Claude Code */}
+			{todos.length > 0 && (
+				<div className="px-2 pb-1">
+					<TodoListDisplay todos={todos} />
+				</div>
+			)}
 			<div
 				className={cn(
 					"relative",

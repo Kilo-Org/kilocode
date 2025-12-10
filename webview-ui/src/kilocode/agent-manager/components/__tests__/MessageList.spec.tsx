@@ -183,4 +183,110 @@ describe("MessageList", () => {
 			expect(screen.queryByText("JSON question")).not.toBeInTheDocument()
 		})
 	})
+
+	describe("updateTodoList filtering", () => {
+		it("does not render updateTodoList tool messages (text format)", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "Starting task",
+				} as ClineMessage,
+				{
+					ts: 2,
+					type: "ask",
+					ask: "tool",
+					text: JSON.stringify({
+						tool: "updateTodoList",
+						todos: [{ id: "1", content: "Task 1", status: "in_progress" }],
+					}),
+				} as ClineMessage,
+				{
+					ts: 3,
+					type: "say",
+					say: "text",
+					text: "Task completed",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			// The text messages should be rendered
+			expect(screen.getByText("Starting task")).toBeInTheDocument()
+			expect(screen.getByText("Task completed")).toBeInTheDocument()
+			// The todo list tool message should NOT be rendered (displayed in header instead)
+			expect(screen.queryByText(/updateTodoList/)).not.toBeInTheDocument()
+			expect(screen.queryByText(/Task 1/)).not.toBeInTheDocument()
+		})
+
+		it("does not render updateTodoList tool messages (metadata format from CLI)", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "say",
+					say: "text",
+					text: "Starting task",
+				} as ClineMessage,
+				{
+					ts: 2,
+					type: "ask",
+					ask: "tool",
+					metadata: {
+						tool: "updateTodoList",
+						todos: [{ id: "1", content: "Task 1", status: "in_progress" }],
+					},
+				} as ClineMessage,
+				{
+					ts: 3,
+					type: "say",
+					say: "text",
+					text: "Task completed",
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			// The text messages should be rendered
+			expect(screen.getByText("Starting task")).toBeInTheDocument()
+			expect(screen.getByText("Task completed")).toBeInTheDocument()
+			// The todo list tool message should NOT be rendered (displayed in header instead)
+			expect(screen.queryByText(/updateTodoList/)).not.toBeInTheDocument()
+			expect(screen.queryByText(/Task 1/)).not.toBeInTheDocument()
+		})
+
+		it("renders other tool messages normally", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "ask",
+					ask: "tool",
+					text: JSON.stringify({
+						tool: "readFile",
+						path: "/some/file.ts",
+					}),
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			// Other tool messages should still be rendered
+			expect(screen.getByText("messages.tool")).toBeInTheDocument()
+		})
+	})
 })
