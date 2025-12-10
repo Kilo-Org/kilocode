@@ -183,6 +183,108 @@ describe("PostHogTelemetryClient", () => {
 			})
 		})
 
+		it("should include organization ID from provider properties", async () => {
+			const client = new PostHogTelemetryClient()
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue({
+					appVersion: "1.0.0",
+					vscodeVersion: "1.60.0",
+					platform: "darwin",
+					editorName: "vscode",
+					language: "en",
+					mode: "code",
+					kilocodeOrganizationId: "org-123",
+				}),
+			}
+
+			client.setProvider(mockProvider)
+
+			const getEventProperties = getPrivateProperty<
+				(event: { event: TelemetryEventName; properties?: Record<string, any> }) => Promise<Record<string, any>>
+			>(client, "getEventProperties").bind(client)
+
+			const result = await getEventProperties({
+				event: TelemetryEventName.TASK_CREATED,
+				properties: {
+					customProp: "value",
+				},
+			})
+
+			// Organization ID should be included
+			expect(result).toEqual({
+				appVersion: "1.0.0",
+				vscodeVersion: "1.60.0",
+				platform: "darwin",
+				editorName: "vscode",
+				language: "en",
+				mode: "code",
+				kilocodeOrganizationId: "org-123",
+				customProp: "value",
+			})
+		})
+
+		it("should not override organization ID from event properties", async () => {
+			const client = new PostHogTelemetryClient()
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue({
+					appVersion: "1.0.0",
+					kilocodeOrganizationId: "org-from-provider",
+				}),
+			}
+
+			client.setProvider(mockProvider)
+
+			const getEventProperties = getPrivateProperty<
+				(event: { event: TelemetryEventName; properties?: Record<string, any> }) => Promise<Record<string, any>>
+			>(client, "getEventProperties").bind(client)
+
+			const result = await getEventProperties({
+				event: TelemetryEventName.TASK_CREATED,
+				properties: {
+					kilocodeOrganizationId: "org-from-event",
+				},
+			})
+
+			// Event property should take precedence
+			expect(result.kilocodeOrganizationId).toBe("org-from-event")
+		})
+
+		it("should handle missing organization ID gracefully", async () => {
+			const client = new PostHogTelemetryClient()
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue({
+					appVersion: "1.0.0",
+					vscodeVersion: "1.60.0",
+					platform: "darwin",
+				}),
+			}
+
+			client.setProvider(mockProvider)
+
+			const getEventProperties = getPrivateProperty<
+				(event: { event: TelemetryEventName; properties?: Record<string, any> }) => Promise<Record<string, any>>
+			>(client, "getEventProperties").bind(client)
+
+			const result = await getEventProperties({
+				event: TelemetryEventName.TASK_CREATED,
+				properties: {
+					customProp: "value",
+				},
+			})
+
+			// Should not have organization ID
+			expect(result).not.toHaveProperty("kilocodeOrganizationId")
+			expect(result).toEqual({
+				appVersion: "1.0.0",
+				vscodeVersion: "1.60.0",
+				platform: "darwin",
+				customProp: "value",
+			})
+		})
+
 		it("should handle errors from provider gracefully", async () => {
 			const client = new PostHogTelemetryClient()
 
@@ -326,6 +428,77 @@ describe("PostHogTelemetryClient", () => {
 			expect(captureCall.properties).not.toHaveProperty("repositoryUrl")
 			expect(captureCall.properties).not.toHaveProperty("repositoryName")
 			expect(captureCall.properties).not.toHaveProperty("defaultBranch")
+		})
+
+		it("should include organization ID in captured events", async () => {
+			const client = new PostHogTelemetryClient()
+			client.updateTelemetryState(true)
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue({
+					appVersion: "1.0.0",
+					vscodeVersion: "1.60.0",
+					platform: "darwin",
+					editorName: "vscode",
+					language: "en",
+					mode: "code",
+					kilocodeOrganizationId: "org-456",
+				}),
+			}
+
+			client.setProvider(mockProvider)
+
+			await client.capture({
+				event: TelemetryEventName.TASK_CREATED,
+				properties: { test: "value" },
+			})
+
+			expect(mockPostHogClient.capture).toHaveBeenCalledWith({
+				distinctId: "test-machine-id",
+				event: TelemetryEventName.TASK_CREATED,
+				properties: expect.objectContaining({
+					appVersion: "1.0.0",
+					test: "value",
+					kilocodeOrganizationId: "org-456",
+				}),
+			})
+
+			// Verify organization ID is included
+			const captureCall = mockPostHogClient.capture.mock.calls[0][0]
+			expect(captureCall.properties.kilocodeOrganizationId).toBe("org-456")
+		})
+
+		it("should capture events without organization ID when not provided", async () => {
+			const client = new PostHogTelemetryClient()
+			client.updateTelemetryState(true)
+
+			const mockProvider: TelemetryPropertiesProvider = {
+				getTelemetryProperties: vi.fn().mockResolvedValue({
+					appVersion: "1.0.0",
+					vscodeVersion: "1.60.0",
+					platform: "darwin",
+				}),
+			}
+
+			client.setProvider(mockProvider)
+
+			await client.capture({
+				event: TelemetryEventName.TASK_CREATED,
+				properties: { test: "value" },
+			})
+
+			expect(mockPostHogClient.capture).toHaveBeenCalledWith({
+				distinctId: "test-machine-id",
+				event: TelemetryEventName.TASK_CREATED,
+				properties: expect.objectContaining({
+					appVersion: "1.0.0",
+					test: "value",
+				}),
+			})
+
+			// Verify organization ID is not included
+			const captureCall = mockPostHogClient.capture.mock.calls[0][0]
+			expect(captureCall.properties).not.toHaveProperty("kilocodeOrganizationId")
 		})
 	})
 

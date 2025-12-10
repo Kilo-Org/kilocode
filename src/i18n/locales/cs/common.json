@@ -171,6 +171,7 @@
 		"share_link_copied": "Odkaz pro sdílení zkopírován do schránky",
 		"organization_share_link_copied": "Odkaz pro sdílení organizace zkopírován do schránky!",
 		"public_share_link_copied": "Veřejný odkaz pro sdílení zkopírován do schránky!",
+		"session_share_link_copied_with_url": "Relace sdílena! Odkaz zkopírován do schránky: {{url}}",
 		"image_copied_to_clipboard": "Image data URI zkopírováno do schránky",
 		"image_saved": "Obrázek uložen do {{path}}",
 		"mode_exported": "Režim '{{mode}}' byl úspěšně exportován",

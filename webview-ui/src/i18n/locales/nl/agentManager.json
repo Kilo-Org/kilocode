@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Lokaal",
 		"mainWorkspace": "Hoofdwerkruimte",
-		"readyToMerge": "Klaar om samen te voegen"
+		"readyToMerge": "Klaar om samen te voegen",
+		"shareSession": "Sessie delen",
+		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
+		"shareConfirmYes": "Ja",
+		"shareConfirmNo": "Nee"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -31,6 +35,7 @@
 		"comingSoon": "Binnenkort beschikbaar",
 		"runningInWorktree": "Draait in worktree",
 		"runningLocally": "Draait lokaal",
+		"runMode": "Uitvoeringsmodus",
 		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
 		"waitingForCli": "Agent-sessie wordt geïnitialiseerd...",

@@ -168,6 +168,7 @@
 		"image_saved": "Gambar disimpan ke {{path}}",
 		"organization_share_link_copied": "Tautan berbagi organisasi disalin ke clipboard!",
 		"public_share_link_copied": "Tautan berbagi publik disalin ke clipboard!",
+		"session_share_link_copied_with_url": "Sesi dibagikan! Tautan disalin ke clipboard: {{url}}",
 		"mode_exported": "Mode '{{mode}}' berhasil diekspor",
 		"mode_imported": "Mode berhasil diimpor"
 	},

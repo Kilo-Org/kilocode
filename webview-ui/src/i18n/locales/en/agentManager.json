@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Local",
 		"mainWorkspace": "Main workspace",
-		"readyToMerge": "Ready to merge"
+		"readyToMerge": "Ready to merge",
+		"shareSession": "Share session",
+		"shareConfirmMessage": "Would you like to publicly share a snapshot of this session?",
+		"shareConfirmYes": "Yes",
+		"shareConfirmNo": "No"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Start a new agent",
@@ -30,6 +34,7 @@
 		"comingSoon": "Coming soon",
 		"runningInWorktree": "Running in worktree",
 		"runningLocally": "Running locally",
+		"runMode": "Run mode",
 		"branch": "Branch",
 		"creatingSession": "Creating session...",
 		"waitingForCli": "Initializing agent session...",

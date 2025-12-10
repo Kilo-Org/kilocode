@@ -171,6 +171,7 @@
 		"share_link_copied": "คัดลอกลิงก์แชร์ไปยังคลิปบอร์ด",
 		"organization_share_link_copied": "คัดลอกลิงก์แชร์องค์กรไปยังคลิปบอร์ด!",
 		"public_share_link_copied": "คัดลอกลิงก์แชร์สาธารณะไปยังคลิปบอร์ด!",
+		"session_share_link_copied_with_url": "แชร์เซสชันแล้ว! คัดลอกลิงก์ไปยังคลิปบอร์ด: {{url}}",
 		"image_copied_to_clipboard": "คัดลอก image data URI ไปยังคลิปบอร์ด",
 		"image_saved": "บันทึกรูปภาพไปที่ {{path}}",
 		"mode_exported": "ส่งออกโหมด '{{mode}}' เรียบร้อยแล้ว",

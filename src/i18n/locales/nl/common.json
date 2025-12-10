@@ -168,6 +168,7 @@
 		"image_saved": "Afbeelding opgeslagen naar {{path}}",
 		"organization_share_link_copied": "Organisatie deel-link gekopieerd naar klembord!",
 		"public_share_link_copied": "Openbare deel-link gekopieerd naar klembord!",
+		"session_share_link_copied_with_url": "Sessie gedeeld! Link gekopieerd naar klembord: {{url}}",
 		"mode_exported": "Modus '{{mode}}' succesvol geëxporteerd",
 		"mode_imported": "Modus succesvol geïmporteerd"
 	},

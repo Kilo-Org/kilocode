@@ -96,7 +96,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 							"text-vscode-editor-font-size",
 							"leading-vscode-editor-line-height",
 							"cursor-text",
-							"!py-3 !pl-3 pr-9",
+							"!pt-3 !pl-3 pr-9", // Top and left padding (from main)
 							// Only show border when no todos (standalone mode)
 							!hasTodos && [
 								isFocused
@@ -112,7 +112,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 							"resize-none",
 							"overflow-x-hidden",
 							"overflow-y-auto",
-							"pb-10",
+							"!pb-10", // Bottom padding for floating buttons (from main)
 							"flex-none flex-grow",
 							"z-[2]",
 							"scrollbar-none",

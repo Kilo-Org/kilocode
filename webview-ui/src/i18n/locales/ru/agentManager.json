@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Локально",
 		"mainWorkspace": "Основное рабочее пространство",
-		"readyToMerge": "Готово к слиянию"
+		"readyToMerge": "Готово к слиянию",
+		"shareSession": "Поделиться сессией",
+		"shareConfirmMessage": "Хотите опубликовать снимок этой сессии?",
+		"shareConfirmYes": "Да",
+		"shareConfirmNo": "Нет"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -31,6 +35,7 @@
 		"comingSoon": "Скоро",
 		"runningInWorktree": "Выполняется в worktree",
 		"runningLocally": "Выполняется локально",
+		"runMode": "Режим запуска",
 		"branch": "Ветка",
 		"creatingSession": "Создание сессии...",
 		"waitingForCli": "Инициализация сессии агента...",

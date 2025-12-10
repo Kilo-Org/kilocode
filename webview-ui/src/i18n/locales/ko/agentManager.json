@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "로컬",
 		"mainWorkspace": "메인 작업 공간",
-		"readyToMerge": "병합 준비 완료"
+		"readyToMerge": "병합 준비 완료",
+		"shareSession": "세션 공유",
+		"shareConfirmMessage": "이 세션의 스냅샷을 공개적으로 공유하시겠습니까?",
+		"shareConfirmYes": "예",
+		"shareConfirmNo": "아니요"
 	},
 	"sessionDetail": {
 		"startNewAgent": "새 에이전트 시작",
@@ -31,6 +35,7 @@
 		"comingSoon": "출시 예정",
 		"runningInWorktree": "Worktree에서 실행 중",
 		"runningLocally": "로컬에서 실행 중",
+		"runMode": "실행 모드",
 		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
 		"waitingForCli": "에이전트 세션 초기화 중...",

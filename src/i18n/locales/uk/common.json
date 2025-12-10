@@ -171,6 +171,7 @@
 		"share_link_copied": "Посилання для поділу скопійовано в буфер обміну",
 		"organization_share_link_copied": "Посилання для поділу організації скопійовано в буфер обміну!",
 		"public_share_link_copied": "Публічне посилання для поділу скопійовано в буфер обміну!",
+		"session_share_link_copied_with_url": "Сеанс опубліковано! Посилання скопійовано в буфер обміну: {{url}}",
 		"image_copied_to_clipboard": "Image data URI скопійовано в буфер обміну",
 		"image_saved": "Зображення збережено в {{path}}",
 		"mode_exported": "Режим '{{mode}}' успішно експортовано",

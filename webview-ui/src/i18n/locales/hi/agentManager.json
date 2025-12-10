@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "स्थानीय",
 		"mainWorkspace": "मुख्य कार्यक्षेत्र",
-		"readyToMerge": "मर्ज के लिए तैयार"
+		"readyToMerge": "मर्ज के लिए तैयार",
+		"shareSession": "सत्र साझा करें",
+		"shareConfirmMessage": "क्या आप इस सत्र का एक स्नैपशॉट सार्वजनिक रूप से साझा करना चाहेंगे?",
+		"shareConfirmYes": "हाँ",
+		"shareConfirmNo": "नहीं"
 	},
 	"sessionDetail": {
 		"startNewAgent": "नया एजेंट शुरू करें",
@@ -31,6 +35,7 @@
 		"comingSoon": "जल्द आ रहा है",
 		"runningInWorktree": "Worktree में चल रहा है",
 		"runningLocally": "स्थानीय रूप से चल रहा है",
+		"runMode": "रन मोड",
 		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
 		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है...",
