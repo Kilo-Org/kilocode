@@ -39,28 +39,28 @@ Before enabling Managed Indexing:
 
 ## How to Enable
 
-Codebase Indexing is currently in beta and requires opt-in configuration.
+Codebase Indexing is rolling out across our users. It will automatically engage unless your repository root is configured to opt out.
 
 1. Create a `.kilocode/config.json` file in the root of your repository (if it doesn't already exist).
 2. Add the following configuration:
 
 ```json
 {
-	"projectId": "my-project-name",
-	"baseBranch": "main",
-	"managedIndexingEnabled": true
+	"project": {
+		"managedIndexingEnabled": false
+	}
 }
 ```
 
 ### Configuration Options
 
-| Field                    | Type    | Required | Description                                                                     |
-| ------------------------ | ------- | -------- | ------------------------------------------------------------------------------- |
-| `projectId`              | string  | No       | Custom name for your project. Defaults to the name from your Git origin remote. |
-| `baseBranch`             | string  | No       | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`.   |
-| `managedIndexingEnabled` | boolean | No       | Set to `true` to enable indexing for individual accounts. Defaults to `false`.  |
+| Field                            | Type    | Required | Description                                                                                 |
+| -------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------- |
+| `project.id`                     | string  | No       | Custom name for your project. Defaults to the name from your Git origin remote.             |
+| `project.baseBranch`             | string  | No       | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`.               |
+| `project.managedIndexingEnabled` | boolean | No       | Set to `false` to disable indexing for individual project repositories. Defaults to `true`. |
 
-For organization-wide shared indexing, contact support. This will be rolled out to all organizations within the coming week and will eventually be enabled by default for any account with an available balance.
+Organization-wide indexing is enabled for any organization that has a credit balance. If you want to disable indexing for a specific repository, set `managedIndexingEnabled` to `false` in the config file.
 
 ---
 
@@ -91,7 +91,9 @@ A minimal UI is available at [app.kilo.ai](https://app.kilo.ai) to:
 
 ## Migration from Local Indexing
 
-Enabling managed indexing will **replace local self-hosted indexing entirely**. Any pre-configured local code index will no longer be accessible once managed indexing is active.
+Enabling managed indexing will **replace local self-hosted indexing entirely**. If you have already configured local indexing for a workspace it will take precedence until you disable it.
+
+### Automatic Reversion
 
 If your credit balance reaches zero, the extension will automatically revert to local indexing (if previously configured).
 
