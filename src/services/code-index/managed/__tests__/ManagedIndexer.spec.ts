@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { ManagedIndexer } from "../ManagedIndexer"
 import { GitWatcher, GitWatcherEvent, GitWatcherFile } from "../../../../shared/GitWatcher"
-import { OrganizationService } from "../../../kilocode/OrganizationService"
 import * as gitUtils from "../git-utils"
 import * as kiloConfigFile from "../../../../utils/kilo-config-file"
 import * as git from "../../../../utils/git"
@@ -34,7 +33,6 @@ vi.mock("vscode", () => ({
 
 // Mock dependencies
 vi.mock("../../../../shared/GitWatcher")
-vi.mock("../../../kilocode/OrganizationService")
 vi.mock("../git-utils")
 vi.mock("../../../../utils/kilo-config-file")
 vi.mock("../../../../utils/git")
@@ -80,6 +78,9 @@ describe("ManagedIndexer", () => {
 				if (key === "kilocodeTesterWarningsDisabledUntil") return null
 				return null
 			}),
+			getGlobalState: vi.fn((key: string) => {
+				return null
+			}),
 			onManagedIndexerConfigChange: vi.fn(() => ({
 				dispose: vi.fn(),
 			})),
@@ -106,12 +107,7 @@ describe("ManagedIndexer", () => {
 			files: {},
 		} as any)
 
-		// Mock OrganizationService
-		vi.mocked(OrganizationService.fetchOrganization).mockResolvedValue({
-			id: "test-org-id",
-			name: "Test Org",
-		} as any)
-		vi.mocked(OrganizationService.isCodeIndexingEnabled).mockReturnValue(true)
+		vi.mocked(apiClient.isEnabled).mockResolvedValue(true)
 
 		// Mock GitWatcher - store instances for later verification
 		const mockWatcherInstances: any[] = []
@@ -192,82 +188,6 @@ describe("ManagedIndexer", () => {
 		})
 	})
 
-	describe("fetchOrganization", () => {
-		it("should fetch organization when token and org ID are present", async () => {
-			const org = await indexer.fetchOrganization()
-
-			expect(OrganizationService.fetchOrganization).toHaveBeenCalledWith("test-token", "test-org-id", undefined)
-			expect(org).toEqual({
-				id: "test-org-id",
-				name: "Test Org",
-			})
-		})
-
-		it("should return null when token is missing", async () => {
-			mockContextProxy.getSecret.mockReturnValue(null)
-
-			const org = await indexer.fetchOrganization()
-
-			expect(OrganizationService.fetchOrganization).not.toHaveBeenCalled()
-			expect(org).toBeNull()
-		})
-
-		it("should return null when org ID is missing", async () => {
-			mockContextProxy.getValue.mockImplementation((key: string) => {
-				if (key === "kilocodeOrganizationId") return null
-				if (key === "kilocodeTesterWarningsDisabledUntil") return null
-				return null
-			})
-
-			const org = await indexer.fetchOrganization()
-
-			expect(OrganizationService.fetchOrganization).not.toHaveBeenCalled()
-			expect(org).toBeNull()
-		})
-
-		it("should store organization in instance", async () => {
-			await indexer.fetchOrganization()
-
-			expect(indexer.organization).toEqual({
-				id: "test-org-id",
-				name: "Test Org",
-			})
-		})
-	})
-
-	describe("isEnabled", () => {
-		it("should return true when organization exists and feature is enabled", async () => {
-			// Must fetch organization first to populate indexer.organization
-			await indexer.fetchOrganization()
-
-			const enabled = indexer.isEnabled()
-
-			expect(enabled).toBe(true)
-		})
-
-		it("should return false when organization does not exist", async () => {
-			vi.mocked(OrganizationService.fetchOrganization).mockResolvedValue(null)
-
-			// Must fetch organization first
-			await indexer.fetchOrganization()
-
-			const enabled = indexer.isEnabled()
-
-			expect(enabled).toBe(false)
-		})
-
-		it("should return false when code indexing is not enabled", async () => {
-			vi.mocked(OrganizationService.isCodeIndexingEnabled).mockReturnValue(false)
-
-			// Must fetch organization first
-			await indexer.fetchOrganization()
-
-			const enabled = indexer.isEnabled()
-
-			expect(enabled).toBe(false)
-		})
-	})
-
 	describe("start", () => {
 		beforeEach(() => {
 			vi.mocked(vscode.workspace).workspaceFolders = [mockWorkspaceFolder]
@@ -283,7 +203,7 @@ describe("ManagedIndexer", () => {
 		})
 
 		it("should not start when feature is not enabled", async () => {
-			vi.mocked(OrganizationService.isCodeIndexingEnabled).mockReturnValue(false)
+			vi.mocked(apiClient.isEnabled).mockReturnValue(Promise.resolve(false))
 
 			await indexer.start()
 
@@ -293,18 +213,6 @@ describe("ManagedIndexer", () => {
 
 		it("should not start when token is missing", async () => {
 			mockContextProxy.getSecret.mockReturnValue(null)
-
-			await indexer.start()
-
-			expect(indexer.isActive).toBe(false)
-			expect(indexer.workspaceFolderState).toEqual([])
-		})
-
-		it("should not start when organization ID is missing", async () => {
-			mockContextProxy.getValue.mockImplementation((key: string) => {
-				if (key === "kilocodeOrganizationId") return null
-				return null
-			})
 
 			await indexer.start()
 

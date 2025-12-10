@@ -231,7 +231,11 @@
 			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
 			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
-			"provider": "Penyedia"
+			"provider": "Penyedia",
+			"enableChatAutocomplete": {
+				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
+				"label": "Pelengkapan Otomatis Input Obrolan"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
+	},
+	"deviceAuth": {
+		"title": "Masuk ke Kilo Code",
+		"step1": "Buka URL berikut di browser kamu",
+		"step2": "Verifikasi kode dan otorisasi perangkat ini di browser kamu",
+		"scanQr": "Atau pindai kode QR ini dengan ponsel kamu",
+		"openBrowser": "Buka Browser",
+		"copyUrl": "Salin URL",
+		"waiting": "Menunggu otorisasi...",
+		"timeRemaining": "Kode kedaluwarsa dalam {{time}}",
+		"success": "Berhasil masuk!",
+		"authenticatedAs": "Diautentikasi sebagai {{email}}",
+		"error": "Kesalahan Autentikasi",
+		"unknownError": "Terjadi kesalahan. Silakan coba lagi.",
+		"cancel": "Batal",
+		"retry": "Coba Lagi",
+		"tryAgain": "Coba Lagi",
+		"cancelled": "Autentikasi Dibatalkan",
+		"initiating": "Memulai autentikasi..."
 	}
 }

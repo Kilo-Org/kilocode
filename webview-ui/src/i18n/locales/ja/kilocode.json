@@ -245,7 +245,11 @@
 			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
 			"configureAutocompleteProfile": "プロファイルに移動し、プロファイルタイプがオートコンプリートのプロファイルを設定することで、任意のモデルを使用できます。",
 			"model": "モデル",
-			"provider": "プロバイダー"
+			"provider": "プロバイダー",
+			"enableChatAutocomplete": {
+				"description": "有効にすると、Kilo Codeはチャット入力の入力中に候補を提案します。Tabキーを押して候補を受け入れることができます。",
+				"label": "チャット入力オートコンプリート"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新機能: 組織を作成してモードを共有"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code にサインイン",
+		"step1": "ブラウザで次のURLを開いてください",
+		"step2": "コードを確認し、ブラウザでこのデバイスを承認してください",
+		"scanQr": "またはスマートフォンでこのQRコードをスキャンしてください",
+		"openBrowser": "ブラウザを開く",
+		"copyUrl": "URLをコピー",
+		"waiting": "承認を待っています...",
+		"timeRemaining": "コードは {{time}} で期限切れになります",
+		"success": "サインインに成功しました！",
+		"authenticatedAs": "{{email}} として認証されました",
+		"error": "認証エラー",
+		"unknownError": "エラーが発生しました。もう一度お試しください。",
+		"cancel": "キャンセル",
+		"retry": "再試行",
+		"tryAgain": "再試行",
+		"cancelled": "認証がキャンセルされました",
+		"initiating": "認証を開始しています..."
 	}
 }

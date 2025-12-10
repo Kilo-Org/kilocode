@@ -6,7 +6,8 @@
 	"scripts": {
 		"test": "tsx runner.ts",
 		"test:verbose": "tsx runner.ts --verbose",
-		"clean": "tsx runner.ts clean"
+		"clean": "tsx runner.ts clean",
+		"report": "tsx runner.ts report"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.51.0",
