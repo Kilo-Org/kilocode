@@ -1,0 +1,168 @@
+[
+	{
+		"provider": "kilocode",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "kilocode" },
+			{ "name": "KILOCODE_TOKEN", "source": "kilocodeToken" },
+			{ "name": "KILOCODE_MODEL", "source": "kilocodeModel" },
+			{ "name": "KILOCODE_ORGANIZATION_ID", "source": "kilocodeOrganizationId" }
+		],
+		"required": ["KILOCODE_TOKEN", "KILOCODE_MODEL"]
+	},
+	{
+		"provider": "openrouter",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "openrouter" },
+			{ "name": "KILO_OPENROUTER_API_KEY", "source": "openRouterApiKey" },
+			{ "name": "KILO_OPENROUTER_MODEL_ID", "source": "openRouterModelId" },
+			{ "name": "KILO_OPENROUTER_BASE_URL", "source": "openRouterBaseUrl" },
+			{ "name": "KILO_OPENROUTER_SPECIFIC_PROVIDER", "source": "openRouterSpecificProvider" },
+			{ "name": "KILO_OPENROUTER_USE_MIDDLE_OUT_TRANSFORM", "source": "openRouterUseMiddleOutTransform" },
+			{ "name": "KILO_OPENROUTER_PROVIDER_DATA_COLLECTION", "source": "openRouterProviderDataCollection" },
+			{ "name": "KILO_OPENROUTER_PROVIDER_SORT", "source": "openRouterProviderSort" },
+			{ "name": "KILO_OPENROUTER_ZDR", "source": "openRouterZdr" }
+		],
+		"required": ["KILO_OPENROUTER_API_KEY", "KILO_OPENROUTER_MODEL_ID"]
+	},
+	{
+		"provider": "anthropic",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "anthropic" },
+			{ "name": "KILO_API_KEY", "source": "apiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_ANTHROPIC_BASE_URL", "source": "anthropicBaseUrl" },
+			{ "name": "KILO_ANTHROPIC_USE_AUTH_TOKEN", "source": "anthropicUseAuthToken" },
+			{ "name": "KILO_ANTHROPIC_DEPLOYMENT_NAME", "source": "anthropicDeploymentName" },
+			{ "name": "KILO_ANTHROPIC_BETA_1M_CONTEXT", "source": "anthropicBeta1MContext" }
+		],
+		"required": ["KILO_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "openai",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "openai" },
+			{ "name": "KILO_OPENAI_API_KEY", "source": "openAiApiKey" },
+			{ "name": "KILO_OPENAI_MODEL_ID", "source": "openAiModelId" },
+			{ "name": "KILO_OPENAI_BASE_URL", "source": "openAiBaseUrl" },
+			{ "name": "KILO_OPENAI_LEGACY_FORMAT", "source": "openAiLegacyFormat" },
+			{ "name": "KILO_OPENAI_R1_FORMAT_ENABLED", "source": "openAiR1FormatEnabled" },
+			{ "name": "KILO_OPENAI_USE_AZURE", "source": "openAiUseAzure" },
+			{ "name": "KILO_AZURE_API_VERSION", "source": "azureApiVersion" },
+			{ "name": "KILO_OPENAI_STREAMING_ENABLED", "source": "openAiStreamingEnabled" },
+			{ "name": "KILO_OPENAI_HOST_HEADER", "source": "openAiHostHeader" }
+		],
+		"required": ["KILO_OPENAI_API_KEY", "KILO_OPENAI_MODEL_ID"]
+	},
+	{
+		"provider": "openai-native",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "openai-native" },
+			{ "name": "KILO_OPENAI_NATIVE_API_KEY", "source": "openAiNativeApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_OPENAI_NATIVE_BASE_URL", "source": "openAiNativeBaseUrl" },
+			{ "name": "KILO_OPENAI_NATIVE_SERVICE_TIER", "source": "openAiNativeServiceTier" }
+		],
+		"required": ["KILO_OPENAI_NATIVE_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "ollama",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "ollama" },
+			{ "name": "KILO_OLLAMA_MODEL_ID", "source": "ollamaModelId" },
+			{ "name": "KILO_OLLAMA_BASE_URL", "source": "ollamaBaseUrl" },
+			{ "name": "KILO_OLLAMA_API_KEY", "source": "ollamaApiKey" },
+			{ "name": "KILO_OLLAMA_NUM_CTX", "source": "ollamaNumCtx" }
+		],
+		"required": ["KILO_OLLAMA_MODEL_ID"]
+	},
+	{
+		"provider": "bedrock",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "bedrock" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_AWS_REGION", "source": "awsRegion" },
+			{ "name": "KILO_AWS_ACCESS_KEY", "source": "awsAccessKey" },
+			{ "name": "KILO_AWS_SECRET_KEY", "source": "awsSecretKey" },
+			{ "name": "KILO_AWS_SESSION_TOKEN", "source": "awsSessionToken" },
+			{ "name": "KILO_AWS_USE_CROSS_REGION_INFERENCE", "source": "awsUseCrossRegionInference" },
+			{ "name": "KILO_AWS_USE_GLOBAL_INFERENCE", "source": "awsUseGlobalInference" },
+			{ "name": "KILO_AWS_USE_PROMPT_CACHE", "source": "awsUsePromptCache" },
+			{ "name": "KILO_AWS_PROFILE", "source": "awsProfile" },
+			{ "name": "KILO_AWS_USE_PROFILE", "source": "awsUseProfile" },
+			{ "name": "KILO_AWS_API_KEY", "source": "awsApiKey" },
+			{ "name": "KILO_AWS_USE_API_KEY", "source": "awsUseApiKey" },
+			{ "name": "KILO_AWS_CUSTOM_ARN", "source": "awsCustomArn" },
+			{ "name": "KILO_AWS_MODEL_CONTEXT_WINDOW", "source": "awsModelContextWindow" },
+			{ "name": "KILO_AWS_BEDROCK_ENDPOINT_ENABLED", "source": "awsBedrockEndpointEnabled" },
+			{ "name": "KILO_AWS_BEDROCK_ENDPOINT", "source": "awsBedrockEndpoint" },
+			{ "name": "KILO_AWS_BEDROCK_1M_CONTEXT", "source": "awsBedrock1MContext" }
+		],
+		"required": ["KILO_API_MODEL_ID", "KILO_AWS_REGION"],
+		"specialRequirements": "bedrock"
+	},
+	{
+		"provider": "vertex",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "vertex" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_VERTEX_PROJECT_ID", "source": "vertexProjectId" },
+			{ "name": "KILO_VERTEX_REGION", "source": "vertexRegion" },
+			{ "name": "KILO_VERTEX_KEY_FILE", "source": "vertexKeyFile" },
+			{ "name": "KILO_VERTEX_JSON_CREDENTIALS", "source": "vertexJsonCredentials" },
+			{ "name": "KILO_ENABLE_URL_CONTEXT", "source": "enableUrlContext" },
+			{ "name": "KILO_ENABLE_GROUNDING", "source": "enableGrounding" }
+		],
+		"required": ["KILO_API_MODEL_ID", "KILO_VERTEX_PROJECT_ID", "KILO_VERTEX_REGION"],
+		"specialRequirements": "vertex"
+	},
+	{
+		"provider": "gemini",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "gemini" },
+			{ "name": "KILO_GEMINI_API_KEY", "source": "geminiApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_GOOGLE_GEMINI_BASE_URL", "source": "googleGeminiBaseUrl" },
+			{ "name": "KILO_ENABLE_URL_CONTEXT", "source": "enableUrlContext" },
+			{ "name": "KILO_ENABLE_GROUNDING", "source": "enableGrounding" }
+		],
+		"required": ["KILO_GEMINI_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "mistral",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "mistral" },
+			{ "name": "KILO_MISTRAL_API_KEY", "source": "mistralApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_MISTRAL_CODESTRAL_URL", "source": "mistralCodestralUrl" }
+		],
+		"required": ["KILO_MISTRAL_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "groq",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "groq" },
+			{ "name": "KILO_GROQ_API_KEY", "source": "groqApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" }
+		],
+		"required": ["KILO_GROQ_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "deepseek",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "deepseek" },
+			{ "name": "KILO_DEEPSEEK_API_KEY", "source": "deepSeekApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" },
+			{ "name": "KILO_DEEPSEEK_BASE_URL", "source": "deepSeekBaseUrl" }
+		],
+		"required": ["KILO_DEEPSEEK_API_KEY", "KILO_API_MODEL_ID"]
+	},
+	{
+		"provider": "xai",
+		"env": [
+			{ "name": "KILO_PROVIDER_TYPE", "value": "xai" },
+			{ "name": "KILO_XAI_API_KEY", "source": "xaiApiKey" },
+			{ "name": "KILO_API_MODEL_ID", "source": "apiModelId" }
+		],
+		"required": ["KILO_XAI_API_KEY", "KILO_API_MODEL_ID"]
+	}
+]
