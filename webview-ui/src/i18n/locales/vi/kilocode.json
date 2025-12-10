@@ -238,7 +238,11 @@
 			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
 			"configureAutocompleteProfile": "Sử dụng bất kỳ mô hình nào bằng cách vào hồ sơ và cấu hình Hồ sơ có Loại Hồ sơ là Tự động hoàn thành.",
 			"model": "Mô hình",
-			"provider": "Nhà cung cấp"
+			"provider": "Nhà cung cấp",
+			"enableChatAutocomplete": {
+				"label": "Gợi ý Tự động Hoàn thành Trong Trò chuyện",
+				"description": "Khi được bật, Kilo Code sẽ đề xuất các gợi ý hoàn thành khi bạn nhập trong ô chat. Nhấn Tab để chấp nhận các gợi ý."
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Mới: Chia sẻ chế độ bằng cách tạo một tổ chức"
+	},
+	"deviceAuth": {
+		"title": "Đăng nhập vào Kilo Code",
+		"step1": "Mở URL sau trên trình duyệt của bạn",
+		"step2": "Xác minh mã và ủy quyền thiết bị này trên trình duyệt của bạn",
+		"scanQr": "Hoặc quét mã QR này bằng điện thoại của bạn",
+		"openBrowser": "Mở trình duyệt",
+		"copyUrl": "Sao chép URL",
+		"waiting": "Đang chờ ủy quyền...",
+		"timeRemaining": "Mã hết hạn sau {{time}}",
+		"success": "Đăng nhập thành công!",
+		"authenticatedAs": "Đã xác thực với tư cách {{email}}",
+		"error": "Lỗi xác thực",
+		"unknownError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+		"cancel": "Hủy",
+		"retry": "Thử lại",
+		"tryAgain": "Thử lại",
+		"cancelled": "Đã hủy xác thực",
+		"initiating": "Đang bắt đầu xác thực..."
 	}
 }

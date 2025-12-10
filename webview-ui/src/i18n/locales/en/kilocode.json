@@ -249,6 +249,10 @@
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
 			},
+			"enableChatAutocomplete": {
+				"label": "Chat Input Autocomplete",
+				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
+			},
 			"keybindingNotFound": "not found",
 			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."
@@ -286,5 +290,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "New: Share modes by creating an organization"
+	},
+	"deviceAuth": {
+		"title": "Sign in to Kilo Code",
+		"step1": "Open the following URL on your browser",
+		"step2": "Verify the code and authorize this device on your browser",
+		"scanQr": "Or scan this QR code with your phone",
+		"openBrowser": "Open Browser",
+		"copyUrl": "Copy URL",
+		"waiting": "Waiting for authorization...",
+		"timeRemaining": "Code expires in {{time}}",
+		"success": "Successfully signed in!",
+		"authenticatedAs": "Authenticated as {{email}}",
+		"error": "Authentication Error",
+		"unknownError": "An error occurred. Please try again.",
+		"cancel": "Cancel",
+		"retry": "Try Again",
+		"tryAgain": "Try Again",
+		"cancelled": "Authentication Cancelled",
+		"initiating": "Starting authentication..."
 	}
 }

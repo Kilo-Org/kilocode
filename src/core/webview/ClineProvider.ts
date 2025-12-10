@@ -110,6 +110,7 @@ import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
+import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -157,6 +158,7 @@ export class ClineProvider
 	private taskEventListeners: WeakMap<Task, Array<() => void>> = new WeakMap()
 	private currentWorkspacePath: string | undefined
 	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
+	private deviceAuthHandler?: DeviceAuthHandler // kilocode_change - Device auth handler
 
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -682,7 +684,7 @@ export class ClineProvider
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
 
-		// kilocode_change start - Stop auto-purge scheduler
+		// kilocode_change start - Stop auto-purge scheduler and device auth service
 		if (this.autoPurgeScheduler) {
 			this.autoPurgeScheduler.stop()
 			this.autoPurgeScheduler = undefined
@@ -1747,7 +1749,7 @@ ${prompt}
 		await this.upsertProviderProfile(profileName, newConfiguration)
 	}
 
-	// kilocode_change:
+	// kilocode_change start
 	async handleKiloCodeCallback(token: string) {
 		const kilocode: ProviderName = "kilocode"
 		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
@@ -1767,6 +1769,24 @@ ${prompt}
 			})
 		}
 	}
+	// kilocode_change end
+
+	// kilocode_change start - Device Auth Flow
+	async startDeviceAuth() {
+		if (!this.deviceAuthHandler) {
+			this.deviceAuthHandler = new DeviceAuthHandler({
+				postMessageToWebview: (msg) => this.postMessageToWebview(msg),
+				log: (msg) => this.log(msg),
+				showInformationMessage: (msg) => vscode.window.showInformationMessage(msg),
+			})
+		}
+		await this.deviceAuthHandler.startDeviceAuth()
+	}
+
+	cancelDeviceAuth() {
+		this.deviceAuthHandler?.cancelDeviceAuth()
+	}
+	// kilocode_change end
 
 	// Task history
 

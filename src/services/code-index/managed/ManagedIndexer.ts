@@ -11,7 +11,7 @@ import { GitWatcher, GitWatcherEvent } from "../../../shared/GitWatcher"
 import { getCurrentBranch, isGitRepository, getCurrentCommitSha, getBaseBranch } from "./git-utils"
 import { getKilocodeConfig } from "../../../utils/kilo-config-file"
 import { getGitRepositoryInfo } from "../../../utils/git"
-import { getServerManifest, searchCode, upsertFile, deleteFiles } from "./api-client"
+import { getServerManifest, searchCode, upsertFile, deleteFiles, isEnabled } from "./api-client"
 import { ServerManifest } from "./types"
 import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
@@ -65,7 +65,8 @@ interface ManagedIndexerWorkspaceFolderState {
 
 export class ManagedIndexer implements vscode.Disposable {
 	private static prevInstance: ManagedIndexer | null = null
-	private enabledViaConfig: boolean = false
+	private disabledViaConfig: boolean = false
+	private enabledViaApi: boolean = false
 
 	static getInstance(): ManagedIndexer {
 		if (!ManagedIndexer.prevInstance) {
@@ -125,7 +126,7 @@ export class ManagedIndexer implements vscode.Disposable {
 	// code right now. We need to clean this up to be more stateless or better rely
 	// on proper memoization/invalidation techniques
 
-	async fetchConfig(): Promise<ManagedIndexerConfig> {
+	fetchConfig(): ManagedIndexerConfig {
 		// kilocode_change: Read directly from ContextProxy instead of ClineProvider
 		const kilocodeToken = this.contextProxy?.getSecret("kilocodeToken")
 		const kilocodeOrganizationId = this.contextProxy?.getValue("kilocodeOrganizationId")
@@ -140,37 +141,16 @@ export class ManagedIndexer implements vscode.Disposable {
 		return this.config
 	}
 
-	async fetchOrganization(): Promise<KiloOrganization | null> {
-		const config = await this.fetchConfig()
-
-		if (config.kilocodeToken && config.kilocodeOrganizationId) {
-			this.organization = await OrganizationService.fetchOrganization(
-				config.kilocodeToken,
-				config.kilocodeOrganizationId,
-				config.kilocodeTesterWarningsDisabledUntil ?? undefined,
-			)
-
-			return this.organization
-		}
-
-		this.organization = null
-
-		return this.organization
-	}
-
 	isEnabled(): boolean {
-		if (this.enabledViaConfig) {
-			return true
-		}
-
-		const organization = this.organization
-
-		if (!organization) {
+		if (this.disabledViaConfig) {
 			return false
 		}
 
-		const isEnabled = OrganizationService.isCodeIndexingEnabled(organization)
-		return isEnabled
+		if (this.enabledViaApi) {
+			return true
+		}
+
+		return false
 	}
 
 	/**
@@ -221,6 +201,21 @@ export class ManagedIndexer implements vscode.Disposable {
 	async start() {
 		console.log("[ManagedIndexer] Starting ManagedIndexer")
 
+		this.fetchConfig()
+		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
+
+		if (!kilocodeToken) {
+			console.log("[ManagedIndexer] No Kilocode token found, skipping managed indexing")
+			return
+		}
+
+		// do not use managed indexing if local codebase indexing is already enabled
+		const localIndexingConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig")
+		if (localIndexingConfig?.codebaseIndexEnabled) {
+			console.log("[ManagedIndexer] Local codebase indexing is enabled, skipping managed indexing")
+			return
+		}
+
 		this.configChangeListener = this.contextProxy?.onManagedIndexerConfigChange(
 			this.onConfigurationChange.bind(this),
 		)
@@ -235,23 +230,19 @@ export class ManagedIndexer implements vscode.Disposable {
 
 		for (const folder of vscode.workspace.workspaceFolders ?? []) {
 			const config = await getKilocodeConfig(folder.uri.fsPath)
-			if (config?.project?.managedIndexingEnabled) {
-				this.enabledViaConfig = true
+			if (config?.project?.managedIndexingEnabled === false) {
+				this.disabledViaConfig = true
 			}
 		}
 
-		this.organization = await this.fetchOrganization()
+		this.enabledViaApi = await isEnabled(kilocodeToken, kilocodeOrganizationId ?? null)
+		console.debug(
+			`[ManagedIndexer] Starting indexer. config disabled: ${this.disabledViaConfig}, API: ${this.enabledViaApi}`,
+		)
 
 		this.sendStateToWebview()
 
 		if (!this.isEnabled()) {
-			return
-		}
-
-		// TODO: Plumb kilocodeTesterWarningsDisabledUntil through
-		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
-
-		if (!kilocodeToken) {
 			return
 		}
 
@@ -297,8 +288,10 @@ export class ManagedIndexer implements vscode.Disposable {
 					const config = await getKilocodeConfig(cwd, repositoryUrl)
 					const projectId = config?.project?.id
 
-					// TODO: (brianc) - only index projects if they're enabled in the config
-					// right now if any workspace folder is enabled, we index them all
+					// if managed indexing is specifically disabled in the config, skip this folder
+					if (config?.project?.managedIndexingEnabled === false) {
+						return null
+					}
 
 					if (!projectId) {
 						console.log("[ManagedIndexer] No project ID found for workspace folder", cwd)
@@ -404,7 +397,6 @@ export class ManagedIndexer implements vscode.Disposable {
 		this.workspaceFolderState = []
 
 		this.isActive = false
-		this.organization = null
 	}
 
 	/**

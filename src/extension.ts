@@ -359,11 +359,13 @@ export async function activate(context: vscode.ExtensionContext) {
 				false,
 			)
 
-			// Enable autocomplete by default for new installs
+			// Enable autocomplete by default for new installs, but not for JetBrains IDEs
+			// JetBrains users can manually enable it if they want to test the feature
+			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 			const currentGhostSettings = contextProxy.getValue("ghostServiceSettings")
 			await contextProxy.setValue("ghostServiceSettings", {
 				...currentGhostSettings,
-				enableAutoTrigger: true,
+				enableAutoTrigger: !kiloCodeWrapperJetbrains,
 				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			})
@@ -460,13 +462,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	// kilocode_change start - Kilo Code specific registrations
-	const { kiloCodeWrapped } = getKiloCodeWrapperProperties()
-	if (!kiloCodeWrapped) {
-		// Only use autocomplete in VS Code
-		registerGhostProvider(context, provider)
-	} else {
+	const { kiloCodeWrapped, kiloCodeWrapperCode } = getKiloCodeWrapperProperties()
+	if (kiloCodeWrapped) {
 		// Only foward logs in Jetbrains
 		registerMainThreadForwardingLogger(context)
+	}
+	// Don't register the ghost provider for the CLI
+	if (kiloCodeWrapperCode !== "cli") {
+		registerGhostProvider(context, provider)
 	}
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	// kilocode_change end - Kilo Code specific registrations

@@ -50,6 +50,12 @@ export enum TelemetryEventName {
 	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
 	ASK_APPROVAL = "Ask Approval",
 	MISSING_MANAGED_INDEXER = "Missing Managed Indexer",
+
+	AGENT_MANAGER_OPENED = "Agent Manager Opened",
+	AGENT_MANAGER_SESSION_STARTED = "Agent Manager Session Started",
+	AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
+	AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",
+	AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -224,6 +230,11 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
 			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
 			TelemetryEventName.GHOST_SERVICE_DISABLED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_OPENED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_COMPLETED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

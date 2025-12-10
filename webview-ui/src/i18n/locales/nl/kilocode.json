@@ -245,7 +245,11 @@
 			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
 			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren.",
 			"model": "Model",
-			"provider": "Provider"
+			"provider": "Provider",
+			"enableChatAutocomplete": {
+				"label": "Chatinvoer Automatisch Aanvullen",
+				"description": "Wanneer ingeschakeld, zal Kilo Code suggesties voor aanvullingen geven terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nieuw: Deel modi door een organisatie aan te maken"
+	},
+	"deviceAuth": {
+		"title": "Inloggen bij Kilo Code",
+		"step1": "Open de volgende URL in je browser",
+		"step2": "Verifieer de code en autoriseer dit apparaat in je browser",
+		"scanQr": "Of scan deze QR-code met je telefoon",
+		"openBrowser": "Browser openen",
+		"copyUrl": "URL kopiëren",
+		"waiting": "Wachten op autorisatie...",
+		"timeRemaining": "Code verloopt over {{time}}",
+		"success": "Succesvol ingelogd!",
+		"authenticatedAs": "Geauthenticeerd als {{email}}",
+		"error": "Authenticatiefout",
+		"unknownError": "Er is een fout opgetreden. Probeer het opnieuw.",
+		"cancel": "Annuleren",
+		"retry": "Opnieuw proberen",
+		"tryAgain": "Opnieuw proberen",
+		"cancelled": "Authenticatie geannuleerd",
+		"initiating": "Authenticatie starten..."
 	}
 }
