@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "更新手順",
 			"installInstructions": "インストール手順",
-			"getHelp": "ヘルプを表示"
+			"getHelp": "ヘルプを表示",
+			"runInTerminal": "ターミナルで実行"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLIをインストールするためにnpm installを実行しています。完了したら、このターミナルを閉じてAgent Managerを再度起動してみてください。"
 		}
 	}
 }

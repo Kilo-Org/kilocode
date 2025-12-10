@@ -112,7 +112,11 @@
 		"actions": {
 			"updateInstructions": "คำแนะนำการอัปเดต",
 			"installInstructions": "คำแนะนำการติดตั้ง",
-			"getHelp": "รับความช่วยเหลือ"
+			"getHelp": "รับความช่วยเหลือ",
+			"runInTerminal": "เรียกใช้ในเทอร์มินัล"
+		},
+		"terminal": {
+			"installMessage": "กำลังรัน npm install เพื่อติดตั้ง Kilocode CLI เมื่อเสร็จแล้ว คุณสามารถปิดเทอร์มินัลนี้และลองเริ่ม Agent Manager อีกครั้ง"
 		}
 	},
 	"ghost": {

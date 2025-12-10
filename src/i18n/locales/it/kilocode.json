@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "Istruzioni di Aggiornamento",
 			"installInstructions": "Istruzioni di Installazione",
-			"getHelp": "Ottieni Aiuto"
+			"getHelp": "Ottieni Aiuto",
+			"runInTerminal": "Esegui nel Terminale"
+		},
+		"terminal": {
+			"installMessage": "Esecuzione di npm install per installare Kilocode CLI. Una volta completato, puoi chiudere questo terminale e provare ad avviare nuovamente l'Agent Manager."
 		}
 	}
 }

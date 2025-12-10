@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "Petunjuk Pembaruan",
 			"installInstructions": "Petunjuk Instalasi",
-			"getHelp": "Dapatkan Bantuan"
+			"getHelp": "Dapatkan Bantuan",
+			"runInTerminal": "Jalankan di Terminal"
+		},
+		"terminal": {
+			"installMessage": "Menjalankan npm install untuk menginstal Kilocode CLI. Setelah selesai, kamu dapat menutup terminal ini dan mencoba memulai Agent Manager lagi."
 		}
 	}
 }

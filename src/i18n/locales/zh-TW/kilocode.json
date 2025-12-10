@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "更新說明",
 			"installInstructions": "安裝說明",
-			"getHelp": "取得協助"
+			"getHelp": "取得協助",
+			"runInTerminal": "在終端機執行"
+		},
+		"terminal": {
+			"installMessage": "執行 npm install 以安裝 Kilocode CLI。完成後，您可以關閉此終端機並嘗試再次啟動 Agent Manager。"
 		}
 	}
 }

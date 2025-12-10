@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "Інструкції з Оновлення",
 			"installInstructions": "Інструкції з Встановлення",
-			"getHelp": "Отримати Допомогу"
+			"getHelp": "Отримати Допомогу",
+			"runInTerminal": "Запустити в Терміналі"
+		},
+		"terminal": {
+			"installMessage": "Виконання npm install для встановлення Kilocode CLI. Після завершення можеш закрити цей термінал і спробувати запустити Agent Manager знову."
 		}
 	}
 }

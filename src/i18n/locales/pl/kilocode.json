@@ -112,7 +112,11 @@
 		"actions": {
 			"updateInstructions": "Instrukcje Aktualizacji",
 			"installInstructions": "Instrukcje Instalacji",
-			"getHelp": "Uzyskaj Pomoc"
+			"getHelp": "Uzyskaj Pomoc",
+			"runInTerminal": "Uruchom w Terminalu"
+		},
+		"terminal": {
+			"installMessage": "Uruchamianie npm install w celu zainstalowania Kilocode CLI. Po zakończeniu możesz zamknąć ten terminal i spróbować ponownie uruchomić Agent Managera."
 		}
 	},
 	"ghost": {

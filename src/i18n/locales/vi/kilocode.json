@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "Hướng Dẫn Cập Nhật",
 			"installInstructions": "Hướng Dẫn Cài Đặt",
-			"getHelp": "Nhận Trợ Giúp"
+			"getHelp": "Nhận Trợ Giúp",
+			"runInTerminal": "Chạy trong Terminal"
+		},
+		"terminal": {
+			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager."
 		}
 	}
 }

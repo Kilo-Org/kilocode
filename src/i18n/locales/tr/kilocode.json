@@ -182,7 +182,11 @@
 		"actions": {
 			"updateInstructions": "Güncelleme Talimatları",
 			"installInstructions": "Kurulum Talimatları",
-			"getHelp": "Yardım Al"
+			"getHelp": "Yardım Al",
+			"runInTerminal": "Terminalde Çalıştır"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI'yi yüklemek için npm install çalıştırılıyor. Tamamlandığında, bu terminali kapatıp Agent Manager'ı tekrar başlatmayı deneyebilirsin."
 		}
 	}
 }
