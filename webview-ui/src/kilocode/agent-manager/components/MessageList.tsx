@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback, useMemo } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
 import { safeJsonParse } from "@roo/safeJsonParse"
+import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
+import { CommandExecutionBlock } from "./CommandExecutionBlock"
 import { vscode } from "../utils/vscode"
 import {
 	MessageCircle,
@@ -31,6 +33,9 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
 	const containerRef = useRef<HTMLDivElement>(null)
 
+	// Combine command and command_output messages into single entries
+	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
+
 	// Auto-scroll to bottom when new messages arrive
 	useEffect(() => {
 		if (containerRef.current) {
@@ -41,7 +46,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 				}
 			})
 		}
-	}, [messages])
+	}, [combinedMessages])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -61,7 +66,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[setInputValue],
 	)
 
-	if (messages.length === 0) {
+	if (combinedMessages.length === 0) {
 		return (
 			<div className="am-messages-empty">
 				<MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -73,7 +78,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	return (
 		<div className="am-messages-container" ref={containerRef}>
 			<div className="am-messages-list">
-				{messages.map((msg, idx) => (
+				{combinedMessages.map((msg, idx) => (
 					<MessageItem
 						key={msg.ts || idx}
 						message={msg}
@@ -162,7 +167,8 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			}
 			case "api_req_finished":
 			case "checkpoint_saved":
-				return null // Skip internal messages
+			case "command_output":
+				return null // Skip internal messages (command_output is combined with command)
 			default:
 				content = <SimpleMarkdown content={messageText} />
 		}
@@ -186,8 +192,12 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			case "command": {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.command")
-				content = <SimpleMarkdown content={`\`${messageText}\``} />
+				content = <CommandExecutionBlock text={messageText} isRunning={message.partial} />
 				break
+			}
+			case "command_output": {
+				// Skip standalone command_output - combined with command message
+				return null
 			}
 			case "tool": {
 				// Tool asks usually have JSON content describing the tool use
