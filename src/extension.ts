@@ -50,30 +50,7 @@ import { SettingsSyncService } from "./services/settings-sync/SettingsSyncServic
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
-
-// kilocode_change start
-async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
-	const { apiConfiguration } = await provider.getState()
-	if (apiConfiguration.kilocodeToken) {
-		return apiConfiguration.kilocodeToken
-	}
-
-	const profiles = await provider.providerSettingsManager.listConfig()
-
-	for (const profile of profiles) {
-		try {
-			const fullProfile = await provider.providerSettingsManager.getProfile({ name: profile.name })
-			if (fullProfile.kilocodeToken) {
-				return fullProfile.kilocodeToken
-			}
-		} catch {
-			continue
-		}
-	}
-
-	return undefined
-}
-// kilocode_change end
+import { resolveKiloUserToken } from "./core/kilocode/kilo-user-resolver" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -318,7 +295,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// kilocode_change start
 	try {
-		const kiloToken = await findKilocodeTokenFromAnyProfile(provider)
+		const kiloToken = await resolveKiloUserToken(provider)
 
 		await kilo_initializeSessionManager({
 			context: context,

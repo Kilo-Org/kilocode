@@ -33,6 +33,7 @@ import {
 	type CloudOrganizationMembership,
 	type CreateTaskOptions,
 	type TokenUsage,
+	type KiloUser, // kilocode_change
 	RooCodeEventName,
 	TelemetryEventName, // kilocode_change
 	requestyDefaultModelId,
@@ -44,6 +45,7 @@ import {
 	DEFAULT_MODES,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 	getModelId,
+	EMPTY_KILO_USER, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -111,6 +113,7 @@ import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { kilo_execIfExtension } from "../../shared/kilocode/cli-sessions/extension/session-manager-utils"
 import { DeviceAuthHandler } from "../kilocode/webview/deviceAuthHandler"
+import { resolveKiloUser } from "../kilocode/kilo-user-resolver" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -2240,6 +2243,16 @@ ${prompt}
 		this.kiloCodeTaskHistorySizeForTelemetryOnly = taskHistory.length
 		// kilocode_change end
 
+		// kilocode_change start: Resolve global Kilo user
+		let kiloUser: KiloUser
+		try {
+			kiloUser = await resolveKiloUser(this)
+		} catch (error) {
+			console.warn("[ClineProvider] Failed to resolve Kilo user:", error)
+			kiloUser = EMPTY_KILO_USER
+		}
+		// kilocode_change end
+
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
@@ -2422,6 +2435,7 @@ ${prompt}
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			kiloUser, // kilocode_change: Global Kilo user resolved from profiles
 		}
 	}
 
@@ -2443,6 +2457,7 @@ ${prompt}
 			// kilocode_change start
 			| "taskHistoryFullLength"
 			| "taskHistoryVersion"
+			| "kiloUser" // Computed in getStateToPostToWebview
 			// kilocode_change end
 		>
 	> {

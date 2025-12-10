@@ -90,7 +90,6 @@ const App = () => {
 		// kilocode_change end
 		renderContext,
 		mdmCompliant,
-		apiConfiguration, // kilocode_change
 	} = useExtensionState()
 
 	// kilocode_change start: disable useEffect
@@ -155,6 +154,14 @@ const App = () => {
 			setCurrentSection(undefined)
 			setCurrentMarketplaceTab(undefined)
 
+			// kilocode_change start - Clear settingsEditingProfile when navigating away from settings
+			// BUT preserve it when going to auth (so we can return to the same profile after auth)
+			// This ensures that when returning to settings (without auth context), it shows the active profile
+			if (tab === "settings" && newTab !== "settings" && newTab !== "auth") {
+				setSettingsEditingProfile(undefined)
+			}
+			// kilocode_change end
+
 			// kilocode_change: start - Bypass unsaved changes check when navigating to auth tab
 			if (newTab === "auth") {
 				setTab(newTab)
@@ -165,7 +172,7 @@ const App = () => {
 				setTab(newTab)
 			}
 		},
-		[mdmCompliant],
+		[mdmCompliant, tab],
 	)
 
 	const [currentSection, setCurrentSection] = useState<string | undefined>(undefined)
@@ -278,7 +285,7 @@ const App = () => {
 	}, [shouldShowAnnouncement, tab])
 
 	// kilocode_change start
-	const telemetryDistinctId = useKiloIdentity(apiConfiguration?.kilocodeToken ?? "", machineId ?? "")
+	const telemetryDistinctId = useKiloIdentity(machineId ?? "")
 	useEffect(() => {
 		if (didHydrateState) {
 			telemetryClient.updateTelemetryState(telemetrySetting, telemetryKey, telemetryDistinctId)

@@ -1,33 +1,72 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { ProfileDataResponsePayload, WebviewMessage, UserOrganizationWithApiKey } from "@roo/WebviewMessage"
+import type { ProviderSettings } from "@roo-code/types"
 
-export const OrganizationSelector = ({ className, showLabel = false }: { className?: string; showLabel?: boolean }) => {
+type OrganizationSelectorProps = {
+	className?: string
+	showLabel?: boolean
+
+	// Controlled mode props (optional) - when provided, component works with specific profile
+	apiConfiguration?: ProviderSettings
+	profileName?: string
+	onChange?: (organizationId: string | undefined) => void
+}
+
+export const OrganizationSelector = ({
+	className,
+	showLabel = false,
+	apiConfiguration: controlledApiConfiguration,
+	profileName: controlledProfileName,
+	onChange,
+}: OrganizationSelectorProps) => {
 	const [organizations, setOrganizations] = useState<UserOrganizationWithApiKey[]>([])
-	const { apiConfiguration, currentApiConfigName } = useExtensionState()
+	const { apiConfiguration: globalApiConfiguration, currentApiConfigName: globalProfileName } = useExtensionState()
 	const { t } = useAppTranslation()
 	const [isOpen, setIsOpen] = useState(false)
-	const selectedOrg = organizations.find((o) => o.id === apiConfiguration?.kilocodeOrganizationId)
 	const containerRef = useRef<HTMLDivElement>(null)
 
-	const handleMessage = (event: MessageEvent<WebviewMessage>) => {
-		const message = event.data
-		if (message.type === "profileDataResponse") {
-			const payload = message.payload as ProfileDataResponsePayload
-			if (payload.success) {
-				setOrganizations(payload.data?.organizations ?? [])
-			} else {
-				console.error("Error fetching profile organizations data:", payload.error)
-				setOrganizations([])
+	// Determine if we're in controlled mode
+	const isControlledMode = controlledApiConfiguration !== undefined
+	const apiConfiguration = isControlledMode ? controlledApiConfiguration : globalApiConfiguration
+	const currentProfileName = isControlledMode ? controlledProfileName : globalProfileName
+
+	const selectedOrg = organizations.find((o) => o.id === apiConfiguration?.kilocodeOrganizationId)
+
+	const handleMessage = useCallback(
+		(event: MessageEvent<WebviewMessage>) => {
+			const message = event.data
+			if (message.type === "profileDataResponse") {
+				const payload = message.payload as ProfileDataResponsePayload
+
+				// Only process response if it matches the requested profile
+				// In global mode (no currentProfileName), accept any response
+				// In controlled mode, only accept responses for the specific profile
+				const responseProfileName = payload.data?.profileName
+				const shouldProcessResponse = !currentProfileName || responseProfileName === currentProfileName
+
+				if (!shouldProcessResponse) {
+					// This response is for a different profile, ignore it
+					return
+				}
+
+				if (payload.success) {
+					setOrganizations(payload.data?.organizations ?? [])
+				} else {
+					console.error("Error fetching profile organizations data:", payload.error)
+					setOrganizations([])
+				}
+			} else if (message.type === "updateProfileData") {
+				vscode.postMessage({
+					type: "fetchProfileDataRequest",
+					profileName: currentProfileName,
+				})
 			}
-		} else if (message.type === "updateProfileData") {
-			vscode.postMessage({
-				type: "fetchProfileDataRequest",
-			})
-		}
-	}
+		},
+		[currentProfileName],
+	)
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
@@ -50,45 +89,56 @@ export const OrganizationSelector = ({ className, showLabel = false }: { classNa
 			window.removeEventListener("mousedown", onMouseDown)
 			window.removeEventListener("message", handleMessage)
 		}
-	}, [])
+	}, [handleMessage])
 
 	useEffect(() => {
 		if (!apiConfiguration?.kilocodeToken) return
 
 		vscode.postMessage({
 			type: "fetchProfileDataRequest",
+			profileName: currentProfileName,
 		})
-	}, [apiConfiguration?.kilocodeToken])
+	}, [apiConfiguration?.kilocodeToken, currentProfileName])
 
 	const setSelectedOrganization = (organization: UserOrganizationWithApiKey | null) => {
-		if (organization === null) {
-			// Switch back to personal account - clear organization token
-			vscode.postMessage({
-				type: "upsertApiConfiguration",
-				text: currentApiConfigName,
-				apiConfiguration: {
-					...apiConfiguration,
-					kilocodeOrganizationId: undefined,
-				},
-			})
-			vscode.postMessage({
-				type: "fetchBalanceDataRequest",
-				values: {
-					apiKey: apiConfiguration?.kilocodeToken,
-				},
-			})
+		const newOrganizationId = organization?.id
+
+		if (isControlledMode) {
+			// Controlled mode: call the onChange callback
+			if (onChange) {
+				onChange(newOrganizationId)
+			}
 		} else {
-			vscode.postMessage({
-				type: "upsertApiConfiguration",
-				text: currentApiConfigName,
-				apiConfiguration: {
-					...apiConfiguration,
-					kilocodeOrganizationId: organization.id,
-				},
-			})
-			vscode.postMessage({
-				type: "fetchBalanceDataRequest",
-			})
+			// Global mode: update the global configuration
+			if (organization === null) {
+				// Switch back to personal account - clear organization token
+				vscode.postMessage({
+					type: "upsertApiConfiguration",
+					text: currentProfileName,
+					apiConfiguration: {
+						...apiConfiguration,
+						kilocodeOrganizationId: undefined,
+					},
+				})
+				vscode.postMessage({
+					type: "fetchBalanceDataRequest",
+					values: {
+						apiKey: apiConfiguration?.kilocodeToken,
+					},
+				})
+			} else {
+				vscode.postMessage({
+					type: "upsertApiConfiguration",
+					text: currentProfileName,
+					apiConfiguration: {
+						...apiConfiguration,
+						kilocodeOrganizationId: organization.id,
+					},
+				})
+				vscode.postMessage({
+					type: "fetchBalanceDataRequest",
+				})
+			}
 		}
 	}
 

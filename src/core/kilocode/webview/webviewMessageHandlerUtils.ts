@@ -4,10 +4,6 @@ import { ClineProvider } from "../../webview/ClineProvider"
 import { t } from "../../../i18n"
 import { WebviewMessage } from "../../../shared/WebviewMessage"
 import { Task } from "../../task/Task"
-import axios from "axios"
-import { getKiloUrlFromToken } from "@roo-code/types"
-
-const shownNativeNotificationIds = new Set<string>()
 
 // Helper function to delete messages for resending
 const deleteMessagesForResend = async (cline: Task, originalMessageIndex: number, originalMessageTs: number) => {
@@ -69,94 +65,6 @@ const resendMessageSequence = async (
 	await newCline.handleWebviewAskResponse("messageResponse", editedText, images)
 
 	return true
-}
-
-export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider) => {
-	try {
-		const { apiConfiguration, dismissedNotificationIds } = await provider.getState()
-		const kilocodeToken = apiConfiguration?.kilocodeToken
-
-		if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
-			provider.postMessageToWebview({
-				type: "kilocodeNotificationsResponse",
-				notifications: [],
-			})
-			return
-		}
-
-		const headers: Record<string, string> = {
-			Authorization: `Bearer ${kilocodeToken}`,
-			"Content-Type": "application/json",
-		}
-
-		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-		if (
-			apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-			apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-		) {
-			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-		}
-
-		const url = getKiloUrlFromToken("https://api.kilo.ai/api/users/notifications", kilocodeToken)
-		const response = await axios.get(url, {
-			headers,
-			timeout: 5000,
-		})
-
-		const notifications = response.data?.notifications || []
-		const dismissedIds = dismissedNotificationIds || []
-
-		// Filter notifications to only show new ones
-		const notificationsToShowAsNative = notifications.filter(
-			(notification: any) =>
-				!dismissedIds.includes(notification.id) &&
-				!shownNativeNotificationIds.has(notification.id) &&
-				(notification.showIn ?? []).includes("extension-native"),
-		)
-
-		provider.postMessageToWebview({
-			type: "kilocodeNotificationsResponse",
-			notifications: (response.data?.notifications || []).filter(
-				({ showIn }: { showIn?: string[] }) => !showIn || showIn.includes("extension"),
-			),
-		})
-
-		for (const notification of notificationsToShowAsNative) {
-			try {
-				const message = `${notification.title}: ${notification.message}`
-				const actionButton = notification.action?.actionText
-				const dismissButton = "Do not show again"
-				const selection = await vscode.window.showInformationMessage(
-					message,
-					...(actionButton ? [actionButton, dismissButton] : [dismissButton]),
-				)
-				if (selection) {
-					const currentDismissedIds = dismissedNotificationIds || []
-					if (!currentDismissedIds.includes(notification.id)) {
-						await provider.contextProxy.setValue("dismissedNotificationIds", [
-							...currentDismissedIds,
-							notification.id,
-						])
-					}
-				}
-				if (selection === actionButton) {
-					if (notification.action?.actionURL) {
-						await vscode.env.openExternal(vscode.Uri.parse(notification.action.actionURL))
-					}
-				}
-
-				shownNativeNotificationIds.add(notification.id)
-			} catch (error: any) {
-				provider.log(`Error displaying notification ${notification.id}: ${error.message}`)
-			}
-		}
-	} catch (error: any) {
-		provider.log(`Error fetching Kilocode notifications: ${error.message}`)
-		provider.postMessageToWebview({
-			type: "kilocodeNotificationsResponse",
-			notifications: [],
-		})
-	}
 }
 
 export const editMessageHandler = async (provider: ClineProvider, message: WebviewMessage) => {

@@ -347,6 +347,7 @@ export interface WebviewMessage {
 	organizationId?: string | null // For organization switching
 	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
 	historyItem?: HistoryItem // kilocode_change For addTaskToHistory
+	profileName?: string // kilocode_change: Optional profile name for profile-specific requests (e.g., fetchProfileDataRequest)
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean
@@ -410,6 +411,7 @@ export type ProfileData = {
 		image: string
 	}
 	organizations?: UserOrganizationWithApiKey[]
+	profileName?: string // kilocode_change: Optional profile name for profile-specific requests
 }
 
 export interface ProfileDataResponsePayload {

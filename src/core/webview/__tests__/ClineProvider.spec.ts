@@ -599,6 +599,14 @@ describe("ClineProvider", () => {
 			taskSyncEnabled: false,
 			featureRoomoteControlEnabled: false,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+			// kilocode_change start - Add kiloUser to mock state
+			kiloUser: {
+				source: "active-profile",
+				profileName: "default",
+				email: "test@example.com",
+				isAuthenticated: true,
+			},
+			// kilocode_change end
 		}
 
 		const message: ExtensionMessage = {
