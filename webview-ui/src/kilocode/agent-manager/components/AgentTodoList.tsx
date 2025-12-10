@@ -118,9 +118,7 @@ export function AgentTodoList({ todos, isIntegrated = false }: AgentTodoListProp
 				<span
 					className={cn(
 						"flex-1 text-xs truncate text-left",
-						inProgressTodo && "text-vscode-charts-yellow",
-						allCompleted && "text-green-400",
-						!inProgressTodo && !allCompleted && "text-vscode-descriptionForeground",
+						allCompleted ? "text-green-400" : "text-vscode-foreground",
 					)}>
 					{allCompleted
 						? t("todo.complete", { total: completedCount })
