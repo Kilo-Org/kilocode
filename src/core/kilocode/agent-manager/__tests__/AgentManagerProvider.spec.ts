@@ -19,12 +19,17 @@ describe("AgentManagerProvider CLI spawning", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
 	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
+	let mockWindow: { showErrorMessage: Mock; showWarningMessage: Mock; ViewColumn: { One: number } }
 
 	beforeEach(async () => {
 		vi.resetModules()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
-		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		mockWindow = {
+			showErrorMessage: vi.fn().mockResolvedValue(undefined),
+			showWarningMessage: vi.fn().mockResolvedValue(undefined),
+			ViewColumn: { One: 1 },
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -275,6 +280,38 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(messages).toHaveLength(1)
 		expect(messages?.[0].text).toBe("final")
 		expect(messages?.[0].partial).toBe(false)
+	})
+
+	it("dedupes auth start failures and reuses reminder text", async () => {
+		const vscode = await import("vscode")
+		const warningSpy = vscode.window.showWarningMessage as unknown as Mock
+
+		const message = "Authentication failed: API request failed."
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+
+		expect(warningSpy).toHaveBeenCalledTimes(1)
+		expect(warningSpy.mock.calls[0][0]).toContain(message)
+		expect(warningSpy.mock.calls[0][0]).toContain("kilocode auth")
+	})
+
+	it("builds payment required message with parsed title and link", async () => {
+		const vscode = await import("vscode")
+		const warningSpy = vscode.window.showWarningMessage as unknown as Mock
+		const payload = {
+			text: JSON.stringify({
+				title: "Low credit",
+				message: "Balance too low",
+				buyCreditsUrl: "https://kilo.ai/billing",
+			}),
+		}
+
+		;(provider as any).showPaymentRequiredPrompt(payload)
+
+		expect(warningSpy).toHaveBeenCalledWith(
+			expect.stringContaining("Low credit: Balance too low"),
+			expect.stringContaining("Open billing"),
+		)
 	})
 
 	describe("dispose behavior", () => {

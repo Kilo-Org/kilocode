@@ -51,6 +51,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private firstApiReqStarted: Map<string, boolean> = new Map()
 	// Track the current workspace's git URL for filtering sessions
 	private currentGitUrl: string | undefined
+	private lastAuthErrorMessage: string | undefined
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -77,6 +78,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 			},
 			onStartSessionFailed: (error) => {
 				this.postMessage({ type: "agentManager.startSessionFailed" })
+				if (error?.type === "payment_required") {
+					this.showPaymentRequiredPrompt(error.payload ?? { text: error.message })
+					return
+				}
+				if (error?.type === "api_req_failed") {
+					this.handleStartSessionApiFailure(error)
+					return
+				}
 				this.showCliError(error)
 			},
 			onChatMessages: (sessionId, messages) => {
@@ -110,6 +119,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					)
 				}
 			},
+			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
 		}
 
 		this.processHandler = new CliProcessHandler(this.registry, callbacks)
@@ -124,6 +134,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			postState: () => this.postStateToWebview(),
 			postStateEvent: (sessionId, payload) =>
 				this.postMessage({ type: "agentManager.stateEvent", sessionId, ...payload }),
+			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
 		})
 	}
 
@@ -784,8 +795,36 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.disposables.forEach((d) => d.dispose())
 	}
 
+	private showPaymentRequiredPrompt(payload?: KilocodePayload | { text?: string; content?: string }): void {
+		const { title, message, buyCreditsUrl, rawText } = this.parsePaymentRequiredPayload(payload)
+
+		const actionLabel = buyCreditsUrl ? "Open billing" : undefined
+		const actions = actionLabel ? [actionLabel] : []
+
+		this.outputChannel.appendLine(`[AgentManager] Payment required: ${message}`)
+
+		void vscode.window.showWarningMessage(`${title}: ${message}`, ...actions).then((selection) => {
+			if (selection === actionLabel && buyCreditsUrl) {
+				void vscode.env.openExternal(vscode.Uri.parse(buyCreditsUrl))
+			}
+		})
+	}
+
 	private showCliNotFoundError(): void {
 		this.showCliError({ type: "spawn_error", message: "CLI not found" })
+	}
+
+	private createCliTerminal(name: string, message?: string): vscode.Terminal {
+		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
+		const shellName = shellPath ? path.basename(shellPath) : undefined
+		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
+
+		return vscode.window.createTerminal({
+			name,
+			message,
+			shellPath,
+			shellArgs,
+		})
 	}
 
 	/**
@@ -793,26 +832,101 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Uses the terminal to ensure the user's shell environment (nvm, fnm, volta, etc.) is respected.
 	 */
 	private runInstallInTerminal(): void {
-		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
-		const shellName = shellPath ? path.basename(shellPath) : undefined
-		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
-
-		const terminal = vscode.window.createTerminal({
-			name: "Install Kilocode CLI",
-			message: t("kilocode:agentManager.terminal.installMessage"),
-			shellPath,
-			shellArgs,
-		})
+		const terminal = this.createCliTerminal(
+			"Install Kilocode CLI",
+			t("kilocode:agentManager.terminal.installMessage"),
+		)
 		terminal.show()
 		terminal.sendText(getCliInstallCommand())
+		this.showCliAuthReminder()
+	}
+
+	private runAuthInTerminal(): void {
+		const terminal = this.createCliTerminal("Kilocode CLI Login")
+		terminal.show()
+		terminal.sendText("kilocode auth")
+	}
+
+	private showCliAuthReminder(message?: string): void {
 		const authLabel = t("kilocode:agentManager.actions.loginCli")
-		void vscode.window
-			.showInformationMessage(t("kilocode:agentManager.terminal.authReminder"), authLabel)
-			.then((selection) => {
-				if (selection === authLabel) {
-					terminal.sendText("kilocode auth")
+		const combined = this.buildAuthReminderMessage(message)
+		this.outputChannel.appendLine(`[AgentManager] ${combined}`)
+		void vscode.window.showWarningMessage(combined, authLabel).then((selection) => {
+			if (selection === authLabel) {
+				this.runAuthInTerminal()
+			}
+		})
+	}
+
+	private buildAuthReminderMessage(message?: string): string {
+		const reminder = t("kilocode:agentManager.terminal.authReminder")
+		const base = message || ""
+		return base ? `${base}\n\n${reminder}` : reminder
+	}
+
+	private handleStartSessionApiFailure(error: { message?: string; authError?: boolean }): void {
+		const message =
+			error.authError === true
+				? this.buildAuthReminderMessage(error.message || t("kilocode:agentManager.errors.sessionFailed"))
+				: error.message || t("kilocode:agentManager.errors.sessionFailed")
+		if (error.authError && message && message === this.lastAuthErrorMessage) {
+			return
+		}
+
+		const authLabel = error.authError ? t("kilocode:agentManager.actions.loginCli") : undefined
+		const actions = authLabel ? [authLabel] : []
+		void vscode.window.showWarningMessage(message, ...actions).then((selection) => {
+			if (selection === authLabel) {
+				this.runAuthInTerminal()
+			}
+		})
+		if (error.authError) {
+			this.lastAuthErrorMessage = message
+		}
+	}
+
+	private parsePaymentRequiredPayload(payload?: KilocodePayload | { text?: string; content?: string }): {
+		title: string
+		message: string
+		buyCreditsUrl?: string
+		rawText?: string
+	} {
+		const fallbackTitle = t("kilocode:lowCreditWarning.title")
+		const fallbackMessage = t("kilocode:lowCreditWarning.message")
+
+		const rawText =
+			typeof payload?.text === "string"
+				? payload.text
+				: typeof payload?.content === "string"
+					? payload.content
+					: undefined
+
+		let parsed: { title?: unknown; message?: unknown; buyCreditsUrl?: unknown } = {}
+		if (rawText) {
+			try {
+				const maybeParsed = JSON.parse(rawText)
+				if (maybeParsed && typeof maybeParsed === "object") {
+					parsed = maybeParsed as Record<string, unknown>
 				}
-			})
+			} catch {
+				this.outputChannel.appendLine(
+					`[AgentManager] Failed to parse payment_required_prompt payload: ${rawText}`,
+				)
+			}
+		}
+
+		const title =
+			(typeof parsed.title === "string" ? parsed.title : undefined) ||
+			(typeof fallbackTitle === "string" ? fallbackTitle : undefined) ||
+			"Payment required"
+		const message =
+			(typeof parsed.message === "string" ? parsed.message : undefined) ||
+			rawText ||
+			(typeof fallbackMessage === "string" ? fallbackMessage : undefined) ||
+			"Paid model requires credits or billing setup."
+		const buyCreditsUrl = typeof parsed.buyCreditsUrl === "string" ? parsed.buyCreditsUrl : undefined
+
+		return { title, message, buyCreditsUrl, rawText }
 	}
 
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {

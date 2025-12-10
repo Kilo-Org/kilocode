@@ -18,6 +18,7 @@ function createDeps() {
 	const postChatMessages = vi.fn()
 	const postState = vi.fn()
 	const postStateEvent = vi.fn()
+	const onPaymentRequiredPrompt = vi.fn()
 
 	return {
 		processHandler,
@@ -28,6 +29,7 @@ function createDeps() {
 		postChatMessages,
 		postState,
 		postStateEvent,
+		onPaymentRequiredPrompt,
 	}
 }
 
@@ -147,6 +149,21 @@ describe("KilocodeEventProcessor", () => {
 		// Only one message stored despite duplicate
 		const stored = deps.sessionMessages.get(sessionId)
 		expect(stored).toHaveLength(1)
+	})
+
+	it("calls onPaymentRequiredPrompt callback only once", () => {
+		const deps = createDeps()
+		const processor = new KilocodeEventProcessor(deps)
+
+		const payEvent: KilocodeStreamEvent = {
+			streamEventType: "kilocode",
+			payload: { type: "ask", ask: "payment_required_prompt", text: "Need billing" },
+		}
+
+		processor.handle(sessionId, payEvent)
+		processor.handle(sessionId, payEvent)
+
+		expect(deps.onPaymentRequiredPrompt).toHaveBeenCalledTimes(1)
 	})
 
 	it("renders checkpoints as checkpoint_saved entries with no text", () => {
