@@ -1,11 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
+const isWindows = process.platform === "win32"
+
 describe("findKilocodeCli", () => {
 	beforeEach(() => {
 		vi.resetModules()
 	})
 
-	it("finds CLI via login shell and returns trimmed result", async () => {
+	const loginShellTests = isWindows ? it.skip : it
+
+	loginShellTests("finds CLI via login shell and returns trimmed result", async () => {
 		// Login shell is tried first, so mock it to succeed
 		const execSyncMock = vi.fn().mockReturnValue("/Users/test/.nvm/versions/node/v20/bin/kilocode\n")
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
@@ -22,7 +26,7 @@ describe("findKilocodeCli", () => {
 		)
 	})
 
-	it("falls back to direct PATH when login shell fails", async () => {
+	loginShellTests("falls back to direct PATH when login shell fails", async () => {
 		let callCount = 0
 		const execSyncMock = vi.fn().mockImplementation((cmd: string) => {
 			callCount++
