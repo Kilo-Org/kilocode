@@ -183,10 +183,12 @@
 			"updateInstructions": "Güncelleme Talimatları",
 			"installInstructions": "Kurulum Talimatları",
 			"getHelp": "Yardım Al",
-			"runInTerminal": "Terminalde Çalıştır"
+			"runInTerminal": "Terminalde Çalıştır",
+			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
-			"installMessage": "Kilocode CLI'yi yüklemek için npm install çalıştırılıyor. Tamamlandığında, bu terminali kapatıp Agent Manager'ı tekrar başlatmayı deneyebilirsin."
+			"installMessage": "Kilocode CLI'yi yüklemek için npm install çalıştırılıyor. Tamamlandığında, bu terminali kapatıp Agent Manager'ı tekrar başlatmayı deneyebilirsin.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

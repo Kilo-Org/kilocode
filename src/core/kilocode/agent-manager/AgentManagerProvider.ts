@@ -776,12 +776,26 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Uses the terminal to ensure the user's shell environment (nvm, fnm, volta, etc.) is respected.
 	 */
 	private runInstallInTerminal(): void {
+		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
+		const shellName = shellPath ? path.basename(shellPath) : undefined
+		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
+
 		const terminal = vscode.window.createTerminal({
 			name: "Install Kilocode CLI",
 			message: t("kilocode:agentManager.terminal.installMessage"),
+			shellPath,
+			shellArgs,
 		})
 		terminal.show()
 		terminal.sendText(getCliInstallCommand())
+		const authLabel = t("kilocode:agentManager.actions.loginCli")
+		void vscode.window
+			.showInformationMessage(t("kilocode:agentManager.terminal.authReminder"), authLabel)
+			.then((selection) => {
+				if (selection === authLabel) {
+					terminal.sendText("kilocode auth")
+				}
+			})
 	}
 
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {

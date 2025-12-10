@@ -183,10 +183,12 @@
 			"updateInstructions": "Hướng Dẫn Cập Nhật",
 			"installInstructions": "Hướng Dẫn Cài Đặt",
 			"getHelp": "Nhận Trợ Giúp",
-			"runInTerminal": "Chạy trong Terminal"
+			"runInTerminal": "Chạy trong Terminal",
+			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
-			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager."
+			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

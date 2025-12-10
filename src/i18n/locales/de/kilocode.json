@@ -183,10 +183,12 @@
 			"updateInstructions": "Update-Anleitung",
 			"installInstructions": "Installationsanleitung",
 			"getHelp": "Hilfe erhalten",
-			"runInTerminal": "Im Terminal ausführen"
+			"runInTerminal": "Im Terminal ausführen",
+			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
-			"installMessage": "Führe npm install aus, um die Kilocode CLI zu installieren. Sobald die Installation abgeschlossen ist, kannst du dieses Terminal schließen und versuchen, den Agent Manager erneut zu starten."
+			"installMessage": "Führe npm install aus, um die Kilocode CLI zu installieren. Sobald die Installation abgeschlossen ist, kannst du dieses Terminal schließen und versuchen, den Agent Manager erneut zu starten.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

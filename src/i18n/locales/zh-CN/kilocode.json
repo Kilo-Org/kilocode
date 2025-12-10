@@ -113,10 +113,12 @@
 			"updateInstructions": "更新说明",
 			"installInstructions": "安装说明",
 			"getHelp": "获取帮助",
-			"runInTerminal": "运行命令"
+			"runInTerminal": "运行命令",
+			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
-			"installMessage": "运行 npm install 安装 Kilocode CLI。完成后可关闭此终端，然后重新启动 Agent Manager。"
+			"installMessage": "运行 npm install 安装 Kilocode CLI。完成后可关闭此终端，然后重新启动 Agent Manager。",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	},
 	"ghost": {

@@ -183,10 +183,12 @@
 			"updateInstructions": "Instruccions d'Actualització",
 			"installInstructions": "Instruccions d'Instal·lació",
 			"getHelp": "Obtenir Ajuda",
-			"runInTerminal": "Executar al Terminal"
+			"runInTerminal": "Executar al Terminal",
+			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
-			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou."
+			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }
