@@ -10,6 +10,7 @@ import { GhostServiceSettings, MODEL_SELECTION_ENABLED } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
+import { useExtensionState } from "../../../context/ExtensionStateContext"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -26,8 +27,15 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding, provider, model } =
-		ghostServiceSettings || {}
+	const { kiloCodeWrapperProperties } = useExtensionState()
+	const {
+		enableAutoTrigger,
+		enableQuickInlineTaskKeybinding,
+		enableSmartInlineTaskKeybinding,
+		enableChatAutocomplete,
+		provider,
+		model,
+	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = useCallback(
@@ -47,6 +55,13 @@ export const GhostServiceSettingsView = ({
 	const onEnableSmartInlineTaskKeybindingChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableSmartInlineTaskKeybinding", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onEnableChatAutocompleteChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableChatAutocomplete", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -82,53 +97,74 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 
+					{!kiloCodeWrapperProperties?.kiloCodeWrapped && (
+						<>
+							<div className="flex flex-col gap-1">
+								<VSCodeCheckbox
+									checked={enableQuickInlineTaskKeybinding || false}
+									onChange={onEnableQuickInlineTaskKeybindingChange}>
+									<span className="font-medium">
+										{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
+											keybinding: keybindings["kilo-code.addToContextAndFocus"],
+										})}
+									</span>
+								</VSCodeCheckbox>
+								<div className="text-vscode-descriptionForeground text-sm mt-1">
+									<Trans
+										i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
+										components={{
+											DocsLink: (
+												<a
+													href="#"
+													onClick={() =>
+														openGlobalKeybindings("kilo-code.addToContextAndFocus")
+													}
+													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
+											),
+										}}
+									/>
+								</div>
+							</div>
+							<div className="flex flex-col gap-1">
+								<VSCodeCheckbox
+									checked={enableSmartInlineTaskKeybinding || false}
+									onChange={onEnableSmartInlineTaskKeybindingChange}>
+									<span className="font-medium">
+										{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
+											keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
+										})}
+									</span>
+								</VSCodeCheckbox>
+								<div className="text-vscode-descriptionForeground text-sm mt-1">
+									<Trans
+										i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
+										values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
+										components={{
+											DocsLink: (
+												<a
+													href="#"
+													onClick={() =>
+														openGlobalKeybindings("kilo-code.ghost.generateSuggestions")
+													}
+													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
+											),
+										}}
+									/>
+								</div>
+							</div>
+						</>
+					)}
+
 					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox
-							checked={enableQuickInlineTaskKeybinding || false}
-							onChange={onEnableQuickInlineTaskKeybindingChange}>
+							checked={enableChatAutocomplete || false}
+							onChange={onEnableChatAutocompleteChange}>
 							<span className="font-medium">
-								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
-									keybinding: keybindings["kilo-code.addToContextAndFocus"],
-								})}
+								{t("kilocode:ghost.settings.enableChatAutocomplete.label")}
 							</span>
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							<Trans
-								i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
-								components={{
-									DocsLink: (
-										<a
-											href="#"
-											onClick={() => openGlobalKeybindings("kilo-code.addToContextAndFocus")}
-											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-									),
-								}}
-							/>
-						</div>
-					</div>
-					<div className="flex flex-col gap-1">
-						<VSCodeCheckbox
-							checked={enableSmartInlineTaskKeybinding || false}
-							onChange={onEnableSmartInlineTaskKeybindingChange}>
-							<span className="font-medium">
-								{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
-									keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
-								})}
-							</span>
-						</VSCodeCheckbox>
-						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							<Trans
-								i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
-								values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
-								components={{
-									DocsLink: (
-										<a
-											href="#"
-											onClick={() => openGlobalKeybindings("kilo-code.ghost.generateSuggestions")}
-											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-									),
-								}}
-							/>
+							<Trans i18nKey="kilocode:ghost.settings.enableChatAutocomplete.description" />
 						</div>
 					</div>
 

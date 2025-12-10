@@ -67,6 +67,13 @@ pnpm run test -oa
 # Run a single test
 pnpm run test closing-brace
 
+# Run tests multiple times (works for both single test and all tests)
+pnpm run test --runs 5
+pnpm run test closing-brace --runs 5
+# Or short form
+pnpm run test -r 5
+pnpm run test closing-brace -r 5
+
 # Clean up orphaned approval files
 pnpm run clean
 

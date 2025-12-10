@@ -26,10 +26,6 @@ It replaces brittle XML-style prompts that risk mixed prose/markup, missing fiel
 
 [More Details are available](native-function-calling)
 
-## Autocomplete
-
-When enabled, Kilo Code will provide inline code suggestions as you type. Currently this requires the Kilo Gateway Provider in order to use it.
-
 ## Concurrent file edits
 
 When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit one file at a time. Disabling this can help when working with less capable models or when you want more control over file modifications.

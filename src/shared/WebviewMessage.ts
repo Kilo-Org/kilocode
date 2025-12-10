@@ -270,11 +270,15 @@ export interface WebviewMessage {
 		| "sessionFork" // kilocode_change
 		| "sessionShow" // kilocode_change
 		| "singleCompletion" // kilocode_change
+		| "startDeviceAuth" // kilocode_change: Start device auth flow
+		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
+		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
+		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 	text?: string
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" // kilocode_change
 	disabled?: boolean
 	context?: string
 	dataUri?: string
@@ -366,6 +370,10 @@ export interface WebviewMessage {
 		codebaseIndexBedrockProfile?: string
 		codebaseIndexSearchMaxResults?: number
 		codebaseIndexSearchMinScore?: number
+		// kilocode_change start
+		codebaseIndexEmbeddingBatchSize?: number
+		codebaseIndexScannerMaxBatchRetries?: number
+		// kilocode_change end
 
 		// Secret settings
 		codeIndexOpenAiKey?: string

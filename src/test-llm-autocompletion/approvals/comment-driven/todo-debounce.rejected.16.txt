@@ -1,5 +1,0 @@
-function handleSearch(query) {
-  // TODO: Add debounce to prevent excessive API calls
-  .then(results => displayResults(results));
-  searchAPI(query);
-}

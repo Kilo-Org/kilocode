@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { AgentRegistry } from "../AgentRegistry"
+import type { ParallelModeInfo } from "../types"
 
 describe("AgentRegistry", () => {
 	let registry: AgentRegistry
@@ -219,6 +220,267 @@ describe("AgentRegistry", () => {
 			const session = registry.createSession("session-1", "test")
 			registry.updateSessionStatus(session.sessionId, "done")
 			expect(registry.hasPendingOrRunningSessions()).toBe(false)
+		})
+	})
+
+	describe("parallelMode", () => {
+		it("creates session without parallelMode by default", () => {
+			const session = registry.createSession("session-1", "no parallel")
+			expect(session.parallelMode).toBeUndefined()
+		})
+
+		it("creates session with parallelMode enabled when option is provided", () => {
+			const session = registry.createSession("session-1", "with parallel", undefined, { parallelMode: true })
+			expect(session.parallelMode).toEqual({ enabled: true })
+		})
+
+		it("creates session with parallelMode disabled when option is false", () => {
+			const session = registry.createSession("session-1", "without parallel", undefined, { parallelMode: false })
+			expect(session.parallelMode).toBeUndefined()
+		})
+
+		it("updates parallelMode info with branch name", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				branch: "add-feature-1702734891234",
+			})
+
+			expect(updated?.parallelMode?.branch).toBe("add-feature-1702734891234")
+			expect(updated?.parallelMode?.enabled).toBe(true)
+		})
+
+		it("updates parallelMode info with worktree path", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				worktreePath: "/tmp/kilocode-worktree-add-feature",
+			})
+
+			expect(updated?.parallelMode?.worktreePath).toBe("/tmp/kilocode-worktree-add-feature")
+		})
+
+		it("updates parallelMode info with completion message", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+			const updated = registry.updateParallelModeInfo(session.sessionId, {
+				completionMessage: "Changes committed to: add-feature\ngit merge add-feature",
+			})
+
+			expect(updated?.parallelMode?.completionMessage).toBe(
+				"Changes committed to: add-feature\ngit merge add-feature",
+			)
+		})
+
+		it("accumulates multiple parallelMode updates", () => {
+			const session = registry.createSession("session-1", "parallel session", undefined, { parallelMode: true })
+
+			registry.updateParallelModeInfo(session.sessionId, { branch: "my-branch" })
+			registry.updateParallelModeInfo(session.sessionId, { worktreePath: "/tmp/worktree" })
+			const final = registry.updateParallelModeInfo(session.sessionId, { completionMessage: "done" })
+
+			expect(final?.parallelMode).toEqual({
+				enabled: true,
+				branch: "my-branch",
+				worktreePath: "/tmp/worktree",
+				completionMessage: "done",
+			})
+		})
+
+		it("returns undefined when updating non-existent session", () => {
+			const result = registry.updateParallelModeInfo("non-existent", { branch: "test" })
+			expect(result).toBeUndefined()
+		})
+
+		it("returns undefined when updating session without parallelMode enabled", () => {
+			const session = registry.createSession("session-1", "no parallel mode")
+			const result = registry.updateParallelModeInfo(session.sessionId, { branch: "test" })
+			expect(result).toBeUndefined()
+		})
+
+		it("preserves parallelMode info in getState", () => {
+			const session = registry.createSession("session-1", "parallel", undefined, { parallelMode: true })
+			registry.updateParallelModeInfo(session.sessionId, { branch: "feature-branch" })
+
+			const state = registry.getState()
+			expect(state.sessions[0].parallelMode).toEqual({
+				enabled: true,
+				branch: "feature-branch",
+			})
+		})
+	})
+
+	describe("gitUrl support", () => {
+		describe("createSession with gitUrl", () => {
+			it("stores gitUrl when provided in options", () => {
+				const session = registry.createSession("session-1", "test prompt", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				expect(session.gitUrl).toBe("https://github.com/org/repo.git")
+			})
+
+			it("creates session without gitUrl when not provided", () => {
+				const session = registry.createSession("session-1", "test prompt")
+
+				expect(session.gitUrl).toBeUndefined()
+			})
+
+			it("creates session without gitUrl when options is empty", () => {
+				const session = registry.createSession("session-1", "test prompt", undefined, {})
+
+				expect(session.gitUrl).toBeUndefined()
+			})
+		})
+
+		describe("setPendingSession with gitUrl", () => {
+			it("stores gitUrl in pending session when provided", () => {
+				const pending = registry.setPendingSession("test prompt", {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				expect(pending.gitUrl).toBe("https://github.com/org/repo.git")
+				expect(registry.pendingSession?.gitUrl).toBe("https://github.com/org/repo.git")
+			})
+
+			it("creates pending session without gitUrl when not provided", () => {
+				const pending = registry.setPendingSession("test prompt")
+
+				expect(pending.gitUrl).toBeUndefined()
+			})
+		})
+
+		describe("getState includes gitUrl", () => {
+			it("includes gitUrl in session state", () => {
+				registry.createSession("session-1", "test prompt", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				const state = registry.getState()
+
+				expect(state.sessions[0].gitUrl).toBe("https://github.com/org/repo.git")
+			})
+		})
+
+		describe("getSessionsForGitUrl", () => {
+			it("returns only sessions without gitUrl when filter is undefined", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				registry.createSession("session-3", "prompt 3") // no gitUrl
+
+				const sessions = registry.getSessionsForGitUrl(undefined)
+
+				expect(sessions).toHaveLength(1)
+				expect(sessions[0].sessionId).toBe("session-3")
+			})
+
+			it("returns only sessions matching the gitUrl exactly", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo1.git")
+
+				expect(sessions).toHaveLength(2)
+				expect(sessions.map((s) => s.sessionId)).toEqual(["session-3", "session-1"])
+			})
+
+			it("excludes sessions without gitUrl when filtering by gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2") // no gitUrl
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo1.git")
+
+				expect(sessions).toHaveLength(1)
+				expect(sessions[0].sessionId).toBe("session-1")
+			})
+
+			it("returns sessions sorted by most recent start time", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-3", "prompt 3", undefined, {
+					gitUrl: "https://github.com/org/repo.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/repo.git")
+
+				expect(sessions.map((s) => s.sessionId)).toEqual(["session-3", "session-2", "session-1"])
+			})
+
+			it("returns empty array when no sessions match gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+
+				const sessions = registry.getSessionsForGitUrl("https://github.com/org/other-repo.git")
+
+				expect(sessions).toHaveLength(0)
+			})
+		})
+
+		describe("getStateForGitUrl", () => {
+			it("returns state filtered by gitUrl", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.sessions).toHaveLength(1)
+				expect(state.sessions[0].sessionId).toBe("session-1")
+			})
+
+			it("preserves selectedId if session is in filtered results", () => {
+				const session1 = registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				registry.selectedId = session1.sessionId
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.selectedId).toBe("session-1")
+			})
+
+			it("clears selectedId if session is not in filtered results", () => {
+				registry.createSession("session-1", "prompt 1", undefined, {
+					gitUrl: "https://github.com/org/repo1.git",
+				})
+				vi.advanceTimersByTime(1)
+				const session2 = registry.createSession("session-2", "prompt 2", undefined, {
+					gitUrl: "https://github.com/org/repo2.git",
+				})
+				registry.selectedId = session2.sessionId
+
+				const state = registry.getStateForGitUrl("https://github.com/org/repo1.git")
+
+				expect(state.selectedId).toBeNull()
+			})
 		})
 	})
 })

@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "新しい変更を表示できません。チェックポイントが利用できません。",
 		"noChanges": "新しい変更を表示できません。変更が見つかりませんでした。",
 		"error": "新しい変更を表示できません。エラーが発生しました。"
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Kilocode CLIのバージョンが古く、Agent Managerをサポートしていません。最新バージョンに更新してください。",
+			"cliNotFound": "Kilocode CLIが見つかりません。Agent Managerを使用するにはインストールしてください。",
+			"sessionFailed": "エージェントセッションの開始に失敗しました",
+			"sessionFailedWithMessage": "エージェントセッションの開始に失敗しました: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "更新手順",
+			"installInstructions": "インストール手順",
+			"getHelp": "ヘルプを表示"
+		}
 	}
 }

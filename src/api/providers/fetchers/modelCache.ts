@@ -211,9 +211,13 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 		if (modelCount > 0) {
 			memoryCache.set(provider, models)
 
-			await writeModels(provider, models).catch((err) =>
-				console.error(`[MODEL_CACHE] Error writing ${provider} models to file cache:`, err),
-			)
+			// kilocode_change start: prevent eternal caching of kilocode models
+			if (provider !== "kilocode") {
+				await writeModels(provider, models).catch((err) =>
+					console.error(`[MODEL_CACHE] Error writing ${provider} models to file cache:`, err),
+				)
+			}
+			// kilocode_change end
 		} else {
 			TelemetryService.instance.captureEvent(TelemetryEventName.MODEL_CACHE_EMPTY_RESPONSE, {
 				provider,
@@ -362,6 +366,12 @@ export function getModelsFromCache(provider: ProviderName): ModelRecord | undefi
 	if (memoryModels) {
 		return memoryModels
 	}
+
+	// kilocode_change start: prevent eternal caching of kilocode models
+	if (provider === "kilocode") {
+		return undefined
+	}
+	// kilocode_change end
 
 	// Memory cache miss - try to load from disk synchronously
 	// This is acceptable because it only happens on cold start or after cache expiry

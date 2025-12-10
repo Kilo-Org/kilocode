@@ -1,23 +1,5 @@
-function registerUser(email: string, password: string) {
-  // Validate email format
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('Invalid email format');
-  }
-
-  // Validate password length
-  if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters long');
-  }
-
-  // Validate password contains at least one number
-  if (!/\d/.test(password)) {
-    throw new Error('Password must contain at least one number');
-  }
-
-  // Validate password contains at least one special character
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    throw new Error('Password must contain at least one special character');
-  }
-
+function registerUser(email, password) {
+  // TODO: Add input validation for email and password
+  // TODO: Add error handling for duplicate email or other issues
   return createUser(email, password);
 }

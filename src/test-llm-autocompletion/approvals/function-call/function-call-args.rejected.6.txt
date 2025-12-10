@@ -1,2 +1,11 @@
 function greet(name) { return 'Hello ' + name; }
-greet(<<<AUTOCOMPLETE_HERE>>>
+greet('World'); // 'Hello World'
+
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'

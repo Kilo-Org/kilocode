@@ -1,0 +1,17 @@
+fetchUser(userId)
+	.then(user => {
+		return processUser(user);
+	})
+	.catch(error => {
+		console.error(error);
+	});
+
+async function showUserAvatar(userId) {
+	try {
+		const user = await fetchUser(userId);
+		const processedUser = await processUser(user);
+		await displayUserAvatar(processedUser.avatarURL);
+	} catch (error) {
+		console.error(error);
+	}
+}

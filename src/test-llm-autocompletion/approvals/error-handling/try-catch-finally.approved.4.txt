@@ -1,0 +1,8 @@
+function processData(data) {
+	try {
+		const result = JSON.parse(data);
+		console.log(result);
+	} catch (error) {
+		console.log('Invalid JSON');
+	}
+}

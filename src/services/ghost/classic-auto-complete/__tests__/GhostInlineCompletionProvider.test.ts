@@ -228,7 +228,7 @@ describe("findMatchingSuggestion", () => {
 			expect(result).toBeNull()
 		})
 
-		it("should handle backward deletion with empty suggestion text", () => {
+		it("should not use backward deletion when suggestion text is empty", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
 				{
 					text: "",
@@ -237,9 +237,9 @@ describe("findMatchingSuggestion", () => {
 				},
 			]
 
-			// User backspaced - should return just the deleted portion
+			// User backspaced - should return null because the original suggestion was empty
 			const result = findMatchingSuggestion("f", "bar", suggestions)
-			expect(result).toEqual({ text: "oo", matchType: "backward_deletion" })
+			expect(result).toBeNull()
 		})
 
 		it("should prefer exact match over backward deletion match", () => {

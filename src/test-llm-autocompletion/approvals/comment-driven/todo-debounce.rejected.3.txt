@@ -1,0 +1,9 @@
+function handleSearch(query) {
+  // TODO: Add debounce to prevent excessive API calls
+  // TODO: Add search history
+  // TODO: Add search suggestions
+  // TODO: Add search filters
+  // TODO: Add search sorting
+  // TODO: Add search pagination
+  searchAPI(query);
+}

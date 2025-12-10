@@ -1,13 +1,16 @@
 function processData(data) {
-  if (!data) {
-    throw new Error('Data is required');
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data');
   }
 
-  try {
-    // TODO: Implement error handling<<<AUTOCOMPLETE_HERE>>>
-    return processedData;
-  } catch (error) {
-    console.error('Error processing data:', error);
-    throw error;
+  // TODO: Implement data processing logic
+  const processedData = {};
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      processedData[key] = data[key].toUpperCase();
+    }
   }
+
+  return processedData;
 }

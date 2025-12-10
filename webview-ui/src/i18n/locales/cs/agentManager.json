@@ -6,12 +6,16 @@
 		"emptyState": "Zatím žádní aktivní agenti.",
 		"startAgent": "Spustit agenta",
 		"removeSession": "Odstranit",
-		"refresh": "Obnovit"
+		"refresh": "Obnovit",
+		"worktree": "Worktree",
+		"local": "Lokální",
+		"mainWorkspace": "Hlavní pracovní prostor",
+		"readyToMerge": "Připraveno ke sloučení"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
 		"describeTask": "Popište úkol, který má agent provést.",
-		"placeholderTask": "např. Vytvořit novou React komponentu pro tlačítko...",
+		"placeholderTask": "Napiš svůj úkol zde...",
 		"stopButton": "Zastavit",
 		"newButton": "Nový",
 		"stopButtonTitle": "Zastavit agenta",
@@ -21,6 +25,13 @@
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
 		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
+		"runModeLocal": "Lokální",
+		"runModeWorktree": "Worktree",
+		"runModeCloud": "Cloud",
+		"comingSoon": "Již brzy",
+		"runningInWorktree": "Běží ve worktree",
+		"runningLocally": "Běží lokálně",
+		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
 		"waitingForCli": "Inicializace relace agenta..."
 	},
@@ -37,7 +48,13 @@
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent běží v autonomním režimu"
+		"autonomous": "Agent běží v autonomním režimu",
+		"placeholderTypeTask": "Napiš svůj úkol zde...",
+		"ariaLabel": "Vstup zprávy",
+		"cancelTitle": "Zrušit agenta",
+		"sendTitle": "Odeslat zprávu",
+		"resumeTitle": "Obnovit agenta",
+		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"
 	},
 	"status": {
 		"running": "běží",
@@ -45,5 +62,16 @@
 		"stopped": "zastaveno",
 		"error": "chyba",
 		"creating": "vytváření..."
+	},
+	"time": {
+		"justNow": "Právě teď",
+		"minuteAgo": "Před minutou",
+		"minutesAgo": "Před {{count}} minutami",
+		"hourAgo": "Před hodinou",
+		"hoursAgo": "Před {{count}} hodinami",
+		"dayAgo": "Před dnem",
+		"daysAgo": "Před {{count}} dny",
+		"weekAgo": "Před týdnem",
+		"weeksAgo": "Před {{count}} týdny"
 	}
 }

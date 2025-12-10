@@ -1,9 +1,8 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		rescue JSON::ParserError => e
-			puts "Error parsing JSON: #{e.message}"
-			nil
-		end
+		result["name"]
+	rescue JSON::ParserError => e
+		"Invalid JSON"
 	end
 end

@@ -1,0 +1,11 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_refund(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum * -1
+end

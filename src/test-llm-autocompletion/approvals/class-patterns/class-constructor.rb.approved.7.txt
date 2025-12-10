@@ -1,6 +1,0 @@
-class User
-	def initialize(username, email, role)
-		@username = username
-		@email = email
-		@role = role
-	end

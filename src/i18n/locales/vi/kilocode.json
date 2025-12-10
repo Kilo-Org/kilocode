@@ -171,5 +171,18 @@
 		"checkpointsUnavailable": "Không thể hiển thị các thay đổi mới, điểm kiểm tra không khả dụng.",
 		"noChanges": "Không thể hiển thị các thay đổi mới, không tìm thấy thay đổi nào.",
 		"error": "Không thể hiển thị các thay đổi mới, đã xảy ra lỗi."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Phiên bản Kilocode CLI của bạn đã cũ và không hỗ trợ Agent Manager. Vui lòng cập nhật lên phiên bản mới nhất.",
+			"cliNotFound": "Không tìm thấy Kilocode CLI. Vui lòng cài đặt để sử dụng Agent Manager.",
+			"sessionFailed": "Không thể khởi động phiên agent",
+			"sessionFailedWithMessage": "Không thể khởi động phiên agent: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Hướng Dẫn Cập Nhật",
+			"installInstructions": "Hướng Dẫn Cài Đặt",
+			"getHelp": "Nhận Trợ Giúp"
+		}
 	}
 }

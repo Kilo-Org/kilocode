@@ -1,0 +1,13 @@
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+puts "Enter the first number: "
+first_number = gets.chomp.to_i
+
+puts "Enter the second number: "
+second_number = gets.chomp.to_i
+
+result = calculate_sum(first_number, second_number)
+puts "The sum of #{first_number} and #{second_number} is #{result}"

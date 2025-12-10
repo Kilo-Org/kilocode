@@ -56,6 +56,7 @@ SPDX-License-Identifier: Apache-2.0
         />
         <checkinHandlerFactory implementation="ai.kilocode.jetbrains.git.CommitMessageHandlerFactory"/>
         <applicationService serviceImplementation="ai.kilocode.jetbrains.git.CommitMessageService"/>
+        <applicationService serviceImplementation="ai.kilocode.jetbrains.inline.InlineCompletionService"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">

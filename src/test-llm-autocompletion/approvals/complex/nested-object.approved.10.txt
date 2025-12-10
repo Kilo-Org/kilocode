@@ -1,4 +1,11 @@
 const config = {
 	server: {
 	  port: 3000,
-	  host: 'localhost',
+	  host: 'localhost'
+	},
+	api: {
+	  prefix: '/api'
+	}
+  }
+
+  export default config

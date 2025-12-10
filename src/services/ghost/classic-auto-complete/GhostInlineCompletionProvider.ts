@@ -5,15 +5,12 @@ import {
 	contextToAutocompleteInput,
 	GhostContextProvider,
 	FillInAtCursorSuggestion,
-	FimGhostPrompt,
-	HoleFillerGhostPrompt,
 	GhostPrompt,
 	MatchingSuggestionResult,
 	CostTrackingCallback,
 	LLMRetrievalResult,
 	PendingRequest,
 	AutocompleteContext,
-	CacheMatchType,
 } from "../types"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
@@ -87,7 +84,12 @@ export function findMatchingSuggestion(
 
 		// Check for backward deletion: user deleted characters from the end of the prefix
 		// The stored prefix should start with the current prefix (current is shorter)
-		if (fillInAtCursor.prefix.startsWith(prefix) && suffix === fillInAtCursor.suffix) {
+		// Only use this logic if the original suggestion is non-empty
+		if (
+			fillInAtCursor.text !== "" &&
+			fillInAtCursor.prefix.startsWith(prefix) &&
+			suffix === fillInAtCursor.suffix
+		) {
 			// Extract the deleted portion of the prefix
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
@@ -121,8 +123,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	public suggestionsHistory: FillInAtCursorSuggestion[] = []
 	/** Tracks all pending/in-flight requests */
 	private pendingRequests: PendingRequest[] = []
-	private holeFiller: HoleFiller
-	private fimPromptBuilder: FimPromptBuilder
+	public holeFiller: HoleFiller // publicly exposed for Jetbrains autocomplete code
+	public fimPromptBuilder: FimPromptBuilder // publicly exposed for Jetbrains autocomplete code
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private getSettings: () => GhostServiceSettings | null

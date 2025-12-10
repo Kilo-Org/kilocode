@@ -102,6 +102,19 @@
 		"noChanges": "Nie można wyświetlić nowych zmian, nie znaleziono żadnych zmian.",
 		"error": "Nie można wyświetlić nowych zmian, wystąpił błąd."
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Twoja wersja Kilocode CLI jest przestarzała i nie obsługuje Agent Managera. Zaktualizuj do najnowszej wersji.",
+			"cliNotFound": "Nie znaleziono Kilocode CLI. Zainstaluj go, aby korzystać z Agent Managera.",
+			"sessionFailed": "Nie udało się uruchomić sesji agenta",
+			"sessionFailedWithMessage": "Nie udało się uruchomić sesji agenta: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Instrukcje Aktualizacji",
+			"installInstructions": "Instrukcje Instalacji",
+			"getHelp": "Uzyskaj Pomoc"
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",

@@ -119,10 +119,10 @@ export default defineConfig(({ mode }) => {
 			// Ensure source maps are properly included in the build
 			minify: mode === "production" ? "esbuild" : false,
 			// Use a single combined CSS bundle so both webviews share styles
-			cssCodeSplit: false,
+			cssCodeSplit: true, // kilocode_change: changed to true to enable cssPerEntryPlugin
 			rollupOptions: {
 				input: {
-					main: resolve(__dirname, "index.html"),
+					index: resolve(__dirname, "index.html"), // kilocode_change - DO NOT CHANGE
 					"agent-manager": resolve(__dirname, "agent-manager.html"), // kilocode_change
 					"browser-panel": resolve(__dirname, "browser-panel.html"),
 				},
@@ -139,10 +139,12 @@ export default defineConfig(({ mode }) => {
 					assetFileNames: (assetInfo) => {
 						const name = assetInfo.name || ""
 
+						// kilocode_change start -  cssPerEntryPlugin
 						// Force all CSS into a single predictable file used by both webviews
-						if (name.endsWith(".css")) {
-							return "assets/index.css"
-						}
+						// if (name.endsWith(".css")) {
+						// 	return "assets/index.css"
+						//}
+						// kilocode_change end
 
 						if (name.endsWith(".woff2") || name.endsWith(".woff") || name.endsWith(".ttf")) {
 							return "assets/fonts/[name][extname]"
