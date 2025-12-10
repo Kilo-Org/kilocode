@@ -4,12 +4,12 @@
 
 import React from "react"
 import { render } from "ink-testing-library"
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
 import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
-import { chatMessagesAtom } from "../../../state/atoms/extension.js"
+import { chatMessagesAtom, lastActivityTimestampAtom } from "../../../state/atoms/extension.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 // Mock the hooks
@@ -20,11 +20,22 @@ vi.mock("../../../state/hooks/useWebviewMessage.js", () => ({
 	}),
 }))
 
+// Mock timers for ThinkingSpinner animation
+vi.useFakeTimers()
+
 describe("StatusIndicator", () => {
 	let store: ReturnType<typeof createStore>
 
 	beforeEach(() => {
 		store = createStore()
+		// Default: no activity (timestamp = 0) so tests must explicitly set recent activity if needed
+		store.set(lastActivityTimestampAtom, 0)
+		// Reset animation frame for each test
+		vi.clearAllTimers()
+	})
+
+	afterEach(() => {
+		vi.clearAllTimers()
 	})
 
 	it("should not render when disabled", () => {
@@ -38,6 +49,8 @@ describe("StatusIndicator", () => {
 	})
 
 	it("should show Thinking status and cancel hotkey when streaming", () => {
+		// Set recent activity for streaming detection
+		store.set(lastActivityTimestampAtom, Date.now())
 		// Set up a partial message to trigger streaming state
 		const partialMessage: ExtensionChatMessage = {
 			type: "say",
@@ -55,6 +68,7 @@ describe("StatusIndicator", () => {
 		)
 
 		const output = lastFrame()
+		// ThinkingSpinner contains animated frame plus "Thinking..." text
 		expect(output).toContain("Thinking...")
 		expect(output).toContain("to cancel")
 		// Should show either Ctrl+X or Cmd+X depending on platform

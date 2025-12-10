@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import { isStreamingAtom } from "../../atoms/ui.js"
-import { chatMessagesAtom, updateChatMessagesAtom } from "../../atoms/extension.js"
+import { chatMessagesAtom, updateChatMessagesAtom, lastActivityTimestampAtom } from "../../atoms/extension.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 describe("isStreamingAtom Logic", () => {
@@ -14,6 +14,8 @@ describe("isStreamingAtom Logic", () => {
 
 	beforeEach(() => {
 		store = createStore()
+		// Default: no activity (timestamp = 0) so streaming detection depends on explicit setup per test
+		store.set(lastActivityTimestampAtom, 0)
 	})
 
 	describe("isStreaming state management", () => {
@@ -22,6 +24,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be true when last message is partial", () => {
+			// Set recent activity for streaming detection
+			store.set(lastActivityTimestampAtom, Date.now())
 			const partialMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -34,6 +38,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be false when last message is complete", () => {
+			// No recent activity = not streaming
 			const completeMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -46,6 +51,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be false when tool is asking for approval", () => {
+			// Even with recent activity, tool ask blocks streaming
+			store.set(lastActivityTimestampAtom, Date.now())
 			const toolMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -57,6 +64,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be true when API request hasn't finished (no cost)", () => {
+			// Set recent activity for streaming detection
+			store.set(lastActivityTimestampAtom, Date.now())
 			const apiReqMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -68,6 +77,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be false when API request has finished (has cost)", () => {
+			// No recent activity = not streaming
 			const apiReqMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -81,6 +91,7 @@ describe("isStreamingAtom Logic", () => {
 
 	describe("Message handling scenarios", () => {
 		it("should not be streaming for completion_result ask message", () => {
+			// No recent activity = not streaming
 			const completionMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -93,6 +104,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should not be streaming for followup ask message", () => {
+			// No recent activity = not streaming
 			const followupMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -105,6 +117,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should not be streaming for tool approval ask message", () => {
+			// Tool ask explicitly blocks streaming, even with recent activity
+			store.set(lastActivityTimestampAtom, Date.now())
 			const toolMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -117,6 +131,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should not be streaming for command approval ask message", () => {
+			// No recent activity = not streaming
 			const commandMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -129,6 +144,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should not be streaming for complete say messages", () => {
+			// No recent activity = not streaming
 			const sayMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -142,6 +158,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should be streaming for partial say messages", () => {
+			// Set recent activity for streaming detection
+			store.set(lastActivityTimestampAtom, Date.now())
 			const sayMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -155,6 +173,7 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should handle multiple messages with last being complete", () => {
+			// No recent activity = not streaming
 			const messages: ExtensionChatMessage[] = [
 				{
 					ts: Date.now(),
@@ -188,6 +207,8 @@ describe("isStreamingAtom Logic", () => {
 		})
 
 		it("should handle message updates via updateChatMessagesAtom", () => {
+			// Set recent activity initially for streaming
+			store.set(lastActivityTimestampAtom, Date.now())
 			const initialMessages: ExtensionChatMessage[] = [
 				{
 					ts: Date.now(),
@@ -201,6 +222,8 @@ describe("isStreamingAtom Logic", () => {
 			store.set(chatMessagesAtom, initialMessages)
 			expect(store.get(isStreamingAtom)).toBe(true)
 
+			// Clear activity timestamp before updating to completion
+			store.set(lastActivityTimestampAtom, 0)
 			const updatedMessages: ExtensionChatMessage[] = [
 				...initialMessages,
 				{
