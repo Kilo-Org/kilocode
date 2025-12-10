@@ -33,12 +33,6 @@ export function FollowUpSuggestions({ suggestions, onSuggestionClick, onCopyToIn
 						aria-label={suggestion.answer}>
 						{suggestion.answer}
 					</button>
-					{suggestion.mode && (
-						<div className="am-followup-mode-badge">
-							<span className="codicon codicon-arrow-right" />
-							{suggestion.mode}
-						</div>
-					)}
 					{onCopyToInput && (
 						<StandardTooltip content={t("chat:followUpSuggest.copyToInput")}>
 							<button

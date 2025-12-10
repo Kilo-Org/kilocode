@@ -746,24 +746,6 @@
 	cursor: not-allowed;
 }
 
-.am-followup-mode-badge {
-	position: absolute;
-	bottom: 0;
-	right: 0;
-	font-size: 10px;
-	background: var(--vscode-badge-background);
-	color: var(--vscode-badge-foreground);
-	padding: 1px 4px;
-	border-top-left-radius: 4px;
-	display: flex;
-	align-items: center;
-	gap: 2px;
-}
-
-.am-followup-mode-badge .codicon {
-	font-size: 8px;
-}
-
 .am-followup-copy-btn {
 	position: absolute;
 	top: 50%;

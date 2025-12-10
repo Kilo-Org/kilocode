@@ -1,10 +1,12 @@
 import React, { useState } from "react"
+import { useAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { SendHorizontal, Square } from "lucide-react" // Changed StopCircle to Square to match SessionDetail stop button
+import { SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
+import { sessionInputAtomFamily } from "../state/atoms/sessions"
 
 interface ChatInputProps {
 	sessionId: string
@@ -14,7 +16,7 @@ interface ChatInputProps {
 
 export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, isActive = false }) => {
 	const { t } = useTranslation("agentManager")
-	const [messageText, setMessageText] = useState("")
+	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 
 	const trimmedMessage = messageText.trim()

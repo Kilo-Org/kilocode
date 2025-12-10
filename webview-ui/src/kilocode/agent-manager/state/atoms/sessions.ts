@@ -1,4 +1,5 @@
 import { atom } from "jotai"
+import { atomFamily } from "jotai/utils"
 
 export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
@@ -53,6 +54,9 @@ export const isRefreshingRemoteSessionsAtom = atom(false)
 export const pendingSessionAtom = atom<PendingSession | null>(null)
 
 export const startSessionFailedCounterAtom = atom(0)
+
+// Per-session input value for the chat input field
+export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""))
 
 // User preference for run mode (persisted across new agent forms)
 export type RunMode = "local" | "worktree"

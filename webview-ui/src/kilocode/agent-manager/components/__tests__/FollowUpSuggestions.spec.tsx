@@ -18,7 +18,7 @@ describe("FollowUpSuggestions", () => {
 	const mockSuggestions: SuggestionItem[] = [
 		{ answer: "Yes, proceed" },
 		{ answer: "No, cancel" },
-		{ answer: "Let me think", mode: "architect" },
+		{ answer: "Let me think" },
 	]
 
 	it("renders nothing when suggestions array is empty", () => {
@@ -42,13 +42,6 @@ describe("FollowUpSuggestions", () => {
 
 		expect(onSuggestionClick).toHaveBeenCalledTimes(1)
 		expect(onSuggestionClick).toHaveBeenCalledWith({ answer: "Yes, proceed" })
-	})
-
-	it("displays mode badge for suggestions with mode", () => {
-		render(<FollowUpSuggestions suggestions={mockSuggestions} onSuggestionClick={vi.fn()} />)
-
-		// The mode badge should show "architect"
-		expect(screen.getByText("architect")).toBeInTheDocument()
 	})
 
 	it("calls onCopyToInput when copy button is clicked", async () => {

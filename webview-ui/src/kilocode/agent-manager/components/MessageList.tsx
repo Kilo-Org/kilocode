@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useCallback } from "react"
-import { useAtomValue } from "jotai"
+import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
+import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
+import { safeJsonParse } from "@roo/safeJsonParse"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
 import { vscode } from "../utils/vscode"
@@ -26,6 +28,7 @@ interface MessageListProps {
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
+	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
 	const containerRef = useRef<HTMLDivElement>(null)
 
 	// Auto-scroll to bottom when new messages arrive
@@ -42,7 +45,6 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
-			// Send the answer to the backend
 			vscode.postMessage({
 				type: "agentManager.sendMessage",
 				sessionId,
@@ -52,10 +54,12 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[sessionId],
 	)
 
-	const handleCopyToInput = useCallback((suggestion: SuggestionItem) => {
-		// Copy the suggestion text to clipboard
-		navigator.clipboard.writeText(suggestion.answer)
-	}, [])
+	const handleCopyToInput = useCallback(
+		(suggestion: SuggestionItem) => {
+			setInputValue((current) => (current !== "" ? `${current} \n${suggestion.answer}` : suggestion.answer))
+		},
+		[setInputValue],
+	)
 
 	if (messages.length === 0) {
 		return (
@@ -82,15 +86,21 @@ export function MessageList({ sessionId }: MessageListProps) {
 	)
 }
 
-function safeJsonParse<T>(text: string | undefined): T | null {
-	if (!text) return null
-	try {
-		return JSON.parse(text) as T
-	} catch (error) {
-		// Debug-level log for JSON parse failures (visible in browser dev tools)
-		console.debug("[MessageList] JSON parse failed:", { text: text.slice(0, 100), error })
-		return null
-	}
+interface FollowUpMetadata {
+	question?: string
+	suggest?: SuggestionItem[]
+}
+
+function extractFollowUpData(message: ClineMessage): { question: string; suggestions?: SuggestionItem[] } | null {
+	const messageText = message.text || (message as { content?: string }).content || ""
+	const metadata = (message.metadata as FollowUpMetadata | undefined) ?? {}
+	const parsedData = safeJsonParse<FollowUpData>(messageText)
+
+	const question = metadata.question || parsedData?.question || messageText
+	const suggestions = metadata.suggest || parsedData?.suggest
+
+	if (!question) return null
+	return { question, suggestions }
 }
 
 interface MessageItemProps {
@@ -164,16 +174,11 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			case "followup": {
 				icon = <MessageCircleQuestion size={16} />
 				title = t("messages.question")
-				// Question can be in metadata.question (from CLI) or parsed from text (legacy)
-				const metadataQuestion = (message as any).metadata?.question
-				const metadataSuggest = (message as any).metadata?.suggest as SuggestionItem[] | undefined
-				const parsedInfo = safeJsonParse<FollowUpData>(messageText)
-				const questionText = metadataQuestion || parsedInfo?.question || messageText
-				// Extract suggestions from metadata or parsed JSON
-				suggestions = metadataSuggest || parsedInfo?.suggest
+				const followUpData = extractFollowUpData(message)
+				suggestions = followUpData?.suggestions
 				content = (
 					<div>
-						<SimpleMarkdown content={questionText} />
+						<SimpleMarkdown content={followUpData?.question || messageText} />
 					</div>
 				)
 				break
