@@ -10,7 +10,7 @@ import {
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
 import { findKilocodeCli } from "./CliPathResolver"
-import { canInstallCli, installOrUpdateCli, getCliInstallCommand } from "./CliInstaller"
+import { canInstallCli, getCliInstallCommand } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { RemoteSessionService } from "./RemoteSessionService"
@@ -50,11 +50,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private firstApiReqStarted: Map<string, boolean> = new Map()
 	// Track the current workspace's git URL for filtering sessions
 	private currentGitUrl: string | undefined
-	// Track the last session request for retry after CLI update
-	private lastSessionRequest?: {
-		prompt: string
-		options?: { parallelMode?: boolean; resumeSessionId?: string; resumeSessionLabel?: string }
-	}
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -263,9 +258,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Store the session request for potential retry after CLI update
-		this.lastSessionRequest = { prompt, options }
-
 		// Get workspace folder - require a valid workspace
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 		if (!workspaceFolder) {
@@ -285,16 +277,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		let cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 		if (!cliPath) {
-			this.outputChannel.appendLine("kilocode CLI not found, attempting auto-install...")
-			cliPath = await this.attemptCliInstall()
-			if (!cliPath) {
-				this.outputChannel.appendLine("ERROR: kilocode CLI not found and auto-install failed")
-				this.showCliNotFoundError()
-				this.postMessage({ type: "agentManager.startSessionFailed" })
-				return
-			}
+			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
+			this.showCliNotFoundError()
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+			return
 		}
 
 		// Preserve existing label when resuming a session (prefer local, fallback to passed label)
@@ -784,65 +772,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Attempt to install or update the CLI automatically using npm.
-	 * Shows progress notification during installation.
-	 * Returns the path to the installed CLI if successful, null otherwise.
-	 */
-	private async attemptCliInstall(): Promise<string | null> {
-		const log = (msg: string) => this.outputChannel.appendLine(`[AgentManager] ${msg}`)
-
-		if (!canInstallCli(log)) {
-			log("Cannot auto-install CLI: Node.js/npm not available")
-			return null
-		}
-
-		return vscode.window.withProgress(
-			{
-				location: vscode.ProgressLocation.Notification,
-				title: t("kilocode:agentManager.progress.installingCli"),
-				cancellable: false,
-			},
-			async (progress) => {
-				const result = await installOrUpdateCli(log, (message) => {
-					progress.report({ message })
-				})
-
-				if (result.success && result.cliPath) {
-					log(`CLI installed successfully at: ${result.cliPath}`)
-					return result.cliPath
-				}
-
-				log(`CLI installation failed: ${result.error}`)
-
-				// If permission error, offer to run in terminal
-				if (result.suggestTerminal) {
-					const runInTerminal = t("kilocode:agentManager.actions.runInTerminal")
-					const manualInstall = t("kilocode:agentManager.actions.installInstructions")
-					const selection = await vscode.window.showErrorMessage(
-						t("kilocode:agentManager.errors.installPermissionDenied"),
-						runInTerminal,
-						manualInstall,
-					)
-
-					if (selection === runInTerminal) {
-						this.runInstallInTerminal()
-					} else if (selection === manualInstall) {
-						void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
-					}
-				} else {
-					void vscode.window.showErrorMessage(
-						t("kilocode:agentManager.errors.installFailed", { error: result.error || "Unknown error" }),
-					)
-				}
-
-				return null
-			},
-		)
-	}
-
-	/**
 	 * Open a terminal and run the CLI install command.
-	 * This is useful when background installation fails due to permissions.
+	 * Uses the terminal to ensure the user's shell environment (nvm, fnm, volta, etc.) is respected.
 	 */
 	private runInstallInTerminal(): void {
 		const terminal = vscode.window.createTerminal({
@@ -854,31 +785,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
-		const canAutoInstall = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 
 		switch (error?.type) {
 			case "cli_outdated":
-				if (canAutoInstall) {
-					// Offer to auto-update
-					const updateNow = t("kilocode:agentManager.actions.updateNow")
+				if (hasNpm) {
+					// Offer to update via terminal
+					const updateInTerminal = t("kilocode:agentManager.actions.runInTerminal")
 					const manualUpdate = t("kilocode:agentManager.actions.updateInstructions")
 					vscode.window
-						.showWarningMessage(t("kilocode:agentManager.errors.cliOutdated"), updateNow, manualUpdate)
-						.then(async (selection) => {
-							if (selection === updateNow) {
-								const cliPath = await this.attemptCliInstall()
-								if (cliPath) {
-									void vscode.window.showInformationMessage(
-										t("kilocode:agentManager.info.cliUpdated"),
-									)
-									// Automatically retry the session with the updated CLI
-									if (this.lastSessionRequest) {
-										void this.startAgentSession(
-											this.lastSessionRequest.prompt,
-											this.lastSessionRequest.options,
-										)
-									}
-								}
+						.showWarningMessage(
+							t("kilocode:agentManager.errors.cliOutdated"),
+							updateInTerminal,
+							manualUpdate,
+						)
+						.then((selection) => {
+							if (selection === updateInTerminal) {
+								this.runInstallInTerminal()
 							} else if (selection === manualUpdate) {
 								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
 							}
@@ -896,13 +819,34 @@ export class AgentManagerProvider implements vscode.Disposable {
 				}
 				break
 			case "spawn_error": {
-				const errorMessage = t("kilocode:agentManager.errors.cliNotFound")
-				const actionLabel = t("kilocode:agentManager.actions.installInstructions")
-				vscode.window.showErrorMessage(errorMessage, actionLabel).then((selection) => {
-					if (selection === actionLabel) {
-						void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
-					}
-				})
+				if (hasNpm) {
+					// Offer to install via terminal
+					const installInTerminal = t("kilocode:agentManager.actions.runInTerminal")
+					const manualInstall = t("kilocode:agentManager.actions.installInstructions")
+					vscode.window
+						.showErrorMessage(
+							t("kilocode:agentManager.errors.cliNotFound"),
+							installInTerminal,
+							manualInstall,
+						)
+						.then((selection) => {
+							if (selection === installInTerminal) {
+								this.runInstallInTerminal()
+							} else if (selection === manualInstall) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				} else {
+					// No npm available, show manual instructions
+					const actionLabel = t("kilocode:agentManager.actions.installInstructions")
+					vscode.window
+						.showErrorMessage(t("kilocode:agentManager.errors.cliNotFound"), actionLabel)
+						.then((selection) => {
+							if (selection === actionLabel) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				}
 				break
 			}
 			default: {
