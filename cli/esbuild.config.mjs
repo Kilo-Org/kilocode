@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chmodSync, mkdirSync, copyFileSync } from "fs"
 import { rimrafSync } from "rimraf"
+import reactCompiler from "./esbuild-plugin-react-compiler.js";
 
 // ESM Polyfill
 const __filename = fileURLToPath(import.meta.url);
@@ -169,7 +170,10 @@ const __dirname = __dirname__(__filename);
 	minify: false,
 	treeShaking: true,
 	logLevel: "info",
-	plugins: [afterBuildPlugin],
+	plugins: [
+		reactCompiler(), 
+		afterBuildPlugin
+	],
 	alias: {
 		'is-in-ci': path.resolve(__dirname, 'src/patches/is-in-ci.ts'),
 	}

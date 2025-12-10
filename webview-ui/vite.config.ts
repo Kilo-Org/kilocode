@@ -93,7 +93,11 @@ export default defineConfig(({ mode }) => {
 	}
 
 	const plugins: PluginOption[] = [
-		react(),
+		react({
+			babel: {
+				plugins: [["babel-plugin-react-compiler", { target: "18" }]],
+			},
+		}),
 		tailwindcss(),
 		persistPortPlugin(),
 		wasmPlugin(),
