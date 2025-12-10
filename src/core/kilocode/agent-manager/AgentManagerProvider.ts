@@ -50,6 +50,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private firstApiReqStarted: Map<string, boolean> = new Map()
 	// Track the current workspace's git URL for filtering sessions
 	private currentGitUrl: string | undefined
+	// Track the last session request for retry after CLI update
+	private lastSessionRequest?: {
+		prompt: string
+		options?: { parallelMode?: boolean; resumeSessionId?: string; resumeSessionLabel?: string }
+	}
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -257,6 +262,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.outputChannel.appendLine("ERROR: prompt is empty")
 			return
 		}
+
+		// Store the session request for potential retry after CLI update
+		this.lastSessionRequest = { prompt, options }
 
 		// Get workspace folder - require a valid workspace
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
@@ -864,7 +872,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 										t("kilocode:agentManager.info.cliUpdated"),
 									)
 									// Automatically retry the session with the updated CLI
-									this.startAgentSession(sessionRequest, cliPath)
+									if (this.lastSessionRequest) {
+										void this.startAgentSession(
+											this.lastSessionRequest.prompt,
+											this.lastSessionRequest.options,
+										)
+									}
 								}
 							} else if (selection === manualUpdate) {
 								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
