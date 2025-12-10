@@ -7,7 +7,7 @@ import { formatResponse } from "../prompts/responses"
 import { t } from "../../i18n"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
+import { isPathOutsideWorkspace, parseParamsFromArgs } from "../../utils/pathUtils"
 import { getReadablePath } from "../../utils/path"
 import { countFileLines } from "../../integrations/misc/line-counter"
 import { readLines } from "../../integrations/misc/read-lines"
@@ -41,7 +41,8 @@ export async function simpleReadFileTool(
 	_removeClosingTag: RemoveClosingTag,
 	toolProtocol?: ToolProtocol,
 ) {
-	const filePath: string | undefined = block.params.path
+	const args = parseParamsFromArgs(block.params.args, ["path"])
+	const filePath: string | undefined = block.params.path || args.path
 
 	// Check if the current model supports images
 	const modelInfo = cline.api.getModel().info

@@ -49,6 +49,7 @@ vi.mock("../../../integrations/editor/detect-omission", () => ({
 
 vi.mock("../../../utils/pathUtils", () => ({
 	isPathOutsideWorkspace: vi.fn().mockReturnValue(false),
+	parseParamsFromArgs: vi.fn().mockReturnValue({}),
 }))
 
 vi.mock("../../../utils/path", () => ({
