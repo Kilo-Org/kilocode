@@ -175,7 +175,7 @@ function MessageItem({ message }: { message: ClineMessage }) {
 
 	return (
 		<div
-			className={`am-message-item ${message.type === "say" && message.say === "api_req_started" ? "api-req" : ""}`}>
+			className={`am-message-item ${message.type === "say" && message.say === "api_req_started" ? "am-api-req" : ""}`}>
 			<div className="am-message-icon">{icon}</div>
 			<div className="am-message-content-wrapper">
 				<div className="am-message-header">

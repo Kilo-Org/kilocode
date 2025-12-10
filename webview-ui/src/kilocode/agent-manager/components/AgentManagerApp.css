@@ -80,7 +80,7 @@
 	background: var(--vscode-button-secondaryHoverBackground);
 }
 
-.am-new-agent-item.selected {
+.am-new-agent-item.am-selected {
 	background: var(--vscode-button-background);
 	color: var(--vscode-button-foreground);
 }
@@ -135,7 +135,7 @@
 	color: var(--vscode-list-hoverForeground);
 }
 
-.am-session-item.selected {
+.am-session-item.am-selected {
 	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
 }
@@ -150,15 +150,15 @@
 	text-align: center;
 }
 
-.am-status-icon.done {
+.am-status-icon.am-done {
 	color: var(--vscode-charts-green);
 }
 
-.am-status-icon.error {
+.am-status-icon.am-error {
 	color: var(--vscode-charts-red);
 }
 
-.am-status-icon.stopped {
+.am-status-icon.am-stopped {
 	color: var(--vscode-charts-orange);
 }
 
@@ -211,7 +211,7 @@
 }
 
 .am-session-item:hover .am-icon-btn,
-.am-session-item.selected .am-icon-btn {
+.am-session-item.am-selected .am-icon-btn {
 	opacity: 0.7;
 }
 
@@ -352,12 +352,12 @@
 }
 
 /* Compact API Request Style */
-.am-message-item.api-req {
+.am-message-item.am-api-req {
 	padding: 4px 20px;
 	opacity: 0.7;
 }
 
-.am-message-item.api-req:hover {
+.am-message-item.am-api-req:hover {
 	opacity: 1;
 }
 
@@ -642,7 +642,7 @@
 	opacity: 0.7;
 }
 
-.am-run-mode-trigger-inline .am-chevron.open {
+.am-run-mode-trigger-inline .am-chevron.am-open {
 	transform: rotate(180deg);
 }
 
@@ -681,13 +681,13 @@
 	gap: 6px;
 }
 
-.am-run-mode-option-inline.disabled {
+.am-run-mode-option-inline.am-disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 	color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
 }
 
-.am-run-mode-option-inline.disabled:hover {
+.am-run-mode-option-inline.am-disabled:hover {
 	background: transparent;
 }
 
@@ -695,7 +695,7 @@
 	background: var(--vscode-list-hoverBackground);
 }
 
-.am-run-mode-option-inline.selected {
+.am-run-mode-option-inline.am-selected {
 	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
 }
