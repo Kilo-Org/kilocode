@@ -4,6 +4,7 @@ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { MessageCircleWarning } from "lucide-react"
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
+import { Button } from "@src/components/ui" // kilocode_change
 
 export interface ErrorRowProps {
 	type: "error" | "mistake_limit" | "api_failure" | "diff_error" | "streaming_failed" | "cancelled"
@@ -15,6 +16,8 @@ export interface ErrorRowProps {
 	additionalContent?: React.ReactNode
 	headerClassName?: string
 	messageClassName?: string
+	showLoginButton?: boolean // kilocode_change
+	onLoginClick?: () => void // kilocode_change
 }
 
 /**
@@ -31,6 +34,8 @@ export const ErrorRow = memo(
 		additionalContent,
 		headerClassName,
 		messageClassName,
+		showLoginButton = false, // kilocode_change
+		onLoginClick, // kilocode_change
 	}: ErrorRowProps) => {
 		const { t } = useTranslation()
 		const [isExpanded, setIsExpanded] = useState(defaultExpanded)
@@ -130,6 +135,15 @@ export const ErrorRow = memo(
 					}>
 					{message}
 				</p>
+				{/* kilocode_change start */}
+				{showLoginButton && onLoginClick && (
+					<div className="ml-6 mt-3">
+						<Button variant="secondary" onClick={onLoginClick}>
+							{t("kilocode:settings.provider.login")}
+						</Button>
+					</div>
+				)}
+				{/* kilocode_change end */}
 				{additionalContent}
 			</>
 		)

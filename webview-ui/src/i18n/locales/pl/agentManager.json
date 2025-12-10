@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Lokalny",
 		"mainWorkspace": "Główny obszar roboczy",
-		"readyToMerge": "Gotowy do scalenia"
+		"readyToMerge": "Gotowy do scalenia",
+		"shareSession": "Udostępnij sesję",
+		"shareConfirmMessage": "Czy chcesz publicznie udostępnić migawkę tej sesji?",
+		"shareConfirmYes": "Tak",
+		"shareConfirmNo": "Nie"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
@@ -31,6 +35,7 @@
 		"comingSoon": "Wkrótce",
 		"runningInWorktree": "Działa w worktree",
 		"runningLocally": "Działa lokalnie",
+		"runMode": "Tryb uruchamiania",
 		"branch": "Gałąź",
 		"creatingSession": "Tworzenie sesji...",
 		"waitingForCli": "Inicjalizacja sesji agenta...",

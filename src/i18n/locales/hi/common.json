@@ -168,6 +168,7 @@
 		"image_saved": "छवि {{path}} में सहेजी गई",
 		"organization_share_link_copied": "संगठन साझाकरण लिंक क्लिपबोर्ड में कॉपी किया गया!",
 		"public_share_link_copied": "सार्वजनिक साझाकरण लिंक क्लिपबोर्ड में कॉपी किया गया!",
+		"session_share_link_copied_with_url": "सत्र साझा किया गया! लिंक क्लिपबोर्ड पर कॉपी किया गया: {{url}}",
 		"mode_exported": "मोड '{{mode}}' सफलतापूर्वक निर्यात किया गया",
 		"mode_imported": "मोड सफलतापूर्वक आयात किया गया"
 	},

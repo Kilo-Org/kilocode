@@ -6,6 +6,7 @@ import { WebviewMessage } from "../../../shared/WebviewMessage"
 import { Task } from "../../task/Task"
 import axios from "axios"
 import { getKiloUrlFromToken } from "@roo-code/types"
+import { buildApiHandler } from "../../../api"
 
 const shownNativeNotificationIds = new Set<string>()
 
@@ -269,7 +270,7 @@ export const deviceAuthMessageHandler = async (provider: ClineProvider, message:
 				const token = message.values.token as string
 				try {
 					if (profileName) {
-						// Save to specified profile
+						// Save to specified profile and activate it
 						const { ...profileConfig } = await provider.providerSettingsManager.getProfile({
 							name: profileName,
 						})
@@ -280,13 +281,21 @@ export const deviceAuthMessageHandler = async (provider: ClineProvider, message:
 								apiProvider: "kilocode",
 								kilocodeToken: token,
 							},
-							false, // Don't activate - just save
+							true, // Activate immediately to match old handleKiloCodeCallback behavior
 						)
 					} else {
-						// Save to current profile (from welcome screen)
+						// Save to current profile (from welcome screen) and activate
 						const { apiConfiguration, currentApiConfigName = "default" } = await provider.getState()
 						await provider.upsertProviderProfile(currentApiConfigName, {
 							...apiConfiguration,
+							apiProvider: "kilocode",
+							kilocodeToken: token,
+						}) // activate: true by default
+					}
+
+					// Update current task's API handler if exists (matching old implementation)
+					if (provider.getCurrentTask()) {
+						provider.getCurrentTask()!.api = buildApiHandler({
 							apiProvider: "kilocode",
 							kilocodeToken: token,
 						})

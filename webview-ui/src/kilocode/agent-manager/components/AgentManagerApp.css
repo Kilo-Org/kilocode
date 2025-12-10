@@ -128,6 +128,7 @@
 	align-items: center;
 	gap: 6px;
 	border: 1px solid transparent; /* Placeholder for focus border */
+	position: relative;
 }
 
 .am-session-item:hover {

@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "ローカル",
 		"mainWorkspace": "メインワークスペース",
-		"readyToMerge": "マージ準備完了"
+		"readyToMerge": "マージ準備完了",
+		"shareSession": "セッションを共有",
+		"shareConfirmMessage": "このセッションのスナップショットを公開で共有しますか？",
+		"shareConfirmYes": "はい",
+		"shareConfirmNo": "いいえ"
 	},
 	"sessionDetail": {
 		"startNewAgent": "新しいエージェントを開始",
@@ -31,6 +35,7 @@
 		"comingSoon": "近日公開",
 		"runningInWorktree": "Worktreeで実行中",
 		"runningLocally": "ローカルで実行中",
+		"runMode": "実行モード",
 		"branch": "ブランチ",
 		"creatingSession": "セッションを作成中...",
 		"waitingForCli": "エージェントセッションを初期化中...",

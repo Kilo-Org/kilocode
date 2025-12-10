@@ -172,6 +172,7 @@
 		"image_saved": "Imagem salva em {{path}}",
 		"organization_share_link_copied": "Link de compartilhamento da organização copiado para a área de transferência!",
 		"public_share_link_copied": "Link de compartilhamento público copiado para a área de transferência!",
+		"session_share_link_copied_with_url": "Sessão compartilhada! Link copiado para a área de transferência: {{url}}",
 		"mode_exported": "Modo '{{mode}}' exportado com sucesso",
 		"mode_imported": "Modo importado com sucesso"
 	},

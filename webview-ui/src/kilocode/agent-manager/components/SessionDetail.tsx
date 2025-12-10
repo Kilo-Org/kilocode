@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
@@ -178,6 +178,7 @@ function NewAgentForm() {
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+	const dropdownRef = useRef<HTMLDivElement>(null)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
@@ -186,6 +187,23 @@ function NewAgentForm() {
 			setIsStarting(false)
 		}
 	}, [startSessionFailedCounter])
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+				setIsDropdownOpen(false)
+			}
+		}
+
+		if (isDropdownOpen) {
+			document.addEventListener("mousedown", handleClickOutside)
+		}
+
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside)
+		}
+	}, [isDropdownOpen])
 
 	const trimmedPrompt = promptText.trim()
 	const isEmpty = trimmedPrompt.length === 0
@@ -286,20 +304,17 @@ function NewAgentForm() {
 
 					{/* Controls Container */}
 					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
-						<div className="am-run-mode-dropdown-inline relative">
-							<button
-								className="am-run-mode-trigger-inline"
-								onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-								disabled={isStarting}
-								type="button"
-								title={
-									runMode === "local"
-										? t("sessionDetail.runModeLocal")
-										: t("sessionDetail.runModeWorktree")
-								}>
-								{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-								<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "am-open")} />
-							</button>
+						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
+							<StandardTooltip content={t("sessionDetail.runMode")}>
+								<button
+									className="am-run-mode-trigger-inline"
+									onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+									disabled={isStarting}
+									type="button">
+									{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+									<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "am-open")} />
+								</button>
+							</StandardTooltip>
 							{isDropdownOpen && (
 								<div className="am-run-mode-menu-inline">
 									<button

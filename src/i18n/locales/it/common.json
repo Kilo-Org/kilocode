@@ -168,6 +168,7 @@
 		"image_saved": "Immagine salvata in {{path}}",
 		"organization_share_link_copied": "Link di condivisione organizzazione copiato negli appunti!",
 		"public_share_link_copied": "Link di condivisione pubblica copiato negli appunti!",
+		"session_share_link_copied_with_url": "Sessione condivisa! Link copiato negli appunti: {{url}}",
 		"mode_exported": "Modalità '{{mode}}' esportata con successo",
 		"mode_imported": "Modalità importata con successo"
 	},

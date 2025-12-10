@@ -168,6 +168,7 @@
 		"image_saved": "이미지가 {{path}}에 저장되었습니다",
 		"organization_share_link_copied": "조직 공유 링크가 클립보드에 복사되었습니다!",
 		"public_share_link_copied": "공개 공유 링크가 클립보드에 복사되었습니다!",
+		"session_share_link_copied_with_url": "세션이 공유되었습니다! 링크가 클립보드에 복사되었습니다: {{url}}",
 		"mode_exported": "'{{mode}}' 모드가 성공적으로 내보내졌습니다",
 		"mode_imported": "모드를 성공적으로 가져왔습니다"
 	},

@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "محلي",
 		"mainWorkspace": "مساحة العمل الرئيسية",
-		"readyToMerge": "جاهز للدمج"
+		"readyToMerge": "جاهز للدمج",
+		"shareSession": "مشاركة الجلسة",
+		"shareConfirmMessage": "هل ترغب في مشاركة لقطة من هذه الجلسة علنًا؟",
+		"shareConfirmYes": "نعم",
+		"shareConfirmNo": "لا"
 	},
 	"sessionDetail": {
 		"startNewAgent": "بدء وكيل جديد",
@@ -31,6 +35,7 @@
 		"comingSoon": "قريباً",
 		"runningInWorktree": "يعمل في Worktree",
 		"runningLocally": "يعمل محلياً",
+		"runMode": "وضع التشغيل",
 		"branch": "فرع",
 		"creatingSession": "جاري إنشاء الجلسة...",
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل...",

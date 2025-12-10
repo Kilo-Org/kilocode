@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "ภายในเครื่อง",
 		"mainWorkspace": "พื้นที่ทำงานหลัก",
-		"readyToMerge": "พร้อมรวม"
+		"readyToMerge": "พร้อมรวม",
+		"shareSession": "แชร์เซสชัน",
+		"shareConfirmMessage": "คุณต้องการแชร์สแนปช็อตของเซสชันนี้แบบสาธารณะหรือไม่?",
+		"shareConfirmYes": "ใช่",
+		"shareConfirmNo": "ไม่"
 	},
 	"sessionDetail": {
 		"startNewAgent": "เริ่มเอเจนต์ใหม่",
@@ -31,6 +35,7 @@
 		"comingSoon": "เร็วๆ นี้",
 		"runningInWorktree": "ทำงานใน worktree",
 		"runningLocally": "ทำงานภายในเครื่อง",
+		"runMode": "โหมดการทำงาน",
 		"branch": "สาขา",
 		"creatingSession": "กำลังสร้างเซสชัน...",
 		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์...",

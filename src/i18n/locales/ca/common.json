@@ -172,6 +172,7 @@
 		"image_saved": "Imatge desada a {{path}}",
 		"organization_share_link_copied": "Enllaç de compartició d'organització copiat al porta-retalls!",
 		"public_share_link_copied": "Enllaç de compartició pública copiat al porta-retalls!",
+		"session_share_link_copied_with_url": "Sessió compartida! Enllaç copiat al porta-retalls: {{url}}",
 		"mode_exported": "Mode '{{mode}}' exportat correctament",
 		"mode_imported": "Mode importat correctament"
 	},

@@ -87,7 +87,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 						"text-vscode-editor-font-size",
 						"leading-vscode-editor-line-height",
 						"cursor-text",
-						"!py-3 !pl-3 pr-9", // Increased padding to fix "no distance" issue
+						"!pt-3 !pl-3 pr-9", // Top and left padding
 						isFocused
 							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
 							: "border border-vscode-input-border", // Default border
@@ -100,7 +100,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 						"resize-none",
 						"overflow-x-hidden",
 						"overflow-y-auto",
-						"pb-10", // Bottom padding for floating buttons
+						"!pb-10", // Bottom padding for floating buttons
 						"flex-none flex-grow",
 						"z-[2]",
 						"scrollbar-none",

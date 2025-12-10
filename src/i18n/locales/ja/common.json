@@ -168,6 +168,7 @@
 		"image_saved": "画像を{{path}}に保存しました",
 		"organization_share_link_copied": "組織共有リンクがクリップボードにコピーされました！",
 		"public_share_link_copied": "公開共有リンクがクリップボードにコピーされました！",
+		"session_share_link_copied_with_url": "セッションが共有されました！リンクがクリップボードにコピーされました：{{url}}",
 		"mode_exported": "モード「{{mode}}」が正常にエクスポートされました",
 		"mode_imported": "モードが正常にインポートされました"
 	},

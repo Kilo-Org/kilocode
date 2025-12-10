@@ -168,6 +168,7 @@
 		"image_saved": "Resim {{path}} konumuna kaydedildi",
 		"organization_share_link_copied": "Kuruluş paylaşım bağlantısı panoya kopyalandı!",
 		"public_share_link_copied": "Herkese açık paylaşım bağlantısı panoya kopyalandı!",
+		"session_share_link_copied_with_url": "Oturum paylaşıldı! Bağlantı panoya kopyalandı: {{url}}",
 		"mode_exported": "'{{mode}}' modu başarıyla dışa aktarıldı",
 		"mode_imported": "Mod başarıyla içe aktarıldı"
 	},

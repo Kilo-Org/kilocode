@@ -170,6 +170,7 @@
 		"share_link_copied": "تم نسخ رابط المشاركة",
 		"organization_share_link_copied": "تم نسخ رابط مشاركة المنظمة!",
 		"public_share_link_copied": "تم نسخ رابط المشاركة العام!",
+		"session_share_link_copied_with_url": "تمت مشاركة الجلسة! تم نسخ الرابط إلى الحافظة: {{url}}",
 		"image_copied_to_clipboard": "تم نسخ بيانات الصورة إلى الحافظة",
 		"image_saved": "تم حفظ الصورة في {{path}}",
 		"auto_import_success": "تم استيراد إعدادات Kilo Code تلقائياً من {{filename}}",

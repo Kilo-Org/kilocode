@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "本地",
 		"mainWorkspace": "主工作区",
-		"readyToMerge": "准备合并"
+		"readyToMerge": "准备合并",
+		"shareSession": "分享会话",
+		"shareConfirmMessage": "是否要公开分享此会话的快照？",
+		"shareConfirmYes": "是",
+		"shareConfirmNo": "否"
 	},
 	"sessionDetail": {
 		"startNewAgent": "启动新代理",
@@ -31,6 +35,7 @@
 		"comingSoon": "即将推出",
 		"runningInWorktree": "在 Worktree 中运行",
 		"runningLocally": "本地运行",
+		"runMode": "运行模式",
 		"branch": "分支",
 		"creatingSession": "正在创建会话...",
 		"waitingForCli": "正在初始化代理会话...",

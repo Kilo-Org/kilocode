@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Cục bộ",
 		"mainWorkspace": "Không gian làm việc chính",
-		"readyToMerge": "Sẵn sàng hợp nhất"
+		"readyToMerge": "Sẵn sàng hợp nhất",
+		"shareSession": "Chia sẻ phiên",
+		"shareConfirmMessage": "Bạn có muốn chia sẻ công khai một ảnh chụp của phiên này không?",
+		"shareConfirmYes": "Có",
+		"shareConfirmNo": "Không"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -31,6 +35,7 @@
 		"comingSoon": "Sắp ra mắt",
 		"runningInWorktree": "Đang chạy trong worktree",
 		"runningLocally": "Đang chạy cục bộ",
+		"runMode": "Chế độ chạy",
 		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent...",

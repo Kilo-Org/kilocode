@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Yerel",
 		"mainWorkspace": "Ana çalışma alanı",
-		"readyToMerge": "Birleştirmeye hazır"
+		"readyToMerge": "Birleştirmeye hazır",
+		"shareSession": "Oturumu paylaş",
+		"shareConfirmMessage": "Bu oturumun bir anlık görüntüsünü herkese açık olarak paylaşmak istiyor musunuz?",
+		"shareConfirmYes": "Evet",
+		"shareConfirmNo": "Hayır"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Yeni bir ajan başlat",
@@ -31,6 +35,7 @@
 		"comingSoon": "Yakında",
 		"runningInWorktree": "Worktree'de çalışıyor",
 		"runningLocally": "Yerel olarak çalışıyor",
+		"runMode": "Çalışma modu",
 		"branch": "Dal",
 		"creatingSession": "Oturum oluşturuluyor...",
 		"waitingForCli": "Ajan oturumu başlatılıyor...",

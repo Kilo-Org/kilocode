@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Lokální",
 		"mainWorkspace": "Hlavní pracovní prostor",
-		"readyToMerge": "Připraveno ke sloučení"
+		"readyToMerge": "Připraveno ke sloučení",
+		"shareSession": "Sdílet relaci",
+		"shareConfirmMessage": "Chcete veřejně sdílet snímek této relace?",
+		"shareConfirmYes": "Ano",
+		"shareConfirmNo": "Ne"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Spustit nového agenta",
@@ -31,6 +35,7 @@
 		"comingSoon": "Již brzy",
 		"runningInWorktree": "Běží ve worktree",
 		"runningLocally": "Běží lokálně",
+		"runMode": "Režim spuštění",
 		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
 		"waitingForCli": "Inicializace relace agenta...",
