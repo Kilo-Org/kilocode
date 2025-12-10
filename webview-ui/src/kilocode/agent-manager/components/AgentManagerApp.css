@@ -704,3 +704,65 @@
 	margin-left: auto;
 	font-size: 10px;
 }
+
+/* Follow-up Suggestions */
+.am-followup-suggestions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.am-followup-suggestion-wrapper {
+	position: relative;
+}
+
+.am-followup-suggestion-wrapper:hover .am-followup-copy-btn {
+	opacity: 1;
+}
+
+.am-followup-suggestion-btn {
+	width: 100%;
+	text-align: left;
+	white-space: normal;
+	word-wrap: break-word;
+	padding: 8px 12px;
+	padding-right: 32px;
+	border-radius: 4px;
+	border: 1px solid var(--vscode-button-border, transparent);
+	background: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	font-size: var(--vscode-font-size);
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.am-followup-suggestion-btn:hover:not(:disabled) {
+	background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.am-followup-suggestion-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.am-followup-copy-btn {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	right: 8px;
+	opacity: 0;
+	transition: opacity 0.15s;
+	background: transparent;
+	border: none;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.am-followup-copy-btn:hover {
+	color: var(--vscode-foreground);
+}
