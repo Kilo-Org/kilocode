@@ -410,15 +410,6 @@ vscode-dropdown::part(listbox) {
 	font-family: var(--font-mono);
 }
 
-/* kilocode_change start: FIM autocomplete ghost text */
-.chat-ghost-text {
-	color: var(--vscode-editorGhostText-foreground, rgba(255, 255, 255, 0.4));
-	opacity: 0.6;
-	pointer-events: none;
-	user-select: none;
-}
-/* kilocode_change end: FIM autocomplete ghost text */
-
 /**
  * vscrui Overrides / Hacks
  */

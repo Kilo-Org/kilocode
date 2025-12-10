@@ -72,7 +72,7 @@ export class ChatTextAreaAutocomplete {
 	 * Get system prompt for chat-based completion
 	 */
 	private getChatSystemPrompt(): string {
-		return `You are an intelligent code completion assistant. Your task is to complete the user's message naturally based on the provided context.
+		return `You are an intelligent chat completion assistant. Your task is to complete the user's message naturally based on the provided context.
 
 ## RULES
 - Provide a natural, conversational completion
