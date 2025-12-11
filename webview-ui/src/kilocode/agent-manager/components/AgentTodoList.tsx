@@ -46,7 +46,7 @@ export function AgentTodoList({ stats, isIntegrated = false }: AgentTodoListProp
 		}
 	}, [isExpanded, todos])
 
-	if (totalCount === 0) return null
+	if (totalCount <= 0) return null
 
 	return (
 		<div
