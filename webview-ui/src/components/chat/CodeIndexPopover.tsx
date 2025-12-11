@@ -49,6 +49,10 @@ import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import { EmbeddingBatchSizeSlider } from "./kilocode/EmbeddingBatchSizeSlider"
 import { MaxBatchRetriesSlider } from "./kilocode/MaxBatchRetriesSlider"
 // kilocode_change end
+import {
+	useOpenRouterModelProviders,
+	OPENROUTER_DEFAULT_PROVIDER_NAME,
+} from "@src/components/ui/hooks/useOpenRouterModelProviders"
 
 // Default URLs for providers
 const DEFAULT_QDRANT_URL = "http://localhost:6333"
@@ -95,6 +99,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexMistralApiKey?: string
 	codebaseIndexVercelAiGatewayApiKey?: string
 	codebaseIndexOpenRouterApiKey?: string
+	codebaseIndexOpenRouterSpecificProvider?: string
 }
 
 // Validation schema for codebase index settings
@@ -259,6 +264,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexMistralApiKey: "",
 		codebaseIndexVercelAiGatewayApiKey: "",
 		codebaseIndexOpenRouterApiKey: "",
+		codebaseIndexOpenRouterSpecificProvider: "",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -315,6 +321,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexMistralApiKey: "",
 				codebaseIndexVercelAiGatewayApiKey: "",
 				codebaseIndexOpenRouterApiKey: "",
+				codebaseIndexOpenRouterSpecificProvider:
+					codebaseIndexConfig.codebaseIndexOpenRouterSpecificProvider || "",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -689,6 +697,23 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			codebaseIndexModels[currentSettings.codebaseIndexEmbedderProvider as keyof typeof codebaseIndexModels]
 		return models ? Object.keys(models) : []
 	}
+
+	// Fetch OpenRouter model providers for embedding model
+	const { data: openRouterEmbeddingProviders } = useOpenRouterModelProviders(
+		currentSettings.codebaseIndexEmbedderProvider === "openrouter"
+			? currentSettings.codebaseIndexEmbedderModelId
+			: undefined,
+		// kilocode_change start
+		apiConfiguration?.apiProvider === "openrouter" ? apiConfiguration?.openRouterBaseUrl : undefined,
+		apiConfiguration?.apiKey,
+		apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		// kilocode_change end
+		{
+			enabled:
+				currentSettings.codebaseIndexEmbedderProvider === "openrouter" &&
+				!!currentSettings.codebaseIndexEmbedderModelId,
+		},
+	)
 
 	const portalContainer = useRooPortal("roo-portal")
 
@@ -1503,6 +1528,55 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													</p>
 												)}
 											</div>
+
+											{/* Provider Routing for OpenRouter */}
+											{openRouterEmbeddingProviders &&
+												Object.keys(openRouterEmbeddingProviders).length > 0 && (
+													<div className="space-y-2">
+														<label className="text-sm font-medium">
+															<a
+																href="https://openrouter.ai/docs/features/provider-routing"
+																target="_blank"
+																rel="noopener noreferrer"
+																className="flex items-center gap-1 hover:underline">
+																{t("settings:codeIndex.openRouterProviderRoutingLabel")}
+																<span className="codicon codicon-link-external text-xs" />
+															</a>
+														</label>
+														<Select
+															value={
+																currentSettings.codebaseIndexOpenRouterSpecificProvider ||
+																OPENROUTER_DEFAULT_PROVIDER_NAME
+															}
+															onValueChange={(value) =>
+																updateSetting(
+																	"codebaseIndexOpenRouterSpecificProvider",
+																	value,
+																)
+															}>
+															<SelectTrigger className="w-full">
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value={OPENROUTER_DEFAULT_PROVIDER_NAME}>
+																	{OPENROUTER_DEFAULT_PROVIDER_NAME}
+																</SelectItem>
+																{Object.entries(openRouterEmbeddingProviders).map(
+																	([value, { label }]) => (
+																		<SelectItem key={value} value={value}>
+																			{label}
+																		</SelectItem>
+																	),
+																)}
+															</SelectContent>
+														</Select>
+														<p className="text-xs text-vscode-descriptionForeground mt-1 mb-0">
+															{t(
+																"settings:codeIndex.openRouterProviderRoutingDescription",
+															)}
+														</p>
+													</div>
+												)}
 										</>
 									)}
 

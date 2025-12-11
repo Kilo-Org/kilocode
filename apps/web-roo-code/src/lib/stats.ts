@@ -104,13 +104,19 @@ export async function getVSCodeDownloads() {
 }
 
 function formatNumber(num: number): string {
-	// divide by 1000 to convert to "thousands" format,
-	// multiply by 10, floor the result, then divide by 10 to keep one decimal place.
+	// if number is 1 million or more, format as millions
+	if (num >= 1000000) {
+		const truncated = Math.floor((num / 1000000) * 100) / 100
+		return truncated.toFixed(2) + "M"
+	}
+
+	// otherwise, format as thousands
 	const truncated = Math.floor((num / 1000) * 10) / 10
-	// ensure one decimal is always shown and append "k"
 	return truncated.toFixed(1) + "k"
 
 	// examples:
+	// console.log(formatNumber(1033400)) -> "1.03M"
+	// console.log(formatNumber(2500000)) -> "2.50M"
 	// console.log(formatNumber(337231)) -> "337.2k"
 	// console.log(formatNumber(23233)) -> "23.2k"
 	// console.log(formatNumber(2322)) -> "2.3k"

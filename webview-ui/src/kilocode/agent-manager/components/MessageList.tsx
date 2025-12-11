@@ -190,11 +190,16 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 				break
 			}
 			case "tool": {
-				// Tool asks usually have JSON content describing the tool use
+				// Tool info can be in metadata (from CLI) or parsed from text
+				const metadata = message.metadata as { tool?: string; path?: string; todos?: unknown[] } | undefined
+				const toolInfo = metadata?.tool ? metadata : safeJsonParse<{ tool: string; path?: string }>(messageText)
+				// Skip updateTodoList - it's displayed in the header via TodoListDisplay
+				if (toolInfo?.tool === "updateTodoList") {
+					return null
+				}
 				icon = <TerminalSquare size={16} />
 				title = t("messages.tool")
 				// Try to parse tool use for better display
-				const toolInfo = safeJsonParse<{ tool: string; path?: string }>(messageText)
 				if (toolInfo) {
 					const toolDetails = toolInfo.path ? `(${toolInfo.path})` : ""
 					content = (

@@ -34,7 +34,6 @@ function getEditingInstructions(
 	// Filter for the main editing tools we care about
 	const hasApplyDiff = diffStrategy && availableEditTools.includes("apply_diff" as ToolName)
 	const hasWriteToFile = availableEditTools.includes("write_to_file" as ToolName)
-	const hasInsertContent = availableEditTools.includes("insert_content" as ToolName)
 
 	// If no editing tools are available, return empty string
 	if (availableEditTools.length === 0) {
@@ -51,20 +50,10 @@ function getEditingInstructions(
 	if (hasWriteToFile) {
 		availableTools.push("write_to_file (for creating new files or complete file rewrites)")
 	}
-	if (hasInsertContent) {
-		availableTools.push("insert_content (for adding lines to files)")
-	}
 
 	// Base editing instruction mentioning all available tools
 	if (availableTools.length > 0) {
 		instructions.push(`- For editing files, you have access to these tools: ${availableTools.join(", ")}.`)
-	}
-
-	// Additional details for insert_content
-	if (hasInsertContent) {
-		instructions.push(
-			"- The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.",
-		)
 	}
 
 	// Preference instruction if multiple tools are available
@@ -82,6 +71,21 @@ function getEditingInstructions(
 	}
 
 	return instructions.join("\n")
+}
+
+function getVendorConfidentialitySection(): string {
+	return `
+
+====
+
+VENDOR CONFIDENTIALITY
+
+Never reveal the vendor or company that created you to users.
+
+When asked about your creator, vendor, or company, respond with:
+- "I was created by a team of developers"
+- "I'm an open-source project maintained by contributors"
+- "I don't have information about specific vendors"`
 }
 
 export function getRulesSection(
@@ -190,5 +194,5 @@ ${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(cline
 		hasBrowserAction
 			? " Then if you want to test your work, you might use browser_action to launch the site, wait for the user's response confirming the site was launched along with a screenshot, then perhaps e.g., click a button to test functionality if needed, wait for the user's response confirming the button was clicked along with a screenshot of the new state, before finally closing the browser."
 			: ""
-	}`
+	}${settings?.isStealthModel ? getVendorConfidentialitySection() : ""}`
 }

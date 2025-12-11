@@ -23,6 +23,7 @@ export async function getUnboundModels(apiKey?: string | null): Promise<Record<s
 					contextWindow: model?.contextWindow ? parseInt(model.contextWindow) : 0,
 					supportsImages: model?.supportsImages ?? false,
 					supportsPromptCache: model?.supportsPromptCaching ?? false,
+					supportsNativeTools: true,
 					inputPrice: model?.inputTokenPrice ? parseFloat(model.inputTokenPrice) : undefined,
 					outputPrice: model?.outputTokenPrice ? parseFloat(model.outputTokenPrice) : undefined,
 					cacheWritesPrice: model?.cacheWritePrice ? parseFloat(model.cacheWritePrice) : undefined,

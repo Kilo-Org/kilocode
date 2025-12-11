@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Proveïdors",
+		"modes": "Modes",
+		"mcp": "Servidors MCP",
 		"autoApprove": "Auto-aprovació",
 		"browser": "Accés a l'ordinador",
 		"checkpoints": "Punts de control",
@@ -89,6 +91,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clau de l'API d'OpenRouter",
 		"openRouterApiKeyPlaceholder": "Introduïu la vostra clau de l'API d'OpenRouter",
+		"openRouterProviderRoutingLabel": "Encaminament de proveïdors d'OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter dirigeix les sol·licituds als millors proveïdors disponibles per al vostre model d'embedding. Per defecte, les sol·licituds s'equilibren entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per utilitzar amb aquest model.",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
 		"openAiKeyLabel": "Clau API OpenAI",
 		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
@@ -1014,7 +1018,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "No s'ha trobat cap coincidència",
-		"useCustomModel": "Utilitzar personalitzat: {{modelId}}"
+		"useCustomModel": "Utilitzar personalitzat: {{modelId}}",
+		"simplifiedExplanation": "Pots ajustar la configuració detallada del model més tard."
 	},
 	"footer": {
 		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",

@@ -463,7 +463,12 @@ describe("ChatView - Focus Grabbing Tests", () => {
 			],
 		})
 
-		// Clear any initial calls
+		// Wait for the component to fully render and settle before clearing mocks
+		await waitFor(() => {
+			expect(getByTestId("chat-textarea")).toBeInTheDocument()
+		})
+
+		// Clear any initial calls after state has settled
 		mockFocus.mockClear()
 
 		// Add follow-up question
@@ -484,7 +489,7 @@ describe("ChatView - Focus Grabbing Tests", () => {
 			],
 		})
 
-		// Wait a bit to ensure any focus operations would have occurred
+		// Wait for state update to complete
 		await waitFor(() => {
 			expect(getByTestId("chat-textarea")).toBeInTheDocument()
 		})

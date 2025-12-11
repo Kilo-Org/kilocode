@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "प्रदाता",
+		"modes": "मोड",
+		"mcp": "एमसीपी सर्वर",
 		"autoApprove": "अनुमोदन",
 		"browser": "ब्राउज़र",
 		"checkpoints": "चेकपॉइंट",
@@ -86,6 +88,8 @@
 		"openRouterProvider": "ओपनराउटर",
 		"openRouterApiKeyLabel": "ओपनराउटर एपीआई कुंजी",
 		"openRouterApiKeyPlaceholder": "अपनी ओपनराउटर एपीआई कुंजी दर्ज करें",
+		"openRouterProviderRoutingLabel": "OpenRouter प्रदाता रूटिंग",
+		"openRouterProviderRoutingDescription": "OpenRouter आपके एम्बेडिंग मॉडल के लिए सर्वोत्तम उपलब्ध प्रदाताओं को अनुरोध भेजता है। डिफ़ॉल्ट रूप से, अपटाइम को अधिकतम करने के लिए अनुरोधों को शीर्ष प्रदाताओं के बीच संतुलित किया जाता है। हालांकि, आप इस मॉडल के लिए उपयोग करने के लिए एक विशिष्ट प्रदाता चुन सकते हैं।",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
@@ -1016,7 +1020,8 @@
 		"label": "मॉडल",
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
-		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}"
+		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",

@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "{{timeout}} 秒間チェックポイントの初期化を待機しました。チェックポイント機能が不要な場合は、<settingsLink>チェックポイント設定</settingsLink>でオフにしてください。",
 		"init_checkpoint_fail_long_time": "チェックポイントの初期化が {{timeout}} 秒以上かかったため、このタスクではチェックポイントが無効化されました。チェックポイントをオフにするか、<settingsLink>チェックポイント設定</settingsLink>で待機時間を延長できます。",
 		"attempt_completion_tool_failed": "前回のツール呼び出しがこのターンで失敗したため、attempt_completionを実行できません。完了を試みる前にツールの失敗に対処してください。"
+	},
+	"tasks": {
+		"delegated": "サブタスクに委任",
+		"delegated_to": "タスク{{childId}}に委任",
+		"delegation_completed": "サブタスク完了、親タスクを再開",
+		"awaiting_child": "子タスク{{childId}}を待機中"
 	}
 }

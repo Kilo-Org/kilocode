@@ -623,6 +623,11 @@
 					],
 					"default": "xml",
 					"description": "%settings.toolProtocol.description%"
+				},
+				"kilo-code.debug": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.debug.description%"
 				}
 			}
 		},

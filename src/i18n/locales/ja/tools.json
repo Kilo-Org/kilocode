@@ -6,7 +6,8 @@
 		"imageTooLarge": "画像ファイルが大きすぎます（{{size}} MB）。最大許可サイズは {{max}} MB です。",
 		"imageWithSize": "画像ファイル（{{size}} KB）"
 	},
-	"toolRepetitionLimitReached": "モデルが同じ操作（{{toolName}}）を繰り返し試みるループに陥っているようです。これは現在の戦略に問題がある可能性を示しています。タスクの言い換え、より具体的な指示の提供、または別のアプローチへの誘導を検討してください。",
+	"toolRepetitionLimitReached": "Kiloが同じ操作（{{toolName}}）を繰り返し試みるループに陥っているようです。これは現在の方法に問題がある可能性を示しています。タスクの言い換え、より具体的な指示の提供、または別のアプローチへの誘導を検討してください。",
+	"unknownToolError": "Kiloが不明なツールを使用しようとしました:「{{toolName}}」。再試行中...",
 	"codebaseSearch": {
 		"approval": "コードベースで '{{query}}' を検索中..."
 	},

@@ -1,13 +1,51 @@
 import { execSync } from "node:child_process"
+import * as path from "node:path"
+import * as os from "node:os"
 
 const CLI_PACKAGE_NAME = "@kilocode/cli"
+const LOCAL_CLI_DIR = path.join(os.homedir(), ".kilocode", "cli", "pkg")
 
 /**
- * Get the npm install command for the CLI.
+ * Get the path to the local CLI installation directory.
+ * This is where the CLI will be installed for immutable systems like NixOS.
+ */
+export function getLocalCliDir(): string {
+	return LOCAL_CLI_DIR
+}
+
+/**
+ * Get the path to the local CLI bin directory.
+ * This is the directory that should be added to PATH.
+ */
+export function getLocalCliBinDir(): string {
+	return path.join(LOCAL_CLI_DIR, "node_modules", ".bin")
+}
+
+/**
+ * Get the path to the locally installed CLI executable.
+ * Returns the full path to the kilocode binary in the local installation.
+ */
+export function getLocalCliPath(): string {
+	const binDir = getLocalCliBinDir()
+	// Windows uses .cmd wrapper scripts
+	const executable = process.platform === "win32" ? "kilocode.cmd" : "kilocode"
+	return path.join(binDir, executable)
+}
+
+/**
+ * Get the npm install command for the CLI (global installation).
  * Useful for displaying to users or running in terminal.
  */
 export function getCliInstallCommand(): string {
 	return `npm install -g ${CLI_PACKAGE_NAME}`
+}
+
+/**
+ * Get the npm install command for local CLI installation.
+ * This installs the CLI to ~/.kilocode/cli/pkg for systems that don't support global installation.
+ */
+export function getLocalCliInstallCommand(): string {
+	return `npm install ${CLI_PACKAGE_NAME} --prefix ${LOCAL_CLI_DIR}`
 }
 
 /**

@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
+import * as os from "node:os"
+import * as path from "node:path"
 
 describe("CliInstaller", () => {
 	beforeEach(() => {
@@ -14,6 +16,68 @@ describe("CliInstaller", () => {
 			const { getCliInstallCommand } = await import("../CliInstaller")
 			const command = getCliInstallCommand()
 			expect(command).toBe("npm install -g @kilocode/cli")
+		})
+	})
+
+	describe("getLocalCliDir", () => {
+		it("returns the local CLI installation directory", async () => {
+			const { getLocalCliDir } = await import("../CliInstaller")
+			const dir = getLocalCliDir()
+			const expectedDir = path.join(os.homedir(), ".kilocode", "cli", "pkg")
+			expect(dir).toBe(expectedDir)
+		})
+	})
+
+	describe("getLocalCliBinDir", () => {
+		it("returns the local CLI bin directory", async () => {
+			const { getLocalCliBinDir } = await import("../CliInstaller")
+			const binDir = getLocalCliBinDir()
+			const expectedDir = path.join(os.homedir(), ".kilocode", "cli", "pkg", "node_modules", ".bin")
+			expect(binDir).toBe(expectedDir)
+		})
+	})
+
+	describe("getLocalCliPath", () => {
+		it("returns the local CLI executable path on Unix", async () => {
+			const originalPlatform = process.platform
+			Object.defineProperty(process, "platform", { value: "linux" })
+
+			const { getLocalCliPath } = await import("../CliInstaller")
+			const cliPath = getLocalCliPath()
+			const expectedPath = path.join(os.homedir(), ".kilocode", "cli", "pkg", "node_modules", ".bin", "kilocode")
+			expect(cliPath).toBe(expectedPath)
+
+			Object.defineProperty(process, "platform", { value: originalPlatform })
+		})
+
+		it("returns the local CLI executable path with .cmd extension on Windows", async () => {
+			const originalPlatform = process.platform
+			Object.defineProperty(process, "platform", { value: "win32" })
+
+			vi.resetModules()
+			const { getLocalCliPath } = await import("../CliInstaller")
+			const cliPath = getLocalCliPath()
+			const expectedPath = path.join(
+				os.homedir(),
+				".kilocode",
+				"cli",
+				"pkg",
+				"node_modules",
+				".bin",
+				"kilocode.cmd",
+			)
+			expect(cliPath).toBe(expectedPath)
+
+			Object.defineProperty(process, "platform", { value: originalPlatform })
+		})
+	})
+
+	describe("getLocalCliInstallCommand", () => {
+		it("returns the npm install command for local CLI installation", async () => {
+			const { getLocalCliInstallCommand } = await import("../CliInstaller")
+			const command = getLocalCliInstallCommand()
+			const expectedDir = path.join(os.homedir(), ".kilocode", "cli", "pkg")
+			expect(command).toBe(`npm install @kilocode/cli --prefix ${expectedDir}`)
 		})
 	})
 

@@ -23,6 +23,7 @@
 		"learnMore": "了解更多",
 		"useAnotherProvider": "使用其他提供商",
 		"useAnotherProviderDescription": "输入 API 密钥即可开始。",
+		"noApiKeys": "不想处理密钥？选择 Roo Code Cloud 提供商吧。",
 		"getStarted": "开始使用"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "如果你未被提示打开 URL，<clickHere>请点击此处</clickHere>。",
 		"havingTrouble": "如果你已完成注册但遇到问题，<clickHere>请点击此处</clickHere>。",
 		"pasteUrl": "从浏览器粘贴回调 URL：",
+		"invalidURL": "这看起来不像是有效的回调 URL。请复制 Roo Code Cloud 在你的浏览器中显示的内容。",
 		"goBack": "返回"
 	},
 	"startRouter": "我们推荐使用 LLM 路由器：",

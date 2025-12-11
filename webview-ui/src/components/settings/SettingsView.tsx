@@ -21,13 +21,15 @@ import {
 	AlertTriangle,
 	Globe,
 	Info,
-	Server, // kilocode_change
 	Bot, // kilocode_change
 	MessageSquare,
 	Monitor,
 	LucideIcon,
 	// SquareSlash, // kilocode_change
 	// Glasses, // kilocode_change
+	Plug,
+	Server,
+	Users2,
 } from "lucide-react"
 
 // kilocode_change
@@ -84,6 +86,8 @@ import deepEqual from "fast-deep-equal" // kilocode_change
 import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { UISettings } from "./UISettings"
+import ModesView from "../modes/ModesView"
+// import McpView from "../mcp/McpView" // kilocode_change: own view
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
@@ -107,6 +111,8 @@ const sectionNames = [
 	"notifications",
 	"contextManagement",
 	"terminal",
+	"modes",
+	"mcp",
 	"prompts",
 	"ui",
 	"experimental",
@@ -731,7 +737,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 
 	const sections: { id: SectionName; icon: LucideIcon }[] = useMemo(
 		() => [
-			{ id: "providers", icon: Webhook },
+			{ id: "providers", icon: Plug },
+			{ id: "modes", icon: Users2 },
 			{ id: "autoApprove", icon: CheckCheck },
 			// { id: "slashCommands", icon: SquareSlash }, // kilocode_change: needs work to be re-introduced
 			{ id: "browser", icon: SquareMousePointer },
@@ -872,7 +879,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 									isSelected // Use manual isSelected for styling
 										? `${settingsTabTrigger} ${settingsTabTriggerActive}`
 										: settingsTabTrigger,
-									"focus:ring-0", // Remove the focus ring styling
+									"cursor-pointer focus:ring-0", // Remove the focus ring styling
 								)}
 								data-testid={`tab-${id}`}
 								data-compact={isCompactMode}>
@@ -1146,6 +1153,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
+
+					{/* Modes Section */}
+					{activeTab === "modes" && <ModesView />}
+
+					{/* MCP Section */}
+					{activeTab === "mcp" && <McpView />}
 
 					{/* Prompts Section */}
 					{activeTab === "prompts" && (

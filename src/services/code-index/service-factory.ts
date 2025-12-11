@@ -94,7 +94,12 @@ export class CodeIndexServiceFactory {
 			if (!config.openRouterOptions?.apiKey) {
 				throw new Error(t("embeddings:serviceFactory.openRouterConfigMissing"))
 			}
-			return new OpenRouterEmbedder(config.openRouterOptions.apiKey, config.modelId)
+			return new OpenRouterEmbedder(
+				config.openRouterOptions.apiKey,
+				config.modelId,
+				undefined, // maxItemTokens
+				config.openRouterOptions.specificProvider,
+			)
 		}
 
 		throw new Error(
