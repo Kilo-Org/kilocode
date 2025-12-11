@@ -1040,7 +1040,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			}
 			// kilocode_change start - autocomplete ghost text display
-			if (ghostText) {
+			if (inputValue && ghostText) {
 				processedText += `<span class="text-vscode-editor-foreground opacity-60 pointer-events-none">${escapeHtml(ghostText)}</span>`
 			}
 			// kilocode_change end - autocomplete ghost text display
@@ -1048,7 +1048,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes, ghostText])
+		}, [customModes, ghostText, inputValue]) // kilocode_change - add inputValue
 
 		useLayoutEffect(() => {
 			updateHighlights()
