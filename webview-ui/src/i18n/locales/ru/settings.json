@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Провайдеры",
+		"modes": "Режимы",
+		"mcp": "Серверы MCP",
 		"autoApprove": "Автоодобрение",
 		"browser": "Доступ к компьютеру",
 		"checkpoints": "Контрольные точки",
@@ -86,6 +88,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Ключ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Введите свой ключ API OpenRouter",
+		"openRouterProviderRoutingLabel": "Маршрутизация провайдера OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter направляет запросы к лучшим доступным провайдерам для вашей модели эмбеддинга. По умолчанию запросы балансируются между топовыми провайдерами для максимальной доступности. Однако вы можете выбрать конкретного провайдера для этой модели.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
@@ -1015,7 +1019,8 @@
 		"label": "Модель",
 		"searchPlaceholder": "Поиск",
 		"noMatchFound": "Совпадений не найдено",
-		"useCustomModel": "Использовать пользовательскую: {{modelId}}"
+		"useCustomModel": "Использовать пользовательскую: {{modelId}}",
+		"simplifiedExplanation": "Ты сможешь настроить подробные параметры модели позже."
 	},
 	"footer": {
 		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",

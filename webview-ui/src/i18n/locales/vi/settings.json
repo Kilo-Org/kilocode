@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Nhà cung cấp",
+		"modes": "Chế độ",
+		"mcp": "Máy chủ MCP",
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
@@ -89,6 +91,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Khóa API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
+		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -1015,7 +1019,8 @@
 		"label": "Mô hình",
 		"searchPlaceholder": "Tìm kiếm",
 		"noMatchFound": "Không tìm thấy kết quả",
-		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}"
+		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}",
+		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau."
 	},
 	"footer": {
 		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",

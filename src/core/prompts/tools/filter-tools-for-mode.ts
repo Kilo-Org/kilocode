@@ -1,10 +1,5 @@
 import type OpenAI from "openai"
-import type {
-	ModeConfig,
-	ToolName,
-	ToolGroup,
-	ModelInfo, // kilocode_change
-} from "@roo-code/types"
+import type { ModeConfig, ToolName, ToolGroup, ModelInfo } from "@roo-code/types"
 import { getModeBySlug, getToolsForMode, isToolAllowedForMode } from "../../../shared/modes"
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS } from "../../../shared/tools"
 import { defaultModeSlug } from "../../../shared/modes"
@@ -18,7 +13,72 @@ import { ManagedIndexer } from "../../../services/code-index/managed/ManagedInde
 // kilocode_change end
 
 /**
- * Filters native tools based on mode restrictions.
+ * Apply model-specific tool customization to a set of allowed tools.
+ *
+ * This function filters tools based on model configuration:
+ * 1. Removes tools specified in modelInfo.excludedTools
+ * 2. Adds tools from modelInfo.includedTools (only if they belong to allowed groups)
+ *
+ * @param allowedTools - Set of tools already allowed by mode configuration
+ * @param modeConfig - Current mode configuration to check tool groups
+ * @param modelInfo - Model configuration with tool customization
+ * @returns Modified set of tools after applying model customization
+ */
+export function applyModelToolCustomization(
+	allowedTools: Set<string>,
+	modeConfig: ModeConfig,
+	modelInfo?: ModelInfo,
+): Set<string> {
+	if (!modelInfo) {
+		return allowedTools
+	}
+
+	const result = new Set(allowedTools)
+
+	// Apply excluded tools (remove from allowed set)
+	if (modelInfo.excludedTools && modelInfo.excludedTools.length > 0) {
+		modelInfo.excludedTools.forEach((tool) => {
+			result.delete(tool)
+		})
+	}
+
+	// Apply included tools (add to allowed set, but only if they belong to an allowed group)
+	if (modelInfo.includedTools && modelInfo.includedTools.length > 0) {
+		// Build a map of tool -> group for all tools in TOOL_GROUPS (including customTools)
+		const toolToGroup = new Map<string, ToolGroup>()
+		for (const [groupName, groupConfig] of Object.entries(TOOL_GROUPS)) {
+			// Add regular tools
+			groupConfig.tools.forEach((tool) => {
+				toolToGroup.set(tool, groupName as ToolGroup)
+			})
+			// Add customTools (opt-in only tools)
+			if (groupConfig.customTools) {
+				groupConfig.customTools.forEach((tool) => {
+					toolToGroup.set(tool, groupName as ToolGroup)
+				})
+			}
+		}
+
+		// Get the list of allowed groups for this mode
+		const allowedGroups = new Set(
+			modeConfig.groups.map((groupEntry) => (Array.isArray(groupEntry) ? groupEntry[0] : groupEntry)),
+		)
+
+		// Add included tools only if they belong to an allowed group
+		// This includes both regular tools and customTools
+		modelInfo.includedTools.forEach((tool) => {
+			const toolGroup = toolToGroup.get(tool)
+			if (toolGroup && allowedGroups.has(toolGroup)) {
+				result.add(tool)
+			}
+		})
+	}
+
+	return result
+}
+
+/**
+ * Filters native tools based on mode restrictions and model customization.
  * This ensures native tools are filtered the same way XML tools are filtered in the system prompt.
  *
  * @param nativeTools - Array of all available native tools
@@ -26,7 +86,7 @@ import { ManagedIndexer } from "../../../services/code-index/managed/ManagedInde
  * @param customModes - Custom mode configurations
  * @param experiments - Experiment flags
  * @param codeIndexManager - Code index manager for codebase_search feature check
- * @param settings - Additional settings for tool filtering
+ * @param settings - Additional settings for tool filtering (includes modelInfo for model-specific customization)
  * @param mcpHub - MCP hub for checking available resources
  * @returns Filtered array of tools allowed for the mode
  */
@@ -39,7 +99,6 @@ export function filterNativeToolsForMode(
 	settings?: Record<string, any>,
 	// kilocode_change start
 	state?: ClineProviderState,
-	modelInfo?: ModelInfo,
 	// kilocode_change end
 	mcpHub?: McpHub,
 ): OpenAI.Chat.ChatCompletionTool[] {
@@ -58,7 +117,7 @@ export function filterNativeToolsForMode(
 	const allToolsForMode = getToolsForMode(modeConfig.groups)
 
 	// Filter to only tools that pass permission checks
-	const allowedToolNames = new Set(
+	let allowedToolNames = new Set(
 		allToolsForMode.filter((tool) =>
 			isToolAllowedForMode(
 				tool as ToolName,
@@ -70,6 +129,10 @@ export function filterNativeToolsForMode(
 			),
 		),
 	)
+
+	// Apply model-specific tool customization
+	const modelInfo = settings?.modelInfo as ModelInfo | undefined
+	allowedToolNames = applyModelToolCustomization(allowedToolNames, modeConfig, modelInfo)
 
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 
@@ -111,7 +174,7 @@ export function filterNativeToolsForMode(
 	// kilocode_change start
 	if (state && isFastApplyAvailable(state)) {
 		// When Fast Apply is enabled, disable traditional editing tools
-		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content"]
+		const traditionalEditingTools = ["apply_diff", "write_to_file"]
 		traditionalEditingTools.forEach((tool) => allowedToolNames.delete(tool))
 	} else {
 		allowedToolNames.delete("edit_file")

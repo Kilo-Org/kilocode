@@ -53,7 +53,18 @@ export const getRooReasoning = ({
 	settings,
 }: GetModelReasoningOptions): RooReasoningParams | undefined => {
 	// Check if model supports reasoning effort
-	if (!model.supportsReasoningEffort) return undefined
+	if (!model.supportsReasoningEffort) {
+		return undefined
+	}
+
+	if (model.requiredReasoningEffort) {
+		// Honor the provided effort if it's valid, otherwise let the model choose.
+		if (reasoningEffort && reasoningEffort !== "disable" && reasoningEffort !== "minimal") {
+			return { enabled: true, effort: reasoningEffort }
+		} else {
+			return { enabled: true }
+		}
+	}
 
 	// Explicit off switch from settings: always send disabled for back-compat and to
 	// prevent automatic reasoning when the toggle is turned off.

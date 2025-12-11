@@ -111,7 +111,7 @@ export const FollowUpSuggest = ({
 					<div key={`${suggestion.answer}-${ts}`} className="w-full relative group">
 						<Button
 							variant="outline"
-							className="text-left whitespace-normal break-words w-full h-auto px-3 py-2 justify-start pr-8"
+							className="text-left whitespace-normal break-words w-full h-auto px-3 py-2 justify-start pr-8 rounded-xl"
 							onClick={(event) => handleSuggestionClick(suggestion, event)}
 							aria-label={suggestion.answer}>
 							{suggestion.answer}

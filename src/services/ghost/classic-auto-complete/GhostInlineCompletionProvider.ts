@@ -21,6 +21,7 @@ import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
+import { shouldSkipAutocomplete } from "./contextualSkip"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
@@ -385,11 +386,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
+			// Check cache first - allow mid-word lookups from cache
 			const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
 				return stringToInlineCompletions(matchingResult.text, position)
+			}
+
+			// Only skip new LLM requests during mid-word typing or at end of statement
+			// Cache lookups above are still allowed
+			if (shouldSkipAutocomplete(prefix, suffix, document.languageId)) {
+				return []
 			}
 
 			const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)

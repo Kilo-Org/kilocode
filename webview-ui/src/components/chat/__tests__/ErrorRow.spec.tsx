@@ -64,7 +64,14 @@ describe("ErrorRow", () => {
 
 		it("shows login button when showLoginButton is true and onLoginClick is provided", () => {
 			const onLoginClick = vi.fn()
-			render(<ErrorRow type="error" message="Test error message" showLoginButton={true} onLoginClick={onLoginClick} />)
+			render(
+				<ErrorRow
+					type="error"
+					message="Test error message"
+					showLoginButton={true}
+					onLoginClick={onLoginClick}
+				/>,
+			)
 			expect(screen.getByText("Login")).toBeInTheDocument()
 		})
 
@@ -75,7 +82,14 @@ describe("ErrorRow", () => {
 
 		it("calls onLoginClick when login button is clicked", () => {
 			const onLoginClick = vi.fn()
-			render(<ErrorRow type="error" message="Test error message" showLoginButton={true} onLoginClick={onLoginClick} />)
+			render(
+				<ErrorRow
+					type="error"
+					message="Test error message"
+					showLoginButton={true}
+					onLoginClick={onLoginClick}
+				/>,
+			)
 
 			const loginButton = screen.getByText("Login")
 			fireEvent.click(loginButton)

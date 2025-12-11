@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Você esperou {{timeout}} segundos para inicializar o checkpoint. Se não precisa dessa função, desative nas <settingsLink>configurações do checkpoint</settingsLink>.",
 		"init_checkpoint_fail_long_time": "A inicialização do checkpoint levou mais de {{timeout}} segundos, então os checkpoints foram desativados para esta tarefa. Você pode desativar os checkpoints ou aumentar o tempo de espera nas <settingsLink>configurações do checkpoint</settingsLink>.",
 		"attempt_completion_tool_failed": "Não é possível executar attempt_completion porque uma chamada de ferramenta anterior falhou neste turno. Por favor, resolva a falha da ferramenta antes de tentar concluir."
+	},
+	"tasks": {
+		"delegated": "Delegado para subtarefa",
+		"delegated_to": "Delegado para tarefa {{childId}}",
+		"delegation_completed": "Subtarefa concluída, retomando tarefa pai",
+		"awaiting_child": "Aguardando tarefa filha {{childId}}"
 	}
 }

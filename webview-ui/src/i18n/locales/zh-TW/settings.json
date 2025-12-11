@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "供應商",
+		"modes": "模式",
+		"mcp": "MCP 伺服器",
 		"autoApprove": "自動核准",
 		"browser": "電腦存取",
 		"checkpoints": "檢查點",
@@ -87,6 +89,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 		"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
+		"openRouterProviderRoutingLabel": "OpenRouter 供應商路由",
+		"openRouterProviderRoutingDescription": "OpenRouter 會將請求路由到適合您嵌入模型的最佳可用供應商。預設情況下，請求會在頂尖供應商之間進行負載平衡以最大化正常運作時間。您也可以為此模型選擇特定的供應商。",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 金鑰：",
 		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
@@ -1016,7 +1020,8 @@
 		"label": "模型",
 		"searchPlaceholder": "搜尋",
 		"noMatchFound": "找不到符合的項目",
-		"useCustomModel": "使用自訂模型：{{modelId}}"
+		"useCustomModel": "使用自訂模型：{{modelId}}",
+		"simplifiedExplanation": "你可以稍後調整詳細的模型設定。"
 	},
 	"footer": {
 		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink> 討論。",

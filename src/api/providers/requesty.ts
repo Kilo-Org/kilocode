@@ -1,9 +1,10 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import { type ModelInfo, requestyDefaultModelId, requestyDefaultModelInfo } from "@roo-code/types"
+import { type ModelInfo, requestyDefaultModelId, requestyDefaultModelInfo, TOOL_PROTOCOL } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { calculateApiCostOpenAI } from "../../shared/cost"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
@@ -133,6 +134,10 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 			? (reasoning_effort as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming["reasoning_effort"])
 			: undefined
 
+		// Check if native tool protocol is enabled
+		const toolProtocol = resolveToolProtocol(this.options, info)
+		const useNativeTools = toolProtocol === TOOL_PROTOCOL.NATIVE
+
 		const completionParams: RequestyChatCompletionParamsStreaming = {
 			messages: openAiMessages,
 			model,
@@ -143,6 +148,8 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 			stream: true,
 			stream_options: { include_usage: true },
 			requesty: { trace_id: metadata?.taskId, extra: { mode: metadata?.mode } },
+			...(useNativeTools && metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+			...(useNativeTools && metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 		}
 
 		let stream
@@ -163,6 +170,19 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 
 			if (delta && "reasoning_content" in delta && delta.reasoning_content) {
 				yield { type: "reasoning", text: (delta.reasoning_content as string | undefined) || "" }
+			}
+
+			// Handle native tool calls
+			if (delta && "tool_calls" in delta && Array.isArray(delta.tool_calls)) {
+				for (const toolCall of delta.tool_calls) {
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
 			}
 
 			if (chunk.usage) {

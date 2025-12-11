@@ -209,12 +209,12 @@ export interface ExtensionMessage {
 	}
 	action?:
 		| "chatButtonClicked"
-		| "mcpButtonClicked"
 		| "settingsButtonClicked"
 		| "historyButtonClicked"
-		| "promptsButtonClicked"
+		| "promptsButtonClicked" // kilocode_change
 		| "profileButtonClicked" // kilocode_change
 		| "marketplaceButtonClicked"
+		| "mcpButtonClicked" // kilocode_change
 		| "cloudButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
@@ -527,6 +527,7 @@ export type ExtensionState = Pick<
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	debug?: boolean
 }
 
 export interface ClineSayTool {
@@ -544,7 +545,6 @@ export interface ClineSayTool {
 		| "switchMode"
 		| "newTask"
 		| "finishTask"
-		| "insertContent"
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"

@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
 		"shareSuccessPublic": "Openbare link gekopieerd naar klembord",
 		"openInCloud": "Taak openen in Roo Code Cloud",
-		"openInCloudIntro": "Blijf Roo vanaf elke locatie monitoren of ermee interacteren. Scan, klik of kopieer om te openen."
+		"openInCloudIntro": "Blijf Roo vanaf elke locatie monitoren of ermee interacteren. Scan, klik of kopieer om te openen.",
+		"openApiHistory": "API-geschiedenis openen",
+		"openUiHistory": "UI-geschiedenis openen"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -137,7 +139,18 @@
 		"failed": "API-verzoek mislukt",
 		"streaming": "API-verzoek...",
 		"cancelled": "API-verzoek geannuleerd",
-		"streamingFailed": "API-streaming mislukt"
+		"streamingFailed": "API-streaming mislukt",
+		"errorTitle": "API-fout {{code}}",
+		"errorMessage": {
+			"docs": "Documentatie",
+			"400": "De provider kon het verzoek niet verwerken zoals ingediend. Stop de taak en probeer een ander benadering.",
+			"401": "Kon niet authenticeren met provider. Controleer je API-sleutelconfiguratie.",
+			"402": "Het lijkt erop dat je funds/credits op je account op zijn. Ga naar je provider en voeg meer toe om door te gaan.",
+			"403": "Niet geautoriseerd. Je API-sleutel is geldig, maar de provider weigerde dit verzoek in te willigen.",
+			"429": "Te veel verzoeken. Je bent rate-gelimiteerd door de provider. Wacht alsjeblieft even voor je volgende API-aanroep.",
+			"500": "Provider-serverfout. Er is iets mis aan de kant van de provider, er is niets mis met je verzoek.",
+			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Roo Code-ondersteuning."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -287,8 +300,8 @@
 		},
 		"release": {
 			"heading": "Nieuw:",
-			"browserUse": "Browser Use 2.0 verbetert de browse-ervaring in chat met persistente sessies, duidelijkere feedback, een toegewijd browserpaneel en natuurlijkere actiebeschrijvingen",
-			"cloudPaid": "De Roo Code Cloud provider biedt nu betaalde modellen: koop credits en gebruik ze voor zowel cloud agents als inference"
+			"contextRewind": "Verbeterde context-samenvatting stelt je nu in staat om de volledige vorige context te herstellen bij het terugspoelen naar een checkpoint",
+			"rooProvider": "De Roo Code Cloud-provider behoudt nu reasoninginhoud en gebruikt standaard native tools voor betere prestaties"
 		},
 		"cloudAgents": {
 			"heading": "Nieuw in de Cloud:",
@@ -297,7 +310,7 @@
 			"tryButton": "Probeer Cloud-agents"
 		},
 		"careers": "Ook, <careersLink>we nemen aan!</careersLink>",
-		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Denkt na",

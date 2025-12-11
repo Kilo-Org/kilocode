@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "{{timeout}} saniye boyunca kontrol noktası başlatılması beklendi. Bu özelliğe ihtiyacın yoksa <settingsLink>kontrol noktası ayarlarından</settingsLink> kapatabilirsin.",
 		"init_checkpoint_fail_long_time": "Kontrol noktası başlatılması {{timeout}} saniyeden fazla sürdü, bu yüzden bu görev için kontrol noktaları devre dışı bırakıldı. Kontrol noktalarını kapatabilir veya <settingsLink>kontrol noktası ayarlarından</settingsLink> bekleme süresini artırabilirsin.",
 		"attempt_completion_tool_failed": "attempt_completion çalıştırılamıyor çünkü bu turda önceki bir araç çağrısı başarısız oldu. Lütfen tamamlamayı denemeden önce araç hatasını giderin."
+	},
+	"tasks": {
+		"delegated": "Alt göreve devredildi",
+		"delegated_to": "{{childId}} görevine devredildi",
+		"delegation_completed": "Alt görev tamamlandı, üst görev devam ediyor",
+		"awaiting_child": "{{childId}} alt görevi bekleniyor"
 	}
 }

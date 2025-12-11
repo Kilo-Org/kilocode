@@ -10,7 +10,7 @@ import {
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
 import { findKilocodeCli } from "./CliPathResolver"
-import { canInstallCli, getCliInstallCommand } from "./CliInstaller"
+import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { RemoteSessionService } from "./RemoteSessionService"
@@ -789,7 +789,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Open a terminal and run the CLI install command.
+	 * Open a terminal and run the CLI install command (global installation).
 	 * Uses the terminal to ensure the user's shell environment (nvm, fnm, volta, etc.) is respected.
 	 */
 	private runInstallInTerminal(): void {
@@ -815,24 +815,129 @@ export class AgentManagerProvider implements vscode.Disposable {
 			})
 	}
 
+	/**
+	 * Open a terminal and run the local CLI install command.
+	 * This installs the CLI to ~/.kilocode/cli/pkg for systems that don't support global installation (e.g., NixOS).
+	 * Also adds the local bin directory to the user's PATH in their shell configuration and sources it immediately.
+	 */
+	private runLocalInstallInTerminal(): void {
+		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
+		const shellName = shellPath ? path.basename(shellPath) : undefined
+		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
+
+		const terminal = vscode.window.createTerminal({
+			name: "Install Kilocode CLI (Local)",
+			message: "Installing Kilocode CLI locally to ~/.kilocode/cli/pkg",
+			shellPath,
+			shellArgs,
+		})
+		terminal.show()
+
+		const binDir = getLocalCliBinDir()
+
+		// Build command as array and join with && for sequential execution
+		if (process.platform === "win32") {
+			// Windows: Chain commands with && to ensure they run sequentially
+			const psCommand = `$binDir = "${binDir.replace(/\\/g, "\\\\")}"; $currentPath = [Environment]::GetEnvironmentVariable("Path", "User"); if ($currentPath -notlike "*$binDir*") { [Environment]::SetEnvironmentVariable("Path", "$binDir;$currentPath", "User"); Write-Host "Added $binDir to user PATH"; $env:Path = "$binDir;$env:Path"; Write-Host "PATH updated in current session" } else { Write-Host "$binDir already in PATH" }`
+
+			const commands = [
+				getLocalCliInstallCommand(),
+				`powershell -Command "${psCommand}"`,
+				"echo.",
+				"echo ✓ CLI installed locally and PATH updated!",
+				"echo.",
+				"echo Next step: Run 'kilocode auth' to authenticate",
+			]
+			terminal.sendText(commands.join(" && "))
+		} else {
+			// Unix: Chain commands with && to ensure they run sequentially
+			const exportLine = `export PATH="${binDir}:$PATH"`
+
+			// Determine the shell config file based on the shell
+			let configFile = "~/.bashrc"
+			let pathCommand = `grep -qxF '${exportLine}' ${configFile} || echo '${exportLine}' >> ${configFile}`
+			let sourceCommand = `source ${configFile}`
+
+			if (shellName === "zsh") {
+				configFile = "~/.zshrc"
+				pathCommand = `grep -qxF '${exportLine}' ${configFile} || echo '${exportLine}' >> ${configFile}`
+				sourceCommand = `source ${configFile}`
+			} else if (shellName === "fish") {
+				// Fish uses a different syntax for PATH
+				configFile = "~/.config/fish/config.fish"
+				const fishPathLine = `fish_add_path ${binDir}`
+				pathCommand = `grep -qxF '${fishPathLine}' ${configFile} || echo '${fishPathLine}' >> ${configFile}`
+				sourceCommand = `source ${configFile}`
+			}
+
+			const commands = [
+				"clear",
+				getLocalCliInstallCommand(),
+				'echo ""',
+				'echo "✓ CLI installed locally"',
+				'echo ""',
+				pathCommand,
+				sourceCommand,
+				`echo "Added ${binDir} to PATH and reloaded config"`,
+				'echo ""',
+				"echo \"Next step: Run 'kilocode auth' to authenticate\"",
+				"echo \"Alternatively, run '~/.kilocode/cli/pkg/node_modules/.bin/kilocode auth' to authenticate if not in PATH\"",
+			]
+			terminal.sendText(commands.join(" ; "))
+		}
+	}
+
+	/**
+	 * Open a terminal and run the local CLI update command.
+	 * This updates the CLI in ~/.kilocode/cli/pkg for systems using local installation.
+	 */
+	private runLocalUpdateInTerminal(): void {
+		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
+		const shellName = shellPath ? path.basename(shellPath) : undefined
+		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
+
+		const terminal = vscode.window.createTerminal({
+			name: "Update Kilocode CLI (Local)",
+			message: "Updating Kilocode CLI in ~/.kilocode/cli/pkg",
+			shellPath,
+			shellArgs,
+		})
+		terminal.show()
+
+		// Update the CLI (npm install will update if already installed)
+		const commands = [
+			"clear",
+			getLocalCliInstallCommand(),
+			'echo ""',
+			'echo "✓ CLI updated successfully!"',
+			'echo ""',
+			'echo "The updated CLI is ready to use"',
+		]
+		terminal.sendText(commands.join(" && "))
+	}
+
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
 		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 
 		switch (error?.type) {
 			case "cli_outdated":
 				if (hasNpm) {
-					// Offer to update via terminal
-					const updateInTerminal = t("kilocode:agentManager.actions.runInTerminal")
+					// Offer to update via terminal (global or local)
+					const updateGlobal = t("kilocode:agentManager.actions.updateGlobal")
+					const updateLocal = t("kilocode:agentManager.actions.updateLocal")
 					const manualUpdate = t("kilocode:agentManager.actions.updateInstructions")
 					vscode.window
 						.showWarningMessage(
 							t("kilocode:agentManager.errors.cliOutdated"),
-							updateInTerminal,
+							updateGlobal,
+							updateLocal,
 							manualUpdate,
 						)
 						.then((selection) => {
-							if (selection === updateInTerminal) {
+							if (selection === updateGlobal) {
 								this.runInstallInTerminal()
+							} else if (selection === updateLocal) {
+								this.runLocalUpdateInTerminal()
 							} else if (selection === manualUpdate) {
 								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
 							}
@@ -851,18 +956,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 				break
 			case "spawn_error": {
 				if (hasNpm) {
-					// Offer to install via terminal
-					const installInTerminal = t("kilocode:agentManager.actions.runInTerminal")
+					// Offer to install via terminal (global or local)
+					const installGlobal = t("kilocode:agentManager.actions.installGlobal")
+					const installLocal = t("kilocode:agentManager.actions.installLocal")
 					const manualInstall = t("kilocode:agentManager.actions.installInstructions")
 					vscode.window
 						.showErrorMessage(
 							t("kilocode:agentManager.errors.cliNotFound"),
-							installInTerminal,
+							installGlobal,
+							installLocal,
 							manualInstall,
 						)
 						.then((selection) => {
-							if (selection === installInTerminal) {
+							if (selection === installGlobal) {
 								this.runInstallInTerminal()
+							} else if (selection === installLocal) {
+								this.runLocalInstallInTerminal()
 							} else if (selection === manualInstall) {
 								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
 							}

@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Provider",
+		"modes": "Mode",
+		"mcp": "Server MCP",
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoint",
@@ -86,6 +88,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Kunci API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Masukkan kunci API OpenRouter Anda",
+		"openRouterProviderRoutingLabel": "Perutean Provider OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter mengarahkan permintaan ke provider terbaik yang tersedia untuk model embedding Anda. Secara default, permintaan diseimbangkan beban di seluruh provider teratas untuk memaksimalkan uptime. Namun, Anda dapat memilih provider spesifik untuk digunakan untuk model ini.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Kunci API:",
 		"mistralApiKeyPlaceholder": "Masukkan kunci API Mistral Anda",
@@ -1036,7 +1040,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Cari",
 		"noMatchFound": "Tidak ada yang cocok ditemukan",
-		"useCustomModel": "Gunakan kustom: {{modelId}}"
+		"useCustomModel": "Gunakan kustom: {{modelId}}",
+		"simplifiedExplanation": "Anda dapat menyesuaikan pengaturan model terperinci nanti."
 	},
 	"footer": {
 		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilo.ai/discord</discordLink>",

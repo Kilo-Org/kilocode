@@ -25,8 +25,9 @@ import {
 	// StandardTooltip, // kilocode_change: not used
 } from "@src/components/ui"
 import { buildDocLink } from "@src/utils/docLinks"
+import { Section } from "@src/components/settings/Section"
 
-import { Tab, TabContent, TabHeader } from "../common/Tab"
+import { Tab, TabHeader } from "../common/Tab" // kilocode_change
 
 import McpToolRow from "./McpToolRow"
 import McpResourceRow from "./McpResourceRow"
@@ -58,7 +59,7 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 				<Button onClick={onDone}>{t("mcp:done")}</Button>
 			</TabHeader>
 
-			<TabContent>
+			<Section>
 				<div
 					style={{
 						color: "var(--vscode-foreground)",
@@ -202,7 +203,7 @@ const McpView = ({ onDone, hideHeader = false }: McpViewProps) => {
 						</div>
 					</>
 				)}
-			</TabContent>
+			</Section>
 		</Tab>
 	)
 }

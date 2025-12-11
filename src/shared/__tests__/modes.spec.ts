@@ -246,33 +246,6 @@ describe("isToolAllowedForMode", () => {
 			expect(isToolAllowedForMode("use_mcp_tool", "architect", [])).toBe(true)
 		})
 
-		it("applies restrictions to insert_content edit tool", () => {
-			// Test insert_content with matching file
-			expect(
-				isToolAllowedForMode("insert_content", "architect", [], undefined, {
-					path: "test.md",
-					line: "1",
-					content: "# New content",
-				}),
-			).toBe(true)
-
-			// Test insert_content with non-matching file - should throw error
-			expect(() =>
-				isToolAllowedForMode("insert_content", "architect", [], undefined, {
-					path: "test.py",
-					line: "1",
-					content: "print('hello')",
-				}),
-			).toThrow(FileRestrictionError)
-			expect(() =>
-				isToolAllowedForMode("insert_content", "architect", [], undefined, {
-					path: "test.py",
-					line: "1",
-					content: "print('hello')",
-				}),
-			).toThrow(/Markdown files only/)
-		})
-
 		it("applies restrictions to apply_diff with concurrent file edits (MULTI_FILE_APPLY_DIFF experiment)", () => {
 			// Test apply_diff with args parameter (used when MULTI_FILE_APPLY_DIFF experiment is enabled)
 			// This simulates concurrent/batch file editing
@@ -338,6 +311,69 @@ describe("isToolAllowedForMode", () => {
 		}
 
 		expect(isToolAllowedForMode("write_to_file", "markdown-editor", customModes, toolRequirements)).toBe(false)
+	})
+
+	describe("customTools (opt-in tools)", () => {
+		const customModesWithEditGroup: ModeConfig[] = [
+			{
+				slug: "test-custom-tools",
+				name: "Test Custom Tools Mode",
+				roleDefinition: "You are a test mode",
+				groups: ["read", "edit", "browser"],
+			},
+		]
+
+		it("disallows customTools by default (not in includedTools)", () => {
+			// search_and_replace is a customTool in the edit group, should be disallowed by default
+			expect(isToolAllowedForMode("search_and_replace", "test-custom-tools", customModesWithEditGroup)).toBe(
+				false,
+			)
+		})
+
+		it("allows customTools when included in includedTools", () => {
+			// search_and_replace should be allowed when explicitly included
+			expect(
+				isToolAllowedForMode(
+					"search_and_replace",
+					"test-custom-tools",
+					customModesWithEditGroup,
+					undefined,
+					undefined,
+					undefined,
+					["search_and_replace"],
+				),
+			).toBe(true)
+		})
+
+		it("disallows customTools even in includedTools if mode doesn't have the group", () => {
+			const customModesWithoutEdit: ModeConfig[] = [
+				{
+					slug: "no-edit-mode",
+					name: "No Edit Mode",
+					roleDefinition: "You have no edit powers",
+					groups: ["read", "browser"], // No edit group
+				},
+			]
+
+			// Even if included, should be disallowed because the mode doesn't have edit group
+			expect(
+				isToolAllowedForMode(
+					"search_and_replace",
+					"no-edit-mode",
+					customModesWithoutEdit,
+					undefined,
+					undefined,
+					undefined,
+					["search_and_replace"],
+				),
+			).toBe(false)
+		})
+
+		it("allows regular tools in the same group as customTools", () => {
+			// apply_diff (regular tool) should be allowed even without includedTools
+			expect(isToolAllowedForMode("apply_diff", "test-custom-tools", customModesWithEditGroup)).toBe(true)
+			expect(isToolAllowedForMode("write_to_file", "test-custom-tools", customModesWithEditGroup)).toBe(true)
+		})
 	})
 })
 

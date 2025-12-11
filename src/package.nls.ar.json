@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "مطالبة بمعامل todos عند إنشاء مهام جديدة باستخدام أداة new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "حجم الدفعة لعمليات التضمين أثناء فهرسة الكود. اضبط هذا حسب حدود مقدم API الخاص بك. القيمة الافتراضية هي 60.",
 	"settings.toolProtocol.description": "بروتوكول الأدوات المستخدم للتفاعل مع الذكاء الاصطناعي. XML هو البروتوكول الافتراضي والموصى به. Native تجريبي وقد لا يعمل مع جميع مقدمي الخدمة.",
+	"settings.debug.description": "تفعيل وضع التصحيح لإظهار أزرار إضافية لعرض سجل محادثات API ورسائل واجهة المستخدم كـ JSON منسق في ملفات مؤقتة.",
 	"ghost.input.title": "اضغط 'Enter' للتأكيد أو 'Escape' للإلغاء",
 	"ghost.input.placeholder": "صف ما تريد فعله...",
 	"ghost.commands.generateSuggestions": "Kilo Code: إنشاء التعديلات المقترحة",

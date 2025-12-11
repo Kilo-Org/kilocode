@@ -23,6 +23,7 @@
 		"learnMore": "자세히 알아보기",
 		"useAnotherProvider": "다른 제공업체 사용",
 		"useAnotherProviderDescription": "API 키를 입력하고 시작하세요.",
+		"noApiKeys": "키를 다루기 싫으세요? Roo Code Cloud 제공업체를 선택하세요.",
 		"getStarted": "시작하기"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "URL을 열도록 요청받지 않으면 <clickHere>여기를 클릭</clickHere>하세요.",
 		"havingTrouble": "가입을 완료했지만 문제가 있으면 <clickHere>여기를 클릭</clickHere>하세요.",
 		"pasteUrl": "브라우저에서 콜백 URL을 붙여넣으세요:",
+		"invalidURL": "유효한 콜백 URL로 보이지 않습니다. Roo Code Cloud에서 브라우저에 표시하는 내용을 복사하세요.",
 		"goBack": "돌아가기"
 	},
 	"startRouter": "LLM 라우터 사용을 권장합니다:",

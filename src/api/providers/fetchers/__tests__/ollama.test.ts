@@ -22,6 +22,7 @@ describe("Ollama Fetcher", () => {
 				contextWindow: 4096, // kilocode_change
 				supportsImages: false,
 				supportsPromptCache: true,
+				supportsNativeTools: true,
 				inputPrice: 0,
 				outputPrice: 0,
 				cacheWritesPrice: 0,
@@ -46,6 +47,7 @@ describe("Ollama Fetcher", () => {
 				contextWindow: 4096, // kilocode_change
 				supportsImages: false,
 				supportsPromptCache: true,
+				supportsNativeTools: true,
 				inputPrice: 0,
 				outputPrice: 0,
 				cacheWritesPrice: 0,
