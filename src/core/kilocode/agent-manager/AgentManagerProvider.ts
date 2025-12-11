@@ -670,6 +670,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		})
 
 		this.firstApiReqStarted.delete(sessionId)
+		this.processStartTimes.delete(sessionId)
 
 		// Track session stopped telemetry
 		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
@@ -783,6 +784,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.postStateToWebview()
 
 		this.firstApiReqStarted.delete(sessionId)
+		this.processStartTimes.delete(sessionId)
 	}
 
 	private getFilteredState() {
