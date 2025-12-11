@@ -123,12 +123,28 @@ export function findMatchingSuggestion(
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.ghost.inline-completion.accepted"
 
 /**
+ * Counts the number of lines in a text string.
+ *
+ * @param text - The text to count lines in
+ * @returns The number of lines (1 for empty string or no newlines)
+ */
+export function countLines(text: string): number {
+	if (text === "") {
+		return 0
+	}
+	// Count newlines and add 1 for the first line
+	const newlineCount = (text.match(/\r?\n/g) || []).length
+	return newlineCount + 1
+}
+
+/**
  * Determines if only the first line of a completion should be shown.
  *
  * The logic is:
  * - If the suggestion starts with a newline → show the whole block
- * - If the prefix's last line is only whitespace → show the whole block
- * - Otherwise (suggestion adds to current line) → show only the first line
+ * - If the prefix's last line has non-whitespace text → show only the first line
+ * - If at start of line and suggestion is 3+ lines → show only the first line
+ * - Otherwise → show the whole block
  *
  * @param prefix - The text before the cursor position
  * @param suggestion - The completion text being suggested
@@ -144,9 +160,15 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
 	const lastNewlineIndex = prefix.lastIndexOf("\n")
 	const currentLinePrefix = lastNewlineIndex === -1 ? prefix : prefix.substring(lastNewlineIndex + 1)
 
-	// If the current line prefix contains only whitespace, show the whole suggestion
-	// Otherwise, only show the first line (suggestion adds to current line content)
-	return currentLinePrefix.trim().length > 0
+	// If the current line prefix contains non-whitespace, only show the first line
+	if (currentLinePrefix.trim().length > 0) {
+		return true
+	}
+
+	// At start of line (only whitespace before cursor on this line)
+	// Show only first line if suggestion is 3 or more lines
+	const lineCount = countLines(suggestion)
+	return lineCount >= 3
 }
 
 /**

@@ -5,6 +5,7 @@ import {
 	stringToInlineCompletions,
 	shouldShowOnlyFirstLine,
 	getFirstLine,
+	countLines,
 	CostTrackingCallback,
 } from "../GhostInlineCompletionProvider"
 import { FillInAtCursorSuggestion } from "../HoleFiller"
@@ -512,35 +513,93 @@ describe("shouldShowOnlyFirstLine", () => {
 	})
 
 	describe("when current line is only whitespace", () => {
-		it("should return false when current line is empty", () => {
+		it("should return false when current line is empty and suggestion is less than 3 lines", () => {
 			const prefix = "const x = 1\n"
 			const suggestion = "const y = 2\nmore code"
 			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 		})
 
-		it("should return false when current line has only spaces", () => {
+		it("should return false when current line has only spaces and suggestion is less than 3 lines", () => {
 			const prefix = "const x = 1\n    "
 			const suggestion = "const y = 2\nmore code"
 			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 		})
 
-		it("should return false when current line has only tabs", () => {
+		it("should return false when current line has only tabs and suggestion is less than 3 lines", () => {
 			const prefix = "const x = 1\n\t\t"
 			const suggestion = "const y = 2\nmore code"
 			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 		})
 
-		it("should return false when prefix is empty", () => {
+		it("should return false when prefix is empty and suggestion is less than 3 lines", () => {
 			const prefix = ""
 			const suggestion = "const y = 2\nmore code"
 			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 		})
 
-		it("should return false when prefix is only whitespace", () => {
+		it("should return false when prefix is only whitespace and suggestion is less than 3 lines", () => {
 			const prefix = "    "
 			const suggestion = "const y = 2\nmore code"
 			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 		})
+
+		it("should return true when at start of line and suggestion is 3 or more lines", () => {
+			const prefix = "const x = 1\n"
+			const suggestion = "line1\nline2\nline3"
+			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
+		})
+
+		it("should return true when at start of line with indentation and suggestion is 3+ lines", () => {
+			const prefix = "const x = 1\n    "
+			const suggestion = "if (true) {\n    console.log('test');\n}"
+			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
+		})
+
+		it("should return false when at start of line and suggestion is exactly 2 lines", () => {
+			const prefix = "const x = 1\n"
+			const suggestion = "line1\nline2"
+			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
+		})
+
+		it("should return false when at start of line and suggestion is single line", () => {
+			const prefix = "const x = 1\n"
+			const suggestion = "single line"
+			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
+		})
+	})
+})
+
+describe("countLines", () => {
+	it("should return 0 for empty string", () => {
+		expect(countLines("")).toBe(0)
+	})
+
+	it("should return 1 for single line without newline", () => {
+		expect(countLines("hello world")).toBe(1)
+	})
+
+	it("should return 2 for two lines", () => {
+		expect(countLines("line1\nline2")).toBe(2)
+	})
+
+	it("should return 3 for three lines", () => {
+		expect(countLines("line1\nline2\nline3")).toBe(3)
+	})
+
+	it("should handle \\r\\n line endings", () => {
+		expect(countLines("line1\r\nline2\r\nline3")).toBe(3)
+	})
+
+	it("should handle mixed line endings", () => {
+		expect(countLines("line1\nline2\r\nline3")).toBe(3)
+	})
+
+	it("should count trailing newline as additional line", () => {
+		expect(countLines("line1\nline2\n")).toBe(3)
+	})
+
+	it("should handle text starting with newline", () => {
+		expect(countLines("\nline2")).toBe(2)
 	})
 })
 
