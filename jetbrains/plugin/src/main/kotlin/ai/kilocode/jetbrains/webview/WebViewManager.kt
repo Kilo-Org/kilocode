@@ -389,9 +389,9 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                 // If HTTP server is running
                 if (resourceRootDir != null) {
                     logger.info("Resource root directory is set: ${resourceRootDir?.pathString}")
-                    
+
                     // Generate unique file name for WebView
-                    val filename = "index.html"
+                    val filename = "index-${project.hashCode()}.html"
 
                     // Save HTML content to file
                     val savedPath = saveHtmlToResourceDir(data.htmlContent, filename)
@@ -474,21 +474,21 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
         try {
             // Only delete index.html file, keep other files
             resourceRootDir?.let {
-                val indexFile = it.resolve("index.html").toFile()
+                val indexFile = it.resolve("index-${project.hashCode()}.html").toFile()
                 if (indexFile.exists() && indexFile.isFile) {
                     val deleted = indexFile.delete()
                     if (deleted) {
-                        logger.info("index.html file deleted")
+                        logger.info("index-${project.hashCode()}.html file deleted")
                     } else {
-                        logger.warn("Failed to delete index.html file")
+                        logger.warn("Failed to delete index-${project.hashCode()}.html file")
                     }
                 } else {
-                    logger.info("index.html file does not exist, no need to clean up")
+                    logger.info("index-${project.hashCode()}.html file does not exist, no need to clean up")
                 }
             }
             resourceRootDir = null
         } catch (e: Exception) {
-            logger.error("Failed to clean up index.html file", e)
+            logger.error("Failed to clean up index-${project.hashCode()}.html file", e)
         }
 
         // Dispose WebView
