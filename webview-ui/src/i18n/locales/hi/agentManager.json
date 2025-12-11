@@ -39,6 +39,13 @@
 		"branch": "ब्रांच",
 		"creatingSession": "सत्र बनाया जा रहा है...",
 		"waitingForCli": "एजेंट सत्र प्रारंभ हो रहा है...",
+		"versions": "संस्करण",
+		"versionsTooltip": "अलग-अलग दृष्टिकोणों की खोज करते समानांतर एजेंट",
+		"versionsHelperText": "अलग-अलग शाखाओं पर {{count}} समानांतर एजेंट",
+		"versionCount_one": "{{count}} संस्करण",
+		"versionCount_other": "{{count}} संस्करण",
+		"launchVersions": "{{count}} संस्करण लॉन्च करें",
+		"startAgent": "एजेंट शुरू करें",
 		"cancelCreating": "सत्र निर्माण रद्द करें",
 		"cancelButton": "रद्द करें"
 	},

@@ -39,6 +39,13 @@
 		"branch": "ブランチ",
 		"creatingSession": "セッションを作成中...",
 		"waitingForCli": "エージェントセッションを初期化中...",
+		"versions": "バージョン",
+		"versionsTooltip": "異なるアプローチを探索する並列エージェント",
+		"versionsHelperText": "別々のブランチで{{count}}個の並列エージェント",
+		"versionCount_one": "{{count}}個のバージョン",
+		"versionCount_other": "{{count}}個のバージョン",
+		"launchVersions": "{{count}}個のバージョンを起動",
+		"startAgent": "エージェントを開始",
 		"cancelCreating": "セッション作成をキャンセル",
 		"cancelButton": "キャンセル"
 	},

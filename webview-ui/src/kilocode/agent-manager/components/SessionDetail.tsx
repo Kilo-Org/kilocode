@@ -425,7 +425,7 @@ function NewAgentForm() {
 											)}
 											onClick={() => handleSelectVersionCount(count)}
 											type="button">
-											<span>{count}</span>
+											<span>{t("sessionDetail.versionCount", { count })}</span>
 											{versionCount === count && <span className="am-checkmark">✓</span>}
 										</button>
 									))}

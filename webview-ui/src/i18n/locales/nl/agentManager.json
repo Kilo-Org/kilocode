@@ -39,6 +39,13 @@
 		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
 		"waitingForCli": "Agent-sessie wordt geïnitialiseerd...",
+		"versions": "Versies",
+		"versionsTooltip": "Parallelle agents die verschillende benaderingen verkennen",
+		"versionsHelperText": "{{count}} parallelle agents op aparte branches",
+		"versionCount_one": "{{count}} versie",
+		"versionCount_other": "{{count}} versies",
+		"launchVersions": "Start {{count}} versies",
+		"startAgent": "Agent starten",
 		"cancelCreating": "Sessie aanmaken annuleren",
 		"cancelButton": "Annuleren"
 	},

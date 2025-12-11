@@ -39,6 +39,13 @@
 		"branch": "สาขา",
 		"creatingSession": "กำลังสร้างเซสชัน...",
 		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์...",
+		"versions": "เวอร์ชัน",
+		"versionsTooltip": "ตัวแทนขนานที่สำรวจแนวทางต่างๆ",
+		"versionsHelperText": "{{count}} ตัวแทนขนานบนสาขาแยก",
+		"versionCount_one": "{{count}} เวอร์ชัน",
+		"versionCount_other": "{{count}} เวอร์ชัน",
+		"launchVersions": "เปิดตัว {{count}} เวอร์ชัน",
+		"startAgent": "เริ่มเอเจนต์",
 		"cancelCreating": "ยกเลิกการสร้างเซสชัน",
 		"cancelButton": "ยกเลิก"
 	},

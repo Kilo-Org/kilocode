@@ -39,6 +39,13 @@
 		"branch": "分支",
 		"creatingSession": "正在建立工作階段...",
 		"waitingForCli": "正在初始化代理工作階段...",
+		"versions": "版本",
+		"versionsTooltip": "探索不同方法的平行代理",
+		"versionsHelperText": "{{count}} 個平行代理在不同分支上",
+		"versionCount_one": "{{count}} 個版本",
+		"versionCount_other": "{{count}} 個版本",
+		"launchVersions": "啟動 {{count}} 個版本",
+		"startAgent": "啟動代理",
 		"cancelCreating": "取消建立工作階段",
 		"cancelButton": "取消"
 	},
