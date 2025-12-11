@@ -60,23 +60,6 @@ const LATENCY_SAMPLE_SIZE = 10
 export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
- * Applies first-line-only logic to a suggestion text if needed.
- *
- * @param text - The suggestion text
- * @param prefix - The text before the cursor position
- * @returns The potentially truncated suggestion text
- */
-function applyFirstLineOnlyIfNeeded(text: string, prefix: string): string {
-	if (text === "") {
-		return text
-	}
-	if (shouldShowOnlyFirstLine(prefix, text)) {
-		return getFirstLine(text)
-	}
-	return text
-}
-
-/**
  * Find a matching suggestion from the history based on current prefix and suffix
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
@@ -94,8 +77,7 @@ export function findMatchingSuggestion(
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			const text = applyFirstLineOnlyIfNeeded(fillInAtCursor.text, prefix)
-			return { text, matchType: "exact" }
+			return { text: fillInAtCursor.text, matchType: "exact" }
 		}
 
 		// If no exact match, but suggestion is available, check for partial typing
@@ -111,9 +93,7 @@ export function findMatchingSuggestion(
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
 				// Return the remaining part of the suggestion (with already-typed portion removed)
-				const remainingText = fillInAtCursor.text.substring(typedContent.length)
-				const text = applyFirstLineOnlyIfNeeded(remainingText, prefix)
-				return { text, matchType: "partial_typing" }
+				return { text: fillInAtCursor.text.substring(typedContent.length), matchType: "partial_typing" }
 			}
 		}
 
@@ -129,13 +109,33 @@ export function findMatchingSuggestion(
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
 			// Return the deleted portion plus the original suggestion text
-			const fullText = deletedContent + fillInAtCursor.text
-			const text = applyFirstLineOnlyIfNeeded(fullText, prefix)
-			return { text, matchType: "backward_deletion" }
+			return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion" }
 		}
 	}
 
 	return null
+}
+
+/**
+ * Transforms a matching suggestion result by applying first-line-only logic if needed.
+ * Use this at call sites where you want to show only the first line of multi-line completions
+ * when the cursor is in the middle of a line.
+ *
+ * @param result - The result from findMatchingSuggestion
+ * @param prefix - The text before the cursor position
+ * @returns A new result with potentially truncated text, or null if input was null
+ */
+export function applyFirstLineOnly(
+	result: MatchingSuggestionResult | null,
+	prefix: string,
+): MatchingSuggestionResult | null {
+	if (result === null || result.text === "") {
+		return result
+	}
+	if (shouldShowOnlyFirstLine(prefix, result.text)) {
+		return { text: getFirstLine(result.text), matchType: result.matchType }
+	}
+	return result
 }
 
 /**
@@ -476,7 +476,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 			// Check cache first - allow mid-word lookups from cache
-			const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			const matchingResult = applyFirstLineOnly(
+				findMatchingSuggestion(prefix, suffix, this.suggestionsHistory),
+				prefix,
+			)
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
@@ -496,7 +499,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
 
-			const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			const cachedResult = applyFirstLineOnly(
+				findMatchingSuggestion(prefix, suffix, this.suggestionsHistory),
+				prefix,
+			)
 			if (cachedResult) {
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
 			}
