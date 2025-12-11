@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Провайдери",
+		"modes": "Режими",
+		"mcp": "MCP сервери",
 		"autoApprove": "Автоматичне затвердження",
 		"browser": "Браузер",
 		"checkpoints": "Контрольні точки",
@@ -120,6 +122,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Ключ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
+		"openRouterProviderRoutingLabel": "Маршрутизація провайдера OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter направляє запити до найкращих доступних провайдерів для вашої моделі вбудовувань. За замовчуванням запити розподіляються між провідними провайдерами для максимального часу безвідмовної роботи. Однак ви можете вибрати конкретного провайдера для використання цієї моделі.",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -1122,7 +1126,8 @@
 		"label": "Модель",
 		"searchPlaceholder": "Пошук",
 		"noMatchFound": "Збігів не знайдено",
-		"useCustomModel": "Використовувати власну: {{modelId}}"
+		"useCustomModel": "Використовувати власну: {{modelId}}",
+		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше."
 	},
 	"footer": {
 		"feedback": "Якщо у тебе є питання або відгуки, не соромся відкрити issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> або приєднатися до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilo.ai/discord</discordLink>.",

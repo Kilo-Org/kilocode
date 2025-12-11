@@ -2,17 +2,8 @@
 
 import React from "react"
 import { render, screen, act, cleanup } from "@/utils/test-utils"
-import posthog from "posthog-js"
 
 import AppWithProviders from "../App"
-
-// Mock posthog
-vi.mock("posthog-js", () => ({
-	default: {
-		onFeatureFlags: vi.fn(),
-		getFeatureFlag: vi.fn(),
-	},
-}))
 
 vi.mock("@src/utils/vscode", () => ({
 	vscode: {
@@ -76,12 +67,8 @@ vi.mock("../components/kilocodeMcp/marketplace/McpMarketplaceView", () => ({
 
 vi.mock("@src/components/modes/ModesView", () => ({
 	__esModule: true,
-	default: function ModesView({ onDone }: { onDone: () => void }) {
-		return (
-			<div data-testid="prompts-view" onClick={onDone}>
-				Modes View
-			</div>
-		)
+	default: function ModesView() {
+		return <div data-testid="prompts-view">Modes View</div>
 	},
 }))
 
@@ -96,12 +83,8 @@ vi.mock("@src/components/marketplace/MarketplaceView", () => ({
 }))
 
 vi.mock("@src/components/cloud/CloudView", () => ({
-	CloudView: function CloudView({ onDone }: { onDone: () => void }) {
-		return (
-			<div data-testid="cloud-view" onClick={onDone}>
-				Cloud View
-			</div>
-		)
+	CloudView: function CloudView() {
+		return <div data-testid="cloud-view">Cloud View</div>
 	},
 }))
 
@@ -249,19 +232,21 @@ describe("App", () => {
 		expect(chatView.getAttribute("data-hidden")).toBe("true")
 	})
 
-	it("switches to prompts view when receiving promptsButtonClicked action", async () => {
+	// kilocode_change start: Test changed to expect settings-view instead of prompts-view
+	it("switches to settings view with modes section when receiving promptsButtonClicked action", async () => {
 		render(<AppWithProviders />)
 
 		act(() => {
 			triggerMessage("promptsButtonClicked")
 		})
 
-		const promptsView = await screen.findByTestId("prompts-view")
-		expect(promptsView).toBeInTheDocument()
+		const settingsView = await screen.findByTestId("settings-view")
+		expect(settingsView).toBeInTheDocument()
 
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("true")
 	})
+	// kilocode_change end
 
 	it("returns to chat view when clicking done in settings view", async () => {
 		render(<AppWithProviders />)
@@ -281,23 +266,43 @@ describe("App", () => {
 		expect(screen.queryByTestId("settings-view")).not.toBeInTheDocument()
 	})
 
-	it.each(["history", "prompts"])("returns to chat view when clicking done in %s view", async (view) => {
+	// kilocode_change start: Split tests for history view and settings view (via promptsButtonClicked)
+	it("returns to chat view when clicking done in history view", async () => {
 		render(<AppWithProviders />)
 
 		act(() => {
-			triggerMessage(`${view}ButtonClicked`)
+			triggerMessage("historyButtonClicked")
 		})
 
-		const viewElement = await screen.findByTestId(`${view}-view`)
+		const historyView = await screen.findByTestId("history-view")
 
 		act(() => {
-			viewElement.click()
+			historyView.click()
 		})
 
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("false")
-		expect(screen.queryByTestId(`${view}-view`)).not.toBeInTheDocument()
+		expect(screen.queryByTestId("history-view")).not.toBeInTheDocument()
 	})
+
+	it("returns to chat view when clicking done in settings view (via promptsButtonClicked)", async () => {
+		render(<AppWithProviders />)
+
+		act(() => {
+			triggerMessage("promptsButtonClicked")
+		})
+
+		const settingsView = await screen.findByTestId("settings-view")
+
+		act(() => {
+			settingsView.click()
+		})
+
+		const chatView = screen.getByTestId("chat-view")
+		expect(chatView.getAttribute("data-hidden")).toBe("false")
+		expect(screen.queryByTestId("settings-view")).not.toBeInTheDocument()
+	})
+	// kilocode_change end
 
 	it.skip("switches to marketplace view when receiving marketplaceButtonClicked action", async () => {
 		render(<AppWithProviders />)
@@ -329,56 +334,5 @@ describe("App", () => {
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("false")
 		expect(screen.queryByTestId("marketplace-view")).not.toBeInTheDocument()
-	})
-
-	// kilocode_change: we do not use posthog feature flags
-	describe.skip("PostHog feature flag initialization", () => {
-		it("waits for state hydration before checking feature flags", () => {
-			mockUseExtensionState.mockReturnValue({
-				didHydrateState: false,
-				showWelcome: false,
-				shouldShowAnnouncement: false,
-				experiments: {},
-				language: "en",
-				telemetrySetting: "enabled",
-			})
-
-			render(<AppWithProviders />)
-
-			// PostHog feature flag check should not be called before hydration
-			expect(posthog.onFeatureFlags).not.toHaveBeenCalled()
-		})
-
-		it("checks feature flags after state hydration when telemetry is enabled", () => {
-			mockUseExtensionState.mockReturnValue({
-				didHydrateState: true,
-				showWelcome: false,
-				shouldShowAnnouncement: false,
-				experiments: {},
-				language: "en",
-				telemetrySetting: "enabled",
-			})
-
-			render(<AppWithProviders />)
-
-			// PostHog feature flag check should be called after hydration
-			expect(posthog.onFeatureFlags).toHaveBeenCalled()
-		})
-
-		it("does not check feature flags when telemetry is disabled", () => {
-			mockUseExtensionState.mockReturnValue({
-				didHydrateState: true,
-				showWelcome: false,
-				shouldShowAnnouncement: false,
-				experiments: {},
-				language: "en",
-				telemetrySetting: "disabled",
-			})
-
-			render(<AppWithProviders />)
-
-			// PostHog feature flag check should not be called when telemetry is disabled
-			expect(posthog.onFeatureFlags).not.toHaveBeenCalled()
-		})
 	})
 })

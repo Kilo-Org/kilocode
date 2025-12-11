@@ -6,7 +6,8 @@
 		"imageTooLarge": "Image file is too large ({{size}} MB). The maximum allowed size is {{max}} MB.",
 		"imageWithSize": "Image file ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "The model appears to be stuck in a loop, attempting the same action ({{toolName}}) repeatedly. This might indicate a problem with its current strategy. Consider rephrasing the task, providing more specific instructions, or guiding it towards a different approach.",
+	"toolRepetitionLimitReached": "Kilo appears to be stuck in a loop, attempting the same action ({{toolName}}) repeatedly. This might indicate a problem with its current strategy. Consider rephrasing the task, providing more specific instructions, or guiding it towards a different approach.",
+	"unknownToolError": "Kilo tried to use an unknown tool: \"{{toolName}}\". Retrying...",
 	"codebaseSearch": {
 		"approval": "Searching for '{{query}}' in codebase..."
 	},

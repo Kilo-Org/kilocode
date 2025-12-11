@@ -93,7 +93,7 @@ export const PROVIDERS = [
 	{ value: "chutes", label: "Chutes AI" },
 	{ value: "litellm", label: "LiteLLM" },
 	{ value: "sambanova", label: "SambaNova" },
-	{ value: "zai", label: "Z AI" },
+	{ value: "zai", label: "Z.ai" },
 	{ value: "fireworks", label: "Fireworks AI" },
 	{ value: "featherless", label: "Featherless AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },

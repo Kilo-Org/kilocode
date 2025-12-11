@@ -3,7 +3,6 @@ import * as path from "path"
 import type { MockedFunction } from "vitest"
 
 import { fileExistsAtPath, createDirectoriesForFile } from "../../../utils/fs"
-import { detectCodeOmission } from "../../../integrations/editor/detect-omission"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 import { getReadablePath } from "../../../utils/path"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
@@ -36,15 +35,8 @@ vi.mock("../../prompts/responses", () => ({
 	formatResponse: {
 		toolError: vi.fn((msg) => `Error: ${msg}`),
 		rooIgnoreError: vi.fn((path) => `Access denied: ${path}`),
-		lineCountTruncationError: vi.fn(
-			(count, isNew, diffEnabled) => `Line count error: ${count}, new: ${isNew}, diff: ${diffEnabled}`,
-		),
 		createPrettyPatch: vi.fn(() => "mock-diff"),
 	},
-}))
-
-vi.mock("../../../integrations/editor/detect-omission", () => ({
-	detectCodeOmission: vi.fn().mockReturnValue(false),
 }))
 
 vi.mock("../../../utils/pathUtils", () => ({
@@ -103,7 +95,6 @@ describe("writeToFileTool", () => {
 	// Mocked functions with correct types
 	const mockedFileExistsAtPath = fileExistsAtPath as MockedFunction<typeof fileExistsAtPath>
 	const mockedCreateDirectoriesForFile = createDirectoriesForFile as MockedFunction<typeof createDirectoriesForFile>
-	const mockedDetectCodeOmission = detectCodeOmission as MockedFunction<typeof detectCodeOmission>
 	const mockedIsPathOutsideWorkspace = isPathOutsideWorkspace as MockedFunction<typeof isPathOutsideWorkspace>
 	const mockedGetReadablePath = getReadablePath as MockedFunction<typeof getReadablePath>
 	const mockedUnescapeHtmlEntities = unescapeHtmlEntities as MockedFunction<typeof unescapeHtmlEntities>
@@ -123,7 +114,6 @@ describe("writeToFileTool", () => {
 
 		mockedPathResolve.mockReturnValue(absoluteFilePath)
 		mockedFileExistsAtPath.mockResolvedValue(false)
-		mockedDetectCodeOmission.mockReturnValue(false)
 		mockedIsPathOutsideWorkspace.mockReturnValue(false)
 		mockedGetReadablePath.mockReturnValue("test/path.txt")
 		mockedUnescapeHtmlEntities.mockImplementation((content) => content)
@@ -224,7 +214,6 @@ describe("writeToFileTool", () => {
 			params: {
 				path: testFilePath,
 				content: testContent,
-				line_count: "3",
 				...params,
 			},
 			partial: isPartial,
@@ -383,8 +372,9 @@ describe("writeToFileTool", () => {
 			expect(mockedIsPathOutsideWorkspace).toHaveBeenCalled()
 		})
 
-		it("processes files with very large line counts", async () => {
-			await executeWriteFileTool({ line_count: "999999" })
+		it("processes files with large content", async () => {
+			const largeContent = "Line\n".repeat(10000)
+			await executeWriteFileTool({ content: largeContent })
 
 			// Should process normally without issues
 			expect(mockCline.consecutiveMistakeCount).toBe(0)

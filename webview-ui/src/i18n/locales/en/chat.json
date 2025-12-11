@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Organization link copied to clipboard",
 		"shareSuccessPublic": "Public link copied to clipboard",
 		"openInCloud": "Open task in Roo Code Cloud",
-		"openInCloudIntro": "Keep monitoring or interacting with Roo from anywhere. Scan, click or copy to open."
+		"openInCloudIntro": "Keep monitoring or interacting with Roo from anywhere. Scan, click or copy to open.",
+		"openApiHistory": "Open API History",
+		"openUiHistory": "Open UI History"
 	},
 	"history": {
 		"title": "History"
@@ -148,7 +150,18 @@
 		"failed": "API Request Failed",
 		"streaming": "API Request...",
 		"cancelled": "API Request Cancelled",
-		"streamingFailed": "API Streaming Failed"
+		"streamingFailed": "API Streaming Failed",
+		"errorTitle": "API Error {{code}}",
+		"errorMessage": {
+			"docs": "Docs",
+			"400": "The provider couldn't process the request as made. Stop the task and try a different approach.",
+			"401": "Couldn't authenticate with provider. Please check your API key configuration.",
+			"402": "You seem to have run out of funds/credits in your account. Go to your provider and add more to continue.",
+			"403": "Unauthorized. Your API key is valid, but the provider refused to complete this request.",
+			"429": "Too many requests. You're being rate-limited by the provider. Please wait a bit before your next API call.",
+			"500": "Provider server error. Something is wrong on the provider side, there's nothing wrong with your request.",
+			"unknown": "Unknown API error. Please contact Roo Code support."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -308,8 +321,8 @@
 		},
 		"release": {
 			"heading": "What's New:",
-			"browserUse": "Browser Use 2.0 upgrades the in-chat browsing experience with persistent sessions, clearer feedback, a dedicated browser panel, and more natural action descriptions",
-			"cloudPaid": "The Roo Code Cloud provider now offers paid models: buy credits and use them for both cloud agents and inference"
+			"contextRewind": "Improved context condensing now lets you restore the full previous context when rewinding to a checkpoint",
+			"rooProvider": "Roo Code Cloud provider now preserves reasoning content and defaults to native tools for better performance"
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
@@ -318,7 +331,7 @@
 			"tryButton": "Try Cloud Agents"
 		},
 		"careers": "Also, <careersLink>we're hiring!</careersLink>",
-		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Thinking",

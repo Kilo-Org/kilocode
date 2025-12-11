@@ -11,7 +11,7 @@ const DIFF_PARAMETER_DESCRIPTION = `A string containing one or more search/repla
 [new content to replace with]
 >>>>>>> REPLACE`
 
-export const apply_diff_single_file = {
+export const apply_diff = {
 	type: "function",
 	function: {
 		name: "apply_diff",

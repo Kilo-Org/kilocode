@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Liên kết tổ chức đã được sao chép vào clipboard",
 		"shareSuccessPublic": "Liên kết công khai đã được sao chép vào clipboard",
 		"openInCloud": "Mở tác vụ trong Roo Code Cloud",
-		"openInCloudIntro": "Tiếp tục theo dõi hoặc tương tác với Roo từ bất cứ đâu. Quét, nhấp hoặc sao chép để mở."
+		"openInCloudIntro": "Tiếp tục theo dõi hoặc tương tác với Roo từ bất cứ đâu. Quét, nhấp hoặc sao chép để mở.",
+		"openApiHistory": "Mở lịch sử API",
+		"openUiHistory": "Mở lịch sử UI"
 	},
 	"history": {
 		"title": "Lịch Sử"
@@ -142,7 +144,18 @@
 		"failed": "Yêu cầu API thất bại",
 		"streaming": "Yêu cầu API...",
 		"cancelled": "Yêu cầu API đã hủy",
-		"streamingFailed": "Streaming API thất bại"
+		"streamingFailed": "Streaming API thất bại",
+		"errorTitle": "Lỗi API {{code}}",
+		"errorMessage": {
+			"docs": "Tài liệu",
+			"400": "Nhà cung cấp không thể xử lý yêu cầu theo cách này. Hãy dừng nhiệm vụ và thử một cách tiếp cận khác.",
+			"401": "Không thể xác thực với nhà cung cấp. Vui lòng kiểm tra cấu hình khóa API của bạn.",
+			"402": "Có vẻ như bạn đã hết tiền/tín dụng trong tài khoản. Hãy truy cập nhà cung cấp và thêm tiền để tiếp tục.",
+			"403": "Truy cập bị từ chối. Khóa API của bạn hợp lệ, nhưng nhà cung cấp từ chối hoàn thành yêu cầu này.",
+			"429": "Quá nhiều yêu cầu. Nhà cung cấp đang giới hạn tốc độ yêu cầu của bạn. Vui lòng chờ một chút trước khi gọi API tiếp theo.",
+			"500": "Lỗi máy chủ của nhà cung cấp. Có sự cố ở phía nhà cung cấp, không có gì sai với yêu cầu của bạn.",
+			"unknown": "Lỗi API không xác định. Vui lòng liên hệ hỗ trợ Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Điểm kiểm tra",
@@ -303,8 +316,8 @@
 		},
 		"release": {
 			"heading": "Mới trong phiên bản này:",
-			"browserUse": "Browser Use 2.0 nâng cấp trải nghiệm duyệt web trong trò chuyện với các phiên bản liên tục, phản hồi rõ ràng hơn, bảng điều khiển trình duyệt chuyên dụng và mô tả hành động tự nhiên hơn",
-			"cloudPaid": "Nhà cung cấp Roo Code Cloud hiện cung cấp các mô hình trả phí: mua tín dụng và sử dụng chúng cho cả các tác nhân đám mây và suy luận"
+			"contextRewind": "Nén ngữ cảnh được cải thiện hiện cho phép bạn khôi phục bối cảnh trước đó đầy đủ khi cuộn lại đến một điểm kiểm tra",
+			"rooProvider": "Nhà cung cấp Roo Code Cloud hiện giữ lại nội dung lý luận và sử dụng các công cụ gốc theo mặc định để có hiệu suất tốt hơn"
 		},
 		"cloudAgents": {
 			"heading": "Mới trên Cloud:",
@@ -313,7 +326,7 @@
 			"tryButton": "Dùng thử Agents trên Cloud"
 		},
 		"careers": "Ngoài ra, <careersLink>chúng tôi đang tuyển dụng!</careersLink>",
-		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
 		"session": "Phiên trình duyệt",

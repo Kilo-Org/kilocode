@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
 		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました",
 		"openInCloud": "Roo Code Cloudでタスクを開く",
-		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。"
+		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。",
+		"openApiHistory": "API履歴を開く",
+		"openUiHistory": "UI履歴を開く"
 	},
 	"history": {
 		"title": "履歴"
@@ -142,7 +144,18 @@
 		"failed": "APIリクエスト失敗",
 		"streaming": "APIリクエスト...",
 		"cancelled": "APIリクエストキャンセル",
-		"streamingFailed": "APIストリーミング失敗"
+		"streamingFailed": "APIストリーミング失敗",
+		"errorTitle": "APIエラー {{code}}",
+		"errorMessage": {
+			"docs": "ドキュメント",
+			"400": "プロバイダーはリクエストをそのまま処理できませんでした。タスクを停止して別のアプローチを試してください。",
+			"401": "プロバイダーで認証できませんでした。API キーの設定を確認してください。",
+			"402": "アカウントの資金/クレジットが不足しているようです。プロバイダーに移動してさらに追加してください。",
+			"403": "認可されていません。API キーは有効ですが、プロバイダーがこのリクエストの完了を拒否しました。",
+			"429": "リクエストが多すぎます。プロバイダーによってレート制限されています。次の API 呼び出しの前にお待ちください。",
+			"500": "プロバイダー サーバー エラー。プロバイダー側に問題があり、リクエスト自体に問題はありません。",
+			"unknown": "不明な API エラー。Roo Code のサポートにお問い合わせください。"
+		}
 	},
 	"checkpoint": {
 		"regular": "チェックポイント",
@@ -302,8 +315,8 @@
 		},
 		"release": {
 			"heading": "このバージョンの新機能:",
-			"browserUse": "Browser Use 2.0 は、永続的なセッション、より明確なフィードバック、専用ブラウザパネル、より自然なアクション説明を備えた、チャット内ブラウジング体験をアップグレードします",
-			"cloudPaid": "Roo Code Cloud プロバイダーは、クラウドエージェントと推論の両方に使用できるクレジットを購入できるようになりました"
+			"contextRewind": "改善されたコンテキスト圧縮により、チェックポイントに巻き戻すときに以前の完全なコンテキストを復元できるようになりました",
+			"rooProvider": "Roo Code Cloud プロバイダーはレジーニングコンテンツを保持し、デフォルトでネイティブ ツールを使用してパフォーマンスを向上させます"
 		},
 		"cloudAgents": {
 			"heading": "クラウドの新機能:",
@@ -312,7 +325,7 @@
 			"tryButton": "クラウドエージェントを試す"
 		},
 		"careers": "また、<careersLink>採用中です！</careersLink>",
-		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/KiloCode</redditLink>でフォローしてください 🚀"
 	},
 	"browser": {
 		"session": "ブラウザセッション",

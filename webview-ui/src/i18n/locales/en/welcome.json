@@ -23,14 +23,16 @@
 		"learnMore": "learn more",
 		"useAnotherProvider": "Use another provider",
 		"useAnotherProviderDescription": "Enter an API key and get going.",
+		"noApiKeys": "Don't want to deal with keys? Go with the Roo Code Cloud Provider.",
 		"getStarted": "Get started"
 	},
 	"waitingForCloud": {
 		"heading": "Taking you to Roo Code Cloud...",
-		"description": "Complete sign-up in your browser, then you'll return here automatically.",
+		"description": "We'll take you to your browser to sign up for Roo Code Cloud. We'll then bring you back here to finish.",
 		"noPrompt": "If you don't get prompted to open a URL, <clickHere>click here</clickHere>.",
-		"havingTrouble": "If you've completed the sign up but are having trouble, <clickHere>click here</clickHere>.",
-		"pasteUrl": "Paste the callback URL from your browser:",
+		"havingTrouble": "If you've completed sign up but are having trouble, <clickHere>click here</clickHere>.",
+		"pasteUrl": "Paste the callback URL shown in your browser:",
+		"invalidURL": "That doesn't look like a valid callback URL. Please copy what Roo Code Cloud is showing in your browser.",
 		"goBack": "Go back"
 	},
 	"startRouter": "We recommend using an LLM Router:",

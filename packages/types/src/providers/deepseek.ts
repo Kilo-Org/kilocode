@@ -11,6 +11,7 @@ export const deepSeekModels = {
 		contextWindow: 128_000,
 		supportsImages: false,
 		supportsPromptCache: true,
+		supportsNativeTools: true,
 		// kilocode_change start pricing updated
 		inputPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Oct 29, 2025
 		outputPrice: 0.42, // $0.42 per million tokens - Updated Oct 29, 2025
@@ -24,6 +25,7 @@ export const deepSeekModels = {
 		contextWindow: 128_000,
 		supportsImages: false,
 		supportsPromptCache: true,
+		supportsNativeTools: true,
 		// kilocode_change start pricing updated
 		inputPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Oct 29, 2025
 		outputPrice: 0.42, // $0.42 per million tokens - Updated Oct 29, 2025

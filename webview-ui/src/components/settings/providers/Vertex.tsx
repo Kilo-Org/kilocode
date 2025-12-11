@@ -12,10 +12,10 @@ import { inputEventTransform } from "../transforms"
 type VertexProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
-	fromWelcomeView?: boolean
+	simplifySettings?: boolean
 }
 
-export const Vertex = ({ apiConfiguration, setApiConfigurationField, fromWelcomeView }: VertexProps) => {
+export const Vertex = ({ apiConfiguration, setApiConfigurationField, simplifySettings }: VertexProps) => {
 	const { t } = useAppTranslation()
 
 	const handleInputChange = useCallback(
@@ -94,7 +94,7 @@ export const Vertex = ({ apiConfiguration, setApiConfigurationField, fromWelcome
 				</Select>
 			</div>
 
-			{!fromWelcomeView && apiConfiguration.apiModelId?.startsWith("gemini") && (
+			{!simplifySettings && apiConfiguration.apiModelId?.startsWith("gemini") && (
 				<div className="mt-6">
 					<Checkbox
 						data-testid="checkbox-url-context"

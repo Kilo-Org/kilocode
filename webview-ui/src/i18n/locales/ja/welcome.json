@@ -23,6 +23,7 @@
 		"learnMore": "詳細を見る",
 		"useAnotherProvider": "別のプロバイダーを使用",
 		"useAnotherProviderDescription": "APIキーを入力して始める。",
+		"noApiKeys": "キーを扱いたくないですか？Roo Code Cloudプロバイダーを選びましょう。",
 		"getStarted": "始める"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "URLを開くように促されない場合は、<clickHere>ここをクリック</clickHere>してください。",
 		"havingTrouble": "サインアップを完了しましたが問題がある場合は、<clickHere>ここをクリック</clickHere>してください。",
 		"pasteUrl": "ブラウザからコールバックURLを貼り付けてください：",
+		"invalidURL": "有効なコールバックURLのようには見えません。Roo Code Cloudがブラウザに表示しているものをコピーしてください。",
 		"goBack": "戻る"
 	},
 	"startRouter": "LLMルーターの使用をお勧めします：",

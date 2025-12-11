@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import * as fsp from "fs/promises"
 import * as path from "path"
 import * as os from "node:os"
 
@@ -35,6 +36,58 @@ class SubprocessTimeoutError extends Error {
 	constructor(timeout: number) {
 		super(`Subprocess timeout after ${timeout}ms`)
 		this.name = "SubprocessTimeoutError"
+	}
+}
+
+/**
+ * Copy conversation history files from VS Code extension storage to the log directory.
+ * This allows us to preserve the api_conversation_history.json and ui_messages.json
+ * files for post-mortem analysis alongside the log files.
+ */
+async function copyConversationHistory({
+	rooTaskId,
+	logDir,
+	language,
+	exercise,
+	iteration,
+	logger,
+}: {
+	rooTaskId: string
+	logDir: string
+	language: string
+	exercise: string
+	iteration: number
+	logger: Logger
+}): Promise<void> {
+	// VS Code extension global storage path within the container
+	const extensionStoragePath = "/roo/.vscode/User/globalStorage/rooveterinaryinc.roo-cline"
+	const taskStoragePath = path.join(extensionStoragePath, "tasks", rooTaskId)
+
+	const filesToCopy = ["api_conversation_history.json", "ui_messages.json"]
+
+	for (const filename of filesToCopy) {
+		const sourcePath = path.join(taskStoragePath, filename)
+		// Use sanitized exercise name (replace slashes with dashes) for the destination filename
+		// Include iteration number to handle multiple attempts at the same exercise
+		const sanitizedExercise = exercise.replace(/\//g, "-")
+		const destFilename = `${language}-${sanitizedExercise}.${iteration}_${filename}`
+		const destPath = path.join(logDir, destFilename)
+
+		try {
+			// Check if source file exists
+			await fsp.access(sourcePath)
+
+			// Copy the file
+			await fsp.copyFile(sourcePath, destPath)
+			logger.info(`copied ${filename} to ${destPath}`)
+		} catch (error) {
+			// File may not exist if task didn't complete properly - this is not fatal
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				logger.info(`${filename} not found at ${sourcePath} - skipping`)
+			} else {
+				logger.error(`failed to copy ${filename}:`, error)
+			}
+		}
 	}
 }
 
@@ -114,7 +167,7 @@ export const processTaskInContainer = async ({
 
 	for (let attempt = 0; attempt <= maxRetries; attempt++) {
 		const containerName = `evals-task-${taskId}.${attempt}`
-		const args = [`--name ${containerName}`, ...baseArgs]
+		const args = [`--name ${containerName}`, `-e EVALS_ATTEMPT=${attempt}`, ...baseArgs]
 		const isRetry = attempt > 0
 
 		if (isRetry) {
@@ -172,6 +225,7 @@ export const runTask = async ({ run, task, publish, logger, jobToken }: RunTaskO
 	const controller = new AbortController()
 	const cancelSignal = controller.signal
 	const containerized = isDockerContainer()
+	const logDir = containerized ? `/var/log/evals/runs/${run.id}` : `/tmp/evals/runs/${run.id}`
 
 	let codeCommand = containerized
 		? `xvfb-run --auto-servernum --server-num=1 code --wait --log trace --disable-workspace-trust --disable-gpu --disable-lcd-text --no-sandbox --user-data-dir /roo/.vscode --password-store="basic" -n ${workspacePath}`
@@ -266,7 +320,23 @@ export const runTask = async ({ run, task, publish, logger, jobToken }: RunTaskO
 				(payload[0].message.say && loggableSays.includes(payload[0].message.say)) ||
 				payload[0].message.partial !== true)
 		) {
-			logger.info(`${eventName} ->`, payload)
+			// Extract tool name for tool-related messages for clearer logging
+			let logEventName: string = eventName
+			if (eventName === RooCodeEventName.Message && payload[0]?.message?.ask === "tool") {
+				try {
+					const textJson = JSON.parse(payload[0].message.text ?? "{}")
+					if (textJson.tool) {
+						logEventName = `${eventName} (tool: ${textJson.tool})`
+					}
+				} catch {
+					// If parsing fails, use the default event name
+				}
+			} else if (eventName === RooCodeEventName.Message && payload[0]?.message?.ask === "command") {
+				logEventName = `${eventName} (command)`
+			} else if (eventName === RooCodeEventName.Message && payload[0]?.message?.ask === "completion_result") {
+				logEventName = `${eventName} (completion_result)`
+			}
+			logger.info(`${logEventName} ->`, payload)
 		}
 
 		if (eventName === RooCodeEventName.TaskStarted) {
@@ -418,9 +488,25 @@ export const runTask = async ({ run, task, publish, logger, jobToken }: RunTaskO
 		}
 	}
 
+	// Copy conversation history files from VS Code extension storage to the log directory
+	// for post-mortem analysis. Only do this in containerized mode where we have a known path.
+	if (containerized && rooTaskId) {
+		await copyConversationHistory({
+			rooTaskId,
+			logDir,
+			language,
+			exercise,
+			iteration: task.iteration,
+			logger,
+		})
+	}
+
 	logger.close()
 
-	if (isApiUnstable) {
+	// Only throw for API instability if the task didn't complete successfully.
+	// If taskFinishedAt is set via TaskCompleted event, the task succeeded despite
+	// API retries, so re-running from scratch would waste resources.
+	if (isApiUnstable && !taskFinishedAt) {
 		throw new Error("API is unstable, throwing to trigger a retry.")
 	}
 }

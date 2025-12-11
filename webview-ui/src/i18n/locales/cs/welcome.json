@@ -23,6 +23,7 @@
 		"learnMore": "dozvědět se více",
 		"useAnotherProvider": "Použít jiného poskytovatele",
 		"useAnotherProviderDescription": "Zadejte API klíč a můžete začít.",
+		"noApiKeys": "Nechceš řešit klíče? Použij Roo Code Cloud Provider.",
 		"getStarted": "Začít"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "Pokud se nezobrazí výzva k otevření URL, <clickHere>klikněte zde</clickHere>.",
 		"havingTrouble": "Pokud jste dokončili registraci, ale máte problémy, <clickHere>klikněte zde</clickHere>.",
 		"pasteUrl": "Vložte zpětnou URL z vašeho prohlížeče:",
+		"invalidURL": "To nevypadá jako platná zpětná URL. Zkopíruj prosím to, co ukazuje Roo Code Cloud ve tvém prohlížeči.",
 		"goBack": "Jít zpět"
 	},
 	"startRouter": "Doporučujeme použít LLM Router:",

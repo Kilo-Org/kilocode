@@ -1,7 +1,7 @@
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk" // Keep for type usage only
 
-import { litellmDefaultModelId, litellmDefaultModelInfo } from "@roo-code/types"
+import { litellmDefaultModelId, litellmDefaultModelInfo, TOOL_PROTOCOL } from "@roo-code/types"
 
 import { calculateApiCostOpenAI } from "../../shared/cost"
 
@@ -117,6 +117,14 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 		// Check if this is a GPT-5 model that requires max_completion_tokens instead of max_tokens
 		const isGPT5Model = this.isGpt5(modelId)
 
+		// Check if model supports native tools and tools are provided with native protocol
+		const supportsNativeTools = info.supportsNativeTools ?? false
+		const useNativeTools =
+			supportsNativeTools &&
+			metadata?.tools &&
+			metadata.tools.length > 0 &&
+			metadata?.toolProtocol === TOOL_PROTOCOL.NATIVE
+
 		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model: modelId,
 			messages: [systemMessage, ...enhancedMessages],
@@ -124,6 +132,9 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 			stream_options: {
 				include_usage: true,
 			},
+			...(useNativeTools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+			...(useNativeTools && metadata.tool_choice && { tool_choice: metadata.tool_choice }),
+			...(useNativeTools && { parallel_tool_calls: metadata?.parallelToolCalls ?? false }),
 		}
 
 		// GPT-5 models require max_completion_tokens instead of the deprecated max_tokens parameter
@@ -136,8 +147,6 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 		if (this.supportsTemperature(modelId)) {
 			requestOptions.temperature = this.options.modelTemperature ?? 0
 		}
-
-		addNativeToolCallsToParams(requestOptions, this.options, metadata) // kilocode_change
 
 		try {
 			const { data: completion } = await this.client.chat.completions.create(requestOptions).withResponse()
@@ -153,6 +162,19 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 
 				if (delta?.content) {
 					yield { type: "text", text: delta.content }
+				}
+
+				// Handle tool calls in stream - emit partial chunks for NativeToolCallParser
+				if (delta?.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						yield {
+							type: "tool_call_partial",
+							index: toolCall.index,
+							id: toolCall.id,
+							name: toolCall.function?.name,
+							arguments: toolCall.function?.arguments,
+						}
+					}
 				}
 
 				if (usage) {

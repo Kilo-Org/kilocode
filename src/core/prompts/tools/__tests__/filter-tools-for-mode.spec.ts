@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import type OpenAI from "openai"
-import type { ModeConfig } from "@roo-code/types"
-import { filterNativeToolsForMode, filterMcpToolsForMode } from "../filter-tools-for-mode"
+import type { ModeConfig, ModelInfo } from "@roo-code/types"
+import { filterNativeToolsForMode, filterMcpToolsForMode, applyModelToolCustomization } from "../filter-tools-for-mode"
+import * as toolsModule from "../../../../shared/tools"
 
 // kilocode_change start
 vi.mock("../../../../services/code-index/managed/ManagedIndexer", () => ({
@@ -277,7 +278,6 @@ describe("filterNativeToolsForMode", () => {
 			undefined,
 			{},
 			undefined, // kilocode_change
-			undefined, // kilocode_change
 			mockMcpHub,
 		)
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
@@ -320,7 +320,6 @@ describe("filterNativeToolsForMode", () => {
 			{},
 			undefined,
 			{},
-			undefined, // kilocode_change
 			undefined, // kilocode_change
 			mockMcpHub,
 		)
@@ -480,5 +479,360 @@ describe("filterMcpToolsForMode", () => {
 
 		// Should include MCP tools since default mode has mcp group
 		expect(filtered.length).toBeGreaterThan(0)
+	})
+
+	describe("applyModelToolCustomization", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const architectMode: ModeConfig = {
+			slug: "architect",
+			name: "Architect",
+			roleDefinition: "Test",
+			groups: ["read", "browser", "mcp"] as const,
+		}
+
+		it("should return original tools when modelInfo is undefined", () => {
+			const tools = new Set(["read_file", "write_to_file", "apply_diff"])
+			const result = applyModelToolCustomization(tools, codeMode, undefined)
+			expect(result).toEqual(tools)
+		})
+
+		it("should exclude tools specified in excludedTools", () => {
+			const tools = new Set(["read_file", "write_to_file", "apply_diff"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff"],
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(true)
+			expect(result.has("apply_diff")).toBe(false)
+		})
+
+		it("should exclude multiple tools", () => {
+			const tools = new Set(["read_file", "write_to_file", "apply_diff", "execute_command"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff", "write_to_file"],
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("execute_command")).toBe(true)
+			expect(result.has("write_to_file")).toBe(false)
+			expect(result.has("apply_diff")).toBe(false)
+		})
+
+		it("should include tools only if they belong to allowed groups", () => {
+			const tools = new Set(["read_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["write_to_file", "apply_diff"], // Both in edit group
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(true)
+			expect(result.has("apply_diff")).toBe(true)
+		})
+
+		it("should NOT include tools from groups not allowed by mode", () => {
+			const tools = new Set(["read_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["write_to_file", "apply_diff"], // Edit group tools
+			}
+			// Architect mode doesn't have edit group
+			const result = applyModelToolCustomization(tools, architectMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(false) // Not in allowed groups
+			expect(result.has("apply_diff")).toBe(false) // Not in allowed groups
+		})
+
+		it("should apply both exclude and include operations", () => {
+			const tools = new Set(["read_file", "write_to_file", "apply_diff"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff"],
+				includedTools: ["search_and_replace"], // Another edit tool (customTool)
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(true)
+			expect(result.has("apply_diff")).toBe(false) // Excluded
+			expect(result.has("search_and_replace")).toBe(true) // Included
+		})
+
+		it("should handle empty excludedTools and includedTools arrays", () => {
+			const tools = new Set(["read_file", "write_to_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: [],
+				includedTools: [],
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result).toEqual(tools)
+		})
+
+		it("should ignore excluded tools that are not in the original set", () => {
+			const tools = new Set(["read_file", "write_to_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff", "nonexistent_tool"],
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(true)
+			expect(result.size).toBe(2)
+		})
+
+		it("should NOT include customTools by default", () => {
+			const tools = new Set(["read_file", "write_to_file"])
+			// Assume 'edit' group has a customTool defined in TOOL_GROUPS
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				// No includedTools specified
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			// customTools should not be in the result unless explicitly included
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("write_to_file")).toBe(true)
+		})
+
+		it("should NOT include tools that are not in any TOOL_GROUPS", () => {
+			const tools = new Set(["read_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["my_custom_tool"], // Not in any tool group
+			}
+			const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("my_custom_tool")).toBe(false)
+		})
+
+		it("should NOT include undefined tools even with allowed groups", () => {
+			const tools = new Set(["read_file"])
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["custom_edit_tool"], // Not in any tool group
+			}
+			// Even though architect mode has read group, undefined tools are not added
+			const result = applyModelToolCustomization(tools, architectMode, modelInfo)
+			expect(result.has("read_file")).toBe(true)
+			expect(result.has("custom_edit_tool")).toBe(false)
+		})
+
+		describe("with customTools defined in TOOL_GROUPS", () => {
+			const originalToolGroups = { ...toolsModule.TOOL_GROUPS }
+
+			beforeEach(() => {
+				// Add a customTool to the edit group
+				;(toolsModule.TOOL_GROUPS as any).edit = {
+					...originalToolGroups.edit,
+					customTools: ["special_edit_tool"],
+				}
+			})
+
+			afterEach(() => {
+				// Restore original TOOL_GROUPS
+				;(toolsModule.TOOL_GROUPS as any).edit = originalToolGroups.edit
+			})
+
+			it("should include customTools when explicitly specified in includedTools", () => {
+				const tools = new Set(["read_file", "write_to_file"])
+				const modelInfo: ModelInfo = {
+					contextWindow: 100000,
+					supportsPromptCache: false,
+					includedTools: ["special_edit_tool"], // customTool from edit group
+				}
+				const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+				expect(result.has("read_file")).toBe(true)
+				expect(result.has("write_to_file")).toBe(true)
+				expect(result.has("special_edit_tool")).toBe(true) // customTool should be included
+			})
+
+			it("should NOT include customTools when not specified in includedTools", () => {
+				const tools = new Set(["read_file", "write_to_file"])
+				const modelInfo: ModelInfo = {
+					contextWindow: 100000,
+					supportsPromptCache: false,
+					// No includedTools specified
+				}
+				const result = applyModelToolCustomization(tools, codeMode, modelInfo)
+				expect(result.has("read_file")).toBe(true)
+				expect(result.has("write_to_file")).toBe(true)
+				expect(result.has("special_edit_tool")).toBe(false) // customTool should NOT be included by default
+			})
+
+			it("should NOT include customTools from groups not allowed by mode", () => {
+				const tools = new Set(["read_file"])
+				const modelInfo: ModelInfo = {
+					contextWindow: 100000,
+					supportsPromptCache: false,
+					includedTools: ["special_edit_tool"], // customTool from edit group
+				}
+				// Architect mode doesn't have edit group
+				const result = applyModelToolCustomization(tools, architectMode, modelInfo)
+				expect(result.has("read_file")).toBe(true)
+				expect(result.has("special_edit_tool")).toBe(false) // customTool should NOT be included
+			})
+		})
+	})
+
+	describe("filterNativeToolsForMode with model customization", () => {
+		const mockNativeTools: OpenAI.Chat.ChatCompletionTool[] = [
+			{
+				type: "function",
+				function: {
+					name: "read_file",
+					description: "Read files",
+					parameters: {},
+				},
+			},
+			{
+				type: "function",
+				function: {
+					name: "write_to_file",
+					description: "Write files",
+					parameters: {},
+				},
+			},
+			{
+				type: "function",
+				function: {
+					name: "apply_diff",
+					description: "Apply diff",
+					parameters: {},
+				},
+			},
+			{
+				type: "function",
+				function: {
+					name: "execute_command",
+					description: "Execute command",
+					parameters: {},
+				},
+			},
+			{
+				type: "function",
+				function: {
+					name: "search_and_replace",
+					description: "Search and replace",
+					parameters: {},
+				},
+			},
+		]
+
+		it("should exclude tools when model specifies excludedTools", () => {
+			const codeMode: ModeConfig = {
+				slug: "code",
+				name: "Code",
+				roleDefinition: "Test",
+				groups: ["read", "edit", "browser", "command", "mcp"] as const,
+			}
+
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff"],
+			}
+
+			const filtered = filterNativeToolsForMode(mockNativeTools, "code", [codeMode], {}, undefined, {
+				modelInfo,
+			})
+
+			const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+
+			expect(toolNames).toContain("read_file")
+			expect(toolNames).toContain("write_to_file")
+			expect(toolNames).not.toContain("apply_diff") // Excluded by model
+		})
+
+		it("should include tools when model specifies includedTools from allowed groups", () => {
+			const modeWithOnlyRead: ModeConfig = {
+				slug: "limited",
+				name: "Limited",
+				roleDefinition: "Test",
+				groups: ["read", "edit"] as const,
+			}
+
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["search_and_replace"], // Edit group customTool
+			}
+
+			const filtered = filterNativeToolsForMode(mockNativeTools, "limited", [modeWithOnlyRead], {}, undefined, {
+				modelInfo,
+			})
+
+			const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+
+			expect(toolNames).toContain("search_and_replace") // Included by model
+		})
+
+		it("should NOT include tools from groups not allowed by mode", () => {
+			const architectMode: ModeConfig = {
+				slug: "architect",
+				name: "Architect",
+				roleDefinition: "Test",
+				groups: ["read", "browser"] as const, // No edit group
+			}
+
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				includedTools: ["write_to_file", "apply_diff"], // Edit group tools
+			}
+
+			const filtered = filterNativeToolsForMode(mockNativeTools, "architect", [architectMode], {}, undefined, {
+				modelInfo,
+			})
+
+			const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+
+			expect(toolNames).toContain("read_file")
+			expect(toolNames).not.toContain("write_to_file") // Not in mode's allowed groups
+			expect(toolNames).not.toContain("apply_diff") // Not in mode's allowed groups
+		})
+
+		it("should combine excludedTools and includedTools", () => {
+			const codeMode: ModeConfig = {
+				slug: "code",
+				name: "Code",
+				roleDefinition: "Test",
+				groups: ["read", "edit", "browser", "command", "mcp"] as const,
+			}
+
+			const modelInfo: ModelInfo = {
+				contextWindow: 100000,
+				supportsPromptCache: false,
+				excludedTools: ["apply_diff"],
+				includedTools: ["search_and_replace"],
+			}
+
+			const filtered = filterNativeToolsForMode(mockNativeTools, "code", [codeMode], {}, undefined, {
+				modelInfo,
+			})
+
+			const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+
+			expect(toolNames).toContain("write_to_file")
+			expect(toolNames).toContain("search_and_replace") // Included
+			expect(toolNames).not.toContain("apply_diff") // Excluded
+		})
 	})
 })

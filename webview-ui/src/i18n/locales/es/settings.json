@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Proveedores",
+		"modes": "Modos",
+		"mcp": "Servidores MCP",
 		"autoApprove": "Auto-aprobación",
 		"browser": "Acceso al ordenador",
 		"checkpoints": "Puntos de control",
@@ -91,6 +93,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clave de API de OpenRouter",
 		"openRouterApiKeyPlaceholder": "Introduce tu clave de API de OpenRouter",
+		"openRouterProviderRoutingLabel": "Enrutamiento de proveedores de OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter dirige las solicitudes a los mejores proveedores disponibles para su modelo de embedding. Por defecto, las solicitudes se equilibran entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para este modelo.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
@@ -1025,7 +1029,8 @@
 		"label": "Modelo",
 		"searchPlaceholder": "Buscar",
 		"noMatchFound": "No se encontraron coincidencias",
-		"useCustomModel": "Usar personalizado: {{modelId}}"
+		"useCustomModel": "Usar personalizado: {{modelId}}",
+		"simplifiedExplanation": "Puedes ajustar la configuración detallada del modelo más tarde."
 	},
 	"footer": {
 		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirse a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",

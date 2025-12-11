@@ -21,6 +21,12 @@ export const historyItemSchema = z.object({
 	isFavorited: z.boolean().optional(), // kilocode_change
 	fileNotfound: z.boolean().optional(), // kilocode_change
 	mode: z.string().optional(),
+	status: z.enum(["active", "completed", "delegated"]).optional(),
+	delegatedToId: z.string().optional(), // Last child this parent delegated to
+	childIds: z.array(z.string()).optional(), // All children spawned by this task
+	awaitingChildId: z.string().optional(), // Child currently awaited (set when delegated)
+	completedByChildId: z.string().optional(), // Child that completed and resumed this parent
+	completionResultSummary: z.string().optional(), // Summary from completed child
 })
 
 export type HistoryItem = z.infer<typeof historyItemSchema>

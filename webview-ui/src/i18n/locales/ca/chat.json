@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
 		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls",
 		"openInCloud": "Obrir tasca a Roo Code Cloud",
-		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir."
+		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir.",
+		"openApiHistory": "Obrir historial d'API",
+		"openUiHistory": "Obrir historial d'UI"
 	},
 	"history": {
 		"title": "Historial"
@@ -142,7 +144,18 @@
 		"failed": "Sol·licitud API ha fallat",
 		"streaming": "Sol·licitud API...",
 		"cancelled": "Sol·licitud API cancel·lada",
-		"streamingFailed": "Transmissió API ha fallat"
+		"streamingFailed": "Transmissió API ha fallat",
+		"errorTitle": "Error API {{code}}",
+		"errorMessage": {
+			"docs": "Documentació",
+			"400": "El proveïdor no ha pogut processar la sol·licitud tal com es va fer. Interromp la tasca i prova una abordatge diferent.",
+			"401": "No s'ha pogut autenticar amb el proveïdor. Si us plau, verifica la teva configuració de clau API.",
+			"402": "Sembla que se t'han acabat els fons/crèdits al teu compte. Vés al teu proveïdor i afegeix més per continuar.",
+			"403": "No autoritzat. La teva clau API és vàlida, però el proveïdor ha rebutjat completar aquesta sol·licitud.",
+			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
+			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
+			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Punt de control",
@@ -302,8 +315,8 @@
 		},
 		"release": {
 			"heading": "Novetats:",
-			"browserUse": "Browser Use 2.0 millora l'experiència de navegació dins del xat amb sessions persistents, comentaris més clars, un panell de navegador dedicat i descripcions d'accions més naturals",
-			"cloudPaid": "El proveïdor de Roo Code Cloud ara ofereix models de pagament: compra crèdits i utilitza'ls tant per a agents al núvol com per a inferència"
+			"contextRewind": "La condensació millorada del context et permet restaurar el context anterior complet quan rebobines a un punt de control",
+			"rooProvider": "El proveïdor de Roo Code Cloud ara conserva el contingut del raonament i utilitza per defecte les eines natives per a un millor rendiment"
 		},
 		"cloudAgents": {
 			"heading": "Novetats al núvol:",

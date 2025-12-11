@@ -14,7 +14,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 const OG_TITLE = "Meet Roo Code"
-const OG_DESCRIPTION = "The AI dev team that gets things done."
+const OG_DESCRIPTION = "Your AI Software Engineering Team in the IDE and the Cloud."
 
 export const metadata: Metadata = {
 	metadataBase: new URL(SEO.url),

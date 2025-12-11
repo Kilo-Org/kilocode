@@ -184,7 +184,11 @@
 			"installInstructions": "Petunjuk Instalasi",
 			"getHelp": "Dapatkan Bantuan",
 			"runInTerminal": "Jalankan di Terminal",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Perbarui Global",
+			"updateLocal": "Perbarui Lokal",
+			"installGlobal": "Instal Global",
+			"installLocal": "Instal Lokal"
 		},
 		"terminal": {
 			"installMessage": "Menjalankan npm install untuk menginstal Kilocode CLI. Setelah selesai, kamu dapat menutup terminal ini dan mencoba memulai Agent Manager lagi.",

@@ -32,6 +32,7 @@ describe("OpenRouter API", () => {
 				supportsReasoningEffort: false,
 				supportsNativeTools: true,
 				supportedParameters: ["max_tokens", "temperature", "reasoning", "include_reasoning"],
+				defaultToolProtocol: "native",
 			})
 
 			expect(models["anthropic/claude-3.7-sonnet:thinking"]).toEqual({
@@ -50,6 +51,7 @@ describe("OpenRouter API", () => {
 				supportsReasoningEffort: true,
 				supportsNativeTools: true,
 				supportedParameters: ["max_tokens", "temperature", "reasoning", "include_reasoning"],
+				defaultToolProtocol: "native",
 			})
 
 			expect(models["google/gemini-2.5-flash-preview-05-20"].maxTokens).toEqual(65535)
@@ -392,6 +394,56 @@ describe("OpenRouter API", () => {
 			// Both should parse successfully (filtering happens at a higher level)
 			expect(textResult.maxTokens).toBe(64000)
 			expect(imageResult.maxTokens).toBe(64000)
+		})
+
+		it("sets defaultToolProtocol to native when model supports native tools", () => {
+			const mockModel = {
+				name: "Tools Model",
+				description: "Model with native tool support",
+				context_length: 128000,
+				max_completion_tokens: 8192,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			const resultWithTools = parseOpenRouterModel({
+				id: "test/tools-model",
+				model: mockModel,
+				inputModality: ["text"],
+				outputModality: ["text"],
+				maxTokens: 8192,
+				supportedParameters: ["tools", "max_tokens", "temperature"],
+			})
+
+			expect(resultWithTools.supportsNativeTools).toBe(true)
+			expect(resultWithTools.defaultToolProtocol).toBe("native")
+		})
+
+		it("does not set defaultToolProtocol when model does not support native tools", () => {
+			const mockModel = {
+				name: "No Tools Model",
+				description: "Model without native tool support",
+				context_length: 128000,
+				max_completion_tokens: 8192,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			const resultWithoutTools = parseOpenRouterModel({
+				id: "test/no-tools-model",
+				model: mockModel,
+				inputModality: ["text"],
+				outputModality: ["text"],
+				maxTokens: 8192,
+				supportedParameters: ["max_tokens", "temperature"],
+			})
+
+			expect(resultWithoutTools.supportsNativeTools).toBe(false)
+			expect(resultWithoutTools.defaultToolProtocol).toBeUndefined()
 		})
 	})
 })
