@@ -7,7 +7,7 @@ import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
-import { sessionTodosAtomFamily } from "../state/atoms/todos"
+import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
 
 interface ChatInputProps {
@@ -19,7 +19,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, isActive = false }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
-	const todos = useAtomValue(sessionTodosAtomFamily(sessionId))
+	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -60,7 +60,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 		}
 	}
 
-	const hasTodos = todos.length > 0
+	const hasTodos = todoStats.totalCount > 0
 
 	return (
 		<div className="am-chat-input-container">
@@ -76,7 +76,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 					],
 				)}>
 				{/* Todo list above input */}
-				{hasTodos && <AgentTodoList todos={todos} isIntegrated />}
+				{hasTodos && <AgentTodoList stats={todoStats} isIntegrated />}
 				<div className={cn("relative", "flex-1", "flex", "flex-col-reverse", "min-h-0", "overflow-hidden")}>
 					<DynamicTextArea
 						ref={textareaRef}

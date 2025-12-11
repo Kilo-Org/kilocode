@@ -1,6 +1,6 @@
 import { atom } from "jotai"
 import { atomFamily } from "jotai/utils"
-import type { ClineMessage, TodoItem } from "@roo-code/types"
+import type { TodoItem } from "@roo-code/types"
 
 /**
  * Per-session todo list using atomFamily.
@@ -9,44 +9,57 @@ import type { ClineMessage, TodoItem } from "@roo-code/types"
 export const sessionTodosAtomFamily = atomFamily((_sessionId: string) => atom<TodoItem[]>([]))
 
 /**
+ * Computed stats for a todo list.
+ */
+export interface TodoStats {
+	todos: TodoItem[]
+	completedCount: number
+	totalCount: number
+	inProgressTodo: TodoItem | undefined
+	nextPendingTodo: TodoItem | undefined
+	currentTodo: TodoItem | undefined
+	allCompleted: boolean
+	progressPercent: number
+}
+
+/**
+ * Compute stats from a todo list. Pure function for testability.
+ */
+export function computeTodoStats(todos: TodoItem[]): TodoStats {
+	const completedCount = todos.filter((t) => t.status === "completed").length
+	const totalCount = todos.length
+	const inProgressTodo = todos.find((t) => t.status === "in_progress")
+	const nextPendingTodo = todos.find((t) => t.status === "pending")
+	const currentTodo = inProgressTodo || nextPendingTodo
+	const allCompleted = totalCount > 0 && completedCount === totalCount
+	const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+
+	return {
+		todos,
+		completedCount,
+		totalCount,
+		inProgressTodo,
+		nextPendingTodo,
+		currentTodo,
+		allCompleted,
+		progressPercent,
+	}
+}
+
+/**
+ * Derived atom family for todo stats per session.
+ */
+export const sessionTodoStatsAtomFamily = atomFamily((sessionId: string) =>
+	atom((get): TodoStats => {
+		const todos = get(sessionTodosAtomFamily(sessionId))
+		return computeTodoStats(todos)
+	}),
+)
+
+/**
  * Action atom to update todos for a session.
  */
 export const updateSessionTodosAtom = atom(null, (_get, set, payload: { sessionId: string; todos: TodoItem[] }) => {
 	const { sessionId, todos } = payload
 	set(sessionTodosAtomFamily(sessionId), todos)
 })
-
-interface TodoMetadata {
-	tool?: string
-	todos?: TodoItem[]
-}
-
-/**
- * Extract the latest todos from a list of ClineMessages.
- * Checks both metadata (from CLI) and parsed text for todo data.
- */
-export function extractTodosFromMessages(messages: ClineMessage[]): TodoItem[] {
-	const todos = messages
-		.filter(
-			(msg) =>
-				(msg.type === "ask" && msg.ask === "tool") || (msg.type === "say" && msg.say === "user_edit_todos"),
-		)
-		.map((msg) => {
-			// Check metadata first (CLI sends tool info here)
-			const metadata = msg.metadata as TodoMetadata | undefined
-			if (metadata?.tool === "updateTodoList" && Array.isArray(metadata.todos)) {
-				return { tool: "updateTodoList", todos: metadata.todos }
-			}
-			// Fall back to parsing text
-			try {
-				return JSON.parse(msg.text ?? "{}")
-			} catch {
-				return null
-			}
-		})
-		.filter((item) => item && item.tool === "updateTodoList" && Array.isArray(item.todos))
-		.map((item) => item.todos as TodoItem[])
-		.pop()
-
-	return todos ?? []
-}

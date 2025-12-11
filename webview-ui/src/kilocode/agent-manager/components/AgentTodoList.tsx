@@ -1,11 +1,11 @@
 import { cn } from "../../../lib/utils"
 import { useTranslation } from "react-i18next"
 import { Check, ChevronDown, ChevronUp, Circle, Loader2 } from "lucide-react"
-import { useState, useRef, useMemo, useEffect } from "react"
-import type { TodoItem } from "@roo-code/types"
+import { useState, useRef, useEffect } from "react"
+import type { TodoStats } from "../state/atoms/todos"
 
 interface AgentTodoListProps {
-	todos: TodoItem[]
+	stats: TodoStats
 	isIntegrated?: boolean
 }
 
@@ -27,26 +27,12 @@ function TodoIcon({ status, size = "sm" }: { status: string; size?: "sm" | "xs" 
 	}
 }
 
-export function AgentTodoList({ todos, isIntegrated = false }: AgentTodoListProps) {
+export function AgentTodoList({ stats, isIntegrated = false }: AgentTodoListProps) {
 	const { t } = useTranslation("chat")
 	const [isExpanded, setIsExpanded] = useState(false)
 	const listRef = useRef<HTMLDivElement>(null)
 
-	const { completedCount, totalCount, inProgressTodo, nextPendingTodo } = useMemo(() => {
-		const completed = todos.filter((t) => t.status === "completed").length
-		const inProgress = todos.find((t) => t.status === "in_progress")
-		const nextPending = todos.find((t) => t.status === "pending")
-		return {
-			completedCount: completed,
-			totalCount: todos.length,
-			inProgressTodo: inProgress,
-			nextPendingTodo: nextPending,
-		}
-	}, [todos])
-
-	const currentTodo = inProgressTodo || nextPendingTodo
-	const allCompleted = completedCount === totalCount && totalCount > 0
-	const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+	const { todos, completedCount, totalCount, currentTodo, allCompleted, progressPercent } = stats
 
 	// Auto-scroll to in-progress item when expanded
 	useEffect(() => {
@@ -60,7 +46,7 @@ export function AgentTodoList({ todos, isIntegrated = false }: AgentTodoListProp
 		}
 	}, [isExpanded, todos])
 
-	if (!todos.length) return null
+	if (totalCount === 0) return null
 
 	return (
 		<div

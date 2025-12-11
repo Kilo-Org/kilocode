@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import type { ClineMessage } from "@roo-code/types"
 import { updateSessionMessagesAtom } from "../atoms/messages"
-import { updateSessionTodosAtom, extractTodosFromMessages } from "../atoms/todos"
+import { updateSessionTodosAtom } from "../atoms/todos"
+import { extractTodosFromMessages } from "./extractTodosFromMessages"
 import {
 	upsertSessionAtom,
 	removeSessionAtom,
