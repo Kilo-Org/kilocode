@@ -95,7 +95,7 @@ export function getModelParams({
 		format,
 	})
 
-	let temperature = customTemperature ?? defaultTemperature
+	let temperature = customTemperature ?? model.defaultTemperature ?? defaultTemperature
 	let reasoningBudget: ModelParams["reasoningBudget"] = undefined
 	let reasoningEffort: ModelParams["reasoningEffort"] = undefined
 	let verbosity: VerbosityLevel | undefined = model.supportsVerbosity ? customVerbosity : undefined // kilocode_change

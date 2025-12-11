@@ -54,26 +54,26 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 	): ApiStream {
 		const { id: modelId, info: modelInfo, reasoning } = this.getModel()
 
+		// Check if model supports native tools and tools are provided with native protocol
+		const supportsNativeTools = modelInfo.supportsNativeTools ?? false
+		const useNativeTools =
+			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
+
 		// Use the OpenAI-compatible API.
 		let stream
 		try {
-			stream = await this.client.chat.completions.create(
-				// kilocode_change start
-				addNativeToolCallsToParams(
-					{
-						model: modelId,
-						max_tokens: modelInfo.maxTokens,
-						temperature: this.options.modelTemperature ?? XAI_DEFAULT_TEMPERATURE,
-						messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
-						stream: true,
-						stream_options: { include_usage: true },
-						...(reasoning && reasoning),
-					},
-					this.options,
-					metadata,
-				),
-				// kilocode_change end
-			)
+			stream = await this.client.chat.completions.create({
+				model: modelId,
+				max_tokens: modelInfo.maxTokens,
+				temperature: this.options.modelTemperature ?? XAI_DEFAULT_TEMPERATURE,
+				messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
+				stream: true,
+				stream_options: { include_usage: true },
+				...(reasoning && reasoning),
+				...(useNativeTools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(useNativeTools && metadata.tool_choice && { tool_choice: metadata.tool_choice }),
+				...(useNativeTools && { parallel_tool_calls: metadata?.parallelToolCalls ?? false }),
+			})
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}
@@ -96,6 +96,19 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 				yield {
 					type: "reasoning",
 					text: delta.reasoning_content as string,
+				}
+			}
+
+			// Handle tool calls in stream - emit partial chunks for NativeToolCallParser
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
 				}
 			}
 

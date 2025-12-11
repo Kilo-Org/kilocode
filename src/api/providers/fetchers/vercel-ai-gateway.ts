@@ -12,10 +12,11 @@ import { parseApiPrice } from "../../../shared/cost"
  */
 
 const vercelAiGatewayPricingSchema = z.object({
-	input: z.string(),
-	output: z.string(),
+	input: z.string().optional(), // Image models don't have an input price.
+	output: z.string().optional(), // Embedding and image models don't have an output price.
 	input_cache_write: z.string().optional(),
 	input_cache_read: z.string().optional(),
+	image: z.string().optional(), // Only image models have an image price.
 })
 
 /**
@@ -62,22 +63,19 @@ export async function getVercelAiGatewayModels(options?: ApiHandlerOptions): Pro
 		const data = result.success ? result.data.data : response.data.data
 
 		if (!result.success) {
-			console.error("Vercel AI Gateway models response is invalid", result.error.format())
+			console.error(`Vercel AI Gateway models response is invalid ${JSON.stringify(result.error.format())}`)
 		}
 
 		for (const model of data) {
 			const { id } = model
 
-			// Only include language models for chat inference
-			// Embedding models are statically defined in embeddingModels.ts
+			// Only include language models for chat inference.
+			// Embedding models are statically defined in embeddingModels.ts.
 			if (model.type !== "language") {
 				continue
 			}
 
-			models[id] = parseVercelAiGatewayModel({
-				id,
-				model,
-			})
+			models[id] = parseVercelAiGatewayModel({ id, model })
 		}
 	} catch (error) {
 		console.error(
@@ -108,6 +106,7 @@ export const parseVercelAiGatewayModel = ({ id, model }: { id: string; model: Ve
 		contextWindow: model.context_window,
 		supportsImages,
 		supportsPromptCache,
+		supportsNativeTools: true,
 		inputPrice: parseApiPrice(model.pricing?.input),
 		outputPrice: parseApiPrice(model.pricing?.output),
 		cacheWritesPrice,

@@ -20,7 +20,8 @@ export abstract class BaseProvider implements ApiHandler {
 
 	/**
 	 * Converts an array of tools to be compatible with OpenAI's strict mode.
-	 * Filters for function tools and applies schema conversion to their parameters.
+	 * Filters for function tools, applies schema conversion to their parameters,
+	 * and ensures all tools have consistent strict: true values.
 	 */
 	protected convertToolsForOpenAI(tools: any[] | undefined): any[] | undefined {
 		if (!tools) {
@@ -33,6 +34,7 @@ export abstract class BaseProvider implements ApiHandler {
 						...tool,
 						function: {
 							...tool.function,
+							strict: true,
 							parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
 						},
 					}

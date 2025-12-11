@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "공급자",
+		"modes": "모드",
+		"mcp": "MCP 서버",
 		"autoApprove": "자동 승인",
 		"browser": "컴퓨터 접근",
 		"checkpoints": "체크포인트",
@@ -89,6 +91,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 키",
 		"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
+		"openRouterProviderRoutingLabel": "OpenRouter 공급자 라우팅",
+		"openRouterProviderRoutingDescription": "OpenRouter는 임베딩 모델에 가장 적합한 공급자로 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자 간에 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
@@ -1015,7 +1019,8 @@
 		"label": "모델",
 		"searchPlaceholder": "검색",
 		"noMatchFound": "일치하는 항목 없음",
-		"useCustomModel": "사용자 정의 사용: {{modelId}}"
+		"useCustomModel": "사용자 정의 사용: {{modelId}}",
+		"simplifiedExplanation": "나중에 자세한 모델 설정을 조정할 수 있습니다."
 	},
 	"footer": {
 		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilo.ai/discord</discordLink>에 가입하세요",

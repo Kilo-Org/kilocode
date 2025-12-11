@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Bạn đã chờ {{timeout}} giây để khởi tạo điểm kiểm tra. Nếu không cần chức năng này, hãy tắt nó trong <settingsLink>cài đặt điểm kiểm tra</settingsLink>.",
 		"init_checkpoint_fail_long_time": "Khởi tạo điểm kiểm tra mất hơn {{timeout}} giây, vì vậy các điểm kiểm tra đã bị vô hiệu hóa cho tác vụ này. Bạn có thể tắt các điểm kiểm tra hoặc tăng thời gian chờ trong <settingsLink>cài đặt điểm kiểm tra</settingsLink>.",
 		"attempt_completion_tool_failed": "Không thể thực thi attempt_completion vì một lệnh gọi công cụ trước đó đã thất bại trong lượt này. Vui lòng giải quyết lỗi công cụ trước khi cố gắng hoàn thành."
+	},
+	"tasks": {
+		"delegated": "Ủy quyền cho nhiệm vụ con",
+		"delegated_to": "Ủy quyền cho nhiệm vụ {{childId}}",
+		"delegation_completed": "Nhiệm vụ con hoàn thành, tiếp tục nhiệm vụ cha",
+		"awaiting_child": "Đang chờ nhiệm vụ con {{childId}}"
 	}
 }

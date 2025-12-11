@@ -184,7 +184,11 @@
 			"installInstructions": "Інструкції з Встановлення",
 			"getHelp": "Отримати Допомогу",
 			"runInTerminal": "Запустити в Терміналі",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Оновити Глобально",
+			"updateLocal": "Оновити Локально",
+			"installGlobal": "Встановити Глобально",
+			"installLocal": "Встановити Локально"
 		},
 		"terminal": {
 			"installMessage": "Виконання npm install для встановлення Kilocode CLI. Після завершення можеш закрити цей термінал і спробувати запустити Agent Manager знову.",

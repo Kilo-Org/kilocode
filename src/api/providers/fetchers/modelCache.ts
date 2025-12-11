@@ -318,6 +318,7 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 			{ provider: "openrouter", options: { provider: "openrouter" } },
 			{ provider: "glama", options: { provider: "glama" } },
 			{ provider: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
+			{ provider: "chutes", options: { provider: "chutes" } },
 		]
 
 		// Refresh each provider in background (fire and forget)

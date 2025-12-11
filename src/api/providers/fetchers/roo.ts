@@ -1,4 +1,4 @@
-import { RooModelsResponseSchema } from "@roo-code/types"
+import { RooModelsResponseSchema, type ModelInfo } from "@roo-code/types"
 
 import type { ModelRecord } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
@@ -95,6 +95,9 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 				// Determine if the model supports native tool calling based on tags
 				const supportsNativeTools = tags.includes("tool-use")
 
+				// Determine if the model should hide vendor/company identity (stealth mode)
+				const isStealthModel = tags.includes("stealth")
+
 				// Parse pricing (API returns strings, convert to numbers)
 				const inputPrice = parseApiPrice(pricing.input)
 				const outputPrice = parseApiPrice(pricing.output)
@@ -117,9 +120,17 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 					description: model.description || model.name,
 					deprecated: model.deprecated || false,
 					isFree: tags.includes("free"),
+					defaultTemperature: model.default_temperature,
+					defaultToolProtocol: "native" as const,
+					isStealthModel: isStealthModel || undefined,
 				}
 
-				models[modelId] = baseModelInfo
+				// Apply API-provided settings on top of base model info
+				// Settings allow the proxy to dynamically configure model-specific options
+				// like includedTools, excludedTools, reasoningEffort, etc.
+				const apiSettings = model.settings as Partial<ModelInfo> | undefined
+
+				models[modelId] = apiSettings ? { ...baseModelInfo, ...apiSettings } : baseModelInfo
 			}
 
 			return models

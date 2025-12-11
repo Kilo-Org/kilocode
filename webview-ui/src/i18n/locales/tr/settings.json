@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Sağlayıcılar",
+		"modes": "Modlar",
+		"mcp": "MCP Sunucuları",
 		"autoApprove": "Oto-Onay",
 		"browser": "Bilgisayar Erişimi",
 		"checkpoints": "Kontrol Noktaları",
@@ -90,6 +92,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API Anahtarı",
 		"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
+		"openRouterProviderRoutingLabel": "OpenRouter Sağlayıcı Yönlendirmesi",
+		"openRouterProviderRoutingDescription": "OpenRouter, gömme modeliniz için mevcut en iyi sağlayıcılara istekleri yönlendirir. Varsayılan olarak, istekler çalışma süresini en üst düzeye çıkarmak için en iyi sağlayıcılar arasında dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -1016,7 +1020,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Ara",
 		"noMatchFound": "Eşleşme bulunamadı",
-		"useCustomModel": "Özel kullan: {{modelId}}"
+		"useCustomModel": "Özel kullan: {{modelId}}",
+		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz."
 	},
 	"footer": {
 		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilo.ai/discord</discordLink>'a katılmaktan çekinmeyin",

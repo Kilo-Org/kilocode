@@ -23,6 +23,7 @@
 		"learnMore": "дізнатися більше",
 		"useAnotherProvider": "Використати іншого провайдера",
 		"useAnotherProviderDescription": "Введи API ключ і почни.",
+		"noApiKeys": "Не хочеш мати справу з ключами? Обери Провайдер Roo Code Cloud.",
 		"getStarted": "Почати"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "Якщо не з'явилась пропозиція відкрити URL, <clickHere>клікни тут</clickHere>.",
 		"havingTrouble": "Якщо ти завершив реєстрацію, але є проблеми, <clickHere>клікни тут</clickHere>.",
 		"pasteUrl": "Вклей callback URL з браузера:",
+		"invalidURL": "Це не схоже на валідний callback URL. Будь ласка, скопіюй те, що показує Roo Code Cloud у твоєму браузері.",
 		"goBack": "Повернутися"
 	},
 	"startRouter": "Ми рекомендуємо використовувати LLM Router:",

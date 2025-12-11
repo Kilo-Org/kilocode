@@ -23,6 +23,7 @@
 		"learnMore": "और जानें",
 		"useAnotherProvider": "दूसरे प्रदाता का उपयोग करें",
 		"useAnotherProviderDescription": "एक API कुंजी दर्ज करें और शुरू करें।",
+		"noApiKeys": "कुंजियों से निपटना नहीं चाहते? Roo Code Cloud प्रदाता के साथ जाएं।",
 		"getStarted": "शुरू करें"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "यदि आपको URL खोलने के लिए संकेत नहीं मिलता है, तो <clickHere>यहां क्लिक करें</clickHere>।",
 		"havingTrouble": "यदि आपने साइन अप पूरा कर लिया है लेकिन समस्या हो रही है, तो <clickHere>यहां क्लिक करें</clickHere>।",
 		"pasteUrl": "अपने ब्राउज़र से कॉलबैक URL पेस्ट करें:",
+		"invalidURL": "यह एक वैध कॉलबैक URL नहीं लगता है। कृपया वह कॉपी करें जो Roo Code Cloud आपके ब्राउज़र में दिखा रहा है।",
 		"goBack": "वापस जाएं"
 	},
 	"startRouter": "हम एक LLM राउटर का उपयोग करने की सलाह देते हैं:",

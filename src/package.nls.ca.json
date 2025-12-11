@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "Requerir el paràmetre de tasques pendents quan es creïn noves tasques amb l'eina new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La mida del lot per a operacions d'incrustació durant la indexació de codi. Ajusta això segons els límits del teu proveïdor d'API. Per defecte és 60.",
 	"settings.toolProtocol.description": "Protocol d'eines a utilitzar per a les interaccions d'IA. XML és el protocol per defecte i recomanat. Natiu és experimental i pot ser que no funcioni amb tots els proveïdors.",
+	"settings.debug.description": "Activa el mode de depuració per mostrar botons addicionals per veure l'historial de conversa de l'API i els missatges de la interfície d'usuari com a JSON embellert en fitxers temporals.",
 	"ghost.input.title": "Premeu 'Enter' per confirmar o 'Escape' per cancel·lar",
 	"ghost.input.placeholder": "Descriviu què voleu fer...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generar Edicions Suggerides",

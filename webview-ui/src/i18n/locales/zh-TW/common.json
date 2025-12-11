@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "初始化存檔點已等待 {{timeout}} 秒。如果你不需要存檔點功能，請在<settingsLink>存檔點設定</settingsLink>中關閉。",
 		"init_checkpoint_fail_long_time": "存檔點初始化已超過 {{timeout}} 秒，因此此工作已停用存檔點。你可以關閉存檔點或在<settingsLink>存檔點設定</settingsLink>中延長等待時間。",
 		"attempt_completion_tool_failed": "無法執行 attempt_completion，因為本輪中先前的工具呼叫失敗了。請在嘗試完成前解決工具失敗問題。"
+	},
+	"tasks": {
+		"delegated": "已委派給子工作",
+		"delegated_to": "已委派給工作 {{childId}}",
+		"delegation_completed": "子工作已完成，繼續父工作",
+		"awaiting_child": "等待子工作 {{childId}}"
 	}
 }

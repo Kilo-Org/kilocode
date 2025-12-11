@@ -74,6 +74,15 @@ const mockSayAndCreateMissingParamError = vi.fn()
 const mockStartSubtask = vi
 	.fn<(message: string, todoItems: any[], mode: string) => Promise<MockClineInstance>>()
 	.mockResolvedValue({ taskId: "mock-subtask-id" })
+
+// Adapter to satisfy legacy expectations while exercising new delegation path
+const mockDelegateParentAndOpenChild = vi.fn(
+	async (args: { parentTaskId: string; message: string; initialTodos: any[]; mode: string }) => {
+		// Call legacy spy so existing expectations still pass
+		await mockStartSubtask(args.message, args.initialTodos, args.mode)
+		return { taskId: "child-1" }
+	},
+)
 const mockCheckpointSave = vi.fn()
 
 // Mock the Cline instance and its methods/properties
@@ -93,6 +102,7 @@ const mockCline = {
 		deref: vi.fn(() => ({
 			getState: vi.fn(() => ({ customModes: [], mode: "ask" })),
 			handleModeSwitch: vi.fn(),
+			delegateParentAndOpenChild: mockDelegateParentAndOpenChild,
 		})),
 	},
 }
@@ -157,7 +167,7 @@ describe("newTaskTool", () => {
 		)
 
 		// Verify side effects
-		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 	})
 
 	it("should not un-escape single escaped \@", async () => {
@@ -270,7 +280,7 @@ describe("newTaskTool", () => {
 		expect(mockStartSubtask).toHaveBeenCalledWith("Test message", [], "code")
 
 		// Should complete successfully
-		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 	})
 
 	it("should work with todos parameter when provided", async () => {
@@ -303,7 +313,7 @@ describe("newTaskTool", () => {
 			"code",
 		)
 
-		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 	})
 
 	it("should error when mode parameter is missing", async () => {
@@ -423,7 +433,7 @@ describe("newTaskTool", () => {
 			expect(mockStartSubtask).toHaveBeenCalledWith("Test message", [], "code")
 
 			// Should complete successfully
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 		})
 
 		it("should REQUIRE todos when VSCode setting is enabled", async () => {
@@ -505,7 +515,7 @@ describe("newTaskTool", () => {
 			)
 
 			// Should complete successfully
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 		})
 
 		it("should work with empty todos string when VSCode setting is enabled", async () => {
@@ -542,7 +552,7 @@ describe("newTaskTool", () => {
 			expect(mockStartSubtask).toHaveBeenCalledWith("Test message", [], "code")
 
 			// Should complete successfully
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task"))
 		})
 
 		it("should check VSCode setting with Package.name configuration key", async () => {
@@ -612,4 +622,78 @@ describe("newTaskTool", () => {
 	})
 
 	// Add more tests for error handling (invalid mode, approval denied) if needed
+})
+
+describe("newTaskTool delegation flow", () => {
+	it("delegates to provider and does not call legacy startSubtask", async () => {
+		// Arrange: stub provider delegation
+		const providerSpy = {
+			getState: vi.fn().mockResolvedValue({
+				mode: "ask",
+				experiments: {},
+			}),
+			delegateParentAndOpenChild: vi.fn().mockResolvedValue({ taskId: "child-1" }),
+			handleModeSwitch: vi.fn(),
+		} as any
+
+		// Use a fresh local cline instance to avoid cross-test interference
+		const localStartSubtask = vi.fn()
+		const localEmit = vi.fn()
+		const localCline = {
+			ask: vi.fn(),
+			sayAndCreateMissingParamError: mockSayAndCreateMissingParamError,
+			emit: localEmit,
+			recordToolError: mockRecordToolError,
+			consecutiveMistakeCount: 0,
+			isPaused: false,
+			pausedModeSlug: "ask",
+			taskId: "mock-parent-task-id",
+			enableCheckpoints: false,
+			checkpointSave: mockCheckpointSave,
+			startSubtask: localStartSubtask,
+			providerRef: {
+				deref: vi.fn(() => providerSpy),
+			},
+		}
+
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Do something",
+				// no todos -> should default to []
+			},
+			partial: false,
+		}
+
+		// Act
+		await newTaskTool.handle(localCline as any, block as ToolUse<"new_task">, {
+			askApproval: mockAskApproval,
+			handleError: mockHandleError,
+			pushToolResult: mockPushToolResult,
+			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "xml",
+		})
+
+		// Assert: provider method called with correct params
+		expect(providerSpy.delegateParentAndOpenChild).toHaveBeenCalledWith({
+			parentTaskId: "mock-parent-task-id",
+			message: "Do something",
+			initialTodos: [],
+			mode: "code",
+		})
+
+		// Assert: legacy path not used
+		expect(localStartSubtask).not.toHaveBeenCalled()
+
+		// Assert: no pause/unpause events emitted in delegation path
+		const pauseEvents = (localEmit as any).mock.calls.filter(
+			(c: any[]) => c[0] === "taskPaused" || c[0] === "taskUnpaused",
+		)
+		expect(pauseEvents.length).toBe(0)
+
+		// Assert: tool result reflects delegation
+		expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Delegated to child task child-1"))
+	})
 })
