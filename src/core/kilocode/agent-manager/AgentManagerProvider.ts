@@ -481,18 +481,28 @@ export class AgentManagerProvider implements vscode.Disposable {
 			}
 			case "complete": {
 				const session = this.registry.getSession(sessionId)
-				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
-				this.log(sessionId, "Agent completed")
+				const isSuccess = event.exitCode === 0 || event.exitCode === undefined
+				this.registry.updateSessionStatus(sessionId, isSuccess ? "done" : "error", event.exitCode)
+				this.log(sessionId, isSuccess ? "Agent completed" : `Agent failed with exit code ${event.exitCode}`)
 				void this.fetchAndPostRemoteSessions()
-				// Notify webview state machine of completion
+				// Notify webview state machine of completion (only on success)
 				// This is needed because completion_result events can be truncated in stdout chunking
-				this.postMessage({
-					type: "agentManager.stateEvent",
-					sessionId,
-					eventType: "ask_completion_result",
-				})
-				// Track session completed telemetry
-				captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
+				if (isSuccess) {
+					this.postMessage({
+						type: "agentManager.stateEvent",
+						sessionId,
+						eventType: "ask_completion_result",
+					})
+					// Track session completed telemetry
+					captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
+				} else {
+					// Track session error telemetry
+					captureAgentManagerSessionError(
+						sessionId,
+						session?.parallelMode?.enabled ?? false,
+						`Exit code ${event.exitCode}`,
+					)
+				}
 				break
 			}
 			case "interrupted": {
