@@ -50,6 +50,7 @@ import {
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
+	OcaHandler,
 	// MiniMaxHandler, // kilocode_change
 	BasetenHandler,
 } from "./providers"
@@ -241,6 +242,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FeatherlessHandler(options)
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
+		case "oca":
+			return new OcaHandler(options)
 		case "minimax":
 			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
 		case "baseten":

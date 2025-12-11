@@ -76,7 +76,8 @@
 			"brace-expansion": "^2.0.2",
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2",
-			"glob": ">=11.1.0"
+			"glob": ">=11.1.0",
+			"fsevents": "^2.3.3"
 		}
 	}
 }

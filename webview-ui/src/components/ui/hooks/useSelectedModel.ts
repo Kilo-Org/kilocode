@@ -511,11 +511,16 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		case "oca": {
+			const id = apiConfiguration.apiModelId ?? ""
+			const info = id && routerModels?.oca ? routerModels.oca[id] : undefined
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "human-relay" | "fake-ai" | "kilocode"
+			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "human-relay" | "fake-ai" | "kilocode" | "oca"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

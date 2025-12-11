@@ -120,6 +120,7 @@ import {
 	Featherless,
 	VercelAiGateway,
 	DeepInfra,
+	OCA,
 	MiniMax,
 } from "./providers"
 
@@ -465,6 +466,7 @@ const ApiOptions = ({
 			"litellm",
 			"zai",
 			"qwen-code",
+			"oca",
 			"minimax",
 		]
 
@@ -582,6 +584,15 @@ const ApiOptions = ({
 					selectedModelId={selectedModelId}
 					uriScheme={uriScheme}
 					simplifySettings={fromWelcomeView}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+
+			{selectedProvider === "oca" && (
+				<OCA
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>
