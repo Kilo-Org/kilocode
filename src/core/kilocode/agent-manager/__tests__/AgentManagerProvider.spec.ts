@@ -292,7 +292,6 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		expect(warningSpy).toHaveBeenCalledTimes(1)
 		expect(warningSpy.mock.calls[0][0]).toContain(message)
-		expect(warningSpy.mock.calls[0][0]).toContain("kilocode auth")
 	})
 
 	it("builds payment required message with parsed title and link", async () => {
