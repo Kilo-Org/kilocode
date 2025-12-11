@@ -122,12 +122,72 @@ export function findMatchingSuggestion(
  */
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.ghost.inline-completion.accepted"
 
-export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
+/**
+ * Determines if only the first line of a completion should be shown.
+ *
+ * The logic is:
+ * - If the suggestion starts with a newline → show the whole block
+ * - If the prefix's last line is only whitespace → show the whole block
+ * - Otherwise (suggestion adds to current line) → show only the first line
+ *
+ * @param prefix - The text before the cursor position
+ * @param suggestion - The completion text being suggested
+ * @returns true if only the first line should be shown
+ */
+export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boolean {
+	// If the suggestion starts with a newline, show the whole block
+	if (suggestion.startsWith("\n") || suggestion.startsWith("\r\n")) {
+		return false
+	}
+
+	// Check if the current line (before cursor) has non-whitespace text
+	const lastNewlineIndex = prefix.lastIndexOf("\n")
+	const currentLinePrefix = lastNewlineIndex === -1 ? prefix : prefix.substring(lastNewlineIndex + 1)
+
+	// If the current line prefix contains only whitespace, show the whole suggestion
+	// Otherwise, only show the first line (suggestion adds to current line content)
+	return currentLinePrefix.trim().length > 0
+}
+
+/**
+ * Extracts the first line from a completion text.
+ *
+ * @param text - The full completion text
+ * @returns The first line of the completion (without the newline)
+ */
+export function getFirstLine(text: string): string {
+	const newlineIndex = text.indexOf("\n")
+	if (newlineIndex === -1) {
+		return text
+	}
+	// Handle \r\n line endings
+	if (newlineIndex > 0 && text[newlineIndex - 1] === "\r") {
+		return text.substring(0, newlineIndex - 1)
+	}
+	return text.substring(0, newlineIndex)
+}
+
+export function stringToInlineCompletions(
+	text: string,
+	position: vscode.Position,
+	prefix?: string,
+): vscode.InlineCompletionItem[] {
 	if (text === "") {
 		return []
 	}
 
-	const item = new vscode.InlineCompletionItem(text, new vscode.Range(position, position), {
+	let completionText = text
+
+	// If prefix is provided, check if we should only show the first line
+	if (prefix !== undefined && shouldShowOnlyFirstLine(prefix, text)) {
+		completionText = getFirstLine(text)
+	}
+
+	if (completionText === "") {
+		return []
+	}
+
+	const item = new vscode.InlineCompletionItem(completionText, new vscode.Range(position, position), {
 		command: INLINE_COMPLETION_ACCEPTED_COMMAND,
 		title: "Autocomplete Accepted",
 	})
@@ -391,7 +451,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
-				return stringToInlineCompletions(matchingResult.text, position)
+				return stringToInlineCompletions(matchingResult.text, position, prefix)
 			}
 
 			// Only skip new LLM requests during mid-word typing or at end of statement
@@ -412,7 +472,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
 			}
 
-			return stringToInlineCompletions(cachedResult?.text ?? "", position)
+			return stringToInlineCompletions(cachedResult?.text ?? "", position, prefix)
 		} catch (error) {
 			// only big catch at the top of the call-chain, if anything goes wrong at a lower level
 			// do not catch, just let the error cascade
