@@ -24,6 +24,7 @@ type UnboundProps = {
 	routerModels?: RouterModels
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 export const Unbound = ({
@@ -32,6 +33,7 @@ export const Unbound = ({
 	routerModels,
 	organizationAllowList,
 	modelValidationError,
+	simplifySettings,
 }: UnboundProps) => {
 	const { t } = useAppTranslation()
 	const [didRefetch, setDidRefetch] = useState<boolean>()
@@ -185,6 +187,7 @@ export const Unbound = ({
 				setApiConfigurationField={setApiConfigurationField}
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

@@ -11,6 +11,7 @@ import { inputEventTransform } from "../transforms"
 type DoubaoProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	simplifySettings?: boolean
 }
 
 export const Doubao = ({ apiConfiguration, setApiConfigurationField }: DoubaoProps) => {

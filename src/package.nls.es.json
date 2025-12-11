@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "Requerir el parámetro todos al crear nuevas tareas con la herramienta new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "El tamaño del lote para operaciones de embedding durante la indexación de código. Ajusta esto según los límites de tu proveedor de API. Por defecto es 60.",
 	"settings.toolProtocol.description": "Protocolo de herramienta a utilizar para las interacciones de IA. XML es el protocolo predeterminado y recomendado. Nativo es experimental y puede que no funcione con todos los proveedores.",
+	"settings.debug.description": "Activa el modo de depuración para mostrar botones adicionales para ver el historial de conversación de API y los mensajes de la interfaz de usuario como JSON embellecido en archivos temporales.",
 	"ghost.input.title": "Presiona 'Enter' para confirmar o 'Escape' para cancelar",
 	"ghost.input.placeholder": "Describe lo que quieres hacer...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",

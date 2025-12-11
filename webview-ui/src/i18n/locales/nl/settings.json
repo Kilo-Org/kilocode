@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Providers",
+		"modes": "Modi",
+		"mcp": "MCP-servers",
 		"autoApprove": "Auto-goedkeuren",
 		"browser": "Browser",
 		"checkpoints": "Checkpoints",
@@ -86,6 +88,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API-sleutel",
 		"openRouterApiKeyPlaceholder": "Voer uw OpenRouter API-sleutel in",
+		"openRouterProviderRoutingLabel": "OpenRouter Provider Routing",
+		"openRouterProviderRoutingDescription": "OpenRouter stuurt verzoeken naar de best beschikbare providers voor uw embedding model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
@@ -1015,7 +1019,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Zoeken",
 		"noMatchFound": "Geen overeenkomsten gevonden",
-		"useCustomModel": "Aangepast gebruiken: {{modelId}}"
+		"useCustomModel": "Aangepast gebruiken: {{modelId}}",
+		"simplifiedExplanation": "Je kunt later gedetailleerde modelinstellingen aanpassen."
 	},
 	"footer": {
 		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",

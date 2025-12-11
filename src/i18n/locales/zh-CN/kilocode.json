@@ -114,7 +114,11 @@
 			"installInstructions": "安装说明",
 			"getHelp": "获取帮助",
 			"runInTerminal": "运行命令",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "全局更新",
+			"updateLocal": "本地更新",
+			"installGlobal": "全局安装",
+			"installLocal": "本地安装"
 		},
 		"terminal": {
 			"installMessage": "运行 npm install 安装 Kilocode CLI。完成后可关闭此终端，然后重新启动 Agent Manager。",

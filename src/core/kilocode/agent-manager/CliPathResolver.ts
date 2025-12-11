@@ -2,6 +2,7 @@ import * as path from "node:path"
 import * as fs from "node:fs"
 import { execSync } from "node:child_process"
 import { fileExistsAtPath } from "../../../utils/fs"
+import { getLocalCliPath } from "./CliInstaller"
 
 /**
  * Find the kilocode CLI executable.
@@ -9,9 +10,10 @@ import { fileExistsAtPath } from "../../../utils/fs"
  * Resolution order:
  * 1. VS Code setting `kiloCode.agentManager.cliPath`
  * 2. Workspace-local build at <workspace>/cli/dist/index.js
- * 3. Login shell lookup (respects user's nvm, fnm, volta, asdf config)
- * 4. Direct PATH lookup (fallback for system-wide installs)
- * 5. Common npm installation paths (last resort)
+ * 3. Local installation at ~/.kilocode/cli/pkg (for immutable systems like NixOS)
+ * 4. Login shell lookup (respects user's nvm, fnm, volta, asdf config)
+ * 5. Direct PATH lookup (fallback for system-wide installs)
+ * 6. Common npm installation paths (last resort)
  *
  * IMPORTANT: Login shell is checked BEFORE direct PATH because:
  * - The user's shell environment is the source of truth for which node/npm they use
@@ -47,17 +49,25 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 		log?.(`findKilocodeCli: vscode lookup failed, falling back to PATH. Error: ${String(error)}`)
 	}
 
-	// 3) Try login shell FIRST to pick up user's shell environment (nvm, fnm, volta, asdf, etc.)
+	// 3) Check local installation (for immutable systems like NixOS)
+	// This is checked early because it's a deliberate user choice for systems that can't use global install
+	const localCliPath = getLocalCliPath()
+	if (await fileExistsAtPath(localCliPath)) {
+		log?.(`Found local CLI installation: ${localCliPath}`)
+		return localCliPath
+	}
+
+	// 4) Try login shell FIRST to pick up user's shell environment (nvm, fnm, volta, asdf, etc.)
 	// This is preferred because it respects the user's actual node environment.
 	// When we run `npm install -g`, it installs to this environment, so we should find CLI here.
 	const loginShellResult = findViaLoginShell(log)
 	if (loginShellResult) return loginShellResult
 
-	// 4) Fall back to direct PATH lookup (for users without version managers)
+	// 5) Fall back to direct PATH lookup (for users without version managers)
 	const directPathResult = findInPath(log)
 	if (directPathResult) return directPathResult
 
-	// 5) Last resort: scan common npm installation paths
+	// 6) Last resort: scan common npm installation paths
 	log?.("Falling back to scanning common installation paths...")
 	for (const candidate of getNpmPaths(log)) {
 		try {
@@ -156,6 +166,8 @@ function getNpmPaths(log?: (msg: string) => void): string[] {
 
 	// macOS and Linux paths
 	const paths = [
+		// Local installation (for immutable systems like NixOS)
+		getLocalCliPath(),
 		// macOS Homebrew (Apple Silicon)
 		"/opt/homebrew/bin/kilocode",
 		// macOS Homebrew (Intel) and Linux standard

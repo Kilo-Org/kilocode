@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
+import crypto from "crypto"
 
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -117,6 +118,7 @@ export type SummarizeResponse = {
 	cost: number // The cost of the summarization operation
 	newContextTokens?: number // The number of tokens in the context for the next API request
 	error?: string // Populated iff the operation fails: error message shown to the user on failure (see Task.ts)
+	condenseId?: string // The unique ID of the created Summary message, for linking to condense_context clineMessage
 }
 
 /**
@@ -172,8 +174,13 @@ export async function summarizeConversation(
 		? getKeepMessagesWithToolBlocks(messages, N_MESSAGES_TO_KEEP)
 		: { keepMessages: messages.slice(-N_MESSAGES_TO_KEEP), toolUseBlocksToPreserve: [] }
 
+	const keepStartIndex = Math.max(messages.length - N_MESSAGES_TO_KEEP, 0)
+	const includeFirstKeptMessageInSummary = toolUseBlocksToPreserve.length > 0
+	const summarySliceEnd = includeFirstKeptMessageInSummary ? keepStartIndex + 1 : keepStartIndex
+	const messagesBeforeKeep = summarySliceEnd > 0 ? messages.slice(0, summarySliceEnd) : []
+
 	// Get messages to summarize, including the first message and excluding the last N messages
-	let messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP)) // kilocode_change: const=>let
+	let messagesToSummarize = getMessagesSinceLastSummary(messagesBeforeKeep) // kilocode_change: const=>let
 
 	// kilocode_change start
 	// discard tool_use, because it won't have a result
@@ -279,15 +286,51 @@ export async function summarizeConversation(
 		summaryContent = summary
 	}
 
+	// Generate a unique condenseId for this summary
+	const condenseId = crypto.randomUUID()
+
+	// Use first kept message's timestamp minus 1 to ensure unique timestamp for summary.
+	// Fallback to Date.now() if keepMessages is empty (shouldn't happen due to earlier checks).
+	const firstKeptTs = keepMessages[0]?.ts ?? Date.now()
+
 	const summaryMessage: ApiMessage = {
 		role: "assistant",
 		content: summaryContent,
-		ts: keepMessages[0].ts,
+		ts: firstKeptTs - 1, // Unique timestamp before first kept message to avoid collision
 		isSummary: true,
+		condenseId, // Unique ID for this summary, used to track which messages it replaces
 	}
 
-	// Reconstruct messages: [first message, summary, last N messages]
-	const newMessages = [firstMessage, summaryMessage, ...keepMessages]
+	// NON-DESTRUCTIVE CONDENSE:
+	// Instead of deleting middle messages, tag them with condenseParent so they can be
+	// restored if the user rewinds to a point before the summary.
+	//
+	// Storage structure after condense:
+	// [firstMessage, msg2(parent=X), ..., msg8(parent=X), summary(id=X), msg9, msg10, msg11]
+	//
+	// Effective for API (filtered by getEffectiveApiHistory):
+	// [firstMessage, summary, msg9, msg10, msg11]
+
+	// Tag middle messages with condenseParent (skip first message, skip last N messages)
+	const newMessages = messages.map((msg, index) => {
+		// First message stays as-is
+		if (index === 0) {
+			return msg
+		}
+		// Messages in the "keep" range stay as-is
+		if (index >= keepStartIndex) {
+			return msg
+		}
+		// Middle messages get tagged with condenseParent (unless they already have one from a previous condense)
+		// If they already have a condenseParent, we leave it - nested condense is handled by filtering
+		if (!msg.condenseParent) {
+			return { ...msg, condenseParent: condenseId }
+		}
+		return msg
+	})
+
+	// Insert the summary message right before the keep messages
+	newMessages.splice(keepStartIndex, 0, summaryMessage)
 
 	// Count the tokens in the context for the next API request
 	// We only estimate the tokens in summaryMesage if outputTokens is 0, otherwise we use outputTokens
@@ -307,7 +350,7 @@ export async function summarizeConversation(
 		const error = t("common:errors.condense_context_grew", { prevContextTokens, newContextTokens })
 		return { ...response, cost, error }
 	}
-	return { messages: newMessages, summary, cost, newContextTokens }
+	return { messages: newMessages, summary, cost, newContextTokens, condenseId }
 }
 
 /* Returns the list of all messages since the last summary message, including the summary. Returns all messages if there is no summary. */
@@ -342,4 +385,109 @@ export function getMessagesSinceLastSummary(messages: ApiMessage[]): ApiMessage[
 	}
 
 	return messagesSinceSummary
+}
+
+/**
+ * Filters the API conversation history to get the "effective" messages to send to the API.
+ * Messages with a condenseParent that points to an existing summary are filtered out,
+ * as they have been replaced by that summary.
+ * Messages with a truncationParent that points to an existing truncation marker are also filtered out,
+ * as they have been hidden by sliding window truncation.
+ *
+ * This allows non-destructive condensing and truncation where messages are tagged but not deleted,
+ * enabling accurate rewind operations while still sending condensed/truncated history to the API.
+ *
+ * @param messages - The full API conversation history including tagged messages
+ * @returns The filtered history that should be sent to the API
+ */
+export function getEffectiveApiHistory(messages: ApiMessage[]): ApiMessage[] {
+	// Collect all condenseIds of summaries that exist in the current history
+	const existingSummaryIds = new Set<string>()
+	// Collect all truncationIds of truncation markers that exist in the current history
+	const existingTruncationIds = new Set<string>()
+
+	for (const msg of messages) {
+		if (msg.isSummary && msg.condenseId) {
+			existingSummaryIds.add(msg.condenseId)
+		}
+		if (msg.isTruncationMarker && msg.truncationId) {
+			existingTruncationIds.add(msg.truncationId)
+		}
+	}
+
+	// Filter out messages whose condenseParent points to an existing summary
+	// or whose truncationParent points to an existing truncation marker.
+	// Messages with orphaned parents (summary/marker was deleted) are included
+	return messages.filter((msg) => {
+		// Filter out condensed messages if their summary exists
+		if (msg.condenseParent && existingSummaryIds.has(msg.condenseParent)) {
+			return false
+		}
+		// Filter out truncated messages if their truncation marker exists
+		if (msg.truncationParent && existingTruncationIds.has(msg.truncationParent)) {
+			return false
+		}
+		return true
+	})
+}
+
+/**
+ * Cleans up orphaned condenseParent and truncationParent references after a truncation operation (rewind/delete).
+ * When a summary message or truncation marker is deleted, messages that were tagged with its ID
+ * should have their parent reference cleared so they become active again.
+ *
+ * This function should be called after any operation that truncates the API history
+ * to ensure messages are properly restored when their summary or truncation marker is deleted.
+ *
+ * @param messages - The API conversation history after truncation
+ * @returns The cleaned history with orphaned condenseParent and truncationParent fields cleared
+ */
+export function cleanupAfterTruncation(messages: ApiMessage[]): ApiMessage[] {
+	// Collect all condenseIds of summaries that still exist
+	const existingSummaryIds = new Set<string>()
+	// Collect all truncationIds of truncation markers that still exist
+	const existingTruncationIds = new Set<string>()
+
+	for (const msg of messages) {
+		if (msg.isSummary && msg.condenseId) {
+			existingSummaryIds.add(msg.condenseId)
+		}
+		if (msg.isTruncationMarker && msg.truncationId) {
+			existingTruncationIds.add(msg.truncationId)
+		}
+	}
+
+	// Clear orphaned parent references for messages whose summary or truncation marker was deleted
+	return messages.map((msg) => {
+		let needsUpdate = false
+
+		// Check for orphaned condenseParent
+		if (msg.condenseParent && !existingSummaryIds.has(msg.condenseParent)) {
+			needsUpdate = true
+		}
+
+		// Check for orphaned truncationParent
+		if (msg.truncationParent && !existingTruncationIds.has(msg.truncationParent)) {
+			needsUpdate = true
+		}
+
+		if (needsUpdate) {
+			// Create a new object without orphaned parent references
+			const { condenseParent, truncationParent, ...rest } = msg
+			const result: ApiMessage = rest as ApiMessage
+
+			// Keep condenseParent if its summary still exists
+			if (condenseParent && existingSummaryIds.has(condenseParent)) {
+				result.condenseParent = condenseParent
+			}
+
+			// Keep truncationParent if its truncation marker still exists
+			if (truncationParent && existingTruncationIds.has(truncationParent)) {
+				result.truncationParent = truncationParent
+			}
+
+			return result
+		}
+		return msg
+	})
 }

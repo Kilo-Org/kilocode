@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "プロバイダー",
+		"modes": "モード",
+		"mcp": "MCPサーバー",
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
@@ -87,6 +89,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter APIキー",
 		"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
+		"openRouterProviderRoutingLabel": "OpenRouterプロバイダールーティング",
+		"openRouterProviderRoutingDescription": "OpenRouterは、埋め込みモデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択することもできます。",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
@@ -1016,7 +1020,8 @@
 		"label": "モデル",
 		"searchPlaceholder": "検索",
 		"noMatchFound": "一致するものが見つかりません",
-		"useCustomModel": "カスタムを使用: {{modelId}}"
+		"useCustomModel": "カスタムを使用: {{modelId}}",
+		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。"
 	},
 	"footer": {
 		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilo.ai/discord</discordLink>に参加してください",

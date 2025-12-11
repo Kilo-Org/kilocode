@@ -184,7 +184,11 @@
 			"installInstructions": "Installatie-instructies",
 			"getHelp": "Hulp krijgen",
 			"runInTerminal": "Uitvoeren in Terminal",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Globaal Bijwerken",
+			"updateLocal": "Lokaal Bijwerken",
+			"installGlobal": "Globaal Installeren",
+			"installLocal": "Lokaal Installeren"
 		},
 		"terminal": {
 			"installMessage": "npm install uitvoeren om Kilocode CLI te installeren. Zodra voltooid, kun je dit terminal sluiten en proberen de Agent Manager opnieuw te starten.",

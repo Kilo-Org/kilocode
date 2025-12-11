@@ -184,7 +184,11 @@
 			"installInstructions": "Kurulum Talimatları",
 			"getHelp": "Yardım Al",
 			"runInTerminal": "Terminalde Çalıştır",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Global Güncelle",
+			"updateLocal": "Lokal Güncelle",
+			"installGlobal": "Global Yükle",
+			"installLocal": "Lokal Yükle"
 		},
 		"terminal": {
 			"installMessage": "Kilocode CLI'yi yüklemek için npm install çalıştırılıyor. Tamamlandığında, bu terminali kapatıp Agent Manager'ı tekrar başlatmayı deneyebilirsin.",

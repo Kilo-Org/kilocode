@@ -210,6 +210,7 @@ function createMockCline(): any {
 		// CRITICAL: Always ensure image support is enabled
 		api: {
 			getModel: vi.fn().mockReturnValue({
+				id: "test-model",
 				info: {
 					supportsImages: true,
 					contextWindow: 200000,
@@ -229,10 +230,8 @@ function createMockCline(): any {
 function setImageSupport(mockCline: any, supportsImages: boolean | undefined): void {
 	mockCline.api = {
 		getModel: vi.fn().mockReturnValue({
-			info: {
-				supportsImages,
-				contextWindow: 100000, // Add context window for token limit calculations
-			},
+			id: "test-model",
+			info: { supportsImages },
 		}),
 		countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 	}

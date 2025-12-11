@@ -26,7 +26,9 @@
 		"expand": "Rozbalit úkol",
 		"collapse": "Sbalit úkol",
 		"openInCloud": "Otevřít v cloudu",
-		"openInCloudIntro": "Monitoruj a spravuj tento úkol vzdáleně"
+		"openInCloudIntro": "Monitoruj a spravuj tento úkol vzdáleně",
+		"openApiHistory": "Otevřít API historii",
+		"openUiHistory": "Otevřít historii UI"
 	},
 	"history": {
 		"title": "Historie"
@@ -155,7 +157,18 @@
 		"failed": "API požadavek selhal",
 		"streaming": "API požadavek...",
 		"cancelled": "API požadavek zrušen",
-		"streamingFailed": "Streamování API selhalo"
+		"streamingFailed": "Streamování API selhalo",
+		"errorTitle": "API Chyba {{code}}",
+		"errorMessage": {
+			"docs": "Dokumentace",
+			"400": "Poskytovatel nemohl zpracovat požadavek jak byl zadán. Zastav úkol a zkus jiný přístup.",
+			"401": "Nepodařilo se autentizovat u poskytovatele. Zkontroluj konfiguraci svého API klíče.",
+			"402": "Zdá se, že ti došly prostředky/kredity na účtu. Jdi ke svému poskytovateli a přidej více pro pokračování.",
+			"403": "Neautorizováno. Tvůj API klíč je platný, ale poskytovatel odmítl dokončit tento požadavek.",
+			"429": "Příliš mnoho požadavků. Poskytovatel tě omezuje rychlostí. Počkej chvíli před dalším API voláním.",
+			"500": "Chyba serveru poskytovatele. Něco je špatně na straně poskytovatele, s tvým požadavkem není nic v nepořádku.",
+			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Roo Code."
+		}
 	},
 	"checkpoint": {
 		"initial": "Počáteční kontrolní bod",
@@ -334,7 +347,9 @@
 			"chutesDynamic": "Chutes nyní dynamicky načítá nejnovější modely",
 			"queuedMessagesFix": "Opravy pro ztracené zprávy ve frontě",
 			"browserUse": "Browser Use 2.0 vylepšuje chatové procházení s trvalými relacemi, jasnější zpětnou vazbou, vyhrazeným panelem prohlížeče a přirozenějšími popisy akcí",
-			"cloudPaid": "Poskytovatel Roo Code Cloud nyní nabízí placené modely: kup si kredity a používej je jak pro cloudové agenty, tak pro inferenci"
+			"cloudPaid": "Poskytovatel Roo Code Cloud nyní nabízí placené modely: kup si kredity a používej je jak pro cloudové agenty, tak pro inferenci",
+			"contextRewind": "Vylepšené zhušťování kontextu nyní umožňuje obnovit plný předchozí kontext při vracení ke kontrolnímu bodu",
+			"rooProvider": "Poskytovatel Roo Code Cloud nyní zachovává obsah uvažování a používá nativní nástroje pro lepší výkon"
 		},
 		"cloudAgents": {
 			"heading": "Nové v cloudu:",
@@ -346,7 +361,7 @@
 			"tryButton": "Vyzkoušet cloudové agenty"
 		},
 		"careers": "Také <careersLink>nabíráme!</careersLink>",
-		"socialLinks": "Připoj se k nám na <xLink>X</xLink>, <discordLink>Discord</discordLink> nebo <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Připoj se k nám na <xLink>X</xLink>, <discordLink>Discord</discordLink> nebo <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Přemýšlím",

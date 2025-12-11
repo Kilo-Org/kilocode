@@ -371,39 +371,11 @@ export class NativeToolCallParser {
 				}
 				break
 
-			case "insert_content":
-				// For partial tool calls, we build nativeArgs incrementally as fields arrive.
-				// Unlike parseToolCall which validates all required fields, partial parsing
-				// needs to show progress as each field streams in.
-				if (
-					partialArgs.path !== undefined ||
-					partialArgs.line !== undefined ||
-					partialArgs.content !== undefined
-				) {
-					nativeArgs = {
-						path: partialArgs.path,
-						line:
-							typeof partialArgs.line === "number"
-								? partialArgs.line
-								: partialArgs.line !== undefined
-									? parseInt(String(partialArgs.line), 10)
-									: undefined,
-						content: partialArgs.content,
-					}
-				}
-				break
-
 			case "write_to_file":
-				if (partialArgs.path || partialArgs.content || partialArgs.line_count !== undefined) {
+				if (partialArgs.path || partialArgs.content) {
 					nativeArgs = {
 						path: partialArgs.path,
 						content: partialArgs.content,
-						line_count:
-							typeof partialArgs.line_count === "number"
-								? partialArgs.line_count
-								: partialArgs.line_count
-									? parseInt(String(partialArgs.line_count), 10)
-									: undefined,
 					}
 				}
 				break
@@ -519,6 +491,14 @@ export class NativeToolCallParser {
 				}
 				break
 
+			case "apply_patch":
+				if (partialArgs.patch !== undefined) {
+					nativeArgs = {
+						patch: partialArgs.patch,
+					}
+				}
+				break
+
 			// Add other tools as needed
 			default:
 				break
@@ -616,26 +596,32 @@ export class NativeToolCallParser {
 					}
 					break
 
-				case "insert_content":
-					if (args.path !== undefined && args.line !== undefined && args.content !== undefined) {
-						nativeArgs = {
-							path: args.path,
-							line: typeof args.line === "number" ? args.line : parseInt(String(args.line), 10),
-							content: args.content,
-						} as NativeArgsFor<TName>
-					}
-					break
-
 				// kilocode_change start
 				case "condense":
 				case "edit_file":
 				case "delete_file":
 				case "new_rule":
 				case "report_bug":
-				case "apply_diff":
-					nativeArgs = args
 					break
 				// kilocode_change end
+
+				case "apply_diff":
+					if (args.path !== undefined && args.diff !== undefined) {
+						nativeArgs = {
+							path: args.path,
+							diff: args.diff,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				case "search_and_replace":
+					if (args.path !== undefined && args.operations !== undefined && Array.isArray(args.operations)) {
+						nativeArgs = {
+							path: args.path,
+							operations: args.operations,
+						} as NativeArgsFor<TName>
+					}
+					break
 
 				case "ask_followup_question":
 					if (args.question !== undefined && args.follow_up !== undefined) {
@@ -730,14 +716,10 @@ export class NativeToolCallParser {
 					break
 
 				case "write_to_file":
-					if (args.path !== undefined && args.content !== undefined && args.line_count !== undefined) {
+					if (args.path !== undefined && args.content !== undefined) {
 						nativeArgs = {
 							path: args.path,
 							content: args.content,
-							line_count:
-								typeof args.line_count === "number"
-									? args.line_count
-									: parseInt(String(args.line_count), 10),
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -757,6 +739,14 @@ export class NativeToolCallParser {
 						nativeArgs = {
 							server_name: args.server_name,
 							uri: args.uri,
+						} as NativeArgsFor<TName>
+					}
+					break
+
+				case "apply_patch":
+					if (args.patch !== undefined) {
+						nativeArgs = {
+							patch: args.patch,
 						} as NativeArgsFor<TName>
 					}
 					break

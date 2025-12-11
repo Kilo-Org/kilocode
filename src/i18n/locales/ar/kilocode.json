@@ -188,7 +188,11 @@
 			"installInstructions": "تعليمات التثبيت",
 			"getHelp": "الحصول على المساعدة",
 			"runInTerminal": "تشغيل في الطرفية",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "تحديث عام",
+			"updateLocal": "تحديث محلي",
+			"installGlobal": "تثبيت عام",
+			"installLocal": "تثبيت محلي"
 		},
 		"terminal": {
 			"installMessage": "تشغيل npm install لتثبيت Kilocode CLI. بمجرد الانتهاء، يمكنك إغلاق هذه الطرفية ومحاولة بدء Agent Manager مرة أخرى.",

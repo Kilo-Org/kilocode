@@ -271,6 +271,8 @@ export interface WebviewMessage {
 		| "sessionShow" // kilocode_change
 		| "sessionSelect" // kilocode_change
 		| "singleCompletion" // kilocode_change
+		| "openDebugApiHistory"
+		| "openDebugUiHistory"
 		| "startDeviceAuth" // kilocode_change: Start device auth flow
 		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
@@ -376,6 +378,7 @@ export interface WebviewMessage {
 		codebaseIndexEmbeddingBatchSize?: number
 		codebaseIndexScannerMaxBatchRetries?: number
 		// kilocode_change end
+		codebaseIndexOpenRouterSpecificProvider?: string // OpenRouter provider routing
 
 		// Secret settings
 		codeIndexOpenAiKey?: string

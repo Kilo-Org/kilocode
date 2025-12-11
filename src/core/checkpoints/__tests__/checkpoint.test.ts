@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, Mock } from "vitest"
 import { Task } from "../../task/Task"
 import { ClineProvider } from "../../webview/ClineProvider"
 import { checkpointSave, checkpointRestore, checkpointDiff, getCheckpointService } from "../index"
+import { MessageManager } from "../../message-manager"
 import * as vscode from "vscode"
 
 // Mock vscode
@@ -103,6 +104,7 @@ describe("Checkpoint functionality", () => {
 			overwriteApiConversationHistory: vi.fn(),
 			combineMessages: vi.fn().mockReturnValue([]),
 		}
+		mockTask.messageManager = new MessageManager(mockTask)
 
 		// Update the mock to return our mockCheckpointService
 		const checkpointsModule = await import("../../../services/checkpoints")

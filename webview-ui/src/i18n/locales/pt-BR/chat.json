@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Link da organização copiado para a área de transferência",
 		"shareSuccessPublic": "Link público copiado para a área de transferência",
 		"openInCloud": "Abrir tarefa no Roo Code Cloud",
-		"openInCloudIntro": "Continue monitorando ou interagindo com Roo de qualquer lugar. Escaneie, clique ou copie para abrir."
+		"openInCloudIntro": "Continue monitorando ou interagindo com Roo de qualquer lugar. Escaneie, clique ou copie para abrir.",
+		"openApiHistory": "Abrir histórico da API",
+		"openUiHistory": "Abrir histórico da UI"
 	},
 	"history": {
 		"title": "Histórico"
@@ -142,7 +144,18 @@
 		"failed": "Requisição API falhou",
 		"streaming": "Requisição API...",
 		"cancelled": "Requisição API cancelada",
-		"streamingFailed": "Streaming API falhou"
+		"streamingFailed": "Streaming API falhou",
+		"errorTitle": "Erro API {{code}}",
+		"errorMessage": {
+			"docs": "Documentação",
+			"400": "O provedor não conseguiu processar a solicitação conforme feita. Interrompa a tarefa e tente uma abordagem diferente.",
+			"401": "Não foi possível autenticar com o provedor. Por favor, verifique a configuração da sua chave API.",
+			"402": "Parece que você ficou sem fundos/créditos em sua conta. Vá ao seu provedor e adicione mais para continuar.",
+			"403": "Não autorizado. Sua chave API é válida, mas o provedor se recusou a concluir esta solicitação.",
+			"429": "Muitas solicitações. Você está sendo limitado pelo provedor. Por favor, aguarde um pouco antes de sua próxima chamada de API.",
+			"500": "Erro do servidor do provedor. Algo está errado do lado do provedor, não há nada de errado com sua solicitação.",
+			"unknown": "Erro de API desconhecido. Por favor, entre em contato com o suporte do Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Ponto de verificação",
@@ -302,8 +315,8 @@
 		},
 		"release": {
 			"heading": "Novidades nesta versão:",
-			"browserUse": "Browser Use 2.0 atualiza a experiência de navegação em chat com sessões persistentes, feedback mais claro, um painel de navegador dedicado e descrições de ações mais naturais",
-			"cloudPaid": "O provedor Roo Code Cloud agora oferece modelos pagos: compre créditos e use-os para agentes na nuvem e inferência"
+			"contextRewind": "A condensação melhorada do contexto agora permite restaurar o contexto anterior completo ao rebobinar para um ponto de verificação",
+			"rooProvider": "O provedor Roo Code Cloud agora preserva o conteúdo de raciocínio e usa ferramentas nativas por padrão para melhor desempenho"
 		},
 		"cloudAgents": {
 			"heading": "Novidades na Nuvem:",
@@ -312,7 +325,7 @@
 			"tryButton": "Experimentar Agentes em Nuvem"
 		},
 		"careers": "Além disso, <careersLink>estamos contratando!</careersLink>",
-		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
 		"session": "Sessão do Navegador",

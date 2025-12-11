@@ -6,7 +6,8 @@
 		"imageTooLarge": "File gambar terlalu besar ({{size}} MB). Ukuran maksimum yang diizinkan adalah {{max}} MB.",
 		"imageWithSize": "File gambar ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Model tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"toolRepetitionLimitReached": "Kilo tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"unknownToolError": "Kilo mencoba menggunakan alat yang tidak dikenal: \"{{toolName}}\". Mencoba lagi...",
 	"codebaseSearch": {
 		"approval": "Mencari '{{query}}' di codebase..."
 	},

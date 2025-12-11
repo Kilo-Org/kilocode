@@ -1,5 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { Message, Ollama } from "ollama"
+import OpenAI from "openai"
+import { Message, Ollama, Tool as OllamaTool, type Config as OllamaOptions } from "ollama"
 import { ModelInfo, openAiModelInfoSaneDefaults, DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
@@ -105,7 +106,7 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 					})
 				}
 			} else if (anthropicMessage.role === "assistant") {
-				const { nonToolMessages } = anthropicMessage.content.reduce<{
+				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
 					nonToolMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
 					toolMessages: Anthropic.ToolUseBlockParam[]
 				}>(
@@ -133,9 +134,21 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 						.join("\n")
 				}
 
+				// Convert tool_use blocks to Ollama tool_calls format
+				const toolCalls =
+					toolMessages.length > 0
+						? toolMessages.map((tool) => ({
+								function: {
+									name: tool.name,
+									arguments: tool.input as Record<string, unknown>,
+								},
+							}))
+						: undefined
+
 				ollamaMessages.push({
 					role: "assistant",
 					content,
+					tool_calls: toolCalls,
 				})
 			}
 		}
@@ -189,6 +202,28 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		return this.client
 	}
 
+	/**
+	 * Converts OpenAI-format tools to Ollama's native tool format.
+	 * This allows NativeOllamaHandler to use the same tool definitions
+	 * that are passed to OpenAI-compatible providers.
+	 */
+	private convertToolsToOllama(tools: OpenAI.Chat.ChatCompletionTool[] | undefined): OllamaTool[] | undefined {
+		if (!tools || tools.length === 0) {
+			return undefined
+		}
+
+		return tools
+			.filter((tool): tool is OpenAI.Chat.ChatCompletionTool & { type: "function" } => tool.type === "function")
+			.map((tool) => ({
+				type: tool.type,
+				function: {
+					name: tool.function.name,
+					description: tool.function.description,
+					parameters: tool.function.parameters as OllamaTool["function"]["parameters"],
+				},
+			}))
+	}
+
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
@@ -229,6 +264,11 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				}) as const,
 		)
 
+		// Check if we should use native tool calling
+		const supportsNativeTools = modelInfo.supportsNativeTools ?? false
+		const useNativeTools =
+			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
+
 		try {
 			// Build options object conditionally
 			const chatOptions: OllamaChatOptions = {
@@ -246,17 +286,37 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				messages: ollamaMessages,
 				stream: true,
 				options: chatOptions,
+				// Native tool calling support
+				...(useNativeTools && { tools: this.convertToolsToOllama(metadata.tools) }),
 			})
 
 			let totalInputTokens = 0
 			let totalOutputTokens = 0
+			// Track tool calls across chunks (Ollama may send complete tool_calls in final chunk)
+			let toolCallIndex = 0
 
 			try {
 				for await (const chunk of stream) {
-					if (typeof chunk.message.content === "string") {
+					if (typeof chunk.message.content === "string" && chunk.message.content.length > 0) {
 						// Process content through matcher for reasoning detection
 						for (const matcherChunk of matcher.update(chunk.message.content)) {
 							yield matcherChunk
+						}
+					}
+
+					// Handle tool calls - emit partial chunks for NativeToolCallParser compatibility
+					if (chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
+						for (const toolCall of chunk.message.tool_calls) {
+							// Generate a unique ID for this tool call
+							const toolCallId = `ollama-tool-${toolCallIndex}`
+							yield {
+								type: "tool_call_partial",
+								index: toolCallIndex,
+								id: toolCallId,
+								name: toolCall.function.name,
+								arguments: JSON.stringify(toolCall.function.arguments),
+							}
+							toolCallIndex++
 						}
 					}
 

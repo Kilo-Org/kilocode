@@ -169,6 +169,10 @@
 			"installInstructions": "Install Instructions",
 			"getHelp": "Get Help",
 			"runInTerminal": "Run in Terminal",
+			"updateGlobal": "Update Global",
+			"updateLocal": "Update Local",
+			"installGlobal": "Install Global",
+			"installLocal": "Install Local",
 			"loginCli": "Run kilocode auth"
 		},
 		"terminal": {
