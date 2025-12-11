@@ -527,14 +527,12 @@ export class CliProcessHandler {
 
 	private handlePaymentRequiredDuringPending(payload: KilocodePayload): void {
 		this.handlePendingAskFailure(payload, "payment_required", () => ({
-			message: extractPayloadMessage(payload, "Paid model requires credits or billing setup.", this.debugLog),
+			message: extractPayloadMessage(payload, "Paid model requires credits or billing setup."),
 		}))
 	}
 
 	private handleApiReqFailedDuringPending(payload: KilocodePayload): void {
-		this.handlePendingAskFailure(payload, "api_req_failed", () =>
-			extractApiReqFailedMessage(payload, this.debugLog),
-		)
+		this.handlePendingAskFailure(payload, "api_req_failed", () => extractApiReqFailedMessage(payload))
 	}
 
 	private handlePendingAskFailure(

@@ -313,6 +313,56 @@ describe("AgentManagerProvider CLI spawning", () => {
 		)
 	})
 
+	describe("parsePaymentRequiredPayload", () => {
+		it("parses valid JSON payload with all fields", () => {
+			const payload = {
+				text: JSON.stringify({
+					title: "Payment Required",
+					message: "Please add credits",
+					buyCreditsUrl: "https://kilo.ai/billing",
+				}),
+			}
+			const result = (provider as any).parsePaymentRequiredPayload(payload)
+			expect(result.title).toBe("Payment Required")
+			expect(result.message).toBe("Please add credits")
+			expect(result.buyCreditsUrl).toBe("https://kilo.ai/billing")
+		})
+
+		it("uses fallback title when not provided in JSON", () => {
+			const payload = {
+				text: JSON.stringify({ message: "Please add credits" }),
+			}
+			const result = (provider as any).parsePaymentRequiredPayload(payload)
+			expect(result.title).toBeTruthy()
+			expect(result.message).toBe("Please add credits")
+		})
+
+		it("uses raw text as message when JSON has no message field", () => {
+			const payload = { text: "Raw error text" }
+			const result = (provider as any).parsePaymentRequiredPayload(payload)
+			expect(result.message).toBe("Raw error text")
+		})
+
+		it("uses content field when text is not present", () => {
+			const payload = { content: "Content field message" }
+			const result = (provider as any).parsePaymentRequiredPayload(payload)
+			expect(result.message).toBe("Content field message")
+		})
+
+		it("returns fallback values when payload is undefined", () => {
+			const result = (provider as any).parsePaymentRequiredPayload(undefined)
+			expect(result.title).toBeTruthy()
+			expect(result.message).toBeTruthy()
+			expect(result.buyCreditsUrl).toBeUndefined()
+		})
+
+		it("handles malformed JSON gracefully", () => {
+			const payload = { text: "not valid json {" }
+			const result = (provider as any).parsePaymentRequiredPayload(payload)
+			expect(result.message).toBe("not valid json {")
+		})
+	})
+
 	describe("dispose behavior", () => {
 		it("kills pending process on dispose", async () => {
 			await (provider as any).startAgentSession("pending session")

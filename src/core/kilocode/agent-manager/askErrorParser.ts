@@ -1,45 +1,69 @@
+import { z } from "zod"
 import { KilocodePayload } from "./CliOutputParser"
 
-type DebugLogger = (message: string) => void
+/**
+ * Schema for parsing JSON content that may contain message/title/buyCreditsUrl fields.
+ * Used for payment_required and similar payloads where text field contains JSON.
+ */
+export const payloadJsonSchema = z.object({
+	message: z.string().optional(),
+	title: z.string().optional(),
+	buyCreditsUrl: z.string().optional(),
+})
 
-export function extractPayloadMessage(
-	payload: KilocodePayload,
-	defaultMessage: string,
-	_debugLog?: DebugLogger,
-): string {
-	const rawText =
-		(typeof payload.text === "string" && payload.text) ||
-		(typeof payload.content === "string" && payload.content) ||
-		""
+export type PayloadJson = z.infer<typeof payloadJsonSchema>
 
-	// If raw text looks like JSON, avoid showing it and use fallback
-	if (rawText.trim().startsWith("{") || rawText.trim().startsWith("[")) {
-		return defaultMessage
-	}
-
-	return rawText || defaultMessage
+/**
+ * Extracts raw text from payload, preferring text over content.
+ */
+export function extractRawText(payload: KilocodePayload | { text?: string; content?: string }): string {
+	const text = typeof payload?.text === "string" ? payload.text : undefined
+	const content = typeof payload?.content === "string" ? payload.content : undefined
+	return text || content || ""
 }
 
-export function extractApiReqFailedMessage(
-	payload: KilocodePayload,
-	_debugLog?: DebugLogger,
-): { message: string; authError: boolean } {
-	const rawText =
-		(typeof payload.text === "string" && payload.text) ||
-		(typeof payload.content === "string" && payload.content) ||
-		""
+/**
+ * Attempts to parse JSON from text and validate against schema.
+ * Returns undefined if parsing fails or validation fails.
+ */
+export function tryParsePayloadJson(text: string): PayloadJson | undefined {
+	try {
+		const result = payloadJsonSchema.safeParse(JSON.parse(text))
+		return result.success ? result.data : undefined
+	} catch {
+		return undefined
+	}
+}
 
+/**
+ * Checks if text contains JSON (has a { character).
+ */
+function containsJson(text: string): boolean {
+	return text.includes("{")
+}
+
+export function extractPayloadMessage(payload: KilocodePayload, defaultMessage: string): string {
+	const rawText = extractRawText(payload)
+
+	// Try to extract message from JSON, fall back to raw text or default
+	return tryParsePayloadJson(rawText)?.message || rawText || defaultMessage
+}
+
+export function extractApiReqFailedMessage(payload: KilocodePayload): { message: string; authError: boolean } {
+	const rawText = extractRawText(payload)
+
+	// Extract HTTP status code from beginning of message (e.g., "401 ...")
 	const statusMatch = rawText.match(/^\s*(\d{3})\b/)
-	const statusCode = statusMatch ? Number(statusMatch[1]) : undefined
-	const authError = statusCode === 401
+	const authError = statusMatch?.[1] === "401"
 
-	const looksJson = rawText.trim().startsWith("{") || rawText.includes("{")
-	let message = rawText && !looksJson ? rawText : "API request failed."
+	// Use raw text if it's not JSON, otherwise fall back
+	let message = rawText && !containsJson(rawText) ? rawText : "API request failed."
 
 	if (!message.trim()) {
 		message = "API request failed."
 	}
 
+	// Prefix auth errors unless already prefixed
 	if (authError && !/^Authentication failed:/i.test(message)) {
 		message = `Authentication failed: ${message}`
 	}

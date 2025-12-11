@@ -13,6 +13,7 @@ import { findKilocodeCli } from "./CliPathResolver"
 import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
+import { extractRawText, tryParsePayloadJson } from "./askErrorParser"
 import { RemoteSessionService } from "./RemoteSessionService"
 import { KilocodeEventProcessor } from "./KilocodeEventProcessor"
 import type { RemoteSession } from "./types"
@@ -894,39 +895,18 @@ export class AgentManagerProvider implements vscode.Disposable {
 		const fallbackTitle = t("kilocode:lowCreditWarning.title")
 		const fallbackMessage = t("kilocode:lowCreditWarning.message")
 
-		const rawText =
-			typeof payload?.text === "string"
-				? payload.text
-				: typeof payload?.content === "string"
-					? payload.content
-					: undefined
-
-		let parsed: { title?: unknown; message?: unknown; buyCreditsUrl?: unknown } = {}
-		if (rawText) {
-			try {
-				const maybeParsed = JSON.parse(rawText)
-				if (maybeParsed && typeof maybeParsed === "object") {
-					parsed = maybeParsed as Record<string, unknown>
-				}
-			} catch {
-				this.outputChannel.appendLine(
-					`[AgentManager] Failed to parse payment_required_prompt payload: ${rawText}`,
-				)
-			}
-		}
+		const rawText = payload ? extractRawText(payload) : undefined
+		const parsed = rawText ? tryParsePayloadJson(rawText) : undefined
 
 		const title =
-			(typeof parsed.title === "string" ? parsed.title : undefined) ||
-			(typeof fallbackTitle === "string" ? fallbackTitle : undefined) ||
-			"Payment required"
+			parsed?.title || (typeof fallbackTitle === "string" ? fallbackTitle : undefined) || "Payment required"
 		const message =
-			(typeof parsed.message === "string" ? parsed.message : undefined) ||
+			parsed?.message ||
 			rawText ||
 			(typeof fallbackMessage === "string" ? fallbackMessage : undefined) ||
 			"Paid model requires credits or billing setup."
-		const buyCreditsUrl = typeof parsed.buyCreditsUrl === "string" ? parsed.buyCreditsUrl : undefined
 
-		return { title, message, buyCreditsUrl, rawText }
+		return { title, message, buyCreditsUrl: parsed?.buyCreditsUrl, rawText }
 	}
 
 	/**
