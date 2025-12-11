@@ -8,6 +8,7 @@ import {
 	preferredRunModeAtom,
 	versionCountAtom,
 	generateVersionLabels,
+	VERSION_COUNT_OPTIONS,
 	type RunMode,
 	type VersionCount,
 } from "../state/atoms/sessions"
@@ -416,7 +417,7 @@ function NewAgentForm() {
 							</StandardTooltip>
 							{isVersionDropdownOpen && (
 								<div className="am-run-mode-menu-inline">
-									{([1, 2, 3, 4] as VersionCount[]).map((count) => (
+									{VERSION_COUNT_OPTIONS.map((count) => (
 										<button
 											key={count}
 											className={cn(

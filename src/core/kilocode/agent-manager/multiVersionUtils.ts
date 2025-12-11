@@ -2,6 +2,9 @@
  * Utility functions for multi-version session handling
  */
 
+/** Maximum number of parallel versions allowed */
+export const MAX_VERSION_COUNT = 4
+
 export interface SessionConfig {
 	prompt: string
 	label: string

@@ -29,7 +29,7 @@ import {
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
 } from "./telemetry"
-import { extractSessionConfigs } from "./multiVersionUtils"
+import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 
 /**
@@ -262,9 +262,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private async handleStartSession(message: { [key: string]: unknown }): Promise<void> {
 		const prompt = message.prompt as string
-		// Clamp versions to valid range (1-4) to prevent runaway process spawning
+		// Clamp versions to valid range to prevent runaway process spawning
 		const rawVersions = (message.versions as number) ?? 1
-		const versions = Math.min(Math.max(rawVersions, 1), 4)
+		const versions = Math.min(Math.max(rawVersions, 1), MAX_VERSION_COUNT)
 		// Only use labels if they match the version count, otherwise ignore
 		const rawLabels = message.labels as string[] | undefined
 		const labels = rawLabels?.length === versions ? rawLabels : undefined

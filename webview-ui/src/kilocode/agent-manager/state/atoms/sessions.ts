@@ -68,6 +68,8 @@ export const preferredRunModeAtom = atom<RunMode>("local")
 // Version count for multi-version mode (1 = single, 2-4 = multi-version with worktrees)
 export type VersionCount = 1 | 2 | 3 | 4
 export const MAX_VERSION_COUNT = 4
+// Derive options from MAX_VERSION_COUNT to ensure consistency
+export const VERSION_COUNT_OPTIONS = Array.from({ length: MAX_VERSION_COUNT }, (_, i) => (i + 1) as VersionCount)
 export const versionCountAtom = atom<VersionCount>(1)
 
 /**
