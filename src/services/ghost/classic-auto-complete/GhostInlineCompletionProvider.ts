@@ -60,6 +60,23 @@ const LATENCY_SAMPLE_SIZE = 10
 export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
+ * Applies first-line-only logic to a suggestion text if needed.
+ *
+ * @param text - The suggestion text
+ * @param prefix - The text before the cursor position
+ * @returns The potentially truncated suggestion text
+ */
+function applyFirstLineOnlyIfNeeded(text: string, prefix: string): string {
+	if (text === "") {
+		return text
+	}
+	if (shouldShowOnlyFirstLine(prefix, text)) {
+		return getFirstLine(text)
+	}
+	return text
+}
+
+/**
  * Find a matching suggestion from the history based on current prefix and suffix
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
@@ -77,7 +94,8 @@ export function findMatchingSuggestion(
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return { text: fillInAtCursor.text, matchType: "exact" }
+			const text = applyFirstLineOnlyIfNeeded(fillInAtCursor.text, prefix)
+			return { text, matchType: "exact" }
 		}
 
 		// If no exact match, but suggestion is available, check for partial typing
@@ -93,7 +111,9 @@ export function findMatchingSuggestion(
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
 				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return { text: fillInAtCursor.text.substring(typedContent.length), matchType: "partial_typing" }
+				const remainingText = fillInAtCursor.text.substring(typedContent.length)
+				const text = applyFirstLineOnlyIfNeeded(remainingText, prefix)
+				return { text, matchType: "partial_typing" }
 			}
 		}
 
@@ -109,7 +129,9 @@ export function findMatchingSuggestion(
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
 			// Return the deleted portion plus the original suggestion text
-			return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion" }
+			const fullText = deletedContent + fillInAtCursor.text
+			const text = applyFirstLineOnlyIfNeeded(fullText, prefix)
+			return { text, matchType: "backward_deletion" }
 		}
 	}
 
@@ -189,27 +211,12 @@ export function getFirstLine(text: string): string {
 	return text.substring(0, newlineIndex)
 }
 
-export function stringToInlineCompletions(
-	text: string,
-	position: vscode.Position,
-	prefix?: string,
-): vscode.InlineCompletionItem[] {
+export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
 	if (text === "") {
 		return []
 	}
 
-	let completionText = text
-
-	// If prefix is provided, check if we should only show the first line
-	if (prefix !== undefined && shouldShowOnlyFirstLine(prefix, text)) {
-		completionText = getFirstLine(text)
-	}
-
-	if (completionText === "") {
-		return []
-	}
-
-	const item = new vscode.InlineCompletionItem(completionText, new vscode.Range(position, position), {
+	const item = new vscode.InlineCompletionItem(text, new vscode.Range(position, position), {
 		command: INLINE_COMPLETION_ACCEPTED_COMMAND,
 		title: "Autocomplete Accepted",
 	})
@@ -473,7 +480,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
-				return stringToInlineCompletions(matchingResult.text, position, prefix)
+				return stringToInlineCompletions(matchingResult.text, position)
 			}
 
 			// Only skip new LLM requests during mid-word typing or at end of statement
@@ -494,7 +501,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
 			}
 
-			return stringToInlineCompletions(cachedResult?.text ?? "", position, prefix)
+			return stringToInlineCompletions(cachedResult?.text ?? "", position)
 		} catch (error) {
 			// only big catch at the top of the call-chain, if anything goes wrong at a lower level
 			// do not catch, just let the error cascade

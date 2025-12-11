@@ -469,6 +469,105 @@ describe("findMatchingSuggestion", () => {
 			expect(result?.matchType).toBe("backward_deletion")
 		})
 	})
+
+	describe("first line only behavior", () => {
+		it("should return only first line when current line has text and suggestion is multi-line", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "first line\nsecond line\nthird line",
+					prefix: "const x = foo",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "first line", matchType: "exact" })
+		})
+
+		it("should return full multi-line text when suggestion starts with newline", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "\nfirst line\nsecond line\nthird line",
+					prefix: "const x = foo",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "\nfirst line\nsecond line\nthird line", matchType: "exact" })
+		})
+
+		it("should return full multi-line text when current line is only whitespace and suggestion is less than 3 lines", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "first line\nsecond line",
+					prefix: "const x = 1\n    ",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = 1\n    ", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "first line\nsecond line", matchType: "exact" })
+		})
+
+		it("should return only first line when at start of line and suggestion is 3+ lines", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "line1\nline2\nline3",
+					prefix: "const x = 1\n",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = 1\n", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "line1", matchType: "exact" })
+		})
+
+		it("should apply first-line-only to partial typing matches", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "console.log('test');\nmore code\neven more",
+					prefix: "const x = foo",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			// User typed "cons" after the prefix
+			const result = findMatchingSuggestion("const x = foocons", "\nconst y = 2", suggestions)
+			// Remaining text is "ole.log('test');\nmore code\neven more"
+			// Current line has text ("const x = foocons"), so only first line should be returned
+			expect(result).toEqual({ text: "ole.log('test');", matchType: "partial_typing" })
+		})
+
+		it("should apply first-line-only to backward deletion matches", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "bar\nmore code\neven more",
+					prefix: "foo",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			// User backspaced from "foo" to "f"
+			// Full text would be "oobar\nmore code\neven more"
+			// Current line has text ("f"), so only first line should be returned
+			const result = findMatchingSuggestion("f", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "oobar", matchType: "backward_deletion" })
+		})
+
+		it("should handle \\r\\n line endings when extracting first line", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "first line\r\nsecond line",
+					prefix: "const x = foo",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
+			expect(result).toEqual({ text: "first line", matchType: "exact" })
+		})
+	})
 })
 
 describe("shouldShowOnlyFirstLine", () => {
@@ -659,84 +758,13 @@ describe("stringToInlineCompletions", () => {
 		expect(result[0].range).toEqual(new vscode.Range(position, position))
 	})
 
-	it("should handle multi-line text without prefix/suffix", () => {
+	it("should handle multi-line text", () => {
 		const position = new vscode.Position(0, 0)
 		const text = "line1\nline2\nline3"
 		const result = stringToInlineCompletions(text, position)
 
 		expect(result).toHaveLength(1)
 		expect(result[0].insertText).toBe(text)
-	})
-
-	describe("first line only behavior", () => {
-		it("should return only first line when current line has text and suggestion adds to it", () => {
-			const position = new vscode.Position(0, 10)
-			const text = "first line\nsecond line\nthird line"
-			const prefix = "const x = foo"
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("first line")
-		})
-
-		it("should return full multi-line text when suggestion starts with newline", () => {
-			const position = new vscode.Position(0, 10)
-			const text = "\nfirst line\nsecond line\nthird line"
-			const prefix = "const x = foo"
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe(text)
-		})
-
-		it("should return full multi-line text when current line is only whitespace", () => {
-			const position = new vscode.Position(1, 4)
-			const text = "first line\nsecond line"
-			const prefix = "const x = 1\n    "
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe(text)
-		})
-
-		it("should return full multi-line text when prefix not provided", () => {
-			const position = new vscode.Position(0, 0)
-			const text = "first line\nsecond line"
-			const result = stringToInlineCompletions(text, position)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe(text)
-		})
-
-		it("should return full multi-line text when suggestion starts with \\r\\n", () => {
-			const position = new vscode.Position(0, 10)
-			const text = "\r\nfirst line\nsecond line"
-			const prefix = "const x = foo"
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe(text)
-		})
-
-		it("should return single line text unchanged when should show only first line", () => {
-			const position = new vscode.Position(0, 10)
-			const text = "single line completion"
-			const prefix = "const x = foo"
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("single line completion")
-		})
-
-		it("should handle \\r\\n line endings when extracting first line", () => {
-			const position = new vscode.Position(0, 10)
-			const text = "first line\r\nsecond line"
-			const prefix = "const x = foo"
-			const result = stringToInlineCompletions(text, position, prefix)
-
-			expect(result).toHaveLength(1)
-			expect(result[0].insertText).toBe("first line")
-		})
 	})
 })
 
