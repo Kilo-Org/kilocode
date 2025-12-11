@@ -104,6 +104,10 @@ function mapToStateMachineEvent(eventType: string, partial?: boolean): SessionEv
 		case "ask_payment_required_prompt":
 			return { type: "ask_payment_required_prompt" }
 
+		// Cancellation
+		case "cancel_session":
+			return { type: "cancel_session" }
+
 		default:
 			return null
 	}

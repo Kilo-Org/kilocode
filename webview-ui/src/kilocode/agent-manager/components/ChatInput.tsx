@@ -12,9 +12,15 @@ interface ChatInputProps {
 	sessionId: string
 	sessionLabel?: string
 	isActive?: boolean
+	autoMode?: boolean // True if session is running in auto mode (non-interactive)
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, isActive = false }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({
+	sessionId,
+	sessionLabel,
+	isActive = false,
+	autoMode = false,
+}) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
@@ -28,11 +34,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
 
+	// In auto mode, input and sending are always disabled (non-interactive)
+	const inputDisabled = autoMode
+	const sendDisabled = isEmpty || autoMode
+
 	const handleSend = () => {
-		if (isEmpty) return
+		if (isEmpty || autoMode) return
 
 		// For running sessions, send as follow-up message
-		// For stopped sessions, this will resume/continue the session
 		vscode.postMessage({
 			type: "agentManager.sendMessage",
 			sessionId,
@@ -77,7 +86,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 					onFocus={() => setIsFocused(true)}
 					onBlur={() => setIsFocused(false)}
 					aria-label={t("chatInput.ariaLabel")}
-					placeholder={t("chatInput.placeholderTypeTask")}
+					placeholder={inputDisabled ? t("chatInput.autonomous") : t("chatInput.placeholderTypeTask")}
+					disabled={inputDisabled}
 					minRows={3}
 					maxRows={15}
 					className={cn(
@@ -136,10 +146,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 							</button>
 						</StandardTooltip>
 					)}
-					<StandardTooltip content={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}>
+					<StandardTooltip content={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}>
 						<button
-							aria-label={isActive ? t("chatInput.sendTitle") : t("chatInput.resumeTitle")}
-							disabled={isEmpty}
+							aria-label={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}
+							disabled={sendDisabled}
 							onClick={handleSend}
 							className={cn(
 								"relative inline-flex items-center justify-center",
@@ -150,8 +160,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 								"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
 								"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 								"active:bg-[rgba(255,255,255,0.1)]",
-								!isEmpty && "cursor-pointer",
-								isEmpty &&
+								!sendDisabled && "cursor-pointer",
+								sendDisabled &&
 									"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
 							)}>
 							{/* rtl support */}

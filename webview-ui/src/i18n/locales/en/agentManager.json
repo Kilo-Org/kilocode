@@ -39,6 +39,11 @@
 		"creatingSession": "Creating session...",
 		"waitingForCli": "Initializing agent session...",
 		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation",
+		"versions": "Versions",
+		"versionsTooltip": "Launch multiple agents in parallel, each exploring different approaches",
+		"versionsHelperText": "Creates {{count}} versions on separate branches (uses worktrees, auto mode)",
+		"launchVersions": "Launch {{count}} versions",
+		"startAgent": "Start agent",
 		"cancelCreating": "Cancel session creation",
 		"cancelButton": "Cancel"
 	},
