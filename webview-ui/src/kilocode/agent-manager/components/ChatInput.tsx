@@ -1,10 +1,12 @@
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
+import { useAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { SendHorizontal, Square } from "lucide-react" // Changed StopCircle to Square to match SessionDetail stop button
+import { SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
+import { sessionInputAtomFamily } from "../state/atoms/sessions"
 
 interface ChatInputProps {
 	sessionId: string
@@ -14,8 +16,14 @@ interface ChatInputProps {
 
 export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, isActive = false }) => {
 	const { t } = useTranslation("agentManager")
-	const [messageText, setMessageText] = useState("")
+	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
+	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+	// Auto-focus the textarea when the session changes (user selects a different session)
+	useEffect(() => {
+		textareaRef.current?.focus()
+	}, [sessionId])
 
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
@@ -62,6 +70,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 					"rounded",
 				)}>
 				<DynamicTextArea
+					ref={textareaRef}
 					value={messageText}
 					onChange={(e) => setMessageText(e.target.value)}
 					onKeyDown={handleKeyDown}
@@ -78,7 +87,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 						"text-vscode-editor-font-size",
 						"leading-vscode-editor-line-height",
 						"cursor-text",
-						"!py-3 !pl-3 pr-9", // Increased padding to fix "no distance" issue
+						"!pt-3 !pl-3 pr-9", // Top and left padding
 						isFocused
 							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
 							: "border border-vscode-input-border", // Default border
@@ -91,7 +100,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ sessionId, sessionLabel, i
 						"resize-none",
 						"overflow-x-hidden",
 						"overflow-y-auto",
-						"pb-10", // Bottom padding for floating buttons
+						"!pb-10", // Bottom padding for floating buttons
 						"flex-none flex-grow",
 						"z-[2]",
 						"scrollbar-none",

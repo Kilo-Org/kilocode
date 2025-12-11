@@ -1,5 +1,43 @@
 # kilo-code
 
+## 4.134.0
+
+### Minor Changes
+
+- [#4330](https://github.com/Kilo-Org/kilocode/pull/4330) [`57dc5a9`](https://github.com/Kilo-Org/kilocode/commit/57dc5a9379b25eb2e1f9902486ff71db731a5aaf) Thanks [@catrielmuller](https://github.com/catrielmuller)! - JetBrains IDEs: Autocomplete is now available and can be enabled in Settings > Autocomplete.
+
+- [#4178](https://github.com/Kilo-Org/kilocode/pull/4178) [`414282a`](https://github.com/Kilo-Org/kilocode/commit/414282a5a5c6cdfe528c3a7775bf07cd3e0739aa) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Added a new device authorization flow for Kilo Gateway that makes it easier to connect your editor to your Kilo account. Instead of manually copying API tokens, you can now:
+
+    - Scan a QR code with your phone or click to open the authorization page in your browser
+    - Approve the connection from your browser
+    - Automatically get authenticated without copying any tokens
+
+    This streamlined workflow provides a more secure and user-friendly way to authenticate, similar to how you connect devices to services like Netflix or YouTube.
+
+- [#4334](https://github.com/Kilo-Org/kilocode/pull/4334) [`5bdab7c`](https://github.com/Kilo-Org/kilocode/commit/5bdab7caca867970a5ee7faccfb76e36e01c6471) Thanks [@brianc](https://github.com/brianc)! - Updated managed indexing gate logic to be able to roll it out to individuals instead of just organizations.
+
+- [#3999](https://github.com/Kilo-Org/kilocode/pull/3999) [`7f349d0`](https://github.com/Kilo-Org/kilocode/commit/7f349d04749f74a9b84de8cb68f44d8d8d71cbc5) Thanks [@hassoncs](https://github.com/hassoncs)! - Add Autocomplete support to the chat text box. It can be enabled/disabled using a new toggle in the autocomplete settings menu
+
+### Patch Changes
+
+- [#4327](https://github.com/Kilo-Org/kilocode/pull/4327) [`52fc352`](https://github.com/Kilo-Org/kilocode/commit/52fc3524151f30d3925408d30fd8af9265890b77) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix agent creation getting stuck when CLI doesn't respond with session_created event
+
+- [#4182](https://github.com/Kilo-Org/kilocode/pull/4182) [`33c9eab`](https://github.com/Kilo-Org/kilocode/commit/33c9eabd2ef395e585f37542980e996054bf3fcb) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Fix open external urls
+
+## 4.133.0
+
+### Minor Changes
+
+- [#4317](https://github.com/Kilo-Org/kilocode/pull/4317) [`797c959`](https://github.com/Kilo-Org/kilocode/commit/797c9594a527f19e0d39b7402fb031cd9eb4e2a7) Thanks [@iscekic](https://github.com/iscekic)! - add session versioning
+
+### Patch Changes
+
+- [#3571](https://github.com/Kilo-Org/kilocode/pull/3571) [`ea2702c`](https://github.com/Kilo-Org/kilocode/commit/ea2702c6f29e7ff2bfe55714716f72bb43cfbede) Thanks [@yadue](https://github.com/yadue)! - Add batch size and number of retries to the indexing options
+
+- [#4310](https://github.com/Kilo-Org/kilocode/pull/4310) [`e5e6085`](https://github.com/Kilo-Org/kilocode/commit/e5e6085d1f9b4f142130eddd3eaddb52bd5cde17) Thanks [@iscekic](https://github.com/iscekic)! - check token before syncing session
+
+- [#4272](https://github.com/Kilo-Org/kilocode/pull/4272) [`3ad35d9`](https://github.com/Kilo-Org/kilocode/commit/3ad35d94a5560ca1b87b2b393c6d064703c144d4) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: reset state errors when clearing indexing state
+
 ## 4.132.0
 
 ### Minor Changes

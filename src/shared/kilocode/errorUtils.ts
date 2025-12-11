@@ -2,6 +2,11 @@ export function stringifyError(error: unknown) {
 	return error instanceof Error ? error.stack || error.message : String(error)
 }
 
+/**
+ * Error message thrown when the KiloCode token is missing or invalid.
+ */
+export const KILOCODE_TOKEN_REQUIRED_ERROR = "KiloCode token + baseUrl is required to fetch models"
+
 export function isPaymentRequiredError(error: any) {
 	return !!(error && error.status === 402)
 }

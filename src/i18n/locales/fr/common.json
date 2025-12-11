@@ -168,6 +168,7 @@
 		"image_saved": "Image enregistrée dans {{path}}",
 		"organization_share_link_copied": "Lien de partage d'organisation copié dans le presse-papiers !",
 		"public_share_link_copied": "Lien de partage public copié dans le presse-papiers !",
+		"session_share_link_copied_with_url": "Session partagée ! Lien copié dans le presse-papiers : {{url}}",
 		"mode_exported": "Mode '{{mode}}' exporté avec succès",
 		"mode_imported": "Mode importé avec succès"
 	},

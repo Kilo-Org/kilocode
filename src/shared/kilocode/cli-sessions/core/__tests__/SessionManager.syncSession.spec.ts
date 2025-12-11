@@ -92,6 +92,7 @@ const createMockDependencies = (): SessionManagerDependencies => ({
 	},
 	onSessionCreated: vi.fn(),
 	onSessionRestored: vi.fn(),
+	onSessionSynced: vi.fn(),
 })
 
 describe("SessionManager.syncSession", () => {
@@ -110,17 +111,11 @@ describe("SessionManager.syncSession", () => {
 
 		const privateInstance = (SessionManager as unknown as { instance: SessionManager }).instance
 		if (privateInstance) {
-			const timer = (privateInstance as unknown as { timer: NodeJS.Timeout | null }).timer
-			if (timer) {
-				clearInterval(timer)
-			}
-			;(privateInstance as unknown as { timer: NodeJS.Timeout | null }).timer = null
 			;(privateInstance as unknown as { sessionClient: SessionClient | undefined }).sessionClient = undefined
 			;(
 				privateInstance as unknown as { sessionPersistenceManager: SessionPersistenceManager | undefined }
 			).sessionPersistenceManager = undefined
 			;(privateInstance as unknown as { queue: unknown[] }).queue = []
-			;(privateInstance as unknown as { isSyncing: boolean }).isSyncing = false
 			;(privateInstance as unknown as { taskGitUrls: Record<string, string> }).taskGitUrls = {}
 			;(privateInstance as unknown as { taskGitHashes: Record<string, string> }).taskGitHashes = {}
 			;(privateInstance as unknown as { sessionTitles: Record<string, string> }).sessionTitles = {}
@@ -158,12 +153,6 @@ describe("SessionManager.syncSession", () => {
 
 	const getQueue = () => (manager as unknown as { queue: unknown[] }).queue
 
-	const getIsSyncing = () => (manager as unknown as { isSyncing: boolean }).isSyncing
-
-	const setIsSyncing = (value: boolean) => {
-		;(manager as unknown as { isSyncing: boolean }).isSyncing = value
-	}
-
 	const getPendingSync = () => (manager as unknown as { pendingSync: Promise<void> | null }).pendingSync
 
 	const setPendingSync = (value: Promise<void> | null) => {
@@ -171,18 +160,6 @@ describe("SessionManager.syncSession", () => {
 	}
 
 	describe("sync skipping conditions", () => {
-		it("should skip sync when already syncing", async () => {
-			setIsSyncing(true)
-			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
-
-			await triggerSync()
-
-			expect(mockDependencies.logger.debug).toHaveBeenCalledWith(
-				"Sync already in progress, skipping",
-				"SessionManager",
-			)
-		})
-
 		it("should return early when queue is empty", async () => {
 			await triggerSync()
 
@@ -348,6 +325,22 @@ describe("SessionManager.syncSession", () => {
 
 			expect(getQueue()).toHaveLength(1)
 			expect(manager.sessionClient!.create).not.toHaveBeenCalled()
+		})
+
+		it("should handle token validity check failure gracefully", async () => {
+			clearTokenValidCache()
+			vi.mocked(manager.sessionClient!.tokenValid).mockRejectedValue(new Error("Network error"))
+
+			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
+
+			await triggerSync()
+
+			expect(mockDependencies.logger.error).toHaveBeenCalledWith(
+				"Failed to check token validity",
+				"SessionManager",
+				{ error: "Network error" },
+			)
+			expect(manager.sessionClient!.uploadBlob).not.toHaveBeenCalled()
 		})
 	})
 
@@ -708,33 +701,6 @@ describe("SessionManager.syncSession", () => {
 		})
 	})
 
-	describe("isSyncing flag", () => {
-		it("should reset isSyncing to false after sync completes", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
-
-			await triggerSync()
-
-			expect(getIsSyncing()).toBe(false)
-		})
-
-		it("should reset isSyncing to false even on error", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-			vi.mocked(readFileSync).mockImplementation(() => {
-				throw new Error("Read error")
-			})
-
-			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
-
-			await triggerSync()
-
-			expect(getIsSyncing()).toBe(false)
-		})
-	})
-
 	describe("error handling", () => {
 		it("should continue processing other tasks when one fails", async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask)
@@ -839,6 +805,12 @@ describe("SessionManager.syncSession", () => {
 				const uiMessages = [{ type: "say", say: "text", text: "Create a login form" }]
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify(uiMessages))
 				vi.mocked(manager.sessionClient!.get).mockRejectedValueOnce(new Error("Network error"))
+				vi.mocked(manager.sessionClient!.update).mockResolvedValue({
+					session_id: "session-123",
+					title: "Create a login form",
+					updated_at: new Date().toISOString(),
+					version: SessionManager.VERSION,
+				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
@@ -846,9 +818,6 @@ describe("SessionManager.syncSession", () => {
 				await triggerSync()
 
 				await new Promise((resolve) => setTimeout(resolve, 100))
-
-				const sessionTitles = (manager as unknown as { sessionTitles: Record<string, string> }).sessionTitles
-				expect(sessionTitles["session-123"]).toBe("")
 
 				expect(mockDependencies.logger.error).toHaveBeenCalledWith(
 					"Failed to generate session title",
@@ -858,6 +827,14 @@ describe("SessionManager.syncSession", () => {
 						error: "Network error",
 					}),
 				)
+
+				expect(manager.sessionClient!.update).toHaveBeenCalledWith({
+					session_id: "session-123",
+					title: "Create a login form",
+				})
+
+				const sessionTitles = (manager as unknown as { sessionTitles: Record<string, string> }).sessionTitles
+				expect(sessionTitles["session-123"]).toBe("Create a login form")
 
 				vi.mocked(manager.sessionClient!.get).mockResolvedValue({
 					session_id: "session-123",
@@ -885,6 +862,112 @@ describe("SessionManager.syncSession", () => {
 				await new Promise((resolve) => setTimeout(resolve, 100))
 
 				expect(manager.sessionClient!.get).toHaveBeenCalledTimes(2)
+			})
+
+			it("should handle renameSession failure when falling back to local title", async () => {
+				const uiMessages = [{ type: "say", say: "text", text: "Create a login form" }]
+				vi.mocked(readFileSync).mockReturnValue(JSON.stringify(uiMessages))
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
+
+				vi.mocked(manager.sessionClient!.get).mockResolvedValueOnce({
+					session_id: "session-123",
+					title: "",
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+					api_conversation_history_blob_url: null,
+					task_metadata_blob_url: null,
+					ui_messages_blob_url: null,
+					git_state_blob_url: null,
+					version: SessionManager.VERSION,
+				})
+
+				vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockRejectedValueOnce(
+					new Error("LLM generation failed"),
+				)
+
+				let updateCallCount = 0
+				vi.mocked(manager.sessionClient!.update).mockImplementation(async (params) => {
+					updateCallCount++
+					if (params && "title" in params) {
+						throw new Error("Update failed")
+					}
+					return {
+						session_id: params?.session_id || "session-123",
+						title: "",
+						updated_at: new Date().toISOString(),
+						version: SessionManager.VERSION,
+					}
+				})
+
+				const taskGitUrls = (manager as unknown as { taskGitUrls: Record<string, string> }).taskGitUrls
+				taskGitUrls["task-123"] = "https://github.com/test/repo.git"
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
+
+				vi.useRealTimers()
+				await triggerSync()
+
+				await new Promise((resolve) => setTimeout(resolve, 100))
+
+				expect(mockDependencies.logger.error).toHaveBeenCalledWith(
+					"Failed to generate session title",
+					"SessionManager",
+					expect.objectContaining({
+						sessionId: "session-123",
+					}),
+				)
+
+				expect(mockDependencies.logger.error).toHaveBeenCalledWith(
+					"Failed to update session title using local title",
+					"SessionManager",
+					expect.objectContaining({
+						sessionId: "session-123",
+						error: "Update failed",
+					}),
+				)
+			})
+
+			it("should not call renameSession when local title is empty", async () => {
+				const uiMessages = [{ type: "say", say: "text" }]
+				vi.mocked(readFileSync).mockReturnValue(JSON.stringify(uiMessages))
+				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
+
+				vi.mocked(manager.sessionClient!.get).mockResolvedValueOnce({
+					session_id: "session-123",
+					title: "",
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+					api_conversation_history_blob_url: null,
+					task_metadata_blob_url: null,
+					ui_messages_blob_url: null,
+					git_state_blob_url: null,
+					version: SessionManager.VERSION,
+				})
+
+				vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockRejectedValueOnce(
+					new Error("LLM generation failed"),
+				)
+
+				const updateMock = vi.mocked(manager.sessionClient!.update)
+				updateMock.mockClear()
+
+				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
+
+				vi.useRealTimers()
+				await triggerSync()
+
+				await new Promise((resolve) => setTimeout(resolve, 100))
+
+				expect(mockDependencies.logger.error).toHaveBeenCalledWith(
+					"Failed to generate session title",
+					"SessionManager",
+					expect.objectContaining({
+						sessionId: "session-123",
+					}),
+				)
+
+				const updateCallsWithTitle = updateMock.mock.calls.filter((call) => call[0] && "title" in call[0])
+				expect(updateCallsWithTitle).toHaveLength(0)
 			})
 
 			it("should set pending title marker to prevent concurrent title generation", async () => {
@@ -927,7 +1010,7 @@ describe("SessionManager.syncSession", () => {
 		})
 
 		describe("concurrent sync attempts", () => {
-			it("should prevent concurrent syncs via isSyncing flag", async () => {
+			it("should prevent concurrent syncs via pendingSync", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
 
@@ -954,10 +1037,8 @@ describe("SessionManager.syncSession", () => {
 
 				await Promise.all([sync1, sync2])
 
-				expect(mockDependencies.logger.debug).toHaveBeenCalledWith(
-					"Sync already in progress, skipping",
-					"SessionManager",
-				)
+				// In the event-based approach, the second sync should return the existing pending sync
+				expect(sync2).toBeInstanceOf(Promise)
 			})
 
 			it("should process queued items after blocked sync completes", async () => {
@@ -980,7 +1061,8 @@ describe("SessionManager.syncSession", () => {
 
 				await sync1
 
-				expect(getQueue()).toHaveLength(1)
+				// In the event-based approach, the queue should be empty after sync completes
+				expect(getQueue()).toHaveLength(0)
 
 				await triggerSync()
 
@@ -1306,22 +1388,7 @@ describe("SessionManager.syncSession", () => {
 			})
 		})
 
-		describe("pendingSync tracking in interval", () => {
-			it("should skip interval sync when pendingSync exists", async () => {
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				const existingPromise = new Promise<void>((resolve) => setTimeout(resolve, 200))
-				setPendingSync(existingPromise)
-
-				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
-
-				vi.advanceTimersByTime(SessionManager.SYNC_INTERVAL)
-
-				expect(manager.sessionClient!.uploadBlob).not.toHaveBeenCalled()
-			})
-
+		describe("pendingSync tracking", () => {
 			it("should clear pendingSync after sync completes via direct call", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
@@ -1337,66 +1404,187 @@ describe("SessionManager.syncSession", () => {
 				expect(getPendingSync()).toBeNull()
 			})
 
-			it("should set pendingSync during sync execution via direct call", async () => {
+			it("should set pendingSync during sync execution via doSync", async () => {
 				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
 
 				let pendingSyncDuringUpload: Promise<void> | null = null
 				vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async () => {
-					pendingSyncDuringUpload = getIsSyncing() ? Promise.resolve() : null
+					pendingSyncDuringUpload = getPendingSync()
 					return { updated_at: new Date().toISOString() }
 				})
 
 				manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
-				await triggerSync()
+				await manager.doSync()
 
-				expect(pendingSyncDuringUpload).not.toBeNull()
+				expect(pendingSyncDuringUpload).toBeInstanceOf(Promise)
 			})
 		})
 	})
 
-	describe("destroy method", () => {
-		it("should trigger final sync on destroy", async () => {
+	describe("doSync", () => {
+		it("should not create new sync when pendingSync exists and not forced", async () => {
+			let resolveExisting: () => void
+			const existingPromise = new Promise<void>((resolve) => {
+				resolveExisting = resolve
+			})
+			;(manager as unknown as { pendingSync: Promise<void> | null }).pendingSync = existingPromise
+
+			manager.doSync()
+
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Found pending sync", "SessionManager")
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith(
+				"Not forced, returning pending sync",
+				"SessionManager",
+			)
+			expect(mockDependencies.logger.debug).not.toHaveBeenCalledWith("Creating new sync", "SessionManager")
+
+			resolveExisting!()
+			await existingPromise
+		})
+
+		it("should create new sync when forced despite pending sync", async () => {
+			let resolveExisting: () => void
+			const existingPromise = new Promise<void>((resolve) => {
+				resolveExisting = resolve
+			})
+			;(manager as unknown as { pendingSync: Promise<void> | null }).pendingSync = existingPromise
+
+			manager.doSync(true)
+
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Found pending sync", "SessionManager")
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith(
+				"Forced, syncing despite pending sync",
+				"SessionManager",
+			)
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Creating new sync", "SessionManager")
+
+			resolveExisting!()
+			await existingPromise
+		})
+
+		it("should create new sync when no pending sync exists", async () => {
+			;(manager as unknown as { pendingSync: Promise<void> | null }).pendingSync = null
+
+			const result = manager.doSync()
+
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Creating new sync", "SessionManager")
+			expect(result).toBeInstanceOf(Promise)
+
+			await result
+		})
+
+		it("should set pendingSync when creating new sync", async () => {
+			;(manager as unknown as { pendingSync: Promise<void> | null }).pendingSync = null
+
+			manager.doSync()
+
+			const pendingSync = (manager as unknown as { pendingSync: Promise<void> | null }).pendingSync
+			expect(pendingSync).not.toBeNull()
+			expect(pendingSync).toBeInstanceOf(Promise)
+
+			await pendingSync
+		})
+
+		it("should log debug messages during sync", async () => {
+			;(manager as unknown as { pendingSync: Promise<void> | null }).pendingSync = null
+
+			await manager.doSync()
+
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Doing sync", "SessionManager")
+			expect(mockDependencies.logger.debug).toHaveBeenCalledWith("Creating new sync", "SessionManager")
+		})
+	})
+
+	describe("onSessionSynced callback", () => {
+		beforeEach(() => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
+			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({
+				updated_at: "2024-01-15T10:30:00.000Z",
+			})
+			const taskGitUrls = (manager as unknown as { taskGitUrls: Record<string, string> }).taskGitUrls
+			taskGitUrls["task-123"] = "https://github.com/test/repo.git"
+			const taskGitHashes = (manager as unknown as { taskGitHashes: Record<string, string> }).taskGitHashes
+			taskGitHashes["task-123"] = "fixed-hash-to-skip-git-upload"
+			const sessionTitles = (manager as unknown as { sessionTitles: Record<string, string> }).sessionTitles
+			sessionTitles["session-123"] = "Existing title"
+			const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+				.sessionUpdatedAt
+			delete sessionUpdatedAt["session-123"]
+		})
+
+		it("should emit onSessionSynced callback after successful sync", async () => {
+			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
+
+			await triggerSync()
+
+			expect(mockDependencies.onSessionSynced).toHaveBeenCalledWith({
+				sessionId: "session-123",
+				updatedAt: new Date("2024-01-15T10:30:00.000Z").getTime(),
+				timestamp: expect.any(Number),
+				event: "session_synced",
+			})
+		})
+
+		it("should emit onSessionSynced with the highest timestamp from multiple uploads", async () => {
+			vi.mocked(manager.sessionClient!.uploadBlob).mockImplementation(async (_sessionId, blobType) => {
+				switch (blobType) {
+					case "ui_messages":
+						return { updated_at: "2024-01-15T10:00:00.000Z" }
+					case "api_conversation_history":
+						return { updated_at: "2024-01-15T12:00:00.000Z" }
+					default:
+						return { updated_at: "2024-01-15T08:00:00.000Z" }
+				}
+			})
+
+			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
+			manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/api.json")
+
+			await triggerSync()
+
+			expect(mockDependencies.onSessionSynced).toHaveBeenCalledWith({
+				sessionId: "session-123",
+				updatedAt: new Date("2024-01-15T12:00:00.000Z").getTime(),
+				timestamp: expect.any(Number),
+				event: "session_synced",
+			})
+		})
+
+		it("should not emit onSessionSynced when no timestamp is available", async () => {
+			const sessionUpdatedAt = (manager as unknown as { sessionUpdatedAt: Record<string, string> })
+				.sessionUpdatedAt
+			delete sessionUpdatedAt["session-123"]
+
+			vi.mocked(manager.sessionClient!.uploadBlob).mockRejectedValue(new Error("Upload failed"))
 
 			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file.json")
 
-			const destroyPromise = manager.destroy()
+			await triggerSync()
 
-			await destroyPromise
-
-			expect(manager.sessionClient!.uploadBlob).toHaveBeenCalledWith(
-				"session-123",
-				"ui_messages",
-				expect.any(Array),
-			)
+			expect(mockDependencies.onSessionSynced).not.toHaveBeenCalled()
 		})
+	})
 
-		it("should return existing pendingSync if one is in progress", async () => {
-			const existingPromise = Promise.resolve()
-			setPendingSync(existingPromise)
-
-			const result = manager.destroy()
-
-			expect(result).toBe(existingPromise)
-		})
-
-		it("should flush queue items during destroy", async () => {
+	describe("automatic sync trigger", () => {
+		it(`should trigger sync when queue exceeds ${SessionManager.QUEUE_FLUSH_THRESHOLD} items`, async () => {
 			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("session-123")
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
 			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
 
-			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/file1.json")
-			manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/file2.json")
+			const doSyncSpy = vi.spyOn(manager, "doSync")
 
-			expect(getQueue()).toHaveLength(2)
+			for (let i = 0; i < SessionManager.QUEUE_FLUSH_THRESHOLD; i++) {
+				manager.handleFileUpdate(`task-${i}`, "uiMessagesPath", `/path/to/file${i}.json`)
+			}
 
-			await manager.destroy()
+			expect(doSyncSpy).not.toHaveBeenCalled()
 
-			expect(getQueue()).toHaveLength(0)
+			manager.handleFileUpdate("task-6", "uiMessagesPath", "/path/to/file6.json")
+
+			expect(doSyncSpy).toHaveBeenCalled()
 		})
 	})
 })

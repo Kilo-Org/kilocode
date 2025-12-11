@@ -238,7 +238,11 @@
 			"noModelConfigured": "No se encontró ningún modelo de autocompletado adecuado. Por favor, configura un proveedor en la configuración de API.",
 			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado.",
 			"model": "Modelo",
-			"provider": "Proveedor"
+			"provider": "Proveedor",
+			"enableChatAutocomplete": {
+				"description": "Cuando está habilitado, Kilo Code sugerirá completaciones mientras escribes en el campo de chat. Presiona Tab para aceptar las sugerencias.",
+				"label": "Autocompletado de Entrada de Chat"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nuevo: Comparte modos creando una organización"
+	},
+	"deviceAuth": {
+		"title": "Iniciar sesión en Kilo Code",
+		"step1": "Abre la siguiente URL en tu navegador",
+		"step2": "Verifica el código y autoriza este dispositivo en tu navegador",
+		"scanQr": "O escanea este código QR con tu teléfono",
+		"openBrowser": "Abrir navegador",
+		"copyUrl": "Copiar URL",
+		"waiting": "Esperando autorización...",
+		"timeRemaining": "El código expira en {{time}}",
+		"success": "¡Sesión iniciada correctamente!",
+		"authenticatedAs": "Autenticado como {{email}}",
+		"error": "Error de autenticación",
+		"unknownError": "Ocurrió un error. Por favor, inténtalo de nuevo.",
+		"cancel": "Cancelar",
+		"retry": "Intentar de nuevo",
+		"tryAgain": "Intentar de nuevo",
+		"cancelled": "Autenticación cancelada",
+		"initiating": "Iniciando autenticación..."
 	}
 }

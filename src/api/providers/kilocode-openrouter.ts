@@ -14,6 +14,7 @@ import {
 	X_KILOCODE_PROJECTID,
 	X_KILOCODE_TESTER,
 } from "../../shared/kilocode/headers"
+import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/continuedev/core/fetch/stream"
 
@@ -114,7 +115,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 	public override async fetchModel() {
 		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
-			throw new Error("KiloCode token + baseUrl is required to fetch models")
+			throw new Error(KILOCODE_TOKEN_REQUIRED_ERROR)
 		}
 
 		const [models, endpoints, defaultModel] = await Promise.all([

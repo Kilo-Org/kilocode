@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Lokal",
 		"mainWorkspace": "Ruang kerja utama",
-		"readyToMerge": "Siap untuk digabungkan"
+		"readyToMerge": "Siap untuk digabungkan",
+		"shareSession": "Bagikan sesi",
+		"shareConfirmMessage": "Apakah Anda ingin membagikan snapshot sesi ini secara publik?",
+		"shareConfirmYes": "Ya",
+		"shareConfirmNo": "Tidak"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Mulai agen baru",
@@ -31,9 +35,12 @@
 		"comingSoon": "Segera hadir",
 		"runningInWorktree": "Berjalan di worktree",
 		"runningLocally": "Berjalan secara lokal",
+		"runMode": "Mode jalankan",
 		"branch": "Cabang",
 		"creatingSession": "Membuat sesi...",
-		"waitingForCli": "Menginisialisasi sesi agen..."
+		"waitingForCli": "Menginisialisasi sesi agen...",
+		"cancelCreating": "Batalkan pembuatan sesi",
+		"cancelButton": "Batal"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

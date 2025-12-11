@@ -169,13 +169,7 @@ const ApiOptions = ({
 	currentApiConfigName, // kilocode_change
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
-	const {
-		organizationAllowList,
-		uiKind, // kilocode_change
-		kiloCodeWrapperProperties, // kilocode_change
-		kilocodeDefaultModel,
-		cloudIsAuthenticated,
-	} = useExtensionState()
+	const { organizationAllowList, kilocodeDefaultModel, cloudIsAuthenticated } = useExtensionState()
 
 	const [customHeaders, setCustomHeaders] = useState<[string, string][]>(() => {
 		const headers = apiConfiguration?.openAiHeaders || {}
@@ -575,9 +569,6 @@ const ApiOptions = ({
 					currentApiConfigName={currentApiConfigName}
 					routerModels={routerModels}
 					organizationAllowList={organizationAllowList}
-					uriScheme={uriScheme}
-					uiKind={uiKind}
-					kiloCodeWrapperProperties={kiloCodeWrapperProperties}
 					kilocodeDefaultModel={kilocodeDefaultModel}
 				/>
 			)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
@@ -13,7 +13,7 @@ import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import { Loader2, SendHorizontal, RefreshCw, GitBranch, Folder, ChevronDown, AlertCircle, Zap } from "lucide-react"
+import { Loader2, SendHorizontal, RefreshCw, GitBranch, Folder, ChevronDown, AlertCircle, Zap, X } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -130,6 +130,10 @@ function PendingSessionView({
 }) {
 	const { t } = useTranslation("agentManager")
 
+	const handleCancel = () => {
+		vscode.postMessage({ type: "agentManager.cancelPendingSession" })
+	}
+
 	return (
 		<div className="am-session-detail">
 			<div className="am-detail-header">
@@ -144,12 +148,24 @@ function PendingSessionView({
 						</div>
 					</div>
 				</div>
+				<div className="am-header-actions">
+					<button
+						className="am-icon-btn"
+						onClick={handleCancel}
+						aria-label={t("sessionDetail.cancelCreating")}
+						title={t("sessionDetail.cancelCreating")}>
+						<X size={14} />
+					</button>
+				</div>
 			</div>
 
 			<div className="am-center-form">
 				<Loader2 size={48} className="am-spinning" style={{ opacity: 0.5 }} />
 				<h2 style={{ marginTop: 16 }}>{t("sessionDetail.creatingSession")}</h2>
 				<p>{t("sessionDetail.waitingForCli")}</p>
+				<button className="am-cancel-btn" onClick={handleCancel} style={{ marginTop: 16 }}>
+					{t("sessionDetail.cancelButton")}
+				</button>
 			</div>
 		</div>
 	)
@@ -162,6 +178,7 @@ function NewAgentForm() {
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+	const dropdownRef = useRef<HTMLDivElement>(null)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
@@ -170,6 +187,23 @@ function NewAgentForm() {
 			setIsStarting(false)
 		}
 	}, [startSessionFailedCounter])
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+				setIsDropdownOpen(false)
+			}
+		}
+
+		if (isDropdownOpen) {
+			document.addEventListener("mousedown", handleClickOutside)
+		}
+
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside)
+		}
+	}, [isDropdownOpen])
 
 	const trimmedPrompt = promptText.trim()
 	const isEmpty = trimmedPrompt.length === 0
@@ -219,6 +253,7 @@ function NewAgentForm() {
 						"rounded",
 					)}>
 					<DynamicTextArea
+						autoFocus
 						value={promptText}
 						onChange={(e) => setPromptText(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -269,24 +304,24 @@ function NewAgentForm() {
 
 					{/* Controls Container */}
 					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
-						<div className="am-run-mode-dropdown-inline relative">
-							<button
-								className="am-run-mode-trigger-inline"
-								onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-								disabled={isStarting}
-								type="button"
-								title={
-									runMode === "local"
-										? t("sessionDetail.runModeLocal")
-										: t("sessionDetail.runModeWorktree")
-								}>
-								{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-								<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "open")} />
-							</button>
+						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
+							<StandardTooltip content={t("sessionDetail.runMode")}>
+								<button
+									className="am-run-mode-trigger-inline"
+									onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+									disabled={isStarting}
+									type="button">
+									{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+									<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "am-open")} />
+								</button>
+							</StandardTooltip>
 							{isDropdownOpen && (
 								<div className="am-run-mode-menu-inline">
 									<button
-										className={cn("am-run-mode-option-inline", runMode === "local" && "selected")}
+										className={cn(
+											"am-run-mode-option-inline",
+											runMode === "local" && "am-selected",
+										)}
 										onClick={() => handleSelectMode("local")}
 										type="button">
 										<Folder size={12} />
@@ -295,7 +330,7 @@ function NewAgentForm() {
 									</button>
 									<StandardTooltip content={t("sessionDetail.comingSoon")}>
 										<button
-											className={cn("am-run-mode-option-inline", "disabled")}
+											className={cn("am-run-mode-option-inline", "am-disabled")}
 											onClick={() => handleSelectMode("worktree")}
 											type="button"
 											disabled>

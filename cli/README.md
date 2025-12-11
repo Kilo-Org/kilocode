@@ -239,9 +239,20 @@ This instructs the AI to proceed without user input.
 
 To build and run the CLI locally off your branch:
 
-#### Install dependencies
+#### Build the VS Code extension
 
 ```shell
+cd src
+pnpm bundle
+pnpm vsix
+pnpm vsix:unpackged
+cd ..
+```
+
+#### Install CLI dependencies
+
+```shell
+cd cli
 pnpm install
 pnpm deps:install
 ```
@@ -249,10 +260,13 @@ pnpm deps:install
 #### Build the CLI
 
 ```shell
+pnpm clean
+pnpm clean:kilocode
+pnpm copy:kilocode
 pnpm build
 ```
 
-#### Configure the settings
+#### Configure CLI settings
 
 ```shell
 pnpm start config

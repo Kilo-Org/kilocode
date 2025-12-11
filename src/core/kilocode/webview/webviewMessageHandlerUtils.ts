@@ -6,6 +6,7 @@ import { WebviewMessage } from "../../../shared/WebviewMessage"
 import { Task } from "../../task/Task"
 import axios from "axios"
 import { getKiloUrlFromToken } from "@roo-code/types"
+import { buildApiHandler } from "../../../api"
 
 const shownNativeNotificationIds = new Set<string>()
 
@@ -246,4 +247,68 @@ export const editMessageHandler = async (provider: ClineProvider, message: Webvi
 		vscode.window.showErrorMessage(t("kilocode:userFeedback.message_update_failed"))
 	}
 	return
+}
+
+/**
+ * Handles device authentication webview messages
+ * Supports: startDeviceAuth, cancelDeviceAuth, deviceAuthCompleteWithProfile
+ */
+export const deviceAuthMessageHandler = async (provider: ClineProvider, message: WebviewMessage): Promise<boolean> => {
+	switch (message.type) {
+		case "startDeviceAuth": {
+			await provider.startDeviceAuth()
+			return true
+		}
+		case "cancelDeviceAuth": {
+			provider.cancelDeviceAuth()
+			return true
+		}
+		case "deviceAuthCompleteWithProfile": {
+			// Save token to specific profile or current profile if no profile name provided
+			if (message.values?.token) {
+				const profileName = message.text || undefined // Empty string becomes undefined
+				const token = message.values.token as string
+				try {
+					if (profileName) {
+						// Save to specified profile and activate it
+						const { ...profileConfig } = await provider.providerSettingsManager.getProfile({
+							name: profileName,
+						})
+						await provider.upsertProviderProfile(
+							profileName,
+							{
+								...profileConfig,
+								apiProvider: "kilocode",
+								kilocodeToken: token,
+							},
+							true, // Activate immediately to match old handleKiloCodeCallback behavior
+						)
+					} else {
+						// Save to current profile (from welcome screen) and activate
+						const { apiConfiguration, currentApiConfigName = "default" } = await provider.getState()
+						await provider.upsertProviderProfile(currentApiConfigName, {
+							...apiConfiguration,
+							apiProvider: "kilocode",
+							kilocodeToken: token,
+						}) // activate: true by default
+					}
+
+					// Update current task's API handler if exists (matching old implementation)
+					if (provider.getCurrentTask()) {
+						provider.getCurrentTask()!.api = buildApiHandler({
+							apiProvider: "kilocode",
+							kilocodeToken: token,
+						})
+					}
+				} catch (error) {
+					provider.log(
+						`Error saving device auth token: ${error instanceof Error ? error.message : String(error)}`,
+					)
+				}
+			}
+			return true
+		}
+		default:
+			return false
+	}
 }

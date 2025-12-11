@@ -240,7 +240,11 @@
 			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
 			"configureAutocompleteProfile": "前往設定檔並設定自動補全類型的設定檔即可使用任意模型。",
 			"model": "模型",
-			"provider": "供應商"
+			"provider": "供應商",
+			"enableChatAutocomplete": {
+				"label": "聊天输入自动完成",
+				"description": "启用后，Kilo Code 将在您在聊天输入框中输入时提供补全建议。按 Tab 键接受建议。"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -288,5 +292,24 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织共享模式"
+	},
+	"deviceAuth": {
+		"title": "登入 Kilo Code",
+		"step1": "在瀏覽器中開啟以下 URL",
+		"step2": "驗證代碼並在瀏覽器中授權此裝置",
+		"scanQr": "或用手機掃描此 QR 碼",
+		"openBrowser": "開啟瀏覽器",
+		"copyUrl": "複製 URL",
+		"waiting": "等待授權...",
+		"timeRemaining": "代碼將在 {{time}} 後過期",
+		"success": "登入成功！",
+		"authenticatedAs": "已驗證為 {{email}}",
+		"error": "驗證錯誤",
+		"unknownError": "發生錯誤。請重試。",
+		"cancel": "取消",
+		"retry": "重試",
+		"tryAgain": "重試",
+		"cancelled": "驗證已取消",
+		"initiating": "正在啟動驗證..."
 	}
 }

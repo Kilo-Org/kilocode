@@ -9,6 +9,8 @@ import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
+import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
 	private readonly model: GhostModel
@@ -38,12 +40,14 @@ export class GhostServiceManager {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
+		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
+			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
 		)
 
 		void this.load()
@@ -57,10 +61,11 @@ export class GhostServiceManager {
 			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
-		// 1% rollout: auto-enable autocomplete for a small subset of logged-in KiloCode users
-		// who have never explicitly toggled enableAutoTrigger.
+		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
+		// JetBrains users can manually enable it if they want to test the feature
 		if (this.settings.enableAutoTrigger == undefined) {
-			this.settings.enableAutoTrigger = true
+			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
+			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
 		}
 
 		await this.updateGlobalContext()

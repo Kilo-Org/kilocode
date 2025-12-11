@@ -168,6 +168,7 @@
 		"image_saved": "圖片已儲存至 {{path}}",
 		"organization_share_link_copied": "組織分享連結已複製到剪貼簿！",
 		"public_share_link_copied": "公開分享連結已複製到剪貼簿！",
+		"session_share_link_copied_with_url": "會話已分享！連結已複製到剪貼簿：{{url}}",
 		"mode_exported": "模式 '{{mode}}' 已成功匯出",
 		"mode_imported": "模式已成功匯入"
 	},

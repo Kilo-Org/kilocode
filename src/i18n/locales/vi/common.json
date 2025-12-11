@@ -168,6 +168,7 @@
 		"image_saved": "Hình ảnh đã được lưu vào {{path}}",
 		"organization_share_link_copied": "Liên kết chia sẻ tổ chức đã được sao chép vào clipboard!",
 		"public_share_link_copied": "Liên kết chia sẻ công khai đã được sao chép vào clipboard!",
+		"session_share_link_copied_with_url": "Phiên đã được chia sẻ! Liên kết đã được sao chép vào clipboard: {{url}}",
 		"mode_exported": "Chế độ '{{mode}}' đã được xuất thành công",
 		"mode_imported": "Chế độ đã được nhập thành công"
 	},

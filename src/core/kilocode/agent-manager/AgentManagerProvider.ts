@@ -10,6 +10,7 @@ import {
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
 import { findKilocodeCli } from "./CliPathResolver"
+import { canInstallCli, getCliInstallCommand } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { RemoteSessionService } from "./RemoteSessionService"
@@ -28,6 +29,7 @@ import {
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
 } from "./telemetry"
+import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 
 /**
  * AgentManagerProvider
@@ -209,6 +211,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.removeSession":
 					this.removeSession(message.sessionId as string)
 					break
+				case "agentManager.cancelPendingSession":
+					this.cancelPendingSession()
+					break
 				case "agentManager.selectSession":
 					this.selectSession(message.sessionId as string | null)
 					break
@@ -217,6 +222,22 @@ export class AgentManagerProvider implements vscode.Disposable {
 					break
 				case "agentManager.refreshSessionMessages":
 					void this.refreshSessionMessages(message.sessionId as string)
+					break
+				case "agentManager.sessionShare":
+					SessionManager.init()
+						.shareSession(message.sessionId as string)
+						.then((result) => {
+							const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
+
+							void vscode.env.clipboard.writeText(shareUrl)
+							vscode.window.showInformationMessage(
+								t("common:info.session_share_link_copied_with_url", { url: shareUrl }),
+							)
+						})
+						.catch((error) => {
+							const errorMessage = error instanceof Error ? error.message : String(error)
+							vscode.window.showErrorMessage(`Failed to share session: ${errorMessage}`)
+						})
 					break
 			}
 		} catch (error) {
@@ -596,6 +617,13 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Cancel a pending session that is stuck in "Creating session..." state
+	 */
+	private cancelPendingSession(): void {
+		this.processHandler.cancelPendingSession()
+	}
+
+	/**
 	 * Remove a session completely
 	 */
 	private removeSession(sessionId: string): void {
@@ -760,32 +788,111 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.showCliError({ type: "spawn_error", message: "CLI not found" })
 	}
 
+	/**
+	 * Open a terminal and run the CLI install command.
+	 * Uses the terminal to ensure the user's shell environment (nvm, fnm, volta, etc.) is respected.
+	 */
+	private runInstallInTerminal(): void {
+		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
+		const shellName = shellPath ? path.basename(shellPath) : undefined
+		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
+
+		const terminal = vscode.window.createTerminal({
+			name: "Install Kilocode CLI",
+			message: t("kilocode:agentManager.terminal.installMessage"),
+			shellPath,
+			shellArgs,
+		})
+		terminal.show()
+		terminal.sendText(getCliInstallCommand())
+		const authLabel = t("kilocode:agentManager.actions.loginCli")
+		void vscode.window
+			.showInformationMessage(t("kilocode:agentManager.terminal.authReminder"), authLabel)
+			.then((selection) => {
+				if (selection === authLabel) {
+					terminal.sendText("kilocode auth")
+				}
+			})
+	}
+
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
-		let errorMessage: string
-		let actionLabel: string
+		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 
 		switch (error?.type) {
 			case "cli_outdated":
-				errorMessage = t("kilocode:agentManager.errors.cliOutdated")
-				actionLabel = t("kilocode:agentManager.actions.updateInstructions")
+				if (hasNpm) {
+					// Offer to update via terminal
+					const updateInTerminal = t("kilocode:agentManager.actions.runInTerminal")
+					const manualUpdate = t("kilocode:agentManager.actions.updateInstructions")
+					vscode.window
+						.showWarningMessage(
+							t("kilocode:agentManager.errors.cliOutdated"),
+							updateInTerminal,
+							manualUpdate,
+						)
+						.then((selection) => {
+							if (selection === updateInTerminal) {
+								this.runInstallInTerminal()
+							} else if (selection === manualUpdate) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				} else {
+					// No npm available, show manual instructions
+					const actionLabel = t("kilocode:agentManager.actions.updateInstructions")
+					vscode.window
+						.showErrorMessage(t("kilocode:agentManager.errors.cliOutdated"), actionLabel)
+						.then((selection) => {
+							if (selection === actionLabel) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				}
 				break
-			case "spawn_error":
-				errorMessage = t("kilocode:agentManager.errors.cliNotFound")
-				actionLabel = t("kilocode:agentManager.actions.installInstructions")
+			case "spawn_error": {
+				if (hasNpm) {
+					// Offer to install via terminal
+					const installInTerminal = t("kilocode:agentManager.actions.runInTerminal")
+					const manualInstall = t("kilocode:agentManager.actions.installInstructions")
+					vscode.window
+						.showErrorMessage(
+							t("kilocode:agentManager.errors.cliNotFound"),
+							installInTerminal,
+							manualInstall,
+						)
+						.then((selection) => {
+							if (selection === installInTerminal) {
+								this.runInstallInTerminal()
+							} else if (selection === manualInstall) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				} else {
+					// No npm available, show manual instructions
+					const actionLabel = t("kilocode:agentManager.actions.installInstructions")
+					vscode.window
+						.showErrorMessage(t("kilocode:agentManager.errors.cliNotFound"), actionLabel)
+						.then((selection) => {
+							if (selection === actionLabel) {
+								void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+							}
+						})
+				}
 				break
-			default:
-				errorMessage = error?.message
+			}
+			default: {
+				const errorMessage = error?.message
 					? t("kilocode:agentManager.errors.sessionFailedWithMessage", { message: error.message })
 					: t("kilocode:agentManager.errors.sessionFailed")
-				actionLabel = t("kilocode:agentManager.actions.getHelp")
+				const actionLabel = t("kilocode:agentManager.actions.getHelp")
+				vscode.window.showErrorMessage(errorMessage, actionLabel).then((selection) => {
+					if (selection === actionLabel) {
+						void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
+					}
+				})
 				break
-		}
-
-		vscode.window.showErrorMessage(errorMessage, actionLabel).then((selection) => {
-			if (selection === actionLabel) {
-				void vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/cli"))
 			}
-		})
+		}
 	}
 
 	/**

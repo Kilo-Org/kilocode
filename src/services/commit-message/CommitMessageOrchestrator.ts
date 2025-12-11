@@ -5,6 +5,7 @@ import { GitExtensionService, GitChange } from "./GitExtensionService"
 import { CommitMessageGenerator } from "./CommitMessageGenerator"
 import { ICommitMessageIntegration } from "./adapters/ICommitMessageIntegration"
 import { t } from "../../i18n"
+import { GitStatus } from "./types"
 
 export interface ChangeResolution {
 	changes: GitChange[]
@@ -99,6 +100,28 @@ export class CommitMessageOrchestrator {
 		selectedFiles?: string[],
 		integration?: ICommitMessageIntegration,
 	): Promise<ChangeResolution> {
+		// If specific files are selected, we don't need to query for all changes
+		// We can construct the change objects directly from the selected files.
+		if (selectedFiles && selectedFiles.length > 0) {
+			const changes: GitChange[] = selectedFiles.map((filePath) => {
+				// A simple way to get status is to check git status for each file
+				// For now, we assume 'Modified' and 'unstaged' as a safe default for commit dialog selections.
+				// A more robust implementation might run `git status --porcelain -- <file>` for each.
+				const status: GitStatus = "M" // Default to Modified
+				const staged = false // Default to unstaged
+				return {
+					filePath,
+					status,
+					staged,
+				}
+			})
+			return {
+				changes,
+				files: selectedFiles,
+				usedStaged: false, // Assume unstaged as commit dialog selections are typically unstaged
+			}
+		}
+
 		// Try staged changes first
 		let changes = await gitService.gatherChanges({ staged: true })
 		let usedStaged = true
@@ -107,16 +130,6 @@ export class CommitMessageOrchestrator {
 		if (changes.length === 0) {
 			changes = await gitService.gatherChanges({ staged: false })
 			usedStaged = false
-		}
-
-		// Apply file filtering if specific files were selected
-		if (selectedFiles && selectedFiles.length > 0) {
-			// Use simple exact path matching - both VSCode and JetBrains should provide full paths
-			const workspaceRoot = gitService["workspaceRoot"] // Access private property
-			changes = changes.filter((change) => {
-				const relativePath = path.relative(workspaceRoot, change.filePath)
-				return selectedFiles.includes(change.filePath) || selectedFiles.includes(relativePath)
-			})
 		}
 
 		return {

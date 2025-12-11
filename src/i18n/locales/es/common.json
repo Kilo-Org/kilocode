@@ -168,6 +168,7 @@
 		"image_saved": "Imagen guardada en {{path}}",
 		"organization_share_link_copied": "¡Enlace de compartición de organización copiado al portapapeles!",
 		"public_share_link_copied": "¡Enlace de compartición pública copiado al portapapeles!",
+		"session_share_link_copied_with_url": "¡Sesión compartida! Enlace copiado al portapapeles: {{url}}",
 		"mode_exported": "Modo '{{mode}}' exportado correctamente",
 		"mode_imported": "Modo importado correctamente"
 	},

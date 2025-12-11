@@ -1,12 +1,10 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.actors
 
 import ai.kilocode.jetbrains.core.ExtensionIdentifier
+import ai.kilocode.jetbrains.inline.InlineCompletionManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 
 /**
  * Language features related interface.
@@ -448,11 +446,26 @@ interface MainThreadLanguageFeaturesShape : Disposable {
  * concrete implementations for all language feature registration methods.
  * It acts as a bridge between the extension host and the IDE's language services.
  */
-class MainThreadLanguageFeatures : MainThreadLanguageFeaturesShape {
+class MainThreadLanguageFeatures(private val project: Project) : MainThreadLanguageFeaturesShape {
     private val logger = Logger.getInstance(MainThreadLanguageFeatures::class.java)
+    
+    /**
+     * Manager for inline completion providers.
+     * Handles registration, unregistration, and lifecycle management.
+     */
+    private val inlineCompletionManager: InlineCompletionManager by lazy {
+        InlineCompletionManager(project)
+    }
 
     override fun unregister(handle: Int) {
         logger.info("Unregistering service: handle=$handle")
+        
+        // Try to unregister from inline completion manager
+        try {
+            inlineCompletionManager.unregisterProvider(handle)
+        } catch (e: Exception) {
+            logger.warn("Failed to unregister inline completion provider: handle=$handle", e)
+        }
     }
 
     override fun registerDocumentSymbolProvider(handle: Int, selector: List<Map<String, Any?>>, label: String) {
@@ -614,7 +627,22 @@ class MainThreadLanguageFeatures : MainThreadLanguageFeaturesShape {
         displayName: String?,
         debounceDelayMs: Int?,
     ) {
-        logger.info("Registering inline completions support: handle=$handle, selector=$selector, supportsHandleDidShowCompletionItem=$supportsHandleDidShowCompletionItem, extensionId=$extensionId, yieldsToExtensionIds=$yieldsToExtensionIds, displayName=$displayName, debounceDelayMs=$debounceDelayMs")
+        logger.info("Registering inline completions support: handle=$handle, extensionId=$extensionId, displayName=$displayName")
+        
+        try {
+            inlineCompletionManager.registerProvider(
+                handle = handle,
+                selector = selector,
+                supportsHandleDidShowCompletionItem = supportsHandleDidShowCompletionItem,
+                extensionId = extensionId,
+                yieldsToExtensionIds = yieldsToExtensionIds,
+                displayName = displayName,
+                debounceDelayMs = debounceDelayMs
+            )
+            logger.info("Successfully registered inline completion provider: handle=$handle")
+        } catch (e: Exception) {
+            logger.error("Failed to register inline completion provider: handle=$handle", e)
+        }
     }
 
     override fun registerInlineEditProvider(
@@ -709,5 +737,12 @@ class MainThreadLanguageFeatures : MainThreadLanguageFeaturesShape {
 
     override fun dispose() {
         logger.info("Disposing MainThreadLanguageFeatures resources")
+        
+        // Dispose inline completion manager
+        try {
+            inlineCompletionManager.dispose()
+        } catch (e: Exception) {
+            logger.error("Error disposing inline completion manager", e)
+        }
     }
 }

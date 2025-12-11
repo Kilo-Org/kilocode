@@ -6,9 +6,10 @@
   <a href="https://www.reddit.com/r/kilocode/"><img src="https://img.shields.io/badge/Join%20r%2Fkilocode-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>
 
-# 🚀 Kilo Code
+# 🚀 Kilo
 
-> Kilo is an open-source AI coding agent.
+> Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
+> #1 on OpenRouter. 750k+ Kilo Coders. 6.1 trillion tokens used per month.
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -16,7 +17,7 @@
 - 🌐 Automate the browser
 - 🤖 Latest AI models
 - 🎁 API keys optional
-- 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 400+ models like Gemini 3 Pro, Claude 4 Sonnet & Opus, and GPT-5
+- 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5
 
 <p align="center">
   <img src="https://media.githubusercontent.com/media/Kilo-Org/kilocode/main/kilo.gif" width="100%" />
@@ -33,11 +34,11 @@
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## How to get started with Kilo Code
+## How to get started with Kilo
 
 1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
-2. Create your account to access 400+ cutting-edge AI models including Gemini 3 Pro, Claude 4 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
-3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo Code in action:
+2. Create your account to access 500+ cutting-edge AI models including Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
+3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo in action:
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
@@ -49,7 +50,7 @@ For details on building and developing the extension, see [DEVELOPMENT.md](/DEVE
 
 Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://discord.gg/kilocode) to chat with the team and community.
 
-Thanks to all the contributors who help make Kilo Code better!
+Thanks to all the contributors who help make Kilo better!
 
 <table>
   <tr>
