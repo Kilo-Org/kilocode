@@ -184,7 +184,11 @@
 			"installInstructions": "Istruzioni di Installazione",
 			"getHelp": "Ottieni Aiuto",
 			"runInTerminal": "Esegui nel Terminale",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Aggiorna Globale",
+			"updateLocal": "Aggiorna Locale",
+			"installGlobal": "Installa Globale",
+			"installLocal": "Installa Locale"
 		},
 		"terminal": {
 			"installMessage": "Esecuzione di npm install per installare Kilocode CLI. Una volta completato, puoi chiudere questo terminale e provare ad avviare nuovamente l'Agent Manager.",

@@ -84,6 +84,7 @@ const TaskItem = ({
 						{...(item.highlight ? { dangerouslySetInnerHTML: { __html: item.highlight } } : {})}>
 						{item.highlight ? undefined : item.task}
 					</div>
+
 					<TaskItemFooter
 						item={item}
 						variant={variant}

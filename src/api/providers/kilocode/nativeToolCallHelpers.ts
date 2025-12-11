@@ -9,43 +9,8 @@ import {
 	ToolProtocol,
 } from "@roo-code/types"
 import Anthropic from "@anthropic-ai/sdk"
-import { Package } from "../../../shared/package"
-import * as vscode from "vscode"
 import { ApiStreamToolCallChunk } from "../../transform/stream"
-import {
-	resolveToolProtocol,
-	modelsDefaultingToNativeKeywords,
-	providersDefaultingToNativeKeywords,
-} from "../../../utils/resolveToolProtocol"
-
-export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolProtocol {
-	const workspaceSetting =
-		"workspace" in vscode
-			? vscode.workspace.getConfiguration(Package.name).get<ToolProtocol>("toolProtocol", TOOL_PROTOCOL.XML)
-			: TOOL_PROTOCOL.XML
-	if (!settings) {
-		console.error("getActiveToolUseStyle: settings missing, returning", workspaceSetting)
-		return workspaceSetting
-	}
-	if (settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider as ProviderName)) {
-		return TOOL_PROTOCOL.XML
-	}
-	if (settings.toolStyle) {
-		return settings.toolStyle === "json" ? TOOL_PROTOCOL.NATIVE : TOOL_PROTOCOL.XML
-	}
-	const model = getModelId(settings)?.toLowerCase()
-	if (!model) {
-		console.error("getActiveToolUseStyle: model missing, returning xml")
-		return TOOL_PROTOCOL.XML
-	}
-	if (
-		providersDefaultingToNativeKeywords.includes(settings.apiProvider as ProviderName) ||
-		modelsDefaultingToNativeKeywords.some((keyword) => model.includes(keyword))
-	) {
-		return TOOL_PROTOCOL.NATIVE
-	}
-	return workspaceSetting
-}
+import { resolveToolProtocol } from "../../../utils/resolveToolProtocol"
 
 /**
  * Adds native tool call parameters to OpenAI chat completion params when toolStyle is "json"

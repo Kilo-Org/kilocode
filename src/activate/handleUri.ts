@@ -46,7 +46,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 			})
 			break
 		}
-		case "/kilo/fork": {
+		case "/kilocode/fork": {
 			const id = query.get("id")
 			if (id) {
 				await visibleProvider.postMessageToWebview({

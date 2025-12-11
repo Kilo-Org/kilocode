@@ -49,6 +49,7 @@
 	"settings.codeIndex.embeddingBatchSize.description": "Kod indeksleme sırasında gömme işlemleri için toplu iş boyutu. Bunu API sağlayıcınızın sınırlarına göre ayarlayın. Varsayılan 60'tır.",
 	"settings.newTaskRequireTodos.description": "new_task aracıyla yeni görevler oluştururken todos parametresini gerekli kıl",
 	"settings.toolProtocol.description": "Yapay zeka etkileşimleri için kullanılacak araç protokolü. XML, varsayılan ve önerilen protokoldür. Yerel deneyseldir ve tüm sağlayıcılarla çalışmayabilir.",
+	"settings.debug.description": "API konuşma geçmişini ve kullanıcı arayüzü mesajlarını geçici dosyalarda biçimlendirilmiş JSON olarak görüntülemek için ek düğmeler göstermek üzere hata ayıklama modunu etkinleştir.",
 	"ghost.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
 	"ghost.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",

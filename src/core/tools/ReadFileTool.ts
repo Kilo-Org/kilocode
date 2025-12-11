@@ -1,11 +1,12 @@
 import path from "path"
 import { isBinaryFile } from "isbinaryfile"
 import type { FileEntry, LineRange } from "@roo-code/types"
-import { isNativeProtocol } from "@roo-code/types"
+import { isNativeProtocol, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
+import { getModelMaxOutputTokens } from "../../shared/api"
 import { t } from "../../i18n"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
@@ -480,11 +481,22 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						continue
 					}
 
-					const modelInfo = task.api.getModel().info
+					const { id: modelId, info: modelInfo } = task.api.getModel()
 					const { contextTokens } = task.getTokenUsage()
 					const contextWindow = modelInfo.contextWindow
 
-					const budgetResult = await validateFileTokenBudget(fullPath, contextWindow, contextTokens || 0)
+					const maxOutputTokens =
+						getModelMaxOutputTokens({
+							modelId,
+							model: modelInfo,
+							settings: task.apiConfiguration,
+						}) ?? ANTHROPIC_DEFAULT_MAX_TOKENS
+
+					const budgetResult = await validateFileTokenBudget(
+						fullPath,
+						contextWindow - maxOutputTokens,
+						contextTokens || 0,
+					)
 
 					let content = await extractTextFromFile(fullPath)
 					let xmlInfo = ""

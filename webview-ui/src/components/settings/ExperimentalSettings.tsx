@@ -78,6 +78,8 @@ export const ExperimentalSettings = ({
 				{Object.entries(experimentConfigsMap)
 					.filter(([key]) => key in EXPERIMENT_IDS)
 					.filter((config) => config[0] !== "MARKETPLACE") // kilocode_change: we have our own market place, filter this out for now
+					// Hide MULTIPLE_NATIVE_TOOL_CALLS - feature is on hold
+					.filter(([key]) => key !== "MULTIPLE_NATIVE_TOOL_CALLS")
 					.map((config) => {
 						if (config[0] === "MULTI_FILE_APPLY_DIFF") {
 							return (

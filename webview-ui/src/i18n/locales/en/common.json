@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Waited {{timeout}} seconds for checkpoint initialization. If you don't need the checkpoint feature, please turn it off in <settingsLink>the checkpoint settings</settingsLink>.",
 		"init_checkpoint_fail_long_time": "Checkpoint initialization has taken more than {{timeout}} seconds, so checkpoints are disabled for this task. You can disable checkpoints or extend the waiting time in <settingsLink>the checkpoint settings</settingsLink>.",
 		"attempt_completion_tool_failed": "Cannot execute attempt_completion because a previous tool call failed in this turn. Please address the tool failure before attempting completion."
+	},
+	"tasks": {
+		"delegated": "Delegated to subtask",
+		"delegated_to": "Delegated to task {{childId}}",
+		"delegation_completed": "Subtask completed, resuming parent",
+		"awaiting_child": "Awaiting child task {{childId}}"
 	}
 }

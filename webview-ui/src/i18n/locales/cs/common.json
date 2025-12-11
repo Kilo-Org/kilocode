@@ -123,5 +123,11 @@
 		"wait_checkpoint_long_time": "Čekalo se {{timeout}} sekund na inicializaci kontrolního bodu. Pokud funkci kontrolních bodů nepotřebuješ, vypni ji v <settingsLink>nastavení kontrolních bodů</settingsLink>.",
 		"init_checkpoint_fail_long_time": "Inicializace kontrolního bodu trvá déle než {{timeout}} sekund, proto jsou kontrolní body pro tento úkol zakázány. Můžeš zakázat kontrolní body nebo prodloužit čekací dobu v <settingsLink>nastavení kontrolních bodů</settingsLink>.",
 		"attempt_completion_tool_failed": "Nelze provést attempt_completion, protože předchozí volání nástroje v tomto kole selhalo. Vyřeš prosím nejprve selhání nástroje před pokusem o dokončení."
+	},
+	"tasks": {
+		"delegated": "Delegováno na podúkol",
+		"delegated_to": "Delegováno na úkol {{childId}}",
+		"delegation_completed": "Podúkol dokončen, pokračuje nadřazený úkol",
+		"awaiting_child": "Čeká se na podřízený úkol {{childId}}"
 	}
 }

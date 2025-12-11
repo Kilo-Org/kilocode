@@ -2,6 +2,7 @@
 
 import type { Mock } from "vitest"
 
+import { Anthropic } from "@anthropic-ai/sdk"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { ApiHandler } from "../../../api"
@@ -11,6 +12,8 @@ import {
 	summarizeConversation,
 	getMessagesSinceLastSummary,
 	getKeepMessagesWithToolBlocks,
+	getEffectiveApiHistory,
+	cleanupAfterTruncation,
 	N_MESSAGES_TO_KEEP,
 } from "../index"
 
@@ -407,22 +410,28 @@ describe("summarizeConversation", () => {
 		expect(mockApiHandler.createMessage).toHaveBeenCalled()
 		expect(maybeRemoveImageBlocks).toHaveBeenCalled()
 
-		// Verify the structure of the result
-		// The result should be: first message + summary + last N messages
-		expect(result.messages.length).toBe(1 + 1 + N_MESSAGES_TO_KEEP) // First + summary + last N
+		// With non-destructive condensing, the result contains ALL original messages
+		// plus the summary message. Condensed messages are tagged but not deleted.
+		// Use getEffectiveApiHistory to verify the effective API view matches the old behavior.
+		expect(result.messages.length).toBe(messages.length + 1) // All original messages + summary
 
 		// Check that the first message is preserved
 		expect(result.messages[0]).toEqual(messages[0])
 
-		// Check that the summary message was inserted correctly
-		const summaryMessage = result.messages[1]
-		expect(summaryMessage.role).toBe("assistant")
-		expect(summaryMessage.content).toBe("This is a summary")
-		expect(summaryMessage.isSummary).toBe(true)
+		// Find the summary message (it has isSummary: true)
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+		expect(summaryMessage!.content).toBe("This is a summary")
+		expect(summaryMessage!.isSummary).toBe(true)
 
-		// Check that the last N_MESSAGES_TO_KEEP messages are preserved
-		const lastMessages = messages.slice(-N_MESSAGES_TO_KEEP)
-		expect(result.messages.slice(-N_MESSAGES_TO_KEEP)).toEqual(lastMessages)
+		// Verify that the effective API history matches expected: first + summary + last N messages
+		const effectiveHistory = getEffectiveApiHistory(result.messages)
+		expect(effectiveHistory.length).toBe(1 + 1 + N_MESSAGES_TO_KEEP) // First + summary + last N
+
+		// Check that condensed messages are properly tagged
+		const condensedMessages = result.messages.filter((m) => m.condenseParent !== undefined)
+		expect(condensedMessages.length).toBeGreaterThan(0)
 
 		// Check the cost and token counts
 		expect(result.cost).toBe(0.05)
@@ -643,9 +652,11 @@ describe("summarizeConversation", () => {
 			prevContextTokens,
 		)
 
-		// Should successfully summarize
-		// Result should be: first message + summary + last N messages
-		expect(result.messages.length).toBe(1 + 1 + N_MESSAGES_TO_KEEP) // First + summary + last N
+		// With non-destructive condensing, result contains all messages plus summary
+		// Use getEffectiveApiHistory to verify the effective API view
+		expect(result.messages.length).toBe(messages.length + 1) // All messages + summary
+		const effectiveHistory = getEffectiveApiHistory(result.messages)
+		expect(effectiveHistory.length).toBe(1 + 1 + N_MESSAGES_TO_KEEP) // First + summary + last N
 		expect(result.cost).toBe(0.03)
 		expect(result.summary).toBe("Concise summary")
 		expect(result.error).toBeUndefined()
@@ -809,24 +820,174 @@ describe("summarizeConversation", () => {
 			true, // useNativeTools - required for tool_use block preservation
 		)
 
-		// Verify the summary message has content array with text and tool_use blocks
-		const summaryMessage = result.messages[1]
-		expect(summaryMessage.role).toBe("assistant")
-		expect(summaryMessage.isSummary).toBe(true)
-		expect(Array.isArray(summaryMessage.content)).toBe(true)
+		// Find the summary message
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(summaryMessage!.role).toBe("assistant")
+		expect(summaryMessage!.isSummary).toBe(true)
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
 
 		// Content should be [text block, tool_use block]
-		const content = summaryMessage.content as any[]
+		const content = summaryMessage!.content as Anthropic.Messages.ContentBlockParam[]
 		expect(content).toHaveLength(2)
 		expect(content[0].type).toBe("text")
-		expect(content[0].text).toBe("Summary of conversation")
+		expect((content[0] as Anthropic.Messages.TextBlockParam).text).toBe("Summary of conversation")
 		expect(content[1].type).toBe("tool_use")
-		expect(content[1].id).toBe("toolu_123")
-		expect(content[1].name).toBe("read_file")
+		expect((content[1] as Anthropic.Messages.ToolUseBlockParam).id).toBe("toolu_123")
+		expect((content[1] as Anthropic.Messages.ToolUseBlockParam).name).toBe("read_file")
 
-		// Verify the keepMessages are preserved correctly
-		expect(result.messages).toHaveLength(1 + 1 + N_MESSAGES_TO_KEEP) // first + summary + last 3
+		// With non-destructive condensing, all messages are retained plus the summary
+		expect(result.messages.length).toBe(messages.length + 1) // all original + summary
+		// Verify effective history matches expected
+		const effectiveHistory = getEffectiveApiHistory(result.messages)
+		expect(effectiveHistory.length).toBe(1 + 1 + N_MESSAGES_TO_KEEP) // first + summary + last 3
 		expect(result.error).toBeUndefined()
+	})
+
+	it("should include user tool_result message in summarize request when preserving tool_use blocks", async () => {
+		const toolUseBlock = {
+			type: "tool_use" as const,
+			id: "toolu_history_fix",
+			name: "read_file",
+			input: { path: "sample.txt" },
+		}
+		const toolResultBlock = {
+			type: "tool_result" as const,
+			tool_use_id: "toolu_history_fix",
+			content: "file contents",
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Hello", ts: 1 },
+			{ role: "assistant", content: "Let me help", ts: 2 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Running tool..." }, toolUseBlock],
+				ts: 3,
+			},
+			{
+				role: "user",
+				content: [toolResultBlock, { type: "text" as const, text: "Thanks" }],
+				ts: 4,
+			},
+			{ role: "assistant", content: "Anything else?", ts: 5 },
+			{ role: "user", content: "Nope", ts: 6 },
+		]
+
+		let capturedRequestMessages: any[] | undefined
+		const customStream = (async function* () {
+			yield { type: "text" as const, text: "Summary of conversation" }
+			yield { type: "usage" as const, totalCost: 0.05, outputTokens: 100 }
+		})()
+
+		mockApiHandler.createMessage = vi.fn().mockImplementation((_prompt, requestMessagesParam) => {
+			capturedRequestMessages = requestMessagesParam
+			return customStream
+		}) as any
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			true,
+		)
+
+		expect(result.error).toBeUndefined()
+		expect(capturedRequestMessages).toBeDefined()
+
+		const requestMessages = capturedRequestMessages!
+		expect(requestMessages[requestMessages.length - 1]).toEqual({
+			role: "user",
+			content: "Summarize the conversation so far, as described in the prompt instructions.",
+		})
+
+		const historyMessages = requestMessages.slice(0, -1)
+		expect(historyMessages.length).toBeGreaterThanOrEqual(2)
+
+		const assistantMessage = historyMessages[historyMessages.length - 2]
+		const userMessage = historyMessages[historyMessages.length - 1]
+
+		expect(assistantMessage.role).toBe("assistant")
+		expect(Array.isArray(assistantMessage.content)).toBe(true)
+		expect(
+			(assistantMessage.content as any[]).some(
+				(block) => block.type === "tool_use" && block.id === toolUseBlock.id,
+			),
+		).toBe(true)
+
+		expect(userMessage.role).toBe("user")
+		expect(Array.isArray(userMessage.content)).toBe(true)
+		expect(
+			(userMessage.content as any[]).some(
+				(block) => block.type === "tool_result" && block.tool_use_id === toolUseBlock.id,
+			),
+		).toBe(true)
+	})
+
+	it("should append multiple tool_use blocks for parallel tool calls", async () => {
+		const toolUseBlockA = {
+			type: "tool_use" as const,
+			id: "toolu_parallel_1",
+			name: "search",
+			input: { query: "foo" },
+		}
+		const toolUseBlockB = {
+			type: "tool_use" as const,
+			id: "toolu_parallel_2",
+			name: "search",
+			input: { query: "bar" },
+		}
+
+		const messages: ApiMessage[] = [
+			{ role: "user", content: "Start", ts: 1 },
+			{ role: "assistant", content: "Working...", ts: 2 },
+			{
+				role: "assistant",
+				content: [{ type: "text" as const, text: "Launching parallel tools" }, toolUseBlockA, toolUseBlockB],
+				ts: 3,
+			},
+			{
+				role: "user",
+				content: [
+					{ type: "tool_result" as const, tool_use_id: "toolu_parallel_1", content: "result A" },
+					{ type: "tool_result" as const, tool_use_id: "toolu_parallel_2", content: "result B" },
+					{ type: "text" as const, text: "Continue" },
+				],
+				ts: 4,
+			},
+			{ role: "assistant", content: "Processing results", ts: 5 },
+			{ role: "user", content: "Thanks", ts: 6 },
+		]
+
+		const result = await summarizeConversation(
+			messages,
+			mockApiHandler,
+			defaultSystemPrompt,
+			taskId,
+			DEFAULT_PREV_CONTEXT_TOKENS,
+			false,
+			undefined,
+			undefined,
+			true,
+		)
+
+		// Find the summary message (it has isSummary: true)
+		const summaryMessage = result.messages.find((m) => m.isSummary)
+		expect(summaryMessage).toBeDefined()
+		expect(Array.isArray(summaryMessage!.content)).toBe(true)
+		const summaryContent = summaryMessage!.content as Anthropic.Messages.ContentBlockParam[]
+		expect(summaryContent[0]).toEqual({ type: "text", text: "This is a summary" })
+
+		const preservedToolUses = summaryContent.filter(
+			(block): block is Anthropic.Messages.ToolUseBlockParam => block.type === "tool_use",
+		)
+		expect(preservedToolUses).toHaveLength(2)
+		expect(preservedToolUses.map((block) => block.id)).toEqual(["toolu_parallel_1", "toolu_parallel_2"])
 	})
 })
 

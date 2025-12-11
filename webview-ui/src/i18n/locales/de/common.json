@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Du hast {{timeout}} Sekunden auf die Initialisierung des Checkpoints gewartet. Wenn du die Checkpoint-Funktion nicht brauchst, kannst du sie in den <settingsLink>Checkpoint-Einstellungen</settingsLink> ausschalten.",
 		"init_checkpoint_fail_long_time": "Die Initialisierung des Checkpoints dauert länger als {{timeout}} Sekunden, deshalb sind Checkpoints für diese Aufgabe deaktiviert. Du kannst Checkpoints ausschalten oder die Wartezeit in den <settingsLink>Checkpoint-Einstellungen</settingsLink> verlängern.",
 		"attempt_completion_tool_failed": "Du kannst attempt_completion nicht ausführen, weil ein vorheriger Tool-Aufruf in diesem Durchgang fehlgeschlagen ist. Behebe den Tool-Fehler, bevor du versuchst, abzuschließen."
+	},
+	"tasks": {
+		"delegated": "An Unteraufgabe delegiert",
+		"delegated_to": "An Aufgabe {{childId}} delegiert",
+		"delegation_completed": "Unteraufgabe abgeschlossen, übergeordnete Aufgabe wird fortgesetzt",
+		"awaiting_child": "Warte auf Unteraufgabe {{childId}}"
 	}
 }

@@ -19,6 +19,7 @@ type BedrockProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	selectedModelInfo?: ModelInfo
+	simplifySettings?: boolean
 }
 
 export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedModelInfo }: BedrockProps) => {

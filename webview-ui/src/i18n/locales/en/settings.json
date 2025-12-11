@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Providers",
+		"modes": "Modes",
+		"mcp": "MCP Servers",
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoints",
@@ -100,6 +102,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API Key",
 		"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
+		"openRouterProviderRoutingLabel": "OpenRouter Provider Routing",
+		"openRouterProviderRoutingDescription": "OpenRouter routes requests to the best available providers for your embedding model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
@@ -1044,7 +1048,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
-		"useCustomModel": "Use custom: {{modelId}}"
+		"useCustomModel": "Use custom: {{modelId}}",
+		"simplifiedExplanation": "You can adjust detailed model settings later."
 	},
 	"footer": {
 		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilo.ai/discord</discordLink>.",

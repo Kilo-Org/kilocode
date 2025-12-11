@@ -76,7 +76,7 @@ export class IpcServer extends EventEmitter<IpcServerEvents> implements RooCodeI
 
 	private onMessage(data: unknown) {
 		if (typeof data !== "object") {
-			this.log("[server#onMessage] invalid data", data)
+			this.log(`[server#onMessage] invalid data -> ${JSON.stringify(data)}`)
 			return
 		}
 
@@ -84,10 +84,9 @@ export class IpcServer extends EventEmitter<IpcServerEvents> implements RooCodeI
 
 		if (!result.success) {
 			this.log(
-				"[server#onMessage] invalid paylooooad",
-				JSON.stringify(result.error.format()),
-				JSON.stringify(data),
+				`[server#onMessage] invalid payload -> ${JSON.stringify(result.error.issues)} -> ${JSON.stringify(data)}`,
 			)
+
 			return
 		}
 

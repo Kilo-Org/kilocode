@@ -2,7 +2,9 @@ import { type Keys, type RooCodeSettings, GLOBAL_SETTINGS_KEYS, PROVIDER_SETTING
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui"
 
-export const ROO_CODE_SETTINGS_KEYS = [...GLOBAL_SETTINGS_KEYS, ...PROVIDER_SETTINGS_KEYS] as Keys<RooCodeSettings>[]
+export const ROO_CODE_SETTINGS_KEYS = [
+	...new Set([...GLOBAL_SETTINGS_KEYS, ...PROVIDER_SETTINGS_KEYS]),
+] as Keys<RooCodeSettings>[]
 
 type SettingsDiffProps = {
 	defaultSettings: RooCodeSettings

@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Lien d'organisation copié dans le presse-papiers",
 		"shareSuccessPublic": "Lien public copié dans le presse-papiers",
 		"openInCloud": "Ouvrir la tâche dans Roo Code Cloud",
-		"openInCloudIntro": "Continue à surveiller ou interagir avec Roo depuis n'importe où. Scanne, clique ou copie pour ouvrir."
+		"openInCloudIntro": "Continue à surveiller ou interagir avec Roo depuis n'importe où. Scanne, clique ou copie pour ouvrir.",
+		"openApiHistory": "Ouvrir l'historique de l'API",
+		"openUiHistory": "Ouvrir l'historique de l'UI"
 	},
 	"history": {
 		"title": "Historique"
@@ -142,7 +144,18 @@
 		"failed": "Échec de la requête API",
 		"streaming": "Requête API...",
 		"cancelled": "Requête API annulée",
-		"streamingFailed": "Échec du streaming API"
+		"streamingFailed": "Échec du streaming API",
+		"errorTitle": "Erreur API {{code}}",
+		"errorMessage": {
+			"docs": "Documentation",
+			"400": "Le fournisseur n'a pas pu traiter la demande telle que présentée. Arrête la tâche et essaie une approche différente.",
+			"401": "Impossible de s'authentifier auprès du fournisseur. Veuillez vérifier la configuration de votre clé API.",
+			"402": "Il semble que vous ayez épuisé vos fonds/crédits sur votre compte. Allez chez votre fournisseur et ajoutez-en plus pour continuer.",
+			"403": "Non autorisé. Votre clé API est valide, mais le fournisseur a refusé de compléter cette demande.",
+			"429": "Trop de demandes. Vous êtes limité par le fournisseur. Veuillez attendre un peu avant votre prochain appel API.",
+			"500": "Erreur du serveur du fournisseur. Quelque chose ne va pas du côté du fournisseur, il n'y a rien de mal avec votre demande.",
+			"unknown": "Erreur API inconnue. Veuillez contacter le support Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Point de contrôle",
@@ -302,8 +315,8 @@
 		},
 		"release": {
 			"heading": "Nouveautés dans cette version :",
-			"browserUse": "Browser Use 2.0 améliore l'expérience de navigation en chat avec des sessions persistantes, des retours plus clairs, un panneau de navigateur dédié et des descriptions d'actions plus naturelles",
-			"cloudPaid": "Le fournisseur Roo Code Cloud propose désormais des modèles payants : achète des crédits et utilise-les pour les agents cloud et l'inférence"
+			"contextRewind": "La condensation améliorée du contexte te permet désormais de restaurer le contexte précédent complet en rembobinant vers un point de contrôle",
+			"rooProvider": "Le fournisseur Roo Code Cloud préserve désormais le contenu du raisonnement et utilise par défaut les outils natifs pour de meilleures performances"
 		},
 		"cloudAgents": {
 			"heading": "Nouveautés dans le Cloud :",
@@ -312,7 +325,7 @@
 			"tryButton": "Essayer les Agents Cloud"
 		},
 		"careers": "Aussi, <careersLink>on recrute !</careersLink>",
-		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
 		"session": "Session du navigateur",

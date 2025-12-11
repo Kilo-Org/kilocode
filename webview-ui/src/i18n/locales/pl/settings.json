@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Dostawcy",
+		"modes": "Tryby",
+		"mcp": "Serwery MCP",
 		"autoApprove": "Auto-zatwierdzanie",
 		"browser": "Dostęp komputera",
 		"checkpoints": "Punkty kontrolne",
@@ -89,6 +91,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Klucz API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
+		"openRouterProviderRoutingLabel": "Routing dostawców OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu osadzania. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
@@ -1015,7 +1019,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Wyszukaj",
 		"noMatchFound": "Nie znaleziono dopasowań",
-		"useCustomModel": "Użyj niestandardowy: {{modelId}}"
+		"useCustomModel": "Użyj niestandardowy: {{modelId}}",
+		"simplifiedExplanation": "Można dostosować szczegółowe ustawienia modelu później."
 	},
 	"footer": {
 		"feedback": "Jeśli masz jakiekolwiek pytania lub opinie, śmiało otwórz zgłoszenie na <githubLink>github.com/Kilo-Org/kilocode</githubLink> lub dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilo.ai/discord</discordLink>",
