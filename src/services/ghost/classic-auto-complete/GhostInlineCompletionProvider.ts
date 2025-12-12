@@ -208,15 +208,7 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
  * @returns The first line of the completion (without the newline)
  */
 export function getFirstLine(text: string): string {
-	const newlineIndex = text.indexOf("\n")
-	if (newlineIndex === -1) {
-		return text
-	}
-	// Handle \r\n line endings
-	if (newlineIndex > 0 && text[newlineIndex - 1] === "\r") {
-		return text.substring(0, newlineIndex - 1)
-	}
-	return text.substring(0, newlineIndex)
+	return text.split(/\r?\n/, 1)[0]
 }
 
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
