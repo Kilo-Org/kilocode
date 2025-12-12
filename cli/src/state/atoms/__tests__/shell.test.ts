@@ -12,10 +12,9 @@ import {
 } from "../shell.js"
 import { textBufferStringAtom, setTextAtom } from "../textBuffer.js"
 
-// Mock child_process to avoid actual command execution
+// Mock child_process to avoid actual command execution; provide exec and execFile for clipboard code
 vi.mock("child_process", () => ({
 	exec: vi.fn((command) => {
-		// Simulate successful command execution
 		const stdout = `Mock output for: ${command}`
 		const stderr = ""
 		const process = {
@@ -40,6 +39,9 @@ vi.mock("child_process", () => ({
 			}),
 		}
 		return process
+	}),
+	execFile: vi.fn((..._args) => {
+		throw new Error("execFile mocked in shell tests")
 	}),
 }))
 
