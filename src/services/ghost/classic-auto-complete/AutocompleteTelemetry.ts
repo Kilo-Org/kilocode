@@ -136,4 +136,24 @@ export class AutocompleteTelemetry {
 	public captureAcceptSuggestion(): void {
 		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION)
 	}
+
+	/**
+	 * Capture when a unique suggestion is shown to the user for the first time.
+	 * Uniqueness is tracked in the cache itself via the shownToUser flag.
+	 *
+	 * @param context - The autocomplete context
+	 * @param suggestionLength - The length of the suggestion in characters
+	 * @param source - Whether the suggestion came from 'llm' or 'cache'
+	 */
+	public captureUniqueSuggestionShown(
+		context: AutocompleteContext,
+		suggestionLength: number,
+		source: "llm" | "cache",
+	): void {
+		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN, {
+			...context,
+			suggestionLength,
+			source,
+		})
+	}
 }

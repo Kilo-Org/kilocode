@@ -60,24 +60,38 @@ const LATENCY_SAMPLE_SIZE = 10
 export type { CostTrackingCallback, GhostPrompt, MatchingSuggestionResult, LLMRetrievalResult }
 
 /**
- * Find a matching suggestion from the history based on current prefix and suffix
+ * Result from findMatchingSuggestion including whether this is the first time shown
+ */
+export interface MatchingSuggestionWithFirstTimeFlag extends MatchingSuggestionResult {
+	/** Whether this is the first time this suggestion is being shown (was just marked as shown) */
+	isFirstTimeShown: boolean
+}
+
+/**
+ * Find a matching suggestion from the history based on current prefix and suffix.
+ * When a match is found, it is immediately marked as shown in the cache.
+ * The isFirstTimeShown flag indicates whether this was the first retrieval.
+ *
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
  * @param suggestionsHistory - Array of previous suggestions (most recent last)
- * @returns The matching suggestion with match type, or null if no match found
+ * @returns The matching suggestion with match type and first-time flag, or null if no match found
  */
 export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
 	suggestionsHistory: FillInAtCursorSuggestion[],
-): MatchingSuggestionResult | null {
+): MatchingSuggestionWithFirstTimeFlag | null {
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return { text: fillInAtCursor.text, matchType: "exact" }
+			const isFirstTimeShown = !fillInAtCursor.shownToUser
+			// Mark as shown in the cache
+			fillInAtCursor.shownToUser = true
+			return { text: fillInAtCursor.text, matchType: "exact", isFirstTimeShown }
 		}
 
 		// If no exact match, but suggestion is available, check for partial typing
@@ -92,8 +106,15 @@ export function findMatchingSuggestion(
 
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
+				const isFirstTimeShown = !fillInAtCursor.shownToUser
+				// Mark as shown in the cache
+				fillInAtCursor.shownToUser = true
 				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return { text: fillInAtCursor.text.substring(typedContent.length), matchType: "partial_typing" }
+				return {
+					text: fillInAtCursor.text.substring(typedContent.length),
+					matchType: "partial_typing",
+					isFirstTimeShown,
+				}
 			}
 		}
 
@@ -108,8 +129,15 @@ export function findMatchingSuggestion(
 			// Extract the deleted portion of the prefix
 			const deletedContent = fillInAtCursor.prefix.substring(prefix.length)
 
+			const isFirstTimeShown = !fillInAtCursor.shownToUser
+			// Mark as shown in the cache
+			fillInAtCursor.shownToUser = true
 			// Return the deleted portion plus the original suggestion text
-			return { text: deletedContent + fillInAtCursor.text, matchType: "backward_deletion" }
+			return {
+				text: deletedContent + fillInAtCursor.text,
+				matchType: "backward_deletion",
+				isFirstTimeShown,
+			}
 		}
 	}
 
@@ -387,10 +415,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 			// Check cache first - allow mid-word lookups from cache
+			// findMatchingSuggestion marks the suggestion as shown and returns isFirstTimeShown flag
 			const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 			if (matchingResult !== null) {
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
+				// Fire unique suggestion shown telemetry if this is the first time
+				if (matchingResult.isFirstTimeShown) {
+					this.telemetry?.captureUniqueSuggestionShown(telemetryContext, matchingResult.text.length, "cache")
+				}
 				return stringToInlineCompletions(matchingResult.text, position)
 			}
 
@@ -407,9 +440,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
 
+			// findMatchingSuggestion marks the suggestion as shown and returns isFirstTimeShown flag
 			const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 			if (cachedResult) {
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
+				// Fire unique suggestion shown telemetry if this is the first time
+				if (cachedResult.isFirstTimeShown) {
+					this.telemetry?.captureUniqueSuggestionShown(telemetryContext, cachedResult.text.length, "llm")
+				}
 			}
 
 			return stringToInlineCompletions(cachedResult?.text ?? "", position)

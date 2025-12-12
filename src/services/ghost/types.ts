@@ -105,6 +105,7 @@ export interface FillInAtCursorSuggestion {
 	text: string
 	prefix: string
 	suffix: string
+	shownToUser?: boolean
 }
 
 export interface MatchingSuggestionResult {
