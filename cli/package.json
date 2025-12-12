@@ -32,6 +32,7 @@
 		"changeset:version": "jq --arg version \"$(jq -r '.version' package.json)\" '.version = $version' package.dist.json > tmp.json && mv tmp.json package.dist.json && prettier --write package.dist.json"
 	},
 	"dependencies": {
+		"@agentclientprotocol/sdk": "^0.7.0",
 		"@anthropic-ai/bedrock-sdk": "^0.22.0",
 		"@anthropic-ai/sdk": "^0.51.0",
 		"@anthropic-ai/vertex-sdk": "^0.11.3",
