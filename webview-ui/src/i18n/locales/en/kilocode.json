@@ -253,6 +253,10 @@
 				"label": "Chat Input Autocomplete",
 				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
 			},
+			"enableBetaChannel": {
+				"label": "Beta channel",
+				"description": "Get experimental features first"
+			},
 			"keybindingNotFound": "not found",
 			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."

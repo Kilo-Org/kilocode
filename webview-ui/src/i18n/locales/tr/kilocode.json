@@ -242,6 +242,10 @@
 			"enableChatAutocomplete": {
 				"label": "Sohbet Girişi Otomatik Tamamlama",
 				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+			},
+			"enableBetaChannel": {
+				"label": "Beta kanalı",
+				"description": "Deneysel özellikleri ilk siz alın"
 			}
 		}
 	},

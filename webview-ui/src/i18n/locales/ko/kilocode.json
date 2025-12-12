@@ -249,6 +249,10 @@
 			"enableChatAutocomplete": {
 				"label": "채팅 입력 자동완성",
 				"description": "활성화되면, Kilo Code는 채팅 입력 시 입력하는 대로 완성 제안을 제공합니다. Tab 키를 눌러 제안을 수락하세요."
+			},
+			"enableBetaChannel": {
+				"label": "베타 채널",
+				"description": "실험적 기능을 먼저 받으세요"
 			}
 		}
 	},

@@ -33,6 +33,7 @@ export const GhostServiceSettingsView = ({
 		enableQuickInlineTaskKeybinding,
 		enableSmartInlineTaskKeybinding,
 		enableChatAutocomplete,
+		enableBetaChannel,
 		provider,
 		model,
 	} = ghostServiceSettings || {}
@@ -62,6 +63,13 @@ export const GhostServiceSettingsView = ({
 	const onEnableChatAutocompleteChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableChatAutocomplete", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onEnableBetaChannelChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableBetaChannel", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -165,6 +173,15 @@ export const GhostServiceSettingsView = ({
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans i18nKey="kilocode:ghost.settings.enableChatAutocomplete.description" />
+						</div>
+					</div>
+	
+					<div className="flex flex-col gap-1">
+						<VSCodeCheckbox checked={enableBetaChannel || false} onChange={onEnableBetaChannelChange}>
+							<span className="font-medium">{t("kilocode:ghost.settings.enableBetaChannel.label")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							<Trans i18nKey="kilocode:ghost.settings.enableBetaChannel.description" />
 						</div>
 					</div>
 

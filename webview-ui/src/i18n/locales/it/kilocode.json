@@ -242,6 +242,10 @@
 			"enableChatAutocomplete": {
 				"label": "Completamento Automatico dell'Input della Chat",
 				"description": "Quando abilitato, Kilo Code suggerirà completamenti mentre digiti nell'area di chat. Premi Tab per accettare i suggerimenti."
+			},
+			"enableBetaChannel": {
+				"label": "Canale beta",
+				"description": "Ottieni le funzionalità sperimentali per primo"
 			}
 		}
 	},

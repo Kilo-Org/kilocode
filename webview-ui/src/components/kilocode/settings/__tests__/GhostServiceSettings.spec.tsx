@@ -96,6 +96,7 @@ const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
 	enableChatAutocomplete: false,
+	enableBetaChannel: false,
 	provider: "openrouter",
 	model: "openai/gpt-4o-mini",
 }
@@ -188,6 +189,18 @@ describe("GhostServiceSettingsView", () => {
 		fireEvent.click(checkbox)
 
 		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableChatAutocomplete", true)
+	})
+
+	it("toggles beta channel checkbox correctly", () => {
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
+
+		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableBetaChannel.label/).closest("label")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
+
+		fireEvent.click(checkbox)
+
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableBetaChannel", true)
 	})
 
 	it("renders Trans components with proper structure", () => {

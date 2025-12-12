@@ -241,6 +241,10 @@
 			"enableChatAutocomplete": {
 				"label": "Chat-Eingabe-Autovervollständigung",
 				"description": "Wenn aktiviert, wird Kilo Code Vervollständigungen vorschlagen, während Sie im Chat-Eingabefeld tippen. Drücken Sie Tab, um Vorschläge zu akzeptieren."
+			},
+			"enableBetaChannel": {
+				"label": "Beta-Kanal",
+				"description": "Erhalte experimentelle Funktionen zuerst"
 			}
 		}
 	},

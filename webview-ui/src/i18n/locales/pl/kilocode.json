@@ -242,6 +242,10 @@
 			"enableChatAutocomplete": {
 				"label": "Automatyczne uzupełnianie wpisów czatu",
 				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			},
+			"enableBetaChannel": {
+				"label": "Kanał beta",
+				"description": "Otrzymuj eksperymentalne funkcje jako pierwszy"
 			}
 		}
 	},

@@ -249,6 +249,10 @@
 			"enableChatAutocomplete": {
 				"label": "Chatinvoer Automatisch Aanvullen",
 				"description": "Wanneer ingeschakeld, zal Kilo Code suggesties voor aanvullingen geven terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
+			},
+			"enableBetaChannel": {
+				"label": "Bètakanaal",
+				"description": "Krijg experimentele functies als eerste"
 			}
 		}
 	},

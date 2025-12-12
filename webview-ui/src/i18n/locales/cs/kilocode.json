@@ -249,6 +249,10 @@
 			"enableChatAutocomplete": {
 				"label": "Automatické doplňování při psaní zpráv",
 				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+			},
+			"enableBetaChannel": {
+				"label": "Beta kanál",
+				"description": "Získejte experimentální funkce jako první"
 			}
 		}
 	},
