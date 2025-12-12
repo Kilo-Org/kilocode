@@ -254,6 +254,9 @@ export class FFmpegCaptureService extends EventEmitter {
 				continue
 			}
 		}
+
+		// Cache the "not found" result to avoid repeated path checks
+		cachedFFmpegPath = null
 		return {
 			available: false,
 			error: "FFmpeg not found. Install from https://ffmpeg.org/download.html",
