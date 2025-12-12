@@ -248,7 +248,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					break
 				case "agentManager.sessionShare":
 					SessionManager.init()
-						.shareSession(message.sessionId as string)
+						?.shareSession(message.sessionId as string)
 						.then((result) => {
 							const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
 

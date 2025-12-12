@@ -14,7 +14,7 @@ async function showSessionId(context: CommandContext): Promise<void> {
 	const { addMessage } = context
 
 	const sessionService = SessionManager.init()
-	const sessionId = sessionService.sessionId
+	const sessionId = sessionService?.sessionId
 
 	if (!sessionId) {
 		addMessage({
@@ -38,10 +38,9 @@ async function showSessionId(context: CommandContext): Promise<void> {
 async function listSessions(context: CommandContext): Promise<void> {
 	const { addMessage } = context
 	const sessionService = SessionManager.init()
-	const sessionClient = sessionService.sessionClient
 
 	try {
-		const result = await sessionClient?.list({ limit: 50 })
+		const result = await sessionService?.listSessions({ limit: 50 })
 		if (!result || result.cliSessions.length === 0) {
 			addMessage({
 				...generateMessage(),
@@ -56,7 +55,7 @@ async function listSessions(context: CommandContext): Promise<void> {
 		// Format and display sessions
 		let content = `**Available Sessions:**\n\n`
 		cliSessions.forEach((session, index) => {
-			const isActive = session.session_id === sessionService.sessionId ? " * [Active]" : ""
+			const isActive = session.session_id === sessionService?.sessionId ? " * [Active]" : ""
 			const title = session.title || "Untitled"
 			const createdTime = formatRelativeTime(new Date(session.created_at).getTime())
 
@@ -118,7 +117,7 @@ async function selectSession(context: CommandContext, sessionId: string): Promis
 		])
 
 		await refreshTerminal()
-		await sessionService.restoreSession(sessionId, true)
+		await sessionService?.restoreSession(sessionId, true)
 
 		// Success message is handled by restoreSession via extension messages
 	} catch (error) {
@@ -136,7 +135,6 @@ async function selectSession(context: CommandContext, sessionId: string): Promis
 async function searchSessions(context: CommandContext, query: string): Promise<void> {
 	const { addMessage } = context
 	const sessionService = SessionManager.init()
-	const sessionClient = sessionService.sessionClient
 
 	if (!query) {
 		addMessage({
@@ -148,7 +146,7 @@ async function searchSessions(context: CommandContext, query: string): Promise<v
 	}
 
 	try {
-		const result = await sessionClient?.search({ search_string: query, limit: 20 })
+		const result = await sessionService?.searchSessions({ search_string: query, limit: 20 })
 
 		if (!result || result.results.length === 0) {
 			addMessage({
@@ -163,7 +161,7 @@ async function searchSessions(context: CommandContext, query: string): Promise<v
 
 		let content = `**Search Results** (${results.length} of ${total}):\n\n`
 		results.forEach((session, index) => {
-			const isActive = session.session_id === sessionService.sessionId ? " * [Active]" : ""
+			const isActive = session.session_id === sessionService?.sessionId ? " * [Active]" : ""
 			const title = session.title || "Untitled"
 			const createdTime = formatRelativeTime(new Date(session.created_at).getTime())
 
@@ -194,7 +192,11 @@ async function shareSession(context: CommandContext): Promise<void> {
 	const sessionService = SessionManager.init()
 
 	try {
-		const result = await sessionService.shareSession()
+		const result = await sessionService?.shareSession()
+
+		if (!result) {
+			throw new Error("SessionManager not initialized")
+		}
 
 		addMessage({
 			...generateMessage(),
@@ -246,7 +248,7 @@ async function forkSession(context: CommandContext, id: string): Promise<void> {
 
 		await refreshTerminal()
 
-		await sessionService.forkSession(id, true)
+		await sessionService?.forkSession(id, true)
 
 		// Success message handled by restoreSession via extension messages
 	} catch (error) {
@@ -264,7 +266,6 @@ async function forkSession(context: CommandContext, id: string): Promise<void> {
 async function deleteSession(context: CommandContext, sessionId: string): Promise<void> {
 	const { addMessage } = context
 	const sessionService = SessionManager.init()
-	const sessionClient = sessionService.sessionClient
 
 	if (!sessionId) {
 		addMessage({
@@ -276,11 +277,11 @@ async function deleteSession(context: CommandContext, sessionId: string): Promis
 	}
 
 	try {
-		if (!sessionClient) {
+		if (!sessionService) {
 			throw new Error("SessionManager used before initialization")
 		}
 
-		await sessionClient.delete({ session_id: sessionId })
+		await sessionService.deleteSession({ session_id: sessionId })
 
 		addMessage({
 			...generateMessage(),
@@ -313,7 +314,7 @@ async function renameSession(context: CommandContext, newName: string): Promise<
 	}
 
 	try {
-		if (!sessionService.sessionId) {
+		if (!sessionService?.sessionId) {
 			throw new Error("No active session to rename")
 		}
 
@@ -338,7 +339,6 @@ async function renameSession(context: CommandContext, newName: string): Promise<
  */
 async function sessionIdAutocompleteProvider(context: ArgumentProviderContext): Promise<ArgumentSuggestion[]> {
 	const sessionService = SessionManager.init()
-	const sessionClient = sessionService.sessionClient
 
 	// Extract prefix from user input
 	const prefix = context.partialInput.trim()
@@ -349,7 +349,7 @@ async function sessionIdAutocompleteProvider(context: ArgumentProviderContext): 
 	}
 
 	try {
-		const response = await sessionClient?.search({ search_string: prefix, limit: 20 })
+		const response = await sessionService?.searchSessions({ search_string: prefix, limit: 20 })
 
 		if (!response) {
 			return []

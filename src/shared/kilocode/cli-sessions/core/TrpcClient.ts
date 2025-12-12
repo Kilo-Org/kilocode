@@ -7,6 +7,25 @@ type HttpMethod = "GET" | "POST"
  */
 export type TrpcResponse<T> = { result: { data: T } }
 
+/**
+ * Error class for tRPC request failures with full context.
+ * Includes procedure name, HTTP method, status code, response body, and request input.
+ */
+export class TrpcError extends Error {
+	constructor(
+		public readonly procedure: string,
+		public readonly method: string,
+		public readonly status: number,
+		public readonly responseBody: unknown,
+		public readonly requestInput: unknown,
+	) {
+		super(
+			`tRPC request failed: ${procedure} (${method}) - Status ${status}\nInput ${JSON.stringify(requestInput)}\nResponse: ${JSON.stringify(responseBody)}`,
+		)
+		this.name = "TrpcError"
+	}
+}
+
 export interface TrpcClientDependencies {
 	getToken: () => Promise<string>
 }
@@ -53,7 +72,14 @@ export class TrpcClient {
 		})
 
 		if (!response.ok) {
-			throw new Error(`tRPC request failed: ${response.status}`)
+			const body = await response.text()
+			let parsedBody: unknown
+			try {
+				parsedBody = JSON.parse(body)
+			} catch {
+				parsedBody = body
+			}
+			throw new TrpcError(procedure, method, response.status, parsedBody, input)
 		}
 
 		const trpcResponse = (await response.json()) as TrpcResponse<TOutput>
