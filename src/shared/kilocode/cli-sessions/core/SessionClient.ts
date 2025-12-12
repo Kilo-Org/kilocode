@@ -5,8 +5,13 @@ export interface Session {
 	title: string
 	created_at: string
 	updated_at: string
-	git_url?: string
+	git_url: string | null
 	version: number
+	cloud_agent_session_id: string | null
+	created_on_platform: string
+	organization_id: string | null
+	last_mode: string | null
+	last_model: string | null
 }
 
 export interface SessionWithSignedUrls extends Session {
@@ -27,7 +32,10 @@ export interface CreateSessionInput {
 	title?: string
 	git_url?: string
 	created_on_platform: string
-	version: number
+	version?: number
+	last_mode?: string | null | undefined
+	last_model?: string | null | undefined
+	organization_id?: string | undefined
 }
 
 export type CreateSessionOutput = Session
@@ -37,14 +45,12 @@ export interface UpdateSessionInput {
 	title?: string
 	git_url?: string
 	version?: number
+	last_mode?: string | null | undefined
+	last_model?: string | null | undefined
+	organization_id?: string | null | undefined
 }
 
-export interface UpdateSessionOutput {
-	session_id: string
-	title: string
-	updated_at: string
-	version: number
-}
+export type UpdateSessionOutput = Session
 
 export interface ListSessionsInput {
 	cursor?: string
@@ -88,9 +94,7 @@ export interface ForkSessionInput {
 	created_on_platform: string
 }
 
-export interface ForkSessionOutput {
-	session_id: string
-}
+export type ForkSessionOutput = Session
 
 export interface DeleteSessionInput {
 	session_id: string

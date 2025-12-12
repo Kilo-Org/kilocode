@@ -6,6 +6,30 @@ export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-5.1"
 
 export const openAiNativeModels = {
+	// kilocode_change start
+	"gpt-5.2": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
+		supportsImages: true,
+		supportsPromptCache: true,
+		promptCacheRetention: "24h",
+		supportsReasoningEffort: ["none", "low", "medium", "high"],
+		reasoningEffort: "medium",
+		inputPrice: 1.75,
+		outputPrice: 14.0,
+		cacheReadsPrice: 0.175,
+		supportsVerbosity: true,
+		supportsTemperature: false,
+		tiers: [
+			{ name: "flex", contextWindow: 400000, inputPrice: 0.625, outputPrice: 5.0, cacheReadsPrice: 0.0625 },
+			{ name: "priority", contextWindow: 400000, inputPrice: 2.5, outputPrice: 20.0, cacheReadsPrice: 0.25 },
+		],
+		description: "GPT-5.2: The best model for coding and agentic tasks across domains",
+	},
+	// kilocode_change end
 	"gpt-5.1-codex-max": {
 		maxTokens: 128000,
 		contextWindow: 400000,

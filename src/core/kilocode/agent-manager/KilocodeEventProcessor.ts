@@ -88,6 +88,13 @@ export class KilocodeEventProcessor {
 			return
 		}
 
+		// Handle resume asks early - they're state signals, not content to display
+		// The state machine transitions to paused/waiting_input, no chat message needed
+		if (payload.type === "ask" && payload.ask === "resume_task") {
+			this.postStateEvent(sessionId, { eventType: "ask_resume_task" })
+			return
+		}
+
 		const timestamp = (payload.timestamp as number | undefined) ?? (payload as { ts?: number }).ts ?? Date.now()
 		const checkpoint = (payload as { checkpoint?: Record<string, unknown> }).checkpoint
 		const text = this.deriveMessageText(payload, checkpoint)

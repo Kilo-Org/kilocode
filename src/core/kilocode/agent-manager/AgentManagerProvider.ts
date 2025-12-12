@@ -29,6 +29,7 @@ import {
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
 } from "./telemetry"
+import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 
 /**
@@ -51,6 +52,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private firstApiReqStarted: Map<string, boolean> = new Map()
 	// Track the current workspace's git URL for filtering sessions
 	private currentGitUrl: string | undefined
+	// Track process start times to filter out replayed history events
+	private processStartTimes: Map<string, number> = new Map()
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -109,6 +112,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 						latestSession.parallelMode?.enabled ?? false,
 					)
 				}
+			},
+			onSessionCompleted: (sessionId) => {
+				// Notify webview state machine of completion when process exits successfully
+				// This ensures the state machine transitions to completed state
+				// (needed because completion_result events from CLI stdout can be truncated)
+				this.postMessage({
+					type: "agentManager.stateEvent",
+					sessionId,
+					eventType: "ask_completion_result",
+				})
 			},
 		}
 
@@ -184,9 +197,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 					void this.fetchAndPostRemoteSessions()
 					break
 				case "agentManager.startSession":
-					void this.startAgentSession(message.prompt as string, {
-						parallelMode: message.parallelMode as boolean | undefined,
-					})
+					void this.handleStartSession(message)
 					break
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
@@ -245,6 +256,93 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Handle start session message from webview.
+	 * Supports multi-version mode: when versions > 1, spawns multiple sessions sequentially.
+	 */
+	private async handleStartSession(message: { [key: string]: unknown }): Promise<void> {
+		const prompt = message.prompt as string
+		// Clamp versions to valid range to prevent runaway process spawning
+		const rawVersions = (message.versions as number) ?? 1
+		const versions = Math.min(Math.max(rawVersions, 1), MAX_VERSION_COUNT)
+		// Only use labels if they match the version count, otherwise ignore
+		const rawLabels = message.labels as string[] | undefined
+		const labels = rawLabels?.length === versions ? rawLabels : undefined
+		const parallelMode = (message.parallelMode as boolean) ?? false
+
+		// Extract session configurations
+		const configs = extractSessionConfigs({ prompt, versions, labels, parallelMode })
+
+		if (configs.length === 1) {
+			// Single session - spawn directly
+			const config = configs[0]
+			await this.startAgentSession(config.prompt, {
+				parallelMode: config.parallelMode,
+				autoMode: config.autoMode,
+				labelOverride: config.label,
+			})
+			return
+		}
+
+		// Multi-version mode: spawn sessions sequentially
+		// We need to wait for each pending session to clear before starting the next
+		this.outputChannel.appendLine(`[AgentManager] Starting ${configs.length} versions in multi-version mode`)
+
+		for (let i = 0; i < configs.length; i++) {
+			const config = configs[i]
+			this.outputChannel.appendLine(`[AgentManager] Starting version ${i + 1}/${configs.length}: ${config.label}`)
+
+			await this.startAgentSession(config.prompt, {
+				parallelMode: config.parallelMode,
+				autoMode: config.autoMode,
+				labelOverride: config.label,
+			})
+
+			// Wait for the pending session to transition to active before spawning the next
+			// This is necessary because CliProcessHandler only supports one pendingProcess at a time
+			if (i < configs.length - 1) {
+				await this.waitForPendingSessionToClear()
+			}
+		}
+
+		this.outputChannel.appendLine(`[AgentManager] All ${configs.length} versions started`)
+	}
+
+	/**
+	 * Wait for any pending session to transition to active/error state.
+	 * Returns immediately if no session is pending.
+	 */
+	private waitForPendingSessionToClear(): Promise<void> {
+		return new Promise((resolve) => {
+			// Check immediately - if no pending session, resolve right away
+			if (!this.registry.pendingSession) {
+				resolve()
+				return
+			}
+
+			// Track timeout so we can clear it when session clears
+			let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+			// Poll until pending session clears
+			const checkInterval = setInterval(() => {
+				if (!this.registry.pendingSession) {
+					clearInterval(checkInterval)
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+					}
+					resolve()
+				}
+			}, 100)
+
+			// Timeout after 30 seconds to avoid hanging forever
+			timeoutId = setTimeout(() => {
+				clearInterval(checkInterval)
+				this.outputChannel.appendLine(`[AgentManager] Timeout waiting for pending session to clear`)
+				resolve()
+			}, 30000)
+		})
+	}
+
 	private async initializeCurrentGitUrl(): Promise<void> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 		if (!workspaceFolder) {
@@ -268,7 +366,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private async startAgentSession(
 		prompt: string,
-		options?: { parallelMode?: boolean; resumeSessionId?: string; resumeSessionLabel?: string },
+		options?: {
+			parallelMode?: boolean
+			autoMode?: boolean
+			labelOverride?: string
+		},
 	): Promise<void> {
 		if (!prompt) {
 			this.outputChannel.appendLine("ERROR: prompt is empty")
@@ -302,10 +404,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Preserve existing label when resuming a session (prefer local, fallback to passed label)
-		const existingLabel = options?.resumeSessionId
-			? (this.registry.getSession(options.resumeSessionId)?.label ?? options.resumeSessionLabel)
-			: undefined
+		// Determine label override (used for multi-version mode)
+		const existingLabel = options?.labelOverride
 
 		// Get git URL for the workspace (used for filtering sessions)
 		let gitUrl: string | undefined
@@ -317,17 +417,25 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Record process start time to filter out replayed history events
+		// This is set before spawning so any events older than this are from history
+		const processStartTime = Date.now()
+
 		this.processHandler.spawnProcess(
 			cliPath,
 			workspaceFolder,
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
-				sessionId: options?.resumeSessionId,
+				autoMode: options?.autoMode,
 				label: existingLabel,
 				gitUrl,
 			},
 			(sessionId, event) => {
+				// For new sessions, set the start time when we first see the session
+				if (!this.processStartTimes.has(sessionId)) {
+					this.processStartTimes.set(sessionId, processStartTime)
+				}
 				this.handleCliEvent(sessionId, event)
 			},
 		)
@@ -338,9 +446,20 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private handleCliEvent(sessionId: string, event: StreamEvent): void {
 		switch (event.streamEventType) {
-			case "kilocode":
+			case "kilocode": {
+				// Filter out replayed events from history (older than process start time)
+				// We allow timestamp <= 1000 because 'welcome' events often have timestamp: 1
+				const processStartTime = this.processStartTimes.get(sessionId) ?? 0
+				const eventTimestamp = event.payload?.timestamp
+				if (eventTimestamp && eventTimestamp > 1000 && eventTimestamp < processStartTime) {
+					this.outputChannel.appendLine(
+						`[AgentManager] Filtering replayed event: ${event.payload?.say || event.payload?.ask || "unknown"} (ts=${eventTimestamp} < start=${processStartTime})`,
+					)
+					return
+				}
 				this.handleKilocodeEvent(sessionId, event)
 				break
+			}
 			case "status":
 				this.parseParallelModeStatus(sessionId, event.message)
 				this.log(sessionId, event.message)
@@ -362,11 +481,28 @@ export class AgentManagerProvider implements vscode.Disposable {
 			}
 			case "complete": {
 				const session = this.registry.getSession(sessionId)
-				this.registry.updateSessionStatus(sessionId, "done", event.exitCode)
-				this.log(sessionId, "Agent completed")
+				const isSuccess = event.exitCode === 0 || event.exitCode === undefined
+				this.registry.updateSessionStatus(sessionId, isSuccess ? "done" : "error", event.exitCode)
+				this.log(sessionId, isSuccess ? "Agent completed" : `Agent failed with exit code ${event.exitCode}`)
 				void this.fetchAndPostRemoteSessions()
-				// Track session completed telemetry
-				captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
+				// Notify webview state machine of completion (only on success)
+				// This is needed because completion_result events can be truncated in stdout chunking
+				if (isSuccess) {
+					this.postMessage({
+						type: "agentManager.stateEvent",
+						sessionId,
+						eventType: "ask_completion_result",
+					})
+					// Track session completed telemetry
+					captureAgentManagerSessionCompleted(sessionId, session?.parallelMode?.enabled ?? false)
+				} else {
+					// Track session error telemetry
+					captureAgentManagerSessionError(
+						sessionId,
+						session?.parallelMode?.enabled ?? false,
+						`Exit code ${event.exitCode}`,
+					)
+				}
 				break
 			}
 			case "interrupted": {
@@ -525,7 +661,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.log(sessionId, "Stopped by user")
 		this.postStateToWebview()
 
+		// Notify webview state machine of cancellation
+		// This ensures the state machine transitions to stopped state
+		this.postMessage({
+			type: "agentManager.stateEvent",
+			sessionId,
+			eventType: "cancel_session",
+		})
+
 		this.firstApiReqStarted.delete(sessionId)
+		this.processStartTimes.delete(sessionId)
 
 		// Track session stopped telemetry
 		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
@@ -533,19 +678,21 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Send a follow-up message to a running agent session via stdin.
-	 * If the session is not running, starts a new session with the message.
 	 */
 	public async sendMessage(sessionId: string, content: string, sessionLabel?: string): Promise<void> {
-		if (!this.processHandler.hasStdin(sessionId)) {
-			// Session is not running - start (or restore) a session with this message as continuation
-			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, starting new session`)
-			const session = this.registry.getSession(sessionId)
+		const session = this.registry.getSession(sessionId)
 
-			await this.startAgentSession(content, {
-				parallelMode: session?.parallelMode?.enabled,
-				resumeSessionId: session?.sessionId ?? sessionId,
-				resumeSessionLabel: session?.label ?? sessionLabel,
-			})
+		// Auto-mode sessions are non-interactive
+		if (session?.autoMode) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Session ${sessionId} is running in auto mode; user input is disabled`,
+			)
+			return
+		}
+
+		if (!this.processHandler.hasStdin(sessionId)) {
+			// Session is not running - ignore the message
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, ignoring follow-up message`)
 			return
 		}
 
@@ -637,6 +784,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.postStateToWebview()
 
 		this.firstApiReqStarted.delete(sessionId)
+		this.processStartTimes.delete(sessionId)
 	}
 
 	private getFilteredState() {

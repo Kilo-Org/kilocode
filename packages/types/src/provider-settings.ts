@@ -211,7 +211,6 @@ const baseProviderSettingsSchema = z.object({
 
 	// Tool protocol override for this profile.
 	toolProtocol: z.enum(["xml", "native"]).optional(),
-	toolStyle: z.enum(["xml", "json"]).optional(), // kilocode_change
 })
 
 // Several of the providers share common model config properties.

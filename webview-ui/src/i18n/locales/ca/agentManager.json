@@ -39,6 +39,13 @@
 		"branch": "Branca",
 		"creatingSession": "Creant sessió...",
 		"waitingForCli": "Inicialitzant la sessió de l'agent...",
+		"versions": "Versions",
+		"versionsTooltip": "Agents paral·lels explorant diferents enfocaments",
+		"versionsHelperText": "{{count}} agents paral·lels en branques separades",
+		"versionCount_one": "{{count}} versió",
+		"versionCount_other": "{{count}} versions",
+		"launchVersions": "Llançar {{count}} versions",
+		"startAgent": "Iniciar agent",
 		"cancelCreating": "Cancel·la la creació de la sessió",
 		"cancelButton": "Cancel·la"
 	},

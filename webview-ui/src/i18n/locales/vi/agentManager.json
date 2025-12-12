@@ -39,6 +39,13 @@
 		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent...",
+		"versions": "Phiên bản",
+		"versionsTooltip": "Các tác vụ song song khám phá các cách tiếp cận khác nhau",
+		"versionsHelperText": "{{count}} tác vụ song song trên các nhánh riêng biệt",
+		"versionCount_one": "{{count}} phiên bản",
+		"versionCount_other": "{{count}} phiên bản",
+		"launchVersions": "Khởi chạy {{count}} phiên bản",
+		"startAgent": "Khởi động Agent",
 		"cancelCreating": "Hủy tạo phiên",
 		"cancelButton": "Hủy"
 	},
