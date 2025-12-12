@@ -11,6 +11,11 @@ import * as os from "os"
  * @returns Energy level from 0 (silence) to 1 (max volume)
  */
 function calculateFrameEnergy(pcm16: Int16Array): number {
+	// Guard against empty buffer to prevent division by zero
+	if (pcm16.length === 0) {
+		return 0
+	}
+
 	let sum = 0
 	for (let i = 0; i < pcm16.length; i++) {
 		const normalized = pcm16[i] / 32768 // Normalize to -1 to 1

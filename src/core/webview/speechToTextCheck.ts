@@ -48,6 +48,7 @@ export async function checkSpeechToTextAvailable(
 		if (!isExperimentEnabled) {
 			console.log("🎙️ [STT Availability Check] ❌ FAILED: Speech-to-text experiment is not enabled")
 			console.log("🎙️ [STT Availability Check] → Enable in Settings > Experiments > Speech to Text")
+			cachedResult = { available: false, timestamp: Date.now() }
 			return false
 		}
 
@@ -60,6 +61,7 @@ export async function checkSpeechToTextAvailable(
 		if (!hasApiKey) {
 			console.log("🎙️ [STT Availability Check] ❌ FAILED: No OpenAI API key found")
 			console.log("🎙️ [STT Availability Check] → Add an OpenAI API provider in Settings")
+			cachedResult = { available: false, timestamp: Date.now() }
 			return false
 		}
 
@@ -75,6 +77,7 @@ export async function checkSpeechToTextAvailable(
 			if (ffmpegResult.error) {
 				console.log(`🎙️ [STT Availability Check] → Error: ${ffmpegResult.error}`)
 			}
+			cachedResult = { available: false, timestamp: Date.now() }
 			return false
 		}
 

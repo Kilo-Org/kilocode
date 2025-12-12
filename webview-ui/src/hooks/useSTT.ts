@@ -46,6 +46,12 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 
 	// Track session to ignore stale events
 	const sessionIdRef = useRef<string | null>(null)
+	// Use ref to avoid stale closure - segments must be current when stt:stopped fires
+	const segmentsRef = useRef<STTSegment[]>([])
+
+	useEffect(() => {
+		segmentsRef.current = segments
+	}, [segments])
 
 	useEffect(() => {
 		const handler = (event: MessageEvent) => {
@@ -81,8 +87,8 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 					setVolume(0)
 
 					if (msg.reason === "completed") {
-						// Get final text from segments (join with spaces)
-						const finalText = segments
+						// Get final text from most recent segments (via ref to avoid stale closure)
+						const finalText = segmentsRef.current
 							.map((s) => s.text)
 							.join(" ")
 							.trim()
@@ -102,7 +108,7 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
-	}, [onComplete, onError, segments])
+	}, [onComplete, onError])
 
 	const start = useCallback((language?: string) => {
 		vscode.postMessage({ type: "stt:start", language })
