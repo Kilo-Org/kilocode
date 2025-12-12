@@ -2,8 +2,9 @@
 import esbuild from "esbuild"
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chmodSync, mkdirSync, copyFileSync } from "fs"
+import { chmodSync, mkdirSync, copyFileSync, existsSync } from "fs"
 import { rimrafSync } from "rimraf"
+import os from "os"
 
 // ESM Polyfill
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,37 @@ function removeUnneededFiles() {
 	console.log("✓ Unneeded files removed")
 }
 
+// Copy ripgrep binary to dist so CLI can find it at runtime
+// The extension code looks for ripgrep at node_modules/@vscode/ripgrep/bin/
+// relative to the appRoot (which is dist/ for the CLI)
+function copyRipgrep() {
+	const binName = os.platform() === "win32" ? "rg.exe" : "rg"
+
+	// Try to find ripgrep from @vscode/ripgrep package in node_modules
+	const possiblePaths = [
+		path.join(__dirname, "node_modules", "@vscode", "ripgrep", "bin", binName),
+		path.join(__dirname, "..", "node_modules", "@vscode", "ripgrep", "bin", binName),
+	]
+
+	let sourcePath = null
+	for (const p of possiblePaths) {
+		if (existsSync(p)) {
+			sourcePath = p
+			break
+		}
+	}
+
+	if (!sourcePath) {
+		console.warn("⚠️ Could not find ripgrep binary to copy. Some features may not work.")
+		return
+	}
+
+	const targetDir = path.join(__dirname, "dist", "node_modules", "@vscode", "ripgrep", "bin")
+	mkdirSync(targetDir, { recursive: true })
+	copyFileSync(sourcePath, path.join(targetDir, binName))
+	console.log("✓ Ripgrep binary copied")
+}
+
 const afterBuildPlugin = {
 	name: "after-build",
 	setup(build) {
@@ -45,6 +77,7 @@ const afterBuildPlugin = {
 			if (result.errors.length > 0) return
 
 			copyPostBuildFiles()
+			copyRipgrep()
 			removeUnneededFiles()
 			try {
 				chmodSync("dist/index.js", 0o755)
