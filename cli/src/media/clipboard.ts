@@ -6,49 +6,35 @@ import {
 	detectImageFormat,
 	generateClipboardFilename,
 	getClipboardDir,
-	getWindowsErrorMessage,
 	parseClipboardInfo,
-	parseXclipTargets,
 	MAX_CLIPBOARD_IMAGE_AGE_MS,
+	getUnsupportedClipboardPlatformMessage,
 	type ClipboardImageResult,
 	type ClipboardInfoResult,
 	type SaveClipboardResult,
-	type XclipTargetsResult,
 } from "./clipboard-shared.js"
 import { hasClipboardImageMacOS, readClipboardImageMacOS, saveClipboardImageMacOS } from "./clipboard-macos.js"
-import {
-	getXclipNotInstalledMessage,
-	hasClipboardImageLinux,
-	readClipboardImageLinux,
-	saveClipboardImageLinux,
-} from "./clipboard-linux.js"
 
 export {
 	buildDataUrl,
 	detectImageFormat,
 	generateClipboardFilename,
 	getClipboardDir,
-	getWindowsErrorMessage,
-	getXclipNotInstalledMessage,
+	getUnsupportedClipboardPlatformMessage,
 	parseClipboardInfo,
-	parseXclipTargets,
 	type ClipboardImageResult,
 	type ClipboardInfoResult,
 	type SaveClipboardResult,
-	type XclipTargetsResult,
 }
 
 export async function isClipboardSupported(): Promise<boolean> {
-	return process.platform === "darwin" || process.platform === "linux"
+	return process.platform === "darwin"
 }
 
 export async function clipboardHasImage(): Promise<boolean> {
 	try {
 		if (process.platform === "darwin") {
 			return await hasClipboardImageMacOS()
-		}
-		if (process.platform === "linux") {
-			return await hasClipboardImageLinux()
 		}
 		return false
 	} catch (error) {
@@ -62,26 +48,15 @@ export async function clipboardHasImage(): Promise<boolean> {
 }
 
 export async function readClipboardImage(): Promise<ClipboardImageResult> {
-	if (process.platform === "win32") {
+	if (process.platform !== "darwin") {
 		return {
 			success: false,
-			error: getWindowsErrorMessage(),
-		}
-	}
-
-	if (process.platform !== "darwin" && process.platform !== "linux") {
-		return {
-			success: false,
-			error: `Clipboard image paste is not supported on ${process.platform}.`,
+			error: getUnsupportedClipboardPlatformMessage(),
 		}
 	}
 
 	try {
-		if (process.platform === "darwin") {
-			return await readClipboardImageMacOS()
-		}
-
-		return await readClipboardImageLinux()
+		return await readClipboardImageMacOS()
 	} catch (error) {
 		return {
 			success: false,
@@ -91,26 +66,15 @@ export async function readClipboardImage(): Promise<ClipboardImageResult> {
 }
 
 export async function saveClipboardImage(): Promise<SaveClipboardResult> {
-	if (process.platform === "win32") {
+	if (process.platform !== "darwin") {
 		return {
 			success: false,
-			error: getWindowsErrorMessage(),
-		}
-	}
-
-	if (process.platform !== "darwin" && process.platform !== "linux") {
-		return {
-			success: false,
-			error: `Clipboard image paste is not supported on ${process.platform}.`,
+			error: getUnsupportedClipboardPlatformMessage(),
 		}
 	}
 
 	try {
-		if (process.platform === "darwin") {
-			return await saveClipboardImageMacOS()
-		}
-
-		return await saveClipboardImageLinux()
+		return await saveClipboardImageMacOS()
 	} catch (error) {
 		return {
 			success: false,

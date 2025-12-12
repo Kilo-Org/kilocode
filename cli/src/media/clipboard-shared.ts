@@ -20,11 +20,6 @@ export interface ClipboardInfoResult {
 	format: "png" | "jpeg" | "tiff" | "gif" | null
 }
 
-export interface XclipTargetsResult {
-	hasImage: boolean
-	mimeType: string | null
-}
-
 export interface SaveClipboardResult {
 	success: boolean
 	filePath?: string
@@ -50,29 +45,6 @@ export function parseClipboardInfo(output: string): ClipboardInfoResult {
 	}
 
 	return { hasImage: false, format: null }
-}
-
-export function parseXclipTargets(output: string): XclipTargetsResult {
-	if (!output) {
-		return { hasImage: false, mimeType: null }
-	}
-
-	const lines = output.split("\n").map((l) => l.trim())
-
-	if (lines.includes("image/png")) {
-		return { hasImage: true, mimeType: "image/png" }
-	}
-	if (lines.includes("image/jpeg")) {
-		return { hasImage: true, mimeType: "image/jpeg" }
-	}
-	if (lines.includes("image/gif")) {
-		return { hasImage: true, mimeType: "image/gif" }
-	}
-	if (lines.includes("image/webp")) {
-		return { hasImage: true, mimeType: "image/webp" }
-	}
-
-	return { hasImage: false, mimeType: null }
 }
 
 export function detectImageFormat(buffer: Buffer): "png" | "jpeg" | "gif" | "webp" | null {
@@ -113,12 +85,11 @@ export function buildDataUrl(data: Buffer, format: string): string {
 	return `data:image/${format};base64,${data.toString("base64")}`
 }
 
-export function getWindowsErrorMessage(): string {
-	return `Clipboard image paste is not yet supported on Windows.
+export function getUnsupportedClipboardPlatformMessage(): string {
+	return `Clipboard image paste is only supported on macOS.
 
-Alternatives:
-  - Use @path/to/image.png to attach images
-  - Run Kilocode CLI in WSL for clipboard support`
+Alternative:
+  - Use @path/to/image.png to attach images`
 }
 
 export function getClipboardDir(): string {

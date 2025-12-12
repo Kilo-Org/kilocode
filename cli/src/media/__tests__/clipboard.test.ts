@@ -2,11 +2,9 @@ import {
 	isClipboardSupported,
 	// Domain logic functions (exported for testing)
 	parseClipboardInfo,
-	parseXclipTargets,
 	detectImageFormat,
 	buildDataUrl,
-	getWindowsErrorMessage,
-	getXclipNotInstalledMessage,
+	getUnsupportedClipboardPlatformMessage,
 	getClipboardDir,
 	generateClipboardFilename,
 } from "../clipboard"
@@ -42,47 +40,6 @@ describe("clipboard utility", () => {
 				hasImage: true,
 				format: "png",
 			})
-		})
-	})
-
-	describe("parseXclipTargets (Linux xclip TARGETS parsing)", () => {
-		it("should detect image/png", () => {
-			expect(parseXclipTargets("TARGETS\nimage/png\ntext/plain")).toEqual({
-				hasImage: true,
-				mimeType: "image/png",
-			})
-		})
-
-		it("should detect image/jpeg", () => {
-			expect(parseXclipTargets("image/jpeg\ntext/plain")).toEqual({
-				hasImage: true,
-				mimeType: "image/jpeg",
-			})
-		})
-
-		it("should detect image/gif", () => {
-			expect(parseXclipTargets("image/gif")).toEqual({
-				hasImage: true,
-				mimeType: "image/gif",
-			})
-		})
-
-		it("should prefer PNG over other formats", () => {
-			expect(parseXclipTargets("image/jpeg\nimage/png\nimage/gif")).toEqual({
-				hasImage: true,
-				mimeType: "image/png",
-			})
-		})
-
-		it("should return no image for text-only clipboard", () => {
-			expect(parseXclipTargets("text/plain\nUTF8_STRING")).toEqual({
-				hasImage: false,
-				mimeType: null,
-			})
-		})
-
-		it("should return no image for empty string", () => {
-			expect(parseXclipTargets("")).toEqual({ hasImage: false, mimeType: null })
 		})
 	})
 
@@ -138,33 +95,16 @@ describe("clipboard utility", () => {
 		})
 	})
 
-	describe("getWindowsErrorMessage", () => {
-		it("should mention Windows", () => {
-			const msg = getWindowsErrorMessage()
-			expect(msg).toContain("Windows")
+	describe("getUnsupportedClipboardPlatformMessage", () => {
+		it("should mention macOS", () => {
+			const msg = getUnsupportedClipboardPlatformMessage()
+			expect(msg).toContain("macOS")
 		})
 
 		it("should mention @path/to/image.png alternative", () => {
-			const msg = getWindowsErrorMessage()
+			const msg = getUnsupportedClipboardPlatformMessage()
 			expect(msg).toContain("@")
 			expect(msg.toLowerCase()).toContain("image")
-		})
-
-		it("should mention WSL as alternative", () => {
-			const msg = getWindowsErrorMessage()
-			expect(msg).toContain("WSL")
-		})
-	})
-
-	describe("getXclipNotInstalledMessage", () => {
-		it("should mention xclip", () => {
-			const msg = getXclipNotInstalledMessage()
-			expect(msg).toContain("xclip")
-		})
-
-		it("should include install instructions", () => {
-			const msg = getXclipNotInstalledMessage()
-			expect(msg.toLowerCase()).toContain("install")
 		})
 	})
 
@@ -177,11 +117,6 @@ describe("clipboard utility", () => {
 
 		it("should return true for darwin", async () => {
 			Object.defineProperty(process, "platform", { value: "darwin" })
-			expect(await isClipboardSupported()).toBe(true)
-		})
-
-		it("should return true for linux", async () => {
-			Object.defineProperty(process, "platform", { value: "linux" })
 			expect(await isClipboardSupported()).toBe(true)
 		})
 
