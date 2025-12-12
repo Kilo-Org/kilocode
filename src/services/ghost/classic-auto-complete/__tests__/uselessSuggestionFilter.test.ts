@@ -161,4 +161,96 @@ describe("postprocessGhostSuggestion", () => {
 			expect(shouldAccept(normal, "", "")).toBe(true)
 		})
 	})
+
+	describe("single-line mode (multiline=false)", () => {
+		it("should truncate at first newline when multiline is false", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "first line\nsecond line\nthird line",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+				multiline: false,
+			})
+			expect(result).toBe("first line")
+		})
+
+		it("should return full content when multiline is true (default)", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "first line\nsecond line\nthird line",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+				multiline: true,
+			})
+			expect(result).toBe("first line\nsecond line\nthird line")
+		})
+
+		it("should default to multiline=true when not specified", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "first line\nsecond line",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+			})
+			expect(result).toBe("first line\nsecond line")
+		})
+
+		it("should filter if truncated result is empty or whitespace", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "\nsecond line",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+				multiline: false,
+			})
+			expect(result).toBeUndefined()
+		})
+
+		it("should filter if truncated result is only whitespace", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "   \nsecond line",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+				multiline: false,
+			})
+			expect(result).toBeUndefined()
+		})
+
+		it("should handle single-line suggestions in single-line mode", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "single line only",
+				prefix: "const x = ",
+				suffix: "",
+				model: "",
+				multiline: false,
+			})
+			expect(result).toBe("single line only")
+		})
+
+		it("should preserve leading whitespace in truncated result", () => {
+			const result = postprocessGhostSuggestion({
+				suggestion: "  indented\nmore lines",
+				prefix: "const x =",
+				suffix: "",
+				model: "",
+				multiline: false,
+			})
+			// Note: postprocessCompletion removes one leading space if prefix ends with space
+			// Since prefix doesn't end with space here, both spaces are preserved
+			expect(result).toBe("  indented")
+		})
+
+		it("should work with model-specific processing before truncation", () => {
+			// Codestral extra space removal should happen before truncation
+			const result = postprocessGhostSuggestion({
+				suggestion: " first\nsecond",
+				prefix: "const x = ",
+				suffix: "\n",
+				model: "codestral",
+				multiline: false,
+			})
+			expect(result).toBe("first")
+		})
+	})
 })

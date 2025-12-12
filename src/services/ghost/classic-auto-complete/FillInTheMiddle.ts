@@ -8,6 +8,7 @@ import {
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
+import { shouldCompleteMultiline } from "../../continuedev/core/autocomplete/classification/shouldCompleteMultiline"
 
 export type { FimGhostPrompt, FimCompletionResult }
 
@@ -46,11 +47,15 @@ export class FimPromptBuilder {
 			formattedPrefix = compiledPrefix
 		}
 
+		// Determine if we should complete multiline based on context
+		const multiline = shouldCompleteMultiline(helper)
+
 		return {
 			strategy: "fim",
 			formattedPrefix,
 			prunedSuffix,
 			autocompleteInput,
+			multiline,
 		}
 	}
 

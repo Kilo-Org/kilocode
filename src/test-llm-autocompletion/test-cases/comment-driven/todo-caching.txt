@@ -1,8 +1,14 @@
 #### Description: Should implement caching mechanism after TODO
 #### Filename: data-service.js
 class DataService {
-  // TODO: Implement caching mechanism to reduce API calls<<<AUTOCOMPLETE_HERE>>>
+  constructor() {
+    this.cache = new Map();
+    this.cacheTTL = 60000; // 1 minute TTL
+  }
+
+  // TODO: Implement caching mechanism to reduce API calls
   async fetchData(id) {
+    <<<AUTOCOMPLETE_HERE>>>
     return await api.get(`/data/${id}`);
   }
 }
