@@ -48,6 +48,7 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 	getOrganizationId: (taskId: string) => Promise<string | undefined>
 	getMode: (taskId: string) => Promise<string | undefined>
 	getModel: (taskId: string) => Promise<string | undefined>
+	getParentTaskId: (taskId: string) => Promise<string | undefined>
 }
 
 /**
@@ -70,8 +71,9 @@ export class SessionManager {
 	 * 0 - No versioning, some sessions incomplete
 	 * 1 - Initial version
 	 * 2 - Added organization id, last mode and last model
+	 * 3 - Added parent session id
 	 */
-	static readonly VERSION = 2
+	static readonly VERSION = 3
 
 	private static instance: SessionManager | null = null
 
@@ -148,6 +150,7 @@ export class SessionManager {
 			getOrganizationId: dependencies.getOrganizationId,
 			getMode: dependencies.getMode,
 			getModel: dependencies.getModel,
+			getParentTaskId: dependencies.getParentTaskId,
 			onSessionCreated: dependencies.onSessionCreated,
 			onSessionSynced: dependencies.onSessionSynced,
 		})

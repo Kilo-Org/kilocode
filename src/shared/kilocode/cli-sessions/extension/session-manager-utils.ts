@@ -112,6 +112,23 @@ export function kilo_initializeSessionManager({
 
 					return result || undefined
 				},
+				getParentTaskId: async (taskId: string) => {
+					const result = await (async () => {
+						const currentTask = provider.getCurrentTask()
+
+						if (currentTask?.taskId === taskId) {
+							return currentTask.parentTaskId
+						}
+
+						const task = await provider.getTaskWithId(taskId)
+
+						return task?.historyItem?.parentTaskId
+					})()
+
+					logger.debug(`Resolved parent task ID for task ${taskId}: "${result}"`, "SessionManager")
+
+					return result || undefined
+				},
 			})
 
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
