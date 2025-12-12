@@ -1,7 +1,6 @@
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
 import { Task } from "../../task/Task"
 import { formatResponse } from "../../prompts/responses"
-import { summarizeConversation } from "../../condense"
 
 export const condenseTool = async (
 	cline: Task,
@@ -39,19 +38,9 @@ export const condenseTool = async (
 				// If no response, the user accepted the condensed version
 				pushToolResult(formatResponse.toolResult(formatResponse.condense()))
 
-				const { contextTokens: prevContextTokens } = cline.getTokenUsage()
-
-				// Use summarizeConversation to create a condensed version of the conversation
-				const summarizedMessages = await summarizeConversation(
-					cline.apiConversationHistory,
-					cline.api,
-					await cline.getSystemPrompt(),
-					"TaskId condenseTool",
-					prevContextTokens,
-				)
-
-				// Overwrite the apiConversationHistory with the summarized messages
-				await cline.overwriteApiConversationHistory(summarizedMessages.messages)
+				// Use the same condenseContext method that the UI button uses
+				// This ensures /smol uses the autocondensing feature with custom prompts and API handlers
+				await cline.condenseContext()
 			}
 			return
 		}
