@@ -1,119 +1,76 @@
 import type { ProviderSettings } from "@roo-code/types"
-import providerEnvMap from "./providerEnvMap.json" assert { type: "json" }
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 
 type EnvOverrides = Record<string, string>
 
-type ProviderEnvEntry = {
-	provider: string
-	env: Array<{ name: string; value?: string; source?: keyof ProviderSettings }>
-	required?: string[]
-	specialRequirements?: "bedrock" | "vertex"
+const hasNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0
+
+type CliConfigShape = {
+	provider?: unknown
+	providers?: unknown
 }
 
-const PROVIDER_CONFIG = (providerEnvMap as ProviderEnvEntry[]).reduce<Record<string, ProviderEnvEntry>>(
-	(acc, entry) => {
-		acc[entry.provider] = entry
-		return acc
-	},
-	{},
-)
-
-const hasValue = (env: Record<string, string | undefined>, key: string | undefined): boolean => {
-	if (!key) return false
-	const value = env[key]
-	return typeof value === "string" && value.trim().length > 0
+type CliProviderShape = {
+	id?: unknown
+	provider?: unknown
 }
 
-const parseEnvBoolean = (value: string | undefined): boolean | undefined => {
-	if (value === undefined) {
+const getHomeDirFromEnv = (baseEnv: NodeJS.ProcessEnv): string | undefined =>
+	baseEnv.HOME || baseEnv.USERPROFILE || baseEnv.HOMEPATH
+
+const getCliConfigPath = (baseEnv: NodeJS.ProcessEnv): string => {
+	const homeDir = getHomeDirFromEnv(baseEnv) || os.homedir()
+	return path.join(homeDir, ".kilocode", "cli", "config.json")
+}
+
+const readCliConfig = (filePath: string): CliConfigShape | undefined => {
+	try {
+		const raw = fs.readFileSync(filePath, "utf8")
+		return JSON.parse(raw) as CliConfigShape
+	} catch {
 		return undefined
 	}
-	const normalized = value.toLowerCase().trim()
-	if (["true", "1", "yes"].includes(normalized)) {
-		return true
-	}
-	if (["false", "0", "no"].includes(normalized)) {
-		return false
-	}
-	return undefined
 }
 
-const toEnvString = (value: unknown): string | undefined => {
-	if (value === undefined || value === null) {
+const findKilocodeProviderId = (config: CliConfigShape | undefined): string | undefined => {
+	const providers = Array.isArray(config?.providers) ? (config!.providers as unknown[]) : []
+	const kiloProviders = providers.filter((p): p is CliProviderShape => {
+		const provider = (p as CliProviderShape | undefined)?.provider
+		const id = (p as CliProviderShape | undefined)?.id
+		return provider === "kilocode" && hasNonEmptyString(id)
+	})
+
+	if (kiloProviders.length === 0) {
 		return undefined
 	}
-	if (typeof value === "string") {
-		return value.trim() === "" ? undefined : value
-	}
-	if (typeof value === "number" || typeof value === "boolean") {
-		return String(value)
-	}
-	return undefined
+
+	const defaultKilo = kiloProviders.find((p) => p.id === "default")
+	return (defaultKilo?.id as string | undefined) ?? (kiloProviders[0]!.id as string)
 }
 
-const addEnvValue = (target: EnvOverrides, key: string, value: unknown): void => {
-	const stringValue = toEnvString(value)
-	if (stringValue !== undefined) {
-		target[key] = stringValue
-	}
-}
-
-const getEnvNameForSource = (config: ProviderEnvEntry, source: keyof ProviderSettings): string | undefined => {
-	return config.env.find((entry) => entry.source === source)?.name
-}
-
-const getMissingProviderEnv = (config: ProviderEnvEntry, env: Record<string, string | undefined>): string[] => {
-	const missing: string[] = []
-
-	for (const required of config.required ?? []) {
-		if (!hasValue(env, required)) {
-			missing.push(required)
-		}
-	}
-
-	switch (config.specialRequirements) {
-		case "bedrock": {
-			const accessKeyEnv = getEnvNameForSource(config, "awsAccessKey") ?? "KILO_AWS_ACCESS_KEY"
-			const secretKeyEnv = getEnvNameForSource(config, "awsSecretKey") ?? "KILO_AWS_SECRET_KEY"
-			const profileEnv = getEnvNameForSource(config, "awsProfile") ?? "KILO_AWS_PROFILE"
-			const useProfileEnv = getEnvNameForSource(config, "awsUseProfile") ?? "KILO_AWS_USE_PROFILE"
-			const apiKeyEnv = getEnvNameForSource(config, "awsApiKey") ?? "KILO_AWS_API_KEY"
-			const useApiKeyEnv = getEnvNameForSource(config, "awsUseApiKey") ?? "KILO_AWS_USE_API_KEY"
-
-			const hasAwsKeys = hasValue(env, accessKeyEnv) && hasValue(env, secretKeyEnv)
-			const useProfile = parseEnvBoolean(env[useProfileEnv]) ?? false
-			const hasProfile = useProfile && hasValue(env, profileEnv)
-			const useApiKey = parseEnvBoolean(env[useApiKeyEnv]) ?? false
-			const hasApiKey = useApiKey && hasValue(env, apiKeyEnv)
-
-			if (!hasAwsKeys && !hasProfile && !hasApiKey) {
-				missing.push(`${accessKeyEnv} + ${secretKeyEnv} (or ${profileEnv} or ${apiKeyEnv})`)
-			}
-			break
-		}
-		case "vertex": {
-			const keyFileEnv = getEnvNameForSource(config, "vertexKeyFile") ?? "KILO_VERTEX_KEY_FILE"
-			const jsonEnv = getEnvNameForSource(config, "vertexJsonCredentials") ?? "KILO_VERTEX_JSON_CREDENTIALS"
-
-			if (!hasValue(env, keyFileEnv) && !hasValue(env, jsonEnv)) {
-				missing.push(`${keyFileEnv} or ${jsonEnv}`)
-			}
-			break
-		}
-		default:
-			break
-	}
-
-	return missing
-}
+const getTempDirFromEnv = (baseEnv: NodeJS.ProcessEnv): string =>
+	baseEnv.TMPDIR || baseEnv.TEMP || baseEnv.TMP || os.tmpdir()
 
 /**
- * Map the VS Code extension's provider configuration to CLI environment variables via config.
- * - Only sets values provided by the extension; user-defined env vars remain intact.
- * - Validates required fields for the chosen provider against the merged env before
- *   injecting `KILO_PROVIDER_TYPE` to avoid breaking spawns with partial configs.
- * - Provider highlights live in providerEnvMap.json, keeping the mapping data-driven.
- * - Logs keys (not secrets) for traceability.
+ * Inject IDE Kilocode authentication into Agent Manager CLI spawns.
+ *
+ * Design choice: we only inject Kilocode auth (not BYOK providers) to avoid
+ * maintaining provider-specific env mappings here.
+ *
+ * Behavior:
+ * - If the IDE's active provider is `kilocode` and a token exists, we inject:
+ *   - `KILOCODE_TOKEN` (required)
+ *   - `KILOCODE_ORGANIZATION_ID` (optional)
+ *
+ * Provider selection strategy (important for older CLIs):
+ * - If the user's CLI config contains a `kilocode` provider entry, we set `KILO_PROVIDER`
+ *   to that provider id so the CLI switches to it without changing other CLI settings.
+ * - If no `kilocode` provider exists in CLI config, we fall back to env-config mode by
+ *   setting `KILO_PROVIDER_TYPE=kilocode` and required vars. To ensure the CLI uses env
+ *   config even when a config file exists, we override `HOME` to a temporary directory.
+ * - If missing/partial, we log and return `{}` so the CLI runs unchanged.
  */
 export const buildProviderEnvOverrides = (
 	apiConfiguration: ProviderSettings | undefined,
@@ -126,40 +83,63 @@ export const buildProviderEnvOverrides = (
 		return {}
 	}
 
-	const providerType = apiConfiguration.apiProvider
-	if (!providerType) {
+	if (!apiConfiguration.apiProvider) {
 		log("[AgentManager] apiConfiguration missing provider; skipping CLI env injection.")
 		return {}
 	}
 
-	const config = PROVIDER_CONFIG[providerType]
-	if (!config) {
-		debugLog(`[AgentManager] Provider "${providerType}" not mapped for env injection; skipping.`)
+	if (apiConfiguration.apiProvider !== "kilocode") {
+		debugLog(`[AgentManager] Provider "${apiConfiguration.apiProvider}" not eligible for env injection; skipping.`)
+		return {}
+	}
+
+	if (!hasNonEmptyString(apiConfiguration.kilocodeToken)) {
+		log("[AgentManager] Missing Kilocode token in apiConfiguration; skipping CLI auth injection.")
 		return {}
 	}
 
 	const overrides: EnvOverrides = {}
-	for (const entry of config.env) {
-		if (entry.value !== undefined) {
-			overrides[entry.name] = entry.value
-		} else if (entry.source) {
-			addEnvValue(overrides, entry.name, (apiConfiguration as Record<string, unknown>)[entry.source])
+
+	// Prefer switching to an existing Kilocode provider entry in the user's CLI config
+	// (preserves other CLI settings like auto-approval and themes).
+	const cliConfigPath = getCliConfigPath(baseEnv)
+	const hasCliConfigFile = fs.existsSync(cliConfigPath)
+
+	const cliConfig = hasCliConfigFile ? readCliConfig(cliConfigPath) : undefined
+	const kilocodeProviderId = findKilocodeProviderId(cliConfig)
+
+	if (kilocodeProviderId) {
+		overrides.KILO_PROVIDER = kilocodeProviderId
+		overrides.KILOCODE_TOKEN = apiConfiguration.kilocodeToken
+	} else {
+		// Fallback: env-config mode requires model id as well.
+		if (!hasNonEmptyString(apiConfiguration.kilocodeModel)) {
+			log("[AgentManager] Missing Kilocode model in apiConfiguration; skipping CLI auth injection.")
+			return {}
+		}
+
+		overrides.KILO_PROVIDER = "default"
+		overrides.KILO_PROVIDER_TYPE = "kilocode"
+		overrides.KILOCODE_TOKEN = apiConfiguration.kilocodeToken
+		overrides.KILOCODE_MODEL = apiConfiguration.kilocodeModel
+
+		// Older CLIs will only honor env-config when no config file exists. If a user has configured
+		// another provider in the CLI, we override HOME so the CLI doesn't see their existing config.
+		if (hasCliConfigFile) {
+			const tempDir = getTempDirFromEnv(baseEnv)
+			const isolatedHome = path.join(tempDir, "kilocode-agent-manager-home")
+			// Cross-platform: Node's os.homedir() uses USERPROFILE on Windows.
+			overrides.HOME = isolatedHome
+			overrides.USERPROFILE = isolatedHome
 		}
 	}
 
-	const candidateEnv: Record<string, string | undefined> = { ...baseEnv, ...overrides }
-	const missing = getMissingProviderEnv(config, candidateEnv)
-	if (missing.length > 0) {
-		log(`[AgentManager] Skipping CLI env injection for provider ${providerType}: missing ${missing.join(", ")}`)
-		return {}
+	if (hasNonEmptyString(apiConfiguration.kilocodeOrganizationId)) {
+		overrides.KILOCODE_ORGANIZATION_ID = apiConfiguration.kilocodeOrganizationId
 	}
 
-	const appliedKeys = Object.keys(overrides).filter((key) => key !== "KILO_PROVIDER_TYPE")
-	debugLog(
-		`[AgentManager] Injecting CLI env for provider ${providerType}${
-			appliedKeys.length ? ` (keys: ${appliedKeys.join(", ")})` : ""
-		}`,
-	)
+	const appliedKeys = Object.keys(overrides).filter((key) => key !== "KILOCODE_TOKEN")
+	debugLog(`[AgentManager] Injecting Kilocode CLI auth env (keys: ${appliedKeys.join(", ")})`)
 
 	return overrides
 }

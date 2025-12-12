@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 import { buildProviderEnvOverrides } from "../providerEnvMapper"
 import type { ProviderSettings } from "@roo-code/types"
 
@@ -6,38 +9,66 @@ const log = (_msg: string) => {}
 const debugLog = (_msg: string) => {}
 
 describe("providerEnvMapper", () => {
+	let tempHome: string
+
+	beforeEach(() => {
+		tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "provider-env-mapper-"))
+	})
+
+	afterEach(() => {
+		fs.rmSync(tempHome, { recursive: true, force: true })
+	})
+
 	it("returns empty overrides when apiConfiguration is missing", () => {
 		const overrides = buildProviderEnvOverrides(undefined, {}, log, debugLog)
 		expect(overrides).toEqual({})
 	})
 
-	it("injects kilocode provider env without clobbering base env", () => {
+	it("injects kilocode auth by switching to an existing CLI kilocode provider entry", () => {
+		const configPath = path.join(tempHome, ".kilocode", "cli", "config.json")
+		fs.mkdirSync(path.dirname(configPath), { recursive: true })
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				version: "1.0.0",
+				provider: "anthropic",
+				providers: [
+					{ id: "anthropic", provider: "anthropic", apiKey: "x", apiModelId: "y" },
+					{
+						id: "kilo-1",
+						provider: "kilocode",
+						kilocodeToken: "",
+						kilocodeModel: "claude-sonnet-4-20250514",
+					},
+				],
+			}),
+		)
+
 		const baseEnv = { KEEP_ME: "1", KILOCODE_TOKEN: "user-token" }
 		const overrides = buildProviderEnvOverrides(
 			{
 				apiProvider: "kilocode",
 				kilocodeToken: "ext-token",
-				kilocodeModel: "model-1",
 			} as ProviderSettings,
-			baseEnv,
+			{ ...baseEnv, HOME: tempHome },
 			log,
 			debugLog,
 		)
 
-		// Extension-provided fields win, unrelated env is preserved
-		expect(overrides.KILO_PROVIDER_TYPE).toBe("kilocode")
+		expect(overrides.KILO_PROVIDER).toBe("kilo-1")
+		expect(overrides.KILO_PROVIDER_TYPE).toBeUndefined()
+		expect(overrides.KILOCODE_MODEL).toBeUndefined()
 		expect(overrides.KILOCODE_TOKEN).toBe("ext-token")
-		expect(overrides.KILOCODE_MODEL).toBe("model-1")
+		expect(overrides.HOME).toBeUndefined()
 		expect(overrides.KEEP_ME).toBeUndefined()
 	})
 
-	it("skips injection when bedrock requirements are incomplete", () => {
+	it("skips injection for non-kilocode providers", () => {
 		const overrides = buildProviderEnvOverrides(
 			{
-				apiProvider: "bedrock",
-				apiModelId: "m1",
-				awsRegion: "us-east-1",
-				// Missing key/profile/api key trio
+				apiProvider: "openrouter",
+				openRouterApiKey: "or-key",
+				openRouterModelId: "openai/gpt-4",
 			} as ProviderSettings,
 			{},
 			log,
@@ -47,33 +78,59 @@ describe("providerEnvMapper", () => {
 		expect(overrides).toEqual({})
 	})
 
-	it("injects bedrock when profile auth is provided", () => {
+	it("falls back to env-config mode when CLI config has no kilocode provider (overrides HOME)", () => {
+		const configPath = path.join(tempHome, ".kilocode", "cli", "config.json")
+		fs.mkdirSync(path.dirname(configPath), { recursive: true })
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				version: "1.0.0",
+				provider: "default",
+				providers: [{ id: "default", provider: "anthropic", apiKey: "x", apiModelId: "y" }],
+			}),
+		)
+
 		const overrides = buildProviderEnvOverrides(
 			{
-				apiProvider: "bedrock",
-				apiModelId: "m1",
-				awsRegion: "us-east-1",
-				awsUseProfile: true,
-				awsProfile: "default",
+				apiProvider: "kilocode",
+				kilocodeToken: "ext-token",
+				kilocodeModel: "claude-sonnet-4-20250514",
 			} as ProviderSettings,
-			{},
+			{ HOME: tempHome, TMPDIR: tempHome },
 			log,
 			debugLog,
 		)
 
-		expect(overrides.KILO_PROVIDER_TYPE).toBe("bedrock")
-		expect(overrides.KILO_AWS_PROFILE).toBe("default")
-		expect(overrides.KILO_API_MODEL_ID).toBe("m1")
-		expect(overrides.KILO_AWS_REGION).toBe("us-east-1")
+		expect(overrides.HOME).toBe(path.join(tempHome, "kilocode-agent-manager-home"))
+		expect(overrides.USERPROFILE).toBe(path.join(tempHome, "kilocode-agent-manager-home"))
+		expect(overrides.KILO_PROVIDER_TYPE).toBe("kilocode")
+		expect(overrides.KILOCODE_MODEL).toBe("claude-sonnet-4-20250514")
+		expect(overrides.KILOCODE_TOKEN).toBe("ext-token")
 	})
 
-	it("skips vertex when neither key file nor JSON creds are present", () => {
+	it("uses env-config mode without HOME override when no CLI config exists", () => {
 		const overrides = buildProviderEnvOverrides(
 			{
-				apiProvider: "vertex",
-				apiModelId: "m1",
-				vertexProjectId: "proj",
-				vertexRegion: "us-central1",
+				apiProvider: "kilocode",
+				kilocodeToken: "ext-token",
+				kilocodeModel: "claude-sonnet-4-20250514",
+			} as ProviderSettings,
+			{ HOME: tempHome },
+			log,
+			debugLog,
+		)
+
+		expect(overrides.HOME).toBeUndefined()
+		expect(overrides.KILO_PROVIDER_TYPE).toBe("kilocode")
+		expect(overrides.KILOCODE_MODEL).toBe("claude-sonnet-4-20250514")
+		expect(overrides.KILOCODE_TOKEN).toBe("ext-token")
+	})
+
+	it("skips injection when kilocode token is missing", () => {
+		const overrides = buildProviderEnvOverrides(
+			{
+				apiProvider: "kilocode",
+				kilocodeToken: "",
 			} as ProviderSettings,
 			{},
 			log,
@@ -83,24 +140,20 @@ describe("providerEnvMapper", () => {
 		expect(overrides).toEqual({})
 	})
 
-	it("injects vertex when key file is provided", () => {
+	it("includes org id when present", () => {
 		const overrides = buildProviderEnvOverrides(
 			{
-				apiProvider: "vertex",
-				apiModelId: "m1",
-				vertexProjectId: "proj",
-				vertexRegion: "us-central1",
-				vertexKeyFile: "/tmp/key.json",
+				apiProvider: "kilocode",
+				kilocodeToken: "ext-token",
+				kilocodeModel: "claude-sonnet-4-20250514",
+				kilocodeOrganizationId: "org-123",
 			} as ProviderSettings,
-			{},
+			{ HOME: tempHome },
 			log,
 			debugLog,
 		)
 
-		expect(overrides.KILO_PROVIDER_TYPE).toBe("vertex")
-		expect(overrides.KILO_API_MODEL_ID).toBe("m1")
-		expect(overrides.KILO_VERTEX_KEY_FILE).toBe("/tmp/key.json")
-		expect(overrides.KILO_VERTEX_PROJECT_ID).toBe("proj")
-		expect(overrides.KILO_VERTEX_REGION).toBe("us-central1")
+		expect(overrides.KILOCODE_TOKEN).toBe("ext-token")
+		expect(overrides.KILOCODE_ORGANIZATION_ID).toBe("org-123")
 	})
 })
