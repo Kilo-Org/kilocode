@@ -99,6 +99,7 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "一時停止中",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",

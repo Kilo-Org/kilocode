@@ -13,6 +13,8 @@ import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
+	private static _instance: GhostServiceManager | null = null
+
 	private readonly model: GhostModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
@@ -26,6 +28,9 @@ export class GhostServiceManager {
 	private completionCount: number = 0
 	private sessionStartTime: number = Date.now()
 
+	// Snooze timer
+	private snoozeTimer: NodeJS.Timeout | null = null
+
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
 	public readonly inlineCompletionProvider: GhostInlineCompletionProvider
@@ -34,6 +39,7 @@ export class GhostServiceManager {
 	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
 		this.cline = cline
+		GhostServiceManager._instance = this
 
 		// Register Internal Components
 		this.model = new GhostModel()
@@ -51,6 +57,13 @@ export class GhostServiceManager {
 		)
 
 		void this.load()
+	}
+
+	/**
+		* Get the singleton instance of GhostServiceManager
+		*/
+	public static getInstance(): GhostServiceManager | null {
+		return GhostServiceManager._instance
 	}
 
 	public async load() {
@@ -81,7 +94,7 @@ export class GhostServiceManager {
 	}
 
 	private async updateInlineCompletionProviderRegistration() {
-		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+		const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
 
 		// First, dispose any existing registration
 		if (this.inlineCompletionProviderDisposable) {
@@ -111,6 +124,73 @@ export class GhostServiceManager {
 		})
 
 		TelemetryService.instance.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
+
+		await this.load()
+	}
+
+	/**
+	 * Check if autocomplete is currently snoozed
+	 */
+	public isSnoozed(): boolean {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return false
+		return Date.now() < snoozeUntil
+	}
+
+	/**
+	 * Get remaining snooze time in seconds
+	 */
+	public getSnoozeRemainingSeconds(): number {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return 0
+		const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
+		return remaining
+	}
+
+	/**
+	 * Snooze autocomplete for a specified number of seconds
+	 */
+	public async snooze(seconds: number): Promise<void> {
+		// Clear any existing snooze timer
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const snoozeUntil = Date.now() + seconds * 1000
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil,
+			},
+		})
+
+		// Set timer to automatically unsnooze
+		this.snoozeTimer = setTimeout(() => {
+			void this.unsnooze()
+		}, seconds * 1000)
+
+		await this.load()
+	}
+
+	/**
+	 * Cancel snooze and re-enable autocomplete
+	 */
+	public async unsnooze(): Promise<void> {
+		// Clear any existing snooze timer
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil: undefined,
+			},
+		})
 
 		await this.load()
 	}
@@ -226,6 +306,7 @@ export class GhostServiceManager {
 
 		this.statusBar?.update({
 			enabled: this.settings?.enableAutoTrigger,
+			snoozed: this.isSnoozed(),
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
 			profileName: this.model.profileName,
@@ -254,6 +335,12 @@ export class GhostServiceManager {
 	 */
 	public dispose(): void {
 		this.statusBar?.dispose()
+
+		// Clear snooze timer
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
 
 		// Dispose inline completion provider registration
 		if (this.inlineCompletionProviderDisposable) {
