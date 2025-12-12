@@ -1,7 +1,24 @@
 // kilocode_change - new file: FFmpeg-based PCM16 audio capture for OpenAI Realtime API
 import { EventEmitter } from "events"
-import { spawn, ChildProcess } from "child_process"
+import { spawn, ChildProcess, execSync } from "child_process"
 import * as os from "os"
+
+/**
+ * Global cache for FFmpeg path (shared across all instances)
+ * undefined = not yet checked, null = not found, string = found path
+ */
+let cachedFFmpegPath: string | null | undefined = undefined
+
+// Platform-specific fallback paths
+const fallbackPaths: Record<string, string[]> = {
+	darwin: ["/usr/local/bin/ffmpeg", "/opt/homebrew/bin/ffmpeg"],
+	linux: ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"],
+	win32: [
+		"C:\\ffmpeg\\bin\\ffmpeg.exe",
+		"C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
+		"C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe",
+	],
+}
 
 /**
  * Calculate RMS energy of PCM16 audio frame
@@ -48,6 +65,16 @@ export class FFmpegCaptureService extends EventEmitter {
 	constructor() {
 		super()
 		this.platform = os.platform()
+
+		// Resolve FFmpeg path once (cached globally)
+		const result = FFmpegCaptureService.findFFmpeg()
+
+		if (!result.available) {
+			console.error("❌ [FFmpegCapture] FFmpeg not found during initialization")
+			console.error("→ Install: https://ffmpeg.org/download.html")
+		} else {
+			console.log(`✅ [FFmpegCapture] FFmpeg resolved to: ${result.path}`)
+		}
 	}
 
 	/**
@@ -59,11 +86,28 @@ export class FFmpegCaptureService extends EventEmitter {
 			throw new Error("Audio capture already in progress")
 		}
 
+		// Get FFmpeg path from global cache
+		const result = FFmpegCaptureService.findFFmpeg()
+		if (!result.available || !result.path) {
+			throw new Error(
+				"FFmpeg not found. Please install FFmpeg to use speech-to-text.\n" +
+					"Installation: https://ffmpeg.org/download.html",
+			)
+		}
+
 		try {
 			const args = this.buildFFmpegArgs()
-			this.ffmpegProcess = spawn("ffmpeg", args, {
+
+			console.log("🔍 [FFmpegCapture] Spawning FFmpeg...")
+			console.log("🔍 [FFmpegCapture] Path:", result.path)
+			console.log("🔍 [FFmpegCapture] Args:", JSON.stringify(args))
+
+			// Use absolute path from cache (not "ffmpeg")
+			this.ffmpegProcess = spawn(result.path, args, {
 				stdio: ["ignore", "pipe", "pipe"],
 			})
+
+			console.log("✅ [FFmpegCapture] Process spawned, PID:", this.ffmpegProcess.pid)
 
 			this.isCapturing = true
 			this.captureStartTime = Date.now()
@@ -99,7 +143,16 @@ export class FFmpegCaptureService extends EventEmitter {
 			})
 
 			this.ffmpegProcess.on("error", (error: Error) => {
-				console.error("[RealtimeAudioCapture] Process error:", error)
+				console.error("❌ [RealtimeAudioCapture] Process error:", error)
+				console.error("❌ [RealtimeAudioCapture] Error details:", {
+					errno: (error as any).errno,
+					code: (error as any).code,
+					syscall: (error as any).syscall,
+					path: (error as any).path,
+					spawnargs: (error as any).spawnargs,
+				})
+				console.error("❌ [RealtimeAudioCapture] Current PATH:", process.env.PATH)
+				console.error("❌ [RealtimeAudioCapture] Which platform:", this.platform)
 				this.emit("error", error)
 				this.cleanup()
 			})
@@ -165,6 +218,46 @@ export class FFmpegCaptureService extends EventEmitter {
 
 	isActive(): boolean {
 		return this.isCapturing
+	}
+
+	/**
+	 * Find FFmpeg executable using platform-specific fallback paths
+	 * Results are cached globally across all instances
+	 */
+	static findFFmpeg(forceRecheck = false): { available: boolean; path?: string; error?: string } {
+		if (cachedFFmpegPath !== undefined && !forceRecheck) {
+			return {
+				available: cachedFFmpegPath !== null,
+				path: cachedFFmpegPath || undefined,
+				error: cachedFFmpegPath === null ? "FFmpeg not found" : undefined,
+			}
+		}
+
+		const platform = os.platform()
+		try {
+			execSync("ffmpeg -version", { stdio: "ignore" })
+			console.log(`🎙️ [FFmpeg] ✅ Found 'ffmpeg' in PATH`)
+			cachedFFmpegPath = "ffmpeg"
+			return { available: true, path: "ffmpeg" }
+		} catch {
+			console.log(`🎙️ [FFmpeg] ❌ 'ffmpeg' not in PATH, trying fallback paths...`)
+		}
+
+		const platformPaths = fallbackPaths[platform] || []
+		for (const fallbackPath of platformPaths) {
+			try {
+				execSync(`"${fallbackPath}" -version`, { stdio: "ignore" })
+				console.log(`🎙️ [FFmpeg] ✅ Found at: ${fallbackPath}`)
+				cachedFFmpegPath = fallbackPath
+				return { available: true, path: fallbackPath }
+			} catch {
+				continue
+			}
+		}
+		return {
+			available: false,
+			error: "FFmpeg not found. Install from https://ffmpeg.org/download.html",
+		}
 	}
 
 	private buildFFmpegArgs(): string[] {

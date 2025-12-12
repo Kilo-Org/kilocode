@@ -1,7 +1,7 @@
 // kilocode_change - new file: Speech-to-text availability check (extracted from ClineProvider)
 import type { ProviderSettingsManager } from "../config/ProviderSettingsManager"
-import type { RooCodeSettings } from "@roo-code/types"
-import { experimentDefault } from "../../shared/experiments"
+import { getOpenAiApiKey } from "../../services/stt/utils/getOpenAiCredentials"
+import { FFmpegCaptureService } from "../../services/stt/FFmpegCaptureService"
 
 /**
  * Cached availability result with timestamp
@@ -10,23 +10,21 @@ let cachedResult: { available: boolean; timestamp: number } | null = null
 const CACHE_DURATION_MS = 30000 // 30 seconds
 
 /**
- * Check if speech-to-text is fully configured and available
+ * Check if speech-to-text prerequisites are available
  *
- * Checks:
- * 1. Speech-to-text experiment is enabled
- * 2. OpenAI API key is configured
- * 3. FFmpeg is installed and available
+ * This checks the backend prerequisites only:
+ * 1. OpenAI API key is configured
+ * 2. FFmpeg is installed and available
  *
- * Results are cached for 30 seconds to prevent redundant checks.
+ * Note: The experiment flag is checked on the frontend, not here.
+ * Results are cached for 30 seconds to prevent redundant FFmpeg checks.
  *
  * @param providerSettingsManager - Provider settings manager for API configuration
- * @param experiments - Experiment settings (defaults to experimentDefault if not provided)
  * @param forceRecheck - Force a fresh check, ignoring cache (default: false)
- * @returns Promise<boolean> - true if speech-to-text is available
+ * @returns Promise<boolean> - true if prerequisites are met
  */
 export async function checkSpeechToTextAvailable(
 	providerSettingsManager: ProviderSettingsManager,
-	experiments?: RooCodeSettings["experiments"],
 	forceRecheck = false,
 ): Promise<boolean> {
 	// Return cached result if valid and not forcing recheck
@@ -37,23 +35,10 @@ export async function checkSpeechToTextAvailable(
 		}
 	}
 
-	console.log("🎙️ [STT Availability Check] Starting speech-to-text availability check...")
+	console.log("🎙️ [STT Availability Check] Starting speech-to-text prerequisite check...")
 
 	try {
-		// Check 1: Experiment flag
-		const experimentsMap = experiments ?? experimentDefault
-		const isExperimentEnabled = experimentsMap.speechToText ?? false
-		console.log(`🎙️ [STT Availability Check] Experiment enabled: ${isExperimentEnabled}`)
-
-		if (!isExperimentEnabled) {
-			console.log("🎙️ [STT Availability Check] ❌ FAILED: Speech-to-text experiment is not enabled")
-			console.log("🎙️ [STT Availability Check] → Enable in Settings > Experiments > Speech to Text")
-			cachedResult = { available: false, timestamp: Date.now() }
-			return false
-		}
-
-		// Check 2: OpenAI API key
-		const { getOpenAiApiKey } = await import("../../services/stt/utils/getOpenAiCredentials")
+		// Check 1: OpenAI API key
 		const apiKey = await getOpenAiApiKey(providerSettingsManager)
 		const hasApiKey = !!apiKey
 		console.log(`🎙️ [STT Availability Check] OpenAI API key configured: ${hasApiKey}`)
@@ -65,10 +50,9 @@ export async function checkSpeechToTextAvailable(
 			return false
 		}
 
-		// Check 3: FFmpeg installed
-		const { checkFFmpegAvailability } = await import("../../services/stt/sttConfig")
+		// Check 2: FFmpeg installed
 		console.log("🎙️ [STT Availability Check] Checking FFmpeg installation...")
-		const ffmpegResult = await checkFFmpegAvailability()
+		const ffmpegResult = FFmpegCaptureService.findFFmpeg()
 		console.log(`🎙️ [STT Availability Check] FFmpeg available: ${ffmpegResult.available}`)
 
 		if (!ffmpegResult.available) {
@@ -81,7 +65,7 @@ export async function checkSpeechToTextAvailable(
 			return false
 		}
 
-		console.log("🎙️ [STT Availability Check] ✅ SUCCESS: Speech-to-text is fully available!")
+		console.log("🎙️ [STT Availability Check] ✅ SUCCESS: Speech-to-text prerequisites are met!")
 		cachedResult = { available: true, timestamp: Date.now() }
 		return true
 	} catch (error) {

@@ -1130,19 +1130,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const { beforeCursor } = recordingStartStateRef.current
 				const separator = beforeCursor && !beforeCursor.endsWith(" ") ? " " : ""
 				const baseOffset = beforeCursor.length + separator.length
-
-				// console.log(
-				// 	"🎙️ [ChatTextArea] 🎨 Applying preview highlighting:",
-				// 	"previewRanges:",
-				// 	previewRanges,
-				// 	"baseOffset:",
-				// 	baseOffset,
-				// 	"processedText length:",
-				// 	processedText.length,
-				// )
-
-				// Apply preview styling to each preview range
-				// Work backwards to avoid offset issues
 				for (let i = previewRanges.length - 1; i >= 0; i--) {
 					const range = previewRanges[i]
 					const start = baseOffset + range.start
@@ -1156,7 +1143,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			}
 			// kilocode_change end - STT preview text highlighting
-
 			// kilocode_change start - autocomplete ghost text display
 			if (inputValue && ghostText) {
 				processedText += `<span class="text-vscode-editor-foreground opacity-60 pointer-events-none">${escapeHtml(ghostText)}</span>`
@@ -1509,11 +1495,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"font-vscode-font-family",
 						"text-vscode-editor-font-size",
 						"leading-vscode-editor-line-height",
-						isRecording
-							? "border border-vscode-focusBorder outline outline-[#ff0000]"
-							: isDraggingOver
-								? "border-2 border-dashed border-vscode-focusBorder"
-								: "border border-transparent",
+						isDraggingOver
+							? "border-2 border-dashed border-vscode-focusBorder"
+							: "border border-transparent",
 						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
 						"px-[8px]",
 						"pr-9",

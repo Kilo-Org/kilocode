@@ -279,8 +279,6 @@ export class STTService {
 		const bufferedMs = this.totalFrameCount * this.vadConfig.frameDurationMs
 		const voicedMs = this.voicedFrameCount * this.vadConfig.frameDurationMs
 
-		console.log(`🎙️ [STTService] 📤 Committing ${bufferedMs}ms (${voicedMs}ms voiced)`)
-
 		this.transcriptionClient?.sendInputBufferCommit()
 
 		// Reset counters for next segment

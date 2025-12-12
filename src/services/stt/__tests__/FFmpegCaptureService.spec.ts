@@ -31,6 +31,7 @@ vi.mock("child_process", () => ({
 		mockStdout = mockProcess.stdout
 		return mockProcess
 	}),
+	execSync: vi.fn(() => Buffer.from("ffmpeg version")),
 }))
 
 vi.mock("os", () => ({
