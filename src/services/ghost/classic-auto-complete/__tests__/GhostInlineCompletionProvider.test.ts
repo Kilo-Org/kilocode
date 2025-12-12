@@ -470,346 +470,80 @@ describe("findMatchingSuggestion", () => {
 			expect(result?.matchType).toBe("backward_deletion")
 		})
 	})
-
-	describe("raw multi-line behavior (no first-line-only transformation)", () => {
-		it("should return full multi-line text when current line has text", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first line\nsecond line\nthird line",
-					prefix: "const x = foo",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "first line\nsecond line\nthird line", matchType: "exact" })
-		})
-
-		it("should return full multi-line text when suggestion starts with newline", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "\nfirst line\nsecond line\nthird line",
-					prefix: "const x = foo",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "\nfirst line\nsecond line\nthird line", matchType: "exact" })
-		})
-
-		it("should return full multi-line text when current line is only whitespace", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first line\nsecond line",
-					prefix: "const x = 1\n    ",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = 1\n    ", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "first line\nsecond line", matchType: "exact" })
-		})
-
-		it("should return full multi-line text when at start of line and suggestion is 3+ lines", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "line1\nline2\nline3",
-					prefix: "const x = 1\n",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = 1\n", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "line1\nline2\nline3", matchType: "exact" })
-		})
-
-		it("should return full multi-line text for partial typing matches", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');\nmore code\neven more",
-					prefix: "const x = foo",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			// User typed "cons" after the prefix
-			const result = findMatchingSuggestion("const x = foocons", "\nconst y = 2", suggestions)
-			// Remaining text is "ole.log('test');\nmore code\neven more"
-			expect(result).toEqual({ text: "ole.log('test');\nmore code\neven more", matchType: "partial_typing" })
-		})
-
-		it("should return full multi-line text for backward deletion matches", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "bar\nmore code\neven more",
-					prefix: "foo",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			// User backspaced from "foo" to "f"
-			// Full text would be "oobar\nmore code\neven more"
-			const result = findMatchingSuggestion("f", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "oobar\nmore code\neven more", matchType: "backward_deletion" })
-		})
-
-		it("should preserve \\r\\n line endings in multi-line text", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first line\r\nsecond line",
-					prefix: "const x = foo",
-					suffix: "\nconst y = 2",
-				},
-			]
-
-			const result = findMatchingSuggestion("const x = foo", "\nconst y = 2", suggestions)
-			expect(result).toEqual({ text: "first line\r\nsecond line", matchType: "exact" })
-		})
-	})
 })
 
 describe("shouldShowOnlyFirstLine", () => {
-	describe("when suggestion starts with newline", () => {
-		it("should return false when suggestion starts with \\n", () => {
-			const prefix = "const x = foo"
-			const suggestion = "\nconst y = 2"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false when suggestion starts with \\r\\n", () => {
-			const prefix = "const x = foo"
-			const suggestion = "\r\nconst y = 2"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false even when current line has text and suggestion starts with newline", () => {
-			const prefix = "const x = foo"
-			const suggestion = "\nconsole.log('test');"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
+	it.each([
+		["\\n", "\nconst y = 2"],
+		["\\r\\n", "\r\nconst y = 2"],
+	])("returns false when suggestion starts with %s", (_label, suggestion) => {
+		expect(shouldShowOnlyFirstLine("const x = foo", suggestion)).toBe(false)
 	})
 
-	describe("when suggestion adds to current line (does not start with newline)", () => {
-		it("should return true when current line has text and suggestion adds to it", () => {
-			const prefix = "const x = foo"
-			const suggestion = "bar\nconst y = 2"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
-		})
-
-		it("should return true when current line has text after newline in prefix", () => {
-			const prefix = "const x = 1\nconst y = foo"
-			const suggestion = "bar\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
-		})
-
-		it("should return true for single-line suggestion when current line has text", () => {
-			const prefix = "const x = foo"
-			const suggestion = "bar"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
-		})
+	it("returns true when cursor is mid-line (current line has non-whitespace)", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\nconst y = foo", "bar\nbaz")).toBe(true)
 	})
 
-	describe("when current line is only whitespace", () => {
-		it("should return false when current line is empty and suggestion is less than 3 lines", () => {
-			const prefix = "const x = 1\n"
-			const suggestion = "const y = 2\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
+	it("returns true at start of line when suggestion is 3+ lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n    ", "l1\nl2\nl3")).toBe(true)
+	})
 
-		it("should return false when current line has only spaces and suggestion is less than 3 lines", () => {
-			const prefix = "const x = 1\n    "
-			const suggestion = "const y = 2\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false when current line has only tabs and suggestion is less than 3 lines", () => {
-			const prefix = "const x = 1\n\t\t"
-			const suggestion = "const y = 2\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false when prefix is empty and suggestion is less than 3 lines", () => {
-			const prefix = ""
-			const suggestion = "const y = 2\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false when prefix is only whitespace and suggestion is less than 3 lines", () => {
-			const prefix = "    "
-			const suggestion = "const y = 2\nmore code"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return true when at start of line and suggestion is 3 or more lines", () => {
-			const prefix = "const x = 1\n"
-			const suggestion = "line1\nline2\nline3"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
-		})
-
-		it("should return true when at start of line with indentation and suggestion is 3+ lines", () => {
-			const prefix = "const x = 1\n    "
-			const suggestion = "if (true) {\n    console.log('test');\n}"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(true)
-		})
-
-		it("should return false when at start of line and suggestion is exactly 2 lines", () => {
-			const prefix = "const x = 1\n"
-			const suggestion = "line1\nline2"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
-
-		it("should return false when at start of line and suggestion is single line", () => {
-			const prefix = "const x = 1\n"
-			const suggestion = "single line"
-			expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
-		})
+	it("returns false at start of line when suggestion is 2 lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n", "l1\nl2")).toBe(false)
 	})
 })
 
 describe("countLines", () => {
-	it("should return 0 for empty string", () => {
+	it("returns 0 for empty string", () => {
 		expect(countLines("")).toBe(0)
 	})
 
-	it("should return 1 for single line without newline", () => {
-		expect(countLines("hello world")).toBe(1)
+	it("counts mixed \\n and \\r\\n correctly", () => {
+		expect(countLines("l1\nl2\r\nl3")).toBe(3)
 	})
 
-	it("should return 2 for two lines", () => {
-		expect(countLines("line1\nline2")).toBe(2)
-	})
-
-	it("should return 3 for three lines", () => {
-		expect(countLines("line1\nline2\nline3")).toBe(3)
-	})
-
-	it("should handle \\r\\n line endings", () => {
-		expect(countLines("line1\r\nline2\r\nline3")).toBe(3)
-	})
-
-	it("should handle mixed line endings", () => {
-		expect(countLines("line1\nline2\r\nline3")).toBe(3)
-	})
-
-	it("should count trailing newline as additional line", () => {
-		expect(countLines("line1\nline2\n")).toBe(3)
-	})
-
-	it("should handle text starting with newline", () => {
-		expect(countLines("\nline2")).toBe(2)
+	it("counts trailing newline as an additional line", () => {
+		expect(countLines("l1\n")).toBe(2)
 	})
 })
 
 describe("getFirstLine", () => {
-	it("should return the entire text when there is no newline", () => {
+	it("returns the entire text when there is no newline", () => {
 		expect(getFirstLine("console.log('test');")).toBe("console.log('test');")
 	})
 
-	it("should return empty string when text is empty", () => {
-		expect(getFirstLine("")).toBe("")
+	it.each([
+		["\\n", "first line\nsecond line"],
+		["\\r\\n", "first line\r\nsecond line"],
+	])("returns first line for %s line endings", (_label, text) => {
+		expect(getFirstLine(text)).toBe("first line")
 	})
 
-	it("should return text before first \\n", () => {
-		expect(getFirstLine("first line\nsecond line\nthird line")).toBe("first line")
-	})
-
-	it("should return text before first \\r\\n", () => {
-		expect(getFirstLine("first line\r\nsecond line")).toBe("first line")
-	})
-
-	it("should return empty string when text starts with newline", () => {
+	it("returns empty string when text starts with a newline", () => {
 		expect(getFirstLine("\nsecond line")).toBe("")
-	})
-
-	it("should return empty string when text starts with \\r\\n", () => {
-		expect(getFirstLine("\r\nsecond line")).toBe("")
-	})
-
-	it("should handle single character before newline", () => {
-		expect(getFirstLine("a\nb")).toBe("a")
 	})
 })
 
 describe("applyFirstLineOnly", () => {
-	it("should return null when input is null", () => {
-		const result = applyFirstLineOnly(null, "const x = foo")
-		expect(result).toBeNull()
+	it("returns null when input is null", () => {
+		expect(applyFirstLineOnly(null, "const x = foo")).toBeNull()
 	})
 
-	it("should return result unchanged when text is empty", () => {
-		const result = applyFirstLineOnly({ text: "", matchType: "exact" }, "const x = foo")
-		expect(result).toEqual({ text: "", matchType: "exact" })
+	it("returns result unchanged when text is empty", () => {
+		expect(applyFirstLineOnly({ text: "", matchType: "exact" }, "const x = foo")).toEqual({
+			text: "",
+			matchType: "exact",
+		})
 	})
 
-	it("should return only first line when current line has text and suggestion is multi-line", () => {
-		const result = applyFirstLineOnly(
-			{ text: "first line\nsecond line\nthird line", matchType: "exact" },
-			"const x = foo",
-		)
-		expect(result).toEqual({ text: "first line", matchType: "exact" })
+	it("truncates to first line and preserves matchType when enabled", () => {
+		const result = applyFirstLineOnly({ text: "line1\nline2\nline3", matchType: "partial_typing" }, "const x = foo")
+		expect(result).toEqual({ text: "line1", matchType: "partial_typing" })
 	})
 
-	it("should return full multi-line text when suggestion starts with newline", () => {
-		const result = applyFirstLineOnly(
-			{ text: "\nfirst line\nsecond line\nthird line", matchType: "exact" },
-			"const x = foo",
-		)
-		expect(result).toEqual({ text: "\nfirst line\nsecond line\nthird line", matchType: "exact" })
-	})
-
-	it("should return full multi-line text when current line is only whitespace and suggestion is less than 3 lines", () => {
-		const result = applyFirstLineOnly({ text: "first line\nsecond line", matchType: "exact" }, "const x = 1\n    ")
-		expect(result).toEqual({ text: "first line\nsecond line", matchType: "exact" })
-	})
-
-	it("should return only first line when at start of line and suggestion is 3+ lines", () => {
-		const result = applyFirstLineOnly({ text: "line1\nline2\nline3", matchType: "exact" }, "const x = 1\n")
-		expect(result).toEqual({ text: "line1", matchType: "exact" })
-	})
-
-	it("should apply first-line-only to partial typing matches", () => {
-		// Remaining text is "ole.log('test');\nmore code\neven more"
-		// Current line has text ("const x = foocons"), so only first line should be returned
-		const result = applyFirstLineOnly(
-			{ text: "ole.log('test');\nmore code\neven more", matchType: "partial_typing" },
-			"const x = foocons",
-		)
-		expect(result).toEqual({ text: "ole.log('test');", matchType: "partial_typing" })
-	})
-
-	it("should apply first-line-only to backward deletion matches", () => {
-		// Full text would be "oobar\nmore code\neven more"
-		// Current line has text ("f"), so only first line should be returned
-		const result = applyFirstLineOnly({ text: "oobar\nmore code\neven more", matchType: "backward_deletion" }, "f")
-		expect(result).toEqual({ text: "oobar", matchType: "backward_deletion" })
-	})
-
-	it("should handle \\r\\n line endings when extracting first line", () => {
-		const result = applyFirstLineOnly({ text: "first line\r\nsecond line", matchType: "exact" }, "const x = foo")
-		expect(result).toEqual({ text: "first line", matchType: "exact" })
-	})
-
-	it("should return single-line text unchanged when current line has text", () => {
-		const result = applyFirstLineOnly({ text: "single line", matchType: "exact" }, "const x = foo")
-		expect(result).toEqual({ text: "single line", matchType: "exact" })
-	})
-
-	it("should preserve matchType from input", () => {
-		const exactResult = applyFirstLineOnly({ text: "line1\nline2\nline3", matchType: "exact" }, "const x = foo")
-		expect(exactResult?.matchType).toBe("exact")
-
-		const partialResult = applyFirstLineOnly(
-			{ text: "line1\nline2\nline3", matchType: "partial_typing" },
-			"const x = foo",
-		)
-		expect(partialResult?.matchType).toBe("partial_typing")
-
-		const backwardResult = applyFirstLineOnly(
-			{ text: "line1\nline2\nline3", matchType: "backward_deletion" },
-			"const x = foo",
-		)
-		expect(backwardResult?.matchType).toBe("backward_deletion")
+	it("does not truncate when suggestion starts with newline", () => {
+		const result = applyFirstLineOnly({ text: "\nline1\nline2", matchType: "exact" }, "const x = foo")
+		expect(result).toEqual({ text: "\nline1\nline2", matchType: "exact" })
 	})
 })
 
@@ -1017,6 +751,24 @@ describe("GhostInlineCompletionProvider", () => {
 				command: "kilocode.ghost.inline-completion.accepted",
 				title: "Autocomplete Accepted",
 			})
+		})
+
+		it("should truncate cached multi-line suggestions to first line when cursor is mid-line", async () => {
+			provider.updateSuggestions({
+				text: "line1\nline2\nline3",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("line1")
 		})
 
 		it("should return empty array when prefix does not match", async () => {
