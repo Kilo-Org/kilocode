@@ -188,7 +188,7 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
 
 	// Check if the current line (before cursor) has non-whitespace text
 	const lastNewlineIndex = prefix.lastIndexOf("\n")
-	const currentLinePrefix = lastNewlineIndex === -1 ? prefix : prefix.substring(lastNewlineIndex + 1)
+	const currentLinePrefix = prefix.slice(lastNewlineIndex + 1)
 
 	// If the current line prefix contains non-whitespace, only show the first line
 	if (currentLinePrefix.trim().length > 0) {
