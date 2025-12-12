@@ -114,12 +114,12 @@ export interface WebviewMessage {
 		| "toggleToolEnabledForPrompt"
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
-		| "fuzzyMatchThreshold"
+		| "fuzzyMatchThreshold" // kilocode_change
 		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "fastApplyModel" // kilocode_change: Fast Apply model selection
 		| "fastApplyApiProvider" // kilocode_change: Fast Apply model api base url
 		| "writeDelayMs" // kilocode_change
-		| "diagnosticsEnabled"
+		| "diagnosticsEnabled" // kilocode_change
 		| "enhancePrompt"
 		| "enhancedPrompt"
 		| "draggedImages"
@@ -144,8 +144,7 @@ export interface WebviewMessage {
 		| "stt:start" // kilocode_change: Start STT recording
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording
-		| "includeTaskHistoryInEnhance"
-		| "updateExperimental"
+		| "includeTaskHistoryInEnhance" // kilocode_change
 		| "autoApprovalEnabled"
 		| "yoloMode" // kilocode_change
 		| "updateCustomMode"
@@ -228,7 +227,7 @@ export interface WebviewMessage {
 		| "marketplaceInstallResult"
 		| "fetchMarketplaceData"
 		| "switchTab"
-		| "profileThresholds"
+		| "profileThresholds" // kilocode_change
 		| "editMessage" // kilocode_change
 		| "systemNotificationsEnabled" // kilocode_change
 		| "dismissNotificationId" // kilocode_change
@@ -286,11 +285,6 @@ export interface WebviewMessage {
 		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
-		| "startSpeechRecognition" // Start speech-to-text recognition
-		| "stopSpeechRecognition" // Stop speech-to-text recognition
-		| "cancelSpeechRecognition" // Cancel speech-to-text recognition
-		| "startStreamingSpeech" // Start streaming speech-to-text
-		| "stopStreamingSpeech" // Stop streaming speech-to-text
 	text?: string
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
@@ -340,7 +334,6 @@ export interface WebviewMessage {
 	query?: string
 	setting?: string
 	slug?: string
-	language?: string // User's language for speech transcription
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload

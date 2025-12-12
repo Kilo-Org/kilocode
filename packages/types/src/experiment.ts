@@ -6,7 +6,7 @@ import type { Keys, Equals, AssertEqual } from "./type-fu.js"
  * ExperimentId
  */
 
-const kilocodeExperimentIds = ["morphFastApply", "speechToText"] as const
+const kilocodeExperimentIds = ["morphFastApply", "speechToText"] as const // kilocode_change
 export const experimentIds = [
 	"powerSteering",
 	"multiFileApplyDiff",

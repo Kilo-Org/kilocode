@@ -33,7 +33,7 @@ import {
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
-import { STTSegment } from "./sttContract"
+import { STTSegment } from "./sttContract" // kilocode_change: STT segment type
 // kilocode_change end
 
 // Command interface for frontend/backend communication
