@@ -963,7 +963,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.showCliError({ type: "spawn_error", message: "CLI not found" })
 	}
 
-	private createCliTerminal(name: string, message?: string): vscode.Terminal {
+	private createCliTerminal(name: string, message?: string): vscode.Terminal | null {
+		if (typeof vscode.window.createTerminal !== "function") {
+			this.outputChannel.appendLine(`[AgentManager] VS Code terminal unavailable; run "kilocode auth" manually.`)
+			return null
+		}
+
 		const shellPath = process.platform === "win32" ? undefined : process.env.SHELL
 		const shellName = shellPath ? path.basename(shellPath) : undefined
 		const shellArgs = process.platform === "win32" ? undefined : shellName === "zsh" ? ["-l", "-i"] : ["-l"]
@@ -985,6 +990,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			"Install Kilocode CLI",
 			t("kilocode:agentManager.terminal.installMessage"),
 		)
+		if (!terminal) {
+			return
+		}
 		terminal.show()
 		terminal.sendText(getCliInstallCommand())
 		this.showCliAuthReminder()
@@ -992,6 +1000,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	private runAuthInTerminal(): void {
 		const terminal = this.createCliTerminal("Kilocode CLI Login")
+		if (!terminal) {
+			return
+		}
 		terminal.show()
 		terminal.sendText("kilocode auth")
 	}
