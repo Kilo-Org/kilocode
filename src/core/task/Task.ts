@@ -2594,7 +2594,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						const nextPromise = iterator.next()
 
 						// If we have an abort controller, race it with the next chunk.
-						// Create a single abort promise/listener to avoid accumulating listeners per chunk.
+						// Reuse a single abort promise/listener across all chunks to avoid accumulating listeners.
 						ensureAbortPromise()
 						if (streamAbortPromise) {
 							return await Promise.race([nextPromise, streamAbortPromise])
