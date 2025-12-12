@@ -54,7 +54,8 @@ export function extractApiReqFailedMessage(payload: KilocodePayload): { message:
 
 	// Extract HTTP status code from message. Some errors include a prefix like
 	// "Provider error: 401 ..." so we can't rely on the status code being at the beginning.
-	const statusMatch = rawText.match(/^\s*(\d{3})\b/) ?? rawText.match(/\b(\d{3})\b/)
+	// Keep this targeted to avoid matching unrelated 3-digit values (e.g. request ids).
+	const statusMatch = rawText.match(/^\s*(\d{3})\b/) ?? rawText.match(/:\s*(\d{3})\b/)
 	const authError = statusMatch?.[1] === "401"
 
 	// Use raw text if it's not JSON, otherwise fall back
