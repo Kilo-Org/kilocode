@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.16.1
+
+### Patch Changes
+
+- [#4155](https://github.com/Kilo-Org/kilocode/pull/4155) [`74fe4b8`](https://github.com/Kilo-Org/kilocode/commit/74fe4b8a20ff13c31d967693818708f81bd9167e) Thanks [@omniwired](https://github.com/omniwired)! - feat(cli): add Ctrl+Y keybinding to toggle YOLO mode
+
 ## 0.16.0
 
 ### Minor Changes
