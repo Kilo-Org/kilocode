@@ -39,6 +39,13 @@
 		"branch": "Branch",
 		"creatingSession": "Sitzung wird erstellt...",
 		"waitingForCli": "Agent-Sitzung wird initialisiert...",
+		"versions": "Versionen",
+		"versionsTooltip": "Parallele Agenten erkunden verschiedene Ansätze",
+		"versionsHelperText": "{{count}} parallele Agenten auf separaten Branches",
+		"versionCount_one": "{{count}} Version",
+		"versionCount_other": "{{count}} Versionen",
+		"launchVersions": "{{count}} Versionen starten",
+		"startAgent": "Agent starten",
 		"cancelCreating": "Sitzungserstellung abbrechen",
 		"cancelButton": "Abbrechen"
 	},

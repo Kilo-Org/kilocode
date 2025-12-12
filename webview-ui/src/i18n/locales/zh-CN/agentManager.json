@@ -39,6 +39,13 @@
 		"branch": "分支",
 		"creatingSession": "正在创建会话...",
 		"waitingForCli": "正在初始化代理会话...",
+		"versions": "版本",
+		"versionsTooltip": "探索不同方法的并行代理",
+		"versionsHelperText": "{{count}} 个并行代理在不同分支上",
+		"versionCount_one": "{{count}} 个版本",
+		"versionCount_other": "{{count}} 个版本",
+		"launchVersions": "启动 {{count}} 个版本",
+		"startAgent": "启动代理",
 		"cancelCreating": "取消创建会话",
 		"cancelButton": "取消"
 	},

@@ -161,6 +161,7 @@ export const anthropicModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native", // kilocode_change
 		inputPrice: 1.0,
 		outputPrice: 5.0,
 		cacheWritesPrice: 1.25,

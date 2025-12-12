@@ -1478,10 +1478,10 @@ ${prompt}
 		const prevConfig = task.apiConfiguration
 		const prevProvider = prevConfig?.apiProvider
 		const prevModelId = prevConfig ? getModelId(prevConfig) : undefined
-		const prevToolProtocol = prevConfig?.toolStyle // kilocode_change
+		const prevToolProtocol = prevConfig?.toolProtocol
 		const newProvider = providerSettings.apiProvider
 		const newModelId = getModelId(providerSettings)
-		const newToolProtocol = providerSettings.toolStyle // kilocode_change
+		const newToolProtocol = providerSettings.toolProtocol
 
 		const needsRebuild =
 			forceRebuild ||

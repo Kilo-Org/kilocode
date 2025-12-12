@@ -39,6 +39,13 @@
 		"branch": "Branch",
 		"creatingSession": "Criando sessão...",
 		"waitingForCli": "Inicializando sessão do agente...",
+		"versions": "Versões",
+		"versionsTooltip": "Agentes paralelos explorando abordagens diferentes",
+		"versionsHelperText": "{{count}} agentes paralelos em branches separados",
+		"versionCount_one": "{{count}} versão",
+		"versionCount_other": "{{count}} versões",
+		"launchVersions": "Lançar {{count}} versões",
+		"startAgent": "Iniciar Agente",
 		"cancelCreating": "Cancelar criação de sessão",
 		"cancelButton": "Cancelar"
 	},

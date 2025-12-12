@@ -1,6 +1,7 @@
 export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
+	autoMode?: boolean
 }
 
 /**
@@ -12,6 +13,10 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
 	const args = ["--json-io", `--workspace=${workspace}`]
 
+	if (options?.autoMode) {
+		args.push("--auto")
+	}
+
 	if (options?.parallelMode) {
 		args.push("--parallel")
 	}
@@ -20,6 +25,11 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 		args.push(`--session=${options.sessionId}`)
 	}
 
-	args.push(prompt)
+	// Only add prompt if non-empty
+	// When resuming with --session, an empty prompt means "continue from where we left off"
+	if (prompt) {
+		args.push(prompt)
+	}
+
 	return args
 }

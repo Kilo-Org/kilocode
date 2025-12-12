@@ -1,5 +1,97 @@
 # kilo-code
 
+## 4.136.0
+
+### Minor Changes
+
+- [#4380](https://github.com/Kilo-Org/kilocode/pull/4380) [`802cc70`](https://github.com/Kilo-Org/kilocode/commit/802cc700a6ef4bc2f7537a4cfff1663da01982c3) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add multi-version feature to Agent Manager - launch 1-4 parallel agents in parallel on git worktrees
+
+### Patch Changes
+
+- [#4396](https://github.com/Kilo-Org/kilocode/pull/4396) [`b2a75e6`](https://github.com/Kilo-Org/kilocode/commit/b2a75e6013c6ec1f01a3e735c51b355a5e1e0308) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add support for GPT-5.2
+
+## 4.135.0
+
+### Minor Changes
+
+- [#4326](https://github.com/Kilo-Org/kilocode/pull/4326) [`6d62090`](https://github.com/Kilo-Org/kilocode/commit/6d620905dfc6d8419bdbc9ffcad54109057e709e) Thanks [@iscekic](https://github.com/iscekic)! - improve session sync mechanism (event based instead of timer)
+
+- [#4333](https://github.com/Kilo-Org/kilocode/pull/4333) [`0093fd1`](https://github.com/Kilo-Org/kilocode/commit/0093fd15e1a3baa80a872bc8889c5e219684004c) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.36.2
+
+    - Restrict GPT-5 tool set to apply_patch for improved compatibility (PR #9853 by @hannesrudolph)
+    - Fix: Resolve Chutes provider model fetching issue (PR #9854 by @cte)
+    - Add MessageManager layer for centralized history coordination, fixing message synchronization issues (PR #9842 by @hannesrudolph)
+    - Fix: Prevent cascading truncation loop by only truncating visible messages (PR #9844 by @hannesrudolph)
+    - Fix: Handle unknown/invalid native tool calls to prevent extension freeze (PR #9834 by @daniel-lxs)
+    - Always enable reasoning for models that require it (PR #9836 by @cte)
+    - ChatView: Smoother stick-to-bottom behavior during streaming (PR #8999 by @hannesrudolph)
+    - UX: Improved error messages and documentation links (PR #9777 by @brunobergher)
+    - Fix: Overly round follow-up question suggestions styling (PR #9829 by @brunobergher)
+    - Ignore input to the execa terminal process for safer command execution (PR #9827 by @mrubens)
+    - Be safer about large file reads (PR #9843 by @jr)
+    - Add gpt-5.1-codex-max model to OpenAI provider (PR #9848 by @hannesrudolph)
+    - Evals UI: Add filtering, bulk delete, tool consolidation, and run notes (PR #9837 by @hannesrudolph)
+    - Evals UI: Add multi-model launch and UI improvements (PR #9845 by @hannesrudolph)
+    - Web: New pricing page (PR #9821 by @brunobergher)
+    - Fix: Restore context when rewinding after condense (#8295 by @hannesrudolph, PR #9665 by @hannesrudolph)
+    - Enable search_and_replace for Minimax models (PR #9780 by @mrubens)
+    - Fix: Resolve Vercel AI Gateway model fetching issues (PR #9791 by @cte)
+    - Fix: Apply conservative max tokens for Cerebras provider (PR #9804 by @sebastiand-cerebras)
+    - Fix: Remove omission detection logic to eliminate false positives (#9785 by @Michaelzag, PR #9787 by @app/roomote)
+    - Refactor: Remove deprecated insert_content tool (PR #9751 by @daniel-lxs)
+    - Chore: Hide parallel tool calls experiment and disable feature (PR #9798 by @hannesrudolph)
+    - Update next.js documentation site dependencies (PR #9799 by @jr)
+    - Fix: Correct download count display on homepage (PR #9807 by @mrubens)
+    - Feat: Add provider routing selection for OpenRouter embeddings (#9144 by @SannidhyaSah, PR #9693 by @SannidhyaSah)
+    - Default Minimax M2 to native tool calling (PR #9778 by @mrubens)
+    - Sanitize the native tool calls to fix a bug with Gemini (PR #9769 by @mrubens)
+    - Fix: Handle malformed native tool calls to prevent hanging (PR #9758 by @daniel-lxs)
+    - Fix: Remove reasoning toggles for GLM-4.5 and GLM-4.6 on z.ai provider (PR #9752 by @roomote)
+    - Refactor: Remove line_count parameter from write_to_file tool (PR #9667 by @hannesrudolph)
+    - Switch to new welcome view for improved onboarding experience (PR #9741 by @mrubens)
+    - Update homepage with latest changes (PR #9675 by @brunobergher)
+    - Improve privacy for stealth models by adding vendor confidentiality section to system prompt (PR #9742 by @mrubens)
+    - Allow models to contain default temperature settings for provider-specific optimal defaults (PR #9734 by @mrubens)
+    - Enable native tool support for all LiteLLM models by default (PR #9736 by @mrubens)
+    - Pass app version to provider for improved request tracking (PR #9730 by @cte)
+    - Fix: Flush pending tool results before task delegation (PR #9726 by @daniel-lxs)
+    - Improve: Better IPC error logging for easier debugging (PR #9727 by @cte)
+    - Metadata-driven subtasks with automatic parent resume and single-open safety for improved task orchestration (#8081 by @hannesrudolph, PR #9090 by @hannesrudolph)
+    - Native tool calling support expanded across many providers: Bedrock (PR #9698 by @mrubens), Cerebras (PR #9692 by @mrubens), Chutes with auto-detection from API (PR #9715 by @daniel-lxs), DeepInfra (PR #9691 by @mrubens), DeepSeek and Doubao (PR #9671 by @daniel-lxs), Groq (PR #9673 by @daniel-lxs), LiteLLM (PR #9719 by @daniel-lxs), Ollama (PR #9696 by @mrubens), OpenAI-compatible providers (PR #9676 by @daniel-lxs), Requesty (PR #9672 by @daniel-lxs), Unbound (PR #9699 by @mrubens), Vercel AI Gateway (PR #9697 by @mrubens), Vertex Gemini (PR #9678 by @daniel-lxs), and xAI with new Grok 4 Fast and Grok 4.1 Fast models (PR #9690 by @mrubens)
+    - Fix: Preserve tool_use blocks in summary for parallel tool calls (#9700 by @SilentFlower, PR #9714 by @SilentFlower)
+    - Default Grok Code Fast to native tools for better performance (PR #9717 by @mrubens)
+    - UX toolbar cleanup and settings consolidation for a cleaner interface (PR #9710 by @brunobergher)
+    - Add model-specific tool customization via `excludedTools` and `includedTools` configuration (PR #9641 by @daniel-lxs)
+    - Add new `apply_patch` native tool for more efficient file editing operations (PR #9663 by @hannesrudolph)
+    - Add new `search_and_replace` tool for batch text replacements across files (PR #9549 by @hannesrudolph)
+    - Add debug buttons to view API and UI history for troubleshooting (PR #9684 by @hannesrudolph)
+    - Include tool format in environment details for better context awareness (PR #9661 by @mrubens)
+    - Fix: Display install count in millions instead of thousands (PR #9677 by @app/roomote)
+    - Fix: Prevent navigation buttons from wrapping on smaller screens (PR #9721 by @app/roomote)
+    - Fix: Race condition in new_task tool for native protocol (PR #9655 by @daniel-lxs)
+
+### Patch Changes
+
+- [#4379](https://github.com/Kilo-Org/kilocode/pull/4379) [`37b90be`](https://github.com/Kilo-Org/kilocode/commit/37b90be866111761dd90c3a0c8f179f5be16242c) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add todo list UI to Agent Manager, displaying task progress above the chat input with a collapsible list view
+
+- [#4266](https://github.com/Kilo-Org/kilocode/pull/4266) [`3ad7248`](https://github.com/Kilo-Org/kilocode/commit/3ad7248effa3b78f93b2f39c875735cd50b78d98) Thanks [@helloGitWorld-ctrl](https://github.com/helloGitWorld-ctrl)! - JetBrains - Improve multiproject conflicts
+
+- [#4366](https://github.com/Kilo-Org/kilocode/pull/4366) [`11c2f87`](https://github.com/Kilo-Org/kilocode/commit/11c2f870a82b39cbbb2d3e9bcdecc8bc13b44adb) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Agent Manager: remind first-time CLI installs to run `kilocode auth` after opening the install terminal, with translations.
+
+- [#4389](https://github.com/Kilo-Org/kilocode/pull/4389) [`ac3350e`](https://github.com/Kilo-Org/kilocode/commit/ac3350e3caff0c3c93e9f3808633d776855cefa8) Thanks [@iscekic](https://github.com/iscekic)! - fix share url handling
+
+- [#4362](https://github.com/Kilo-Org/kilocode/pull/4362) [`d596a08`](https://github.com/Kilo-Org/kilocode/commit/d596a08d6fe5c1a719855616ba5f582407f6769a) Thanks [@iscekic](https://github.com/iscekic)! - extract an extension message handler for extension/cli reuse
+
+- [#4361](https://github.com/Kilo-Org/kilocode/pull/4361) [`24813e9`](https://github.com/Kilo-Org/kilocode/commit/24813e900e50bf63dbb553a951970467221ce73d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix Kilo Auth flow
+
+- [#4374](https://github.com/Kilo-Org/kilocode/pull/4374) [`612e472`](https://github.com/Kilo-Org/kilocode/commit/612e47277d32eb4c481e15fa47c4216015597e88) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix styling issue on task headers
+
+- [#4308](https://github.com/Kilo-Org/kilocode/pull/4308) [`a9eab93`](https://github.com/Kilo-Org/kilocode/commit/a9eab931b11baf20e229dd328dd47557fa29fe49) Thanks [@markijbema](https://github.com/markijbema)! - Minor tuning to autocomplete
+
+- [#4375](https://github.com/Kilo-Org/kilocode/pull/4375) [`58c4096`](https://github.com/Kilo-Org/kilocode/commit/58c40964bb07135a0e9df29a253651a255ccffa2) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Agent Manager - Local CLI install for immutable environments
+
+- [#4369](https://github.com/Kilo-Org/kilocode/pull/4369) [`5195bd0`](https://github.com/Kilo-Org/kilocode/commit/5195bd00067d83474606dfca0df71abfed13566a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Agent-Manager - Fix Chat Input scroll
+
 ## 4.134.0
 
 ### Minor Changes
