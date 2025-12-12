@@ -310,5 +310,9 @@
 		"tryAgain": "حاول مرة أخرى",
 		"cancelled": "تم إلغاء المصادقة",
 		"initiating": "جاري بدء المصادقة..."
+	},
+	"speechToText": {
+		"stopRecording": "إيقاف الإدخال الصوتي",
+		"startRecording": "ابدأ الإدخال الصوتي"
 	}
 }

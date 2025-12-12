@@ -311,5 +311,9 @@
 		"tryAgain": "再試行",
 		"cancelled": "認証がキャンセルされました",
 		"initiating": "認証を開始しています..."
+	},
+	"speechToText": {
+		"startRecording": "音声入力を開始",
+		"stopRecording": "音声入力を停止"
 	}
 }

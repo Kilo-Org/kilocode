@@ -956,6 +956,10 @@
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		},
+		"SPEECH_TO_TEXT": {
+			"name": "Speech-to-Text (STT)",
+			"description": "When enabled, Kilo Code can transcribe your voice into text using OpenAI's Whisper model. Click the microphone button in the chat to start recording. Requires FFmpeg to be installed and a configured OpenAI API provider."
+		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
 			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",

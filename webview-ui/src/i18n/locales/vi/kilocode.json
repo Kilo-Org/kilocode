@@ -311,5 +311,9 @@
 		"tryAgain": "Thử lại",
 		"cancelled": "Đã hủy xác thực",
 		"initiating": "Đang bắt đầu xác thực..."
+	},
+	"speechToText": {
+		"stopRecording": "Dừng nhập bằng giọng nói",
+		"startRecording": "Bắt đầu nhập bằng giọng nói"
 	}
 }

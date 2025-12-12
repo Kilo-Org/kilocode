@@ -95,7 +95,7 @@ import { MarketplaceManager, MarketplaceItemType } from "../../services/marketpl
 import { UsageTracker } from "../../utils/usage-tracker" // kilocode_change
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
-import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
+import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers" // kilocode_change
 import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-core" // kilocode_change
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
@@ -3641,6 +3641,14 @@ export const webviewMessageHandler = async (
 				await updateGlobalState(stateKey, stateValue)
 				await provider.postStateToWebview()
 			}
+			break
+		}
+		// kilocode_change start: STT (Speech-to-Text) handlers
+		case "stt:start":
+		case "stt:stop":
+		case "stt:cancel": {
+			const { handleSTTCommand } = await import("./sttHandlers")
+			await handleSTTCommand(provider, message as any)
 			break
 		}
 		// kilocode_change end: Type-safe global state handler
