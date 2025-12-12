@@ -385,4 +385,182 @@ console.log('test');</COMPLETION>`
 			expect(mockManager.inlineCompletionProviderDisposable).toBeNull()
 		})
 	})
+
+	describe("snooze functionality", () => {
+		it("should return false for isSnoozed when snoozeUntil is not set", () => {
+			const mockManager = {
+				settings: {} as any,
+				isSnoozed() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return false
+					return Date.now() < snoozeUntil
+				},
+			}
+
+			expect(mockManager.isSnoozed()).toBe(false)
+		})
+
+		it("should return false for isSnoozed when snoozeUntil is in the past", () => {
+			const mockManager = {
+				settings: { snoozeUntil: Date.now() - 1000 } as any,
+				isSnoozed() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return false
+					return Date.now() < snoozeUntil
+				},
+			}
+
+			expect(mockManager.isSnoozed()).toBe(false)
+		})
+
+		it("should return true for isSnoozed when snoozeUntil is in the future", () => {
+			const mockManager = {
+				settings: { snoozeUntil: Date.now() + 60000 } as any,
+				isSnoozed() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return false
+					return Date.now() < snoozeUntil
+				},
+			}
+
+			expect(mockManager.isSnoozed()).toBe(true)
+		})
+
+		it("should return 0 for getSnoozeRemainingSeconds when not snoozed", () => {
+			const mockManager = {
+				settings: {} as any,
+				getSnoozeRemainingSeconds() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return 0
+					const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
+					return remaining
+				},
+			}
+
+			expect(mockManager.getSnoozeRemainingSeconds()).toBe(0)
+		})
+
+		it("should return remaining seconds when snoozed", () => {
+			const snoozeUntil = Date.now() + 30000 // 30 seconds from now
+			const mockManager = {
+				settings: { snoozeUntil } as any,
+				getSnoozeRemainingSeconds() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return 0
+					const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
+					return remaining
+				},
+			}
+
+			const remaining = mockManager.getSnoozeRemainingSeconds()
+			expect(remaining).toBeGreaterThan(0)
+			expect(remaining).toBeLessThanOrEqual(30)
+		})
+
+		it("should not register provider when snoozed even if enableAutoTrigger is true", async () => {
+			const mockDisposable = { dispose: vi.fn() }
+			const mockRegister = vi.fn().mockReturnValue(mockDisposable)
+
+			const mockManager = {
+				settings: { enableAutoTrigger: true, snoozeUntil: Date.now() + 60000 } as any,
+				inlineCompletionProviderDisposable: null as any,
+				inlineCompletionProvider: {} as any,
+				context: { subscriptions: [] as any[] },
+				isSnoozed() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return false
+					return Date.now() < snoozeUntil
+				},
+				async updateInlineCompletionProviderRegistration() {
+					const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
+
+					if (this.inlineCompletionProviderDisposable) {
+						this.inlineCompletionProviderDisposable.dispose()
+						this.inlineCompletionProviderDisposable = null
+					}
+
+					if (!shouldBeRegistered) return
+
+					this.inlineCompletionProviderDisposable = mockRegister("*", this.inlineCompletionProvider)
+					this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
+				},
+			}
+
+			await mockManager.updateInlineCompletionProviderRegistration()
+
+			// Provider should NOT be registered because we're snoozed
+			expect(mockRegister).not.toHaveBeenCalled()
+			expect(mockManager.inlineCompletionProviderDisposable).toBeNull()
+		})
+
+		it("should register provider when snooze expires", async () => {
+			const mockDisposable = { dispose: vi.fn() }
+			const mockRegister = vi.fn().mockReturnValue(mockDisposable)
+
+			const mockManager = {
+				settings: { enableAutoTrigger: true, snoozeUntil: Date.now() - 1000 } as any, // Expired snooze
+				inlineCompletionProviderDisposable: null as any,
+				inlineCompletionProvider: {} as any,
+				context: { subscriptions: [] as any[] },
+				isSnoozed() {
+					const snoozeUntil = this.settings?.snoozeUntil
+					if (!snoozeUntil) return false
+					return Date.now() < snoozeUntil
+				},
+				async updateInlineCompletionProviderRegistration() {
+					const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
+
+					if (this.inlineCompletionProviderDisposable) {
+						this.inlineCompletionProviderDisposable.dispose()
+						this.inlineCompletionProviderDisposable = null
+					}
+
+					if (!shouldBeRegistered) return
+
+					this.inlineCompletionProviderDisposable = mockRegister("*", this.inlineCompletionProvider)
+					this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
+				},
+			}
+
+			await mockManager.updateInlineCompletionProviderRegistration()
+
+			// Provider should be registered because snooze has expired
+			expect(mockRegister).toHaveBeenCalledWith("*", mockManager.inlineCompletionProvider)
+			expect(mockManager.inlineCompletionProviderDisposable).toBe(mockDisposable)
+		})
+
+		it("should clear snooze timer on dispose", () => {
+			const mockTimer = setTimeout(() => {}, 1000)
+			const clearTimeoutSpy = vi.spyOn(global, "clearTimeout")
+
+			const mockManager = {
+				snoozeTimer: mockTimer as any,
+				statusBar: { dispose: vi.fn() },
+				inlineCompletionProviderDisposable: null as any,
+				inlineCompletionProvider: { dispose: vi.fn() },
+				dispose() {
+					this.statusBar?.dispose()
+
+					if (this.snoozeTimer) {
+						clearTimeout(this.snoozeTimer)
+						this.snoozeTimer = null
+					}
+
+					if (this.inlineCompletionProviderDisposable) {
+						this.inlineCompletionProviderDisposable.dispose()
+						this.inlineCompletionProviderDisposable = null
+					}
+
+					this.inlineCompletionProvider.dispose()
+				},
+			}
+
+			mockManager.dispose()
+
+			expect(clearTimeoutSpy).toHaveBeenCalledWith(mockTimer)
+			expect(mockManager.snoozeTimer).toBeNull()
+
+			clearTimeoutSpy.mockRestore()
+		})
+	})
 })
