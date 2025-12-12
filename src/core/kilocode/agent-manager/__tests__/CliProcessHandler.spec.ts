@@ -533,6 +533,28 @@ describe("CliProcessHandler", () => {
 				payload: expect.objectContaining({ ask: "api_req_failed" }),
 			})
 		})
+
+		it("marks auth error when api_req_failed includes provider prefix", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const failEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: {
+					type: "ask",
+					ask: "api_req_failed",
+					text: "Provider error: 401 No cookie auth credentials found",
+				},
+			})
+			mockProcess.stdout.emit("data", Buffer.from(failEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "api_req_failed",
+				message: "Authentication failed: Provider error: 401 No cookie auth credentials found",
+				authError: true,
+				payload: expect.objectContaining({ ask: "api_req_failed" }),
+			})
+		})
 	})
 
 	describe("stopProcess", () => {

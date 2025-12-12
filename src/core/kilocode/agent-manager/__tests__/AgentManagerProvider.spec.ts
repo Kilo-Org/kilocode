@@ -298,6 +298,25 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(warningSpy.mock.calls[0][0]).toContain(message)
 	})
 
+	it("shows auth popup again on a new start attempt", async () => {
+		const vscode = await import("vscode")
+		const warningSpy = vscode.window.showWarningMessage as unknown as Mock
+
+		// Avoid the full CLI spawn flow; we only want to exercise per-attempt dedupe reset.
+		;(provider as any).startAgentSession = vi.fn().mockResolvedValue(undefined)
+
+		const message = "Authentication failed: Provider error: 401 No cookie auth credentials found"
+
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		expect(warningSpy).toHaveBeenCalledTimes(1)
+
+		// New attempt should reset dedupe state
+		await (provider as any).handleStartSession({ prompt: "hi", parallelMode: false })
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		expect(warningSpy).toHaveBeenCalledTimes(2)
+	})
+
 	it("builds payment required message with parsed title and link", async () => {
 		const vscode = await import("vscode")
 		const warningSpy = vscode.window.showWarningMessage as unknown as Mock

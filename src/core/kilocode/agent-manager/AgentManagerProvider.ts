@@ -276,6 +276,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Supports multi-version mode: when versions > 1, spawns multiple sessions sequentially.
 	 */
 	private async handleStartSession(message: { [key: string]: unknown }): Promise<void> {
+		// Reset auth warning dedupe for each start attempt so users see the login prompt
+		// every time they try to start an agent and authentication fails.
+		this.lastAuthErrorMessage = undefined
+
 		const prompt = message.prompt as string
 		// Clamp versions to valid range to prevent runaway process spawning
 		const rawVersions = (message.versions as number) ?? 1

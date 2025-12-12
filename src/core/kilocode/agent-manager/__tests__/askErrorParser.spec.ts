@@ -88,6 +88,13 @@ describe("askErrorParser", () => {
 			expect(result.message).toMatch(/^Authentication failed:/)
 		})
 
+		it("detects 401 status code even when not at start of message", () => {
+			const payload: KilocodePayload = { text: "Provider error: 401 No cookie auth credentials found" }
+			const result = extractApiReqFailedMessage(payload)
+			expect(result.authError).toBe(true)
+			expect(result.message).toBe("Authentication failed: Provider error: 401 No cookie auth credentials found")
+		})
+
 		it("does not mark non-401 status codes as auth error", () => {
 			const payload: KilocodePayload = { text: "500 Internal Server Error" }
 			const result = extractApiReqFailedMessage(payload)
