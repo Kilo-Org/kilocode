@@ -39,6 +39,13 @@
 		"branch": "Cabang",
 		"creatingSession": "Membuat sesi...",
 		"waitingForCli": "Menginisialisasi sesi agen...",
+		"versions": "Versi",
+		"versionsTooltip": "Agen paralel menjelajahi pendekatan yang berbeda",
+		"versionsHelperText": "{{count}} agen paralel pada cabang terpisah",
+		"versionCount_one": "{{count}} versi",
+		"versionCount_other": "{{count}} versi",
+		"launchVersions": "Luncurkan {{count}} versi",
+		"startAgent": "Mulai Agen",
 		"cancelCreating": "Batalkan pembuatan sesi",
 		"cancelButton": "Batal"
 	},

@@ -39,6 +39,13 @@
 		"branch": "Dal",
 		"creatingSession": "Oturum oluşturuluyor...",
 		"waitingForCli": "Ajan oturumu başlatılıyor...",
+		"versions": "Sürümler",
+		"versionsTooltip": "Farklı yaklaşımları keşfeden paralel ajanlar",
+		"versionsHelperText": "Ayrı dallarda {{count}} paralel ajan",
+		"versionCount_one": "{{count}} sürüm",
+		"versionCount_other": "{{count}} sürüm",
+		"launchVersions": "{{count}} sürüm başlat",
+		"startAgent": "Ajanı Başlat",
 		"cancelCreating": "Oturum oluşturmayı iptal et",
 		"cancelButton": "İptal"
 	},

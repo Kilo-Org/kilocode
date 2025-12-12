@@ -36,7 +36,6 @@ import {
 	GeminiCliHandler,
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
-	MiniMaxAnthropicHandler,
 	SapAiCoreHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
@@ -50,7 +49,7 @@ import {
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
-	// MiniMaxHandler, // kilocode_change
+	MiniMaxHandler,
 	BasetenHandler,
 } from "./providers"
 // kilocode_change start
@@ -242,7 +241,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
 		case "minimax":
-			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
+			return new MiniMaxHandler(options)
 		case "baseten":
 			return new BasetenHandler(options)
 		default:

@@ -28,6 +28,7 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
+	autoMode?: boolean // True if session was started with --auto flag
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
@@ -57,6 +58,7 @@ export interface CliProcessHandlerCallbacks {
 	onChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	onSessionCreated: (sawApiReqStarted: boolean) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
+	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
 }
 
 export class CliProcessHandler {
@@ -84,7 +86,9 @@ export class CliProcessHandler {
 		cliPath: string,
 		workspace: string,
 		prompt: string,
-		options: { parallelMode?: boolean; sessionId?: string; label?: string; gitUrl?: string } | undefined,
+		options:
+			| { parallelMode?: boolean; autoMode?: boolean; sessionId?: string; label?: string; gitUrl?: string }
+			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		// Check if we're resuming an existing session (sessionId explicitly provided)
@@ -110,6 +114,7 @@ export class CliProcessHandler {
 			// New session - create pending session state
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
+				autoMode: options?.autoMode,
 				gitUrl: options?.gitUrl,
 			})
 			this.debugLog(`Pending session created, waiting for CLI session_created event`)
@@ -119,6 +124,7 @@ export class CliProcessHandler {
 		// Build CLI command
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			parallelMode: options?.parallelMode,
+			autoMode: options?.autoMode,
 			sessionId: options?.sessionId,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
@@ -166,6 +172,7 @@ export class CliProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
+				autoMode: options?.autoMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
@@ -381,6 +388,7 @@ export class CliProcessHandler {
 			startTime,
 			parser,
 			parallelMode,
+			autoMode,
 			worktreeBranch,
 			desiredSessionId,
 			desiredLabel,
@@ -404,6 +412,7 @@ export class CliProcessHandler {
 			// Create new session (also sets selectedId)
 			session = this.registry.createSession(sessionId, prompt, startTime, {
 				parallelMode,
+				autoMode,
 				labelOverride: desiredLabel,
 				gitUrl,
 			})
@@ -483,6 +492,8 @@ export class CliProcessHandler {
 		if (code === 0) {
 			this.registry.updateSessionStatus(sessionId, "done", code)
 			this.callbacks.onSessionLog(sessionId, "Agent completed")
+			// Notify that session completed successfully (for state machine transition)
+			this.callbacks.onSessionCompleted?.(sessionId, code)
 		} else {
 			this.registry.updateSessionStatus(sessionId, "error", code ?? undefined)
 			this.callbacks.onSessionLog(

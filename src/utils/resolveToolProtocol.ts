@@ -1,18 +1,5 @@
 import { ToolProtocol, TOOL_PROTOCOL } from "@roo-code/types"
 import type { ProviderSettings, ModelInfo } from "@roo-code/types"
-import { ProviderName, getModelId } from "@roo-code/types" // kilocode_change
-
-// kilocode_change start
-export const modelsDefaultingToNativeKeywords = [
-	"claude-haiku-4.5",
-	"claude-haiku-4-5",
-	"gpt-5-codex",
-	"gpt-5.1-codex",
-	"minimax-m2",
-]
-
-export const providersDefaultingToNativeKeywords = ["synthetic", "inception"]
-// kilocode_change end
 
 /**
  * Resolve the effective tool protocol based on the precedence hierarchy:
@@ -43,21 +30,6 @@ export function resolveToolProtocol(providerSettings: ProviderSettings, modelInf
 	if (modelInfo?.defaultToolProtocol) {
 		return modelInfo.defaultToolProtocol
 	}
-
-	// kilocode_change start: return native for specified models
-	const model = getModelId(providerSettings)?.toLowerCase()
-	if (!model) {
-		console.error("getActiveToolUseStyle: model missing, returning xml")
-		return TOOL_PROTOCOL.XML
-	}
-
-	if (
-		providersDefaultingToNativeKeywords.includes(providerSettings.apiProvider as ProviderName) ||
-		modelsDefaultingToNativeKeywords.some((keyword) => model.includes(keyword))
-	) {
-		return TOOL_PROTOCOL.NATIVE
-	}
-	// kilocode_change end
 
 	// 3. XML Fallback
 	return TOOL_PROTOCOL.XML
