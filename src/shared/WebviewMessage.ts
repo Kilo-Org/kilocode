@@ -334,6 +334,7 @@ export interface WebviewMessage {
 	query?: string
 	setting?: string
 	slug?: string
+	language?: string // User's language for speech transcription (STT)
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload
