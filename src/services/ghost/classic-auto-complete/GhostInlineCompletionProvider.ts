@@ -529,6 +529,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			strategy: prompt.strategy,
 		}
 
+		// Defense-in-depth: credentials may become invalid between the provider gate and the actual
+		// debounced execution (e.g., profile reload calling GhostModel.cleanup()).
+		// In that case, do not attempt an LLM call at all.
+		if (!this.model || !this.model.hasValidCredentials()) {
+			return
+		}
+
 		try {
 			// Curry processSuggestion with prefix, suffix, model, and telemetry context
 			const curriedProcessSuggestion = (text: string) =>

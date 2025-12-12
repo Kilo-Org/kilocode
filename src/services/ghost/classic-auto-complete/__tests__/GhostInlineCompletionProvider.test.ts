@@ -1609,6 +1609,24 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(mockModel.generateResponse).not.toHaveBeenCalled()
 		})
 
+		it("should not attempt an LLM call if credentials become invalid before the debounced fetch executes", async () => {
+			// First call executes immediately (leading edge) - just to move provider into debounced mode
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+
+			// Second call will be debounced. Simulate a model reload happening before the timer fires.
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
+
+			const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Let the trailing-edge debounce fire
+			await vi.advanceTimersByTimeAsync(300)
+			await promise
+
+			// If fetch-time validation is working, we do not call generateResponse again.
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+		})
+
 		it("should return suggestions when model has valid credentials", async () => {
 			// Ensure hasValidCredentials returns true
 			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(true)
