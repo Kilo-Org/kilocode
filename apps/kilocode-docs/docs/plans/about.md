@@ -25,6 +25,7 @@ No credits are included with a Teams or Enterprise plan purchase.
 - **Centralized billing** - one invoice for your whole team
 - **Complete transparency** - see every request, cost, and usage pattern
 - **Team management** - roles, permissions, and usage controls
+- **AI Adoption Score** - see how well your team is using AI to accelerate development
 
 **Cost:** $15 per user per month
 

@@ -35,6 +35,7 @@ export class SearchFilesTool extends BaseTool<"search_files"> {
 		if (!relDirPath) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("search_files")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("search_files", "path"))
 			return
 		}
@@ -42,6 +43,7 @@ export class SearchFilesTool extends BaseTool<"search_files"> {
 		if (!regex) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("search_files")
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("search_files", "regex"))
 			return
 		}

@@ -1,7 +1,7 @@
 function processOrder(order) {
   // TODO: Add comprehensive logging for order processing
   console.log(`Processing order: ${JSON.stringify(order)}`);
-  logger.info(`Order validation started for order ID: ${order.id}`);
+  // Simulate order processing logic
   const result = validateOrder(order);
   return result;
 }

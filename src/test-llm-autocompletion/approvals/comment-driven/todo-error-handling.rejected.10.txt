@@ -1,0 +1,14 @@
+function processData(data) {
+  // TODO: Implement error handling for invalid data
+  // TODO: Implement data validation
+  // TODO: Implement data transformation
+  // TODO: Implement data filtering
+  // TODO: Implement data aggregation
+  // TODO: Implement data sorting
+  // TODO: Implement data pagination
+
+  // Example: Transform data to uppercase
+  const processedData = data.map(item => item.toUpperCase());
+
+  return processedData;
+}

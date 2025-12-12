@@ -14,7 +14,7 @@ Then, make sure you place your Kilo Code API token in the CLI config:
 kilocode config # this opens up your editor
 ```
 
-You can find your Kilo Code API token on your profile page at [app.kilocode.ai](https://app.kilocode.ai), and place it in the `kilocodeToken` field in the CLI config.
+You can find your Kilo Code API token on your profile page at [app.kilo.ai](https://app.kilo.ai), and place it in the `kilocodeToken` field in the CLI config.
 
 ## Known Issues
 
@@ -235,6 +235,49 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### DevTools
+### Getting Started
+
+To build and run the CLI locally off your branch:
+
+#### Build the VS Code extension
+
+```shell
+cd src
+pnpm bundle
+pnpm vsix
+pnpm vsix:unpackged
+cd ..
+```
+
+#### Install CLI dependencies
+
+```shell
+cd cli
+pnpm install
+pnpm deps:install
+```
+
+#### Build the CLI
+
+```shell
+pnpm clean
+pnpm clean:kilocode
+pnpm copy:kilocode
+pnpm build
+```
+
+#### Configure CLI settings
+
+```shell
+pnpm start config
+```
+
+#### Run the built CLI
+
+```shell
+pnpm start
+```
+
+### Using DevTools
 
 In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.

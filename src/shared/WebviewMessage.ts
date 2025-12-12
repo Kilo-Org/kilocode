@@ -85,6 +85,7 @@ export interface WebviewMessage {
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
 		| "requestRooModels"
+		| "requestRooCreditBalance"
 		| "requestVsCodeLmModels"
 		| "requestHuggingFaceModels"
 		| "requestSapAiCoreModels" // kilocode_change
@@ -113,9 +114,12 @@ export interface WebviewMessage {
 		| "toggleToolEnabledForPrompt"
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
+		| "fuzzyMatchThreshold" // kilocode_change
 		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "fastApplyModel" // kilocode_change: Fast Apply model selection
 		| "fastApplyApiProvider" // kilocode_change: Fast Apply model api base url
+		| "writeDelayMs" // kilocode_change
+		| "diagnosticsEnabled" // kilocode_change
 		| "enhancePrompt"
 		| "enhancedPrompt"
 		| "draggedImages"
@@ -137,6 +141,10 @@ export interface WebviewMessage {
 		| "commitMessageApiConfigId" // kilocode_change
 		| "terminalCommandApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
+		| "stt:start" // kilocode_change: Start STT recording
+		| "stt:stop" // kilocode_change: Stop STT recording
+		| "stt:cancel" // kilocode_change: Cancel STT recording
+		| "includeTaskHistoryInEnhance" // kilocode_change
 		| "autoApprovalEnabled"
 		| "yoloMode" // kilocode_change
 		| "updateCustomMode"
@@ -219,6 +227,7 @@ export interface WebviewMessage {
 		| "marketplaceInstallResult"
 		| "fetchMarketplaceData"
 		| "switchTab"
+		| "profileThresholds" // kilocode_change
 		| "editMessage" // kilocode_change
 		| "systemNotificationsEnabled" // kilocode_change
 		| "dismissNotificationId" // kilocode_change
@@ -231,7 +240,7 @@ export interface WebviewMessage {
 		| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
 		| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
 		| "manualPurge" // kilocode_change
-		| "shareTaskSuccess"
+		| "shareTaskSuccess" // kilocode_change
 		| "exportMode"
 		| "exportModeResult"
 		| "importMode"
@@ -256,12 +265,32 @@ export interface WebviewMessage {
 		| "getDismissedUpsells"
 		| "updateSettings"
 		| "requestManagedIndexerState" // kilocode_change
+		| "allowedCommands"
+		| "deniedCommands"
+		| "killBrowserSession"
+		| "openBrowserSessionPanel"
+		| "showBrowserSessionPanelAtStep"
+		| "refreshBrowserSessionPanel"
+		| "browserPanelDidLaunch"
 		| "addTaskToHistory" // kilocode_change
+		| "sessionShare" // kilocode_change
+		| "shareTaskSession" // kilocode_change
+		| "sessionFork" // kilocode_change
+		| "sessionShow" // kilocode_change
+		| "sessionSelect" // kilocode_change
 		| "singleCompletion" // kilocode_change
+		| "openDebugApiHistory"
+		| "openDebugUiHistory"
+		| "startDeviceAuth" // kilocode_change: Start device auth flow
+		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
+		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
+		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 	text?: string
 	completionRequestId?: string // kilocode_change
+	shareId?: string // kilocode_change - for sessionFork
+	sessionId?: string // kilocode_change - for sessionSelect
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud" | "auth" // kilocode_change
 	disabled?: boolean
 	context?: string
 	dataUri?: string
@@ -270,6 +299,9 @@ export interface WebviewMessage {
 	images?: string[]
 	bool?: boolean
 	value?: number
+	stepIndex?: number
+	isLaunchAction?: boolean
+	forceShow?: boolean
 	commands?: string[]
 	audioType?: AudioType
 	// kilocode_change begin
@@ -302,6 +334,7 @@ export interface WebviewMessage {
 	query?: string
 	setting?: string
 	slug?: string
+	language?: string // User's language for speech transcription (STT)
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload
@@ -325,6 +358,7 @@ export interface WebviewMessage {
 	upsellId?: string // For dismissUpsell
 	list?: string[] // For dismissedUpsells response
 	organizationId?: string | null // For organization switching
+	useProviderSignup?: boolean // For rooCloudSignIn to use provider signup flow
 	historyItem?: HistoryItem // kilocode_change For addTaskToHistory
 	codeIndexSettings?: {
 		// Global state settings
@@ -337,6 +371,7 @@ export interface WebviewMessage {
 			| "gemini"
 			| "mistral"
 			| "vercel-ai-gateway"
+			| "bedrock"
 			| "openrouter"
 		codebaseIndexVectorStoreProvider?: "lancedb" | "qdrant" // kilocode_change
 		codebaseIndexLancedbVectorStoreDirectory?: string // kilocode_change
@@ -344,8 +379,15 @@ export interface WebviewMessage {
 		codebaseIndexEmbedderModelId: string
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 		codebaseIndexOpenAiCompatibleBaseUrl?: string
+		codebaseIndexBedrockRegion?: string
+		codebaseIndexBedrockProfile?: string
 		codebaseIndexSearchMaxResults?: number
 		codebaseIndexSearchMinScore?: number
+		// kilocode_change start
+		codebaseIndexEmbeddingBatchSize?: number
+		codebaseIndexScannerMaxBatchRetries?: number
+		// kilocode_change end
+		codebaseIndexOpenRouterSpecificProvider?: string // OpenRouter provider routing
 
 		// Secret settings
 		codeIndexOpenAiKey?: string

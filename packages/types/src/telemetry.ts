@@ -21,10 +21,18 @@ export type TelemetrySetting = z.infer<typeof telemetrySettingsSchema>
 export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
+
 	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
 	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
-	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
-	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
+
+	AUTOCOMPLETE_SUGGESTION_REQUESTED = "Autocomplete Suggestion Requested",
+	AUTOCOMPLETE_LLM_REQUEST_COMPLETED = "Autocomplete LLM Request Completed",
+	AUTOCOMPLETE_LLM_REQUEST_FAILED = "Autocomplete LLM Request Failed",
+	AUTOCOMPLETE_LLM_SUGGESTION_RETURNED = "Autocomplete LLM Suggestion Returned",
+	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
+	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
+	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
@@ -41,6 +49,13 @@ export enum TelemetryEventName {
 	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
 	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
 	ASK_APPROVAL = "Ask Approval",
+	MISSING_MANAGED_INDEXER = "Missing Managed Indexer",
+
+	AGENT_MANAGER_OPENED = "Agent Manager Opened",
+	AGENT_MANAGER_SESSION_STARTED = "Agent Manager Session Started",
+	AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
+	AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",
+	AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -97,6 +112,7 @@ export enum TelemetryEventName {
 	CONSECUTIVE_MISTAKE_ERROR = "Consecutive Mistake Error",
 	CODE_INDEX_ERROR = "Code Index Error",
 	TELEMETRY_SETTINGS_CHANGED = "Telemetry Settings Changed",
+	MODEL_CACHE_EMPTY_RESPONSE = "Model Cache Empty Response",
 }
 
 /**
@@ -201,14 +217,24 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_FAILED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
 			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
 			TelemetryEventName.GHOST_SERVICE_DISABLED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_OPENED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_STARTED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_COMPLETED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,
@@ -245,6 +271,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.SHELL_INTEGRATION_ERROR,
 			TelemetryEventName.CONSECUTIVE_MISTAKE_ERROR,
 			TelemetryEventName.CODE_INDEX_ERROR,
+			TelemetryEventName.MODEL_CACHE_EMPTY_RESPONSE,
 			TelemetryEventName.CONTEXT_CONDENSED,
 			TelemetryEventName.SLIDING_WINDOW_TRUNCATION,
 			TelemetryEventName.TAB_SHOWN,

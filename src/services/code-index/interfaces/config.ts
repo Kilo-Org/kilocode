@@ -19,11 +19,16 @@ export interface CodeIndexConfig {
 	geminiOptions?: { apiKey: string }
 	mistralOptions?: { apiKey: string }
 	vercelAiGatewayOptions?: { apiKey: string }
-	openRouterOptions?: { apiKey: string }
+	bedrockOptions?: { region: string; profile?: string }
+	openRouterOptions?: { apiKey: string; specificProvider?: string }
 	qdrantUrl?: string
 	qdrantApiKey?: string
 	searchMinScore?: number
 	searchMaxResults?: number
+	// kilocode_change start
+	embeddingBatchSize?: number
+	scannerMaxBatchRetries?: number
+	// kilocode_change end
 }
 
 /**
@@ -46,7 +51,10 @@ export type PreviousConfigSnapshot = {
 	geminiApiKey?: string
 	mistralApiKey?: string
 	vercelAiGatewayApiKey?: string
+	bedrockRegion?: string
+	bedrockProfile?: string
 	openRouterApiKey?: string
+	openRouterSpecificProvider?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string
 }

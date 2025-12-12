@@ -13,7 +13,7 @@ import { EXTERNAL_LINKS } from "@/lib/constants"
 import { useLogoSrc } from "@/lib/hooks/use-logo-src"
 import { ScrollButton } from "@/components/ui"
 import ThemeToggle from "@/components/chromes/theme-toggle"
-import { ChevronDown, Cloud, X } from "lucide-react"
+import { ChevronDown, X } from "lucide-react"
 
 interface NavBarProps {
 	stars: string | null
@@ -93,35 +93,41 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 					</div>
 				</nav>
 
-				<div className="hidden md:flex md:items-center md:space-x-4">
-					<div className="flex flex-row space-x-2">
+				<div className="hidden md:flex md:items-center md:space-x-4 flex-shrink-0">
+					<div className="flex flex-row space-x-2 flex-shrink-0">
 						<ThemeToggle />
 						<Link
 							href={EXTERNAL_LINKS.GITHUB}
 							target="_blank"
-							className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:flex">
+							className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground md:flex whitespace-nowrap">
 							<RxGithubLogo className="h-4 w-4" />
 							{stars !== null && <span>{stars}</span>}
 						</Link>
 					</div>
+					<a
+						href={EXTERNAL_LINKS.CLOUD_APP_LOGIN}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="hidden items-center gap-1.5 rounded-md py-2 text-sm border border-primary-background px-4 font-medium text-primary-background transition-all duration-200 hover:shadow-lg hover:scale-105 lg:flex">
+						Log in
+					</a>
+					<a
+						href={EXTERNAL_LINKS.CLOUD_APP_SIGNUP_HOME}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="hidden items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-200 hover:shadow-lg hover:scale-105 md:flex">
+						Sign Up
+					</a>
 					<Link
 						href={EXTERNAL_LINKS.MARKETPLACE}
 						target="_blank"
-						className="hidden items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-200 hover:shadow-lg hover:scale-105 md:flex">
+						className="hidden items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-200 hover:shadow-lg hover:scale-105 md:flex whitespace-nowrap">
 						<VscVscode className="-mr-[2px] mt-[1px] h-4 w-4" />
 						<span>
 							Install <span className="font-black max-lg:text-xs">&middot;</span>
 						</span>
 						{downloads !== null && <span>{downloads}</span>}
 					</Link>
-					<a
-						href={EXTERNAL_LINKS.CLOUD_APP_LOGIN}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="hidden items-center gap-1.5 rounded-md py-2 text-sm border border-primary-background px-4 font-medium text-primary-background transition-all duration-200 hover:shadow-lg hover:scale-105 md:flex">
-						<Cloud className="inline h-4 w-4" />
-						Log in
-					</a>
 				</div>
 
 				{/* Mobile Menu Button */}
@@ -226,15 +232,24 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								{downloads !== null && <span>{downloads}</span>}
 							</Link>
 						</div>
-						<a
-							href={EXTERNAL_LINKS.CLOUD_APP_LOGIN}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="flex items-center justify-center gap-2 rounded-lg border border-primary bg-background p-4 mx-4 mb-4 text-base font-semibold text-primary"
-							onClick={() => setIsMenuOpen(false)}>
-							<Cloud className="h-5 w-5" />
-							Log in
-						</a>
+						<div className="flex gap-2 px-4 pb-4">
+							<a
+								href={EXTERNAL_LINKS.CLOUD_APP_SIGNUP_HOME}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="flex items-center justify-center gap-2 rounded-full border border-primary bg-foreground p-4 w-full text-base font-semibold text-background"
+								onClick={() => setIsMenuOpen(false)}>
+								Sign up
+							</a>
+							<a
+								href={EXTERNAL_LINKS.CLOUD_APP_LOGIN}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="flex items-center justify-center gap-2 rounded-full border border-primary bg-background p-4 w-full text-base font-semibold text-primary"
+								onClick={() => setIsMenuOpen(false)}>
+								Log in
+							</a>
+						</div>
 					</div>
 				</nav>
 			</div>

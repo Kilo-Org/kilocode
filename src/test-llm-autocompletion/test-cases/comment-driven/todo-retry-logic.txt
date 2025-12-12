@@ -1,6 +1,7 @@
-# Description: Should implement retry logic with exponential backoff
+#### Description: Should implement retry logic with exponential backoff
+#### Filename: http-client.js
 async function fetchWithRetry(url) {
-  // TODO: Implement retry logic with exponential backoff<<<CURSOR>>>
+  // TODO: Implement retry logic with exponential backoff<<<AUTOCOMPLETE_HERE>>>
   const response = await fetch(url);
   return response.json();
 }

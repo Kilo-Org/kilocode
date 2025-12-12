@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Tautan organisasi disalin ke clipboard",
 		"shareSuccessPublic": "Tautan publik disalin ke clipboard",
 		"openInCloud": "Buka tugas di Roo Code Cloud",
-		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka."
+		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka.",
+		"openApiHistory": "Buka Riwayat API",
+		"openUiHistory": "Buka Riwayat UI"
 	},
 	"history": {
 		"title": "Riwayat"
@@ -145,7 +147,18 @@
 		"failed": "Permintaan API Gagal",
 		"streaming": "Permintaan API...",
 		"cancelled": "Permintaan API Dibatalkan",
-		"streamingFailed": "Streaming API Gagal"
+		"streamingFailed": "Streaming API Gagal",
+		"errorTitle": "Kesalahan API {{code}}",
+		"errorMessage": {
+			"docs": "Dokumentasi",
+			"400": "Penyedia tidak dapat memproses permintaan seperti yang dibuat. Hentikan tugas dan coba pendekatan berbeda.",
+			"401": "Tidak dapat mengautentikasi dengan penyedia. Harap periksa konfigurasi kunci API Anda.",
+			"402": "Tampaknya Anda telah kehabisan dana/kredit di akun Anda. Pergi ke penyedia Anda dan tambahkan lebih banyak untuk melanjutkan.",
+			"403": "Tidak sah. Kunci API Anda valid, tetapi penyedia menolak untuk menyelesaikan permintaan ini.",
+			"429": "Terlalu banyak permintaan. Anda dibatasi tingkat oleh penyedia. Harap tunggu sebentar sebelum panggilan API berikutnya Anda.",
+			"500": "Kesalahan server penyedia. Ada yang salah di sisi penyedia, tidak ada yang salah dengan permintaan Anda.",
+			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -307,19 +320,18 @@
 			"goToSettingsButton": "Pergi ke Pengaturan"
 		},
 		"release": {
-			"heading": "Baru di Ekstensi:",
-			"openRouterEmbeddings": "Dukungan untuk model embedding OpenRouter",
-			"chutesDynamic": "Chutes sekarang memuat model terbaru secara dinamis",
-			"queuedMessagesFix": "Perbaikan untuk pesan antrian yang hilang"
+			"heading": "Terbaru:",
+			"contextRewind": "Kondensasi konteks yang ditingkatkan sekarang memungkinkan Anda mengembalikan konteks sebelumnya secara penuh saat memutar ulang ke checkpoint",
+			"rooProvider": "Penyedia Roo Code Cloud sekarang mempertahankan konten penalaran dan menggunakan alat asli secara default untuk kinerja yang lebih baik"
 		},
 		"cloudAgents": {
 			"heading": "Baru di Cloud:",
-			"prFixer": "Memperkenalkan agen cloud <bold>PR Fixer</bold> untuk melengkapi PR Reviewer.",
-			"prFixerDescription": "PR Fixer dari Roo Code menerapkan perubahan berkualitas tinggi ke PR Anda, langsung dari GitHub. Panggil melalui komentar PR dan ia akan membaca seluruh riwayat komentar untuk memahami konteks, kesepakatan, dan trade-off - kemudian menerapkan perbaikan yang tepat.",
-			"tryPrFixerButton": "Coba PR Fixer"
+			"specialized": "Memperkenalkan <bold>Explainer</bold>, <bold>Planner</bold>, dan <bold>Coder</bold> - tiga agen cloud khusus untuk meningkatkan alur kerja Anda.",
+			"description": "Agen bekerja bersama di cloud dan dapat dipicu dari web atau melalui Slack.",
+			"tryButton": "Coba Agen Cloud"
 		},
 		"careers": "Juga, <careersLink>kami sedang merekrut!</careersLink>",
-		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/KiloRooCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Berpikir",
@@ -331,6 +343,7 @@
 		"countdownDisplay": "{{count}}dtk"
 	},
 	"browser": {
+		"session": "Sesi Browser",
 		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
@@ -343,12 +356,14 @@
 		},
 		"sessionStarted": "Sesi Browser Dimulai",
 		"actions": {
-			"title": "Aksi Browse: ",
+			"title": "Aksi Browser: ",
 			"launch": "Luncurkan browser di {{url}}",
 			"click": "Klik ({{coordinate}})",
 			"type": "Ketik \"{{text}}\"",
+			"press": "Tekan {{key}}",
 			"scrollDown": "Gulir ke bawah",
 			"scrollUp": "Gulir ke atas",
+			"hover": "Arahkan ({{coordinate}})",
 			"close": "Tutup browser"
 		}
 	},

@@ -1,0 +1,19 @@
+// Implement functino to add two numbers
+// Input: 2, 3
+// Output: 5
+
+function addTwoNumbers(num1, num2) {
+    return num1 + num2;
+}
+
+console.log(addTwoNumbers(2, 3));
+
+// Implement function to multiply two numbers
+// Input: 2, 3
+// Output: 6
+
+function multiplyTwoNumbers(num1, num2) {
+    return num1 * num2;
+}
+
+console.log(multiplyTwoNumbers(2, 3));

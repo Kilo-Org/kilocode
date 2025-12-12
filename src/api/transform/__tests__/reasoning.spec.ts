@@ -7,11 +7,13 @@ import {
 	getAnthropicReasoning,
 	getOpenAiReasoning,
 	getRooReasoning,
+	getGeminiReasoning,
 	GetModelReasoningOptions,
 	OpenRouterReasoningParams,
 	AnthropicReasoningParams,
 	OpenAiReasoningParams,
 	RooReasoningParams,
+	GeminiReasoningParams,
 } from "../reasoning"
 
 describe("reasoning.ts", () => {
@@ -584,6 +586,61 @@ describe("reasoning.ts", () => {
 			const result = getOpenAiReasoning(options)
 
 			expect(result).toBeUndefined()
+		})
+	})
+
+	describe("Gemini reasoning (effort models)", () => {
+		it("should return thinkingLevel when effort is set to low or high and budget is not used", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				// Effort-only reasoning model (no budget fields)
+				supportsReasoningEffort: ["low", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "low",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				enableReasoningEffort: true,
+				reasoningEffort: "high",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: 2048,
+				reasoningEffort: "high",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+
+			// Budget should not be used for effort-only models
+			expect(result).toEqual({ thinkingLevel: "high", includeThoughts: true })
+		})
+
+		it("should still return thinkingLevel when enableReasoningEffort is false but effort is explicitly set", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				// Effort-only reasoning model
+				supportsReasoningEffort: ["low", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "low",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				// Even with this flag false, an explicit effort selection should win
+				enableReasoningEffort: false,
+				reasoningEffort: "high",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: 2048,
+				reasoningEffort: "high",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			expect(result).toEqual({ thinkingLevel: "high", includeThoughts: true })
 		})
 	})
 

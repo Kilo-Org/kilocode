@@ -171,5 +171,28 @@
 		"checkpointsUnavailable": "No es poden mostrar canvis nous, els punts de control no estan disponibles.",
 		"noChanges": "No es poden mostrar canvis nous, no s'han trobat canvis.",
 		"error": "No es poden mostrar canvis nous, s'ha produït un error."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "La teva versió de Kilocode CLI està desactualitzada i no és compatible amb el Gestor d'Agents. Si us plau, actualitza a la versió més recent.",
+			"cliNotFound": "No s'ha trobat Kilocode CLI. Si us plau, instal·la'l per utilitzar el Gestor d'Agents.",
+			"sessionFailed": "Error en iniciar la sessió de l'agent",
+			"sessionFailedWithMessage": "Error en iniciar la sessió de l'agent: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Instruccions d'Actualització",
+			"installInstructions": "Instruccions d'Instal·lació",
+			"getHelp": "Obtenir Ajuda",
+			"runInTerminal": "Executar al Terminal",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Actualitzar Global",
+			"updateLocal": "Actualitzar Local",
+			"installGlobal": "Instal·lar Global",
+			"installLocal": "Instal·lar Local"
+		},
+		"terminal": {
+			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
 	}
 }

@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "new_task टूल के साथ नए कार्य बनाते समय टूडू पैरामीटर की आवश्यकता होती है",
 	"settings.codeIndex.embeddingBatchSize.description": "कोड इंडेक्सिंग के दौरान एम्बेडिंग ऑपरेशन के लिए बैच साइज़। इसे अपने API प्रदाता की सीमाओं के अनुसार समायोजित करें। डिफ़ॉल्ट 60 है।",
 	"settings.toolProtocol.description": "एआई इंटरैक्शन के लिए उपयोग करने वाला टूल प्रोटोकॉल। एक्सएमएल डिफ़ॉल्ट और अनुशंसित प्रोटोकॉल है। नेटिव प्रायोगिक है और सभी प्रदाताओं के साथ काम नहीं कर सकता है।",
+	"settings.debug.description": "API conversation history और UI messages को temporary files में prettified JSON के रूप में देखने के लिए अतिरिक्त बटन दिखाने के लिए debug mode सक्षम करें।",
 	"ghost.input.title": "पुष्टि के लिए 'Enter' दबाएं या रद्द करने के लिए 'Escape' दबाएं",
 	"ghost.input.placeholder": "वर्णन करें कि आप क्या करना चाहते हैं...",
 	"ghost.commands.generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",

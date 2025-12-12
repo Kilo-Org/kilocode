@@ -1,3 +1,4 @@
-# Description: Should complete property access after dot
+#### Description: Should complete property access after dot
+#### Filename: user-display.js
 const user = { name: 'John', age: 30 };
-console.log(user.<<<CURSOR>>>);
+console.log(user.<<<AUTOCOMPLETE_HERE>>>);

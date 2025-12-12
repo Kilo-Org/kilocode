@@ -117,6 +117,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "Has esperado {{timeout}} segundos para la inicialización del punto de control. Si no necesitas esta función, desactívala en <settingsLink>la configuración del punto de control</settingsLink>.",
-		"init_checkpoint_fail_long_time": "La inicialización del punto de control ha tardado más de {{timeout}} segundos, por lo que los puntos de control están desactivados para esta tarea. Puedes desactivar los puntos de control o aumentar el tiempo de espera en <settingsLink>la configuración del punto de control</settingsLink>."
+		"init_checkpoint_fail_long_time": "La inicialización del punto de control ha tardado más de {{timeout}} segundos, por lo que los puntos de control están desactivados para esta tarea. Puedes desactivar los puntos de control o aumentar el tiempo de espera en <settingsLink>la configuración del punto de control</settingsLink>.",
+		"attempt_completion_tool_failed": "No se puede ejecutar attempt_completion porque una llamada de herramienta anterior falló en este turno. Por favor, resuelve el error de la herramienta antes de intentar completar."
+	},
+	"tasks": {
+		"delegated": "Delegado a subtarea",
+		"delegated_to": "Delegado a la tarea {{childId}}",
+		"delegation_completed": "Subtarea completada, reanudando tarea principal",
+		"awaiting_child": "Esperando tarea secundaria {{childId}}"
 	}
 }

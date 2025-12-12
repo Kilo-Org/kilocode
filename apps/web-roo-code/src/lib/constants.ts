@@ -26,7 +26,8 @@ export const EXTERNAL_LINKS = {
 	TESTIMONIALS: "https://roocode.com/#testimonials",
 	CLOUD_APP_LOGIN: "https://app.roocode.com/sign-in",
 	CLOUD_APP_SIGNUP: "https://app.roocode.com/sign-up",
-	CLOUD_APP_SIGNUP_PRO: "https://app.roocode.com/sign-up?redirect_url=/cloud-agents/welcome",
+	CLOUD_APP_SIGNUP_HOME: "https://app.roocode.com/sign-up?redirect_url=/cloud-agents/setup",
+	CLOUD_APP_SIGNUP_PRO: "https://app.roocode.com/sign-up?redirect_url=/cloud-agents/setup",
 }
 
 export const INTERNAL_LINKS = {

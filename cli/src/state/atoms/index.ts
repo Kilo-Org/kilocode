@@ -126,6 +126,9 @@ export {
 	refreshStateAtom,
 	sendPrimaryButtonClickAtom,
 	sendSecondaryButtonClickAtom,
+
+	// YOLO mode action
+	toggleYoloModeAtom,
 } from "./actions.js"
 
 // ============================================================================
@@ -200,6 +203,7 @@ export {
 	messagesAtom,
 	isStreamingAtom,
 	errorAtom,
+	yoloModeAtom,
 	isCommittingParallelModeAtom,
 	commitCountdownSecondsAtom,
 

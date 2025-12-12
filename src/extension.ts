@@ -47,9 +47,33 @@ import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // 
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
-import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
-import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils"
+import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
+import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
+
+// kilocode_change start
+async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
+	const { apiConfiguration } = await provider.getState()
+	if (apiConfiguration.kilocodeToken) {
+		return apiConfiguration.kilocodeToken
+	}
+
+	const profiles = await provider.providerSettingsManager.listConfig()
+
+	for (const profile of profiles) {
+		try {
+			const fullProfile = await provider.providerSettingsManager.getProfile({ name: profile.name })
+			if (fullProfile.kilocodeToken) {
+				return fullProfile.kilocodeToken
+			}
+		} catch {
+			continue
+		}
+	}
+
+	return undefined
+}
+// kilocode_change end
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -160,7 +184,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize the provider *before* the Roo Code Cloud service.
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
-	// const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
+
+	// kilocode_change start: Initialize ManagedIndexer
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
+	// kilocode_change end
 
 	// Initialize Roo Code Cloud service.
 	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
@@ -181,17 +209,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		// Handle Roo models cache based on auth state
 		const handleRooModelsCache = async () => {
 			try {
-				await flushModels("roo")
+				// Flush and refresh cache on auth state changes
+				await flushModels("roo", true)
 
 				if (data.state === "active-session") {
-					// Reload models with the new auth token
-					const sessionToken = cloudService?.authService?.getSessionToken()
-					await getModels({
-						provider: "roo",
-						baseUrl: process.env.ROO_CODE_PROVIDER_URL ?? "https://api.roocode.com/proxy",
-						apiKey: sessionToken,
-					})
-					cloudLogger(`[authStateChangedHandler] Reloaded Roo models cache for active session`)
+					cloudLogger(`[authStateChangedHandler] Refreshed Roo models cache for active session`)
 				} else {
 					cloudLogger(`[authStateChangedHandler] Flushed Roo models cache on logout`)
 				}
@@ -203,7 +225,33 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 
 		if (data.state === "active-session" || data.state === "logged-out") {
-			// kilocode_change: await handleRooModelsCache()
+			// kilocode_change start: disable
+			// await handleRooModelsCache()
+			// // Apply stored provider model to API configuration if present
+			// if (data.state === "active-session") {
+			// 	try {
+			// 		const storedModel = context.globalState.get<string>("roo-provider-model")
+			// 		if (storedModel) {
+			// 			cloudLogger(`[authStateChangedHandler] Applying stored provider model: ${storedModel}`)
+			// 			// Get the current API configuration name
+			// 			const currentConfigName =
+			// 				provider.contextProxy.getGlobalState("currentApiConfigName") || "default"
+			// 			// Update it with the stored model using upsertProviderProfile
+			// 			await provider.upsertProviderProfile(currentConfigName, {
+			// 				apiProvider: "roo",
+			// 				apiModelId: storedModel,
+			// 			})
+			// 			// Clear the stored model after applying
+			// 			await context.globalState.update("roo-provider-model", undefined)
+			// 			cloudLogger(`[authStateChangedHandler] Applied and cleared stored provider model`)
+			// 		}
+			// 	} catch (error) {
+			// 		cloudLogger(
+			// 			`[authStateChangedHandler] Failed to apply stored provider model: ${error instanceof Error ? error.message : String(error)}`,
+			// 		)
+			// 	}
+			// }
+			// kilocode_change end
 		}
 	}
 
@@ -270,11 +318,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// kilocode_change start
 	try {
-		const { apiConfiguration } = await provider.getState()
+		const kiloToken = await findKilocodeTokenFromAnyProfile(provider)
 
 		await kilo_initializeSessionManager({
 			context: context,
-			kiloToken: apiConfiguration.kilocodeToken,
+			kiloToken,
 			log: provider.log.bind(provider),
 			outputChannel,
 			provider,
@@ -311,11 +359,13 @@ export async function activate(context: vscode.ExtensionContext) {
 				false,
 			)
 
-			// Enable autocomplete by default for new installs
+			// Enable autocomplete by default for new installs, but not for JetBrains IDEs
+			// JetBrains users can manually enable it if they want to test the feature
+			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 			const currentGhostSettings = contextProxy.getValue("ghostServiceSettings")
 			await contextProxy.setValue("ghostServiceSettings", {
 				...currentGhostSettings,
-				enableAutoTrigger: true,
+				enableAutoTrigger: !kiloCodeWrapperJetbrains,
 				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			})
@@ -412,13 +462,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	// kilocode_change start - Kilo Code specific registrations
-	const { kiloCodeWrapped } = getKiloCodeWrapperProperties()
-	if (!kiloCodeWrapped) {
-		// Only use autocomplete in VS Code
-		registerGhostProvider(context, provider)
-	} else {
+	const { kiloCodeWrapped, kiloCodeWrapperCode } = getKiloCodeWrapperProperties()
+	if (kiloCodeWrapped) {
 		// Only foward logs in Jetbrains
 		registerMainThreadForwardingLogger(context)
+	}
+	// Don't register the ghost provider for the CLI
+	if (kiloCodeWrapperCode !== "cli") {
+		registerGhostProvider(context, provider)
 	}
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
 	// kilocode_change end - Kilo Code specific registrations
@@ -486,15 +537,15 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	// kilocode_change start: Initialize ManagedIndexer
-	await checkAndRunAutoLaunchingTask(context)
-	const managedIndexer = new ManagedIndexer(contextProxy)
-	context.subscriptions.push(managedIndexer)
 	void managedIndexer.start().catch((error) => {
 		outputChannel.appendLine(
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+	await checkAndRunAutoLaunchingTask(context)
 	// kilocode_change end
+	// Initialize background model cache refresh
+	initializeModelCacheRefresh()
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }

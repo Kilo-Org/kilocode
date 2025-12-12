@@ -96,6 +96,12 @@
 				},
 				"provider": "終端機命令產生器供應商"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding 批次大小",
+			"embeddingBatchSizeDescription": "用於 Embedding 生成和向量儲存更新的程式碼片段批次數量。較大的值可以提高索引速度，但可能增加記憶體使用量。較小的值可以減少記憶體使用量，但可能降低索引速度。",
+			"scannerMaxBatchRetriesLabel": "掃描器最大批次重試次數",
+			"scannerMaxBatchRetriesDescription": "目錄掃描期間重試失敗批次的最大次數。較大的值可以提高對暫時性錯誤的容錯能力，但如果錯誤持續存在可能會降低索引速度。較小的值會更快失敗，但可能在暫時性問題時跳過內容。"
 		}
 	},
 	"toolCallStyle": {
@@ -234,7 +240,11 @@
 			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
 			"configureAutocompleteProfile": "前往設定檔並設定自動補全類型的設定檔即可使用任意模型。",
 			"model": "模型",
-			"provider": "供應商"
+			"provider": "供應商",
+			"enableChatAutocomplete": {
+				"label": "聊天输入自动完成",
+				"description": "启用后，Kilo Code 将在您在聊天输入框中输入时提供补全建议。按 Tab 键接受建议。"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +292,28 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织共享模式"
+	},
+	"deviceAuth": {
+		"title": "登入 Kilo Code",
+		"step1": "在瀏覽器中開啟以下 URL",
+		"step2": "驗證代碼並在瀏覽器中授權此裝置",
+		"scanQr": "或用手機掃描此 QR 碼",
+		"openBrowser": "開啟瀏覽器",
+		"copyUrl": "複製 URL",
+		"waiting": "等待授權...",
+		"timeRemaining": "代碼將在 {{time}} 後過期",
+		"success": "登入成功！",
+		"authenticatedAs": "已驗證為 {{email}}",
+		"error": "驗證錯誤",
+		"unknownError": "發生錯誤。請重試。",
+		"cancel": "取消",
+		"retry": "重試",
+		"tryAgain": "重試",
+		"cancelled": "驗證已取消",
+		"initiating": "正在啟動驗證..."
+	},
+	"speechToText": {
+		"startRecording": "开始语音输入",
+		"stopRecording": "停止语音输入"
 	}
 }

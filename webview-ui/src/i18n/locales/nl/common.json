@@ -117,6 +117,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "Je hebt {{timeout}} seconden gewacht op de initialisatie van de checkpoint. Als je deze functie niet nodig hebt, schakel hem dan uit in de <settingsLink>checkpoint-instellingen</settingsLink>.",
-		"init_checkpoint_fail_long_time": "De initialisatie van de checkpoint duurde meer dan {{timeout}} seconden, dus checkpoints zijn uitgeschakeld voor deze taak. Je kunt checkpoints uitschakelen of de wachttijd in de <settingsLink>checkpoint-instellingen</settingsLink> verhogen."
+		"init_checkpoint_fail_long_time": "De initialisatie van de checkpoint duurde meer dan {{timeout}} seconden, dus checkpoints zijn uitgeschakeld voor deze taak. Je kunt checkpoints uitschakelen of de wachttijd in de <settingsLink>checkpoint-instellingen</settingsLink> verhogen.",
+		"attempt_completion_tool_failed": "Je kunt attempt_completion niet uitvoeren omdat een eerdere tool-aanroep in deze beurt is mislukt. Los het tool-probleem op voordat je probeert te voltooien."
+	},
+	"tasks": {
+		"delegated": "Gedelegeerd naar subtaak",
+		"delegated_to": "Gedelegeerd naar taak {{childId}}",
+		"delegation_completed": "Subtaak voltooid, hoofdtaak wordt hervat",
+		"awaiting_child": "Wachten op kindtaak {{childId}}"
 	}
 }

@@ -1,4 +1,5 @@
-# Description: Should complete complex array reduce operation
+#### Description: Should complete complex array reduce operation
+#### Filename: order-analytics.js
 const orders = [{id: 1, items: [{price: 10}, {price: 20}]}, {id: 2, items: [{price: 15}]}];
 const totalRevenue = orders.reduce((acc, order) => {
 	const orderTotal = order.items.reduce((sum, item) => <<<AUTOCOMPLETE_HERE>>>

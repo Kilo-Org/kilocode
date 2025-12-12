@@ -49,6 +49,13 @@ vi.mock("@/hooks/useKeybindings", () => ({
 	}),
 }))
 
+// Mock useExtensionState hook
+vi.mock("@/context/ExtensionStateContext", () => ({
+	useExtensionState: () => ({
+		kiloCodeWrapperProperties: undefined,
+	}),
+}))
+
 // Mock VSCodeCheckbox to render as regular HTML checkbox for testing
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeCheckbox: ({ checked, onChange, children }: any) => (
@@ -88,6 +95,7 @@ const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
+	enableChatAutocomplete: false,
 	provider: "openrouter",
 	model: "openai/gpt-4o-mini",
 }
@@ -168,6 +176,18 @@ describe("GhostServiceSettingsView", () => {
 		fireEvent.click(checkbox)
 
 		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableSmartInlineTaskKeybinding", true)
+	})
+
+	it("toggles chat autocomplete checkbox correctly", () => {
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
+
+		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableChatAutocomplete.label/).closest("label")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
+
+		fireEvent.click(checkbox)
+
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableChatAutocomplete", true)
 	})
 
 	it("renders Trans components with proper structure", () => {

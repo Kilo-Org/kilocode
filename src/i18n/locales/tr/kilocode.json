@@ -171,5 +171,28 @@
 		"checkpointsUnavailable": "Yeni değişiklikler gösterilemiyor, kontrol noktaları kullanılamıyor.",
 		"noChanges": "Yeni değişiklikler gösterilemiyor, hiçbir değişiklik bulunamadı.",
 		"error": "Yeni değişiklikler gösterilemiyor, bir hata oluştu."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Kilocode CLI sürümün eski ve Agent Manager'ı desteklemiyor. Lütfen en son sürüme güncelle.",
+			"cliNotFound": "Kilocode CLI bulunamadı. Agent Manager'ı kullanmak için lütfen yükle.",
+			"sessionFailed": "Ajan oturumu başlatılamadı",
+			"sessionFailedWithMessage": "Ajan oturumu başlatılamadı: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Güncelleme Talimatları",
+			"installInstructions": "Kurulum Talimatları",
+			"getHelp": "Yardım Al",
+			"runInTerminal": "Terminalde Çalıştır",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Global Güncelle",
+			"updateLocal": "Lokal Güncelle",
+			"installGlobal": "Global Yükle",
+			"installLocal": "Lokal Yükle"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI'yi yüklemek için npm install çalıştırılıyor. Tamamlandığında, bu terminali kapatıp Agent Manager'ı tekrar başlatmayı deneyebilirsin.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
 	}
 }

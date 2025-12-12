@@ -40,7 +40,7 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import ReportBugPreview from "./ReportBugPreview"
 
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
-import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
+import { CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { appendImages } from "@src/utils/imageUtils"
 import { McpExecution } from "./McpExecution"
@@ -76,6 +76,7 @@ import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
 import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
+import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
 // kilocode_change end
 
 // Helper function to get previous todos before a specific message
@@ -187,7 +188,7 @@ export const ChatRowContent = ({
 	enableCheckpoints, // kilocode_change
 	isFollowUpAnswered,
 }: ChatRowContentProps) => {
-	const { t } = useTranslation()
+	const { t, i18n } = useTranslation()
 
 	// kilocode_change: add showTimestamps
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, clineMessages, showTimestamps } =
@@ -599,7 +600,6 @@ export const ChatRowContent = ({
 			}
 			case "updateTodoList" as any: {
 				const todos = (tool as any).todos || []
-
 				// Get previous todos from the latest todos in the task context
 				const previousTodos = getPreviousTodos(clineMessages, message.ts)
 
@@ -1105,13 +1105,14 @@ export const ChatRowContent = ({
 						</div>
 						{message.type === "ask" && (
 							<div className="pl-6">
-								<CodeAccordian
-									path={tool.path}
-									code={tool.content}
-									language="text"
-									isExpanded={isExpanded}
-									onToggleExpand={handleToggleExpand}
-								/>
+								<ToolUseBlock>
+									<div className="p-2">
+										<div className="mb-2 break-words">{tool.content}</div>
+										<div className="flex items-center gap-1 text-xs text-vscode-descriptionForeground">
+											{tool.path}
+										</div>
+									</div>
+								</ToolUseBlock>
 							</div>
 						)}
 					</>
@@ -1231,24 +1232,54 @@ export const ChatRowContent = ({
 								<ErrorRow
 									type="api_failure"
 									message={apiRequestFailedMessage || apiReqStreamingFailedMessage || ""}
-									additionalContent={
-										apiRequestFailedMessage?.toLowerCase().includes("powershell") ? (
-											<>
-												<br />
-												<br />
-												{t("chat:powershell.issues")}{" "}
-												<a
-													href="https://github.com/cline/cline/wiki/TroubleShooting-%E2%80%90-%22PowerShell-is-not-recognized-as-an-internal-or-external-command%22"
-													style={{ color: "inherit", textDecoration: "underline" }}>
-													troubleshooting guide
-												</a>
-												.
-											</>
-										) : undefined
+									docsURL={
+										apiRequestFailedMessage?.toLowerCase().includes("powershell")
+											? "https://github.com/cline/cline/wiki/TroubleShooting-%E2%80%90-%22PowerShell-is-not-recognized-as-an-internal-or-external-command%22"
+											: undefined
 									}
 								/>
 							)}
 						</>
+					)
+				case "api_req_retry_delayed":
+					let body = t(`chat:apiRequest.failed`)
+					let retryInfo, code, docsURL
+					if (message.text !== undefined) {
+						// Try to show richer error message for that code, if available
+						const potentialCode = parseInt(message.text.substring(0, 3))
+						if (potentialCode >= 400) {
+							code = potentialCode
+							const stringForError = `chat:apiRequest.errorMessage.${code}`
+							if (i18n.exists(stringForError)) {
+								body = t(stringForError)
+								// Fill this out in upcoming PRs
+								// Do not remove this
+								// switch(code) {
+								// 	case ERROR_CODE:
+								// 		docsURL = ???
+								// 		break;
+								// }
+							} else {
+								body = t("chat:apiRequest.errorMessage.unknown")
+								docsURL = "mailto:support@roocode.com?subject=Unknown API Error"
+							}
+							retryInfo = (
+								<p className="mt-1 font-light text-xs text-vscode-errorForeground/80 cursor-default">
+									{message.text.substring(4)}
+								</p>
+							)
+						} else {
+							body = message.text
+						}
+					}
+					return (
+						<ErrorRow
+							type="api_req_retry_delayed"
+							code={code}
+							message={body}
+							docsURL={docsURL}
+							additionalContent={retryInfo}
+						/>
 					)
 				case "api_req_finished":
 					return null // we should never see this message type
@@ -1361,7 +1392,29 @@ export const ChatRowContent = ({
 						</div>
 					)
 				case "error":
-					return <ErrorRow type="error" message={message.text || ""} />
+					// kilocode_change start: Show login button for KiloCode auth errors
+					const isKiloCodeAuthError =
+						apiConfiguration?.apiProvider === "kilocode" &&
+						message.text?.includes(KILOCODE_TOKEN_REQUIRED_ERROR)
+					return (
+						<ErrorRow
+							type="error"
+							message={message.text || ""}
+							showLoginButton={isKiloCodeAuthError}
+							onLoginClick={
+								isKiloCodeAuthError
+									? () => {
+											vscode.postMessage({
+												type: "switchTab",
+												tab: "auth",
+												values: { returnTo: "chat" },
+											})
+										}
+									: undefined
+							}
+						/>
+					)
+				// kilocode_change end
 				case "completion_result":
 					const commitRange = message.metadata?.kiloCode?.commitRange
 					return (
@@ -1406,7 +1459,13 @@ export const ChatRowContent = ({
 					}
 					return message.contextCondense ? <ContextCondenseRow {...message.contextCondense} /> : null
 				case "condense_context_error":
-					return <CondenseContextErrorRow errorText={message.text} />
+					return (
+						<ErrorRow
+							type="error"
+							title={t("chat:contextCondense.errorHeader")}
+							message={message.text || ""}
+						/>
+					)
 				case "codebase_search_result":
 					let parsed: {
 						content: {
@@ -1437,39 +1496,6 @@ export const ChatRowContent = ({
 					const { results = [] } = parsed?.content || {}
 
 					return <CodebaseSearchResultsDisplay results={results} />
-				// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
-				case "browser_action_result":
-					// This should not normally be rendered here as browser_action_result messages
-					// should be grouped into browser sessions and rendered by BrowserSessionRow.
-					// If we see this, it means the message grouping logic has a bug.
-					return (
-						<>
-							{title && (
-								<div style={headerStyle}>
-									{icon}
-									{title}
-								</div>
-							)}
-							<div style={{ paddingTop: 10 }}>
-								<div
-									style={{
-										color: "var(--vscode-errorForeground)",
-										fontFamily: "monospace",
-										fontSize: "12px",
-										padding: "8px",
-										backgroundColor: "var(--vscode-editor-background)",
-										border: "1px solid var(--vscode-editorError-border)",
-										borderRadius: "4px",
-										marginBottom: "8px",
-									}}>
-									⚠️ Browser action result not properly grouped - this is a bug in the message
-									grouping logic
-								</div>
-								<Markdown markdown={message.text} partial={message.partial} />
-							</div>
-						</>
-					)
-				// kilocode_change end
 				case "user_edit_todos":
 					return <UpdateTodoListToolBlock userEdited onChange={() => {}} />
 				case "tool" as any:
@@ -1562,6 +1588,41 @@ export const ChatRowContent = ({
 							<ImageBlock imageUri={imageInfo.imageUri} imagePath={imageInfo.imagePath} />
 						</div>
 					)
+				// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
+				case "browser_action":
+					return null
+				case "browser_action_result":
+					// This should not normally be rendered here as browser_action_result messages
+					// should be grouped into browser sessions and rendered by BrowserSessionRow.
+					// If we see this, it means the message grouping logic has a bug.
+					return (
+						<>
+							{title && (
+								<div style={headerStyle}>
+									{icon}
+									{title}
+								</div>
+							)}
+							<div style={{ paddingTop: 10 }}>
+								<div
+									style={{
+										color: "var(--vscode-errorForeground)",
+										fontFamily: "monospace",
+										fontSize: "12px",
+										padding: "8px",
+										backgroundColor: "var(--vscode-editor-background)",
+										border: "1px solid var(--vscode-editorError-border)",
+										borderRadius: "4px",
+										marginBottom: "8px",
+									}}>
+									⚠️ Browser action result not properly grouped - this is a bug in the message
+									grouping logic
+								</div>
+								<Markdown markdown={message.text} partial={message.partial} />
+							</div>
+						</>
+					)
+				// kilocode_change end
 				default:
 					return (
 						<>

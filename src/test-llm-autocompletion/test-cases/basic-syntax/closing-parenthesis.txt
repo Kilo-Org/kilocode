@@ -1,2 +1,0 @@
-# Description: Should complete closing parenthesis for function call
-console.log('test'<<<AUTOCOMPLETE_HERE>>>

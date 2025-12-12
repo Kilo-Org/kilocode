@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "Yêu cầu tham số todos khi tạo nhiệm vụ mới với công cụ new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Kích thước lô cho các hoạt động nhúng trong quá trình lập chỉ mục mã. Điều chỉnh điều này dựa trên giới hạn của nhà cung cấp API của bạn. Mặc định là 60.",
 	"settings.toolProtocol.description": "Giao thức công cụ để sử dụng cho các tương tác AI. XML là giao thức mặc định và được khuyến nghị. Bản gốc là thử nghiệm và có thể không hoạt động với tất cả các nhà cung cấp.",
+	"settings.debug.description": "Bật chế độ gỡ lỗi để hiển thị các nút bổ sung để xem lịch sử hội thoại API và thông điệp giao diện người dùng dưới dạng JSON được định dạng trong các tệp tạm thời.",
 	"ghost.input.title": "Nhấn 'Enter' để xác nhận hoặc 'Escape' để hủy",
 	"ghost.input.placeholder": "Mô tả những gì bạn muốn làm...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Tạo Gợi Ý Chỉnh Sửa",

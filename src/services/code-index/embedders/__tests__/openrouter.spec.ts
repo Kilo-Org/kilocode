@@ -1,7 +1,7 @@
 import type { MockedClass, MockedFunction } from "vitest"
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { OpenAI } from "openai"
-import { OpenRouterEmbedder } from "../openrouter"
+import { OpenRouterEmbedder, OPENROUTER_DEFAULT_PROVIDER_NAME } from "../openrouter"
 import { getModelDimension, getDefaultModelId } from "../../../../shared/embeddingModels"
 import { DEFAULT_HEADERS } from "../../../../api/providers/constants" // kilocode_change
 
@@ -92,6 +92,16 @@ describe("OpenRouterEmbedder", () => {
 				apiKey: mockApiKey,
 				defaultHeaders: DEFAULT_HEADERS, // kilocode_change
 			})
+		})
+
+		it("should accept specificProvider parameter", () => {
+			const embedder = new OpenRouterEmbedder(mockApiKey, undefined, undefined, "together")
+			expect(embedder).toBeInstanceOf(OpenRouterEmbedder)
+		})
+
+		it("should ignore default provider name as specificProvider", () => {
+			const embedder = new OpenRouterEmbedder(mockApiKey, undefined, undefined, OPENROUTER_DEFAULT_PROVIDER_NAME)
+			expect(embedder).toBeInstanceOf(OpenRouterEmbedder)
 		})
 	})
 
@@ -203,6 +213,77 @@ describe("OpenRouterEmbedder", () => {
 				encoding_format: "base64",
 			})
 		})
+
+		it("should include provider routing when specificProvider is set", async () => {
+			const specificProvider = "together"
+			const embedderWithProvider = new OpenRouterEmbedder(mockApiKey, undefined, undefined, specificProvider)
+
+			const testEmbedding = new Float32Array([0.25, 0.5])
+			const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+
+			const mockResponse = {
+				data: [
+					{
+						embedding: base64String,
+					},
+				],
+				usage: {
+					prompt_tokens: 5,
+					total_tokens: 5,
+				},
+			}
+
+			mockEmbeddingsCreate.mockResolvedValue(mockResponse)
+
+			await embedderWithProvider.createEmbeddings(["test"])
+
+			// Verify the embeddings.create was called with provider routing
+			expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+				input: ["test"],
+				model: "openai/text-embedding-3-large",
+				encoding_format: "base64",
+				provider: {
+					order: [specificProvider],
+					only: [specificProvider],
+					allow_fallbacks: false,
+				},
+			})
+		})
+
+		it("should not include provider routing when specificProvider is default", async () => {
+			const embedderWithDefaultProvider = new OpenRouterEmbedder(
+				mockApiKey,
+				undefined,
+				undefined,
+				OPENROUTER_DEFAULT_PROVIDER_NAME,
+			)
+
+			const testEmbedding = new Float32Array([0.25, 0.5])
+			const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+
+			const mockResponse = {
+				data: [
+					{
+						embedding: base64String,
+					},
+				],
+				usage: {
+					prompt_tokens: 5,
+					total_tokens: 5,
+				},
+			}
+
+			mockEmbeddingsCreate.mockResolvedValue(mockResponse)
+
+			await embedderWithDefaultProvider.createEmbeddings(["test"])
+
+			// Verify the embeddings.create was called without provider routing
+			expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+				input: ["test"],
+				model: "openai/text-embedding-3-large",
+				encoding_format: "base64",
+			})
+		})
 	})
 
 	describe("validateConfiguration", () => {
@@ -251,6 +332,43 @@ describe("OpenRouterEmbedder", () => {
 
 			expect(result.valid).toBe(false)
 			expect(result.error).toBe("embeddings:validation.authenticationFailed")
+		})
+
+		it("should validate configuration with specificProvider", async () => {
+			const specificProvider = "openai"
+			const embedderWithProvider = new OpenRouterEmbedder(mockApiKey, undefined, undefined, specificProvider)
+
+			const testEmbedding = new Float32Array([0.25, 0.5])
+			const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+
+			const mockResponse = {
+				data: [
+					{
+						embedding: base64String,
+					},
+				],
+				usage: {
+					prompt_tokens: 1,
+					total_tokens: 1,
+				},
+			}
+
+			mockEmbeddingsCreate.mockResolvedValue(mockResponse)
+
+			const result = await embedderWithProvider.validateConfiguration()
+
+			expect(result.valid).toBe(true)
+			expect(result.error).toBeUndefined()
+			expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+				input: ["test"],
+				model: "openai/text-embedding-3-large",
+				encoding_format: "base64",
+				provider: {
+					order: [specificProvider],
+					only: [specificProvider],
+					allow_fallbacks: false,
+				},
+			})
 		})
 	})
 

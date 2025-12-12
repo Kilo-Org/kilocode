@@ -1,30 +1,16 @@
-import { AutocompleteInput } from "../types"
-import { GhostContextProvider } from "./GhostContextProvider"
+import {
+	AutocompleteInput,
+	GhostContextProvider,
+	HoleFillerGhostPrompt,
+	FillInAtCursorSuggestion,
+	ChatCompletionResult,
+} from "../types"
+import { getProcessedSnippets } from "./getProcessedSnippets"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 
-export interface HoleFillerGhostPrompt {
-	strategy: "hole_filler"
-	autocompleteInput: AutocompleteInput
-	systemPrompt: string
-	userPrompt: string
-}
-
-export interface FillInAtCursorSuggestion {
-	text: string
-	prefix: string
-	suffix: string
-}
-
-export interface ChatCompletionResult {
-	suggestion: FillInAtCursorSuggestion
-	cost: number
-	inputTokens: number
-	outputTokens: number
-	cacheWriteTokens: number
-	cacheReadTokens: number
-}
+export type { HoleFillerGhostPrompt, FillInAtCursorSuggestion, ChatCompletionResult }
 
 /**
  * Parse the response - only handles responses with <COMPLETION> tags
@@ -168,9 +154,13 @@ Provide a subtle, non-intrusive completion after a typing pause.
 	 * Build minimal prompt for auto-trigger with optional context
 	 */
 	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
-		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
+		const { helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
+			this.contextProvider.contextService,
+			this.contextProvider.model,
+			this.contextProvider.ide,
+			this.contextProvider.ignoreController,
 		)
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)

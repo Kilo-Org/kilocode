@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
 		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls",
 		"openInCloud": "Obrir tasca a Roo Code Cloud",
-		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir."
+		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir.",
+		"openApiHistory": "Obrir historial d'API",
+		"openUiHistory": "Obrir historial d'UI"
 	},
 	"history": {
 		"title": "Historial"
@@ -142,7 +144,18 @@
 		"failed": "Sol·licitud API ha fallat",
 		"streaming": "Sol·licitud API...",
 		"cancelled": "Sol·licitud API cancel·lada",
-		"streamingFailed": "Transmissió API ha fallat"
+		"streamingFailed": "Transmissió API ha fallat",
+		"errorTitle": "Error API {{code}}",
+		"errorMessage": {
+			"docs": "Documentació",
+			"400": "El proveïdor no ha pogut processar la sol·licitud tal com es va fer. Interromp la tasca i prova una abordatge diferent.",
+			"401": "No s'ha pogut autenticar amb el proveïdor. Si us plau, verifica la teva configuració de clau API.",
+			"402": "Sembla que se t'han acabat els fons/crèdits al teu compte. Vés al teu proveïdor i afegeix més per continuar.",
+			"403": "No autoritzat. La teva clau API és vàlida, però el proveïdor ha rebutjat completar aquesta sol·licitud.",
+			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
+			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
+			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Punt de control",
@@ -301,21 +314,21 @@
 			"goToSettingsButton": "Anar a Configuració"
 		},
 		"release": {
-			"heading": "Novetats a l'extensió:",
-			"openRouterEmbeddings": "Suport per a models d'incrustació d'OpenRouter",
-			"chutesDynamic": "Chutes ara carrega els últims models de forma dinàmica",
-			"queuedMessagesFix": "Correccions per a missatges en cua que es perden"
+			"heading": "Novetats:",
+			"contextRewind": "La condensació millorada del context et permet restaurar el context anterior complet quan rebobines a un punt de control",
+			"rooProvider": "El proveïdor de Roo Code Cloud ara conserva el contingut del raonament i utilitza per defecte les eines natives per a un millor rendiment"
 		},
 		"cloudAgents": {
 			"heading": "Novetats al núvol:",
-			"prFixer": "Presentem l'agent al núvol <bold>PR Fixer</bold> per complementar el Revisor de PR.",
-			"prFixerDescription": "El PR Fixer de Roo Code aplica canvis d'alta qualitat a les teves PR directament des de GitHub. Invoca'l mitjançant un comentari a la PR i llegirà tot l'historial de comentaris per entendre el context, els acords i els compromisos, i després implementarà la solució correcta.",
-			"tryPrFixerButton": "Prova el PR Fixer"
+			"specialized": "Presentem <bold>Explainer</bold>, <bold>Planner</bold> i <bold>Coder</bold> - tres agents al núvol especialitzats per millorar els teus fluxos de treball.",
+			"description": "Els agents treballen junts al núvol i es poden activar des del web o mitjançant Slack.",
+			"tryButton": "Prova els Agents al Núvol"
 		},
 		"careers": "A més, <careersLink>estem contractant!</careersLink>",
 		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sessió del navegador",
 		"rooWantsToUse": "Kilo Code vol utilitzar el navegador",
 		"consoleLogs": "Registres de consola",
 		"noNewLogs": "(Cap registre nou)",
@@ -328,12 +341,14 @@
 		},
 		"sessionStarted": "Sessió de navegador iniciada",
 		"actions": {
-			"title": "Acció de navegació: ",
+			"title": "Acció del navegador: ",
 			"launch": "Iniciar navegador a {{url}}",
 			"click": "Clic ({{coordinate}})",
 			"type": "Escriure \"{{text}}\"",
+			"press": "Prem {{key}}",
 			"scrollDown": "Desplaçar avall",
 			"scrollUp": "Desplaçar amunt",
+			"hover": "Plana sobre ({{coordinate}})",
 			"close": "Tancar navegador"
 		}
 	},

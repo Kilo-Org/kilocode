@@ -57,5 +57,6 @@
 	"ghost.commands.applyCurrentSuggestion": "Použít Aktuální Navrženou Úpravu",
 	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
 	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
-	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh"
+	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh",
+	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech."
 }

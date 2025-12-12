@@ -1,3 +1,3 @@
-function greet(name: string, greeting: string) {
-  console.log(`${greeting} ${name}!`);
+function greet(name, callback) {
+  console.log(`Hello ${name}!`);
 }

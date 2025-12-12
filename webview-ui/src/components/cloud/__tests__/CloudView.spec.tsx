@@ -10,12 +10,15 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 				"cloud:title": "Cloud",
 				"settings:common.done": "Done",
 				"cloud:signIn": "Connect to Roo Code Cloud",
-				"cloud:cloudBenefitsTitle": "Connect to Roo Code Cloud",
-				"cloud:cloudBenefitSharing": "Share tasks with others",
-				"cloud:cloudBenefitHistory": "Access your task history",
+				"cloud:cloudBenefitsTitle": "Try Roo Code Cloud",
+				"cloud:cloudBenefitProvider": "Access free and paid models that work great with Roo",
+				"cloud:cloudBenefitCloudAgents": "Give tasks to autonomous Cloud agents",
+				"cloud:cloudBenefitTriggers": "Get code reviews on Github, start tasks from Slack and more",
+				"cloud:cloudBenefitWalkaway": "Follow and control tasks from anywhere (including your phone)",
+				"cloud:cloudBenefitHistory": "Access your task history from anywhere and share them with others",
 				"cloud:cloudBenefitMetrics": "Get a holistic view of your token consumption",
 				"cloud:logOut": "Log out",
-				"cloud:connect": "Connect Now",
+				"cloud:connect": "Get started",
 				"cloud:visitCloudWebsite": "Visit Roo Code Cloud",
 				"cloud:taskSync": "Task sync",
 				"cloud:taskSyncDescription": "Sync your tasks for viewing and sharing on Roo Code Cloud",
@@ -69,23 +72,21 @@ Object.defineProperty(window, "IMAGES_BASE_URI", {
 
 describe("CloudView", () => {
 	it("should display benefits when user is not authenticated", () => {
-		render(
-			<CloudView
-				userInfo={null}
-				isAuthenticated={false}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={null} isAuthenticated={false} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the benefits section is displayed
-		expect(screen.getByRole("heading", { name: "Connect to Roo Code Cloud" })).toBeInTheDocument()
-		expect(screen.getByText("Share tasks with others")).toBeInTheDocument()
-		expect(screen.getByText("Access your task history")).toBeInTheDocument()
+		expect(screen.getByRole("heading", { name: "Try Roo Code Cloud" })).toBeInTheDocument()
+		expect(screen.getByText("Access free and paid models that work great with Roo")).toBeInTheDocument()
+		expect(screen.getByText("Give tasks to autonomous Cloud agents")).toBeInTheDocument()
+		expect(screen.getByText("Get code reviews on Github, start tasks from Slack and more")).toBeInTheDocument()
+		expect(screen.getByText("Follow and control tasks from anywhere (including your phone)")).toBeInTheDocument()
+		expect(
+			screen.getByText("Access your task history from anywhere and share them with others"),
+		).toBeInTheDocument()
 		expect(screen.getByText("Get a holistic view of your token consumption")).toBeInTheDocument()
 
 		// Check that the connect button is also present
-		expect(screen.getByText("Connect Now")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "Get started" })).toBeInTheDocument()
 	})
 
 	it("should not display benefits when user is authenticated", () => {
@@ -94,21 +95,20 @@ describe("CloudView", () => {
 			email: "test@example.com",
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the benefits section is NOT displayed
+		expect(screen.queryByText("Access free and paid models that work great with Roo")).not.toBeInTheDocument()
+		expect(screen.queryByText("Give tasks to autonomous Cloud agents")).not.toBeInTheDocument()
 		expect(
-			screen.queryByText("Follow and control tasks from anywhere with Roomote Control"),
+			screen.queryByText("Get code reviews on Github, start tasks from Slack and more"),
 		).not.toBeInTheDocument()
-		expect(screen.queryByText("Share tasks with others")).not.toBeInTheDocument()
-		expect(screen.queryByText("Access your task history")).not.toBeInTheDocument()
+		expect(
+			screen.queryByText("Follow and control tasks from anywhere (including your phone)"),
+		).not.toBeInTheDocument()
+		expect(
+			screen.queryByText("Access your task history from anywhere and share them with others"),
+		).not.toBeInTheDocument()
 		expect(screen.queryByText("Get a holistic view of your token consumption")).not.toBeInTheDocument()
 
 		// Check that user info is displayed instead
@@ -123,14 +123,7 @@ describe("CloudView", () => {
 			extensionBridgeEnabled: true,
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the remote control toggle is displayed
 		expect(screen.getByTestId("remote-control-toggle")).toBeInTheDocument()
@@ -147,14 +140,7 @@ describe("CloudView", () => {
 			extensionBridgeEnabled: false,
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the remote control toggle is NOT displayed
 		expect(screen.queryByTestId("remote-control-toggle")).not.toBeInTheDocument()
@@ -172,14 +158,7 @@ describe("CloudView", () => {
 			extensionBridgeEnabled: true, // Bridge enabled but roomote control disabled
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the remote control toggle is NOT displayed
 		expect(screen.queryByTestId("remote-control-toggle")).not.toBeInTheDocument()
@@ -202,14 +181,7 @@ describe("CloudView", () => {
 			extensionBridgeEnabled: true,
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the remote control toggle IS displayed for organization users
 		// (The ClineProvider would set featureRoomoteControlEnabled to true for org users)
@@ -226,14 +198,7 @@ describe("CloudView", () => {
 			email: "test@example.com",
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the cloud URL pill is NOT displayed for production URL
 		expect(screen.queryByText(/Roo Code Cloud URL:/)).not.toBeInTheDocument()
@@ -245,14 +210,7 @@ describe("CloudView", () => {
 			email: "test@example.com",
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://staging.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://staging.roocode.com" />)
 
 		// Check that the cloud URL pill is displayed with the staging URL
 		expect(screen.getByText(/Roo Code Cloud URL:/)).toBeInTheDocument()
@@ -260,14 +218,7 @@ describe("CloudView", () => {
 	})
 
 	it("should display cloud URL pill for non-authenticated users when not pointing to production", () => {
-		render(
-			<CloudView
-				userInfo={null}
-				isAuthenticated={false}
-				cloudApiUrl="https://dev.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={null} isAuthenticated={false} cloudApiUrl="https://dev.roocode.com" />)
 
 		// Check that the cloud URL pill is displayed even when not authenticated
 		expect(screen.getByText(/Roo Code Cloud URL:/)).toBeInTheDocument()
@@ -280,7 +231,7 @@ describe("CloudView", () => {
 			email: "test@example.com",
 		}
 
-		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} onDone={() => {}} />)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} />)
 
 		// Check that the cloud URL pill is NOT displayed when cloudApiUrl is undefined
 		expect(screen.queryByText(/Roo Code Cloud URL:/)).not.toBeInTheDocument()
@@ -294,14 +245,7 @@ describe("CloudView", () => {
 			organizationName: "Test Organization",
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the task sync toggle is disabled for organization users
 		const taskSyncToggle = screen.getByTestId("task-sync-toggle")
@@ -326,14 +270,7 @@ describe("CloudView", () => {
 			// No organizationId - regular user
 		}
 
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the task sync toggle is enabled for non-organization users
 		const taskSyncToggle = screen.getByTestId("task-sync-toggle")
@@ -353,14 +290,7 @@ describe("CloudView", () => {
 		}
 
 		// Test with task sync enabled
-		render(
-			<CloudView
-				userInfo={mockUserInfo}
-				isAuthenticated={true}
-				cloudApiUrl="https://app.roocode.com"
-				onDone={() => {}}
-			/>,
-		)
+		render(<CloudView userInfo={mockUserInfo} isAuthenticated={true} cloudApiUrl="https://app.roocode.com" />)
 
 		// Check that the toggle shows the current state (enabled in this case)
 		const taskSyncToggle = screen.getByTestId("task-sync-toggle")

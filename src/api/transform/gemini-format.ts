@@ -1,12 +1,65 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Content, Part } from "@google/genai"
 
-export function convertAnthropicContentToGemini(content: string | Anthropic.ContentBlockParam[]): Part[] {
+type ThoughtSignatureContentBlock = {
+	type: "thoughtSignature"
+	thoughtSignature?: string
+}
+
+type ReasoningContentBlock = {
+	type: "reasoning"
+	text: string
+}
+
+type ExtendedContentBlockParam = Anthropic.ContentBlockParam | ThoughtSignatureContentBlock | ReasoningContentBlock
+type ExtendedAnthropicContent = string | ExtendedContentBlockParam[]
+
+function isThoughtSignatureContentBlock(block: ExtendedContentBlockParam): block is ThoughtSignatureContentBlock {
+	return block.type === "thoughtSignature"
+}
+
+export function convertAnthropicContentToGemini(
+	content: ExtendedAnthropicContent,
+	options?: { includeThoughtSignatures?: boolean; toolIdToName?: Map<string, string> },
+): Part[] {
+	const includeThoughtSignatures = options?.includeThoughtSignatures ?? true
+	const toolIdToName = options?.toolIdToName
+
+	// First pass: find thoughtSignature if it exists in the content blocks
+	let activeThoughtSignature: string | undefined
+	if (Array.isArray(content)) {
+		const sigBlock = content.find((block) => isThoughtSignatureContentBlock(block)) as ThoughtSignatureContentBlock
+		if (sigBlock?.thoughtSignature) {
+			activeThoughtSignature = sigBlock.thoughtSignature
+		}
+	}
+
+	// Determine the signature to attach to function calls.
+	// If we're in a mode that expects signatures (includeThoughtSignatures is true):
+	// 1. Use the actual signature if we found one in the history/content.
+	// 2. Fallback to "skip_thought_signature_validator" if missing (e.g. cross-model history).
+	let functionCallSignature: string | undefined
+	if (includeThoughtSignatures) {
+		functionCallSignature = activeThoughtSignature || "skip_thought_signature_validator"
+	}
+
 	if (typeof content === "string") {
 		return [{ text: content }]
 	}
 
 	return content.flatMap((block): Part | Part[] => {
+		// Handle thoughtSignature blocks first
+		if (isThoughtSignatureContentBlock(block)) {
+			if (includeThoughtSignatures && typeof block.thoughtSignature === "string") {
+				// The Google GenAI SDK currently exposes thoughtSignature as an
+				// extension field on Part; model it structurally without widening
+				// the upstream type.
+				return { thoughtSignature: block.thoughtSignature } as Part
+			}
+			// Explicitly omit thoughtSignature when not including it.
+			return []
+		}
+
 		switch (block.type) {
 			case "text":
 				return { text: block.text }
@@ -22,14 +75,26 @@ export function convertAnthropicContentToGemini(content: string | Anthropic.Cont
 						name: block.name,
 						args: block.input as Record<string, unknown>,
 					},
-				}
+					// Inject the thoughtSignature into the functionCall part if required.
+					// This is necessary for Gemini 2.5/3+ thinking models to validate the tool call.
+					...(functionCallSignature ? { thoughtSignature: functionCallSignature } : {}),
+				} as Part
 			case "tool_result": {
 				if (!block.content) {
 					return []
 				}
 
-				// Extract tool name from tool_use_id (e.g., "calculator-123" -> "calculator")
-				const toolName = block.tool_use_id.split("-")[0]
+				// Get tool name from the map (built from tool_use blocks in message history).
+				// The map must contain the tool name - if it doesn't, this indicates a bug
+				// where the conversation history is incomplete or tool_use blocks are missing.
+				const toolName = toolIdToName?.get(block.tool_use_id)
+				if (!toolName) {
+					throw new Error(
+						`Unable to find tool name for tool_use_id "${block.tool_use_id}". ` +
+							`This indicates the conversation history is missing the corresponding tool_use block. ` +
+							`Available tool IDs: ${Array.from(toolIdToName?.keys() ?? []).join(", ") || "none"}`,
+					)
+				}
 
 				if (typeof block.content === "string") {
 					return {
@@ -64,15 +129,28 @@ export function convertAnthropicContentToGemini(content: string | Anthropic.Cont
 				]
 			}
 			default:
-				// Currently unsupported: "thinking" | "redacted_thinking" | "document"
-				throw new Error(`Unsupported content block type: ${block.type}`)
+				// Skip unsupported content block types (e.g., "reasoning", "thinking", "redacted_thinking", "document")
+				// These are typically metadata from other providers that don't need to be sent to Gemini
+				console.warn(`Skipping unsupported content block type: ${block.type}`)
+				return []
 		}
 	})
 }
 
-export function convertAnthropicMessageToGemini(message: Anthropic.Messages.MessageParam): Content {
-	return {
-		role: message.role === "assistant" ? "model" : "user",
-		parts: convertAnthropicContentToGemini(message.content),
+export function convertAnthropicMessageToGemini(
+	message: Anthropic.Messages.MessageParam,
+	options?: { includeThoughtSignatures?: boolean; toolIdToName?: Map<string, string> },
+): Content[] {
+	const parts = convertAnthropicContentToGemini(message.content, options)
+
+	if (parts.length === 0) {
+		return []
 	}
+
+	return [
+		{
+			role: message.role === "assistant" ? "model" : "user",
+			parts,
+		},
+	]
 }

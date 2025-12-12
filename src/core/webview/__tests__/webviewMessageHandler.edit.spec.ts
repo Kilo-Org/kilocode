@@ -43,6 +43,7 @@ import { webviewMessageHandler } from "../webviewMessageHandler"
 import type { ClineProvider } from "../ClineProvider"
 import type { ClineMessage } from "@roo-code/types"
 import type { ApiMessage } from "../../task-persistence/apiMessages"
+import { MessageManager } from "../../message-manager"
 
 describe("webviewMessageHandler - Edit Message with Timestamp Fallback", () => {
 	let mockClineProvider: ClineProvider
@@ -60,6 +61,7 @@ describe("webviewMessageHandler - Edit Message with Timestamp Fallback", () => {
 			overwriteApiConversationHistory: vi.fn(),
 			handleWebviewAskResponse: vi.fn(),
 		}
+		mockCurrentTask.messageManager = new MessageManager(mockCurrentTask)
 
 		// Create mock provider
 		mockClineProvider = {

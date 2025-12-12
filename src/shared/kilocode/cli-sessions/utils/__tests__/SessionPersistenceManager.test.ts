@@ -298,4 +298,30 @@ describe("SessionPersistenceManager", () => {
 			expect(result).toEqual({})
 		})
 	})
+
+	describe("taskSessionMap duplicate values", () => {
+		it("should deduplicate session IDs keeping only the last entry for each duplicate value", () => {
+			manager.setWorkspaceDir("/workspace")
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: {
+						"task-1": "session-1",
+						"task-2": "session-2",
+						"task-3": "session-1",
+					},
+				}),
+			)
+
+			const taskSessionMap = manager.getTaskSessionMap()
+			const sessionIds = Object.values(taskSessionMap)
+			const uniqueSessionIds = new Set(sessionIds)
+
+			expect(sessionIds.length).toBe(uniqueSessionIds.size)
+			expect(taskSessionMap).toEqual({
+				"task-2": "session-2",
+				"task-3": "session-1",
+			})
+		})
+	})
 })

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.126.1",
+	"version": "4.137.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -23,7 +23,7 @@
 		"type": "git",
 		"url": "https://github.com/Kilo-Org/kilocode"
 	},
-	"homepage": "https://kilocode.ai",
+	"homepage": "https://kilo.ai",
 	"categories": [
 		"AI",
 		"Chat",
@@ -292,6 +292,12 @@
 				"command": "kilo-code.ghost.goToPreviousSuggestion",
 				"title": "%ghost.commands.goToPreviousSuggestion%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.agentManagerOpen",
+				"title": "Open Agent Manager",
+				"icon": "$(circuit-board)",
+				"category": "%configuration.title%"
 			}
 		],
 		"menus": {
@@ -342,6 +348,11 @@
 			"view/title": [
 				{
 					"command": "kilo-code.plusButtonClicked",
+					"group": "navigation@0",
+					"when": "view == kilo-code.SidebarProvider"
+				},
+				{
+					"command": "kilo-code.agentManagerOpen",
 					"group": "navigation@1",
 					"when": "view == kilo-code.SidebarProvider"
 				},
@@ -612,6 +623,11 @@
 					],
 					"default": "xml",
 					"description": "%settings.toolProtocol.description%"
+				},
+				"kilo-code.debug": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.debug.description%"
 				}
 			}
 		},
@@ -658,7 +674,7 @@
 		"@aws-sdk/client-bedrock-runtime": "^3.922.0",
 		"@aws-sdk/credential-providers": "^3.922.0",
 		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
-		"@google/genai": "^1.0.0",
+		"@google/genai": "^1.29.1",
 		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
@@ -710,6 +726,7 @@
 		"p-map": "^7.0.3",
 		"p-retry": "^7.1.0",
 		"p-wait-for": "^5.0.2",
+		"partial-json": "^0.1.7",
 		"pdf-parse": "^1.1.1",
 		"pkce-challenge": "^5.0.0",
 		"pretty-bytes": "^7.0.0",
@@ -742,6 +759,7 @@
 		"vscode-material-icons": "^0.1.1",
 		"web-tree-sitter": "^0.25.6",
 		"workerpool": "^9.2.0",
+		"ws": "^8.18.0",
 		"xlsx": "^0.18.5",
 		"yaml": "^2.8.0",
 		"zod": "^3.25.61"
@@ -770,12 +788,13 @@
 		"@types/tmp": "^0.2.6",
 		"@types/turndown": "^5.0.5",
 		"@types/vscode": "^1.84.0",
+		"@types/ws": "^8.5.13",
 		"@vscode/test-electron": "^2.5.2",
 		"@vscode/vsce": "3.3.2",
 		"dotenv": "^16.4.7",
 		"esbuild": "^0.25.0",
 		"execa": "^9.5.2",
-		"glob": "^11.0.1",
+		"glob": "^11.1.0",
 		"mkdirp": "^3.0.1",
 		"myers-diff": "^2.1.0",
 		"nock": "^14.0.4",

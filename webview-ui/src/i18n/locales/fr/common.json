@@ -117,6 +117,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "Tu as attendu {{timeout}} secondes pour l'initialisation du checkpoint. Si tu n'as pas besoin de cette fonction, désactive-la dans <settingsLink>les paramètres du checkpoint</settingsLink>.",
-		"init_checkpoint_fail_long_time": "L'initialisation du checkpoint a pris plus de {{timeout}} secondes, donc les checkpoints sont désactivés pour cette tâche. Tu peux désactiver les checkpoints ou prolonger le délai dans <settingsLink>les paramètres du checkpoint</settingsLink>."
+		"init_checkpoint_fail_long_time": "L'initialisation du checkpoint a pris plus de {{timeout}} secondes, donc les checkpoints sont désactivés pour cette tâche. Tu peux désactiver les checkpoints ou prolonger le délai dans <settingsLink>les paramètres du checkpoint</settingsLink>.",
+		"attempt_completion_tool_failed": "Tu ne peux pas exécuter attempt_completion car un appel d'outil précédent a échoué dans ce tour. Résous l'échec de l'outil avant de tenter de terminer."
+	},
+	"tasks": {
+		"delegated": "Délégué à la sous-tâche",
+		"delegated_to": "Délégué à la tâche {{childId}}",
+		"delegation_completed": "Sous-tâche terminée, reprise de la tâche parent",
+		"awaiting_child": "En attente de la tâche enfant {{childId}}"
 	}
 }

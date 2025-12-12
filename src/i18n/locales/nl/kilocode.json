@@ -171,5 +171,28 @@
 		"checkpointsUnavailable": "Kan nieuwe wijzigingen niet weergeven, controlepunten zijn niet beschikbaar.",
 		"noChanges": "Kan nieuwe wijzigingen niet weergeven, er zijn geen wijzigingen gevonden.",
 		"error": "Kan nieuwe wijzigingen niet weergeven, er is een fout opgetreden."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Je Kilocode CLI-versie is verouderd en ondersteunt de Agent Manager niet. Update naar de nieuwste versie.",
+			"cliNotFound": "Kilocode CLI niet gevonden. Installeer het om de Agent Manager te gebruiken.",
+			"sessionFailed": "Kon agentsessie niet starten",
+			"sessionFailedWithMessage": "Kon agentsessie niet starten: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Update-instructies",
+			"installInstructions": "Installatie-instructies",
+			"getHelp": "Hulp krijgen",
+			"runInTerminal": "Uitvoeren in Terminal",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Globaal Bijwerken",
+			"updateLocal": "Lokaal Bijwerken",
+			"installGlobal": "Globaal Installeren",
+			"installLocal": "Lokaal Installeren"
+		},
+		"terminal": {
+			"installMessage": "npm install uitvoeren om Kilocode CLI te installeren. Zodra voltooid, kun je dit terminal sluiten en proberen de Agent Manager opnieuw te starten.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
 	}
 }

@@ -33,6 +33,7 @@ import {
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
+import { STTSegment } from "./sttContract" // kilocode_change: STT segment type
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -133,6 +134,10 @@ export interface ExtensionMessage {
 		| "openInBrowser" // kilocode_change
 		| "acceptInput"
 		| "focusChatInput" // kilocode_change
+		| "stt:started" // kilocode_change: STT session started
+		| "stt:transcript" // kilocode_change: STT transcript update
+		| "stt:volume" // kilocode_change: STT volume level
+		| "stt:stopped" // kilocode_change: STT session stopped
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -144,6 +149,7 @@ export interface ExtensionMessage {
 		| "authenticatedUser"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
+		| "rooCreditBalance"
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
@@ -172,6 +178,10 @@ export interface ExtensionMessage {
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
 		| "interactionRequired"
+		| "managedIndexerState" // kilocode_change
+		| "managedIndexerEnabled" // kilocode_change
+		| "browserSessionUpdate"
+		| "browserSessionNavigate"
 		| "organizationSwitchResult"
 		| "showTimestamps" // kilocode_change
 		| "apiMessagesSaved" // kilocode_change: File save event for API messages
@@ -179,7 +189,12 @@ export interface ExtensionMessage {
 		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
 		| "managedIndexerState" // kilocode_change
 		| "singleCompletionResult" // kilocode_change
-		| "managedIndexerState" // kilocode_change
+		| "deviceAuthStarted" // kilocode_change: Device auth initiated
+		| "deviceAuthPolling" // kilocode_change: Device auth polling update
+		| "deviceAuthComplete" // kilocode_change: Device auth successful
+		| "deviceAuthFailed" // kilocode_change: Device auth failed
+		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -199,12 +214,12 @@ export interface ExtensionMessage {
 	}
 	action?:
 		| "chatButtonClicked"
-		| "mcpButtonClicked"
 		| "settingsButtonClicked"
 		| "historyButtonClicked"
-		| "promptsButtonClicked"
+		| "promptsButtonClicked" // kilocode_change
 		| "profileButtonClicked" // kilocode_change
 		| "marketplaceButtonClicked"
+		| "mcpButtonClicked" // kilocode_change
 		| "cloudButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
@@ -254,6 +269,11 @@ export interface ExtensionMessage {
 	slug?: string
 	success?: boolean
 	values?: Record<string, any>
+	sessionId?: string // kilocode_change: STT session ID
+	segments?: STTSegment[] // kilocode_change: STT transcript segments (complete state)
+	isFinal?: boolean // kilocode_change: STT transcript is final
+	level?: number // kilocode_change: STT volume level (0-1)
+	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
@@ -327,6 +347,18 @@ export interface ExtensionMessage {
 			}
 		}
 	}> // kilocode_change end: Managed Indexer
+	browserSessionMessages?: ClineMessage[] // For browser session panel updates
+	isBrowserSessionActive?: boolean // For browser session panel updates
+	stepIndex?: number // For browserSessionNavigate: the target step index to display
+	// kilocode_change start: Device auth data
+	deviceAuthCode?: string
+	deviceAuthVerificationUrl?: string
+	deviceAuthExpiresIn?: number
+	deviceAuthTimeRemaining?: number
+	deviceAuthToken?: string
+	deviceAuthUserEmail?: string
+	deviceAuthError?: string
+	// kilocode_change end: Device auth data
 }
 
 export type ExtensionState = Pick<
@@ -343,6 +375,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowWrite"
 	| "alwaysAllowWriteOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
+	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
 	| "alwaysApproveResubmit"
 	| "alwaysAllowMcp"
@@ -416,11 +449,13 @@ export type ExtensionState = Pick<
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
+	| "imageGenerationProvider"
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
 	| "includeCurrentTime"
 	| "includeCurrentCost"
+	| "maxGitStatusFiles"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -480,6 +515,8 @@ export type ExtensionState = Pick<
 	organizationAllowList: OrganizationAllowList
 	organizationSettingsVersion?: number
 
+	isBrowserSessionActive: boolean // Actual browser session state
+
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
 	marketplaceItems?: MarketplaceItem[]
@@ -500,6 +537,8 @@ export type ExtensionState = Pick<
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	debug?: boolean
+	speechToTextAvailable?: boolean // kilocode_change: Whether speech-to-text is fully configured (FFmpeg + OpenAI key)
 }
 
 export interface ClineSayTool {
@@ -517,7 +556,6 @@ export interface ClineSayTool {
 		| "switchMode"
 		| "newTask"
 		| "finishTask"
-		| "insertContent"
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
@@ -587,6 +625,7 @@ export const browserActions = [
 	"click",
 	"hover",
 	"type",
+	"press",
 	"scroll_down",
 	"scroll_up",
 	"resize",
@@ -600,6 +639,7 @@ export interface ClineSayBrowserAction {
 	coordinate?: string
 	size?: string
 	text?: string
+	executedCoordinate?: string
 }
 
 export type BrowserActionResult = {
@@ -607,6 +647,8 @@ export type BrowserActionResult = {
 	logs?: string
 	currentUrl?: string
 	currentMousePosition?: string
+	viewportWidth?: number
+	viewportHeight?: number
 }
 
 export interface ClineAskUseMcpServer {

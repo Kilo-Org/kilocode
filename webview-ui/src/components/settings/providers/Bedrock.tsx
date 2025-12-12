@@ -19,6 +19,7 @@ type BedrockProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	selectedModelInfo?: ModelInfo
+	simplifySettings?: boolean
 }
 
 export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedModelInfo }: BedrockProps) => {
@@ -152,21 +153,17 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 			{supportsGlobalInference && (
 				<Checkbox
 					checked={apiConfiguration?.awsUseGlobalInference || false}
-					disabled={apiConfiguration?.awsUseCrossRegionInference || false}
 					onChange={(checked: boolean) => {
-						// Enabling Global Inference should disable cross-region inference
+						// Global Inference takes priority over cross-region when both are enabled
 						setApiConfigurationField("awsUseGlobalInference", checked)
-						if (checked) setApiConfigurationField("awsUseCrossRegionInference", false)
 					}}>
 					{t("settings:providers.awsGlobalInference")}
 				</Checkbox>
 			)}
 			<Checkbox
 				checked={apiConfiguration?.awsUseCrossRegionInference || false}
-				disabled={apiConfiguration?.awsUseGlobalInference || false}
 				onChange={(checked: boolean) => {
 					setApiConfigurationField("awsUseCrossRegionInference", checked)
-					if (checked) setApiConfigurationField("awsUseGlobalInference", false)
 				}}>
 				{t("settings:providers.awsCrossRegion")}
 			</Checkbox>

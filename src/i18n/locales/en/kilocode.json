@@ -157,6 +157,29 @@
 		"noChanges": "Cannot show new changes, no changes were found.",
 		"error": "Cannot show new changes, an error occured."
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Your Kilocode CLI version is outdated and doesn't support the Agent Manager. Please update to the latest version.",
+			"cliNotFound": "Kilocode CLI not found. Please install it to use the Agent Manager.",
+			"sessionFailed": "Failed to start agent session",
+			"sessionFailedWithMessage": "Failed to start agent session: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Update Instructions",
+			"installInstructions": "Install Instructions",
+			"getHelp": "Get Help",
+			"runInTerminal": "Run in Terminal",
+			"updateGlobal": "Update Global",
+			"updateLocal": "Update Local",
+			"installGlobal": "Install Global",
+			"installLocal": "Install Local",
+			"loginCli": "Run kilocode auth"
+		},
+		"terminal": {
+			"installMessage": "Running npm install to install the Kilocode CLI. Once complete, you can close this terminal and try starting the Agent Manager again.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
 	"terminalCommandGenerator": {
 		"tipMessage": "Kilo: Press {{shortcut}} to generate terminal commands",
 		"inputPrompt": "Kilo: Describe the command you want to generate",

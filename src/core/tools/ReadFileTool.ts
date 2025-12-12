@@ -1,10 +1,12 @@
 import path from "path"
 import { isBinaryFile } from "isbinaryfile"
 import type { FileEntry, LineRange } from "@roo-code/types"
+import { isNativeProtocol, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
+import { getModelMaxOutputTokens } from "../../shared/api"
 import { t } from "../../i18n"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
@@ -14,6 +16,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -35,6 +38,7 @@ interface FileResult {
 	notice?: string
 	lineRanges?: LineRange[]
 	xmlContent?: string
+	nativeContent?: string
 	imageDataUrl?: string
 	feedbackText?: string
 	feedbackImages?: any[]
@@ -103,18 +107,21 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 	}
 
 	async execute(params: { files: FileEntry[] }, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { handleError, pushToolResult } = callbacks
+		const { handleError, pushToolResult, toolProtocol } = callbacks
 		const fileEntries = params.files
+		const modelInfo = task.api.getModel().info
+		const protocol = resolveToolProtocol(task.apiConfiguration, modelInfo)
+		const useNative = isNativeProtocol(protocol)
 
 		if (!fileEntries || fileEntries.length === 0) {
 			task.consecutiveMistakeCount++
 			task.recordToolError("read_file")
 			const errorMsg = await task.sayAndCreateMissingParamError("read_file", "args (containing valid file paths)")
-			pushToolResult(`<files><error>${errorMsg}</error></files>`)
+			const errorResult = useNative ? `Error: ${errorMsg}` : `<files><error>${errorMsg}</error></files>`
+			pushToolResult(errorResult)
 			return
 		}
 
-		const modelInfo = task.api.getModel().info
 		const supportsImages = modelInfo.supportsImages ?? false
 
 		const fileResults: FileResult[] = fileEntries.map((entry) => ({
@@ -146,6 +153,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 								status: "blocked",
 								error: errorMsg,
 								xmlContent: `<file><path>${relPath}</path><error>Error reading file: ${errorMsg}</error></file>`,
+								nativeContent: `File: ${relPath}\nError: Error reading file: ${errorMsg}`,
 							})
 							await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
 							hasRangeError = true
@@ -157,6 +165,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 								status: "blocked",
 								error: errorMsg,
 								xmlContent: `<file><path>${relPath}</path><error>Error reading file: ${errorMsg}</error></file>`,
+								nativeContent: `File: ${relPath}\nError: Error reading file: ${errorMsg}`,
 							})
 							await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
 							hasRangeError = true
@@ -175,6 +184,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							status: "blocked",
 							error: errorMsg,
 							xmlContent: `<file><path>${relPath}</path><error>${errorMsg}</error></file>`,
+							nativeContent: `File: ${relPath}\nError: ${errorMsg}`,
 						})
 						continue
 					}
@@ -228,6 +238,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						updateFileResult(fileResult.path, {
 							status: "denied",
 							xmlContent: `<file><path>${fileResult.path}</path><status>Denied by user</status></file>`,
+							nativeContent: `File: ${fileResult.path}\nStatus: Denied by user`,
 							feedbackText: text,
 							feedbackImages: images,
 						})
@@ -248,6 +259,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 								updateFileResult(fileResult.path, {
 									status: "denied",
 									xmlContent: `<file><path>${fileResult.path}</path><status>Denied by user</status></file>`,
+									nativeContent: `File: ${fileResult.path}\nStatus: Denied by user`,
 								})
 							}
 						})
@@ -260,6 +272,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							updateFileResult(fileResult.path, {
 								status: "denied",
 								xmlContent: `<file><path>${fileResult.path}</path><status>Denied by user</status></file>`,
+								nativeContent: `File: ${fileResult.path}\nStatus: Denied by user`,
 							})
 						})
 					}
@@ -299,6 +312,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 					updateFileResult(relPath, {
 						status: "denied",
 						xmlContent: `<file><path>${relPath}</path><status>Denied by user</status></file>`,
+						nativeContent: `File: ${relPath}\nStatus: Denied by user`,
 						feedbackText: text,
 						feedbackImages: images,
 					})
@@ -343,6 +357,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 									await task.fileContextTracker.trackFileContext(relPath, "read_tool" as RecordSource)
 									updateFileResult(relPath, {
 										xmlContent: `<file><path>${relPath}</path>\n<notice>${validationResult.notice}</notice>\n</file>`,
+										nativeContent: `File: ${relPath}\nNote: ${validationResult.notice}`,
 									})
 									continue
 								}
@@ -353,6 +368,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 								updateFileResult(relPath, {
 									xmlContent: `<file><path>${relPath}</path>\n<notice>${imageResult.notice}</notice>\n</file>`,
+									nativeContent: `File: ${relPath}\nNote: ${imageResult.notice}`,
 									imageDataUrl: imageResult.dataUrl,
 								})
 								continue
@@ -362,6 +378,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 									status: "error",
 									error: `Error reading image file: ${errorMsg}`,
 									xmlContent: `<file><path>${relPath}</path><error>Error reading image file: ${errorMsg}</error></file>`,
+									nativeContent: `File: ${relPath}\nError: Error reading image file: ${errorMsg}`,
 								})
 								await task.say("error", `Error reading image file ${relPath}: ${errorMsg}`)
 								continue
@@ -375,6 +392,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							updateFileResult(relPath, {
 								notice: `Binary file format: ${fileFormat}`,
 								xmlContent: `<file><path>${relPath}</path>\n<binary_file format="${fileFormat}">Binary file - content not displayed</binary_file>\n</file>`,
+								nativeContent: `File: ${relPath}\nBinary file (${fileFormat}) - content not displayed`,
 							})
 							continue
 						}
@@ -382,6 +400,8 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 					if (fileResult.lineRanges && fileResult.lineRanges.length > 0) {
 						const rangeResults: string[] = []
+						const nativeRangeResults: string[] = []
+
 						for (const range of fileResult.lineRanges) {
 							const content = addLineNumbers(
 								await readLines(fullPath, range.end - 1, range.start - 1),
@@ -389,9 +409,12 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							)
 							const lineRangeAttr = ` lines="${range.start}-${range.end}"`
 							rangeResults.push(`<content${lineRangeAttr}>\n${content}</content>`)
+							nativeRangeResults.push(`Lines ${range.start}-${range.end}:\n${content}`)
 						}
+
 						updateFileResult(relPath, {
 							xmlContent: `<file><path>${relPath}</path>\n${rangeResults.join("\n")}\n</file>`,
+							nativeContent: `File: ${relPath}\n${nativeRangeResults.join("\n\n")}`,
 						})
 						continue
 					}
@@ -403,9 +426,10 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 								task.rooIgnoreController,
 							)
 							if (defResult) {
-								let xmlInfo = `<notice>Showing only ${maxReadFileLine} of ${totalLines} total lines. Use line_range if you need to read more lines</notice>\n`
+								const notice = `Showing only ${maxReadFileLine} of ${totalLines} total lines. Use line_range if you need to read more lines`
 								updateFileResult(relPath, {
-									xmlContent: `<file><path>${relPath}</path>\n<list_code_definition_names>${defResult}</list_code_definition_names>\n${xmlInfo}</file>`,
+									xmlContent: `<file><path>${relPath}</path>\n<list_code_definition_names>${defResult}</list_code_definition_names>\n<notice>${notice}</notice>\n</file>`,
+									nativeContent: `File: ${relPath}\nCode Definitions:\n${defResult}\n\nNote: ${notice}`,
 								})
 							}
 						} catch (error) {
@@ -424,6 +448,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						const content = addLineNumbers(await readLines(fullPath, maxReadFileLine - 1, 0))
 						const lineRangeAttr = ` lines="1-${maxReadFileLine}"`
 						let xmlInfo = `<content${lineRangeAttr}>\n${content}</content>\n`
+						let nativeInfo = `Lines 1-${maxReadFileLine}:\n${content}\n`
 
 						try {
 							const defResult = await parseSourceCodeDefinitionsForFile(
@@ -433,10 +458,16 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							if (defResult) {
 								const truncatedDefs = truncateDefinitionsToLineLimit(defResult, maxReadFileLine)
 								xmlInfo += `<list_code_definition_names>${truncatedDefs}</list_code_definition_names>\n`
+								nativeInfo += `\nCode Definitions:\n${truncatedDefs}\n`
 							}
-							xmlInfo += `<notice>Showing only ${maxReadFileLine} of ${totalLines} total lines. Use line_range if you need to read more lines</notice>\n`
+
+							const notice = `Showing only ${maxReadFileLine} of ${totalLines} total lines. Use line_range if you need to read more lines`
+							xmlInfo += `<notice>${notice}</notice>\n`
+							nativeInfo += `\nNote: ${notice}`
+
 							updateFileResult(relPath, {
 								xmlContent: `<file><path>${relPath}</path>\n${xmlInfo}</file>`,
+								nativeContent: `File: ${relPath}\n${nativeInfo}`,
 							})
 						} catch (error) {
 							if (error instanceof Error && error.message.startsWith("Unsupported language:")) {
@@ -450,14 +481,27 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						continue
 					}
 
-					const modelInfo = task.api.getModel().info
+					const { id: modelId, info: modelInfo } = task.api.getModel()
 					const { contextTokens } = task.getTokenUsage()
 					const contextWindow = modelInfo.contextWindow
 
-					const budgetResult = await validateFileTokenBudget(fullPath, contextWindow, contextTokens || 0)
+					const maxOutputTokens =
+						getModelMaxOutputTokens({
+							modelId,
+							model: modelInfo,
+							settings: task.apiConfiguration,
+						}) ?? ANTHROPIC_DEFAULT_MAX_TOKENS
+
+					const budgetResult = await validateFileTokenBudget(
+						fullPath,
+						contextWindow - maxOutputTokens,
+						contextTokens || 0,
+					)
 
 					let content = await extractTextFromFile(fullPath)
 					let xmlInfo = ""
+
+					let nativeInfo = ""
 
 					if (budgetResult.shouldTruncate && budgetResult.maxChars !== undefined) {
 						const truncateResult = truncateFileContent(
@@ -476,31 +520,58 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						xmlInfo =
 							content.length > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
 						xmlInfo += `<notice>${truncateResult.notice}</notice>\n`
+
+						nativeInfo =
+							content.length > 0
+								? `Lines 1-${displayedLines}:\n${content}\n\nNote: ${truncateResult.notice}`
+								: `Note: ${truncateResult.notice}`
 					} else {
 						const lineRangeAttr = ` lines="1-${totalLines}"`
 						xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
 
 						if (totalLines === 0) {
 							xmlInfo += `<notice>File is empty</notice>\n`
+							nativeInfo = "Note: File is empty"
+						} else {
+							nativeInfo = `Lines 1-${totalLines}:\n${content}`
 						}
 					}
 
 					await task.fileContextTracker.trackFileContext(relPath, "read_tool" as RecordSource)
 
-					updateFileResult(relPath, { xmlContent: `<file><path>${relPath}</path>\n${xmlInfo}</file>` })
+					updateFileResult(relPath, {
+						xmlContent: `<file><path>${relPath}</path>\n${xmlInfo}</file>`,
+						nativeContent: `File: ${relPath}\n${nativeInfo}`,
+					})
 				} catch (error) {
 					const errorMsg = error instanceof Error ? error.message : String(error)
 					updateFileResult(relPath, {
 						status: "error",
 						error: `Error reading file: ${errorMsg}`,
 						xmlContent: `<file><path>${relPath}</path><error>Error reading file: ${errorMsg}</error></file>`,
+						nativeContent: `File: ${relPath}\nError: Error reading file: ${errorMsg}`,
 					})
 					await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
 				}
 			}
 
-			const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
-			const filesXml = `<files>\n${xmlResults.join("\n")}\n</files>`
+			// Check if any files had errors or were blocked and mark the turn as failed
+			const hasErrors = fileResults.some((result) => result.status === "error" || result.status === "blocked")
+			if (hasErrors) {
+				task.didToolFailInCurrentTurn = true
+			}
+
+			// Build final result based on protocol
+			let finalResult: string
+			if (useNative) {
+				const nativeResults = fileResults
+					.filter((result) => result.nativeContent)
+					.map((result) => result.nativeContent)
+				finalResult = nativeResults.join("\n\n---\n\n")
+			} else {
+				const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
+				finalResult = `<files>\n${xmlResults.join("\n")}\n</files>`
+			}
 
 			const fileImageUrls = fileResults
 				.filter((result) => result.imageDataUrl)
@@ -534,26 +605,26 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 			if (statusMessage || imagesToInclude.length > 0) {
 				const result = formatResponse.toolResult(
-					statusMessage || filesXml,
+					statusMessage || finalResult,
 					imagesToInclude.length > 0 ? imagesToInclude : undefined,
 				)
 
 				if (typeof result === "string") {
 					if (statusMessage) {
-						pushToolResult(`${result}\n${filesXml}`)
+						pushToolResult(`${result}\n${finalResult}`)
 					} else {
 						pushToolResult(result)
 					}
 				} else {
 					if (statusMessage) {
-						const textBlock = { type: "text" as const, text: filesXml }
+						const textBlock = { type: "text" as const, text: finalResult }
 						pushToolResult([...result, textBlock])
 					} else {
 						pushToolResult(result)
 					}
 				}
 			} else {
-				pushToolResult(filesXml)
+				pushToolResult(finalResult)
 			}
 		} catch (error) {
 			const relPath = fileEntries[0]?.path || "unknown"
@@ -564,14 +635,28 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 					status: "error",
 					error: `Error reading file: ${errorMsg}`,
 					xmlContent: `<file><path>${relPath}</path><error>Error reading file: ${errorMsg}</error></file>`,
+					nativeContent: `File: ${relPath}\nError: Error reading file: ${errorMsg}`,
 				})
 			}
 
 			await task.say("error", `Error reading file ${relPath}: ${errorMsg}`)
 
-			const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
+			// Mark that a tool failed in this turn
+			task.didToolFailInCurrentTurn = true
 
-			pushToolResult(`<files>\n${xmlResults.join("\n")}\n</files>`)
+			// Build final error result based on protocol
+			let errorResult: string
+			if (useNative) {
+				const nativeResults = fileResults
+					.filter((result) => result.nativeContent)
+					.map((result) => result.nativeContent)
+				errorResult = nativeResults.join("\n\n---\n\n")
+			} else {
+				const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
+				errorResult = `<files>\n${xmlResults.join("\n")}\n</files>`
+			}
+
+			pushToolResult(errorResult)
 		}
 	}
 
@@ -653,6 +738,13 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 		}
 		if (!filePath && legacyPath) {
 			filePath = legacyPath
+		}
+
+		if (!filePath && block.nativeArgs && "files" in block.nativeArgs && Array.isArray(block.nativeArgs.files)) {
+			const files = block.nativeArgs.files
+			if (files.length > 0 && files[0]?.path) {
+				filePath = files[0].path
+			}
 		}
 
 		const fullPath = filePath ? path.resolve(task.cwd, filePath) : ""

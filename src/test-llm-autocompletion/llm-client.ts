@@ -19,7 +19,7 @@ export interface FimResponse {
 	tokensUsed?: number
 }
 
-function getKiloBaseUriFromToken(kilocodeToken?: string): string {
+export function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 	if (kilocodeToken) {
 		try {
 			const payload_string = kilocodeToken.split(".")[1]
@@ -31,7 +31,7 @@ function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
-	return "https://api.kilocode.ai"
+	return "https://api.kilo.ai"
 }
 
 export class LLMClient {

@@ -1,16 +1,6 @@
 import * as vscode from "vscode"
 import { t } from "../../i18n"
-
-interface GhostStatusBarStateProps {
-	enabled?: boolean
-	model?: string
-	provider?: string
-	profileName?: string | null
-	hasValidToken: boolean
-	totalSessionCost: number
-	completionCount: number
-	sessionStartTime: number
-}
+import type { GhostStatusBarStateProps } from "./types"
 
 export class GhostStatusBar {
 	statusBar: vscode.StatusBarItem

@@ -2,4 +2,12 @@ const config = {
 	server: {
 	  port: 3000,
 	  host: 'localhost',
-	  <<<AUTOCOMPLETE_HERE>>>
+	},
+	db: {
+	  host: 'localhost',
+	  port: 27017,
+	  name: 'test',
+	},
+  };
+
+  module.exports = config;

@@ -1,5 +1,6 @@
-# Description: Should implement rate limiting for API endpoints
+#### Description: Should implement rate limiting for API endpoints
+#### Filename: api-middleware.js
 function handleAPIRequest(req, res) {
-  // TODO: Implement rate limiting to prevent abuse<<<CURSOR>>>
+  // TODO: Implement rate limiting to prevent abuse<<<AUTOCOMPLETE_HERE>>>
   processRequest(req, res);
 }

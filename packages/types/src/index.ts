@@ -9,6 +9,7 @@ export * from "./feature-flags.js"
 export * from "./followup.js"
 export * from "./global-settings.js"
 export * from "./history.js"
+export * from "./image-generation.js"
 export * from "./ipc.js"
 export * from "./marketplace.js"
 export * from "./mcp.js"
@@ -27,6 +28,7 @@ export * from "./tool-params.js"
 export * from "./type-fu.js"
 export * from "./vscode.js"
 export * from "./kilocode/kilocode.js"
+export * from "./kilocode/device-auth.js" // kilocode_change
 export * from "./kilocode/nativeFunctionCallingProviders.js"
 export * from "./usage-tracker.js" // kilocode_change
 

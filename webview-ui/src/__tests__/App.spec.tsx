@@ -67,12 +67,8 @@ vi.mock("../components/kilocodeMcp/marketplace/McpMarketplaceView", () => ({
 
 vi.mock("@src/components/modes/ModesView", () => ({
 	__esModule: true,
-	default: function ModesView({ onDone }: { onDone: () => void }) {
-		return (
-			<div data-testid="prompts-view" onClick={onDone}>
-				Modes View
-			</div>
-		)
+	default: function ModesView() {
+		return <div data-testid="prompts-view">Modes View</div>
 	},
 }))
 
@@ -87,12 +83,8 @@ vi.mock("@src/components/marketplace/MarketplaceView", () => ({
 }))
 
 vi.mock("@src/components/cloud/CloudView", () => ({
-	CloudView: function CloudView({ onDone }: { onDone: () => void }) {
-		return (
-			<div data-testid="cloud-view" onClick={onDone}>
-				Cloud View
-			</div>
-		)
+	CloudView: function CloudView() {
+		return <div data-testid="cloud-view">Cloud View</div>
 	},
 }))
 
@@ -185,6 +177,7 @@ describe("App", () => {
 			shouldShowAnnouncement: false,
 			experiments: {},
 			language: "en",
+			telemetrySetting: "enabled",
 		})
 	})
 
@@ -239,19 +232,21 @@ describe("App", () => {
 		expect(chatView.getAttribute("data-hidden")).toBe("true")
 	})
 
-	it("switches to prompts view when receiving promptsButtonClicked action", async () => {
+	// kilocode_change start: Test changed to expect settings-view instead of prompts-view
+	it("switches to settings view with modes section when receiving promptsButtonClicked action", async () => {
 		render(<AppWithProviders />)
 
 		act(() => {
 			triggerMessage("promptsButtonClicked")
 		})
 
-		const promptsView = await screen.findByTestId("prompts-view")
-		expect(promptsView).toBeInTheDocument()
+		const settingsView = await screen.findByTestId("settings-view")
+		expect(settingsView).toBeInTheDocument()
 
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("true")
 	})
+	// kilocode_change end
 
 	it("returns to chat view when clicking done in settings view", async () => {
 		render(<AppWithProviders />)
@@ -271,23 +266,43 @@ describe("App", () => {
 		expect(screen.queryByTestId("settings-view")).not.toBeInTheDocument()
 	})
 
-	it.each(["history", "prompts"])("returns to chat view when clicking done in %s view", async (view) => {
+	// kilocode_change start: Split tests for history view and settings view (via promptsButtonClicked)
+	it("returns to chat view when clicking done in history view", async () => {
 		render(<AppWithProviders />)
 
 		act(() => {
-			triggerMessage(`${view}ButtonClicked`)
+			triggerMessage("historyButtonClicked")
 		})
 
-		const viewElement = await screen.findByTestId(`${view}-view`)
+		const historyView = await screen.findByTestId("history-view")
 
 		act(() => {
-			viewElement.click()
+			historyView.click()
 		})
 
 		const chatView = screen.getByTestId("chat-view")
 		expect(chatView.getAttribute("data-hidden")).toBe("false")
-		expect(screen.queryByTestId(`${view}-view`)).not.toBeInTheDocument()
+		expect(screen.queryByTestId("history-view")).not.toBeInTheDocument()
 	})
+
+	it("returns to chat view when clicking done in settings view (via promptsButtonClicked)", async () => {
+		render(<AppWithProviders />)
+
+		act(() => {
+			triggerMessage("promptsButtonClicked")
+		})
+
+		const settingsView = await screen.findByTestId("settings-view")
+
+		act(() => {
+			settingsView.click()
+		})
+
+		const chatView = screen.getByTestId("chat-view")
+		expect(chatView.getAttribute("data-hidden")).toBe("false")
+		expect(screen.queryByTestId("settings-view")).not.toBeInTheDocument()
+	})
+	// kilocode_change end
 
 	it.skip("switches to marketplace view when receiving marketplaceButtonClicked action", async () => {
 		render(<AppWithProviders />)

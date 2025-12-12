@@ -1,0 +1,50 @@
+function calculateSum(a, b) {
+    return a + b;
+  }
+
+  function calculateDifference(a, b) {
+    return a - b;
+  }
+
+  function calculateProduct(a, b) {
+    return a * b;
+  }
+
+  function calculateQuotient(a, b) {
+    if (b === 0) {
+      return "Cannot divide by zero";
+    }
+    return a / b;
+  }
+
+  function calculateRemainder(a, b) {
+    if (b === 0) {
+      return "Cannot divide by zero";
+    }
+    return a % b;
+  }
+
+  function calculatePower(a, b) {
+    return Math.pow(a, b);
+  }
+
+  function calculateSquareRoot(a) {
+    if (a < 0) {
+      return "Cannot calculate square root of a negative number";
+    }
+    return Math.sqrt(a);
+  }
+
+  function calculateAbsoluteValue(a) {
+    return Math.abs(a);
+  }
+
+  function calculateFactorial(a) {
+    if (a < 0) {
+      return "Cannot calculate factorial of a negative number";
+    }
+    if (a === 0 || a === 1) {
+      return 1;
+    }
+    let result = 1;
+    for (let i

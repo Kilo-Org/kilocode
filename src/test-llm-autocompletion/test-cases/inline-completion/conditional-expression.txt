@@ -1,4 +1,5 @@
-# Description: Should complete conditional expression
+#### Description: Should complete conditional expression
+#### Filename: validator.js
 function isValid(value) {
-  return value !== null && <<<CURSOR>>>;
+  return value !== null && <<<AUTOCOMPLETE_HERE>>>;
 }

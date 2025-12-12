@@ -14,6 +14,7 @@ type MistralProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	routerModels?: RouterModels
+	simplifySettings?: boolean
 }
 
 export const Mistral = ({ apiConfiguration, setApiConfigurationField }: MistralProps) => {

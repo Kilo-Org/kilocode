@@ -3,12 +3,14 @@ import type { WebviewMessage } from "../../shared/kilocode/cli-sessions/types/IE
 import type { ExtensionMessage } from "../../shared/ExtensionMessage"
 import type { ClineProvider } from "../../core/webview/ClineProvider"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
+import { webviewMessageHandler } from "../../core/webview/webviewMessageHandler"
 
 export class ExtensionMessengerImpl implements IExtensionMessenger {
 	constructor(private readonly provider: ClineProvider) {}
 
+	// we can directly handle whatever is sent
 	async sendWebviewMessage(message: WebviewMessage): Promise<void> {
-		await this.provider.postMessageToWebview(message as unknown as ExtensionMessage)
+		return webviewMessageHandler(this.provider, message)
 	}
 
 	async requestSingleCompletion(prompt: string, timeoutMs: number): Promise<string> {
