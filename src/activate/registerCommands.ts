@@ -70,9 +70,9 @@ export type RegisterCommandOptions = {
 let agentManagerProvider: AgentManagerProvider | undefined
 
 const registerAgentManager = (options: RegisterCommandOptions) => {
-	const { context, outputChannel } = options
+	const { context, outputChannel, provider } = options
 
-	agentManagerProvider = new AgentManagerProvider(context, outputChannel)
+	agentManagerProvider = new AgentManagerProvider(context, outputChannel, provider)
 	context.subscriptions.push(agentManagerProvider)
 }
 // kilocode_change end

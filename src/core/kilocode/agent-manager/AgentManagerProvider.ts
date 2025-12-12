@@ -23,6 +23,7 @@ import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import type { ClineMessage } from "@roo-code/types"
+import type { ProviderSettings } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -30,6 +31,7 @@ import {
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
 } from "./telemetry"
+import type { ClineProvider } from "../../webview/ClineProvider"
 import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 
@@ -60,6 +62,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly outputChannel: vscode.OutputChannel,
+		private readonly provider: ClineProvider,
 	) {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
@@ -273,6 +276,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Supports multi-version mode: when versions > 1, spawns multiple sessions sequentially.
 	 */
 	private async handleStartSession(message: { [key: string]: unknown }): Promise<void> {
+		// Reset auth warning dedupe for each start attempt so users see the login prompt
+		// every time they try to start an agent and authentication fails.
+		this.lastAuthErrorMessage = undefined
+
 		const prompt = message.prompt as string
 		// Clamp versions to valid range to prevent runaway process spawning
 		const rawVersions = (message.versions as number) ?? 1
@@ -432,6 +439,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// Record process start time to filter out replayed history events
 		// This is set before spawning so any events older than this are from history
 		const processStartTime = Date.now()
+		let apiConfiguration: ProviderSettings | undefined
+		try {
+			apiConfiguration = await this.getApiConfigurationForCli()
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to read provider settings for CLI: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
 
 		this.processHandler.spawnProcess(
 			cliPath,
@@ -442,6 +459,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				autoMode: options?.autoMode,
 				label: existingLabel,
 				gitUrl,
+				apiConfiguration,
 			},
 			(sessionId, event) => {
 				// For new sessions, set the start time when we first see the session
@@ -451,6 +469,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.handleCliEvent(sessionId, event)
 			},
 		)
+	}
+
+	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
+		const { apiConfiguration } = await this.provider.getState()
+		return apiConfiguration
 	}
 
 	/**

@@ -64,8 +64,11 @@ describe("AgentManagerProvider IPC paths", () => {
 			asAbsolutePath: (p: string) => p,
 			extensionMode: 1, // Development mode
 		} as unknown as vscode.ExtensionContext
+		const providerStub = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
-		provider = new AgentManagerProvider(context, outputChannel)
+		provider = new AgentManagerProvider(context, outputChannel, providerStub as any)
 
 		// Inject mocks
 		;(provider as any).processHandler = mockProcessHandler
