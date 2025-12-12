@@ -41,7 +41,8 @@ export function shouldIgnoreFile(relativeFilePath: string): boolean {
 		ext === ".min.js" ||
 		ext === ".min.css" ||
 		ext === ".bundle.js" ||
-		ext === ".map"
+		ext === ".map" ||
+		fileName.match(/\.dist\..+$/)
 	) {
 		return true
 	}
