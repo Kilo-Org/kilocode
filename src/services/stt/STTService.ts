@@ -75,16 +75,13 @@ export class STTService {
 		this.voicedFrameCount = 0
 		this.lastVoicedAtMs = 0
 
-		const prompt = await this.codeGlossary?.getGlossary()
-		if (prompt) {
-			console.log(`🎙️ [STTService] 📝 Code glossary (${prompt.length} chars):`, prompt)
-		}
-
+		// The prompt is making it hallucinate more so remove it for now
+		// const prompt = await this.codeGlossary?.getGlossary()
 		try {
 			this.transcriptionClient = new OpenAIWhisperClient(this.providerSettingsManager, {
 				apiKey: config.apiKey || "",
 				language: language || config.language || "en",
-				prompt,
+				// prompt,
 			})
 
 			this.setupEventHandlers()

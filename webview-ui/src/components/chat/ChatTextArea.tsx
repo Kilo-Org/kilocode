@@ -402,7 +402,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [intendedCursorPosition, setIntendedCursorPosition] = useState<number | null>(null)
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
-		const [isFocused, setIsFocused] = useState(false)
+		// const [isFocused, setIsFocused] = useState(false) // kilocode_change - not needed
 		// kilocode_change start: FIM autocomplete ghost text
 		const {
 			ghostText,
@@ -990,7 +990,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowSlashCommandsMenu(false)
 			} // kilocode_change
 
-			setIsFocused(false)
+			// setIsFocused(false) // kilocode_change - not needed
 		}, [isMouseDownOnMenu])
 
 		const handlePaste = useCallback(
@@ -1511,11 +1511,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"leading-vscode-editor-line-height",
 						isRecording
 							? "border border-vscode-focusBorder outline outline-[#ff0000]"
-							: isFocused
-								? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
-								: isDraggingOver
-									? "border-2 border-dashed border-vscode-focusBorder"
-									: "border border-transparent",
+							: isDraggingOver
+								? "border-2 border-dashed border-vscode-focusBorder"
+								: "border border-transparent",
 						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
 						"px-[8px]",
 						"pr-9",
@@ -1544,7 +1542,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							updateHighlights()
 						}
 					}}
-					onFocus={() => setIsFocused(true)}
+					// onFocus={() => setIsFocused(true)} // kilocode_change - not needed
 					onKeyDown={(e) => {
 						// Handle ESC to cancel in edit mode
 						if (isEditMode && e.key === "Escape" && !e.nativeEvent?.isComposing) {
@@ -1571,6 +1569,13 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					minRows={3}
 					maxRows={15}
 					autoFocus={true}
+					// kilocode_change start - isRecording active
+					style={{
+						border: isRecording
+							? "1px solid var(--vscode-editorError-foreground)"
+							: "1px solid transparent",
+					}}
+					// kilocode_change end - isRecording active
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",
@@ -1579,11 +1584,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"leading-vscode-editor-line-height",
 						"cursor-text",
 						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
-						isFocused
-							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
-							: isDraggingOver
-								? "border-2 border-dashed border-vscode-focusBorder"
-								: "border border-transparent",
+						// kilocode_change start - removing duplicated border
+						isRecording && "focus:outline-0",
+						// isFocused
+						// 	? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
+						// 	: isDraggingOver
+						// 		? "border-2 border-dashed border-vscode-focusBorder"
+						// 		: "border border-transparent",
+						// kilocode_change end - removing duplicated border
 						isDraggingOver
 							? "bg-[color-mix(in_srgb,var(--vscode-input-background)_95%,var(--vscode-focusBorder))]"
 							: "bg-vscode-input-background",
