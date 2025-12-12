@@ -147,16 +147,24 @@ export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.ghost.inline-complet
 /**
  * Counts the number of lines in a text string.
  *
+ * Notes:
+ * - Returns 0 for an empty string
+ * - A single trailing newline (or CRLF) does not count as an additional line
+ *
  * @param text - The text to count lines in
- * @returns The number of lines (1 for empty string or no newlines)
+ * @returns The number of lines
  */
 export function countLines(text: string): number {
 	if (text === "") {
 		return 0
 	}
-	// Count newlines and add 1 for the first line
-	const newlineCount = (text.match(/\r?\n/g) || []).length
-	return newlineCount + 1
+
+	// Count line breaks and add 1 for the first line.
+	// If the text ends with a line break, don't count the implicit trailing empty line.
+	const lineBreakCount = (text.match(/\r?\n/g) || []).length
+	const endsWithLineBreak = text.endsWith("\n")
+
+	return lineBreakCount + 1 - (endsWithLineBreak ? 1 : 0)
 }
 
 /**

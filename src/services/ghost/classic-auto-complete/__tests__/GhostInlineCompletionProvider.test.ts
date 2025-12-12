@@ -502,8 +502,8 @@ describe("countLines", () => {
 		expect(countLines("l1\nl2\r\nl3")).toBe(3)
 	})
 
-	it("counts trailing newline as an additional line", () => {
-		expect(countLines("l1\n")).toBe(2)
+	it("does not count trailing newline as an additional line", () => {
+		expect(countLines("l1\nl2\n")).toBe(2)
 	})
 })
 
