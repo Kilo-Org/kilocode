@@ -2289,7 +2289,8 @@ describe("GhostInlineCompletionProvider", () => {
 			// Simulate accepting the suggestion
 			acceptCallback!()
 
-			expect(testTelemetry.captureAcceptSuggestion).toHaveBeenCalled()
+			// Should be called with the languageId of the document where the suggestion was shown
+			expect(testTelemetry.captureAcceptSuggestion).toHaveBeenCalledWith("typescript")
 
 			// Cleanup
 			testProvider.dispose()

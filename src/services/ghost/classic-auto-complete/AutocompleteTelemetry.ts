@@ -132,8 +132,14 @@ export class AutocompleteTelemetry {
 	 * There are two ways to analyze what percentage was accepted:
 	 * 1. Sum of this event divided by the sum of the suggestion returned event
 	 * 2. Sum of this event divided by the sum of the suggestion returned + cache hit events
+	 *
+	 * @param languageId - The language ID of the file where the suggestion was accepted (optional)
 	 */
-	public captureAcceptSuggestion(): void {
-		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION)
+	public captureAcceptSuggestion(languageId?: string): void {
+		if (languageId !== undefined) {
+			this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, { languageId })
+		} else {
+			this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION)
+		}
 	}
 }
