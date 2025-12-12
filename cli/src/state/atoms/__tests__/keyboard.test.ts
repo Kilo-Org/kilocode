@@ -12,10 +12,13 @@ import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
+import { chatMessagesAtom } from "../extension.js"
+import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
+import type { ExtensionService } from "../../../services/extension.js"
 
 describe("keypress atoms", () => {
 	let store: ReturnType<typeof createStore>
@@ -978,6 +981,110 @@ describe("keypress atoms", () => {
 			store.set(keyboardHandlerAtom, escapeKey)
 
 			// Buffer should be cleared (normal ESC behavior)
+			expect(store.get(textBufferStringAtom)).toBe("")
+		})
+	})
+
+	describe("global hotkeys", () => {
+		beforeEach(() => {
+			// Mock the extension service to prevent "ExtensionService not available" error
+			const mockService: Partial<ExtensionService> = {
+				initialize: vi.fn(),
+				dispose: vi.fn(),
+				on: vi.fn(),
+				off: vi.fn(),
+				sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
+				isReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(extensionServiceAtom, mockService as ExtensionService)
+			store.set(isServiceReadyAtom, true)
+		})
+
+		it("should cancel task when ESC is pressed while streaming", async () => {
+			// Set up streaming state by adding a partial message
+			// isStreamingAtom returns true when the last message is partial
+			const streamingMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "text",
+				text: "Processing...",
+				partial: true, // This makes isStreamingAtom return true
+			}
+			store.set(chatMessagesAtom, [streamingMessage])
+
+			// Type some text first
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify we have text in the buffer
+			expect(store.get(textBufferStringAtom)).toBe("hello")
+
+			// Press ESC while streaming
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, escapeKey)
+
+			// When streaming, ESC should cancel the task and NOT clear the buffer
+			// (because it returns early from handleGlobalHotkeys)
+			expect(store.get(textBufferStringAtom)).toBe("hello")
+		})
+
+		it("should clear buffer when ESC is pressed while NOT streaming", async () => {
+			// Set up non-streaming state by adding a complete message
+			const completeMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "text",
+				text: "Done",
+				partial: false, // This makes isStreamingAtom return false
+			}
+			store.set(chatMessagesAtom, [completeMessage])
+
+			// Type some text
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify we have text in the buffer
+			expect(store.get(textBufferStringAtom)).toBe("hello")
+
+			// Press ESC while NOT streaming
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, escapeKey)
+
+			// When not streaming, ESC should clear the buffer (normal behavior)
 			expect(store.get(textBufferStringAtom)).toBe("")
 		})
 	})

@@ -70,7 +70,7 @@ export function useHotkeys(): UseHotkeysReturn {
 
 		// Priority 3: Streaming state - show cancel
 		if (isStreaming) {
-			return [{ keys: `${modifierKey}+X`, description: "to cancel" }]
+			return [{ keys: `Esc/${modifierKey}+X`, description: "to cancel" }]
 		}
 
 		// Priority 4: Followup suggestions visible

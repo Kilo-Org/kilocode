@@ -803,10 +803,21 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 				const isStreaming = get(isStreamingAtom)
 				if (isStreaming) {
 					set(cancelTaskAtom)
+					return true
 				}
-				return true
+				// If not streaming, don't consume the key
 			}
 			break
+		case "escape": {
+			// ESC cancels the task when streaming (same as Ctrl+X)
+			const isStreaming = get(isStreamingAtom)
+			if (isStreaming) {
+				set(cancelTaskAtom)
+				return true
+			}
+			// If not streaming, don't consume the key - let mode-specific handlers deal with it
+			break
+		}
 		case "r":
 			if (key.ctrl) {
 				const hasResumeTask = get(hasResumeTaskAtom)
