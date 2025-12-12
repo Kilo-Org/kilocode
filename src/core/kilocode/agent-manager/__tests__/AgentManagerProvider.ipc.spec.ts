@@ -8,6 +8,7 @@ import type { CliProcessHandler } from "../CliProcessHandler"
 vi.mock("vscode", () => {
 	const window = {
 		showErrorMessage: vi.fn(),
+		showWarningMessage: vi.fn(),
 	}
 	const Uri = {
 		joinPath: vi.fn(),

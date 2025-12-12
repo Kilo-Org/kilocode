@@ -38,6 +38,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 	onStartSessionFailed: ReturnType<typeof vi.fn>
 	onChatMessages: ReturnType<typeof vi.fn>
 	onSessionCreated: ReturnType<typeof vi.fn>
+	onPaymentRequiredPrompt: ReturnType<typeof vi.fn>
 } {
 	return {
 		onLog: vi.fn(),
@@ -48,6 +49,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 		onStartSessionFailed: vi.fn(),
 		onChatMessages: vi.fn(),
 		onSessionCreated: vi.fn(),
+		onPaymentRequiredPrompt: vi.fn(),
 	}
 }
 
@@ -316,6 +318,73 @@ describe("CliProcessHandler", () => {
 			mockProcess.stdout.emit("data", Buffer.from('{"streamEventType":"status","message":"Initializing..."}\n'))
 
 			expect(callbacks.onDebugLog).toHaveBeenCalledWith("Pending session status: Initializing...")
+		})
+
+		it("handles payment_required_prompt before session_created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const payEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: {
+					type: "ask",
+					ask: "payment_required_prompt",
+					text: JSON.stringify({ message: "Need billing" }),
+				},
+			})
+			mockProcess.stdout.emit("data", Buffer.from(payEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "payment_required",
+				message: "Need billing",
+				payload: expect.objectContaining({ ask: "payment_required_prompt" }),
+			})
+			expect(callbacks.onPaymentRequiredPrompt).not.toHaveBeenCalled()
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("handles api_req_failed before session_created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const failEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "ask", ask: "api_req_failed", text: "Auth failed" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(failEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "api_req_failed",
+				message: "Auth failed",
+				authError: false,
+				payload: expect.objectContaining({ ask: "api_req_failed" }),
+			})
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("parses api_req_failed payload JSON and marks auth error", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const failEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: {
+					type: "ask",
+					ask: "api_req_failed",
+					content:
+						'401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_123"}',
+				},
+			})
+			mockProcess.stdout.emit("data", Buffer.from(failEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "api_req_failed",
+				message: "Authentication failed: API request failed.",
+				authError: true,
+				payload: expect.objectContaining({ ask: "api_req_failed" }),
+			})
 		})
 	})
 
