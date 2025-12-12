@@ -13,10 +13,12 @@ import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "..
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
 import { chatMessagesAtom } from "../extension.js"
+import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
+import type { ExtensionService } from "../../../services/extension.js"
 
 describe("keypress atoms", () => {
 	let store: ReturnType<typeof createStore>
@@ -984,6 +986,20 @@ describe("keypress atoms", () => {
 	})
 
 	describe("global hotkeys", () => {
+		beforeEach(() => {
+			// Mock the extension service to prevent "ExtensionService not available" error
+			const mockService: Partial<ExtensionService> = {
+				initialize: vi.fn(),
+				dispose: vi.fn(),
+				on: vi.fn(),
+				off: vi.fn(),
+				sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
+				isReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(extensionServiceAtom, mockService as ExtensionService)
+			store.set(isServiceReadyAtom, true)
+		})
+
 		it("should cancel task when ESC is pressed while streaming", async () => {
 			// Set up streaming state by adding a partial message
 			// isStreamingAtom returns true when the last message is partial
