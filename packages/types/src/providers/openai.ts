@@ -16,7 +16,7 @@ export const openAiNativeModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		promptCacheRetention: "24h",
-		supportsReasoningEffort: ["none", "low", "medium", "high"],
+		supportsReasoningEffort: ["none", "low", "medium", "high", "xhigh"],
 		reasoningEffort: "medium",
 		inputPrice: 1.75,
 		outputPrice: 14.0,

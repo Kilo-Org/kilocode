@@ -310,5 +310,9 @@
 		"tryAgain": "Erneut versuchen",
 		"cancelled": "Authentifizierung abgebrochen",
 		"initiating": "Authentifizierung wird gestartet..."
+	},
+	"speechToText": {
+		"startRecording": "Spracheingabe starten",
+		"stopRecording": "Spracheingabe stoppen"
 	}
 }

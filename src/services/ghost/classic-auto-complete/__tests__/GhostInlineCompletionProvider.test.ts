@@ -2,7 +2,11 @@ import * as vscode from "vscode"
 import {
 	GhostInlineCompletionProvider,
 	findMatchingSuggestion,
+	applyFirstLineOnly,
 	stringToInlineCompletions,
+	shouldShowOnlyFirstLine,
+	getFirstLine,
+	countLines,
 	CostTrackingCallback,
 } from "../GhostInlineCompletionProvider"
 import { FillInAtCursorSuggestion } from "../HoleFiller"
@@ -468,6 +472,81 @@ describe("findMatchingSuggestion", () => {
 	})
 })
 
+describe("shouldShowOnlyFirstLine", () => {
+	it.each([
+		["\\n", "\nconst y = 2"],
+		["\\r\\n", "\r\nconst y = 2"],
+	])("returns false when suggestion starts with %s", (_label, suggestion) => {
+		expect(shouldShowOnlyFirstLine("const x = foo", suggestion)).toBe(false)
+	})
+
+	it("returns true when cursor is mid-line (current line has non-whitespace)", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\nconst y = foo", "bar\nbaz")).toBe(true)
+	})
+
+	it("returns true at start of line when suggestion is 3+ lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n    ", "l1\nl2\nl3")).toBe(true)
+	})
+
+	it("returns false at start of line when suggestion is 2 lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n", "l1\nl2")).toBe(false)
+	})
+})
+
+describe("countLines", () => {
+	it("returns 0 for empty string", () => {
+		expect(countLines("")).toBe(0)
+	})
+
+	it("counts mixed \\n and \\r\\n correctly", () => {
+		expect(countLines("l1\nl2\r\nl3")).toBe(3)
+	})
+
+	it("does not count trailing newline as an additional line", () => {
+		expect(countLines("l1\nl2\n")).toBe(2)
+	})
+})
+
+describe("getFirstLine", () => {
+	it("returns the entire text when there is no newline", () => {
+		expect(getFirstLine("console.log('test');")).toBe("console.log('test');")
+	})
+
+	it.each([
+		["\\n", "first line\nsecond line"],
+		["\\r\\n", "first line\r\nsecond line"],
+	])("returns first line for %s line endings", (_label, text) => {
+		expect(getFirstLine(text)).toBe("first line")
+	})
+
+	it("returns empty string when text starts with a newline", () => {
+		expect(getFirstLine("\nsecond line")).toBe("")
+	})
+})
+
+describe("applyFirstLineOnly", () => {
+	it("returns null when input is null", () => {
+		expect(applyFirstLineOnly(null, "const x = foo")).toBeNull()
+	})
+
+	it("returns result unchanged when text is empty", () => {
+		expect(applyFirstLineOnly({ text: "", matchType: "exact" }, "const x = foo")).toEqual({
+			text: "",
+			matchType: "exact",
+		})
+	})
+
+	it("truncates to first line and preserves matchType when enabled", () => {
+		const result = applyFirstLineOnly({ text: "line1\nline2\nline3", matchType: "partial_typing" }, "const x = foo")
+		expect(result).toEqual({ text: "line1", matchType: "partial_typing" })
+	})
+
+	it("does not truncate when suggestion starts with newline", () => {
+		const result = applyFirstLineOnly({ text: "\nline1\nline2", matchType: "exact" }, "const x = foo")
+		expect(result).toEqual({ text: "\nline1\nline2", matchType: "exact" })
+	})
+})
+
 describe("stringToInlineCompletions", () => {
 	it("should return empty array when text is empty string", () => {
 		const position = new vscode.Position(0, 10)
@@ -672,6 +751,24 @@ describe("GhostInlineCompletionProvider", () => {
 				command: "kilocode.ghost.inline-completion.accepted",
 				title: "Autocomplete Accepted",
 			})
+		})
+
+		it("should truncate cached multi-line suggestions to first line when cursor is mid-line", async () => {
+			provider.updateSuggestions({
+				text: "line1\nline2\nline3",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("line1")
 		})
 
 		it("should return empty array when prefix does not match", async () => {
@@ -1607,6 +1704,24 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result).toHaveLength(0)
 			// Model should not be called
 			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should not attempt an LLM call if credentials become invalid before the debounced fetch executes", async () => {
+			// First call executes immediately (leading edge) - just to move provider into debounced mode
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+
+			// Second call will be debounced. Simulate a model reload happening before the timer fires.
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
+
+			const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Let the trailing-edge debounce fire
+			await vi.advanceTimersByTimeAsync(300)
+			await promise
+
+			// If fetch-time validation is working, we do not call generateResponse again.
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
 		})
 
 		it("should return suggestions when model has valid credentials", async () => {

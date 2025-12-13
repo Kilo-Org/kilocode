@@ -1,5 +1,27 @@
 # kilo-code
 
+## 4.137.0
+
+### Minor Changes
+
+- [#4394](https://github.com/Kilo-Org/kilocode/pull/4394) [`01b968b`](https://github.com/Kilo-Org/kilocode/commit/01b968ba4635a162c787169bffe1809fc1ab973a) Thanks [@hassoncs](https://github.com/hassoncs)! - Add Speech-To-Text experiment for the chat input powered by ffmpeg and the OpenAI Whisper API
+
+- [#4388](https://github.com/Kilo-Org/kilocode/pull/4388) [`af93318`](https://github.com/Kilo-Org/kilocode/commit/af93318e3648c235721ba58fe9caab9429608241) Thanks [@iscekic](https://github.com/iscekic)! - send org id and last mode with session data
+
+### Patch Changes
+
+- [#4412](https://github.com/Kilo-Org/kilocode/pull/4412) [`d56879c`](https://github.com/Kilo-Org/kilocode/commit/d56879c58f65c8da1419c9840816720279bec4e6) Thanks [@quantizoor](https://github.com/quantizoor)! - Added support for xhigh reasoning effort
+
+- [#4415](https://github.com/Kilo-Org/kilocode/pull/4415) [`5e670d1`](https://github.com/Kilo-Org/kilocode/commit/5e670d14047054a2f92a9057391286402076b5a5) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: bottom controls no longer overlap with create mode button
+
+- [#4416](https://github.com/Kilo-Org/kilocode/pull/4416) [`026da65`](https://github.com/Kilo-Org/kilocode/commit/026da65fdb9f16d23216197412e06ca2ed208639) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix: resolve AbortSignal memory leak in CLI (MaxListenersExceededWarning)
+
+- [#4392](https://github.com/Kilo-Org/kilocode/pull/4392) [`73681e9`](https://github.com/Kilo-Org/kilocode/commit/73681e9002af4c5aa3fec3bc2a86e8008dc926af) Thanks [@markijbema](https://github.com/markijbema)! - Split autocomplete suggestion in current line and next lines in most cases
+
+- [#4426](https://github.com/Kilo-Org/kilocode/pull/4426) [`fdc0c0a`](https://github.com/Kilo-Org/kilocode/commit/fdc0c0a07d49c4726997121ad540d6c855965e7b) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix API request errors with MCP functions incompatible with OpenAI strict mode
+
+- [#4373](https://github.com/Kilo-Org/kilocode/pull/4373) [`a80ec02`](https://github.com/Kilo-Org/kilocode/commit/a80ec02db75c061163100ce91d099f4fd3846a99) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Handle different cli authentication errors when using agent manager
+
 ## 4.136.0
 
 ### Minor Changes

@@ -311,5 +311,9 @@
 		"tryAgain": "Spróbuj ponownie",
 		"cancelled": "Uwierzytelnianie anulowane",
 		"initiating": "Rozpoczynanie uwierzytelniania..."
+	},
+	"speechToText": {
+		"startRecording": "Rozpocznij wprowadzanie głosowe",
+		"stopRecording": "Zatrzymaj wprowadzanie głosowe"
 	}
 }
