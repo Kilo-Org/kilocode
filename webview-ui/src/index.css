@@ -145,6 +145,7 @@
 	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
 
 	--color-matterai-green: #3affa3;
+	--color-matterai-border: #81838e33;
 }
 
 @layer base {

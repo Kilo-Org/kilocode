@@ -95,6 +95,21 @@ export async function seeNewChanges(task: Task, commitRange: CommitRange) {
 			return
 		}
 
+		// Add all changes to the review controller
+		for (const change of changes) {
+			task.fileEditReviewController.addEdit({
+				relPath: change.paths.relative,
+				absolutePath: change.paths.absolute,
+				originalContent: change.content.before ?? "",
+				newContent: change.content.after ?? "",
+			})
+		}
+
+		// Trigger review flow
+		await vscode.commands.executeCommand("axon-code.fileEdit.reviewNext")
+
+		// original diff view logic commented out as we replaced it with inline review
+		/*
 		await vscode.commands.executeCommand(
 			"vscode.changes",
 			t("kilocode:seeNewChanges.title"),
@@ -108,6 +123,7 @@ export async function seeNewChanges(task: Task, commitRange: CommitRange) {
 				}),
 			]),
 		)
+		*/
 	} catch (err) {
 		vscode.window.showErrorMessage(t("kilocode:seeNewChanges.error"))
 		TelemetryService.instance.captureException(err, { context: "seeNewChanges" })

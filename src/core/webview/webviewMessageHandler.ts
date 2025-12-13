@@ -84,6 +84,7 @@ import { setPendingTodoList } from "../tools/updateTodoListTool"
 import { UsageTracker } from "../../utils/usage-tracker"
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
+import { getCheckpointService } from "../checkpoints" // kilocode_change
 import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
 
 export const webviewMessageHandler = async (
@@ -587,6 +588,40 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("alwaysAllowWriteProtected", message.bool ?? undefined)
 			await provider.postStateToWebview()
 			break
+
+		// kilocode_change start
+		case "getCommitChanges": {
+			const { commitRange } = (message.payload || {}) as { commitRange?: import("@roo-code/types").CommitRange }
+			if (commitRange) {
+				const currentTask = provider.getCurrentTask()
+				const service = await getCheckpointService(currentTask || (provider as any))
+				if (service) {
+					try {
+						const changes = await service.getDiff(commitRange)
+						// Simplify for frontend
+						const files = changes.map((change) => ({
+							relative: change.paths.relative,
+							absolute: change.paths.absolute,
+							stat: {
+								additions: change.content.after ? change.content.after.split("\n").length : 0,
+								deletions: change.content.before ? change.content.before.split("\n").length : 0,
+							},
+						}))
+						await provider.postMessageToWebview({
+							type: "commitChanges",
+							payload: {
+								commitRange,
+								files,
+							},
+						} as any) // Cast to any to avoid strict check conflicts if types slightly mismatched during hot reload
+					} catch (error) {
+						console.error("Failed to get diff for chat UI:", error)
+					}
+				}
+			}
+			break
+		}
+		// kilocode_change end
 		case "alwaysAllowExecute":
 			await updateGlobalState("alwaysAllowExecute", message.bool ?? undefined)
 			await provider.postStateToWebview()
@@ -933,6 +968,9 @@ export const webviewMessageHandler = async (
 			if (task && message.payload && message.payload) {
 				await seeNewChanges(task, (message.payload as SeeNewChangesPayload).commitRange)
 			}
+			break
+		case "fileEditReviewAcceptAll":
+			await vscode.commands.executeCommand("axon-code.fileEdit.acceptAll")
 			break
 		case "tasksByIdRequest": {
 			const request = message.payload as TasksByIdRequestPayload

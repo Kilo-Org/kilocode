@@ -81,7 +81,7 @@ const KiloTaskHeader = ({
 				className={cn(
 					"p-2.5 flex flex-col relative z-1 border",
 					"rounded-xl",
-					"border border-white/20 outline-none",
+					"border border-[--var(--color-matterai-border)] outline-none",
 				)}>
 				<div className="flex justify-between items-center gap-2">
 					<div
