@@ -25,6 +25,15 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { getApiRequestTimeout } from "./utils/timeout-config"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import {
+	buildResponsesRequestBody,
+	completePromptViaResponses,
+	requiresResponsesApiForModel,
+	streamResponsesAsApiStream,
+	supportsResponsesApiForBaseUrl,
+	type OpenAiResponsesMode,
+} from "./utils/openai-responses-adapter"
+import { ensureHttps, normalizeOpenAiResponsesBaseUrl } from "./utils/openai-url-utils"
 
 // TODO: Rename this to OpenAICompatibleHandler. Also, I think the
 // `OpenAINativeHandler` can subclass from this, since it's obviously
@@ -32,17 +41,93 @@ import { handleOpenAIError } from "./utils/openai-error-handler"
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
+	private responsesClient?: OpenAI
 	private readonly providerName = "OpenAI"
+	private readonly supportsResponsesApi: boolean
+	private readonly responsesMode: OpenAiResponsesMode
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 
-		const baseURL = this.options.openAiBaseUrl ?? "https://api.openai.com/v1"
+		// Normalize base URL early to ensure consistent https:// usage and avoid malformed URLs.
+		const rawBaseUrl = this.options.openAiBaseUrl ?? "https://api.openai.com"
+		const baseURL = ensureHttps(rawBaseUrl)
 		const apiKey = this.options.openAiApiKey ?? "not-provided"
-		const isAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
-		const urlHost = this._getUrlHost(this.options.openAiBaseUrl)
+		const isAzureAiInference = this._isAzureAiInference(baseURL)
+		const urlHost = this._getUrlHost(baseURL)
 		const isAzureOpenAi = urlHost === "azure.com" || urlHost.endsWith(".azure.com") || options.openAiUseAzure
+
+		/**
+		 * Some OpenAI-compatible providers (incl. custom Azure-hosted ones) expose the
+		 * Responses API under `/openai/v1/responses` without requiring an `api-version`
+		 * query parameter. For these, the default Azure OpenAI client behaviour
+		 * (which always appends api-version) breaks with "API version not supported".
+		 *
+		 * Heuristics:
+		 * - If the baseURL already contains `/openai/v1` we treat it as a pure
+		 *   OpenAI-compatible endpoint and MUST NOT append any api-version.
+		 * - If the baseURL is just the Azure host (e.g. https://xxx.openai.azure.com),
+		 *   we treat it as an OpenAI-style responses endpoint base and will derive
+		 *   `/openai/v1/responses` from it when im Responses-Modus.
+		 */
+		const isOpenAiStyleAzureBase = typeof baseURL === "string" && baseURL.includes("/openai/v1")
+
+		this.supportsResponsesApi = supportsResponsesApiForBaseUrl(baseURL)
+		this.responsesMode = ((this.options as any).openAiResponsesMode as OpenAiResponsesMode | undefined) ?? "auto"
+
+		/**
+		 * Wenn der User explizit den API-Modus "responses" gewählt hat und
+		 * der Provider laut Heuristik die Responses-API unterstützt, normalisieren
+		 * wir die Base-URL für die Responses-API.
+		 *
+		 * Wichtig:
+		 * - Die Responses-API erwartet IMMER den Pfad `/openai/v1/responses`.
+		 * - Azure-spezifische `api-version` Query-Parameter dürfen an der Responses-URL
+		 *   nicht hängen, sie werden in `normalizeOpenAiResponsesBaseUrl` entfernt.
+		 *
+		 * Erwartete Eingaben im UI:
+		 *
+		 *   baseURL: https://myendpoint.openai.azure.com
+		 *   → https://myendpoint.openai.azure.com/openai/v1/responses
+		 *
+		 *   baseURL: https://myendpoint.openai.azure.com/openai/v1
+		 *   → https://myendpoint.openai.azure.com/openai/v1/responses
+		 *
+		 *   baseURL: https://myendpoint.openai.azure.com/openai/v1/responses
+		 *   → https://myendpoint.openai.azure.com/openai/v1/responses
+		 *
+		 * Für generische OpenAI-kompatible Endpoints (nicht Azure) gilt:
+		 *
+		 *   baseURL: https://host/api
+		 *   → https://host/api/responses
+		 */
+		const apiMode = this.getApiMode()
+
+		// Responses-Base-URL IMMER nur aus der Host-Basis normalisieren.
+		// WICHTIG:
+		// - Wir verwenden ausschließlich `origin` (Schema + Host), um zu verhindern,
+		//   dass ein bereits gesetzter `/openai/v1/responses`-Pfad erneut transformiert wird.
+		// - Damit kann der User im UI zwar einen voll qualifizierten Pfad angeben,
+		//   für den Responses-Client wird aber immer nur die Resource-Host-Basis genutzt
+		//   und dann exakt einmal `/openai/v1/responses` angehängt.
+		const hostOnlyBaseUrl = (() => {
+			try {
+				const parsed = new URL(baseURL)
+				return `${parsed.protocol}//${parsed.host}`
+			} catch {
+				// Falls baseURL kein gültiger URL-String ist (z. B. nur Hostname),
+				// übergeben wir ihn direkt an normalizeOpenAiResponsesBaseUrl,
+				// das dann `ensureHttps` und die weitere Normalisierung übernimmt.
+				return baseURL
+			}
+		})()
+
+		const responsesBaseUrl =
+			apiMode === "responses" && this.supportsResponsesApi
+				? normalizeOpenAiResponsesBaseUrl(hostOnlyBaseUrl)
+				: undefined
+		;(this as any)._responsesBaseUrl = responsesBaseUrl
 
 		const headers = {
 			...DEFAULT_HEADERS,
@@ -51,22 +136,54 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 		const timeout = getApiRequestTimeout()
 
-		if (isAzureAiInference) {
-			// Azure AI Inference Service (e.g., for DeepSeek) uses a different path structure
-			this.client = new OpenAI({
-				baseURL,
+		// IMPORTANT:
+		// - For Responses API we must NEVER attach Azure `api-version` query params.
+		//   Therefore we create a dedicated OpenAI client (never AzureOpenAI) for Responses mode.
+		if (responsesBaseUrl) {
+			this.responsesClient = new OpenAI({
+				baseURL: responsesBaseUrl,
 				apiKey,
 				defaultHeaders: headers,
-				defaultQuery: { "api-version": this.options.azureApiVersion || "2024-05-01-preview" },
 				timeout,
 			})
-		} else if (isAzureOpenAi) {
-			// Azure API shape slightly differs from the core API shape:
-			// https://github.com/openai/openai-node?tab=readme-ov-file#microsoft-azure-openai
+		}
+
+		// WICHTIG:
+		// - Azure OpenAI (.openai.azure.com / .cognitiveservices.azure.com) darf KEINE api-version
+		//   im Query für die Responses-API haben. Wir nutzen im Responses-Modus daher immer `responsesClient`.
+		// - Azure AI Inference (.services.ai.azure.com) soll NUR im Completions-Modus (chat/completions)
+		//   automatisch eine api-version im Query anhängen, NICHT im Responses-Modus.
+		if (isAzureOpenAi && !isOpenAiStyleAzureBase) {
+			// Azure OpenAI (klassische Endpunkte, z. B. https://myendpoint.openai.azure.com)
 			this.client = new AzureOpenAI({
 				baseURL,
 				apiKey,
 				apiVersion: this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
+				defaultHeaders: headers,
+				timeout,
+			})
+		} else if (isAzureAiInference && !isOpenAiStyleAzureBase) {
+			// Azure AI Inference Service (z. B. *.services.ai.azure.com)
+			// Nur wenn wir im Completions-Modus sind, hängen wir api-version als Query an.
+			const defaultQuery =
+				apiMode === "completions"
+					? { "api-version": this.options.azureApiVersion || "2024-05-01-preview" }
+					: undefined
+
+			this.client = new OpenAI({
+				baseURL,
+				apiKey,
+				defaultHeaders: headers,
+				defaultQuery,
+				timeout,
+			})
+		} else if (isOpenAiStyleAzureBase) {
+			// OpenAI-compatible service hosted on *.azure.com that expects pure
+			// OpenAI-style URLs (e.g. https://...azure.com/openai/v1/responses)
+			// WITHOUT any api-version query parameter.
+			this.client = new OpenAI({
+				baseURL,
+				apiKey,
 				defaultHeaders: headers,
 				timeout,
 			})
@@ -78,6 +195,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				timeout,
 			})
 		}
+	}
+
+	private getApiMode(): "completions" | "responses" {
+		// Default to completions for backward compatibility.
+		// NOTE: This legacy flag is kept only for backwards-compat configs.
+		const mode = (this.options as any).openAiApiMode as "completions" | "responses" | undefined
+		return mode ?? "completions"
+	}
+
+	private isAzureHost(baseUrl?: string): boolean {
+		const host = this._getUrlHost(baseUrl)
+		return host.endsWith(".openai.azure.com") || host.endsWith(".cognitiveservices.azure.com")
 	}
 
 	override async *createMessage(
@@ -93,6 +222,68 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isAzureAiInference = this._isAzureAiInference(modelUrl)
 		const deepseekReasoner = modelId.includes("deepseek-reasoner") || enabledR1Format
 		const ark = modelUrl.includes(".volces.com")
+
+		const apiMode = this.getApiMode()
+		const isAzureHost = this.isAzureHost(modelUrl)
+		const isCodexModel = modelId.toLowerCase().includes("codex")
+		const useTextInput = isAzureHost && isCodexModel
+
+		// Backwards compatibility:
+		// If legacy openAiApiMode explicitly requests "responses",
+		// treat it as if responsesMode had been set to "force".
+		const effectiveResponsesMode: OpenAiResponsesMode =
+			apiMode === "responses" && this.supportsResponsesApi && this.responsesMode === "auto"
+				? "force"
+				: this.responsesMode
+
+		const responsesBaseUrl = (this as any)._responsesBaseUrl as string | undefined
+
+		// Harte Policy:
+		// - Wenn im UI explizit "completions" gewählt wurde, verwenden wir NIEMALS
+		//   die Responses-API, unabhängig von Modell-Heuristiken.
+		if (apiMode === "completions") {
+			// completions/chat-Zweig folgt weiter unten unverändert.
+			// Wir setzen shouldUseResponses einfach auf false.
+		}
+
+		const shouldUseResponses =
+			apiMode === "completions"
+				? false
+				: effectiveResponsesMode === "force"
+					? this.supportsResponsesApi
+					: effectiveResponsesMode === "off"
+						? false
+						: this.supportsResponsesApi && requiresResponsesApiForModel(modelId, modelInfo)
+
+		if (shouldUseResponses) {
+			const temperature = this.options.modelTemperature ?? (deepseekReasoner ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0)
+			const requestBody = buildResponsesRequestBody({
+				modelId,
+				modelInfo,
+				systemPrompt,
+				messages,
+				metadata,
+				streaming: true,
+				temperature,
+				// Note: keep max_output_tokens conservative; if includeMaxTokens is enabled we map to model maxTokens.
+				maxOutputTokens:
+					this.options.includeMaxTokens === true
+						? (this.options.modelMaxTokens ?? modelInfo.maxTokens ?? undefined)
+						: undefined,
+				store: this.options.openAiResponsesStoreEnabled ?? false,
+			})
+
+			// For Responses API we MUST NOT use AzureOpenAI (it always appends api-version).
+			const clientForResponses = (this.responsesClient ?? this.client) as any
+
+			yield* streamResponsesAsApiStream({
+				client: clientForResponses,
+				requestBody,
+				providerName: this.providerName,
+				requestOptions: undefined,
+			})
+			return
+		}
 
 		if (modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")) {
 			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages, metadata)
@@ -156,6 +347,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			const isGrokXAI = this._isGrokXAI(this.options.openAiBaseUrl)
+
+			// Prefer a responses-specific base URL if one was configured in the constructor
+			// (apiMode === "responses" & supportsResponsesApi). This ensures that for
+			// OpenAI-compatible providers we call `/openai/v1/responses` exactly.
+			const responsesBaseUrl = (this as any).clientBaseUrlForResponses as string | undefined
 
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 				model: modelId,
@@ -336,6 +532,47 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const isAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
 			const model = this.getModel()
 			const modelInfo = model.info
+
+			const apiMode = this.getApiMode()
+			const effectiveResponsesMode: OpenAiResponsesMode =
+				apiMode === "responses" && this.supportsResponsesApi && this.responsesMode === "auto"
+					? "force"
+					: this.responsesMode
+
+			const shouldUseResponses =
+				apiMode === "completions"
+					? false
+					: effectiveResponsesMode === "force"
+						? this.supportsResponsesApi
+						: effectiveResponsesMode === "off"
+							? false
+							: this.supportsResponsesApi && requiresResponsesApiForModel(model.id, modelInfo)
+
+			if (shouldUseResponses) {
+				const requestBody = buildResponsesRequestBody({
+					modelId: model.id,
+					modelInfo,
+					systemPrompt: "",
+					messages: [{ role: "user", content: prompt }],
+					metadata: undefined,
+					streaming: false,
+					temperature: this.options.modelTemperature ?? 0,
+					maxOutputTokens:
+						this.options.includeMaxTokens === true
+							? (this.options.modelMaxTokens ?? modelInfo.maxTokens ?? undefined)
+							: undefined,
+					store: this.options.openAiResponsesStoreEnabled ?? false,
+				})
+
+				// For Responses API we MUST NOT use AzureOpenAI (it always appends api-version).
+				const clientForResponses = (this.responsesClient ?? this.client) as any
+
+				return await completePromptViaResponses({
+					client: clientForResponses,
+					requestBody,
+					providerName: this.providerName,
+				})
+			}
 
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: model.id,

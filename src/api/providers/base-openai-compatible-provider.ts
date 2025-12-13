@@ -17,6 +17,14 @@ import { fetchWithTimeout } from "./kilocode/fetchWithTimeout" // kilocode_chang
 import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
 import { ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers" // kilocode_change
 import { calculateApiCostOpenAI } from "../../shared/cost"
+import {
+	buildResponsesRequestBody,
+	completePromptViaResponses,
+	requiresResponsesApiForModel,
+	streamResponsesAsApiStream,
+	supportsResponsesApiForBaseUrl,
+	type OpenAiResponsesMode,
+} from "./utils/openai-responses-adapter"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -39,6 +47,8 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 	protected readonly options: ApiHandlerOptions
 
 	protected client: OpenAI
+	protected readonly supportsResponsesApi: boolean
+	protected readonly responsesMode: OpenAiResponsesMode
 
 	constructor({
 		providerName,
@@ -72,6 +82,9 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			fetch: fetchWithTimeout(timeout),
 			// kilocode_change end
 		})
+
+		this.supportsResponsesApi = supportsResponsesApiForBaseUrl(baseURL)
+		this.responsesMode = ((this.options as any).responsesMode as OpenAiResponsesMode | undefined) ?? "auto"
 	}
 
 	protected createStream(
@@ -124,6 +137,46 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		const { id: modelId, info: modelInfo } = this.getModel()
+
+		const shouldUseResponses =
+			this.responsesMode === "force"
+				? this.supportsResponsesApi
+				: this.responsesMode === "off"
+					? false
+					: this.supportsResponsesApi && requiresResponsesApiForModel(modelId, modelInfo)
+
+		if (shouldUseResponses) {
+			const maxTokens =
+				getModelMaxOutputTokens({
+					modelId,
+					model: modelInfo,
+					settings: this.options,
+					format: "openai",
+				}) ?? undefined
+
+			const temperature = this.options.modelTemperature ?? this.defaultTemperature
+
+			const requestBody = buildResponsesRequestBody({
+				modelId,
+				modelInfo,
+				systemPrompt,
+				messages,
+				metadata,
+				streaming: true,
+				temperature,
+				maxOutputTokens: maxTokens,
+			})
+
+			yield* streamResponsesAsApiStream({
+				client: this.client as any,
+				requestBody,
+				providerName: this.providerName,
+				requestOptions: undefined,
+			})
+			return
+		}
+
 		const stream = await this.createStream(systemPrompt, messages, metadata)
 
 		const matcher = new XmlMatcher(
@@ -221,6 +274,41 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 
 	async completePrompt(prompt: string): Promise<string> {
 		const { id: modelId, info: modelInfo } = this.getModel()
+
+		const shouldUseResponses =
+			this.responsesMode === "force"
+				? this.supportsResponsesApi
+				: this.responsesMode === "off"
+					? false
+					: this.supportsResponsesApi && requiresResponsesApiForModel(modelId, modelInfo)
+
+		if (shouldUseResponses) {
+			const maxTokens =
+				getModelMaxOutputTokens({
+					modelId,
+					model: modelInfo,
+					settings: this.options,
+					format: "openai",
+				}) ?? undefined
+
+			const requestBody = buildResponsesRequestBody({
+				modelId,
+				modelInfo,
+				systemPrompt: "",
+				messages: [{ role: "user", content: prompt }],
+				metadata: undefined,
+				streaming: false,
+				temperature: this.options.modelTemperature ?? this.defaultTemperature,
+				maxOutputTokens: maxTokens,
+			})
+
+			return await completePromptViaResponses({
+				client: this.client as any,
+				requestBody,
+				providerName: this.providerName,
+				requestOptions: undefined,
+			})
+		}
 
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
 			model: modelId,

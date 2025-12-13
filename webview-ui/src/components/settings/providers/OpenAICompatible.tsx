@@ -151,6 +151,58 @@ export const OpenAICompatible = ({
 				errorMessage={modelValidationError}
 				simplifySettings={simplifySettings}
 			/>
+
+			{/* OpenAI API mode (Completions vs Responses) */}
+			<div className="mt-2">
+				<label className="block font-medium mb-1">
+					{t("settings:providers.openAiApiModeLabel", { defaultValue: "API style (Chat vs Responses)" })}
+					{/* kilocode_change */}
+				</label>
+				<select
+					className="w-full px-2 py-1 bg-vscode-input-background text-vscode-foreground border border-vscode-input-border rounded"
+					value={apiConfiguration.openAiApiMode ?? "completions"}
+					onChange={(event) => {
+						const mode = event.target.value as ProviderSettings["openAiApiMode"]
+						setApiConfigurationField("openAiApiMode", mode)
+
+						if (mode === "responses") {
+							// When switching to Responses API, Azure api-version is not applicable
+							setAzureApiVersionSelected(false)
+							setApiConfigurationField("azureApiVersion", "")
+						}
+					}}>
+					<option value="completions">
+						{t("settings:providers.openAiApiMode.completions", {
+							defaultValue: "Chat Completions API (classic)",
+						})}
+						{/* kilocode_change */}
+					</option>
+					<option value="responses">
+						{t("settings:providers.openAiApiMode.responses", {
+							defaultValue: "Responses API (structured)",
+						})}
+						{/* kilocode_change */}
+					</option>
+				</select>
+				<div className="text-sm text-vscode-descriptionForeground mt-1">
+					{t("settings:providers.openAiApiModeDescription", {
+						defaultValue:
+							"Choose between the classic Chat Completions endpoint and the newer Responses API (recommended for Codex/Foundry).",
+					})}
+					{/* kilocode_change */}
+				</div>
+			</div>
+			{/* Store toggle for Responses API */}
+			<div className="mt-2">
+				<Checkbox
+					checked={apiConfiguration?.openAiResponsesStoreEnabled ?? false}
+					onChange={handleInputChange("openAiResponsesStoreEnabled", noTransform)}>
+					{t("settings:providers.openAiResponsesStoreEnabled") ?? "Responses speichern (store=true)"}
+				</Checkbox>
+				<div className="text-sm text-vscode-descriptionForeground ml-6">
+					{t("Responses Store") ?? "Steuert, ob Responses-API-Aufrufe serverseitig gespeichert werden."}
+				</div>
+			</div>
 			<R1FormatSetting
 				onChange={handleInputChange("openAiR1FormatEnabled", noTransform)}
 				openAiR1FormatEnabled={apiConfiguration?.openAiR1FormatEnabled ?? false}
@@ -185,27 +237,41 @@ export const OpenAICompatible = ({
 				onChange={handleInputChange("openAiUseAzure", noTransform)}>
 				{t("settings:modelInfo.useAzure")}
 			</Checkbox>
-			<div>
-				<Checkbox
-					checked={azureApiVersionSelected}
-					onChange={(checked: boolean) => {
-						setAzureApiVersionSelected(checked)
+			{(() => {
+				const apiMode = apiConfiguration.openAiApiMode ?? "completions"
+				const completionsMode = apiMode === "completions"
 
-						if (!checked) {
-							setApiConfigurationField("azureApiVersion", "")
-						}
-					}}>
-					{t("settings:modelInfo.azureApiVersion")}
-				</Checkbox>
-				{azureApiVersionSelected && (
-					<VSCodeTextField
-						value={apiConfiguration?.azureApiVersion || ""}
-						onInput={handleInputChange("azureApiVersion")}
-						placeholder={`Default: ${azureOpenAiDefaultApiVersion}`}
-						className="w-full mt-1"
-					/>
-				)}
-			</div>
+				return (
+					<div>
+						<Checkbox
+							checked={azureApiVersionSelected}
+							disabled={!completionsMode}
+							onChange={(checked: boolean) => {
+								if (!completionsMode) {
+									// Azure API version is only applicable in Completions mode
+									return
+								}
+
+								setAzureApiVersionSelected(checked)
+
+								if (!checked) {
+									setApiConfigurationField("azureApiVersion", "")
+								}
+							}}>
+							{t("settings:modelInfo.azureApiVersion")}
+						</Checkbox>
+						{azureApiVersionSelected && (
+							<VSCodeTextField
+								value={apiConfiguration?.azureApiVersion || ""}
+								onInput={handleInputChange("azureApiVersion")}
+								placeholder={`Default: ${azureOpenAiDefaultApiVersion}`}
+								className="w-full mt-1"
+								disabled={!completionsMode}
+							/>
+						)}
+					</div>
+				)
+			})()}
 
 			{/* Custom Headers UI */}
 			<div className="mb-4">

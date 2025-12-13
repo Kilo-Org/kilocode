@@ -211,6 +211,15 @@ const baseProviderSettingsSchema = z.object({
 
 	// Tool protocol override for this profile.
 	toolProtocol: z.enum(["xml", "native"]).optional(),
+
+	// OpenAI-compatible API transport mode for this profile.
+	// - "completions": use Chat Completions API
+	// - "responses": use Responses API (v1/responses)
+	openAiApiMode: z.enum(["completions", "responses"]).optional(),
+
+	// Controls whether Responses API calls are persisted server-side.
+	// Only used for OpenAI-compatible / Responses mode.
+	openAiResponsesStoreEnabled: z.boolean().optional(),
 })
 
 // Several of the providers share common model config properties.
@@ -302,6 +311,13 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiStreamingEnabled: z.boolean().optional(),
 	openAiHostHeader: z.string().optional(), // Keep temporarily for backward compatibility during migration.
 	openAiHeaders: z.record(z.string(), z.string()).optional(),
+	/**
+	 * Controls which OpenAI endpoint style is used for this provider configuration.
+	 * - "off": Always use Chat Completions API
+	 * - "auto": Use Responses API only when the model requires it (e.g., Codex models) and baseUrl supports it
+	 * - "force": Always use Responses API when baseUrl supports it
+	 */
+	openAiResponsesMode: z.enum(["off", "auto", "force"]).optional(),
 })
 
 const ollamaSchema = baseProviderSettingsSchema.extend({
