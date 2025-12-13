@@ -197,10 +197,10 @@ export const OpenAICompatible = ({
 				<Checkbox
 					checked={apiConfiguration?.openAiResponsesStoreEnabled ?? false}
 					onChange={handleInputChange("openAiResponsesStoreEnabled", noTransform)}>
-					{t("settings:providers.openAiResponsesStoreEnabled") ?? "Responses speichern (store=true)"}
+					{t("Enable Provider Storing Model Outputs") ?? "Save Responses (store=true)"}
 				</Checkbox>
 				<div className="text-sm text-vscode-descriptionForeground ml-6">
-					{t("Responses Store") ?? "Steuert, ob Responses-API-Aufrufe serverseitig gespeichert werden."}
+					{t("Responses Store") ?? "Directs whether Responses API calls are stored server-side."}
 				</div>
 			</div>
 			<R1FormatSetting
