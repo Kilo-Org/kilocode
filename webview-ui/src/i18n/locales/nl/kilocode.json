@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "Chatinvoer Automatisch Aanvullen",
 				"description": "Wanneer ingeschakeld, zal Kilo Code suggesties voor aanvullingen geven terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
+			},
+			"snooze": {
+				"label": "Autocomplete Snoozen",
+				"description": "Pauzeer autocomplete-suggesties tijdelijk voor een opgegeven duur.",
+				"button": "Snoozen",
+				"unsnooze": "Snooze opheffen",
+				"currentlySnoozed": "Autocomplete is momenteel gesnoozed.",
+				"duration": {
+					"1min": "1 minuut",
+					"5min": "5 minuten",
+					"15min": "15 minuten",
+					"30min": "30 minuten",
+					"1hour": "1 uur"
+				}
 			}
 		}
 	},

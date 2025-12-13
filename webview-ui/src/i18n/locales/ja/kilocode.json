@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"description": "有効にすると、Kilo Codeはチャット入力の入力中に候補を提案します。Tabキーを押して候補を受け入れることができます。",
 				"label": "チャット入力オートコンプリート"
+			},
+			"snooze": {
+				"label": "オートコンプリートをスヌーズ",
+				"description": "指定した時間、オートコンプリートの提案を一時的に停止します。",
+				"button": "スヌーズ",
+				"unsnooze": "スヌーズ解除",
+				"currentlySnoozed": "オートコンプリートは現在スヌーズ中です。",
+				"duration": {
+					"1min": "1分",
+					"5min": "5分",
+					"15min": "15分",
+					"30min": "30分",
+					"1hour": "1時間"
+				}
 			}
 		}
 	},

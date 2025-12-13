@@ -242,6 +242,20 @@
 			"enableChatAutocomplete": {
 				"label": "Sohbet Girişi Otomatik Tamamlama",
 				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+			},
+			"snooze": {
+				"label": "Otomatik Tamamlamayı Ertele",
+				"description": "Otomatik tamamlama önerilerini belirli bir süre için geçici olarak duraklat.",
+				"button": "Ertele",
+				"unsnooze": "Ertelemeyi Kaldır",
+				"currentlySnoozed": "Otomatik tamamlama şu anda ertelenmiş durumda.",
+				"duration": {
+					"1min": "1 dakika",
+					"5min": "5 dakika",
+					"15min": "15 dakika",
+					"30min": "30 dakika",
+					"1hour": "1 saat"
+				}
 			}
 		}
 	},

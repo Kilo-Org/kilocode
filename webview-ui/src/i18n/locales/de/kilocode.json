@@ -241,6 +241,20 @@
 			"enableChatAutocomplete": {
 				"label": "Chat-Eingabe-Autovervollständigung",
 				"description": "Wenn aktiviert, wird Kilo Code Vervollständigungen vorschlagen, während Sie im Chat-Eingabefeld tippen. Drücken Sie Tab, um Vorschläge zu akzeptieren."
+			},
+			"snooze": {
+				"label": "Autocomplete pausieren",
+				"description": "Autocomplete-Vorschläge vorübergehend für eine bestimmte Dauer pausieren.",
+				"button": "Pausieren",
+				"unsnooze": "Fortsetzen",
+				"currentlySnoozed": "Autocomplete ist derzeit pausiert.",
+				"duration": {
+					"1min": "1 Minute",
+					"5min": "5 Minuten",
+					"15min": "15 Minuten",
+					"30min": "30 Minuten",
+					"1hour": "1 Stunde"
+				}
 			}
 		}
 	},

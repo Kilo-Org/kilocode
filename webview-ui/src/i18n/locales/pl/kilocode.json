@@ -242,6 +242,20 @@
 			"enableChatAutocomplete": {
 				"label": "Automatyczne uzupełnianie wpisów czatu",
 				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			},
+			"snooze": {
+				"label": "Wstrzymaj Autocomplete",
+				"description": "Tymczasowo wstrzymaj sugestie autouzupełniania na określony czas.",
+				"button": "Wstrzymaj",
+				"unsnooze": "Wznów",
+				"currentlySnoozed": "Autouzupełnianie jest obecnie wstrzymane.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 godzina"
+				}
 			}
 		}
 	},
