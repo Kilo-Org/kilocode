@@ -2,15 +2,16 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { GaugeCircle } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 import { ModelSelector } from "./chat/ModelSelector"
 
 export const BottomApiConfig = () => {
-	const { currentApiConfigName, apiConfiguration } = useExtensionState()
+	const { currentApiConfigName, apiConfiguration, clineMessages } = useExtensionState()
 	const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
 	const [usagePercentage, setUsagePercentage] = useState<number | null>(null)
 	const [_isLoading, setIsLoading] = useState(false)
+	const previousMessagesRef = useRef<string>("")
 
 	useEffect(() => {
 		// Only fetch usage data if we have a kilocode token
@@ -46,6 +47,35 @@ export const BottomApiConfig = () => {
 			window.removeEventListener("message", handleMessage)
 		}
 	}, [])
+
+	// Watch for new assistant responses and fetch updated profile data
+	useEffect(() => {
+		if (!apiConfiguration?.kilocodeToken || !clineMessages) return
+
+		const currentMessagesHash = JSON.stringify(
+			clineMessages.map((msg) => ({
+				type: msg.type,
+				say: msg.say,
+				partial: msg.partial,
+				ts: msg.ts,
+			})),
+		)
+
+		// If this is the first run or messages have changed
+		if (previousMessagesRef.current !== currentMessagesHash) {
+			// Check if there's a new non-partial assistant response (say: "text" or "completion_result")
+			const hasNewAssistantResponse = clineMessages.some(
+				(msg) => msg.type === "say" && (msg.say === "text" || msg.say === "completion_result") && !msg.partial,
+			)
+
+			if (hasNewAssistantResponse && previousMessagesRef.current !== "") {
+				// New assistant response detected, fetch updated profile data
+				vscode.postMessage({ type: "fetchProfileDataRequest" })
+			}
+
+			previousMessagesRef.current = currentMessagesHash
+		}
+	}, [clineMessages, apiConfiguration?.kilocodeToken])
 
 	if (!apiConfiguration) {
 		return null
