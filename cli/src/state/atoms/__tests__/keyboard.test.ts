@@ -1088,4 +1088,280 @@ describe("keypress atoms", () => {
 			expect(store.get(textBufferStringAtom)).toBe("")
 		})
 	})
+
+	describe("word navigation", () => {
+		it("should move cursor to previous word with Meta+B", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
+
+			// Press Meta+B (previous word)
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+B again
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+B again
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "hello"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of text
+		})
+
+		it("should move cursor to next word with Meta+F", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to start
+			const homeKey: Key = {
+				name: "a",
+				sequence: "a",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, homeKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0)
+
+			// Press Meta+F (next word)
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+F again
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+F again
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to end of text
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // End of text
+		})
+
+		it("should handle word navigation across lines", () => {
+			// Type "hello\nworld"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Add newline
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: true, // Shift+Enter for newline
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, enterKey)
+
+			// Type "world"
+			const worldChars = ["w", "o", "r", "l", "d"]
+			for (const char of worldChars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Should have "hello\nworld"
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("hello\nworld")
+
+			// Cursor should already be on second line at end of "world" after typing
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(1)
+			expect(cursor.col).toBe(5) // End of "world"
+
+			// Press Meta+F (next word) - should stay on same line since no more words
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(1)
+			expect(cursor.col).toBe(5) // End of "world"
+
+			// Press Meta+B (previous word) - should move to previous line
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(0)
+			expect(cursor.col).toBe(0) // Start of "hello"
+		})
+
+		it("should handle empty text gracefully", () => {
+			// Empty buffer
+			expect(store.get(textBufferStringAtom)).toBe("")
+
+			// Press Meta+B - should not crash
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, metaBKey)).not.toThrow()
+
+			// Press Meta+F - should not crash
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, metaFKey)).not.toThrow()
+		})
+
+		it("should handle single word correctly", () => {
+			// Type "hello"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to middle of word
+			const leftKey: Key = {
+				name: "left",
+				sequence: "\x1b[D",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, leftKey)
+			store.set(keyboardHandlerAtom, leftKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(3) // Position before 'l' in "hello"
+
+			// Press Meta+B - should move to start of word
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of "hello"
+
+			// Press Meta+F - should move to end of word
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5) // End of "hello"
+		})
+	})
 })
