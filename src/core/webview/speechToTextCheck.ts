@@ -35,41 +35,24 @@ export async function checkSpeechToTextAvailable(
 		}
 	}
 
-	console.log("🎙️ [STT Availability Check] Starting speech-to-text prerequisite check...")
-
 	try {
 		// Check 1: OpenAI API key
 		const apiKey = await getOpenAiApiKey(providerSettingsManager)
-		const hasApiKey = !!apiKey
-		console.log(`🎙️ [STT Availability Check] OpenAI API key configured: ${hasApiKey}`)
-
-		if (!hasApiKey) {
-			console.log("🎙️ [STT Availability Check] ❌ FAILED: No OpenAI API key found")
-			console.log("🎙️ [STT Availability Check] → Add an OpenAI API provider in Settings")
+		if (!apiKey) {
 			cachedResult = { available: false, timestamp: Date.now() }
 			return false
 		}
 
 		// Check 2: FFmpeg installed
-		console.log("🎙️ [STT Availability Check] Checking FFmpeg installation...")
 		const ffmpegResult = FFmpegCaptureService.findFFmpeg()
-		console.log(`🎙️ [STT Availability Check] FFmpeg available: ${ffmpegResult.available}`)
-
 		if (!ffmpegResult.available) {
-			console.log("🎙️ [STT Availability Check] ❌ FAILED: FFmpeg is not installed or not in PATH")
-			console.log("🎙️ [STT Availability Check] → Install FFmpeg: https://ffmpeg.org/download.html")
-			if (ffmpegResult.error) {
-				console.log(`🎙️ [STT Availability Check] → Error: ${ffmpegResult.error}`)
-			}
 			cachedResult = { available: false, timestamp: Date.now() }
 			return false
 		}
 
-		console.log("🎙️ [STT Availability Check] ✅ SUCCESS: Speech-to-text prerequisites are met!")
 		cachedResult = { available: true, timestamp: Date.now() }
 		return true
 	} catch (error) {
-		console.error("🎙️ [STT Availability Check] ❌ FAILED: Unexpected error during check", error)
 		cachedResult = { available: false, timestamp: Date.now() }
 		return false
 	}

@@ -49,6 +49,7 @@ export interface SessionSyncServiceDependencies {
 	getOrganizationId: (taskId: string) => Promise<string | undefined>
 	getMode: (taskId: string) => Promise<string | undefined>
 	getModel: (taskId: string) => Promise<string | undefined>
+	getParentTaskId: (taskId: string) => Promise<string | undefined>
 	onSessionCreated?: (message: SessionCreatedMessage) => void
 	onSessionSynced?: (message: SessionSyncedMessage) => void
 }
@@ -81,6 +82,7 @@ export class SessionSyncService {
 	private readonly getOrganizationId: (taskId: string) => Promise<string | undefined>
 	private readonly getMode: (taskId: string) => Promise<string | undefined>
 	private readonly getModel: (taskId: string) => Promise<string | undefined>
+	private readonly getParentTaskId: (taskId: string) => Promise<string | undefined>
 	private readonly onSessionCreated: (message: SessionCreatedMessage) => void
 	private readonly onSessionSynced: (message: SessionSyncedMessage) => void
 
@@ -100,6 +102,7 @@ export class SessionSyncService {
 		this.getOrganizationId = dependencies.getOrganizationId
 		this.getMode = dependencies.getMode
 		this.getModel = dependencies.getModel
+		this.getParentTaskId = dependencies.getParentTaskId
 		this.onSessionCreated = dependencies.onSessionCreated ?? (() => {})
 		this.onSessionSynced = dependencies.onSessionSynced ?? (() => {})
 	}
@@ -362,6 +365,7 @@ export class SessionSyncService {
 				...basePayload,
 				last_mode: currentMode,
 				last_model: currentModel,
+				version: this.version,
 			})
 
 			this.stateManager.updateTimestamp(sessionId, updateResult.updated_at)
@@ -383,6 +387,9 @@ export class SessionSyncService {
 	): Promise<string> {
 		const currentMode = await this.getMode(taskId)
 		const currentModel = await this.getModel(taskId)
+		const parentTaskId = await this.getParentTaskId(taskId)
+
+		const parentSessionId = parentTaskId ? this.persistenceManager.getSessionForTask(parentTaskId) : undefined
 
 		const createdSession = await this.sessionClient.create({
 			...basePayload,
@@ -391,6 +398,7 @@ export class SessionSyncService {
 			organization_id: await this.getOrganizationId(taskId),
 			last_mode: currentMode,
 			last_model: currentModel,
+			parent_session_id: parentSessionId,
 		})
 
 		const sessionId = createdSession.session_id

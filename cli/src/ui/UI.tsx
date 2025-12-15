@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
+import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom, yoloModeAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
 import { taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
@@ -54,8 +54,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const notifications = useAtomValue(notificationsAtom)
 	const [versionStatus, setVersionStatus] = useState<Awaited<ReturnType<typeof getAutoUpdateStatus>>>()
 
-	// Initialize CI mode configuration
+	// Initialize CI mode and YOLO mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
+	const setYoloMode = useSetAtom(yoloModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
@@ -108,6 +109,14 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			})
 		}
 	}, [options.ci, options.timeout, setCIMode])
+
+	// Initialize YOLO mode atom
+	useEffect(() => {
+		if (options.yolo) {
+			logs.info("Initializing YOLO mode", "UI")
+			setYoloMode(true)
+		}
+	}, [options.yolo, setYoloMode])
 
 	// Set parallel mode flag
 	useEffect(() => {
