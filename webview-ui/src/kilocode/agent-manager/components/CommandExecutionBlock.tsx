@@ -173,7 +173,7 @@ export const CommandExecutionBlock = memo(
 								"max-h-[500px] overflow-y-auto": isExpanded,
 							},
 						)}>
-						<div className="p-2 bg-black/40">
+						<div className="p-2 bg-vscode-editor-background">
 							<pre
 								className={cn(
 									"overflow-x-auto whitespace-pre m-0 p-0 text-xs",

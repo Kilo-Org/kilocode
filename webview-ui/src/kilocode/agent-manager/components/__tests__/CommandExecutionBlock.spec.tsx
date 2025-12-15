@@ -212,8 +212,8 @@ describe("CommandExecutionBlock", () => {
 			// Check that the error output has red text
 			const outputPre = container.querySelector("pre.text-red-400")
 			expect(outputPre).toBeInTheDocument()
-			// Background should be visibly darker
-			const outputDiv = container.querySelector(".bg-black\\/40")
+			// Background should match editor background
+			const outputDiv = container.querySelector(".bg-vscode-editor-background")
 			expect(outputDiv).toBeInTheDocument()
 		})
 
@@ -224,8 +224,8 @@ describe("CommandExecutionBlock", () => {
 			// Check that successful output has normal text color
 			const outputPre = container.querySelector("pre.text-vscode-descriptionForeground")
 			expect(outputPre).toBeInTheDocument()
-			// Background should be visibly darker for all outputs
-			const outputDiv = container.querySelector(".bg-black\\/40")
+			// Background should match editor background for all outputs
+			const outputDiv = container.querySelector(".bg-vscode-editor-background")
 			expect(outputDiv).toBeInTheDocument()
 		})
 	})
