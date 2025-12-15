@@ -52,9 +52,22 @@ const isProcessingBufferAtom = atom<boolean>(false)
  * Key: executionId, Value: latest output data
  * Exported so extension.ts can apply pending updates when asks appear
  */
-export const pendingOutputUpdatesAtom = atom<Map<string, { output: string; command?: string; completed?: boolean }>>(
-	new Map<string, { output: string; command?: string; completed?: boolean }>(),
-)
+export interface PendingOutputUpdate {
+	output: string
+	command?: string
+	completed?: boolean
+	/**
+	 * Exit code when the process completes (0 = success).
+	 * Only set for `commandExecutionStatus.status === "exited"`.
+	 */
+	exitCode?: number
+	/**
+	 * Terminal status on completion (e.g. "exited", "timeout").
+	 */
+	status?: CommandExecutionStatus["status"]
+}
+
+export const pendingOutputUpdatesAtom = atom<Map<string, PendingOutputUpdate>>(new Map<string, PendingOutputUpdate>())
 
 /**
  * Map to track which commands have shown a command_output ask
@@ -411,7 +424,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						// Initialize with command info
 						// IMPORTANT: Store the command immediately so it's available even if no output is produced
 						const command = "command" in statusData ? (statusData.command as string) : undefined
-						const updateData: { output: string; command?: string; completed?: boolean } = {
+						const updateData: PendingOutputUpdate = {
 							output: "",
 							command: command || "", // Always set command, even if empty
 						}
@@ -458,17 +471,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						)
 
 						// Update with new output
-						const existing = newPendingUpdates.get(statusData.executionId) || { output: "" }
+						const existing: PendingOutputUpdate = newPendingUpdates.get(statusData.executionId) || {
+							output: "",
+						}
 						const command = "command" in statusData ? (statusData.command as string) : existing.command
-						const updateData: { output: string; command?: string; completed?: boolean } = {
+						const updateData: PendingOutputUpdate = {
 							output: statusData.output || "",
 						}
 						if (command) {
 							updateData.command = command
 						}
-						if (existing.completed !== undefined) {
-							updateData.completed = existing.completed
-						}
+						if (existing.completed !== undefined) updateData.completed = existing.completed
 						newPendingUpdates.set(statusData.executionId, updateData)
 
 						// Update the synthetic ask with the new output
@@ -522,7 +535,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 						)
 
 						// Mark as completed and ensure command is preserved
-						const existing = newPendingUpdates.get(statusData.executionId) || { output: "", command: "" }
+						const existing: PendingOutputUpdate = newPendingUpdates.get(statusData.executionId) || {
+							output: "",
+							command: "",
+						}
 						// If command wasn't set yet (shouldn't happen but defensive), try to get it from statusData
 						const command =
 							existing.command || ("command" in statusData ? (statusData.command as string) : "")
@@ -530,6 +546,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 							...existing,
 							command: command,
 							completed: true,
+							status: statusData.status,
+							...(statusData.status === "exited" && "exitCode" in statusData
+								? { exitCode: statusData.exitCode }
+								: {}),
 						}
 						newPendingUpdates.set(statusData.executionId, finalUpdate)
 					}
@@ -566,6 +586,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									status: statusData.status,
+									...(statusData.status === "exited" && pendingUpdate?.exitCode !== undefined
+										? { exitCode: pendingUpdate.exitCode }
+										: {}),
 								}),
 								partial: false, // Command completed
 								isAnswered: false, // Still needs user response

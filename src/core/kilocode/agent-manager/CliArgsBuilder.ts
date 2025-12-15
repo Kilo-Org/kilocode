@@ -9,9 +9,10 @@ export interface BuildCliArgsOptions {
  * Uses --json-io for bidirectional communication via stdin/stdout.
  */
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
-	// Always use --json-io for Agent Manager (enables stdin for bidirectional communication)
+	// Agent Manager runs agents in autonomous mode by default.
+	// Always use --json-io (enables stdin for bidirectional communication).
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
-	const args = ["--json-io", `--workspace=${workspace}`]
+	const args = ["--auto", "--json-io", `--workspace=${workspace}`]
 
 	if (options?.autoMode) {
 		args.push("--auto")

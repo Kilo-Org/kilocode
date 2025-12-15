@@ -49,6 +49,7 @@ export class KilocodeEventProcessor {
 	public handle(sessionId: string, event: KilocodeStreamEvent): void {
 		const payload = event.payload
 		const messageType = payload.type === "ask" ? "ask" : payload.type === "say" ? "say" : null
+		const isCommandOutput = payload.ask === "command_output" || payload.say === "command_output"
 
 		if (!messageType) {
 			// Unknown payloads (e.g., session_created) are logged but not shown as chat
@@ -81,7 +82,7 @@ export class KilocodeEventProcessor {
 
 		// Skip empty partial messages
 		const rawContent = payload.content || payload.text
-		if (payload.partial && !rawContent) {
+		if (payload.partial && !rawContent && !isCommandOutput) {
 			return
 		}
 
@@ -123,13 +124,14 @@ export class KilocodeEventProcessor {
 		if (!message.text && message.type === "ask" && message.ask) {
 			if (message.ask === "tool") {
 				message.text = this.formatToolAskText(payload.metadata)
-			} else {
+			} else if (message.ask !== "command_output") {
 				message.text = message.ask
 			}
 		}
 
 		// Drop empty messages (except checkpoints)
-		if (!message.text && message.say !== "checkpoint_saved") {
+		const isCommandOutputMessage = message.ask === "command_output" || message.say === "command_output"
+		if (!message.text && message.say !== "checkpoint_saved" && !isCommandOutputMessage) {
 			return
 		}
 
@@ -231,6 +233,15 @@ export class KilocodeEventProcessor {
 		// Tool asks
 		if (payload.ask === "tool") {
 			return this.formatToolAskText(payload.metadata) || ""
+		}
+
+		// command_output messages from the CLI often encode output in `metadata`
+		// (because the CLI JSON renderer parses `text` JSON into `metadata`).
+		if ((payload.ask === "command_output" || payload.say === "command_output") && payload.metadata) {
+			const output = (payload.metadata as { output?: unknown }).output
+			if (typeof output === "string") return output
+			if (output != null) return String(output)
+			return ""
 		}
 
 		// Fallback empty

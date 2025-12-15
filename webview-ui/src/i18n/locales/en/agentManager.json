@@ -63,8 +63,6 @@
 		"output": "Output",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"running": "Running",
-		"completed": "Completed",
 		"copyCommand": "Copy command"
 	},
 	"chatInput": {

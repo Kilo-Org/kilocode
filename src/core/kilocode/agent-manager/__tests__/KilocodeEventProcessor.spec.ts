@@ -184,4 +184,52 @@ describe("KilocodeEventProcessor", () => {
 		expect(stored?.[0].say).toBe("checkpoint_saved")
 		expect(stored?.[0].text).toBe("")
 	})
+
+	it("extracts command_output text from metadata.output", () => {
+		const deps = createDeps()
+		deps.firstApiReqStarted.set(sessionId, true)
+		const processor = new KilocodeEventProcessor(deps)
+
+		const cmdOutputEvent: KilocodeStreamEvent = {
+			streamEventType: "kilocode",
+			payload: {
+				type: "ask",
+				ask: "command_output",
+				timestamp: 123,
+				metadata: { executionId: "exec-1", command: "echo pong", output: "pong\n" },
+			},
+		}
+
+		processor.handle(sessionId, cmdOutputEvent)
+
+		const stored = deps.sessionMessages.get(sessionId)
+		expect(stored).toHaveLength(1)
+		expect(stored?.[0].ask).toBe("command_output")
+		expect(stored?.[0].text).toBe("pong\n")
+	})
+
+	it("keeps empty partial command_output messages (no placeholder text)", () => {
+		const deps = createDeps()
+		deps.firstApiReqStarted.set(sessionId, true)
+		const processor = new KilocodeEventProcessor(deps)
+
+		const cmdOutputStart: KilocodeStreamEvent = {
+			streamEventType: "kilocode",
+			payload: {
+				type: "ask",
+				ask: "command_output",
+				partial: true,
+				timestamp: 124,
+				metadata: { executionId: "exec-2", command: "echo pong", output: "" },
+			},
+		}
+
+		processor.handle(sessionId, cmdOutputStart)
+
+		const stored = deps.sessionMessages.get(sessionId)
+		expect(stored).toHaveLength(1)
+		expect(stored?.[0].ask).toBe("command_output")
+		expect(stored?.[0].partial).toBe(true)
+		expect(stored?.[0].text).toBe("")
+	})
 })

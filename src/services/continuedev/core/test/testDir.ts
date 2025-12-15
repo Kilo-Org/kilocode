@@ -1,10 +1,13 @@
 import fs from "fs"
 import os from "os"
 import path from "path"
+import { threadId } from "worker_threads"
 import { localPathOrUriToPath, localPathToUri } from "../util/pathToUri"
 
 // Want this outside of the git repository so we can change branches in tests
-const TEST_DIR_PATH = path.join(os.tmpdir(), "testWorkspaceDir")
+// Use a unique directory per Vitest worker/process to avoid cross-test interference.
+const TEST_DIR_ID = process.env.VITEST_WORKER_ID ?? process.env.VITEST_POOL_ID ?? `${process.pid}-${threadId}`
+const TEST_DIR_PATH = path.join(os.tmpdir(), `testWorkspaceDir-${TEST_DIR_ID}`)
 export const TEST_DIR = localPathToUri(TEST_DIR_PATH) // URI
 
 export function setUpTestDir() {

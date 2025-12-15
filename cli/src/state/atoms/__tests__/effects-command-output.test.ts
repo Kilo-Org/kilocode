@@ -92,7 +92,9 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 		expect(pendingUpdates.get(executionId)).toEqual({
 			output: "",
 			command: "sleep 10",
+			exitCode: 0,
 			completed: true,
+			status: "exited",
 		})
 
 		// Verify the ask was updated to mark as complete (not partial)
@@ -183,7 +185,9 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 		expect(pendingUpdates.get(executionId)).toEqual({
 			output: "hello\n",
 			command: "echo hello",
+			exitCode: 0,
 			completed: true,
+			status: "exited",
 		})
 
 		// Verify the ask was marked as complete
@@ -225,6 +229,7 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 			output: "",
 			command: "sleep 1000",
 			completed: true,
+			status: "timeout",
 		})
 	})
 

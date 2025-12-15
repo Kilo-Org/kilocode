@@ -67,35 +67,6 @@ function sanitizeOutput(raw: string): string {
 	return withoutEsc.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
 }
 
-/**
- * Detect if output indicates an error based on common error patterns.
- */
-function detectErrorInOutput(output: string): boolean {
-	if (!output) return false
-	const lowerOutput = output.toLowerCase()
-	// Common error indicators
-	const errorPatterns = [
-		"error:",
-		"error ",
-		"fatal:",
-		"fatal ",
-		"failed",
-		"command not found",
-		"no such file",
-		"permission denied",
-		"cannot ",
-		"unable to",
-		"exception",
-		"traceback",
-		"segmentation fault",
-		"panic:",
-		"not found",
-		"exit code",
-		"exited with",
-	]
-	return errorPatterns.some((pattern) => lowerOutput.includes(pattern))
-}
-
 export const CommandExecutionBlock = memo(
 	({ text, isRunning = false, isLast = false, exitCode, terminalStatus }: CommandExecutionBlockProps) => {
 		const { t } = useTranslation("agentManager")
@@ -105,22 +76,37 @@ export const CommandExecutionBlock = memo(
 
 		const output = useMemo(() => sanitizeOutput(rawOutput), [rawOutput])
 		const hasOutput = useMemo(() => /\S/.test(output), [output])
-		const hasError = useMemo(() => detectErrorInOutput(output), [output])
 		const hasOutputMarker = useMemo(() => text.indexOf(COMMAND_OUTPUT_STRING) !== -1, [text])
 		const isCompleted = exitCode !== undefined || terminalStatus === "timeout" || terminalStatus === "exited"
 
-		// Determine status
+		// Determine status - deterministic based on exit code
 		const status: CommandStatus = useMemo(() => {
+			// Log when we have output to debug status determination
+			if (hasOutput || hasOutputMarker) {
+				console.debug("[CommandExecutionBlock] Status determination", {
+					command: command.substring(0, 50),
+					exitCode,
+					terminalStatus,
+					hasOutput,
+					hasOutputMarker,
+					isRunning,
+					isLast,
+					isCompleted,
+					output: output.substring(0, 100),
+				})
+			}
+
 			// If we have an Output: marker but no output yet, the command is likely executing.
 			// Only show this as "running" for the most recent command row.
 			if (!isCompleted && (isRunning || (hasOutputMarker && isLast)) && !hasOutput) return "running"
 			if (terminalStatus === "timeout") return "error"
 			if (exitCode !== undefined) return exitCode === 0 ? "success" : "error"
-			if (hasOutput && hasError) return "error"
 			if (hasOutput) return "success"
 			if (hasOutputMarker) return "success" // executed but produced no visible output
 			return "pending" // No output, not running - waiting for approval/execution
-		}, [isCompleted, isRunning, hasOutputMarker, isLast, hasOutput, hasError, terminalStatus, exitCode])
+		}, [isCompleted, isRunning, hasOutputMarker, isLast, hasOutput, terminalStatus, exitCode, command, output])
+
+		const isError = status === "error"
 
 		const handleCopy = async () => {
 			try {
@@ -177,7 +163,7 @@ export const CommandExecutionBlock = memo(
 							<pre
 								className={cn(
 									"overflow-x-auto whitespace-pre m-0 p-0 text-xs",
-									hasError ? "text-red-400" : "text-vscode-descriptionForeground",
+									isError ? "text-red-400" : "text-vscode-descriptionForeground",
 								)}>
 								{output}
 							</pre>

@@ -110,44 +110,37 @@ describe("CommandExecutionBlock", () => {
 			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
 		})
 
-		it("shows success indicator (green) when has output without errors", () => {
+		it("shows success indicator (green) when has output without exitCode", () => {
 			const text = `echo hello${COMMAND_OUTPUT_STRING}hello`
 			const { container } = render(<CommandExecutionBlock text={text} />)
 
 			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
 		})
-
-		it("shows error indicator (red) when output contains error patterns", () => {
-			const text = `npm run build${COMMAND_OUTPUT_STRING}Error: Build failed`
-			const { container } = render(<CommandExecutionBlock text={text} />)
-
-			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
-		})
 	})
 
-	describe("error detection", () => {
-		const errorPatterns = [
-			"Error: something went wrong",
-			"fatal: not a git repository",
-			"command not found",
-			"No such file or directory",
-			"Permission denied",
-			"cannot find module",
-			"Unable to resolve",
-			"Exception in thread",
-			"Traceback (most recent call last)",
-			"Segmentation fault",
-			"panic: runtime error",
-		]
+	describe("deterministic exit code based error detection", () => {
+		it("does not treat error-like text as errors without exit code", () => {
+			const text = `some-command${COMMAND_OUTPUT_STRING}Error: something went wrong`
+			const { container } = render(<CommandExecutionBlock text={text} />)
 
-		errorPatterns.forEach((errorOutput) => {
-			it(`detects error pattern: ${errorOutput.substring(0, 30)}...`, () => {
-				const text = `some-command${COMMAND_OUTPUT_STRING}${errorOutput}`
-				const { container } = render(<CommandExecutionBlock text={text} />)
+			// Without exitCode, output text patterns are ignored - should show success (green)
+			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
+		})
 
-				// Should show red indicator for error
-				expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
-			})
+		it("trusts exit code over output content", () => {
+			const text = `some-command${COMMAND_OUTPUT_STRING}Build successful`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={1} />)
+
+			// Even with successful output, non-zero exit code means error (red)
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+
+		it("shows green indicator when exitCode is 0 regardless of output", () => {
+			const text = `some-command${COMMAND_OUTPUT_STRING}Error: something`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={0} />)
+
+			// Exit code 0 always means success (green), even with "Error" in output
+			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
 		})
 	})
 
@@ -205,9 +198,9 @@ describe("CommandExecutionBlock", () => {
 	})
 
 	describe("output styling", () => {
-		it("applies red text color when output contains errors", () => {
-			const text = `npm run build${COMMAND_OUTPUT_STRING}Error: Build failed`
-			const { container } = render(<CommandExecutionBlock text={text} />)
+		it("applies red text color when exitCode indicates error", () => {
+			const text = `npm run build${COMMAND_OUTPUT_STRING}Build output`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={1} />)
 
 			// Check that the error output has red text
 			const outputPre = container.querySelector("pre.text-red-400")
@@ -217,9 +210,9 @@ describe("CommandExecutionBlock", () => {
 			expect(outputDiv).toBeInTheDocument()
 		})
 
-		it("applies normal text color when output is successful", () => {
+		it("applies normal text color when command succeeds (exitCode 0)", () => {
 			const text = `npm run build${COMMAND_OUTPUT_STRING}Build successful`
-			const { container } = render(<CommandExecutionBlock text={text} />)
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={0} />)
 
 			// Check that successful output has normal text color
 			const outputPre = container.querySelector("pre.text-vscode-descriptionForeground")
@@ -227,6 +220,106 @@ describe("CommandExecutionBlock", () => {
 			// Background should match editor background for all outputs
 			const outputDiv = container.querySelector(".bg-vscode-editor-background")
 			expect(outputDiv).toBeInTheDocument()
+		})
+
+		it("applies normal text color when output exists without exitCode", () => {
+			const text = `npm run build${COMMAND_OUTPUT_STRING}Build output`
+			const { container } = render(<CommandExecutionBlock text={text} />)
+
+			// Without exitCode, it's treated as success and uses normal color
+			const outputPre = container.querySelector("pre.text-vscode-descriptionForeground")
+			expect(outputPre).toBeInTheDocument()
+		})
+	})
+
+	describe("exit code reliability for error detection", () => {
+		it("shows red indicator for exit code 127 (command not found)", () => {
+			const text = `nonexistent_command${COMMAND_OUTPUT_STRING}command not found`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={127} />)
+
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+
+		it("shows red indicator for exit code 2 (stderr output)", () => {
+			const text = `ls /invalid${COMMAND_OUTPUT_STRING}No such file or directory`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={2} />)
+
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+
+		it("shows green indicator for exit code 0 even with 'error' in output text", () => {
+			const text = `test_check${COMMAND_OUTPUT_STRING}Checked 5 items, 0 errors found`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={0} />)
+
+			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
+		})
+
+		it("shows red indicator for exit code 1 even with 'success' in output text", () => {
+			const text = `failing_script${COMMAND_OUTPUT_STRING}Build failed: success unlikely`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={1} />)
+
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+
+		it("shows error indicator when terminalStatus is timeout even with other factors", () => {
+			// terminalStatus=timeout overrides other status indicators
+			const text = `long_cmd${COMMAND_OUTPUT_STRING}Still processing`
+			const { container } = render(<CommandExecutionBlock text={text} terminalStatus="timeout" />)
+
+			// terminalStatus=timeout means error
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+
+		it("shows red indicator when terminalStatus is timeout without exitCode", () => {
+			const text = `long_cmd${COMMAND_OUTPUT_STRING}Still running...`
+			const { container } = render(<CommandExecutionBlock text={text} terminalStatus="timeout" />)
+
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+		})
+	})
+
+	describe("metadata extraction from command output messages", () => {
+		it("correctly extracts and applies exitCode metadata to determine status", () => {
+			// This test verifies the complete flow: metadata → component prop → status indicator
+			const text = `failing_cmd${COMMAND_OUTPUT_STRING}Error details`
+
+			// When exitCode metadata is provided, it should result in red indicator
+			const { container } = render(
+				<CommandExecutionBlock
+					text={text}
+					exitCode={1} // This would come from message metadata
+					isLast={true}
+				/>,
+			)
+
+			// Verify red indicator (error status)
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+			// Verify no green indicator
+			expect(container.querySelector(".bg-green-500")).not.toBeInTheDocument()
+		})
+
+		it("displays red error output text when exitCode indicates failure", () => {
+			const text = `git_push${COMMAND_OUTPUT_STRING}fatal: Authentication failed`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={128} />)
+
+			// Should have red error indicator
+			expect(container.querySelector(".bg-red-500")).toBeInTheDocument()
+			// Output should be visible and colored red
+			const outputPre = container.querySelector("pre.text-red-400")
+			expect(outputPre).toBeInTheDocument()
+			expect(outputPre?.textContent).toContain("fatal: Authentication failed")
+		})
+
+		it("displays green success output text when exitCode is 0", () => {
+			const text = `npm_test${COMMAND_OUTPUT_STRING}All tests passed: 42`
+			const { container } = render(<CommandExecutionBlock text={text} exitCode={0} />)
+
+			// Should have green success indicator
+			expect(container.querySelector(".bg-green-500")).toBeInTheDocument()
+			// Output should be visible and not red
+			const outputPre = container.querySelector("pre.text-vscode-descriptionForeground")
+			expect(outputPre).toBeInTheDocument()
+			expect(outputPre?.textContent).toContain("All tests passed")
 		})
 	})
 })

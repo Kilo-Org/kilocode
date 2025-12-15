@@ -71,6 +71,15 @@ export function MessageList({ sessionId }: MessageListProps) {
 				if (next.ask !== "command_output" && next.say !== "command_output") continue
 
 				data = extractCommandMetadata(next)
+				if (data) {
+					console.debug("[MessageList] Extracted command execution metadata", {
+						command: (msg.text || "").substring(0, 50),
+						exitCode: data.exitCode,
+						status: data.status,
+						isRunning: data.isRunning,
+						rawMetadata: next.metadata,
+					})
+				}
 			}
 
 			if (data) info.set(msg.ts, data)
