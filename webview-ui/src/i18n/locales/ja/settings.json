@@ -575,7 +575,8 @@
 			"minimal": "最小 (最速)",
 			"high": "高",
 			"medium": "中",
-			"low": "低"
+			"low": "低",
+			"xhigh": "極高"
 		},
 		"verbosity": {
 			"label": "出力の冗長性",
@@ -982,6 +983,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "並列ツール呼び出し",
 			"description": "有効にすると、ネイティブプロトコルは単一のアシスタントメッセージターンで複数のツールを実行できます。"
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "音声認識 (STT)",
+			"description": "有効にすると、Kilo CodeはOpenAIのWhisperモデルを使用して音声をテキストに変換できます。録音を開始するには、チャット内のマイクボタンをクリックしてください。FFmpegのインストールと、設定済みのOpenAI APIプロバイダーが必要です。"
 		}
 	},
 	"promptCaching": {

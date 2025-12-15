@@ -42,7 +42,7 @@ import {
 } from "./textBuffer.js"
 import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
-import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
+import { cancelTaskAtom, resumeTaskAtom, toggleYoloModeAtom } from "./actions.js"
 import {
 	historyModeAtom,
 	historyEntriesAtom,
@@ -824,6 +824,13 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 				if (hasResumeTask) {
 					set(resumeTaskAtom)
 				}
+				return true
+			}
+			break
+		case "y":
+			// Toggle YOLO mode with Ctrl+Y
+			if (key.ctrl) {
+				set(toggleYoloModeAtom)
 				return true
 			}
 			break

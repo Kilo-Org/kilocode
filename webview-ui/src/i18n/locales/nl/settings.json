@@ -574,7 +574,8 @@
 			"minimal": "Minimaal (Snelst)",
 			"high": "Hoog",
 			"medium": "Middel",
-			"low": "Laag"
+			"low": "Laag",
+			"xhigh": "Extra Hoog"
 		},
 		"verbosity": {
 			"label": "Uitvoerbaarheid",
@@ -981,6 +982,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Parallelle tool-aanroepen",
 			"description": "Wanneer ingeschakeld, kan het native protocol meerdere tools uitvoeren in één enkele assistent-berichtbeurt."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Spraak-naar-Tekst (STT)",
+			"description": "Wanneer ingeschakeld kan Kilo Code je stem naar tekst transcriberen met behulp van OpenAI's Whisper model. Klik op de microfoonknop in de chat om op te nemen. Vereist dat FFmpeg geïnstalleerd is en een geconfigureerde OpenAI API provider."
 		}
 	},
 	"promptCaching": {

@@ -23,7 +23,7 @@
 	"sections": {
 		"providers": "提供商",
 		"modes": "模式",
-		"mcp": "MCP 服务",
+		"mcp": "MCP 服务器",
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
@@ -37,7 +37,6 @@
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
-		"mcp": "MCP 服务器",
 		"autoPurge": "自动清理"
 	},
 	"about": {
@@ -372,9 +371,6 @@
 		"getZaiApiKey": "获取 Z AI API 密钥",
 		"zaiEntrypoint": "Z AI 服务站点",
 		"zaiEntrypointDescription": "请根据您的位置选择适当的 API 服务站点。如果您在中国，请选择 open.bigmodel.cn。否则，请选择 api.z.ai。",
-		"minimaxApiKey": "MiniMax API 密钥",
-		"getMiniMaxApiKey": "获取 MiniMax API 密钥",
-		"minimaxBaseUrl": "MiniMax 服务站点",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
@@ -578,7 +574,8 @@
 			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
-			"low": "低"
+			"low": "低",
+			"xhigh": "极高"
 		},
 		"verbosity": {
 			"label": "输出详细程度",
@@ -989,6 +986,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "并行工具调用",
 			"description": "启用后，原生协议可在单个助手消息轮次中执行多个工具。"
+		},
+		"SPEECH_TO_TEXT": {
+			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
+			"name": "语音转文本 (STT)"
 		}
 	},
 	"promptCaching": {

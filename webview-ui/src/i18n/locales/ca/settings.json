@@ -574,7 +574,8 @@
 			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
 			"medium": "Mitjà",
-			"low": "Baix"
+			"low": "Baix",
+			"xhigh": "Molt Alt"
 		},
 		"verbosity": {
 			"label": "Verbositat de la sortida",
@@ -980,6 +981,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Crides paral·leles a eines",
 			"description": "Quan està activat, el protocol natiu pot executar múltiples eines en un sol torn de missatge de l'assistent."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Veu a text (STT)",
+			"description": "Quan està activat, Kilo Code pot transcriure la teva veu a text utilitzant el model Whisper d'OpenAI. Fes clic al botó del micròfon al xat per començar a gravar. Requereix que FFmpeg estigui instal·lat i un proveïdor d'API d'OpenAI configurat."
 		}
 	},
 	"promptCaching": {

@@ -311,5 +311,9 @@
 		"tryAgain": "Tentar novamente",
 		"cancelled": "Autenticação cancelada",
 		"initiating": "Iniciando autenticação..."
+	},
+	"speechToText": {
+		"startRecording": "Iniciar entrada de voz",
+		"stopRecording": "Parar entrada de voz"
 	}
 }

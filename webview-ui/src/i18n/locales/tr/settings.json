@@ -549,7 +549,8 @@
 			"minimal": "Minimal (en hızlı)",
 			"high": "Yüksek",
 			"medium": "Orta",
-			"low": "Düşük"
+			"low": "Düşük",
+			"xhigh": "Ekstra Yüksek"
 		},
 		"verbosity": {
 			"label": "Çıktı Ayrıntı Düzeyi",
@@ -982,6 +983,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Paralel araç çağrıları",
 			"description": "Etkinleştirildiğinde, yerel protokol tek bir asistan mesaj turunda birden fazla araç yürütebilir."
+		},
+		"SPEECH_TO_TEXT": {
+			"description": "Etkinleştirildiğinde, Kilo Code sesinizi OpenAI'nin Whisper modeli kullanarak metne dönüştürebilir. Kayda başlamak için sohbetteki mikrofon düğmesine tıklayın. FFmpeg'in yüklü olması ve yapılandırılmış bir OpenAI API sağlayıcısı gereklidir.",
+			"name": "Konuşmadan Metne (STT)"
 		}
 	},
 	"promptCaching": {

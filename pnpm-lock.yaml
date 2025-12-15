@@ -1943,6 +1943,9 @@ importers:
       workerpool:
         specifier: ^9.2.0
         version: 9.2.0
+      ws:
+        specifier: ^8.18.0
+        version: 8.18.3
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -2022,6 +2025,9 @@ importers:
       '@types/vscode':
         specifier: ^1.84.0
         version: 1.100.0
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.18.1
       '@vscode/test-electron':
         specifier: ^2.5.2
         version: 2.5.2

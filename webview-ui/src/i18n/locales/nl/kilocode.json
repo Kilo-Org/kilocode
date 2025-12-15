@@ -311,5 +311,9 @@
 		"tryAgain": "Opnieuw proberen",
 		"cancelled": "Authenticatie geannuleerd",
 		"initiating": "Authenticatie starten..."
+	},
+	"speechToText": {
+		"startRecording": "Start spraakinvoer",
+		"stopRecording": "Stop sprakinvoer"
 	}
 }

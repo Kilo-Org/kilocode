@@ -104,7 +104,6 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
-		"bedrockProvider": "Amazon Bedrock",
 		"bedrockConfigTitle": "Конфігурація Amazon Bedrock",
 		"bedrockConfigDesc": "Налаштуйте Amazon Bedrock для використання моделей вбудовувань AWS",
 		"bedrockEmbeddingModel": "Модель вбудовувань Bedrock",
@@ -610,7 +609,8 @@
 			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
-			"low": "Низький"
+			"low": "Низький",
+			"xhigh": "Екстра високий"
 		},
 		"verbosity": {
 			"label": "Рівень деталізації виводу",
@@ -1086,7 +1086,11 @@
 		"experimentalParallelToolCalls": "Експериментальні паралельні виклики інструментів",
 		"experimentalParallelToolCallsDesc": "Дозволяє моделі викликати кілька інструментів одночасно для покращення ефективності",
 		"experimentalParallelToolCallsInfo": "Ця функція може покращити швидкість виконання завдань, але може бути нестабільною з деякими моделями",
-		"experimentalParallelToolCallsWarning": "Використовуйте з обережністю: може призвести до неочікуваної поведінки"
+		"experimentalParallelToolCallsWarning": "Використовуйте з обережністю: може призвести до неочікуваної поведінки",
+		"SPEECH_TO_TEXT": {
+			"name": "Мовлення в текст (STT)",
+			"description": "Коли увімкнено, Kilo Code може транскрибувати ваш голос у текст за допомогою моделі Whisper від OpenAI. Натисніть кнопку мікрофона в чаті, щоб почати запис. Потребує встановленого FFmpeg та налаштованого провайдера OpenAI API."
+		}
 	},
 	"promptCaching": {
 		"label": "Вимкнути кешування підказок",

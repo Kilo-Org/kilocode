@@ -591,7 +591,8 @@
 			"minimal": "Minimal (Fastest)",
 			"low": "Low",
 			"medium": "Medium",
-			"high": "High"
+			"high": "High",
+			"xhigh": "Extra High"
 		},
 		"verbosity": {
 			"label": "Output Verbosity",
@@ -955,6 +956,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Speech-to-Text (STT)",
+			"description": "When enabled, Kilo Code can transcribe your voice into text using OpenAI's Whisper model. Click the microphone button in the chat to start recording. Requires FFmpeg to be installed and a configured OpenAI API provider."
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
