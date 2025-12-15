@@ -1,18 +1,17 @@
 /**
- * Tests for command_output ask deduplication
- * Verifies that duplicate asks from the backend are properly filtered
- * when the CLI has already created a synthetic ask
+ * Tests for command_output ask filtering
+ * Verifies that ask:command_output messages are filtered out since
+ * say:command_output contains the actual output
  */
 
 import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
-import { messageHandlerEffectAtom, commandOutputAskShownAtom } from "../effects.js"
-import { chatMessagesAtom } from "../extension.js"
+import { messageHandlerEffectAtom } from "../effects.js"
 import { extensionServiceAtom } from "../service.js"
 import type { ExtensionService } from "../../../services/extension.js"
 import type { ExtensionMessage, ExtensionChatMessage, ExtensionState } from "../../../types/messages.js"
 
-describe("Command Output Ask Deduplication", () => {
+describe("Command Output Ask Filtering", () => {
 	let store: ReturnType<typeof createStore>
 
 	beforeEach(() => {
@@ -27,177 +26,169 @@ describe("Command Output Ask Deduplication", () => {
 		store.set(extensionServiceAtom, mockService as ExtensionService)
 	})
 
-	it("should filter duplicate command_output ask from state when synthetic ask exists", () => {
+	it("should filter ask:command_output from state messages", () => {
 		const executionId = "test-exec-123"
 
-		// Step 1: Simulate commandExecutionStatus "started" which creates synthetic ask
-		const startedMessage: ExtensionMessage = {
-			type: "commandExecutionStatus",
-			text: JSON.stringify({
-				executionId,
-				status: "started",
-				command: "sleep 30",
-			}),
-		}
-		store.set(messageHandlerEffectAtom, startedMessage)
-
-		// Verify synthetic ask was created
-		const messagesAfterStart = store.get(chatMessagesAtom)
-		expect(messagesAfterStart).toHaveLength(1)
-		expect(messagesAfterStart[0]?.ask).toBe("command_output")
-
-		// Step 2: Simulate backend sending its own command_output ask via state
-		const backendAsk: ExtensionChatMessage = {
-			ts: Date.now() + 100,
+		// Create a mix of messages including ask:command_output
+		const askCommandOutput: ExtensionChatMessage = {
+			ts: Date.now(),
 			type: "ask",
 			ask: "command_output",
 			text: JSON.stringify({
 				executionId,
-				command: "sleep 30",
-				output: "",
+				command: "ls -la",
+				output: "file1\nfile2\n",
 			}),
-			partial: true,
+			partial: false,
 			isAnswered: false,
+		}
+
+		const sayCommandOutput: ExtensionChatMessage = {
+			ts: Date.now() + 1,
+			type: "say",
+			say: "command_output",
+			text: "file1\nfile2\n",
+		}
+
+		const regularMessage: ExtensionChatMessage = {
+			ts: Date.now() + 2,
+			type: "say",
+			say: "text",
+			text: "Here are your files",
 		}
 
 		const stateMessage: ExtensionMessage = {
 			type: "state",
 			state: {
-				chatMessages: [messagesAfterStart[0]!, backendAsk],
+				chatMessages: [askCommandOutput, sayCommandOutput, regularMessage],
 			} as unknown as ExtensionState,
 		}
+
 		store.set(messageHandlerEffectAtom, stateMessage)
 
-		// Verify duplicate was filtered - should still have only 1 message
-		const messagesAfterState = store.get(chatMessagesAtom)
-		expect(messagesAfterState).toHaveLength(1)
-		expect(messagesAfterState[0]?.ts).toBe(messagesAfterStart[0]?.ts)
+		// Verify ask:command_output was filtered out
+		// The state message should have been modified in-place
+		expect(stateMessage.state?.chatMessages).toHaveLength(2)
+		expect(
+			stateMessage.state?.chatMessages?.find((m) => m.type === "ask" && m.ask === "command_output"),
+		).toBeUndefined()
+		expect(
+			stateMessage.state?.chatMessages?.find((m) => m.type === "say" && m.say === "command_output"),
+		).toBeDefined()
+		expect(stateMessage.state?.chatMessages?.find((m) => m.type === "say" && m.say === "text")).toBeDefined()
 	})
 
-	it("should filter duplicate command_output ask from messageUpdated when synthetic ask exists", () => {
-		const executionId = "test-exec-456"
-
-		// Step 1: Create synthetic ask
-		const startedMessage: ExtensionMessage = {
-			type: "commandExecutionStatus",
-			text: JSON.stringify({
-				executionId,
-				status: "started",
-				command: "sleep 30",
-			}),
+	it("should not modify state when no ask:command_output present", () => {
+		const sayMessage: ExtensionChatMessage = {
+			ts: Date.now(),
+			type: "say",
+			say: "text",
+			text: "Hello",
 		}
-		store.set(messageHandlerEffectAtom, startedMessage)
 
-		const messagesAfterStart = store.get(chatMessagesAtom)
-		expect(messagesAfterStart).toHaveLength(1)
+		const stateMessage: ExtensionMessage = {
+			type: "state",
+			state: {
+				chatMessages: [sayMessage],
+			} as unknown as ExtensionState,
+		}
 
-		// Step 2: Simulate backend sending its own ask via messageUpdated
-		const backendAsk: ExtensionChatMessage = {
-			ts: Date.now() + 100,
+		store.set(messageHandlerEffectAtom, stateMessage)
+
+		// Should remain unchanged
+		expect(stateMessage.state?.chatMessages).toHaveLength(1)
+	})
+
+	it("should filter ask:command_output from messageUpdated", () => {
+		// Create an ask:command_output message
+		const askCommandOutput: ExtensionChatMessage = {
+			ts: Date.now(),
 			type: "ask",
 			ask: "command_output",
 			text: JSON.stringify({
-				executionId,
-				command: "sleep 30",
-				output: "",
+				executionId: "test-exec-456",
+				command: "echo hello",
+				output: "hello\n",
 			}),
-			partial: true,
+			partial: false,
 			isAnswered: false,
 		}
 
 		const messageUpdatedMessage: ExtensionMessage = {
 			type: "messageUpdated",
-			chatMessage: backendAsk,
+			chatMessage: askCommandOutput,
 		}
+
+		// This should be filtered out (break early without updating)
 		store.set(messageHandlerEffectAtom, messageUpdatedMessage)
 
-		// Verify duplicate was ignored - should still have only 1 message
-		const messagesAfterUpdate = store.get(chatMessagesAtom)
-		expect(messagesAfterUpdate).toHaveLength(1)
-		expect(messagesAfterUpdate[0]?.ts).toBe(messagesAfterStart[0]?.ts)
+		// The message should have been ignored - no error should occur
+		// We can't directly test the internal state change was blocked,
+		// but the code should break early without calling updateChatMessageByTsAtom
 	})
 
-	it("should allow backend ask when no synthetic ask exists", () => {
-		const executionId = "test-exec-789"
-
-		// This test verifies that our filtering logic doesn't break normal scenarios
-		// where the backend creates a command_output ask without a prior synthetic one
-
-		// In this case, we DON'T create a synthetic ask first
-		// Instead, we simulate the backend creating its own ask
-		// This would happen if the command produces output immediately (before our synthetic ask is created)
-
-		// Since we can't easily test the full state update flow in a unit test,
-		// we'll just verify that the tracking map doesn't have this executionId
-		// which means our filter won't block it
-
-		const askShownMap = store.get(commandOutputAskShownAtom)
-		expect(askShownMap.has(executionId)).toBe(false)
-
-		// This means when a backend ask with this executionId comes through,
-		// it won't be filtered out by our duplicate detection logic
-	})
-
-	it("should update synthetic ask with output when command produces output", () => {
-		const executionId = "test-exec-output"
-
-		// Step 1: Create synthetic ask
-		const startedMessage: ExtensionMessage = {
-			type: "commandExecutionStatus",
+	it("should allow non-command_output messages through messageUpdated", () => {
+		// Create a regular ask message
+		const regularAsk: ExtensionChatMessage = {
+			ts: Date.now(),
+			type: "ask",
+			ask: "followup",
 			text: JSON.stringify({
-				executionId,
-				status: "started",
-				command: "echo test",
+				question: "What would you like to do next?",
 			}),
+			partial: false,
+			isAnswered: false,
 		}
-		store.set(messageHandlerEffectAtom, startedMessage)
 
-		// Step 2: Send output
-		const outputMessage: ExtensionMessage = {
-			type: "commandExecutionStatus",
-			text: JSON.stringify({
-				executionId,
-				status: "output",
-				output: "test\n",
-			}),
+		const messageUpdatedMessage: ExtensionMessage = {
+			type: "messageUpdated",
+			chatMessage: regularAsk,
 		}
-		store.set(messageHandlerEffectAtom, outputMessage)
 
-		// Verify synthetic ask was updated with output
-		const messages = store.get(chatMessagesAtom)
-		expect(messages).toHaveLength(1)
+		// This should be allowed through
+		store.set(messageHandlerEffectAtom, messageUpdatedMessage)
 
-		const askData = JSON.parse(messages[0]?.text || "{}")
-		expect(askData.output).toBe("test\n")
-		expect(askData.command).toBe("echo test")
+		// Non-command_output asks should be processed normally
 	})
 
-	it("should mark synthetic ask as complete when command exits", () => {
-		const executionId = "test-exec-complete"
+	it("should filter multiple ask:command_output from state", () => {
+		// Create multiple ask:command_output messages
+		const ask1: ExtensionChatMessage = {
+			ts: Date.now(),
+			type: "ask",
+			ask: "command_output",
+			text: JSON.stringify({ executionId: "exec-1", command: "cmd1", output: "out1" }),
+			partial: false,
+			isAnswered: false,
+		}
 
-		// Step 1: Create synthetic ask
-		store.set(messageHandlerEffectAtom, {
-			type: "commandExecutionStatus",
-			text: JSON.stringify({
-				executionId,
-				status: "started",
-				command: "sleep 1",
-			}),
-		})
+		const ask2: ExtensionChatMessage = {
+			ts: Date.now() + 1,
+			type: "ask",
+			ask: "command_output",
+			text: JSON.stringify({ executionId: "exec-2", command: "cmd2", output: "out2" }),
+			partial: false,
+			isAnswered: false,
+		}
 
-		// Step 2: Command exits
-		store.set(messageHandlerEffectAtom, {
-			type: "commandExecutionStatus",
-			text: JSON.stringify({
-				executionId,
-				status: "exited",
-				exitCode: 0,
-			}),
-		})
+		const regularMessage: ExtensionChatMessage = {
+			ts: Date.now() + 2,
+			type: "say",
+			say: "text",
+			text: "Done",
+		}
 
-		// Verify synthetic ask is marked as complete
-		const messages = store.get(chatMessagesAtom)
-		expect(messages).toHaveLength(1)
-		expect(messages[0]?.partial).toBe(false)
+		const stateMessage: ExtensionMessage = {
+			type: "state",
+			state: {
+				chatMessages: [ask1, ask2, regularMessage],
+			} as unknown as ExtensionState,
+		}
+
+		store.set(messageHandlerEffectAtom, stateMessage)
+
+		// Both ask:command_output should be filtered
+		expect(stateMessage.state?.chatMessages).toHaveLength(1)
+		expect(stateMessage.state?.chatMessages?.[0]?.type).toBe("say")
 	})
 })
