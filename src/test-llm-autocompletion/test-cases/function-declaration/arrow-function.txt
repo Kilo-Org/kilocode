@@ -1,3 +1,9 @@
 #### Description: Should complete arrow function syntax
 #### Filename: math-helpers.js
+// Math utility functions
+const multiply = (a, b) => a * b;
+const divide = (a, b) => a / b;
 const add = (a, b) <<<AUTOCOMPLETE_HERE>>>
+
+// Export the functions
+module.exports = { multiply, divide, add };
