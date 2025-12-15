@@ -63,7 +63,8 @@
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent běží v autonomním režimu",
+		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",
+		"sessionEnded": "Relace skončila, prosím zahajte novou relaci",
 		"placeholderTypeTask": "Napiš svůj úkol zde...",
 		"ariaLabel": "Vstup zprávy",
 		"cancelTitle": "Zrušit agenta",

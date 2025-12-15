@@ -62,7 +62,8 @@
 		"usingTool": "正在使用工具：**{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "代理正在自主模式下运行",
+		"autoMode": "Agent 正在全自动模式下运行 - 不允许输入",
+		"sessionEnded": "会话已结束，请开始新会话",
 		"placeholderTypeTask": "在此输入你的任务...",
 		"ariaLabel": "消息输入",
 		"cancelTitle": "取消代理",

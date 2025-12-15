@@ -46,13 +46,14 @@ export function extractSessionConfigs(message: StartSessionMessage): SessionConf
 		]
 	}
 
-	// Multi-version case: always use parallelMode and autoMode
+	// Multi-version case: always use parallelMode, but start interactively (autoMode=false)
+	// Users can click the "Finish to Branch" button on individual sessions to commit their changes
 	const effectiveLabels = labels ?? Array.from({ length: versions }, (_, i) => `${prompt.slice(0, 50)} (v${i + 1})`)
 
 	return effectiveLabels.map((label) => ({
 		prompt,
 		label,
 		parallelMode: true,
-		autoMode: true,
+		autoMode: false,
 	}))
 }

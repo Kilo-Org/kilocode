@@ -87,7 +87,13 @@ export class CliProcessHandler {
 		workspace: string,
 		prompt: string,
 		options:
-			| { parallelMode?: boolean; autoMode?: boolean; sessionId?: string; label?: string; gitUrl?: string }
+			| {
+					parallelMode?: boolean
+					autoMode?: boolean
+					sessionId?: string
+					label?: string
+					gitUrl?: string
+			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
@@ -224,6 +230,20 @@ export class CliProcessHandler {
 			info.process.kill("SIGTERM")
 			this.activeSessions.delete(sessionId)
 		}
+	}
+
+	/**
+	 * Terminate a running process but keep it tracked until it exits.
+	 * This is useful when we want the normal CLI shutdown logic to run and for
+	 * the exit handler to update session status (e.g., "Finish to branch").
+	 */
+	public terminateProcess(sessionId: string, signal: NodeJS.Signals = "SIGTERM"): void {
+		const info = this.activeSessions.get(sessionId)
+		if (!info) {
+			return
+		}
+
+		info.process.kill(signal)
 	}
 
 	public stopAllProcesses(): void {

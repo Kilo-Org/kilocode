@@ -62,7 +62,8 @@
 		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agente in esecuzione in modalità autonoma",
+		"autoMode": "Agent in esecuzione in modalità completamente automatica - input non consentito",
+		"sessionEnded": "Sessione terminata, per favore avvia una nuova sessione",
 		"placeholderTypeTask": "Scrivi il tuo compito qui...",
 		"ariaLabel": "Input messaggio",
 		"cancelTitle": "Annulla agente",

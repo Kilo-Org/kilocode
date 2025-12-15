@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react"
 import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { SendHorizontal, Square } from "lucide-react"
+import { GitBranch, SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -14,14 +14,22 @@ interface ChatInputProps {
 	sessionId: string
 	sessionLabel?: string
 	isActive?: boolean
+	showCancel?: boolean
 	autoMode?: boolean // True if session is running in auto mode (non-interactive)
+	showFinishToBranch?: boolean
+	worktreeBranchName?: string
+	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
 	sessionId,
 	sessionLabel,
 	isActive = false,
+	showCancel = false,
 	autoMode = false,
+	showFinishToBranch = false,
+	worktreeBranchName,
+	sessionStatus,
 }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
@@ -37,12 +45,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
 
-	// In auto mode, input and sending are always disabled (non-interactive)
-	const inputDisabled = autoMode
-	const sendDisabled = isEmpty || autoMode
+	// Input is disabled when:
+	// - In auto mode (non-interactive)
+	// - Session is not in "running" status (done, stopped, error, etc.)
+	const isSessionRunning = sessionStatus === "running"
+	const inputDisabled = autoMode || !isSessionRunning
+	const sendDisabled = isEmpty || autoMode || !isSessionRunning
 
 	const handleSend = () => {
-		if (isEmpty || autoMode) return
+		if (isEmpty || autoMode || !isSessionRunning) return
 
 		// For running sessions, send as follow-up message
 		vscode.postMessage({
@@ -58,6 +69,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	const handleCancel = () => {
 		vscode.postMessage({
 			type: "agentManager.cancelSession",
+			sessionId,
+		})
+	}
+
+	const handleFinishToBranch = () => {
+		vscode.postMessage({
+			type: "agentManager.finishWorktreeSession",
 			sessionId,
 		})
 	}
@@ -95,7 +113,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("chatInput.ariaLabel")}
-						placeholder={inputDisabled ? t("chatInput.autonomous") : t("chatInput.placeholderTypeTask")}
+						placeholder={
+							!isSessionRunning
+								? t("chatInput.sessionEnded")
+								: autoMode
+									? t("chatInput.autoMode")
+									: t("chatInput.placeholderTypeTask")
+						}
 						disabled={inputDisabled}
 						minRows={3}
 						maxRows={15}
@@ -138,7 +162,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 					{/* Floating Actions */}
 					<div className="absolute bottom-2 right-2 z-30 flex gap-1">
-						{isActive && (
+						{showFinishToBranch && (
+							<StandardTooltip
+								content={
+									worktreeBranchName
+										? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+										: t("chatInput.finishToBranchTitleNoBranch")
+								}>
+								<button
+									aria-label={
+										worktreeBranchName
+											? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+											: t("chatInput.finishToBranchTitleNoBranch")
+									}
+									onClick={handleFinishToBranch}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<GitBranch size={14} />
+								</button>
+							</StandardTooltip>
+						)}
+						{isActive && showCancel && (
 							<StandardTooltip content={t("chatInput.cancelTitle")}>
 								<button
 									aria-label={t("chatInput.cancelTitle")}
@@ -158,9 +211,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
-						<StandardTooltip content={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}>
+						<StandardTooltip
+							content={inputDisabled ? t("chatInput.sessionEnded") : t("chatInput.sendTitle")}>
 							<button
-								aria-label={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}
+								aria-label={inputDisabled ? t("chatInput.sessionEnded") : t("chatInput.sendTitle")}
 								disabled={sendDisabled}
 								onClick={handleSend}
 								className={cn(

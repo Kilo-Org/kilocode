@@ -62,7 +62,8 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "エージェントは自律モードで実行中",
+		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",
+		"sessionEnded": "セッションが終了しました。新しいセッションを開始してください",
 		"placeholderTypeTask": "タスクを入力してください...",
 		"ariaLabel": "メッセージ入力",
 		"cancelTitle": "エージェントをキャンセル",

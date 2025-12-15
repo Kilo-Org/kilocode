@@ -214,6 +214,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
 					break
+				case "agentManager.finishWorktreeSession":
+					this.finishWorktreeSession(message.sessionId as string)
+					break
 				case "agentManager.sendMessage":
 					void this.sendMessage(
 						message.sessionId as string,
@@ -398,15 +401,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Check if trying to use parallel mode from within a worktree
-		if (options?.parallelMode && this.isInsideWorktree(workspaceFolder)) {
-			this.outputChannel.appendLine("ERROR: Cannot use parallel mode from within a git worktree")
-			void vscode.window.showErrorMessage(
-				"Parallel mode cannot be used from within a git worktree. Please open the main repository to use this feature.",
-			)
-			this.postMessage({ type: "agentManager.startSessionFailed" })
-			return
-		}
+		// Note: we intentionally allow starting parallel mode from within an existing git worktree.
+		// Git worktrees share a common .git dir, so `git worktree add/remove` still works from a worktree root.
 
 		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 		if (!cliPath) {
@@ -686,6 +682,26 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// Track session stopped telemetry
 		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
+	}
+
+	/**
+	 * Finish a worktree (parallel mode) session by gracefully terminating the CLI process.
+	 * The CLI's SIGTERM handler will run its normal dispose flow, including worktree commit/cleanup.
+	 * We keep the process tracked so the exit handler can mark the session as done/error.
+	 */
+	private finishWorktreeSession(sessionId: string): void {
+		const session = this.registry.getSession(sessionId)
+		if (!session?.parallelMode?.enabled) {
+			// Safety: "Finish to branch" must never apply to non-worktree sessions.
+			this.outputChannel.appendLine(
+				`[AgentManager] Ignoring finishWorktreeSession for non-worktree session: ${sessionId}`,
+			)
+			return
+		}
+
+		this.processHandler.terminateProcess(sessionId, "SIGTERM")
+		this.log(sessionId, "Finishing worktree session (commit + close)...")
+		this.postStateToWebview()
 	}
 
 	/**

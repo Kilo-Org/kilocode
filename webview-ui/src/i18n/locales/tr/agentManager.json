@@ -62,7 +62,8 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Ajan otonom modda çalışıyor",
+		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",
+		"sessionEnded": "Oturum sona erdi, lütfen yeni bir oturum başlat",
 		"placeholderTypeTask": "Görevini buraya yaz...",
 		"ariaLabel": "Mesaj girişi",
 		"cancelTitle": "Ajanı iptal et",
