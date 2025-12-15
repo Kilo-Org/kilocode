@@ -22,6 +22,7 @@ import { getModelParams } from "../transform/model-params"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
 
 export type OpenAiNativeModel = ReturnType<OpenAiNativeHandler["getModel"]>
 
@@ -292,7 +293,11 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 						type: "function",
 						name: tool.function.name,
 						description: tool.function.description,
-						parameters: ensureAllRequired(tool.function.parameters),
+						// kilocode_change start: normalize invalid schemes for strict mode
+						parameters: normalizeObjectAdditionalPropertiesFalse(
+							ensureAllRequired(tool.function.parameters),
+						),
+						// kilocode_chang end
 						strict: true,
 					})),
 			}),

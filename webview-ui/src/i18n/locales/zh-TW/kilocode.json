@@ -311,5 +311,9 @@
 		"tryAgain": "重試",
 		"cancelled": "驗證已取消",
 		"initiating": "正在啟動驗證..."
+	},
+	"speechToText": {
+		"startRecording": "开始语音输入",
+		"stopRecording": "停止语音输入"
 	}
 }

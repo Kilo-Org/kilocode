@@ -114,9 +114,12 @@ export interface WebviewMessage {
 		| "toggleToolEnabledForPrompt"
 		| "toggleMcpServer"
 		| "updateMcpTimeout"
+		| "fuzzyMatchThreshold" // kilocode_change
 		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "fastApplyModel" // kilocode_change: Fast Apply model selection
 		| "fastApplyApiProvider" // kilocode_change: Fast Apply model api base url
+		| "writeDelayMs" // kilocode_change
+		| "diagnosticsEnabled" // kilocode_change
 		| "enhancePrompt"
 		| "enhancedPrompt"
 		| "draggedImages"
@@ -138,6 +141,10 @@ export interface WebviewMessage {
 		| "commitMessageApiConfigId" // kilocode_change
 		| "terminalCommandApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
+		| "stt:start" // kilocode_change: Start STT recording
+		| "stt:stop" // kilocode_change: Stop STT recording
+		| "stt:cancel" // kilocode_change: Cancel STT recording
+		| "includeTaskHistoryInEnhance" // kilocode_change
 		| "autoApprovalEnabled"
 		| "yoloMode" // kilocode_change
 		| "updateCustomMode"
@@ -220,6 +227,7 @@ export interface WebviewMessage {
 		| "marketplaceInstallResult"
 		| "fetchMarketplaceData"
 		| "switchTab"
+		| "profileThresholds" // kilocode_change
 		| "editMessage" // kilocode_change
 		| "systemNotificationsEnabled" // kilocode_change
 		| "dismissNotificationId" // kilocode_change
@@ -232,7 +240,7 @@ export interface WebviewMessage {
 		| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
 		| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
 		| "manualPurge" // kilocode_change
-		| "shareTaskSuccess"
+		| "shareTaskSuccess" // kilocode_change
 		| "exportMode"
 		| "exportModeResult"
 		| "importMode"
@@ -326,6 +334,7 @@ export interface WebviewMessage {
 	query?: string
 	setting?: string
 	slug?: string
+	language?: string // User's language for speech transcription (STT)
 	modeConfig?: ModeConfig
 	timeout?: number
 	payload?: WebViewMessagePayload

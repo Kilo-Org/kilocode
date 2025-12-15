@@ -438,8 +438,8 @@ const App = () => {
 				/>
 			)}
 			{/* kilocode_change */}
-			{/* Chat, modes and history view contain their own bottom controls */}
-			{!["chat", "modes", "history"].includes(tab) && (
+			{/* Chat, and history view contain their own bottom controls, settings doesn't need it */}
+			{!["chat", "settings", "history"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

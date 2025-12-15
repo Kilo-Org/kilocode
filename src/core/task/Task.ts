@@ -2566,26 +2566,38 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				>()
 				// kilocode_change end
 
+				let streamAbortSignal: AbortSignal | undefined
+				let streamAbortListener: (() => void) | undefined
+				let streamAbortPromise: Promise<never> | undefined
+
 				try {
 					const iterator = stream[Symbol.asyncIterator]()
+
+					const ensureAbortPromise = (): void => {
+						if (streamAbortPromise || !this.currentRequestAbortController) {
+							return
+						}
+
+						streamAbortSignal = this.currentRequestAbortController.signal
+						streamAbortPromise = new Promise<never>((_, reject) => {
+							if (streamAbortSignal!.aborted) {
+								reject(new Error("Request cancelled by user"))
+							} else {
+								streamAbortListener = () => reject(new Error("Request cancelled by user"))
+								streamAbortSignal!.addEventListener("abort", streamAbortListener)
+							}
+						})
+					}
 
 					// Helper to race iterator.next() with abort signal
 					const nextChunkWithAbort = async () => {
 						const nextPromise = iterator.next()
 
-						// If we have an abort controller, race it with the next chunk
-						if (this.currentRequestAbortController) {
-							const abortPromise = new Promise<never>((_, reject) => {
-								const signal = this.currentRequestAbortController!.signal
-								if (signal.aborted) {
-									reject(new Error("Request cancelled by user"))
-								} else {
-									signal.addEventListener("abort", () => {
-										reject(new Error("Request cancelled by user"))
-									})
-								}
-							})
-							return await Promise.race([nextPromise, abortPromise])
+						// If we have an abort controller, race it with the next chunk.
+						// Reuse a single abort promise/listener across all chunks to avoid accumulating listeners.
+						ensureAbortPromise()
+						if (streamAbortPromise) {
+							return await Promise.race([nextPromise, streamAbortPromise])
 						}
 
 						// No abort controller, just return the next chunk normally
@@ -3176,6 +3188,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 				} finally {
 					this.isStreaming = false
+					if (streamAbortSignal && streamAbortListener) {
+						streamAbortSignal.removeEventListener("abort", streamAbortListener)
+					}
 					// Clean up the abort controller when streaming completes
 					this.currentRequestAbortController = undefined
 				}
@@ -4004,10 +4019,24 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		)
 		const iterator = stream[Symbol.asyncIterator]()
 
-		// Set up abort handling - when the signal is aborted, clean up the controller reference
-		abortSignal.addEventListener("abort", () => {
+		// Set up abort handling - store listener reference for cleanup
+		// to avoid accumulating listeners on the AbortSignal
+		const abortCleanupListener = () => {
 			console.log(`[Task#${this.taskId}.${this.instanceId}] AbortSignal triggered for current request`)
 			this.currentRequestAbortController = undefined
+		}
+		abortSignal.addEventListener("abort", abortCleanupListener)
+
+		// Create a single abort promise/listener for racing with first chunk
+		// to avoid accumulating listeners per attempt
+		let firstChunkAbortListener: (() => void) | undefined
+		const abortPromise = new Promise<never>((_, reject) => {
+			if (abortSignal.aborted) {
+				reject(new Error("Request cancelled by user"))
+			} else {
+				firstChunkAbortListener = () => reject(new Error("Request cancelled by user"))
+				abortSignal.addEventListener("abort", firstChunkAbortListener)
+			}
 		})
 
 		try {
@@ -4016,15 +4045,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			// Race between the first chunk and the abort signal
 			const firstChunkPromise = iterator.next()
-			const abortPromise = new Promise<never>((_, reject) => {
-				if (abortSignal.aborted) {
-					reject(new Error("Request cancelled by user"))
-				} else {
-					abortSignal.addEventListener("abort", () => {
-						reject(new Error("Request cancelled by user"))
-					})
-				}
-			})
 
 			const firstChunk = await Promise.race([firstChunkPromise, abortPromise])
 			yield firstChunk.value
@@ -4130,6 +4150,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			Task.lastGlobalApiRequestTime = performance.now()
 		}
 		// kilocode_change end
+
+		// Clean up abort listeners to prevent memory leaks
+		abortSignal.removeEventListener("abort", abortCleanupListener)
+		if (firstChunkAbortListener) {
+			abortSignal.removeEventListener("abort", firstChunkAbortListener)
+		}
 	}
 
 	// Shared exponential backoff for retries (first-chunk and mid-stream)

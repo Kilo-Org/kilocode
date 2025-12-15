@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.16.0
+
+### Minor Changes
+
+- [#4388](https://github.com/Kilo-Org/kilocode/pull/4388) [`af93318`](https://github.com/Kilo-Org/kilocode/commit/af93318e3648c235721ba58fe9caab9429608241) Thanks [@iscekic](https://github.com/iscekic)! - send org id and last mode with session data
+
 ## 0.15.0
 
 ### Minor Changes

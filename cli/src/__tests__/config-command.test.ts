@@ -26,6 +26,9 @@ vi.mock("fs/promises", async () => {
 	}
 })
 
+// Mock environment variables to avoid ephemeral mode
+vi.stubEnv("KILOCODE_EPHEMERAL", "false")
+
 describe("Config Command", () => {
 	let testDir: string
 	let testConfigFile: string

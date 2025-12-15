@@ -574,7 +574,8 @@
 			"minimal": "Tối thiểu (nhanh nhất)",
 			"high": "Cao",
 			"medium": "Trung bình",
-			"low": "Thấp"
+			"low": "Thấp",
+			"xhigh": "Rất cao"
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",
@@ -981,6 +982,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Lệnh gọi công cụ song song",
 			"description": "Khi được bật, giao thức native có thể thực thi nhiều công cụ trong một lượt tin nhắn của trợ lý."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Chuyển Giọng nói thành Văn bản (STT)",
+			"description": "Khi được bật, Kilo Code có thể chuyển đổi giọng nói của bạn thành văn bản bằng mô hình Whisper của OpenAI. Nhấp vào nút microphone trong chat để bắt đầu ghi âm. Yêu cầu cài đặt FFmpeg và cấu hình nhà cung cấp API OpenAI."
 		}
 	},
 	"promptCaching": {

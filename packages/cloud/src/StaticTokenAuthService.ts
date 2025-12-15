@@ -22,6 +22,11 @@ export class StaticTokenAuthService extends EventEmitter<AuthServiceEvents> impl
 		let payload
 
 		try {
+			const parts = typeof token === "string" ? token.split(".") : []
+			if (parts.length !== 3 || parts.some((p) => p.length === 0)) {
+				throw new Error("Invalid JWT format")
+			}
+
 			payload = jwtDecode<JWTPayload>(token)
 		} catch (error) {
 			this.log("[auth] Failed to parse JWT:", error)

@@ -311,5 +311,9 @@
 		"tryAgain": "ลองอีกครั้ง",
 		"cancelled": "ยกเลิกการยืนยันตัวตนแล้ว",
 		"initiating": "กำลังเริ่มการยืนยันตัวตน..."
+	},
+	"speechToText": {
+		"startRecording": "เริ่มการป้อนเสียง",
+		"stopRecording": "หยุดการป้อนเสียง"
 	}
 }

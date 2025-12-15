@@ -583,7 +583,8 @@
 			"minimal": "Minimal (schnellste)",
 			"high": "Hoch",
 			"medium": "Mittel",
-			"low": "Niedrig"
+			"low": "Niedrig",
+			"xhigh": "Sehr hoch"
 		},
 		"verbosity": {
 			"label": "Ausgabe-Ausführlichkeit",
@@ -976,6 +977,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Parallele Tool-Aufrufe",
 			"description": "Wenn aktiviert, kann das native Protokoll mehrere Tools in einer einzigen Assistenten-Nachrichtenrunde ausführen."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Sprache-zu-Text (STT)",
+			"description": "Wenn aktiviert, kann Kilo Code Ihre Sprache mit OpenAIs Whisper-Modell in Text umwandeln. Klicken Sie auf das Mikrofon-Symbol im Chat, um die Aufnahme zu starten. Erfordert eine installierte FFmpeg-Version und einen konfigurierten OpenAI API-Anbieter."
 		}
 	},
 	"promptCaching": {

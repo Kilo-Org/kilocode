@@ -574,7 +574,8 @@
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
 			"medium": "Sedang",
-			"low": "Rendah"
+			"low": "Rendah",
+			"xhigh": "Ekstra Tinggi"
 		},
 		"verbosity": {
 			"label": "Verbositas Output",
@@ -1002,6 +1003,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Panggilan tool paralel",
 			"description": "Ketika diaktifkan, protokol native dapat mengeksekusi beberapa tool dalam satu giliran pesan asisten."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Ucapan-ke-Teks (STT)",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengubah suara Anda menjadi teks menggunakan model Whisper dari OpenAI. Klik tombol mikrofon di chat untuk mulai merekam. Memerlukan FFmpeg yang terinstal dan penyedia API OpenAI yang dikonfigurasi."
 		}
 	},
 	"promptCaching": {
