@@ -311,5 +311,9 @@
 		"tryAgain": "पुनः प्रयास करें",
 		"cancelled": "प्रमाणीकरण रद्द किया गया",
 		"initiating": "प्रमाणीकरण शुरू हो रहा है..."
+	},
+	"speechToText": {
+		"stopRecording": "वॉइस इनपुट बंद करें",
+		"startRecording": "वॉयस इनपुट शुरू करें"
 	}
 }

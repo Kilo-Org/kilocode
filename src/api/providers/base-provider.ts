@@ -6,6 +6,8 @@ import type { ApiHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { ApiStream } from "../transform/stream"
 import { countTokens } from "../../utils/countTokens"
 
+import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
+
 /**
  * Base class for API providers that implements common functionality.
  */
@@ -86,7 +88,7 @@ export abstract class BaseProvider implements ApiHandler {
 			result.properties = newProps
 		}
 
-		return result
+		return normalizeObjectAdditionalPropertiesFalse(result) // kilocode_change: normalize invalid schemes for strict mode
 	}
 
 	/**

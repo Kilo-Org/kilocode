@@ -6,14 +6,29 @@ import {
 	startSessionFailedCounterAtom,
 	pendingSessionAtom,
 	preferredRunModeAtom,
+	versionCountAtom,
+	generateVersionLabels,
+	VERSION_COUNT_OPTIONS,
 	type RunMode,
+	type VersionCount,
 } from "../state/atoms/sessions"
 import { sessionMachineUiStateAtom, selectedSessionMachineStateAtom } from "../state/atoms/stateMachine"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import { Loader2, SendHorizontal, RefreshCw, GitBranch, Folder, ChevronDown, AlertCircle, Zap, X } from "lucide-react"
+import {
+	Loader2,
+	SendHorizontal,
+	RefreshCw,
+	GitBranch,
+	Folder,
+	ChevronDown,
+	AlertCircle,
+	Zap,
+	Layers,
+	X,
+} from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -115,7 +130,12 @@ export function SessionDetail() {
 
 			<MessageList sessionId={selectedSession.sessionId} />
 
-			<ChatInput sessionId={selectedSession.sessionId} sessionLabel={selectedSession.label} isActive={isActive} />
+			<ChatInput
+				sessionId={selectedSession.sessionId}
+				sessionLabel={selectedSession.label}
+				isActive={isActive}
+				autoMode={selectedSession.autoMode}
+			/>
 		</div>
 	)
 }
@@ -175,11 +195,18 @@ function NewAgentForm() {
 	const { t } = useTranslation("agentManager")
 	const [promptText, setPromptText] = useState("")
 	const [runMode, setRunMode] = useAtom(preferredRunModeAtom)
+	const [versionCount, setVersionCount] = useAtom(versionCountAtom)
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+	const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
+	const versionDropdownRef = useRef<HTMLDivElement>(null)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
+
+	// Multi-version mode forces worktree mode
+	const isMultiVersion = versionCount > 1
+	const effectiveRunMode = isMultiVersion ? "worktree" : runMode
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
 	useEffect(() => {
@@ -188,22 +215,25 @@ function NewAgentForm() {
 		}
 	}, [startSessionFailedCounter])
 
-	// Close dropdown when clicking outside
+	// Close dropdowns when clicking outside
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
 			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
 				setIsDropdownOpen(false)
 			}
+			if (versionDropdownRef.current && !versionDropdownRef.current.contains(event.target as Node)) {
+				setIsVersionDropdownOpen(false)
+			}
 		}
 
-		if (isDropdownOpen) {
+		if (isDropdownOpen || isVersionDropdownOpen) {
 			document.addEventListener("mousedown", handleClickOutside)
 		}
 
 		return () => {
 			document.removeEventListener("mousedown", handleClickOutside)
 		}
-	}, [isDropdownOpen])
+	}, [isDropdownOpen, isVersionDropdownOpen])
 
 	const trimmedPrompt = promptText.trim()
 	const isEmpty = trimmedPrompt.length === 0
@@ -212,10 +242,16 @@ function NewAgentForm() {
 		if (isEmpty || isStarting) return
 
 		setIsStarting(true)
+
+		// Generate labels for multi-version mode
+		const labels = isMultiVersion ? generateVersionLabels(trimmedPrompt.slice(0, 50), versionCount) : undefined
+
 		vscode.postMessage({
 			type: "agentManager.startSession",
 			prompt: trimmedPrompt,
-			parallelMode: runMode === "worktree",
+			parallelMode: effectiveRunMode === "worktree",
+			versions: versionCount,
+			labels,
 		})
 	}
 
@@ -227,12 +263,17 @@ function NewAgentForm() {
 	}
 
 	const handleSelectMode = (mode: RunMode) => {
-		if (mode === "worktree") {
-			// Worktree mode is not yet available for users
+		if (mode === "worktree" && !isMultiVersion) {
+			// Worktree mode is not yet available for users (unless in multi-version mode)
 			return
 		}
 		setRunMode(mode)
 		setIsDropdownOpen(false)
+	}
+
+	const handleSelectVersionCount = (count: VersionCount) => {
+		setVersionCount(count)
+		setIsVersionDropdownOpen(false)
 	}
 
 	return (
@@ -304,18 +345,31 @@ function NewAgentForm() {
 
 					{/* Controls Container */}
 					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
+						{/* Run Mode Dropdown */}
 						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
-							<StandardTooltip content={t("sessionDetail.runMode")}>
+							<StandardTooltip
+								content={
+									isMultiVersion
+										? t("sessionDetail.versionsHelperText", { count: versionCount })
+										: effectiveRunMode === "local"
+											? t("sessionDetail.runModeLocal")
+											: t("sessionDetail.runModeWorktree")
+								}>
 								<button
-									className="am-run-mode-trigger-inline"
-									onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-									disabled={isStarting}
+									className={cn("am-run-mode-trigger-inline", isMultiVersion && "am-locked")}
+									onClick={() => !isMultiVersion && setIsDropdownOpen(!isDropdownOpen)}
+									disabled={isStarting || isMultiVersion}
 									type="button">
-									{runMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
-									<ChevronDown size={10} className={cn("am-chevron", isDropdownOpen && "am-open")} />
+									{effectiveRunMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+									{!isMultiVersion && (
+										<ChevronDown
+											size={10}
+											className={cn("am-chevron", isDropdownOpen && "am-open")}
+										/>
+									)}
 								</button>
 							</StandardTooltip>
-							{isDropdownOpen && (
+							{isDropdownOpen && !isMultiVersion && (
 								<div className="am-run-mode-menu-inline">
 									<button
 										className={cn(
@@ -344,6 +398,43 @@ function NewAgentForm() {
 							)}
 						</div>
 
+						{/* Version Count Dropdown */}
+						<div ref={versionDropdownRef} className="am-run-mode-dropdown-inline relative">
+							<StandardTooltip content={t("sessionDetail.versionsTooltip")}>
+								<button
+									className="am-run-mode-trigger-inline"
+									onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
+									disabled={isStarting}
+									type="button"
+									title={t("sessionDetail.versions")}>
+									<Layers size={14} />
+									<span className="am-version-count">{versionCount}</span>
+									<ChevronDown
+										size={10}
+										className={cn("am-chevron", isVersionDropdownOpen && "am-open")}
+									/>
+								</button>
+							</StandardTooltip>
+							{isVersionDropdownOpen && (
+								<div className="am-run-mode-menu-inline">
+									{VERSION_COUNT_OPTIONS.map((count) => (
+										<button
+											key={count}
+											className={cn(
+												"am-run-mode-option-inline",
+												versionCount === count && "am-selected",
+											)}
+											onClick={() => handleSelectVersionCount(count)}
+											type="button">
+											<span>{t("sessionDetail.versionCount", { count })}</span>
+											{versionCount === count && <span className="am-checkmark">✓</span>}
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+
+						{/* Start Button */}
 						<button
 							className={cn(
 								"relative inline-flex items-center justify-center",
@@ -360,7 +451,12 @@ function NewAgentForm() {
 							)}
 							onClick={handleStart}
 							disabled={isEmpty || isStarting}
-							aria-label={isStarting ? t("sessionDetail.starting") : t("sessionDetail.startAriaLabel")}>
+							aria-label={isStarting ? t("sessionDetail.starting") : t("sessionDetail.startAriaLabel")}
+							title={
+								isMultiVersion
+									? t("sessionDetail.launchVersions", { count: versionCount })
+									: t("sessionDetail.startAgent")
+							}>
 							{isStarting ? <Loader2 size={16} className="am-spinning" /> : <SendHorizontal size={16} />}
 						</button>
 					</div>

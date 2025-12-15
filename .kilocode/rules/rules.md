@@ -12,7 +12,9 @@
         - Backend tests: `cd src && pnpm test path/to/test-file` (don't include `src/` in path)
         - UI tests: `cd webview-ui && pnpm test src/path/to/test-file`
     - Example: For `src/tests/user.spec.ts`, run `cd src && pnpm test tests/user.spec.ts` NOT `pnpm test src/tests/user.spec.ts`
-    - **Test File Naming Convention**: Use `.spec.ts` or `.spec.tsx` for test files, NOT `.test.ts` or `.test.tsx`. This is the project standard.
+    - **Test File Naming Convention**:
+        - Monorepo default: `.spec.ts` / `.spec.tsx`
+        - CLI package exception: `.test.ts` / `.test.tsx` (match existing CLI convention)
 
 2. Lint Rules:
 

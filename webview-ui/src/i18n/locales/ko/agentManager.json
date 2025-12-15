@@ -39,6 +39,13 @@
 		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
 		"waitingForCli": "에이전트 세션 초기화 중...",
+		"versions": "버전",
+		"versionsTooltip": "다양한 접근 방식을 탐색하는 병렬 에이전트",
+		"versionsHelperText": "별도 브랜치에서 {{count}}개의 병렬 에이전트",
+		"versionCount_one": "{{count}}개 버전",
+		"versionCount_other": "{{count}}개 버전",
+		"launchVersions": "{{count}}개 버전 실행",
+		"startAgent": "에이전트 시작",
 		"cancelCreating": "세션 생성 취소",
 		"cancelButton": "취소"
 	},

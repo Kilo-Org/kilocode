@@ -549,7 +549,8 @@
 			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
-			"low": "低"
+			"low": "低",
+			"xhigh": "超高"
 		},
 		"verbosity": {
 			"label": "輸出詳細程度",
@@ -982,6 +983,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "並行工具呼叫",
 			"description": "啟用後，原生協定可在單個助理訊息輪次中執行多個工具。"
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "语音转文本 (STT)",
+			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。"
 		}
 	},
 	"promptCaching": {

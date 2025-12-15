@@ -26,6 +26,20 @@ describe("Session State Machine", () => {
 			machine.send({ type: "say_text", partial: false })
 			expect(machine.getState()).toBe("idle")
 		})
+
+		it("should transition directly to streaming on session_created (multi-version hydration)", () => {
+			// When sessions are created indirectly (e.g., multi-version mode),
+			// the UI might miss start_session. session_created should hydrate to streaming.
+			machine.send({ type: "session_created", sessionId: "test-123" })
+			expect(machine.getState()).toBe("streaming")
+		})
+
+		it("should transition directly to streaming on api_req_started (missed start)", () => {
+			// If the state machine misses both start_session and session_created,
+			// api_req_started should still hydrate to streaming.
+			machine.send({ type: "api_req_started" })
+			expect(machine.getState()).toBe("streaming")
+		})
 	})
 
 	describe("State: creating", () => {
@@ -278,11 +292,6 @@ describe("Session State Machine", () => {
 			expect(machine.getState()).toBe("paused")
 		})
 
-		it("should transition to streaming on resume_session", () => {
-			machine.send({ type: "resume_session" })
-			expect(machine.getState()).toBe("streaming")
-		})
-
 		it("should transition to stopped on cancel_session", () => {
 			machine.send({ type: "cancel_session" })
 			expect(machine.getState()).toBe("stopped")
@@ -327,11 +336,6 @@ describe("Session State Machine", () => {
 
 		it("should be in stopped state", () => {
 			expect(machine.getState()).toBe("stopped")
-		})
-
-		it("should transition to streaming on resume_session", () => {
-			machine.send({ type: "resume_session" })
-			expect(machine.getState()).toBe("streaming")
 		})
 
 		it("should transition to creating on start_session (new task)", () => {

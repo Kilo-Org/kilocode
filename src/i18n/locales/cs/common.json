@@ -69,7 +69,7 @@
 		"custom_storage_path_unusable": "Vlastní cesta úložiště \"{{path}}\" je nepoužitelná, bude použita výchozí cesta",
 		"cannot_access_path": "Nelze přistupovat k cestě {{path}}: {{error}}",
 		"settings_import_failed": "Import nastavení selhal: {{error}}.",
-		"mistake_limit_guidance": "To může naznačovat selhání v myšlenkovém procesu modelu nebo neschopnost správně používat nástroj, což lze zmírnit pomocí nějakého vedení uživatele (např. \"Zkus rozdělit úkol na menší kroky\").",
+		"mistake_limit_guidance": "To může naznačovat selhání v uvažování modelu nebo neschopnost správně používat nástroj. Zkus jednu z následujících možností:\n\n• Použij chytřejší model nebo prostě jiný model (každý model má své slabiny)\n• Sniž množství kontextu (zjednoduš prompt pro LLM)\n• Poskytni další instrukce, které pomohou LLM (např. \"Zkus rozdělit úkol na menší kroky\")",
 		"violated_organization_allowlist": "Spuštění úlohy selhalo: aktuální profil porušuje nastavení tvé organizace",
 		"condense_failed": "Zhušťování kontextu selhalo",
 		"condense_not_enough_messages": "Nedostatek zpráv pro zhuštění kontextu {{prevContextTokens}} tokenů. Je vyžadováno alespoň {{minimumMessageCount}} zpráv, ale k dispozici je pouze {{messageCount}}.",

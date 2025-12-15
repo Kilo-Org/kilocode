@@ -5,10 +5,13 @@ import {
 	type SessionCreatedStreamEvent,
 	type WelcomeStreamEvent,
 	type KilocodeStreamEvent,
+	type KilocodePayload,
 } from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
-import type { ClineMessage } from "@roo-code/types"
+import type { ClineMessage, ProviderSettings } from "@roo-code/types"
+import { extractApiReqFailedMessage, extractPayloadMessage } from "./askErrorParser"
+import { buildProviderEnvOverrides } from "./providerEnvMapper"
 
 /**
  * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
@@ -26,6 +29,7 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
+	autoMode?: boolean // True if session was started with --auto flag
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
@@ -46,9 +50,16 @@ export interface CliProcessHandlerCallbacks {
 	onSessionLog: (sessionId: string, line: string) => void
 	onStateChanged: () => void
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
-	onStartSessionFailed: (error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }) => void
+	onStartSessionFailed: (
+		error?:
+			| { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }
+			| { type: "api_req_failed"; message: string; payload?: KilocodePayload; authError?: boolean }
+			| { type: "payment_required"; message: string; payload?: KilocodePayload },
+	) => void
 	onChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	onSessionCreated: (sawApiReqStarted: boolean) => void
+	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
+	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
 }
 
 export class CliProcessHandler {
@@ -72,11 +83,39 @@ export class CliProcessHandler {
 		}
 	}
 
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+		const baseEnv = { ...process.env }
+
+		const overrides = buildProviderEnvOverrides(
+			apiConfiguration,
+			baseEnv,
+			(message) => this.callbacks.onLog(message),
+			(message) => this.debugLog(message),
+		)
+
+		return {
+			...baseEnv,
+			...overrides,
+			NO_COLOR: "1",
+			FORCE_COLOR: "0",
+			KILO_PLATFORM: "agent-manager",
+		}
+	}
+
 	public spawnProcess(
 		cliPath: string,
 		workspace: string,
 		prompt: string,
-		options: { parallelMode?: boolean; sessionId?: string; label?: string; gitUrl?: string } | undefined,
+		options:
+			| {
+					parallelMode?: boolean
+					autoMode?: boolean
+					sessionId?: string
+					label?: string
+					gitUrl?: string
+					apiConfiguration?: ProviderSettings
+			  }
+			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
 		// Check if we're resuming an existing session (sessionId explicitly provided)
@@ -102,6 +141,7 @@ export class CliProcessHandler {
 			// New session - create pending session state
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
+				autoMode: options?.autoMode,
 				gitUrl: options?.gitUrl,
 			})
 			this.debugLog(`Pending session created, waiting for CLI session_created event`)
@@ -111,16 +151,19 @@ export class CliProcessHandler {
 		// Build CLI command
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			parallelMode: options?.parallelMode,
+			autoMode: options?.autoMode,
 			sessionId: options?.sessionId,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
+
 		// Spawn CLI process
 		const proc = spawn(cliPath, cliArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", KILO_PLATFORM: "agent-manager" },
+			env,
 			shell: false,
 		})
 
@@ -158,6 +201,7 @@ export class CliProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
+				autoMode: options?.autoMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
@@ -309,6 +353,14 @@ export class CliProcessHandler {
 			// This is needed so KilocodeEventProcessor knows the user echo has already happened
 			if (event.streamEventType === "kilocode") {
 				const payload = (event as KilocodeStreamEvent).payload
+				if (payload?.ask === "payment_required_prompt") {
+					this.handlePaymentRequiredDuringPending(payload)
+					return
+				}
+				if (payload?.ask === "api_req_failed") {
+					this.handleApiReqFailedDuringPending(payload)
+					return
+				}
 				if (payload?.say === "api_req_started") {
 					this.pendingProcess.sawApiReqStarted = true
 					this.debugLog(`Captured api_req_started before session_created`)
@@ -365,6 +417,7 @@ export class CliProcessHandler {
 			startTime,
 			parser,
 			parallelMode,
+			autoMode,
 			worktreeBranch,
 			desiredSessionId,
 			desiredLabel,
@@ -388,6 +441,7 @@ export class CliProcessHandler {
 			// Create new session (also sets selectedId)
 			session = this.registry.createSession(sessionId, prompt, startTime, {
 				parallelMode,
+				autoMode,
 				labelOverride: desiredLabel,
 				gitUrl,
 			})
@@ -467,6 +521,8 @@ export class CliProcessHandler {
 		if (code === 0) {
 			this.registry.updateSessionStatus(sessionId, "done", code)
 			this.callbacks.onSessionLog(sessionId, "Agent completed")
+			// Notify that session completed successfully (for state machine transition)
+			this.callbacks.onSessionCompleted?.(sessionId, code)
 		} else {
 			this.registry.updateSessionStatus(sessionId, "error", code ?? undefined)
 			this.callbacks.onSessionLog(
@@ -507,6 +563,51 @@ export class CliProcessHandler {
 			}
 		}
 		return null
+	}
+
+	private handlePaymentRequiredDuringPending(payload: KilocodePayload): void {
+		this.handlePendingAskFailure(payload, "payment_required", () => ({
+			message: extractPayloadMessage(payload, "Paid model requires credits or billing setup."),
+		}))
+	}
+
+	private handleApiReqFailedDuringPending(payload: KilocodePayload): void {
+		this.handlePendingAskFailure(payload, "api_req_failed", () => extractApiReqFailedMessage(payload))
+	}
+
+	private handlePendingAskFailure(
+		payload: KilocodePayload,
+		type: "payment_required" | "api_req_failed",
+		build: () => { message: string; authError?: boolean },
+	): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		this.debugLog(`Received ${type} before session_created`)
+		this.clearPendingAndNotify(true)
+
+		const details = build()
+		this.callbacks.onStartSessionFailed({
+			type,
+			payload,
+			...details,
+		})
+	}
+
+	private clearPendingAndNotify(killProcess: boolean): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		this.clearPendingTimeout()
+		if (killProcess) {
+			this.pendingProcess.process.kill("SIGTERM")
+		}
+		this.registry.clearPendingSession()
+		this.pendingProcess = null
+		this.callbacks.onPendingSessionChanged(null)
+		this.callbacks.onStateChanged()
 	}
 
 	/**

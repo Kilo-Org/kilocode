@@ -706,6 +706,24 @@
 	font-size: 10px;
 }
 
+/* Version count display in dropdown trigger */
+.am-version-count {
+	font-size: 11px;
+	font-weight: 500;
+	margin-left: 2px;
+}
+
+/* Locked state for run mode when multi-version is selected */
+.am-run-mode-trigger-inline.am-locked {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.am-run-mode-trigger-inline.am-locked:hover {
+	background: transparent;
+	border-color: transparent;
+}
+
 /* Cancel button for pending session */
 .am-cancel-btn {
 	padding: 6px 16px;

@@ -28,10 +28,12 @@ describe("buildCliArgs", () => {
 		expect(args[1]).toBe("--workspace=/path/with spaces/project")
 	})
 
-	it("handles empty prompt", () => {
+	it("omits empty prompt from args (used for resume without new prompt)", () => {
 		const args = buildCliArgs("/workspace", "")
 
-		expect(args).toEqual(["--json-io", "--workspace=/workspace", ""])
+		// Empty prompt should not be added to args - this is used when resuming
+		// a session with --session where we don't want to pass a new prompt
+		expect(args).toEqual(["--json-io", "--workspace=/workspace"])
 	})
 
 	it("handles multiline prompts", () => {
@@ -60,5 +62,22 @@ describe("buildCliArgs", () => {
 		})
 
 		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--parallel", "--session=session-id", "prompt"])
+	})
+
+	it("includes --auto flag when autoMode is true", () => {
+		const args = buildCliArgs("/workspace", "prompt", { autoMode: true })
+
+		expect(args).toContain("--auto")
+	})
+
+	it("combines --auto and --parallel flags for multi-version mode", () => {
+		const args = buildCliArgs("/workspace", "prompt", {
+			parallelMode: true,
+			autoMode: true,
+		})
+
+		expect(args).toContain("--parallel")
+		expect(args).toContain("--auto")
+		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--auto", "--parallel", "prompt"])
 	})
 })

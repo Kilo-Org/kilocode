@@ -1,5 +1,23 @@
 # @kilocode/cli
 
+## 0.16.0
+
+### Minor Changes
+
+- [#4388](https://github.com/Kilo-Org/kilocode/pull/4388) [`af93318`](https://github.com/Kilo-Org/kilocode/commit/af93318e3648c235721ba58fe9caab9429608241) Thanks [@iscekic](https://github.com/iscekic)! - send org id and last mode with session data
+
+## 0.15.0
+
+### Minor Changes
+
+- [#4326](https://github.com/Kilo-Org/kilocode/pull/4326) [`6d62090`](https://github.com/Kilo-Org/kilocode/commit/6d620905dfc6d8419bdbc9ffcad54109057e709e) Thanks [@iscekic](https://github.com/iscekic)! - improve session sync mechanism (event based instead of timer)
+
+### Patch Changes
+
+- [#4367](https://github.com/Kilo-Org/kilocode/pull/4367) [`8b3ef61`](https://github.com/Kilo-Org/kilocode/commit/8b3ef617c3f6a6f02eddc9e866efe82ce2644959) Thanks [@iscekic](https://github.com/iscekic)! - flush cli session on completion
+
+- [#4362](https://github.com/Kilo-Org/kilocode/pull/4362) [`d596a08`](https://github.com/Kilo-Org/kilocode/commit/d596a08d6fe5c1a719855616ba5f582407f6769a) Thanks [@iscekic](https://github.com/iscekic)! - extract an extension message handler for extension/cli reuse
+
 ## 0.14.0
 
 ### Minor Changes

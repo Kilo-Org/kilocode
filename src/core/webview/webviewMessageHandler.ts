@@ -95,7 +95,7 @@ import { MarketplaceManager, MarketplaceItemType } from "../../services/marketpl
 import { UsageTracker } from "../../utils/usage-tracker" // kilocode_change
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
-import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
+import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers" // kilocode_change
 import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-core" // kilocode_change
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
@@ -3643,6 +3643,14 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start: STT (Speech-to-Text) handlers
+		case "stt:start":
+		case "stt:stop":
+		case "stt:cancel": {
+			const { handleSTTCommand } = await import("./sttHandlers")
+			await handleSTTCommand(provider, message as any)
+			break
+		}
 		// kilocode_change end: Type-safe global state handler
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
@@ -4005,7 +4013,7 @@ export const webviewMessageHandler = async (
 			try {
 				const sessionService = SessionManager.init()
 
-				if (!sessionService.sessionId) {
+				if (!sessionService?.sessionId) {
 					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
 					break
 				}
@@ -4021,14 +4029,18 @@ export const webviewMessageHandler = async (
 			try {
 				const sessionService = SessionManager.init()
 
-				const sessionId = message.sessionId || sessionService.sessionId
+				const sessionId = message.sessionId || sessionService?.sessionId
 
 				if (!sessionId) {
 					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
 					break
 				}
 
-				const result = await sessionService.shareSession(sessionId)
+				const result = await sessionService?.shareSession(sessionId)
+
+				if (!result) {
+					throw new Error("SessionManager not initialized")
+				}
 
 				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
 
@@ -4053,9 +4065,13 @@ export const webviewMessageHandler = async (
 				const taskId = message.text
 				const sessionService = SessionManager.init()
 
-				const sessionId = await sessionService.getSessionFromTask(taskId, provider)
+				const sessionId = await sessionService?.getSessionFromTask(taskId, provider)
 
-				const result = await sessionService.shareSession(sessionId)
+				const result = await sessionService?.shareSession(sessionId)
+
+				if (!result) {
+					throw new Error("SessionManager not initialized")
+				}
 
 				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
 
@@ -4080,7 +4096,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService.forkSession(message.shareId, true)
+				await sessionService?.forkSession(message.shareId, true)
 
 				await provider.postStateToWebview()
 
@@ -4102,7 +4118,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService.restoreSession(message.sessionId, true)
+				await sessionService?.restoreSession(message.sessionId, true)
 
 				await provider.postStateToWebview()
 			} catch (error) {

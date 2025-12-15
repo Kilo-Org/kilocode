@@ -211,17 +211,6 @@
 			"description": "Eliminar archivos y directorios automáticamente sin requerir aprobación"
 		},
 		"browser": {
-			"delayLabel": "Retraso después de escritura para permitir que los diagnósticos detecten posibles problemas",
-			"outsideWorkspace": {
-				"label": "Incluir archivos fuera del espacio de trabajo",
-				"description": "Permitir a Kilo Code crear y editar archivos fuera del espacio de trabajo actual sin requerir aprobación."
-			},
-			"protected": {
-				"label": "Incluir archivos protegidos",
-				"description": "Permitir a Kilo Code crear y editar archivos protegidos (como .kilocodeignore y archivos de configuración .kilocode/) sin requerir aprobación."
-			}
-		},
-		"browser": {
 			"label": "Navegador",
 			"description": "Realizar acciones del navegador automáticamente sin requerir aprobación. Nota: Solo se aplica cuando el modelo admite el uso del ordenador"
 		},
@@ -568,7 +557,8 @@
 			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
 			"medium": "Medio",
-			"low": "Bajo"
+			"low": "Bajo",
+			"xhigh": "Extra Alto"
 		},
 		"verbosity": {
 			"label": "Verbosidad de la salida",
@@ -991,6 +981,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Llamadas paralelas a herramientas",
 			"description": "Cuando está habilitado, el protocolo nativo puede ejecutar múltiples herramientas en un solo turno de mensaje del asistente."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Voz a Texto (STT)",
+			"description": "Cuando esté habilitado, Kilo Code puede transcribir tu voz a texto usando el modelo Whisper de OpenAI. Haz clic en el botón del micrófono en el chat para comenzar a grabar. Requiere que FFmpeg esté instalado y un proveedor de API de OpenAI configurado."
 		}
 	},
 	"promptCaching": {

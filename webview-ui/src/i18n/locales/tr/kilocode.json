@@ -311,5 +311,9 @@
 		"tryAgain": "Tekrar Dene",
 		"cancelled": "Kimlik Doğrulama İptal Edildi",
 		"initiating": "Kimlik doğrulama başlatılıyor..."
+	},
+	"speechToText": {
+		"startRecording": "Sesli girişi başlat",
+		"stopRecording": "Sesli girişi durdur"
 	}
 }

@@ -309,5 +309,9 @@
 		"tryAgain": "Try Again",
 		"cancelled": "Authentication Cancelled",
 		"initiating": "Starting authentication..."
+	},
+	"speechToText": {
+		"startRecording": "Start voice input",
+		"stopRecording": "Stop voice input"
 	}
 }
