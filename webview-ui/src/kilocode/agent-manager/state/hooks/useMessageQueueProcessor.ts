@@ -59,12 +59,7 @@ export function useMessageQueueProcessor(sessionId: string | null) {
 			if (status === "sent") {
 				removeFromQueue({ sessionId, messageId })
 				setSendingMessage({ sessionId, messageId: null })
-
-				const currentQueue = queue.filter((msg) => msg.id !== messageId)
-				const nextMessage = currentQueue.find((msg) => msg.status === "queued")
-				if (nextMessage) {
-					sendNextMessage(nextMessage.id, nextMessage.content)
-				}
+				// Next message is picked up by the auto-process effect when sendingMessageId becomes null
 			}
 
 			if (status === "failed") {
@@ -74,7 +69,7 @@ export function useMessageQueueProcessor(sessionId: string | null) {
 
 		window.addEventListener("message", handleMessage)
 		return () => window.removeEventListener("message", handleMessage)
-	}, [sessionId, queue, updateStatus, removeFromQueue, setSendingMessage, sendNextMessage])
+	}, [sessionId, updateStatus, removeFromQueue, setSendingMessage])
 
 	// Auto-process queue when it changes and nothing is currently sending
 	useEffect(() => {

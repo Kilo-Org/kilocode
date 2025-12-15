@@ -783,7 +783,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		sessionId: string,
 		messageId: string,
 		content: string,
-		sessionLabel?: string,
+		_sessionLabel?: string,
 	): Promise<void> {
 		// Validate the session and message prerequisites
 		const validationError = this.validateMessagePrerequisites(sessionId, messageId)
