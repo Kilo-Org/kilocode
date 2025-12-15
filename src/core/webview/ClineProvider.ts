@@ -1794,7 +1794,10 @@ ${prompt}
 
 	// Task history
 
-	async getTaskWithId(id: string): Promise<{
+	async getTaskWithId(
+		id: string,
+		kilo_withMessage = true, // kilocode_change session manager uses this method in the background
+	): Promise<{
 		historyItem: HistoryItem
 		taskDirPath: string
 		apiConversationHistoryFilePath: string
@@ -1823,12 +1826,16 @@ ${prompt}
 					apiConversationHistory,
 				}
 			} else {
-				vscode.window.showErrorMessage(
-					`Task file not found for task ID: ${id} (file ${apiConversationHistoryFilePath})`,
-				) //kilocode_change show extra debugging information to debug task not found issues
+				if (kilo_withMessage) {
+					vscode.window.showErrorMessage(
+						`Task file not found for task ID: ${id} (file ${apiConversationHistoryFilePath})`,
+					) //kilocode_change show extra debugging information to debug task not found issues
+				}
 			}
 		} else {
-			vscode.window.showErrorMessage(`Task with ID: ${id} not found in history.`) // kilocode_change show extra debugging information to debug task not found issues
+			if (kilo_withMessage) {
+				vscode.window.showErrorMessage(`Task with ID: ${id} not found in history.`) // kilocode_change show extra debugging information to debug task not found issues
+			}
 		}
 
 		// if we tried to get a task that doesn't exist, remove it from state

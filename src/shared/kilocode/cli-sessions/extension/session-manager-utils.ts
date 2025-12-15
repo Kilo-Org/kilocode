@@ -86,7 +86,7 @@ export function kilo_initializeSessionManager({
 								return await currentTask.getTaskMode()
 							}
 
-							const task = await provider.getTaskWithId(taskId)
+							const task = await provider.getTaskWithId(taskId, false)
 							const globalMode = await provider.getMode()
 
 							return task?.historyItem?.mode || globalMode
