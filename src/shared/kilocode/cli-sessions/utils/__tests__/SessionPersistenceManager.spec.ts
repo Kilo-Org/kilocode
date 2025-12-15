@@ -1,4 +1,5 @@
 import { SessionPersistenceManager } from "../SessionPersistenceManager"
+import { SessionStateManager } from "../../core/SessionStateManager"
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs"
 import type { IPathProvider } from "../../types/IPathProvider"
 
@@ -23,6 +24,7 @@ vi.mock("path", async () => {
 describe("SessionPersistenceManager", () => {
 	let manager: SessionPersistenceManager
 	let mockPathProvider: IPathProvider
+	let stateManager: SessionStateManager
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -34,15 +36,8 @@ describe("SessionPersistenceManager", () => {
 				.mockImplementation((workspaceDir: string) => `${workspaceDir}/.kilocode/session.json`),
 		}
 
-		manager = new SessionPersistenceManager(mockPathProvider)
-	})
-
-	describe("setWorkspaceDir", () => {
-		it("should set the workspace directory", () => {
-			manager.setWorkspaceDir("/workspace")
-
-			expect(mockPathProvider.getSessionFilePath).not.toHaveBeenCalled()
-		})
+		stateManager = new SessionStateManager()
+		manager = new SessionPersistenceManager(mockPathProvider, stateManager)
 	})
 
 	describe("getLastSession", () => {
@@ -53,7 +48,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should return undefined when session file does not exist", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(false)
 
 			const result = manager.getLastSession()
@@ -62,7 +57,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should return last session when it exists", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -77,7 +72,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should return undefined when lastSession is not set in state", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -99,7 +94,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should write last session to file", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ taskSessionMap: {} }))
 
@@ -113,7 +108,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should preserve existing taskSessionMap when setting last session", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -137,7 +132,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should return empty object when session file does not exist", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(false)
 
 			const result = manager.getTaskSessionMap()
@@ -146,7 +141,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should return task session map when it exists", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -174,7 +169,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should write task session map to file", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ taskSessionMap: {} }))
 
@@ -188,7 +183,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should preserve existing lastSession when setting task session map", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -205,8 +200,8 @@ describe("SessionPersistenceManager", () => {
 	})
 
 	describe("getSessionForTask", () => {
-		it("should return undefined when task is not mapped", () => {
-			manager.setWorkspaceDir("/workspace")
+		it("should return undefined when task is not mapped in either state manager or persistence", () => {
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -219,8 +214,8 @@ describe("SessionPersistenceManager", () => {
 			expect(result).toBeUndefined()
 		})
 
-		it("should return session ID for mapped task", () => {
-			manager.setWorkspaceDir("/workspace")
+		it("should return session ID from persisted taskSessionMap when not in state manager", () => {
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -232,11 +227,56 @@ describe("SessionPersistenceManager", () => {
 
 			expect(result).toBe("session-1")
 		})
+
+		it("should return session ID from state manager when available", () => {
+			stateManager.setWorkspaceDir("/workspace")
+			stateManager.setSessionForTask("task-1", "session-from-state-manager")
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: { "task-1": "session-from-persistence" },
+				}),
+			)
+
+			const result = manager.getSessionForTask("task-1")
+
+			expect(result).toBe("session-from-state-manager")
+		})
+
+		it("should prioritize state manager over persisted taskSessionMap", () => {
+			stateManager.setWorkspaceDir("/workspace")
+			stateManager.setSessionForTask("task-1", "state-manager-session")
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: { "task-1": "persisted-session" },
+				}),
+			)
+
+			const result = manager.getSessionForTask("task-1")
+
+			expect(result).toBe("state-manager-session")
+		})
+
+		it("should fall back to persisted taskSessionMap when state manager returns undefined", () => {
+			stateManager.setWorkspaceDir("/workspace")
+			// Don't set anything in state manager
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: { "task-1": "persisted-session" },
+				}),
+			)
+
+			const result = manager.getSessionForTask("task-1")
+
+			expect(result).toBe("persisted-session")
+		})
 	})
 
 	describe("setSessionForTask", () => {
 		it("should add task-session mapping to existing map", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -254,7 +294,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should update existing task-session mapping", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({
@@ -269,7 +309,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should create taskSessionMap when it does not exist", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(false)
 
 			manager.setSessionForTask("task-1", "session-1")
@@ -277,11 +317,44 @@ describe("SessionPersistenceManager", () => {
 			const writtenData = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string)
 			expect(writtenData.taskSessionMap).toEqual({ "task-1": "session-1" })
 		})
+
+		it("should also update the state manager when setting session for task", () => {
+			stateManager.setWorkspaceDir("/workspace")
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: {},
+				}),
+			)
+
+			manager.setSessionForTask("task-1", "session-1")
+
+			expect(stateManager.getSessionForTask("task-1")).toBe("session-1")
+		})
+
+		it("should update both state manager and persistence when setting session for task", () => {
+			stateManager.setWorkspaceDir("/workspace")
+			vi.mocked(existsSync).mockReturnValue(true)
+			vi.mocked(readFileSync).mockReturnValue(
+				JSON.stringify({
+					taskSessionMap: {},
+				}),
+			)
+
+			manager.setSessionForTask("task-1", "session-1")
+
+			// Verify state manager was updated
+			expect(stateManager.getSessionForTask("task-1")).toBe("session-1")
+
+			// Verify persistence was updated
+			const writtenData = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string)
+			expect(writtenData.taskSessionMap["task-1"]).toBe("session-1")
+		})
 	})
 
 	describe("edge cases", () => {
 		it("should handle malformed JSON gracefully by allowing the error to propagate", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue("invalid json")
 
@@ -289,7 +362,7 @@ describe("SessionPersistenceManager", () => {
 		})
 
 		it("should handle empty taskSessionMap in JSON", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(JSON.stringify({}))
 
@@ -301,7 +374,7 @@ describe("SessionPersistenceManager", () => {
 
 	describe("taskSessionMap duplicate values", () => {
 		it("should deduplicate session IDs keeping only the last entry for each duplicate value", () => {
-			manager.setWorkspaceDir("/workspace")
+			stateManager.setWorkspaceDir("/workspace")
 			vi.mocked(existsSync).mockReturnValue(true)
 			vi.mocked(readFileSync).mockReturnValue(
 				JSON.stringify({

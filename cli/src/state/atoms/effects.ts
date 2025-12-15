@@ -180,17 +180,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 		if (message.type === "apiMessagesSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
 		} else if (message.type === "taskMessagesSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "uiMessagesPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "uiMessagesPath", filePath)
 		} else if (message.type === "taskMetadataSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "taskMetadataPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "taskMetadataPath", filePath)
 		} else if (message.type === "currentCheckpointUpdated") {
-			SessionManager.init().doSync()
+			SessionManager.init()?.doSync()
 		}
 
 		// Handle different message types
@@ -604,7 +604,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 				set(ciCompletionDetectedAtom, true)
 
-				SessionManager.init().doSync(true)
+				SessionManager.init()?.doSync(true)
 			}
 		}
 	} catch (error) {

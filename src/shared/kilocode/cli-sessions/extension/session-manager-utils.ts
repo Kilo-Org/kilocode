@@ -55,6 +55,9 @@ export function kilo_initializeSessionManager({
 				onSessionRestored: () => {
 					log("Session restored")
 				},
+				onSessionSynced: (message) => {
+					log(`Session synced: ${message.sessionId}`)
+				},
 				platform: vscode.env.appName,
 				getOrganizationId: async (taskId: string) => {
 					const result = await (async () => {
@@ -125,7 +128,7 @@ export function kilo_initializeSessionManager({
 
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
 			if (workspaceFolder) {
-				sessionManager.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
+				sessionManager?.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
 			}
 
 			log("SessionManager initialized successfully")

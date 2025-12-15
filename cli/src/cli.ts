@@ -194,14 +194,14 @@ export class CLI {
 				logs.debug("SessionManager initialized with dependencies", "CLI")
 
 				const workspace = this.options.workspace || process.cwd()
-				this.sessionService.setWorkspaceDirectory(workspace)
+				this.sessionService?.setWorkspaceDirectory(workspace)
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
-					await this.sessionService.restoreSession(this.options.session)
+					await this.sessionService?.restoreSession(this.options.session)
 				} else if (this.options.fork) {
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-					await this.sessionService.forkSession(this.options.fork)
+					await this.sessionService?.forkSession(this.options.fork)
 				}
 			}
 

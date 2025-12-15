@@ -34,7 +34,8 @@ vi.mock("simple-git", () => ({
 
 describe("sessionCommand", () => {
 	let mockContext: CommandContext
-	let mockSessionManager: Partial<SessionManager>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let mockSessionManager: any // Use any to allow mocking the sessionId getter
 	let mockSessionClient: Partial<SessionClient>
 
 	beforeEach(() => {
@@ -54,6 +55,7 @@ describe("sessionCommand", () => {
 				limit: 20,
 				offset: 0,
 			}),
+			delete: vi.fn().mockResolvedValue({ success: true }),
 		}
 
 		// Create a mock session manager instance with sessionClient property
@@ -61,6 +63,10 @@ describe("sessionCommand", () => {
 			sessionId: null,
 			restoreSession: vi.fn().mockResolvedValue(undefined),
 			sessionClient: mockSessionClient as SessionClient,
+			// Add facade methods that delegate to sessionClient
+			listSessions: vi.fn().mockImplementation((input) => mockSessionClient.list?.(input)),
+			searchSessions: vi.fn().mockImplementation((input) => mockSessionClient.search?.(input)),
+			deleteSession: vi.fn().mockImplementation((input) => mockSessionClient.delete?.(input)),
 		}
 
 		// Mock SessionManager.init to return our mock instance
