@@ -12,11 +12,8 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 	// Agent Manager runs agents in autonomous mode by default.
 	// Always use --json-io (enables stdin for bidirectional communication).
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
+	// autoMode option is accepted for backwards compatibility but --auto is always included
 	const args = ["--auto", "--json-io", `--workspace=${workspace}`]
-
-	if (options?.autoMode) {
-		args.push("--auto")
-	}
 
 	if (options?.parallelMode) {
 		args.push("--parallel")

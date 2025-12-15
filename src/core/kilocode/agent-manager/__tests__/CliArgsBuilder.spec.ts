@@ -33,7 +33,7 @@ describe("buildCliArgs", () => {
 
 		// Empty prompt should not be added to args - this is used when resuming
 		// a session with --session where we don't want to pass a new prompt
-		expect(args).toEqual(["--json-io", "--workspace=/workspace"])
+		expect(args).toEqual(["--auto", "--json-io", "--workspace=/workspace"])
 	})
 
 	it("handles multiline prompts", () => {
@@ -85,6 +85,7 @@ describe("buildCliArgs", () => {
 
 		expect(args).toContain("--parallel")
 		expect(args).toContain("--auto")
-		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--auto", "--parallel", "prompt"])
+		// --auto is always included by default now, autoMode is for backwards compatibility
+		expect(args).toEqual(["--auto", "--json-io", "--workspace=/workspace", "--parallel", "prompt"])
 	})
 })
