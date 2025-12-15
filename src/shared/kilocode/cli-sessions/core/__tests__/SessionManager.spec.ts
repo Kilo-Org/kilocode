@@ -46,6 +46,7 @@ describe("SessionManager", () => {
 	let mockGetOrganizationId: any
 	let mockGetMode: any
 	let mockGetModel: any
+	let mockGetParentTaskId: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -129,6 +130,7 @@ describe("SessionManager", () => {
 		mockGetOrganizationId = vi.fn().mockResolvedValue("org-123")
 		mockGetMode = vi.fn().mockResolvedValue("code")
 		mockGetModel = vi.fn().mockResolvedValue("gpt-4")
+		mockGetParentTaskId = vi.fn().mockResolvedValue(undefined)
 	})
 
 	describe("Singleton Pattern", () => {
@@ -145,6 +147,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
 			const instance = SessionManager.init(dependencies)
@@ -177,6 +180,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 			const firstInstance = SessionManager.init(dependencies)
 
@@ -207,6 +211,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 			SessionManager.init(dependencies)
 		})
@@ -257,6 +262,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 			manager = SessionManager.init(dependencies)
 		})
@@ -370,6 +376,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
 			SessionManager.init(dependencies)
@@ -398,6 +405,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
 			SessionManager.init(dependencies)
@@ -418,6 +426,7 @@ describe("SessionManager", () => {
 				getOrganizationId: mockGetOrganizationId,
 				getMode: mockGetMode,
 				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
 			SessionManager.init(dependencies)

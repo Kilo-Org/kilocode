@@ -59,13 +59,16 @@
 		"copyCommand": "Copia la comanda"
 	},
 	"chatInput": {
-		"autonomous": "L'agent s'està executant en mode autònom",
+		"autoMode": "Agent en mode automàtic complet - no es permet entrada",
+		"sessionEnded": "Sessió finalitzada, si us plau, inicia una nova sessió",
 		"placeholderTypeTask": "Escriu la teva tasca aquí...",
 		"ariaLabel": "Entrada de missatge",
-		"cancelTitle": "Cancel·la l'agent",
-		"sendTitle": "Envia el missatge",
-		"resumeTitle": "Reprèn l'agent",
-		"hint": "Prem Enter per enviar, Maj+Enter per nova línia"
+		"cancelTitle": "Cancel·lar agent",
+		"finishToBranchTitle": "Finalitza worktree i prepara branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Finalitza worktree i prepara branch",
+		"sendTitle": "Enviar missatge",
+		"resumeTitle": "Reprendre agent",
+		"hint": "Prem Enter per enviar, Shift+Enter per nova línia"
 	},
 	"status": {
 		"running": "executant-se",

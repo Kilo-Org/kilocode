@@ -94,7 +94,7 @@ export class KilocodeEventProcessor {
 
 		// Handle resume asks early - they're state signals, not content to display
 		// The state machine transitions to paused/waiting_input, no chat message needed
-		if (payload.type === "ask" && payload.ask === "resume_task") {
+		if (payload.type === "ask" && (payload.ask === "resume_task" || payload.ask === "resume_completed_task")) {
 			this.postStateEvent(sessionId, { eventType: "ask_resume_task" })
 			return
 		}
@@ -206,6 +206,7 @@ export class KilocodeEventProcessor {
 
 				// Paused state
 				case "resume_task":
+				case "resume_completed_task":
 					this.postStateEvent(sessionId, { eventType: "ask_resume_task" })
 					break
 

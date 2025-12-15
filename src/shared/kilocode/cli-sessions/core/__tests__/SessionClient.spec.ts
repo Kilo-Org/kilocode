@@ -66,7 +66,7 @@ describe("SessionClient", () => {
 
 				await client.create(input)
 
-				expect(mockTrpcClient.request).toHaveBeenCalledWith("cliSessions.create", "POST", input)
+				expect(mockTrpcClient.request).toHaveBeenCalledWith("cliSessions.createV2", "POST", input)
 			})
 
 			it("uses KILO_PLATFORM env var when set", async () => {
@@ -81,7 +81,7 @@ describe("SessionClient", () => {
 
 				await client.create(input)
 
-				expect(mockTrpcClient.request).toHaveBeenCalledWith("cliSessions.create", "POST", {
+				expect(mockTrpcClient.request).toHaveBeenCalledWith("cliSessions.createV2", "POST", {
 					...input,
 					created_on_platform: "test-platform",
 				})

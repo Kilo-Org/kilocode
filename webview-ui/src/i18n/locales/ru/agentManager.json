@@ -59,10 +59,13 @@
 		"copyCommand": "Копировать команду"
 	},
 	"chatInput": {
-		"autonomous": "Агент работает в автономном режиме",
-		"placeholderTypeTask": "Введите вашу задачу здесь...",
+		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",
+		"sessionEnded": "Сессия завершена, пожалуйста, начните новую сессию",
+		"placeholderTypeTask": "Введи свою задачу здесь...",
 		"ariaLabel": "Ввод сообщения",
 		"cancelTitle": "Отменить агента",
+		"finishToBranchTitle": "Завершить worktree и подготовить branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Завершить worktree и подготовить branch",
 		"sendTitle": "Отправить сообщение",
 		"resumeTitle": "Возобновить агента",
 		"hint": "Нажмите Enter для отправки, Shift+Enter для новой строки"

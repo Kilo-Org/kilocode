@@ -59,10 +59,13 @@
 		"copyCommand": "Copier la commande"
 	},
 	"chatInput": {
-		"autonomous": "L'agent s'exécute en mode autonome",
-		"placeholderTypeTask": "Tape ta tâche ici...",
-		"ariaLabel": "Saisie du message",
+		"autoMode": "Agent en mode entièrement automatique - aucune entrée autorisée",
+		"sessionEnded": "Session terminée, veuillez démarrer une nouvelle session",
+		"placeholderTypeTask": "Écris ta tâche ici...",
+		"ariaLabel": "Saisie de message",
 		"cancelTitle": "Annuler l'agent",
+		"finishToBranchTitle": "Terminer le worktree et préparer la branch : {{branch}}",
+		"finishToBranchTitleNoBranch": "Terminer le worktree et préparer la branch",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
 		"hint": "Appuie sur Entrée pour envoyer, Maj+Entrée pour nouvelle ligne"

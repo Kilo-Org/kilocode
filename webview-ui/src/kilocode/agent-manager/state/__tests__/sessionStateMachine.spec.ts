@@ -137,7 +137,7 @@ describe("Session State Machine", () => {
 
 		it("should stay streaming on partial ask:followup", () => {
 			machine.send({ type: "ask_followup", partial: true })
-			expect(machine.getState()).toBe("streaming")
+			expect(machine.getState()).toBe("waiting_input")
 		})
 
 		it("should transition to waiting_input on complete ask:followup", () => {

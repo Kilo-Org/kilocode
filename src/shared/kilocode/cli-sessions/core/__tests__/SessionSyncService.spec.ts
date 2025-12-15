@@ -1,7 +1,6 @@
 import { promises as fs } from "fs"
 import { SessionSyncService } from "../SessionSyncService"
 import type { ILogger } from "../../types/ILogger.js"
-import type { ClineMessage } from "@roo-code/types"
 
 // Mock fs
 vi.mock("fs", () => ({
@@ -78,6 +77,7 @@ const mockSyncQueue = {
 const mockGetOrganizationId = vi.fn()
 const mockGetMode = vi.fn()
 const mockGetModel = vi.fn()
+const mockGetParentTaskId = vi.fn()
 const mockOnSessionCreated = vi.fn()
 const mockOnSessionSynced = vi.fn()
 
@@ -101,6 +101,7 @@ describe("SessionSyncService", () => {
 			getOrganizationId: mockGetOrganizationId,
 			getMode: mockGetMode,
 			getModel: mockGetModel,
+			getParentTaskId: mockGetParentTaskId,
 			onSessionCreated: mockOnSessionCreated,
 			onSessionSynced: mockOnSessionSynced,
 		})
@@ -475,6 +476,7 @@ describe("SessionSyncService", () => {
 			mockGetOrganizationId.mockResolvedValue("org-1")
 			mockGetMode.mockResolvedValue("code")
 			mockGetModel.mockResolvedValue("gpt-4")
+			mockGetParentTaskId.mockResolvedValue(undefined)
 			mockSessionClient.create.mockResolvedValue({
 				session_id: "new-session-1",
 				updated_at: "2023-01-01T10:00:00Z",
@@ -488,6 +490,62 @@ describe("SessionSyncService", () => {
 				organization_id: "org-1",
 				last_mode: "code",
 				last_model: "gpt-4",
+				parent_session_id: undefined,
+			})
+		})
+
+		it("creates new session with parent session ID when parent task exists", async () => {
+			mockGitStateService.getGitState.mockResolvedValue(null)
+			mockPersistenceManager.getSessionForTask.mockImplementation((taskId) => {
+				if (taskId === "parent-task-1") return "parent-session-1"
+				return undefined
+			})
+			mockGetOrganizationId.mockResolvedValue("org-1")
+			mockGetMode.mockResolvedValue("code")
+			mockGetModel.mockResolvedValue("gpt-4")
+			mockGetParentTaskId.mockResolvedValue("parent-task-1")
+			mockSessionClient.create.mockResolvedValue({
+				session_id: "new-session-1",
+				updated_at: "2023-01-01T10:00:00Z",
+			})
+
+			await service.doSync()
+
+			expect(mockSessionClient.create).toHaveBeenCalledWith({
+				created_on_platform: "test-platform",
+				version: 1,
+				organization_id: "org-1",
+				last_mode: "code",
+				last_model: "gpt-4",
+				parent_session_id: "parent-session-1",
+			})
+		})
+
+		it("creates new session with parent_session_id undefined when parent task has no session", async () => {
+			mockGitStateService.getGitState.mockResolvedValue(null)
+			mockPersistenceManager.getSessionForTask.mockImplementation((taskId) => {
+				// Parent task exists but has no session
+				if (taskId === "parent-task-1") return undefined
+				return undefined
+			})
+			mockGetOrganizationId.mockResolvedValue("org-1")
+			mockGetMode.mockResolvedValue("code")
+			mockGetModel.mockResolvedValue("gpt-4")
+			mockGetParentTaskId.mockResolvedValue("parent-task-1")
+			mockSessionClient.create.mockResolvedValue({
+				session_id: "new-session-1",
+				updated_at: "2023-01-01T10:00:00Z",
+			})
+
+			await service.doSync()
+
+			expect(mockSessionClient.create).toHaveBeenCalledWith({
+				created_on_platform: "test-platform",
+				version: 1,
+				organization_id: "org-1",
+				last_mode: "code",
+				last_model: "gpt-4",
+				parent_session_id: undefined,
 			})
 		})
 

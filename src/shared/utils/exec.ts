@@ -42,6 +42,7 @@ export async function execWithStdin({ cmd, cwd, uid, env }: ExecOptions): Promis
 		cwd,
 		uid,
 		shell: true,
+		windowsHide: true,
 		stdio: ["pipe", 1, 2],
 		env,
 	})
@@ -56,6 +57,7 @@ export async function exec({ cmd, cwd, context, uid, env }: ExecOptions): Promis
 		cwd,
 		uid,
 		shell: true,
+		windowsHide: true,
 		stdio: ["inherit", "inherit", "inherit"],
 		env,
 	})
@@ -77,6 +79,7 @@ export async function* execGetLines({
 		cwd,
 		uid,
 		shell: true,
+		windowsHide: true,
 		stdio: ["ignore", "pipe", "inherit"],
 		env,
 	})
@@ -111,6 +114,7 @@ export async function* execGetLinesStdoutStderr({
 		cwd,
 		uid,
 		shell: true,
+		windowsHide: true,
 		stdio: ["ignore", "pipe", "pipe"],
 		env,
 	})

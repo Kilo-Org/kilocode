@@ -863,4 +863,39 @@ describe("AgentManagerProvider telemetry", () => {
 			true, // useWorktree = true (parallel mode)
 		)
 	})
+
+	describe("Regression Tests - finishWorktreeSession validation (P0)", () => {
+		it("should not attempt to terminate non-running worktree sessions", async () => {
+			const registry = (provider as any).registry
+			const sessionId = "session-done-1"
+			registry.createSession(sessionId, "test done session", undefined, { parallelMode: true })
+			registry.updateSessionStatus(sessionId, "done")
+
+			const processHandler = (provider as any).processHandler
+			vi.spyOn(processHandler, "terminateProcess")
+
+			// Call finishWorktreeSession on a done session
+			;(provider as any).finishWorktreeSession(sessionId)
+
+			// Should NOT call terminateProcess
+			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
+		})
+
+		it("should only allow finishing running worktree sessions", async () => {
+			const registry = (provider as any).registry
+			const sessionId = "session-running-1"
+			registry.createSession(sessionId, "test running session", undefined, { parallelMode: true })
+			registry.updateSessionStatus(sessionId, "running")
+			;(provider as any).sessionMessages.set(sessionId, [])
+
+			const processHandler = (provider as any).processHandler
+			vi.spyOn(processHandler, "terminateProcess")
+
+			// Call finishWorktreeSession on a running session
+			;(provider as any).finishWorktreeSession(sessionId)
+
+			// Should call terminateProcess
+			expect(processHandler.terminateProcess).toHaveBeenCalledWith(sessionId, "SIGTERM")
+		})
+	})
 })

@@ -59,10 +59,13 @@
 		"copyCommand": "คัดลอกคำสั่ง"
 	},
 	"chatInput": {
-		"autonomous": "เอเจนต์กำลังทำงานในโหมดอิสระ",
+		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",
+		"sessionEnded": "เซสชันสิ้นสุดแล้ว โปรดเริ่มเซสชันใหม่",
 		"placeholderTypeTask": "พิมพ์งานของคุณที่นี่...",
 		"ariaLabel": "ช่องกรอกข้อความ",
 		"cancelTitle": "ยกเลิกเอเจนต์",
+		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการเอเจนต์ต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"

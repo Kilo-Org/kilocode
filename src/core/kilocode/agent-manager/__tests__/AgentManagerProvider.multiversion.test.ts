@@ -66,15 +66,15 @@ describe("Multi-version session spawning", () => {
 			expect(configs[1].parallelMode).toBe(true)
 		})
 
-		it("forces autoMode=true for multi-version", () => {
+		it("starts multi-version sessions interactively (autoMode=false)", () => {
 			const configs = extractSessionConfigs({
 				prompt,
 				versions: 2,
 			})
 
 			expect(configs).toHaveLength(2)
-			expect(configs[0].autoMode).toBe(true)
-			expect(configs[1].autoMode).toBe(true)
+			expect(configs[0].autoMode).toBe(false)
+			expect(configs[1].autoMode).toBe(false)
 		})
 
 		it("uses provided labels for multi-version", () => {
@@ -123,7 +123,7 @@ describe("Multi-version session spawning", () => {
 			expect(configs).toHaveLength(4)
 			configs.forEach((config) => {
 				expect(config.parallelMode).toBe(true)
-				expect(config.autoMode).toBe(true)
+				expect(config.autoMode).toBe(false)
 			})
 		})
 
