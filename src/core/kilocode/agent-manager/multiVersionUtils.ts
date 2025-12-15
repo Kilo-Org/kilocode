@@ -28,7 +28,8 @@ export interface StartSessionMessage {
  *
  * For multi-version (versions>1):
  * - Returns multiple configs, one per version
- * - Forces parallelMode=true and autoMode=true
+ * - Forces parallelMode=true for isolated worktrees, autoMode=false for interactive finishing
+ * - Users can click "Finish to Branch" on each session to commit their changes
  * - Uses provided labels or generates (v1), (v2) suffixes
  */
 export function extractSessionConfigs(message: StartSessionMessage): SessionConfig[] {
