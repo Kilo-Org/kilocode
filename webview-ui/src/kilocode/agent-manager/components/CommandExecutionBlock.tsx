@@ -173,7 +173,7 @@ export const CommandExecutionBlock = memo(
 								"max-h-[500px] overflow-y-auto": isExpanded,
 							},
 						)}>
-						<div className={cn("p-2", hasError ? "bg-red-500/10" : "bg-black/5")}>
+						<div className="p-2 bg-black/40">
 							<pre
 								className={cn(
 									"overflow-x-auto whitespace-pre m-0 p-0 text-xs",
