@@ -2,7 +2,7 @@
  * Tests for useFollowupHandler hook
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import {
 	extensionMessagesAtom,
@@ -22,10 +22,7 @@ describe("useFollowupHandler", () => {
 	describe("followup suggestions clearing", () => {
 		it("should clear suggestions when a non-followup message arrives", () => {
 			// Set up initial suggestions
-			store.set(setFollowupSuggestionsAtom, [
-				{ answer: "Option 1" },
-				{ answer: "Option 2" },
-			])
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Option 1" }, { answer: "Option 2" }])
 
 			// Verify suggestions are set
 			expect(store.get(followupSuggestionsAtom)).toHaveLength(2)
@@ -49,10 +46,7 @@ describe("useFollowupHandler", () => {
 
 		it("should keep suggestions when a followup message is the last message", () => {
 			// Set up initial suggestions
-			store.set(setFollowupSuggestionsAtom, [
-				{ answer: "Option 1" },
-				{ answer: "Option 2" },
-			])
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Option 1" }, { answer: "Option 2" }])
 
 			// Verify suggestions are set
 			expect(store.get(followupSuggestionsAtom)).toHaveLength(2)
@@ -75,10 +69,7 @@ describe("useFollowupHandler", () => {
 
 		it("should clear suggestions when followup is answered", () => {
 			// Set up initial suggestions
-			store.set(setFollowupSuggestionsAtom, [
-				{ answer: "Option 1" },
-				{ answer: "Option 2" },
-			])
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Option 1" }, { answer: "Option 2" }])
 
 			// Verify suggestions are set
 			expect(store.get(followupSuggestionsAtom)).toHaveLength(2)
@@ -106,10 +97,7 @@ describe("useFollowupHandler", () => {
 
 	describe("suggestion parsing", () => {
 		it("should parse followup suggestions from message text", () => {
-			const suggestions = [
-				{ answer: "Option 1" },
-				{ answer: "Option 2", mode: "code" },
-			]
+			const suggestions = [{ answer: "Option 1" }, { answer: "Option 2", mode: "code" }]
 
 			// Set suggestions directly (simulating what the hook does)
 			store.set(setFollowupSuggestionsAtom, suggestions)
