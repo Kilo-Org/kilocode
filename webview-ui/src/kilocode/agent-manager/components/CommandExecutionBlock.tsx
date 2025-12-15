@@ -1,14 +1,17 @@
 import { memo, useState, useMemo } from "react"
-import { ChevronDown, Copy, Check, Loader2, Terminal } from "lucide-react"
+import { ChevronDown, Copy, Check, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
 import { cn } from "../../../lib/utils"
 
-type CommandStatus = "running" | "success" | "error" | "unknown"
+type CommandStatus = "pending" | "running" | "success" | "error"
 
 interface CommandExecutionBlockProps {
 	text: string
 	isRunning?: boolean
+	isLast?: boolean
+	exitCode?: number
+	terminalStatus?: string
 }
 
 /**
@@ -26,10 +29,42 @@ function parseCommandAndOutput(text: string | undefined): { command: string; out
 		return { command: text, output: "" }
 	}
 
+	let output = text.slice(index + COMMAND_OUTPUT_STRING.length)
+
+	// `combineCommandSequences` adds "\nOutput:" before output; real output often starts with a newline.
+	output = output.replace(/^\n/, "")
+
+	// Clean up output - remove leading "command_output" lines that may appear from message parsing
+	const lines = output.split("\n")
+	const cleanedLines = lines.filter((line) => line.trim() !== "command_output")
+	output = cleanedLines.join("\n").replace(/\n+$/, "")
+
 	return {
 		command: text.slice(0, index).trim(),
-		output: text.slice(index + COMMAND_OUTPUT_STRING.length).trim(),
+		output,
 	}
+}
+
+/**
+ * Strip terminal escape sequences and non-printable control characters.
+ * This prevents "blank" outputs caused by ANSI control codes.
+ */
+function sanitizeOutput(raw: string): string {
+	if (!raw) return ""
+
+	// OSC: ESC ] ... BEL  OR  ESC ] ... ESC \
+	// eslint-disable-next-line no-control-regex
+	const withoutOsc = raw.replace(/\u001B\][^\u0007]*(?:\u0007|\u001B\\)/g, "")
+	// CSI: ESC [ ... command
+	// eslint-disable-next-line no-control-regex
+	const withoutCsi = withoutOsc.replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, "")
+	// Other stray ESC sequences
+	// eslint-disable-next-line no-control-regex
+	const withoutEsc = withoutCsi.replace(/\u001B./g, "")
+
+	// Remove control chars except \t, \n, \r
+	// eslint-disable-next-line no-control-regex
+	return withoutEsc.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
 }
 
 /**
@@ -54,96 +89,105 @@ function detectErrorInOutput(output: string): boolean {
 		"traceback",
 		"segmentation fault",
 		"panic:",
+		"not found",
+		"exit code",
+		"exited with",
 	]
 	return errorPatterns.some((pattern) => lowerOutput.includes(pattern))
 }
 
-export const CommandExecutionBlock = memo(({ text, isRunning = false }: CommandExecutionBlockProps) => {
-	const { t } = useTranslation("agentManager")
-	const { command, output } = useMemo(() => parseCommandAndOutput(text), [text])
-	const [isExpanded, setIsExpanded] = useState(true)
-	const [copied, setCopied] = useState(false)
+export const CommandExecutionBlock = memo(
+	({ text, isRunning = false, isLast = false, exitCode, terminalStatus }: CommandExecutionBlockProps) => {
+		const { t } = useTranslation("agentManager")
+		const { command, output: rawOutput } = useMemo(() => parseCommandAndOutput(text), [text])
+		const [isExpanded, setIsExpanded] = useState(true)
+		const [copied, setCopied] = useState(false)
 
-	const hasOutput = output.length > 0
-	const hasError = useMemo(() => detectErrorInOutput(output), [output])
+		const output = useMemo(() => sanitizeOutput(rawOutput), [rawOutput])
+		const hasOutput = useMemo(() => /\S/.test(output), [output])
+		const hasError = useMemo(() => detectErrorInOutput(output), [output])
+		const hasOutputMarker = useMemo(() => text.indexOf(COMMAND_OUTPUT_STRING) !== -1, [text])
+		const isCompleted = exitCode !== undefined || terminalStatus === "timeout" || terminalStatus === "exited"
 
-	// Determine status
-	const status: CommandStatus = useMemo(() => {
-		if (isRunning && !hasOutput) return "running"
-		if (hasOutput && hasError) return "error"
-		if (hasOutput) return "success"
-		return "unknown" // No output, not running - we don't know the status
-	}, [isRunning, hasOutput, hasError])
+		// Determine status
+		const status: CommandStatus = useMemo(() => {
+			// If we have an Output: marker but no output yet, the command is likely executing.
+			// Only show this as "running" for the most recent command row.
+			if (!isCompleted && (isRunning || (hasOutputMarker && isLast)) && !hasOutput) return "running"
+			if (terminalStatus === "timeout") return "error"
+			if (exitCode !== undefined) return exitCode === 0 ? "success" : "error"
+			if (hasOutput && hasError) return "error"
+			if (hasOutput) return "success"
+			if (hasOutputMarker) return "success" // executed but produced no visible output
+			return "pending" // No output, not running - waiting for approval/execution
+		}, [isCompleted, isRunning, hasOutputMarker, isLast, hasOutput, hasError, terminalStatus, exitCode])
 
-	const handleCopy = async () => {
-		try {
-			await navigator.clipboard.writeText(command)
-			setCopied(true)
-			setTimeout(() => setCopied(false), 2000)
-		} catch {
-			// Clipboard API may fail in some contexts
+		const handleCopy = async () => {
+			try {
+				await navigator.clipboard.writeText(command)
+				setCopied(true)
+				setTimeout(() => setCopied(false), 2000)
+			} catch {
+				// Clipboard API may fail in some contexts
+			}
 		}
-	}
 
-	return (
-		<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-sm font-mono text-sm">
-			{/* Header with status */}
-			<div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b border-vscode-panel-border">
-				<div className="flex items-center gap-2">
-					<StatusIndicator status={status} />
-					<span className="text-xs text-vscode-descriptionForeground">
-						{status === "running" && t("messages.running")}
-						{status === "success" && t("messages.completed")}
-						{status === "error" && t("messages.error")}
-						{status === "unknown" && <Terminal size={12} className="opacity-50" />}
-					</span>
-				</div>
-				<div className="flex items-center gap-1">
-					<button
-						onClick={handleCopy}
-						className="p-1 text-vscode-descriptionForeground hover:text-vscode-foreground transition-colors rounded hover:bg-vscode-toolbar-hoverBackground"
-						title={t("messages.copyCommand")}>
-						{copied ? <Check size={14} /> : <Copy size={14} />}
-					</button>
-					{hasOutput && (
+		return (
+			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-sm font-mono text-sm">
+				{/* Header with status and command */}
+				<div className="flex items-center justify-between gap-2 px-2 py-1.5">
+					<div className="flex items-center gap-2 min-w-0 flex-1">
+						<StatusIndicator status={status} />
+						<pre className="overflow-x-auto whitespace-pre m-0 p-0 flex-1 min-w-0">{command}</pre>
+					</div>
+					<div className="flex items-center gap-1 flex-shrink-0">
 						<button
-							onClick={() => setIsExpanded(!isExpanded)}
+							onClick={handleCopy}
 							className="p-1 text-vscode-descriptionForeground hover:text-vscode-foreground transition-colors rounded hover:bg-vscode-toolbar-hoverBackground"
-							title={isExpanded ? t("messages.collapseOutput") : t("messages.expandOutput")}>
-							<ChevronDown
-								className={cn("size-4 transition-transform duration-200", isExpanded && "rotate-180")}
-							/>
+							title={t("messages.copyCommand")}>
+							{copied ? <Check size={14} /> : <Copy size={14} />}
 						</button>
-					)}
-				</div>
-			</div>
-
-			{/* Command */}
-			<div className="p-2">
-				<pre className="overflow-x-auto whitespace-pre-wrap break-all m-0 p-0">{command}</pre>
-			</div>
-
-			{/* Output */}
-			{hasOutput && (
-				<div
-					className={cn("overflow-hidden transition-all duration-200 border-t border-vscode-panel-border", {
-						"max-h-0 border-t-0": !isExpanded,
-						"max-h-[500px] overflow-y-auto": isExpanded,
-					})}>
-					<div className={cn("p-2", hasError ? "bg-red-500/5" : "bg-black/5")}>
-						<pre
-							className={cn(
-								"overflow-x-auto whitespace-pre-wrap break-all m-0 p-0 text-xs",
-								hasError ? "text-red-400" : "text-vscode-descriptionForeground",
-							)}>
-							{output}
-						</pre>
+						{hasOutput && (
+							<button
+								onClick={() => setIsExpanded(!isExpanded)}
+								className="p-1 text-vscode-descriptionForeground hover:text-vscode-foreground transition-colors rounded hover:bg-vscode-toolbar-hoverBackground"
+								title={isExpanded ? t("messages.collapseOutput") : t("messages.expandOutput")}>
+								<ChevronDown
+									className={cn(
+										"size-4 transition-transform duration-200",
+										isExpanded && "rotate-180",
+									)}
+								/>
+							</button>
+						)}
 					</div>
 				</div>
-			)}
-		</div>
-	)
-})
+
+				{/* Output */}
+				{hasOutput && (
+					<div
+						className={cn(
+							"overflow-hidden transition-all duration-200 border-t border-vscode-panel-border",
+							{
+								"max-h-0 border-t-0": !isExpanded,
+								"max-h-[500px] overflow-y-auto": isExpanded,
+							},
+						)}>
+						<div className={cn("p-2", hasError ? "bg-red-500/10" : "bg-black/5")}>
+							<pre
+								className={cn(
+									"overflow-x-auto whitespace-pre m-0 p-0 text-xs",
+									hasError ? "text-red-400" : "text-vscode-descriptionForeground",
+								)}>
+								{output}
+							</pre>
+						</div>
+					</div>
+				)}
+			</div>
+		)
+	},
+)
 
 CommandExecutionBlock.displayName = "CommandExecutionBlock"
 
@@ -152,13 +196,13 @@ CommandExecutionBlock.displayName = "CommandExecutionBlock"
  */
 function StatusIndicator({ status }: { status: CommandStatus }) {
 	switch (status) {
+		case "pending":
+			return <div className="size-2 rounded-full bg-yellow-500/70 flex-shrink-0" />
 		case "running":
-			return <Loader2 size={12} className="animate-spin text-blue-400" />
+			return <Loader2 size={10} className="animate-spin text-blue-400 flex-shrink-0" />
 		case "success":
-			return <div className="size-2.5 rounded-full bg-green-500" />
+			return <div className="size-2 rounded-full bg-green-500 flex-shrink-0" />
 		case "error":
-			return <div className="size-2.5 rounded-full bg-red-500" />
-		default:
-			return <div className="size-2.5 rounded-full bg-vscode-descriptionForeground/30" />
+			return <div className="size-2 rounded-full bg-red-500 flex-shrink-0" />
 	}
 }

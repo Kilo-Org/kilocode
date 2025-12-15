@@ -1,8 +1,9 @@
 import { expect } from "vitest"
 import { MockLLM } from "../../../llm/llms/Mock"
-import { testMinimalConfigProvider, testIde } from "../../../test/fixtures"
+import { testIde } from "../../../test/fixtures"
 import { joinPathsToUri } from "../../../util/uri"
 import { CompletionProvider } from "../../CompletionProvider"
+import { MinimalConfigProvider } from "../../MinimalConfig"
 import { AutocompleteInput } from "../../util/types"
 
 const FIM_DELIMITER = "<|fim|>"
@@ -32,7 +33,32 @@ export async function testAutocompleteFiltering(test: AutocompleteFileringTestIn
 	})
 	llm.completion = test.llmOutput
 	const ide = testIde
-	const configHandler = testMinimalConfigProvider
+	const configHandler = new MinimalConfigProvider({
+		tabAutocompleteOptions: {
+			disable: false,
+			maxPromptTokens: 1024,
+			debounceDelay: 0,
+			// Avoid flakiness under load from timeout-based partial completions.
+			modelTimeout: 20_000,
+			maxSuffixPercentage: 0.15,
+			prefixPercentage: 0.75,
+			maxSnippetPercentage: 0.1,
+			multilineCompletions: "auto",
+			slidingWindowPrefixPercentage: 0.75,
+			slidingWindowSize: 50,
+			// Avoid cross-test interference via the shared autocomplete cache.
+			useCache: false,
+			onlyMyCode: false,
+			useRecentlyEdited: false,
+			useRecentlyOpened: false,
+			useImports: false,
+			experimental_includeClipboard: false,
+			experimental_includeRecentlyVisitedRanges: false,
+			experimental_includeRecentlyEditedRanges: false,
+			experimental_includeDiff: false,
+			experimental_enableStaticContextualization: false,
+		},
+	})
 
 	// Create a real file
 	const [workspaceDir] = await ide.getWorkspaceDirs()
