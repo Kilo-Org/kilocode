@@ -58,6 +58,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private lastAuthErrorMessage: string | undefined
 	// Track process start times to filter out replayed history events
 	private processStartTimes: Map<string, number> = new Map()
+	// Track currently sending message per session (for one-at-a-time constraint)
+	private sendingMessageMap: Map<string, string> = new Map()
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -223,6 +225,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.sendMessage":
 					void this.sendMessage(
 						message.sessionId as string,
+						message.content as string,
+						message.sessionLabel as string | undefined,
+					)
+					break
+				case "agentManager.messageQueued":
+					void this.handleQueuedMessage(
+						message.sessionId as string,
+						message.messageId as string,
 						message.content as string,
 						message.sessionLabel as string | undefined,
 					)
@@ -702,6 +712,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		this.firstApiReqStarted.delete(sessionId)
 		this.processStartTimes.delete(sessionId)
+		this.sendingMessageMap.delete(sessionId)
 
 		// Track session stopped telemetry
 		captureAgentManagerSessionStopped(sessionId, session?.parallelMode?.enabled ?? false)
@@ -762,6 +773,103 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		await this.safeWriteToStdin(sessionId, message, "message")
+	}
+
+	/**
+	 * Handle a queued message from the webview.
+	 * Orchestrates validation, sending, and status notification.
+	 */
+	private async handleQueuedMessage(
+		sessionId: string,
+		messageId: string,
+		content: string,
+		sessionLabel?: string,
+	): Promise<void> {
+		// Validate the session and message prerequisites
+		const validationError = this.validateMessagePrerequisites(sessionId, messageId)
+		if (validationError) return
+
+		// Attempt to send the message
+		await this.sendQueuedMessage(sessionId, messageId, content)
+	}
+
+	/**
+	 * Validate that a message can be sent (not auto-mode, session running, no other message sending).
+	 * Returns error message if validation fails, undefined if valid.
+	 */
+	private validateMessagePrerequisites(sessionId: string, messageId: string): void | undefined {
+		// Check auto-mode
+		const session = this.registry.getSession(sessionId)
+		if (session?.autoMode) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Session ${sessionId} is running in auto mode; user input is disabled`,
+			)
+			this.notifyMessageStatus(sessionId, messageId, "failed", "Session is in auto mode")
+			return
+		}
+
+		// Check if session is running
+		if (!this.processHandler.hasStdin(sessionId)) {
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, message send failed`)
+			this.notifyMessageStatus(sessionId, messageId, "failed", "Session is not running")
+			return
+		}
+
+		// Check one-at-a-time constraint
+		if (this.sendingMessageMap.has(sessionId)) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Message ${messageId} queued - another message is currently sending`,
+			)
+			this.notifyMessageStatus(sessionId, messageId, "failed", "Another message is currently being sent")
+			return
+		}
+	}
+
+	/**
+	 * Send a validated queued message to the CLI.
+	 * Handles marking as sending, actual send, and error handling.
+	 */
+	private async sendQueuedMessage(sessionId: string, messageId: string, content: string): Promise<void> {
+		// Mark as sending
+		this.sendingMessageMap.set(sessionId, messageId)
+		this.notifyMessageStatus(sessionId, messageId, "sending")
+
+		try {
+			const message = {
+				type: "askResponse",
+				askResponse: "messageResponse",
+				text: content,
+			}
+
+			await this.safeWriteToStdin(sessionId, message, "message")
+			this.log(sessionId, `Message ${messageId} sent successfully`)
+			this.notifyMessageStatus(sessionId, messageId, "sent")
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : "Unknown error"
+			this.outputChannel.appendLine(`[AgentManager] Failed to send message ${messageId}: ${errorMsg}`)
+			this.notifyMessageStatus(sessionId, messageId, "failed", errorMsg)
+		} finally {
+			// Clear the sending flag
+			this.sendingMessageMap.delete(sessionId)
+		}
+	}
+
+	/**
+	 * Notify the webview of message status changes.
+	 */
+	private notifyMessageStatus(
+		sessionId: string,
+		messageId: string,
+		status: "sending" | "sent" | "failed",
+		error?: string,
+	): void {
+		this.postMessage({
+			type: "agentManager.messageStatus",
+			sessionId,
+			messageId,
+			status,
+			error,
+		})
 	}
 
 	/**
@@ -844,6 +952,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		this.firstApiReqStarted.delete(sessionId)
 		this.processStartTimes.delete(sessionId)
+		this.sendingMessageMap.delete(sessionId)
 	}
 
 	private getFilteredState() {

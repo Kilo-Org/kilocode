@@ -3,6 +3,13 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
+import {
+	sessionMessageQueueAtomFamily,
+	sessionSendingMessageIdAtomFamily,
+	removeFromQueueAtom,
+	retryFailedMessageAtom,
+} from "../state/atoms/messageQueue"
+import type { QueuedMessage } from "../state/atoms/messageQueue"
 import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { SimpleMarkdown } from "./SimpleMarkdown"
@@ -16,7 +23,10 @@ import {
 	CheckCircle2,
 	AlertCircle,
 	User,
+	Clock,
+	Loader,
 } from "lucide-react"
+import { cn } from "../../../lib/utils"
 
 interface MessageListProps {
 	sessionId: string
@@ -28,7 +38,11 @@ interface MessageListProps {
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
+	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId))
+	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId))
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
+	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
+	const removeFromQueue = useSetAtom(removeFromQueueAtom)
 	const containerRef = useRef<HTMLDivElement>(null)
 
 	// Auto-scroll to bottom when new messages arrive
@@ -61,7 +75,21 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[setInputValue],
 	)
 
-	if (messages.length === 0) {
+	const handleRetryMessage = useCallback(
+		(sessionId: string, messageId: string) => {
+			retryFailedMessage({ sessionId, messageId })
+		},
+		[retryFailedMessage],
+	)
+
+	const handleDiscardMessage = useCallback(
+		(sessionId: string, messageId: string) => {
+			removeFromQueue({ sessionId, messageId })
+		},
+		[removeFromQueue],
+	)
+
+	if (messages.length === 0 && queue.length === 0) {
 		return (
 			<div className="am-messages-empty">
 				<MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -79,6 +107,16 @@ export function MessageList({ sessionId }: MessageListProps) {
 						message={msg}
 						onSuggestionClick={handleSuggestionClick}
 						onCopyToInput={handleCopyToInput}
+					/>
+				))}
+				{/* Display queued messages */}
+				{queue.map((queuedMsg) => (
+					<QueuedMessageItem
+						key={`queued-${queuedMsg.id}`}
+						queuedMessage={queuedMsg}
+						isSending={sendingMessageId === queuedMsg.id}
+						onRetry={handleRetryMessage}
+						onDiscard={handleDiscardMessage}
 					/>
 				))}
 			</div>
@@ -234,6 +272,86 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 						onSuggestionClick={onSuggestionClick}
 						onCopyToInput={onCopyToInput}
 					/>
+				)}
+			</div>
+		</div>
+	)
+}
+
+interface QueuedMessageItemProps {
+	queuedMessage: QueuedMessage
+	isSending: boolean
+	onRetry: (sessionId: string, messageId: string) => void
+	onDiscard: (sessionId: string, messageId: string) => void
+}
+
+function QueuedMessageItem({ queuedMessage, isSending: _isSending, onRetry, onDiscard }: QueuedMessageItemProps) {
+	const { t } = useTranslation("agentManager")
+
+	let icon = <Clock size={16} className="opacity-70" />
+	let statusText = t("chatInput.messageSending")
+	let statusColor = "text-vscode-descriptionForeground"
+
+	if (queuedMessage.status === "sending") {
+		icon = <Loader size={16} className="animate-spin opacity-70" />
+		statusText = t("chatInput.messageSending")
+		statusColor = "text-vscode-descriptionForeground"
+	} else if (queuedMessage.status === "failed") {
+		icon = <AlertCircle size={16} className="text-vscode-errorForeground" />
+		statusText = queuedMessage.error || "Failed to send message"
+		statusColor = "text-vscode-errorForeground"
+	} else {
+		icon = <Clock size={16} className="opacity-70" />
+		statusText = t("chatInput.messageSending")
+		statusColor = "text-vscode-descriptionForeground"
+	}
+
+	const handleRetry = () => {
+		onRetry(queuedMessage.sessionId, queuedMessage.id)
+	}
+
+	const handleDiscard = () => {
+		onDiscard(queuedMessage.sessionId, queuedMessage.id)
+	}
+
+	const canRetry = queuedMessage.retryCount < queuedMessage.maxRetries
+
+	return (
+		<div className={cn("am-message-item", queuedMessage.status === "failed" && "opacity-75")}>
+			<div className="am-message-icon">{icon}</div>
+			<div className="am-message-content-wrapper">
+				<div className="am-message-header">
+					<span className="am-message-author text-vscode-descriptionForeground">{t("messages.youSaid")}</span>
+					<span className={cn("am-message-ts text-xs", statusColor)}>{statusText}</span>
+				</div>
+				<div className="am-message-body">
+					<SimpleMarkdown content={queuedMessage.content} />
+				</div>
+				{queuedMessage.status === "failed" && (
+					<div className="mt-2 space-y-2">
+						{queuedMessage.error && (
+							<p className="text-xs text-vscode-errorForeground">Error: {queuedMessage.error}</p>
+						)}
+						{queuedMessage.retryCount > 0 && (
+							<p className="text-xs text-vscode-descriptionForeground">
+								Retry attempt {queuedMessage.retryCount} of {queuedMessage.maxRetries}
+							</p>
+						)}
+						<div className="flex gap-2">
+							{canRetry && (
+								<button
+									onClick={handleRetry}
+									className="text-xs px-2 py-1 rounded bg-vscode-button-background hover:bg-vscode-button-hoverBackground text-vscode-button-foreground">
+									Retry
+								</button>
+							)}
+							<button
+								onClick={handleDiscard}
+								className="text-xs px-2 py-1 rounded bg-vscode-errorBackground hover:opacity-80 text-vscode-errorForeground">
+								Discard
+							</button>
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

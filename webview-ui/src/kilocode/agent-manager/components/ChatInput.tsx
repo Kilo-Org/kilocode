@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
 import { GitBranch, SendHorizontal, Square } from "lucide-react"
@@ -9,6 +9,7 @@ import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
+import { addToQueueAtom } from "../state/atoms/messageQueue"
 
 interface ChatInputProps {
 	sessionId: string
@@ -36,6 +37,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const addToQueue = useSetAtom(addToQueueAtom)
 
 	// Auto-focus the textarea when the session changes (user selects a different session)
 	useEffect(() => {
@@ -44,26 +46,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
+	const isSessionRunning = sessionStatus === "running"
 
 	// Input is disabled when:
 	// - In auto mode (non-interactive)
 	// - Session is not in "running" status (done, stopped, error, etc.)
-	const isSessionRunning = sessionStatus === "running"
 	const inputDisabled = autoMode || !isSessionRunning
+	// Send is disabled when: empty, auto-mode, or session not running
+	// Note: Users CAN queue multiple messages while one is sending
 	const sendDisabled = isEmpty || autoMode || !isSessionRunning
 
 	const handleSend = () => {
 		if (isEmpty || autoMode || !isSessionRunning) return
 
-		// For running sessions, send as follow-up message
-		vscode.postMessage({
-			type: "agentManager.sendMessage",
-			sessionId,
-			sessionLabel,
-			content: trimmedMessage,
-		})
+		// Queue the message instead of sending directly
+		const queuedMsg = addToQueue({ sessionId, content: trimmedMessage })
 
-		setMessageText("")
+		if (queuedMsg) {
+			// Notify the extension that a message has been queued
+			vscode.postMessage({
+				type: "agentManager.messageQueued",
+				sessionId,
+				messageId: queuedMsg.id,
+				sessionLabel,
+				content: trimmedMessage,
+			})
+
+			setMessageText("")
+		}
 	}
 
 	const handleCancel = () => {
