@@ -95,6 +95,7 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
+import { checkSpeechToTextAvailable } from "./speechToTextCheck" // kilocode_change
 import type { ClineMessage, TodoItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
@@ -2211,11 +2212,9 @@ ${prompt}
 				: undefined
 		// kilocode_change end
 
-		// kilocode_change start - checkSpeechToTextAvailable (backend prerequisites only, experiment flag checked in frontend)
-		console.log("🎙️ [ClineProvider] Checking speech-to-text availability for webview state update...")
-		const { checkSpeechToTextAvailable } = await import("./speechToTextCheck")
-		const speechToTextAvailable = await checkSpeechToTextAvailable(this.providerSettingsManager)
-		console.log(`🎙️ [ClineProvider] Speech-to-text available: ${speechToTextAvailable}`)
+		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
+		let speechToTextAvailable =
+			experiments?.speechToText && (await checkSpeechToTextAvailable(this.providerSettingsManager))
 		// kilocode_change end - checkSpeechToTextAvailable
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
