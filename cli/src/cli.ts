@@ -218,7 +218,7 @@ export class CLI {
 			const extensionHost = this.service.getExtensionHost()
 			extensionHost.sendWebviewMessage({
 				type: "yoloMode",
-				bool: Boolean(this.options.ci),
+				bool: Boolean(this.options.ci || this.options.yolo),
 			})
 
 			// Request router models after configuration is injected
@@ -270,6 +270,7 @@ export class CLI {
 					mode: this.options.mode || "code",
 					workspace: this.options.workspace || process.cwd(),
 					ci: this.options.ci || false,
+					yolo: this.options.yolo || false,
 					json: this.options.json || false,
 					jsonInteractive: this.options.jsonInteractive || false,
 					prompt: this.options.prompt || "",

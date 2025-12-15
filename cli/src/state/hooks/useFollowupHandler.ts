@@ -63,6 +63,10 @@ export function useFollowupHandler(): void {
 			// Question was answered, clear suggestions
 			logs.debug("Clearing suggestions - question answered", "useFollowupHandler")
 			clearSuggestions()
+		} else if (lastMessage && (lastMessage.type !== "ask" || lastMessage.ask !== "followup")) {
+			// Last message is not a followup question, clear any existing suggestions
+			// This handles cases where a new message type (like command) comes in
+			clearSuggestions()
 		}
 	}, [messages, setSuggestions, clearSuggestions])
 }
