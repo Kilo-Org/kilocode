@@ -67,6 +67,8 @@
 		"placeholderTypeTask": "พิมพ์งานของคุณที่นี่...",
 		"ariaLabel": "ช่องใส่ข้อความ",
 		"cancelTitle": "ยกเลิกเอเจนต์",
+		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"

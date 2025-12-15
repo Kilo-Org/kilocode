@@ -67,6 +67,8 @@
 		"placeholderTypeTask": "在此輸入你的任務...",
 		"ariaLabel": "訊息輸入",
 		"cancelTitle": "取消代理",
+		"finishToBranchTitle": "完成 Worktree 並準備分支：{{branch}}",
+		"finishToBranchTitleNoBranch": "完成 Worktree 並準備分支",
 		"sendTitle": "傳送訊息",
 		"resumeTitle": "繼續代理",
 		"hint": "按 Enter 傳送，Shift+Enter 換行"

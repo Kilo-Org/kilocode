@@ -69,6 +69,8 @@
 		"placeholderTypeTask": "Введи своє завдання тут...",
 		"ariaLabel": "Введення повідомлення",
 		"cancelTitle": "Скасувати агента",
+		"finishToBranchTitle": "Завершити worktree та підготувати branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Завершити worktree та підготувати branch",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
 		"hint": "Enter для надсилання, Shift+Enter для нового рядка"

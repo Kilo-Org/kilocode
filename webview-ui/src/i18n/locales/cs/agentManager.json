@@ -68,6 +68,8 @@
 		"placeholderTypeTask": "Napiš svůj úkol zde...",
 		"ariaLabel": "Vstup zprávy",
 		"cancelTitle": "Zrušit agenta",
+		"finishToBranchTitle": "Dokončit worktree a připravit branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Dokončit worktree a připravit branch",
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
 		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"

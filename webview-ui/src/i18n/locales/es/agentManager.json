@@ -67,6 +67,8 @@
 		"placeholderTypeTask": "Escribe tu tarea aquí...",
 		"ariaLabel": "Entrada de mensaje",
 		"cancelTitle": "Cancelar agente",
+		"finishToBranchTitle": "Finalizar worktree y preparar branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Finalizar worktree y preparar branch",
 		"sendTitle": "Enviar mensaje",
 		"resumeTitle": "Reanudar agente",
 		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea"
