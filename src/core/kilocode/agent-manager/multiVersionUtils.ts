@@ -10,6 +10,7 @@ export interface SessionConfig {
 	label: string
 	parallelMode: boolean
 	autoMode: boolean
+	existingBranch?: string
 }
 
 export interface StartSessionMessage {
@@ -17,6 +18,7 @@ export interface StartSessionMessage {
 	versions?: number
 	labels?: string[]
 	parallelMode?: boolean
+	existingBranch?: string
 }
 
 /**
@@ -33,7 +35,7 @@ export interface StartSessionMessage {
  * - Uses provided labels or generates (v1), (v2) suffixes
  */
 export function extractSessionConfigs(message: StartSessionMessage): SessionConfig[] {
-	const { prompt, versions = 1, labels, parallelMode = false } = message
+	const { prompt, versions = 1, labels, parallelMode = false, existingBranch } = message
 
 	// Single version case
 	if (versions === 1) {
@@ -43,12 +45,14 @@ export function extractSessionConfigs(message: StartSessionMessage): SessionConf
 				label: prompt.slice(0, 50),
 				parallelMode,
 				autoMode: false,
+				existingBranch,
 			},
 		]
 	}
 
 	// Multi-version case: always use parallelMode, but start interactively (autoMode=false)
 	// Users can click the "Finish to Branch" button on individual sessions to commit their changes
+	// Note: existingBranch is not supported in multi-version mode as each version needs isolated branches
 	const effectiveLabels = labels ?? Array.from({ length: versions }, (_, i) => `${prompt.slice(0, 50)} (v${i + 1})`)
 
 	return effectiveLabels.map((label) => ({
@@ -56,5 +60,6 @@ export function extractSessionConfigs(message: StartSessionMessage): SessionConf
 		label,
 		parallelMode: true,
 		autoMode: false,
+		// existingBranch is deliberately excluded in multi-version mode
 	}))
 }

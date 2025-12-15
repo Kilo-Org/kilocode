@@ -146,5 +146,31 @@ describe("Multi-version session spawning", () => {
 			expect(configs[0].label).toHaveLength(50)
 			expect(configs[0].label).toBe(longPrompt.slice(0, 50))
 		})
+
+		describe("existingBranch", () => {
+			it("passes existingBranch through for single version", () => {
+				const configs = extractSessionConfigs({
+					prompt,
+					versions: 1,
+					parallelMode: true,
+					existingBranch: "feature/my-branch",
+				})
+
+				expect(configs).toHaveLength(1)
+				expect(configs[0].existingBranch).toBe("feature/my-branch")
+			})
+
+			it("excludes existingBranch in multi-version mode", () => {
+				const configs = extractSessionConfigs({
+					prompt,
+					versions: 2,
+					existingBranch: "feature/my-branch",
+				})
+
+				expect(configs).toHaveLength(2)
+				expect(configs[0].existingBranch).toBeUndefined()
+				expect(configs[1].existingBranch).toBeUndefined()
+			})
+		})
 	})
 })

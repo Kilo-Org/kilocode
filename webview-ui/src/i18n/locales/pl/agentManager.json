@@ -49,7 +49,14 @@
 		"launchVersions": "Uruchom {{count}} wersje",
 		"startAgent": "Uruchom agenta",
 		"cancelCreating": "Anuluj tworzenie sesji",
-		"cancelButton": "Anuluj"
+		"cancelButton": "Anuluj",
+		"selectBranch": "Wybierz gałąź",
+		"searchBranches": "Wpisz, aby przeszukać wszystkie gałęzie",
+		"yourBranches": "Twoje gałęzie",
+		"otherBranches": "Inne gałęzie",
+		"branchPickerTooltip": "Zmień gałąź bazową",
+		"noBranches": "Nie znaleziono gałęzi",
+		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",

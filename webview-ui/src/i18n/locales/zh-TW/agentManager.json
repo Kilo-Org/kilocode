@@ -47,7 +47,14 @@
 		"launchVersions": "啟動 {{count}} 個版本",
 		"startAgent": "啟動代理",
 		"cancelCreating": "取消建立工作階段",
-		"cancelButton": "取消"
+		"cancelButton": "取消",
+		"selectBranch": "選擇 Branch",
+		"searchBranches": "輸入以搜尋所有 Branch",
+		"yourBranches": "你的 Branch",
+		"otherBranches": "其他 Branch",
+		"branchPickerTooltip": "切換基礎 Branch",
+		"noBranches": "找不到 Branch",
+		"noMatchingBranches": "沒有符合的 Branch"
 	},
 	"messages": {
 		"waiting": "等待代理回應...",

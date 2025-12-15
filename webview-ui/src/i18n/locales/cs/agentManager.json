@@ -48,7 +48,14 @@
 		"launchVersions": "Spustit {{count}} verzí",
 		"startAgent": "Spustit agenta",
 		"cancelCreating": "Zrušit vytváření relace",
-		"cancelButton": "Zrušit"
+		"cancelButton": "Zrušit",
+		"selectBranch": "Vyber větev",
+		"searchBranches": "Zadej text pro prohledání všech větví",
+		"yourBranches": "Tvoje větve",
+		"otherBranches": "Ostatní větve",
+		"branchPickerTooltip": "Změnit základní větev",
+		"noBranches": "Nebyly nalezeny žádné větve",
+		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",

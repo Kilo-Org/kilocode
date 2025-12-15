@@ -34,6 +34,7 @@ import {
 import type { ClineProvider } from "../../webview/ClineProvider"
 import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
+import { WorkspaceGitService } from "./WorkspaceGitService"
 
 /**
  * AgentManagerProvider
@@ -249,6 +250,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 				case "agentManager.refreshRemoteSessions":
 					void this.fetchAndPostRemoteSessions()
 					break
+				case "agentManager.listBranches":
+					void this.handleListBranches()
+					break
 				case "agentManager.refreshSessionMessages":
 					void this.refreshSessionMessages(message.sessionId as string)
 					break
@@ -291,9 +295,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 		const rawLabels = message.labels as string[] | undefined
 		const labels = rawLabels?.length === versions ? rawLabels : undefined
 		const parallelMode = (message.parallelMode as boolean) ?? false
+		const existingBranch = (message.existingBranch as string) ?? undefined
 
 		// Extract session configurations
-		const configs = extractSessionConfigs({ prompt, versions, labels, parallelMode })
+		const configs = extractSessionConfigs({ prompt, versions, labels, parallelMode, existingBranch })
 
 		if (configs.length === 1) {
 			// Single session - spawn directly
@@ -302,6 +307,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				parallelMode: config.parallelMode,
 				autoMode: config.autoMode,
 				labelOverride: config.label,
+				existingBranch: config.existingBranch,
 			})
 			return
 		}
@@ -318,6 +324,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				parallelMode: config.parallelMode,
 				autoMode: config.autoMode,
 				labelOverride: config.label,
+				existingBranch: config.existingBranch,
 			})
 
 			// Wait for the pending session to transition to active before spawning the next
@@ -392,6 +399,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			parallelMode?: boolean
 			autoMode?: boolean
 			labelOverride?: string
+			existingBranch?: string
 		},
 	): Promise<void> {
 		if (!prompt) {
@@ -456,6 +464,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				label: existingLabel,
 				gitUrl,
 				apiConfiguration,
+				existingBranch: options?.existingBranch,
 			},
 			(sessionId, event) => {
 				// For new sessions, set the start time when we first see the session
@@ -870,6 +879,19 @@ export class AgentManagerProvider implements vscode.Disposable {
 			})
 		} catch (error) {
 			this.outputChannel.appendLine(`[AgentManager] Failed to fetch remote sessions: ${error}`)
+		}
+	}
+
+	private async handleListBranches(): Promise<void> {
+		try {
+			const gitService = new WorkspaceGitService()
+			const { branches, currentBranch } = await gitService.getBranchInfo()
+			this.postMessage({ type: "agentManager.branches", branches, currentBranch })
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to list branches: ${error instanceof Error ? error.message : String(error)}`,
+			)
+			this.postMessage({ type: "agentManager.branches", branches: [], currentBranch: undefined })
 		}
 	}
 

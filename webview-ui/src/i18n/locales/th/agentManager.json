@@ -47,7 +47,14 @@
 		"launchVersions": "เปิดตัว {{count}} เวอร์ชัน",
 		"startAgent": "เริ่มเอเจนต์",
 		"cancelCreating": "ยกเลิกการสร้างเซสชัน",
-		"cancelButton": "ยกเลิก"
+		"cancelButton": "ยกเลิก",
+		"selectBranch": "เลือกสาขา",
+		"searchBranches": "พิมพ์เพื่อค้นหาสาขาทั้งหมด",
+		"yourBranches": "สาขาของคุณ",
+		"otherBranches": "สาขาอื่นๆ",
+		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
+		"noBranches": "ไม่พบสาขา",
+		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",

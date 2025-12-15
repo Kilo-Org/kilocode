@@ -47,7 +47,14 @@
 		"launchVersions": "{{count}} sürüm başlat",
 		"startAgent": "Ajanı Başlat",
 		"cancelCreating": "Oturum oluşturmayı iptal et",
-		"cancelButton": "İptal"
+		"cancelButton": "İptal",
+		"selectBranch": "Dal seç",
+		"searchBranches": "Tüm dalları aramak için yaz",
+		"yourBranches": "Senin dalların",
+		"otherBranches": "Diğer dallar",
+		"branchPickerTooltip": "Temel dalı değiştir",
+		"noBranches": "Dal bulunamadı",
+		"noMatchingBranches": "Aramanla eşleşen dal yok"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

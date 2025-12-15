@@ -47,7 +47,14 @@
 		"launchVersions": "Avvia {{count}} versioni",
 		"startAgent": "Avvia agente",
 		"cancelCreating": "Annulla creazione sessione",
-		"cancelButton": "Annulla"
+		"cancelButton": "Annulla",
+		"selectBranch": "Seleziona branch",
+		"searchBranches": "Digita per cercare tutti i branch",
+		"yourBranches": "I tuoi branch",
+		"otherBranches": "Altri branch",
+		"branchPickerTooltip": "Cambia branch di base",
+		"noBranches": "Nessun branch trovato",
+		"noMatchingBranches": "Nessun branch corrisponde alla tua ricerca"
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",

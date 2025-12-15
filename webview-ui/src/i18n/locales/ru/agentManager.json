@@ -49,7 +49,14 @@
 		"launchVersions": "Запустить {{count}} версий",
 		"startAgent": "Запустить агента",
 		"cancelCreating": "Отменить создание сессии",
-		"cancelButton": "Отмена"
+		"cancelButton": "Отмена",
+		"selectBranch": "Выбери ветку",
+		"searchBranches": "Введи для поиска всех веток",
+		"yourBranches": "Твои ветки",
+		"otherBranches": "Другие ветки",
+		"branchPickerTooltip": "Сменить базовую ветку",
+		"noBranches": "Ветки не найдены",
+		"noMatchingBranches": "Нет веток, соответствующих твоему поиску"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",

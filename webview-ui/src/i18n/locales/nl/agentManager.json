@@ -47,7 +47,14 @@
 		"launchVersions": "Start {{count}} versies",
 		"startAgent": "Agent starten",
 		"cancelCreating": "Sessie aanmaken annuleren",
-		"cancelButton": "Annuleren"
+		"cancelButton": "Annuleren",
+		"selectBranch": "Branch selecteren",
+		"searchBranches": "Typ om alle branches te doorzoeken",
+		"yourBranches": "Jouw branches",
+		"otherBranches": "Andere branches",
+		"branchPickerTooltip": "Wijzig basisbranch",
+		"noBranches": "Geen branches gevonden",
+		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

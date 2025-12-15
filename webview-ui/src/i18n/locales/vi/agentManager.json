@@ -47,7 +47,14 @@
 		"launchVersions": "Khởi chạy {{count}} phiên bản",
 		"startAgent": "Khởi động Agent",
 		"cancelCreating": "Hủy tạo phiên",
-		"cancelButton": "Hủy"
+		"cancelButton": "Hủy",
+		"selectBranch": "Chọn nhánh",
+		"searchBranches": "Nhập để tìm kiếm tất cả các nhánh",
+		"yourBranches": "Nhánh của bạn",
+		"otherBranches": "Nhánh khác",
+		"branchPickerTooltip": "Chuyển nhánh cơ sở",
+		"noBranches": "Không tìm thấy nhánh nào",
+		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

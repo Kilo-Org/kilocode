@@ -2,6 +2,7 @@ export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
 	autoMode?: boolean
+	existingBranch?: string
 }
 
 /**
@@ -19,6 +20,11 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 
 	if (options?.parallelMode) {
 		args.push("--parallel")
+
+		// Add existing branch flag if specified (resume on existing branch)
+		if (options.existingBranch) {
+			args.push(`--existing-branch=${options.existingBranch}`)
+		}
 	}
 
 	if (options?.sessionId) {

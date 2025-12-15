@@ -47,7 +47,14 @@
 		"launchVersions": "Luncurkan {{count}} versi",
 		"startAgent": "Mulai Agen",
 		"cancelCreating": "Batalkan pembuatan sesi",
-		"cancelButton": "Batal"
+		"cancelButton": "Batal",
+		"selectBranch": "Pilih cabang",
+		"searchBranches": "Ketik untuk mencari semua cabang",
+		"yourBranches": "Cabang kamu",
+		"otherBranches": "Cabang lain",
+		"branchPickerTooltip": "Ganti cabang dasar",
+		"noBranches": "Tidak ada cabang ditemukan",
+		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",
