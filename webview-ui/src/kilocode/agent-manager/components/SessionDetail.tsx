@@ -327,7 +327,7 @@ function NewAgentForm() {
 				style={{ width: 48, height: 48, margin: "0 auto 16px auto" }}>
 				<KiloLogo />
 			</div>
-			<div style={{ width: "100%", maxWidth: "100%" }}>
+			<div style={{ width: "100%", maxWidth: "100%", minWidth: "280px" }}>
 				<div
 					className={cn(
 						"relative",
@@ -507,7 +507,7 @@ function NewAgentForm() {
 					{/* Hint Text inside input */}
 					{!promptText && (
 						<div
-							className="absolute left-3 right-[90px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							className="absolute left-3 right-[140px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 							style={{
 								bottom: "0.25rem",
 								color: "var(--vscode-descriptionForeground)",
