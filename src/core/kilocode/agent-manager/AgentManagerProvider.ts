@@ -699,6 +699,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
+		// Only allow finishing if session is still running
+		if (session.status !== "running") {
+			this.outputChannel.appendLine(
+				`[AgentManager] Ignoring finishWorktreeSession for non-running session: ${sessionId} (status: ${session.status})`,
+			)
+			return
+		}
+
 		this.processHandler.terminateProcess(sessionId, "SIGTERM")
 		this.log(sessionId, "Finishing worktree session (commit + close)...")
 		this.postStateToWebview()

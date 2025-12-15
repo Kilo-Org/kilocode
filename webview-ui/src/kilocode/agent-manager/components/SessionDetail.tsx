@@ -43,24 +43,25 @@ export function SessionDetail() {
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
-	const prevSessionStatusRef = useRef<string | undefined>(undefined)
+	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
 
 	// Hooks must be called unconditionally before any early returns
 	const timeLabels = useMemo(() => createRelativeTimeLabels(t), [t])
 
 	// Auto-cancel session when it ends (as if user clicked the red cancel button)
 	// Only send cancel once when transitioning from "running" to a terminal state
+	// Track both sessionId and status to avoid spurious cancels on session switches
 	useEffect(() => {
 		if (!selectedSession) return
 
-		const previousStatus = prevSessionStatusRef.current
-		const currentStatus = selectedSession.status
+		const prevState = prevSessionStateRef.current
+		const currentState = { id: selectedSession.sessionId, status: selectedSession.status }
 
 		// Update the ref for next render
-		prevSessionStatusRef.current = currentStatus
+		prevSessionStateRef.current = currentState
 
-		// Send cancel message only when transitioning from "running" to a terminal state
-		if (previousStatus === "running" && currentStatus !== "running") {
+		// Only send cancel if same session transitioned from running to terminal state
+		if (prevState?.id === currentState.id && prevState.status === "running" && currentState.status !== "running") {
 			vscode.postMessage({
 				type: "agentManager.cancelSession",
 				sessionId: selectedSession.sessionId,
