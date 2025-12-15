@@ -53,7 +53,6 @@ import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import { McpExecution } from "./McpExecution"
 import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
-import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -138,7 +137,7 @@ export const ChatRowContent = ({
 	onSuggestionClick,
 	onFollowUpUnmount,
 	onBatchFileResponse,
-	enableCheckpoints, // kilocode_change
+	// enableCheckpoints, // kilocode_change
 	isFollowUpAnswered,
 	editable,
 }: ChatRowContentProps) => {
@@ -1292,7 +1291,6 @@ export const ChatRowContent = ({
 				case "error":
 					return <ErrorRow type="error" message={message.text || ""} />
 				case "completion_result":
-					const commitRange = message.metadata?.kiloCode?.commitRange
 					return (
 						<>
 							<div style={headerStyle}>
@@ -1307,15 +1305,6 @@ export const ChatRowContent = ({
 							<div className="pb-1">
 								<Markdown markdown={message.text} />
 							</div>
-							{
-								// kilocode_change start
-								!message.partial && enableCheckpoints !== false && commitRange ? (
-									<SeeNewChangesButtons commitRange={commitRange} />
-								) : (
-									<></>
-								)
-								// kilocode_change end
-							}
 						</>
 					)
 				case "shell_integration_warning":

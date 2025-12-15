@@ -31,6 +31,7 @@ import ContextMenu from "./ContextMenu"
 import { ImageWarningBanner } from "./ImageWarningBanner" // kilocode_change
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { usePromptHistory } from "./hooks/usePromptHistory"
+import { AcceptRejectButtons } from "./kilocode/AcceptRejectButtons"
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -100,6 +101,20 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			taskHistoryVersion, // kilocode_change
 			clineMessages,
 		} = useExtensionState()
+
+		const latestCommitRange = useMemo(() => {
+			// Find most recent completion_result that included a commit range.
+			for (let i = clineMessages.length - 1; i >= 0; i--) {
+				const msg: any = clineMessages[i]
+				if (msg?.type === "say" && msg?.say === "completion_result" && !msg?.partial) {
+					const commitRange = msg?.metadata?.kiloCode?.commitRange
+					if (commitRange?.from) return commitRange
+				}
+			}
+			return undefined
+		}, [clineMessages])
+
+		const [dismissedCommitFrom, setDismissedCommitFrom] = useState<string | undefined>(undefined)
 
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
@@ -1281,10 +1296,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"outline-none",
 						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
 						isFocused
-							? "border border-white/20 outline-none"
+							? "border border-[--var(--color-matterai-border)] outline-none"
 							: isDraggingOver
-								? "border-2 border-dashed border-white/20 outline-none"
-								: "border border-white/20 outline-none",
+								? "border-2 border-dashed border-[--var(--color-matterai-border)] outline-none"
+								: "border border-[--var(--color-matterai-border)] outline-none",
 						isDraggingOver
 							? "bg-[color-mix(in_srgb,var(--vscode-input-background)_95%,white)]"
 							: "bg-vscode-input-background",
@@ -1437,6 +1452,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					"mr-auto",
 					"box-border",
 				)}>
+				{/* Pinned file review actions (not a chat row) */}
+				{!isEditMode && latestCommitRange && latestCommitRange.from !== dismissedCommitFrom && (
+					<div className="px-0.5">
+						<AcceptRejectButtons
+							commitRange={latestCommitRange}
+							onDismiss={() => setDismissedCommitFrom(latestCommitRange.from)}
+						/>
+					</div>
+				)}
 				<div className="relative">
 					<div
 						className={cn(
@@ -1508,7 +1532,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"drop-shadow-md",
 									"rounded-xl",
 									"border",
-									"border-white/20",
+									"border-[--var(--color-matterai-border)]",
 									"outline-none",
 								)}>
 								<ContextMenu

@@ -12,36 +12,46 @@ type PendingFileEdit = {
 	diffAnchor: vscode.Range
 }
 
-const labelDecorationType = vscode.window.createTextEditorDecorationType({
-	after: {
-		margin: "0 0 0 12px",
-		backgroundColor: new vscode.ThemeColor("badge.background"),
-		color: new vscode.ThemeColor("badge.foreground"),
-		fontWeight: "500",
-	},
-})
-
 const highlightDecorationType = vscode.window.createTextEditorDecorationType({
 	isWholeLine: true,
 	backgroundColor: new vscode.ThemeColor("editor.hoverHighlightBackground"),
 })
 
-const KEEP_COMMAND = "roo.fileEdit.keep"
-const UNDO_COMMAND = "roo.fileEdit.undo"
-const NEXT_COMMAND = "roo.fileEdit.reviewNext"
+const ACCEPT_COMMAND = "axon-code.fileEdit.accept"
+const ACCEPT_ALL_COMMAND = "axon-code.fileEdit.acceptAll"
+const REJECT_COMMAND = "axon-code.fileEdit.reject"
+const NEXT_COMMAND = "axon-code.fileEdit.reviewNext"
 
 export class FileEditReviewController implements vscode.Disposable {
 	private readonly disposables: vscode.Disposable[] = []
 	private pendingEdits = new Map<string, PendingFileEdit>()
 	private reviewQueue: string[] = []
+	private readonly codeLensEmitter = new vscode.EventEmitter<void>()
+	private readonly codeLensProvider: FileEditReviewCodeLensProvider
 
 	constructor(private cwd: string) {
+		// Old UI (comment thread actions) — kept for reference.
+		//
+		// this.commentController = vscode.comments.createCommentController("axon-code.review", "Axon Code Review")
+		// this.commentController.commentingRangeProvider = {
+		// 	provideCommentingRanges: () => [], // Disable manual commenting
+		// }
+
+		this.codeLensProvider = new FileEditReviewCodeLensProvider(
+			this.cwd,
+			() => this.pendingEdits,
+			this.codeLensEmitter.event,
+		)
+
 		this.disposables.push(
+			this.codeLensEmitter,
+			vscode.languages.registerCodeLensProvider({ scheme: "file" }, this.codeLensProvider),
 			vscode.window.onDidChangeActiveTextEditor(() => this.refreshDecorations()),
 			vscode.window.onDidChangeVisibleTextEditors(() => this.refreshDecorations()),
 			vscode.workspace.onDidCloseTextDocument((doc) => this.handleDocumentClosed(doc)),
-			vscode.commands.registerCommand(KEEP_COMMAND, (relPath?: string) => this.handleKeep(relPath)),
-			vscode.commands.registerCommand(UNDO_COMMAND, (relPath?: string) => this.handleUndo(relPath)),
+			vscode.commands.registerCommand(ACCEPT_COMMAND, (arg?: any) => this.handleAccept(arg)),
+			vscode.commands.registerCommand(ACCEPT_ALL_COMMAND, () => this.handleAcceptAll()),
+			vscode.commands.registerCommand(REJECT_COMMAND, (arg?: any) => this.handleReject(arg)),
 			vscode.commands.registerCommand(NEXT_COMMAND, () => this.handleReviewNext()),
 		)
 	}
@@ -49,6 +59,29 @@ export class FileEditReviewController implements vscode.Disposable {
 	addEdit(params: { relPath: string; absolutePath: string; originalContent: string; newContent: string }) {
 		const readablePath = getReadablePath(this.cwd, params.relPath)
 		const diffAnchor = computeFirstDifferenceRange(params.originalContent, params.newContent)
+
+		// Old UI (comment thread actions) — kept for reference.
+		//
+		// let entry = this.pendingEdits.get(readablePath)
+		// if (entry && entry.thread) {
+		// 	entry.thread.dispose()
+		// }
+		//
+		// const uri = vscode.Uri.file(params.absolutePath)
+		// const thread = this.commentController.createCommentThread(uri, diffAnchor, [])
+		// thread.canReply = false
+		// thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded
+		// thread.label = "Axon Code"
+		//
+		// // We don't necessarily need a comment body if the title actions are enough,
+		// // but a body explains what's happening.
+		// thread.comments = [
+		// 	{
+		// 		author: { name: "Review Changes" },
+		// 		body: "",
+		// 		mode: vscode.CommentMode.Preview,
+		// 	},
+		// ]
 
 		const pending: PendingFileEdit = {
 			relPath: params.relPath,
@@ -59,40 +92,103 @@ export class FileEditReviewController implements vscode.Disposable {
 		}
 
 		this.pendingEdits.set(readablePath, pending)
+		// Ensure unique queue items
 		this.reviewQueue = this.reviewQueue.filter((path) => path !== readablePath)
 		this.reviewQueue.push(readablePath)
 
 		this.refreshDecorations()
+		this.codeLensEmitter.fire()
 	}
 
-	async handleKeep(relPath?: string) {
-		const entry = this.getEntryForPath(relPath)
+	async handleAccept(arg?: any) {
+		// Arg can be a CommentThread if triggered from menu, or relPath if triggered programmatically
+		let entry: PendingFileEdit | undefined
+
+		if (arg && (arg as vscode.CommentThread).uri) {
+			const thread = arg as vscode.CommentThread
+			const readablePath = getReadablePath(this.cwd, path.relative(this.cwd, thread.uri.fsPath))
+			entry = this.pendingEdits.get(readablePath)
+		} else if (typeof arg === "string") {
+			const readablePath = getReadablePath(this.cwd, arg)
+			entry = this.pendingEdits.get(readablePath)
+		} else {
+			// Fallback: active editor
+			const activeEditor = vscode.window.activeTextEditor
+			if (activeEditor) {
+				const readablePath = getReadablePath(
+					this.cwd,
+					path.relative(this.cwd, activeEditor.document.uri.fsPath),
+				)
+				entry = this.pendingEdits.get(readablePath)
+			}
+		}
+
 		if (!entry) {
 			return
 		}
 
-		this.pendingEdits.delete(entry.readablePath)
-		this.reviewQueue = this.reviewQueue.filter((path) => path !== entry.readablePath)
+		// Accept means we keep the changes. Just clean up.
+		this.clearEntry(entry)
 		this.refreshDecorations()
+
+		// If we just accepted the current file, try to go to the next one
+		if (this.reviewQueue.length > 0) {
+			// Optional: auto-advance behavior?
+			// this.handleReviewNext()
+		}
 	}
 
-	async handleUndo(relPath?: string) {
-		const entry = this.getEntryForPath(relPath)
+	async handleReject(arg?: any) {
+		let entry: PendingFileEdit | undefined
+
+		if (arg && (arg as vscode.CommentThread).uri) {
+			const thread = arg as vscode.CommentThread
+			const readablePath = getReadablePath(this.cwd, path.relative(this.cwd, thread.uri.fsPath))
+			entry = this.pendingEdits.get(readablePath)
+		} else if (typeof arg === "string") {
+			const readablePath = getReadablePath(this.cwd, arg)
+			entry = this.pendingEdits.get(readablePath)
+		} else {
+			// Fallback: active editor
+			const activeEditor = vscode.window.activeTextEditor
+			if (activeEditor) {
+				const readablePath = getReadablePath(
+					this.cwd,
+					path.relative(this.cwd, activeEditor.document.uri.fsPath),
+				)
+				entry = this.pendingEdits.get(readablePath)
+			}
+		}
+
 		if (!entry) {
 			return
 		}
 
 		await fs.writeFile(entry.absolutePath, entry.originalContent, "utf-8")
-		await vscode.workspace.openTextDocument(entry.absolutePath).then((doc) => doc.save())
+		// Force reload/save not strictly needed as file watcher handles it,
+		// but ensures editor updates
 
-		this.pendingEdits.delete(entry.readablePath)
-		this.reviewQueue = this.reviewQueue.filter((path) => path !== entry.readablePath)
+		this.clearEntry(entry)
 		this.refreshDecorations()
+
+		if (this.reviewQueue.length > 0) {
+			// Optional: auto-advance
+		}
+	}
+
+	async handleAcceptAll() {
+		if (this.pendingEdits.size === 0) return
+
+		this.pendingEdits.clear()
+		this.reviewQueue = []
+		this.refreshDecorations()
+		this.codeLensEmitter.fire()
 	}
 
 	async handleReviewNext() {
 		const nextEntry = this.getNextEntry()
 		if (!nextEntry) {
+			vscode.window.showInformationMessage("No more pending file reviews.")
 			return
 		}
 
@@ -101,19 +197,14 @@ export class FileEditReviewController implements vscode.Disposable {
 		editor.revealRange(nextEntry.diffAnchor, vscode.TextEditorRevealType.InCenter)
 	}
 
-	private getEntryForPath(relPath?: string): PendingFileEdit | undefined {
-		if (relPath) {
-			const readablePath = getReadablePath(this.cwd, relPath)
-			return this.pendingEdits.get(readablePath)
-		}
-
-		const activeEditor = vscode.window.activeTextEditor
-		if (!activeEditor) {
-			return undefined
-		}
-
-		const readablePath = getReadablePath(this.cwd, path.relative(this.cwd, activeEditor.document.uri.fsPath))
-		return this.pendingEdits.get(readablePath)
+	private clearEntry(entry: PendingFileEdit) {
+		// Old UI (comment thread actions) — kept for reference.
+		// if (entry.thread) {
+		// 	entry.thread.dispose()
+		// }
+		this.pendingEdits.delete(entry.readablePath)
+		this.reviewQueue = this.reviewQueue.filter((path) => path !== entry.readablePath)
+		this.codeLensEmitter.fire()
 	}
 
 	private getNextEntry(): PendingFileEdit | undefined {
@@ -129,77 +220,26 @@ export class FileEditReviewController implements vscode.Disposable {
 	private handleDocumentClosed(doc: vscode.TextDocument) {
 		const readablePath = getReadablePath(this.cwd, path.relative(this.cwd, doc.uri.fsPath))
 		if (this.pendingEdits.has(readablePath)) {
+			// Keep decorations + codelens in sync when files close/reopen.
 			this.refreshDecorations()
+			this.codeLensEmitter.fire()
 		}
-	}
-
-	private getOverlayMarkdown(entry?: PendingFileEdit): vscode.MarkdownString | undefined {
-		if (!entry && this.pendingEdits.size === 0) {
-			return undefined
-		}
-
-		const markdown = new vscode.MarkdownString(undefined, true)
-		markdown.isTrusted = true
-
-		if (entry) {
-			const args = encodeURIComponent(JSON.stringify({ relPath: entry.relPath }))
-			const keepLink = `[Keep](command:${KEEP_COMMAND}?${args})`
-			const undoLink = `[Undo](command:${UNDO_COMMAND}?${args})`
-			markdown.appendMarkdown(`${keepLink} • ${undoLink}`)
-		} else {
-			markdown.appendMarkdown(`[Review next file](command:${NEXT_COMMAND})`)
-		}
-
-		markdown.appendMarkdown("\n\n")
-		markdown.appendMarkdown("**Pending files**\n")
-		for (const filePath of this.reviewQueue) {
-			if (this.pendingEdits.has(filePath)) {
-				markdown.appendMarkdown(`- ${filePath}\n`)
-			}
-		}
-
-		return markdown
 	}
 
 	private refreshDecorations() {
-		const hasPending = this.pendingEdits.size > 0
+		// We still use highlight decorations; accept/reject is provided via CodeLens.
 		for (const editor of vscode.window.visibleTextEditors) {
 			const readableEditorPath = getReadablePath(this.cwd, path.relative(this.cwd, editor.document.uri.fsPath))
 			const entry = this.pendingEdits.get(readableEditorPath)
 
-			const labelDecorations: vscode.DecorationOptions[] = []
 			const highlightDecorations: vscode.DecorationOptions[] = []
 
 			if (entry) {
-				const labelRange = new vscode.Range(editor.document.lineCount - 1, 0, editor.document.lineCount - 1, 0)
-				labelDecorations.push({
-					range: labelRange,
-					hoverMessage: this.getOverlayMarkdown(entry),
-					renderOptions: {
-						after: {
-							contentText: ` $(tools) Review changes`,
-						},
-					},
-				})
-
 				highlightDecorations.push({
 					range: entry.diffAnchor,
-					hoverMessage: this.getOverlayMarkdown(entry),
-				})
-			} else if (hasPending) {
-				const labelRange = new vscode.Range(editor.document.lineCount - 1, 0, editor.document.lineCount - 1, 0)
-				labelDecorations.push({
-					range: labelRange,
-					hoverMessage: this.getOverlayMarkdown(),
-					renderOptions: {
-						after: {
-							contentText: ` $(arrow-right) Review next file`,
-						},
-					},
 				})
 			}
 
-			editor.setDecorations(labelDecorationType, labelDecorations)
 			editor.setDecorations(highlightDecorationType, highlightDecorations)
 		}
 	}
@@ -208,10 +248,15 @@ export class FileEditReviewController implements vscode.Disposable {
 		for (const disposable of this.disposables) {
 			disposable.dispose()
 		}
+
+		// Old UI (comment thread actions) — kept for reference.
+		// for (const entry of this.pendingEdits.values()) {
+		// 	entry.thread?.dispose()
+		// }
+
 		this.pendingEdits.clear()
 		this.reviewQueue = []
 		vscode.window.visibleTextEditors.forEach((editor) => {
-			editor.setDecorations(labelDecorationType, [])
 			editor.setDecorations(highlightDecorationType, [])
 		})
 	}
@@ -226,17 +271,50 @@ function computeFirstDifferenceRange(originalContent: string, newContent: string
 		line++
 	}
 
-	const originalLine = originalLines[line] ?? ""
-	const newLine = newLines[line] ?? ""
+	// Just return the line for simplicity in this visual anchor
+	return new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER)
+}
 
-	let character = 0
-	while (
-		character < originalLine.length &&
-		character < newLine.length &&
-		originalLine[character] === newLine[character]
+class FileEditReviewCodeLensProvider implements vscode.CodeLensProvider {
+	public readonly onDidChangeCodeLenses?: vscode.Event<void>
+
+	constructor(
+		private readonly cwd: string,
+		private readonly getPendingEdits: () => Map<string, PendingFileEdit>,
+		onDidChangeCodeLenses: vscode.Event<void>,
 	) {
-		character++
+		this.onDidChangeCodeLenses = onDidChangeCodeLenses
 	}
 
-	return new vscode.Range(line, character, line, character)
+	provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
+		const readablePath = getReadablePath(this.cwd, path.relative(this.cwd, document.uri.fsPath))
+		const entry = this.getPendingEdits().get(readablePath)
+		if (!entry) return []
+
+		const line = Math.max(0, entry.diffAnchor.start.line)
+		const anchor = new vscode.Range(line, 0, line, 0)
+
+		return [
+			new vscode.CodeLens(anchor, {
+				title: "Accept",
+				command: ACCEPT_COMMAND,
+				arguments: [entry.relPath],
+			}),
+			new vscode.CodeLens(anchor, {
+				title: "Reject",
+				command: REJECT_COMMAND,
+				arguments: [entry.relPath],
+			}),
+			new vscode.CodeLens(anchor, {
+				title: "Next",
+				command: NEXT_COMMAND,
+				arguments: [],
+			}),
+			new vscode.CodeLens(anchor, {
+				title: "Accept all",
+				command: ACCEPT_ALL_COMMAND,
+				arguments: [],
+			}),
+		]
+	}
 }

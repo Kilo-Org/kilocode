@@ -1,11 +1,10 @@
-import React from "react"
-import type { HistoryItem } from "@roo-code/types"
 import { formatTimeAgo } from "@/utils/format"
-import { CopyButton } from "./CopyButton"
-import { ExportButton } from "./ExportButton"
-import { DeleteButton } from "./DeleteButton"
-import { FavoriteButton } from "../kilocode/history/FavoriteButton" // kilocode_change
+import type { HistoryItem } from "@roo-code/types"
+import React from "react"
 import { StandardTooltip } from "../ui/standard-tooltip"
+import { CopyButton } from "./CopyButton"
+import { DeleteButton } from "./DeleteButton"
+import { ExportButton } from "./ExportButton"
 
 export interface TaskItemFooterProps {
 	item: HistoryItem
@@ -35,7 +34,7 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({ item, variant, isSelect
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-1 items-center text-vscode-descriptionForeground/60 hover:text-vscode-descriptionForeground">
 					<CopyButton itemTask={item.task} />
-					<FavoriteButton isFavorited={item.isFavorited ?? false} id={item.id} />
+					{/* <FavoriteButton isFavorited={item.isFavorited ?? false} id={item.id} /> */}
 					{variant === "full" && <ExportButton itemId={item.id} />}
 					{onDelete && <DeleteButton itemId={item.id} onDelete={onDelete} />}
 				</div>

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "matterai",
-	"version": "4.123.1",
+	"version": "4.200.0",
 	"icon": "assets/icons/matterai-ic.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -273,6 +273,16 @@
 				"command": "axon-code.ghost.goToPreviousSuggestion",
 				"title": "%ghost.commands.goToPreviousSuggestion%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "axon-code.fileEdit.accept",
+				"title": "Accept",
+				"icon": "$(check)"
+			},
+			{
+				"command": "axon-code.fileEdit.reject",
+				"title": "Reject",
+				"icon": "$(close)"
 			}
 		],
 		"menus": {
@@ -405,6 +415,18 @@
 					"command": "axon-code.vsc.generateCommitMessage",
 					"when": "scmProvider == git",
 					"group": "navigation"
+				}
+			],
+			"comments/commentThread/title": [
+				{
+					"command": "axon-code.fileEdit.accept",
+					"group": "inline",
+					"when": "commentController == axon-code.review"
+				},
+				{
+					"command": "axon-code.fileEdit.reject",
+					"group": "inline",
+					"when": "commentController == axon-code.review"
 				}
 			]
 		},

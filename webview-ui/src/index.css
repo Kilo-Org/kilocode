@@ -145,6 +145,8 @@
 	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
 
 	--color-matterai-green: #3affa3;
+	--color-matterai-border: #81838e33;
+	--color-matterai-blue: #1c4b6b;
 }
 
 @layer base {
@@ -408,29 +410,31 @@ vscode-text-field::part(input) {
 /* Context mentions */
 
 .mention-context-textarea-highlight {
-	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-blue) 100%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
-	color: transparent;
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-blue) 100%, transparent);
+	color: white;
 	text-align: center;
 	display: inline-block;
 	padding-bottom: 1px;
-	padding-left: 1px;
-	padding-right: 1px;
-	margin-top: 3px;
+	padding-left: 2px;
+	padding-right: 2px;
+	margin-top: 1px;
 }
 
 .mention-context-highlight {
-	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-blue) 100%, transparent);
 	border-radius: 3px;
+	color: white;
 	text-align: center;
 }
 
 .mention-context-highlight-with-shadow {
-	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-blue) 100%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-blue) 100%, transparent);
 	text-align: center;
+	color: white;
 }
 
 /**

@@ -187,6 +187,7 @@ export interface WebviewMessage {
 		| "checkpointDiff"
 		| "checkpointRestore"
 		| "seeNewChanges" // kilocode_change
+		| "fileEditReviewAcceptAll" // kilocode_change
 		| "deleteMcpServer"
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
@@ -305,6 +306,10 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		// kilocode_change start
+		| "getCommitChanges"
+		| "commitChanges"
+	// kilocode_change end
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -504,6 +509,17 @@ export type InstallMarketplaceItemWithParametersPayload = z.infer<
 	typeof installMarketplaceItemWithParametersPayloadSchema
 >
 
+// kilocode_change start
+export interface GetCommitChangesPayload {
+	commitRange: CommitRange
+}
+export interface CommitChangesPayload {
+	// The response message type
+	commitRange: CommitRange
+	files: { relative: string; absolute: string; stat: { additions: number; deletions: number } }[]
+}
+// kilocode_change end
+
 export type WebViewMessagePayload =
 	// kilocode_change start
 	| ProfileDataResponsePayload
@@ -511,6 +527,8 @@ export type WebViewMessagePayload =
 	| SeeNewChangesPayload
 	| TasksByIdRequestPayload
 	| TaskHistoryRequestPayload
+	| GetCommitChangesPayload
+	| CommitChangesPayload
 	// kilocode_change end
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload
