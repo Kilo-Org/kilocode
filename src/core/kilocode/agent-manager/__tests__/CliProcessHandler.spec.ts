@@ -38,6 +38,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 	onStartSessionFailed: ReturnType<typeof vi.fn>
 	onChatMessages: ReturnType<typeof vi.fn>
 	onSessionCreated: ReturnType<typeof vi.fn>
+	onPaymentRequiredPrompt: ReturnType<typeof vi.fn>
 } {
 	return {
 		onLog: vi.fn(),
@@ -48,6 +49,7 @@ function createMockCallbacks(): CliProcessHandlerCallbacks & {
 		onStartSessionFailed: vi.fn(),
 		onChatMessages: vi.fn(),
 		onSessionCreated: vi.fn(),
+		onPaymentRequiredPrompt: vi.fn(),
 	}
 }
 
@@ -148,6 +150,21 @@ describe("CliProcessHandler", () => {
 					env: expect.objectContaining({
 						NO_COLOR: "1",
 						FORCE_COLOR: "0",
+					}),
+				}),
+			)
+		})
+
+		it("sets KILO_PLATFORM environment variable to agent-manager", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			expect(spawnMock).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.any(Array),
+				expect.objectContaining({
+					env: expect.objectContaining({
+						KILO_PLATFORM: "agent-manager",
 					}),
 				}),
 			)
@@ -301,6 +318,73 @@ describe("CliProcessHandler", () => {
 			mockProcess.stdout.emit("data", Buffer.from('{"streamEventType":"status","message":"Initializing..."}\n'))
 
 			expect(callbacks.onDebugLog).toHaveBeenCalledWith("Pending session status: Initializing...")
+		})
+
+		it("handles payment_required_prompt before session_created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const payEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: {
+					type: "ask",
+					ask: "payment_required_prompt",
+					text: JSON.stringify({ message: "Need billing" }),
+				},
+			})
+			mockProcess.stdout.emit("data", Buffer.from(payEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "payment_required",
+				message: "Need billing",
+				payload: expect.objectContaining({ ask: "payment_required_prompt" }),
+			})
+			expect(callbacks.onPaymentRequiredPrompt).not.toHaveBeenCalled()
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("handles api_req_failed before session_created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const failEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "ask", ask: "api_req_failed", text: "Auth failed" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(failEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "api_req_failed",
+				message: "Auth failed",
+				authError: false,
+				payload: expect.objectContaining({ ask: "api_req_failed" }),
+			})
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("parses api_req_failed payload JSON and marks auth error", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			const failEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: {
+					type: "ask",
+					ask: "api_req_failed",
+					content:
+						'401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_123"}',
+				},
+			})
+			mockProcess.stdout.emit("data", Buffer.from(failEvent + "\n"))
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "api_req_failed",
+				message: "Authentication failed: API request failed.",
+				authError: true,
+				payload: expect.objectContaining({ ask: "api_req_failed" }),
+			})
 		})
 	})
 
@@ -587,6 +671,139 @@ describe("CliProcessHandler", () => {
 					payload: expect.objectContaining({ content: "from session 2" }),
 				}),
 			)
+		})
+	})
+
+	describe("pending session timeout", () => {
+		it("times out pending session after 30 seconds if no session_created event", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			expect(registry.pendingSession).not.toBeNull()
+
+			// Advance time by 30 seconds
+			vi.advanceTimersByTime(30_000)
+
+			// Pending session should be cleared
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onPendingSessionChanged).toHaveBeenLastCalledWith(null)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "Session creation timed out - CLI did not respond",
+			})
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+		})
+
+		it("includes stderr output in timeout error message", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit some stderr output before timeout
+			mockProcess.stderr.emit("data", Buffer.from("Some error output"))
+
+			// Advance time by 30 seconds
+			vi.advanceTimersByTime(30_000)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "Some error output",
+			})
+		})
+
+		it("does not timeout if session_created event arrives in time", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Advance time by 15 seconds (half the timeout)
+			vi.advanceTimersByTime(15_000)
+
+			// Emit session_created event
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			// Advance time past the original timeout
+			vi.advanceTimersByTime(20_000)
+
+			// Session should still exist and not be timed out
+			expect(registry.getSession("session-1")).toBeDefined()
+			expect(registry.getSession("session-1")?.status).toBe("running")
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+		})
+
+		it("clears timeout when process exits before timeout", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Process exits with error before timeout
+			mockProcess.emit("exit", 1, null)
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should only have been called once (from exit, not timeout)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledTimes(1)
+		})
+
+		it("clears timeout when process errors before timeout", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Process errors before timeout
+			mockProcess.emit("error", new Error("spawn ENOENT"))
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should only have been called once (from error, not timeout)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledTimes(1)
+		})
+
+		it("clears timeout when stopAllProcesses is called", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			handler.stopAllProcesses()
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should not have been called (stopAllProcesses doesn't call it)
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("cancelPendingSession", () => {
+		it("cancels a pending session and kills the process", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			expect(registry.pendingSession).not.toBeNull()
+
+			handler.cancelPendingSession()
+
+			expect(registry.pendingSession).toBeNull()
+			expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM")
+			expect(callbacks.onPendingSessionChanged).toHaveBeenLastCalledWith(null)
+			expect(callbacks.onStateChanged).toHaveBeenCalled()
+		})
+
+		it("does nothing when no pending session exists", () => {
+			handler.cancelPendingSession()
+
+			expect(mockProcess.kill).not.toHaveBeenCalled()
+			expect(callbacks.onPendingSessionChanged).not.toHaveBeenCalled()
+		})
+
+		it("clears the timeout when canceling", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			handler.cancelPendingSession()
+
+			// Advance time past the timeout
+			vi.advanceTimersByTime(35_000)
+
+			// onStartSessionFailed should not have been called (cancel doesn't trigger failure)
+			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
 		})
 	})
 

@@ -182,7 +182,17 @@
 		"actions": {
 			"updateInstructions": "Инструкции по Обновлению",
 			"installInstructions": "Инструкции по Установке",
-			"getHelp": "Получить Помощь"
+			"getHelp": "Получить Помощь",
+			"runInTerminal": "Запустить в Терминале",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Обновить Глобально",
+			"updateLocal": "Обновить Локально",
+			"installGlobal": "Установить Глобально",
+			"installLocal": "Установить Локально"
+		},
+		"terminal": {
+			"installMessage": "Выполнение npm install для установки Kilocode CLI. После завершения можешь закрыть этот терминал и попробовать запустить Agent Manager снова.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

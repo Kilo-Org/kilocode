@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Провайдери",
+		"modes": "Режими",
+		"mcp": "MCP сервери",
 		"autoApprove": "Автоматичне затвердження",
 		"browser": "Браузер",
 		"checkpoints": "Контрольні точки",
@@ -102,7 +104,6 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
-		"bedrockProvider": "Amazon Bedrock",
 		"bedrockConfigTitle": "Конфігурація Amazon Bedrock",
 		"bedrockConfigDesc": "Налаштуйте Amazon Bedrock для використання моделей вбудовувань AWS",
 		"bedrockEmbeddingModel": "Модель вбудовувань Bedrock",
@@ -120,6 +121,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Ключ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
+		"openRouterProviderRoutingLabel": "Маршрутизація провайдера OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter направляє запити до найкращих доступних провайдерів для вашої моделі вбудовувань. За замовчуванням запити розподіляються між провідними провайдерами для максимального часу безвідмовної роботи. Однак ви можете вибрати конкретного провайдера для використання цієї моделі.",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -606,7 +609,8 @@
 			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
-			"low": "Низький"
+			"low": "Низький",
+			"xhigh": "Екстра високий"
 		},
 		"verbosity": {
 			"label": "Рівень деталізації виводу",
@@ -1082,7 +1086,11 @@
 		"experimentalParallelToolCalls": "Експериментальні паралельні виклики інструментів",
 		"experimentalParallelToolCallsDesc": "Дозволяє моделі викликати кілька інструментів одночасно для покращення ефективності",
 		"experimentalParallelToolCallsInfo": "Ця функція може покращити швидкість виконання завдань, але може бути нестабільною з деякими моделями",
-		"experimentalParallelToolCallsWarning": "Використовуйте з обережністю: може призвести до неочікуваної поведінки"
+		"experimentalParallelToolCallsWarning": "Використовуйте з обережністю: може призвести до неочікуваної поведінки",
+		"SPEECH_TO_TEXT": {
+			"name": "Мовлення в текст (STT)",
+			"description": "Коли увімкнено, Kilo Code може транскрибувати ваш голос у текст за допомогою моделі Whisper від OpenAI. Натисніть кнопку мікрофона в чаті, щоб почати запис. Потребує встановленого FFmpeg та налаштованого провайдера OpenAI API."
+		}
 	},
 	"promptCaching": {
 		"label": "Вимкнути кешування підказок",
@@ -1122,7 +1130,8 @@
 		"label": "Модель",
 		"searchPlaceholder": "Пошук",
 		"noMatchFound": "Збігів не знайдено",
-		"useCustomModel": "Використовувати власну: {{modelId}}"
+		"useCustomModel": "Використовувати власну: {{modelId}}",
+		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше."
 	},
 	"footer": {
 		"feedback": "Якщо у тебе є питання або відгуки, не соромся відкрити issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> або приєднатися до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilo.ai/discord</discordLink>.",

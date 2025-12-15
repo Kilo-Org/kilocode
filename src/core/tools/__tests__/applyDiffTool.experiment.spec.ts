@@ -15,13 +15,6 @@ vi.mock("../ApplyDiffTool", () => ({
 	},
 }))
 
-// kilocode_change start
-vi.mock("../kilocode/searchAndReplaceTool", () => ({
-	searchAndReplaceTool: vi.fn(),
-}))
-import { searchAndReplaceTool } from "../kilocode/searchAndReplaceTool"
-// kilocode_change end
-
 // Import after mocking to get the mocked version
 import { applyDiffTool as multiApplyDiffTool } from "../MultiApplyDiffTool"
 import { applyDiffTool as applyDiffToolClass } from "../ApplyDiffTool"
@@ -182,7 +175,7 @@ describe("applyDiffTool experiment routing", () => {
 				[EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF]: true,
 			},
 		})
-		;(searchAndReplaceTool as any).mockResolvedValue(undefined)
+		;(applyDiffToolClass.handle as any).mockResolvedValue(undefined)
 
 		await multiApplyDiffTool(
 			mockCline,
@@ -193,13 +186,13 @@ describe("applyDiffTool experiment routing", () => {
 			mockRemoveClosingTag,
 		)
 
-		// When native protocol is enabled, should always use class-based tool
-		expect(searchAndReplaceTool).toHaveBeenCalledWith(
-			mockCline,
-			mockBlock,
-			mockAskApproval,
-			mockHandleError,
-			mockPushToolResult,
-		)
+		// When native protocol is used, should always use class-based tool
+		expect(applyDiffToolClass.handle).toHaveBeenCalledWith(mockCline, mockBlock, {
+			askApproval: mockAskApproval,
+			handleError: mockHandleError,
+			pushToolResult: mockPushToolResult,
+			removeClosingTag: mockRemoveClosingTag,
+			toolProtocol: "native",
+		})
 	})
 })

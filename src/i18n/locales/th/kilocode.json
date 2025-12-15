@@ -112,7 +112,17 @@
 		"actions": {
 			"updateInstructions": "คำแนะนำการอัปเดต",
 			"installInstructions": "คำแนะนำการติดตั้ง",
-			"getHelp": "รับความช่วยเหลือ"
+			"getHelp": "รับความช่วยเหลือ",
+			"runInTerminal": "เรียกใช้ในเทอร์มินัล",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "อัปเดตแบบ Global",
+			"updateLocal": "อัปเดตแบบ Local",
+			"installGlobal": "ติดตั้งแบบ Global",
+			"installLocal": "ติดตั้งแบบ Local"
+		},
+		"terminal": {
+			"installMessage": "กำลังรัน npm install เพื่อติดตั้ง Kilocode CLI เมื่อเสร็จแล้ว คุณสามารถปิดเทอร์มินัลนี้และลองเริ่ม Agent Manager อีกครั้ง",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	},
 	"ghost": {

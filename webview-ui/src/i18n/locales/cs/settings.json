@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Poskytovatelé",
+		"modes": "Režimy",
+		"mcp": "MCP servery",
 		"autoApprove": "Automatické schválení",
 		"browser": "Prohlížeč",
 		"checkpoints": "Kontrolní body",
@@ -104,6 +106,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Klíč API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Zadejte svůj klíč API OpenRouter",
+		"openRouterProviderRoutingLabel": "Směrování poskytovatele OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter směruje požadavky na nejlepší dostupné poskytovatele pro váš model vkládání. Ve výchozím nastavení jsou požadavky vyrovnávány zátěží mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
@@ -597,7 +601,8 @@
 			"minimal": "Minimální (nejrychlejší)",
 			"low": "Nízké",
 			"medium": "Střední",
-			"high": "Vysoké"
+			"high": "Vysoké",
+			"xhigh": "Extra vysoké"
 		},
 		"verbosity": {
 			"label": "Podrobnost výstupu",
@@ -1056,6 +1061,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Paralelní volání nástrojů",
 			"description": "Pokud je povoleno, nativní protokol může provádět více nástrojů v jednom obratu zprávy asistenta."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Převod řeči na text (STT)",
+			"description": "Když je povoleno, Kilo Code může přepsat váš hlas do textu pomocí modelu Whisper od OpenAI. Klikněte na tlačítko mikrofonu v chatu pro zahájení nahrávání. Vyžaduje nainstalovaný FFmpeg a nakonfigurovaného poskytovatele OpenAI API."
 		}
 	},
 	"promptCaching": {
@@ -1096,7 +1105,8 @@
 		"label": "Model",
 		"searchPlaceholder": "Hledat",
 		"noMatchFound": "Nebyla nalezena žádná shoda",
-		"useCustomModel": "Použít vlastní: {{modelId}}"
+		"useCustomModel": "Použít vlastní: {{modelId}}",
+		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později."
 	},
 	"footer": {
 		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>.",

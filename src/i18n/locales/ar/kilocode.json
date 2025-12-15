@@ -186,7 +186,17 @@
 		"actions": {
 			"updateInstructions": "تعليمات التحديث",
 			"installInstructions": "تعليمات التثبيت",
-			"getHelp": "الحصول على المساعدة"
+			"getHelp": "الحصول على المساعدة",
+			"runInTerminal": "تشغيل في الطرفية",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "تحديث عام",
+			"updateLocal": "تحديث محلي",
+			"installGlobal": "تثبيت عام",
+			"installLocal": "تثبيت محلي"
+		},
+		"terminal": {
+			"installMessage": "تشغيل npm install لتثبيت Kilocode CLI. بمجرد الانتهاء، يمكنك إغلاق هذه الطرفية ومحاولة بدء Agent Manager مرة أخرى.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

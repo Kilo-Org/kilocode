@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Czekałeś {{timeout}} sekund na inicjalizację punktu kontrolnego. Jeśli nie potrzebujesz tej funkcji, wyłącz ją w <settingsLink>ustawieniach punktu kontrolnego</settingsLink>.",
 		"init_checkpoint_fail_long_time": "Inicjalizacja punktu kontrolnego trwała ponad {{timeout}} sekund, więc punkty kontrolne zostały wyłączone dla tego zadania. Możesz wyłączyć punkty kontrolne lub wydłużyć czas oczekiwania w <settingsLink>ustawieniach punktu kontrolnego</settingsLink>.",
 		"attempt_completion_tool_failed": "Nie można wykonać attempt_completion, ponieważ poprzednie wywołanie narzędzia nie powiodło się w tym cyklu. Rozwiąż błąd narzędzia przed próbą zakończenia."
+	},
+	"tasks": {
+		"delegated": "Przekazano do podzadania",
+		"delegated_to": "Przekazano do zadania {{childId}}",
+		"delegation_completed": "Podzadanie ukończone, wznowienie zadania nadrzędnego",
+		"awaiting_child": "Oczekiwanie na zadanie podrzędne {{childId}}"
 	}
 }

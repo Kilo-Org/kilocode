@@ -326,5 +326,9 @@
 		"tryAgain": "Coba Lagi",
 		"cancelled": "Autentikasi Dibatalkan",
 		"initiating": "Memulai autentikasi..."
+	},
+	"speechToText": {
+		"startRecording": "Mulai input suara",
+		"stopRecording": "Hentikan input suara"
 	}
 }

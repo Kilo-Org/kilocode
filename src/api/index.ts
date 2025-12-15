@@ -36,7 +36,6 @@ import {
 	GeminiCliHandler,
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
-	MiniMaxAnthropicHandler,
 	SapAiCoreHandler,
 	IntelligentHandler,
 	// kilocode_change end
@@ -51,7 +50,7 @@ import {
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
-	// MiniMaxHandler, // kilocode_change
+	MiniMaxHandler,
 	BasetenHandler,
 } from "./providers"
 // kilocode_change start
@@ -264,7 +263,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "intelligent":
 			return new IntelligentHandler(options)
 		case "minimax":
-			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
+			return new MiniMaxHandler(options)
 		case "baseten":
 			return new BasetenHandler(options)
 		default:

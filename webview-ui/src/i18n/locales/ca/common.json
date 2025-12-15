@@ -119,5 +119,11 @@
 		"wait_checkpoint_long_time": "Has esperat {{timeout}} segons per inicialitzar el punt de control. Si no necessites aquesta funció, desactiva-la a <settingsLink>la configuració del punt de control</settingsLink>.",
 		"init_checkpoint_fail_long_time": "La inicialització del punt de control ha trigat més de {{timeout}} segons, per això els punts de control estan desactivats per a aquesta tasca. Pots desactivar els punts de control o augmentar el temps d'espera a <settingsLink>la configuració del punt de control</settingsLink>.",
 		"attempt_completion_tool_failed": "No es pot executar attempt_completion perquè una crida d'eina anterior ha fallat en aquest torn. Si us plau, resol el problema de l'eina abans d'intentar completar."
+	},
+	"tasks": {
+		"delegated": "Delegat a subtasca",
+		"delegated_to": "Delegat a la tasca {{childId}}",
+		"delegation_completed": "Subtasca completada, reprenent la tasca principal",
+		"awaiting_child": "Esperant la tasca filla {{childId}}"
 	}
 }

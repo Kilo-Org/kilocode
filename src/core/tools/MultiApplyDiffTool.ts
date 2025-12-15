@@ -16,11 +16,7 @@ import { parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffTool as applyDiffToolClass } from "./ApplyDiffTool"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
-import * as vscode from "vscode"
-import { ToolProtocol, isNativeProtocol } from "@roo-code/types"
-import { Package } from "../../shared/package"
-import { getActiveToolUseStyle } from "../../api/providers/kilocode/nativeToolCallHelpers"
-import { searchAndReplaceTool } from "./kilocode/searchAndReplaceTool"
+import { isNativeProtocol } from "@roo-code/types"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 export interface DiffOperation {
@@ -68,7 +64,13 @@ export async function applyDiffTool(
 	// Check if native protocol is enabled - if so, always use single-file class-based tool
 	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info)
 	if (isNativeProtocol(toolProtocol)) {
-		return searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult) // kilocode_change
+		return applyDiffToolClass.handle(cline, block as ToolUse<"apply_diff">, {
+			askApproval,
+			handleError,
+			pushToolResult,
+			removeClosingTag,
+			toolProtocol,
+		})
 	}
 
 	// Check if MULTI_FILE_APPLY_DIFF experiment is enabled

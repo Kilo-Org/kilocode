@@ -112,7 +112,17 @@
 		"actions": {
 			"updateInstructions": "Instrukce k Aktualizaci",
 			"installInstructions": "Instrukce k Instalaci",
-			"getHelp": "Získat Pomoc"
+			"getHelp": "Získat Pomoc",
+			"runInTerminal": "Spustit v Terminálu",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "Aktualizovat Globálně",
+			"updateLocal": "Aktualizovat Lokálně",
+			"installGlobal": "Instalovat Globálně",
+			"installLocal": "Instalovat Lokálně"
+		},
+		"terminal": {
+			"installMessage": "Spouštím npm install pro instalaci Kilocode CLI. Po dokončení můžeš tento terminál zavřít a zkusit Agent Manager spustit znovu.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	},
 	"ghost": {

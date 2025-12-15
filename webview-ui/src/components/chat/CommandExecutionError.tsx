@@ -12,11 +12,11 @@ export const CommandExecutionError = () => {
 	}, [])
 
 	return (
-		<div className="text-sm bg-vscode-editor-background border border-vscode-border rounded-xs p-2">
+		<div className="text-sm bg-vscode-editor-background border border-vscode-border rounded-lg p-3 ml-6">
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center">
 					<i className="codicon codicon-warning mr-1 text-vscode-editorWarning-foreground" />
-					<span className="text-vscode-editorWarning-foreground font-medium">
+					<span className="text-vscode-editorWarning-foreground font-semibold">
 						{t("chat:shellIntegration.title")}
 					</span>
 				</div>

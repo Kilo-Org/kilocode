@@ -20,6 +20,7 @@ interface Dependencies {
 	postChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	postState: () => void
 	postStateEvent: (sessionId: string, payload: StateEventPayload) => void
+	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 }
 
 export class KilocodeEventProcessor {
@@ -31,6 +32,7 @@ export class KilocodeEventProcessor {
 	private readonly postChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	private readonly postState: () => void
 	private readonly postStateEvent: (sessionId: string, payload: StateEventPayload) => void
+	private readonly onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 
 	constructor(deps: Dependencies) {
 		this.processHandler = deps.processHandler
@@ -41,6 +43,7 @@ export class KilocodeEventProcessor {
 		this.postChatMessages = deps.postChatMessages
 		this.postState = deps.postState
 		this.postStateEvent = deps.postStateEvent
+		this.onPaymentRequiredPrompt = deps.onPaymentRequiredPrompt
 	}
 
 	public handle(sessionId: string, event: KilocodeStreamEvent): void {
@@ -85,6 +88,13 @@ export class KilocodeEventProcessor {
 		// Handle ask:completion_result early - it has no text but needs to trigger state event
 		if (payload.type === "ask" && payload.ask === "completion_result") {
 			this.postStateEvent(sessionId, { eventType: "ask_completion_result" })
+			return
+		}
+
+		// Handle resume asks early - they're state signals, not content to display
+		// The state machine transitions to paused/waiting_input, no chat message needed
+		if (payload.type === "ask" && payload.ask === "resume_task") {
+			this.postStateEvent(sessionId, { eventType: "ask_resume_task" })
 			return
 		}
 
@@ -133,6 +143,7 @@ export class KilocodeEventProcessor {
 				return
 			}
 
+			this.onPaymentRequiredPrompt?.(payload)
 			this.processHandler.stopProcess(sessionId)
 			const errorText = message.text || "Paid model requires credits or billing setup."
 			this.registry.updateSessionStatus(sessionId, "error", undefined, errorText)

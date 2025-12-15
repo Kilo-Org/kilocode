@@ -6,7 +6,8 @@
 		"imageTooLarge": "El fitxer d'imatge és massa gran ({{size}} MB). La mida màxima permesa és {{max}} MB.",
 		"imageWithSize": "Fitxer d'imatge ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "El model sembla estar atrapat en un bucle, intentant la mateixa acció ({{toolName}}) repetidament. Això podria indicar un problema amb la seva estratègia actual. Considera reformular la tasca, proporcionar instruccions més específiques o guiar-lo cap a un enfocament diferent.",
+	"toolRepetitionLimitReached": "Kilo sembla estar atrapat en un bucle, intentant la mateixa acció ({{toolName}}) repetidament. Això podria indicar un problema amb la seva estratègia actual. Considera reformular la tasca, proporcionar instruccions més específiques o guiar-lo cap a un enfocament diferent.",
+	"unknownToolError": "Kilo ha intentat utilitzar una eina desconeguda: \"{{toolName}}\". Reintentant...",
 	"codebaseSearch": {
 		"approval": "Cercant '{{query}}' a la base de codi..."
 	},

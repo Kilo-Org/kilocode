@@ -23,6 +23,7 @@
 		"learnMore": "pelajari lebih lanjut",
 		"useAnotherProvider": "Gunakan penyedia lain",
 		"useAnotherProviderDescription": "Masukkan kunci API dan mulai.",
+		"noApiKeys": "Tidak ingin menangani kunci? Pilih Penyedia Roo Code Cloud.",
 		"getStarted": "Mulai"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "Jika kamu tidak diminta untuk membuka URL, <clickHere>klik di sini</clickHere>.",
 		"havingTrouble": "Jika kamu telah menyelesaikan pendaftaran tetapi mengalami masalah, <clickHere>klik di sini</clickHere>.",
 		"pasteUrl": "Tempel URL callback dari browser Anda:",
+		"invalidURL": "Itu tidak terlihat seperti URL callback yang valid. Salin apa yang ditampilkan Roo Code Cloud di browser Anda.",
 		"goBack": "Kembali"
 	},
 	"startRouter": "Kami merekomendasikan menggunakan Router LLM:",

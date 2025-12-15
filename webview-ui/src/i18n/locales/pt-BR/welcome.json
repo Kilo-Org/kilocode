@@ -23,6 +23,7 @@
 		"learnMore": "saiba mais",
 		"useAnotherProvider": "Usar outro provedor",
 		"useAnotherProviderDescription": "Digite uma chave API e comece.",
+		"noApiKeys": "Não quer lidar com chaves? Escolha o Provedor Roo Code Cloud.",
 		"getStarted": "Começar"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "Se você não for solicitado a abrir uma URL, <clickHere>clique aqui</clickHere>.",
 		"havingTrouble": "Se você completou o registro mas está tendo problemas, <clickHere>clique aqui</clickHere>.",
 		"pasteUrl": "Cole a URL de callback do seu navegador:",
+		"invalidURL": "Isso não parece uma URL de callback válida. Copie o que o Roo Code Cloud está mostrando no seu navegador.",
 		"goBack": "Voltar"
 	},
 	"startRouter": "Recomendamos usar um roteador LLM:",

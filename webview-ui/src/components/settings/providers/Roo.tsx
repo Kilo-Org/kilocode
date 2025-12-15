@@ -15,6 +15,7 @@ type RooProps = {
 	cloudIsAuthenticated: boolean
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 export const Roo = ({
@@ -24,6 +25,7 @@ export const Roo = ({
 	cloudIsAuthenticated,
 	organizationAllowList,
 	modelValidationError,
+	simplifySettings,
 }: RooProps) => {
 	const { t } = useAppTranslation()
 
@@ -55,6 +57,7 @@ export const Roo = ({
 				serviceUrl="https://roocode.com"
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

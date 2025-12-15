@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Fornitori",
+		"modes": "Modalità",
+		"mcp": "Server MCP",
 		"autoApprove": "Auto-approvazione",
 		"browser": "Accesso computer",
 		"checkpoints": "Punti di controllo",
@@ -87,6 +89,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Chiave API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Inserisci la tua chiave API OpenRouter",
+		"openRouterProviderRoutingLabel": "Routing dei fornitori OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter indirizza le richieste ai migliori fornitori disponibili per il tuo modello di embedding. Per impostazione predefinita, le richieste sono bilanciate tra i principali fornitori per massimizzare il tempo di attività. Tuttavia, puoi scegliere un fornitore specifico da utilizzare per questo modello.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Chiave API:",
 		"mistralApiKeyPlaceholder": "Inserisci la tua chiave API Mistral",
@@ -580,7 +584,8 @@
 			"minimal": "Minimo (più veloce)",
 			"high": "Alto",
 			"medium": "Medio",
-			"low": "Basso"
+			"low": "Basso",
+			"xhigh": "Extra Alto"
 		},
 		"verbosity": {
 			"label": "Verbosity dell'output",
@@ -978,6 +983,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Chiamate parallele agli strumenti",
 			"description": "Quando abilitato, il protocollo nativo può eseguire più strumenti in un singolo turno di messaggio dell'assistente."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Riconoscimento vocale (STT)",
+			"description": "Quando abilitato, Kilo Code può trascrivere la tua voce in testo utilizzando il modello Whisper di OpenAI. Clicca il pulsante del microfono nella chat per iniziare la registrazione. Richiede l'installazione di FFmpeg e un provider API OpenAI configurato."
 		}
 	},
 	"promptCaching": {
@@ -1016,7 +1025,8 @@
 		"label": "Modello",
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "Nessuna corrispondenza trovata",
-		"useCustomModel": "Usa personalizzato: {{modelId}}"
+		"useCustomModel": "Usa personalizzato: {{modelId}}",
+		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito."
 	},
 	"footer": {
 		"feedback": "Se hai domande o feedback, sentiti libero di aprire un issue su <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",

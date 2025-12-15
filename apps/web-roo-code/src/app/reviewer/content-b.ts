@@ -32,8 +32,9 @@ export const content: AgentPageContent = {
 			],
 		},
 		cta: {
-			buttonText: "Start 14-day Free Trial",
-			disclaimer: "(cancel anytime)",
+			buttonText: "Try now for free",
+			disclaimer: "",
+			tracking: "&agent=reviewer",
 		},
 	},
 	howItWorks: {
@@ -87,6 +88,6 @@ export const content: AgentPageContent = {
 	cta: {
 		heading: "Ready for better code reviews?",
 		description: "Start finding the issues that matter with AI-powered reviews built for depth, not cost-cutting.",
-		buttonText: "Start 14-day Free Trial",
+		buttonText: "Try now for free",
 	},
 }

@@ -104,7 +104,7 @@
 	},
 	"agentManager": {
 		"errors": {
-			"cliOutdated": "你的 Kilocode CLI 版本已过时,不支持 Agent Manager。请更新到最新版本。",
+			"cliOutdated": "你的 Kilocode CLI 版本已过时，不支持 Agent Manager。请更新到最新版本。",
 			"cliNotFound": "未找到 Kilocode CLI。请安装以使用 Agent Manager。",
 			"sessionFailed": "启动代理会话失败",
 			"sessionFailedWithMessage": "启动代理会话失败: {{message}}"
@@ -112,7 +112,17 @@
 		"actions": {
 			"updateInstructions": "更新说明",
 			"installInstructions": "安装说明",
-			"getHelp": "获取帮助"
+			"getHelp": "获取帮助",
+			"runInTerminal": "运行命令",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "全局更新",
+			"updateLocal": "本地更新",
+			"installGlobal": "全局安装",
+			"installLocal": "本地安装"
+		},
+		"terminal": {
+			"installMessage": "运行 npm install 安装 Kilocode CLI。完成后可关闭此终端，然后重新启动 Agent Manager。",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	},
 	"ghost": {

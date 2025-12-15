@@ -10,6 +10,7 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
 	private readonly model: GhostModel
@@ -39,12 +40,14 @@ export class GhostServiceManager {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
+		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
+			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
 		)
 
 		void this.load()

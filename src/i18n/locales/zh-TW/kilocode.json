@@ -182,7 +182,17 @@
 		"actions": {
 			"updateInstructions": "更新說明",
 			"installInstructions": "安裝說明",
-			"getHelp": "取得協助"
+			"getHelp": "取得協助",
+			"runInTerminal": "在終端機執行",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "更新全域",
+			"updateLocal": "更新本地",
+			"installGlobal": "安裝全域",
+			"installLocal": "安裝本地"
+		},
+		"terminal": {
+			"installMessage": "執行 npm install 以安裝 Kilocode CLI。完成後，您可以關閉此終端機並嘗試再次啟動 Agent Manager。",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "ผู้ให้บริการ",
+		"modes": "โหมด",
+		"mcp": "เซิร์ฟเวอร์ MCP",
 		"autoApprove": "อนุมัติอัตโนมัติ",
 		"browser": "เบราว์เซอร์",
 		"checkpoints": "จุดตรวจสอบ",
@@ -119,6 +121,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "คีย์ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "ป้อนคีย์ API OpenRouter ของคุณ",
+		"openRouterProviderRoutingLabel": "การกำหนดเส้นทางผู้ให้บริการ OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter กำหนดเส้นทางคำขอไปยังผู้ให้บริการที่ดีที่สุดสำหรับโมเดล embedding ของคุณ โดยค่าเริ่มต้น คำขอจะถูกกระจายโหลดไปยังผู้ให้บริการชั้นนำเพื่อเพิ่มเวลาทำงานสูงสุด อย่างไรก็ตาม คุณสามารถเลือกผู้ให้บริการเฉพาะสำหรับโมเดลนี้ได้",
 		"openaiCompatibleProvider": "เข้ากันได้กับ OpenAI",
 		"openAiKeyLabel": "คีย์ API OpenAI",
 		"openAiKeyPlaceholder": "ป้อนคีย์ API OpenAI ของคุณ",
@@ -565,7 +569,8 @@
 			"minimal": "น้อยที่สุด (เร็วที่สุด)",
 			"low": "ต่ำ",
 			"medium": "ปานกลาง",
-			"high": "สูง"
+			"high": "สูง",
+			"xhigh": "สูงพิเศษ"
 		},
 		"verbosity": {
 			"label": "ระดับความละเอียดของผลลัพธ์",
@@ -1067,6 +1072,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "การเรียกใช้เครื่องมือแบบขนาน",
 			"description": "เมื่อเปิดใช้งาน โปรโตคอล native สามารถดำเนินการเครื่องมือหลายรายการในข้อความของผู้ช่วยเดียว"
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "การแปลงเสียงพูดเป็นข้อความ (STT)",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแปลงเสียงของคุณเป็นข้อความได้โดยใช้โมเดล Whisper ของ OpenAI คลิกปุ่มไมโครโฟนในแชทเพื่อเริ่มบันทึกเสียง ต้องติดตั้ง FFmpeg และกำหนดค่าผู้ให้บริการ OpenAI API แล้ว"
 		}
 	},
 	"promptCaching": {
@@ -1107,7 +1116,8 @@
 		"label": "โมเดล",
 		"searchPlaceholder": "ค้นหา",
 		"noMatchFound": "ไม่พบรายการที่ตรงกัน",
-		"useCustomModel": "ใช้แบบกำหนดเอง: {{modelId}}"
+		"useCustomModel": "ใช้แบบกำหนดเอง: {{modelId}}",
+		"simplifiedExplanation": "คุณสามารถปรับการตั้งค่าโมเดลโดยละเอียดได้ภายหลัง"
 	},
 	"footer": {
 		"feedback": "หากคุณมีคำถามหรือข้อเสนอแนะ โปรดเปิด issue ที่ <githubLink>github.com/Kilo-Org/kilocode</githubLink> หรือเข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>kilo.ai/discord</discordLink>",

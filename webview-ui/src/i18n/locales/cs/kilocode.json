@@ -325,5 +325,9 @@
 		"tryAgain": "Zkusit znovu",
 		"cancelled": "Ověření zrušeno",
 		"initiating": "Spouštění ověření..."
+	},
+	"speechToText": {
+		"startRecording": "Spustit hlasový vstup",
+		"stopRecording": "Zastavit hlasový vstup"
 	}
 }

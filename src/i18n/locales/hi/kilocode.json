@@ -112,7 +112,17 @@
 		"actions": {
 			"updateInstructions": "अपडेट निर्देश",
 			"installInstructions": "इंस्टॉल निर्देश",
-			"getHelp": "सहायता प्राप्त करें"
+			"getHelp": "सहायता प्राप्त करें",
+			"runInTerminal": "टर्मिनल में चलाएं",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "ग्लोबल अपडेट करें",
+			"updateLocal": "लोकल अपडेट करें",
+			"installGlobal": "ग्लोबल इंस्टॉल करें",
+			"installLocal": "लोकल इंस्टॉल करें"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI इंस्टॉल करने के लिए npm install चल रहा है। पूर्ण होने के बाद, आप यह टर्मिनल बंद कर सकते हैं और Agent Manager को फिर से शुरू करने का प्रयास कर सकते हैं।",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	},
 	"ghost": {

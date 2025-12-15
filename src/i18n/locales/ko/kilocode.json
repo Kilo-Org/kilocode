@@ -182,7 +182,17 @@
 		"actions": {
 			"updateInstructions": "업데이트 지침",
 			"installInstructions": "설치 지침",
-			"getHelp": "도움말 보기"
+			"getHelp": "도움말 보기",
+			"runInTerminal": "터미널에서 실행",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "전역 업데이트",
+			"updateLocal": "로컬 업데이트",
+			"installGlobal": "전역 설치",
+			"installLocal": "로컬 설치"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI를 설치하기 위해 npm install을 실행합니다. 완료되면 이 터미널을 닫고 Agent Manager를 다시 시작해 보세요.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

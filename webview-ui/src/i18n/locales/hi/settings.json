@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "प्रदाता",
+		"modes": "मोड",
+		"mcp": "एमसीपी सर्वर",
 		"autoApprove": "अनुमोदन",
 		"browser": "ब्राउज़र",
 		"checkpoints": "चेकपॉइंट",
@@ -86,6 +88,8 @@
 		"openRouterProvider": "ओपनराउटर",
 		"openRouterApiKeyLabel": "ओपनराउटर एपीआई कुंजी",
 		"openRouterApiKeyPlaceholder": "अपनी ओपनराउटर एपीआई कुंजी दर्ज करें",
+		"openRouterProviderRoutingLabel": "OpenRouter प्रदाता रूटिंग",
+		"openRouterProviderRoutingDescription": "OpenRouter आपके एम्बेडिंग मॉडल के लिए सर्वोत्तम उपलब्ध प्रदाताओं को अनुरोध भेजता है। डिफ़ॉल्ट रूप से, अपटाइम को अधिकतम करने के लिए अनुरोधों को शीर्ष प्रदाताओं के बीच संतुलित किया जाता है। हालांकि, आप इस मॉडल के लिए उपयोग करने के लिए एक विशिष्ट प्रदाता चुन सकते हैं।",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
@@ -192,7 +196,6 @@
 		"write": {
 			"label": "लिखें",
 			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से फाइलें बनाएँ और संपादित करें",
-			"delayLabel": "लिखने के बाद विलंब ताकि डायग्नोस्टिक संभावित समस्याओं का पता लगा सकें",
 			"delayLabel": "लिखने के बाद विलंब ताकि डायग्नोस्टिक संभावित समस्याओं का पता लगा सकें",
 			"outsideWorkspace": {
 				"label": "वर्कस्पेस के बाहर की फाइलें शामिल करें",
@@ -571,7 +574,8 @@
 			"minimal": "न्यूनतम (सबसे तेज़)",
 			"high": "उच्च",
 			"medium": "मध्यम",
-			"low": "निम्न"
+			"low": "निम्न",
+			"xhigh": "अत्यंत उच्च"
 		},
 		"verbosity": {
 			"label": "आउटपुट वर्बोसिटी",
@@ -978,6 +982,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "समानांतर टूल कॉल",
 			"description": "सक्षम होने पर, नेटिव प्रोटोकॉल एकल सहायक संदेश टर्न में एकाधिक टूल निष्पादित कर सकता है।"
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "वाक्-से-पाठ (STT)",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code OpenAI के Whisper मॉडल का उपयोग करके आपकी आवाज़ को टेक्स्ट में बदल सकता है। रिकॉर्डिंग शुरू करने के लिए चैट में माइक्रोफ़ोन बटन पर क्लिक करें। इसके लिए FFmpeg इंस्टॉल होना और एक कॉन्फ़िगर किया गया OpenAI API प्रोवाइडर होना आवश्यक है।"
 		}
 	},
 	"promptCaching": {
@@ -1016,7 +1024,8 @@
 		"label": "मॉडल",
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
-		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}"
+		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",

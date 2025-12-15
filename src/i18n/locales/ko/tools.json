@@ -6,7 +6,8 @@
 		"imageTooLarge": "이미지 파일이 너무 큽니다 ({{size}} MB). 최대 허용 크기는 {{max}} MB입니다.",
 		"imageWithSize": "이미지 파일 ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "모델이 같은 동작({{toolName}})을 반복적으로 시도하면서 루프에 갇힌 것 같습니다. 이는 현재 전략에 문제가 있을 수 있음을 나타냅니다. 작업을 다시 표현하거나, 더 구체적인 지침을 제공하거나, 다른 접근 방식으로 안내해 보세요.",
+	"toolRepetitionLimitReached": "Kilo가 같은 동작({{toolName}})을 반복적으로 시도하면서 루프에 갇힌 것 같습니다. 이는 현재 전략에 문제가 있을 수 있음을 나타냅니다. 작업을 다시 표현하거나, 더 구체적인 지침을 제공하거나, 다른 접근 방식으로 안내해 보세요.",
+	"unknownToolError": "Kilo가 알 수 없는 도구를 사용하려고 했습니다: \"{{toolName}}\". 다시 시도 중...",
 	"codebaseSearch": {
 		"approval": "코드베이스에서 '{{query}}' 검색 중..."
 	},

@@ -36,6 +36,7 @@
 		"learnMore": "เรียนรู้เพิ่มเติม",
 		"useAnotherProvider": "ใช้ผู้ให้บริการอื่น",
 		"useAnotherProviderDescription": "ป้อน API key และเริ่มใช้งาน",
+		"noApiKeys": "ไม่ต้องการจัดการกับ key หรือไม่? ใช้ Roo Code Cloud Provider",
 		"getStarted": "เริ่มต้นใช้งาน"
 	},
 	"waitingForCloud": {
@@ -44,6 +45,7 @@
 		"noPrompt": "หากคุณไม่ได้รับการแจ้งให้เปิด URL <clickHere>คลิกที่นี่</clickHere>",
 		"havingTrouble": "หากคุณดำเนินการสมัครสมาชิกเสร็จสิ้นแล้วแต่มีปัญหา <clickHere>คลิกที่นี่</clickHere>",
 		"pasteUrl": "วาง URL callback จากเบราว์เซอร์ของคุณ:",
+		"invalidURL": "นี่ดูไม่เหมือน callback URL ที่ถูกต้อง โปรดคัดลอกสิ่งที่ Roo Code Cloud แสดงในเบราว์เซอร์ของคุณ",
 		"goBack": "ย้อนกลับ"
 	},
 	"startRouter": "เราแนะนำให้ใช้ LLM Router:",

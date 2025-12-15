@@ -42,7 +42,6 @@ type ApproveActionEvent = { type: "approve_action" }
 type RejectActionEvent = { type: "reject_action" }
 type SendMessageEvent = { type: "send_message"; content: string }
 type CancelSessionEvent = { type: "cancel_session" }
-type ResumeSessionEvent = { type: "resume_session" }
 type RetryEvent = { type: "retry" }
 
 export type SessionEvent =
@@ -66,7 +65,6 @@ export type SessionEvent =
 	| RejectActionEvent
 	| SendMessageEvent
 	| CancelSessionEvent
-	| ResumeSessionEvent
 	| RetryEvent
 
 // ============ Context ============
@@ -195,10 +193,30 @@ function transition(currentState: SessionState, event: SessionEvent, context: Se
 }
 
 function transitionFromIdle(event: SessionEvent): TransitionResult {
-	if (event.type === "start_session") {
-		return { nextState: SessionState.creating }
+	switch (event.type) {
+		case "start_session":
+			return { nextState: SessionState.creating }
+
+		// Allow direct transition to streaming if we receive events that indicate
+		// the session is already running (e.g., multi-version mode, or missed start_session)
+		case "session_created":
+			return {
+				nextState: SessionState.streaming,
+				contextUpdate: {
+					sawSessionCreated: true,
+					sessionId: (event as SessionCreatedEvent).sessionId,
+				},
+			}
+
+		case "api_req_started":
+			return {
+				nextState: SessionState.streaming,
+				contextUpdate: { sawApiReqStarted: true },
+			}
+
+		default:
+			return { nextState: SessionState.idle }
 	}
-	return { nextState: SessionState.idle }
 }
 
 function transitionFromCreating(event: SessionEvent, context: SessionContext): TransitionResult {
@@ -341,9 +359,6 @@ function transitionFromPaused(event: SessionEvent): TransitionResult {
 		case "api_req_started":
 			return { nextState: SessionState.streaming }
 
-		case "resume_session":
-			return { nextState: SessionState.streaming }
-
 		case "cancel_session":
 			return { nextState: SessionState.stopped }
 
@@ -371,9 +386,6 @@ function transitionFromError(event: SessionEvent): TransitionResult {
 function transitionFromStopped(event: SessionEvent): TransitionResult {
 	switch (event.type) {
 		case "api_req_started":
-			return { nextState: SessionState.streaming }
-
-		case "resume_session":
 			return { nextState: SessionState.streaming }
 
 		case "start_session": // New task

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useForm, FormProvider } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { X, Rocket, Check, ChevronsUpDown, SlidersHorizontal } from "lucide-react"
+import { X, Rocket, Check, ChevronsUpDown, SlidersHorizontal, Info, Plus, Minus } from "lucide-react"
 
 import {
 	globalSettingsSchema,
@@ -30,6 +30,9 @@ import {
 	TIMEOUT_MIN,
 	TIMEOUT_MAX,
 	TIMEOUT_DEFAULT,
+	ITERATIONS_MIN,
+	ITERATIONS_MAX,
+	ITERATIONS_DEFAULT,
 } from "@/lib/schemas"
 import { cn } from "@/lib/utils"
 
@@ -61,7 +64,9 @@ import {
 	PopoverTrigger,
 	Slider,
 	Label,
-	FormDescription,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@/components/ui"
 
 import { SettingsDiff } from "./settings-diff"
@@ -72,17 +77,38 @@ type ImportedSettings = {
 	currentApiConfigName: string
 }
 
+// Type for a model selection entry
+type ModelSelection = {
+	id: string
+	model: string
+	popoverOpen: boolean
+}
+
+// Type for a config selection entry (for import mode)
+type ConfigSelection = {
+	id: string
+	configName: string
+	popoverOpen: boolean
+}
+
 export function NewRun() {
 	const router = useRouter()
 
-	const [provider, setModelSource] = useState<"roo" | "openrouter" | "other">("roo")
-	const [modelPopoverOpen, setModelPopoverOpen] = useState(false)
+	const [provider, setModelSource] = useState<"roo" | "openrouter" | "other">("other")
 	const [useNativeToolProtocol, setUseNativeToolProtocol] = useState(true)
+	const [commandExecutionTimeout, setCommandExecutionTimeout] = useState(20)
+	const [terminalShellIntegrationTimeout, setTerminalShellIntegrationTimeout] = useState(30) // seconds
 
-	// State for imported settings with config selection
+	// State for multiple model selections
+	const [modelSelections, setModelSelections] = useState<ModelSelection[]>([
+		{ id: crypto.randomUUID(), model: "", popoverOpen: false },
+	])
+
+	// State for imported settings with multiple config selections
 	const [importedSettings, setImportedSettings] = useState<ImportedSettings | null>(null)
-	const [selectedConfigName, setSelectedConfigName] = useState<string>("")
-	const [configPopoverOpen, setConfigPopoverOpen] = useState(false)
+	const [configSelections, setConfigSelections] = useState<ConfigSelection[]>([
+		{ id: crypto.randomUUID(), configName: "", popoverOpen: false },
+	])
 
 	const openRouter = useOpenRouterModels()
 	const rooCodeCloud = useRooCodeCloudModels()
@@ -106,6 +132,7 @@ export function NewRun() {
 			settings: undefined,
 			concurrency: CONCURRENCY_DEFAULT,
 			timeout: TIMEOUT_DEFAULT,
+			iterations: ITERATIONS_DEFAULT,
 			jobToken: "",
 		},
 	})
@@ -117,9 +144,9 @@ export function NewRun() {
 		formState: { isSubmitting },
 	} = form
 
-	const [model, suite, settings] = watch(["model", "suite", "settings", "concurrency"])
+	const [suite, settings] = watch(["suite", "settings", "concurrency"])
 
-	// Load concurrency and timeout from localStorage on mount
+	// Load settings from localStorage on mount
 	useEffect(() => {
 		const savedConcurrency = localStorage.getItem("evals-concurrency")
 		if (savedConcurrency) {
@@ -133,6 +160,37 @@ export function NewRun() {
 			const parsed = parseInt(savedTimeout, 10)
 			if (!isNaN(parsed) && parsed >= TIMEOUT_MIN && parsed <= TIMEOUT_MAX) {
 				setValue("timeout", parsed)
+			}
+		}
+		const savedCommandTimeout = localStorage.getItem("evals-command-execution-timeout")
+		if (savedCommandTimeout) {
+			const parsed = parseInt(savedCommandTimeout, 10)
+			if (!isNaN(parsed) && parsed >= 20 && parsed <= 60) {
+				setCommandExecutionTimeout(parsed)
+			}
+		}
+		const savedShellTimeout = localStorage.getItem("evals-shell-integration-timeout")
+		if (savedShellTimeout) {
+			const parsed = parseInt(savedShellTimeout, 10)
+			if (!isNaN(parsed) && parsed >= 30 && parsed <= 60) {
+				setTerminalShellIntegrationTimeout(parsed)
+			}
+		}
+		// Load saved exercises selection
+		const savedSuite = localStorage.getItem("evals-suite")
+		if (savedSuite === "partial") {
+			setValue("suite", "partial")
+			const savedExercises = localStorage.getItem("evals-exercises")
+			if (savedExercises) {
+				try {
+					const parsed = JSON.parse(savedExercises) as string[]
+					if (Array.isArray(parsed)) {
+						setSelectedExercises(parsed)
+						setValue("exercises", parsed)
+					}
+				} catch {
+					// Invalid JSON, ignore
+				}
 			}
 		}
 	}, [setValue])
@@ -178,6 +236,7 @@ export function NewRun() {
 
 			setSelectedExercises(newSelected)
 			setValue("exercises", newSelected)
+			localStorage.setItem("evals-exercises", JSON.stringify(newSelected))
 		},
 		[getExercisesForLanguage, selectedExercises, setValue],
 	)
@@ -201,40 +260,165 @@ export function NewRun() {
 		[getExercisesForLanguage, selectedExercises],
 	)
 
+	// Add a new model selection
+	const addModelSelection = useCallback(() => {
+		setModelSelections((prev) => [...prev, { id: crypto.randomUUID(), model: "", popoverOpen: false }])
+	}, [])
+
+	// Remove a model selection
+	const removeModelSelection = useCallback((id: string) => {
+		setModelSelections((prev) => prev.filter((s) => s.id !== id))
+	}, [])
+
+	// Update a model selection
+	const updateModelSelection = useCallback(
+		(id: string, model: string) => {
+			setModelSelections((prev) => prev.map((s) => (s.id === id ? { ...s, model, popoverOpen: false } : s)))
+			// Also set the form model field for validation (use first non-empty model)
+			setValue("model", model)
+		},
+		[setValue],
+	)
+
+	// Toggle popover for a model selection
+	const toggleModelPopover = useCallback((id: string, open: boolean) => {
+		setModelSelections((prev) => prev.map((s) => (s.id === id ? { ...s, popoverOpen: open } : s)))
+	}, [])
+
+	// Add a new config selection
+	const addConfigSelection = useCallback(() => {
+		setConfigSelections((prev) => [...prev, { id: crypto.randomUUID(), configName: "", popoverOpen: false }])
+	}, [])
+
+	// Remove a config selection
+	const removeConfigSelection = useCallback((id: string) => {
+		setConfigSelections((prev) => prev.filter((s) => s.id !== id))
+	}, [])
+
+	// Update a config selection
+	const updateConfigSelection = useCallback(
+		(id: string, configName: string) => {
+			setConfigSelections((prev) => prev.map((s) => (s.id === id ? { ...s, configName, popoverOpen: false } : s)))
+			// Also update the form settings for the first config (for validation)
+			if (importedSettings) {
+				const providerSettings = importedSettings.apiConfigs[configName] ?? {}
+				setValue("model", getModelId(providerSettings) ?? "")
+				setValue("settings", { ...EVALS_SETTINGS, ...providerSettings, ...importedSettings.globalSettings })
+			}
+		},
+		[importedSettings, setValue],
+	)
+
+	// Toggle popover for a config selection
+	const toggleConfigPopover = useCallback((id: string, open: boolean) => {
+		setConfigSelections((prev) => prev.map((s) => (s.id === id ? { ...s, popoverOpen: open } : s)))
+	}, [])
+
 	const onSubmit = useCallback(
 		async (values: CreateRun) => {
 			try {
-				if (provider === "openrouter") {
-					values.settings = {
-						...(values.settings || {}),
-						apiProvider: "openrouter",
-						openRouterModelId: model,
-						toolStyle: useNativeToolProtocol ? "json" : "xml", // kilocode_change
+				// Validate jobToken for Roo Code Cloud provider
+				if (provider === "roo" && !values.jobToken?.trim()) {
+					toast.error("Roo Code Cloud Token is required")
+					return
+				}
+
+				// Determine which selections to use based on provider
+				const selectionsToLaunch: { model: string; configName?: string }[] = []
+
+				if (provider === "other") {
+					// For import mode, use config selections
+					for (const config of configSelections) {
+						if (config.configName) {
+							selectionsToLaunch.push({ model: "", configName: config.configName })
+						}
 					}
-				} else if (provider === "roo") {
-					values.settings = {
-						...(values.settings || {}),
-						apiProvider: "roo",
-						apiModelId: model,
-						toolStyle: useNativeToolProtocol ? "json" : "xml", // kilocode_change
+				} else {
+					// For openrouter/roo, use model selections
+					for (const selection of modelSelections) {
+						if (selection.model) {
+							selectionsToLaunch.push({ model: selection.model })
+						}
 					}
 				}
 
-				const { id } = await createRun(values)
-				router.push(`/runs/${id}`)
+				if (selectionsToLaunch.length === 0) {
+					toast.error("Please select at least one model or config")
+					return
+				}
+
+				// Show launching toast
+				const totalRuns = selectionsToLaunch.length
+				toast.info(totalRuns > 1 ? `Launching ${totalRuns} runs (every 20 seconds)...` : "Launching run...")
+
+				// Launch runs with 20-second delay between each
+				for (let i = 0; i < selectionsToLaunch.length; i++) {
+					const selection = selectionsToLaunch[i]!
+
+					// Wait 20 seconds between runs (except for the first one)
+					if (i > 0) {
+						await new Promise((resolve) => setTimeout(resolve, 20000))
+					}
+
+					const runValues = { ...values }
+
+					if (provider === "openrouter") {
+						runValues.model = selection.model
+						runValues.settings = {
+							...(runValues.settings || {}),
+							apiProvider: "openrouter",
+							openRouterModelId: selection.model,
+							toolProtocol: useNativeToolProtocol ? "native" : "xml",
+							commandExecutionTimeout,
+							terminalShellIntegrationTimeout: terminalShellIntegrationTimeout * 1000,
+						}
+					} else if (provider === "roo") {
+						runValues.model = selection.model
+						runValues.settings = {
+							...(runValues.settings || {}),
+							apiProvider: "roo",
+							apiModelId: selection.model,
+							toolProtocol: useNativeToolProtocol ? "native" : "xml",
+							commandExecutionTimeout,
+							terminalShellIntegrationTimeout: terminalShellIntegrationTimeout * 1000,
+						}
+					} else if (provider === "other" && selection.configName && importedSettings) {
+						const providerSettings = importedSettings.apiConfigs[selection.configName] ?? {}
+						runValues.model = getModelId(providerSettings) ?? ""
+						runValues.settings = {
+							...EVALS_SETTINGS,
+							...providerSettings,
+							...importedSettings.globalSettings,
+							toolProtocol: useNativeToolProtocol ? "native" : "xml",
+							commandExecutionTimeout,
+							terminalShellIntegrationTimeout: terminalShellIntegrationTimeout * 1000,
+						}
+					}
+
+					try {
+						await createRun(runValues)
+						toast.success(`Run ${i + 1}/${totalRuns} launched`)
+					} catch (e) {
+						toast.error(`Run ${i + 1} failed: ${e instanceof Error ? e.message : "Unknown error"}`)
+					}
+				}
+
+				// Navigate back to main evals UI
+				router.push("/")
 			} catch (e) {
 				toast.error(e instanceof Error ? e.message : "An unknown error occurred.")
 			}
 		},
-		[provider, model, router, useNativeToolProtocol],
-	)
-
-	const onSelectModel = useCallback(
-		(model: string) => {
-			setValue("model", model)
-			setModelPopoverOpen(false)
-		},
-		[setValue, setModelPopoverOpen],
+		[
+			provider,
+			modelSelections,
+			configSelections,
+			importedSettings,
+			router,
+			useNativeToolProtocol,
+			commandExecutionTimeout,
+			terminalShellIntegrationTimeout,
+		],
 	)
 
 	const onImportSettings = useCallback(
@@ -265,9 +449,9 @@ export function NewRun() {
 					currentApiConfigName: providerProfiles.currentApiConfigName,
 				})
 
-				// Default to the current config
+				// Default to the current config for the first selection
 				const defaultConfigName = providerProfiles.currentApiConfigName
-				setSelectedConfigName(defaultConfigName)
+				setConfigSelections([{ id: crypto.randomUUID(), configName: defaultConfigName, popoverOpen: false }])
 
 				// Apply the default config
 				const providerSettings = providerProfiles.apiConfigs[defaultConfigName] ?? {}
@@ -281,22 +465,6 @@ export function NewRun() {
 			}
 		},
 		[clearErrors, setValue],
-	)
-
-	const onSelectConfig = useCallback(
-		(configName: string) => {
-			if (!importedSettings) {
-				return
-			}
-
-			setSelectedConfigName(configName)
-			setConfigPopoverOpen(false)
-
-			const providerSettings = importedSettings.apiConfigs[configName] ?? {}
-			setValue("model", getModelId(providerSettings) ?? "")
-			setValue("settings", { ...EVALS_SETTINGS, ...providerSettings, ...importedSettings.globalSettings })
-		},
-		[importedSettings, setValue],
 	)
 
 	return (
@@ -314,9 +482,9 @@ export function NewRun() {
 									value={provider}
 									onValueChange={(value) => setModelSource(value as "roo" | "openrouter" | "other")}>
 									<TabsList className="mb-2">
+										<TabsTrigger value="other">Import</TabsTrigger>
 										<TabsTrigger value="roo">Roo Code Cloud</TabsTrigger>
 										<TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
-										<TabsTrigger value="other">Other</TabsTrigger>
 									</TabsList>
 								</Tabs>
 
@@ -338,61 +506,113 @@ export function NewRun() {
 											onChange={onImportSettings}
 										/>
 
-										{importedSettings && Object.keys(importedSettings.apiConfigs).length > 1 && (
-											<div className="space-y-1">
-												<Label>API Config</Label>
-												<Popover open={configPopoverOpen} onOpenChange={setConfigPopoverOpen}>
-													<PopoverTrigger asChild>
-														<Button
-															variant="input"
-															role="combobox"
-															aria-expanded={configPopoverOpen}
-															className="flex items-center justify-between w-full">
-															<div>{selectedConfigName || "Select config"}</div>
-															<ChevronsUpDown className="opacity-50" />
-														</Button>
-													</PopoverTrigger>
-													<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-														<Command>
-															<CommandInput
-																placeholder="Search configs..."
-																className="h-9"
-															/>
-															<CommandList>
-																<CommandEmpty>No config found.</CommandEmpty>
-																<CommandGroup>
-																	{Object.keys(importedSettings.apiConfigs).map(
-																		(configName) => (
-																			<CommandItem
-																				key={configName}
-																				value={configName}
-																				onSelect={onSelectConfig}>
-																				{configName}
-																				{configName ===
-																					importedSettings.currentApiConfigName && (
-																					<span className="ml-2 text-xs text-muted-foreground">
-																						(default)
-																					</span>
-																				)}
-																				<Check
-																					className={cn(
-																						"ml-auto size-4",
-																						configName ===
-																							selectedConfigName
-																							? "opacity-100"
-																							: "opacity-0",
+										{importedSettings && Object.keys(importedSettings.apiConfigs).length > 0 && (
+											<div className="space-y-2">
+												<Label>API Configs</Label>
+												{configSelections.map((selection, index) => (
+													<div key={selection.id} className="flex items-center gap-2">
+														<Popover
+															open={selection.popoverOpen}
+															onOpenChange={(open) =>
+																toggleConfigPopover(selection.id, open)
+															}>
+															<PopoverTrigger asChild>
+																<Button
+																	variant="input"
+																	role="combobox"
+																	aria-expanded={selection.popoverOpen}
+																	className="flex items-center justify-between flex-1">
+																	<div>{selection.configName || "Select config"}</div>
+																	<ChevronsUpDown className="opacity-50" />
+																</Button>
+															</PopoverTrigger>
+															<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
+																<Command>
+																	<CommandInput
+																		placeholder="Search configs..."
+																		className="h-9"
+																	/>
+																	<CommandList>
+																		<CommandEmpty>No config found.</CommandEmpty>
+																		<CommandGroup>
+																			{Object.keys(
+																				importedSettings.apiConfigs,
+																			).map((configName) => (
+																				<CommandItem
+																					key={configName}
+																					value={configName}
+																					onSelect={() =>
+																						updateConfigSelection(
+																							selection.id,
+																							configName,
+																						)
+																					}>
+																					{configName}
+																					{configName ===
+																						importedSettings.currentApiConfigName && (
+																						<span className="ml-2 text-xs text-muted-foreground">
+																							(default)
+																						</span>
 																					)}
-																				/>
-																			</CommandItem>
-																		),
-																	)}
-																</CommandGroup>
-															</CommandList>
-														</Command>
-													</PopoverContent>
-												</Popover>
+																					<Check
+																						className={cn(
+																							"ml-auto size-4",
+																							configName ===
+																								selection.configName
+																								? "opacity-100"
+																								: "opacity-0",
+																						)}
+																					/>
+																				</CommandItem>
+																			))}
+																		</CommandGroup>
+																	</CommandList>
+																</Command>
+															</PopoverContent>
+														</Popover>
+														{index === configSelections.length - 1 ? (
+															<Button
+																type="button"
+																variant="outline"
+																size="icon"
+																onClick={addConfigSelection}
+																className="shrink-0">
+																<Plus className="size-4" />
+															</Button>
+														) : (
+															<Button
+																type="button"
+																variant="outline"
+																size="icon"
+																onClick={() => removeConfigSelection(selection.id)}
+																className="shrink-0">
+																<Minus className="size-4" />
+															</Button>
+														)}
+													</div>
+												))}
 											</div>
 										)}
+
+										<div className="mt-4 p-4 rounded-md bg-muted/30 border border-border space-y-3">
+											<Label className="text-sm font-medium text-muted-foreground">
+												Tool Protocol Options
+											</Label>
+											<div className="flex flex-col gap-2.5 pl-1">
+												<label
+													htmlFor="native-other"
+													className="flex items-center gap-2 cursor-pointer">
+													<Checkbox
+														id="native-other"
+														checked={useNativeToolProtocol}
+														onCheckedChange={(checked: boolean) =>
+															setUseNativeToolProtocol(checked)
+														}
+													/>
+													<span className="text-sm">Use Native Tool Calls</span>
+												</label>
+											</div>
+										</div>
 
 										{settings && (
 											<SettingsDiff defaultSettings={EVALS_SETTINGS} customSettings={settings} />
@@ -400,59 +620,103 @@ export function NewRun() {
 									</div>
 								) : (
 									<>
-										<Popover open={modelPopoverOpen} onOpenChange={setModelPopoverOpen}>
-											<PopoverTrigger asChild>
-												<Button
-													variant="input"
-													role="combobox"
-													aria-expanded={modelPopoverOpen}
-													className="flex items-center justify-between">
-													<div>
-														{models?.find(({ id }) => id === model)?.name || `Select`}
-													</div>
-													<ChevronsUpDown className="opacity-50" />
-												</Button>
-											</PopoverTrigger>
-											<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
-												<Command filter={onFilter}>
-													<CommandInput
-														placeholder="Search"
-														value={searchValue}
-														onValueChange={setSearchValue}
-														className="h-9"
-													/>
-													<CommandList>
-														<CommandEmpty>No model found.</CommandEmpty>
-														<CommandGroup>
-															{models?.map(({ id, name }) => (
-																<CommandItem
-																	key={id}
-																	value={id}
-																	onSelect={onSelectModel}>
-																	{name}
-																	<Check
-																		className={cn(
-																			"ml-auto text-accent group-data-[selected=true]:text-accent-foreground size-4",
-																			id === model ? "opacity-100" : "opacity-0",
-																		)}
-																	/>
-																</CommandItem>
-															))}
-														</CommandGroup>
-													</CommandList>
-												</Command>
-											</PopoverContent>
-										</Popover>
+										<div className="space-y-2">
+											{modelSelections.map((selection, index) => (
+												<div key={selection.id} className="flex items-center gap-2">
+													<Popover
+														open={selection.popoverOpen}
+														onOpenChange={(open) => toggleModelPopover(selection.id, open)}>
+														<PopoverTrigger asChild>
+															<Button
+																variant="input"
+																role="combobox"
+																aria-expanded={selection.popoverOpen}
+																className="flex items-center justify-between flex-1">
+																<div>
+																	{models?.find(({ id }) => id === selection.model)
+																		?.name || `Select`}
+																</div>
+																<ChevronsUpDown className="opacity-50" />
+															</Button>
+														</PopoverTrigger>
+														<PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]">
+															<Command filter={onFilter}>
+																<CommandInput
+																	placeholder="Search"
+																	value={searchValue}
+																	onValueChange={setSearchValue}
+																	className="h-9"
+																/>
+																<CommandList>
+																	<CommandEmpty>No model found.</CommandEmpty>
+																	<CommandGroup>
+																		{models?.map(({ id, name }) => (
+																			<CommandItem
+																				key={id}
+																				value={id}
+																				onSelect={() =>
+																					updateModelSelection(
+																						selection.id,
+																						id,
+																					)
+																				}>
+																				{name}
+																				<Check
+																					className={cn(
+																						"ml-auto text-accent group-data-[selected=true]:text-accent-foreground size-4",
+																						id === selection.model
+																							? "opacity-100"
+																							: "opacity-0",
+																					)}
+																				/>
+																			</CommandItem>
+																		))}
+																	</CommandGroup>
+																</CommandList>
+															</Command>
+														</PopoverContent>
+													</Popover>
+													{index === modelSelections.length - 1 ? (
+														<Button
+															type="button"
+															variant="outline"
+															size="icon"
+															onClick={addModelSelection}
+															className="shrink-0">
+															<Plus className="size-4" />
+														</Button>
+													) : (
+														<Button
+															type="button"
+															variant="outline"
+															size="icon"
+															onClick={() => removeModelSelection(selection.id)}
+															className="shrink-0">
+															<Minus className="size-4" />
+														</Button>
+													)}
+												</div>
+											))}
+										</div>
 
-										<div className="flex items-center gap-1.5">
-											<Checkbox
-												id="native"
-												checked={useNativeToolProtocol}
-												onCheckedChange={(checked) =>
-													setUseNativeToolProtocol(checked === true)
-												}
-											/>
-											<Label htmlFor="native">Use Native Tool Calls</Label>
+										<div className="mt-4 p-4 rounded-md bg-muted/30 border border-border space-y-3">
+											<Label className="text-sm font-medium text-muted-foreground">
+												Tool Protocol Options
+											</Label>
+											<div className="flex flex-col gap-2.5 pl-1">
+												<label
+													htmlFor="native"
+													className="flex items-center gap-2 cursor-pointer">
+													<Checkbox
+														id="native"
+														checked={useNativeToolProtocol}
+														onCheckedChange={(checked: boolean) =>
+															setUseNativeToolProtocol(checked)
+														}
+													/>
+													<span className="text-sm">Use Native Tool Calls</span>
+												</label>
+											</div>
 										</div>
 									</>
 								)}
@@ -468,20 +732,28 @@ export function NewRun() {
 							name="jobToken"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Roo Code Cloud Token</FormLabel>
+									<div className="flex items-center gap-1">
+										<FormLabel>Roo Code Cloud Token</FormLabel>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Info className="size-4 text-muted-foreground cursor-help" />
+											</TooltipTrigger>
+											<TooltipContent side="right" className="max-w-xs">
+												<p>
+													If you have access to the Roo Code Cloud repository and the
+													decryption key for the .env.* files, generate a token with:
+												</p>
+												<code className="text-xs block mt-1">
+													pnpm --filter @roo-code-cloud/auth production:create-auth-token
+													[email] [org] [ttl]
+												</code>
+											</TooltipContent>
+										</Tooltip>
+									</div>
 									<FormControl>
-										<Input type="password" {...field} />
+										<Input type="password" placeholder="Required" {...field} />
 									</FormControl>
 									<FormMessage />
-									<FormDescription>
-										If you have access to the Roo Code Cloud repository then you can generate a
-										token with:
-										<br />
-										<code className="text-xs">
-											pnpm --filter @roo-code-cloud/auth production:create-job-token [org]
-											[timeout]
-										</code>
-									</FormDescription>
 								</FormItem>
 							)}
 						/>
@@ -495,12 +767,14 @@ export function NewRun() {
 								<FormLabel>Exercises</FormLabel>
 								<div className="flex items-center gap-2 flex-wrap">
 									<Tabs
-										defaultValue="full"
+										value={suite}
 										onValueChange={(value) => {
 											setValue("suite", value as "full" | "partial")
+											localStorage.setItem("evals-suite", value)
 											if (value === "full") {
 												setSelectedExercises([])
 												setValue("exercises", [])
+												localStorage.removeItem("evals-exercises")
 											}
 										}}>
 										<TabsList>
@@ -537,6 +811,7 @@ export function NewRun() {
 										onValueChange={(value) => {
 											setSelectedExercises(value)
 											setValue("exercises", value)
+											localStorage.setItem("evals-exercises", JSON.stringify(value))
 										}}
 										placeholder="Select"
 										variant="inverted"
@@ -548,57 +823,153 @@ export function NewRun() {
 						)}
 					/>
 
-					<FormField
-						control={form.control}
-						name="concurrency"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Concurrency</FormLabel>
-								<FormControl>
-									<div className="flex flex-row items-center gap-2">
-										<Slider
-											value={[field.value]}
-											min={CONCURRENCY_MIN}
-											max={CONCURRENCY_MAX}
-											step={1}
-											onValueChange={(value) => {
-												field.onChange(value[0])
-												localStorage.setItem("evals-concurrency", String(value[0]))
-											}}
-										/>
-										<div>{field.value}</div>
-									</div>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
+					{/* Concurrency, Timeout, and Iterations in a 3-column row */}
+					<div className="grid grid-cols-3 gap-4 py-5">
+						<FormField
+							control={form.control}
+							name="concurrency"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Concurrency</FormLabel>
+									<FormControl>
+										<div className="flex flex-row items-center gap-2">
+											<Slider
+												value={[field.value]}
+												min={CONCURRENCY_MIN}
+												max={CONCURRENCY_MAX}
+												step={1}
+												onValueChange={(value) => {
+													field.onChange(value[0])
+													localStorage.setItem("evals-concurrency", String(value[0]))
+												}}
+											/>
+											<div className="w-6 text-right">{field.value}</div>
+										</div>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-					<FormField
-						control={form.control}
-						name="timeout"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Timeout (Minutes)</FormLabel>
-								<FormControl>
-									<div className="flex flex-row items-center gap-2">
-										<Slider
-											value={[field.value]}
-											min={TIMEOUT_MIN}
-											max={TIMEOUT_MAX}
-											step={1}
-											onValueChange={(value) => {
-												field.onChange(value[0])
-												localStorage.setItem("evals-timeout", String(value[0]))
-											}}
-										/>
-										<div>{field.value}</div>
-									</div>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
+						<FormField
+							control={form.control}
+							name="timeout"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Timeout (Minutes)</FormLabel>
+									<FormControl>
+										<div className="flex flex-row items-center gap-2">
+											<Slider
+												value={[field.value]}
+												min={TIMEOUT_MIN}
+												max={TIMEOUT_MAX}
+												step={1}
+												onValueChange={(value) => {
+													field.onChange(value[0])
+													localStorage.setItem("evals-timeout", String(value[0]))
+												}}
+											/>
+											<div className="w-6 text-right">{field.value}</div>
+										</div>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="iterations"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Iterations</FormLabel>
+									<FormControl>
+										<div className="flex flex-row items-center gap-2">
+											<Slider
+												value={[field.value]}
+												min={ITERATIONS_MIN}
+												max={ITERATIONS_MAX}
+												step={1}
+												onValueChange={(value) => {
+													field.onChange(value[0])
+												}}
+											/>
+											<div className="w-6 text-right">{field.value}</div>
+										</div>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
+
+					{/* Terminal timeouts in a 2-column row */}
+					<div className="grid grid-cols-2 gap-4 py-5">
+						<FormItem>
+							<div className="flex items-center gap-1">
+								<Label>Command Timeout (Seconds)</Label>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Info className="size-4 text-muted-foreground cursor-help" />
+									</TooltipTrigger>
+									<TooltipContent side="right" className="max-w-xs">
+										<p>
+											Maximum time in seconds to wait for terminal command execution to complete
+											before timing out. This applies to commands run via the execute_command
+											tool.
+										</p>
+									</TooltipContent>
+								</Tooltip>
+							</div>
+							<div className="flex flex-row items-center gap-2">
+								<Slider
+									value={[commandExecutionTimeout]}
+									min={20}
+									max={60}
+									step={1}
+									onValueChange={([value]) => {
+										if (value !== undefined) {
+											setCommandExecutionTimeout(value)
+											localStorage.setItem("evals-command-execution-timeout", String(value))
+										}
+									}}
+								/>
+								<div className="w-8 text-right">{commandExecutionTimeout}</div>
+							</div>
+						</FormItem>
+
+						<FormItem>
+							<div className="flex items-center gap-1">
+								<Label>Shell Integration Timeout (Seconds)</Label>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Info className="size-4 text-muted-foreground cursor-help" />
+									</TooltipTrigger>
+									<TooltipContent side="right" className="max-w-xs">
+										<p>
+											Maximum time in seconds to wait for shell integration to initialize when
+											opening a new terminal.
+										</p>
+									</TooltipContent>
+								</Tooltip>
+							</div>
+							<div className="flex flex-row items-center gap-2">
+								<Slider
+									value={[terminalShellIntegrationTimeout]}
+									min={30}
+									max={60}
+									step={1}
+									onValueChange={([value]) => {
+										if (value !== undefined) {
+											setTerminalShellIntegrationTimeout(value)
+											localStorage.setItem("evals-shell-integration-timeout", String(value))
+										}
+									}}
+								/>
+								<div className="w-8 text-right">{terminalShellIntegrationTimeout}</div>
+							</div>
+						</FormItem>
+					</div>
 
 					<FormField
 						control={form.control}

@@ -161,6 +161,8 @@ const sidebars: SidebarsConfig = {
 				"advanced-usage/code-reviews",
 				"advanced-usage/deploy",
 				"advanced-usage/managed-indexing",
+				"advanced-usage/agent-manager",
+				"advanced-usage/sessions",
 				"features/experimental/experimental-features",
 			],
 		},

@@ -117,9 +117,9 @@ export function useChatGhostText({
 				!newValue.includes("@")
 			) {
 				// Request new completion after debounce (only if feature is enabled)
+				const requestId = generateRequestId()
+				completionRequestIdRef.current = requestId
 				completionDebounceRef.current = setTimeout(() => {
-					const requestId = generateRequestId()
-					completionRequestIdRef.current = requestId
 					vscode.postMessage({
 						type: "requestChatCompletion",
 						text: newValue,

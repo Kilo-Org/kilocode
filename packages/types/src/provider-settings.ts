@@ -212,7 +212,6 @@ const baseProviderSettingsSchema = z.object({
 
 	// Tool protocol override for this profile.
 	toolProtocol: z.enum(["xml", "native"]).optional(),
-	toolStyle: z.enum(["xml", "json"]).optional(), // kilocode_change
 })
 
 // Several of the providers share common model config properties.
@@ -883,8 +882,8 @@ export const MODELS_BY_PROVIDER: Record<
 		models: Object.keys(vscodeLlmModels),
 	},
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
-	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
-	baseten: { id: "baseten", label: "BaseTen", models: Object.keys(basetenModels) },
+	zai: { id: "zai", label: "Z.ai", models: Object.keys(internationalZAiModels) },
+	baseten: { id: "baseten", label: "Baseten", models: Object.keys(basetenModels) },
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },

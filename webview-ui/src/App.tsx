@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useEvent } from "react-use"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-// import posthog from "posthog-js" // kilocode_change unused
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import TranslationProvider from "./i18n/TranslationContext"
@@ -17,10 +16,9 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
+import McpView from "./components/mcp/McpView" // kilocode_change
 import AuthView from "./components/kilocode/auth/AuthView" // kilocode_change
-import McpView from "./components/mcp/McpView"
 import { MarketplaceView } from "./components/marketplace/MarketplaceView"
-import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 import { MemoryService } from "./services/MemoryService" // kilocode_change
@@ -66,13 +64,19 @@ const MemoizedHumanRelayDialog = React.memo(HumanRelayDialog)
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
-	promptsButtonClicked: "modes",
-	mcpButtonClicked: "mcp",
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
+	promptsButtonClicked: "settings", // kilocode_change: Navigate to settings with modes section
+	mcpButtonClicked: "mcp", // kilocode_change
 	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
+
+// kilocode_change start: Map certain actions to a default section when navigating to settings
+const defaultSectionByAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, string>> = {
+	promptsButtonClicked: "modes",
+}
+// kilocode_change end
 
 const App = () => {
 	const {
@@ -92,23 +96,6 @@ const App = () => {
 		mdmCompliant,
 		apiConfiguration, // kilocode_change
 	} = useExtensionState()
-
-	// kilocode_change start: disable useEffect
-	// const [useProviderSignupView, setUseProviderSignupView] = useState(false)
-
-	// Check PostHog feature flag for provider signup view
-	// Wait for telemetry to be initialized before checking feature flags
-	// useEffect(() => {
-	// 	if (!didHydrateState || telemetrySetting === "disabled") {
-	// 		return
-	// 	}
-
-	// 	posthog.onFeatureFlags(function () {
-	// 		// Feature flag for new provider-focused welcome view
-	// 		setUseProviderSignupView(posthog?.getFeatureFlag("welcome-provider-signup") === "test")
-	// 	})
-	// }, [didHydrateState, telemetrySetting])
-	// kilocode_change end
 
 	// Create a persistent state manager
 	const marketplaceStateManager = useMemo(() => new MarketplaceViewStateManager(), [])
@@ -210,7 +197,10 @@ const App = () => {
 				} else {
 					// Handle other actions using the mapping
 					const newTab = tabsByMessageAction[message.action]
-					const section = message.values?.section as string | undefined
+					// kilocode_change start
+					const section =
+						(message.values?.section as string | undefined) ?? defaultSectionByAction[message.action]
+					// kilocode_change end
 					const marketplaceTab = message.values?.marketplaceTab as string | undefined
 					const editingProfile = message.values?.editingProfile as string | undefined // kilocode_change
 
@@ -336,10 +326,10 @@ const App = () => {
 		<WelcomeView />
 	) : (
 		<>
-			{/* kilocode_change: add MemoryWarningBanner */}
+			{/* kilocode_change start */}
 			<MemoryWarningBanner />
-			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
 			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
+			{/* kilocode_change end */}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{/* kilocode_change: auth redirect / editingProfile */}
 			{tab === "settings" && (
@@ -368,7 +358,6 @@ const App = () => {
 					isAuthenticated={cloudIsAuthenticated}
 					cloudApiUrl={cloudApiUrl}
 					organizations={cloudOrganizations}
-					onDone={() => switchTab("chat")}
 				/>
 			)} */}
 			{/* kilocode_change: we have our own profile view */}
@@ -449,8 +438,8 @@ const App = () => {
 				/>
 			)}
 			{/* kilocode_change */}
-			{/* Chat, modes and history view contain their own bottom controls */}
-			{!["chat", "modes", "history"].includes(tab) && (
+			{/* Chat, and history view contain their own bottom controls, settings doesn't need it */}
+			{!["chat", "settings", "history"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

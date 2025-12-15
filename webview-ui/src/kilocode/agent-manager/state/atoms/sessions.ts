@@ -1,4 +1,5 @@
 import { atom } from "jotai"
+import { atomFamily } from "jotai/utils"
 
 export type AgentStatus = "creating" | "running" | "done" | "error" | "stopped"
 export type SessionSource = "local" | "remote"
@@ -23,6 +24,7 @@ export interface AgentSession {
 	source: SessionSource
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
+	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
 }
 
 /**
@@ -34,6 +36,7 @@ export interface PendingSession {
 	startTime: number
 	parallelMode?: boolean
 	gitUrl?: string
+	autoMode?: boolean // True if session will be started with --auto flag
 }
 
 export interface RemoteSession {
@@ -54,10 +57,32 @@ export const pendingSessionAtom = atom<PendingSession | null>(null)
 
 export const startSessionFailedCounterAtom = atom(0)
 
+// Per-session input value for the chat input field
+export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""))
+
 // User preference for run mode (persisted across new agent forms)
 export type RunMode = "local" | "worktree"
 // Default to local until worktree mode is ready to ship
 export const preferredRunModeAtom = atom<RunMode>("local")
+
+// Version count for multi-version mode (1 = single, 2-4 = multi-version with worktrees)
+export type VersionCount = 1 | 2 | 3 | 4
+export const MAX_VERSION_COUNT = 4
+// Derive options from MAX_VERSION_COUNT to ensure consistency
+export const VERSION_COUNT_OPTIONS = Array.from({ length: MAX_VERSION_COUNT }, (_, i) => (i + 1) as VersionCount)
+export const versionCountAtom = atom<VersionCount>(1)
+
+/**
+ * Generate version labels with (v1), (v2), etc. suffixes for multi-version mode.
+ * Single version (count=1) returns the original label without suffix.
+ */
+export function generateVersionLabels(baseLabel: string, count: VersionCount): string[] {
+	if (count === 1) {
+		return [baseLabel]
+	}
+
+	return Array.from({ length: count }, (_, i) => `${baseLabel} (v${i + 1})`)
+}
 
 // Derived - local sessions only
 export const sessionsArrayAtom = atom((get) => {

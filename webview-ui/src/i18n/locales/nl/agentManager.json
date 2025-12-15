@@ -10,7 +10,11 @@
 		"worktree": "Worktree",
 		"local": "Lokaal",
 		"mainWorkspace": "Hoofdwerkruimte",
-		"readyToMerge": "Klaar om samen te voegen"
+		"readyToMerge": "Klaar om samen te voegen",
+		"shareSession": "Sessie delen",
+		"shareConfirmMessage": "Wil je een momentopname van deze sessie publiek delen?",
+		"shareConfirmYes": "Ja",
+		"shareConfirmNo": "Nee"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Een nieuwe agent starten",
@@ -31,9 +35,19 @@
 		"comingSoon": "Binnenkort beschikbaar",
 		"runningInWorktree": "Draait in worktree",
 		"runningLocally": "Draait lokaal",
+		"runMode": "Uitvoeringsmodus",
 		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
-		"waitingForCli": "Agent-sessie wordt geïnitialiseerd..."
+		"waitingForCli": "Agent-sessie wordt geïnitialiseerd...",
+		"versions": "Versies",
+		"versionsTooltip": "Parallelle agents die verschillende benaderingen verkennen",
+		"versionsHelperText": "{{count}} parallelle agents op aparte branches",
+		"versionCount_one": "{{count}} versie",
+		"versionCount_other": "{{count}} versies",
+		"launchVersions": "Start {{count}} versies",
+		"startAgent": "Agent starten",
+		"cancelCreating": "Sessie aanmaken annuleren",
+		"cancelButton": "Annuleren"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

@@ -182,7 +182,17 @@
 		"actions": {
 			"updateInstructions": "更新手順",
 			"installInstructions": "インストール手順",
-			"getHelp": "ヘルプを表示"
+			"getHelp": "ヘルプを表示",
+			"runInTerminal": "ターミナルで実行",
+			"loginCli": "Run kilocode auth",
+			"updateGlobal": "グローバル更新",
+			"updateLocal": "ローカル更新",
+			"installGlobal": "グローバルインストール",
+			"installLocal": "ローカルインストール"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLIをインストールするためにnpm installを実行しています。完了したら、このターミナルを閉じてAgent Managerを再度起動してみてください。",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
 	}
 }

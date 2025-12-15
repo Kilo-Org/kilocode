@@ -23,6 +23,7 @@
 		"learnMore": "اعرف أكثر",
 		"useAnotherProvider": "استخدم مزوّد آخر",
 		"useAnotherProviderDescription": "أدخل مفتاح API وانطلق.",
+		"noApiKeys": "ما تبي تتعامل مع المفاتيح؟ استخدم مزوّد Roo Code Cloud.",
 		"getStarted": "ابدأ"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "إذا ما طلع لك رابط للفتح، <clickHere>اضغط هنا</clickHere>.",
 		"havingTrouble": "إذا خلصت التسجيل بس عندك مشاكل، <clickHere>اضغط هنا</clickHere>.",
 		"pasteUrl": "الصق رابط الاستدعاء من المتصفح:",
+		"invalidURL": "هذا ما يبدو رابط استدعاء صحيح. الرجاء نسخ ما يعرضه Roo Code Cloud في المتصفح.",
 		"goBack": "ارجع"
 	},
 	"startRouter": "نوصي باستخدام موجّه LLM:",

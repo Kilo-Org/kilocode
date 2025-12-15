@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Proveedores",
+		"modes": "Modos",
+		"mcp": "Servidores MCP",
 		"autoApprove": "Auto-aprobación",
 		"browser": "Acceso al ordenador",
 		"checkpoints": "Puntos de control",
@@ -91,6 +93,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Clave de API de OpenRouter",
 		"openRouterApiKeyPlaceholder": "Introduce tu clave de API de OpenRouter",
+		"openRouterProviderRoutingLabel": "Enrutamiento de proveedores de OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter dirige las solicitudes a los mejores proveedores disponibles para su modelo de embedding. Por defecto, las solicitudes se equilibran entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para este modelo.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
@@ -205,17 +209,6 @@
 		"delete": {
 			"label": "Eliminar",
 			"description": "Eliminar archivos y directorios automáticamente sin requerir aprobación"
-		},
-		"browser": {
-			"delayLabel": "Retraso después de escritura para permitir que los diagnósticos detecten posibles problemas",
-			"outsideWorkspace": {
-				"label": "Incluir archivos fuera del espacio de trabajo",
-				"description": "Permitir a Kilo Code crear y editar archivos fuera del espacio de trabajo actual sin requerir aprobación."
-			},
-			"protected": {
-				"label": "Incluir archivos protegidos",
-				"description": "Permitir a Kilo Code crear y editar archivos protegidos (como .kilocodeignore y archivos de configuración .kilocode/) sin requerir aprobación."
-			}
 		},
 		"browser": {
 			"label": "Navegador",
@@ -564,7 +557,8 @@
 			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
 			"medium": "Medio",
-			"low": "Bajo"
+			"low": "Bajo",
+			"xhigh": "Extra Alto"
 		},
 		"verbosity": {
 			"label": "Verbosidad de la salida",
@@ -987,6 +981,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Llamadas paralelas a herramientas",
 			"description": "Cuando está habilitado, el protocolo nativo puede ejecutar múltiples herramientas en un solo turno de mensaje del asistente."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Voz a Texto (STT)",
+			"description": "Cuando esté habilitado, Kilo Code puede transcribir tu voz a texto usando el modelo Whisper de OpenAI. Haz clic en el botón del micrófono en el chat para comenzar a grabar. Requiere que FFmpeg esté instalado y un proveedor de API de OpenAI configurado."
 		}
 	},
 	"promptCaching": {
@@ -1025,7 +1023,8 @@
 		"label": "Modelo",
 		"searchPlaceholder": "Buscar",
 		"noMatchFound": "No se encontraron coincidencias",
-		"useCustomModel": "Usar personalizado: {{modelId}}"
+		"useCustomModel": "Usar personalizado: {{modelId}}",
+		"simplifiedExplanation": "Puedes ajustar la configuración detallada del modelo más tarde."
 	},
 	"footer": {
 		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirse a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",

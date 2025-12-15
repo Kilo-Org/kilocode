@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "組織連結已複製到剪貼簿",
 		"shareSuccessPublic": "公開連結已複製到剪貼簿",
 		"openInCloud": "在 Roo Code Cloud 中開啟工作",
-		"openInCloudIntro": "從任何地方繼續監控或與 Roo 互動。掃描、點擊或複製以開啟。"
+		"openInCloudIntro": "從任何地方繼續監控或與 Roo 互動。掃描、點擊或複製以開啟。",
+		"openApiHistory": "開啟 API 歷史紀錄",
+		"openUiHistory": "開啟 UI 歷史紀錄"
 	},
 	"history": {
 		"title": "歷史記錄"
@@ -148,7 +150,18 @@
 		"failed": "API 請求失敗",
 		"streaming": "正在處理 API 請求...",
 		"cancelled": "API 請求已取消",
-		"streamingFailed": "API 串流處理失敗"
+		"streamingFailed": "API 串流處理失敗",
+		"errorTitle": "API 錯誤 {{code}}",
+		"errorMessage": {
+			"docs": "文件",
+			"400": "提供商無法按照此方式處理請求。請停止工作並嘗試其他方法。",
+			"401": "無法向提供商進行身份驗證。請檢查您的 API 金鑰設定。",
+			"402": "您的帳戶資金/額度似乎已用盡。請前往提供商增加額度以繼續。",
+			"403": "無權存取。您的 API 金鑰有效，但提供商拒絕完成此請求。",
+			"429": "請求次數過多。提供商已對您的請求進行速率限制。請在下一次 API 呼叫前稍候。",
+			"500": "提供商伺服器錯誤。提供商端發生問題，您的請求沒有問題。",
+			"unknown": "未知 API 錯誤。請聯絡 Roo Code 支援。"
+		}
 	},
 	"checkpoint": {
 		"regular": "檢查點",
@@ -312,8 +325,8 @@
 		},
 		"release": {
 			"heading": "最新功能：",
-			"browserUse": "Browser Use 2.0 升級了聊天內瀏覽體驗，支援持久會話、更清晰的回饋、專用瀏覽器面板以及更自然的動作描述",
-			"cloudPaid": "Roo Code Cloud 現已提供付費模型：購買點數即可同時用於雲端代理和推理服務"
+			"contextRewind": "改進的上下文壓縮現在允許您在回到存檔點時恢復完整的先前上下文",
+			"rooProvider": "Roo Code Cloud 提供商現在保留推理內容，並預設使用原生工具以獲得更佳效能"
 		},
 		"cloudAgents": {
 			"heading": "雲端的新功能：",
@@ -322,7 +335,7 @@
 			"tryButton": "試用雲端代理"
 		},
 		"careers": "此外，<careersLink>我們正在招募！</careersLink>",
-		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上關注我們 🚀"
+		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/KiloCode</redditLink> 上關注我們 🚀"
 	},
 	"reasoning": {
 		"thinking": "思考中",

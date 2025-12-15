@@ -62,17 +62,17 @@ const testCases = [
 	},
 	{
 		name: "Message with a complex tool use (write_to_file)",
-		input: "<write_to_file><path>src/file.ts</path><content>\nfunction example() {\n  // This has XML-like content: </content>\n  return true;\n}\n</content><line_count>5</line_count></write_to_file>",
+		input: "<write_to_file><path>src/file.ts</path><content>\nfunction example() {\n  // This has XML-like content: </content>\n  return true;\n}\n</content></write_to_file>",
 	},
 	{
 		name: "Message with multiple tool uses",
-		input: "First file: <read_file><path>src/file1.ts</path></read_file>\nSecond file: <read_file><path>src/file2.ts</path></read_file>\nLet's write a new file: <write_to_file><path>src/file3.ts</path><content>\nexport function newFunction() {\n  return 'Hello world';\n}\n</content><line_count>3</line_count></write_to_file>",
+		input: "First file: <read_file><path>src/file1.ts</path></read_file>\nSecond file: <read_file><path>src/file2.ts</path></read_file>\nLet's write a new file: <write_to_file><path>src/file3.ts</path><content>\nexport function newFunction() {\n  return 'Hello world';\n}\n</content></write_to_file>",
 	},
 	{
 		name: "Large message with repeated tool uses",
 		input: Array(50)
 			.fill(
-				'<read_file><path>src/file.ts</path></read_file>\n<write_to_file><path>output.ts</path><content>console.log("hello");</content><line_count>1</line_count></write_to_file>',
+				'<read_file><path>src/file.ts</path></read_file>\n<write_to_file><path>output.ts</path><content>console.log("hello");</content></write_to_file>',
 			)
 			.join("\n"),
 	},

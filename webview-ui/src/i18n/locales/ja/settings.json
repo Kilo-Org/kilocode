@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "プロバイダー",
+		"modes": "モード",
+		"mcp": "MCPサーバー",
 		"autoApprove": "自動承認",
 		"browser": "コンピューターアクセス",
 		"checkpoints": "チェックポイント",
@@ -87,6 +89,8 @@
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter APIキー",
 		"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
+		"openRouterProviderRoutingLabel": "OpenRouterプロバイダールーティング",
+		"openRouterProviderRoutingDescription": "OpenRouterは、埋め込みモデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択することもできます。",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
@@ -571,7 +575,8 @@
 			"minimal": "最小 (最速)",
 			"high": "高",
 			"medium": "中",
-			"low": "低"
+			"low": "低",
+			"xhigh": "極高"
 		},
 		"verbosity": {
 			"label": "出力の冗長性",
@@ -978,6 +983,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "並列ツール呼び出し",
 			"description": "有効にすると、ネイティブプロトコルは単一のアシスタントメッセージターンで複数のツールを実行できます。"
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "音声認識 (STT)",
+			"description": "有効にすると、Kilo CodeはOpenAIのWhisperモデルを使用して音声をテキストに変換できます。録音を開始するには、チャット内のマイクボタンをクリックしてください。FFmpegのインストールと、設定済みのOpenAI APIプロバイダーが必要です。"
 		}
 	},
 	"promptCaching": {
@@ -1016,7 +1025,8 @@
 		"label": "モデル",
 		"searchPlaceholder": "検索",
 		"noMatchFound": "一致するものが見つかりません",
-		"useCustomModel": "カスタムを使用: {{modelId}}"
+		"useCustomModel": "カスタムを使用: {{modelId}}",
+		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。"
 	},
 	"footer": {
 		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilo.ai/discord</discordLink>に参加してください",

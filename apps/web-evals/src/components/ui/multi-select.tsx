@@ -84,6 +84,18 @@ interface MultiSelectProps extends React.HTMLAttributes<HTMLDivElement>, Variant
 	 * Optional, can be used to add custom styles.
 	 */
 	className?: string
+
+	/**
+	 * If true, popover width will auto-size to content instead of matching trigger width.
+	 * Optional, defaults to false.
+	 */
+	popoverAutoWidth?: boolean
+
+	/**
+	 * Optional footer content to render at the bottom of the popover.
+	 * Useful for adding reset buttons or other actions.
+	 */
+	footer?: React.ReactNode
 }
 
 export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
@@ -97,6 +109,8 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 			placeholder = "Select options",
 			maxCount = 3,
 			modalPopover = false,
+			popoverAutoWidth = false,
+			footer,
 			className,
 			...props
 		},
@@ -243,7 +257,7 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 					</div>
 				</PopoverTrigger>
 				<PopoverContent
-					className="p-0 w-[var(--radix-popover-trigger-width)]"
+					className={cn("p-0", popoverAutoWidth ? "w-auto" : "w-[var(--radix-popover-trigger-width)]")}
 					align="start"
 					onEscapeKeyDown={() => setIsPopoverOpen(false)}>
 					<Command filter={onFilter}>
@@ -276,6 +290,7 @@ export const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 							</CommandGroup>
 						</CommandList>
 					</Command>
+					{footer && <div className="border-t p-2">{footer}</div>}
 				</PopoverContent>
 			</Popover>
 		)

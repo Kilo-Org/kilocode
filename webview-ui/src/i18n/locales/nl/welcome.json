@@ -23,6 +23,7 @@
 		"learnMore": "meer informatie",
 		"useAnotherProvider": "Gebruik een andere provider",
 		"useAnotherProviderDescription": "Voer een API-sleutel in en ga aan de slag.",
+		"noApiKeys": "Geen zin in sleutels? Kies dan voor de Roo Code Cloud Provider.",
 		"getStarted": "Beginnen"
 	},
 	"waitingForCloud": {
@@ -31,6 +32,7 @@
 		"noPrompt": "Als je niet wordt gevraagd een URL te openen, <clickHere>klik hier</clickHere>.",
 		"havingTrouble": "Als je de registratie hebt voltooid maar problemen hebt, <clickHere>klik hier</clickHere>.",
 		"pasteUrl": "Plak de callback-URL vanuit je browser:",
+		"invalidURL": "Dat ziet er niet uit als een geldige callback-URL. Kopieer wat Roo Code Cloud in je browser toont.",
 		"goBack": "Terug"
 	},
 	"startRouter": "We raden aan om een LLM-router te gebruiken:",
