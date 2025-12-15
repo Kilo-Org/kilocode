@@ -24,6 +24,25 @@ interface MessageListProps {
 	sessionId: string
 }
 
+// Parse exit code from various formats (number, string, etc.)
+function parseExitCode(raw: unknown): number | undefined {
+	if (typeof raw === "number") return raw
+	if (typeof raw === "string" && raw.trim() && !Number.isNaN(Number(raw))) return Number(raw)
+	return undefined
+}
+
+// Extract execution metadata from command output message
+function extractCommandMetadata(msg: ClineMessage): { exitCode?: number; status?: string; isRunning?: boolean } | null {
+	const metadata = msg.metadata as Record<string, unknown> | undefined
+	if (!metadata) return null
+
+	return {
+		exitCode: parseExitCode(metadata.exitCode),
+		status: typeof metadata.status === "string" ? metadata.status : undefined,
+		isRunning: msg.partial ?? false,
+	}
+}
+
 /**
  * Displays messages for a session from Jotai state.
  */
@@ -35,6 +54,30 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
+
+	const commandExecutionByTs = useMemo(() => {
+		const info = new Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>()
+
+		for (let i = 0; i < messages.length; i++) {
+			const msg = messages[i]
+			if (msg.type !== "ask" || msg.ask !== "command") continue
+
+			let data: ReturnType<typeof extractCommandMetadata> = null
+
+			// Find output messages following this command
+			for (let j = i + 1; j < messages.length; j++) {
+				const next = messages[j]
+				if (next.type === "ask" && next.ask === "command") break
+				if (next.ask !== "command_output" && next.say !== "command_output") continue
+
+				data = extractCommandMetadata(next)
+			}
+
+			if (data) info.set(msg.ts, data)
+		}
+
+		return info
+	}, [messages])
 
 	// Auto-scroll to bottom when new messages arrive
 	useEffect(() => {
@@ -82,6 +125,8 @@ export function MessageList({ sessionId }: MessageListProps) {
 					<MessageItem
 						key={msg.ts || idx}
 						message={msg}
+						isLast={idx === combinedMessages.length - 1}
+						commandExecutionByTs={commandExecutionByTs}
 						onSuggestionClick={handleSuggestionClick}
 						onCopyToInput={handleCopyToInput}
 					/>
@@ -110,11 +155,13 @@ function extractFollowUpData(message: ClineMessage): { question: string; suggest
 
 interface MessageItemProps {
 	message: ClineMessage
+	isLast: boolean
+	commandExecutionByTs: Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>
 	onSuggestionClick?: (suggestion: SuggestionItem) => void
 	onCopyToInput?: (suggestion: SuggestionItem) => void
 }
 
-function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemProps) {
+function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick, onCopyToInput }: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
@@ -192,7 +239,16 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			case "command": {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.command")
-				content = <CommandExecutionBlock text={messageText} isRunning={message.partial} />
+				const execInfo = commandExecutionByTs.get(message.ts)
+				content = (
+					<CommandExecutionBlock
+						text={messageText}
+						isRunning={execInfo?.isRunning ?? message.partial}
+						isLast={isLast}
+						exitCode={execInfo?.exitCode}
+						terminalStatus={execInfo?.status}
+					/>
+				)
 				break
 			}
 			case "command_output": {
