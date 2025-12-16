@@ -268,10 +268,8 @@ describe("Command Execution Timeout Integration", () => {
 			mockBlock.params.command = "npm install"
 
 			// Create a process that would timeout if not allowlisted
-			// Using 500ms instead of 2000ms to avoid test timeout
-			// (the code has a 1s wait for exitDetails + 50ms delay)
 			const longRunningProcess = new Promise((resolve) => {
-				setTimeout(resolve, 500)
+				setTimeout(resolve, 2000) // 2 seconds, longer than 1 second timeout
 			})
 			mockTerminal.runCommand.mockReturnValue(longRunningProcess)
 
@@ -287,7 +285,7 @@ describe("Command Execution Timeout Integration", () => {
 			expect(mockPushToolResult).toHaveBeenCalled()
 			const result = mockPushToolResult.mock.calls[0][0]
 			expect(result).not.toContain("terminated after exceeding")
-		}, 5000)
+		}, 3000)
 
 		it("should apply timeout for commands not in allowlist", async () => {
 			// Mock VSCode configuration with timeout and allowlist

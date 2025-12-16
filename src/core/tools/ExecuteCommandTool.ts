@@ -236,9 +236,7 @@ export async function executeCommandInTerminal(
 				terminalOutputCharacterLimit,
 			)
 
-			// Don't call task.say here - we need to wait for exitDetails
-			// which may not be available yet. The message will be sent after
-			// the process completes and we have both output and exit code.
+			task.say("command_output", result)
 			completed = true
 		},
 		onShellExecutionStarted: (pid: number | undefined) => {
@@ -322,20 +320,6 @@ export async function executeCommandInTerminal(
 		throw new ShellIntegrationError(shellIntegrationError)
 	}
 
-	// Wait for exit details to be available (with timeout fallback)
-	let maxWaits = 100 // 100 * 10ms = 1 second max wait
-	while (!exitDetails && maxWaits > 0) {
-		await delay(10)
-		maxWaits--
-	}
-
-	// Send command_output message now that we have both output and exit code
-	// This ensures the exit code is always available in the metadata
-	if (completed || exitDetails) {
-		const metadata = exitDetails ? { exitCode: exitDetails.exitCode } : undefined
-		await task.say("command_output", result, undefined, false, undefined, undefined, { metadata })
-	}
-
 	// Wait for a short delay to ensure all messages are sent to the webview.
 	// This delay allows time for non-awaited promises to be created and
 	// for their associated messages to be sent to the webview, maintaining
@@ -386,9 +370,7 @@ export async function executeCommandInTerminal(
 
 		let workingDirInfo = ` within working directory '${terminal.getCurrentWorkingDirectory().toPosix()}'`
 
-		// Note: Output is sent separately via say:command_output and combined with ask:command message
-		// Don't include it here to avoid duplication
-		return [false, `Command executed in terminal ${workingDirInfo}. ${exitStatus}`]
+		return [false, `Command executed in terminal ${workingDirInfo}. ${exitStatus}\nOutput:\n${result}`]
 	} else {
 		return [
 			false,
