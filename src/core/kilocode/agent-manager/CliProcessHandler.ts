@@ -525,11 +525,28 @@ export class CliProcessHandler {
 		// Clean up
 		this.activeSessions.delete(sessionId)
 
+		// Exit code handling (matching cloud-agent backend behavior):
+		// - 0: Success
+		// - 124: CLI timeout exceeded
+		// - 130 (128+2): SIGINT - user interrupted
+		// - 137 (128+9): SIGKILL - force killed
+		// - 143 (128+15): SIGTERM - terminated
+		// - Other non-zero: Error
+		const INTERRUPTED_EXIT_CODES = [130, 137, 143]
+		const TIMEOUT_EXIT_CODE = 124
+
 		if (code === 0) {
 			this.registry.updateSessionStatus(sessionId, "done", code)
 			this.callbacks.onSessionLog(sessionId, "Agent completed")
 			// Notify that session completed successfully (for state machine transition)
 			this.callbacks.onSessionCompleted?.(sessionId, code)
+		} else if (code === TIMEOUT_EXIT_CODE) {
+			this.registry.updateSessionStatus(sessionId, "error", code, "CLI timeout exceeded")
+			this.callbacks.onSessionLog(sessionId, "Agent timed out")
+		} else if (code !== null && INTERRUPTED_EXIT_CODES.includes(code)) {
+			// User or system interrupted - not an error, just stopped
+			this.registry.updateSessionStatus(sessionId, "stopped", code)
+			this.callbacks.onSessionLog(sessionId, "Agent was interrupted")
 		} else {
 			this.registry.updateSessionStatus(sessionId, "error", code ?? undefined)
 			this.callbacks.onSessionLog(

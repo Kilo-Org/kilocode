@@ -13,7 +13,7 @@ import { extractSessionConfigs, type SessionConfig } from "../multiVersionUtils"
  *    - Generate labels with (v1), (v2), etc. suffixes
  *    - Spawn sessions sequentially
  *
- * All sessions are always interactive (no --yolo flag) - user must approve tool operations.
+ * All sessions run with --auto flag since Agent Manager has no approval UI.
  */
 
 describe("Multi-version session spawning", () => {
