@@ -11,21 +11,21 @@ describe("buildCliArgs", () => {
 	it("returns correct args for basic prompt", () => {
 		const args = buildCliArgs("/workspace", "hello world")
 
-		expect(args).toEqual(["--json-io", "--workspace=/workspace", "hello world"])
+		expect(args).toEqual(["--json-io", "--yolo", "--workspace=/workspace", "hello world"])
 	})
 
 	it("preserves prompt with special characters", () => {
 		const prompt = 'echo "$(whoami)"'
 		const args = buildCliArgs("/tmp", prompt)
 
-		expect(args).toHaveLength(3)
-		expect(args[2]).toBe(prompt)
+		expect(args).toHaveLength(4)
+		expect(args[3]).toBe(prompt)
 	})
 
 	it("handles workspace paths with spaces", () => {
 		const args = buildCliArgs("/path/with spaces/project", "test")
 
-		expect(args[1]).toBe("--workspace=/path/with spaces/project")
+		expect(args[2]).toBe("--workspace=/path/with spaces/project")
 	})
 
 	it("omits empty prompt from args (used for resume without new prompt)", () => {
@@ -33,14 +33,14 @@ describe("buildCliArgs", () => {
 
 		// Empty prompt should not be added to args - this is used when resuming
 		// a session with --session where we don't want to pass a new prompt
-		expect(args).toEqual(["--json-io", "--workspace=/workspace"])
+		expect(args).toEqual(["--json-io", "--yolo", "--workspace=/workspace"])
 	})
 
 	it("handles multiline prompts", () => {
 		const prompt = "line1\nline2\nline3"
 		const args = buildCliArgs("/workspace", prompt)
 
-		expect(args[2]).toBe(prompt)
+		expect(args[3]).toBe(prompt)
 	})
 
 	it("includes --parallel flag when parallelMode is true", () => {
@@ -61,15 +61,20 @@ describe("buildCliArgs", () => {
 			sessionId: "session-id",
 		})
 
-		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--parallel", "--session=session-id", "prompt"])
+		expect(args).toEqual([
+			"--json-io",
+			"--yolo",
+			"--workspace=/workspace",
+			"--parallel",
+			"--session=session-id",
+			"prompt",
+		])
 	})
 
-	it("runs in interactive mode (no --auto flag)", () => {
-		// Agent Manager uses --json-io for bidirectional communication
-		// Approvals are handled via the JSON-IO protocol, not auto-approved
-		const args = buildCliArgs("/workspace", "prompt", { parallelMode: true })
+	it("uses --yolo for auto-approval (temporary until JSON-IO approval handling)", () => {
+		const args = buildCliArgs("/workspace", "prompt")
 
+		expect(args).toContain("--yolo")
 		expect(args).not.toContain("--auto")
-		expect(args).not.toContain("--yolo")
 	})
 })
