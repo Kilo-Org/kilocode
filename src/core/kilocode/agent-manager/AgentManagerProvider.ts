@@ -300,7 +300,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			const config = configs[0]
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				yoloMode: config.yoloMode,
 				labelOverride: config.label,
 			})
 			return
@@ -316,7 +315,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				yoloMode: config.yoloMode,
 				labelOverride: config.label,
 			})
 
@@ -390,7 +388,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options?: {
 			parallelMode?: boolean
-			yoloMode?: boolean
 			labelOverride?: string
 		},
 	): Promise<void> {
@@ -452,7 +449,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
-				yoloMode: options?.yoloMode,
 				label: existingLabel,
 				gitUrl,
 				apiConfiguration,

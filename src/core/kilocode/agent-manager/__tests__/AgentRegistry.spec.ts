@@ -440,49 +440,6 @@ describe("AgentRegistry", () => {
 			})
 		})
 
-		describe("yoloMode", () => {
-			it("creates session without yoloMode by default", () => {
-				const session = registry.createSession("session-1", "no yolo mode")
-				expect(session.yoloMode).toBeUndefined()
-			})
-
-			it("creates session with yoloMode enabled when option is provided", () => {
-				const session = registry.createSession("session-1", "with yolo mode", undefined, { yoloMode: true })
-				expect(session.yoloMode).toBe(true)
-			})
-
-			it("creates session without yoloMode when option is false", () => {
-				const session = registry.createSession("session-1", "without yolo mode", undefined, { yoloMode: false })
-				expect(session.yoloMode).toBeUndefined()
-			})
-
-			it("stores yoloMode in pending session when provided", () => {
-				const pending = registry.setPendingSession("test prompt", { yoloMode: true })
-				expect(pending.yoloMode).toBe(true)
-				expect(registry.pendingSession?.yoloMode).toBe(true)
-			})
-
-			it("creates pending session without yoloMode when not provided", () => {
-				const pending = registry.setPendingSession("test prompt")
-				expect(pending.yoloMode).toBeUndefined()
-			})
-
-			it("preserves yoloMode in getState", () => {
-				registry.createSession("session-1", "yolo mode session", undefined, { yoloMode: true })
-				const state = registry.getState()
-				expect(state.sessions[0].yoloMode).toBe(true)
-			})
-
-			it("combines yoloMode with parallelMode", () => {
-				const session = registry.createSession("session-1", "combined", undefined, {
-					parallelMode: true,
-					yoloMode: true,
-				})
-				expect(session.yoloMode).toBe(true)
-				expect(session.parallelMode).toEqual({ enabled: true })
-			})
-		})
-
 		describe("getStateForGitUrl", () => {
 			it("returns state filtered by gitUrl", () => {
 				registry.createSession("session-1", "prompt 1", undefined, {

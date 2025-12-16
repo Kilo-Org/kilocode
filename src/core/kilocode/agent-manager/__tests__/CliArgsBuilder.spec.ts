@@ -64,20 +64,11 @@ describe("buildCliArgs", () => {
 		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--parallel", "--session=session-id", "prompt"])
 	})
 
-	it("includes --yolo flag when yoloMode is true", () => {
-		const args = buildCliArgs("/workspace", "prompt", { yoloMode: true })
+	it("never includes --yolo flag (sessions are always interactive)", () => {
+		// Sessions are always interactive - user must approve tool operations
+		const args = buildCliArgs("/workspace", "prompt", { parallelMode: true })
 
-		expect(args).toContain("--yolo")
-	})
-
-	it("combines --yolo and --parallel flags when both options are set", () => {
-		const args = buildCliArgs("/workspace", "prompt", {
-			parallelMode: true,
-			yoloMode: true,
-		})
-
-		expect(args).toContain("--parallel")
-		expect(args).toContain("--yolo")
-		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--yolo", "--parallel", "prompt"])
+		expect(args).not.toContain("--yolo")
+		expect(args).not.toContain("--auto")
 	})
 })

@@ -1,23 +1,17 @@
 export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
-	yoloMode?: boolean
 }
 
 /**
  * Builds CLI arguments for spawning kilocode agent processes.
  * Uses --json-io for bidirectional communication via stdin/stdout.
+ * Sessions are always interactive (no --yolo flag) - user must approve tool operations.
  */
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
 	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
 	const args = ["--json-io", `--workspace=${workspace}`]
-
-	// --yolo: auto-approve all tool permissions (file writes, command execution, etc.)
-	// Only enable when explicitly requested - default is interactive mode
-	if (options?.yoloMode) {
-		args.push("--yolo")
-	}
 
 	if (options?.parallelMode) {
 		args.push("--parallel")
