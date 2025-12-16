@@ -415,6 +415,81 @@ describe("SessionLifecycleService", () => {
 				sessionId: "session-123",
 			})
 		})
+
+		describe("empty session handling", () => {
+			it("throws error when session has no content (no blob URLs)", async () => {
+				const emptySession = {
+					session_id: "session-123",
+					title: "Empty Session",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: undefined,
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(emptySession)
+
+				// Should throw when rethrowError is true
+				await expect(service.restoreSession("session-123", true)).rejects.toThrow(
+					"Session has no content to restore",
+				)
+
+				// Should log info message about empty session
+				expect(mockLogger.info).toHaveBeenCalledWith(
+					"Session has no content to restore - skipping restore. This can happen with sessions created but never used (e.g., from cloud-agent).",
+					expect.any(String),
+					{ sessionId: "session-123" },
+				)
+			})
+
+			it("does not throw when rethrowError is false for empty session", async () => {
+				const emptySession = {
+					session_id: "session-123",
+					title: "Empty Session",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: undefined,
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(emptySession)
+
+				// Should not throw when rethrowError is false (default)
+				await expect(service.restoreSession("session-123", false)).resolves.not.toThrow()
+
+				// Should still log the error
+				expect(mockLogger.error).toHaveBeenCalledWith(
+					"Failed to restore session",
+					expect.any(String),
+					expect.objectContaining({
+						error: "Session has no content to restore",
+						sessionId: "session-123",
+					}),
+				)
+			})
+
+			it("restores session successfully when it has at least one blob URL", async () => {
+				const sessionWithContent = {
+					session_id: "session-123",
+					title: "Session With Content",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: "https://api.example.com",
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(sessionWithContent)
+
+				await service.restoreSession("session-123")
+
+				// Should proceed with restore
+				expect(mockOnSessionRestored).toHaveBeenCalled()
+				expect(mockStateManager.setActiveSessionId).toHaveBeenCalledWith("session-123")
+			})
+		})
 	})
 
 	describe("shareSession", () => {

@@ -143,6 +143,22 @@ export class SessionLifecycleService {
 
 			this.logger.debug("Obtained session", LOG_SOURCES.SESSION_LIFECYCLE, { sessionId, session })
 
+			// Check if session has any content to restore
+			const hasContent =
+				session.api_conversation_history_blob_url ||
+				session.ui_messages_blob_url ||
+				session.task_metadata_blob_url ||
+				session.git_state_blob_url
+
+			if (!hasContent) {
+				this.logger.info(
+					"Session has no content to restore - skipping restore. This can happen with sessions created but never used (e.g., from cloud-agent).",
+					LOG_SOURCES.SESSION_LIFECYCLE,
+					{ sessionId },
+				)
+				throw new Error("Session has no content to restore")
+			}
+
 			const sessionDirectoryPath = path.join(this.pathProvider.getTasksDir(), sessionId)
 
 			mkdirSync(sessionDirectoryPath, { recursive: true })
