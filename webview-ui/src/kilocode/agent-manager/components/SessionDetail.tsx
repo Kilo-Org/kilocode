@@ -402,7 +402,7 @@ function NewAgentForm() {
 						aria-hidden="true"
 					/>
 
-					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2 max-w-[calc(100%-1rem)] overflow-hidden">
+					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
 						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
 							<StandardTooltip
 								content={
