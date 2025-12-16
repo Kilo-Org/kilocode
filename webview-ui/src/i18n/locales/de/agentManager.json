@@ -60,7 +60,6 @@
 		"command": "Kilo möchte einen Befehl ausführen",
 		"tool": "Kilo möchte ein Tool verwenden",
 		"usingTool": "Tool wird verwendet: **{{tool}}** {{details}}",
-		"output": "Ausgabe",
 		"expandOutput": "Ausgabe erweitern",
 		"collapseOutput": "Ausgabe einklappen",
 		"copyCommand": "Befehl kopieren"

@@ -60,7 +60,6 @@
 		"command": "Kilo chce spustit příkaz",
 		"tool": "Kilo chce použít nástroj",
 		"usingTool": "Používání nástroje: **{{tool}}** {{details}}",
-		"output": "Výstup",
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
 		"copyCommand": "Kopírovat příkaz"

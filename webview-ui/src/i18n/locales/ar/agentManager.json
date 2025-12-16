@@ -60,7 +60,6 @@
 		"command": "Kilo يريد تشغيل أمر",
 		"tool": "Kilo يريد استخدام أداة",
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
-		"output": "الناتج",
 		"expandOutput": "توسيع الناتج",
 		"collapseOutput": "طي الناتج",
 		"copyCommand": "نسخ الأمر"

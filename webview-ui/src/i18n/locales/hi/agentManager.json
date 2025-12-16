@@ -60,7 +60,6 @@
 		"command": "Kilo एक कमांड चलाना चाहता है",
 		"tool": "Kilo एक टूल का उपयोग करना चाहता है",
 		"usingTool": "टूल का उपयोग कर रहे हैं: **{{tool}}** {{details}}",
-		"output": "आउटपुट",
 		"expandOutput": "आउटपुट विस्तृत करें",
 		"collapseOutput": "आउटपुट संक्षिप्त करें",
 		"copyCommand": "कमांड कॉपी करें"

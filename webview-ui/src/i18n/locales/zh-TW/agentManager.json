@@ -60,7 +60,6 @@
 		"command": "Kilo 想執行指令",
 		"tool": "Kilo 想使用工具",
 		"usingTool": "正在使用工具: **{{tool}}** {{details}}",
-		"output": "輸出",
 		"expandOutput": "展開輸出",
 		"collapseOutput": "收起輸出",
 		"copyCommand": "複製指令"

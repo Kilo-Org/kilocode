@@ -60,7 +60,6 @@
 		"command": "Kilo ingin menjalankan perintah",
 		"tool": "Kilo ingin menggunakan alat",
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
-		"output": "Output",
 		"expandOutput": "Perluas output",
 		"collapseOutput": "Ciutkan output",
 		"copyCommand": "Salin perintah"

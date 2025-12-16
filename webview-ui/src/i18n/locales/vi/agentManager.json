@@ -60,7 +60,6 @@
 		"command": "Kilo muốn chạy một lệnh",
 		"tool": "Kilo muốn sử dụng một công cụ",
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}",
-		"output": "Đầu ra",
 		"expandOutput": "Mở rộng đầu ra",
 		"collapseOutput": "Thu gọn đầu ra",
 		"copyCommand": "Sao chép lệnh"

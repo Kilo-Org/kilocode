@@ -60,7 +60,6 @@
 		"command": "Kilo ต้องการเรียกใช้คำสั่ง",
 		"tool": "Kilo ต้องการใช้เครื่องมือ",
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
-		"output": "ผลลัพธ์",
 		"expandOutput": "ขยายผลลัพธ์",
 		"collapseOutput": "ยุบผลลัพธ์",
 		"copyCommand": "คัดลอกคำสั่ง"

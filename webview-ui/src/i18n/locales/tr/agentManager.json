@@ -60,7 +60,6 @@
 		"command": "Kilo bir komut çalıştırmak istiyor",
 		"tool": "Kilo bir araç kullanmak istiyor",
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
-		"output": "Çıktı",
 		"expandOutput": "Çıktıyı genişlet",
 		"collapseOutput": "Çıktıyı daralt",
 		"copyCommand": "Komutu kopyala"

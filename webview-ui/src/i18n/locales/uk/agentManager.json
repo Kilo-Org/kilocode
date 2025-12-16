@@ -60,7 +60,6 @@
 		"command": "Kilo хоче виконати команду",
 		"tool": "Kilo хоче використати інструмент",
 		"usingTool": "Використання інструменту: **{{tool}}** {{details}}",
-		"output": "Вивід",
 		"expandOutput": "Розгорнути вивід",
 		"collapseOutput": "Згорнути вивід",
 		"copyCommand": "Копіювати команду"

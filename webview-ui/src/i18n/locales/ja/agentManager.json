@@ -60,7 +60,6 @@
 		"command": "Kiloがコマンドを実行したがっています",
 		"tool": "Kiloがツールを使用したがっています",
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}",
-		"output": "出力",
 		"expandOutput": "出力を展開",
 		"collapseOutput": "出力を折りたたむ",
 		"copyCommand": "コマンドをコピー"

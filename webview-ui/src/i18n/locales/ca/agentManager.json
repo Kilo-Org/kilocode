@@ -66,7 +66,6 @@
 		"command": "Kilo vol executar una comanda",
 		"tool": "Kilo vol utilitzar una eina",
 		"usingTool": "Utilitzant l'eina: **{{tool}}** {{details}}",
-		"output": "Sortida",
 		"expandOutput": "Expandeix la sortida",
 		"collapseOutput": "Contrau la sortida",
 		"copyCommand": "Copia la comanda"
