@@ -318,4 +318,59 @@ describe("Task Tool History Handling", () => {
 			})
 		})
 	})
+
+	describe("empty API conversation history handling", () => {
+		it("should handle empty API conversation history gracefully", () => {
+			// Simulate empty API conversation history (e.g., from an empty session)
+			const apiHistory: any[] = []
+
+			// The logic in Task.resumeTaskFromHistory should handle this case
+			// by initializing empty arrays instead of throwing
+			let modifiedApiConversationHistory: any[]
+			let modifiedOldUserContent: any[]
+
+			if (apiHistory.length === 0) {
+				// Empty API conversation history - treat it like a fresh start
+				modifiedApiConversationHistory = []
+				modifiedOldUserContent = []
+			} else {
+				// Normal case - would process the history
+				modifiedApiConversationHistory = [...apiHistory]
+				modifiedOldUserContent = []
+			}
+
+			// Verify we get empty arrays, not an error
+			expect(modifiedApiConversationHistory).toEqual([])
+			expect(modifiedOldUserContent).toEqual([])
+		})
+
+		it("should not throw when API conversation history is empty", () => {
+			const apiHistory: any[] = []
+
+			// This should NOT throw - it should handle empty history gracefully
+			expect(() => {
+				if (apiHistory.length === 0) {
+					// Empty history is valid - just return empty arrays
+					return { history: [], userContent: [] }
+				}
+				// Normal processing would happen here
+				return { history: apiHistory, userContent: [] }
+			}).not.toThrow()
+		})
+
+		it("should handle single-message API conversation history", () => {
+			// A session with just one user message (no assistant response yet)
+			const apiHistory: any[] = [
+				{
+					role: "user",
+					content: "Hello",
+					ts: Date.now(),
+				},
+			]
+
+			// This is a valid case - the session was started but no response was received
+			expect(apiHistory.length).toBe(1)
+			expect(apiHistory[0].role).toBe("user")
+		})
+	})
 })

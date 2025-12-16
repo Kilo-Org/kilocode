@@ -1951,7 +1951,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				throw new Error("Unexpected: Last message is not a user or assistant message")
 			}
 		} else {
-			throw new Error("Unexpected: No existing API conversation history")
+			// Empty API conversation history - this can happen when restoring an empty session
+			// (e.g., a session created but never used). Treat it like a fresh start.
+			modifiedApiConversationHistory = []
+			modifiedOldUserContent = []
 		}
 
 		let newUserContent: Anthropic.Messages.ContentBlockParam[] = [...modifiedOldUserContent]
