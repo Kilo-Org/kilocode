@@ -12,8 +12,7 @@ export interface BuildCliArgsOptions {
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
 	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
-	// --yolo: auto-approve all tool uses and follow-ups (for testing)
-	// TODO: Remove --yolo once JSON-IO approval handling is implemented
+	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
 	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
 
 	if (options?.parallelMode) {

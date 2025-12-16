@@ -38,7 +38,7 @@
 		"branch": "Branch",
 		"creatingSession": "Creating session...",
 		"waitingForCli": "Initializing agent session...",
-		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation",
+		"autoModeWarning": "YOLO mode - tool operations are auto-approved",
 		"versions": "Versions",
 		"versionsTooltip": "Parallel agents exploring different approaches",
 		"versionsHelperText": "{{count}} parallel agents on separate branches",

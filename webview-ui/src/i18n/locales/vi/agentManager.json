@@ -38,7 +38,7 @@
 		"branch": "Nhánh",
 		"creatingSession": "Đang tạo phiên...",
 		"waitingForCli": "Đang khởi tạo phiên agent...",
-		"autoModeWarning": "Đang chạy ở chế độ tự động hoàn toàn - agent sẽ thực hiện các hành động mà không cần xác nhận",
+		"autoModeWarning": "Chế độ YOLO - các hoạt động công cụ được tự động phê duyệt",
 		"versions": "Phiên bản",
 		"versionsTooltip": "Các agent song song khám phá các cách tiếp cận khác nhau",
 		"versionsHelperText": "{{count}} agent song song trên các nhánh riêng biệt",

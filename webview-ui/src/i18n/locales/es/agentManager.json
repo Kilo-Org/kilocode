@@ -38,7 +38,7 @@
 		"branch": "Rama",
 		"creatingSession": "Creando sesión...",
 		"waitingForCli": "Inicializando sesión de agente...",
-		"autoModeWarning": "Ejecutándose en modo totalmente automático - el agente ejecutará acciones sin confirmación",
+		"autoModeWarning": "Modo YOLO - las operaciones de herramientas se aprueban automáticamente",
 		"versions": "Versiones",
 		"versionsTooltip": "Agentes paralelos explorando diferentes enfoques",
 		"versionsHelperText": "{{count}} agentes paralelos en ramas separadas",

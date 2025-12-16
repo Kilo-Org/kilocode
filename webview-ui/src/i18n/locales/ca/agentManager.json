@@ -38,7 +38,7 @@
 		"branch": "Branca",
 		"creatingSession": "Creant sessió...",
 		"waitingForCli": "Inicialitzant la sessió de l'agent...",
-		"autoModeWarning": "Executant-se en mode totalment automàtic - l'agent executarà accions sense confirmació",
+		"autoModeWarning": "Mode YOLO - les operacions d'eines s'aproven automàticament",
 		"versions": "Versions",
 		"versionsTooltip": "Agents paral·lels explorant diferents enfocaments",
 		"versionsHelperText": "{{count}} agents paral·lels en branques separades",

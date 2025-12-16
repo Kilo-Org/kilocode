@@ -38,7 +38,7 @@
 		"branch": "브랜치",
 		"creatingSession": "세션 생성 중...",
 		"waitingForCli": "에이전트 세션 초기화 중...",
-		"autoModeWarning": "전체 자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
+		"autoModeWarning": "YOLO 모드 - 도구 작업이 자동으로 승인됩니다",
 		"versions": "버전",
 		"versionsTooltip": "다양한 접근 방식을 탐색하는 병렬 에이전트",
 		"versionsHelperText": "{{count}}개의 병렬 에이전트가 별도의 브랜치에서 실행",

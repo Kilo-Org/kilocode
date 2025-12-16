@@ -38,7 +38,7 @@
 		"branch": "الفرع",
 		"creatingSession": "جارٍ إنشاء الجلسة...",
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل...",
-		"autoModeWarning": "يعمل في وضع التشغيل الآلي الكامل - سينفذ الوكيل الإجراءات دون تأكيد",
+		"autoModeWarning": "وضع YOLO - العمليات معتمدة تلقائياً",
 		"versions": "الإصدارات",
 		"versionsTooltip": "وكلاء متوازية تستكشف مقاربات مختلفة",
 		"versionsHelperText": "{{count}} وكيل متوازي على فروع منفصلة",

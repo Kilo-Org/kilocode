@@ -417,41 +417,78 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Get workspace folder - require a valid workspace
+		// Get workspace folder early to fetch git URL before spawning
+		// Note: we intentionally allow starting parallel mode from within an existing git worktree.
+		// Git worktrees share a common .git dir, so `git worktree add/remove` still works from a worktree root.
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+
+		// Get git URL for the workspace (used for filtering sessions)
+		let gitUrl: string | undefined
+		if (workspaceFolder) {
+			try {
+				gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
+			} catch (error) {
+				this.outputChannel.appendLine(
+					`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+
+		const onSetupFailed = () => {
+			if (!workspaceFolder) {
+				void vscode.window.showErrorMessage("Please open a folder before starting an agent.")
+			}
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+		}
+
+		await this.spawnCliWithCommonSetup(
+			prompt,
+			{
+				parallelMode: options?.parallelMode,
+				label: options?.labelOverride,
+				gitUrl,
+				existingBranch: options?.existingBranch,
+			},
+			onSetupFailed,
+		)
+	}
+
+	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
+		const { apiConfiguration } = await this.provider.getState()
+		return apiConfiguration
+	}
+
+	/**
+	 * Common helper to spawn a CLI process with standard setup.
+	 * Handles CLI path lookup, workspace folder validation, API config, and event callback wiring.
+	 * @returns true if process was spawned, false if setup failed
+	 */
+	private async spawnCliWithCommonSetup(
+		prompt: string,
+		options: {
+			parallelMode?: boolean
+			label?: string
+			gitUrl?: string
+			existingBranch?: string
+			sessionId?: string
+		},
+		onSetupFailed?: () => void,
+	): Promise<boolean> {
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 		if (!workspaceFolder) {
 			this.outputChannel.appendLine("ERROR: No workspace folder open")
-			void vscode.window.showErrorMessage("Please open a folder before starting an agent.")
-			this.postMessage({ type: "agentManager.startSessionFailed" })
-			return
+			onSetupFailed?.()
+			return false
 		}
-
-		// Note: we intentionally allow starting parallel mode from within an existing git worktree.
-		// Git worktrees share a common .git dir, so `git worktree add/remove` still works from a worktree root.
 
 		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 		if (!cliPath) {
 			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
 			this.showCliNotFoundError()
-			this.postMessage({ type: "agentManager.startSessionFailed" })
-			return
+			onSetupFailed?.()
+			return false
 		}
 
-		// Determine label override (used for multi-version mode)
-		const existingLabel = options?.labelOverride
-
-		// Get git URL for the workspace (used for filtering sessions)
-		let gitUrl: string | undefined
-		try {
-			gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
-		} catch (error) {
-			this.outputChannel.appendLine(
-				`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
-			)
-		}
-
-		// Record process start time to filter out replayed history events
-		// This is set before spawning so any events older than this are from history
 		const processStartTime = Date.now()
 		let apiConfiguration: ProviderSettings | undefined
 		try {
@@ -468,26 +505,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 			cliPath,
 			workspaceFolder,
 			prompt,
-			{
-				parallelMode: options?.parallelMode,
-				label: existingLabel,
-				gitUrl,
-				apiConfiguration,
-				existingBranch: options?.existingBranch,
-			},
-			(sessionId, event) => {
-				// For new sessions, set the start time when we first see the session
-				if (!this.processStartTimes.has(sessionId)) {
-					this.processStartTimes.set(sessionId, processStartTime)
+			{ ...options, apiConfiguration },
+			(sid, event) => {
+				if (!this.processStartTimes.has(sid)) {
+					this.processStartTimes.set(sid, processStartTime)
 				}
-				this.handleCliEvent(sessionId, event)
+				this.handleCliEvent(sid, event)
 			},
 		)
-	}
 
-	private async getApiConfigurationForCli(): Promise<ProviderSettings | undefined> {
-		const { apiConfiguration } = await this.provider.getState()
-		return apiConfiguration
+		return true
 	}
 
 	/**
@@ -878,49 +905,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
 
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-		if (!workspaceFolder) {
-			this.outputChannel.appendLine("ERROR: No workspace folder open")
-			return
-		}
-
-		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
-		if (!cliPath) {
-			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
-			this.showCliNotFoundError()
-			return
-		}
-
-		const processStartTime = Date.now()
-		let apiConfiguration: ProviderSettings | undefined
-		try {
-			apiConfiguration = await this.getApiConfigurationForCli()
-		} catch (error) {
-			this.outputChannel.appendLine(
-				`[AgentManager] Failed to read provider settings for CLI: ${
-					error instanceof Error ? error.message : String(error)
-				}`,
-			)
-		}
-
-		// Spawn new process with --session flag to resume
-		this.processHandler.spawnProcess(
-			cliPath,
-			workspaceFolder,
-			content,
-			{
-				sessionId, // This triggers --session=<id> flag
-				parallelMode: session.parallelMode?.enabled,
-				gitUrl: session.gitUrl,
-				apiConfiguration,
-			},
-			(sid, event) => {
-				if (!this.processStartTimes.has(sid)) {
-					this.processStartTimes.set(sid, processStartTime)
-				}
-				this.handleCliEvent(sid, event)
-			},
-		)
+		await this.spawnCliWithCommonSetup(content, {
+			sessionId, // This triggers --session=<id> flag
+			parallelMode: session.parallelMode?.enabled,
+			gitUrl: session.gitUrl,
+		})
 	}
 
 	/**

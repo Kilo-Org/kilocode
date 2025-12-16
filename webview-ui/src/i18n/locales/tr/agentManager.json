@@ -38,7 +38,7 @@
 		"branch": "Dal",
 		"creatingSession": "Oturum oluşturuluyor...",
 		"waitingForCli": "Ajan oturumu başlatılıyor...",
-		"autoModeWarning": "Tam otomatik modda çalışıyor - ajan onay almadan işlemleri gerçekleştirecek",
+		"autoModeWarning": "YOLO modu - araç işlemleri otomatik olarak onaylanır",
 		"versions": "Sürümler",
 		"versionsTooltip": "Farklı yaklaşımları keşfeden paralel ajanlar",
 		"versionsHelperText": "{{count}} paralel ajan ayrı dallarda",

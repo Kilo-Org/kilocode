@@ -38,7 +38,7 @@
 		"branch": "Branch",
 		"creatingSession": "Sessie aanmaken...",
 		"waitingForCli": "Agent-sessie wordt geïnitialiseerd...",
-		"autoModeWarning": "Draait in volledig automatische modus - de agent voert acties uit zonder bevestiging",
+		"autoModeWarning": "YOLO-modus - toolbewerkingen worden automatisch goedgekeurd",
 		"versions": "Versies",
 		"versionsTooltip": "Parallelle agents die verschillende benaderingen verkennen",
 		"versionsHelperText": "{{count}} parallelle agents op aparte branches",

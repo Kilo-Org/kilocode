@@ -242,8 +242,12 @@ export class KilocodeEventProcessor {
 		// (because the CLI JSON renderer parses `text` JSON into `metadata`).
 		if ((payload.ask === "command_output" || payload.say === "command_output") && payload.metadata) {
 			const output = (payload.metadata as { output?: unknown }).output
-			if (typeof output === "string") return output
-			if (output != null) return String(output)
+			if (typeof output === "string") {
+				return output
+			}
+			if (output != null) {
+				return String(output)
+			}
 			return ""
 		}
 

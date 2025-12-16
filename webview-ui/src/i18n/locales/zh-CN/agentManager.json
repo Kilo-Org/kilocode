@@ -38,7 +38,7 @@
 		"branch": "分支",
 		"creatingSession": "正在创建会话...",
 		"waitingForCli": "正在初始化 Agent 会话...",
-		"autoModeWarning": "全自动模式运行中 - Agent 将在无需确认的情况下执行操作",
+		"autoModeWarning": "YOLO 模式 - 工具操作自动批准",
 		"versions": "版本",
 		"versionsTooltip": "探索不同方法的并行 Agent",
 		"versionsHelperText": "{{count}} 个并行 Agent 在不同分支上",

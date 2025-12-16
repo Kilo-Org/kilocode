@@ -71,7 +71,7 @@ describe("buildCliArgs", () => {
 		])
 	})
 
-	it("uses --yolo for auto-approval (temporary until JSON-IO approval handling)", () => {
+	it("uses --yolo for auto-approval of tool uses", () => {
 		const args = buildCliArgs("/workspace", "prompt")
 
 		expect(args).toContain("--yolo")

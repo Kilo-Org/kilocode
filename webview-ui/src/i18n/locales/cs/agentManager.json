@@ -38,7 +38,7 @@
 		"branch": "Větev",
 		"creatingSession": "Vytváření relace...",
 		"waitingForCli": "Inicializace relace agenta...",
-		"autoModeWarning": "Běží v plně automatickém režimu - agent bude provádět akce bez potvrzení",
+		"autoModeWarning": "YOLO režim - operace nástrojů jsou automaticky schvalovány",
 		"versions": "Verze",
 		"versionsTooltip": "Paralelní agenti zkoumající různé přístupy",
 		"versionsHelperText": "{{count}} paralelních agentů na samostatných větvích",

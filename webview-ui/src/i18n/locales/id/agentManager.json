@@ -38,7 +38,7 @@
 		"branch": "Branch",
 		"creatingSession": "Membuat sesi...",
 		"waitingForCli": "Menginisialisasi sesi agen...",
-		"autoModeWarning": "Berjalan dalam mode otomatis penuh - agen akan menjalankan aksi tanpa konfirmasi",
+		"autoModeWarning": "Mode YOLO - operasi alat disetujui secara otomatis",
 		"versions": "Versi",
 		"versionsTooltip": "Agen paralel menjelajahi pendekatan berbeda",
 		"versionsHelperText": "{{count}} agen paralel pada cabang terpisah",

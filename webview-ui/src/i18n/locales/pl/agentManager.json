@@ -38,7 +38,7 @@
 		"branch": "Gałąź",
 		"creatingSession": "Tworzenie sesji...",
 		"waitingForCli": "Inicjalizacja sesji agenta...",
-		"autoModeWarning": "Działa w trybie pełnej automatyzacji - agent będzie wykonywał działania bez potwierdzenia",
+		"autoModeWarning": "Tryb YOLO - operacje narzędzi są zatwierdzane automatycznie",
 		"versions": "Wersje",
 		"versionsTooltip": "Równolegli agenci eksplorujący różne podejścia",
 		"versionsHelperText": "{{count}} równoległych agentów na oddzielnych gałęziach",

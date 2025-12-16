@@ -38,7 +38,7 @@
 		"branch": "ブランチ",
 		"creatingSession": "セッションを作成中...",
 		"waitingForCli": "エージェントセッションを初期化中...",
-		"autoModeWarning": "完全自動モードで実行中 - エージェントは確認なしでアクションを実行します",
+		"autoModeWarning": "YOLOモード - ツール操作は自動承認されます",
 		"versions": "バージョン",
 		"versionsTooltip": "異なるアプローチを探索する並列エージェント",
 		"versionsHelperText": "{{count}}個の並列エージェントが別々のブランチで動作",

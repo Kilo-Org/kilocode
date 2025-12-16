@@ -329,13 +329,10 @@ export async function executeCommandInTerminal(
 		maxWaits--
 	}
 
-	console.log(`[ExecuteCommandTool] Before say - completed: ${completed}, exitDetails:`, exitDetails)
-
 	// Send command_output message now that we have both output and exit code
 	// This ensures the exit code is always available in the metadata
 	if (completed || exitDetails) {
 		const metadata = exitDetails ? { exitCode: exitDetails.exitCode } : undefined
-		console.log(`[ExecuteCommandTool] Sending command_output with metadata:`, metadata)
 		await task.say("command_output", result, undefined, false, undefined, undefined, { metadata })
 	}
 

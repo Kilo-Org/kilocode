@@ -38,7 +38,7 @@
 		"branch": "Branch",
 		"creatingSession": "Creazione sessione...",
 		"waitingForCli": "Inizializzazione sessione agente...",
-		"autoModeWarning": "In esecuzione in modalità completamente automatica - l'agente eseguirà azioni senza conferma",
+		"autoModeWarning": "Modalità YOLO - le operazioni degli strumenti sono approvate automaticamente",
 		"versions": "Versioni",
 		"versionsTooltip": "Agenti paralleli che esplorano approcci diversi",
 		"versionsHelperText": "{{count}} agenti paralleli su branch separati",
