@@ -538,7 +538,7 @@ export type ExtensionState = Pick<
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 	debug?: boolean
-	speechToTextAvailable?: boolean // kilocode_change: Whether speech-to-text is fully configured (FFmpeg + OpenAI key)
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
 }
 
 export interface ClineSayTool {

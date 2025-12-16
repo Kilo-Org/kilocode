@@ -40,10 +40,11 @@ export const MicrophoneButton: React.FC<MicrophoneButtonProps> = ({
 					"rounded-md min-w-[28px] min-h-[28px]",
 					"transition-all duration-150",
 					"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-					"cursor-pointer",
 					isRecording
-						? "opacity-100 text-red-500 animate-pulse hover:text-red-600"
-						: "opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] active:bg-[rgba(255,255,255,0.1)]",
+						? "opacity-100 text-red-500 animate-pulse hover:text-red-600 cursor-pointer"
+						: disabled
+							? "opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent text-vscode-descriptionForeground"
+							: "opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)] active:bg-[rgba(255,255,255,0.1)] cursor-pointer",
 					containerWidth !== undefined && { hidden: containerWidth < 235 },
 				)}>
 				{isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-4 h-4" />}

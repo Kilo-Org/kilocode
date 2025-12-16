@@ -162,7 +162,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			ghostServiceSettings, // kilocode_change
 			language, // User's VSCode display language
 			experiments, // kilocode_change: For speechToText experiment flag
-			speechToTextAvailable, // kilocode_change: Whether voice transcription is configured
+			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		} = useExtensionState()
 
 		// kilocode_change start - autocomplete profile type system
@@ -1712,10 +1712,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<MicrophoneButton
 							isRecording={isRecording}
 							onClick={handleMicrophoneClick}
-							disabled={!speechToTextAvailable}
+							disabled={!speechToTextStatus?.available}
 							tooltipContent={
-								!speechToTextAvailable
-									? "Configure an OpenAI API key and install FFmpeg to use voice transcription"
+								!speechToTextStatus?.available && speechToTextStatus
+									? speechToTextStatus.reason === "openaiKeyMissing"
+										? "Speech to text is unavailable. Configure an OpenAI API key to use voice transcription."
+										: speechToTextStatus.reason === "ffmpegNotInstalled"
+											? "Speech to text is unavailable. Install FFmpeg to use voice transcription."
+											: "Speech to text is unavailable. Configure an OpenAI API key and install FFmpeg to use voice transcription."
 									: undefined
 							}
 						/>
