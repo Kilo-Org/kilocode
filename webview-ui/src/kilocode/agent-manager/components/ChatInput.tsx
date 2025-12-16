@@ -16,7 +16,6 @@ interface ChatInputProps {
 	sessionLabel?: string
 	isActive?: boolean
 	showCancel?: boolean
-	autoMode?: boolean // True if session is running in auto mode (non-interactive)
 	showFinishToBranch?: boolean
 	worktreeBranchName?: string
 	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
@@ -27,7 +26,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	sessionLabel,
 	isActive = false,
 	showCancel = false,
-	autoMode = false,
 	showFinishToBranch = false,
 	worktreeBranchName,
 	sessionStatus,
@@ -48,16 +46,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	const isEmpty = trimmedMessage.length === 0
 	const isSessionCompleted = sessionStatus === "done" || sessionStatus === "error" || sessionStatus === "stopped"
 
-	// Input is only disabled in auto mode (non-interactive)
-	// Users can still send messages to completed sessions (to resume them)
-	const inputDisabled = autoMode
-	// Send is disabled when empty or in auto-mode
+	// Send is disabled when empty
 	// Note: Users CAN queue multiple messages while one is sending (for running sessions)
 	// Note: Users CAN send messages to completed sessions (to resume them)
-	const sendDisabled = isEmpty || autoMode
+	const sendDisabled = isEmpty
 
 	const handleSend = () => {
-		if (isEmpty || autoMode) return
+		if (isEmpty) return
 
 		if (isSessionCompleted) {
 			// Resume a completed session with a new message (sent directly, not queued)
@@ -134,8 +129,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("chatInput.ariaLabel")}
-						placeholder={autoMode ? t("chatInput.autoMode") : t("chatInput.placeholderTypeTask")}
-						disabled={inputDisabled}
+						placeholder={t("chatInput.placeholderTypeTask")}
 						minRows={3}
 						maxRows={15}
 						className={cn(
@@ -226,9 +220,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
-						<StandardTooltip content={inputDisabled ? t("chatInput.autoMode") : t("chatInput.sendTitle")}>
+						<StandardTooltip content={t("chatInput.sendTitle")}>
 							<button
-								aria-label={inputDisabled ? t("chatInput.autoMode") : t("chatInput.sendTitle")}
+								aria-label={t("chatInput.sendTitle")}
 								disabled={sendDisabled}
 								onClick={handleSend}
 								className={cn(

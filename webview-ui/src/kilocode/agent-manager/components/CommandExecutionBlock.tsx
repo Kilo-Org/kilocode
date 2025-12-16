@@ -81,30 +81,21 @@ export const CommandExecutionBlock = memo(
 
 		// Determine status - deterministic based on exit code
 		const status: CommandStatus = useMemo(() => {
-			// Log when we have output to debug status determination
-			if (hasOutput || hasOutputMarker) {
-				console.debug("[CommandExecutionBlock] Status determination", {
-					command: command.substring(0, 50),
-					exitCode,
-					terminalStatus,
-					hasOutput,
-					hasOutputMarker,
-					isRunning,
-					isLast,
-					isCompleted,
-					output: output.substring(0, 100),
-				})
+			// Running: has output marker but no output yet, only for the most recent command
+			if (!isCompleted && (isRunning || (hasOutputMarker && isLast)) && !hasOutput) {
+				return "running"
 			}
-
-			// If we have an Output: marker but no output yet, the command is likely executing.
-			// Only show this as "running" for the most recent command row.
-			if (!isCompleted && (isRunning || (hasOutputMarker && isLast)) && !hasOutput) return "running"
-			if (terminalStatus === "timeout") return "error"
-			if (exitCode !== undefined) return exitCode === 0 ? "success" : "error"
-			if (hasOutput) return "success"
-			if (hasOutputMarker) return "success" // executed but produced no visible output
-			return "pending" // No output, not running - waiting for approval/execution
-		}, [isCompleted, isRunning, hasOutputMarker, isLast, hasOutput, terminalStatus, exitCode, command, output])
+			// Error: timeout or non-zero exit code
+			if (terminalStatus === "timeout" || (exitCode !== undefined && exitCode !== 0)) {
+				return "error"
+			}
+			// Success: zero exit code, has output, or has output marker (executed but no visible output)
+			if (exitCode === 0 || hasOutput || hasOutputMarker) {
+				return "success"
+			}
+			// Pending: waiting for approval/execution
+			return "pending"
+		}, [isCompleted, isRunning, hasOutputMarker, isLast, hasOutput, terminalStatus, exitCode])
 
 		const isError = status === "error"
 
