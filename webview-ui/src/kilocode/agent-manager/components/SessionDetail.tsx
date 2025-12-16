@@ -180,7 +180,6 @@ export function SessionDetail() {
 				sessionLabel={selectedSession.label}
 				isActive={isActive}
 				showCancel={isActive}
-				autoMode={selectedSession.autoMode}
 				showFinishToBranch={canFinishWorktree}
 				worktreeBranchName={branchName}
 				sessionStatus={selectedSession.status}
