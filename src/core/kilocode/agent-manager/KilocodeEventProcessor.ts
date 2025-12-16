@@ -102,6 +102,8 @@ export class KilocodeEventProcessor {
 		const timestamp = (payload.timestamp as number | undefined) ?? (payload as { ts?: number }).ts ?? Date.now()
 		const checkpoint = (payload as { checkpoint?: Record<string, unknown> }).checkpoint
 		const text = this.deriveMessageText(payload, checkpoint)
+		const metadata = payload.metadata as Record<string, unknown> | undefined
+
 		const message: ClineMessage = {
 			ts: timestamp,
 			type: messageType,
@@ -110,7 +112,7 @@ export class KilocodeEventProcessor {
 			text,
 			partial: payload.partial ?? false,
 			isAnswered: payload.isAnswered as boolean | undefined,
-			metadata: payload.metadata as Record<string, unknown> | undefined,
+			metadata,
 			checkpoint,
 		}
 

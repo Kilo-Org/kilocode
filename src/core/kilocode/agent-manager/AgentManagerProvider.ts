@@ -238,6 +238,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 						message.sessionLabel as string | undefined,
 					)
 					break
+				case "agentManager.resumeSession":
+					void this.resumeSession(message.sessionId as string, message.content as string)
+					break
 				case "agentManager.cancelSession":
 					void this.cancelSession(message.sessionId as string)
 					break
@@ -789,20 +792,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Validate that a message can be sent (not auto-mode, session running, no other message sending).
+	 * Validate that a message can be sent (session running, no other message sending).
 	 * Returns error message if validation fails, undefined if valid.
 	 */
 	private validateMessagePrerequisites(sessionId: string, messageId: string): void | undefined {
-		// Check auto-mode
-		const session = this.registry.getSession(sessionId)
-		if (session?.autoMode) {
-			this.outputChannel.appendLine(
-				`[AgentManager] Session ${sessionId} is running in auto mode; user input is disabled`,
-			)
-			this.notifyMessageStatus(sessionId, messageId, "failed", "Session is in auto mode")
-			return
-		}
-
 		// Check if session is running
 		if (!this.processHandler.hasStdin(sessionId)) {
 			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, message send failed`)
@@ -865,6 +858,69 @@ export class AgentManagerProvider implements vscode.Disposable {
 			status,
 			error,
 		})
+	}
+
+	/**
+	 * Resume a completed session by spawning a new CLI process with --session flag.
+	 */
+	public async resumeSession(sessionId: string, content: string): Promise<void> {
+		const session = this.registry.getSession(sessionId)
+		if (!session) {
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not found, cannot resume`)
+			return
+		}
+
+		// If session is still running, send as regular message instead
+		if (this.processHandler.hasStdin(sessionId)) {
+			await this.sendMessage(sessionId, content)
+			return
+		}
+
+		this.outputChannel.appendLine(`[AgentManager] Resuming session ${sessionId} with new prompt`)
+
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		if (!workspaceFolder) {
+			this.outputChannel.appendLine("ERROR: No workspace folder open")
+			return
+		}
+
+		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+		if (!cliPath) {
+			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
+			this.showCliNotFoundError()
+			return
+		}
+
+		const processStartTime = Date.now()
+		let apiConfiguration: ProviderSettings | undefined
+		try {
+			apiConfiguration = await this.getApiConfigurationForCli()
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to read provider settings for CLI: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
+
+		// Spawn new process with --session flag to resume
+		this.processHandler.spawnProcess(
+			cliPath,
+			workspaceFolder,
+			content,
+			{
+				sessionId, // This triggers --session=<id> flag
+				parallelMode: session.parallelMode?.enabled,
+				gitUrl: session.gitUrl,
+				apiConfiguration,
+			},
+			(sid, event) => {
+				if (!this.processStartTimes.has(sid)) {
+					this.processStartTimes.set(sid, processStartTime)
+				}
+				this.handleCliEvent(sid, event)
+			},
+		)
 	}
 
 	/**

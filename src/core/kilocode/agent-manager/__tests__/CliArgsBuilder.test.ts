@@ -13,12 +13,6 @@ describe("CliArgsBuilder", () => {
 		expect(args).toContain(prompt)
 	})
 
-	it("adds --auto flag when autoMode is true", () => {
-		const args = buildCliArgs(workspace, prompt, { autoMode: true })
-
-		expect(args).toContain("--auto")
-	})
-
 	it("adds --parallel flag when parallelMode is true", () => {
 		const args = buildCliArgs(workspace, prompt, { parallelMode: true })
 
