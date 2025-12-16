@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtomValue, useSetAtom } from "jotai"
 import {
 	sessionMessageQueueAtomFamily,
 	sessionSendingMessageIdAtomFamily,
@@ -21,9 +21,9 @@ import { vscode } from "../../utils/vscode"
 export function useMessageQueueProcessor(sessionId: string | null) {
 	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId || ""))
 	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId || ""))
-	const [, updateStatus] = useAtom(updateMessageStatusAtom)
-	const [, removeFromQueue] = useAtom(removeFromQueueAtom)
-	const [, setSendingMessage] = useAtom(setSendingMessageAtom)
+	const updateStatus = useSetAtom(updateMessageStatusAtom)
+	const removeFromQueue = useSetAtom(removeFromQueueAtom)
+	const setSendingMessage = useSetAtom(setSendingMessageAtom)
 
 	// Send the next queued message
 	const sendNextMessage = useCallback(
