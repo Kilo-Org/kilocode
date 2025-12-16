@@ -1,5 +1,27 @@
 # kilo-code
 
+## 4.138.0
+
+### Minor Changes
+
+- [#4472](https://github.com/Kilo-Org/kilocode/pull/4472) [`d2e82a1`](https://github.com/Kilo-Org/kilocode/commit/d2e82a115afac0467787db63d51c696d08ee102d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Interactive agent manager worktree sessions now start without auto-execution, allowing to manually click "Finish to Branch".
+
+- [#4428](https://github.com/Kilo-Org/kilocode/pull/4428) [`8394da8`](https://github.com/Kilo-Org/kilocode/commit/8394da8715fae4eacf416301885eeee840456700) Thanks [@iscekic](https://github.com/iscekic)! - add parent session id when creating a session
+
+### Patch Changes
+
+- [#4425](https://github.com/Kilo-Org/kilocode/pull/4425) [`6f70448`](https://github.com/Kilo-Org/kilocode/commit/6f70448300567b7ded997231b049346aa2718d92) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Share kilocode extension authentication directly with agent manager
+
+- [#4475](https://github.com/Kilo-Org/kilocode/pull/4475) [`625561f`](https://github.com/Kilo-Org/kilocode/commit/625561f11669d6458729b01dcbe630a551ecfe04) Thanks [@jrf0110](https://github.com/jrf0110)! - Fixes issue on Windows where kilo code would spawn many cmd.exe windows.
+
+- [#4376](https://github.com/Kilo-Org/kilocode/pull/4376) [`3971db3`](https://github.com/Kilo-Org/kilocode/commit/3971db3215d7339514031e094e87e9c889c9372d) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - Add Cerebras integration header with "kilocode" identifier to all API requests.
+
+- [#4447](https://github.com/Kilo-Org/kilocode/pull/4447) [`0022305`](https://github.com/Kilo-Org/kilocode/commit/0022305558d71957aeb7468a0e8e3ed829997f93) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Provide a few tips for when an LLM gets stuck in a loop
+
+- [#4456](https://github.com/Kilo-Org/kilocode/pull/4456) [`85a2e31`](https://github.com/Kilo-Org/kilocode/commit/85a2e31a331157f27bfe1c9823e3326ae58779c6) Thanks [@iscekic](https://github.com/iscekic)! - correctly handle deleted tasks
+
+- [#4476](https://github.com/Kilo-Org/kilocode/pull/4476) [`ea9413d`](https://github.com/Kilo-Org/kilocode/commit/ea9413d4fb01846b1aeb872652c92fa8e844d35f) Thanks [@hassoncs](https://github.com/hassoncs)! - Remove check for ffmpeg if the STT experiment is disabled
+
 ## 4.137.0
 
 ### Minor Changes
