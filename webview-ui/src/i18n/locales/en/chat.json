@@ -364,7 +364,7 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Auto-Approved Cost Limit Reached",
-			"description": "Kilo has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
+			"description": "Axon Code has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
 			"button": "Reset and Continue"
 		}
 	},

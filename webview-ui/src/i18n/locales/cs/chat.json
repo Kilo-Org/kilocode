@@ -1,32 +1,32 @@
 {
-	"greeting": "Co pro tebe může Axon Code udělat?",
+	"greeting": "Co může Axon Code udělat pro vás?",
 	"task": {
 		"title": "Úkol",
+		"expand": "Rozbalit úkol",
+		"collapse": "Sbalit úkol",
 		"seeMore": "Zobrazit více",
 		"seeLess": "Zobrazit méně",
-		"tokens": "Tokeny:",
-		"cache": "Cache:",
-		"apiCost": "Cena API:",
+		"tokens": "Tokeny",
+		"cache": "Cache",
+		"apiCost": "Náklady API",
 		"size": "Velikost",
-		"condenseContext": "Inteligentně zhustit kontext",
-		"contextWindow": "Délka kontextu:",
+		"condenseContext": "Inteligentně zhutnit kontext",
+		"contextWindow": "Délka kontextu",
 		"closeAndStart": "Zavřít úkol a začít nový",
-		"export": "Exportovat historii úkolu",
+		"export": "Exportovat historii úkolů",
 		"share": "Sdílet úkol",
-		"delete": "Smazat úkol (Shift + Klik pro přeskočení potvrzení)",
+		"delete": "Smazat úkol (Shift + kliknutí pro přeskočení potvrzení)",
 		"shareWithOrganization": "Sdílet s organizací",
-		"shareWithOrganizationDescription": "Přístup mají pouze členové tvé organizace",
+		"shareWithOrganizationDescription": "Přístup mají pouze členové vaší organizace",
 		"sharePublicly": "Sdílet veřejně",
-		"sharePubliclyDescription": "Kdokoli s odkazem má přístup",
-		"connectToCloud": "Připojit ke cloudu",
+		"sharePubliclyDescription": "Kdokoli s odkazem může přistupovat",
+		"connectToCloud": "Připojit se ke Cloudu",
 		"connectToCloudDescription": "Přihlaste se do Axon Code Cloud pro sdílení úkolů",
 		"sharingDisabledByOrganization": "Sdílení zakázáno organizací",
 		"shareSuccessOrganization": "Odkaz organizace zkopírován do schránky",
 		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky",
-		"expand": "Rozbalit úkol",
-		"collapse": "Sbalit úkol",
-		"openInCloud": "Otevřít v cloudu",
-		"openInCloudIntro": "Monitoruj a spravuj tento úkol vzdáleně"
+		"openInCloud": "Otevřít úkol v Roo Code Cloud",
+		"openInCloudIntro": "Pokračujte v monitorování nebo interakci s Roo odkudkoli. Naskenujte, klikněte nebo zkopírujte a otevřete."
 	},
 	"history": {
 		"title": "Historie"
@@ -34,26 +34,26 @@
 	"unpin": "Odepnout",
 	"pin": "Připnout",
 	"retry": {
-		"title": "Zkusit znovu",
-		"tooltip": "Zkusit operaci znovu"
+		"title": "Opakovat",
+		"tooltip": "Zkuste operaci znovu"
 	},
 	"startNewTask": {
 		"title": "Začít nový úkol",
-		"tooltip": "Začít nový úkol"
+		"tooltip": "Zahajte nový úkol"
 	},
 	"reportBug": {
 		"title": "Nahlásit chybu"
 	},
 	"proceedAnyways": {
 		"title": "Přesto pokračovat",
-		"tooltip": "Pokračovat během provádění příkazu"
+		"tooltip": "Pokračovat, zatímco se příkaz vykonává"
 	},
 	"save": {
 		"title": "Uložit",
-		"tooltip": "Uložit změny souboru"
+		"tooltip": "Uložit změny zprávy"
 	},
 	"tokenProgress": {
-		"availableSpace": "Dostupný prostor: {{amount}} tokenů",
+		"availableSpace": "Dostupné místo: {{amount}} tokenů",
 		"tokensUsed": "Použité tokeny: {{used}} z {{total}}",
 		"reservedForResponse": "Rezervováno pro odpověď modelu: {{amount}} tokenů"
 	},
@@ -75,8 +75,8 @@
 		}
 	},
 	"runCommand": {
-		"title": "Spustit příkaz",
-		"tooltip": "Provést tento příkaz"
+		"title": "Spustit",
+		"tooltip": "Vykonat tento příkaz"
 	},
 	"proceedWhileRunning": {
 		"title": "Pokračovat během běhu",
@@ -87,7 +87,7 @@
 		"tooltip": "Ukončit aktuální příkaz"
 	},
 	"resumeTask": {
-		"title": "Pokračovat v úkolu",
+		"title": "Obnovit úkol",
 		"tooltip": "Pokračovat v aktuálním úkolu"
 	},
 	"terminate": {
@@ -99,47 +99,52 @@
 		"tooltip": "Zrušit aktuální operaci"
 	},
 	"editMessage": {
-		"placeholder": "Upravit tvou zprávu..."
+		"placeholder": "Upravit vaši zprávu..."
 	},
-	"searchResults": {
-		"title": "Výsledky vyhledávání",
-		"noResults": "Nebyly nalezeny žádné výsledky"
-	},
-	"scrollToBottom": "Posunout se na konec chatu",
-	"about": "Generuj, refaktoruj a ladí kód s pomocí AI. Podívej se na naši <DocsLink>dokumentaci</DocsLink> pro více informací.",
-	"onboarding": "Tvůj seznam úkolů v tomto pracovním prostoru je prázdný.",
+	"scrollToBottom": "Přejít na konec chatu",
+	"about": "Generujte, refaktorujte a ladíte kód s pomocí AI. Prohlédněte si naši <DocsLink>dokumentaci</DocsLink> a dozvíte se více.",
+	"onboarding": "Váš seznam úkolů v tomto pracovním prostoru je prázdný.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Orchestrace úkolů",
-			"description": "Rozděl úkoly na menší, zvládnutelné části"
+			"description": "Rozdělte úkoly na menší, zvladatelné části"
 		},
 		"stickyModels": {
-			"title": "Přilepené modely",
-			"description": "Každý režim si pamatuje tvůj naposledy použitý model"
+			"title": "Sticky modely",
+			"description": "Každý režim si pamatuje váš naposledy použitý model"
 		},
 		"tools": {
 			"title": "Nástroje",
-			"description": "Umožni AI řešit problémy procházením webu, spouštěním příkazů a dalším"
+			"description": "Umožněte AI řešit problémy procházením webu, spouštěním příkazů a dalšími"
 		},
 		"customizableModes": {
 			"title": "Přizpůsobitelné režimy",
-			"description": "Specializované persony s vlastním chováním a přiřazenými modely"
+			"description": "Specializované osobnosti s vlastním chováním a přiřazenými modely"
 		}
 	},
-	"selectMode": "Vyber režim pro interakci",
-	"selectApiConfig": "Vyber konfiguraci API",
+	"selectMode": "Vyberte režim pro interakci",
+	"selectApiConfig": "Vybrat model",
 	"selectModelConfig": "Vybrat model",
-	"enhancePrompt": "Vylepšit prompt s dodatečným kontextem",
-	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
-	"addImages": "Přidat obrázky do zprávy",
+	"enhancePrompt": "Vylepšit výzvu dalším kontextem",
+	"modeSelector": {
+		"title": "Režimy",
+		"marketplace": "Tržiště režimů",
+		"settings": "Nastavení režimů",
+		"description": "Specializované osobnosti, které přizpůsobují chování Axon Code.",
+		"searchPlaceholder": "Hledat režimy...",
+		"noResults": "Nebyly nalezeny žádné výsledky",
+		"organizationModes": "Režimy organizace"
+	},
+	"enhancePromptDescription": "Tlačítko 'Vylepšit výzvu' pomáhá zlepšit vaši výzvu poskytnutím dalšího kontextu, vysvětlení nebo přeformulování. Zkuste sem napsat výzvu a znovu kliknout na tlačítko, abyste viděli, jak to funguje.",
+	"addImages": "Přidat obrázky ke zprávě",
 	"sendMessage": "Odeslat zprávu",
 	"stopTts": "Zastavit převod textu na řeč",
-	"typeMessage": "Napiš zprávu...",
-	"typeTask": "Vytvoř, najdi, zeptej se na něco",
-	"addContext": "@ pro přidání kontextu, / pro přepnutí režimů",
-	"dragFiles": "drž shift pro přetažení souborů",
-	"dragFilesImages": "drž shift pro přetažení souborů/obrázků",
-	"errorReadingFile": "Chyba při čtení souboru:",
+	"typeMessage": "Napište zprávu...",
+	"typeTask": "Zde zadejte svůj úkol...",
+	"addContext": "@ pro přidání kontextu, / pro příkazy",
+	"dragFiles": "podržte shift pro přetažení souborů",
+	"dragFilesImages": "podržte shift pro přetažení souborů/obrázků",
+	"errorReadingFile": "Chyba při čtení souboru",
 	"noValidImages": "Nebyly zpracovány žádné platné obrázky",
 	"separator": "Oddělovač",
 	"edit": "Upravit...",
@@ -153,91 +158,88 @@
 		"streamingFailed": "Streamování API selhalo"
 	},
 	"checkpoint": {
-		"initial": "Počáteční kontrolní bod",
 		"regular": "Kontrolní bod",
-		"initializingWarning": "Stále se inicializuje kontrolní bod... Pokud to trvá příliš dlouho, můžeš vypnout kontrolní body v <settingsLink>nastavení</settingsLink> a restartovat svůj úkol.",
+		"initializingWarning": "Stále se inicializuje kontrolní bod... Pokud to trvá příliš dlouho, můžete zakázat kontrolní body v <settingsLink>nastavení</settingsLink> a restartovat svůj úkol.",
 		"menu": {
 			"viewDiff": "Zobrazit rozdíly",
 			"restore": "Obnovit kontrolní bod",
 			"restoreFiles": "Obnovit soubory",
-			"restoreFilesDescription": "Obnoví soubory tvého projektu zpět na snímek pořízený v tomto bodě.",
+			"restoreFilesDescription": "Obnoví soubory vašeho projektu zpět na snímek pořízený v tomto bodě.",
 			"restoreFilesAndTask": "Obnovit soubory a úkol",
 			"confirm": "Potvrdit",
 			"cancel": "Zrušit",
 			"cannotUndo": "Tuto akci nelze vrátit zpět.",
-			"restoreFilesAndTaskDescription": "Obnoví soubory tvého projektu zpět na snímek pořízený v tomto bodě a smaže všechny zprávy po tomto bodě."
+			"restoreFilesAndTaskDescription": "Obnoví soubory vašeho projektu zpět na snímek pořízený v tomto bodě a smaže všechny zprávy po tomto bodě."
 		},
 		"current": "Aktuální"
 	},
 	"contextCondense": {
-		"title": "Kontext zhušťěn",
-		"condensing": "Zhušťování kontextu...",
-		"errorHeader": "Nepodařilo se zhuštit kontext",
+		"title": "Kontext zhutněn",
+		"condensing": "Zhutňování kontextu...",
+		"errorHeader": "Nepodařilo se zhutit kontext",
 		"tokens": "tokeny"
 	},
 	"instructions": {
-		"wantsToFetch": "Axon Code chce načíst podrobné instrukce pro pomoc s aktuálním úkolem"
+		"wantsToFetch": "načíst pokyny"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code chce přečíst tento soubor:",
-		"wantsToReadMultiple": "Axon Code chce přečíst více souborů:",
-		"wantsToReadAndXMore": "Axon Code chce přečíst tento soubor a {{count}} dalších:",
-		"wantsToReadOutsideWorkspace": "Axon Code chce přečíst tento soubor mimo pracovní prostor:",
-		"didRead": "Axon Code přečetl tento soubor:",
-		"wantsToEdit": "Axon Code chce upravit tento soubor:",
-		"wantsToEditOutsideWorkspace": "Axon Code chce upravit tento soubor mimo pracovní prostor:",
-		"wantsToEditProtected": "Axon Code chce upravit chráněný konfigurační soubor:",
-		"wantsToApplyBatchChanges": "Axon Code chce aplikovat změny na více souborů:",
-		"wantsToGenerateImage": "Axon Code chce vygenerovat obrázek:",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code chce vygenerovat obrázek mimo pracovní prostor:",
-		"wantsToGenerateImageProtected": "Axon Code chce vygenerovat obrázek v chráněném umístění:",
-		"didGenerateImage": "Axon Code vygeneroval obrázek:",
-		"wantsToCreate": "Axon Code chce vytvořit nový soubor:",
-		"wantsToSearchReplace": "Axon Code chce hledat a nahradit v tomto souboru:",
-		"didSearchReplace": "Axon Code provedl hledání a nahrazení v tomto souboru:",
-		"wantsToInsert": "Axon Code chce vložit obsah do tohoto souboru:",
-		"wantsToInsertWithLineNumber": "Axon Code chce vložit obsah do tohoto souboru na řádek {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Axon Code chce přidat obsah na konec tohoto souboru:"
+		"wantsToRead": "Číst",
+		"wantsToReadMultiple": "Číst",
+		"wantsToReadAndXMore": "Číst {{count}} další",
+		"wantsToReadOutsideWorkspace": "Číst (mimo pracovní prostor)",
+		"didRead": "Přečteno",
+		"wantsToEdit": "Upravit",
+		"wantsToEditOutsideWorkspace": "Upravit (mimo pracovní prostor)",
+		"wantsToEditProtected": "upravit chráněný konfigurační soubor",
+		"wantsToApplyBatchChanges": "aplikovat změny na více souborů",
+		"wantsToGenerateImage": "vygenerovat obrázek",
+		"wantsToGenerateImageOutsideWorkspace": "vygenerovat obrázek (mimo pracovní prostor)",
+		"wantsToGenerateImageProtected": "vygenerovat obrázek (chráněné umístění)",
+		"didGenerateImage": "vygenerovaný obrázek",
+		"wantsToCreate": "vytvořit nový soubor",
+		"wantsToSearchReplace": "hledat a nahradit",
+		"didSearchReplace": "provedeno hledání a nahrazení v tomto souboru",
+		"wantsToInsert": "vložit obsah do tohoto souboru",
+		"wantsToInsertWithLineNumber": "vložit obsah do tohoto souboru na řádku {{lineNumber}}",
+		"wantsToInsertAtEnd": "připojit obsah na konec tohoto souboru"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code chce zobrazit soubory nejvyšší úrovně v tomto adresáři:",
-		"didViewTopLevel": "Axon Code zobrazil soubory nejvyšší úrovně v tomto adresáři:",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code chce zobrazit soubory nejvyšší úrovně v tomto adresáři (mimo pracovní prostor):",
-		"didViewTopLevelOutsideWorkspace": "Axon Code zobrazil soubory nejvyšší úrovně v tomto adresáři (mimo pracovní prostor):",
-		"wantsToViewRecursive": "Axon Code chce rekurzivně zobrazit všechny soubory v tomto adresáři:",
-		"didViewRecursive": "Axon Code rekurzivně zobrazil všechny soubory v tomto adresáři:",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code chce rekurzivně zobrazit všechny soubory v tomto adresáři (mimo pracovní prostor):",
-		"didViewRecursiveOutsideWorkspace": "Axon Code rekurzivně zobrazil všechny soubory v tomto adresáři (mimo pracovní prostor):",
-		"wantsToViewDefinitions": "Axon Code chce zobrazit názvy definic zdrojového kódu použité v tomto adresáři:",
-		"didViewDefinitions": "Axon Code zobrazil názvy definic zdrojového kódu použité v tomto adresáři:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code chce zobrazit názvy definic zdrojového kódu použité v tomto adresáři (mimo pracovní prostor):",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code zobrazil názvy definic zdrojového kódu použité v tomto adresáři (mimo pracovní prostor):",
-		"wantsToSearch": "Axon Code chce hledat v tomto adresáři <code>{{regex}}</code>:",
-		"didSearch": "Axon Code hledal v tomto adresáři <code>{{regex}}</code>:",
-		"wantsToSearchOutsideWorkspace": "Axon Code chce hledat v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>:",
-		"didSearchOutsideWorkspace": "Axon Code hledal v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "Prozkoumat",
+		"didViewTopLevel": "Prozkoumat",
+		"wantsToViewTopLevelOutsideWorkspace": "Prozkoumat (mimo pracovní prostor)",
+		"didViewTopLevelOutsideWorkspace": "Prozkoumáno (mimo pracovní prostor)",
+		"wantsToViewRecursive": "Prozkoumat (rekurzivně)",
+		"didViewRecursive": "Prozkoumáno (rekurzivně)",
+		"wantsToViewRecursiveOutsideWorkspace": "Prozkoumat (rekurzivně)(mimo pracovní prostor)",
+		"didViewRecursiveOutsideWorkspace": "Prozkoumáno (rekurzivně)(mimo pracovní prostor)",
+		"wantsToViewDefinitions": "zobrazit názvy definic zdrojového kódu použitých v tomto adresáři",
+		"didViewDefinitions": "zobrazeny názvy definic zdrojového kódu použitých v tomto adresáři",
+		"wantsToViewDefinitionsOutsideWorkspace": "zobrazit názvy definic zdrojového kódu použitých v tomto adresáři (mimo pracovní prostor)",
+		"didViewDefinitionsOutsideWorkspace": "zobrazeny názvy definic zdrojového kódu použitých v tomto adresáři (mimo pracovní prostor)",
+		"wantsToSearch": "Hledat <code>{{regex}}</code>",
+		"didSearch": "Hledat <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "hledat v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "prohledáno v tomto adresáři (mimo pracovní prostor) <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Axon Code chce hledat v kódové základně <code>{{query}}</code>:",
-		"wantsToSearchWithPath": "Axon Code chce hledat v kódové základně <code>{{query}}</code> v <code>{{path}}</code>:",
+		"wantsToSearch": "prohledávání kódové základny pro <code>{{query}}</code>",
+		"wantsToSearchWithPath": "prohledávání kódové základny pro <code>{{query}}</code> v <code>{{path}}</code>",
 		"didSearch_one": "Nalezen 1 výsledek",
 		"didSearch_other": "Nalezeno {{count}} výsledků",
-		"resultTooltip": "Skóre podobnosti: {{score}} (klikni pro otevření souboru)"
+		"resultTooltip": "Skóre podobnosti: {{score}} (klikněte pro otevření souboru)"
 	},
 	"commandOutput": "Výstup příkazu",
 	"commandExecution": {
 		"abort": "Přerušit",
 		"running": "Běží",
-		"exitStatus": "Ukončen se stavem {{exitCode}}",
 		"pid": "PID: {{pid}}",
-		"exited": "Ukončeno ({{exitCode}})",
-		"manageCommands": "Spravovat oprávnění příkazů",
-		"commandManagementDescription": "Spravovat oprávnění příkazů: Klikni ✓ pro povolení automatického spuštění, ✗ pro zamítnutí spuštění. Vzory lze zapnout/vypnout nebo odstranit ze seznamů. <settingsLink>Zobrazit všechna nastavení</settingsLink>",
-		"addToAllowed": "Přidat do seznamu povolených",
-		"removeFromAllowed": "Odstranit ze seznamu povolených",
-		"addToDenied": "Přidat do seznamu zamítnutých",
-		"removeFromDenied": "Odstranit ze seznamu zamítnutých",
-		"abortCommand": "Přerušit provádění příkazu",
+		"exitStatus": "Ukončeno se stavem {{exitCode}}",
+		"manageCommands": "Automaticky schválené příkazy",
+		"addToAllowed": "Přidat do povoleného seznamu",
+		"removeFromAllowed": "Odebrat z povoleného seznamu",
+		"addToDenied": "Přidat do zakázaného seznamu",
+		"removeFromDenied": "Odebrat ze zakázaného seznamu",
+		"abortCommand": "Přerušit vykonávání příkazu",
 		"expandOutput": "Rozbalit výstup",
 		"collapseOutput": "Sbalit výstup",
 		"expandManagement": "Rozbalit sekci správy příkazů",
@@ -246,99 +248,80 @@
 	"response": "Odpověď",
 	"arguments": "Argumenty",
 	"text": {
-		"rooSaid": "Kilo řekl"
+		"rooSaid": "Odpověď"
 	},
 	"feedback": {
-		"youSaid": "Řekl jsi"
+		"youSaid": "Řekli jste"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code chce použít nástroj na MCP serveru {{serverName}}:",
-		"wantsToAccessResource": "Axon Code chce přistupovat k prostředku na MCP serveru {{serverName}}:"
+		"wantsToUseTool": "používání nástroje serveru MCP {{serverName}}",
+		"wantsToAccessResource": "přístup k prostředku serveru MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code chce přepnout do režimu {{mode}}",
-		"wantsToSwitchWithReason": "Axon Code chce přepnout do režimu {{mode}}, protože: {{reason}}",
-		"didSwitch": "Axon Code přepnul do režimu {{mode}}",
-		"didSwitchWithReason": "Axon Code přepnul do režimu {{mode}}, protože: {{reason}}"
+		"wantsToSwitch": "přepnout do režimu {{mode}}",
+		"wantsToSwitchWithReason": "přepínání do režimu {{mode}}, protože: {{reason}}",
+		"didSwitch": "přepnuto do režimu {{mode}}",
+		"didSwitchWithReason": "přepnuto do režimu {{mode}}, protože: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code chce vytvořit nový podúkol v režimu {{mode}}:",
-		"wantsToFinish": "Axon Code chce dokončit tento podúkol",
-		"newTaskContent": "Instrukce podúkolu",
+		"wantsToCreate": "vytvořit nový podúkol v režimu {{mode}}",
+		"wantsToFinish": "dokončit tento podúkol",
+		"newTaskContent": "Pokyny pro podúkol",
 		"completionContent": "Podúkol dokončen",
 		"resultContent": "Výsledky podúkolu",
-		"defaultResult": "Prosím pokračuj k dalšímu úkolu.",
-		"completionInstructions": "Podúkol dokončen! Můžeš zkontrolovat výsledky a navrhnout jakékoli opravy nebo další kroky. Pokud vše vypadá dobře, potvrď pro vrácení výsledku do nadřazeného úkolu."
+		"defaultResult": "Prosím pokračujte k dalšímu úkolu.",
+		"completionInstructions": "Podúkol dokončen! Můžete zkontrolovat výsledky a navrhnout jakékoli opravy nebo další kroky. Pokud vše vypadá dobře, potvrďte vrácení výsledku rodičovskému úkolu."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code má otázku:"
+		"hasQuestion": "otázka"
 	},
-	"taskCompleted": "Úkol dokončen",
+	"taskCompleted": "Dokončeno",
 	"error": "Chyba",
 	"diffError": {
 		"title": "Úprava neúspěšná"
 	},
 	"troubleMessage": "Axon Code má potíže...",
 	"powershell": {
-		"issues": "Zdá se, že máš problémy s Windows PowerShell, prosím podívej se na toto"
+		"issues": "Zdá se, že máte problémy s Windows PowerShell, prosím podívejte se na toto"
 	},
 	"autoApprove": {
-		"title": "Automatické schvalování:",
-		"none": "Žádné",
-		"description": "Automatické schvalování umožňuje Axon Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>.",
-		"selectOptionsFirst": "Nejprve vyber alespoň jednu možnost níže pro povolení automatického schvalování",
-		"toggleAriaLabel": "Přepnout automatické schvalování",
-		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti",
-		"tooltip": "Automaticky schválit požadavky na použití nástrojů",
 		"tooltipManage": "Spravovat nastavení automatického schvalování",
 		"tooltipStatus": "Automatické schvalování povoleno pro: {{toggles}}",
+		"title": "Automatické schvalování",
 		"all": "Vše",
-		"triggerLabel_zero": "Automatické schválení: vypnuto",
-		"triggerLabel_one": "Automatické schválení: 1",
-		"triggerLabel_other": "Automatické schválení: {{count}}",
-		"triggerLabelAll": "Automatické schválení: YOLO",
-		"triggerLabelOff": "Automatické schvalování vypnuto"
-	},
-	"modeSelector": {
-		"title": "Režimy",
-		"marketplace": "Tržiště režimů",
-		"settings": "Nastavení režimů",
-		"description": "Specializované persony které přizpůsobují chování Axon Code.",
-		"searchPlaceholder": "Hledat režimy...",
-		"noResults": "Nebyly nalezeny žádné výsledky",
-		"organizationModes": "Režimy organizace"
+		"none": "Žádné",
+		"description": "Spouštět tyto akce bez žádosti o souhlas. Povolte to pouze pro akce, kterým plně důvěřujete.",
+		"selectOptionsFirst": "Vyberte alespoň jednu možnost níže pro povolení automatického schvalování",
+		"toggleAriaLabel": "Přepnout automatické schvalování",
+		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyberte možnosti",
+		"triggerLabelOff": "Automatické schvalování vypnuto",
+		"triggerLabel_zero": "0 automatických schválení",
+		"triggerLabel_one": "1 automatické schválení",
+		"triggerLabel_other": "{{count}} automatických schválení",
+		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Vydán Axon Code {{version}}",
-		"description": "Axon Code {{version}} přináší hlavní nové funkce a vylepšení na základě tvé zpětné vazby.",
-		"whatsNew": "Co je nového",
-		"feature1": "<bold>Spuštění Axon Code Marketplace</bold>: Tržiště je nyní živé! Objevuj a instaluj režimy a MCP snadněji než kdy dříve.",
-		"feature2": "<bold>Modely Gemini 2.5</bold>: Přidána podpora pro nové modely Gemini 2.5 Pro, Flash a Flash Lite.",
-		"feature3": "<bold>Podpora souborů Excel a další</bold>: Přidána podpora souborů Excel (.xlsx) a mnoho oprav chyb a vylepšení!",
-		"hideButton": "Skrýt oznámení",
-		"detailsDiscussLinks": "Získej více podrobností a diskutuj na <discordLink>Discord</discordLink> a <redditLink>Reddit</redditLink> 🚀",
-		"learnMore": "Dozvědět se více",
-		"visitCloudButton": "Navštívit Roo Code Cloud",
-		"socialLinks": "Následujte nás",
+		"title": "🎉 Roo Code {{version}} vydáno",
 		"stealthModel": {
-			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Bleskurychle rychlý rozumový model, který vyniká v agentním kódování s kontextovým oknem 262k, dostupný prostřednictvím Roo Code Cloud.",
-			"note": "(Poznámka: prompty a dokončení jsou zaznamenávány tvůrcem modelu za účelem vylepšení modelu)",
-			"connectButton": "Připojit se k Roo Code Cloud",
-			"selectModel": "Vyber <code>roo/sonic</code> z poskytovatele Roo Code Cloud v<br/><settingsLink>Nastaveních</settingsLink> pro začátek",
-			"goToSettingsButton": "Jít do Nastavení"
-		}
+			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Code Supernova: Nyní upgradován s <bold>1M tokenovým kontextovým oknem</bold>! Všestranný agentní programovací model, který podporuje vstup obrázků, přístupný přes Roo Code Cloud.",
+			"note": "(Poznámka: výzvy a dokončení jsou zaznamenávány tvůrcem modelu a používány ke zlepšení modelu)",
+			"connectButton": "Připojit k Roo Code Cloud",
+			"selectModel": "Vyberte <code>roo/code-supernova</code> z poskytovatele Roo Code Cloud v Nastavení a začněte.",
+			"goToSettingsButton": "Přejít do nastavení"
+		},
+		"socialLinks": "Připojte se k nám na <xLink>X</xLink>, <discordLink>Discord</discordLink>, nebo <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
-		"thinking": "Přemýšlím",
+		"thinking": "Uvažování",
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Kopírovat do vstupu (stejné jako shift + klik)",
+		"copyToInput": "Kopírovat do vstupu (stejné jako shift + kliknutí)",
 		"autoSelectCountdown": "Automatický výběr za {{count}}s",
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Axon Code chce použít prohlížeč:",
+		"rooWantsToUse": "použít prohlížeč",
 		"consoleLogs": "Záznamy konzole",
 		"noNewLogs": "(Žádné nové záznamy)",
 		"screenshot": "Snímek obrazovky prohlížeče",
@@ -363,27 +346,25 @@
 		"tooltips": {
 			"expand": "Rozbalit blok kódu",
 			"collapse": "Sbalit blok kódu",
-			"enable_wrap": "Zapnout zalamování slov",
-			"disable_wrap": "Vypnout zalamování slov",
 			"copy_code": "Kopírovat kód"
 		}
 	},
-	"systemPromptWarning": "VAROVÁNÍ: Aktivní vlastní přepsání systémového promptu. To může vážně narušit funkčnost a způsobit nepředvídatelné chování.",
-	"profileViolationWarning": "Aktuální profil porušuje nastavení tvé organizace",
+	"systemPromptWarning": "VAROVÁNÍ: Vlastní přepsání systémové výzvy aktivní. To může vážně narušit funkčnost a způsobit nepředvídatelné chování.",
+	"profileViolationWarning": "Aktuální profil není kompatibilní s nastavením vaší organizace",
 	"shellIntegration": {
-		"title": "Varování provádění příkazu",
-		"description": "Tvůj příkaz se provádí bez integrace shellu terminálu VSCode. Pro potlačení tohoto varování můžeš vypnout integraci shellu v sekci <strong>Terminal</strong> <settingsLink>nastavení Axon Code</settingsLink> nebo vyřešit integraci terminálu VSCode pomocí odkazu níže.",
-		"troubleshooting": "Klikni zde pro dokumentaci integrace shellu."
+		"title": "Varování při vykonávání příkazu",
+		"description": "Váš příkaz je vykonáván bez integrace shellu terminálu VSCode. Chcete-li toto varování potlačit, můžete zakázat integraci shellu v sekci <strong>Terminál</strong> v <settingsLink>nastavení Axon Code</settingsLink> nebo řešit problémy s integrací terminálu VSCode pomocí odkazu níže.",
+		"troubleshooting": "Klikněte sem pro dokumentaci integrace shellu."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Dosažen limit automaticky schválených požadavků",
-			"description": "Axon Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chceš resetovat počítadlo a pokračovat v úkolu?",
+			"description": "Axon Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chcete resetovat počet a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
 		},
 		"autoApprovedCostLimitReached": {
-			"title": "Dosažen limit automaticky schválených nákladů",
-			"description": "Axon Code dosáhl limitu automaticky schválených nákladů ${{count}}. Chceš resetovat náklady a pokračovat v úkolu?",
+			"title": "Dosažen limit nákladů automaticky schválených",
+			"description": "Axon Code dosáhl automaticky schváleného limitu nákladů ${{count}}. Chcete resetovat náklady a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
 		}
 	},
@@ -395,21 +376,16 @@
 		"status": "Stav indexu"
 	},
 	"versionIndicator": {
-		"ariaLabel": "Verze {{version}} - Klikni pro zobrazení poznámek k vydání"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud přichází brzy!",
-		"description": "Spouštěj vzdálené agenty v cloudu, přistupuj ke svým úkolům odkudkoli, spolupracuj s ostatními a mnoho dalšího.",
-		"joinWaitlist": "Připoj se na čekací listinu pro získání přednostního přístupu."
+		"ariaLabel": "Verze {{version}} - Klikněte pro zobrazení poznámek k vydání"
 	},
 	"command": {
 		"triggerDescription": "Spustit příkaz {{name}}"
 	},
 	"slashCommands": {
-		"tooltip": "Spravovat slash příkazy",
-		"manageCommands": "Spravovat slash příkazy v nastavení",
-		"title": "Slash příkazy",
-		"description": "Vytvoř vlastní slash příkazy pro rychlý přístup k často používaným promptům a pracovním postupům. <DocsLink>Dokumentace</DocsLink>",
+		"tooltip": "Spravovat lomítkové příkazy",
+		"title": "Lomítkové příkazy",
+		"description": "Používejte vestavěné lomítkové příkazy nebo si vytvořte vlastní pro rychlý přístup k často používaným výzvám a pracovním postupům. <DocsLink>Dokumentace</DocsLink>",
+		"manageCommands": "Spravovat lomítkové příkazy v nastavení",
 		"builtInCommands": "Vestavěné příkazy",
 		"globalCommands": "Globální příkazy",
 		"workspaceCommands": "Příkazy pracovního prostoru",
@@ -420,27 +396,23 @@
 		"newWorkspaceCommandPlaceholder": "Nový příkaz pracovního prostoru...",
 		"deleteDialog": {
 			"title": "Smazat příkaz",
-			"description": "Jsi si jistý, že chceš smazat příkaz \"{{name}}\"? Tuto akci nelze vrátit zpět.",
+			"description": "Opravdu chcete smazat příkaz \"{{name}}\"? Tuto akci nelze vrátit zpět.",
 			"cancel": "Zrušit",
 			"confirm": "Smazat"
 		}
 	},
-	"queuedMessages": {
-		"title": "Zprávy ve frontě:",
-		"clickToEdit": "Klikni pro úpravu zprávy"
-	},
-	"editMessage": {
-		"placeholder": "Upravit tvou zprávu..."
-	},
-	"generateCommitMessage": "Vygenerovat commit zprávu",
 	"slashCommand": {
-		"wantsToRun": "Axon Code chce spustit slash příkaz:",
-		"didRun": "Axon Code spustil slash příkaz:"
+		"wantsToRun": "spustit lomítkový příkaz",
+		"didRun": "Axon Code spustil lomítkový příkaz"
+	},
+	"queuedMessages": {
+		"title": "Zprávy ve frontě",
+		"clickToEdit": "Klikněte pro úpravu zprávy"
 	},
 	"contextMenu": {
 		"noResults": "Žádné výsledky",
 		"problems": "Problémy",
 		"terminal": "Terminál",
-		"url": "Vložit URL pro získání obsahu"
+		"url": "Vložte URL pro načtení obsahu"
 	}
 }

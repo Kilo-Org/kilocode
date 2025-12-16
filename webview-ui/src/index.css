@@ -437,6 +437,33 @@ vscode-text-field::part(input) {
 	color: white;
 }
 
+.mention-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 1px;
+	padding: 0px 1.5px;
+	border-radius: 2px;
+	font-size: 10px;
+	background-color: color-mix(in srgb, var(--vscode-charts-blue) 30%, black);
+	color: var(--vscode-foreground);
+	font-size: inherit;
+	letter-spacing: 0em;
+	font-weight: 300;
+	vertical-align: baseline;
+}
+
+.mention-chip__at {
+	padding: 0px;
+	color: white;
+	font-size: 11px;
+	font-weight: 200;
+}
+
+.mention-chip__primary,
+.mention-chip__primary {
+	color: var(--vscode-foreground);
+}
+
 /**
  * vscrui Overrides / Hacks
  */

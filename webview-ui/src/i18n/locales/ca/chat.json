@@ -3,26 +3,26 @@
 	"task": {
 		"title": "Tasca",
 		"expand": "Expandir tasca",
-		"collapse": "Replegar tasca",
+		"collapse": "Contraure tasca",
 		"seeMore": "Veure més",
 		"seeLess": "Veure menys",
 		"tokens": "Tokens",
-		"cache": "Caché",
-		"apiCost": "Cost d'API",
+		"cache": "Memòria cau",
+		"apiCost": "Cost de l'API",
 		"size": "Mida",
-		"contextWindow": "Finestra de context",
-		"closeAndStart": "Tancar tasca i iniciar-ne una de nova",
+		"condenseContext": "Condensar context de manera intel·ligent",
+		"contextWindow": "Longitud del context",
+		"closeAndStart": "Tancar tasca i començar-ne una de nova",
 		"export": "Exportar historial de tasques",
-		"delete": "Eliminar tasca (Shift + Clic per ometre confirmació)",
-		"condenseContext": "Condensar context de forma intel·ligent",
 		"share": "Compartir tasca",
+		"delete": "Eliminar tasca (Shift + Clic per ometre confirmació)",
 		"shareWithOrganization": "Compartir amb l'organització",
 		"shareWithOrganizationDescription": "Només els membres de la teva organització poden accedir",
 		"sharePublicly": "Compartir públicament",
 		"sharePubliclyDescription": "Qualsevol amb l'enllaç pot accedir",
-		"connectToCloud": "Connecta al núvol",
+		"connectToCloud": "Connectar al núvol",
 		"connectToCloudDescription": "Inicia sessió a Axon Code Cloud per compartir tasques",
-		"sharingDisabledByOrganization": "Compartició deshabilitada per l'organització",
+		"sharingDisabledByOrganization": "Compartir desactivat per l'organització",
 		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
 		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls",
 		"openInCloud": "Obrir tasca a Roo Code Cloud",
@@ -31,56 +31,64 @@
 	"history": {
 		"title": "Historial"
 	},
-	"unpin": "Desfixar",
-	"pin": "Fixar",
-	"tokenProgress": {
-		"availableSpace": "Espai disponible: {{amount}} tokens",
-		"tokensUsed": "Tokens utilitzats: {{used}} de {{total}}",
-		"reservedForResponse": "Reservat per a resposta del model: {{amount}} tokens"
-	},
+	"unpin": "Desancorar",
+	"pin": "Ancorar",
 	"retry": {
 		"title": "Tornar a intentar",
-		"tooltip": "Torna a provar l'operació"
+		"tooltip": "Intenta l'operació de nou"
 	},
 	"startNewTask": {
-		"title": "Començar una nova tasca",
+		"title": "Començar nova tasca",
 		"tooltip": "Comença una nova tasca"
 	},
 	"reportBug": {
-		"title": "Informa d'un error"
+		"title": "Informar d'un error"
 	},
 	"proceedAnyways": {
-		"title": "Continuar de totes maneres",
+		"title": "Continuar igualment",
 		"tooltip": "Continua mentre s'executa l'ordre"
 	},
 	"save": {
 		"title": "Desar",
 		"tooltip": "Desa els canvis del missatge"
 	},
+	"tokenProgress": {
+		"availableSpace": "Espai disponible: {{amount}} tokens",
+		"tokensUsed": "Tokens utilitzats: {{used}} de {{total}}",
+		"reservedForResponse": "Reservat per a la resposta del model: {{amount}} tokens"
+	},
 	"reject": {
 		"title": "Rebutjar",
 		"tooltip": "Rebutja aquesta acció"
 	},
-	"completeSubtaskAndReturn": "Completar la subtasca i tornar",
+	"completeSubtaskAndReturn": "Completar subtasca i tornar",
 	"approve": {
 		"title": "Aprovar",
 		"tooltip": "Aprova aquesta acció"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Aprovar tot"
+		},
+		"deny": {
+			"title": "Denegar tot"
+		}
+	},
 	"runCommand": {
-		"title": "Ordre",
+		"title": "Executar",
 		"tooltip": "Executa aquesta ordre"
 	},
 	"proceedWhileRunning": {
 		"title": "Continuar mentre s'executa",
-		"tooltip": "Continua malgrat els advertiments"
+		"tooltip": "Continua malgrat els avisos"
 	},
 	"killCommand": {
-		"title": "Atura l'ordre",
-		"tooltip": "Atura l'ordre actual"
+		"title": "Aturar ordre",
+		"tooltip": "Finalitza l'ordre actual"
 	},
 	"resumeTask": {
-		"title": "Reprendre la tasca",
-		"tooltip": "Repren la tasca actual"
+		"title": "Reprendre tasca",
+		"tooltip": "Continua la tasca actual"
 	},
 	"terminate": {
 		"title": "Finalitzar",
@@ -90,186 +98,201 @@
 		"title": "Cancel·lar",
 		"tooltip": "Cancel·la l'operació actual"
 	},
+	"editMessage": {
+		"placeholder": "Editar el teu missatge..."
+	},
 	"scrollToBottom": "Desplaça't al final del xat",
-	"about": "Genera, refactoritza i depura codi amb l'ajuda de la IA. Consulta la nostra <DocsLink>documentació</DocsLink> per obtenir més informació.",
-	"onboarding": "<strong> La vostra llista de tasques en aquest espai de treball està buida. </strong> Comença escrivint una tasca a continuació. \nNo esteu segur per on començar? \nMés informació sobre què pot fer Axon Code als documents.",
+	"about": "Genera, refactoritza i depura codi amb assistència d'IA. Consulta la nostra <DocsLink>documentació</DocsLink> per obtenir més informació.",
+	"onboarding": "La teva llista de tasques en aquest espai de treball està buida.",
 	"rooTips": {
 		"boomerangTasks": {
-			"title": "Orquestració de Tasques",
-			"description": "Divideix les tasques en parts més petites i manejables."
+			"title": "Orquestració de tasques",
+			"description": "Divideix les tasques en parts més petites i manejables"
 		},
 		"stickyModels": {
-			"title": "Modes persistents",
-			"description": "Cada mode recorda el vostre darrer model utilitzat"
+			"title": "Models enganxosos",
+			"description": "Cada mode recorda l'últim model utilitzat"
 		},
 		"tools": {
 			"title": "Eines",
-			"description": "Permet que la IA resolgui problemes navegant per la web, executant ordres i molt més."
+			"description": "Permet que la IA resolgui problemes navegant pel web, executant ordres i més"
 		},
 		"customizableModes": {
 			"title": "Modes personalitzables",
-			"description": "Personalitats especialitzades amb comportaments propis i models assignats"
+			"description": "Personalitats especialitzades amb el seu propi comportament i models assignats"
 		}
 	},
 	"selectMode": "Selecciona el mode d'interacció",
-	"selectApiConfig": "Seleccioneu la configuració de l'API",
-	"selectModelConfig": "Seleccioneu el model",
-	"enhancePrompt": "Millora la sol·licitud amb context addicional",
-	"addImages": "Afegeix imatges al missatge",
-	"sendMessage": "Envia el missatge",
-	"stopTts": "Atura la síntesi de veu",
-	"typeMessage": "Escriu un missatge...",
-	"typeTask": "Escriu la teva tasca aquí...",
-	"addContext": "@ per afegir context, / per a comandes",
-	"dragFiles": "manté premut shift per arrossegar fitxers",
-	"dragFilesImages": "manté premut shift per arrossegar fitxers/imatges",
-	"enhancePromptDescription": "El botó 'Millora la sol·licitud' ajuda a millorar la teva sol·licitud proporcionant context addicional, aclariments o reformulacions. Prova d'escriure una sol·licitud aquí i fes clic al botó de nou per veure com funciona.",
+	"selectApiConfig": "Selecciona model",
+	"selectModelConfig": "Selecciona model",
+	"enhancePrompt": "Millorar l'indicació amb context addicional",
 	"modeSelector": {
 		"title": "Modes",
-		"marketplace": "Marketplace de Modes",
-		"settings": "Configuració de Modes",
-		"description": "Personalitats especialitzades que adapten el comportament de Axon Code.",
-		"searchPlaceholder": "Cerca modes...",
+		"marketplace": "Mercat de modes",
+		"settings": "Configuració de modes",
+		"description": "Personalitats especialitzades que adapten el comportament d'Axon Code.",
+		"searchPlaceholder": "Cercar modes...",
 		"noResults": "No s'han trobat resultats",
 		"organizationModes": "Modes d'organització"
 	},
+	"enhancePromptDescription": "El botó 'Millorar indicació' ajuda a millorar la teva indicació proporcionant context addicional, aclariment o reformulació. Prova d'escriure una indicació aquí i fes clic al botó de nou per veure com funciona.",
+	"addImages": "Afegir imatges al missatge",
+	"sendMessage": "Enviar missatge",
+	"stopTts": "Aturar text a veu",
+	"typeMessage": "Escriu un missatge...",
+	"typeTask": "Escriu la teva tasca aquí...",
+	"addContext": "@ per afegir context, / per a ordres",
+	"dragFiles": "mantén shift per arrossegar fitxers",
+	"dragFilesImages": "mantén shift per arrossegar fitxers/imatges",
 	"errorReadingFile": "Error en llegir el fitxer",
-	"noValidImages": "No s'ha processat cap imatge vàlida",
+	"noValidImages": "No s'han processat imatges vàlides",
 	"separator": "Separador",
-	"edit": "Edita...",
-	"forNextMode": "per al següent mode",
+	"edit": "Editar...",
+	"forNextMode": "per al mode següent",
 	"forPreviousMode": "per al mode anterior",
-	"error": "Error",
-	"diffError": {
-		"title": "Edició fallida"
-	},
-	"troubleMessage": "Axon Code està tenint problemes...",
 	"apiRequest": {
 		"title": "Sol·licitud API",
-		"failed": "Sol·licitud API ha fallat",
+		"failed": "Ha fallat la sol·licitud API",
 		"streaming": "Sol·licitud API...",
 		"cancelled": "Sol·licitud API cancel·lada",
-		"streamingFailed": "Transmissió API ha fallat"
+		"streamingFailed": "Ha fallat la transmissió API"
 	},
 	"checkpoint": {
 		"regular": "Punt de control",
-		"initializingWarning": "Encara s'està inicialitzant el punt de control... Si això triga massa, pots desactivar els punts de control a la <settingsLink>configuració</settingsLink> i reiniciar la teva tasca.",
+		"initializingWarning": "Encara s'està inicialitzant el punt de control... Si això triga massa, pots desactivar els punts de control a <settingsLink>configuració</settingsLink> i reiniciar la teva tasca.",
 		"menu": {
 			"viewDiff": "Veure diferències",
 			"restore": "Restaurar punt de control",
-			"restoreFiles": "Restaurar arxius",
-			"restoreFilesDescription": "Restaura els arxius del teu projecte a una instantània presa en aquest punt.",
-			"restoreFilesAndTask": "Restaurar arxius i tasca",
+			"restoreFiles": "Restaurar fitxers",
+			"restoreFilesDescription": "Restaura els fitxers del teu projecte a una instantània feta en aquest punt.",
+			"restoreFilesAndTask": "Restaurar fitxers i tasca",
 			"confirm": "Confirmar",
 			"cancel": "Cancel·lar",
 			"cannotUndo": "Aquesta acció no es pot desfer.",
-			"restoreFilesAndTaskDescription": "Restaura els arxius del teu projecte a una instantània presa en aquest punt i elimina tots els missatges posteriors a aquest punt."
+			"restoreFilesAndTaskDescription": "Restaura els fitxers del teu projecte a una instantània feta en aquest punt i elimina tots els missatges després d'aquest punt."
 		},
 		"current": "Actual"
 	},
+	"contextCondense": {
+		"title": "Context condensat",
+		"condensing": "Condensant context...",
+		"errorHeader": "No s'ha pogut condensar el context",
+		"tokens": "tokens"
+	},
 	"instructions": {
-		"wantsToFetch": "Axon Code vol obtenir instruccions detallades per ajudar amb la tasca actual."
+		"wantsToFetch": "obtenir instruccions"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code vol llegir aquest fitxer",
-		"wantsToReadOutsideWorkspace": "Axon Code vol llegir aquest fitxer fora de l'espai de treball",
-		"didRead": "Axon Code ha llegit aquest fitxer",
-		"wantsToEdit": "Axon Code vol editar aquest fitxer",
-		"wantsToEditOutsideWorkspace": "Axon Code vol editar aquest fitxer fora de l'espai de treball",
-		"wantsToEditProtected": "Axon Code vol editar un fitxer de configuració protegit",
-		"wantsToCreate": "Axon Code vol crear un nou fitxer",
-		"wantsToSearchReplace": "Axon Code vol realitzar cerca i substitució en aquest fitxer",
-		"didSearchReplace": "Axon Code ha realitzat cerca i substitució en aquest fitxer",
-		"wantsToInsert": "Axon Code vol inserir contingut en aquest fitxer",
-		"wantsToInsertWithLineNumber": "Axon Code vol inserir contingut a la línia {{lineNumber}} d'aquest fitxer",
-		"wantsToInsertAtEnd": "Axon Code vol afegir contingut al final d'aquest fitxer",
-		"wantsToReadAndXMore": "En Axon Code vol llegir aquest fitxer i {{count}} més",
-		"wantsToReadMultiple": "Axon Code vol llegir diversos fitxers",
-		"wantsToApplyBatchChanges": "Axon Code vol aplicar canvis a múltiples fitxers",
-		"wantsToGenerateImage": "Axon Code vol generar una imatge",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code vol generar una imatge fora de l'espai de treball",
-		"wantsToGenerateImageProtected": "Axon Code vol generar una imatge en una ubicació protegida",
-		"didGenerateImage": "Axon Code ha generat una imatge"
+		"wantsToRead": "Llegir",
+		"wantsToReadMultiple": "Llegir",
+		"wantsToReadAndXMore": "Llegir {{count}} més",
+		"wantsToReadOutsideWorkspace": "Llegir (fora de l'espai de treball)",
+		"didRead": "Llegit",
+		"wantsToEdit": "Editar",
+		"wantsToEditOutsideWorkspace": "Editar (fora de l'espai de treball)",
+		"wantsToEditProtected": "editar fitxer de configuració protegit",
+		"wantsToApplyBatchChanges": "aplicar canvis a múltiples fitxers",
+		"wantsToGenerateImage": "generar imatge",
+		"wantsToGenerateImageOutsideWorkspace": "generar imatge (fora de l'espai de treball)",
+		"wantsToGenerateImageProtected": "generar imatge (ubicació protegida)",
+		"didGenerateImage": "imatge generada",
+		"wantsToCreate": "crear fitxer nou",
+		"wantsToSearchReplace": "cercar i reemplaçar",
+		"didSearchReplace": "s'ha fet cercar i reemplaçar en aquest fitxer",
+		"wantsToInsert": "inserir contingut en aquest fitxer",
+		"wantsToInsertWithLineNumber": "inserir contingut en aquest fitxer a la línia {{lineNumber}}",
+		"wantsToInsertAtEnd": "afegir contingut al final d'aquest fitxer"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code vol veure els fitxers de nivell superior en aquest directori",
-		"didViewTopLevel": "Axon Code ha vist els fitxers de nivell superior en aquest directori",
-		"wantsToViewRecursive": "Axon Code vol veure recursivament tots els fitxers en aquest directori",
-		"didViewRecursive": "Axon Code ha vist recursivament tots els fitxers en aquest directori",
-		"wantsToViewDefinitions": "Axon Code vol veure noms de definicions de codi font utilitzats en aquest directori",
-		"didViewDefinitions": "Axon Code ha vist noms de definicions de codi font utilitzats en aquest directori",
-		"wantsToSearch": "Axon Code vol cercar en aquest directori <code>{{regex}}</code>",
-		"didSearch": "Axon Code ha cercat en aquest directori <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Axon Code vol cercar en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code ha cercat en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code vol veure els fitxers de nivell superior en aquest directori (fora de l'espai de treball)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code ha vist els fitxers de nivell superior en aquest directori (fora de l'espai de treball)",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code vol veure recursivament tots els fitxers en aquest directori (fora de l'espai de treball)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code ha vist recursivament tots els fitxers en aquest directori (fora de l'espai de treball)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code vol veure noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)"
+		"wantsToViewTopLevel": "Explorar",
+		"didViewTopLevel": "Explorar",
+		"wantsToViewTopLevelOutsideWorkspace": "Explorar (fora de l'espai de treball)",
+		"didViewTopLevelOutsideWorkspace": "Explorat (fora de l'espai de treball)",
+		"wantsToViewRecursive": "Explorar (recursivament)",
+		"didViewRecursive": "Explorat (recursivament)",
+		"wantsToViewRecursiveOutsideWorkspace": "Explorar (recursivament)(fora de l'espai de treball)",
+		"didViewRecursiveOutsideWorkspace": "Explorat (recursivament)(fora de l'espai de treball)",
+		"wantsToViewDefinitions": "veure noms de definicions de codi font utilitzats en aquest directori",
+		"didViewDefinitions": "s'han vist noms de definicions de codi font utilitzats en aquest directori",
+		"wantsToViewDefinitionsOutsideWorkspace": "veure noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)",
+		"didViewDefinitionsOutsideWorkspace": "s'han vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)",
+		"wantsToSearch": "Cercar <code>{{regex}}</code>",
+		"didSearch": "Cercar <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "cercar en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "s'ha cercat en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>"
 	},
-	"commandOutput": "Sortida de la comanda",
+	"codebaseSearch": {
+		"wantsToSearch": "cercant a la base de codi <code>{{query}}</code>",
+		"wantsToSearchWithPath": "cercant a la base de codi <code>{{query}}</code> a <code>{{path}}</code>",
+		"didSearch_one": "S'ha trobat 1 resultat",
+		"didSearch_other": "S'han trobat {{count}} resultats",
+		"resultTooltip": "Puntuació de similitud: {{score}} (fes clic per obrir el fitxer)"
+	},
+	"commandOutput": "Sortida de l'ordre",
 	"commandExecution": {
 		"abort": "Avortar",
-		"running": "En execució",
+		"running": "Executant",
 		"pid": "PID: {{pid}}",
-		"exitStatus": "S'ha sortit amb l'estat {{exitCode}}",
-		"manageCommands": "Comandes aprovades automàticament",
-		"addToAllowed": "Afegeix a la llista permesa",
-		"removeFromAllowed": "Elimina de la llista permesa",
-		"addToDenied": "Afegeix a la llista denegada",
-		"removeFromDenied": "Elimina de la llista denegada",
-		"abortCommand": "Interrompre l'execució de l'ordre",
-		"expandOutput": "Amplia la sortida",
-		"collapseOutput": "Redueix la sortida",
-		"expandManagement": "Amplia la secció de gestió de comandaments",
-		"collapseManagement": "Redueix la secció de gestió de comandaments"
+		"exitStatus": "Ha sortit amb estat {{exitCode}}",
+		"manageCommands": "Ordres aprovades automàticament",
+		"addToAllowed": "Afegir a la llista permesa",
+		"removeFromAllowed": "Eliminar de la llista permesa",
+		"addToDenied": "Afegir a la llista denegada",
+		"removeFromDenied": "Eliminar de la llista denegada",
+		"abortCommand": "Avortar l'execució de l'ordre",
+		"expandOutput": "Expandir sortida",
+		"collapseOutput": "Contraure sortida",
+		"expandManagement": "Expandir secció de gestió d'ordres",
+		"collapseManagement": "Contraure secció de gestió d'ordres"
 	},
 	"response": "Resposta",
 	"arguments": "Arguments",
 	"text": {
-		"rooSaid": "En Kilo ha dit"
+		"rooSaid": "Resposta"
 	},
 	"feedback": {
 		"youSaid": "Has dit"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code vol utilitzar una eina al servidor MCP {{serverName}}",
-		"wantsToAccessResource": "Axon Code vol accedir a un recurs al servidor MCP {{serverName}}"
+		"wantsToUseTool": "utilitzant eina del servidor MCP {{serverName}}",
+		"wantsToAccessResource": "accedint a recurs del servidor MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code vol canviar a mode <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Axon Code vol canviar a mode <code>{{mode}}</code> perquè: {{reason}}",
-		"didSwitch": "Axon Code ha canviat a mode <code>{{mode}}</code>",
-		"didSwitchWithReason": "Axon Code ha canviat a mode <code>{{mode}}</code> perquè: {{reason}}"
+		"wantsToSwitch": "canviar al mode {{mode}}",
+		"wantsToSwitchWithReason": "canviant al mode {{mode}} perquè: {{reason}}",
+		"didSwitch": "s'ha canviat al mode {{mode}}",
+		"didSwitchWithReason": "s'ha canviat al mode {{mode}} perquè: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code vol crear una nova subtasca en mode <code>{{mode}}</code>",
-		"wantsToFinish": "Axon Code vol finalitzar aquesta subtasca",
+		"wantsToCreate": "crear una nova subtasca en mode {{mode}}",
+		"wantsToFinish": "finalitzar aquesta subtasca",
 		"newTaskContent": "Instruccions de la subtasca",
 		"completionContent": "Subtasca completada",
 		"resultContent": "Resultats de la subtasca",
-		"defaultResult": "Si us plau, continua amb la següent tasca.",
-		"completionInstructions": "Subtasca completada! Pots revisar els resultats i suggerir correccions o següents passos. Si tot sembla correcte, confirma per tornar el resultat a la tasca principal."
+		"defaultResult": "Si us plau, continua amb la tasca següent.",
+		"completionInstructions": "Subtasca completada! Pots revisar els resultats i suggerir correccions o passos següents. Si tot es veu bé, confirma per retornar el resultat a la tasca principal."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code té una pregunta"
+		"hasQuestion": "pregunta"
 	},
-	"taskCompleted": "Tasca completada",
+	"taskCompleted": "Completat",
+	"error": "Error",
+	"diffError": {
+		"title": "Edició sense èxit"
+	},
+	"troubleMessage": "Axon Code està tenint problemes...",
 	"powershell": {
-		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
+		"issues": "Sembla que tens problemes amb Windows PowerShell, si us plau consulta això"
 	},
 	"autoApprove": {
-		"tooltipManage": "Gestiona la configuració d'aprovació automàtica",
+		"tooltipManage": "Gestionar la configuració d'aprovació automàtica",
 		"tooltipStatus": "Aprovació automàtica activada per a: {{toggles}}",
 		"title": "Aprovació automàtica",
-		"toggle": "Commuta l'aprovació automàtica",
 		"all": "Tot",
 		"none": "Cap",
-		"description": "Executa aquestes accions sense demanar permís. Activa-ho només per a accions de confiança.",
+		"description": "Executar aquestes accions sense demanar permís. Activa això només per a accions en les quals confiïs completament.",
 		"selectOptionsFirst": "Selecciona almenys una opció a continuació per activar l'aprovació automàtica",
-		"toggleAriaLabel": "Commuta l'aprovació automàtica",
+		"toggleAriaLabel": "Commutar l'aprovació automàtica",
 		"disabledAriaLabel": "Aprovació automàtica desactivada - selecciona primer les opcions",
 		"triggerLabelOff": "Aprovació automàtica desactivada",
 		"triggerLabel_zero": "0 aprovacions automàtiques",
@@ -277,36 +300,30 @@
 		"triggerLabel_other": "{{count}} aprovacions automàtiques",
 		"triggerLabelAll": "YOLO"
 	},
-	"reasoning": {
-		"thinking": "Pensant",
-		"seconds": "{{count}}s"
-	},
-	"contextCondense": {
-		"title": "Context condensat",
-		"condensing": "Condensant context...",
-		"errorHeader": "Error en condensar el context",
-		"tokens": "tokens"
-	},
-	"followUpSuggest": {
-		"copyToInput": "Copiar a l'entrada (o Shift + clic)",
-		"autoSelectCountdown": "Selecció automàtica en {{count}}s",
-		"countdownDisplay": "{{count}}s"
-	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Llançat",
+		"title": "🎉 S'ha llançat Roo Code {{version}}",
 		"stealthModel": {
-			"feature": "<bold>Model stealth GRATUÏT per temps limitat</bold> - Code Supernova: Ara actualitzat amb una <bold>finestra de context d'1M tokens</bold>! Un model de codificació agèntica versàtil que suporta entrades d'imatges, disponible a través de Roo Code Cloud.",
-			"note": "(Nota: els prompts i completacions són registrats pel creador del model i utilitzats per millorar-lo)",
+			"feature": "<bold>Model stealth GRATUÏT per temps limitat</bold> - Code Supernova: Ara actualitzat amb una <bold>finestra de context d'1M tokens</bold>! Un model de codificació agèntic versàtil que admet entrades d'imatges, accessible a través de Roo Code Cloud.",
+			"note": "(Nota: els prompts i les completacions són registrats pel creador del model i utilitzats per millorar el model)",
 			"connectButton": "Connectar a Roo Code Cloud",
 			"selectModel": "Selecciona <code>roo/code-supernova</code> del proveïdor Roo Code Cloud a Configuració per començar.",
 			"goToSettingsButton": "Anar a Configuració"
 		},
 		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
+	"reasoning": {
+		"thinking": "Raonament",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Copiar a l'entrada (igual que shift + clic)",
+		"autoSelectCountdown": "Selecció automàtica en {{count}}s",
+		"countdownDisplay": "{{count}}s"
+	},
 	"browser": {
-		"rooWantsToUse": "Axon Code vol utilitzar el navegador",
-		"consoleLogs": "Registres de consola",
-		"noNewLogs": "(Cap registre nou)",
+		"rooWantsToUse": "utilitzar navegador",
+		"consoleLogs": "Registres de la consola",
+		"noNewLogs": "(No hi ha registres nous)",
 		"screenshot": "Captura de pantalla del navegador",
 		"cursor": "cursor",
 		"navigation": {
@@ -317,11 +334,11 @@
 		"sessionStarted": "Sessió de navegador iniciada",
 		"actions": {
 			"title": "Acció de navegació: ",
-			"launch": "Iniciar navegador a {{url}}",
+			"launch": "Llançar navegador a {{url}}",
 			"click": "Clic ({{coordinate}})",
 			"type": "Escriure \"{{text}}\"",
-			"scrollDown": "Desplaçar avall",
-			"scrollUp": "Desplaçar amunt",
+			"scrollDown": "Desplaçar cap avall",
+			"scrollUp": "Desplaçar cap amunt",
 			"close": "Tancar navegador"
 		}
 	},
@@ -332,11 +349,11 @@
 			"copy_code": "Copiar codi"
 		}
 	},
-	"systemPromptWarning": "ADVERTÈNCIA: S'ha activat una substitució personalitzada d'instruccions del sistema. Això pot trencar greument la funcionalitat i causar un comportament impredictible.",
+	"systemPromptWarning": "ADVERTÈNCIA: Sobreescriptura personalitzada del prompt del sistema activa. Això pot trencar severament la funcionalitat i causar comportament impredictible.",
 	"profileViolationWarning": "El perfil actual no és compatible amb la configuració de la teva organització",
 	"shellIntegration": {
 		"title": "Advertència d'execució d'ordres",
-		"description": "La teva ordre s'està executant sense la integració de shell del terminal VSCode. Per suprimir aquest advertiment, pots desactivar la integració de shell a la secció <strong>Terminal</strong> de la <settingsLink>configuració de Axon Code</settingsLink> o solucionar problemes d'integració del terminal VSCode utilitzant l'enllaç a continuació.",
+		"description": "La teva ordre s'està executant sense la integració de shell del terminal de VSCode. Per suprimir aquest advertiment, pots desactivar la integració de shell a la secció <strong>Terminal</strong> de la <settingsLink>configuració d'Axon Code</settingsLink> o solucionar problemes de la integració del terminal de VSCode mitjançant l'enllaç de sota.",
 		"troubleshooting": "Fes clic aquí per a la documentació d'integració de shell."
 	},
 	"ask": {
@@ -346,79 +363,56 @@
 			"button": "Reiniciar i continuar"
 		},
 		"autoApprovedCostLimitReached": {
-			"title": "S'ha arribat al límit de cost d'aprovació automàtica",
-			"button": "Restableix i continua",
-			"description": "Axon Code ha arribat al límit de cost aprovat automàticament de ${{count}}. Vols restablir el cost i continuar amb la tasca?"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code vol cercar a la base de codi <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code vol cercar a la base de codi <code>{{query}}</code> a <code>{{path}}</code>",
-		"didSearch_one": "S'ha trobat 1 resultat",
-		"didSearch_other": "S'han trobat {{count}} resultats",
-		"resultTooltip": "Puntuació de similitud: {{score}} (fes clic per obrir el fitxer)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Aprovar tot"
-		},
-		"deny": {
-			"title": "Denegar tot"
+			"title": "S'ha arribat al límit de cost aprovat automàticament",
+			"description": "Axon Code ha arribat al límit de cost aprovat automàticament de ${{count}}. Vols reiniciar el cost i continuar amb la tasca?",
+			"button": "Reiniciar i continuar"
 		}
 	},
 	"indexingStatus": {
-		"ready": "Índex preparat",
+		"ready": "Índex llest",
 		"indexing": "Indexant {{percentage}}%",
 		"indexed": "Indexat",
 		"error": "Error d'índex",
 		"status": "Estat de l'índex"
 	},
 	"versionIndicator": {
-		"ariaLabel": "Versió {{version}} - Feu clic per veure les notes de llançament"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud està evolucionant!",
-		"description": "Executa agents remots al núvol, accedeix a les teves tasques des de qualsevol lloc, col·labora amb altres i molt més.",
-		"joinWaitlist": "Registra't per rebre les últimes actualitzacions."
-	},
-	"editMessage": {
-		"placeholder": "Edita el teu missatge..."
+		"ariaLabel": "Versió {{version}} - Fes clic per veure les notes de la versió"
 	},
 	"command": {
-		"triggerDescription": "Activa la comanda {{name}}"
+		"triggerDescription": "Activar l'ordre {{name}}"
 	},
 	"slashCommands": {
 		"tooltip": "Gestionar ordres de barra",
-		"title": "Ordres de Barra",
-		"description": "Utilitza ordres de barra integrades o crea personalitzades per accedir ràpidament a indicacions i fluxos de treball utilitzats amb freqüència. <DocsLink>Documentació</DocsLink>",
-		"manageCommands": "Gestiona les ordres de barra a la configuració",
-		"builtInCommands": "Ordres Integrades",
-		"globalCommands": "Ordres Globals",
-		"workspaceCommands": "Ordres de l'Espai de Treball",
+		"title": "Ordres de barra",
+		"description": "Utilitza ordres de barra integrades o crea-les personalitzades per accedir ràpidament a prompts i fluxos de treball utilitzats amb freqüència. <DocsLink>Documentació</DocsLink>",
+		"manageCommands": "Gestionar ordres de barra a la configuració",
+		"builtInCommands": "Ordres integrades",
+		"globalCommands": "Ordres globals",
+		"workspaceCommands": "Ordres de l'espai de treball",
 		"globalCommand": "Ordre global",
 		"editCommand": "Editar ordre",
 		"deleteCommand": "Eliminar ordre",
 		"newGlobalCommandPlaceholder": "Nova ordre global...",
 		"newWorkspaceCommandPlaceholder": "Nova ordre de l'espai de treball...",
 		"deleteDialog": {
-			"title": "Eliminar Ordre",
+			"title": "Eliminar ordre",
 			"description": "Estàs segur que vols eliminar l'ordre \"{{name}}\"? Aquesta acció no es pot desfer.",
 			"cancel": "Cancel·lar",
 			"confirm": "Eliminar"
 		}
 	},
+	"slashCommand": {
+		"wantsToRun": "executar una ordre de barra",
+		"didRun": "Axon Code ha executat una ordre de barra"
+	},
 	"queuedMessages": {
 		"title": "Missatges en cua",
-		"clickToEdit": "Feu clic per editar el missatge"
-	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code vol executar una comanda slash",
-		"didRun": "Axon Code ha executat una comanda slash"
+		"clickToEdit": "Fes clic per editar el missatge"
 	},
 	"contextMenu": {
-		"noResults": "Sense resultats",
+		"noResults": "No hi ha resultats",
 		"problems": "Problemes",
 		"terminal": "Terminal",
-		"url": "Enganxa la URL per obtenir-ne el contingut"
+		"url": "Enganxa l'URL per obtenir continguts"
 	}
 }

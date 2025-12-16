@@ -100,6 +100,11 @@ export class FileEditReviewController implements vscode.Disposable {
 		this.codeLensEmitter.fire()
 	}
 
+	// Public getter for pendingEdits to allow webview access
+	getPendingEdits() {
+		return this.pendingEdits
+	}
+
 	async handleAccept(arg?: any) {
 		// Arg can be a CommentThread if triggered from menu, or relPath if triggered programmatically
 		let entry: PendingFileEdit | undefined

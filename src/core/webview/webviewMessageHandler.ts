@@ -599,14 +599,51 @@ export const webviewMessageHandler = async (
 					try {
 						const changes = await service.getDiff(commitRange)
 						// Simplify for frontend
-						const files = changes.map((change) => ({
-							relative: change.paths.relative,
-							absolute: change.paths.absolute,
-							stat: {
-								additions: change.content.after ? change.content.after.split("\n").length : 0,
-								deletions: change.content.before ? change.content.before.split("\n").length : 0,
-							},
-						}))
+						const files = changes.map((change) => {
+							// Calculate actual additions and deletions by comparing before/after
+							let additions = 0
+							let deletions = 0
+
+							const beforeLines = (change.content.before || "").split("\n")
+							const afterLines = (change.content.after || "").split("\n")
+
+							// Simple line-based diff calculation
+							// This is a simplified approach - for new files, all lines are additions
+							// For deleted files, all lines are deletions
+							// For modified files, count changed lines
+							if (!change.content.before && change.content.after) {
+								// New file
+								additions = afterLines.length
+							} else if (change.content.before && !change.content.after) {
+								// Deleted file
+								deletions = beforeLines.length
+							} else {
+								// Modified file - use simple line count difference
+								// This is approximate but good enough for UI display
+								const lineDiff = afterLines.length - beforeLines.length
+								if (lineDiff > 0) {
+									additions = lineDiff
+									deletions = 0
+								} else {
+									additions = 0
+									deletions = Math.abs(lineDiff)
+								}
+								// If same line count, assume at least some lines changed
+								if (lineDiff === 0 && beforeLines.some((line, i) => line !== afterLines[i])) {
+									additions = 1
+									deletions = 1
+								}
+							}
+
+							return {
+								relative: change.paths.relative,
+								absolute: change.paths.absolute,
+								stat: {
+									additions,
+									deletions,
+								},
+							}
+						})
 						await provider.postMessageToWebview({
 							type: "commitChanges",
 							payload: {
@@ -622,6 +659,79 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		case "getPendingFileEdits": {
+			const currentTask = provider.getCurrentTask()
+
+			if (!currentTask) {
+				await provider.postMessageToWebview({
+					type: "pendingFileEdits",
+					payload: {
+						files: [],
+					},
+				} as any)
+				break
+			}
+
+			const pendingEdits = currentTask.fileEditReviewController.getPendingEdits()
+
+			const files = Array.from(pendingEdits.values()).map((edit) => {
+				// Calculate additions and deletions from content differences
+				let additions = 0
+				let deletions = 0
+
+				const beforeLines = (edit.originalContent || "").split("\n")
+
+				// Read the current file content to get the "after" state
+				let afterLines: string[] = []
+				try {
+					// Use the absolute path to read the current file content
+					const currentContent = require("fs").readFileSync(edit.absolutePath, "utf-8")
+					afterLines = currentContent.split("\n")
+				} catch (error) {
+					// File might have been deleted or not yet created
+					afterLines = []
+				}
+
+				// Simple line-based diff calculation
+				if (beforeLines.length === 0 && afterLines.length > 0) {
+					// New file
+					additions = afterLines.length
+				} else if (beforeLines.length > 0 && afterLines.length === 0) {
+					// Deleted file
+					deletions = beforeLines.length
+				} else {
+					// Modified file - use simple line count difference
+					const lineDiff = afterLines.length - beforeLines.length
+					if (lineDiff > 0) {
+						additions = lineDiff
+					} else {
+						deletions = Math.abs(lineDiff)
+					}
+					// If same line count, assume at least some lines changed
+					if (lineDiff === 0 && beforeLines.some((line, i) => line !== afterLines[i])) {
+						additions = 1
+						deletions = 1
+					}
+				}
+
+				return {
+					relPath: edit.relPath,
+					absolutePath: edit.absolutePath,
+					stat: {
+						additions,
+						deletions,
+					},
+				}
+			})
+
+			await provider.postMessageToWebview({
+				type: "pendingFileEdits",
+				payload: {
+					files,
+				},
+			} as any)
+			break
+		}
 		case "alwaysAllowExecute":
 			await updateGlobalState("alwaysAllowExecute", message.bool ?? undefined)
 			await provider.postStateToWebview()

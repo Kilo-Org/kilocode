@@ -152,7 +152,7 @@ export default function PricingPage() {
 
 			{/* Free Extension Notice */}
 			<div className="mx-auto max-w-6xl">
-				<div className="rounded-xl p-4 mb-8 text-center bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-purple-500/10 border border-blue-500/20 dark:border-[--var(--color-matterai-border)]">
+				<div className="rounded-xl p-4 mb-8 text-center bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-purple-500/10 border border-blue-500/20 dark:border-[var(--color-matterai-border)]">
 					<p className="text-center">
 						<strong className="font-semibold">The Roo Code extension is free! </strong>
 						Roo Code Cloud is an optional service which takes it to the next level.
@@ -326,7 +326,7 @@ export default function PricingPage() {
 			{/* CTA Section */}
 			<section className="py-20">
 				<div className="container mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="mx-auto max-w-4xl rounded-3xl border border-border/50 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-purple-500/5 p-8 text-center shadow-2xl backdrop-blur-xl dark:border-[--var(--color-matterai-border)] dark:bg-gradient-to-br dark:from-gray-800 dark:via-gray-900 dark:to-black sm:p-12">
+					<div className="mx-auto max-w-4xl rounded-3xl border border-border/50 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-purple-500/5 p-8 text-center shadow-2xl backdrop-blur-xl dark:border-[var(--color-matterai-border)] dark:bg-gradient-to-br dark:from-gray-800 dark:via-gray-900 dark:to-black sm:p-12">
 						<h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Try Roo Code Cloud now</h2>
 						<p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">Code from anywhere.</p>
 						<div className="flex flex-col justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">

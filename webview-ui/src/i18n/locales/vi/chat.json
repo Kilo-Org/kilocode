@@ -10,12 +10,12 @@
 		"cache": "Bộ nhớ đệm",
 		"apiCost": "Chi phí API",
 		"size": "Kích thước",
+		"condenseContext": "Cô đọng ngữ cảnh thông minh",
 		"contextWindow": "Chiều dài bối cảnh",
 		"closeAndStart": "Đóng nhiệm vụ và bắt đầu nhiệm vụ mới",
 		"export": "Xuất lịch sử nhiệm vụ",
-		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)",
-		"condenseContext": "Cô đọng ngữ cảnh thông minh",
 		"share": "Chia sẻ nhiệm vụ",
+		"delete": "Xóa nhiệm vụ (Shift + Click để bỏ qua xác nhận)",
 		"shareWithOrganization": "Chia sẻ với tổ chức",
 		"shareWithOrganizationDescription": "Chỉ thành viên tổ chức của bạn mới có thể truy cập",
 		"sharePublicly": "Chia sẻ công khai",
@@ -33,11 +33,6 @@
 	},
 	"unpin": "Bỏ ghim khỏi đầu",
 	"pin": "Ghim lên đầu",
-	"tokenProgress": {
-		"availableSpace": "Không gian khả dụng: {{amount}} tokens",
-		"tokensUsed": "Tokens đã sử dụng: {{used}} trong {{total}}",
-		"reservedForResponse": "Dành riêng cho phản hồi mô hình: {{amount}} tokens"
-	},
 	"retry": {
 		"title": "Thử lại",
 		"tooltip": "Thử lại thao tác"
@@ -57,6 +52,11 @@
 		"title": "Lưu",
 		"tooltip": "Lưu các thay đổi tin nhắn"
 	},
+	"tokenProgress": {
+		"availableSpace": "Không gian khả dụng: {{amount}} tokens",
+		"tokensUsed": "Tokens đã sử dụng: {{used}} trong {{total}}",
+		"reservedForResponse": "Dành riêng cho phản hồi mô hình: {{amount}} tokens"
+	},
 	"reject": {
 		"title": "Từ chối",
 		"tooltip": "Từ chối hành động này"
@@ -66,8 +66,16 @@
 		"title": "Phê duyệt",
 		"tooltip": "Phê duyệt hành động này"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Chấp nhận tất cả"
+		},
+		"deny": {
+			"title": "Từ chối tất cả"
+		}
+	},
 	"runCommand": {
-		"title": "Lệnh",
+		"title": "Chạy",
 		"tooltip": "Thực thi lệnh này"
 	},
 	"proceedWhileRunning": {
@@ -90,13 +98,16 @@
 		"title": "Hủy",
 		"tooltip": "Hủy thao tác hiện tại"
 	},
+	"editMessage": {
+		"placeholder": "Chỉnh sửa tin nhắn của bạn..."
+	},
 	"scrollToBottom": "Cuộn xuống cuối cuộc trò chuyện",
 	"about": "Tạo, tái cấu trúc và gỡ lỗi mã bằng sự hỗ trợ của AI. Kiểm tra <DocsLink>tài liệu</DocsLink> của chúng tôi để tìm hiểu thêm.",
-	"onboarding": "<strong>Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.</strong> Bắt đầu bằng cách nhập nhiệm vụ bên dưới. Bạn không chắc chắn nên bắt đầu như thế nào? Đọc thêm về những gì Axon Code có thể làm cho bạn trong <DocsLink>tài liệu</DocsLink>.",
+	"onboarding": "Danh sách nhiệm vụ của bạn trong không gian làm việc này trống.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Điều phối Nhiệm vụ",
-			"description": "Chia nhỏ các nhiệm vụ thành các phần nhỏ hơn, dễ quản lý hơn."
+			"description": "Chia nhỏ các nhiệm vụ thành các phần nhỏ hơn, dễ quản lý hơn"
 		},
 		"stickyModels": {
 			"title": "Chế độ dính",
@@ -115,15 +126,6 @@
 	"selectApiConfig": "Chọn cấu hình API",
 	"selectModelConfig": "Chọn mô hình",
 	"enhancePrompt": "Nâng cao yêu cầu với ngữ cảnh bổ sung",
-	"addImages": "Thêm hình ảnh vào tin nhắn",
-	"sendMessage": "Gửi tin nhắn",
-	"stopTts": "Dừng chuyển văn bản thành giọng nói",
-	"typeMessage": "Nhập tin nhắn...",
-	"typeTask": "Nhập nhiệm vụ của bạn tại đây...",
-	"addContext": "@ để thêm ngữ cảnh, / cho lệnh",
-	"dragFiles": "giữ shift để kéo tệp",
-	"dragFilesImages": "giữ shift để kéo tệp/hình ảnh",
-	"enhancePromptDescription": "Nút 'Nâng cao yêu cầu' giúp cải thiện yêu cầu của bạn bằng cách cung cấp ngữ cảnh bổ sung, làm rõ hoặc diễn đạt lại. Hãy thử nhập yêu cầu tại đây và nhấp vào nút một lần nữa để xem cách thức hoạt động.",
 	"modeSelector": {
 		"title": "Chế độ",
 		"marketplace": "Chợ Chế độ",
@@ -133,17 +135,21 @@
 		"noResults": "Không tìm thấy kết quả nào",
 		"organizationModes": "Chế độ của tổ chức"
 	},
+	"enhancePromptDescription": "Nút 'Nâng cao yêu cầu' giúp cải thiện yêu cầu của bạn bằng cách cung cấp ngữ cảnh bổ sung, làm rõ hoặc diễn đạt lại. Hãy thử nhập yêu cầu tại đây và nhấp vào nút một lần nữa để xem cách thức hoạt động.",
+	"addImages": "Thêm hình ảnh vào tin nhắn",
+	"sendMessage": "Gửi tin nhắn",
+	"stopTts": "Dừng chuyển văn bản thành giọng nói",
+	"typeMessage": "Nhập tin nhắn...",
+	"typeTask": "Nhập nhiệm vụ của bạn tại đây...",
+	"addContext": "@ để thêm ngữ cảnh, / cho lệnh",
+	"dragFiles": "giữ shift để kéo tệp",
+	"dragFilesImages": "giữ shift để kéo tệp/hình ảnh",
 	"errorReadingFile": "Lỗi khi đọc tệp",
 	"noValidImages": "Không có hình ảnh hợp lệ nào được xử lý",
 	"separator": "Dấu phân cách",
 	"edit": "Chỉnh sửa...",
 	"forNextMode": "cho chế độ tiếp theo",
 	"forPreviousMode": "cho chế độ trước đó",
-	"error": "Lỗi",
-	"diffError": {
-		"title": "Chỉnh sửa không thành công"
-	},
-	"troubleMessage": "Axon Code đang gặp sự cố...",
 	"apiRequest": {
 		"title": "Yêu cầu API",
 		"failed": "Yêu cầu API thất bại",
@@ -167,56 +173,68 @@
 		},
 		"current": "Hiện tại"
 	},
+	"contextCondense": {
+		"title": "Ngữ cảnh đã tóm tắt",
+		"condensing": "Đang cô đọng ngữ cảnh...",
+		"errorHeader": "Không thể cô đọng ngữ cảnh",
+		"tokens": "token"
+	},
 	"instructions": {
-		"wantsToFetch": "Axon Code muốn lấy hướng dẫn chi tiết để hỗ trợ nhiệm vụ hiện tại"
+		"wantsToFetch": "lấy hướng dẫn"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code muốn đọc tệp này",
-		"wantsToReadOutsideWorkspace": "Axon Code muốn đọc tệp này bên ngoài không gian làm việc",
-		"didRead": "Axon Code đã đọc tệp này",
-		"wantsToEdit": "Axon Code muốn chỉnh sửa tệp này",
-		"wantsToEditOutsideWorkspace": "Axon Code muốn chỉnh sửa tệp này bên ngoài không gian làm việc",
-		"wantsToEditProtected": "Axon Code muốn chỉnh sửa tệp cấu hình được bảo vệ",
-		"wantsToCreate": "Axon Code muốn tạo một tệp mới",
-		"wantsToSearchReplace": "Axon Code muốn thực hiện tìm kiếm và thay thế trong tệp này",
-		"didSearchReplace": "Axon Code đã thực hiện tìm kiếm và thay thế trong tệp này",
-		"wantsToInsert": "Axon Code muốn chèn nội dung vào tệp này",
-		"wantsToInsertWithLineNumber": "Axon Code muốn chèn nội dung vào dòng {{lineNumber}} của tệp này",
-		"wantsToInsertAtEnd": "Axon Code muốn thêm nội dung vào cuối tệp này",
-		"wantsToReadAndXMore": "Axon Code muốn đọc tệp này và {{count}} tệp khác",
-		"wantsToReadMultiple": "Axon Code muốn đọc nhiều tệp",
-		"wantsToApplyBatchChanges": "Axon Code muốn áp dụng thay đổi cho nhiều tệp",
-		"wantsToGenerateImage": "Axon Code muốn tạo một hình ảnh",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code muốn tạo hình ảnh bên ngoài không gian làm việc",
-		"wantsToGenerateImageProtected": "Axon Code muốn tạo hình ảnh ở vị trí được bảo vệ",
-		"didGenerateImage": "Axon Code đã tạo một hình ảnh"
+		"wantsToRead": "Đọc",
+		"wantsToReadMultiple": "Đọc",
+		"wantsToReadAndXMore": "Đọc {{count}} thêm",
+		"wantsToReadOutsideWorkspace": "Đọc (ngoài không gian làm việc)",
+		"didRead": "Đã đọc",
+		"wantsToEdit": "Chỉnh sửa",
+		"wantsToEditOutsideWorkspace": "Chỉnh sửa (ngoài không gian làm việc)",
+		"wantsToEditProtected": "chỉnh sửa tệp cấu hình được bảo vệ",
+		"wantsToApplyBatchChanges": "áp dụng thay đổi cho nhiều tệp",
+		"wantsToGenerateImage": "tạo hình ảnh",
+		"wantsToGenerateImageOutsideWorkspace": "tạo hình ảnh (ngoài không gian làm việc)",
+		"wantsToGenerateImageProtected": "tạo hình ảnh (vị trí được bảo vệ)",
+		"didGenerateImage": "đã tạo hình ảnh",
+		"wantsToCreate": "tạo tệp mới",
+		"wantsToSearchReplace": "tìm kiếm và thay thế",
+		"didSearchReplace": "đã thực hiện tìm kiếm và thay thế trong tệp này",
+		"wantsToInsert": "chèn nội dung vào tệp này",
+		"wantsToInsertWithLineNumber": "chèn nội dung vào tệp này tại dòng {{lineNumber}}",
+		"wantsToInsertAtEnd": "thêm nội dung vào cuối tệp này"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code muốn xem các tệp cấp cao nhất trong thư mục này",
-		"didViewTopLevel": "Axon Code đã xem các tệp cấp cao nhất trong thư mục này",
-		"wantsToViewRecursive": "Axon Code muốn xem đệ quy tất cả các tệp trong thư mục này",
-		"didViewRecursive": "Axon Code đã xem đệ quy tất cả các tệp trong thư mục này",
-		"wantsToViewDefinitions": "Axon Code muốn xem tên định nghĩa mã nguồn được sử dụng trong thư mục này",
-		"didViewDefinitions": "Axon Code đã xem tên định nghĩa mã nguồn được sử dụng trong thư mục này",
-		"wantsToSearch": "Axon Code muốn tìm kiếm trong thư mục này cho <code>{{regex}}</code>",
-		"didSearch": "Axon Code đã tìm kiếm trong thư mục này cho <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Axon Code muốn tìm kiếm trong thư mục này (ngoài không gian làm việc) cho <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code đã tìm kiếm trong thư mục này (ngoài không gian làm việc) cho <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code muốn xem các tệp cấp cao nhất trong thư mục này (ngoài không gian làm việc)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code đã xem các tệp cấp cao nhất trong thư mục này (ngoài không gian làm việc)",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code muốn xem đệ quy tất cả các tệp trong thư mục này (ngoài không gian làm việc)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code đã xem đệ quy tất cả các tệp trong thư mục này (ngoài không gian làm việc)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code muốn xem tên định nghĩa mã nguồn được sử dụng trong thư mục này (ngoài không gian làm việc)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code đã xem tên định nghĩa mã nguồn được sử dụng trong thư mục này (ngoài không gian làm việc)"
+		"wantsToViewTopLevel": "Khám phá",
+		"didViewTopLevel": "Khám phá",
+		"wantsToViewTopLevelOutsideWorkspace": "Khám phá (ngoài không gian làm việc)",
+		"didViewTopLevelOutsideWorkspace": "Đã khám phá (ngoài không gian làm việc)",
+		"wantsToViewRecursive": "Khám phá (đệ quy)",
+		"didViewRecursive": "Đã khám phá (đệ quy)",
+		"wantsToViewRecursiveOutsideWorkspace": "Khám phá (đệ quy) (ngoài không gian làm việc)",
+		"didViewRecursiveOutsideWorkspace": "Đã khám phá (đệ quy) (ngoài không gian làm việc)",
+		"wantsToViewDefinitions": "xem tên định nghĩa mã nguồn được sử dụng trong thư mục này",
+		"didViewDefinitions": "đã xem tên định nghĩa mã nguồn được sử dụng trong thư mục này",
+		"wantsToViewDefinitionsOutsideWorkspace": "xem tên định nghĩa mã nguồn được sử dụng trong thư mục này (ngoài không gian làm việc)",
+		"didViewDefinitionsOutsideWorkspace": "đã xem tên định nghĩa mã nguồn được sử dụng trong thư mục này (ngoài không gian làm việc)",
+		"wantsToSearch": "Tìm kiếm <code>{{regex}}</code>",
+		"didSearch": "Tìm kiếm <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "tìm kiếm trong thư mục này (ngoài không gian làm việc) cho <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "đã tìm kiếm trong thư mục này (ngoài không gian làm việc) cho <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "đang tìm kiếm trong cơ sở mã cho <code>{{query}}</code>",
+		"wantsToSearchWithPath": "đang tìm kiếm trong cơ sở mã cho <code>{{query}}</code> trong <code>{{path}}</code>",
+		"didSearch_one": "Đã tìm thấy 1 kết quả",
+		"didSearch_other": "Đã tìm thấy {{count}} kết quả",
+		"resultTooltip": "Điểm tương tự: {{score}} (nhấp để mở tệp)"
 	},
 	"commandOutput": "Kết quả lệnh",
 	"commandExecution": {
-		"running": "Đang chạy",
 		"abort": "Hủy bỏ",
+		"running": "Đang chạy",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Đã thoát với trạng thái {{exitCode}}",
-		"manageCommands": "Quản lý quyền lệnh",
-		"commandManagementDescription": "Quản lý quyền lệnh: Nhấp vào ✓ để cho phép tự động thực thi, ✗ để từ chối thực thi. Các mẫu có thể được bật/tắt hoặc xóa khỏi danh sách. <settingsLink>Xem tất cả cài đặt</settingsLink>",
+		"manageCommands": "Lệnh được tự động phê duyệt",
 		"addToAllowed": "Thêm vào danh sách cho phép",
 		"removeFromAllowed": "Xóa khỏi danh sách cho phép",
 		"addToDenied": "Thêm vào danh sách từ chối",
@@ -236,18 +254,18 @@
 		"youSaid": "Bạn đã nói"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code muốn sử dụng một công cụ trên máy chủ MCP {{serverName}}",
-		"wantsToAccessResource": "Axon Code muốn truy cập một tài nguyên trên máy chủ MCP {{serverName}}"
+		"wantsToUseTool": "đang sử dụng công cụ {{serverName}} MCP server",
+		"wantsToAccessResource": "đang truy cập tài nguyên {{serverName}} MCP server"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code muốn chuyển sang chế độ <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Axon Code muốn chuyển sang chế độ <code>{{mode}}</code> vì: {{reason}}",
-		"didSwitch": "Axon Code đã chuyển sang chế độ <code>{{mode}}</code>",
-		"didSwitchWithReason": "Axon Code đã chuyển sang chế độ <code>{{mode}}</code> vì: {{reason}}"
+		"wantsToSwitch": "chuyển sang chế độ {{mode}}",
+		"wantsToSwitchWithReason": "chuyển sang chế độ {{mode}} vì: {{reason}}",
+		"didSwitch": "đã chuyển sang chế độ {{mode}}",
+		"didSwitchWithReason": "đã chuyển sang chế độ {{mode}} vì: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code muốn tạo một nhiệm vụ phụ mới trong chế độ <code>{{mode}}</code>",
-		"wantsToFinish": "Axon Code muốn hoàn thành nhiệm vụ phụ này",
+		"wantsToCreate": "tạo một nhiệm vụ phụ mới trong chế độ {{mode}}",
+		"wantsToFinish": "hoàn thành nhiệm vụ phụ này",
 		"newTaskContent": "Hướng dẫn nhiệm vụ phụ",
 		"completionContent": "Nhiệm vụ phụ đã hoàn thành",
 		"resultContent": "Kết quả nhiệm vụ phụ",
@@ -255,9 +273,14 @@
 		"completionInstructions": "Nhiệm vụ phụ đã hoàn thành! Bạn có thể xem lại kết quả và đề xuất các sửa đổi hoặc bước tiếp theo. Nếu mọi thứ có vẻ tốt, hãy xác nhận để trả kết quả về nhiệm vụ chính."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code có một câu hỏi"
+		"hasQuestion": "câu hỏi"
 	},
-	"taskCompleted": "Nhiệm vụ hoàn thành",
+	"taskCompleted": "Hoàn thành",
+	"error": "Lỗi",
+	"diffError": {
+		"title": "Chỉnh sửa không thành công"
+	},
+	"troubleMessage": "Axon Code đang gặp sự cố...",
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
 	},
@@ -265,7 +288,6 @@
 		"tooltipManage": "Quản lý cài đặt tự động phê duyệt",
 		"tooltipStatus": "Tự động phê duyệt được bật cho: {{toggles}}",
 		"title": "Tự động phê duyệt",
-		"toggle": "Bật/tắt tự động phê duyệt",
 		"all": "Tất cả",
 		"none": "Không có",
 		"description": "Thực hiện các hành động này mà không cần xin phép. Chỉ bật tính năng này cho các hành động bạn hoàn toàn tin tưởng.",
@@ -273,25 +295,10 @@
 		"toggleAriaLabel": "Bật/tắt tự động phê duyệt",
 		"disabledAriaLabel": "Tự động phê duyệt đã tắt - trước tiên hãy chọn các tùy chọn",
 		"triggerLabelOff": "Tự động phê duyệt tắt",
-		"triggerLabel_zero": "0 được tự động phê duyệt",
-		"triggerLabel_one": "1 được tự động phê duyệt",
-		"triggerLabel_other": "{{count}} được tự động phê duyệt",
-		"triggerLabelAll": "YOLO"
-	},
-	"reasoning": {
-		"thinking": "Đang suy nghĩ",
-		"seconds": "{{count}} giây"
-	},
-	"contextCondense": {
-		"title": "Ngữ cảnh đã tóm tắt",
-		"condensing": "Đang cô đọng ngữ cảnh...",
-		"errorHeader": "Không thể cô đọng ngữ cảnh",
-		"tokens": "token"
-	},
-	"followUpSuggest": {
-		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)",
-		"autoSelectCountdown": "Tự động chọn sau {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"triggerLabel_zero": "Tự động phê duyệt: 0",
+		"triggerLabel_one": "Tự động phê duyệt: 1",
+		"triggerLabel_other": "Tự động phê duyệt: {{count}}",
+		"triggerLabelAll": "Tự động phê duyệt: YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Đã phát hành",
@@ -304,8 +311,17 @@
 		},
 		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/RooCode</redditLink> 🚀"
 	},
+	"reasoning": {
+		"thinking": "Đang suy nghĩ",
+		"seconds": "{{count}} giây"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)",
+		"autoSelectCountdown": "Tự động chọn sau {{count}}s",
+		"countdownDisplay": "{{count}}s"
+	},
 	"browser": {
-		"rooWantsToUse": "Axon Code muốn sử dụng trình duyệt",
+		"rooWantsToUse": "sử dụng trình duyệt",
 		"consoleLogs": "Nhật ký bảng điều khiển",
 		"noNewLogs": "(Không có nhật ký mới)",
 		"screenshot": "Ảnh chụp màn hình trình duyệt",
@@ -347,24 +363,9 @@
 			"button": "Đặt lại và Tiếp tục"
 		},
 		"autoApprovedCostLimitReached": {
-			"button": "Đặt lại và Tiếp tục",
 			"title": "Đã Đạt Giới Hạn Chi Phí Tự Động Phê Duyệt",
-			"description": "Axon Code đã đạt đến giới hạn chi phí tự động phê duyệt là ${{count}}. Bạn có muốn đặt lại chi phí và tiếp tục với nhiệm vụ không?"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code muốn tìm kiếm trong cơ sở mã cho <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code muốn tìm kiếm trong cơ sở mã cho <code>{{query}}</code> trong <code>{{path}}</code>",
-		"didSearch_one": "Đã tìm thấy 1 kết quả",
-		"didSearch_other": "Đã tìm thấy {{count}} kết quả",
-		"resultTooltip": "Điểm tương tự: {{score}} (nhấp để mở tệp)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Chấp nhận tất cả"
-		},
-		"deny": {
-			"title": "Từ chối tất cả"
+			"description": "Axon Code đã đạt đến giới hạn chi phí tự động phê duyệt là ${{count}}. Bạn có muốn đặt lại chi phí và tiếp tục với nhiệm vụ không?",
+			"button": "Đặt lại và Tiếp tục"
 		}
 	},
 	"indexingStatus": {
@@ -377,21 +378,13 @@
 	"versionIndicator": {
 		"ariaLabel": "Phiên bản {{version}} - Nhấp để xem ghi chú phát hành"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud đang phát triển!",
-		"description": "Chạy các agent từ xa trên cloud, truy cập các tác vụ của bạn từ mọi nơi, cộng tác với người khác và nhiều hơn nữa.",
-		"joinWaitlist": "Đăng ký để nhận các cập nhật mới nhất."
-	},
-	"editMessage": {
-		"placeholder": "Chỉnh sửa tin nhắn của bạn..."
-	},
 	"command": {
 		"triggerDescription": "Kích hoạt lệnh {{name}}"
 	},
 	"slashCommands": {
 		"tooltip": "Quản lý lệnh gạch chéo",
 		"title": "Lệnh Gạch Chéo",
-		"description": "Sử dụng lệnh gạch chéo tích hợp sẵn hoặc tạo tùy chỉnh để truy cập nhanh vào các lời nhắc và quy trình làm việc thường dùng. <DocsLink>Tài liệu</DocsLink>",
+		"description": "Sử dụng các lệnh gạch chéo tích hợp sẵn hoặc tạo lệnh tùy chỉnh để truy cập nhanh vào các lời nhắc và quy trình làm việc thường dùng. <DocsLink>Tài liệu</DocsLink>",
 		"manageCommands": "Quản lý các lệnh slash trong cài đặt",
 		"builtInCommands": "Lệnh Tích Hợp",
 		"globalCommands": "Lệnh Toàn Cục",
@@ -408,18 +401,18 @@
 			"confirm": "Xóa"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Không có kết quả",
-		"problems": "Vấn đề",
-		"terminal": "Terminal",
-		"url": "Dán URL để lấy nội dung"
+	"slashCommand": {
+		"wantsToRun": "Axon Code muốn chạy lệnh slash",
+		"didRun": "Axon Code đã chạy lệnh slash"
 	},
 	"queuedMessages": {
 		"title": "Tin nhắn trong hàng đợi",
 		"clickToEdit": "Nhấp để chỉnh sửa tin nhắn"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code muốn chạy lệnh slash",
-		"didRun": "Axon Code đã chạy lệnh slash"
+	"contextMenu": {
+		"noResults": "Không có kết quả",
+		"problems": "Vấn đề",
+		"terminal": "Terminal",
+		"url": "Dán URL để lấy nội dung"
 	}
 }

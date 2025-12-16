@@ -10,12 +10,12 @@
 		"cache": "Önbellek",
 		"apiCost": "API Maliyeti",
 		"size": "Boyut",
+		"condenseContext": "Bağlamı akıllıca yoğunlaştır",
 		"contextWindow": "Bağlam Uzunluğu",
 		"closeAndStart": "Görevi kapat ve yeni bir görev başlat",
 		"export": "Görev geçmişini dışa aktar",
-		"delete": "Görevi sil (Onayı atlamak için Shift + Tıkla)",
-		"condenseContext": "Bağlamı akıllıca yoğunlaştır",
 		"share": "Görevi paylaş",
+		"delete": "Görevi sil (Onayı atlamak için Shift + Tıkla)",
 		"shareWithOrganization": "Kuruluşla paylaş",
 		"shareWithOrganizationDescription": "Sadece kuruluşunuzun üyeleri erişebilir",
 		"sharePublicly": "Herkese açık paylaş",
@@ -33,11 +33,6 @@
 	},
 	"unpin": "Sabitlemeyi iptal et",
 	"pin": "Sabitle",
-	"tokenProgress": {
-		"availableSpace": "Kullanılabilir alan: {{amount}} token",
-		"tokensUsed": "Kullanılan tokenlar: {{used}} / {{total}}",
-		"reservedForResponse": "Model yanıtı için ayrılan: {{amount}} token"
-	},
 	"retry": {
 		"title": "Yeniden Dene",
 		"tooltip": "İşlemi tekrar dene"
@@ -57,6 +52,11 @@
 		"title": "Kaydet",
 		"tooltip": "Mesaj değişikliklerini kaydet"
 	},
+	"tokenProgress": {
+		"availableSpace": "Kullanılabilir alan: {{amount}} token",
+		"tokensUsed": "Kullanılan tokenlar: {{used}} / {{total}}",
+		"reservedForResponse": "Model yanıtı için ayrılan: {{amount}} token"
+	},
 	"reject": {
 		"title": "Reddet",
 		"tooltip": "Bu eylemi reddet"
@@ -66,8 +66,16 @@
 		"title": "Onayla",
 		"tooltip": "Bu eylemi onayla"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Tümünü Onayla"
+		},
+		"deny": {
+			"title": "Tümünü Reddet"
+		}
+	},
 	"runCommand": {
-		"title": "Komut",
+		"title": "Çalıştır",
 		"tooltip": "Bu komutu çalıştır"
 	},
 	"proceedWhileRunning": {
@@ -90,13 +98,16 @@
 		"title": "İptal",
 		"tooltip": "Mevcut işlemi iptal et"
 	},
+	"editMessage": {
+		"placeholder": "Mesajını düzenle..."
+	},
 	"scrollToBottom": "Sohbetin altına kaydır",
 	"about": "AI yardımıyla kod oluşturun, yeniden düzenleyin ve hatalarını ayıklayın. Daha fazla bilgi edinmek için <DocsLink>belgelerimize</DocsLink> göz atın.",
-	"onboarding": "<strong>Bu çalışma alanındaki görev listeniz boş.</strong> Aşağıya bir görev yazarak başlayın. Nasıl başlayacağınızdan emin değil misiniz? Axon Code'nun sizin için neler yapabileceği hakkında daha fazla bilgiyi <DocsLink>belgelerde</DocsLink> okuyun.",
+	"onboarding": "Bu çalışma alanındaki görev listeniz boş.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Görev Orkestrasyonu",
-			"description": "Görevleri daha küçük, yönetilebilir parçalara ayırın."
+			"description": "Görevleri daha küçük, yönetilebilir parçalara ayırın"
 		},
 		"stickyModels": {
 			"title": "Yapışkan Modlar",
@@ -104,7 +115,7 @@
 		},
 		"tools": {
 			"title": "Araçlar",
-			"description": "AI'nın web'e göz atarak, komutlar çalıştırarak ve daha fazlasını yaparak sorunları çözmesine izin verin."
+			"description": "AI'nın web'e göz atarak, komutlar çalıştırarak ve daha fazlasını yaparak sorunları çözmesine izin verin"
 		},
 		"customizableModes": {
 			"title": "Özelleştirilebilir Modlar",
@@ -112,18 +123,9 @@
 		}
 	},
 	"selectMode": "Etkileşim modunu seçin",
-	"selectApiConfig": "API yapılandırmasını seçin",
-	"selectModelConfig": "Model seçin",
+	"selectApiConfig": "Model Seç",
+	"selectModelConfig": "Model seç",
 	"enhancePrompt": "Ek bağlamla istemi geliştir",
-	"addImages": "Mesaja resim ekle",
-	"sendMessage": "Mesaj gönder",
-	"stopTts": "Metin okumayı durdur",
-	"typeMessage": "Bir mesaj yazın...",
-	"typeTask": "Görevinizi buraya yazın...",
-	"addContext": "Bağlam eklemek için @, komutlar için /",
-	"dragFiles": "dosyaları sürüklemek için shift tuşuna basılı tutun",
-	"dragFilesImages": "dosyaları/resimleri sürüklemek için shift tuşuna basılı tutun",
-	"enhancePromptDescription": "'İstemi geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifade sağlayarak isteğinizi iyileştirmeye yardımcı olur. Buraya bir istek yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 	"modeSelector": {
 		"title": "Modlar",
 		"marketplace": "Mod Pazaryeri",
@@ -133,17 +135,21 @@
 		"noResults": "Sonuç bulunamadı",
 		"organizationModes": "Kuruluş Modları"
 	},
+	"enhancePromptDescription": "'İstemi geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifade sağlayarak isteğinizi iyileştirmeye yardımcı olur. Buraya bir istek yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+	"addImages": "Mesaja resim ekle",
+	"sendMessage": "Mesaj gönder",
+	"stopTts": "Metin okumayı durdur",
+	"typeMessage": "Bir mesaj yazın...",
+	"typeTask": "Görevinizi buraya yazın...",
+	"addContext": "Bağlam eklemek için @, komutlar için /",
+	"dragFiles": "dosyaları sürüklemek için shift tuşuna basılı tutun",
+	"dragFilesImages": "dosyaları/resimleri sürüklemek için shift tuşuna basılı tutun",
 	"errorReadingFile": "Dosya okuma hatası",
 	"noValidImages": "Hiçbir geçerli resim işlenmedi",
 	"separator": "Ayırıcı",
 	"edit": "Düzenle...",
 	"forNextMode": "sonraki mod için",
 	"forPreviousMode": "önceki mod için",
-	"error": "Hata",
-	"diffError": {
-		"title": "Düzenleme Başarısız"
-	},
-	"troubleMessage": "Axon Code sorun yaşıyor...",
 	"apiRequest": {
 		"title": "API İsteği",
 		"failed": "API İsteği Başarısız",
@@ -167,56 +173,68 @@
 		},
 		"current": "Mevcut"
 	},
+	"contextCondense": {
+		"title": "Bağlam Özetlendi",
+		"condensing": "Bağlam yoğunlaştırılıyor...",
+		"errorHeader": "Bağlam yoğunlaştırılamadı",
+		"tokens": "token"
+	},
 	"instructions": {
-		"wantsToFetch": "Axon Code mevcut göreve yardımcı olmak için ayrıntılı talimatlar almak istiyor"
+		"wantsToFetch": "talimatları getir"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code bu dosyayı okumak istiyor",
-		"wantsToReadOutsideWorkspace": "Axon Code çalışma alanı dışındaki bu dosyayı okumak istiyor",
-		"didRead": "Axon Code bu dosyayı okudu",
-		"wantsToEdit": "Axon Code bu dosyayı düzenlemek istiyor",
-		"wantsToEditOutsideWorkspace": "Axon Code çalışma alanı dışındaki bu dosyayı düzenlemek istiyor",
-		"wantsToEditProtected": "Axon Code korumalı bir yapılandırma dosyasını düzenlemek istiyor",
-		"wantsToCreate": "Axon Code yeni bir dosya oluşturmak istiyor",
-		"wantsToSearchReplace": "Axon Code bu dosyada arama ve değiştirme yapmak istiyor",
-		"didSearchReplace": "Axon Code bu dosyada arama ve değiştirme yaptı",
-		"wantsToInsert": "Axon Code bu dosyaya içerik eklemek istiyor",
-		"wantsToInsertWithLineNumber": "Axon Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor",
-		"wantsToInsertAtEnd": "Axon Code bu dosyanın sonuna içerik eklemek istiyor",
-		"wantsToReadAndXMore": "Axon Code bu dosyayı ve {{count}} tane daha okumak istiyor",
-		"wantsToReadMultiple": "Axon Code birden fazla dosya okumak istiyor",
-		"wantsToApplyBatchChanges": "Axon Code birden fazla dosyaya değişiklik uygulamak istiyor",
-		"wantsToGenerateImage": "Axon Code bir görsel oluşturmak istiyor",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code çalışma alanının dışında bir görsel oluşturmak istiyor",
-		"wantsToGenerateImageProtected": "Axon Code korumalı bir konumda görsel oluşturmak istiyor",
-		"didGenerateImage": "Axon Code bir görsel oluşturdu"
+		"wantsToRead": "Oku",
+		"wantsToReadMultiple": "Oku",
+		"wantsToReadAndXMore": "Oku {{count}} daha",
+		"wantsToReadOutsideWorkspace": "Oku (çalışma alanı dışında)",
+		"didRead": "Okundu",
+		"wantsToEdit": "Düzenle",
+		"wantsToEditOutsideWorkspace": "Düzenle (çalışma alanı dışında)",
+		"wantsToEditProtected": "korumalı yapılandırma dosyasını düzenle",
+		"wantsToApplyBatchChanges": "birden fazla dosyaya değişiklik uygula",
+		"wantsToGenerateImage": "görsel oluştur",
+		"wantsToGenerateImageOutsideWorkspace": "görsel oluştur (çalışma alanı dışında)",
+		"wantsToGenerateImageProtected": "görsel oluştur (korumalı konum)",
+		"didGenerateImage": "görsel oluşturuldu",
+		"wantsToCreate": "yeni dosya oluştur",
+		"wantsToSearchReplace": "arama ve değiştirme",
+		"didSearchReplace": "bu dosyada arama ve değiştirme yapıldı",
+		"wantsToInsert": "bu dosyaya içerik ekle",
+		"wantsToInsertWithLineNumber": "bu dosyanın {{lineNumber}}. satırına içerik ekle",
+		"wantsToInsertAtEnd": "bu dosyanın sonuna içerik ekle"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code bu dizindeki üst düzey dosyaları görüntülemek istiyor",
-		"didViewTopLevel": "Axon Code bu dizindeki üst düzey dosyaları görüntüledi",
-		"wantsToViewRecursive": "Axon Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntülemek istiyor",
-		"didViewRecursive": "Axon Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntüledi",
-		"wantsToViewDefinitions": "Axon Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor",
-		"didViewDefinitions": "Axon Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi",
-		"wantsToSearch": "Axon Code bu dizinde <code>{{regex}}</code> için arama yapmak istiyor",
-		"didSearch": "Axon Code bu dizinde <code>{{regex}}</code> için arama yaptı",
-		"wantsToSearchOutsideWorkspace": "Axon Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yapmak istiyor",
-		"didSearchOutsideWorkspace": "Axon Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yaptı",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntülemek istiyor",
-		"didViewTopLevelOutsideWorkspace": "Axon Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntüledi",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntülemek istiyor",
-		"didViewRecursiveOutsideWorkspace": "Axon Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntüledi",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi"
+		"wantsToViewTopLevel": "Keşfet",
+		"didViewTopLevel": "Keşfet",
+		"wantsToViewTopLevelOutsideWorkspace": "Keşfet (çalışma alanı dışında)",
+		"didViewTopLevelOutsideWorkspace": "Keşfedildi (çalışma alanı dışında)",
+		"wantsToViewRecursive": "Keşfet (özyinelemeli)",
+		"didViewRecursive": "Keşfedildi (özyinelemeli)",
+		"wantsToViewRecursiveOutsideWorkspace": "Keşfet (özyinelemeli) (çalışma alanı dışında)",
+		"didViewRecursiveOutsideWorkspace": "Keşfedildi (özyinelemeli) (çalışma alanı dışında)",
+		"wantsToViewDefinitions": "bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüle",
+		"didViewDefinitions": "bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi",
+		"wantsToViewDefinitionsOutsideWorkspace": "bu dizinde used (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüle",
+		"didViewDefinitionsOutsideWorkspace": "bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi",
+		"wantsToSearch": "Ara <code>{{regex}}</code>",
+		"didSearch": "Ara <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> ara",
+		"didSearchOutsideWorkspace": "bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> arandı"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "kod tabanında <code>{{query}}</code> aranıyor",
+		"wantsToSearchWithPath": "<code>{{path}}</code> içinde kod tabanında <code>{{query}}</code> aranıyor",
+		"didSearch_one": "1 sonuç bulundu",
+		"didSearch_other": "{{count}} sonuç bulundu",
+		"resultTooltip": "Benzerlik puanı: {{score}} (dosyayı açmak için tıklayın)"
 	},
 	"commandOutput": "Komut Çıktısı",
 	"commandExecution": {
-		"running": "Çalışıyor",
 		"abort": "İptal Et",
+		"running": "Çalışıyor",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "{{exitCode}} durumuyla çıkıldı",
-		"manageCommands": "Komut İzinlerini Yönet",
-		"commandManagementDescription": "Komut izinlerini yönetin: Otomatik yürütmeye izin vermek için ✓'e, yürütmeyi reddetmek için ✗'e tıklayın. Desenler açılıp kapatılabilir veya listelerden kaldırılabilir. <settingsLink>Tüm ayarları görüntüle</settingsLink>",
+		"manageCommands": "Otomatik onaylanan komutlar",
 		"addToAllowed": "İzin verilenler listesine ekle",
 		"removeFromAllowed": "İzin verilenler listesinden kaldır",
 		"addToDenied": "Reddedilenler listesine ekle",
@@ -230,24 +248,24 @@
 	"response": "Yanıt",
 	"arguments": "Argümanlar",
 	"text": {
-		"rooSaid": "Kilo dedi"
+		"rooSaid": "Yanıt"
 	},
 	"feedback": {
 		"youSaid": "Dediniz ki"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code {{serverName}} MCP sunucusunda bir araç kullanmak istiyor",
-		"wantsToAccessResource": "Axon Code {{serverName}} MCP sunucusundaki bir kaynağa erişmek istiyor"
+		"wantsToUseTool": "{{serverName}} MCP sunucusu aracı kullanılıyor",
+		"wantsToAccessResource": "{{serverName}} MCP sunucusu kaynağına erişiliyor"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code <code>{{mode}}</code> moduna geçmek istiyor",
-		"wantsToSwitchWithReason": "Axon Code <code>{{mode}}</code> moduna geçmek istiyor çünkü: {{reason}}",
-		"didSwitch": "Axon Code <code>{{mode}}</code> moduna geçti",
-		"didSwitchWithReason": "Axon Code <code>{{mode}}</code> moduna geçti çünkü: {{reason}}"
+		"wantsToSwitch": "{{mode}} moduna geç",
+		"wantsToSwitchWithReason": "{{mode}} moduna geçiliyor çünkü: {{reason}}",
+		"didSwitch": "{{mode}} moduna geçildi",
+		"didSwitchWithReason": "{{mode}} moduna geçildi çünkü: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code <code>{{mode}}</code> modunda yeni bir alt görev oluşturmak istiyor",
-		"wantsToFinish": "Axon Code bu alt görevi bitirmek istiyor",
+		"wantsToCreate": "{{mode}} modunda yeni bir alt görev oluştur",
+		"wantsToFinish": "bu alt görevi bitir",
 		"newTaskContent": "Alt Görev Talimatları",
 		"completionContent": "Alt Görev Tamamlandı",
 		"resultContent": "Alt Görev Sonuçları",
@@ -255,9 +273,14 @@
 		"completionInstructions": "Alt görev tamamlandı! Sonuçları inceleyebilir ve düzeltmeler veya sonraki adımlar önerebilirsiniz. Her şey iyi görünüyorsa, sonucu üst göreve döndürmek için onaylayın."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code'nun bir sorusu var"
+		"hasQuestion": "soru"
 	},
-	"taskCompleted": "Görev Tamamlandı",
+	"taskCompleted": "Tamamlandı",
+	"error": "Hata",
+	"diffError": {
+		"title": "Düzenleme Başarısız"
+	},
+	"troubleMessage": "Axon Code sorun yaşıyor...",
 	"powershell": {
 		"issues": "Windows PowerShell ile ilgili sorunlar yaşıyor gibi görünüyorsunuz, lütfen şu konuya bakın"
 	},
@@ -265,7 +288,6 @@
 		"tooltipManage": "Otomatik onay ayarlarını yönet",
 		"tooltipStatus": "Otomatik onay şunlar için etkinleştirildi: {{toggles}}",
 		"title": "Otomatik onayla",
-		"toggle": "Otomatik onayı aç/kapat",
 		"all": "Tümü",
 		"none": "Hiçbiri",
 		"description": "İzin istemeden bu eylemleri gerçekleştirin. Bunu yalnızca tamamen güvendiğiniz eylemler için etkinleştirin.",
@@ -278,21 +300,6 @@
 		"triggerLabel_other": "{{count}} otomatik onaylandı",
 		"triggerLabelAll": "YOLO"
 	},
-	"reasoning": {
-		"thinking": "Düşünüyor",
-		"seconds": "{{count}}sn"
-	},
-	"contextCondense": {
-		"title": "Bağlam Özetlendi",
-		"condensing": "Bağlam yoğunlaştırılıyor...",
-		"errorHeader": "Bağlam yoğunlaştırılamadı",
-		"tokens": "token"
-	},
-	"followUpSuggest": {
-		"copyToInput": "Giriş alanına kopyala (veya Shift + tıklama)",
-		"autoSelectCountdown": "{{count}}s içinde otomatik seçilecek",
-		"countdownDisplay": "{{count}}sn"
-	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Yayınlandı",
 		"stealthModel": {
@@ -304,8 +311,17 @@
 		},
 		"socialLinks": "Bize <xLink>X</xLink>, <discordLink>Discord</discordLink>, veya <redditLink>r/RooCode</redditLink>'da katılın 🚀"
 	},
+	"reasoning": {
+		"thinking": "Düşünüyor",
+		"seconds": "{{count}}sn"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Giriş alanına kopyala (veya Shift + tıklama)",
+		"autoSelectCountdown": "{{count}}s içinde otomatik seçilecek",
+		"countdownDisplay": "{{count}}sn"
+	},
 	"browser": {
-		"rooWantsToUse": "Axon Code tarayıcıyı kullanmak istiyor",
+		"rooWantsToUse": "tarayıcıyı kullan",
 		"consoleLogs": "Konsol Kayıtları",
 		"noNewLogs": "(Yeni kayıt yok)",
 		"screenshot": "Tarayıcı ekran görüntüsü",
@@ -352,21 +368,6 @@
 			"button": "Sıfırla ve Devam Et"
 		}
 	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code kod tabanında <code>{{query}}</code> aramak istiyor",
-		"wantsToSearchWithPath": "Axon Code <code>{{path}}</code> içinde kod tabanında <code>{{query}}</code> aramak istiyor",
-		"didSearch_one": "1 sonuç bulundu",
-		"didSearch_other": "{{count}} sonuç bulundu",
-		"resultTooltip": "Benzerlik puanı: {{score}} (dosyayı açmak için tıklayın)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Tümünü Onayla"
-		},
-		"deny": {
-			"title": "Tümünü Reddet"
-		}
-	},
 	"indexingStatus": {
 		"ready": "İndeks hazır",
 		"indexing": "İndeksleniyor {{percentage}}%",
@@ -376,14 +377,6 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Sürüm {{version}} - Sürüm notlarını görüntülemek için tıklayın"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud gelişiyor!",
-		"description": "Bulutta uzak ajanlar çalıştırın, görevlerinize her yerden erişin, başkalarıyla işbirliği yapın ve daha fazlası.",
-		"joinWaitlist": "En son güncellemeleri almak için kaydolun."
-	},
-	"editMessage": {
-		"placeholder": "Mesajını düzenle..."
 	},
 	"command": {
 		"triggerDescription": "{{name}} komutunu tetikle"
@@ -408,18 +401,18 @@
 			"confirm": "Sil"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Sonuç yok",
-		"problems": "Sorunlar",
-		"terminal": "Terminal",
-		"url": "İçeriği getirmek için URL'yi yapıştırın"
+	"slashCommand": {
+		"wantsToRun": "bir slash komutu çalıştır",
+		"didRun": "Axon Code bir slash komutu çalıştırdı"
 	},
 	"queuedMessages": {
 		"title": "Sıradaki Mesajlar",
 		"clickToEdit": "Mesajı düzenlemek için tıkla"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code bir slash komutu çalıştırmak istiyor",
-		"didRun": "Axon Code bir slash komutu çalıştırdı"
+	"contextMenu": {
+		"noResults": "Sonuç yok",
+		"problems": "Sorunlar",
+		"terminal": "Terminal",
+		"url": "İçeriği getirmek için URL'yi yapıştırın"
 	}
 }

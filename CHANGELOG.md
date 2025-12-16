@@ -1,5 +1,52 @@
 # Changelog
 
+## [v4.201.0] - 2025-12-16
+
+### Added
+
+- Enhanced file edit review functionality with improved user experience
+- Better webview message handling for file edit operations
+
+### Changed
+
+- Improved file edit review interface with refined accept/reject buttons
+- Updated ChatTextArea component for better user interaction
+- Enhanced OpenRouter provider integration
+- Streamlined UI components for improved consistency
+- Updated translations for ar, ca, cs, de, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, th, tr, uk, vi, zh-CN and zh-TW
+
+### Fixed
+
+- Better handling of file edit review edge cases
+- Improved localization support for chat components
+
+---
+
+## [v4.200.0] - 2025-12-15
+
+### Added
+
+- New file edit review system with accept/reject functionality
+- Enhanced monthly quota management within chat interface
+- Improved mentions cleanup and handling
+- New AcceptRejectButtons component for better user interaction
+
+### Changed
+
+- Updated UI components across dialogs, dropdowns, popovers, and selects
+- Enhanced chat interface with improved user experience
+- Refined chat row component for better readability
+- Updated tool use block styling for improved visual consistency
+- Streamlined chat message layout and interactions
+
+### Fixed
+
+- Better handling of file edit operations
+- Improved quota tracking and display
+- Enhanced error handling in chat interface
+
+---
+
 ## [v4.123.1] - 2025-12-07
 
 ### Changed

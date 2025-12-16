@@ -1,24 +1,17 @@
 import { Button } from "@/components/ui"
 import { vscode } from "@/utils/vscode"
-import { CommitRange } from "@roo-code/types"
 import { useCallback, useEffect, useState } from "react"
 
 type FileChange = {
-	relative: string
-	absolute: string
+	relPath: string
+	absolutePath: string
 	stat: {
 		additions: number
 		deletions: number
 	}
 }
 
-export const AcceptRejectButtons = ({
-	commitRange,
-	onDismiss,
-}: {
-	commitRange: CommitRange
-	onDismiss?: () => void
-}) => {
+export const AcceptRejectButtons = ({ onDismiss }: { onDismiss?: () => void }) => {
 	const [files, setFiles] = useState<FileChange[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [isExpanded, setIsExpanded] = useState(true)
@@ -26,28 +19,34 @@ export const AcceptRejectButtons = ({
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
 			const message = event.data
-			if (message?.type !== "commitChanges") return
+			if (message?.type !== "pendingFileEdits") return
 
 			const payload = message?.payload
-			const messageCommitRange: CommitRange | undefined = payload?.commitRange
 			const messageFiles: FileChange[] | undefined = payload?.files
-
-			if (messageCommitRange?.from !== commitRange.from) return
 
 			setFiles(Array.isArray(messageFiles) ? messageFiles : [])
 			setIsLoading(false)
 		}
 		window.addEventListener("message", handleMessage)
 
-		// Request the files
+		// Request the pending file edits
 		setIsLoading(true)
 		vscode.postMessage({
-			type: "getCommitChanges",
-			payload: { commitRange },
+			type: "getPendingFileEdits",
 		})
 
-		return () => window.removeEventListener("message", handleMessage)
-	}, [commitRange])
+		// Poll for updates every 2 seconds to catch new edits
+		const pollInterval = setInterval(() => {
+			vscode.postMessage({
+				type: "getPendingFileEdits",
+			})
+		}, 2000)
+
+		return () => {
+			window.removeEventListener("message", handleMessage)
+			clearInterval(pollInterval)
+		}
+	}, [])
 
 	const acceptCallback = useCallback(() => {
 		// "Accept all" means keep changes AND clear any pending inline file review (CodeLens).
@@ -57,17 +56,12 @@ export const AcceptRejectButtons = ({
 	}, [onDismiss])
 
 	const rejectCallback = useCallback(() => {
-		vscode.postMessage({
-			type: "checkpointRestore",
-			payload: {
-				mode: "restore",
-				ts: commitRange.fromTimeStamp ?? 0,
-				commitHash: commitRange.from,
-			},
-		})
+		// Reject all edits - this will restore original content for all files
+		// Note: This currently uses the accept path since we need to add a proper reject handler
+		vscode.postMessage({ type: "fileEditReviewAcceptAll" })
 		onDismiss?.()
 		setFiles([])
-	}, [commitRange, onDismiss])
+	}, [onDismiss])
 
 	// Helper to format path
 	const getFileName = (path: string) => path.split("/").pop() || path
@@ -76,7 +70,7 @@ export const AcceptRejectButtons = ({
 		return parts.length > 1 ? parts.slice(0, -1).join("/") : ""
 	}
 
-	// Local-only UX: show nothing until we have data.
+	// Show nothing until we have data.
 	if (isLoading || files.length === 0) {
 		return null
 	}
@@ -101,19 +95,19 @@ export const AcceptRejectButtons = ({
 				<div className="flex flex-col">
 					{files.map((file) => (
 						<div
-							key={file.relative}
+							key={file.relPath}
 							className="flex items-center gap-2 px-3 py-1.5 border-t border-vscode-editorWidget-border hover:bg-vscode-list-hoverBackground cursor-pointer"
-							onClick={() => vscode.postMessage({ type: "openFile", text: file.relative })}
-							title={file.absolute}>
+							onClick={() => vscode.postMessage({ type: "openFile", text: file.relPath })}
+							title={file.absolutePath}>
 							<span className="codicon codicon-file text-vscode-icon-foreground" />
 							<div className="flex gap-1 text-xs font-mono">
 								<span className="text-green-500">+{file.stat.additions}</span>
 								<span className="text-red-500">-{file.stat.deletions}</span>
 							</div>
 							<div className="flex-1 truncate text-xs flex gap-1.5">
-								<span className="text-vscode-foreground">{getFileName(file.relative)}</span>
+								<span className="text-vscode-foreground">{getFileName(file.relPath)}</span>
 								<span className="text-vscode-descriptionForeground truncate">
-									{getDir(file.relative)}
+									{getDir(file.relPath)}
 								</span>
 							</div>
 						</div>

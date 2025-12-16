@@ -102,20 +102,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			clineMessages,
 		} = useExtensionState()
 
-		const latestCommitRange = useMemo(() => {
-			// Find most recent completion_result that included a commit range.
-			for (let i = clineMessages.length - 1; i >= 0; i--) {
-				const msg: any = clineMessages[i]
-				if (msg?.type === "say" && msg?.say === "completion_result" && !msg?.partial) {
-					const commitRange = msg?.metadata?.kiloCode?.commitRange
-					if (commitRange?.from) return commitRange
-				}
-			}
-			return undefined
-		}, [clineMessages])
-
-		const [dismissedCommitFrom, setDismissedCommitFrom] = useState<string | undefined>(undefined)
-
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
 			const currentConfig = listApiConfigMeta?.find((config) => config.name === currentApiConfigName)
@@ -133,6 +119,37 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [containerWidth, setContainerWidth] = useState<number>(300) // Default to a value larger than our threshold
 
 		const containerRef = useRef<HTMLDivElement>(null)
+
+		// Map of short mention display text -> full path for file/folder mentions
+		// Format in textarea: @[filename.ext] -> expands to @/full/path/filename.ext
+		const mentionMapRef = useRef<Map<string, string>>(new Map())
+
+		// Expand short mentions @filename to full paths @/full/path before sending
+		const expandMentions = useCallback((text: string): string => {
+			// Match @word patterns that might be filenames (has extension like .ts, .js, etc.)
+			return text.replace(/@([a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+)/g, (_match, filename) => {
+				const fullPath = mentionMapRef.current.get(filename)
+				if (fullPath) {
+					return `${fullPath}`
+				}
+				// If no mapping found, keep original (might be a valid full path or other mention)
+				return _match
+			})
+		}, [])
+
+		// Wrapper for onSend that expands mentions first
+		const handleSend = useCallback(() => {
+			const expandedValue = expandMentions(inputValue)
+			if (expandedValue !== inputValue) {
+				setInputValue(expandedValue)
+				// Give React time to update, then send
+				setTimeout(() => {
+					onSend()
+				}, 0)
+			} else {
+				onSend()
+			}
+		}, [inputValue, setInputValue, expandMentions, onSend])
 
 		useEffect(() => {
 			if (!containerRef.current) return
@@ -394,8 +411,23 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 					if (type === ContextMenuOptionType.URL) {
 						insertValue = value || ""
-					} else if (type === ContextMenuOptionType.File || type === ContextMenuOptionType.Folder) {
-						insertValue = value || ""
+					} else if (
+						type === ContextMenuOptionType.File ||
+						type === ContextMenuOptionType.Folder ||
+						type === ContextMenuOptionType.OpenedFile
+					) {
+						// Extract filename and store mapping for compact chip display
+						const fullPath = value || ""
+						if (fullPath.startsWith("/")) {
+							const segments = fullPath.split("/").filter(Boolean)
+							const filename = segments.pop() || fullPath
+							// Store just filename - cursor will align perfectly with visible chip
+							insertValue = filename
+							// Store mapping for expansion before send
+							mentionMapRef.current.set(filename, fullPath)
+						} else {
+							insertValue = fullPath
+						}
 					} else if (type === ContextMenuOptionType.Problems) {
 						insertValue = "problems"
 					} else if (type === ContextMenuOptionType.Terminal) {
@@ -586,7 +618,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					event.preventDefault()
 
 					resetHistoryNavigation()
-					onSend()
+					handleSend()
 				}
 
 				// Handle prompt history navigation using custom hook
@@ -649,7 +681,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				selectedSlashCommandsIndex,
 				slashCommandsQuery,
 				// kilocode_change end
-				onSend,
+				handleSend,
 				showContextMenu,
 				searchQuery,
 				selectedMenuIndex,
@@ -686,7 +718,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				// Reset history navigation when user types
 				resetOnInputChange()
 
-				const newCursorPosition = e.target.selectionStart
+				const newCursorPosition = e.target.selectionStart + 200
 				setCursorPosition(newCursorPosition)
 
 				// kilocode_change start: pull slash commands from Cline
@@ -888,6 +920,94 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setIsMouseDownOnMenu(true)
 		}, [])
 
+		const escapeHtml = (value: string) =>
+			value.replace(/[&<>"']/g, (char) => {
+				const map: Record<string, string> = {
+					"&": "&amp;",
+					"<": "&lt;",
+					">": "&gt;",
+					'"': "&quot;",
+					"'": "&#39;",
+				}
+				return map[char] || char
+			})
+
+		const formatMentionChipParts = useCallback((rawMention: string) => {
+			const mention = unescapeSpaces(rawMention)
+
+			// Basic url + special keyword handling
+			if (/^\w+:\/\/\S+/.test(mention)) {
+				try {
+					const url = new URL(mention)
+					const meta = url.pathname.replace(/^\/+/, "")
+					return {
+						primary: url.hostname || mention,
+						meta: meta ? [meta] : [],
+					}
+				} catch {
+					return { primary: mention, meta: [] }
+				}
+			}
+
+			if (mention === "problems" || mention === "terminal") {
+				return { primary: mention, meta: [] }
+			}
+
+			if (/^[a-f0-9]{7,40}$/i.test(mention)) {
+				return { primary: mention.slice(0, 7), meta: ["commit"] }
+			}
+
+			// File / folder / snippet path handling
+			if (!mention.startsWith("/")) {
+				return { primary: mention, meta: [] }
+			}
+
+			let pathPart = mention
+			let lineInfo: string | undefined
+
+			// Support #L10-20 or #L10 snippets
+			const hashMatch = mention.match(/^(.*)#L(\d+(?:-\d+)?)/)
+			if (hashMatch) {
+				pathPart = hashMatch[1]
+				lineInfo = `L${hashMatch[2]}`
+			} else {
+				// Support :10 or :10-20 suffixes for ranges
+				const lastColonIndex = mention.lastIndexOf(":")
+				if (lastColonIndex > mention.lastIndexOf("/")) {
+					const maybeRange = mention.slice(lastColonIndex + 1)
+					if (/^\d+(?:-\d+)?$/.test(maybeRange)) {
+						pathPart = mention.slice(0, lastColonIndex)
+						lineInfo = `L${maybeRange}`
+					}
+				}
+			}
+
+			const segments = pathPart.split("/").filter(Boolean)
+			const primary = segments.pop() || "/"
+			const parent = segments.length ? segments[segments.length - 1] : ""
+
+			const metaParts = []
+			if (parent) metaParts.push(parent)
+			if (lineInfo) metaParts.push(lineInfo)
+
+			return { primary, meta: metaParts }
+		}, [])
+
+		const renderMentionChip = useCallback(
+			(rawMention: string, isCompactFile: boolean = false) => {
+				// For compact file mentions, rawMention is just the filename
+				// For standard mentions, extract the display name from the path
+				const displayText = isCompactFile
+					? rawMention
+					: formatMentionChipParts(rawMention).primary || rawMention
+				const escapedPrimary = escapeHtml(displayText)
+				const label = escapeHtml(`${isCompactFile ? rawMention : unescapeSpaces(rawMention)}`)
+
+				return `<span class="mention-chip" data-mention="${label}" aria-label="${label}"><span class="mention-chip__at">@</span><span class="mention-chip__primary">${escapedPrimary}</span></span>`
+			},
+			[formatMentionChipParts],
+		)
+
 		const updateHighlights = useCallback(() => {
 			if (!textAreaRef.current || !highlightLayerRef.current) return
 
@@ -897,7 +1017,17 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			processedText = processedText
 				.replace(/\n$/, "\n\n")
 				.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
-				.replace(mentionRegexGlobal, '<mark class="mention-context-textarea-highlight">$&</mark>')
+				// Handle compact file mentions @filename (in mention map)
+				.replace(/@([a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+)(?=\s|$)/g, (_match, filename) => {
+					// Check if this filename is in our mention map (it's a compact file mention)
+					if (mentionMapRef.current.has(filename)) {
+						return renderMentionChip(filename, true)
+					}
+					// Not in map, return original text
+					return _match
+				})
+				// Handle standard mentions (URLs, problems, terminal, git hashes, etc.)
+				.replace(mentionRegexGlobal, (_match, mention) => renderMentionChip(mention, false))
 
 			// check for highlighting /slash-commands
 			if (/^\s*\//.test(processedText)) {
@@ -924,7 +1054,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes])
+		}, [customModes, renderMentionChip])
 
 		useLayoutEffect(() => {
 			updateHighlights()
@@ -967,7 +1097,17 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						for (let i = 0; i < lines.length; i++) {
 							const line = lines[i]
 							// Convert each path to a mention-friendly format
-							const mentionText = convertToMentionPath(line, cwd)
+							const fullMention = convertToMentionPath(line, cwd)
+							// Extract filename for compact display
+							let mentionText = fullMention
+							if (fullMention.startsWith("@/")) {
+								const pathWithoutAt = fullMention.slice(1) // Remove @
+								const segments = pathWithoutAt.split("/").filter(Boolean)
+								const filename = segments.pop() || pathWithoutAt
+								mentionText = `${filename}`
+								// Store mapping for expansion
+								mentionMapRef.current.set(filename, pathWithoutAt)
+							}
 							newValue += mentionText
 							totalLength += mentionText.length
 
@@ -983,7 +1123,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						totalLength += 1
 
 						setInputValue(newValue)
-						const newCursorPosition = cursorPosition + totalLength
+						const newCursorPosition = cursorPosition + totalLength + 1
 						setCursorPosition(newCursorPosition)
 						setIntendedCursorPosition(newCursorPosition)
 					}
@@ -1221,13 +1361,13 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				)}>
 				<div
 					ref={highlightLayerRef}
+					data-testid="highlight-layer"
 					className={cn(
 						"absolute",
 						"inset-0",
 						"pointer-events-none",
 						"whitespace-pre-wrap",
 						"break-words",
-						"text-transparent",
 						"overflow-hidden",
 						"font-vscode-font-family",
 						"text-vscode-editor-font-size",
@@ -1242,7 +1382,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"pb-16", // kilocode_change
 					)}
 					style={{
-						color: "transparent",
+						color: "var(--vscode-input-foreground)",
 					}}
 				/>
 				<DynamicTextArea
@@ -1296,10 +1436,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"outline-none",
 						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
 						isFocused
-							? "border border-[--var(--color-matterai-border)] outline-none"
+							? "border border-[var(--color-matterai-border)] outline-none"
 							: isDraggingOver
-								? "border-2 border-dashed border-[--var(--color-matterai-border)] outline-none"
-								: "border border-[--var(--color-matterai-border)] outline-none",
+								? "border-2 border-dashed border-[var(--color-matterai-border)] outline-none"
+								: "border border-[var(--color-matterai-border)] outline-none",
 						isDraggingOver
 							? "bg-[color-mix(in_srgb,var(--vscode-input-background)_95%,white)]"
 							: "bg-vscode-input-background",
@@ -1318,6 +1458,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"scrollbar-hide",
 						"pb-14",
 					)}
+					style={{
+						color: inputValue ? "transparent" : undefined,
+						caretColor: "var(--vscode-input-foreground)",
+					}}
 					onScroll={() => updateHighlights()}
 				/>
 				{/* kilocode_change {Transparent overlay at bottom of textArea to avoid text overlap } */}
@@ -1399,7 +1543,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<button
 							aria-label={t("chat:sendMessage")}
 							disabled={sendingDisabled}
-							onClick={!sendingDisabled ? onSend : undefined}
+							onClick={!sendingDisabled ? handleSend : undefined}
 							className={cn(
 								"relative inline-flex items-center justify-center",
 								"bg-transparent border-none p-1.5",
@@ -1453,12 +1597,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					"box-border",
 				)}>
 				{/* Pinned file review actions (not a chat row) */}
-				{!isEditMode && latestCommitRange && latestCommitRange.from !== dismissedCommitFrom && (
+				{!isEditMode && (
 					<div className="px-0.5">
-						<AcceptRejectButtons
-							commitRange={latestCommitRange}
-							onDismiss={() => setDismissedCommitFrom(latestCommitRange.from)}
-						/>
+						<AcceptRejectButtons onDismiss={() => {}} />
 					</div>
 				)}
 				<div className="relative">
@@ -1532,7 +1673,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"drop-shadow-md",
 									"rounded-xl",
 									"border",
-									"border-[--var(--color-matterai-border)]",
+									"border-[var(--color-matterai-border)]",
 									"outline-none",
 								)}>
 								<ContextMenu

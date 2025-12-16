@@ -10,12 +10,12 @@
 		"cache": "Cache",
 		"apiCost": "Custo da API",
 		"size": "Tamanho",
+		"condenseContext": "Condensar contexto de forma inteligente",
 		"contextWindow": "Janela de contexto",
 		"closeAndStart": "Fechar tarefa e iniciar nova",
 		"export": "Exportar histórico de tarefas",
-		"delete": "Excluir tarefa (Shift + Clique para pular confirmação)",
-		"condenseContext": "Condensar contexto de forma inteligente",
 		"share": "Compartilhar tarefa",
+		"delete": "Excluir tarefa (Shift + Clique para pular confirmação)",
 		"shareWithOrganization": "Compartilhar com organização",
 		"shareWithOrganizationDescription": "Apenas membros da sua organização podem acessar",
 		"sharePublicly": "Compartilhar publicamente",
@@ -33,11 +33,6 @@
 	},
 	"unpin": "Desfixar",
 	"pin": "Fixar",
-	"tokenProgress": {
-		"availableSpace": "Espaço disponível: {{amount}} tokens",
-		"tokensUsed": "Tokens usados: {{used}} de {{total}}",
-		"reservedForResponse": "Reservado para resposta do modelo: {{amount}} tokens"
-	},
 	"retry": {
 		"title": "Tentar novamente",
 		"tooltip": "Tentar a operação novamente"
@@ -57,6 +52,11 @@
 		"title": "Salvar",
 		"tooltip": "Salvar as alterações da mensagem"
 	},
+	"tokenProgress": {
+		"availableSpace": "Espaço disponível: {{amount}} tokens",
+		"tokensUsed": "Tokens usados: {{used}} de {{total}}",
+		"reservedForResponse": "Reservado para resposta do modelo: {{amount}} tokens"
+	},
 	"reject": {
 		"title": "Rejeitar",
 		"tooltip": "Rejeitar esta ação"
@@ -65,6 +65,14 @@
 	"approve": {
 		"title": "Aprovar",
 		"tooltip": "Aprovar esta ação"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Aprovar tudo"
+		},
+		"deny": {
+			"title": "Negar tudo"
+		}
 	},
 	"runCommand": {
 		"title": "Comando",
@@ -89,6 +97,9 @@
 	"cancel": {
 		"title": "Cancelar",
 		"tooltip": "Cancelar a operação atual"
+	},
+	"editMessage": {
+		"placeholder": "Edite sua mensagem..."
 	},
 	"scrollToBottom": "Rolar para o final do chat",
 	"about": "Gere, refatore e depure código com assistência de IA. Confira nossa <DocsLink>documentação</DocsLink> para saber mais.",
@@ -115,15 +126,6 @@
 	"selectApiConfig": "Selecionar configuração da API",
 	"selectModelConfig": "Selecionar modelo",
 	"enhancePrompt": "Aprimorar prompt com contexto adicional",
-	"addImages": "Adicionar imagens à mensagem",
-	"sendMessage": "Enviar mensagem",
-	"stopTts": "Parar conversão de texto em fala",
-	"typeMessage": "Digite uma mensagem...",
-	"typeTask": "Digite sua tarefa aqui...",
-	"addContext": "@ para adicionar contexto, / para comandos",
-	"dragFiles": "segure shift para arrastar arquivos",
-	"dragFilesImages": "segure shift para arrastar arquivos/imagens",
-	"enhancePromptDescription": "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
 	"modeSelector": {
 		"title": "Modos",
 		"marketplace": "Marketplace de Modos",
@@ -133,17 +135,21 @@
 		"noResults": "Nenhum resultado encontrado",
 		"organizationModes": "Modos da organização"
 	},
+	"enhancePromptDescription": "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
+	"addImages": "Adicionar imagens à mensagem",
+	"sendMessage": "Enviar mensagem",
+	"stopTts": "Parar conversão de texto em fala",
+	"typeMessage": "Digite uma mensagem...",
+	"typeTask": "Digite sua tarefa aqui...",
+	"addContext": "@ para adicionar contexto, / para comandos",
+	"dragFiles": "segure shift para arrastar arquivos",
+	"dragFilesImages": "segure shift para arrastar arquivos/imagens",
 	"errorReadingFile": "Erro ao ler arquivo",
 	"noValidImages": "Nenhuma imagem válida foi processada",
 	"separator": "Separador",
 	"edit": "Editar...",
 	"forNextMode": "para o próximo modo",
 	"forPreviousMode": "para o modo anterior",
-	"error": "Erro",
-	"diffError": {
-		"title": "Edição mal-sucedida"
-	},
-	"troubleMessage": "Axon Code está tendo problemas...",
 	"apiRequest": {
 		"title": "Requisição API",
 		"failed": "Requisição API falhou",
@@ -167,52 +173,65 @@
 		},
 		"current": "Atual"
 	},
+	"contextCondense": {
+		"title": "Contexto condensado",
+		"condensing": "Condensando contexto...",
+		"errorHeader": "Falha ao condensar contexto",
+		"tokens": "tokens"
+	},
 	"instructions": {
 		"wantsToFetch": "Axon Code quer buscar instruções detalhadas para ajudar com a tarefa atual"
 	},
 	"fileOperations": {
 		"wantsToRead": "Axon Code quer ler este arquivo",
+		"wantsToReadMultiple": "Axon Code deseja ler múltiplos arquivos",
+		"wantsToReadAndXMore": "Axon Code quer ler este arquivo e mais {{count}}",
 		"wantsToReadOutsideWorkspace": "Axon Code quer ler este arquivo fora do espaço de trabalho",
 		"didRead": "Axon Code leu este arquivo",
 		"wantsToEdit": "Axon Code quer editar este arquivo",
 		"wantsToEditOutsideWorkspace": "Axon Code quer editar este arquivo fora do espaço de trabalho",
 		"wantsToEditProtected": "Axon Code quer editar um arquivo de configuração protegido",
+		"wantsToApplyBatchChanges": "Axon Code quer aplicar alterações a múltiplos arquivos",
+		"wantsToGenerateImage": "Axon Code quer gerar uma imagem",
+		"wantsToGenerateImageOutsideWorkspace": "Axon Code quer gerar uma imagem fora do espaço de trabalho",
+		"wantsToGenerateImageProtected": "Axon Code quer gerar uma imagem em um local protegido",
+		"didGenerateImage": "Axon Code gerou uma imagem",
 		"wantsToCreate": "Axon Code quer criar um novo arquivo",
 		"wantsToSearchReplace": "Axon Code quer realizar busca e substituição neste arquivo",
 		"didSearchReplace": "Axon Code realizou busca e substituição neste arquivo",
 		"wantsToInsert": "Axon Code quer inserir conteúdo neste arquivo",
 		"wantsToInsertWithLineNumber": "Axon Code quer inserir conteúdo neste arquivo na linha {{lineNumber}}",
-		"wantsToInsertAtEnd": "Axon Code quer adicionar conteúdo ao final deste arquivo",
-		"wantsToReadAndXMore": "Axon Code quer ler este arquivo e mais {{count}}",
-		"wantsToReadMultiple": "Axon Code deseja ler múltiplos arquivos",
-		"wantsToApplyBatchChanges": "Axon Code quer aplicar alterações a múltiplos arquivos",
-		"wantsToGenerateImage": "Axon Code quer gerar uma imagem",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code quer gerar uma imagem fora do espaço de trabalho",
-		"wantsToGenerateImageProtected": "Axon Code quer gerar uma imagem em um local protegido",
-		"didGenerateImage": "Axon Code gerou uma imagem"
+		"wantsToInsertAtEnd": "Axon Code quer adicionar conteúdo ao final deste arquivo"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Axon Code quer visualizar os arquivos de nível superior neste diretório",
 		"didViewTopLevel": "Axon Code visualizou os arquivos de nível superior neste diretório",
+		"wantsToViewTopLevelOutsideWorkspace": "Axon Code quer visualizar os arquivos de nível superior neste diretório (fora do espaço de trabalho)",
+		"didViewTopLevelOutsideWorkspace": "Axon Code visualizou os arquivos de nível superior neste diretório (fora do espaço de trabalho)",
 		"wantsToViewRecursive": "Axon Code quer visualizar recursivamente todos os arquivos neste diretório",
 		"didViewRecursive": "Axon Code visualizou recursivamente todos os arquivos neste diretório",
+		"wantsToViewRecursiveOutsideWorkspace": "Axon Code quer visualizar recursivamente todos os arquivos neste diretório (fora do espaço de trabalho)",
+		"didViewRecursiveOutsideWorkspace": "Axon Code visualizou recursivamente todos os arquivos neste diretório (fora do espaço de trabalho)",
 		"wantsToViewDefinitions": "Axon Code quer visualizar nomes de definição de código-fonte usados neste diretório",
 		"didViewDefinitions": "Axon Code visualizou nomes de definição de código-fonte usados neste diretório",
+		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code quer visualizar nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho)",
+		"didViewDefinitionsOutsideWorkspace": "Axon Code visualizou nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho)",
 		"wantsToSearch": "Axon Code quer pesquisar neste diretório por <code>{{regex}}</code>",
 		"didSearch": "Axon Code pesquisou neste diretório por <code>{{regex}}</code>",
 		"wantsToSearchOutsideWorkspace": "Axon Code quer pesquisar neste diretório (fora do espaço de trabalho) por <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code pesquisou neste diretório (fora do espaço de trabalho) por <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code quer visualizar os arquivos de nível superior neste diretório (fora do espaço de trabalho)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code visualizou os arquivos de nível superior neste diretório (fora do espaço de trabalho)",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code quer visualizar recursivamente todos os arquivos neste diretório (fora do espaço de trabalho)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code visualizou recursivamente todos os arquivos neste diretório (fora do espaço de trabalho)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code quer visualizar nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code visualizou nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho)"
+		"didSearchOutsideWorkspace": "Axon Code pesquisou neste diretório (fora do espaço de trabalho) por <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Axon Code quer pesquisar na base de código por <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Axon Code quer pesquisar na base de código por <code>{{query}}</code> em <code>{{path}}</code>",
+		"didSearch_one": "Encontrado 1 resultado",
+		"didSearch_other": "Encontrados {{count}} resultados",
+		"resultTooltip": "Pontuação de similaridade: {{score}} (clique para abrir o arquivo)"
 	},
 	"commandOutput": "Saída do comando",
 	"commandExecution": {
-		"running": "Executando",
 		"abort": "Interromper",
+		"running": "Executando",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Saiu com o status {{exitCode}}",
 		"manageCommands": "Comandos aprovados automaticamente",
@@ -257,6 +276,11 @@
 		"hasQuestion": "Axon Code tem uma pergunta"
 	},
 	"taskCompleted": "Tarefa concluída",
+	"error": "Erro",
+	"diffError": {
+		"title": "Edição mal-sucedida"
+	},
+	"troubleMessage": "Axon Code está tendo problemas...",
 	"powershell": {
 		"issues": "Parece que você está tendo problemas com o Windows PowerShell, por favor veja este"
 	},
@@ -264,7 +288,6 @@
 		"tooltipManage": "Gerenciar configurações de aprovação automática",
 		"tooltipStatus": "Aprovação automática habilitada para: {{toggles}}",
 		"title": "Aprovação automática",
-		"toggle": "Alternar aprovação automática",
 		"all": "Todos",
 		"none": "Nenhum",
 		"description": "Execute estas ações sem pedir permissão. Ative isso apenas para ações em que você confia totalmente.",
@@ -277,21 +300,6 @@
 		"triggerLabel_other": "{{count}} aprovados automaticamente",
 		"triggerLabelAll": "YOLO"
 	},
-	"reasoning": {
-		"thinking": "Pensando",
-		"seconds": "{{count}}s"
-	},
-	"contextCondense": {
-		"title": "Contexto condensado",
-		"condensing": "Condensando contexto...",
-		"errorHeader": "Falha ao condensar contexto",
-		"tokens": "tokens"
-	},
-	"followUpSuggest": {
-		"copyToInput": "Copiar para entrada (ou Shift + clique)",
-		"autoSelectCountdown": "Seleção automática em {{count}}s",
-		"countdownDisplay": "{{count}}s"
-	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Lançado",
 		"stealthModel": {
@@ -302,6 +310,15 @@
 			"goToSettingsButton": "Ir para Configurações"
 		},
 		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Pensando",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Copiar para entrada (ou Shift + clique)",
+		"autoSelectCountdown": "Seleção automática em {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
 		"rooWantsToUse": "Axon Code quer usar o navegador",
@@ -351,21 +368,6 @@
 			"button": "Redefinir e Continuar"
 		}
 	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code quer pesquisar na base de código por <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code quer pesquisar na base de código por <code>{{query}}</code> em <code>{{path}}</code>",
-		"didSearch_one": "Encontrado 1 resultado",
-		"didSearch_other": "Encontrados {{count}} resultados",
-		"resultTooltip": "Pontuação de similaridade: {{score}} (clique para abrir o arquivo)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Aprovar tudo"
-		},
-		"deny": {
-			"title": "Negar tudo"
-		}
-	},
 	"indexingStatus": {
 		"ready": "Índice pronto",
 		"indexing": "Indexando {{percentage}}%",
@@ -375,14 +377,6 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versão {{version}} - Clique para ver as notas de lançamento"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud está evoluindo!",
-		"description": "Execute agentes remotos na nuvem, acesse suas tarefas de qualquer lugar, colabore com outros e muito mais.",
-		"joinWaitlist": "Cadastre-se para receber as últimas atualizações."
-	},
-	"editMessage": {
-		"placeholder": "Edite sua mensagem..."
 	},
 	"command": {
 		"triggerDescription": "Acionar o comando {{name}}"
@@ -407,18 +401,18 @@
 			"confirm": "Excluir"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Nenhum resultado",
-		"problems": "Problemas",
-		"terminal": "Terminal",
-		"url": "Cole o URL para buscar o conteúdo"
+	"slashCommand": {
+		"wantsToRun": "Axon Code quer executar um comando slash",
+		"didRun": "Axon Code executou um comando slash"
 	},
 	"queuedMessages": {
 		"title": "Mensagens na fila",
 		"clickToEdit": "Clique para editar a mensagem"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code quer executar um comando slash",
-		"didRun": "Axon Code executou um comando slash"
+	"contextMenu": {
+		"noResults": "Nenhum resultado",
+		"problems": "Problemas",
+		"terminal": "Terminal",
+		"url": "Cole o URL para buscar o conteúdo"
 	}
 }

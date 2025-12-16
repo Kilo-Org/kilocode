@@ -1,5 +1,5 @@
 {
-	"greeting": "歡迎使用 Axon Code！",
+	"greeting": "Axon Code 能为您做什么？",
 	"task": {
 		"title": "工作",
 		"expand": "展開工作",
@@ -107,7 +107,7 @@
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "工作編排",
-			"description": "將工作拆分為更小、更易於管理的部分。"
+			"description": "將工作拆分為更小、更易於管理的部分"
 		},
 		"stickyModels": {
 			"title": "記憶模型",
@@ -115,7 +115,7 @@
 		},
 		"tools": {
 			"title": "工具",
-			"description": "允許 AI 透過瀏覽網路、執行命令等方式解決問題。"
+			"description": "允許 AI 透過瀏覽網路、執行命令等方式解決問題"
 		},
 		"customizableModes": {
 			"title": "可自訂模式",
@@ -180,62 +180,61 @@
 		"tokens": "Token"
 	},
 	"instructions": {
-		"wantsToFetch": "Axon Code 想要取得詳細指示以協助目前工作"
+		"wantsToFetch": "取得指令"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code 想要讀取此檔案",
-		"wantsToReadMultiple": "Axon Code 想要讀取多個檔案",
-		"wantsToReadAndXMore": "Axon Code 想要讀取此檔案以及另外 {{count}} 個檔案",
-		"wantsToReadOutsideWorkspace": "Axon Code 想要讀取此工作區外的檔案",
-		"didRead": "Axon Code 已讀取此檔案",
-		"wantsToEdit": "Axon Code 想要編輯此檔案",
-		"wantsToEditOutsideWorkspace": "Axon Code 想要編輯此工作區外的檔案",
-		"wantsToEditProtected": "Axon Code 想要編輯受保護的設定檔案",
-		"wantsToApplyBatchChanges": "Axon Code 想要對多個檔案套用變更",
-		"wantsToGenerateImage": "Axon Code 想要產生圖片",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code 想要在工作區外產生圖片",
-		"wantsToGenerateImageProtected": "Axon Code 想要在受保護位置產生圖片",
-		"didGenerateImage": "Axon Code 已產生圖片",
-		"wantsToCreate": "Axon Code 想要建立新檔案",
-		"wantsToSearchReplace": "Axon Code 想要在此檔案中搜尋和取代",
-		"didSearchReplace": "Axon Code 已在此檔案執行搜尋和取代",
-		"wantsToInsert": "Axon Code 想要在此檔案中插入內容",
-		"wantsToInsertWithLineNumber": "Axon Code 想要在此檔案第 {{lineNumber}} 行插入內容",
-		"wantsToInsertAtEnd": "Axon Code 想要在此檔案尾端新增內容"
+		"wantsToRead": "讀取",
+		"wantsToReadMultiple": "讀取",
+		"wantsToReadAndXMore": "讀取另外 {{count}} 個",
+		"wantsToReadOutsideWorkspace": "讀取（工作區外）",
+		"didRead": "已讀取",
+		"wantsToEdit": "編輯",
+		"wantsToEditOutsideWorkspace": "編輯（工作區外）",
+		"wantsToEditProtected": "編輯受保護的設定檔案",
+		"wantsToApplyBatchChanges": "對多個檔案套用變更",
+		"wantsToGenerateImage": "產生圖片",
+		"wantsToGenerateImageOutsideWorkspace": "產生圖片（工作區外）",
+		"wantsToGenerateImageProtected": "產生圖片（受保護位置）",
+		"didGenerateImage": "已產生圖片",
+		"wantsToCreate": "建立新檔案",
+		"wantsToSearchReplace": "搜尋和取代",
+		"didSearchReplace": "在此檔案執行搜尋和取代",
+		"wantsToInsert": "在此檔案中插入內容",
+		"wantsToInsertWithLineNumber": "在此檔案第 {{lineNumber}} 行插入內容",
+		"wantsToInsertAtEnd": "在此檔案尾端新增內容"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code 想要檢視此目錄中最上層的檔案",
-		"didViewTopLevel": "Axon Code 已檢視此目錄中最上層的檔案",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code 想要檢視此目錄（工作區外）中最上層的檔案",
-		"didViewTopLevelOutsideWorkspace": "Axon Code 已檢視此目錄（工作區外）中最上層的檔案",
-		"wantsToViewRecursive": "Axon Code 想要遞迴檢視此目錄中的所有檔案",
-		"didViewRecursive": "Axon Code 已遞迴檢視此目錄中的所有檔案",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code 想要遞迴檢視此目錄（工作區外）中的所有檔案",
-		"didViewRecursiveOutsideWorkspace": "Axon Code 已遞迴檢視此目錄（工作區外）中的所有檔案",
-		"wantsToViewDefinitions": "Axon Code 想要檢視此目錄中使用的原始碼定義名稱",
-		"didViewDefinitions": "Axon Code 已檢視此目錄中使用的原始碼定義名稱",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code 想要檢視此目錄（工作區外）中使用的原始碼定義名稱",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code 已檢視此目錄（工作區外）中使用的原始碼定義名稱",
-		"wantsToSearch": "Axon Code 想要在此目錄中搜尋 <code>{{regex}}</code>",
-		"didSearch": "Axon Code 已在此目錄中搜尋 <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Axon Code 想要在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code 已在此目錄（工作區外）中搜尋 <code>{{regex}}</code>"
+		"wantsToViewTopLevel": "瀏覽",
+		"didViewTopLevel": "瀏覽",
+		"wantsToViewTopLevelOutsideWorkspace": "瀏覽（工作區外）",
+		"didViewTopLevelOutsideWorkspace": "已瀏覽（工作區外）",
+		"wantsToViewRecursive": "瀏覽（遞迴）",
+		"didViewRecursive": "已瀏覽（遞迴）",
+		"wantsToViewRecursiveOutsideWorkspace": "瀏覽（遞迴）（工作區外）",
+		"didViewRecursiveOutsideWorkspace": "已瀏覽（遞迴）（工作區外）",
+		"wantsToViewDefinitions": "檢視此目錄中使用的原始碼定義名稱",
+		"didViewDefinitions": "已檢視此目錄中使用的原始碼定義名稱",
+		"wantsToViewDefinitionsOutsideWorkspace": "檢視此目錄（工作區外）中使用的原始碼定義名稱",
+		"didViewDefinitionsOutsideWorkspace": "已檢視此目錄（工作區外）中使用的原始碼定義名稱",
+		"wantsToSearch": "搜尋 <code>{{regex}}</code>",
+		"didSearch": "搜尋 <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "在此目錄中搜尋（工作區外） <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "已在此目錄中搜尋（工作區外） <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Axon Code 想要在程式碼庫中搜尋 <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code 想要在 <code>{{path}}</code> 中搜尋程式碼庫 <code>{{query}}</code>",
+		"wantsToSearch": "正在搜尋程式碼庫: <code>{{query}}</code>",
+		"wantsToSearchWithPath": "正在 <code>{{path}}</code> 中搜尋: <code>{{query}}</code>",
 		"didSearch_one": "找到 1 個結果",
 		"didSearch_other": "找到 {{count}} 個結果",
 		"resultTooltip": "相似度評分：{{score}} (點選開啟檔案)"
 	},
 	"commandOutput": "命令輸出",
 	"commandExecution": {
-		"running": "正在執行",
 		"abort": "中止",
+		"running": "正在執行",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "已結束，狀態碼 {{exitCode}}",
-		"manageCommands": "管理命令權限",
-		"commandManagementDescription": "管理命令權限：點選 ✓ 允許自動執行，點選 ✗ 拒絕執行。規則可以開啟/關閉或從清單中移除。<settingsLink>檢視所有設定</settingsLink>",
+		"manageCommands": "自動核准的命令",
 		"addToAllowed": "新增至允許清單",
 		"removeFromAllowed": "從允許清單中移除",
 		"addToDenied": "新增至拒絕清單",
@@ -255,18 +254,18 @@
 		"youSaid": "您說"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code 想要在 {{serverName}} MCP 伺服器上使用工具",
-		"wantsToAccessResource": "Axon Code 想要存取 {{serverName}} MCP 伺服器上的資源"
+		"wantsToUseTool": "正在使用工具 {{serverName}} MCP 伺服器",
+		"wantsToAccessResource": "正在存取資源 {{serverName}} MCP 伺服器"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code 想要切換至 {{mode}} 模式",
-		"wantsToSwitchWithReason": "Axon Code 想要切換至 {{mode}} 模式，原因：{{reason}}",
-		"didSwitch": "Axon Code 已切換至 {{mode}} 模式",
-		"didSwitchWithReason": "Axon Code 已切換至 {{mode}} 模式，原因：{{reason}}"
+		"wantsToSwitch": "切換至 {{mode}} 模式",
+		"wantsToSwitchWithReason": "切換至 {{mode}} 模式，原因：{{reason}}",
+		"didSwitch": "已切換至 {{mode}} 模式",
+		"didSwitchWithReason": "已切換至 {{mode}} 模式，原因：{{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code 想要在 {{mode}} 模式下建立新的子工作",
-		"wantsToFinish": "Axon Code 想要完成此子工作",
+		"wantsToCreate": "在 {{mode}} 模式下建立新的子工作",
+		"wantsToFinish": "完成此子工作",
 		"newTaskContent": "子工作指示",
 		"completionContent": "子工作已完成",
 		"resultContent": "子工作結果",
@@ -274,7 +273,7 @@
 		"completionInstructions": "子工作已完成！您可以檢閱結果並提出修正或後續步驟。如果一切順利，請確認以將結果回傳給主任務。"
 	},
 	"questions": {
-		"hasQuestion": "Axon Code 有一個問題"
+		"hasQuestion": "問題"
 	},
 	"taskCompleted": "工作完成",
 	"error": "錯誤",
@@ -289,7 +288,6 @@
 		"tooltipManage": "管理自動批准設定",
 		"tooltipStatus": "自動批准已啟用：{{toggles}}",
 		"title": "自動批准",
-		"toggle": "切換自動批准",
 		"all": "全部",
 		"none": "無",
 		"description": "無需請求權限即可執行這些操作。僅對您完全信任的操作啟用此功能。",
@@ -297,10 +295,10 @@
 		"toggleAriaLabel": "切換自動批准",
 		"disabledAriaLabel": "自動批准已禁用 - 請先選擇選項",
 		"triggerLabelOff": "自動批准已關閉",
-		"triggerLabel_zero": "0 個自動核准",
-		"triggerLabel_one": "1 個自動核准",
-		"triggerLabel_other": "{{count}} 個自動核准",
-		"triggerLabelAll": "YOLO"
+		"triggerLabel_zero": "自動核准: 0",
+		"triggerLabel_one": "自動核准: 1",
+		"triggerLabel_other": "自動核准: {{count}}",
+		"triggerLabelAll": "自動核准: YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} 已發布",
@@ -323,7 +321,7 @@
 		"countdownDisplay": "{{count}} 秒"
 	},
 	"browser": {
-		"rooWantsToUse": "Axon Code 想要使用瀏覽器",
+		"rooWantsToUse": "使用瀏覽器",
 		"consoleLogs": "主控台記錄",
 		"noNewLogs": "（沒有新記錄）",
 		"screenshot": "瀏覽器螢幕擷圖",
@@ -380,11 +378,6 @@
 	"versionIndicator": {
 		"ariaLabel": "版本 {{version}} - 點選查看發布說明"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud 正在進化！",
-		"description": "在雲端執行 Roomote 遠端代理、隨時隨地存取您的工作、與他人協作等等。",
-		"joinWaitlist": "註冊以獲得最新更新。"
-	},
 	"command": {
 		"triggerDescription": "觸發 {{name}} 命令"
 	},
@@ -408,18 +401,18 @@
 			"confirm": "刪除"
 		}
 	},
-	"contextMenu": {
-		"noResults": "沒有結果",
-		"problems": "問題",
-		"terminal": "終端機",
-		"url": "貼上 URL 以擷取內容"
+	"slashCommand": {
+		"wantsToRun": "Axon Code 想要執行斜線指令",
+		"didRun": "Axon Code 執行了斜線指令"
 	},
 	"queuedMessages": {
 		"title": "佇列中的訊息",
 		"clickToEdit": "點選以編輯訊息"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code 想要執行斜線指令",
-		"didRun": "Axon Code 執行了斜線指令"
+	"contextMenu": {
+		"noResults": "沒有結果",
+		"problems": "問題",
+		"terminal": "終端機",
+		"url": "貼上 URL 以擷取內容"
 	}
 }

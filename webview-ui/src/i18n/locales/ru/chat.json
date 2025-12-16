@@ -10,12 +10,12 @@
 		"cache": "Кэш",
 		"apiCost": "Стоимость API",
 		"size": "Размер",
+		"condenseContext": "Интеллектуально сжать контекст",
 		"contextWindow": "Длина контекста",
 		"closeAndStart": "Закрыть задачу и начать новую",
 		"export": "Экспортировать историю задач",
-		"delete": "Удалить задачу (Shift + клик для пропуска подтверждения)",
-		"condenseContext": "Интеллектуально сжать контекст",
 		"share": "Поделиться задачей",
+		"delete": "Удалить задачу (Shift + клик для пропуска подтверждения)",
 		"shareWithOrganization": "Поделиться с организацией",
 		"shareWithOrganizationDescription": "Только члены вашей организации могут получить доступ",
 		"sharePublicly": "Поделиться публично",
@@ -66,6 +66,14 @@
 		"title": "Одобрить",
 		"tooltip": "Одобрить это действие"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Одобрить все"
+		},
+		"deny": {
+			"title": "Отклонить все"
+		}
+	},
 	"runCommand": {
 		"title": "Команда",
 		"tooltip": "Выполнить эту команду"
@@ -74,13 +82,13 @@
 		"title": "Продолжить во время выполнения",
 		"tooltip": "Продолжить несмотря на предупреждения"
 	},
-	"resumeTask": {
-		"title": "Возобновить задачу",
-		"tooltip": "Продолжить текущую задачу"
-	},
 	"killCommand": {
 		"title": "Завершить команду",
 		"tooltip": "Завершить текущую команду"
+	},
+	"resumeTask": {
+		"title": "Возобновить задачу",
+		"tooltip": "Продолжить текущую задачу"
 	},
 	"terminate": {
 		"title": "Завершить",
@@ -90,8 +98,12 @@
 		"title": "Отмена",
 		"tooltip": "Отменить текущую операцию"
 	},
+	"editMessage": {
+		"placeholder": "Редактировать сообщение..."
+	},
 	"scrollToBottom": "Прокрутить чат вниз",
 	"about": "Создавайте, рефакторите и отлаживайте код с помощью ИИ. Подробнее см. в нашей <DocsLink>документации</DocsLink>.",
+	"onboarding": "<strong>Ваш список задач в этом рабочем пространстве пуст.</strong> Начните с ввода задачи ниже. Не знаете, с чего начать? Подробнее о возможностях Axon Code читайте в <DocsLink>документации</DocsLink>.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Оркестрация задач",
@@ -110,12 +122,10 @@
 			"description": "Специализированные персонажи с собственным поведением и назначенными моделями"
 		}
 	},
-	"onboarding": "<strong>Ваш список задач в этом рабочем пространстве пуст.</strong> Начните с ввода задачи ниже. Не знаете, с чего начать? Подробнее о возможностях Axon Code читайте в <DocsLink>документации</DocsLink>.",
 	"selectMode": "Выберите режим взаимодействия",
 	"selectApiConfig": "Выберите конфигурацию API",
 	"selectModelConfig": "Выберите модель",
 	"enhancePrompt": "Улучшить запрос с дополнительным контекстом",
-	"enhancePromptDescription": "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 	"modeSelector": {
 		"title": "Режимы",
 		"marketplace": "Маркетплейс режимов",
@@ -125,6 +135,7 @@
 		"noResults": "Ничего не найдено",
 		"organizationModes": "Режимы организации"
 	},
+	"enhancePromptDescription": "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 	"addImages": "Добавить изображения к сообщению",
 	"sendMessage": "Отправить сообщение",
 	"stopTts": "Остановить синтез речи",
@@ -162,56 +173,68 @@
 		},
 		"current": "Текущая"
 	},
+	"contextCondense": {
+		"title": "Контекст сжат",
+		"condensing": "Сжатие контекста...",
+		"errorHeader": "Не удалось сжать контекст",
+		"tokens": "токены"
+	},
 	"instructions": {
 		"wantsToFetch": "Axon Code хочет получить подробные инструкции для помощи с текущей задачей"
 	},
 	"fileOperations": {
 		"wantsToRead": "Axon Code хочет прочитать этот файл",
+		"wantsToReadMultiple": "Axon Code хочет прочитать несколько файлов",
+		"wantsToReadAndXMore": "Axon Code хочет прочитать этот файл и еще {{count}}",
 		"wantsToReadOutsideWorkspace": "Axon Code хочет прочитать этот файл вне рабочей области",
 		"didRead": "Axon Code прочитал этот файл",
 		"wantsToEdit": "Axon Code хочет отредактировать этот файл",
 		"wantsToEditOutsideWorkspace": "Axon Code хочет отредактировать этот файл вне рабочей области",
 		"wantsToEditProtected": "Axon Code хочет отредактировать защищённый файл конфигурации",
+		"wantsToApplyBatchChanges": "Axon Code хочет применить изменения к нескольким файлам",
+		"wantsToGenerateImage": "Axon Code хочет сгенерировать изображение",
+		"wantsToGenerateImageOutsideWorkspace": "Axon Code хочет сгенерировать изображение вне рабочего пространства",
+		"wantsToGenerateImageProtected": "Axon Code хочет сгенерировать изображение в защищённом месте",
+		"didGenerateImage": "Axon Code сгенерировал изображение",
 		"wantsToCreate": "Axon Code хочет создать новый файл",
 		"wantsToSearchReplace": "Axon Code хочет выполнить поиск и замену в этом файле",
 		"didSearchReplace": "Axon Code выполнил поиск и замену в этом файле",
 		"wantsToInsert": "Axon Code хочет вставить содержимое в этот файл",
 		"wantsToInsertWithLineNumber": "Axon Code хочет вставить содержимое в этот файл на строку {{lineNumber}}",
-		"wantsToInsertAtEnd": "Axon Code хочет добавить содержимое в конец этого файла",
-		"wantsToReadAndXMore": "Axon Code хочет прочитать этот файл и еще {{count}}",
-		"wantsToReadMultiple": "Axon Code хочет прочитать несколько файлов",
-		"wantsToApplyBatchChanges": "Axon Code хочет применить изменения к нескольким файлам",
-		"wantsToGenerateImage": "Axon Code хочет сгенерировать изображение",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code хочет сгенерировать изображение вне рабочего пространства",
-		"wantsToGenerateImageProtected": "Axon Code хочет сгенерировать изображение в защищённом месте",
-		"didGenerateImage": "Axon Code сгенерировал изображение"
+		"wantsToInsertAtEnd": "Axon Code хочет добавить содержимое в конец этого файла"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Axon Code хочет просмотреть файлы верхнего уровня в этой директории",
 		"didViewTopLevel": "Axon Code просмотрел файлы верхнего уровня в этой директории",
+		"wantsToViewTopLevelOutsideWorkspace": "Axon Code хочет просмотреть файлы верхнего уровня в этой директории (вне рабочего пространства)",
+		"didViewTopLevelOutsideWorkspace": "Axon Code просмотрел файлы верхнего уровня в этой директории (вне рабочего пространства)",
 		"wantsToViewRecursive": "Axon Code хочет рекурсивно просмотреть все файлы в этой директории",
 		"didViewRecursive": "Axon Code рекурсивно просмотрел все файлы в этой директории",
+		"wantsToViewRecursiveOutsideWorkspace": "Axon Code хочет рекурсивно просмотреть все файлы в этой директории (вне рабочего пространства)",
+		"didViewRecursiveOutsideWorkspace": "Axon Code рекурсивно просмотрел все файлы в этой директории (вне рабочего пространства)",
 		"wantsToViewDefinitions": "Axon Code хочет просмотреть имена определений исходного кода в этой директории",
 		"didViewDefinitions": "Axon Code просмотрел имена определений исходного кода в этой директории",
+		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code хочет просмотреть имена определений исходного кода в этой директории (вне рабочего пространства)",
+		"didViewDefinitionsOutsideWorkspace": "Axon Code просмотрел имена определений исходного кода в этой директории (вне рабочего пространства)",
 		"wantsToSearch": "Axon Code хочет выполнить поиск в этой директории по <code>{{regex}}</code>",
 		"didSearch": "Axon Code выполнил поиск в этой директории по <code>{{regex}}</code>",
 		"wantsToSearchOutsideWorkspace": "Axon Code хочет выполнить поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code выполнил поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code хочет просмотреть файлы верхнего уровня в этой директории (вне рабочего пространства)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code просмотрел файлы верхнего уровня в этой директории (вне рабочего пространства)",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code хочет рекурсивно просмотреть все файлы в этой директории (вне рабочего пространства)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code рекурсивно просмотрел все файлы в этой директории (вне рабочего пространства)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code хочет просмотреть имена определений исходного кода в этой директории (вне рабочего пространства)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code просмотрел имена определений исходного кода в этой директории (вне рабочего пространства)"
+		"didSearchOutsideWorkspace": "Axon Code выполнил поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Axon Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Axon Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code> в <code>{{path}}</code>",
+		"didSearch_one": "Найден 1 результат",
+		"didSearch_other": "Найдено {{count}} результатов",
+		"resultTooltip": "Оценка схожести: {{score}} (нажмите, чтобы открыть файл)"
 	},
 	"commandOutput": "Вывод команды",
 	"commandExecution": {
-		"running": "Выполняется",
 		"abort": "Прервать",
+		"running": "Выполняется",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Завершено со статусом {{exitCode}}",
 		"manageCommands": "Управление разрешениями команд",
-		"commandManagementDescription": "Управляйте разрешениями команд: Нажмите ✓, чтобы разрешить автоматическое выполнение, ✗, чтобы запретить выполнение. Шаблоны можно включать/выключать или удалять из списков. <settingsLink>Просмотреть все настройки</settingsLink>",
 		"addToAllowed": "Добавить в список разрешенных",
 		"removeFromAllowed": "Удалить из списка разрешенных",
 		"addToDenied": "Добавить в список запрещенных",
@@ -265,7 +288,6 @@
 		"tooltipManage": "Управление настройками автоматического одобрения",
 		"tooltipStatus": "Авто-одобрение включено для: {{toggles}}",
 		"title": "Авто-одобрение",
-		"toggle": "Переключить авто-утверждение",
 		"all": "Все",
 		"none": "Ни одного",
 		"description": "Выполняйте эти действия, не спрашивая разрешения. Включайте это только для действий, которым вы полностью доверяете.",
@@ -292,12 +314,6 @@
 	"reasoning": {
 		"thinking": "Обдумывание",
 		"seconds": "{{count}}с"
-	},
-	"contextCondense": {
-		"title": "Контекст сжат",
-		"condensing": "Сжатие контекста...",
-		"errorHeader": "Не удалось сжать контекст",
-		"tokens": "токены"
 	},
 	"followUpSuggest": {
 		"copyToInput": "Скопировать во ввод (то же, что shift + клик)",
@@ -348,23 +364,8 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Достигнут лимит автоматически одобряемых расходов",
-			"button": "Сбросить и продолжить",
-			"description": "Ру достиг автоматически утвержденного лимита расходов в размере ${{count}}. Хотите сбросить расходы и продолжить выполнение задачи?"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code> в <code>{{path}}</code>",
-		"didSearch_one": "Найден 1 результат",
-		"didSearch_other": "Найдено {{count}} результатов",
-		"resultTooltip": "Оценка схожести: {{score}} (нажмите, чтобы открыть файл)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Одобрить все"
-		},
-		"deny": {
-			"title": "Отклонить все"
+			"description": "Ру достиг автоматически утвержденного лимита расходов в размере ${{count}}. Хотите сбросить расходы и продолжить выполнение задачи?",
+			"button": "Сбросить и продолжить"
 		}
 	},
 	"indexingStatus": {
@@ -376,14 +377,6 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Версия {{version}} - Нажмите, чтобы просмотреть примечания к выпуску"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud развивается!",
-		"description": "Запускайте удаленные агенты в облаке, получайте доступ к своим задачам из любого места, сотрудничайте с другими и многое другое.",
-		"joinWaitlist": "Зарегистрируйтесь, чтобы получать последние обновления."
-	},
-	"editMessage": {
-		"placeholder": "Редактировать сообщение..."
 	},
 	"command": {
 		"triggerDescription": "Запустить команду {{name}}"
@@ -408,18 +401,18 @@
 			"confirm": "Удалить"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Нет результатов",
-		"problems": "Проблемы",
-		"terminal": "Терминал",
-		"url": "Вставьте URL для получения содержимого"
+	"slashCommand": {
+		"wantsToRun": "Axon Code хочет выполнить слеш-команду",
+		"didRun": "Axon Code выполнил слеш-команду"
 	},
 	"queuedMessages": {
 		"title": "Сообщения в очереди",
 		"clickToEdit": "Нажмите, чтобы редактировать сообщение"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code хочет выполнить слеш-команду",
-		"didRun": "Axon Code выполнил слеш-команду"
+	"contextMenu": {
+		"noResults": "Нет результатов",
+		"problems": "Проблемы",
+		"terminal": "Терминал",
+		"url": "Вставьте URL для получения содержимого"
 	}
 }

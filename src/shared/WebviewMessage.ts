@@ -309,6 +309,8 @@ export interface WebviewMessage {
 		// kilocode_change start
 		| "getCommitChanges"
 		| "commitChanges"
+		| "getPendingFileEdits"
+		| "pendingFileEdits"
 	// kilocode_change end
 	text?: string
 	editedMessageContent?: string
@@ -518,6 +520,11 @@ export interface CommitChangesPayload {
 	commitRange: CommitRange
 	files: { relative: string; absolute: string; stat: { additions: number; deletions: number } }[]
 }
+
+export interface PendingFileEditsPayload {
+	// The response message type - list of all pending file edits
+	files: { relPath: string; absolutePath: string; stat: { additions: number; deletions: number } }[]
+}
 // kilocode_change end
 
 export type WebViewMessagePayload =
@@ -529,6 +536,7 @@ export type WebViewMessagePayload =
 	| TaskHistoryRequestPayload
 	| GetCommitChangesPayload
 	| CommitChangesPayload
+	| PendingFileEditsPayload
 	// kilocode_change end
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload

@@ -10,12 +10,12 @@
 		"cache": "Cache",
 		"apiCost": "API-kosten",
 		"size": "Grootte",
+		"condenseContext": "Context intelligent samenvatten",
 		"contextWindow": "Contextlengte",
 		"closeAndStart": "Taak sluiten en een nieuwe starten",
 		"export": "Taakgeschiedenis exporteren",
-		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
-		"condenseContext": "Context intelligent samenvatten",
 		"share": "Taak delen",
+		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
 		"shareWithOrganization": "Delen met organisatie",
 		"shareWithOrganizationDescription": "Alleen leden van je organisatie kunnen toegang krijgen",
 		"sharePublicly": "Openbaar delen",
@@ -66,6 +66,14 @@
 		"title": "Goedkeuren",
 		"tooltip": "Deze actie goedkeuren"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Alles goedkeuren"
+		},
+		"deny": {
+			"title": "Alles weigeren"
+		}
+	},
 	"runCommand": {
 		"title": "Commando",
 		"tooltip": "Voer dit commando uit"
@@ -89,6 +97,9 @@
 	"cancel": {
 		"title": "Annuleren",
 		"tooltip": "Annuleer de huidige bewerking"
+	},
+	"editMessage": {
+		"placeholder": "Bewerk je bericht..."
 	},
 	"scrollToBottom": "Scroll naar onderaan de chat",
 	"about": "Genereer, refactor en debug code met AI-assistentie. Bekijk onze <DocsLink>documentatie</DocsLink> voor meer informatie.",
@@ -115,7 +126,6 @@
 	"selectApiConfig": "Selecteer API-configuratie",
 	"selectModelConfig": "Selecteer model",
 	"enhancePrompt": "Prompt verbeteren met extra context",
-	"enhancePromptDescription": "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt te typen en klik opnieuw op de knop om te zien hoe het werkt.",
 	"modeSelector": {
 		"title": "Modi",
 		"marketplace": "Modus Marktplaats",
@@ -125,6 +135,7 @@
 		"noResults": "Geen resultaten gevonden",
 		"organizationModes": "Organisatiemodi"
 	},
+	"enhancePromptDescription": "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Probeer hier een prompt te typen en klik opnieuw op de knop om te zien hoe het werkt.",
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
 	"stopTts": "Stop tekst-naar-spraak",
@@ -162,52 +173,65 @@
 		},
 		"current": "Huidig"
 	},
+	"contextCondense": {
+		"title": "Context samengevat",
+		"condensing": "Context aan het samenvatten...",
+		"errorHeader": "Context samenvatten mislukt",
+		"tokens": "tokens"
+	},
 	"instructions": {
 		"wantsToFetch": "Axon Code wil gedetailleerde instructies ophalen om te helpen met de huidige taak"
 	},
 	"fileOperations": {
 		"wantsToRead": "Axon Code wil dit bestand lezen",
+		"wantsToReadMultiple": "Axon Code wil meerdere bestanden lezen",
+		"wantsToReadAndXMore": "Axon Code wil dit bestand en nog {{count}} andere lezen",
 		"wantsToReadOutsideWorkspace": "Axon Code wil dit bestand buiten de werkruimte lezen",
 		"didRead": "Axon Code heeft dit bestand gelezen",
 		"wantsToEdit": "Axon Code wil dit bestand bewerken",
 		"wantsToEditOutsideWorkspace": "Axon Code wil dit bestand buiten de werkruimte bewerken",
 		"wantsToEditProtected": "Axon Code wil een beveiligd configuratiebestand bewerken",
+		"wantsToApplyBatchChanges": "Axon Code wil wijzigingen toepassen op meerdere bestanden",
+		"wantsToGenerateImage": "Axon Code wil een afbeelding genereren",
+		"wantsToGenerateImageOutsideWorkspace": "Axon Code wil een afbeelding genereren buiten de werkruimte",
+		"wantsToGenerateImageProtected": "Axon Code wil een afbeelding genereren op een beschermde locatie",
+		"didGenerateImage": "Axon Code heeft een afbeelding gegenereerd",
 		"wantsToCreate": "Axon Code wil een nieuw bestand aanmaken",
 		"wantsToSearchReplace": "Axon Code wil zoeken en vervangen in dit bestand",
 		"didSearchReplace": "Axon Code heeft zoeken en vervangen uitgevoerd op dit bestand",
 		"wantsToInsert": "Axon Code wil inhoud invoegen in dit bestand",
 		"wantsToInsertWithLineNumber": "Axon Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}",
-		"wantsToInsertAtEnd": "Axon Code wil inhoud toevoegen aan het einde van dit bestand",
-		"wantsToReadAndXMore": "Axon Code wil dit bestand en nog {{count}} andere lezen",
-		"wantsToReadMultiple": "Axon Code wil meerdere bestanden lezen",
-		"wantsToApplyBatchChanges": "Axon Code wil wijzigingen toepassen op meerdere bestanden",
-		"wantsToGenerateImage": "Axon Code wil een afbeelding genereren",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code wil een afbeelding genereren buiten de werkruimte",
-		"wantsToGenerateImageProtected": "Axon Code wil een afbeelding genereren op een beschermde locatie",
-		"didGenerateImage": "Axon Code heeft een afbeelding gegenereerd"
+		"wantsToInsertAtEnd": "Axon Code wil inhoud toevoegen aan het einde van dit bestand"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Axon Code wil de bovenliggende bestanden in deze map bekijken",
 		"didViewTopLevel": "Axon Code heeft de bovenliggende bestanden in deze map bekeken",
+		"wantsToViewTopLevelOutsideWorkspace": "Axon Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken",
+		"didViewTopLevelOutsideWorkspace": "Axon Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken",
 		"wantsToViewRecursive": "Axon Code wil alle bestanden in deze map recursief bekijken",
 		"didViewRecursive": "Axon Code heeft alle bestanden in deze map recursief bekeken",
+		"wantsToViewRecursiveOutsideWorkspace": "Axon Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken",
+		"didViewRecursiveOutsideWorkspace": "Axon Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken",
 		"wantsToViewDefinitions": "Axon Code wil broncode-definitienamen bekijken die in deze map worden gebruikt",
 		"didViewDefinitions": "Axon Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt",
+		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt",
+		"didViewDefinitionsOutsideWorkspace": "Axon Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt",
 		"wantsToSearch": "Axon Code wil deze map doorzoeken op <code>{{regex}}</code>",
 		"didSearch": "Axon Code heeft deze map doorzocht op <code>{{regex}}</code>",
 		"wantsToSearchOutsideWorkspace": "Axon Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken",
-		"didViewTopLevelOutsideWorkspace": "Axon Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken",
-		"didViewRecursiveOutsideWorkspace": "Axon Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt"
+		"didSearchOutsideWorkspace": "Axon Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>",
+		"didSearch_one": "1 resultaat gevonden",
+		"didSearch_other": "{{count}} resultaten gevonden",
+		"resultTooltip": "Gelijkenisscore: {{score}} (klik om bestand te openen)"
 	},
 	"commandOutput": "Commando-uitvoer",
 	"commandExecution": {
-		"running": "Lopend",
 		"abort": "Afbreken",
+		"running": "Lopend",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Afgesloten met status {{exitCode}}",
 		"manageCommands": "Automatisch goedgekeurde commando's",
@@ -264,7 +288,6 @@
 		"tooltipManage": "Beheer instellingen voor automatische goedkeuring",
 		"tooltipStatus": "Automatische goedkeuring ingeschakeld voor: {{toggles}}",
 		"title": "Automatisch goedkeuren",
-		"toggle": "Automatisch goedkeuren in-/uitschakelen",
 		"all": "Alles",
 		"none": "Geen",
 		"description": "Voer deze acties uit zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt.",
@@ -291,12 +314,6 @@
 	"reasoning": {
 		"thinking": "Denkt na",
 		"seconds": "{{count}}s"
-	},
-	"contextCondense": {
-		"title": "Context samengevat",
-		"condensing": "Context aan het samenvatten...",
-		"errorHeader": "Context samenvatten mislukt",
-		"tokens": "tokens"
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)",
@@ -347,23 +364,8 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Limiet voor automatisch goedgekeurde kosten bereikt",
-			"button": "Resetten en doorgaan",
-			"description": "Axon Code heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>",
-		"didSearch_one": "1 resultaat gevonden",
-		"didSearch_other": "{{count}} resultaten gevonden",
-		"resultTooltip": "Gelijkenisscore: {{score}} (klik om bestand te openen)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Alles goedkeuren"
-		},
-		"deny": {
-			"title": "Alles weigeren"
+			"description": "Axon Code heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?",
+			"button": "Resetten en doorgaan"
 		}
 	},
 	"indexingStatus": {
@@ -375,14 +377,6 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versie {{version}} - Klik om release notes te bekijken"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud evolueert!",
-		"description": "Voer externe agenten uit in de cloud, krijg overal toegang tot je taken, werk samen met anderen en nog veel meer.",
-		"joinWaitlist": "Meld je aan om de laatste updates te ontvangen."
-	},
-	"editMessage": {
-		"placeholder": "Bewerk je bericht..."
 	},
 	"command": {
 		"triggerDescription": "Activeer de {{name}} opdracht"
@@ -407,18 +401,18 @@
 			"confirm": "Verwijderen"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Geen resultaten",
-		"problems": "Problemen",
-		"terminal": "Terminal",
-		"url": "Plak URL om inhoud op te halen"
+	"slashCommand": {
+		"wantsToRun": "Axon Code wil een slash commando uitvoeren",
+		"didRun": "Axon Code heeft een slash commando uitgevoerd"
 	},
 	"queuedMessages": {
 		"title": "Berichten in wachtrij",
 		"clickToEdit": "Klik om bericht te bewerken"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code wil een slash commando uitvoeren",
-		"didRun": "Axon Code heeft een slash commando uitgevoerd"
+	"contextMenu": {
+		"noResults": "Geen resultaten",
+		"problems": "Problemen",
+		"terminal": "Terminal",
+		"url": "Plak URL om inhoud op te halen"
 	}
 }

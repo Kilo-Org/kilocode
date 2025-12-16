@@ -6,16 +6,16 @@
 		"collapse": "收起任务",
 		"seeMore": "展开",
 		"seeLess": "收起",
-		"tokens": "Token 用量",
+		"tokens": "Token",
 		"cache": "缓存",
 		"apiCost": "API 费用",
 		"size": "大小",
+		"condenseContext": "智能压缩上下文",
 		"contextWindow": "上下文长度",
 		"closeAndStart": "关闭任务并开始新任务",
 		"export": "导出任务历史",
-		"delete": "删除任务（Shift + 点击跳过确认）",
 		"share": "分享任务",
-		"condenseContext": "智能压缩上下文",
+		"delete": "删除任务（Shift + 点击跳过确认）",
 		"shareWithOrganization": "与组织分享",
 		"shareWithOrganizationDescription": "仅组织成员可访问",
 		"sharePublicly": "公开分享",
@@ -33,11 +33,6 @@
 	},
 	"unpin": "取消置顶",
 	"pin": "置顶",
-	"tokenProgress": {
-		"availableSpace": "可用: {{amount}}",
-		"tokensUsed": "已使用: {{used}} / {{total}}",
-		"reservedForResponse": "已保留: {{amount}}"
-	},
 	"retry": {
 		"title": "重试",
 		"tooltip": "再次尝试操作"
@@ -57,6 +52,11 @@
 		"title": "保存",
 		"tooltip": "保存消息更改"
 	},
+	"tokenProgress": {
+		"availableSpace": "可用: {{amount}}",
+		"tokensUsed": "已使用: {{used}} / {{total}}",
+		"reservedForResponse": "已保留: {{amount}}"
+	},
 	"reject": {
 		"title": "拒绝",
 		"tooltip": "拒绝此操作"
@@ -65,6 +65,14 @@
 	"approve": {
 		"title": "批准",
 		"tooltip": "批准此操作"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "全部批准"
+		},
+		"deny": {
+			"title": "全部拒绝"
+		}
 	},
 	"runCommand": {
 		"title": "运行",
@@ -90,21 +98,24 @@
 		"title": "取消",
 		"tooltip": "取消当前操作"
 	},
+	"editMessage": {
+		"placeholder": "编辑消息..."
+	},
 	"scrollToBottom": "滚动到聊天底部",
 	"about": "通过 AI 辅助生成、重构和调试代码。查看我们的 <DocsLink>文档</DocsLink> 了解更多信息。",
-	"onboarding": "<strong>此工作区中的任务列表为空。</strong> 请在下方输入任务开始。 不确定如何开始？ 在 <DocsLink>文档</DocsLink> 中阅读更多关于 Axon Code 可以为您做什么的信息。",
+	"onboarding": "此工作区中的任务列表为空。",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "任务编排",
-			"description": "将任务拆分为更小、更易于管理的部分。"
+			"description": "将任务拆分为更小、更易于管理的部分"
 		},
 		"stickyModels": {
 			"title": "粘性模式",
-			"description": "每个模式 都会记住 您上次使用的模型"
+			"description": "每个模式都会记住您上次使用的模型"
 		},
 		"tools": {
 			"title": "工具",
-			"description": "允许 AI 通过浏览网络、运行命令等方式解决问题。"
+			"description": "允许 AI 通过浏览网络、运行命令等方式解决问题"
 		},
 		"customizableModes": {
 			"title": "自定义模式",
@@ -115,6 +126,16 @@
 	"selectApiConfig": "选择 API 配置",
 	"selectModelConfig": "选择模型",
 	"enhancePrompt": "增强提示词",
+	"modeSelector": {
+		"title": "模式",
+		"marketplace": "模式市场",
+		"settings": "模式设置",
+		"description": "专门定制Axon Code行为的角色。",
+		"searchPlaceholder": "搜索模式...",
+		"noResults": "未找到结果",
+		"organizationModes": "组织模式"
+	},
+	"enhancePromptDescription": "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
 	"addImages": "添加图片到消息",
 	"sendMessage": "发送消息",
 	"stopTts": "停止文本转语音",
@@ -123,27 +144,12 @@
 	"addContext": "@添加上下文，/输入命令",
 	"dragFiles": "Shift+拖拽文件",
 	"dragFilesImages": "Shift+拖拽文件/图片",
-	"enhancePromptDescription": "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
-	"modeSelector": {
-		"title": "模式",
-		"marketplace": "模式市场",
-		"settings": "模式设置",
-		"description": "专门定制Kilo Code行为的角色。",
-		"searchPlaceholder": "搜索模式...",
-		"noResults": "未找到结果",
-		"organizationModes": "组织模式"
-	},
 	"errorReadingFile": "读取文件时出错",
 	"noValidImages": "没有处理有效图片",
 	"separator": "分隔符",
 	"edit": "编辑...",
 	"forNextMode": "用于下一个模式",
 	"forPreviousMode": "用于上一个模式",
-	"error": "错误",
-	"diffError": {
-		"title": "编辑失败"
-	},
-	"troubleMessage": "Kilo Code遇到问题...",
 	"apiRequest": {
 		"title": "API请求",
 		"failed": "API请求失败",
@@ -167,56 +173,68 @@
 		},
 		"current": "当前"
 	},
+	"contextCondense": {
+		"title": "上下文已压缩",
+		"condensing": "正在压缩上下文...",
+		"errorHeader": "上下文压缩失败",
+		"tokens": "token"
+	},
 	"instructions": {
-		"wantsToFetch": "Axon Code 想要获取详细指示以协助当前任务"
+		"wantsToFetch": "获取指令"
 	},
 	"fileOperations": {
-		"wantsToRead": "需要读取文件",
-		"wantsToReadOutsideWorkspace": "请求访问外部文件",
-		"didRead": "已读取文件",
-		"wantsToEdit": "需要编辑文件",
-		"wantsToEditOutsideWorkspace": "需要编辑外部文件",
-		"wantsToEditProtected": "需要编辑受保护的配置文件",
-		"wantsToCreate": "需要新建文件",
-		"wantsToSearchReplace": "需要在此文件中搜索和替换",
-		"didSearchReplace": "已完成搜索和替换",
-		"wantsToInsert": "需要在此文件中插入内容",
-		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容",
-		"wantsToInsertAtEnd": "需要在文件末尾添加内容",
-		"wantsToReadAndXMore": "Axon Code 想读取此文件以及另外 {{count}} 个文件",
-		"wantsToReadMultiple": "Axon Code 想要读取多个文件",
-		"wantsToApplyBatchChanges": "Axon Code 想要对多个文件应用更改",
-		"wantsToGenerateImage": "需要生成图片",
-		"wantsToGenerateImageOutsideWorkspace": "需要在工作区外生成图片",
-		"wantsToGenerateImageProtected": "需要在受保护位置生成图片",
-		"didGenerateImage": "已生成图片"
+		"wantsToRead": "读取",
+		"wantsToReadMultiple": "读取",
+		"wantsToReadAndXMore": "读取另外 {{count}} 个",
+		"wantsToReadOutsideWorkspace": "读取（工作区外）",
+		"didRead": "已读取",
+		"wantsToEdit": "编辑",
+		"wantsToEditOutsideWorkspace": "编辑（工作区外）",
+		"wantsToEditProtected": "编辑受保护的配置文件",
+		"wantsToApplyBatchChanges": "对多个文件应用更改",
+		"wantsToGenerateImage": "生成图片",
+		"wantsToGenerateImageOutsideWorkspace": "生成图片（工作区外）",
+		"wantsToGenerateImageProtected": "生成图片（受保护位置）",
+		"didGenerateImage": "已生成图片",
+		"wantsToCreate": "新建文件",
+		"wantsToSearchReplace": "搜索和替换",
+		"didSearchReplace": "在此文件中完成搜索和替换",
+		"wantsToInsert": "在此文件中插入内容",
+		"wantsToInsertWithLineNumber": "在第 {{lineNumber}} 行插入内容",
+		"wantsToInsertAtEnd": "在文件末尾添加内容"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "需要查看目录文件列表",
-		"didViewTopLevel": "已查看目录文件列表",
-		"wantsToViewRecursive": "需要查看目录所有文件",
-		"didViewRecursive": "已查看目录所有文件",
-		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称",
-		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称",
-		"wantsToSearch": "需要搜索内容: {{regex}}",
-		"didSearch": "已完成内容搜索: {{regex}}",
-		"wantsToSearchOutsideWorkspace": "需要搜索内容（工作区外）: {{regex}}",
-		"didSearchOutsideWorkspace": "已完成内容搜索（工作区外）: {{regex}}",
-		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）",
-		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）",
-		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）",
-		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）"
+		"wantsToViewTopLevel": "浏览",
+		"didViewTopLevel": "浏览",
+		"wantsToViewTopLevelOutsideWorkspace": "浏览（工作区外）",
+		"didViewTopLevelOutsideWorkspace": "已浏览（工作区外）",
+		"wantsToViewRecursive": "浏览（递归）",
+		"didViewRecursive": "已浏览（递归）",
+		"wantsToViewRecursiveOutsideWorkspace": "浏览（递归）（工作区外）",
+		"didViewRecursiveOutsideWorkspace": "已浏览（递归）（工作区外）",
+		"wantsToViewDefinitions": "查看此目录中使用的源代码定义名称",
+		"didViewDefinitions": "已查看此目录中使用的源代码定义名称",
+		"wantsToViewDefinitionsOutsideWorkspace": "查看此目录中使用的源代码定义名称（工作区外）",
+		"didViewDefinitionsOutsideWorkspace": "已查看此目录中使用的源代码定义名称（工作区外）",
+		"wantsToSearch": "搜索 <code>{{regex}}</code>",
+		"didSearch": "搜索 <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "在此目录中搜索（工作区外） <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "已在此目录中搜索（工作区外） <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "正在搜索代码库: <code>{{query}}</code>",
+		"wantsToSearchWithPath": "正在 <code>{{path}}</code> 中搜索: <code>{{query}}</code>",
+		"didSearch_one": "找到 1 个结果",
+		"didSearch_other": "找到 {{count}} 个结果",
+		"resultTooltip": "相似度评分: {{score}} (点击打开文件)"
 	},
 	"commandOutput": "命令输出",
 	"commandExecution": {
-		"running": "正在运行",
 		"abort": "中止",
+		"running": "正在运行",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "已退出，状态码 {{exitCode}}",
-		"manageCommands": "管理命令权限",
-		"commandManagementDescription": "管理命令权限：点击 ✓ 允许自动执行，点击 ✗ 拒绝执行。可以打开/关闭模式或从列表中删除。<settingsLink>查看所有设置</settingsLink>",
+		"manageCommands": "自动批准的命令",
 		"addToAllowed": "添加到允许列表",
 		"removeFromAllowed": "从允许列表中删除",
 		"addToDenied": "添加到拒绝列表",
@@ -236,18 +254,18 @@
 		"youSaid": "你说"
 	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP上使用工具",
-		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务上的资源"
+		"wantsToUseTool": "正在使用工具 {{serverName}} MCP server",
+		"wantsToAccessResource": "正在访问资源 {{serverName}} MCP server"
 	},
 	"modes": {
-		"wantsToSwitch": "即将切换至{{mode}}模式",
-		"wantsToSwitchWithReason": "即将切换至{{mode}}模式（原因：{{reason}}）",
+		"wantsToSwitch": "切换至{{mode}}模式",
+		"wantsToSwitchWithReason": "切换至{{mode}}模式，原因：{{reason}}",
 		"didSwitch": "已切换至{{mode}}模式",
-		"didSwitchWithReason": "已切换至{{mode}}模式（原因：{{reason}}）"
+		"didSwitchWithReason": "已切换至{{mode}}模式，原因：{{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务",
-		"wantsToFinish": "Kilo Code想完成此子任务",
+		"wantsToCreate": "在{{mode}}模式下创建新子任务",
+		"wantsToFinish": "完成此子任务",
 		"newTaskContent": "子任务说明",
 		"completionContent": "子任务已完成",
 		"resultContent": "子任务结果",
@@ -255,9 +273,14 @@
 		"completionInstructions": "子任务已完成！您可以查看结果并提出修改或下一步建议。如果一切正常，请确认以将结果返回给主任务。"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code有一个问题"
+		"hasQuestion": "问题"
 	},
 	"taskCompleted": "任务完成",
+	"error": "错误",
+	"diffError": {
+		"title": "编辑失败"
+	},
+	"troubleMessage": "Axon Code遇到问题...",
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
 	},
@@ -265,7 +288,6 @@
 		"tooltipManage": "管理自动批准设置",
 		"tooltipStatus": "自动批准已启用：{{toggles}}",
 		"title": "自动批准",
-		"toggle": "切换自动批准",
 		"all": "全部",
 		"none": "无",
 		"description": "无需请求权限即可执行这些操作。仅对您完全信任的操作启用此功能。",
@@ -273,25 +295,10 @@
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"triggerLabelOff": "自动批准已关闭",
-		"triggerLabel_zero": "0 个自动批准",
-		"triggerLabel_one": "1 个自动批准",
-		"triggerLabel_other": "{{count}} 个自动批准",
-		"triggerLabelAll": "YOLO"
-	},
-	"reasoning": {
-		"thinking": "思考中",
-		"seconds": "{{count}}秒"
-	},
-	"contextCondense": {
-		"title": "上下文已压缩",
-		"condensing": "正在压缩上下文...",
-		"errorHeader": "上下文压缩失败",
-		"tokens": "tokens"
-	},
-	"followUpSuggest": {
-		"copyToInput": "复制到输入框（或按住Shift点击）",
-		"autoSelectCountdown": "{{count}}秒后自动选择",
-		"countdownDisplay": "{{count}}秒"
+		"triggerLabel_zero": "自动批准: 0",
+		"triggerLabel_one": "自动批准: 1",
+		"triggerLabel_other": "自动批准: {{count}}",
+		"triggerLabelAll": "自动批准: YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} 已发布",
@@ -304,8 +311,17 @@
 		},
 		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
 	},
+	"reasoning": {
+		"thinking": "思考中",
+		"seconds": "{{count}}秒"
+	},
+	"followUpSuggest": {
+		"copyToInput": "复制到输入框（或按住Shift点击）",
+		"autoSelectCountdown": "{{count}}秒后自动选择",
+		"countdownDisplay": "{{count}}秒"
+	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code想使用浏览器",
+		"rooWantsToUse": "使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
 		"screenshot": "浏览器截图",
@@ -348,23 +364,8 @@
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "已达到自动批准的费用限额",
-			"description": "Kilo Code已经达到了${{count}}的自动批准成本限制。您想重置成本并继续任务吗？",
+			"description": "Axon Code已经达到了${{count}}的自动批准成本限制。您想重置成本并继续任务吗？",
 			"button": "重置并继续"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code 需要搜索代码库: <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code 需要在 <code>{{path}}</code> 中搜索: <code>{{query}}</code>",
-		"didSearch_one": "找到 1 个结果",
-		"didSearch_other": "找到 {{count}} 个结果",
-		"resultTooltip": "相似度评分: {{score}} (点击打开文件)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "全部批准"
-		},
-		"deny": {
-			"title": "全部拒绝"
 		}
 	},
 	"indexingStatus": {
@@ -377,16 +378,8 @@
 	"versionIndicator": {
 		"ariaLabel": "版本 {{version}} - 点击查看发布说明"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud 正在进化！",
-		"description": "在云端运行远程代理，随时随地访问任务，与他人协作等更多功能。",
-		"joinWaitlist": "注册获取最新更新。"
-	},
 	"command": {
 		"triggerDescription": "触发 {{name}} 命令"
-	},
-	"editMessage": {
-		"placeholder": "编辑消息..."
 	},
 	"slashCommands": {
 		"tooltip": "管理斜杠命令",
@@ -408,18 +401,18 @@
 			"confirm": "删除"
 		}
 	},
-	"contextMenu": {
-		"noResults": "无结果",
-		"problems": "问题",
-		"terminal": "终端",
-		"url": "粘贴URL以获取内容"
+	"slashCommand": {
+		"wantsToRun": "Axon Code 想要运行斜杠命令",
+		"didRun": "Axon Code 运行了斜杠命令"
 	},
 	"queuedMessages": {
 		"title": "队列消息",
 		"clickToEdit": "点击编辑消息"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code 想要运行斜杠命令",
-		"didRun": "Axon Code 运行了斜杠命令"
+	"contextMenu": {
+		"noResults": "无结果",
+		"problems": "问题",
+		"terminal": "终端",
+		"url": "粘贴URL以获取内容"
 	}
 }

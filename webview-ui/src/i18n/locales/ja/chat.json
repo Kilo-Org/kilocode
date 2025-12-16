@@ -1,5 +1,5 @@
 {
-	"greeting": "Axon Code は何をお手伝いできますか？",
+	"greeting": "Axon Codeはあなたのために何ができますか？",
 	"task": {
 		"title": "タスク",
 		"expand": "タスクを展開",
@@ -10,18 +10,18 @@
 		"cache": "キャッシュ",
 		"apiCost": "APIコスト",
 		"size": "サイズ",
-		"contextWindow": "コンテキストウィンドウ",
+		"condenseContext": "コンテキストをインテリジェントに圧縮",
+		"contextWindow": "コンテキストの長さ",
 		"closeAndStart": "タスクを閉じて新しいタスクを開始",
 		"export": "タスク履歴をエクスポート",
-		"delete": "タスクを削除（Shift + クリックで確認をスキップ）",
-		"condenseContext": "コンテキストをインテリジェントに圧縮",
 		"share": "タスクを共有",
+		"delete": "タスクを削除（Shift + クリックで確認をスキップ）",
 		"shareWithOrganization": "組織と共有",
 		"shareWithOrganizationDescription": "組織のメンバーのみがアクセスできます",
 		"sharePublicly": "公開で共有",
 		"sharePubliclyDescription": "リンクを持つ誰でもアクセスできます",
 		"connectToCloud": "クラウドに接続",
-		"connectToCloudDescription": "タスクを共有するためにKilo Code Cloudにサインイン",
+		"connectToCloudDescription": "タスクを共有するにはAxon Code Cloudにサインイン",
 		"sharingDisabledByOrganization": "組織により共有が無効化されています",
 		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
 		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました",
@@ -33,11 +33,6 @@
 	},
 	"unpin": "ピン留めを解除",
 	"pin": "ピン留め",
-	"tokenProgress": {
-		"availableSpace": "利用可能な空き容量: {{amount}} トークン",
-		"tokensUsed": "使用トークン: {{used}} / {{total}}",
-		"reservedForResponse": "モデル応答用に予約: {{amount}} トークン"
-	},
 	"retry": {
 		"title": "再試行",
 		"tooltip": "操作を再試行"
@@ -57,6 +52,11 @@
 		"title": "保存",
 		"tooltip": "メッセージの変更を保存"
 	},
+	"tokenProgress": {
+		"availableSpace": "利用可能な空き容量: {{amount}} トークン",
+		"tokensUsed": "使用トークン: {{used}} / {{total}}",
+		"reservedForResponse": "モデル応答用に予約: {{amount}} トークン"
+	},
 	"reject": {
 		"title": "拒否",
 		"tooltip": "このアクションを拒否"
@@ -66,8 +66,16 @@
 		"title": "承認",
 		"tooltip": "このアクションを承認"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "すべて承認"
+		},
+		"deny": {
+			"title": "すべて拒否"
+		}
+	},
 	"runCommand": {
-		"title": "コマンド",
+		"title": "実行",
 		"tooltip": "このコマンドを実行"
 	},
 	"proceedWhileRunning": {
@@ -76,7 +84,7 @@
 	},
 	"killCommand": {
 		"title": "コマンドを強制終了",
-		"tooltip": "現在のコマンドを強制終了します"
+		"tooltip": "現在のコマンドを強制終了"
 	},
 	"resumeTask": {
 		"title": "タスクを再開",
@@ -90,21 +98,24 @@
 		"title": "キャンセル",
 		"tooltip": "現在の操作をキャンセル"
 	},
+	"editMessage": {
+		"placeholder": "メッセージを編集..."
+	},
 	"scrollToBottom": "チャットの最下部にスクロール",
-	"about": "AI支援でコードを生成、リファクタリング、デバッグします。詳細については、<DocsLink>ドキュメント</DocsLink>をご覧ください。",
-	"onboarding": "最新のエージェント型コーディング能力の進歩により、複雑なソフトウェア開発タスクをステップバイステップで処理できます。ファイルの作成や編集、複雑なプロジェクトの探索、ブラウザの使用、ターミナルコマンドの実行（許可後）を可能にするツールにより、コード補完や技術サポート以上の方法であなたをサポートできます。MCPを使用して新しいツールを作成し、自分の能力を拡張することもできます。",
+	"about": "AI支援でコードを生成、リファクタリング、デバッグ。詳細については、<DocsLink>ドキュメント</DocsLink>をご覧ください。",
+	"onboarding": "このワークスペースのタスクリストは空です。",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "タスクオーケストレーション",
-			"description": "タスクをより小さく、管理しやすい部分に分割します。"
+			"description": "タスクをより小さく、管理しやすい部分に分割"
 		},
 		"stickyModels": {
-			"title": "スティッキーモード",
-			"description": "各モードは、最後に使用したモデルを記憶しています"
+			"title": "スティッキーモデル",
+			"description": "各モードは、最後に使用したモデルを記憶"
 		},
 		"tools": {
 			"title": "ツール",
-			"description": "AIがWebの閲覧、コマンドの実行などによって問題を解決できるようにします。"
+			"description": "AIがWebの閲覧、コマンドの実行などによって問題を解決"
 		},
 		"customizableModes": {
 			"title": "カスタマイズ可能なモード",
@@ -112,9 +123,19 @@
 		}
 	},
 	"selectMode": "対話モードを選択",
-	"selectApiConfig": "API構成を選択",
+	"selectApiConfig": "モデルを選択",
 	"selectModelConfig": "モデルを選択",
 	"enhancePrompt": "追加コンテキストでプロンプトを強化",
+	"modeSelector": {
+		"title": "モード",
+		"marketplace": "モードマーケットプレイス",
+		"settings": "モード設定",
+		"description": "Axon Codeの動作をカスタマイズする専門的なペルソナ。",
+		"searchPlaceholder": "モードを検索...",
+		"noResults": "結果が見つかりません",
+		"organizationModes": "組織モード"
+	},
+	"enhancePromptDescription": "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することでリクエストを改善。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
 	"addImages": "メッセージに画像を追加",
 	"sendMessage": "メッセージを送信",
 	"stopTts": "テキスト読み上げを停止",
@@ -123,27 +144,12 @@
 	"addContext": "コンテキスト追加は@、コマンドは/",
 	"dragFiles": "ファイルをドラッグするにはShiftキーを押したまま",
 	"dragFilesImages": "ファイル/画像をドラッグするにはShiftキーを押したまま",
-	"enhancePromptDescription": "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
-	"modeSelector": {
-		"title": "モード",
-		"marketplace": "モードマーケットプレイス",
-		"settings": "モード設定",
-		"description": "Kilo Codeの動作をカスタマイズする専門的なペルソナ。",
-		"searchPlaceholder": "モードを検索...",
-		"noResults": "結果が見つかりません",
-		"organizationModes": "組織モード"
-	},
 	"errorReadingFile": "ファイル読み込みエラー",
 	"noValidImages": "有効な画像が処理されませんでした",
 	"separator": "区切り",
 	"edit": "編集...",
 	"forNextMode": "次のモード用",
 	"forPreviousMode": "前のモード用",
-	"error": "エラー",
-	"diffError": {
-		"title": "編集に失敗しました"
-	},
-	"troubleMessage": "Kilo Codeに問題が発生しています...",
 	"apiRequest": {
 		"title": "APIリクエスト",
 		"failed": "APIリクエスト失敗",
@@ -158,63 +164,76 @@
 			"viewDiff": "差分を表示",
 			"restore": "チェックポイントを復元",
 			"restoreFiles": "ファイルを復元",
-			"restoreFilesDescription": "この時点で撮影されたスナップショットにプロジェクトのファイルを復元します。",
+			"restoreFilesDescription": "この時点で撮影されたスナップショットにプロジェクトのファイルを復元。",
 			"restoreFilesAndTask": "ファイルとタスクを復元",
 			"confirm": "確認",
 			"cancel": "キャンセル",
 			"cannotUndo": "このアクションは元に戻せません。",
-			"restoreFilesAndTaskDescription": "この時点で撮影されたスナップショットにプロジェクトのファイルを復元し、この時点以降のすべてのメッセージを削除します。"
+			"restoreFilesAndTaskDescription": "この時点で撮影されたスナップショットにプロジェクトのファイルを復元し、この時点以降のすべてのメッセージを削除。"
 		},
 		"current": "現在"
 	},
+	"contextCondense": {
+		"title": "コンテキスト圧縮済み",
+		"condensing": "コンテキストを圧縮中...",
+		"errorHeader": "コンテキストの圧縮に失敗",
+		"tokens": "トークン"
+	},
 	"instructions": {
-		"wantsToFetch": "Kilo Codeは現在のタスクを支援するための詳細な指示を取得したい"
+		"wantsToFetch": "指示を取得"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Codeはこのファイルを読みたい",
-		"wantsToReadOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを読みたい",
-		"didRead": "Kilo Codeはこのファイルを読みました",
-		"wantsToEdit": "Kilo Codeはこのファイルを編集したい",
-		"wantsToEditOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを編集したい",
-		"wantsToEditProtected": "Kilo Codeは保護された設定ファイルを編集したい",
-		"wantsToCreate": "Kilo Codeは新しいファイルを作成したい",
-		"wantsToSearchReplace": "Kilo Codeはこのファイルで検索と置換を行う",
-		"didSearchReplace": "Kilo Codeはこのファイルで検索と置換を実行しました",
-		"wantsToInsert": "Kilo Codeはこのファイルにコンテンツを挿入したい",
-		"wantsToInsertWithLineNumber": "Kilo Codeはこのファイルの{{lineNumber}}行目にコンテンツを挿入したい",
-		"wantsToInsertAtEnd": "Kilo Codeはこのファイルの末尾にコンテンツを追加したい",
-		"wantsToReadAndXMore": "Axon Code はこのファイルと他に {{count}} 個のファイルを読み込もうとしています",
-		"wantsToReadMultiple": "Kilo Codeは複数のファイルを読み取ろうとしています",
-		"wantsToApplyBatchChanges": "Kilo Codeは複数のファイルに変更を適用したい",
-		"wantsToGenerateImage": "Kilo Codeは画像を生成したい",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Codeはワークスペース外で画像を生成したい",
-		"wantsToGenerateImageProtected": "Kilo Codeは保護された場所で画像を生成したい",
-		"didGenerateImage": "Kilo Codeは画像を生成しました"
+		"wantsToRead": "読み取り",
+		"wantsToReadMultiple": "読み取り",
+		"wantsToReadAndXMore": "{{count}} 個以上を読み取り",
+		"wantsToReadOutsideWorkspace": "読み取り（ワークスペース外）",
+		"didRead": "読み取り済み",
+		"wantsToEdit": "編集",
+		"wantsToEditOutsideWorkspace": "編集（ワークスペース外）",
+		"wantsToEditProtected": "保護された設定ファイルを編集",
+		"wantsToApplyBatchChanges": "複数のファイルに変更を適用",
+		"wantsToGenerateImage": "画像を生成",
+		"wantsToGenerateImageOutsideWorkspace": "画像を生成（ワークスペース外）",
+		"wantsToGenerateImageProtected": "画像を生成（保護された場所）",
+		"didGenerateImage": "画像を生成済み",
+		"wantsToCreate": "新しいファイルを作成",
+		"wantsToSearchReplace": "検索と置換",
+		"didSearchReplace": "このファイルで検索と置換を実行済み",
+		"wantsToInsert": "このファイルにコンテンツを挿入",
+		"wantsToInsertWithLineNumber": "このファイルの{{lineNumber}}行目にコンテンツを挿入",
+		"wantsToInsertAtEnd": "このファイルの末尾にコンテンツを追加"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示したい",
-		"didViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示しました",
-		"wantsToViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示したい",
-		"didViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示しました",
-		"wantsToViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示したい",
-		"didViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示しました",
-		"wantsToSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索したい",
-		"didSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索しました",
-		"wantsToSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索したい",
-		"didSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索しました",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示したい",
-		"didViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示しました",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示したい",
-		"didViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示しました",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示したい",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示しました"
+		"wantsToViewTopLevel": "探索",
+		"didViewTopLevel": "探索",
+		"wantsToViewTopLevelOutsideWorkspace": "探索（ワークスペース外）",
+		"didViewTopLevelOutsideWorkspace": "探索済み（ワークスペース外）",
+		"wantsToViewRecursive": "探索（再帰的）",
+		"didViewRecursive": "探索済み（再帰的）",
+		"wantsToViewRecursiveOutsideWorkspace": "探索（再帰的）（ワークスペース外）",
+		"didViewRecursiveOutsideWorkspace": "探索済み（再帰的）（ワークスペース外）",
+		"wantsToViewDefinitions": "このディレクトリで使用されているソースコード定義名を表示",
+		"didViewDefinitions": "このディレクトリで使用されているソースコード定義名を表示済み",
+		"wantsToViewDefinitionsOutsideWorkspace": "このディレクトリで使用されているソースコード定義名を表示（ワークスペース外）",
+		"didViewDefinitionsOutsideWorkspace": "このディレクトリで使用されているソースコード定義名を表示済み（ワークスペース外）",
+		"wantsToSearch": "<code>{{regex}}</code> を検索",
+		"didSearch": "<code>{{regex}}</code> を検索",
+		"wantsToSearchOutsideWorkspace": "このディレクトリで <code>{{regex}}</code> を検索（ワークスペース外）",
+		"didSearchOutsideWorkspace": "このディレクトリで <code>{{regex}}</code> を検索済み（ワークスペース外）"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "コードベースで <code>{{query}}</code> を検索中",
+		"wantsToSearchWithPath": "<code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索中",
+		"didSearch_one": "1件の結果が見つかりました",
+		"didSearch_other": "{{count}}件の結果が見つかりました",
+		"resultTooltip": "類似度スコア: {{score}}（クリックしてファイルを開く）"
 	},
 	"commandOutput": "コマンド出力",
 	"commandExecution": {
 		"abort": "中止",
 		"running": "実行中",
 		"pid": "PID: {{pid}}",
-		"exitStatus": "ステータス {{exitCode}} で終了しました",
+		"exitStatus": "ステータス {{exitCode}} で終了",
 		"manageCommands": "自動承認されたコマンド",
 		"addToAllowed": "許可リストに追加",
 		"removeFromAllowed": "許可リストから削除",
@@ -229,24 +248,24 @@
 	"response": "応答",
 	"arguments": "引数",
 	"text": {
-		"rooSaid": "Rooの発言"
+		"rooSaid": "応答"
 	},
 	"feedback": {
 		"youSaid": "あなたの発言"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code{{serverName}}でツールを使用したい",
-		"wantsToAccessResource": "Axon Code{{serverName}}のリソースにアクセスしたい"
+		"wantsToUseTool": "{{serverName}} MCPサーバーのツールを使用中",
+		"wantsToAccessResource": "{{serverName}} MCPサーバーのリソースにアクセス中"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Codeは<code>{{mode}}</code>モードに切り替えたい",
-		"wantsToSwitchWithReason": "Kilo Codeは次の理由で<code>{{mode}}</code>モードに切り替えたい: {{reason}}",
-		"didSwitch": "Kilo Codeは<code>{{mode}}</code>モードに切り替えました",
-		"didSwitchWithReason": "Kilo Codeは次の理由で<code>{{mode}}</code>モードに切り替えました: {{reason}}"
+		"wantsToSwitch": "{{mode}} モードに切り替え",
+		"wantsToSwitchWithReason": "{{mode}} モードに切り替え中。理由: {{reason}}",
+		"didSwitch": "{{mode}} モードに切り替え済み",
+		"didSwitchWithReason": "{{mode}} モードに切り替え済み。理由: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code<code>{{mode}}</code>モードで新しいサブタスクを作成したい",
-		"wantsToFinish": "Kilo Codeはこのサブタスクを終了したい",
+		"wantsToCreate": "{{mode}} モードで新しいサブタスクを作成",
+		"wantsToFinish": "このサブタスクを終了",
 		"newTaskContent": "サブタスク指示",
 		"completionContent": "サブタスク完了",
 		"resultContent": "サブタスク結果",
@@ -254,59 +273,57 @@
 		"completionInstructions": "サブタスク完了！結果を確認し、修正や次のステップを提案できます。問題なければ、親タスクに結果を返すために確認してください。"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Codeは質問があります"
+		"hasQuestion": "質問"
 	},
-	"taskCompleted": "タスク完了",
+	"taskCompleted": "完了",
+	"error": "エラー",
+	"diffError": {
+		"title": "編集失敗"
+	},
+	"troubleMessage": "Axon Codeに問題が発生しています...",
 	"powershell": {
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
 	},
 	"autoApprove": {
-		"tooltipManage": "自動承認設定を管理する",
-		"tooltipStatus": "自動承認が有効です: {{toggles}}",
+		"tooltipManage": "自動承認設定を管理",
+		"tooltipStatus": "自動承認が有効: {{toggles}}",
 		"title": "自動承認",
-		"toggle": "自動承認を切り替える",
 		"all": "すべて",
 		"none": "なし",
-		"description": "許可を求めずにこれらのアクションを実行します。完全に信頼するアクションに対してのみ有効にしてください。",
-		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
-		"toggleAriaLabel": "自動承認を切り替える",
-		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
+		"description": "許可を求めずにこれらのアクションを実行。完全に信頼するアクションに対してのみ有効化してください。",
+		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択",
+		"toggleAriaLabel": "自動承認を切り替え",
+		"disabledAriaLabel": "自動承認が無効 - 最初にオプションを選択",
 		"triggerLabelOff": "自動承認オフ",
 		"triggerLabel_zero": "0個の自動承認",
 		"triggerLabel_one": "1個の自動承認済み",
 		"triggerLabel_other": "{{count}}個の自動承認済み",
 		"triggerLabelAll": "YOLO"
 	},
-	"reasoning": {
-		"thinking": "考え中",
-		"seconds": "{{count}}秒"
-	},
-	"contextCondense": {
-		"title": "コンテキスト要約",
-		"condensing": "コンテキストを圧縮中...",
-		"errorHeader": "コンテキストの圧縮に失敗しました",
-		"tokens": "トークン"
-	},
-	"followUpSuggest": {
-		"copyToInput": "入力欄にコピー（またはShift + クリック）",
-		"autoSelectCountdown": "{{count}}秒後に自動選択します",
-		"countdownDisplay": "{{count}}秒"
-	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} リリース",
 		"stealthModel": {
 			"feature": "<bold>期間限定無料ステルスモデル</bold> - Code Supernova：<bold>1Mトークンコンテキストウィンドウ</bold>にアップグレード！画像入力をサポートする多目的エージェントコーディングモデル、Roo Code Cloud 経由で利用可能。",
-			"note": "(注意：プロンプトと補完はモデル作成者によってログに記録され、モデルの改善に使用されます)",
+			"note": "（注意：プロンプトと補完はモデル作成者によってログに記録され、モデルの改善に使用されます）",
 			"connectButton": "Roo Code Cloud に接続",
-			"selectModel": "設定で Roo Code Cloud プロバイダーから <code>roo/code-supernova</code> を選択して開始してください。",
+			"selectModel": "設定で Roo Code Cloud プロバイダーから <code>roo/code-supernova</code> を選択して開始。",
 			"goToSettingsButton": "設定に移動"
 		},
-		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォロー 🚀"
+	},
+	"reasoning": {
+		"thinking": "推論中",
+		"seconds": "{{count}}秒"
+	},
+	"followUpSuggest": {
+		"copyToInput": "入力欄にコピー（shift + クリックと同じ）",
+		"autoSelectCountdown": "{{count}}秒後に自動選択",
+		"countdownDisplay": "{{count}}秒"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
+		"rooWantsToUse": "ブラウザを使用",
 		"consoleLogs": "コンソールログ",
-		"noNewLogs": "(新しいログはありません)",
+		"noNewLogs": "（新しいログなし）",
 		"screenshot": "ブラウザのスクリーンショット",
 		"cursor": "カーソル",
 		"navigation": {
@@ -318,7 +335,7 @@
 		"actions": {
 			"title": "ブラウザアクション: ",
 			"launch": "{{url}} でブラウザを起動",
-			"click": "クリック ({{coordinate}})",
+			"click": "クリック（{{coordinate}}）",
 			"type": "入力 \"{{text}}\"",
 			"scrollDown": "下にスクロール",
 			"scrollUp": "上にスクロール",
@@ -332,38 +349,23 @@
 			"copy_code": "コードをコピー"
 		}
 	},
-	"systemPromptWarning": "警告：カスタムシステムプロンプトの上書きが有効です。これにより機能が深刻に損なわれ、予測不可能な動作が発生する可能性があります。",
+	"systemPromptWarning": "警告：カスタムシステムプロンプトの上書きが有効。これにより機能が深刻に損なわれ、予測不可能な動作が発生する可能性があります。",
 	"profileViolationWarning": "現在のプロファイルは組織の設定と互換性がありません",
 	"shellIntegration": {
 		"title": "コマンド実行警告",
-		"description": "コマンドはVSCodeターミナルシェル統合なしで実行されています。この警告を非表示にするには、<settingsLink>Kilo Code設定</settingsLink>の<strong>Terminal</strong>セクションでシェル統合を無効にするか、以下のリンクを使用してVSCodeターミナル統合のトラブルシューティングを行ってください。",
-		"troubleshooting": "シェル統合のドキュメントはこちらをクリック"
+		"description": "コマンドはVSCodeターミナルシェル統合なしで実行されています。この警告を非表示にするには、<settingsLink>Axon Code設定</settingsLink>の<strong>Terminal</strong>セクションでシェル統合を無効にするか、以下のリンクを使用してVSCodeターミナル統合のトラブルシューティングを行ってください。",
+		"troubleshooting": "シェル統合の documentation はこちらをクリック"
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "自動承認リクエスト制限に達しました",
-			"description": "Kilo Codeは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
+			"description": "Axon Codeは{{count}}件のAPI自動承認リクエスト制限に達しました。カウントをリセットしてタスクを続行しますか？",
 			"button": "リセットして続行"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "自動承認コスト制限に達しました",
-			"description": "Kilo Codeは自動承認されたコスト制限の${{count}}に達しました。コストをリセットしてタスクを続行しますか？",
-			"button": "リセットして続ける"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Kilo Codeはコードベースで <code>{{query}}</code> を検索したい",
-		"wantsToSearchWithPath": "Kilo Codeは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい",
-		"didSearch_one": "1件の結果が見つかりました",
-		"didSearch_other": "{{count}}件の結果が見つかりました",
-		"resultTooltip": "類似度スコア: {{score}} (クリックしてファイルを開く)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "すべて承認"
-		},
-		"deny": {
-			"title": "すべて拒否"
+			"description": "Axon Codeは自動承認されたコスト制限の${{count}}に達しました。コストをリセットしてタスクを続行しますか？",
+			"button": "リセットして続行"
 		}
 	},
 	"indexingStatus": {
@@ -376,21 +378,13 @@
 	"versionIndicator": {
 		"ariaLabel": "バージョン {{version}} - クリックしてリリースノートを表示"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud が進化中！",
-		"description": "クラウドでリモートエージェントを実行し、どこからでもタスクにアクセスし、他の人と協力し、その他多くの機能を利用できます。",
-		"joinWaitlist": "最新のアップデートを受け取るためにサインアップしてください。"
-	},
-	"editMessage": {
-		"placeholder": "メッセージを編集..."
-	},
 	"command": {
 		"triggerDescription": "{{name}}コマンドをトリガー"
 	},
 	"slashCommands": {
 		"tooltip": "スラッシュコマンドを管理",
 		"title": "スラッシュコマンド",
-		"description": "組み込みスラッシュコマンドを使用するか、よく使用するプロンプトやワークフローに素早くアクセスするためのカスタムスラッシュコマンドを作成します。<DocsLink>ドキュメント</DocsLink>",
+		"description": "組み込みスラッシュコマンドを使用するか、よく使用するプロンプトやワークフローに素早くアクセスするためのカスタムスラッシュコマンドを作成。<DocsLink>ドキュメント</DocsLink>",
 		"manageCommands": "設定でスラッシュコマンドを管理",
 		"builtInCommands": "組み込みコマンド",
 		"globalCommands": "グローバルコマンド",
@@ -407,18 +401,18 @@
 			"confirm": "削除"
 		}
 	},
-	"contextMenu": {
-		"noResults": "結果なし",
-		"problems": "問題",
-		"terminal": "ターミナル",
-		"url": "URLを貼り付けてコンテンツを取得"
+	"slashCommand": {
+		"wantsToRun": "スラッシュコマンドを実行",
+		"didRun": "Axon Codeはスラッシュコマンドを実行しました"
 	},
 	"queuedMessages": {
 		"title": "キューメッセージ",
 		"clickToEdit": "クリックしてメッセージを編集"
 	},
-	"slashCommand": {
-		"wantsToRun": "Kilo Codeはスラッシュコマンドを実行したい",
-		"didRun": "Kilo Codeはスラッシュコマンドを実行しました"
+	"contextMenu": {
+		"noResults": "結果なし",
+		"problems": "問題",
+		"terminal": "ターミナル",
+		"url": "URLを貼り付けてコンテンツを取得"
 	}
 }

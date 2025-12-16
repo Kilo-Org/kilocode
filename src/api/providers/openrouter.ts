@@ -224,8 +224,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let stream
 		try {
-			console.log("requestOptions", requestOptions)
-			console.log("metadata", metadata)
 			stream = await this.client.chat.completions.create(
 				requestOptions,
 				this.customRequestOptions(metadata), // kilocode_change

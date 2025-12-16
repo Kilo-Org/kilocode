@@ -1,73 +1,81 @@
 {
-	"greeting": "Was kann Axon Code für dich tun?",
+	"greeting": "Was kann Axon Code für Sie tun?",
 	"task": {
 		"title": "Aufgabe",
 		"expand": "Aufgabe erweitern",
-		"collapse": "Aufgabe einklappen",
+		"collapse": "Aufgabe zusammenklappen",
 		"seeMore": "Mehr anzeigen",
 		"seeLess": "Weniger anzeigen",
 		"tokens": "Tokens",
 		"cache": "Cache",
 		"apiCost": "API-Kosten",
 		"size": "Größe",
-		"contextWindow": "Kontextfenster",
+		"condenseContext": "Kontext intelligent verdichten",
+		"contextWindow": "Kontextlänge",
 		"closeAndStart": "Aufgabe schließen und neue starten",
 		"export": "Aufgabenverlauf exportieren",
-		"delete": "Aufgabe löschen (Shift + Klick zum Überspringen der Bestätigung)",
 		"share": "Aufgabe teilen",
-		"condenseContext": "Kontext intelligent komprimieren",
+		"delete": "Aufgabe löschen (Shift + Klick zum Überspringen der Bestätigung)",
 		"shareWithOrganization": "Mit Organisation teilen",
-		"shareWithOrganizationDescription": "Nur Mitglieder deiner Organisation können zugreifen",
+		"shareWithOrganizationDescription": "Nur Mitglieder Ihrer Organisation können darauf zugreifen",
 		"sharePublicly": "Öffentlich teilen",
-		"sharePubliclyDescription": "Jeder mit dem Link kann zugreifen",
+		"sharePubliclyDescription": "Jeder mit dem Link kann darauf zugreifen",
 		"connectToCloud": "Mit Cloud verbinden",
-		"connectToCloudDescription": "Melde dich bei Axon Code Cloud an, um Aufgaben zu teilen",
-		"sharingDisabledByOrganization": "Freigabe von der Organisation deaktiviert",
-		"shareSuccessOrganization": "Organisationslink in die Zwischenablage kopiert",
-		"shareSuccessPublic": "Öffentlicher Link in die Zwischenablage kopiert",
+		"connectToCloudDescription": "Melden Sie sich bei Axon Code Cloud an, um Aufgaben zu teilen",
+		"sharingDisabledByOrganization": "Teilen von Organisation deaktiviert",
+		"shareSuccessOrganization": "Organisationslink in Zwischenablage kopiert",
+		"shareSuccessPublic": "Öffentlicher Link in Zwischenablage kopiert",
 		"openInCloud": "Aufgabe in Roo Code Cloud öffnen",
-		"openInCloudIntro": "Überwache oder interagiere mit Roo von überall aus. Scanne, klicke oder kopiere zum Öffnen."
+		"openInCloudIntro": "Überwachen oder interagieren Sie von überall mit Roo. Scannen, klicken oder kopieren Sie zum Öffnen."
 	},
 	"history": {
 		"title": "Verlauf"
 	},
-	"unpin": "Lösen von oben",
+	"unpin": "Lösen",
 	"pin": "Anheften",
-	"tokenProgress": {
-		"availableSpace": "Verfügbarer Speicher: {{amount}} Tokens",
-		"tokensUsed": "Verwendete Tokens: {{used}} von {{total}}",
-		"reservedForResponse": "Reserviert für Modellantwort: {{amount}} Tokens"
-	},
 	"retry": {
 		"title": "Wiederholen",
-		"tooltip": "Versuch erneut starten"
+		"tooltip": "Operation erneut versuchen"
 	},
 	"startNewTask": {
 		"title": "Neue Aufgabe starten",
-		"tooltip": "Beginne eine neue Aufgabe"
+		"tooltip": "Neue Aufgabe beginnen"
 	},
 	"reportBug": {
 		"title": "Fehler melden"
 	},
 	"proceedAnyways": {
 		"title": "Trotzdem fortfahren",
-		"tooltip": "Während der Befehlsausführung fortfahren"
+		"tooltip": "Fortfahren während Befehl ausgeführt wird"
 	},
 	"save": {
 		"title": "Speichern",
 		"tooltip": "Nachrichtenänderungen speichern"
 	},
+	"tokenProgress": {
+		"availableSpace": "Verfügbarer Speicherplatz: {{amount}} Tokens",
+		"tokensUsed": "Verwendete Tokens: {{used}} von {{total}}",
+		"reservedForResponse": "Reserviert für Modellantwort: {{amount}} Tokens"
+	},
 	"reject": {
 		"title": "Ablehnen",
 		"tooltip": "Diese Aktion ablehnen"
 	},
-	"completeSubtaskAndReturn": "Teilaufgabe abschließen und zurückkehren",
+	"completeSubtaskAndReturn": "Unteraufgabe abschließen und zurückkehren",
 	"approve": {
 		"title": "Genehmigen",
 		"tooltip": "Diese Aktion genehmigen"
 	},
+	"read-batch": {
+		"approve": {
+			"title": "Alle genehmigen"
+		},
+		"deny": {
+			"title": "Alle ablehnen"
+		}
+	},
 	"runCommand": {
-		"title": "Befehl",
+		"title": "Ausführen",
 		"tooltip": "Diesen Befehl ausführen"
 	},
 	"proceedWhileRunning": {
@@ -75,8 +83,8 @@
 		"tooltip": "Trotz Warnungen fortfahren"
 	},
 	"killCommand": {
-		"title": "Befehl abbrechen",
-		"tooltip": "Aktuellen Befehl abbrechen"
+		"title": "Befehl beenden",
+		"tooltip": "Aktuellen Befehl beenden"
 	},
 	"resumeTask": {
 		"title": "Aufgabe fortsetzen",
@@ -90,60 +98,58 @@
 		"title": "Abbrechen",
 		"tooltip": "Aktuelle Operation abbrechen"
 	},
-	"scrollToBottom": "Zum Chat-Ende scrollen",
-	"about": "Generiere, überarbeite und debugge Code mit KI-Unterstützung. Weitere Informationen findest du in unserer <DocsLink>Dokumentation</DocsLink>.",
-	"onboarding": "<strong>Deine Aufgabenliste in diesem Arbeitsbereich ist leer.</strong> Beginne mit der Eingabe einer Aufgabe unten. Du bist dir nicht sicher, wie du anfangen sollst? Lies mehr darüber, was Axon Code für dich tun kann, in <DocsLink>den Dokumenten</DocsLink>.",
+	"editMessage": {
+		"placeholder": "Ihre Nachricht bearbeiten..."
+	},
+	"scrollToBottom": "Zum Ende des Chats scrollen",
+	"about": "Code mit KI-Unterstützung generieren, umstrukturieren und debuggen. Schauen Sie sich unsere <DocsLink>Dokumentation</DocsLink> an, um mehr zu erfahren.",
+	"onboarding": "Ihre Aufgabenliste in diesem Arbeitsbereich ist leer.",
 	"rooTips": {
 		"boomerangTasks": {
-			"title": "Aufgaben-Orchestrierung",
-			"description": "Teile Aufgaben in kleinere, überschaubare Teile auf."
+			"title": "Aufgabenorchestrierung",
+			"description": "Teilen Sie Aufgaben in kleinere, überschaubare Teile auf"
 		},
 		"stickyModels": {
-			"title": "Sticky Modi",
-			"description": "Jeder Modus merkt sich dein zuletzt verwendetes Modell"
+			"title": "Sticky-Modelle",
+			"description": "Jeder Modus merkt sich Ihr zuletzt verwendetes Modell"
 		},
 		"tools": {
-			"title": "Tools",
-			"description": "Erlaube der KI, Probleme durch Surfen im Web, Ausführen von Befehlen und mehr zu lösen."
+			"title": "Werkzeuge",
+			"description": "Ermöglichen Sie der KI, Probleme durch Surfen im Web, Ausführen von Befehlen und mehr zu lösen"
 		},
 		"customizableModes": {
 			"title": "Anpassbare Modi",
 			"description": "Spezialisierte Personas mit eigenem Verhalten und zugewiesenen Modellen"
 		}
 	},
-	"selectMode": "Interaktionsmodus auswählen",
-	"selectApiConfig": "API-Konfiguration auswählen",
+	"selectMode": "Modus für Interaktion auswählen",
+	"selectApiConfig": "Modell auswählen",
 	"selectModelConfig": "Modell auswählen",
-	"enhancePrompt": "Prompt mit zusätzlichem Kontext verbessern",
-	"addImages": "Bilder zur Nachricht hinzufügen",
-	"sendMessage": "Nachricht senden",
-	"stopTts": "Text-in-Sprache beenden",
-	"typeMessage": "Nachricht eingeben...",
-	"typeTask": "Gib deine Aufgabe hier ein...",
-	"addContext": "@ für Kontext, / für Befehle",
-	"dragFiles": "Shift halten, um Dateien einzufügen",
-	"dragFilesImages": "Shift halten, um Dateien/Bilder einzufügen",
-	"enhancePromptDescription": "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
+	"enhancePrompt": "Eingabeaufforderung mit zusätzlichem Kontext verbessern",
 	"modeSelector": {
 		"title": "Modi",
-		"marketplace": "Modus-Marketplace",
+		"marketplace": "Modus-Marktplatz",
 		"settings": "Modus-Einstellungen",
-		"description": "Spezialisierte Personas, die Kilo Codes Verhalten anpassen.",
+		"description": "Spezialisierte Personas, die das Verhalten von Axon Code anpassen.",
 		"searchPlaceholder": "Modi suchen...",
 		"noResults": "Keine Ergebnisse gefunden",
-		"organizationModes": "Organisations-Modi"
+		"organizationModes": "Organisationsmodi"
 	},
+	"enhancePromptDescription": "Die Schaltfläche 'Eingabeaufforderung verbessern' hilft, Ihre Eingabeaufforderung durch zusätzlichen Kontext, Klarstellung oder Umformulierung zu verbessern. Versuchen Sie, hier eine Eingabeaufforderung einzugeben und klicken Sie erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
+	"addImages": "Bilder zur Nachricht hinzufügen",
+	"sendMessage": "Nachricht senden",
+	"stopTts": "Text-zu-Sprache stoppen",
+	"typeMessage": "Nachricht eingeben...",
+	"typeTask": "Geben Sie Ihre Aufgabe hier ein...",
+	"addContext": "@ um Kontext hinzuzufügen, / für Befehle",
+	"dragFiles": "Shift halten, um Dateien zu ziehen",
+	"dragFilesImages": "Shift halten, um Dateien/Bilder zu ziehen",
 	"errorReadingFile": "Fehler beim Lesen der Datei",
 	"noValidImages": "Keine gültigen Bilder wurden verarbeitet",
-	"separator": "Trennlinie",
+	"separator": "Trennzeichen",
 	"edit": "Bearbeiten...",
 	"forNextMode": "für nächsten Modus",
 	"forPreviousMode": "für vorherigen Modus",
-	"error": "Fehler",
-	"diffError": {
-		"title": "Bearbeitung fehlgeschlagen"
-	},
-	"troubleMessage": "Axon Code hat Probleme...",
 	"apiRequest": {
 		"title": "API-Anfrage",
 		"failed": "API-Anfrage fehlgeschlagen",
@@ -152,174 +158,185 @@
 		"streamingFailed": "API-Streaming fehlgeschlagen"
 	},
 	"checkpoint": {
-		"regular": "Checkpoint",
-		"initializingWarning": "Checkpoint wird noch initialisiert... Falls dies zu lange dauert, kannst du Checkpoints in den <settingsLink>Einstellungen</settingsLink> deaktivieren und deine Aufgabe neu starten.",
+		"regular": "Kontrollpunkt",
+		"initializingWarning": "Kontrollpunkt wird noch initialisiert... Wenn dies zu lange dauert, können Sie Kontrollpunkte in den <settingsLink>Einstellungen</settingsLink> deaktivieren und Ihre Aufgabe neu starten.",
 		"menu": {
-			"viewDiff": "Unterschiede anzeigen",
-			"restore": "Checkpoint wiederherstellen",
+			"viewDiff": "Unterschied anzeigen",
+			"restore": "Kontrollpunkt wiederherstellen",
 			"restoreFiles": "Dateien wiederherstellen",
-			"restoreFilesDescription": "Stellt die Dateien deines Projekts auf einen Snapshot zurück, der an diesem Punkt erstellt wurde.",
+			"restoreFilesDescription": "Stellt die Dateien Ihres Projekts auf einen an diesem Punkt erstellten Snapshot zurück.",
 			"restoreFilesAndTask": "Dateien & Aufgabe wiederherstellen",
 			"confirm": "Bestätigen",
 			"cancel": "Abbrechen",
 			"cannotUndo": "Diese Aktion kann nicht rückgängig gemacht werden.",
-			"restoreFilesAndTaskDescription": "Stellt die Dateien deines Projekts auf einen Snapshot zurück, der an diesem Punkt erstellt wurde, und löscht alle Nachrichten nach diesem Punkt."
+			"restoreFilesAndTaskDescription": "Stellt die Dateien Ihres Projekts auf einen an diesem Punkt erstellten Snapshot zurück und löscht alle Nachrichten nach diesem Punkt."
 		},
 		"current": "Aktuell"
 	},
+	"contextCondense": {
+		"title": "Kontext verdichtet",
+		"condensing": "Kontext wird verdichtet...",
+		"errorHeader": "Fehler beim Verdichten des Kontexts",
+		"tokens": "Tokens"
+	},
 	"instructions": {
-		"wantsToFetch": "Axon Code möchte detaillierte Anweisungen abrufen, um bei der aktuellen Aufgabe zu helfen"
+		"wantsToFetch": "Anweisungen abrufen"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code möchte diese Datei lesen",
-		"wantsToReadAndXMore": "Axon Code möchte diese Datei und {{count}} weitere lesen",
-		"wantsToReadOutsideWorkspace": "Axon Code möchte diese Datei außerhalb des Arbeitsbereichs lesen",
-		"didRead": "Axon Code hat diese Datei gelesen",
-		"wantsToEdit": "Axon Code möchte diese Datei bearbeiten",
-		"wantsToEditOutsideWorkspace": "Axon Code möchte diese Datei außerhalb des Arbeitsbereichs bearbeiten",
-		"wantsToEditProtected": "Axon Code möchte eine geschützte Konfigurationsdatei bearbeiten",
-		"wantsToCreate": "Axon Code möchte eine neue Datei erstellen",
-		"wantsToSearchReplace": "Axon Code möchte in dieser Datei suchen und ersetzen",
-		"didSearchReplace": "Axon Code hat Suchen und Ersetzen in dieser Datei durchgeführt",
-		"wantsToInsert": "Axon Code möchte Inhalte in diese Datei einfügen",
-		"wantsToInsertWithLineNumber": "Axon Code möchte Inhalte in diese Datei in Zeile {{lineNumber}} einfügen",
-		"wantsToInsertAtEnd": "Axon Code möchte Inhalte am Ende dieser Datei anhängen",
-		"wantsToReadMultiple": "Axon Code möchte mehrere Dateien lesen",
-		"wantsToApplyBatchChanges": "Axon Code möchte Änderungen an mehreren Dateien vornehmen",
-		"wantsToGenerateImage": "Axon Code möchte ein Bild generieren",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code möchte ein Bild außerhalb des Arbeitsbereichs generieren",
-		"wantsToGenerateImageProtected": "Axon Code möchte ein Bild an einem geschützten Ort generieren",
-		"didGenerateImage": "Axon Code hat ein Bild generiert"
+		"wantsToRead": "Lesen",
+		"wantsToReadMultiple": "Lesen",
+		"wantsToReadAndXMore": "{{count}} weitere lesen",
+		"wantsToReadOutsideWorkspace": "Lesen (außerhalb des Arbeitsbereichs)",
+		"didRead": "Gelesen",
+		"wantsToEdit": "Bearbeiten",
+		"wantsToEditOutsideWorkspace": "Bearbeiten (außerhalb des Arbeitsbereichs)",
+		"wantsToEditProtected": "geschützte Konfigurationsdatei bearbeiten",
+		"wantsToApplyBatchChanges": "Änderungen auf mehrere Dateien anwenden",
+		"wantsToGenerateImage": "Bild generieren",
+		"wantsToGenerateImageOutsideWorkspace": "Bild generieren (außerhalb des Arbeitsbereichs)",
+		"wantsToGenerateImageProtected": "Bild generieren (geschützter Speicherort)",
+		"didGenerateImage": "Bild generiert",
+		"wantsToCreate": "neue Datei erstellen",
+		"wantsToSearchReplace": "suchen und ersetzen",
+		"didSearchReplace": "Suchen und Ersetzen in dieser Datei durchgeführt",
+		"wantsToInsert": "Inhalt in diese Datei einfügen",
+		"wantsToInsertWithLineNumber": "Inhalt in diese Datei in Zeile {{lineNumber}} einfügen",
+		"wantsToInsertAtEnd": "Inhalt am Ende dieser Datei anhängen"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code möchte die Dateien auf oberster Ebene in diesem Verzeichnis anzeigen",
-		"didViewTopLevel": "Axon Code hat die Dateien auf oberster Ebene in diesem Verzeichnis angezeigt",
-		"wantsToViewRecursive": "Axon Code möchte rekursiv alle Dateien in diesem Verzeichnis anzeigen",
-		"didViewRecursive": "Axon Code hat rekursiv alle Dateien in diesem Verzeichnis angezeigt",
-		"wantsToViewDefinitions": "Axon Code möchte Quellcode-Definitionsnamen in diesem Verzeichnis anzeigen",
-		"didViewDefinitions": "Axon Code hat Quellcode-Definitionsnamen in diesem Verzeichnis angezeigt",
-		"wantsToSearch": "Axon Code möchte dieses Verzeichnis nach <code>{{regex}}</code> durchsuchen",
-		"didSearch": "Axon Code hat dieses Verzeichnis nach <code>{{regex}}</code> durchsucht",
-		"wantsToSearchOutsideWorkspace": "Axon Code möchte dieses Verzeichnis (außerhalb des Arbeitsbereichs) nach <code>{{regex}}</code> durchsuchen",
-		"didSearchOutsideWorkspace": "Axon Code hat dieses Verzeichnis (außerhalb des Arbeitsbereichs) nach <code>{{regex}}</code> durchsucht",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code möchte die Dateien auf oberster Ebene in diesem Verzeichnis (außerhalb des Arbeitsbereichs) anzeigen",
-		"didViewTopLevelOutsideWorkspace": "Axon Code hat die Dateien auf oberster Ebene in diesem Verzeichnis (außerhalb des Arbeitsbereichs) angezeigt",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code möchte rekursiv alle Dateien in diesem Verzeichnis (außerhalb des Arbeitsbereichs) anzeigen",
-		"didViewRecursiveOutsideWorkspace": "Axon Code hat rekursiv alle Dateien in diesem Verzeichnis (außerhalb des Arbeitsbereichs) angezeigt",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code möchte Quellcode-Definitionsnamen in diesem Verzeichnis (außerhalb des Arbeitsbereichs) anzeigen",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code hat Quellcode-Definitionsnamen in diesem Verzeichnis (außerhalb des Arbeitsbereichs) angezeigt"
+		"wantsToViewTopLevel": "Erkunden",
+		"didViewTopLevel": "Erkunden",
+		"wantsToViewTopLevelOutsideWorkspace": "Erkunden (außerhalb des Arbeitsbereichs)",
+		"didViewTopLevelOutsideWorkspace": "Erkundet (außerhalb des Arbeitsbereichs)",
+		"wantsToViewRecursive": "Erkunden (rekursiv)",
+		"didViewRecursive": "Erkundet (rekursiv)",
+		"wantsToViewRecursiveOutsideWorkspace": "Erkunden (rekursiv)(außerhalb des Arbeitsbereichs)",
+		"didViewRecursiveOutsideWorkspace": "Erkundet (rekursiv)(außerhalb des Arbeitsbereichs)",
+		"wantsToViewDefinitions": "Quellcode-Definitionsnamen anzeigen, die in diesem Verzeichnis verwendet werden",
+		"didViewDefinitions": "Quellcode-Definitionsnamen angezeigt, die in diesem Verzeichnis verwendet werden",
+		"wantsToViewDefinitionsOutsideWorkspace": "Quellcode-Definitionsnamen anzeigen, die in diesem Verzeichnis verwendet werden (außerhalb des Arbeitsbereichs)",
+		"didViewDefinitionsOutsideWorkspace": "Quellcode-Definitionsnamen angezeigt, die in diesem Verzeichnis verwendet werden (außerhalb des Arbeitsbereichs)",
+		"wantsToSearch": "Suchen nach <code>{{regex}}</code>",
+		"didSearch": "Suchen nach <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "in diesem Verzeichnis suchen (außerhalb des Arbeitsbereichs) nach <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "in diesem Verzeichnis gesucht (außerhalb des Arbeitsbereichs) nach <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Codebase durchsuchen nach <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Codebase durchsuchen nach <code>{{query}}</code> in <code>{{path}}</code>",
+		"didSearch_one": "1 Ergebnis gefunden",
+		"didSearch_other": "{{count}} Ergebnisse gefunden",
+		"resultTooltip": "Ähnlichkeits-Score: {{score}} (klicken Sie zum Öffnen der Datei)"
 	},
 	"commandOutput": "Befehlsausgabe",
 	"commandExecution": {
 		"abort": "Abbrechen",
-		"running": "Wird ausgeführt",
+		"running": "Läuft",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Beendet mit Status {{exitCode}}",
 		"manageCommands": "Automatisch genehmigte Befehle",
-		"addToAllowed": "Zur erlaubten Liste hinzufügen",
-		"removeFromAllowed": "Von der erlaubten Liste entfernen",
-		"addToDenied": "Zur verweigerten Liste hinzufügen",
-		"removeFromDenied": "Von der verweigerten Liste entfernen",
+		"addToAllowed": "Zur Erlaubnisliste hinzufügen",
+		"removeFromAllowed": "Von Erlaubnisliste entfernen",
+		"addToDenied": "Zur Ablehnungsliste hinzufügen",
+		"removeFromDenied": "Von Ablehnungsliste entfernen",
 		"abortCommand": "Befehlsausführung abbrechen",
 		"expandOutput": "Ausgabe erweitern",
-		"collapseOutput": "Ausgabe reduzieren",
-		"expandManagement": "Befehlsverwaltungsbereich erweitern",
-		"collapseManagement": "Befehlsverwaltungsbereich reduzieren"
+		"collapseOutput": "Ausgabe zusammenklappen",
+		"expandManagement": "Befehls-Verwaltungsbereich erweitern",
+		"collapseManagement": "Befehls-Verwaltungsbereich zusammenklappen"
 	},
 	"response": "Antwort",
 	"arguments": "Argumente",
 	"text": {
-		"rooSaid": "Kilo hat gesagt"
+		"rooSaid": "Antwort"
 	},
 	"feedback": {
-		"youSaid": "Du hast gesagt"
+		"youSaid": "Sie sagten"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code möchte ein Tool auf dem {{serverName}} MCP-Server verwenden",
-		"wantsToAccessResource": "Axon Code möchte auf eine Ressource auf dem {{serverName}} MCP-Server zugreifen"
+		"wantsToUseTool": "Werkzeug des MCP-Servers {{serverName}} verwenden",
+		"wantsToAccessResource": "auf Ressource des MCP-Servers {{serverName}} zugreifen"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code möchte zum <code>{{mode}}</code>-Modus wechseln",
-		"wantsToSwitchWithReason": "Axon Code möchte zum <code>{{mode}}</code>-Modus wechseln, weil: {{reason}}",
-		"didSwitch": "Axon Code hat zum <code>{{mode}}</code>-Modus gewechselt",
-		"didSwitchWithReason": "Axon Code hat zum <code>{{mode}}</code>-Modus gewechselt, weil: {{reason}}"
+		"wantsToSwitch": "zu Modus {{mode}} wechseln",
+		"wantsToSwitchWithReason": "wechsle zu Modus {{mode}}, weil: {{reason}}",
+		"didSwitch": "zu Modus {{mode}} gewechselt",
+		"didSwitchWithReason": "zu Modus {{mode}} gewechselt, weil: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code möchte eine neue Teilaufgabe im <code>{{mode}}</code>-Modus erstellen",
-		"wantsToFinish": "Axon Code möchte diese Teilaufgabe abschließen",
-		"newTaskContent": "Teilaufgabenanweisungen",
-		"completionContent": "Teilaufgabe abgeschlossen",
-		"resultContent": "Teilaufgabenergebnisse",
-		"defaultResult": "Bitte fahre mit der nächsten Aufgabe fort.",
-		"completionInstructions": "Teilaufgabe abgeschlossen! Du kannst die Ergebnisse überprüfen und Korrekturen oder nächste Schritte vorschlagen. Wenn alles gut aussieht, bestätige, um das Ergebnis an die übergeordnete Aufgabe zurückzugeben."
+		"wantsToCreate": "eine neue Unteraufgabe im Modus {{mode}} erstellen",
+		"wantsToFinish": "diese Unteraufgabe beenden",
+		"newTaskContent": "Unteraufgaben-Anweisungen",
+		"completionContent": "Unteraufgabe abgeschlossen",
+		"resultContent": "Unteraufgaben-Ergebnisse",
+		"defaultResult": "Bitte fahren Sie mit der nächsten Aufgabe fort.",
+		"completionInstructions": "Unteraufgabe abgeschlossen! Sie können die Ergebnisse überprüfen und Korrekturen oder nächste Schritte vorschlagen. Wenn alles gut aussieht, bestätigen Sie, um das Ergebnis an die übergeordnete Aufgabe zurückzugeben."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code hat eine Frage"
+		"hasQuestion": "Frage"
 	},
-	"taskCompleted": "Aufgabe abgeschlossen",
+	"taskCompleted": "Abgeschlossen",
+	"error": "Fehler",
+	"diffError": {
+		"title": "Bearbeitung nicht erfolgreich"
+	},
+	"troubleMessage": "Axon Code hat Probleme...",
 	"powershell": {
-		"issues": "Es scheint, dass du Probleme mit Windows PowerShell hast, bitte sieh dir dies an"
+		"issues": "Es scheint, dass Sie Windows PowerShell-Probleme haben, bitte sehen Sie sich dies an"
 	},
 	"autoApprove": {
-		"tooltipManage": "Einstellungen für die automatische Genehmigung verwalten",
-		"tooltipStatus": "Automatische Genehmigung aktiviert für: {{toggles}}",
-		"title": "Automatische Genehmigung",
-		"toggle": "Automatische Genehmigung umschalten",
+		"tooltipManage": "Auto-Genehmigungseinstellungen verwalten",
+		"tooltipStatus": "Auto-Genehmigung aktiviert für: {{toggles}}",
+		"title": "Auto-Genehmigung",
 		"all": "Alle",
 		"none": "Keine",
-		"description": "Führe diese Aktionen aus, ohne um Erlaubnis zu fragen. Aktiviere dies nur für Aktionen, denen du voll vertraust.",
-		"selectOptionsFirst": "Wähle mindestens eine Option unten aus, um die automatische Genehmigung zu aktivieren",
-		"toggleAriaLabel": "Automatische Genehmigung umschalten",
-		"disabledAriaLabel": "Automatische Genehmigung deaktiviert - wähle zuerst Optionen aus",
-		"triggerLabelOff": "Automatische Genehmigung aus",
-		"triggerLabel_zero": "0 automatisch genehmigt",
-		"triggerLabel_one": "1 automatisch genehmigt",
-		"triggerLabel_other": "{{count}} automatisch genehmigt",
+		"description": "Diese Aktionen ohne Erlaubnis ausführen. Aktivieren Sie dies nur für Aktionen, denen Sie voll vertrauen.",
+		"selectOptionsFirst": "Wählen Sie mindestens eine Option unten aus, um die Auto-Genehmigung zu aktivieren",
+		"toggleAriaLabel": "Auto-Genehmigung umschalten",
+		"disabledAriaLabel": "Auto-Genehmigung deaktiviert - wählen Sie zuerst Optionen aus",
+		"triggerLabelOff": "Auto-Genehmigung aus",
+		"triggerLabel_zero": "0 Auto-Genehmigungen",
+		"triggerLabel_one": "1 Auto-Genehmigung",
+		"triggerLabel_other": "{{count}} Auto-Genehmigungen",
 		"triggerLabelAll": "YOLO"
-	},
-	"reasoning": {
-		"thinking": "Denke nach",
-		"seconds": "{{count}}s"
-	},
-	"contextCondense": {
-		"title": "Kontext komprimiert",
-		"condensing": "Kontext wird komprimiert...",
-		"errorHeader": "Kontext konnte nicht komprimiert werden",
-		"tokens": "Tokens"
-	},
-	"followUpSuggest": {
-		"copyToInput": "In Eingabefeld kopieren (oder Shift + Klick)",
-		"autoSelectCountdown": "Automatische Auswahl in {{count}}s",
-		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} veröffentlicht",
 		"stealthModel": {
-			"feature": "<bold>Zeitlich begrenztes KOSTENLOSES Stealth-Modell</bold> - Code Supernova: Jetzt mit einem <bold>1M Token Kontextfenster</bold> erweitert! Ein vielseitiges agentisches Coding-Modell, das Bildeingaben unterstützt und über Roo Code Cloud zugänglich ist.",
-			"note": "(Hinweis: Prompts und Vervollständigungen werden vom Modellersteller protokolliert und zur Verbesserung des Modells verwendet)",
+			"feature": "<bold>Zeitlich begrenztes KOSTENLOSES Stealth-Modell</bold> - Code Supernova: Jetzt mit einem <bold>1M-Token-Kontextfenster</bold> aufgerüstet! Ein vielseitiges agentisches Coding-Modell, das Bildeingaben unterstützt, zugänglich über Roo Code Cloud.",
+			"note": "(Hinweis: Eingabeaufforderungen und Vervollständigungen werden vom Modellersteller protokolliert und zur Verbesserung des Modells verwendet)",
 			"connectButton": "Mit Roo Code Cloud verbinden",
-			"selectModel": "Wähle <code>roo/code-supernova</code> vom Roo Code Cloud-Provider in den Einstellungen aus, um zu beginnen.",
-			"goToSettingsButton": "Zu den Einstellungen"
+			"selectModel": "Wählen Sie <code>roo/code-supernova</code> vom Roo Code Cloud-Anbieter in den Einstellungen aus, um loszulegen.",
+			"goToSettingsButton": "Zu Einstellungen gehen"
 		},
-		"socialLinks": "Folge uns auf <xLink>X</xLink>, <discordLink>Discord</discordLink> oder <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Treten Sie uns bei auf <xLink>X</xLink>, <discordLink>Discord</discordLink> oder <redditLink>r/RooCode</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Überlegung",
+		"seconds": "{{count}}s"
+	},
+	"followUpSuggest": {
+		"copyToInput": "In Eingabe kopieren (wie Shift + Klick)",
+		"autoSelectCountdown": "Automatische Auswahl in {{count}}s",
+		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Axon Code möchte den Browser verwenden",
-		"consoleLogs": "Konsolenprotokolle",
-		"noNewLogs": "(Keine neuen Protokolle)",
+		"rooWantsToUse": "Browser verwenden",
+		"consoleLogs": "Konsolen-Logs",
+		"noNewLogs": "(Keine neuen Logs)",
 		"screenshot": "Browser-Screenshot",
 		"cursor": "Cursor",
 		"navigation": {
 			"step": "Schritt {{current}} von {{total}}",
-			"previous": "Zurück",
-			"next": "Weiter"
+			"previous": "Vorherige",
+			"next": "Nächste"
 		},
 		"sessionStarted": "Browser-Sitzung gestartet",
 		"actions": {
 			"title": "Browser-Aktion: ",
-			"launch": "Browser starten auf {{url}}",
+			"launch": "Browser bei {{url}} starten",
 			"click": "Klicken ({{coordinate}})",
-			"type": "Eingeben \"{{text}}\"",
+			"type": "Tippen \"{{text}}\"",
 			"scrollDown": "Nach unten scrollen",
 			"scrollUp": "Nach oben scrollen",
 			"close": "Browser schließen"
@@ -327,43 +344,28 @@
 	},
 	"codeblock": {
 		"tooltips": {
-			"expand": "Code-Block erweitern",
-			"collapse": "Code-Block reduzieren",
+			"expand": "Codeblock erweitern",
+			"collapse": "Codeblock zusammenklappen",
 			"copy_code": "Code kopieren"
 		}
 	},
-	"systemPromptWarning": "WARNUNG: Benutzerdefinierte Systemaufforderung aktiv. Dies kann die Funktionalität erheblich beeinträchtigen und zu unvorhersehbarem Verhalten führen.",
-	"profileViolationWarning": "Das aktuelle Profil ist nicht kompatibel mit den Einstellungen deiner Organisation",
+	"systemPromptWarning": "WARNUNG: Benutzerdefinierte System-Eingabeaufforderung-Überschreibung aktiv. Dies kann die Funktionalität stark beeinträchtigen und unvorhersehbares Verhalten verursachen.",
+	"profileViolationWarning": "Das aktuelle Profil ist nicht mit den Einstellungen Ihrer Organisation kompatibel",
 	"shellIntegration": {
-		"title": "Befehlsausführungswarnung",
-		"description": "Dein Befehl wird ohne VSCode Terminal-Shell-Integration ausgeführt. Um diese Warnung zu unterdrücken, kannst du die Shell-Integration im Abschnitt <strong>Terminal</strong> der <settingsLink>Axon Code Einstellungen</settingsLink> deaktivieren oder die VSCode Terminal-Integration mit dem Link unten beheben.",
-		"troubleshooting": "Klicke hier für die Shell-Integrationsdokumentation."
+		"title": "Warnung zur Befehlsausführung",
+		"description": "Ihr Befehl wird ohne VSCode-Terminal-Shell-Integration ausgeführt. Um diese Warnung zu unterdrücken, können Sie die Shell-Integration im Abschnitt <strong>Terminal</strong> der <settingsLink>Axon Code-Einstellungen</settingsLink> deaktivieren oder die VSCode-Terminal-Integration über den unten stehenden Link beheben.",
+		"troubleshooting": "Klicken Sie hier für die Shell-Integrationsdokumentation."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
-			"title": "Limit für automatisch genehmigte Anfragen erreicht",
-			"description": "Axon Code hat das automatisch genehmigte Limit von {{count}} API-Anfrage(n) erreicht. Möchtest du den Zähler zurücksetzen und mit der Aufgabe fortfahren?",
+			"title": "Auto-genehmigtes Anfragelimit erreicht",
+			"description": "Axon Code hat das automatisch genehmigte Limit von {{count}} API-Anfrage(n) erreicht. Möchten Sie den Zähler zurücksetzen und mit der Aufgabe fortfahren?",
 			"button": "Zurücksetzen und fortfahren"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Axon Code hat das automatisch genehmigte Kostenlimit von ${{count}} erreicht. Möchtest du die Kosten zurücksetzen und mit der Aufgabe fortfahren?",
-			"title": "Kostengrenze für automatische Genehmigung erreicht",
-			"button": "Zurücksetzen und Fortfahren"
-		}
-	},
-	"codebaseSearch": {
-		"wantsToSearch": "Axon Code möchte den Codebase nach <code>{{query}}</code> durchsuchen",
-		"wantsToSearchWithPath": "Axon Code möchte den Codebase nach <code>{{query}}</code> in <code>{{path}}</code> durchsuchen",
-		"didSearch_one": "1 Ergebnis gefunden",
-		"didSearch_other": "{{count}} Ergebnisse gefunden",
-		"resultTooltip": "Ähnlichkeitswert: {{score}} (klicken zum Öffnen der Datei)"
-	},
-	"read-batch": {
-		"approve": {
-			"title": "Alle genehmigen"
-		},
-		"deny": {
-			"title": "Alle ablehnen"
+			"title": "Auto-genehmigtes Kostenlimit erreicht",
+			"description": "Axon Code hat das automatisch genehmigte Kostenlimit von ${{count}} erreicht. Möchten Sie die Kosten zurücksetzen und mit der Aufgabe fortfahren?",
+			"button": "Zurücksetzen und fortfahren"
 		}
 	},
 	"indexingStatus": {
@@ -374,51 +376,43 @@
 		"status": "Index-Status"
 	},
 	"versionIndicator": {
-		"ariaLabel": "Version {{version}} - Klicke, um die Versionshinweise anzuzeigen"
-	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud entwickelt sich weiter!",
-		"description": "Führe Remote-Agenten in der Cloud aus, greife von überall auf deine Aufgaben zu, arbeite mit anderen zusammen und vieles mehr.",
-		"joinWaitlist": "Melde dich an, um die neuesten Updates zu erhalten."
+		"ariaLabel": "Version {{version}} - Klicken Sie, um Versionshinweise anzuzeigen"
 	},
 	"command": {
-		"triggerDescription": "Starte den {{name}} Befehl"
-	},
-	"editMessage": {
-		"placeholder": "Bearbeite deine Nachricht..."
+		"triggerDescription": "Befehl {{name}} auslösen"
 	},
 	"slashCommands": {
 		"tooltip": "Slash-Befehle verwalten",
 		"title": "Slash-Befehle",
-		"description": "Verwende eingebaute Slash-Befehle oder erstelle benutzerdefinierte für schnellen Zugriff auf häufig verwendete Prompts und Workflows. <DocsLink>Dokumentation</DocsLink>",
-		"manageCommands": "Slash-Befehle in den Einstellungen verwalten",
-		"builtInCommands": "Eingebaute Befehle",
+		"description": "Verwenden Sie integrierte Slash-Befehle oder erstellen Sie eigene für schnellen Zugriff auf häufig verwendete Eingabeaufforderungen und Arbeitsabläufe. <DocsLink>Dokumentation</DocsLink>",
+		"manageCommands": "Slash-Befehle in Einstellungen verwalten",
+		"builtInCommands": "Integrierte Befehle",
 		"globalCommands": "Globale Befehle",
-		"workspaceCommands": "Arbeitsbereich-Befehle",
+		"workspaceCommands": "Arbeitsbereichsbefehle",
 		"globalCommand": "Globaler Befehl",
 		"editCommand": "Befehl bearbeiten",
 		"deleteCommand": "Befehl löschen",
 		"newGlobalCommandPlaceholder": "Neuer globaler Befehl...",
-		"newWorkspaceCommandPlaceholder": "Neuer Arbeitsbereich-Befehl...",
+		"newWorkspaceCommandPlaceholder": "Neuer Arbeitsbereichsbefehl...",
 		"deleteDialog": {
 			"title": "Befehl löschen",
-			"description": "Bist du sicher, dass du den Befehl \"{{name}}\" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+			"description": "Sind Sie sicher, dass Sie den Befehl \"{{name}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
 			"cancel": "Abbrechen",
 			"confirm": "Löschen"
 		}
+	},
+	"slashCommand": {
+		"wantsToRun": "einen Slash-Befehl ausführen",
+		"didRun": "Axon Code hat einen Slash-Befehl ausgeführt"
+	},
+	"queuedMessages": {
+		"title": "Nachrichten in Warteschlange",
+		"clickToEdit": "Klicken Sie, um die Nachricht zu bearbeiten"
 	},
 	"contextMenu": {
 		"noResults": "Keine Ergebnisse",
 		"problems": "Probleme",
 		"terminal": "Terminal",
 		"url": "URL einfügen, um Inhalte abzurufen"
-	},
-	"queuedMessages": {
-		"title": "Warteschlange Nachrichten",
-		"clickToEdit": "Klicken zum Bearbeiten der Nachricht"
-	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code möchte einen Slash-Befehl ausführen",
-		"didRun": "Axon Code hat einen Slash-Befehl ausgeführt"
 	}
 }

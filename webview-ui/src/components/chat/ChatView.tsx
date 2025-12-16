@@ -1,3 +1,4 @@
+import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import debounce from "debounce"
 import { LRUCache } from "lru-cache"
@@ -59,7 +60,6 @@ import KiloTaskHeader from "../kilocode/KiloTaskHeader" // kilocode_change
 import AutoApproveMenu from "./AutoApproveMenu"
 import SystemPromptWarning from "./SystemPromptWarning"
 // import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
-import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { CheckpointWarning } from "./CheckpointWarning"
 import { QueuedMessages } from "./QueuedMessages"
@@ -217,6 +217,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const autoApproveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const userRespondedRef = useRef<boolean>(false)
 	const [currentFollowUpTs, setCurrentFollowUpTs] = useState<number | null>(null)
+	const [iconsBaseUri] = useState(() => {
+		const w = window as any
+		return w.ICONS_BASE_URI || ""
+	})
 
 	const clineAskRef = useRef(clineAsk)
 	useEffect(() => {
@@ -2031,7 +2035,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								<KilocodeNotifications />
 							</div>
 						)}
-						<div className="flex flex-grow flex-col justify-center gap-4">
+						<div className="flex flex-grow flex-col justify-start gap-4">
 							{/* kilocode_change end */}
 							{/* <p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
@@ -2048,7 +2052,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									}}
 								/>
 							</p> */}
-							{taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{/* {taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} */}
 							{/*<div className="mb-2.5">
 								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
 							</div> kilocode_change: do not show */}
@@ -2056,6 +2060,57 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							{taskHistoryFullLength > 0 && isExpanded && (
 								<HistoryPreview taskHistoryVersion={taskHistoryVersion} />
 							)}
+
+							{/* AI Code Reviews Setup Box */}
+							<div className="absolute bottom-2 min-w-0 p-3 border border-vscode-input-border rounded-xl bg-vscode-editor-background/50">
+								<div className="flex flex-col gap-2">
+									{/* Top section: Title/Subtitle left, Icons right */}
+									<div className="flex justify-between gap-4 items-center min-w-0">
+										<div className="flex flex-col gap-1">
+											<p className="text-md p-0 m-0 font-semibold text-vscode-foreground">
+												Setup AI Code Reviews
+											</p>
+											<p className="text-sm p-0 m-0 text-vscode-descriptionForeground">
+												70% faster code reviews
+											</p>
+											<div className="self-start mt-1">
+												<VSCodeButtonLink
+													variant="secondary"
+													href="https://app.matterai.so/get-started">
+													Get Started for free
+												</VSCodeButtonLink>
+											</div>
+										</div>
+
+										<div className="flex items-center justify-center flex-col gap-2.5 pr-2">
+											<div className="flex items-center gap-1">
+												<img
+													src={iconsBaseUri + "/github-ic.png"}
+													alt="GitHub"
+													className="w-5.5 h-5.5"
+												/>
+											</div>
+											<div className="flex items-center gap-4">
+												<div className="flex items-center gap-1">
+													<img
+														src={iconsBaseUri + "/gitlab-ic.png"}
+														alt="GitLab"
+														className="w-5.5 h-5.5"
+													/>
+												</div>
+												<div className="flex items-center gap-1">
+													<img
+														src={iconsBaseUri + "/bitbucket-ic.png"}
+														alt="Bitbucket"
+														className="w-5.5 h-5.5"
+													/>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
 							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
 						</div>
 						{/* kilocode_change end */}

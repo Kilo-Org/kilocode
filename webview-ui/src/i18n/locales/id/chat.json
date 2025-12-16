@@ -1,5 +1,5 @@
 {
-	"greeting": "Selamat datang di Axon Code",
+	"greeting": "Apa yang bisa Axon Code lakukan untuk Anda?",
 	"task": {
 		"title": "Tugas",
 		"expand": "Perluas tugas",
@@ -10,29 +10,29 @@
 		"cache": "Cache",
 		"apiCost": "Biaya API",
 		"size": "Ukuran",
-		"condenseContext": "Kondensasi konteks secara cerdas",
+		"condenseContext": "Padatkan konteks secara cerdas",
 		"contextWindow": "Panjang Konteks",
 		"closeAndStart": "Tutup tugas dan mulai yang baru",
 		"export": "Ekspor riwayat tugas",
 		"share": "Bagikan tugas",
-		"delete": "Hapus Tugas (Shift + Klik untuk lewati konfirmasi)",
-		"shareWithOrganization": "Bagikan dengan organisasi",
+		"delete": "Hapus Tugas (Shift + Klik untuk melewati konfirmasi)",
+		"shareWithOrganization": "Bagikan dengan Organisasi",
 		"shareWithOrganizationDescription": "Hanya anggota organisasi Anda yang dapat mengakses",
-		"sharePublicly": "Bagikan secara publik",
+		"sharePublicly": "Bagikan Secara Publik",
 		"sharePubliclyDescription": "Siapa pun dengan tautan dapat mengakses",
 		"connectToCloud": "Hubungkan ke Cloud",
-		"connectToCloudDescription": "Masuk ke Axon Code Cloud untuk berbagi tugas",
+		"connectToCloudDescription": "Masuk ke Axon Code Cloud untuk membagikan tugas",
 		"sharingDisabledByOrganization": "Berbagi dinonaktifkan oleh organisasi",
 		"shareSuccessOrganization": "Tautan organisasi disalin ke clipboard",
 		"shareSuccessPublic": "Tautan publik disalin ke clipboard",
 		"openInCloud": "Buka tugas di Roo Code Cloud",
-		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka."
+		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik, atau salin untuk membuka."
 	},
 	"history": {
 		"title": "Riwayat"
 	},
-	"unpin": "Lepas Pin",
-	"pin": "Pin",
+	"unpin": "Lepas pin",
+	"pin": "Sematkan",
 	"retry": {
 		"title": "Coba Lagi",
 		"tooltip": "Coba operasi lagi"
@@ -45,7 +45,7 @@
 		"title": "Laporkan Bug"
 	},
 	"proceedAnyways": {
-		"title": "Lanjutkan Saja",
+		"title": "Lanjutkan Tetap",
 		"tooltip": "Lanjutkan saat perintah dijalankan"
 	},
 	"save": {
@@ -59,12 +59,12 @@
 	},
 	"reject": {
 		"title": "Tolak",
-		"tooltip": "Tolak aksi ini"
+		"tooltip": "Tolak tindakan ini"
 	},
 	"completeSubtaskAndReturn": "Selesaikan Subtugas dan Kembali",
 	"approve": {
 		"title": "Setujui",
-		"tooltip": "Setujui aksi ini"
+		"tooltip": "Setujui tindakan ini"
 	},
 	"read-batch": {
 		"approve": {
@@ -75,7 +75,7 @@
 		}
 	},
 	"runCommand": {
-		"title": "Perintah",
+		"title": "Jalankan",
 		"tooltip": "Jalankan perintah ini"
 	},
 	"proceedWhileRunning": {
@@ -98,54 +98,57 @@
 		"title": "Batal",
 		"tooltip": "Batalkan operasi saat ini"
 	},
-	"scrollToBottom": "Gulir ke bawah chat",
-	"about": "Buat, refaktor, dan debug kode dengan bantuan AI.<br />Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
-	"onboarding": "Daftar tugas di workspace ini kosong.",
+	"editMessage": {
+		"placeholder": "Edit pesan Anda..."
+	},
+	"scrollToBottom": "Gulir ke bawah obrolan",
+	"about": "Hasilkan, refactor, dan debug kode dengan bantuan AI. Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
+	"onboarding": "Daftar tugas Anda di ruang kerja ini kosong.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Orkestrasi Tugas",
-			"description": "Bagi tugas menjadi bagian-bagian kecil yang dapat dikelola"
+			"description": "Bagi tugas menjadi bagian yang lebih kecil dan dapat dikelola"
 		},
 		"stickyModels": {
-			"title": "Model Sticky",
-			"description": "Setiap mode mengingat model terakhir yang kamu gunakan"
+			"title": "Model Lengket",
+			"description": "Setiap mode mengingat model terakhir yang Anda gunakan"
 		},
 		"tools": {
-			"title": "Tools",
-			"description": "Izinkan AI menyelesaikan masalah dengan browsing web, menjalankan perintah, dan lainnya"
+			"title": "Alat",
+			"description": "Biarkan AI memecahkan masalah dengan menjelajah web, menjalankan perintah, dan lainnya"
 		},
 		"customizableModes": {
 			"title": "Mode yang Dapat Disesuaikan",
-			"description": "Persona khusus dengan perilaku dan model yang ditugaskan sendiri"
+			"description": "Persona khusus dengan perilaku sendiri dan model yang ditetapkan"
 		}
 	},
 	"selectMode": "Pilih mode untuk interaksi",
-	"selectApiConfig": "Pilih konfigurasi API",
+	"selectApiConfig": "Pilih Model",
 	"selectModelConfig": "Pilih model",
 	"enhancePrompt": "Tingkatkan prompt dengan konteks tambahan",
-	"enhancePromptDescription": "Tombol 'Tingkatkan Prompt' membantu memperbaiki prompt kamu dengan memberikan konteks tambahan, klarifikasi, atau penyusunan ulang. Coba ketik prompt di sini dan klik tombol lagi untuk melihat cara kerjanya.",
 	"modeSelector": {
 		"title": "Mode",
-		"marketplace": "Marketplace Mode",
+		"marketplace": "Pasar Mode",
 		"settings": "Pengaturan Mode",
 		"description": "Persona khusus yang menyesuaikan perilaku Axon Code.",
 		"searchPlaceholder": "Cari mode...",
-		"noResults": "Tidak ada hasil yang ditemukan",
+		"noResults": "Tidak ada hasil ditemukan",
 		"organizationModes": "Mode Organisasi"
 	},
+	"enhancePromptDescription": "Tombol 'Tingkatkan Prompt' membantu meningkatkan prompt Anda dengan menyediakan konteks tambahan, klarifikasi, atau penyusunan ulang. Coba ketik prompt di sini dan klik tombol lagi untuk melihat cara kerjanya.",
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
-	"stopTts": "Hentikan text-to-speech",
+	"stopTts": "Hentikan teks-ke-suara",
 	"typeMessage": "Ketik pesan...",
-	"typeTask": "Bangun, cari, tanya sesuatu",
-	"addContext": "@ untuk menambah konteks, / untuk perintah",
-	"dragFiles": "tahan shift untuk drag file",
-	"dragFilesImages": "tahan shift untuk drag file/gambar",
-	"errorReadingFile": "Error membaca file",
+	"typeTask": "Ketik tugas Anda di sini...",
+	"addContext": "@ untuk menambahkan konteks, / untuk perintah",
+	"dragFiles": "tahan shift untuk menarik file",
+	"dragFilesImages": "tahan shift untuk menarik file/gambar",
+	"errorReadingFile": "Kesalahan membaca file",
 	"noValidImages": "Tidak ada gambar valid yang diproses",
 	"separator": "Pemisah",
 	"edit": "Edit...",
-	"forNextMode": "untuk mode selanjutnya",
+	"forNextMode": "untuk mode berikutnya",
 	"forPreviousMode": "untuk mode sebelumnya",
 	"apiRequest": {
 		"title": "Permintaan API",
@@ -155,171 +158,170 @@
 		"streamingFailed": "Streaming API Gagal"
 	},
 	"checkpoint": {
-		"regular": "Checkpoint",
-		"initializingWarning": "Masih menginisialisasi checkpoint... Jika ini terlalu lama, kamu bisa menonaktifkan checkpoint di <settingsLink>pengaturan</settingsLink> dan restart tugas.",
+		"regular": "Titik Pemeriksaan",
+		"initializingWarning": "Masih menginisialisasi titik pemeriksaan... Jika ini memakan waktu terlalu lama, Anda dapat menonaktifkan titik pemeriksaan di <settingsLink>pengaturan</settingsLink> dan mulai ulang tugas Anda.",
 		"menu": {
-			"viewDiff": "Lihat Diff",
-			"restore": "Pulihkan Checkpoint",
+			"viewDiff": "Lihat Perbedaan",
+			"restore": "Pulihkan Titik Pemeriksaan",
 			"restoreFiles": "Pulihkan File",
-			"restoreFilesDescription": "Mengembalikan file proyek kamu ke snapshot yang diambil pada titik ini.",
+			"restoreFilesDescription": "Mengembalikan file proyek Anda kembali ke snapshot yang diambil pada titik ini.",
 			"restoreFilesAndTask": "Pulihkan File & Tugas",
 			"confirm": "Konfirmasi",
 			"cancel": "Batal",
-			"cannotUndo": "Aksi ini tidak dapat dibatalkan.",
-			"restoreFilesAndTaskDescription": "Mengembalikan file proyek kamu ke snapshot yang diambil pada titik ini dan menghapus semua pesan setelah titik ini."
+			"cannotUndo": "Tindakan ini tidak dapat dibatalkan.",
+			"restoreFilesAndTaskDescription": "Mengembalikan file proyek Anda kembali ke snapshot yang diambil pada titik ini dan menghapus semua pesan setelah titik ini."
 		},
 		"current": "Saat Ini"
 	},
 	"contextCondense": {
-		"title": "Konteks Dikondensasi",
-		"condensing": "Mengondensasi konteks...",
-		"errorHeader": "Gagal mengondensasi konteks",
+		"title": "Konteks Dipadatkan",
+		"condensing": "Memadatkan konteks...",
+		"errorHeader": "Gagal memadatkan konteks",
 		"tokens": "token"
 	},
 	"instructions": {
-		"wantsToFetch": "Axon Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
+		"wantsToFetch": "ambil instruksi"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code ingin membaca file ini",
-		"wantsToReadMultiple": "Axon Code ingin membaca beberapa file",
-		"wantsToReadAndXMore": "Axon Code ingin membaca file ini dan {{count}} lainnya",
-		"wantsToReadOutsideWorkspace": "Axon Code ingin membaca file ini di luar workspace",
-		"didRead": "Axon Code membaca file ini",
-		"wantsToEdit": "Axon Code ingin mengedit file ini",
-		"wantsToEditOutsideWorkspace": "Axon Code ingin mengedit file ini di luar workspace",
-		"wantsToEditProtected": "Axon Code ingin mengedit file konfigurasi yang dilindungi",
-		"wantsToApplyBatchChanges": "Axon Code ingin menerapkan perubahan ke beberapa file",
-		"wantsToGenerateImage": "Axon Code ingin menghasilkan gambar",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code ingin menghasilkan gambar di luar workspace",
-		"wantsToGenerateImageProtected": "Axon Code ingin menghasilkan gambar di lokasi yang dilindungi",
-		"didGenerateImage": "Axon Code telah menghasilkan gambar",
-		"wantsToCreate": "Axon Code ingin membuat file baru",
-		"wantsToSearchReplace": "Axon Code ingin mencari dan mengganti di file ini",
-		"didSearchReplace": "Axon Code melakukan pencarian dan penggantian pada file ini",
-		"wantsToInsert": "Axon Code ingin menyisipkan konten ke file ini",
-		"wantsToInsertWithLineNumber": "Axon Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
-		"wantsToInsertAtEnd": "Axon Code ingin menambahkan konten ke akhir file ini"
+		"wantsToRead": "Baca",
+		"wantsToReadMultiple": "Baca",
+		"wantsToReadAndXMore": "Baca {{count}} lagi",
+		"wantsToReadOutsideWorkspace": "Baca (di luar ruang kerja)",
+		"didRead": "Membaca",
+		"wantsToEdit": "Edit",
+		"wantsToEditOutsideWorkspace": "Edit (di luar ruang kerja)",
+		"wantsToEditProtected": "edit file konfigurasi yang dilindungi",
+		"wantsToApplyBatchChanges": "terapkan perubahan ke beberapa file",
+		"wantsToGenerateImage": "hasilkan gambar",
+		"wantsToGenerateImageOutsideWorkspace": "hasilkan gambar (di luar ruang kerja)",
+		"wantsToGenerateImageProtected": "hasilkan gambar (lokasi dilindungi)",
+		"didGenerateImage": "gambar dihasilkan",
+		"wantsToCreate": "buat file baru",
+		"wantsToSearchReplace": "cari dan ganti",
+		"didSearchReplace": "melakukan cari dan ganti pada file ini",
+		"wantsToInsert": "sisipkan konten ke file ini",
+		"wantsToInsertWithLineNumber": "sisipkan konten ke file ini di baris {{lineNumber}}",
+		"wantsToInsertAtEnd": "tambahkan konten ke akhir file ini"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code ingin melihat file tingkat atas di direktori ini",
-		"didViewTopLevel": "Axon Code melihat file tingkat atas di direktori ini",
-		"wantsToViewRecursive": "Axon Code ingin melihat semua file secara rekursif di direktori ini",
-		"didViewRecursive": "Axon Code melihat semua file secara rekursif di direktori ini",
-		"wantsToViewDefinitions": "Axon Code ingin melihat nama definisi source code yang digunakan di direktori ini",
-		"didViewDefinitions": "Axon Code melihat nama definisi source code yang digunakan di direktori ini",
-		"wantsToSearch": "Axon Code ingin mencari direktori ini untuk <code>{{regex}}</code>",
-		"didSearch": "Axon Code mencari direktori ini untuk <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Axon Code ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code ingin melihat file tingkat atas di direktori ini (di luar workspace)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code melihat file tingkat atas di direktori ini (di luar workspace)",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code ingin melihat semua file secara rekursif di direktori ini (di luar workspace)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code melihat semua file secara rekursif di direktori ini (di luar workspace)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code ingin melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)"
+		"wantsToViewTopLevel": "Jelajahi",
+		"didViewTopLevel": "Jelajahi",
+		"wantsToViewTopLevelOutsideWorkspace": "Jelajahi (di luar ruang kerja)",
+		"didViewTopLevelOutsideWorkspace": "Dijelajahi (di luar ruang kerja)",
+		"wantsToViewRecursive": "Jelajahi (secara rekursif)",
+		"didViewRecursive": "Dijelajahi (secara rekursif)",
+		"wantsToViewRecursiveOutsideWorkspace": "Jelajahi (secara rekursif)(di luar ruang kerja)",
+		"didViewRecursiveOutsideWorkspace": "Dijelajahi (secara rekursif)(di luar ruang kerja)",
+		"wantsToViewDefinitions": "lihat nama definisi kode sumber yang digunakan di direktori ini",
+		"didViewDefinitions": "melihat nama definisi kode sumber yang digunakan di direktori ini",
+		"wantsToViewDefinitionsOutsideWorkspace": "lihat nama definisi kode sumber yang digunakan di direktori ini (di luar ruang kerja)",
+		"didViewDefinitionsOutsideWorkspace": "melihat nama definisi kode sumber yang digunakan di direktori ini (di luar ruang kerja)",
+		"wantsToSearch": "Cari <code>{{regex}}</code>",
+		"didSearch": "Cari <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "cari direktori ini (di luar ruang kerja) untuk <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "mencari direktori ini (di luar ruang kerja) untuk <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Axon Code ingin mencari codebase untuk <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
+		"wantsToSearch": "mencari codebase untuk <code>{{query}}</code>",
+		"wantsToSearchWithPath": "mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
 		"didSearch_one": "Ditemukan 1 hasil",
 		"didSearch_other": "Ditemukan {{count}} hasil",
 		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
 	},
-	"commandOutput": "Keluaran Perintah",
+	"commandOutput": "Output Perintah",
 	"commandExecution": {
 		"abort": "Batalkan",
-		"running": "Menjalankan",
+		"running": "Berjalan",
 		"pid": "PID: {{pid}}",
 		"exitStatus": "Keluar dengan status {{exitCode}}",
-		"manageCommands": "Perintah yang disetujui secara otomatis",
+		"manageCommands": "Perintah yang disetujui otomatis",
 		"addToAllowed": "Tambahkan ke daftar yang diizinkan",
 		"removeFromAllowed": "Hapus dari daftar yang diizinkan",
 		"addToDenied": "Tambahkan ke daftar yang ditolak",
 		"removeFromDenied": "Hapus dari daftar yang ditolak",
 		"abortCommand": "Batalkan eksekusi perintah",
-		"expandOutput": "Perluas keluaran",
-		"collapseOutput": "Ciutkan keluaran",
+		"expandOutput": "Perluas output",
+		"collapseOutput": "Ciutkan output",
 		"expandManagement": "Perluas bagian manajemen perintah",
 		"collapseManagement": "Ciutkan bagian manajemen perintah"
 	},
 	"response": "Respons",
 	"arguments": "Argumen",
 	"text": {
-		"rooSaid": "Kilo berkata"
+		"rooSaid": "Respons"
 	},
 	"feedback": {
-		"youSaid": "Anda bilang"
+		"youSaid": "Anda berkata"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code ingin menggunakan tool di server MCP {{serverName}}",
-		"wantsToAccessResource": "Axon Code ingin mengakses resource di server MCP {{serverName}}"
+		"wantsToUseTool": "menggunakan alat server MCP {{serverName}}",
+		"wantsToAccessResource": "mengakses sumber daya server MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code ingin beralih ke mode {{mode}}",
-		"wantsToSwitchWithReason": "Axon Code ingin beralih ke mode {{mode}} karena: {{reason}}",
-		"didSwitch": "Axon Code beralih ke mode {{mode}}",
-		"didSwitchWithReason": "Axon Code beralih ke mode {{mode}} karena: {{reason}}"
+		"wantsToSwitch": "beralih ke mode {{mode}}",
+		"wantsToSwitchWithReason": "beralih ke mode {{mode}} karena: {{reason}}",
+		"didSwitch": "beralih ke mode {{mode}}",
+		"didSwitchWithReason": "beralih ke mode {{mode}} karena: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code ingin membuat subtugas baru dalam mode {{mode}}",
-		"wantsToFinish": "Axon Code ingin menyelesaikan subtugas ini",
+		"wantsToCreate": "buat subtugas baru dalam mode {{mode}}",
+		"wantsToFinish": "selesaikan subtugas ini",
 		"newTaskContent": "Instruksi Subtugas",
 		"completionContent": "Subtugas Selesai",
 		"resultContent": "Hasil Subtugas",
 		"defaultResult": "Silakan lanjutkan ke tugas berikutnya.",
-		"completionInstructions": "Subtugas selesai! Kamu bisa meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk."
+		"completionInstructions": "Subtugas selesai! Anda dapat meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code punya pertanyaan"
+		"hasQuestion": "pertanyaan"
 	},
-	"taskCompleted": "Tugas Selesai",
-	"error": "Error",
+	"taskCompleted": "Selesai",
+	"error": "Kesalahan",
 	"diffError": {
 		"title": "Edit Tidak Berhasil"
 	},
 	"troubleMessage": "Axon Code mengalami masalah...",
 	"powershell": {
-		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
+		"issues": "Sepertinya Anda mengalami masalah Windows PowerShell, silakan lihat ini"
 	},
 	"autoApprove": {
 		"tooltipManage": "Kelola pengaturan persetujuan otomatis",
 		"tooltipStatus": "Persetujuan otomatis diaktifkan untuk: {{toggles}}",
-		"title": "Setujui Otomatis",
-		"toggle": "Beralih persetujuan otomatis",
+		"title": "Persetujuan otomatis",
 		"all": "Semua",
 		"none": "Tidak ada",
-		"description": "Jalankan tindakan ini tanpa meminta izin. Hanya aktifkan untuk tindakan yang Anda percayai sepenuhnya.",
-		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
-		"toggleAriaLabel": "Beralih persetujuan otomatis",
+		"description": "Jalankan tindakan ini tanpa meminta izin. Hanya aktifkan untuk tindakan yang benar-benar Anda percayai.",
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah untuk mengaktifkan persetujuan otomatis",
+		"toggleAriaLabel": "Alihkan persetujuan otomatis",
 		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
-		"triggerLabelOff": "Persetujuan otomatis mati",
-		"triggerLabel_zero": "0 disetujui otomatis",
-		"triggerLabel_one": "1 disetujui otomatis",
-		"triggerLabel_other": "{{count}} disetujui otomatis",
+		"triggerLabelOff": "Persetujuan otomatis nonaktif",
+		"triggerLabel_zero": "0 persetujuan otomatis",
+		"triggerLabel_one": "1 persetujuan otomatis",
+		"triggerLabel_other": "{{count}} persetujuan otomatis",
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Dirilis",
 		"stealthModel": {
-			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Code Supernova: Sekarang diupgrade dengan <bold>jendela konteks 1M token</bold>! Model coding agentik serbaguna yang mendukung input gambar, tersedia melalui Roo Code Cloud.",
+			"feature": "<bold>Model siluman GRATIS untuk waktu terbatas</bold> - Code Supernova: Sekarang ditingkatkan dengan <bold>jendela konteks 1M token</bold>! Model coding agentik serbaguna yang mendukung input gambar, dapat diakses melalui Roo Code Cloud.",
 			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
 			"connectButton": "Hubungkan ke Roo Code Cloud",
 			"selectModel": "Pilih <code>roo/code-supernova</code> dari penyedia Roo Code Cloud di Pengaturan untuk memulai.",
-			"goToSettingsButton": "Pergi ke Pengaturan"
+			"goToSettingsButton": "Buka Pengaturan"
 		},
 		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
-		"thinking": "Berpikir",
+		"thinking": "Penalaran",
 		"seconds": "{{count}}d"
 	},
 	"followUpSuggest": {
-		"copyToInput": "Salin ke input (sama dengan shift + klik)",
-		"autoSelectCountdown": "Pemilihan otomatis dalam {{count}}dtk",
-		"countdownDisplay": "{{count}}dtk"
+		"copyToInput": "Salin ke input (sama seperti shift + klik)",
+		"autoSelectCountdown": "Pemilihan otomatis dalam {{count}}d",
+		"countdownDisplay": "{{count}}d"
 	},
 	"browser": {
-		"rooWantsToUse": "Axon Code ingin menggunakan browser",
+		"rooWantsToUse": "gunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
 		"screenshot": "Screenshot browser",
@@ -331,7 +333,7 @@
 		},
 		"sessionStarted": "Sesi Browser Dimulai",
 		"actions": {
-			"title": "Aksi Browse: ",
+			"title": "Aksi Browser: ",
 			"launch": "Luncurkan browser di {{url}}",
 			"click": "Klik ({{coordinate}})",
 			"type": "Ketik \"{{text}}\"",
@@ -343,63 +345,55 @@
 	"codeblock": {
 		"tooltips": {
 			"expand": "Perluas blok kode",
-			"collapse": "Tutup blok kode",
+			"collapse": "Ciutkan blok kode",
 			"copy_code": "Salin kode"
 		}
 	},
-	"systemPromptWarning": "PERINGATAN: Override system prompt kustom aktif. Ini dapat merusak fungsionalitas secara serius dan menyebabkan perilaku yang tidak terduga.",
-	"profileViolationWarning": "Profil saat ini tidak kompatibel dengan pengaturan organisasi kamu",
+	"systemPromptWarning": "PERINGATAN: Penggantian prompt sistem kustom aktif. Ini dapat merusak fungsionalitas secara parah dan menyebabkan perilaku yang tidak terduga.",
+	"profileViolationWarning": "Profil saat ini tidak kompatibel dengan pengaturan organisasi Anda",
 	"shellIntegration": {
 		"title": "Peringatan Eksekusi Perintah",
-		"description": "Perintah kamu dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini kamu bisa menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Axon Code</settingsLink> atau troubleshoot integrasi terminal VSCode menggunakan link di bawah.",
+		"description": "Perintah Anda sedang dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini, Anda dapat menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Axon Code</settingsLink> atau memecahkan masalah integrasi terminal VSCode menggunakan tautan di bawah.",
 		"troubleshooting": "Klik di sini untuk dokumentasi integrasi shell."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
-			"description": "Axon Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
-			"button": "Setel Ulang dan Lanjutkan"
+			"description": "Axon Code telah mencapai batas yang disetujui otomatis sebanyak {{count}} permintaan API. Apakah Anda ingin mereset hitungan dan melanjutkan tugas?",
+			"button": "Reset dan Lanjutkan"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Batas Biaya yang Disetujui Otomatis Tercapai",
-			"description": "Axon Code telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas?",
-			"button": "Setel Ulang dan Lanjutkan"
+			"description": "Axon Code telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mereset biaya dan melanjutkan tugas?",
+			"button": "Reset dan Lanjutkan"
 		}
 	},
 	"indexingStatus": {
 		"ready": "Indeks siap",
 		"indexing": "Mengindeks {{percentage}}%",
-		"indexed": "Terindeks",
-		"error": "Error indeks",
+		"indexed": "Diindeks",
+		"error": "Kesalahan indeks",
 		"status": "Status indeks"
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versi {{version}} - Klik untuk melihat catatan rilis"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud sedang berkembang!",
-		"description": "Jalankan agen jarak jauh di cloud, akses tugas Anda dari mana saja, berkolaborasi dengan orang lain, dan banyak lagi.",
-		"joinWaitlist": "Daftar untuk mendapatkan pembaruan terbaru."
-	},
-	"editMessage": {
-		"placeholder": "Edit pesan Anda..."
-	},
 	"command": {
-		"triggerDescription": "Jalankan perintah {{name}}"
+		"triggerDescription": "Picu perintah {{name}}"
 	},
 	"slashCommands": {
-		"tooltip": "Kelola perintah slash",
-		"title": "Perintah Slash",
-		"description": "Gunakan perintah slash bawaan atau buat kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
-		"manageCommands": "Kelola perintah slash di pengaturan",
+		"tooltip": "Kelola perintah garis miring",
+		"title": "Perintah Garis Miring",
+		"description": "Gunakan perintah garis miring bawaan atau buat yang kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
+		"manageCommands": "Kelola perintah garis miring di pengaturan",
 		"builtInCommands": "Perintah Bawaan",
 		"globalCommands": "Perintah Global",
-		"workspaceCommands": "Perintah Workspace",
+		"workspaceCommands": "Perintah Ruang Kerja",
 		"globalCommand": "Perintah global",
 		"editCommand": "Edit perintah",
 		"deleteCommand": "Hapus perintah",
 		"newGlobalCommandPlaceholder": "Perintah global baru...",
-		"newWorkspaceCommandPlaceholder": "Perintah workspace baru...",
+		"newWorkspaceCommandPlaceholder": "Perintah ruang kerja baru...",
 		"deleteDialog": {
 			"title": "Hapus Perintah",
 			"description": "Apakah Anda yakin ingin menghapus perintah \"{{name}}\"? Tindakan ini tidak dapat dibatalkan.",
@@ -407,18 +401,18 @@
 			"confirm": "Hapus"
 		}
 	},
-	"contextMenu": {
-		"noResults": "Tidak ada hasil",
-		"problems": "Masalah",
-		"terminal": "Terminal",
-		"url": "Tempel URL untuk mengambil konten"
+	"slashCommand": {
+		"wantsToRun": "jalankan perintah garis miring",
+		"didRun": "Axon Code menjalankan perintah garis miring"
 	},
 	"queuedMessages": {
 		"title": "Pesan Antrian",
 		"clickToEdit": "Klik untuk mengedit pesan"
 	},
-	"slashCommand": {
-		"wantsToRun": "Axon Code ingin menjalankan perintah slash",
-		"didRun": "Axon Code telah menjalankan perintah slash"
+	"contextMenu": {
+		"noResults": "Tidak ada hasil",
+		"problems": "Masalah",
+		"terminal": "Terminal",
+		"url": "Tempel URL untuk mengambil konten"
 	}
 }

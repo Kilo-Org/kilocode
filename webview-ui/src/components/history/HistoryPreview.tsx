@@ -30,12 +30,12 @@ const HistoryPreview = ({ taskHistoryVersion }: { taskHistoryVersion: number } /
 		<div className="flex flex-col gap-3">
 			{tasks.length !== 0 && (
 				<>
-					{tasks.slice(0, 3).map((item) => (
+					{tasks.slice(0, 6).map((item) => (
 						<TaskItem key={item.id} item={item} variant="compact" />
 					))}
 					<button
 						onClick={handleViewAllHistory}
-						className="text-base text-vscode-descriptionForeground hover:text-vscode-textLink-foreground transition-colors cursor-pointer text-center w-full"
+						className="text-base text-vscode-descriptionForeground hover:text-[var(--color-matterai-green)] transition-colors cursor-pointer text-center w-full"
 						aria-label={t("history:viewAllHistory")}>
 						{t("history:viewAllHistory")}
 					</button>
