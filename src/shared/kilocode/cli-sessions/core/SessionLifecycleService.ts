@@ -214,6 +214,28 @@ export class SessionLifecycleService {
 				}
 			}
 
+			// Ensure required JSON files exist even if no blob URLs were provided.
+			// This prevents the UI from hanging when restoring an empty session.
+			if (!session.ui_messages_blob_url) {
+				const uiMessagesPath = path.join(sessionDirectoryPath, "ui_messages.json")
+				writeFileSync(uiMessagesPath, JSON.stringify([], null, 2))
+				this.logger.debug(
+					"Created empty ui_messages.json for session without messages",
+					LOG_SOURCES.SESSION_LIFECYCLE,
+					{ sessionId },
+				)
+			}
+
+			if (!session.api_conversation_history_blob_url) {
+				const apiHistoryPath = path.join(sessionDirectoryPath, "api_conversation_history.json")
+				writeFileSync(apiHistoryPath, JSON.stringify([], null, 2))
+				this.logger.debug(
+					"Created empty api_conversation_history.json for session without history",
+					LOG_SOURCES.SESSION_LIFECYCLE,
+					{ sessionId },
+				)
+			}
+
 			const historyItem: HistoryItem = {
 				id: sessionId,
 				number: 1,
