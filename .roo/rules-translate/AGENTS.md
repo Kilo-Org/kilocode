@@ -1,6 +1,151 @@
-# Simplified Chinese (zh-CN) Translation Guidelines
+# AGENTS.md
 
-## Key Terminology
+This file provides guidance to agents when working with code in this repository in Translate mode.
+
+## Workflow
+
+This workflow requires Orchestrator mode.
+
+Execute `node scripts/find-missing-translations.js` in Code mode to find all missing translations.
+
+For each language that is missing translations:
+
+- For each JSON file that is missing translations:
+    - Start a separate subtask in Translate mode for this language and JSON file to add the missing translations. Do not try to process mutliple languages or JSON files in one subtask.
+
+---
+
+# 1. SUPPORTED LANGUAGES AND LOCATION
+
+- Localize all strings into the following locale files: ar, ca, cs, de, en, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, th, tr, uk, vi, zh-CN, zh-TW
+- The VSCode extension has two main areas that require localization:
+    - Core Extension: src/i18n/locales/, src/package.nls.json, src/package.nls.<locale>.json (extension backend)
+    - WebView UI: webview-ui/src/i18n/locales/ (user interface)
+
+# 2. VOICE, STYLE AND TONE
+
+- Always use informal speech (e.g., "du" instead of "Sie" in German) for all translations
+- Maintain a direct and concise style that mirrors the tone of the original text
+- Carefully account for colloquialisms and idiomatic expressions in both source and target languages
+- Aim for culturally relevant and meaningful translations rather than literal translations
+- Preserve the personality and voice of the original content
+- Use natural-sounding language that feels native to speakers of the target language
+- Don't translate the word "token" as it means something specific in English that all languages will understand
+- Don't translate domain-specific words (especially technical terms like "Prompt") that are commonly used in English in the target language
+
+# 3. CORE EXTENSION LOCALIZATION (src/)
+
+- Located in src/i18n/locales/
+- NOT ALL strings in core source need internationalization - only user-facing messages
+- Internal error messages, debugging logs, and developer-facing messages should remain in English
+- The t() function is used with namespaces like 'core:errors.missingToolParameter'
+- Be careful when modifying interpolation variables; they must remain consistent across all translations
+- Some strings in formatResponse.ts are intentionally not internationalized since they're internal
+- When updating strings in core.json, maintain all existing interpolation variables
+- Check string usages in the codebase before making changes to ensure you're not breaking functionality
+
+# 4. WEBVIEW UI LOCALIZATION (webview-ui/src/)
+
+- Located in webview-ui/src/i18n/locales/
+- Uses standard React i18next patterns with the useTranslation hook
+- All user interface strings should be internationalized
+- Always use the Trans component with named components for text with embedded components
+
+<Trans> example:
+
+`"changeSettings": "You can always change this at the bottom of the <settingsLink>settings</settingsLink>",`
+
+```
+  <Trans
+    i18nKey="welcome:telemetry.changeSettings"
+    components={{
+      settingsLink: <VSCodeLink href="#" onClick={handleOpenSettings} />
+    }}
+  />
+```
+
+# 5. TECHNICAL IMPLEMENTATION
+
+- Use namespaces to organize translations logically
+- Handle pluralization using i18next's built-in capabilities
+- Implement proper interpolation for variables using {{variable}} syntax
+- Don't include defaultValue. The `en` translations are the fallback
+- Always use apply_diff instead of write_to_file when editing existing translation files (much faster and more reliable)
+- When using apply_diff, carefully identify the exact JSON structure to edit to avoid syntax errors
+- Placeholders (like {{variable}}) must remain exactly identical to the English source to maintain code integration and prevent syntax errors
+
+# 6. WORKFLOW AND APPROACH
+
+- First add or modify English strings, then ask for confirmation before translating to all other languages
+- Use this process for each localization task:
+    1. Identify where the string appears in the UI/codebase
+    2. Understand the context and purpose of the string
+    3. Update English translation first
+    4. Use the `<search_files>` tool to find JSON keys that are near new keys in English translations but do not yet exist in the other language files for `<apply_diff>` SEARCH context
+    5. Create appropriate translations for all other supported languages utilizing the `search_files` result using `<apply_diff>` without reading every file.
+    6. Do not output the translated text into the chat, just modify the files.
+    7. Validate your changes with the missing translations script
+- Flag or comment if an English source string is incomplete ("please see this...") to avoid truncated or unclear translations
+- For UI elements, distinguish between:
+    - Button labels: Use short imperative commands ("Save", "Cancel")
+    - Tooltip text: Can be slightly more descriptive
+- Preserve the original perspective: If text is a user command directed at the software, ensure the translation maintains this direction, avoiding language that makes it sound like an instruction from the system to the user
+
+# 7. COMMON PITFALLS TO AVOID
+
+- Switching between formal and informal addressing styles - always stay informal ("du" not "Sie")
+- Translating or altering technical terms and brand names that should remain in English
+- Modifying or removing placeholders like {{variable}} - these must remain identical
+- Translating domain-specific terms that are commonly used in English in the target language
+- Changing the meaning or nuance of instructions or error messages
+- Forgetting to maintain consistent terminology throughout the translation
+
+# 8. QUALITY ASSURANCE
+
+- Maintain consistent terminology across all translations
+- Respect the JSON structure of translation files
+- Watch for placeholders and preserve them in translations
+- Be mindful of text length in UI elements when translating to languages that might require more characters
+- Use context-aware translations when the same string has different meanings
+- Always validate your translation work by running the missing translations script:
+    ```
+    node scripts/find-missing-translations.js
+    ```
+- Address any missing translations identified by the script to ensure complete coverage across all locales
+
+# 9. TRANSLATOR'S CHECKLIST
+
+- ✓ Used informal tone consistently ("du" not "Sie")
+- ✓ Preserved all placeholders exactly as in the English source
+- ✓ Maintained consistent terminology with existing translations
+- ✓ Kept technical terms and brand names unchanged where appropriate
+- ✓ Preserved the original perspective (user→system vs system→user)
+- ✓ Adapted the text appropriately for UI context (buttons vs tooltips)
+
+---
+
+# Language-Specific Guidelines
+
+## German (de) Translation Guidelines
+
+**Key Rule:** Always use informal speech ("du" form) in all German translations without exception.
+
+### Quick Reference
+
+| Category    | Formal (Avoid)            | Informal (Use)      | Example           |
+| ----------- | ------------------------- | ------------------- | ----------------- |
+| Pronouns    | Sie                       | du                  | you               |
+| Possessives | Ihr/Ihre/Ihrem            | dein/deine/deinem   | your              |
+| Verbs       | können Sie, müssen Sie    | kannst du, musst du | you can, you must |
+| Imperatives | Geben Sie ein, Wählen Sie | Gib ein, Wähle      | Enter, Choose     |
+
+**Technical terms** like "API", "token", "prompt" should not be translated.
+
+---
+
+## Simplified Chinese (zh-CN) Translation Guidelines
+
+### Key Terminology
 
 | English Term          | Preferred (zh-CN) | Avoid        | Context/Notes |
 | --------------------- | ----------------- | ------------ | ------------- |
@@ -28,7 +173,7 @@
 | power steering mode   | 增强导向模式      | 动力转向模式 | 避免直译      |
 | Boomerang Tasks       | 任务拆分          | 回旋镖任务   | 避免直译      |
 
-## Formatting Rules
+### Formatting Rules
 
 1. **中英文混排**
 
@@ -63,7 +208,7 @@
     - 保持原格式：`{{variable}}`
     - 中文说明放在变量外："Token 使用量: {{used}}"
 
-## UI Element Translation Standards
+### UI Element Translation Standards
 
 1. **按钮(Buttons)**
 
@@ -95,7 +240,7 @@
     - 正文：分段落说明
     - 按钮：使用动词，如"确认删除"
 
-## Contextual Translation Principles
+### Contextual Translation Principles
 
 1. **根据UI位置调整**
 
@@ -126,7 +271,7 @@
         - "Enabled"→"已启用"
         - "Disabled"→"已禁用"
 
-## Technical Documentation Guidelines
+### Technical Documentation Guidelines
 
 1. **技术术语**
 
@@ -164,46 +309,41 @@
         - 使用编号步骤：如"1. 注册Google Cloud账号"
         - 步骤动词一致：如"安装配置Google Cloud CLI工具"
 
-## Common Patterns
+### Common Patterns
 
 ```markdown
 <<<<<<< BEFORE
 "dragFiles": "按住shift拖动文件"
 =======
 "dragFiles": "Shift+拖拽文件"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "description": "启用后，Kilo Code 将能够与 MCP 服务器交互以获取高级功能。"
 =======
 "description": "启用后 Kilo Code 可与 MCP 服务交互获取高级功能。"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "cannotUndo": "此操作无法撤消。"
 =======
 "cannotUndo": "此操作不可逆。"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "hold shift to drag in files" → "按住shift拖动文件"
 =======
 "hold shift to drag in files" → "Shift+拖拽文件"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "Double click to edit" → "双击进行编辑"
 =======
 "Double click to edit" → "双击编辑"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 ```
 
-## Common Pitfalls
+### Common Pitfalls
 
 1. 避免过度直译导致生硬
 
@@ -238,7 +378,7 @@
       ✗ 翻译参数名称导致无法使用
       ✓ 保持参数名称英文，仅翻译说明
 
-## Best Practices
+### Best Practices
 
 1. **翻译工作流程**
 
@@ -265,7 +405,7 @@
     - 初翻 → 技术审校 → 语言润色 → 最终确认
     - 重点关注技术准确性、语言流畅度和UI显示效果
 
-## Quality Checklist
+### Quality Checklist
 
 1. 术语是否全文一致？
 2. 是否符合中文技术文档习惯？
@@ -276,3 +416,24 @@
 7. 文化表达是否恰当？
 8. 是否保持了原文的精确含义？
 9. 特殊格式(如变量、代码)是否正确保留？
+
+---
+
+## Traditional Chinese (zh-TW) Translation Guidelines
+
+### Key Terminology
+
+| English Term  | Use (zh-TW) | Avoid (Mainland) |
+| ------------- | ----------- | ---------------- |
+| file          | 檔案        | 文件             |
+| task          | 工作        | 任務             |
+| project       | 專案        | 項目             |
+| configuration | 設定        | 配置             |
+| server        | 伺服器      | 服務器           |
+| import/export | 匯入/匯出   | 導入/導出        |
+
+### Formatting Rules
+
+- Add spaces between Chinese and English/numbers: "AI 驅動" (not "AI驅動")
+- Use Traditional Chinese quotation marks: 「範例文字」(not "範例文字")
+- Use Taiwanese computing conventions rather than mainland terminology

@@ -1,4 +1,14 @@
-# Code Quality Rules
+# AGENTS.md
+
+Kilo Code is an open source AI coding agent for VS Code that generates code from natural language, automates tasks, and supports 500+ AI models.
+
+## Mode-Specific Rules
+
+For mode-specific guidance, see the following files:
+
+- **Translate mode**: `.roo/rules-translate/AGENTS.md` - Translation and localization guidelines
+
+## Code Quality Rules
 
 1. Test Coverage:
 
