@@ -560,12 +560,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 						if (messageIndex !== -1) {
 							const pendingUpdate = newPendingUpdates.get(statusData.executionId)
+							const exitCode =
+								statusData.status === "exited" && "exitCode" in statusData
+									? statusData.exitCode
+									: undefined
 							const updatedAsk: ExtensionChatMessage = {
 								...currentMessages[messageIndex]!,
 								text: JSON.stringify({
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									...(exitCode !== undefined && { exitCode }),
 								}),
 								partial: false, // Command completed
 								isAnswered: false, // Still needs user response
