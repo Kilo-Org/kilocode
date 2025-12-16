@@ -176,6 +176,8 @@ export function messageToEvent(msg: ClineMessage): SessionEvent | null {
 			// Resumable
 			case "resume_task":
 				return { type: "ask_resume_task" }
+			case "resume_completed_task":
+				return { type: "ask_resume_task" }
 
 			default:
 				return null

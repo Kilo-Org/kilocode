@@ -64,10 +64,13 @@
 		"usingTool": "Використання інструменту: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Агент працює в автономному режимі",
+		"autoMode": "Агент працює в повністю автоматичному режимі - введення заборонено",
+		"sessionEnded": "Сесію завершено, будь ласка, розпочніть нову сесію",
 		"placeholderTypeTask": "Введи своє завдання тут...",
 		"ariaLabel": "Введення повідомлення",
 		"cancelTitle": "Скасувати агента",
+		"finishToBranchTitle": "Завершити worktree та підготувати branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Завершити worktree та підготувати branch",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
 		"hint": "Enter для надсилання, Shift+Enter для нового рядка"

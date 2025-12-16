@@ -62,10 +62,13 @@
 		"usingTool": "Utilisation de l'outil : **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent en mode autonome",
+		"autoMode": "Agent en mode entièrement automatique - aucune entrée autorisée",
+		"sessionEnded": "Session terminée, veuillez démarrer une nouvelle session",
 		"placeholderTypeTask": "Écris ta tâche ici...",
 		"ariaLabel": "Saisie de message",
 		"cancelTitle": "Annuler l'agent",
+		"finishToBranchTitle": "Terminer le worktree et préparer la branch : {{branch}}",
+		"finishToBranchTitleNoBranch": "Terminer le worktree et préparer la branch",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
 		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"

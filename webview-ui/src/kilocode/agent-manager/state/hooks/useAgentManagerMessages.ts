@@ -76,6 +76,7 @@ function mapToStateMachineEvent(eventType: string, partial?: boolean): SessionEv
 
 		// Input-required asks
 		case "ask_followup":
+			// Followups should always transition to waiting_input (partial handling is done in the state machine).
 			return { type: "ask_followup", partial: partial ?? false }
 
 		// Approval-required asks

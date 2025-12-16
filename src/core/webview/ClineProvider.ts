@@ -95,6 +95,7 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
+import { checkSpeechToTextAvailable } from "./speechToTextCheck" // kilocode_change
 import type { ClineMessage, TodoItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
@@ -228,7 +229,7 @@ export class ClineProvider
 			const onTaskStarted = () => this.emit(RooCodeEventName.TaskStarted, instance.taskId)
 			const onTaskCompleted = (taskId: string, tokenUsage: any, toolUsage: any) => {
 				kilo_execIfExtension(() => {
-					SessionManager.init().doSync(true)
+					SessionManager.init()?.doSync(true)
 				})
 
 				return this.emit(RooCodeEventName.TaskCompleted, taskId, tokenUsage, toolUsage)
@@ -1153,17 +1154,17 @@ ${prompt}
 			if (message.type === "apiMessagesSaved" && message.payload) {
 				const [taskId, filePath] = message.payload as [string, string]
 
-				SessionManager.init().handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
+				SessionManager.init()?.handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
 			} else if (message.type === "taskMessagesSaved" && message.payload) {
 				const [taskId, filePath] = message.payload as [string, string]
 
-				SessionManager.init().handleFileUpdate(taskId, "uiMessagesPath", filePath)
+				SessionManager.init()?.handleFileUpdate(taskId, "uiMessagesPath", filePath)
 			} else if (message.type === "taskMetadataSaved" && message.payload) {
 				const [taskId, filePath] = message.payload as [string, string]
 
-				SessionManager.init().handleFileUpdate(taskId, "taskMetadataPath", filePath)
+				SessionManager.init()?.handleFileUpdate(taskId, "taskMetadataPath", filePath)
 			} else if (message.type === "currentCheckpointUpdated") {
-				SessionManager.init().doSync()
+				SessionManager.init()?.doSync()
 			}
 		})
 
@@ -1794,7 +1795,10 @@ ${prompt}
 
 	// Task history
 
-	async getTaskWithId(id: string): Promise<{
+	async getTaskWithId(
+		id: string,
+		kilo_withMessage = true, // kilocode_change session manager uses this method in the background
+	): Promise<{
 		historyItem: HistoryItem
 		taskDirPath: string
 		apiConversationHistoryFilePath: string
@@ -1823,12 +1827,16 @@ ${prompt}
 					apiConversationHistory,
 				}
 			} else {
-				vscode.window.showErrorMessage(
-					`Task file not found for task ID: ${id} (file ${apiConversationHistoryFilePath})`,
-				) //kilocode_change show extra debugging information to debug task not found issues
+				if (kilo_withMessage) {
+					vscode.window.showErrorMessage(
+						`Task file not found for task ID: ${id} (file ${apiConversationHistoryFilePath})`,
+					) //kilocode_change show extra debugging information to debug task not found issues
+				}
 			}
 		} else {
-			vscode.window.showErrorMessage(`Task with ID: ${id} not found in history.`) // kilocode_change show extra debugging information to debug task not found issues
+			if (kilo_withMessage) {
+				vscode.window.showErrorMessage(`Task with ID: ${id} not found in history.`) // kilocode_change show extra debugging information to debug task not found issues
+			}
 		}
 
 		// if we tried to get a task that doesn't exist, remove it from state
@@ -1939,7 +1947,7 @@ ${prompt}
 
 		await kilo_execIfExtension(() => {
 			if (this.currentWorkspacePath) {
-				SessionManager.init().setWorkspaceDirectory(this.currentWorkspacePath)
+				SessionManager.init()?.setWorkspaceDirectory(this.currentWorkspacePath)
 			}
 		})
 
@@ -2204,11 +2212,9 @@ ${prompt}
 				: undefined
 		// kilocode_change end
 
-		// kilocode_change start - checkSpeechToTextAvailable (backend prerequisites only, experiment flag checked in frontend)
-		console.log("🎙️ [ClineProvider] Checking speech-to-text availability for webview state update...")
-		const { checkSpeechToTextAvailable } = await import("./speechToTextCheck")
-		const speechToTextAvailable = await checkSpeechToTextAvailable(this.providerSettingsManager)
-		console.log(`🎙️ [ClineProvider] Speech-to-text available: ${speechToTextAvailable}`)
+		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
+		let speechToTextAvailable =
+			experiments?.speechToText && (await checkSpeechToTextAvailable(this.providerSettingsManager))
 		// kilocode_change end - checkSpeechToTextAvailable
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []

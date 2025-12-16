@@ -62,10 +62,13 @@
 		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "एजेंट स्वायत्त मोड में चल रहा है",
+		"autoMode": "एजेंट पूर्ण-स्वचालित मोड में चल रहा है - इनपुट की अनुमति नहीं है",
+		"sessionEnded": "सत्र समाप्त हो गया, कृपया एक नया सत्र शुरू करें",
 		"placeholderTypeTask": "अपना कार्य यहाँ लिखें...",
 		"ariaLabel": "संदेश इनपुट",
 		"cancelTitle": "एजेंट रद्द करें",
+		"finishToBranchTitle": "Worktree समाप्त करें और branch तैयार करें: {{branch}}",
+		"finishToBranchTitleNoBranch": "Worktree समाप्त करें और branch तैयार करें",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
 		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"

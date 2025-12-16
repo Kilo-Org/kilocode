@@ -9,8 +9,9 @@ import {
 } from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
-import type { ClineMessage } from "@roo-code/types"
+import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import { extractApiReqFailedMessage, extractPayloadMessage } from "./askErrorParser"
+import { buildProviderEnvOverrides } from "./providerEnvMapper"
 
 /**
  * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
@@ -82,12 +83,38 @@ export class CliProcessHandler {
 		}
 	}
 
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+		const baseEnv = { ...process.env }
+
+		const overrides = buildProviderEnvOverrides(
+			apiConfiguration,
+			baseEnv,
+			(message) => this.callbacks.onLog(message),
+			(message) => this.debugLog(message),
+		)
+
+		return {
+			...baseEnv,
+			...overrides,
+			NO_COLOR: "1",
+			FORCE_COLOR: "0",
+			KILO_PLATFORM: "agent-manager",
+		}
+	}
+
 	public spawnProcess(
 		cliPath: string,
 		workspace: string,
 		prompt: string,
 		options:
-			| { parallelMode?: boolean; autoMode?: boolean; sessionId?: string; label?: string; gitUrl?: string }
+			| {
+					parallelMode?: boolean
+					autoMode?: boolean
+					sessionId?: string
+					label?: string
+					gitUrl?: string
+					apiConfiguration?: ProviderSettings
+			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
@@ -130,11 +157,13 @@ export class CliProcessHandler {
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
+
 		// Spawn CLI process
 		const proc = spawn(cliPath, cliArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", KILO_PLATFORM: "agent-manager" },
+			env,
 			shell: false,
 		})
 
@@ -224,6 +253,20 @@ export class CliProcessHandler {
 			info.process.kill("SIGTERM")
 			this.activeSessions.delete(sessionId)
 		}
+	}
+
+	/**
+	 * Terminate a running process but keep it tracked until it exits.
+	 * This is useful when we want the normal CLI shutdown logic to run and for
+	 * the exit handler to update session status (e.g., "Finish to branch").
+	 */
+	public terminateProcess(sessionId: string, signal: NodeJS.Signals = "SIGTERM"): void {
+		const info = this.activeSessions.get(sessionId)
+		if (!info) {
+			return
+		}
+
+		info.process.kill(signal)
 	}
 
 	public stopAllProcesses(): void {

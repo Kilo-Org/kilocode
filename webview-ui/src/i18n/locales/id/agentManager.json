@@ -62,10 +62,13 @@
 		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agen berjalan dalam mode otonom",
+		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",
+		"sessionEnded": "Sesi berakhir, silakan mulai sesi baru",
 		"placeholderTypeTask": "Ketik tugas Anda di sini...",
 		"ariaLabel": "Input pesan",
 		"cancelTitle": "Batalkan agen",
+		"finishToBranchTitle": "Selesaikan worktree dan siapkan branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Selesaikan worktree dan siapkan branch",
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
 		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"

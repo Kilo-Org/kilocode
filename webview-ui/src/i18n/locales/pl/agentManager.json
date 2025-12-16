@@ -64,10 +64,13 @@
 		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent działa w trybie autonomicznym",
+		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",
+		"sessionEnded": "Sesja zakończona, proszę rozpocząć nową sesję",
 		"placeholderTypeTask": "Wpisz swoje zadanie tutaj...",
 		"ariaLabel": "Pole wiadomości",
 		"cancelTitle": "Anuluj agenta",
+		"finishToBranchTitle": "Zakończ worktree i przygotuj branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Zakończ worktree i przygotuj branch",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
 		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"

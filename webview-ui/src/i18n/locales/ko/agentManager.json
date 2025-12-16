@@ -62,10 +62,13 @@
 		"usingTool": "도구 사용 중: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "에이전트가 자율 모드로 실행 중",
+		"autoMode": "에이전트가 완전 자동 모드로 실행 중 - 입력이 허용되지 않습니다",
+		"sessionEnded": "세션이 종료되었습니다. 새 세션을 시작하세요",
 		"placeholderTypeTask": "작업을 입력하세요...",
 		"ariaLabel": "메시지 입력",
 		"cancelTitle": "에이전트 취소",
+		"finishToBranchTitle": "Worktree 완료 및 브랜치 준비: {{branch}}",
+		"finishToBranchTitleNoBranch": "Worktree 완료 및 브랜치 준비",
 		"sendTitle": "메시지 보내기",
 		"resumeTitle": "에이전트 재개",
 		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈"

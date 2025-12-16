@@ -66,10 +66,13 @@
 		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "الوكيل يعمل في الوضع المستقل",
+		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",
+		"sessionEnded": "انتهت الجلسة، يرجى بدء جلسة جديدة",
 		"placeholderTypeTask": "اكتب مهمتك هنا...",
 		"ariaLabel": "إدخال الرسالة",
 		"cancelTitle": "إلغاء الوكيل",
+		"finishToBranchTitle": "إنهاء worktree والتحضير للـ branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "إنهاء worktree والتحضير للـ branch",
 		"sendTitle": "إرسال الرسالة",
 		"resumeTitle": "استئناف الوكيل",
 		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد"

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
 	selectedSessionAtom,
+	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	pendingSessionAtom,
 	preferredRunModeAtom,
@@ -28,6 +29,7 @@ import {
 	Zap,
 	Layers,
 	X,
+	Plus,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -40,9 +42,32 @@ export function SessionDetail() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
+	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
+	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
 
 	// Hooks must be called unconditionally before any early returns
 	const timeLabels = useMemo(() => createRelativeTimeLabels(t), [t])
+
+	// Auto-cancel session when it ends (as if user clicked the red cancel button)
+	// Only send cancel once when transitioning from "running" to a terminal state
+	// Track both sessionId and status to avoid spurious cancels on session switches
+	useEffect(() => {
+		if (!selectedSession) return
+
+		const prevState = prevSessionStateRef.current
+		const currentState = { id: selectedSession.sessionId, status: selectedSession.status }
+
+		// Update the ref for next render
+		prevSessionStateRef.current = currentState
+
+		// Only send cancel if same session transitioned from running to terminal state
+		if (prevState?.id === currentState.id && prevState.status === "running" && currentState.status !== "running") {
+			vscode.postMessage({
+				type: "agentManager.cancelSession",
+				sessionId: selectedSession.sessionId,
+			})
+		}
+	}, [selectedSession])
 
 	// Show pending session view only when no other session is selected
 	if (pendingSession && !selectedSession) {
@@ -57,12 +82,22 @@ export function SessionDetail() {
 		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
 	}
 
+	const handleNew = () => {
+		setSelectedSessionId(null)
+	}
+
 	// Use state machine UI state as the single source of truth for activity/spinner
 	const sessionUiState = machineUiState[selectedSession.sessionId]
 	const isActive = sessionUiState?.isActive ?? false
 	const showSpinner = sessionUiState?.showSpinner ?? false
 	const isWorktree = selectedSession.parallelMode?.enabled
 	const branchName = selectedSession.parallelMode?.branch
+
+	// Determine if "Finish to Branch" button should be shown
+	// Simplified logic: show when session is a worktree session and running
+	// Users should be able to finish at any point while the session is active
+	const isSessionRunning = selectedSession.status === "running"
+	const canFinishWorktree = !!isWorktree && isSessionRunning
 
 	return (
 		<div className="am-session-detail">
@@ -102,6 +137,15 @@ export function SessionDetail() {
 				</div>
 
 				<div className="am-header-actions">
+					{!showSpinner && (
+						<button
+							className="am-icon-btn"
+							onClick={handleNew}
+							aria-label={t("sessionDetail.newButtonTitle")}
+							title={t("sessionDetail.newButtonTitle")}>
+							<Plus size={14} />
+						</button>
+					)}
 					{!isActive && (
 						<button
 							className="am-icon-btn"
@@ -134,7 +178,11 @@ export function SessionDetail() {
 				sessionId={selectedSession.sessionId}
 				sessionLabel={selectedSession.label}
 				isActive={isActive}
+				showCancel={isActive}
 				autoMode={selectedSession.autoMode}
+				showFinishToBranch={canFinishWorktree}
+				worktreeBranchName={branchName}
+				sessionStatus={selectedSession.status}
 			/>
 		</div>
 	)
@@ -263,10 +311,6 @@ function NewAgentForm() {
 	}
 
 	const handleSelectMode = (mode: RunMode) => {
-		if (mode === "worktree" && !isMultiVersion) {
-			// Worktree mode is not yet available for users (unless in multi-version mode)
-			return
-		}
 		setRunMode(mode)
 		setIsDropdownOpen(false)
 	}
@@ -283,7 +327,7 @@ function NewAgentForm() {
 				style={{ width: 48, height: 48, margin: "0 auto 16px auto" }}>
 				<KiloLogo />
 			</div>
-			<div style={{ width: "100%", maxWidth: "100%" }}>
+			<div style={{ width: "100%", maxWidth: "100%", minWidth: "280px" }}>
 				<div
 					className={cn(
 						"relative",
@@ -382,18 +426,17 @@ function NewAgentForm() {
 										<span>{t("sessionDetail.runModeLocal")}</span>
 										{runMode === "local" && <span className="am-checkmark">✓</span>}
 									</button>
-									<StandardTooltip content={t("sessionDetail.comingSoon")}>
-										<button
-											className={cn("am-run-mode-option-inline", "am-disabled")}
-											onClick={() => handleSelectMode("worktree")}
-											type="button"
-											disabled>
-											<GitBranch size={12} />
-											<span className="am-run-mode-label">
-												{t("sessionDetail.runModeWorktree")}
-											</span>
-										</button>
-									</StandardTooltip>
+									<button
+										className={cn(
+											"am-run-mode-option-inline",
+											runMode === "worktree" && "am-selected",
+										)}
+										onClick={() => handleSelectMode("worktree")}
+										type="button">
+										<GitBranch size={12} />
+										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
+										{runMode === "worktree" && <span className="am-checkmark">✓</span>}
+									</button>
 								</div>
 							)}
 						</div>
@@ -464,7 +507,7 @@ function NewAgentForm() {
 					{/* Hint Text inside input */}
 					{!promptText && (
 						<div
-							className="absolute left-3 right-[90px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							className="absolute left-3 right-[140px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 							style={{
 								bottom: "0.25rem",
 								color: "var(--vscode-descriptionForeground)",

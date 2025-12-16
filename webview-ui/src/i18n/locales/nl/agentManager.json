@@ -62,10 +62,13 @@
 		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent draait in autonome modus",
+		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",
+		"sessionEnded": "Sessie beëindigd, start alsjeblieft een nieuwe sessie",
 		"placeholderTypeTask": "Typ je taak hier...",
 		"ariaLabel": "Berichtinvoer",
 		"cancelTitle": "Agent annuleren",
+		"finishToBranchTitle": "Voltooi worktree en bereid branch voor: {{branch}}",
+		"finishToBranchTitleNoBranch": "Voltooi worktree en bereid branch voor",
 		"sendTitle": "Bericht verzenden",
 		"resumeTitle": "Agent hervatten",
 		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel"

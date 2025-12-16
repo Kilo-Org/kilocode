@@ -62,10 +62,13 @@
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Agent đang chạy ở chế độ tự động",
+		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",
+		"sessionEnded": "Phiên đã kết thúc, vui lòng bắt đầu phiên mới",
 		"placeholderTypeTask": "Nhập nhiệm vụ của bạn ở đây...",
 		"ariaLabel": "Nhập tin nhắn",
 		"cancelTitle": "Hủy agent",
+		"finishToBranchTitle": "Hoàn tất worktree và chuẩn bị branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Hoàn tất worktree và chuẩn bị branch",
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
 		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"

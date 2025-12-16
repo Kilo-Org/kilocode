@@ -25,6 +25,10 @@ describe("AgentManagerProvider CLI spawning", () => {
 		vi.resetModules()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
+
 		mockWindow = {
 			showErrorMessage: vi.fn().mockResolvedValue(undefined),
 			showWarningMessage: vi.fn().mockResolvedValue(undefined),
@@ -66,7 +70,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {
@@ -294,6 +298,25 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(warningSpy.mock.calls[0][0]).toContain(message)
 	})
 
+	it("shows auth popup again on a new start attempt", async () => {
+		const vscode = await import("vscode")
+		const warningSpy = vscode.window.showWarningMessage as unknown as Mock
+
+		// Avoid the full CLI spawn flow; we only want to exercise per-attempt dedupe reset.
+		;(provider as any).startAgentSession = vi.fn().mockResolvedValue(undefined)
+
+		const message = "Authentication failed: Provider error: 401 No cookie auth credentials found"
+
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		expect(warningSpy).toHaveBeenCalledTimes(1)
+
+		// New attempt should reset dedupe state
+		await (provider as any).handleStartSession({ prompt: "hi", parallelMode: false })
+		;(provider as any).handleStartSessionApiFailure({ message, authError: true })
+		expect(warningSpy).toHaveBeenCalledTimes(2)
+	})
+
 	it("builds payment required message with parsed title and link", async () => {
 		const vscode = await import("vscode")
 		const warningSpy = vscode.window.showWarningMessage as unknown as Mock
@@ -456,6 +479,9 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
 		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -492,7 +518,7 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {
@@ -675,6 +701,9 @@ describe("AgentManagerProvider telemetry", () => {
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
 		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
@@ -710,7 +739,7 @@ describe("AgentManagerProvider telemetry", () => {
 
 		const module = await import("../AgentManagerProvider")
 		AgentManagerProvider = module.AgentManagerProvider
-		provider = new AgentManagerProvider(mockContext, mockOutputChannel)
+		provider = new AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
 	})
 
 	afterEach(() => {
@@ -833,5 +862,40 @@ describe("AgentManagerProvider telemetry", () => {
 			sessionId,
 			true, // useWorktree = true (parallel mode)
 		)
+	})
+
+	describe("Regression Tests - finishWorktreeSession validation (P0)", () => {
+		it("should not attempt to terminate non-running worktree sessions", async () => {
+			const registry = (provider as any).registry
+			const sessionId = "session-done-1"
+			registry.createSession(sessionId, "test done session", undefined, { parallelMode: true })
+			registry.updateSessionStatus(sessionId, "done")
+
+			const processHandler = (provider as any).processHandler
+			vi.spyOn(processHandler, "terminateProcess")
+
+			// Call finishWorktreeSession on a done session
+			;(provider as any).finishWorktreeSession(sessionId)
+
+			// Should NOT call terminateProcess
+			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
+		})
+
+		it("should only allow finishing running worktree sessions", async () => {
+			const registry = (provider as any).registry
+			const sessionId = "session-running-1"
+			registry.createSession(sessionId, "test running session", undefined, { parallelMode: true })
+			registry.updateSessionStatus(sessionId, "running")
+			;(provider as any).sessionMessages.set(sessionId, [])
+
+			const processHandler = (provider as any).processHandler
+			vi.spyOn(processHandler, "terminateProcess")
+
+			// Call finishWorktreeSession on a running session
+			;(provider as any).finishWorktreeSession(sessionId)
+
+			// Should call terminateProcess
+			expect(processHandler.terminateProcess).toHaveBeenCalledWith(sessionId, "SIGTERM")
+		})
 	})
 })

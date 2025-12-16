@@ -70,7 +70,7 @@ describe("buildCliArgs", () => {
 		expect(args).toContain("--auto")
 	})
 
-	it("combines --auto and --parallel flags for multi-version mode", () => {
+	it("combines --auto and --parallel flags when both options are set", () => {
 		const args = buildCliArgs("/workspace", "prompt", {
 			parallelMode: true,
 			autoMode: true,

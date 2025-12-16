@@ -11,6 +11,7 @@ export interface AppOptions {
 	mode?: string
 	workspace?: string
 	ci?: boolean
+	yolo?: boolean
 	json?: boolean
 	jsonInteractive?: boolean
 	prompt?: string

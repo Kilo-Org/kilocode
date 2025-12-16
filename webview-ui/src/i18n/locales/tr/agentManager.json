@@ -62,10 +62,13 @@
 		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "Ajan otonom modda çalışıyor",
+		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",
+		"sessionEnded": "Oturum sona erdi, lütfen yeni bir oturum başlat",
 		"placeholderTypeTask": "Görevini buraya yaz...",
 		"ariaLabel": "Mesaj girişi",
 		"cancelTitle": "Ajanı iptal et",
+		"finishToBranchTitle": "Worktree'yi bitir ve branch hazırla: {{branch}}",
+		"finishToBranchTitleNoBranch": "Worktree'yi bitir ve branch hazırla",
 		"sendTitle": "Mesaj gönder",
 		"resumeTitle": "Ajanı devam ettir",
 		"hint": "Göndermek için Enter, yeni satır için Shift+Enter"

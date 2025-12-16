@@ -62,10 +62,13 @@
 		"usingTool": "ツールを使用中: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "エージェントは自律モードで実行中",
+		"autoMode": "エージェントが完全自動モードで実行中 - 入力はできません",
+		"sessionEnded": "セッションが終了しました。新しいセッションを開始してください",
 		"placeholderTypeTask": "タスクを入力してください...",
 		"ariaLabel": "メッセージ入力",
 		"cancelTitle": "エージェントをキャンセル",
+		"finishToBranchTitle": "Worktreeを終了してブランチを準備: {{branch}}",
+		"finishToBranchTitleNoBranch": "Worktreeを終了してブランチを準備",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
 		"hint": "Enterで送信、Shift+Enterで改行"

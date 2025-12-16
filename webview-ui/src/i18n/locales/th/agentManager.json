@@ -62,10 +62,13 @@
 		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}"
 	},
 	"chatInput": {
-		"autonomous": "เอเจนต์ทำงานในโหมดอัตโนมัติ",
+		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",
+		"sessionEnded": "เซสชันสิ้นสุดแล้ว โปรดเริ่มเซสชันใหม่",
 		"placeholderTypeTask": "พิมพ์งานของคุณที่นี่...",
 		"ariaLabel": "ช่องใส่ข้อความ",
 		"cancelTitle": "ยกเลิกเอเจนต์",
+		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"
