@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 0.17.0
+
+### Minor Changes
+
+- [#4428](https://github.com/Kilo-Org/kilocode/pull/4428) [`8394da8`](https://github.com/Kilo-Org/kilocode/commit/8394da8715fae4eacf416301885eeee840456700) Thanks [@iscekic](https://github.com/iscekic)! - add parent session id when creating a session
+
+### Patch Changes
+
+- [#4155](https://github.com/Kilo-Org/kilocode/pull/4155) [`74fe4b8`](https://github.com/Kilo-Org/kilocode/commit/74fe4b8a20ff13c31d967693818708f81bd9167e) Thanks [@omniwired](https://github.com/omniwired)! - feat(cli): add Ctrl+Y keybinding to toggle YOLO mode
+
+- [#4447](https://github.com/Kilo-Org/kilocode/pull/4447) [`0022305`](https://github.com/Kilo-Org/kilocode/commit/0022305558d71957aeb7468a0e8e3ed829997f93) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Provide a few tips for when an LLM gets stuck in a loop
+
+- [#4477](https://github.com/Kilo-Org/kilocode/pull/4477) [`564b60e`](https://github.com/Kilo-Org/kilocode/commit/564b60eb7c8a1cac6d80c6756a05e9e5eb20d94a) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Simplify --yolo option description
+
 ## 0.16.0
 
 ### Minor Changes
