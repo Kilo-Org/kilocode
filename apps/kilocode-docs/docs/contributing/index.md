@@ -1,3 +1,8 @@
+---
+sidebar_position: 1
+title: "Contributing to Kilo Code"
+---
+
 # Contributing to Kilo Code
 
 Kilo Code is an open-source project that welcomes contributions from developers of all skill levels. This guide will help you get started with contributing to Kilo Code, whether you're fixing bugs, adding features, improving documentation, or sharing custom modes.
@@ -15,7 +20,11 @@ There are many ways to contribute to Kilo Code:
 
 ## Setting Up the Development Environment
 
-Setting Up the Development Environment is described in details on [this page](/docs/extending/development-environment.md)
+Setting Up the Development Environment is described in details on the [Development Environment](/contributing/development-environment) page.
+
+## Understanding the Architecture
+
+Before diving into the code, we recommend reviewing the [Architecture Overview](/contributing/architecture) to understand how the different components of Kilo Code fit together.
 
 ## Development Workflow
 
@@ -79,6 +88,10 @@ Custom modes are a powerful way to extend Kilo Code's capabilities. To create an
 
 3. Share your mode with the community by submitting a [GitHub Discussion](https://github.com/Kilo-Org/kilocode/discussions)
 
+## Engineering Specs
+
+For larger features, we write engineering specs to align on requirements before implementation. Check out the [Engineering Specs](/contributing/specs) section to see planned features and learn how to contribute specs.
+
 ## Documentation Contributions
 
 Documentation improvements are highly valued contributions:
@@ -93,9 +106,9 @@ Documentation improvements are highly valued contributions:
 2. Test your documentation changes by running the docs site locally:
 
     ```bash
-    cd docs
-    npm install
-    npm start
+    cd apps/kilocode-docs
+    pnpm install
+    pnpm start
     ```
 
 3. Submit a PR with your documentation changes

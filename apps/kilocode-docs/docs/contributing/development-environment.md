@@ -1,3 +1,8 @@
+---
+sidebar_position: 3
+title: "Development Environment"
+---
+
 # Development Environment
 
 <!-- Please refer to the [DEVELOPMENT.md](https://github.com/Kilo-Org/kilocode/blob/main/DEVELOPMENT.md) guide in the main repository for detailed instructions on setting up the development environment. -->

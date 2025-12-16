@@ -208,6 +208,15 @@ const config: Config = {
 						to: "/plans/migration",
 						from: ["/seats/migration"],
 					},
+					// Contributing page relocation
+					{
+						to: "/contributing",
+						from: ["/extending/contributing-to-kilo"],
+					},
+					{
+						to: "/contributing/development-environment",
+						from: ["/extending/development-environment"],
+					},
 				],
 			},
 		],

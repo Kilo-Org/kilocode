@@ -188,8 +188,29 @@ const sidebars: SidebarsConfig = {
 					],
 				},
 				"features/shell-integration",
-				"extending/contributing-to-kilo",
-				"extending/development-environment",
+			],
+		},
+		{
+			type: "category",
+			label: "Contributing",
+			items: [
+				"contributing/index",
+				"contributing/architecture",
+				"contributing/development-environment",
+				{
+					type: "category",
+					label: "Engineering Specs",
+					items: [
+						"contributing/specs/index",
+						"contributing/specs/spec-template",
+						"contributing/specs/spec-enterprise-mcp-controls",
+						"contributing/specs/spec-onboarding-engagement-improvements",
+						"contributing/specs/spec-organization-modes-library",
+						"contributing/specs/spec-security-reviews",
+						"contributing/specs/spec-track-repo-url",
+						"contributing/specs/spec-voice-transcription",
+					],
+				},
 			],
 		},
 		{
