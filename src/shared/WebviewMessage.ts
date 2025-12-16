@@ -145,6 +145,7 @@ export interface WebviewMessage {
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording
 		| "includeTaskHistoryInEnhance" // kilocode_change
+		| "snoozeAutocomplete" // kilocode_change
 		| "autoApprovalEnabled"
 		| "yoloMode" // kilocode_change
 		| "updateCustomMode"

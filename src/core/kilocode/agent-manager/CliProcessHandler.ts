@@ -112,6 +112,7 @@ export class CliProcessHandler {
 					label?: string
 					gitUrl?: string
 					apiConfiguration?: ProviderSettings
+					existingBranch?: string
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -149,6 +150,7 @@ export class CliProcessHandler {
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
+			existingBranch: options?.existingBranch,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)

@@ -47,7 +47,14 @@
 		"launchVersions": "Launch {{count}} versions",
 		"startAgent": "Start agent",
 		"cancelCreating": "Cancel session creation",
-		"cancelButton": "Cancel"
+		"cancelButton": "Cancel",
+		"selectBranch": "Select branch",
+		"searchBranches": "Type to search all branches",
+		"yourBranches": "Your branches",
+		"otherBranches": "Other branches",
+		"branchPickerTooltip": "Switch base branch",
+		"noBranches": "No branches found",
+		"noMatchingBranches": "No branches match your search"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",

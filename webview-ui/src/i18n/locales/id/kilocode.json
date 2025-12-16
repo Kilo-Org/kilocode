@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
 				"label": "Pelengkapan Otomatis Input Obrolan"
+			},
+			"snooze": {
+				"label": "Tunda Autocomplete",
+				"description": "Jeda sementara saran autocomplete untuk durasi tertentu.",
+				"button": "Tunda",
+				"unsnooze": "Aktifkan Kembali",
+				"currentlySnoozed": "Autocomplete sedang ditunda.",
+				"duration": {
+					"1min": "1 menit",
+					"5min": "5 menit",
+					"15min": "15 menit",
+					"30min": "30 menit",
+					"1hour": "1 jam"
+				}
 			}
 		}
 	},

@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "Automatické doplňování při psaní zpráv",
 				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+			},
+			"snooze": {
+				"label": "Pozastavit Autocomplete",
+				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"button": "Pozastavit",
+				"unsnooze": "Obnovit",
+				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 hodina"
+				}
 			}
 		}
 	},

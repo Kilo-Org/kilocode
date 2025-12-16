@@ -40,7 +40,14 @@
 		"waitingForCli": "エージェントセッションを初期化中...",
 		"autoModeWarning": "完全自動モードで実行中 - エージェントは確認なしでアクションを実行します",
 		"cancelCreating": "セッション作成をキャンセル",
-		"cancelButton": "キャンセル"
+		"cancelButton": "キャンセル",
+		"selectBranch": "ブランチを選択",
+		"searchBranches": "すべてのブランチを検索するには入力してください",
+		"yourBranches": "あなたのブランチ",
+		"otherBranches": "その他のブランチ",
+		"branchPickerTooltip": "ベースブランチを切り替え",
+		"noBranches": "ブランチが見つかりません",
+		"noMatchingBranches": "検索に一致するブランチがありません"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

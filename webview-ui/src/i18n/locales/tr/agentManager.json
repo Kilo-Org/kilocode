@@ -40,7 +40,14 @@
 		"waitingForCli": "Ajan oturumu başlatılıyor...",
 		"autoModeWarning": "Tam otomatik modda çalışıyor - ajan onay almadan işlemleri gerçekleştirecek",
 		"cancelCreating": "Oturum oluşturmayı iptal et",
-		"cancelButton": "İptal"
+		"cancelButton": "İptal",
+		"selectBranch": "Dal seç",
+		"searchBranches": "Tüm dalları aramak için yaz",
+		"yourBranches": "Senin dalların",
+		"otherBranches": "Diğer dallar",
+		"branchPickerTooltip": "Temel dalı değiştir",
+		"noBranches": "Dal bulunamadı",
+		"noMatchingBranches": "Aramanla eşleşen dal yok"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

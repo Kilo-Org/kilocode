@@ -40,7 +40,14 @@
 		"waitingForCli": "กำลังเริ่มต้นเซสชันเอเจนต์...",
 		"autoModeWarning": "กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - เอเจนต์จะดำเนินการโดยไม่ต้องยืนยัน",
 		"cancelCreating": "ยกเลิกการสร้างเซสชัน",
-		"cancelButton": "ยกเลิก"
+		"cancelButton": "ยกเลิก",
+		"selectBranch": "เลือกสาขา",
+		"searchBranches": "พิมพ์เพื่อค้นหาสาขาทั้งหมด",
+		"yourBranches": "สาขาของคุณ",
+		"otherBranches": "สาขาอื่นๆ",
+		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
+		"noBranches": "ไม่พบสาขา",
+		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ"
 	},
 	"messages": {
 		"waiting": "กำลังรอการตอบกลับจากเอเจนต์...",

@@ -40,7 +40,14 @@
 		"waitingForCli": "에이전트 세션 초기화 중...",
 		"autoModeWarning": "전체 자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
 		"cancelCreating": "세션 생성 취소",
-		"cancelButton": "취소"
+		"cancelButton": "취소",
+		"selectBranch": "브랜치 선택",
+		"searchBranches": "모든 브랜치를 검색하려면 입력하세요",
+		"yourBranches": "내 브랜치",
+		"otherBranches": "다른 브랜치",
+		"branchPickerTooltip": "기본 브랜치 변경",
+		"noBranches": "브랜치를 찾을 수 없습니다",
+		"noMatchingBranches": "검색과 일치하는 브랜치가 없습니다"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",

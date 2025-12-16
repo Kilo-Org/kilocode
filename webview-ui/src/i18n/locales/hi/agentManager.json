@@ -40,7 +40,14 @@
 		"waitingForCli": "एजेंट सत्र आरंभ हो रहा है...",
 		"autoModeWarning": "फुल-ऑटो मोड में चल रहा है - एजेंट बिना पुष्टि के कार्य करेगा",
 		"cancelCreating": "सत्र निर्माण रद्द करें",
-		"cancelButton": "रद्द करें"
+		"cancelButton": "रद्द करें",
+		"selectBranch": "ब्रांच चुनें",
+		"searchBranches": "सभी ब्रांच खोजने के लिए टाइप करें",
+		"yourBranches": "आपकी ब्रांच",
+		"otherBranches": "अन्य ब्रांच",
+		"branchPickerTooltip": "बेस ब्रांच बदलें",
+		"noBranches": "कोई ब्रांच नहीं मिली",
+		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",

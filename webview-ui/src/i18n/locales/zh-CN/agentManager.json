@@ -40,7 +40,14 @@
 		"waitingForCli": "正在初始化 Agent 会话...",
 		"autoModeWarning": "全自动模式运行中 - Agent 将在无需确认的情况下执行操作",
 		"cancelCreating": "取消创建会话",
-		"cancelButton": "取消"
+		"cancelButton": "取消",
+		"selectBranch": "选择 Branch",
+		"searchBranches": "输入以搜索所有 Branch",
+		"yourBranches": "你的 Branch",
+		"otherBranches": "其他 Branch",
+		"branchPickerTooltip": "切换基础 Branch",
+		"noBranches": "未找到 Branch",
+		"noMatchingBranches": "没有匹配的 Branch"
 	},
 	"messages": {
 		"waiting": "等待 Agent 响应...",

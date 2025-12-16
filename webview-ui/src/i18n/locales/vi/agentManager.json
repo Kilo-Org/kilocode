@@ -40,7 +40,14 @@
 		"waitingForCli": "Đang khởi tạo phiên agent...",
 		"autoModeWarning": "Đang chạy ở chế độ tự động hoàn toàn - agent sẽ thực hiện các hành động mà không cần xác nhận",
 		"cancelCreating": "Hủy tạo phiên",
-		"cancelButton": "Hủy"
+		"cancelButton": "Hủy",
+		"selectBranch": "Chọn nhánh",
+		"searchBranches": "Nhập để tìm kiếm tất cả các nhánh",
+		"yourBranches": "Nhánh của bạn",
+		"otherBranches": "Nhánh khác",
+		"branchPickerTooltip": "Chuyển nhánh cơ sở",
+		"noBranches": "Không tìm thấy nhánh nào",
+		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

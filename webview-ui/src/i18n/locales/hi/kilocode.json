@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"label": "चैट इनपुट स्वतःपूर्ण",
 				"description": "जब सक्षम होता है, Kilo Code चैट इनपुट में टाइप करते समय पूर्णताएं सुझाएगा। सुझावों को स्वीकार करने के लिए Tab दबाएं।"
+			},
+			"snooze": {
+				"label": "Autocomplete स्नूज़ करें",
+				"description": "निर्दिष्ट अवधि के लिए Autocomplete सुझावों को अस्थायी रूप से रोकें।",
+				"button": "स्नूज़",
+				"unsnooze": "अनस्नूज़",
+				"currentlySnoozed": "Autocomplete वर्तमान में स्नूज़ है।",
+				"duration": {
+					"1min": "1 मिनट",
+					"5min": "5 मिनट",
+					"15min": "15 मिनट",
+					"30min": "30 मिनट",
+					"1hour": "1 घंटा"
+				}
 			}
 		}
 	},

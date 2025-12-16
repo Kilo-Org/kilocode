@@ -242,6 +242,20 @@
 			"enableChatAutocomplete": {
 				"description": "Cuando está habilitado, Kilo Code sugerirá completaciones mientras escribes en el campo de chat. Presiona Tab para aceptar las sugerencias.",
 				"label": "Autocompletado de Entrada de Chat"
+			},
+			"snooze": {
+				"label": "Posponer Autocompletado",
+				"description": "Pausar temporalmente las sugerencias de autocompletado durante un tiempo especificado.",
+				"button": "Posponer",
+				"unsnooze": "Reactivar",
+				"currentlySnoozed": "El autocompletado está actualmente pospuesto.",
+				"duration": {
+					"1min": "1 minuto",
+					"5min": "5 minutos",
+					"15min": "15 minutos",
+					"30min": "30 minutos",
+					"1hour": "1 hora"
+				}
 			}
 		}
 	},

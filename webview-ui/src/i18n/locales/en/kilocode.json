@@ -253,6 +253,20 @@
 				"label": "Chat Input Autocomplete",
 				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
 			},
+			"snooze": {
+				"label": "Snooze Autocomplete",
+				"description": "Temporarily pause autocomplete suggestions for a specified duration.",
+				"button": "Snooze",
+				"unsnooze": "Unsnooze",
+				"currentlySnoozed": "Autocomplete is currently snoozed.",
+				"duration": {
+					"1min": "1 minute",
+					"5min": "5 minutes",
+					"15min": "15 minutes",
+					"30min": "30 minutes",
+					"1hour": "1 hour"
+				}
+			},
 			"keybindingNotFound": "not found",
 			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."

@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"description": "Quan està activat, Kilo Code suggerirà complecions mentre escriviu a l'entrada del xat. Premeu Tab per acceptar els suggeriments.",
 				"label": "Autocompletat d'entrada de xat"
+			},
+			"snooze": {
+				"label": "Posposar Autocomplete",
+				"description": "Pausa temporalment els suggeriments d'autocompletat durant un temps especificat.",
+				"button": "Posposar",
+				"unsnooze": "Reactivar",
+				"currentlySnoozed": "L'autocompletat està actualment posposat.",
+				"duration": {
+					"1min": "1 minut",
+					"5min": "5 minuts",
+					"15min": "15 minuts",
+					"30min": "30 minuts",
+					"1hour": "1 hora"
+				}
 			}
 		}
 	},

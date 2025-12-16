@@ -40,7 +40,14 @@
 		"waitingForCli": "جارٍ تهيئة جلسة الوكيل...",
 		"autoModeWarning": "يعمل في وضع التشغيل الآلي الكامل - سينفذ الوكيل الإجراءات دون تأكيد",
 		"cancelCreating": "إلغاء إنشاء الجلسة",
-		"cancelButton": "إلغاء"
+		"cancelButton": "إلغاء",
+		"selectBranch": "اختر فرع",
+		"searchBranches": "اكتب للبحث في جميع الفروع",
+		"yourBranches": "فروعك",
+		"otherBranches": "فروع أخرى",
+		"branchPickerTooltip": "تبديل الفرع الأساسي",
+		"noBranches": "لم يتم العثور على فروع",
+		"noMatchingBranches": "لا توجد فروع تطابق بحثك"
 	},
 	"messages": {
 		"waiting": "في انتظار استجابة الوكيل...",

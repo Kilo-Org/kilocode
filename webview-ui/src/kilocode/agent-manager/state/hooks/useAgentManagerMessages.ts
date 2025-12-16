@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai"
 import type { ClineMessage } from "@roo-code/types"
 import { updateSessionMessagesAtom } from "../atoms/messages"
 import { updateSessionTodosAtom } from "../atoms/todos"
+import { updateBranchesAtom } from "../atoms/branches"
 import { extractTodosFromMessages } from "./extractTodosFromMessages"
 import {
 	upsertSessionAtom,
@@ -57,6 +58,12 @@ interface StateEventMessage {
 	partial?: boolean
 }
 
+interface BranchesMessage {
+	type: "agentManager.branches"
+	branches: string[]
+	currentBranch?: string
+}
+
 type ExtensionMessage =
 	| ChatMessagesMessage
 	| StateMessage
@@ -64,6 +71,7 @@ type ExtensionMessage =
 	| RemoteSessionsMessage
 	| PendingSessionMessage
 	| StateEventMessage
+	| BranchesMessage
 	| { type: string; [key: string]: unknown }
 
 /**
@@ -123,6 +131,7 @@ function mapToStateMachineEvent(eventType: string, partial?: boolean): SessionEv
 export function useAgentManagerMessages() {
 	const updateSessionMessages = useSetAtom(updateSessionMessagesAtom)
 	const updateSessionTodos = useSetAtom(updateSessionTodosAtom)
+	const updateBranches = useSetAtom(updateBranchesAtom)
 	const upsertSession = useSetAtom(upsertSessionAtom)
 	const removeSession = useSetAtom(removeSessionAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
@@ -226,6 +235,12 @@ export function useAgentManagerMessages() {
 					}
 					break
 				}
+
+				case "agentManager.branches": {
+					const { branches, currentBranch } = message as BranchesMessage
+					updateBranches({ branches, currentBranch })
+					break
+				}
 			}
 		}
 
@@ -234,6 +249,7 @@ export function useAgentManagerMessages() {
 	}, [
 		updateSessionMessages,
 		updateSessionTodos,
+		updateBranches,
 		upsertSession,
 		removeSession,
 		setSelectedSessionId,

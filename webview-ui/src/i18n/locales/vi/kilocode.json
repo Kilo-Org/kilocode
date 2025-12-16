@@ -242,6 +242,20 @@
 			"enableChatAutocomplete": {
 				"label": "Gợi ý Tự động Hoàn thành Trong Trò chuyện",
 				"description": "Khi được bật, Kilo Code sẽ đề xuất các gợi ý hoàn thành khi bạn nhập trong ô chat. Nhấn Tab để chấp nhận các gợi ý."
+			},
+			"snooze": {
+				"label": "Tạm dừng Autocomplete",
+				"description": "Tạm thời dừng gợi ý tự động hoàn thành trong một khoảng thời gian nhất định.",
+				"button": "Tạm dừng",
+				"unsnooze": "Bỏ tạm dừng",
+				"currentlySnoozed": "Autocomplete hiện đang bị tạm dừng.",
+				"duration": {
+					"1min": "1 phút",
+					"5min": "5 phút",
+					"15min": "15 phút",
+					"30min": "30 phút",
+					"1hour": "1 giờ"
+				}
 			}
 		}
 	},

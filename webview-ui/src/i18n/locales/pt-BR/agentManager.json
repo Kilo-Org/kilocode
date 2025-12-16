@@ -40,7 +40,14 @@
 		"waitingForCli": "Inicializando sessão do agente...",
 		"autoModeWarning": "Executando em modo totalmente automático - o agente executará ações sem confirmação",
 		"cancelCreating": "Cancelar criação de sessão",
-		"cancelButton": "Cancelar"
+		"cancelButton": "Cancelar",
+		"selectBranch": "Selecionar branch",
+		"searchBranches": "Digite para pesquisar todos os branches",
+		"yourBranches": "Seus branches",
+		"otherBranches": "Outros branches",
+		"branchPickerTooltip": "Mudar branch base",
+		"noBranches": "Nenhum branch encontrado",
+		"noMatchingBranches": "Nenhum branch corresponde à sua pesquisa"
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",
