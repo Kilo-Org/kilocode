@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Start spraakinvoer",
-		"stopRecording": "Stop sprakinvoer"
+		"stopRecording": "Stop spraakinvoer",
+		"unavailableOpenAiKeyMissing": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI provider met een API-sleutel om spraaktranscriptie te gebruiken.",
+		"unavailableBoth": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI-provider en FFmpeg moet geïnstalleerd zijn.",
+		"unavailableFfmpegNotInstalled": "Spraak-naar-tekst is niet beschikbaar. Installeer FFmpeg om spraaktranscriptie te gebruiken."
 	}
 }

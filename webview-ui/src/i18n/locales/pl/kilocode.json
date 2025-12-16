@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Rozpocznij wprowadzanie głosowe",
-		"stopRecording": "Zatrzymaj wprowadzanie głosowe"
+		"stopRecording": "Zatrzymaj wprowadzanie głosowe",
+		"unavailableFfmpegNotInstalled": "Transkrypcja mowy na tekst jest niedostępna. Zainstaluj FFmpeg, aby korzystać z transkrypcji głosowej.",
+		"unavailableOpenAiKeyMissing": "Zamiana mowy na tekst jest niedostępna. Wymaga poprawnego dostawcy OpenAI z kluczem API, aby korzystać z transkrypcji głosowej.",
+		"unavailableBoth": "Funkcja zamiany mowy na tekst jest niedostępna. Wymaga ona prawidłowego dostawcy OpenAI oraz zainstalowanego FFmpeg."
 	}
 }

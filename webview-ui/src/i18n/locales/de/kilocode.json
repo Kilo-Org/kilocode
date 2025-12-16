@@ -327,6 +327,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Spracheingabe starten",
-		"stopRecording": "Spracheingabe stoppen"
+		"stopRecording": "Spracheingabe beenden",
+		"unavailableBoth": "Spracherkennung ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter und FFmpeg muss installiert sein.",
+		"unavailableFfmpegNotInstalled": "Sprache-zu-Text ist nicht verfügbar. Installieren Sie FFmpeg, um Sprachtranskription zu nutzen.",
+		"unavailableOpenAiKeyMissing": "Sprache-zu-Text ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um Sprachtranskription zu nutzen."
 	}
 }

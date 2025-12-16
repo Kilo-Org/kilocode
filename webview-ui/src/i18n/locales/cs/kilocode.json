@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Spustit hlasový vstup",
-		"stopRecording": "Zastavit hlasový vstup"
+		"stopRecording": "Zastavit hlasový vstup",
+		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
+		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
+		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
 	}
 }

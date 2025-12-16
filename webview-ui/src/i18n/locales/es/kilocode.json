@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
-		"stopRecording": "Detener entrada de voz"
+		"stopRecording": "Detener entrada de voz",
+		"unavailableOpenAiKeyMissing": "La conversión de voz a texto no está disponible. Requiere un proveedor OpenAI válido con una clave API para utilizar la transcripción de voz.",
+		"unavailableFfmpegNotInstalled": "La conversión de voz a texto no está disponible. Instale FFmpeg para usar la transcripción de voz.",
+		"unavailableBoth": "El reconocimiento de voz a texto no está disponible. Requiere un proveedor válido de OpenAI y FFmpeg debe estar instalado."
 	}
 }

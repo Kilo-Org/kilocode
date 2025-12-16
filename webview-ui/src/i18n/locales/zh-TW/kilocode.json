@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "开始语音输入",
-		"stopRecording": "停止语音输入"
+		"stopRecording": "停止语音输入",
+		"unavailableFfmpegNotInstalled": "语音转文本功能不可用。请安装FFmpeg以使用语音转录功能。",
+		"unavailableOpenAiKeyMissing": "语音转文字功能不可用。使用语音转录功能需要有效的OpenAI提供商及API密钥。",
+		"unavailableBoth": "语音转文字功能不可用。它需要有效的OpenAI提供商，并且必须安装FFmpeg。"
 	}
 }

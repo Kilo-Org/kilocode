@@ -1716,10 +1716,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							tooltipContent={
 								!speechToTextStatus?.available && speechToTextStatus
 									? speechToTextStatus.reason === "openaiKeyMissing"
-										? "Speech to text is unavailable. Configure an OpenAI API key to use voice transcription."
+										? t("kilocode:speechToText.unavailableOpenAiKeyMissing")
 										: speechToTextStatus.reason === "ffmpegNotInstalled"
-											? "Speech to text is unavailable. Install FFmpeg to use voice transcription."
-											: "Speech to text is unavailable. Configure an OpenAI API key and install FFmpeg to use voice transcription."
+											? t("kilocode:speechToText.unavailableFfmpegNotInstalled")
+											: t("kilocode:speechToText.unavailableBoth")
 									: undefined
 							}
 						/>

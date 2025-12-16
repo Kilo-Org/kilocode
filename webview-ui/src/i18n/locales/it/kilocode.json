@@ -327,7 +327,10 @@
 		"initiating": "Avvio autenticazione..."
 	},
 	"speechToText": {
-		"startRecording": "Avvia input vocale",
-		"stopRecording": "Interrompi input vocale"
+		"startRecording": "Inizia l'input vocale",
+		"stopRecording": "Interrompi input vocale",
+		"unavailableOpenAiKeyMissing": "La conversione da voce a testo non è disponibile. Richiede un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
+		"unavailableFfmpegNotInstalled": "La conversione vocale in testo non è disponibile. Installa FFmpeg per utilizzare la trascrizione vocale.",
+		"unavailableBoth": "Il riconoscimento vocale non è disponibile. Richiede un provider OpenAI valido e FFmpeg deve essere installato."
 	}
 }

@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Démarrer la saisie vocale",
-		"stopRecording": "Arrêter la saisie vocale"
+		"stopRecording": "Arrêter la saisie vocale",
+		"unavailableOpenAiKeyMissing": "La reconnaissance vocale est indisponible. Elle nécessite un fournisseur OpenAI valide avec une clé API pour utiliser la transcription vocale.",
+		"unavailableFfmpegNotInstalled": "La reconnaissance vocale n'est pas disponible. Installez FFmpeg pour utiliser la transcription vocale.",
+		"unavailableBoth": "La reconnaissance vocale n'est pas disponible. Elle nécessite un fournisseur OpenAI valide et FFmpeg doit être installé."
 	}
 }

@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"stopRecording": "Atura l'entrada de veu",
-		"startRecording": "Inicia l'entrada de veu"
+		"startRecording": "Inicia l'entrada de veu",
+		"unavailableFfmpegNotInstalled": "La transcripció de veu a text no està disponible. Instal·leu FFmpeg per utilitzar la transcripció de veu.",
+		"unavailableOpenAiKeyMissing": "La transcripció de veu a text no està disponible. Requereix un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+		"unavailableBoth": "La conversió de veu a text no està disponible. Requereix un proveïdor vàlid d'OpenAI i FFmpeg ha d'estar instal·lat."
 	}
 }

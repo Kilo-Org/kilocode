@@ -328,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Sesli girişi başlat",
-		"stopRecording": "Sesli girişi durdur"
+		"stopRecording": "Sesli girişi durdur",
+		"unavailableOpenAiKeyMissing": "Konuşmadan metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanabilmek için API anahtarına sahip geçerli bir OpenAI sağlayıcısı gerekiyor.",
+		"unavailableFfmpegNotInstalled": "Konuşmayı metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanmak için FFmpeg'i yükleyin.",
+		"unavailableBoth": "Konuşmadan metne dönüştürme özelliği kullanılamıyor. Geçerli bir OpenAI sağlayıcısı gerektirir ve FFmpeg yüklü olmalıdır."
 	}
 }
