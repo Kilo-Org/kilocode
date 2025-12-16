@@ -8,24 +8,24 @@ describe("buildCliArgs", () => {
 		expect(args).toContain("--json-io")
 	})
 
-	it("returns correct args for basic prompt", () => {
+	it("returns correct args for basic prompt (interactive mode by default)", () => {
 		const args = buildCliArgs("/workspace", "hello world")
 
-		expect(args).toEqual(["--auto", "--json-io", "--workspace=/workspace", "hello world"])
+		expect(args).toEqual(["--json-io", "--workspace=/workspace", "hello world"])
 	})
 
 	it("preserves prompt with special characters", () => {
 		const prompt = 'echo "$(whoami)"'
 		const args = buildCliArgs("/tmp", prompt)
 
-		expect(args).toHaveLength(4)
-		expect(args[3]).toBe(prompt)
+		expect(args).toHaveLength(3)
+		expect(args[2]).toBe(prompt)
 	})
 
 	it("handles workspace paths with spaces", () => {
 		const args = buildCliArgs("/path/with spaces/project", "test")
 
-		expect(args[2]).toBe("--workspace=/path/with spaces/project")
+		expect(args[1]).toBe("--workspace=/path/with spaces/project")
 	})
 
 	it("omits empty prompt from args (used for resume without new prompt)", () => {
@@ -33,14 +33,14 @@ describe("buildCliArgs", () => {
 
 		// Empty prompt should not be added to args - this is used when resuming
 		// a session with --session where we don't want to pass a new prompt
-		expect(args).toEqual(["--auto", "--json-io", "--workspace=/workspace"])
+		expect(args).toEqual(["--json-io", "--workspace=/workspace"])
 	})
 
 	it("handles multiline prompts", () => {
 		const prompt = "line1\nline2\nline3"
 		const args = buildCliArgs("/workspace", prompt)
 
-		expect(args[3]).toBe(prompt)
+		expect(args[2]).toBe(prompt)
 	})
 
 	it("includes --parallel flag when parallelMode is true", () => {
@@ -61,31 +61,23 @@ describe("buildCliArgs", () => {
 			sessionId: "session-id",
 		})
 
-		expect(args).toEqual([
-			"--auto",
-			"--json-io",
-			"--workspace=/workspace",
-			"--parallel",
-			"--session=session-id",
-			"prompt",
-		])
+		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--parallel", "--session=session-id", "prompt"])
 	})
 
-	it("includes --auto flag when autoMode is true", () => {
-		const args = buildCliArgs("/workspace", "prompt", { autoMode: true })
+	it("includes --yolo flag when yoloMode is true", () => {
+		const args = buildCliArgs("/workspace", "prompt", { yoloMode: true })
 
-		expect(args).toContain("--auto")
+		expect(args).toContain("--yolo")
 	})
 
-	it("combines --auto and --parallel flags when both options are set", () => {
+	it("combines --yolo and --parallel flags when both options are set", () => {
 		const args = buildCliArgs("/workspace", "prompt", {
 			parallelMode: true,
-			autoMode: true,
+			yoloMode: true,
 		})
 
 		expect(args).toContain("--parallel")
-		expect(args).toContain("--auto")
-		// --auto is always included by default now, autoMode is for backwards compatibility
-		expect(args).toEqual(["--auto", "--json-io", "--workspace=/workspace", "--parallel", "prompt"])
+		expect(args).toContain("--yolo")
+		expect(args).toEqual(["--json-io", "--workspace=/workspace", "--yolo", "--parallel", "prompt"])
 	})
 })

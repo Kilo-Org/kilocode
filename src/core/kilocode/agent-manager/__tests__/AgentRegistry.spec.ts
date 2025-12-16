@@ -440,45 +440,45 @@ describe("AgentRegistry", () => {
 			})
 		})
 
-		describe("autoMode", () => {
-			it("creates session without autoMode by default", () => {
-				const session = registry.createSession("session-1", "no auto mode")
-				expect(session.autoMode).toBeUndefined()
+		describe("yoloMode", () => {
+			it("creates session without yoloMode by default", () => {
+				const session = registry.createSession("session-1", "no yolo mode")
+				expect(session.yoloMode).toBeUndefined()
 			})
 
-			it("creates session with autoMode enabled when option is provided", () => {
-				const session = registry.createSession("session-1", "with auto mode", undefined, { autoMode: true })
-				expect(session.autoMode).toBe(true)
+			it("creates session with yoloMode enabled when option is provided", () => {
+				const session = registry.createSession("session-1", "with yolo mode", undefined, { yoloMode: true })
+				expect(session.yoloMode).toBe(true)
 			})
 
-			it("creates session without autoMode when option is false", () => {
-				const session = registry.createSession("session-1", "without auto mode", undefined, { autoMode: false })
-				expect(session.autoMode).toBeUndefined()
+			it("creates session without yoloMode when option is false", () => {
+				const session = registry.createSession("session-1", "without yolo mode", undefined, { yoloMode: false })
+				expect(session.yoloMode).toBeUndefined()
 			})
 
-			it("stores autoMode in pending session when provided", () => {
-				const pending = registry.setPendingSession("test prompt", { autoMode: true })
-				expect(pending.autoMode).toBe(true)
-				expect(registry.pendingSession?.autoMode).toBe(true)
+			it("stores yoloMode in pending session when provided", () => {
+				const pending = registry.setPendingSession("test prompt", { yoloMode: true })
+				expect(pending.yoloMode).toBe(true)
+				expect(registry.pendingSession?.yoloMode).toBe(true)
 			})
 
-			it("creates pending session without autoMode when not provided", () => {
+			it("creates pending session without yoloMode when not provided", () => {
 				const pending = registry.setPendingSession("test prompt")
-				expect(pending.autoMode).toBeUndefined()
+				expect(pending.yoloMode).toBeUndefined()
 			})
 
-			it("preserves autoMode in getState", () => {
-				registry.createSession("session-1", "auto mode session", undefined, { autoMode: true })
+			it("preserves yoloMode in getState", () => {
+				registry.createSession("session-1", "yolo mode session", undefined, { yoloMode: true })
 				const state = registry.getState()
-				expect(state.sessions[0].autoMode).toBe(true)
+				expect(state.sessions[0].yoloMode).toBe(true)
 			})
 
-			it("combines autoMode with parallelMode", () => {
+			it("combines yoloMode with parallelMode", () => {
 				const session = registry.createSession("session-1", "combined", undefined, {
 					parallelMode: true,
-					autoMode: true,
+					yoloMode: true,
 				})
-				expect(session.autoMode).toBe(true)
+				expect(session.yoloMode).toBe(true)
 				expect(session.parallelMode).toEqual({ enabled: true })
 			})
 		})

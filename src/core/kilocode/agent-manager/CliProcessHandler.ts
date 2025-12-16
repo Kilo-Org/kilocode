@@ -29,7 +29,7 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
-	autoMode?: boolean // True if session was started with --auto flag
+	yoloMode?: boolean // True if session was started with --yolo flag (auto-approve all tools)
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
@@ -109,7 +109,7 @@ export class CliProcessHandler {
 		options:
 			| {
 					parallelMode?: boolean
-					autoMode?: boolean
+					yoloMode?: boolean
 					sessionId?: string
 					label?: string
 					gitUrl?: string
@@ -141,7 +141,7 @@ export class CliProcessHandler {
 			// New session - create pending session state
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
-				autoMode: options?.autoMode,
+				yoloMode: options?.yoloMode,
 				gitUrl: options?.gitUrl,
 			})
 			this.debugLog(`Pending session created, waiting for CLI session_created event`)
@@ -151,7 +151,7 @@ export class CliProcessHandler {
 		// Build CLI command
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			parallelMode: options?.parallelMode,
-			autoMode: options?.autoMode,
+			yoloMode: options?.yoloMode,
 			sessionId: options?.sessionId,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
@@ -201,7 +201,7 @@ export class CliProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
-				autoMode: options?.autoMode,
+				yoloMode: options?.yoloMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
@@ -431,7 +431,7 @@ export class CliProcessHandler {
 			startTime,
 			parser,
 			parallelMode,
-			autoMode,
+			yoloMode,
 			worktreeBranch,
 			desiredSessionId,
 			desiredLabel,
@@ -455,7 +455,7 @@ export class CliProcessHandler {
 			// Create new session (also sets selectedId)
 			session = this.registry.createSession(sessionId, prompt, startTime, {
 				parallelMode,
-				autoMode,
+				yoloMode,
 				labelOverride: desiredLabel,
 				gitUrl,
 			})

@@ -300,7 +300,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			const config = configs[0]
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				autoMode: config.autoMode,
+				yoloMode: config.yoloMode,
 				labelOverride: config.label,
 			})
 			return
@@ -316,7 +316,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 			await this.startAgentSession(config.prompt, {
 				parallelMode: config.parallelMode,
-				autoMode: config.autoMode,
+				yoloMode: config.yoloMode,
 				labelOverride: config.label,
 			})
 
@@ -390,7 +390,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		prompt: string,
 		options?: {
 			parallelMode?: boolean
-			autoMode?: boolean
+			yoloMode?: boolean
 			labelOverride?: string
 		},
 	): Promise<void> {
@@ -452,7 +452,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
-				autoMode: options?.autoMode,
+				yoloMode: options?.yoloMode,
 				label: existingLabel,
 				gitUrl,
 				apiConfiguration,
@@ -739,16 +739,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * Send a follow-up message to a running agent session via stdin.
 	 */
 	public async sendMessage(sessionId: string, content: string, sessionLabel?: string): Promise<void> {
-		const session = this.registry.getSession(sessionId)
-
-		// Auto-mode sessions are non-interactive
-		if (session?.autoMode) {
-			this.outputChannel.appendLine(
-				`[AgentManager] Session ${sessionId} is running in auto mode; user input is disabled`,
-			)
-			return
-		}
-
 		if (!this.processHandler.hasStdin(sessionId)) {
 			// Session is not running - ignore the message
 			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} not running, ignoring follow-up message`)

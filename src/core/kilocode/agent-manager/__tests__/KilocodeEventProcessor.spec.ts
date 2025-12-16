@@ -232,4 +232,46 @@ describe("KilocodeEventProcessor", () => {
 		expect(stored?.[0].partial).toBe(true)
 		expect(stored?.[0].text).toBe("")
 	})
+
+	it("deduplicates command_output messages by executionId (not timestamp)", () => {
+		const deps = createDeps()
+		deps.firstApiReqStarted.set(sessionId, true)
+		const processor = new KilocodeEventProcessor(deps)
+
+		// First command_output event with isAnswered=false (waiting for approval)
+		const cmdOutputPending: KilocodeStreamEvent = {
+			streamEventType: "kilocode",
+			payload: {
+				type: "ask",
+				ask: "command_output",
+				partial: false,
+				isAnswered: false,
+				timestamp: 1000,
+				metadata: { executionId: "exec-3", command: "pwd", output: "/home/user\n" },
+			},
+		}
+
+		// Second command_output event with isAnswered=true (approved) - different timestamp
+		const cmdOutputApproved: KilocodeStreamEvent = {
+			streamEventType: "kilocode",
+			payload: {
+				type: "ask",
+				ask: "command_output",
+				partial: false,
+				isAnswered: true,
+				timestamp: 1003, // Different timestamp
+				metadata: { executionId: "exec-3", command: "pwd", output: "/home/user\n" },
+			},
+		}
+
+		processor.handle(sessionId, cmdOutputPending)
+		processor.handle(sessionId, cmdOutputApproved)
+
+		// Should only have one message (deduplicated by executionId)
+		const stored = deps.sessionMessages.get(sessionId)
+		expect(stored).toHaveLength(1)
+		expect(stored?.[0].ask).toBe("command_output")
+		expect(stored?.[0].isAnswered).toBe(true) // Should be the latest one
+		expect(stored?.[0].text).toBe("/home/user\n")
+	})
 })

@@ -31,7 +31,7 @@ export interface AgentSession {
 	source: SessionSource
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
-	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
+	yoloMode?: boolean // True if session was started with --yolo flag (auto-approve all tools)
 }
 
 /**
@@ -43,7 +43,7 @@ export interface PendingSession {
 	startTime: number
 	parallelMode?: boolean
 	gitUrl?: string
-	autoMode?: boolean // True if session will be started with --auto flag
+	yoloMode?: boolean // True if session will be started with --yolo flag
 }
 
 // Re-export remote session shape from shared session client for consistency

@@ -263,6 +263,14 @@ export class KilocodeEventProcessor {
 	}
 
 	private getMessageKey(message: ClineMessage): string {
+		// For command_output, use executionId from metadata for deduplication
+		// This ensures we don't show duplicate outputs when isAnswered changes from false to true
+		if (message.ask === "command_output" || message.say === "command_output") {
+			const executionId = (message.metadata as { executionId?: string } | undefined)?.executionId
+			if (executionId) {
+				return `command_output-${executionId}`
+			}
+		}
 		return `${message.ts}-${message.type}-${message.say ?? ""}-${message.ask ?? ""}`
 	}
 }

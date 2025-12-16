@@ -1,7 +1,7 @@
 export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
-	autoMode?: boolean
+	yoloMode?: boolean
 }
 
 /**
@@ -9,11 +9,15 @@ export interface BuildCliArgsOptions {
  * Uses --json-io for bidirectional communication via stdin/stdout.
  */
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
-	// Agent Manager runs agents in autonomous mode by default.
-	// Always use --json-io (enables stdin for bidirectional communication).
+	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
-	// autoMode option is accepted for backwards compatibility but --auto is always included
-	const args = ["--auto", "--json-io", `--workspace=${workspace}`]
+	const args = ["--json-io", `--workspace=${workspace}`]
+
+	// --yolo: auto-approve all tool permissions (file writes, command execution, etc.)
+	// Only enable when explicitly requested - default is interactive mode
+	if (options?.yoloMode) {
+		args.push("--yolo")
+	}
 
 	if (options?.parallelMode) {
 		args.push("--parallel")

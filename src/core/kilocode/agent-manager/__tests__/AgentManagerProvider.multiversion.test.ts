@@ -9,7 +9,7 @@ import { extractSessionConfigs, type SessionConfig } from "../multiVersionUtils"
  *
  * 1. Single version (count=1) should spawn once with the original prompt
  * 2. Multiple versions (count>1) should:
- *    - Always use parallelMode=true and autoMode=true
+ *    - Always use parallelMode=true and yoloMode=true (for autonomous tool approval)
  *    - Generate labels with (v1), (v2), etc. suffixes
  *    - Spawn sessions sequentially
  */
@@ -18,7 +18,7 @@ describe("Multi-version session spawning", () => {
 	describe("extractSessionConfigs", () => {
 		const prompt = "Build a todo app with React"
 
-		it("returns single config for version=1 without auto mode", () => {
+		it("returns single config for version=1 without yolo mode", () => {
 			const configs = extractSessionConfigs({
 				prompt,
 				versions: 1,
@@ -29,7 +29,7 @@ describe("Multi-version session spawning", () => {
 				prompt,
 				label: prompt.slice(0, 50),
 				parallelMode: false,
-				autoMode: false,
+				yoloMode: false,
 			})
 		})
 
@@ -42,7 +42,7 @@ describe("Multi-version session spawning", () => {
 
 			expect(configs).toHaveLength(1)
 			expect(configs[0].parallelMode).toBe(true)
-			expect(configs[0].autoMode).toBe(false)
+			expect(configs[0].yoloMode).toBe(false)
 		})
 
 		it("returns multiple configs for version>1", () => {
@@ -66,15 +66,15 @@ describe("Multi-version session spawning", () => {
 			expect(configs[1].parallelMode).toBe(true)
 		})
 
-		it("starts multi-version sessions interactively (autoMode=false)", () => {
+		it("starts multi-version sessions interactively (yoloMode=false)", () => {
 			const configs = extractSessionConfigs({
 				prompt,
 				versions: 2,
 			})
 
 			expect(configs).toHaveLength(2)
-			expect(configs[0].autoMode).toBe(false)
-			expect(configs[1].autoMode).toBe(false)
+			expect(configs[0].yoloMode).toBe(false)
+			expect(configs[1].yoloMode).toBe(false)
 		})
 
 		it("uses provided labels for multi-version", () => {
@@ -123,7 +123,7 @@ describe("Multi-version session spawning", () => {
 			expect(configs).toHaveLength(4)
 			configs.forEach((config) => {
 				expect(config.parallelMode).toBe(true)
-				expect(config.autoMode).toBe(false)
+				expect(config.yoloMode).toBe(false)
 			})
 		})
 
@@ -133,7 +133,7 @@ describe("Multi-version session spawning", () => {
 			})
 
 			expect(configs).toHaveLength(1)
-			expect(configs[0].autoMode).toBe(false)
+			expect(configs[0].yoloMode).toBe(false)
 		})
 
 		it("truncates label to 50 characters", () => {
