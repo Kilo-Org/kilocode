@@ -1,52 +1,106 @@
 import { ChatTextAreaAutocomplete } from "../ChatTextAreaAutocomplete"
-import { ProviderSettingsManager } from "../../../../core/config/ProviderSettingsManager"
 import { GhostModel } from "../../GhostModel"
-import { ApiStreamChunk } from "../../../../api/transform/stream"
+import { GhostInlineCompletionProvider } from "../../classic-auto-complete/GhostInlineCompletionProvider"
+import * as vscode from "vscode"
+
+// Mock vscode module
+vi.mock("vscode", () => ({
+	Uri: {
+		parse: vi.fn((str: string) => ({ toString: () => str, fsPath: str })),
+	},
+	workspace: {
+		openTextDocument: vi.fn(),
+	},
+	Position: vi.fn((line: number, char: number) => ({ line, character: char })),
+	InlineCompletionTriggerKind: {
+		Invoke: 0,
+		Automatic: 1,
+	},
+	CancellationTokenSource: vi.fn(() => ({
+		token: { isCancellationRequested: false },
+		cancel: vi.fn(),
+		dispose: vi.fn(),
+	})),
+}))
 
 describe("ChatTextAreaAutocomplete", () => {
 	let autocomplete: ChatTextAreaAutocomplete
-	let mockProviderSettingsManager: ProviderSettingsManager
+	let mockInlineCompletionProvider: GhostInlineCompletionProvider
+	let mockDocument: any
 
 	beforeEach(() => {
-		mockProviderSettingsManager = {} as ProviderSettingsManager
-		autocomplete = new ChatTextAreaAutocomplete(mockProviderSettingsManager)
+		// Create a mock document
+		mockDocument = {
+			uri: { toString: () => "untitled:test", fsPath: "untitled:test" },
+			getText: vi.fn().mockReturnValue(""),
+			lineCount: 1,
+			positionAt: vi.fn((offset: number) => ({ line: 0, character: offset })),
+		}
+
+		// Mock vscode.workspace.openTextDocument
+		vi.mocked(vscode.workspace.openTextDocument).mockResolvedValue(mockDocument)
+
+		// Create a mock inline completion provider with minimal required properties
+		mockInlineCompletionProvider = {
+			provideInlineCompletionItems_Internal: vi.fn(),
+		} as any as GhostInlineCompletionProvider
+
+		autocomplete = new ChatTextAreaAutocomplete(mockInlineCompletionProvider)
+	})
+
+	afterEach(() => {
+		vi.clearAllMocks()
 	})
 
 	describe("getCompletion", () => {
-		it("should work with non-FIM models using chat-based completion", async () => {
-			// Setup: Model without FIM support (like Mistral)
-			const mockModel = new GhostModel()
-			mockModel.loaded = true
+		it("should use the inline completion provider to get suggestions", async () => {
+			// Mock the inline completion provider to return a suggestion
+			const mockCompletions = [
+				{
+					insertText: "write a function",
+					range: {} as any,
+				},
+			]
 
-			vi.spyOn(mockModel, "hasValidCredentials").mockReturnValue(true)
-			vi.spyOn(mockModel, "supportsFim").mockReturnValue(false)
-			vi.spyOn(mockModel, "generateResponse").mockImplementation(async (systemPrompt, userPrompt, onChunk) => {
-				// Simulate streaming chat response
-				const chunks: ApiStreamChunk[] = [{ type: "text", text: "write a function" }]
-				for (const chunk of chunks) {
-					onChunk(chunk)
-				}
-				return {
-					cost: 0,
-					inputTokens: 15,
-					outputTokens: 8,
-					cacheWriteTokens: 0,
-					cacheReadTokens: 0,
-				}
-			})
-
-			// @ts-expect-error - accessing private property for test
-			autocomplete.model = mockModel
+			vi.mocked(mockInlineCompletionProvider.provideInlineCompletionItems_Internal).mockResolvedValue(
+				mockCompletions as any,
+			)
 
 			const result = await autocomplete.getCompletion("How to ")
 
-			expect(mockModel.generateResponse).toHaveBeenCalled()
+			expect(mockInlineCompletionProvider.provideInlineCompletionItems_Internal).toHaveBeenCalled()
 			expect(result.suggestion).toBe("write a function")
+		})
+
+		it("should return empty suggestion when no completions are available", async () => {
+			vi.mocked(mockInlineCompletionProvider.provideInlineCompletionItems_Internal).mockResolvedValue([])
+
+			const result = await autocomplete.getCompletion("How to ")
+
+			expect(result.suggestion).toBe("")
 		})
 	})
 
 	describe("isFimAvailable", () => {
-		it("should return false when model is not loaded", () => {
+		it("should check if model has valid credentials", () => {
+			// Mock the model property on the provider
+			const mockModel = {
+				hasValidCredentials: vi.fn().mockReturnValue(true),
+			}
+			;(mockInlineCompletionProvider as any).model = mockModel
+
+			const result = autocomplete.isFimAvailable()
+
+			expect(result).toBe(true)
+			expect(mockModel.hasValidCredentials).toHaveBeenCalled()
+		})
+
+		it("should return false when model has no valid credentials", () => {
+			const mockModel = {
+				hasValidCredentials: vi.fn().mockReturnValue(false),
+			}
+			;(mockInlineCompletionProvider as any).model = mockModel
+
 			const result = autocomplete.isFimAvailable()
 			expect(result).toBe(false)
 		})

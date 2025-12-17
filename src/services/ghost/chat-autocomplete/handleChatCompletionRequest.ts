@@ -5,7 +5,7 @@ import { ChatTextAreaAutocomplete } from "./ChatTextAreaAutocomplete"
 
 /**
  * Handles a chat completion request from the webview.
- * Captures visible code context and generates a FIM-based autocomplete suggestion.
+ * Captures visible code context and generates autocomplete suggestions using the inline completion provider.
  */
 export async function handleChatCompletionRequest(
 	message: WebviewMessage & { type: "requestChatCompletion" },
@@ -22,7 +22,13 @@ export async function handleChatCompletionRequest(
 
 		const visibleContext = await tracker.captureVisibleCode()
 
-		const autocomplete = new ChatTextAreaAutocomplete(provider.providerSettingsManager)
+		// Get the inline completion provider from the ghost service manager
+		const ghostServiceManager = provider.getGhostServiceManager()
+		if (!ghostServiceManager) {
+			throw new Error("Ghost service manager not available")
+		}
+
+		const autocomplete = new ChatTextAreaAutocomplete(ghostServiceManager.inlineCompletionProvider)
 		const { suggestion } = await autocomplete.getCompletion(userText, visibleContext)
 
 		await provider.postMessageToWebview({ type: "chatCompletionResult", text: suggestion, requestId })

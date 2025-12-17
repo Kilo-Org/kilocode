@@ -1,105 +1,87 @@
 import * as vscode from "vscode"
-import { GhostModel } from "../GhostModel"
-import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
+import { GhostInlineCompletionProvider } from "../classic-auto-complete/GhostInlineCompletionProvider"
 import { VisibleCodeContext } from "../types"
-import { ApiStreamChunk } from "../../../api/transform/stream"
 
 /**
- * Service for providing FIM-based autocomplete suggestions in ChatTextArea
+ * Service for providing autocomplete suggestions in ChatTextArea
+ * Uses the GhostInlineCompletionProvider to avoid duplicating logic
  */
 export class ChatTextAreaAutocomplete {
-	private model: GhostModel
-	private providerSettingsManager: ProviderSettingsManager
+	private inlineCompletionProvider: GhostInlineCompletionProvider
 
-	constructor(providerSettingsManager: ProviderSettingsManager) {
-		this.model = new GhostModel()
-		this.providerSettingsManager = providerSettingsManager
-	}
-
-	async initialize(): Promise<boolean> {
-		return this.model.reload(this.providerSettingsManager)
+	constructor(inlineCompletionProvider: GhostInlineCompletionProvider) {
+		this.inlineCompletionProvider = inlineCompletionProvider
 	}
 
 	/**
-	 * Check if we can successfully make a FIM request.
-	 * Validates that model is loaded, has valid API handler, and supports FIM.
+	 * Check if we can successfully make a completion request.
+	 * Validates that model is loaded and has valid credentials.
 	 */
 	isFimAvailable(): boolean {
-		return this.model.hasValidCredentials() && this.model.supportsFim()
+		// Access the model through the provider's public properties
+		const model = (this.inlineCompletionProvider as any).model
+		return model?.hasValidCredentials() ?? false
 	}
 
 	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
-		if (!this.model.loaded) {
-			const loaded = await this.initialize()
-			if (!loaded) {
-				return { suggestion: "" }
-			}
+		// Create a virtual document with the user text and context
+		const documentContent = await this.buildDocumentContent(userText, visibleCodeContext)
+
+		// Create a virtual document
+		const uri = vscode.Uri.parse(`untitled:chat-completion-${Date.now()}.txt`)
+		const document = await vscode.workspace.openTextDocument({
+			content: documentContent,
+			language: "plaintext",
+		})
+
+		// Position at the end of the user text (before any context)
+		const position = document.positionAt(userText.length)
+
+		// Create completion context for manual trigger
+		const context: vscode.InlineCompletionContext = {
+			triggerKind: vscode.InlineCompletionTriggerKind.Invoke,
+			selectedCompletionInfo: undefined,
 		}
+		const tokenSource = new vscode.CancellationTokenSource()
 
-		// Check if model has valid credentials (but don't require FIM)
-		if (!this.model.hasValidCredentials()) {
-			return { suggestion: "" }
-		}
+		try {
+			// Use the internal method to bypass auto-trigger check
+			const completions = await this.inlineCompletionProvider.provideInlineCompletionItems_Internal(
+				document,
+				position,
+				context,
+				tokenSource.token,
+			)
 
-		const prefix = await this.buildPrefix(userText, visibleCodeContext)
-		const suffix = ""
+			// Extract the suggestion text
+			if (completions && (Array.isArray(completions) ? completions.length > 0 : completions.items.length > 0)) {
+				const items = Array.isArray(completions) ? completions : completions.items
+				const firstCompletion = items[0]
 
-		let response = ""
+				if (firstCompletion && firstCompletion.insertText) {
+					const insertText =
+						typeof firstCompletion.insertText === "string"
+							? firstCompletion.insertText
+							: firstCompletion.insertText.value
 
-		// Use FIM if supported, otherwise fall back to chat-based completion
-		if (this.model.supportsFim()) {
-			await this.model.generateFimResponse(prefix, suffix, (chunk) => {
-				response += chunk
-			})
-		} else {
-			// Fall back to chat-based completion for models without FIM support
-			const systemPrompt = this.getChatSystemPrompt()
-			const userPrompt = this.getChatUserPrompt(prefix)
-
-			await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
-				if (chunk.type === "text") {
-					response += chunk.text
+					const cleanedSuggestion = this.cleanSuggestion(insertText, userText)
+					return { suggestion: cleanedSuggestion }
 				}
-			})
+			}
+
+			return { suggestion: "" }
+		} finally {
+			tokenSource.dispose()
 		}
-
-		const cleanedSuggestion = this.cleanSuggestion(response, userText)
-
-		return { suggestion: cleanedSuggestion }
 	}
 
 	/**
-	 * Get system prompt for chat-based completion
+	 * Build document content with visible code context and additional sources
 	 */
-	private getChatSystemPrompt(): string {
-		return `You are an intelligent chat completion assistant. Your task is to complete the user's message naturally based on the provided context.
-
-## RULES
-- Provide a natural, conversational completion
-- Be concise - typically 1-15 words
-- Match the user's tone and style
-- Use context from visible code if relevant
-- NEVER repeat what the user already typed
-- NEVER start with comments (//, /*, #)
-- Return ONLY the completion text, no explanations or formatting`
-	}
-
-	/**
-	 * Get user prompt for chat-based completion
-	 */
-	private getChatUserPrompt(prefix: string): string {
-		return `${prefix}
-
-TASK: Complete the user's message naturally. Return ONLY the completion text (what comes next), no explanations.`
-	}
-
-	/**
-	 * Build the prefix for FIM completion with visible code context and additional sources
-	 */
-	private async buildPrefix(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
+	private async buildDocumentContent(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
 		const contextParts: string[] = []
 
-		// Add visible code context (replaces cursor-based prefix/suffix)
+		// Add visible code context
 		if (visibleCodeContext && visibleCodeContext.editors.length > 0) {
 			contextParts.push("// Code visible in editor:")
 
