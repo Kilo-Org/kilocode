@@ -626,15 +626,19 @@ export class ExtensionHost extends EventEmitter {
 					},
 				) => {
 					this.safeExecute(() => {
-						// Create a unique ID for this message to prevent loops
-						const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
+						// Skip deduplication for messageUpdated - these are streaming updates that should always be processed
+						// The message reconciliation logic in extension.ts will handle any actual duplicates
+						if (message.type !== "messageUpdated") {
+							// For other message types, use timestamp and content for deduplication
+							const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
 
-						if (processedMessageIds.has(messageId)) {
-							logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
-							return
+							if (processedMessageIds.has(messageId)) {
+								logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
+								return
+							}
+
+							processedMessageIds.add(messageId)
 						}
-
-						processedMessageIds.add(messageId)
 
 						// Clean up old message IDs to prevent memory leaks
 						if (processedMessageIds.size > 100) {
