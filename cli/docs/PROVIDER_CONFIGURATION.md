@@ -64,6 +64,58 @@ You can configure providers using:
 
 ---
 
+## Common Model Settings
+
+All providers support the following optional model settings that control the behavior of the AI model. These can be configured via config.json or environment variables:
+
+| Setting                 | JSON Field               | Environment Variable             | Description                                            |
+| ----------------------- | ------------------------ | -------------------------------- | ------------------------------------------------------ |
+| Reasoning Effort        | `reasoningEffort`        | `KILO_REASONING_EFFORT`          | Controls how much the model "thinks" before responding |
+| Verbosity               | `verbosity`              | `KILO_VERBOSITY`                 | Controls the verbosity level of the model output       |
+| Temperature             | `modelTemperature`       | `KILO_MODEL_TEMPERATURE`         | Temperature for model sampling (0.0-2.0)               |
+| Max Output Tokens       | `modelMaxTokens`         | `KILO_MODEL_MAX_TOKENS`          | Maximum output tokens                                  |
+| Max Thinking Tokens     | `modelMaxThinkingTokens` | `KILO_MODEL_MAX_THINKING_TOKENS` | Maximum thinking tokens for reasoning models           |
+| Enable Reasoning Effort | `enableReasoningEffort`  | `KILO_ENABLE_REASONING_EFFORT`   | Enable/disable reasoning effort setting                |
+
+### Reasoning Effort Values
+
+The `reasoningEffort` setting controls how much "thinking" the model does before responding:
+
+- `disable`: Completely disable reasoning/thinking
+- `none`: No reasoning effort
+- `minimal`: Minimal reasoning
+- `low`: Low reasoning effort
+- `medium`: Medium reasoning effort (balanced)
+- `high`: High reasoning effort (more thorough)
+- `xhigh`: Extra high reasoning effort (most thorough, slower)
+
+### Verbosity Values
+
+The `verbosity` setting controls how verbose the model output is:
+
+- `low`: Concise responses
+- `medium`: Balanced responses
+- `high`: Detailed, verbose responses
+
+### Example with Model Settings
+
+```json
+{
+	"id": "anthropic-high-reasoning",
+	"provider": "anthropic",
+	"apiKey": "sk-ant-...",
+	"apiModelId": "claude-sonnet-4-20250514",
+	"reasoningEffort": "high",
+	"verbosity": "medium",
+	"modelTemperature": 0.7,
+	"modelMaxTokens": 4096,
+	"modelMaxThinkingTokens": 8192,
+	"enableReasoningEffort": true
+}
+```
+
+---
+
 ## Provider Details
 
 ### kilocode

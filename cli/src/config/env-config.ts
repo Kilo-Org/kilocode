@@ -11,6 +11,8 @@ import {
 	parseNumber,
 	parseArray,
 	snakeToCamelCase,
+	parseReasoningEffort,
+	parseVerbosity,
 } from "./env-utils.js"
 import { envConfigExists, getMissingEnvVars } from "./provider-validation.js"
 
@@ -315,6 +317,54 @@ function getProviderOverrideFields(provider: string): Array<{ fieldName: string;
 }
 
 /**
+ * Apply model settings from environment variables to a provider config
+ * These settings are common to all providers and control model behavior
+ */
+function applyModelSettingsFromEnv(config: Record<string, unknown>): void {
+	// Reasoning effort
+	const reasoningEffort = parseReasoningEffort(process.env[ENV_VARS.REASONING_EFFORT])
+	if (reasoningEffort) {
+		config.reasoningEffort = reasoningEffort
+		logs.info(`Model setting: reasoningEffort set to "${reasoningEffort}"`, "EnvConfig")
+	}
+
+	// Verbosity
+	const verbosity = parseVerbosity(process.env[ENV_VARS.VERBOSITY])
+	if (verbosity) {
+		config.verbosity = verbosity
+		logs.info(`Model setting: verbosity set to "${verbosity}"`, "EnvConfig")
+	}
+
+	// Model temperature
+	const modelTemperature = parseNumber(process.env[ENV_VARS.MODEL_TEMPERATURE])
+	if (modelTemperature !== undefined) {
+		config.modelTemperature = modelTemperature
+		logs.info(`Model setting: modelTemperature set to "${modelTemperature}"`, "EnvConfig")
+	}
+
+	// Model max tokens
+	const modelMaxTokens = parseNumber(process.env[ENV_VARS.MODEL_MAX_TOKENS])
+	if (modelMaxTokens !== undefined) {
+		config.modelMaxTokens = modelMaxTokens
+		logs.info(`Model setting: modelMaxTokens set to "${modelMaxTokens}"`, "EnvConfig")
+	}
+
+	// Model max thinking tokens
+	const modelMaxThinkingTokens = parseNumber(process.env[ENV_VARS.MODEL_MAX_THINKING_TOKENS])
+	if (modelMaxThinkingTokens !== undefined) {
+		config.modelMaxThinkingTokens = modelMaxThinkingTokens
+		logs.info(`Model setting: modelMaxThinkingTokens set to "${modelMaxThinkingTokens}"`, "EnvConfig")
+	}
+
+	// Enable reasoning effort
+	const enableReasoningEffort = parseBoolean(process.env[ENV_VARS.ENABLE_REASONING_EFFORT])
+	if (enableReasoningEffort !== undefined) {
+		config.enableReasoningEffort = enableReasoningEffort
+		logs.info(`Model setting: enableReasoningEffort set to "${enableReasoningEffort}"`, "EnvConfig")
+	}
+}
+
+/**
  * Build provider configuration from environment variables
  * Uses the provider-specific environment variable patterns
  *
@@ -345,6 +395,9 @@ function buildProviderFromEnv(providerType: string): ProviderConfig {
 			"EnvConfig",
 		)
 	}
+
+	// Apply model settings from environment variables
+	applyModelSettingsFromEnv(baseConfig)
 
 	return baseConfig as ProviderConfig
 }
@@ -396,6 +449,15 @@ export function buildConfigFromEnv(): CLIConfig | null {
  * - KILO_TELEMETRY: Override telemetry setting (true/false)
  * - KILO_THEME: Override the UI theme
  * - KILO_AUTO_APPROVAL_*: Override auto-approval settings
+ *
+ * Model settings (applied to provider):
+ * - KILO_REASONING_EFFORT: Set reasoning effort level (disable|none|minimal|low|medium|high|xhigh)
+ * - KILO_VERBOSITY: Set output verbosity (low|medium|high)
+ * - KILO_MODEL_TEMPERATURE: Set model temperature (number)
+ * - KILO_MODEL_MAX_TOKENS: Set maximum output tokens (number)
+ * - KILO_MODEL_MAX_THINKING_TOKENS: Set maximum thinking tokens for reasoning models (number)
+ * - KILO_ENABLE_REASONING_EFFORT: Enable/disable reasoning effort setting (true/false)
+ *
  * - For Kilocode provider: KILOCODE_<FIELD_NAME> (e.g., KILOCODE_MODEL → kilocodeModel)
  *   Examples:
  *   - KILOCODE_MODEL → kilocodeModel
@@ -448,13 +510,22 @@ export function applyEnvOverrides(config: CLIConfig): CLIConfig {
 	// Find all environment variable overrides for the current provider
 	const overrideFields = getProviderOverrideFields(currentProvider.provider)
 
-	if (overrideFields.length > 0) {
+	// Check if any model settings need to be applied
+	const hasModelSettings =
+		process.env[ENV_VARS.REASONING_EFFORT] ||
+		process.env[ENV_VARS.VERBOSITY] ||
+		process.env[ENV_VARS.MODEL_TEMPERATURE] ||
+		process.env[ENV_VARS.MODEL_MAX_TOKENS] ||
+		process.env[ENV_VARS.MODEL_MAX_THINKING_TOKENS] ||
+		process.env[ENV_VARS.ENABLE_REASONING_EFFORT]
+
+	if (overrideFields.length > 0 || hasModelSettings) {
 		// Create a new providers array with the updated provider
 		overriddenConfig.providers = overriddenConfig.providers.map((p) => {
 			if (p.id === currentProvider.id) {
-				const updatedProvider = { ...p }
+				const updatedProvider: Record<string, unknown> = { ...p }
 
-				// Apply each override
+				// Apply each provider-specific override
 				for (const { fieldName, value } of overrideFields) {
 					updatedProvider[fieldName] = value
 
@@ -464,7 +535,10 @@ export function applyEnvOverrides(config: CLIConfig): CLIConfig {
 					)
 				}
 
-				return updatedProvider
+				// Apply model settings from environment variables
+				applyModelSettingsFromEnv(updatedProvider)
+
+				return updatedProvider as ProviderConfig
 			}
 
 			return p

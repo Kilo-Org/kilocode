@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { applyEnvOverrides, PROVIDER_ENV_VAR, KILOCODE_PREFIX, KILO_PREFIX } from "../env-config.js"
+import { ENV_VARS } from "../env-utils.js"
 import type { CLIConfig } from "../types.js"
 
 describe("env-overrides", () => {
@@ -248,6 +249,148 @@ describe("env-overrides", () => {
 
 			const provider = result.providers.find((p) => p.id === "anthropic-provider")
 			expect(provider?.provider).toBe("anthropic") // Original value
+		})
+	})
+
+	describe("Model settings overrides", () => {
+		it("should apply KILO_REASONING_EFFORT to current provider", () => {
+			process.env[ENV_VARS.REASONING_EFFORT] = "high"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.reasoningEffort).toBe("high")
+		})
+
+		it("should apply KILO_VERBOSITY to current provider", () => {
+			process.env[ENV_VARS.VERBOSITY] = "medium"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.verbosity).toBe("medium")
+		})
+
+		it("should apply KILO_MODEL_TEMPERATURE to current provider", () => {
+			process.env[ENV_VARS.MODEL_TEMPERATURE] = "0.7"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.modelTemperature).toBe(0.7)
+		})
+
+		it("should apply KILO_MODEL_MAX_TOKENS to current provider", () => {
+			process.env[ENV_VARS.MODEL_MAX_TOKENS] = "4096"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.modelMaxTokens).toBe(4096)
+		})
+
+		it("should apply KILO_MODEL_MAX_THINKING_TOKENS to current provider", () => {
+			process.env[ENV_VARS.MODEL_MAX_THINKING_TOKENS] = "8192"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.modelMaxThinkingTokens).toBe(8192)
+		})
+
+		it("should apply KILO_ENABLE_REASONING_EFFORT to current provider", () => {
+			process.env[ENV_VARS.ENABLE_REASONING_EFFORT] = "true"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.enableReasoningEffort).toBe(true)
+		})
+
+		it("should apply model settings to non-kilocode provider", () => {
+			process.env[PROVIDER_ENV_VAR] = "anthropic-provider"
+			process.env[ENV_VARS.REASONING_EFFORT] = "high"
+			process.env[ENV_VARS.VERBOSITY] = "low"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "anthropic-provider")
+			expect(provider?.reasoningEffort).toBe("high")
+			expect(provider?.verbosity).toBe("low")
+		})
+
+		it("should apply multiple model settings at once", () => {
+			process.env[ENV_VARS.REASONING_EFFORT] = "medium"
+			process.env[ENV_VARS.VERBOSITY] = "high"
+			process.env[ENV_VARS.MODEL_TEMPERATURE] = "0.5"
+			process.env[ENV_VARS.MODEL_MAX_TOKENS] = "2048"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.reasoningEffort).toBe("medium")
+			expect(provider?.verbosity).toBe("high")
+			expect(provider?.modelTemperature).toBe(0.5)
+			expect(provider?.modelMaxTokens).toBe(2048)
+		})
+
+		it("should validate reasoning effort values", () => {
+			process.env[ENV_VARS.REASONING_EFFORT] = "invalid-value"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.reasoningEffort).toBeUndefined()
+		})
+
+		it("should validate verbosity values", () => {
+			process.env[ENV_VARS.VERBOSITY] = "invalid-value"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.verbosity).toBeUndefined()
+		})
+
+		it("should handle case-insensitive reasoning effort values", () => {
+			process.env[ENV_VARS.REASONING_EFFORT] = "HIGH"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.reasoningEffort).toBe("high")
+		})
+
+		it("should handle case-insensitive verbosity values", () => {
+			process.env[ENV_VARS.VERBOSITY] = "MEDIUM"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.verbosity).toBe("medium")
+		})
+
+		it("should apply model settings together with provider field overrides", () => {
+			process.env[`${KILOCODE_PREFIX}MODEL`] = "anthropic/claude-opus-4.0"
+			process.env[ENV_VARS.REASONING_EFFORT] = "high"
+			process.env[ENV_VARS.VERBOSITY] = "medium"
+
+			const result = applyEnvOverrides(testConfig)
+
+			const provider = result.providers.find((p) => p.id === "default")
+			expect(provider?.kilocodeModel).toBe("anthropic/claude-opus-4.0")
+			expect(provider?.reasoningEffort).toBe("high")
+			expect(provider?.verbosity).toBe("medium")
+		})
+
+		it("should not apply model settings when there is no current provider", () => {
+			testConfig.provider = "nonexistent"
+			process.env[ENV_VARS.REASONING_EFFORT] = "high"
+
+			const result = applyEnvOverrides(testConfig)
+
+			// Config should be unchanged as no valid provider exists
+			expect(result.providers).toEqual(testConfig.providers)
 		})
 	})
 })

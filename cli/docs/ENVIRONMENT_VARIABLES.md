@@ -19,6 +19,41 @@ The Kilo Code CLI can be fully configured using environment variables, allowing 
 
 \*Required when running without config.json
 
+## Model Settings
+
+These settings control the behavior of the model and apply to all providers:
+
+| Variable                         | Description                                                               | Default | Values                                                         |
+| -------------------------------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------------------------- |
+| `KILO_REASONING_EFFORT`          | Controls how much the model "thinks" before responding                    | -       | `disable`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh` |
+| `KILO_VERBOSITY`                 | Controls the verbosity level of the model output                          | -       | `low`, `medium`, `high`                                        |
+| `KILO_MODEL_TEMPERATURE`         | Temperature for model sampling (0.0-2.0)                                  | -       | Number (e.g., `0.7`)                                           |
+| `KILO_MODEL_MAX_TOKENS`          | Maximum output tokens                                                     | -       | Number (e.g., `4096`)                                          |
+| `KILO_MODEL_MAX_THINKING_TOKENS` | Maximum thinking tokens for reasoning models (e.g., Claude with thinking) | -       | Number (e.g., `8192`)                                          |
+| `KILO_ENABLE_REASONING_EFFORT`   | Enable/disable reasoning effort setting                                   | -       | `true`, `false`                                                |
+
+### Reasoning Effort Values
+
+- `disable`: Completely disable reasoning/thinking
+- `none`: No reasoning effort
+- `minimal`: Minimal reasoning
+- `low`: Low reasoning effort
+- `medium`: Medium reasoning effort (balanced)
+- `high`: High reasoning effort (more thorough)
+- `xhigh`: Extra high reasoning effort (most thorough, slower)
+
+### Example with Model Settings
+
+```bash
+export KILO_PROVIDER_TYPE=anthropic
+export KILO_API_KEY=your-api-key
+export KILO_API_MODEL_ID=claude-sonnet-4-20250514
+export KILO_REASONING_EFFORT=high
+export KILO_VERBOSITY=medium
+export KILO_MODEL_TEMPERATURE=0.7
+kilocode
+```
+
 ## Provider-Specific Configuration
 
 ### Kilocode Provider

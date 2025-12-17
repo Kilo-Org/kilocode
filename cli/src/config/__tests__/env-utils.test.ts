@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest"
-import { parseBoolean, parseNumber, parseArray, snakeToCamelCase } from "../env-utils.js"
+import {
+	parseBoolean,
+	parseNumber,
+	parseArray,
+	snakeToCamelCase,
+	parseReasoningEffort,
+	parseVerbosity,
+	VALID_REASONING_EFFORT_VALUES,
+	VALID_VERBOSITY_VALUES,
+} from "../env-utils.js"
 
 describe("env-utils", () => {
 	describe("parseBoolean", () => {
@@ -119,6 +128,81 @@ describe("env-utils", () => {
 		it("should handle KILOCODE_ prefix", () => {
 			expect(snakeToCamelCase("KILOCODE_MODEL")).toBe("kilocodeModel")
 			expect(snakeToCamelCase("KILOCODE_ORGANIZATION_ID")).toBe("kilocodeOrganizationId")
+		})
+	})
+
+	describe("parseReasoningEffort", () => {
+		it("should parse all valid reasoning effort values", () => {
+			for (const value of VALID_REASONING_EFFORT_VALUES) {
+				expect(parseReasoningEffort(value)).toBe(value)
+			}
+		})
+
+		it("should parse reasoning effort values case-insensitively", () => {
+			expect(parseReasoningEffort("HIGH")).toBe("high")
+			expect(parseReasoningEffort("Medium")).toBe("medium")
+			expect(parseReasoningEffort("DISABLE")).toBe("disable")
+		})
+
+		it("should trim whitespace", () => {
+			expect(parseReasoningEffort("  high  ")).toBe("high")
+			expect(parseReasoningEffort("\tmedium\n")).toBe("medium")
+		})
+
+		it("should return undefined for invalid values", () => {
+			expect(parseReasoningEffort("invalid")).toBeUndefined()
+			expect(parseReasoningEffort("very-high")).toBeUndefined()
+		})
+
+		it("should return undefined for empty string", () => {
+			expect(parseReasoningEffort("")).toBeUndefined()
+		})
+
+		it("should return undefined for undefined", () => {
+			expect(parseReasoningEffort(undefined)).toBeUndefined()
+		})
+
+		it("should return default value when provided", () => {
+			expect(parseReasoningEffort(undefined, "medium")).toBe("medium")
+			expect(parseReasoningEffort("invalid", "high")).toBe("high")
+		})
+	})
+
+	describe("parseVerbosity", () => {
+		it("should parse all valid verbosity values", () => {
+			for (const value of VALID_VERBOSITY_VALUES) {
+				expect(parseVerbosity(value)).toBe(value)
+			}
+		})
+
+		it("should parse verbosity values case-insensitively", () => {
+			expect(parseVerbosity("HIGH")).toBe("high")
+			expect(parseVerbosity("Medium")).toBe("medium")
+			expect(parseVerbosity("LOW")).toBe("low")
+		})
+
+		it("should trim whitespace", () => {
+			expect(parseVerbosity("  high  ")).toBe("high")
+			expect(parseVerbosity("\tmedium\n")).toBe("medium")
+		})
+
+		it("should return undefined for invalid values", () => {
+			expect(parseVerbosity("invalid")).toBeUndefined()
+			expect(parseVerbosity("very-high")).toBeUndefined()
+			expect(parseVerbosity("xhigh")).toBeUndefined() // Valid for reasoningEffort but not for verbosity
+		})
+
+		it("should return undefined for empty string", () => {
+			expect(parseVerbosity("")).toBeUndefined()
+		})
+
+		it("should return undefined for undefined", () => {
+			expect(parseVerbosity(undefined)).toBeUndefined()
+		})
+
+		it("should return default value when provided", () => {
+			expect(parseVerbosity(undefined, "medium")).toBe("medium")
+			expect(parseVerbosity("invalid", "high")).toBe("high")
 		})
 	})
 })

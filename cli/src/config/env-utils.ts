@@ -14,6 +14,14 @@ export const ENV_VARS = {
 	PROVIDER: "KILO_PROVIDER",
 	PROVIDER_TYPE: "KILO_PROVIDER_TYPE",
 
+	// Model reasoning and verbosity settings
+	REASONING_EFFORT: "KILO_REASONING_EFFORT",
+	VERBOSITY: "KILO_VERBOSITY",
+	MODEL_TEMPERATURE: "KILO_MODEL_TEMPERATURE",
+	MODEL_MAX_TOKENS: "KILO_MODEL_MAX_TOKENS",
+	MODEL_MAX_THINKING_TOKENS: "KILO_MODEL_MAX_THINKING_TOKENS",
+	ENABLE_REASONING_EFFORT: "KILO_ENABLE_REASONING_EFFORT",
+
 	// Auto-approval settings
 	AUTO_APPROVAL_ENABLED: "KILO_AUTO_APPROVAL_ENABLED",
 	AUTO_APPROVAL_READ_ENABLED: "KILO_AUTO_APPROVAL_READ_ENABLED",
@@ -59,7 +67,26 @@ export const SPECIFIC_ENV_VARS = new Set([
 	ENV_VARS.MODE,
 	ENV_VARS.TELEMETRY,
 	ENV_VARS.THEME,
+	ENV_VARS.REASONING_EFFORT,
+	ENV_VARS.VERBOSITY,
+	ENV_VARS.MODEL_TEMPERATURE,
+	ENV_VARS.MODEL_MAX_TOKENS,
+	ENV_VARS.MODEL_MAX_THINKING_TOKENS,
+	ENV_VARS.ENABLE_REASONING_EFFORT,
 ])
+
+/**
+ * Valid reasoning effort values
+ */
+export const VALID_REASONING_EFFORT_VALUES = ["disable", "none", "minimal", "low", "medium", "high", "xhigh"] as const
+
+/**
+ * Valid verbosity values
+ */
+export const VALID_VERBOSITY_VALUES = ["low", "medium", "high"] as const
+
+export type ReasoningEffortSetting = (typeof VALID_REASONING_EFFORT_VALUES)[number]
+export type VerbosityLevel = (typeof VALID_VERBOSITY_VALUES)[number]
 
 /**
  * Parse a boolean value from environment variable
@@ -111,4 +138,37 @@ export function parseArray(value: string | undefined, defaultValue?: string[]): 
  */
 export function snakeToCamelCase(str: string): string {
 	return str.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+}
+
+/**
+ * Parse a reasoning effort value from environment variable
+ * @param value - The environment variable value
+ * @param defaultValue - Optional default value to return if parsing fails or value is undefined
+ * @returns Parsed reasoning effort value, defaultValue if provided, or undefined
+ */
+export function parseReasoningEffort(
+	value: string | undefined,
+	defaultValue?: ReasoningEffortSetting,
+): ReasoningEffortSetting | undefined {
+	if (!value) return defaultValue
+	const normalized = value.toLowerCase().trim()
+	if (VALID_REASONING_EFFORT_VALUES.includes(normalized as ReasoningEffortSetting)) {
+		return normalized as ReasoningEffortSetting
+	}
+	return defaultValue
+}
+
+/**
+ * Parse a verbosity value from environment variable
+ * @param value - The environment variable value
+ * @param defaultValue - Optional default value to return if parsing fails or value is undefined
+ * @returns Parsed verbosity value, defaultValue if provided, or undefined
+ */
+export function parseVerbosity(value: string | undefined, defaultValue?: VerbosityLevel): VerbosityLevel | undefined {
+	if (!value) return defaultValue
+	const normalized = value.toLowerCase().trim()
+	if (VALID_VERBOSITY_VALUES.includes(normalized as VerbosityLevel)) {
+		return normalized as VerbosityLevel
+	}
+	return defaultValue
 }

@@ -1,6 +1,16 @@
 import type { ThemeId, Theme } from "../types/theme.js"
 
 /**
+ * Reasoning effort level for models that support it
+ */
+export type ReasoningEffortSetting = "disable" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+
+/**
+ * Verbosity level for models that support it
+ */
+export type VerbosityLevel = "low" | "medium" | "high"
+
+/**
  * Auto approval configuration for read operations
  */
 export interface AutoApprovalReadConfig {
@@ -108,6 +118,13 @@ export interface CLIConfig {
 // Base provider config with common fields
 interface BaseProviderConfig {
 	id: string
+	// Common model settings (applicable to all providers)
+	reasoningEffort?: ReasoningEffortSetting
+	verbosity?: VerbosityLevel
+	modelTemperature?: number
+	modelMaxTokens?: number
+	modelMaxThinkingTokens?: number
+	enableReasoningEffort?: boolean
 	[key: string]: unknown // Allow additional fields for flexibility
 }
 
