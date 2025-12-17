@@ -8,9 +8,6 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 	const ghost = new GhostServiceManager(context, cline)
 	context.subscriptions.push(ghost)
 
-	// Store reference in ClineProvider for access by other services
-	cline.setGhostServiceManager(ghost)
-
 	// Register JetBrains Bridge if applicable
 	registerGhostJetbrainsBridge(context, cline, ghost)
 

@@ -1,5 +1,6 @@
 import { ClineProvider } from "../../../core/webview/ClineProvider"
 import { WebviewMessage } from "../../../shared/WebviewMessage"
+import { GhostServiceManager } from "../GhostServiceManager"
 import { ChatTextAreaAutocomplete } from "./ChatTextAreaAutocomplete"
 
 /**
@@ -16,8 +17,8 @@ export async function handleChatCompletionRequest(
 		const userText = message.text || ""
 		const requestId = message.requestId || ""
 
-		// Get the inline completion provider from the ghost service manager
-		const ghostServiceManager = provider.getGhostServiceManager()
+		// Get the inline completion provider from the ghost service manager singleton
+		const ghostServiceManager = GhostServiceManager.getInstance()
 		if (!ghostServiceManager) {
 			throw new Error("Ghost service manager not available")
 		}

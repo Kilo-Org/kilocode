@@ -163,7 +163,6 @@ export class ClineProvider
 	private currentWorkspacePath: string | undefined
 	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
 	private deviceAuthHandler?: DeviceAuthHandler // kilocode_change - Device auth handler
-	private ghostServiceManager?: any // kilocode_change - Ghost service manager reference (Any to prevent circular import)
 
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -2845,22 +2844,6 @@ ${prompt}
 
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
-	}
-
-	/**
-	 * Get the ghost service manager instance
-	 * @returns The ghost service manager or undefined if not initialized
-	 */
-	public getGhostServiceManager(): any | undefined {
-		return this.ghostServiceManager
-	}
-
-	/**
-	 * Set the ghost service manager instance
-	 * Called during extension initialization
-	 */
-	public setGhostServiceManager(manager: any): void {
-		this.ghostServiceManager = manager
 	}
 
 	/**
