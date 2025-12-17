@@ -1,6 +1,5 @@
 import * as vscode from "vscode"
 import { GhostInlineCompletionProvider } from "../classic-auto-complete/GhostInlineCompletionProvider"
-import { VisibleCodeContext } from "../types"
 
 /**
  * Service for providing autocomplete suggestions in ChatTextArea
@@ -23,18 +22,16 @@ export class ChatTextAreaAutocomplete {
 		return model?.hasValidCredentials() ?? false
 	}
 
-	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
-		// Create a virtual document with the user text and context
-		const documentContent = await this.buildDocumentContent(userText, visibleCodeContext)
-
-		// Create a virtual document
-		const uri = vscode.Uri.parse(`untitled:chat-completion-${Date.now()}.txt`)
+	async getCompletion(userText: string): Promise<{ suggestion: string }> {
+		// Create a simple virtual document with just the user text
+		// The inline completion provider will handle all context gathering
+		// (recently visited ranges, recently edited ranges, etc.)
 		const document = await vscode.workspace.openTextDocument({
-			content: documentContent,
+			content: userText,
 			language: "plaintext",
 		})
 
-		// Position at the end of the user text (before any context)
+		// Position at the end of the user text
 		const position = document.positionAt(userText.length)
 
 		// Create completion context for manual trigger
@@ -73,54 +70,6 @@ export class ChatTextAreaAutocomplete {
 		} finally {
 			tokenSource.dispose()
 		}
-	}
-
-	/**
-	 * Build document content with visible code context and additional sources
-	 */
-	private async buildDocumentContent(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
-		const contextParts: string[] = []
-
-		// Add visible code context
-		if (visibleCodeContext && visibleCodeContext.editors.length > 0) {
-			contextParts.push("// Code visible in editor:")
-
-			for (const editor of visibleCodeContext.editors) {
-				const fileName = editor.filePath.split("/").pop() || editor.filePath
-				contextParts.push(`\n// File: ${fileName} (${editor.languageId})`)
-
-				for (const range of editor.visibleRanges) {
-					contextParts.push(range.content)
-				}
-			}
-		}
-
-		const clipboardContent = await this.getClipboardContext()
-		if (clipboardContent) {
-			contextParts.push("\n// Clipboard content:")
-			contextParts.push(clipboardContent)
-		}
-
-		contextParts.push("\n// User's message:")
-		contextParts.push(userText)
-
-		return contextParts.join("\n")
-	}
-
-	/**
-	 * Get clipboard content for context
-	 */
-	private async getClipboardContext(): Promise<string | null> {
-		try {
-			const text = await vscode.env.clipboard.readText()
-			// Only include if it's reasonable size and looks like code
-			if (text && text.length > 5 && text.length < 500) {
-				return text
-			}
-		} catch {
-			// Silently ignore clipboard errors
-		}
-		return null
 	}
 
 	/**
