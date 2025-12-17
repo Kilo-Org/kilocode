@@ -22,6 +22,7 @@ import { TodoChangeDisplay } from "./TodoChangeDisplay"
 import CodeAccordian from "../common/CodeAccordian"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
+import { BrailleSpinner } from "./BrailleSpinner"
 import Thumbnails from "../common/Thumbnails"
 import ImageBlock from "../common/ImageBlock"
 import ErrorRow from "./ErrorRow"
@@ -370,7 +371,7 @@ export const ChatRowContent = ({
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
-						<ProgressIndicator />
+						<BrailleSpinner />
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
