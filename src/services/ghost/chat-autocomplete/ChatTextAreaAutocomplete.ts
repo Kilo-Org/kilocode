@@ -24,8 +24,8 @@ export class ChatTextAreaAutocomplete {
 
 	async getCompletion(userText: string): Promise<{ suggestion: string }> {
 		// Create a simple virtual document with just the user text
-		// The inline completion provider will handle all context gathering
-		// (recently visited ranges, recently edited ranges, etc.)
+		// The inline completion provider will handle all context gathering,
+		// postprocessing, and filtering
 		const document = await vscode.workspace.openTextDocument({
 			content: userText,
 			language: "plaintext",
@@ -61,8 +61,7 @@ export class ChatTextAreaAutocomplete {
 							? firstCompletion.insertText
 							: firstCompletion.insertText.value
 
-					const cleanedSuggestion = this.cleanSuggestion(insertText, userText)
-					return { suggestion: cleanedSuggestion }
+					return { suggestion: insertText }
 				}
 			}
 
@@ -70,56 +69,5 @@ export class ChatTextAreaAutocomplete {
 		} finally {
 			tokenSource.dispose()
 		}
-	}
-
-	/**
-	 * Clean the suggestion by removing any leading repetition of user text
-	 * and filtering out unwanted patterns like comments
-	 */
-	private cleanSuggestion(suggestion: string, userText: string): string {
-		let cleaned = suggestion.trim()
-
-		if (cleaned.startsWith(userText)) {
-			cleaned = cleaned.substring(userText.length)
-		}
-
-		const firstNewline = cleaned.indexOf("\n")
-		if (firstNewline !== -1) {
-			cleaned = cleaned.substring(0, firstNewline)
-		}
-
-		cleaned = cleaned.trimStart()
-
-		// Filter out suggestions that start with comment patterns
-		// This happens because the context uses // prefixes for labels
-		if (this.isUnwantedSuggestion(cleaned)) {
-			return ""
-		}
-
-		return cleaned
-	}
-
-	/**
-	 * Check if suggestion should be filtered out
-	 */
-	public isUnwantedSuggestion(suggestion: string): boolean {
-		// Filter comment-starting suggestions
-		if (suggestion.startsWith("//") || suggestion.startsWith("/*") || suggestion.startsWith("*")) {
-			return true
-		}
-
-		// Filter suggestions that look like code rather than natural language
-		// This includes preprocessor directives (#include) and markdown headers
-		// Chat is for natural language, not formatted documents
-		if (suggestion.startsWith("#")) {
-			return true
-		}
-
-		// Filter suggestions that are just punctuation or whitespace
-		if (suggestion.length < 2 || /^[\s\p{P}]+$/u.test(suggestion)) {
-			return true
-		}
-
-		return false
 	}
 }
