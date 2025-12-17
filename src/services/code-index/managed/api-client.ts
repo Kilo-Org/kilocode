@@ -21,7 +21,7 @@ export async function isEnabled(kilocodeToken: string, organizationId: string | 
 		const response = await fetchWithRetries({
 			url,
 			method: "GET",
-			retries: 1,
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
