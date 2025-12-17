@@ -205,16 +205,19 @@ export class ManagedIndexer implements vscode.Disposable {
 	/**
 	 * Send the complete managed indexer state to the webview
 	 */
-	sendStateToWebview(repoUrl?: string, fileCount?: number) {
+	sendStateToWebview(stateOverride?: ManagedIndexerWorkspaceFolderState, fileCount?: number) {
 		const state = {
 			isEnabled: this.isEnabled(),
 			isActive: this.isActive,
 			workspaceFolders: this.workspaceFolderState.map(serializeWorkspaceFolderState),
 		}
-		if (repoUrl && fileCount) {
-			const folderState = state.workspaceFolders.find((x) => x.repositoryUrl === repoUrl)
-			if (folderState) {
-				folderState.manifestFileCount = fileCount
+		if (stateOverride && fileCount) {
+			const index = this.workspaceFolderState.indexOf(stateOverride)
+			if (index > -1) {
+				const folderState = state.workspaceFolders[index]
+				if (folderState) {
+					folderState.manifestFileCount = fileCount
+				}
 			}
 		}
 		const provider = ClineProvider.getVisibleInstance()
@@ -686,7 +689,7 @@ export class ManagedIndexer implements vscode.Disposable {
 						)
 
 						upsertCount++
-						this.sendStateToWebview(state.repositoryUrl, upsertCount)
+						this.sendStateToWebview(state, upsertCount)
 
 						// Clear any previous file-upsert errors on success
 						if (state.error?.type === "file-upsert") {
