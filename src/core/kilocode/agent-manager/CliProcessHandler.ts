@@ -165,7 +165,7 @@ export class CliProcessHandler {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
 			env,
-			shell: false,
+			shell: needsShell,
 		})
 
 		if (proc.pid) {
