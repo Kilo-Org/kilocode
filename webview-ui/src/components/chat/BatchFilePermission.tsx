@@ -25,22 +25,25 @@ export const BatchFilePermission = memo(({ files = [], onPermissionResponse, ts 
 	}
 
 	return (
-		<div className="pt-[5px]">
+		<div className="pt-[5px] min-w-fit">
 			{/* Individual files */}
-			<div className="flex flex-col gap-0 border border-border rounded-md p-1">
+			<div className="flex flex-col gap-1 min-w-fit">
 				{files.map((file) => {
 					return (
 						<div key={`${file.path}-${ts}`} className="flex items-center gap-2">
-							<ToolUseBlock className="flex-1">
+							<ToolUseBlock className="flex-1 min-w-fit">
 								<ToolUseBlockHeader
 									onClick={() => vscode.postMessage({ type: "openFile", text: file.content })}>
 									{file.path?.startsWith(".") && <span>.</span>}
-									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl min-w-fit">
 										{removeLeadingNonAlphanumeric(file.path ?? "") + "\u200E"}
-										{file.lineSnippet && ` ${file.lineSnippet}`}
+										{file.lineSnippet
+											?.replace("lines", "#L")
+											?.replaceAll(" ", "")
+											.replaceAll("(", "")
+											.replaceAll(")", "") &&
+											` ${file.lineSnippet?.replace("lines", "#L")?.replaceAll(" ", "").replaceAll("(", "").replaceAll(")", "")}`}
 									</span>
-									<div className="flex-grow"></div>
-									<span className="codicon codicon-link-external text-[13.5px] my-[1px]" />
 								</ToolUseBlockHeader>
 							</ToolUseBlock>
 						</div>

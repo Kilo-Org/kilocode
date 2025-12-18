@@ -81,7 +81,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 				"w-full text-ellipsis overflow-hidden p-0",
 				"bg-transparent border-transparent hover:bg-transparent hover:border-transparent",
 			)}
-			triggerIcon={false}
+			triggerIcon={true}
 			itemClassName="group"
 		/>
 	)

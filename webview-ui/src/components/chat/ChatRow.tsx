@@ -85,6 +85,42 @@ const headerStyle: React.CSSProperties = {
 	flexShrink: 0,
 }
 
+// Build a minimal unified diff for fileEdit when backend doesn't supply one
+const buildFileEditDiff = (tool: ClineSayTool): string | null => {
+	const path = tool.path || "file"
+	const oldText = (tool.search ?? "").trimEnd()
+	const newText = (tool.replace ?? tool.content ?? "").trimEnd()
+
+	if (!oldText && !newText) return null
+
+	const lines: string[] = []
+	lines.push(`--- a/${path}`)
+	lines.push(`+++ b/${path}`)
+	lines.push(`@@`)
+
+	if (oldText) {
+		lines.push(...oldText.split(/\r?\n/).map((line) => `-${line}`))
+	}
+
+	if (newText) {
+		lines.push(...newText.split(/\r?\n/).map((line) => `+${line}`))
+	}
+
+	return lines.join("\n")
+}
+
+const computeDiffStats = (diff?: string | null) => {
+	if (!diff) return null
+	let added = 0
+	let removed = 0
+	diff.split(/\r?\n/).forEach((line) => {
+		if (line.startsWith("+++ ") || line.startsWith("--- ") || line.startsWith("@@")) return
+		if (line.startsWith("+")) added += 1
+		else if (line.startsWith("-")) removed += 1
+	})
+	return { added, removed }
+}
+
 const ChatRow = memo(
 	(props: ChatRowProps) => {
 		const { highlighted } = props // kilocode_change: Add highlighted prop
@@ -442,9 +478,11 @@ export const ChatRowContent = ({
 					</>
 				)
 			case "fileEdit":
+				const fileEditDiff = tool.diff ?? buildFileEditDiff(tool)
+				const diffStats = computeDiffStats(fileEditDiff)
 				return (
-					<div className={`flex ${isExpanded ? "flex-col" : "flex-row"} gap-1`}>
-						<div style={headerStyle}>
+					<div className={`flex ${isExpanded ? "flex-row" : "flex-row"} gap-1 items-start`}>
+						<div style={headerStyle} className="mt-0.5">
 							{tool.isProtected ? (
 								<span
 									className="codicon codicon-lock"
@@ -462,13 +500,69 @@ export const ChatRowContent = ({
 						</div>
 						<div className="">
 							<CodeAccordian
-								path={tool.path}
-								code={tool.content ?? tool.replace ?? ""}
-								language={getLanguageFromPath(tool.path || "") || "log"}
+								path={undefined} // custom headerContent handles display/jump
+								code={fileEditDiff ?? tool.content ?? tool.replace ?? ""}
+								language={fileEditDiff ? "diff" : getLanguageFromPath(tool.path || "") || "log"}
+								headerContent={
+									<div className="flex items-center gap-2 w-full">
+										{tool.isProtected ? (
+											<span
+												className="codicon codicon-lock"
+												style={{
+													color: "var(--vscode-editorWarning-foreground)",
+													marginBottom: "-1.5px",
+												}}
+											/>
+										) : null}
+										{tool.path ? (
+											<span
+												className="cursor-pointer"
+												role="button"
+												tabIndex={0}
+												title={tool.path}
+												aria-label={tool.path}
+												data-mention={tool.path}
+												onClick={(e) => {
+													e.stopPropagation()
+													vscode.postMessage({ type: "openFile", text: "./" + tool.path })
+												}}
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault()
+														e.stopPropagation()
+														vscode.postMessage({ type: "openFile", text: "./" + tool.path })
+													}
+												}}>
+												<span>{tool.path.split("/").pop() || tool.path}</span>
+											</span>
+										) : null}
+										{diffStats ? (
+											<span className="text-xs text-vscode-descriptionForeground">
+												<span style={{ color: "var(--vscode-charts-green)" }}>
+													+{diffStats.added}
+												</span>{" "}
+												<span style={{ color: "var(--vscode-charts-red)" }}>
+													-{diffStats.removed}
+												</span>
+											</span>
+										) : null}
+										<div className="flex-grow" />
+										{tool.path && (
+											<span
+												className="codicon codicon-link-external"
+												style={{ fontSize: 13.5 }}
+												onClick={(e) => {
+													e.stopPropagation()
+													vscode.postMessage({ type: "openFile", text: "./" + tool.path })
+												}}
+												aria-label={`Open file: ${tool.path}`}
+											/>
+										)}
+									</div>
+								}
 								isLoading={message.partial}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
-								onJumpToFile={() => vscode.postMessage({ type: "openFile", text: "./" + tool.path })}
 							/>
 							{
 								// kilocode_change start
@@ -672,7 +766,11 @@ export const ChatRowContent = ({
 									{tool.path?.startsWith(".") && <span>.</span>}
 									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
 										{fileName}
-										{tool.reason}
+										{tool.reason
+											?.replace("lines", "#L")
+											?.replaceAll(" ", "")
+											.replaceAll("(", "")
+											.replaceAll(")", "")}
 									</span>
 								</ToolUseBlockHeader>
 							</ToolUseBlock>

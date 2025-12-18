@@ -184,7 +184,7 @@
 	},
 	"fileOperations": {
 		"wantsToRead": "Read",
-		"wantsToReadMultiple": "Read",
+		"wantsToReadMultiple": "Read (multiple)",
 		"wantsToReadAndXMore": "Read {{count}} more",
 		"wantsToReadOutsideWorkspace": "Read (outside of the workspace)",
 		"didRead": "Read",

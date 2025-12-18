@@ -2,7 +2,8 @@
 const AXON_MODEL_CREDITS: Record<string, string> = {
 	"axon-mini": "(0.5x)",
 	"axon-code": "(1x)",
-	// "axon-code-pro": "(1.25x)",
+	// "gemini-3-flash-preview": "(1x)",
+	// "gemini-3-pro-preview": "(2x)",
 }
 
 export const prettyModelName = (modelId: string): string => {
@@ -30,10 +31,5 @@ export const prettyModelName = (modelId: string): string => {
 
 // Function to get credits for Axon models
 export const getModelCredits = (modelId: string): string | null => {
-	// Check if this is an Axon model
-	if (modelId.startsWith("axon-") || modelId === "axon-code" || modelId === "axon-code-pro") {
-		return AXON_MODEL_CREDITS[modelId] || null
-	}
-
-	return null
+	return AXON_MODEL_CREDITS[modelId]
 }

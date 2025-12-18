@@ -17,6 +17,7 @@ interface CodeAccordianProps {
 	isFeedback?: boolean
 	onToggleExpand: () => void
 	header?: string
+	headerContent?: React.ReactNode
 	onJumpToFile?: () => void
 }
 
@@ -30,18 +31,21 @@ const CodeAccordian = ({
 	isFeedback,
 	onToggleExpand,
 	header,
+	headerContent,
 	onJumpToFile,
 }: CodeAccordianProps) => {
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
 	const source = useMemo(() => String(code).trim() /*kilocode_change: coerce to string*/, [code])
-	const hasHeader = Boolean(path || isFeedback || header)
+	const hasHeader = Boolean(path || isFeedback || header || headerContent)
 
 	return (
 		<ToolUseBlock>
 			{hasHeader && (
 				<ToolUseBlockHeader onClick={onToggleExpand} className="group">
 					{isLoading && <VSCodeProgressRing className="size-3 mr-2" />}
-					{header ? (
+					{headerContent ? (
+						headerContent
+					) : header ? (
 						<div className="flex items-center">
 							<span className="codicon codicon-server mr-1.5"></span>
 							<span className="whitespace-nowrap overflow-hidden text-ellipsis mr-2">{header}</span>
@@ -61,16 +65,16 @@ const CodeAccordian = ({
 							</span>
 						</>
 					)}
-					<div className="flex-grow-1" />
 					{progressStatus && progressStatus.text && (
 						<>
+							<div className="flex-grow" />
 							{progressStatus.icon && <span className={`codicon codicon-${progressStatus.icon} mr-1`} />}
 							<span className="mr-1 ml-auto text-vscode-descriptionForeground">
 								{progressStatus.text}
 							</span>
 						</>
 					)}
-					{onJumpToFile && path && (
+					{onJumpToFile && path && !headerContent && (
 						<span
 							className="codicon codicon-link-external mr-1"
 							style={{ fontSize: 13.5 }}
@@ -81,7 +85,7 @@ const CodeAccordian = ({
 							aria-label={`Open file: ${path}`}
 						/>
 					)}
-					{!onJumpToFile && (
+					{!onJumpToFile && !headerContent && (
 						<span
 							className={`opacity-0 group-hover:opacity-100 codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 					)}

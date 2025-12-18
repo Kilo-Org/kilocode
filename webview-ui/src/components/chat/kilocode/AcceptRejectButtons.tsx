@@ -14,7 +14,7 @@ type FileChange = {
 export const AcceptRejectButtons = ({ onDismiss }: { onDismiss?: () => void }) => {
 	const [files, setFiles] = useState<FileChange[]>([])
 	const [isLoading, setIsLoading] = useState(true)
-	const [isExpanded, setIsExpanded] = useState(true)
+	const [isExpanded, setIsExpanded] = useState(false)
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
@@ -70,44 +70,74 @@ export const AcceptRejectButtons = ({ onDismiss }: { onDismiss?: () => void }) =
 		return parts.length > 1 ? parts.slice(0, -1).join("/") : ""
 	}
 
+	// Get file icon class - simpler approach using standard file associations
+	const getFileIconClass = (path: string): string => {
+		const ext = path.split(".").pop()?.toLowerCase() || ""
+
+		// Map common extensions to icon classes
+		// This uses a simpler model-based approach
+		const iconMap: Record<string, string> = {
+			ts: "typescript",
+			tsx: "react_ts",
+			js: "javascript",
+			jsx: "react",
+			json: "json",
+			md: "markdown",
+			py: "python",
+			css: "css",
+			scss: "scss",
+			html: "html",
+			go: "go",
+			rs: "rust",
+			java: "java",
+			xml: "xml",
+			yml: "yaml",
+			yaml: "yaml",
+		}
+
+		return iconMap[ext] || "default_file"
+	}
+
 	// Show nothing until we have data.
 	if (isLoading || files.length === 0) {
 		return null
 	}
 
 	return (
-		<div className="flex flex-col w-full mt-3 border border-vscode-editorWidget-border rounded-md overflow-hidden bg-vscode-editor-background">
-			{/* Header */}
-			<div
-				className="flex items-center justify-between px-3 py-2 bg-vscode-editorWidget-headerBackground cursor-pointer select-none"
-				onClick={() => setIsExpanded(!isExpanded)}>
-				<div className="flex items-center gap-2">
-					<span className={`codicon codicon-chevron-${isExpanded ? "down" : "right"}`} />
-					<span className="font-medium text-xs">
-						{files.length} {files.length === 1 ? "File" : "Files"} With Changes
-					</span>
-				</div>
-				<div className="flex bg-vscode-editor-background rounded-md overflow-hidden border border-vscode-editorWidget-border"></div>
-			</div>
-
-			{/* List */}
+		<div className="flex flex-col w-full mt-3 border border-vscode-editorWidget-border rounded-lg overflow-hidden bg-vscode-editor-background">
+			{/* File List - Only show when expanded */}
 			{isExpanded && (
 				<div className="flex flex-col">
 					{files.map((file) => (
 						<div
 							key={file.relPath}
-							className="flex items-center gap-2 px-3 py-1.5 border-t border-vscode-editorWidget-border hover:bg-vscode-list-hoverBackground cursor-pointer"
+							className="flex items-center gap-1.5 px-2 py-1 border-b border-vscode-editorWidget-border hover:bg-vscode-list-hoverBackground cursor-pointer"
 							onClick={() => vscode.postMessage({ type: "openFile", text: file.relPath })}
 							title={file.absolutePath}>
-							<span className="codicon codicon-file text-vscode-icon-foreground" />
-							<div className="flex gap-1 text-xs font-mono">
-								<span className="text-green-500">+{file.stat.additions}</span>
-								<span className="text-red-500">-{file.stat.deletions}</span>
+							{/* File Icon - Simple indicator */}
+							<div
+								className="flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded"
+								style={{
+									backgroundColor: "var(--vscode-editorWidget-background)",
+									color: "var(--vscode-descriptionForeground)",
+								}}
+								title={getFileIconClass(file.relPath)}>
+								{getFileName(file.relPath).split(".").pop()?.slice(0, 2).toUpperCase() || "F"}
 							</div>
-							<div className="flex-1 truncate text-xs flex gap-1.5">
-								<span className="text-vscode-foreground">{getFileName(file.relPath)}</span>
-								<span className="text-vscode-descriptionForeground truncate">
-									{getDir(file.relPath)}
+
+							{/* Diff Stats */}
+							<div className="flex gap-0.5 text-sm font-medium">
+								<span style={{ color: "var(--vscode-charts-green)" }}>+{file.stat.additions}</span>
+								<span style={{ color: "var(--vscode-charts-red)" }}>-{file.stat.deletions}</span>
+							</div>
+
+							{/* File Name */}
+							<div className="flex flex-row gap-2.5 flex-1 min-w-0 items-center justify-start">
+								<span className="text-sm flex-shrink-0 font-medium text-vscode-foreground truncate">
+									{getFileName(file.relPath)}
+								</span>
+								<span className="text-xs text-vscode-foreground opacity-80 truncate">
+									{getDir(file.absolutePath)}
 								</span>
 							</div>
 						</div>
@@ -115,31 +145,45 @@ export const AcceptRejectButtons = ({ onDismiss }: { onDismiss?: () => void }) =
 				</div>
 			)}
 
-			{/* Footer Actions */}
-			<div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-vscode-editorWidget-border bg-vscode-editorWidget-background">
-				<Button
-					type="button"
-					size="sm"
-					className="rounded-md"
-					onClick={rejectCallback}
-					style={{
-						background: "var(--vscode-button-secondaryBackground)",
-						color: "var(--vscode-button-secondaryForeground)",
-					}}>
-					Reject all
-				</Button>
+			{/* Footer with Collapse/Expand and Actions */}
+			<div className="flex items-center justify-between px-2 py-1 bg-vscode-editorWidget-background border-vscode-editorWidget-border">
+				{/* Left side: collapse button and file count */}
+				<div
+					className="flex items-center gap-1 cursor-pointer select-none"
+					onClick={() => setIsExpanded(!isExpanded)}>
+					<span className={`text-sm codicon codicon-chevron-${isExpanded ? "up" : "down"}`} />
 
-				<Button
-					type="button"
-					size="sm"
-					className="rounded-md"
-					onClick={acceptCallback}
-					style={{
-						background: "var(--vscode-button-background)",
-						color: "var(--vscode-button-foreground)",
-					}}>
-					Accept all
-				</Button>
+					<span className="text-xs text-vscode-foreground opacity-80">
+						{files.length} {files.length === 1 ? "File" : "Files"} with changes
+					</span>
+				</div>
+
+				{/* Right side: action buttons */}
+				<div className="flex items-center gap-2">
+					<Button
+						type="button"
+						size="sm"
+						className="rounded-md text-sm px-3 py-1"
+						onClick={rejectCallback}
+						style={{
+							background: "var(--vscode-button-secondaryBackground)",
+							color: "var(--vscode-button-secondaryForeground)",
+						}}>
+						Reject all
+					</Button>
+
+					<Button
+						type="button"
+						size="sm"
+						className="rounded-md text-sm px-3 py-1"
+						onClick={acceptCallback}
+						style={{
+							background: "var(--vscode-button-background)",
+							color: "var(--vscode-button-foreground)",
+						}}>
+						Accept all
+					</Button>
+				</div>
 			</div>
 		</div>
 	)
