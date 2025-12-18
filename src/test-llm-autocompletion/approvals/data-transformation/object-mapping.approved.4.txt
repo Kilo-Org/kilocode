@@ -5,4 +5,6 @@ const userDTOs = users.map(user => ({
 }));
 
 console.log(userDTOs);
-// Output: [{ id: 1, fullName: 'John Doe' }, { id: 2, fullName: 'Jane Smith' }]
+// Output: [{id: 1, fullName: 'John Doe'}, {id: 2, fullName: 'Jane Smith'}]
+
+// The map method is used to transform each user object into a new object with only the id and fullName properties.

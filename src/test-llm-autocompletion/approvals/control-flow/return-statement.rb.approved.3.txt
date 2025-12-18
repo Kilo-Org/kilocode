@@ -1,0 +1,16 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_tax(items)
+	tax = 0.09
+	tax_total = calculate_total(items) * tax
+	return tax_total
+end
+
+def calculate_grand_total(items)
+	grand_total = calculate_total(items) + calculate_tax(items)
+	return grand_total
+end

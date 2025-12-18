@@ -253,6 +253,7 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 1. **Extension not loading**: Check the VSCode Developer Tools (Help > Toggle Developer Tools) for errors
 2. **Webview not updating**: Try reloading the window (Developer: Reload Window)
 3. **Build errors**: Make sure all dependencies are installed with `pnpm install`
+4. **Ripgrep missing**: We bundle `@vscode/ripgrep`, but if that binary is missing the extension will fall back to `rg` on your `PATH` (commonly `/opt/homebrew/bin/rg` on macOS) or the path set in `RIPGREP_PATH`.
 
 ### Debugging Tips
 
@@ -279,7 +280,7 @@ We welcome contributions to Kilo Code! Here's how you can help:
 1. **Report an issue** using [GitHub Issues](https://github.com/Kilo-Org/kilocode/issues)
 2. **Find an issue** and submit a Pull Request with your fix
 3. **Write tests** to improve Code Coverage
-4. **Improve Documentation** at [kilocode.ai/docs](https://kilocode.ai/docs)
+4. **Improve Documentation** at [kilo.ai/docs](https://kilo.ai/docs)
 5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
 6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
 

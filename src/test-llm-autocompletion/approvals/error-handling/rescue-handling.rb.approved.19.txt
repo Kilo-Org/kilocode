@@ -1,0 +1,16 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		result["data"].map do |item|
+			{
+				"userId" => item["userId"],
+				"cafe" => item["cafe"]["name"],
+				"picture" => item["picture"],
+				"page" => item["page"]
+			}
+		end
+	rescue JSON::ParserError => e
+		puts "Error parsing JSON: #{e.message}"
+		[]
+	end
+end

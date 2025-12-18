@@ -1,0 +1,12 @@
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+def find_even_values(arr)
+  arr.select { |num| num.even? }
+end
+
+p find_even_values(arr)
+
+def find_even_values(arr)
+  arr.select(&:even?)
+end
+
+p find_even_values(arr)

@@ -6,9 +6,55 @@ export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-5.1"
 
 export const openAiNativeModels = {
+	// kilocode_change start
+	"gpt-5.2": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
+		supportsImages: true,
+		supportsPromptCache: true,
+		promptCacheRetention: "24h",
+		supportsReasoningEffort: ["none", "low", "medium", "high", "xhigh"],
+		reasoningEffort: "medium",
+		inputPrice: 1.75,
+		outputPrice: 14.0,
+		cacheReadsPrice: 0.175,
+		supportsVerbosity: true,
+		supportsTemperature: false,
+		tiers: [
+			{ name: "flex", contextWindow: 400000, inputPrice: 0.625, outputPrice: 5.0, cacheReadsPrice: 0.0625 },
+			{ name: "priority", contextWindow: 400000, inputPrice: 2.5, outputPrice: 20.0, cacheReadsPrice: 0.25 },
+		],
+		description: "GPT-5.2: The best model for coding and agentic tasks across domains",
+	},
+	// kilocode_change end
+	"gpt-5.1-codex-max": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
+		supportsImages: true,
+		supportsPromptCache: true,
+		promptCacheRetention: "24h",
+		supportsReasoningEffort: ["low", "medium", "high"],
+		reasoningEffort: "medium",
+		inputPrice: 1.25,
+		outputPrice: 10.0,
+		cacheReadsPrice: 0.125,
+		supportsTemperature: false,
+		tiers: [{ name: "priority", contextWindow: 400000, inputPrice: 2.5, outputPrice: 20.0, cacheReadsPrice: 0.25 }],
+		description:
+			"GPT-5.1 Codex Max: Our most intelligent coding model optimized for long-horizon, agentic coding tasks",
+	},
 	"gpt-5.1": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		promptCacheRetention: "24h",
@@ -28,6 +74,9 @@ export const openAiNativeModels = {
 	"gpt-5.1-codex": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		promptCacheRetention: "24h",
@@ -43,6 +92,9 @@ export const openAiNativeModels = {
 	"gpt-5.1-codex-mini": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		promptCacheRetention: "24h",
@@ -57,6 +109,9 @@ export const openAiNativeModels = {
 	"gpt-5": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -75,6 +130,9 @@ export const openAiNativeModels = {
 	"gpt-5-mini": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -93,6 +151,9 @@ export const openAiNativeModels = {
 	"gpt-5-codex": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["low", "medium", "high"],
@@ -107,6 +168,9 @@ export const openAiNativeModels = {
 	"gpt-5-nano": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -122,6 +186,9 @@ export const openAiNativeModels = {
 	"gpt-5-chat-latest": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 1.25,
@@ -132,6 +199,9 @@ export const openAiNativeModels = {
 	"gpt-4.1": {
 		maxTokens: 32_768,
 		contextWindow: 1_047_576,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 2,
@@ -145,6 +215,9 @@ export const openAiNativeModels = {
 	"gpt-4.1-mini": {
 		maxTokens: 32_768,
 		contextWindow: 1_047_576,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 0.4,
@@ -158,6 +231,9 @@ export const openAiNativeModels = {
 	"gpt-4.1-nano": {
 		maxTokens: 32_768,
 		contextWindow: 1_047_576,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 0.1,
@@ -171,6 +247,7 @@ export const openAiNativeModels = {
 	o3: {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 2.0,
@@ -187,6 +264,7 @@ export const openAiNativeModels = {
 	"o3-high": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 2.0,
@@ -198,6 +276,7 @@ export const openAiNativeModels = {
 	"o3-low": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 2.0,
@@ -209,6 +288,7 @@ export const openAiNativeModels = {
 	"o4-mini": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -225,6 +305,7 @@ export const openAiNativeModels = {
 	"o4-mini-high": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -236,6 +317,7 @@ export const openAiNativeModels = {
 	"o4-mini-low": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -247,6 +329,7 @@ export const openAiNativeModels = {
 	"o3-mini": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: false,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -259,6 +342,7 @@ export const openAiNativeModels = {
 	"o3-mini-high": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: false,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -270,6 +354,7 @@ export const openAiNativeModels = {
 	"o3-mini-low": {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: false,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -281,6 +366,7 @@ export const openAiNativeModels = {
 	o1: {
 		maxTokens: 100_000,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 15,
@@ -291,6 +377,7 @@ export const openAiNativeModels = {
 	"o1-preview": {
 		maxTokens: 32_768,
 		contextWindow: 128_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 15,
@@ -301,6 +388,7 @@ export const openAiNativeModels = {
 	"o1-mini": {
 		maxTokens: 65_536,
 		contextWindow: 128_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 1.1,
@@ -311,6 +399,7 @@ export const openAiNativeModels = {
 	"gpt-4o": {
 		maxTokens: 16_384,
 		contextWindow: 128_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5,
@@ -324,6 +413,7 @@ export const openAiNativeModels = {
 	"gpt-4o-mini": {
 		maxTokens: 16_384,
 		contextWindow: 128_000,
+		supportsNativeTools: true,
 		supportsImages: true,
 		supportsPromptCache: true,
 		inputPrice: 0.15,
@@ -337,6 +427,7 @@ export const openAiNativeModels = {
 	"codex-mini-latest": {
 		maxTokens: 16_384,
 		contextWindow: 200_000,
+		supportsNativeTools: true,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 1.5,
@@ -350,6 +441,9 @@ export const openAiNativeModels = {
 	"gpt-5-2025-08-07": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -368,6 +462,9 @@ export const openAiNativeModels = {
 	"gpt-5-mini-2025-08-07": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -386,6 +483,9 @@ export const openAiNativeModels = {
 	"gpt-5-nano-2025-08-07": {
 		maxTokens: 128000,
 		contextWindow: 400000,
+		supportsNativeTools: true,
+		includedTools: ["apply_patch"],
+		excludedTools: ["apply_diff", "write_to_file"],
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
@@ -407,6 +507,7 @@ export const openAiModelInfoSaneDefaults: ModelInfo = {
 	supportsPromptCache: false,
 	inputPrice: 0,
 	outputPrice: 0,
+	supportsNativeTools: true,
 }
 
 // https://learn.microsoft.com/en-us/azure/ai-services/openai/api-version-deprecation

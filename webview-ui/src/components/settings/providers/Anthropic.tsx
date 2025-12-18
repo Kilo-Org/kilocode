@@ -13,6 +13,7 @@ import { inputEventTransform, noTransform } from "../transforms"
 type AnthropicProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	simplifySettings?: boolean
 }
 
 export const Anthropic = ({ apiConfiguration, setApiConfigurationField }: AnthropicProps) => {
@@ -20,6 +21,11 @@ export const Anthropic = ({ apiConfiguration, setApiConfigurationField }: Anthro
 	const selectedModel = useSelectedModel(apiConfiguration)
 
 	const [anthropicBaseUrlSelected, setAnthropicBaseUrlSelected] = useState(!!apiConfiguration?.anthropicBaseUrl)
+	// kilocode_change start
+	const [anthropicDeploymentSelected, setAnthropicDeploymentSelected] = useState(
+		!!apiConfiguration?.anthropicDeploymentName,
+	)
+	// kilocode_change end
 
 	// Check if the current model supports 1M context beta
 	const supports1MContextBeta =
@@ -85,6 +91,29 @@ export const Anthropic = ({ apiConfiguration, setApiConfigurationField }: Anthro
 					</>
 				)}
 			</div>
+			{/* kilocode_change start */}
+			<div className="mt-2">
+				<Checkbox
+					checked={anthropicDeploymentSelected}
+					onChange={(checked: boolean) => {
+						setAnthropicDeploymentSelected(checked)
+
+						if (!checked) {
+							setApiConfigurationField("anthropicDeploymentName", "")
+						}
+					}}>
+					{t("settings:providers.anthropicUseAzureDeployment")}
+				</Checkbox>
+				{anthropicDeploymentSelected && (
+					<VSCodeTextField
+						value={apiConfiguration?.anthropicDeploymentName || ""}
+						onInput={handleInputChange("anthropicDeploymentName")}
+						placeholder={t("settings:providers.anthropicAzureDeploymentPlaceholder")}
+						className="w-full mt-1"
+					/>
+				)}
+			</div>
+			{/* kilocode_change end */}
 			{supports1MContextBeta && (
 				<div>
 					<Checkbox

@@ -124,6 +124,9 @@ export {
 	refreshStateAtom,
 	sendPrimaryButtonClickAtom,
 	sendSecondaryButtonClickAtom,
+
+	// YOLO mode action
+	toggleYoloModeAtom,
 } from "./actions.js"
 
 // ============================================================================
@@ -145,6 +148,14 @@ export {
 } from "./effects.js"
 
 // ============================================================================
+// Model Validation Atoms - Model availability validation
+// ============================================================================
+export {
+	// Model validation effect
+	validateModelOnRouterModelsUpdateAtom,
+} from "./modelValidation.js"
+
+// ============================================================================
 // Config Sync Atoms - Configuration synchronization
 // ============================================================================
 export {
@@ -163,6 +174,26 @@ export {
 } from "./notifications.js"
 
 // ============================================================================
+// Model List Atoms - Model list pagination, sorting, and filtering
+// ============================================================================
+export {
+	// Core model list atoms
+	modelListPageIndexAtom,
+	modelListFiltersAtom,
+
+	// Model list action atoms
+	updateModelListFiltersAtom,
+	changeModelListPageAtom,
+	resetModelListStateAtom,
+
+	// Constants and types
+	MODEL_LIST_PAGE_SIZE,
+	defaultModelListFilters,
+	type ModelListFilters,
+	type ModelListState,
+} from "./modelList.js"
+
+// ============================================================================
 // UI Atoms - Command-based UI state
 // ============================================================================
 export {
@@ -170,6 +201,7 @@ export {
 	messagesAtom,
 	isStreamingAtom,
 	errorAtom,
+	yoloModeAtom,
 	isCommittingParallelModeAtom,
 	commitCountdownSecondsAtom,
 

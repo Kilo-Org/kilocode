@@ -77,6 +77,7 @@ export type EmbedderProvider =
 	| "gemini"
 	| "mistral"
 	| "vercel-ai-gateway"
+	| "bedrock"
 	| "openrouter"
 
 export interface IndexProgressUpdate {

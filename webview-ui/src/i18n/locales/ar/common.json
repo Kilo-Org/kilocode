@@ -121,6 +121,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "انتظرنا {{timeout}} ثانية لتهيئة نقطة الحفظ. إذا كنت لا تحتاج ميزة نقاط الحفظ، يرجى إيقافها في <settingsLink>إعدادات نقاط الحفظ</settingsLink>.",
-		"init_checkpoint_fail_long_time": "استغرقت تهيئة نقطة الحفظ أكثر من {{timeout}} ثانية، لذلك تم تعطيل نقاط الحفظ لهذه المهمة. يمكنك تعطيل نقاط الحفظ أو تمديد وقت الانتظار في <settingsLink>إعدادات نقاط الحفظ</settingsLink>."
+		"init_checkpoint_fail_long_time": "استغرقت تهيئة نقطة الحفظ أكثر من {{timeout}} ثانية، لذلك تم تعطيل نقاط الحفظ لهذه المهمة. يمكنك تعطيل نقاط الحفظ أو تمديد وقت الانتظار في <settingsLink>إعدادات نقاط الحفظ</settingsLink>.",
+		"attempt_completion_tool_failed": "لا يمكن تنفيذ attempt_completion لأن استدعاء أداة سابق فشل في هذا الدور. يرجى معالجة فشل الأداة قبل محاولة الإكمال."
+	},
+	"tasks": {
+		"delegated": "تم التفويض إلى مهمة فرعية",
+		"delegated_to": "تم التفويض إلى مهمة {{childId}}",
+		"delegation_completed": "اكتملت المهمة الفرعية، استئناف المهمة الرئيسية",
+		"awaiting_child": "في انتظار المهمة الفرعية {{childId}}"
 	}
 }

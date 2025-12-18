@@ -6,23 +6,26 @@ import {
 	type ModelInfo,
 	getClaudeCodeModelId,
 } from "@roo-code/types"
-import { type ApiHandler } from ".."
+import { type ApiHandler, ApiHandlerCreateMessageMetadata } from ".."
 import { ApiStreamUsageChunk, type ApiStream } from "../transform/stream"
 import { runClaudeCode } from "../../integrations/claude-code/run"
 import { filterMessagesForClaudeCode } from "../../integrations/claude-code/message-filter"
-import { BaseProvider } from "./base-provider"
 import { t } from "../../i18n"
 import { ApiHandlerOptions } from "../../shared/api"
+import { countTokens } from "../../utils/countTokens"
 
-export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
+export class ClaudeCodeHandler implements ApiHandler {
 	private options: ApiHandlerOptions
 
 	constructor(options: ApiHandlerOptions) {
-		super()
 		this.options = options
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		_metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
 		// Filter out image blocks since Claude Code doesn't support them
 		const filteredMessages = filterMessagesForClaudeCode(messages)
 
@@ -42,7 +45,7 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 
 		// Usage is included with assistant messages,
 		// but cost is included in the result chunk
-		let usage: ApiStreamUsageChunk = {
+		const usage: ApiStreamUsageChunk = {
 			type: "usage",
 			inputTokens: 0,
 			outputTokens: 0,
@@ -95,6 +98,7 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 					}
 				}
 
+				let toolReminder = false // kilocode_change
 				for (const content of message.content) {
 					switch (content.type) {
 						case "text":
@@ -117,10 +121,20 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 							break
 						case "tool_use":
 							console.error(`tool_use is not supported yet. Received: ${JSON.stringify(content)}`)
+							// kilocode_change start
+							if (!toolReminder) {
+								yield {
+									type: "text",
+									text: "Preparing to use tools in XML format... ",
+								}
+								toolReminder = true
+							}
+							// kilocode_change end
 							break
 					}
 				}
 
+				// Accumulate usage across streaming chunks
 				usage.inputTokens += message.usage.input_tokens
 				usage.outputTokens += message.usage.output_tokens
 				usage.cacheReadTokens = (usage.cacheReadTokens || 0) + (message.usage.cache_read_input_tokens || 0)
@@ -138,7 +152,7 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 		}
 	}
 
-	getModel() {
+	getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.apiModelId
 		if (modelId && modelId in claudeCodeModels) {
 			const id = modelId as ClaudeCodeModelId
@@ -163,6 +177,13 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 			id: claudeCodeDefaultModelId,
 			info: defaultModelInfo,
 		}
+	}
+
+	async countTokens(content: Anthropic.Messages.ContentBlockParam[]): Promise<number> {
+		if (content.length === 0) {
+			return 0
+		}
+		return countTokens(content, { useWorker: true })
 	}
 
 	private attemptParse(str: string) {

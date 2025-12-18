@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react"
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { render, screen, fireEvent, act } from "@testing-library/react"
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { GhostServiceSettingsView } from "../GhostServiceSettings"
 import { GhostServiceSettings } from "@roo-code/types"
 import React from "react"
@@ -27,6 +27,7 @@ vi.mock("@/i18n/TranslationContext", () => ({
 vi.mock("lucide-react", () => ({
 	Bot: ({ className }: any) => <span className={className}>Bot Icon</span>,
 	Zap: ({ className }: any) => <span className={className}>Zap Icon</span>,
+	Clock: ({ className }: any) => <span className={className}>Clock Icon</span>,
 }))
 
 // Mock cn utility
@@ -49,7 +50,14 @@ vi.mock("@/hooks/useKeybindings", () => ({
 	}),
 }))
 
-// Mock VSCodeCheckbox to render as regular HTML checkbox for testing
+// Mock useExtensionState hook
+vi.mock("@/context/ExtensionStateContext", () => ({
+	useExtensionState: () => ({
+		kiloCodeWrapperProperties: undefined,
+	}),
+}))
+
+// Mock VSCode webview-ui-toolkit components for testing
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeCheckbox: ({ checked, onChange, children }: any) => (
 		<label>
@@ -61,6 +69,17 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 			{children}
 		</label>
 	),
+	VSCodeButton: ({ children, onClick, appearance }: any) => (
+		<button onClick={onClick} data-appearance={appearance}>
+			{children}
+		</button>
+	),
+	VSCodeDropdown: ({ children, value, onChange }: any) => (
+		<select value={value} onChange={(e) => onChange({ target: { value: e.target.value } })}>
+			{children}
+		</select>
+	),
+	VSCodeOption: ({ children, value }: any) => <option value={value}>{children}</option>,
 }))
 
 // Mock the UI components
@@ -88,6 +107,7 @@ const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
+	enableChatAutocomplete: false,
 	provider: "openrouter",
 	model: "openai/gpt-4o-mini",
 }
@@ -105,6 +125,11 @@ const renderComponent = (props = {}) => {
 describe("GhostServiceSettingsView", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		vi.useFakeTimers()
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
 	})
 
 	it("renders the component without errors", () => {
@@ -170,6 +195,18 @@ describe("GhostServiceSettingsView", () => {
 		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableSmartInlineTaskKeybinding", true)
 	})
 
+	it("toggles chat autocomplete checkbox correctly", () => {
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
+
+		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableChatAutocomplete.label/).closest("label")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
+
+		fireEvent.click(checkbox)
+
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableChatAutocomplete", true)
+	})
+
 	it("renders Trans components with proper structure", () => {
 		renderComponent()
 
@@ -229,5 +266,65 @@ describe("GhostServiceSettingsView", () => {
 		})
 
 		expect(screen.getByText(/kilocode:ghost.settings.noModelConfigured/)).toBeInTheDocument()
+	})
+
+	describe("snooze status refresh", () => {
+		it("updates snooze status when timer fires and snooze expires", () => {
+			const now = Date.now()
+			vi.setSystemTime(now)
+
+			// Snooze expires in 15 seconds (less than the 30 second refresh interval)
+			const snoozeUntil = now + 15_000
+
+			const { rerender } = render(
+				<GhostServiceSettingsView
+					ghostServiceSettings={{
+						...defaultGhostServiceSettings,
+						enableAutoTrigger: true,
+						snoozeUntil,
+					}}
+					onGhostServiceSettingsChange={vi.fn()}
+				/>,
+			)
+
+			// Initially should show snoozed state
+			expect(screen.getByText(/kilocode:ghost.settings.snooze.currentlySnoozed/)).toBeInTheDocument()
+
+			// Advance time past the snooze expiration and past the 30 second refresh interval
+			act(() => {
+				vi.advanceTimersByTime(30_000)
+			})
+
+			// Force a rerender to pick up the state change from the interval
+			rerender(
+				<GhostServiceSettingsView
+					ghostServiceSettings={{
+						...defaultGhostServiceSettings,
+						enableAutoTrigger: true,
+						snoozeUntil,
+					}}
+					onGhostServiceSettingsChange={vi.fn()}
+				/>,
+			)
+
+			// Now should show the snooze button (not snoozed state)
+			expect(screen.getByText(/kilocode:ghost.settings.snooze.button/)).toBeInTheDocument()
+			expect(screen.queryByText(/kilocode:ghost.settings.snooze.currentlySnoozed/)).not.toBeInTheDocument()
+		})
+
+		it("cleans up interval on unmount", () => {
+			const clearIntervalSpy = vi.spyOn(global, "clearInterval")
+
+			const { unmount } = render(
+				<GhostServiceSettingsView
+					ghostServiceSettings={defaultGhostServiceSettings}
+					onGhostServiceSettingsChange={vi.fn()}
+				/>,
+			)
+
+			unmount()
+
+			expect(clearIntervalSpy).toHaveBeenCalled()
+		})
 	})
 })

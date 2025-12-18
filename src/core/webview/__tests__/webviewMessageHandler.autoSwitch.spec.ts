@@ -327,6 +327,43 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(mockUpsertProviderProfile).not.toHaveBeenCalled()
 			expect(mockUpdateGlobalState).not.toHaveBeenCalledWith("hasPerformedOrganizationAutoSwitch", true)
 		})
+
+		it("should NOT auto-switch when YOLO mode is enabled (cloud agents, CI)", async () => {
+			// Setup: User logs in with organizations but YOLO mode is enabled
+			const mockProfileData = {
+				organizations: [{ id: "org-1", name: "Test Org 1", balance: 100, role: "owner" }],
+			}
+
+			// YOLO mode is enabled (e.g., cloud agent running with --ci flag)
+			mockGetGlobalState.mockImplementation((key: string) => {
+				if (key === "yoloMode") return true
+				if (key === "hasPerformedOrganizationAutoSwitch") return undefined
+				return undefined
+			})
+			;(axios.get as Mock).mockResolvedValueOnce({ data: mockProfileData })
+
+			await webviewMessageHandler(mockProvider, {
+				type: "fetchProfileDataRequest",
+			})
+
+			// Verify no auto-switch occurred - YOLO mode should prevent it
+			expect(mockUpsertProviderProfile).not.toHaveBeenCalled()
+			expect(mockUpdateGlobalState).not.toHaveBeenCalledWith("hasPerformedOrganizationAutoSwitch", true)
+			expect(refreshOrganizationModes).not.toHaveBeenCalled()
+			expect(flushModels).not.toHaveBeenCalled()
+
+			// Verify profile fetch still succeeded
+			expect(mockPostMessageToWebview).toHaveBeenCalledWith({
+				type: "profileDataResponse",
+				payload: {
+					success: true,
+					data: expect.objectContaining({
+						kilocodeToken: "test-token",
+						organizations: mockProfileData.organizations,
+					}),
+				},
+			})
+		})
 	})
 
 	describe("Flag Reset Cases", () => {

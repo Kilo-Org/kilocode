@@ -1,6 +1,7 @@
 function processOrder(order) {
+  // TODO: Add comprehensive logging for order processing
   console.log(`Processing order: ${JSON.stringify(order)}`);
-  // TODO: Add comprehensive logging for order processing<<<AUTOCOMPLETE_HERE>>>
+
   const result = validateOrder(order);
   return result;
 }

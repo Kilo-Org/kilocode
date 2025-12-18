@@ -1,7 +1,14 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		rescue JSON::ParserError => e
-			puts "Error parsing JSON: #{e.message}"
-			return nil
+		if result.is_a?(Hash)
+			result.each do |key, value|
+				puts "#{key}: #{value}"
+			end
+		else
+			puts "Invalid JSON data format"
 		end
+	rescue JSON::ParserError => e
+		puts "Invalid JSON data: #{e.message}"
+	end
+end

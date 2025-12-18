@@ -6,13 +6,26 @@
 		"imageTooLarge": "El fitxer d'imatge és massa gran ({{size}} MB). La mida màxima permesa és {{max}} MB.",
 		"imageWithSize": "Fitxer d'imatge ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "El model sembla estar atrapat en un bucle, intentant la mateixa acció ({{toolName}}) repetidament. Això podria indicar un problema amb la seva estratègia actual. Considera reformular la tasca, proporcionar instruccions més específiques o guiar-lo cap a un enfocament diferent.",
+	"toolRepetitionLimitReached": "Kilo sembla estar atrapat en un bucle, intentant la mateixa acció ({{toolName}}) repetidament. Això podria indicar un problema amb la seva estratègia actual. Considera reformular la tasca, proporcionar instruccions més específiques o guiar-lo cap a un enfocament diferent.",
+	"unknownToolError": "Kilo ha intentat utilitzar una eina desconeguda: \"{{toolName}}\". Reintentant...",
 	"codebaseSearch": {
 		"approval": "Cercant '{{query}}' a la base de codi..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "No s'ha pogut crear una nova tasca a causa de restriccions de política."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Es requereix la clau API d'OpenRouter per a la generació d'imatges amb models d'OpenRouter. Configura-la a la configuració experimental de Generació d'Imatges.",
+		"failedWithStatus": "Error en generar imatge: {{status}} {{statusText}}",
+		"failedWithMessage": "Error en generar imatge: {{message}}",
+		"noImageGenerated": "No s'ha generat cap imatge en la resposta",
+		"invalidImageData": "Dades d'imatge no vàlides en la resposta",
+		"invalidImageFormat": "Format d'imatge no vàlid rebut",
+		"unknownError": "S'ha produït un error desconegut",
+		"roo": {
+			"authRequired": "Es requereix autenticació de Roo Code Cloud per a la generació d'imatges. Inicia sessió a Roo Code Cloud."
 		}
 	}
 }

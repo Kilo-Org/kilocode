@@ -6,13 +6,26 @@
 		"imageTooLarge": "画像ファイルが大きすぎます（{{size}} MB）。最大許可サイズは {{max}} MB です。",
 		"imageWithSize": "画像ファイル（{{size}} KB）"
 	},
-	"toolRepetitionLimitReached": "モデルが同じ操作（{{toolName}}）を繰り返し試みるループに陥っているようです。これは現在の戦略に問題がある可能性を示しています。タスクの言い換え、より具体的な指示の提供、または別のアプローチへの誘導を検討してください。",
+	"toolRepetitionLimitReached": "Kiloが同じ操作（{{toolName}}）を繰り返し試みるループに陥っているようです。これは現在の方法に問題がある可能性を示しています。タスクの言い換え、より具体的な指示の提供、または別のアプローチへの誘導を検討してください。",
+	"unknownToolError": "Kiloが不明なツールを使用しようとしました:「{{toolName}}」。再試行中...",
 	"codebaseSearch": {
 		"approval": "コードベースで '{{query}}' を検索中..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "ポリシー制限により新しいタスクを作成できませんでした。"
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "OpenRouterモデルでの画像生成にはOpenRouter APIキーが必要です。画像生成の実験設定で設定してください。",
+		"failedWithStatus": "画像生成に失敗しました: {{status}} {{statusText}}",
+		"failedWithMessage": "画像生成に失敗しました: {{message}}",
+		"noImageGenerated": "レスポンスに画像が生成されませんでした",
+		"invalidImageData": "レスポンスに無効な画像データがあります",
+		"invalidImageFormat": "無効な画像フォーマットを受信しました",
+		"unknownError": "不明なエラーが発生しました",
+		"roo": {
+			"authRequired": "画像生成にはRoo Code Cloud認証が必要です。Roo Code Cloudにサインインしてください。"
 		}
 	}
 }

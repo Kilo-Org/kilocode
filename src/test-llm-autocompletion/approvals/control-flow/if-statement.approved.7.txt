@@ -1,2 +1,8 @@
 const x = 10;
-if (x > 5) {}
+if (x > 5) {
+    let y = 20;
+    var z = 30;
+    console.log(x);
+    console.log(y);
+    console.log(z);
+}

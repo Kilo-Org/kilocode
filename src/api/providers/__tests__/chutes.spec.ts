@@ -233,6 +233,83 @@ describe("ChutesHandler", () => {
 		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
+	it("createMessage should yield tool_call_partial from stream", async () => {
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vi
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [
+									{
+										delta: {
+											tool_calls: [
+												{
+													index: 0,
+													id: "call_123",
+													function: { name: "test_tool", arguments: '{"arg":"value"}' },
+												},
+											],
+										},
+									},
+								],
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [])
+		const firstChunk = await stream.next()
+
+		expect(firstChunk.done).toBe(false)
+		expect(firstChunk.value).toEqual({
+			type: "tool_call_partial",
+			index: 0,
+			id: "call_123",
+			name: "test_tool",
+			arguments: '{"arg":"value"}',
+		})
+	})
+
+	it("createMessage should pass tools and tool_choice to API", async () => {
+		const tools = [
+			{
+				type: "function" as const,
+				function: {
+					name: "test_tool",
+					description: "A test tool",
+					parameters: { type: "object", properties: {} },
+				},
+			},
+		]
+		const tool_choice = "auto" as const
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vi.fn().mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [], { tools, tool_choice, taskId: "test-task-id" })
+		// Consume stream
+		for await (const _ of stream) {
+			// noop
+		}
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tools,
+				tool_choice,
+			}),
+		)
+	})
+
 	it("should apply DeepSeek default temperature for R1 models", () => {
 		const testModelId = "deepseek-ai/DeepSeek-R1"
 		const handlerWithModel = new ChutesHandler({

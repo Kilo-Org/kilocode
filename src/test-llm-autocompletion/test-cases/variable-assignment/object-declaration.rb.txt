@@ -1,4 +1,5 @@
-# Description: Should complete Ruby hash declaration
+#### Description: Should complete Ruby hash declaration
+#### Filename: user.rb
 user = {
 	name: 'John',
 	email: <<<AUTOCOMPLETE_HERE>>>

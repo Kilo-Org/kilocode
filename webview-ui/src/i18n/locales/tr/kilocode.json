@@ -39,6 +39,12 @@
 				"description": "Etkinleştirildiğinde, Kilo Code bağlam penceresini taşma olasılığı yüksek olsa bile çok büyük dosya veya MCP çıktı okumalarını gerçekleştirir (içerik boyutu bağlam penceresinin %80'inden fazla)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Gömme Toplu İşlem Boyutu",
+			"embeddingBatchSizeDescription": "Gömme üretimi ve vektör deposu güncellemeleri için birlikte toplu işleme alınacak kod segmentlerinin sayısı. Daha yüksek değerler indeksleme hızını artırabilir ancak bellek kullanımını artırabilir. Daha düşük değerler bellek kullanımını azaltır ancak indekslemeyi yavaşlatabilir.",
+			"scannerMaxBatchRetriesLabel": "Tarayıcı Maksimum Toplu İşlem Yeniden Denemeleri",
+			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir."
+		},
 		"provider": {
 			"account": "Kilo Code Hesabı",
 			"apiKey": "Kilo Code API Anahtarı",
@@ -232,7 +238,25 @@
 			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
 			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
 			"model": "Model",
-			"provider": "Sağlayıcı"
+			"provider": "Sağlayıcı",
+			"enableChatAutocomplete": {
+				"label": "Sohbet Girişi Otomatik Tamamlama",
+				"description": "Etkinleştirildiğinde, Kilo Code sohbet girişinde yazarken tamamlama önerileri sunacaktır. Önerileri kabul etmek için Tab tuşuna basın."
+			},
+			"snooze": {
+				"label": "Otomatik Tamamlamayı Ertele",
+				"description": "Otomatik tamamlama önerilerini belirli bir süre için geçici olarak duraklat.",
+				"button": "Ertele",
+				"unsnooze": "Ertelemeyi Kaldır",
+				"currentlySnoozed": "Otomatik tamamlama şu anda ertelenmiş durumda.",
+				"duration": {
+					"1min": "1 dakika",
+					"5min": "5 dakika",
+					"15min": "15 dakika",
+					"30min": "30 dakika",
+					"1hour": "1 saat"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code'a giriş yap",
+		"step1": "Tarayıcında aşağıdaki URL'yi aç",
+		"step2": "Kodu doğrula ve bu cihazı tarayıcında yetkilendir",
+		"scanQr": "Veya bu QR kodunu telefonunla tara",
+		"openBrowser": "Tarayıcıyı Aç",
+		"copyUrl": "URL'yi Kopyala",
+		"waiting": "Yetkilendirme bekleniyor...",
+		"timeRemaining": "Kod {{time}} içinde sona erecek",
+		"success": "Başarıyla giriş yapıldı!",
+		"authenticatedAs": "{{email}} olarak kimlik doğrulandı",
+		"error": "Kimlik Doğrulama Hatası",
+		"unknownError": "Bir hata oluştu. Lütfen tekrar dene.",
+		"cancel": "İptal",
+		"retry": "Tekrar Dene",
+		"tryAgain": "Tekrar Dene",
+		"cancelled": "Kimlik Doğrulama İptal Edildi",
+		"initiating": "Kimlik doğrulama başlatılıyor..."
+	},
+	"speechToText": {
+		"startRecording": "Sesli girişi başlat",
+		"stopRecording": "Sesli girişi durdur",
+		"unavailableOpenAiKeyMissing": "Konuşmadan metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanabilmek için API anahtarına sahip geçerli bir OpenAI sağlayıcısı gerekiyor.",
+		"unavailableFfmpegNotInstalled": "Konuşmayı metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanmak için FFmpeg'i yükleyin.",
+		"unavailableBoth": "Konuşmadan metne dönüştürme özelliği kullanılamıyor. Geçerli bir OpenAI sağlayıcısı gerektirir ve FFmpeg yüklü olmalıdır."
 	}
 }

@@ -31,8 +31,10 @@ import {
 	taskHistoryErrorAtom,
 	resolveTaskHistoryRequestAtom,
 } from "./taskHistory.js"
+import { validateModelOnRouterModelsUpdateAtom } from "./modelValidation.js"
+import { validateModeOnCustomModesUpdateAtom } from "./modeValidation.js"
 import { logs } from "../../services/logs.js"
-import { SessionService } from "../../services/session.js"
+import { SessionManager } from "../../../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 
 /**
  * Message buffer to handle race conditions during initialization
@@ -121,6 +123,8 @@ export const initializeServiceEffectAtom = atom(null, async (get, set, store?: {
 		service.on("stateChange", (state) => {
 			if (atomStore) {
 				atomStore.set(updateExtensionStateAtom, state)
+				// Trigger mode validation after state update (which includes customModes)
+				void atomStore.set(validateModeOnCustomModesUpdateAtom)
 			}
 		})
 
@@ -170,6 +174,23 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			const buffer = get(messageBufferAtom)
 			set(messageBufferAtom, [...buffer, message])
 			return
+		}
+
+		// NOTE: Copied from ClineProvider - make sure the two match.
+		if (message.type === "apiMessagesSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
+		} else if (message.type === "taskMessagesSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "uiMessagesPath", filePath)
+		} else if (message.type === "taskMetadataSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "taskMetadataPath", filePath)
+		} else if (message.type === "currentCheckpointUpdated") {
+			SessionManager.init()?.doSync()
 		}
 
 		// Handle different message types
@@ -287,6 +308,8 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				const routerModels = message.routerModels as RouterModels | undefined
 				if (routerModels) {
 					set(updateRouterModelsAtom, routerModels)
+					// Trigger model validation after router models are updated
+					void set(validateModelOnRouterModelsUpdateAtom)
 				}
 				break
 			}
@@ -371,43 +394,6 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 			}
 
-			case "apiMessagesSaved": {
-				const payload = message.payload as [string, string] | undefined
-
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
-
-					SessionService.init().setPath("apiConversationHistoryPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid apiMessagesSaved payload`, "effects", { payload })
-				}
-				break
-			}
-
-			case "taskMessagesSaved": {
-				const payload = message.payload as [string, string] | undefined
-
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
-
-					SessionService.init().setPath("uiMessagesPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid taskMessagesSaved payload`, "effects", { payload })
-				}
-				break
-			}
-
-			case "taskMetadataSaved": {
-				const payload = message.payload as [string, string] | undefined
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [, filePath] = payload
-
-					SessionService.init().setPath("taskMetadataPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid taskMetadataSaved payload`, "effects", { payload })
-				}
-				break
-			}
 			case "commandExecutionStatus": {
 				// Handle command execution status messages
 				// Store output updates and apply them when the ask appears
@@ -574,12 +560,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 						if (messageIndex !== -1) {
 							const pendingUpdate = newPendingUpdates.get(statusData.executionId)
+							const exitCode =
+								statusData.status === "exited" && "exitCode" in statusData
+									? statusData.exitCode
+									: undefined
 							const updatedAsk: ExtensionChatMessage = {
 								...currentMessages[messageIndex]!,
 								text: JSON.stringify({
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									...(exitCode !== undefined && { exitCode }),
 								}),
 								partial: false, // Command completed
 								isAnswered: false, // Still needs user response
@@ -615,7 +606,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			const lastMessage = message.state.chatMessages[message.state.chatMessages.length - 1]
 			if (lastMessage?.type === "ask" && lastMessage?.ask === "completion_result") {
 				logs.info("Completion result detected in state update", "effects")
+
 				set(ciCompletionDetectedAtom, true)
+
+				SessionManager.init()?.doSync(true)
 			}
 		}
 	} catch (error) {

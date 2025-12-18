@@ -6,13 +6,26 @@
 		"imageTooLarge": "Tệp hình ảnh quá lớn ({{size}} MB). Kích thước tối đa cho phép là {{max}} MB.",
 		"imageWithSize": "Tệp hình ảnh ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Mô hình dường như đang bị mắc kẹt trong một vòng lặp, liên tục cố gắng thực hiện cùng một hành động ({{toolName}}). Điều này có thể cho thấy vấn đề với chiến lược hiện tại. Hãy cân nhắc việc diễn đạt lại nhiệm vụ, cung cấp hướng dẫn cụ thể hơn, hoặc hướng mô hình theo một cách tiếp cận khác.",
+	"toolRepetitionLimitReached": "Kilo dường như đang bị mắc kẹt trong một vòng lặp, liên tục cố gắng thực hiện cùng một hành động ({{toolName}}). Điều này có thể cho thấy vấn đề với chiến lược hiện tại. Hãy cân nhắc việc diễn đạt lại nhiệm vụ, cung cấp hướng dẫn cụ thể hơn, hoặc hướng Kilo theo một cách tiếp cận khác.",
+	"unknownToolError": "Kilo đã cố gắng sử dụng một công cụ không xác định: \"{{toolName}}\". Đang thử lại...",
 	"codebaseSearch": {
 		"approval": "Đang tìm kiếm '{{query}}' trong cơ sở mã..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "Không thể tạo nhiệm vụ mới do hạn chế chính sách."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Yêu cầu khóa API OpenRouter để tạo hình ảnh với các mô hình OpenRouter. Vui lòng cấu hình trong cài đặt thử nghiệm Tạo hình ảnh.",
+		"failedWithStatus": "Tạo hình ảnh thất bại: {{status}} {{statusText}}",
+		"failedWithMessage": "Tạo hình ảnh thất bại: {{message}}",
+		"noImageGenerated": "Không có hình ảnh nào được tạo trong phản hồi",
+		"invalidImageData": "Dữ liệu hình ảnh không hợp lệ trong phản hồi",
+		"invalidImageFormat": "Nhận được định dạng hình ảnh không hợp lệ",
+		"unknownError": "Đã xảy ra lỗi không xác định",
+		"roo": {
+			"authRequired": "Yêu cầu xác thực Roo Code Cloud để tạo hình ảnh. Vui lòng đăng nhập vào Roo Code Cloud."
 		}
 	}
 }

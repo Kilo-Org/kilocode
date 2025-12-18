@@ -225,7 +225,6 @@ describe("SYSTEM_PROMPT", () => {
 		// Should NOT include traditional editing tools
 		expect(prompt).not.toContain("## apply_diff")
 		expect(prompt).not.toContain("## write_to_file")
-		expect(prompt).not.toContain("## insert_content")
 
 		// Should contain Fast Apply-specific instructions
 		expect(prompt).toContain("FastApply is enabled")
@@ -262,7 +261,6 @@ describe("SYSTEM_PROMPT", () => {
 		// Should include traditional editing tools
 		expect(prompt).toContain("## apply_diff")
 		expect(prompt).toContain("## write_to_file")
-		expect(prompt).toContain("## insert_content")
 
 		// Should NOT contain Fast Apply-specific instructions
 		expect(prompt).not.toContain("FastApply is enabled")

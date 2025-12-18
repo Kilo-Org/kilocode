@@ -92,6 +92,12 @@
 				"cacheWritePrice": "每百万写入缓存 Token 的费用。"
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding 批次大小",
+			"embeddingBatchSizeDescription": "用于 Embedding 生成和向量存储更新的代码片段批次大小。较大的值可以提高索引速度，但可能增加内存使用量。较小的值可以减少内存使用量，但可能降低索引速度。",
+			"scannerMaxBatchRetriesLabel": "扫描器最大批次重试次数",
+			"scannerMaxBatchRetriesDescription": "目录扫描期间重试失败批次的最大次数。较大的值可以提高对临时错误的容错能力，但如果错误持续存在可能会降低索引速度。较小的值会更快失败，但可能在临时问题时跳过内容。"
+		},
 		"terminal": {
 			"commandGenerator": {
 				"apiConfigId": {
@@ -239,7 +245,25 @@
 			"noModelConfigured": "未找到合适的自动补全模型。请在 API 设置中配置提供商。",
 			"configureAutocompleteProfile": "前往配置文件并配置自动补全类型的配置文件即可使用任意模型。",
 			"model": "模型",
-			"provider": "提供商"
+			"provider": "提供商",
+			"enableChatAutocomplete": {
+				"label": "聊天输入自动完成",
+				"description": "启用后，Kilo Code 将在您输入聊天内容时提供补全建议。按 Tab 键接受建议。"
+			},
+			"snooze": {
+				"label": "暂停自动补全",
+				"description": "在指定时间内暂时停止自动补全建议。",
+				"button": "暂停",
+				"unsnooze": "取消暂停",
+				"currentlySnoozed": "自动补全当前已暂停。",
+				"duration": {
+					"1min": "1 分钟",
+					"5min": "5 分钟",
+					"15min": "15 分钟",
+					"30min": "30 分钟",
+					"1hour": "1 小时"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
+	},
+	"deviceAuth": {
+		"title": "登录 Kilo Code",
+		"step1": "在浏览器中打开以下 URL",
+		"step2": "验证代码并在浏览器中授权此设备",
+		"scanQr": "或用手机扫描此二维码",
+		"openBrowser": "打开浏览器",
+		"copyUrl": "复制 URL",
+		"waiting": "等待授权...",
+		"timeRemaining": "代码将在 {{time}} 后过期",
+		"success": "登录成功！",
+		"authenticatedAs": "已验证为 {{email}}",
+		"error": "验证错误",
+		"unknownError": "发生错误。请重试。",
+		"cancel": "取消",
+		"retry": "重试",
+		"tryAgain": "重试",
+		"cancelled": "验证已取消",
+		"initiating": "正在启动验证..."
+	},
+	"speechToText": {
+		"startRecording": "开始语音输入",
+		"stopRecording": "停止语音输入",
+		"unavailableOpenAiKeyMissing": "语音转文字功能不可用。使用语音转录需要有效的OpenAI提供商及其API密钥。",
+		"unavailableFfmpegNotInstalled": "语音转文字功能不可用。请安装FFmpeg以使用语音转录功能。",
+		"unavailableBoth": "语音转文字功能不可用。它需要有效的OpenAI提供商，且必须安装FFmpeg。"
 	}
 }

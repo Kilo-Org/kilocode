@@ -146,8 +146,7 @@ export function isFileOperation(message: ClineMessage): { isFile: boolean; isWri
 			if (
 				toolName.includes("read_file") ||
 				toolName.includes("write_to_file") ||
-				toolName.includes("apply_diff") ||
-				toolName.includes("insert_content")
+				toolName.includes("apply_diff")
 			) {
 				const isWrite = toolName.includes("write") || toolName.includes("apply") || toolName.includes("insert")
 				return { isFile: true, isWrite }

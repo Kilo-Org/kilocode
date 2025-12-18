@@ -13,6 +13,7 @@ import { countFileLines } from "../../integrations/misc/line-counter"
 import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
+import { ToolProtocol, isNativeProtocol } from "@roo-code/types"
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -38,6 +39,7 @@ export async function simpleReadFileTool(
 	handleError: HandleError,
 	pushToolResult: PushToolResult,
 	_removeClosingTag: RemoveClosingTag,
+	toolProtocol?: ToolProtocol,
 ) {
 	const filePath: string | undefined = block.params.path
 

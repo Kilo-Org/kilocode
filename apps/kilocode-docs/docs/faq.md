@@ -175,7 +175,7 @@ Yes, you can create your own MCP servers to add custom functionality to Kilo Cod
 - Check your internet connection.
 - Check the status of your chosen API provider.
 - Try restarting VS Code.
-- If the problem persists, report the issue on [GitHub](https://github.com/Kilo-Org/kilocode/issues) or [Discord](https://kilocode.ai/discord).
+- If the problem persists, report the issue on [GitHub](https://github.com/Kilo-Org/kilocode/issues) or [Discord](https://kilo.ai/discord).
 
 ### I'm seeing an error message. What does it mean?
 

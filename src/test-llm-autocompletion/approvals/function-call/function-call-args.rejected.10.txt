@@ -1,0 +1,11 @@
+function greet(name) { return 'Hello ' + name; }
+greet('John'); // 'Hello John'
+greet(5); // 'Hello 5'
+
+function greet(name) {
+  if (typeof name === 'string') {
+    return 'Hello ' + name;
+  } else {
+    return 'Hello';
+  }
+}

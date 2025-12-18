@@ -17,6 +17,24 @@
 		}
 	},
 	"chooseProvider": "Để thực hiện phép màu của mình, Kilo Code cần một khóa API.",
+	"providerSignup": {
+		"rooCloudProvider": "Nhà cung cấp Roo Code Cloud",
+		"rooCloudDescription": "Cách đơn giản nhất để sử dụng Roo. Sự kết hợp được tuyển chọn của các mô hình miễn phí và trả phí với chi phí thấp",
+		"learnMore": "tìm hiểu thêm",
+		"useAnotherProvider": "Sử dụng nhà cung cấp khác",
+		"useAnotherProviderDescription": "Nhập khóa API và bắt đầu.",
+		"noApiKeys": "Không muốn phải xử lý các khóa? Hãy sử dụng Nhà cung cấp Roo Code Cloud.",
+		"getStarted": "Bắt đầu"
+	},
+	"waitingForCloud": {
+		"heading": "Đang đưa bạn đến Roo Code Cloud...",
+		"description": "Hoàn thành đăng ký trong trình duyệt và bạn sẽ tự động quay lại đây.",
+		"noPrompt": "Nếu bạn không được nhắc mở URL, <clickHere>hãy nhấp vào đây</clickHere>.",
+		"havingTrouble": "Nếu bạn đã hoàn thành đăng ký nhưng gặp sự cố, <clickHere>hãy nhấp vào đây</clickHere>.",
+		"pasteUrl": "Dán URL callback từ trình duyệt của bạn:",
+		"invalidURL": "Điều đó không giống như một URL callback hợp lệ. Vui lòng sao chép những gì Roo Code Cloud đang hiển thị trong trình duyệt của bạn.",
+		"goBack": "Quay lại"
+	},
 	"startRouter": "Chúng tôi khuyên bạn nên sử dụng bộ định tuyến LLM:",
 	"startCustom": "Hoặc bạn có thể sử dụng khóa API của riêng mình:",
 	"telemetry": {

@@ -117,6 +117,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "Kamu sudah menunggu {{timeout}} detik untuk inisialisasi checkpoint. Kalau tidak butuh fitur ini, matikan saja di <settingsLink>pengaturan checkpoint</settingsLink>.",
-		"init_checkpoint_fail_long_time": "Inisialisasi checkpoint sudah lebih dari {{timeout}} detik, jadi checkpoint dinonaktifkan untuk tugas ini. Kamu bisa mematikan checkpoint atau menambah waktu tunggu di <settingsLink>pengaturan checkpoint</settingsLink>."
+		"init_checkpoint_fail_long_time": "Inisialisasi checkpoint sudah lebih dari {{timeout}} detik, jadi checkpoint dinonaktifkan untuk tugas ini. Kamu bisa mematikan checkpoint atau menambah waktu tunggu di <settingsLink>pengaturan checkpoint</settingsLink>.",
+		"attempt_completion_tool_failed": "Tidak dapat mengeksekusi attempt_completion karena panggilan alat sebelumnya gagal dalam giliran ini. Harap atasi kegagalan alat sebelum mencoba menyelesaikan."
+	},
+	"tasks": {
+		"delegated": "Didelegasikan ke subtugas",
+		"delegated_to": "Didelegasikan ke tugas {{childId}}",
+		"delegation_completed": "Subtugas selesai, melanjutkan tugas induk",
+		"awaiting_child": "Menunggu tugas anak {{childId}}"
 	}
 }

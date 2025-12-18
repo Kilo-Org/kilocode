@@ -7,12 +7,25 @@
 		"imageWithSize": "ไฟล์รูปภาพ ({{size}} KB)"
 	},
 	"toolRepetitionLimitReached": "ดูเหมือนโมเดลจะติดอยู่ในลูป พยายามทำการกระทำเดิม ({{toolName}}) ซ้ำๆ นี่อาจบ่งชี้ถึงปัญหากับกลยุทธ์ปัจจุบัน ลองเขียนงานใหม่ ให้คำแนะนำที่เฉพาะเจาะจงมากขึ้น หรือแนะนำให้ใช้วิธีการอื่น",
+	"unknownToolError": "Kilo พยายามใช้เครื่องมือที่ไม่รู้จัก: \"{{toolName}}\" กำลังลองใหม่...",
 	"codebaseSearch": {
 		"approval": "กำลังค้นหา '{{query}}' ใน codebase..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "ไม่สามารถสร้างงานใหม่ได้เนื่องจากข้อจำกัดของนโยบาย"
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "จำเป็นต้องมี OpenRouter API key สำหรับการสร้างรูปภาพด้วยโมเดล OpenRouter กรุณาตั้งค่าในการตั้งค่าทดลองการสร้างรูปภาพ",
+		"failedWithStatus": "การสร้างรูปภาพล้มเหลว: {{status}} {{statusText}}",
+		"failedWithMessage": "การสร้างรูปภาพล้มเหลว: {{message}}",
+		"noImageGenerated": "ไม่มีรูปภาพถูกสร้างในการตอบกลับ",
+		"invalidImageData": "ข้อมูลรูปภาพไม่ถูกต้องในการตอบกลับ",
+		"invalidImageFormat": "รับรูปแบบรูปภาพที่ไม่ถูกต้อง",
+		"unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+		"roo": {
+			"authRequired": "จำเป็นต้องยืนยันตัวตน Roo Code Cloud สำหรับการสร้างรูปภาพ กรุณาลงชื่อเข้าใช้ Roo Code Cloud"
 		}
 	}
 }

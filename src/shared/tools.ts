@@ -39,7 +39,6 @@ export const toolParamNames = [
 	"command",
 	"path",
 	"content",
-	"line_count",
 	"regex",
 	"file_pattern",
 	"recursive",
@@ -86,6 +85,8 @@ export const toolParamNames = [
 	"run_in_background", // kilocode_change
 	"terminal_id", // kilocode_change
 	"files", // Native protocol parameter for read_file
+	"operations", // search_and_replace parameter for multiple operations
+	"patch", // apply_patch parameter
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -97,11 +98,13 @@ export type ToolProtocol = "xml" | "native"
  * Tools not listed here will fall back to `any` for backward compatibility.
  */
 export type NativeToolArgs = {
+	access_mcp_resource: { server_name: string; uri: string }
 	read_file: { files: FileEntry[] }
 	attempt_completion: { result: string }
 	execute_command: { command: string; cwd?: string; run_in_background?: boolean } // kilocode_change: add run_in_background
-	insert_content: { path: string; line: number; content: string }
 	apply_diff: { path: string; diff: string }
+	search_and_replace: { path: string; operations: Array<{ search: string; replace: string }> }
+	apply_patch: { patch: string }
 	ask_followup_question: {
 		question: string
 		follow_up: Array<{ text: string; mode?: string }>
@@ -116,7 +119,7 @@ export type NativeToolArgs = {
 	switch_mode: { mode_slug: string; reason: string }
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
-	write_to_file: { path: string; content: string; line_count: number }
+	write_to_file: { path: string; content: string }
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -135,6 +138,26 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 	toolUseId?: string // kilocode_change
 	// nativeArgs is properly typed based on TName if it's in NativeToolArgs, otherwise never
 	nativeArgs?: TName extends keyof NativeToolArgs ? NativeToolArgs[TName] : never
+}
+
+/**
+ * Represents a native MCP tool call from the model.
+ * In native mode, MCP tools are called directly with their prefixed name (e.g., "mcp_serverName_toolName")
+ * rather than through the use_mcp_tool wrapper. This type preserves the original tool name
+ * so it appears correctly in API conversation history.
+ */
+export interface McpToolUse {
+	type: "mcp_tool_use"
+	id?: string // Tool call ID from the API
+	/** The original tool name from the API (e.g., "mcp_serverName_toolName") */
+	name: string
+	/** Extracted server name from the tool name */
+	serverName: string
+	/** Extracted tool name from the tool name */
+	toolName: string
+	/** Arguments passed to the MCP tool */
+	arguments: Record<string, unknown>
+	partial: boolean
 }
 
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {
@@ -162,7 +185,7 @@ export interface FetchInstructionsToolUse extends ToolUse<"fetch_instructions"> 
 
 export interface WriteToFileToolUse extends ToolUse<"write_to_file"> {
 	name: "write_to_file"
-	params: Partial<Pick<Record<ToolParamName, string>, "path" | "content" | "line_count">>
+	params: Partial<Pick<Record<ToolParamName, string>, "path" | "content">>
 }
 
 // kilocode_change start
@@ -171,11 +194,6 @@ export interface DeleteFileToolUse extends ToolUse {
 	params: Partial<Pick<Record<ToolParamName, string>, "path">>
 }
 // kilocode_change end
-
-export interface InsertCodeBlockToolUse extends ToolUse<"insert_content"> {
-	name: "insert_content"
-	params: Partial<Pick<Record<ToolParamName, string>, "path" | "line" | "content">>
-}
 
 export interface CodebaseSearchToolUse extends ToolUse<"codebase_search"> {
 	name: "codebase_search"
@@ -253,6 +271,7 @@ export interface GenerateImageToolUse extends ToolUse<"generate_image"> {
 export type ToolGroupConfig = {
 	tools: readonly string[]
 	alwaysAvailable?: boolean // Whether this group is always available and shouldn't show in prompts view
+	customTools?: readonly string[] // Opt-in only tools - only available when explicitly included via model's includedTools
 }
 
 export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
@@ -267,6 +286,8 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	report_bug: "report bug",
 	condense: "condense the current context window",
 	// kilocode_change end
+	search_and_replace: "apply changes using search and replace",
+	apply_patch: "apply patches using codex format",
 	search_files: "search files",
 	list_files: "list files",
 	list_code_definition_names: "list definitions",
@@ -277,7 +298,6 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	attempt_completion: "complete tasks",
 	switch_mode: "switch modes",
 	new_task: "create new task",
-	insert_content: "insert content",
 	new_rule: "create new rule",
 	terminal_kill: "control terminals", // kilocode_change: new terminal control tool
 	codebase_search: "codebase search",
@@ -304,10 +324,10 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"edit_file", // kilocode_change: Morph fast apply
 			"write_to_file",
 			"delete_file", // kilocode_change
-			"insert_content",
 			"new_rule", // kilocode_change
 			"generate_image",
 		],
+		customTools: ["search_and_replace", "apply_patch"],
 	},
 	browser: {
 		tools: ["browser_action"],

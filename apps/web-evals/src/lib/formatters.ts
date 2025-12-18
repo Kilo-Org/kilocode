@@ -45,4 +45,14 @@ export const formatTokens = (tokens: number) => {
 }
 
 export const formatToolUsageSuccessRate = (usage: { attempts: number; failures: number }) =>
-	usage.attempts === 0 ? "0%" : `${(((usage.attempts - usage.failures) / usage.attempts) * 100).toFixed(1)}%`
+	usage.attempts === 0 ? "0%" : `${Math.round(((usage.attempts - usage.failures) / usage.attempts) * 100)}%`
+
+export const formatDateTime = (date: Date) => {
+	return new Intl.DateTimeFormat("en-US", {
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true,
+	}).format(date)
+}

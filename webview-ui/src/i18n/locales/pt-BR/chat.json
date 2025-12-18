@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Link da organização copiado para a área de transferência",
 		"shareSuccessPublic": "Link público copiado para a área de transferência",
 		"openInCloud": "Abrir tarefa no Roo Code Cloud",
-		"openInCloudIntro": "Continue monitorando ou interagindo com Roo de qualquer lugar. Escaneie, clique ou copie para abrir."
+		"openInCloudIntro": "Continue monitorando ou interagindo com Roo de qualquer lugar. Escaneie, clique ou copie para abrir.",
+		"openApiHistory": "Abrir histórico da API",
+		"openUiHistory": "Abrir histórico da UI"
 	},
 	"history": {
 		"title": "Histórico"
@@ -142,7 +144,18 @@
 		"failed": "Requisição API falhou",
 		"streaming": "Requisição API...",
 		"cancelled": "Requisição API cancelada",
-		"streamingFailed": "Streaming API falhou"
+		"streamingFailed": "Streaming API falhou",
+		"errorTitle": "Erro API {{code}}",
+		"errorMessage": {
+			"docs": "Documentação",
+			"400": "O provedor não conseguiu processar a solicitação conforme feita. Interrompa a tarefa e tente uma abordagem diferente.",
+			"401": "Não foi possível autenticar com o provedor. Por favor, verifique a configuração da sua chave API.",
+			"402": "Parece que você ficou sem fundos/créditos em sua conta. Vá ao seu provedor e adicione mais para continuar.",
+			"403": "Não autorizado. Sua chave API é válida, mas o provedor se recusou a concluir esta solicitação.",
+			"429": "Muitas solicitações. Você está sendo limitado pelo provedor. Por favor, aguarde um pouco antes de sua próxima chamada de API.",
+			"500": "Erro do servidor do provedor. Algo está errado do lado do provedor, não há nada de errado com sua solicitação.",
+			"unknown": "Erro de API desconhecido. Por favor, entre em contato com o suporte do Roo Code."
+		}
 	},
 	"checkpoint": {
 		"regular": "Ponto de verificação",
@@ -301,21 +314,21 @@
 			"goToSettingsButton": "Ir para Configurações"
 		},
 		"release": {
-			"heading": "Novidades na Extensão:",
-			"openRouterEmbeddings": "Suporte para modelos de embedding do OpenRouter",
-			"chutesDynamic": "Chutes agora carrega os modelos mais recentes dinamicamente",
-			"queuedMessagesFix": "Correções para mensagens enfileiradas que se perdiam"
+			"heading": "Novidades nesta versão:",
+			"contextRewind": "A condensação melhorada do contexto agora permite restaurar o contexto anterior completo ao rebobinar para um ponto de verificação",
+			"rooProvider": "O provedor Roo Code Cloud agora preserva o conteúdo de raciocínio e usa ferramentas nativas por padrão para melhor desempenho"
 		},
 		"cloudAgents": {
 			"heading": "Novidades na Nuvem:",
-			"prFixer": "Apresentando o agente em nuvem <bold>PR Fixer</bold> para complementar o Revisor de PR.",
-			"prFixerDescription": "O PR Fixer do Roo Code aplica alterações de alta qualidade aos seus PRs, diretamente do GitHub. Invoque via comentário de PR e ele lerá todo o histórico de comentários para entender contexto, acordos e compromissos - depois implementa a correção certa.",
-			"tryPrFixerButton": "Experimentar PR Fixer"
+			"specialized": "Apresentando <bold>Explainer</bold>, <bold>Planner</bold> e <bold>Coder</bold> - três agentes em nuvem especializados para aprimorar seus fluxos de trabalho.",
+			"description": "Os agentes trabalham juntos na nuvem e podem ser acionados a partir da web ou por meio do Slack.",
+			"tryButton": "Experimentar Agentes em Nuvem"
 		},
 		"careers": "Além disso, <careersLink>estamos contratando!</careersLink>",
-		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sessão do Navegador",
 		"rooWantsToUse": "Kilo Code quer usar o navegador",
 		"consoleLogs": "Logs do console",
 		"noNewLogs": "(Sem novos logs)",
@@ -332,8 +345,10 @@
 			"launch": "Iniciar navegador em {{url}}",
 			"click": "Clique ({{coordinate}})",
 			"type": "Digitar \"{{text}}\"",
+			"press": "Pressione {{key}}",
 			"scrollDown": "Rolar para baixo",
 			"scrollUp": "Rolar para cima",
+			"hover": "Pairar ({{coordinate}})",
 			"close": "Fechar navegador"
 		}
 	},

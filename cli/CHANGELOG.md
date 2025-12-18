@@ -1,5 +1,97 @@
 # @kilocode/cli
 
+## 0.17.0
+
+### Minor Changes
+
+- [#4428](https://github.com/Kilo-Org/kilocode/pull/4428) [`8394da8`](https://github.com/Kilo-Org/kilocode/commit/8394da8715fae4eacf416301885eeee840456700) Thanks [@iscekic](https://github.com/iscekic)! - add parent session id when creating a session
+
+### Patch Changes
+
+- [#4155](https://github.com/Kilo-Org/kilocode/pull/4155) [`74fe4b8`](https://github.com/Kilo-Org/kilocode/commit/74fe4b8a20ff13c31d967693818708f81bd9167e) Thanks [@omniwired](https://github.com/omniwired)! - feat(cli): add Ctrl+Y keybinding to toggle YOLO mode
+
+- [#4447](https://github.com/Kilo-Org/kilocode/pull/4447) [`0022305`](https://github.com/Kilo-Org/kilocode/commit/0022305558d71957aeb7468a0e8e3ed829997f93) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Provide a few tips for when an LLM gets stuck in a loop
+
+- [#4477](https://github.com/Kilo-Org/kilocode/pull/4477) [`564b60e`](https://github.com/Kilo-Org/kilocode/commit/564b60eb7c8a1cac6d80c6756a05e9e5eb20d94a) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Simplify --yolo option description
+
+## 0.16.0
+
+### Minor Changes
+
+- [#4388](https://github.com/Kilo-Org/kilocode/pull/4388) [`af93318`](https://github.com/Kilo-Org/kilocode/commit/af93318e3648c235721ba58fe9caab9429608241) Thanks [@iscekic](https://github.com/iscekic)! - send org id and last mode with session data
+
+## 0.15.0
+
+### Minor Changes
+
+- [#4326](https://github.com/Kilo-Org/kilocode/pull/4326) [`6d62090`](https://github.com/Kilo-Org/kilocode/commit/6d620905dfc6d8419bdbc9ffcad54109057e709e) Thanks [@iscekic](https://github.com/iscekic)! - improve session sync mechanism (event based instead of timer)
+
+### Patch Changes
+
+- [#4367](https://github.com/Kilo-Org/kilocode/pull/4367) [`8b3ef61`](https://github.com/Kilo-Org/kilocode/commit/8b3ef617c3f6a6f02eddc9e866efe82ce2644959) Thanks [@iscekic](https://github.com/iscekic)! - flush cli session on completion
+
+- [#4362](https://github.com/Kilo-Org/kilocode/pull/4362) [`d596a08`](https://github.com/Kilo-Org/kilocode/commit/d596a08d6fe5c1a719855616ba5f582407f6769a) Thanks [@iscekic](https://github.com/iscekic)! - extract an extension message handler for extension/cli reuse
+
+## 0.14.0
+
+### Minor Changes
+
+- [#4291](https://github.com/Kilo-Org/kilocode/pull/4291) [`215c48f`](https://github.com/Kilo-Org/kilocode/commit/215c48f68dca37df435ea619ba8496912e2b4c22) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Fix race during session restoration
+
+## 0.13.1
+
+### Patch Changes
+
+- [#4267](https://github.com/Kilo-Org/kilocode/pull/4267) [`a475394`](https://github.com/Kilo-Org/kilocode/commit/a47539442de1addacf55f9647471411fb55b50ee) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add JSON stdin handler for bidirectional CLI communication
+
+## 0.13.0
+
+### Minor Changes
+
+- [#4251](https://github.com/Kilo-Org/kilocode/pull/4251) [`1c5e35b`](https://github.com/Kilo-Org/kilocode/commit/1c5e35b52959690b181800cdc4b9bccdf4606c91) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix cli ephemeral mode config leak
+
+### Patch Changes
+
+- [#4211](https://github.com/Kilo-Org/kilocode/pull/4211) [`489b366`](https://github.com/Kilo-Org/kilocode/commit/489b3669c34f437dfd7c4b9a692cf7d84fff73a1) Thanks [@iscekic](https://github.com/iscekic)! - refactor session manager to better handle asynchronicity of file save events
+
+## 0.12.1
+
+### Patch Changes
+
+- [#4204](https://github.com/Kilo-Org/kilocode/pull/4204) [`c200579`](https://github.com/Kilo-Org/kilocode/commit/c2005792b71ff8ea8d2e15286575294eb079066f) Thanks [@iscekic](https://github.com/iscekic)! - fixes session cleanup race conditions
+
+## 0.12.0
+
+### Minor Changes
+
+- [#4177](https://github.com/Kilo-Org/kilocode/pull/4177) [`8d44a94`](https://github.com/Kilo-Org/kilocode/commit/8d44a94a28f1cd84d1af9836c1822eb43fe41a1b) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Fix: inject configuration before session restoration
+
+## 0.11.0
+
+### Minor Changes
+
+- [#4148](https://github.com/Kilo-Org/kilocode/pull/4148) [`44ebf95`](https://github.com/Kilo-Org/kilocode/commit/44ebf95e72d2abad86181cc957a8fa29d1b38740) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - fix potential credential seeding race
+
+### Patch Changes
+
+- [#4066](https://github.com/Kilo-Org/kilocode/pull/4066) [`1831796`](https://github.com/Kilo-Org/kilocode/commit/18317963fbb5b02a1178f4579d5cb643cfbd531c) Thanks [@iscekic](https://github.com/iscekic)! - use shared session manager from extension folder
+
+- [#4121](https://github.com/Kilo-Org/kilocode/pull/4121) [`7cd2035`](https://github.com/Kilo-Org/kilocode/commit/7cd2035a920a466d93001eb621cd21082d6cf9bd) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve "/model list" command with pagination, filters and sorting
+
+- [#4122](https://github.com/Kilo-Org/kilocode/pull/4122) [`fa54645`](https://github.com/Kilo-Org/kilocode/commit/fa546456b379d10044c045118b08f77b9034d5fc) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Pulish version on Github Pages
+
+## 0.10.2
+
+### Patch Changes
+
+- [#4116](https://github.com/Kilo-Org/kilocode/pull/4116) [`c6072d0`](https://github.com/Kilo-Org/kilocode/commit/c6072d03709d93e9aca1b187c2005f65463d6b53) Thanks [@catrielmuller](https://github.com/catrielmuller)! - NPM provenance
+
+## 0.10.1
+
+### Patch Changes
+
+- [#4115](https://github.com/Kilo-Org/kilocode/pull/4115) [`a36323c`](https://github.com/Kilo-Org/kilocode/commit/a36323c0fbb560172071826d2920ce7b94bd5985) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Public Docker images
+
 ## 0.10.0
 
 ### Minor Changes

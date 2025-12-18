@@ -94,6 +94,12 @@
 					"current": "Użyj bieżącej konfiguracji"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Rozmiar Partii Embeddingów",
+			"embeddingBatchSizeDescription": "Liczba segmentów kodu grupowanych razem do generowania embeddingów i aktualizacji magazynu wektorów. Wyższe wartości mogą przyspieszyć indeksowanie, ale mogą zwiększyć zużycie pamięci. Niższe wartości zmniejszają zużycie pamięci, ale mogą spowolnić indeksowanie.",
+			"scannerMaxBatchRetriesLabel": "Maksymalna Liczba Ponowień Partii Skanera",
+			"scannerMaxBatchRetriesDescription": "Maksymalna liczba ponowień nieudanej partii podczas skanowania katalogów. Wyższe wartości zwiększają odporność na przejściowe błędy, ale mogą spowolnić indeksowanie, jeśli błędy się utrzymują. Niższe wartości kończą się szybciej niepowodzeniem, ale mogą pominąć zawartość przy tymczasowych problemach."
 		}
 	},
 	"toolCallStyle": {
@@ -232,7 +238,25 @@
 			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
 			"configureAutocompleteProfile": "Użyj dowolnego modelu, przechodząc do profili i konfigurując Profil typu Autouzupełnianie.",
 			"model": "Model",
-			"provider": "Dostawca"
+			"provider": "Dostawca",
+			"enableChatAutocomplete": {
+				"label": "Automatyczne uzupełnianie wpisów czatu",
+				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			},
+			"snooze": {
+				"label": "Wstrzymaj Autocomplete",
+				"description": "Tymczasowo wstrzymaj sugestie autouzupełniania na określony czas.",
+				"button": "Wstrzymaj",
+				"unsnooze": "Wznów",
+				"currentlySnoozed": "Autouzupełnianie jest obecnie wstrzymane.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 godzina"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
+	},
+	"deviceAuth": {
+		"title": "Zaloguj się do Kilo Code",
+		"step1": "Otwórz następujący adres URL w przeglądarce",
+		"step2": "Zweryfikuj kod i autoryzuj to urządzenie w przeglądarce",
+		"scanQr": "Lub zeskanuj ten kod QR telefonem",
+		"openBrowser": "Otwórz przeglądarkę",
+		"copyUrl": "Kopiuj URL",
+		"waiting": "Oczekiwanie na autoryzację...",
+		"timeRemaining": "Kod wygasa za {{time}}",
+		"success": "Pomyślnie zalogowano!",
+		"authenticatedAs": "Uwierzytelniono jako {{email}}",
+		"error": "Błąd uwierzytelniania",
+		"unknownError": "Wystąpił błąd. Spróbuj ponownie.",
+		"cancel": "Anuluj",
+		"retry": "Spróbuj ponownie",
+		"tryAgain": "Spróbuj ponownie",
+		"cancelled": "Uwierzytelnianie anulowane",
+		"initiating": "Rozpoczynanie uwierzytelniania..."
+	},
+	"speechToText": {
+		"startRecording": "Rozpocznij wprowadzanie głosowe",
+		"stopRecording": "Zatrzymaj wprowadzanie głosowe",
+		"unavailableFfmpegNotInstalled": "Transkrypcja mowy na tekst jest niedostępna. Zainstaluj FFmpeg, aby korzystać z transkrypcji głosowej.",
+		"unavailableOpenAiKeyMissing": "Zamiana mowy na tekst jest niedostępna. Wymaga poprawnego dostawcy OpenAI z kluczem API, aby korzystać z transkrypcji głosowej.",
+		"unavailableBoth": "Funkcja zamiany mowy na tekst jest niedostępna. Wymaga ona prawidłowego dostawcy OpenAI oraz zainstalowanego FFmpeg."
 	}
 }

@@ -101,6 +101,12 @@
 				},
 				"provider": "Poskytovatel generátoru terminálových příkazů"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Velikost dávky embeddingu",
+			"embeddingBatchSizeDescription": "Počet segmentů kódu, které se seskupí pro generování embeddingů a vektové upserty. Vyšší hodnoty mohou zlepšit rychlost indexování, ale mohou zvýšit spotřebu paměti. Nižší hodnoty snižují spotřebu paměti, ale mohou zpomalit indexování.",
+			"scannerMaxBatchRetriesLabel": "Maximální počet opakování dávky skeneru",
+			"scannerMaxBatchRetriesDescription": "Maximální počet pokusů o opakování neúspěšné dávky během skenování adresářů. Vyšší hodnoty zvyšují odolnost vůči přechodným chybám, ale mohou zpomalit indexování, pokud chyby přetrvávají. Nižší hodnoty selhávají rychleji, ale mohou při dočasných problémech přeskočit obsah."
 		}
 	},
 	"chat": {
@@ -239,7 +245,25 @@
 			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
-			"provider": "Poskytovatel"
+			"provider": "Poskytovatel",
+			"enableChatAutocomplete": {
+				"label": "Automatické doplňování při psaní zpráv",
+				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+			},
+			"snooze": {
+				"label": "Pozastavit Autocomplete",
+				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"button": "Pozastavit",
+				"unsnooze": "Obnovit",
+				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 hodina"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Novinka: Sdílejte režimy vytvořením organizace"
+	},
+	"deviceAuth": {
+		"title": "Přihlásit se do Kilo Code",
+		"step1": "Otevři následující URL ve svém prohlížeči",
+		"step2": "Ověř kód a autorizuj toto zařízení ve svém prohlížeči",
+		"scanQr": "Nebo naskenuj tento QR kód svým telefonem",
+		"openBrowser": "Otevřít prohlížeč",
+		"copyUrl": "Kopírovat URL",
+		"waiting": "Čekání na autorizaci...",
+		"timeRemaining": "Kód vyprší za {{time}}",
+		"success": "Úspěšně přihlášen!",
+		"authenticatedAs": "Ověřen jako {{email}}",
+		"error": "Chyba ověření",
+		"unknownError": "Došlo k chybě. Zkus to prosím znovu.",
+		"cancel": "Zrušit",
+		"retry": "Zkusit znovu",
+		"tryAgain": "Zkusit znovu",
+		"cancelled": "Ověření zrušeno",
+		"initiating": "Spouštění ověření..."
+	},
+	"speechToText": {
+		"startRecording": "Spustit hlasový vstup",
+		"stopRecording": "Zastavit hlasový vstup",
+		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
+		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
+		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
 	}
 }

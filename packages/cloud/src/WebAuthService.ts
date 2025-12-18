@@ -252,8 +252,9 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	 * and opening the browser to the authorization URL.
 	 *
 	 * @param landingPageSlug Optional slug of a specific landing page (e.g., "supernova", "special-offer", etc.)
+	 * @param useProviderSignup If true, uses provider signup flow (/extension/provider-sign-up). If false, uses standard sign-in (/extension/sign-in). Defaults to false.
 	 */
-	public async login(landingPageSlug?: string): Promise<void> {
+	public async login(landingPageSlug?: string, useProviderSignup: boolean = false): Promise<void> {
 		try {
 			const vscode = await importVscode()
 
@@ -272,10 +273,12 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 				auth_redirect: `${vscode.env.uriScheme}://${publisher}.${name}`,
 			})
 
-			// Use landing page URL if slug is provided, otherwise use default sign-in URL
+			// Use landing page URL if slug is provided, otherwise use provider sign-up or sign-in URL based on parameter
 			const url = landingPageSlug
 				? `${getRooCodeApiUrl()}/l/${landingPageSlug}?${params.toString()}`
-				: `${getRooCodeApiUrl()}/extension/sign-in?${params.toString()}`
+				: useProviderSignup
+					? `${getRooCodeApiUrl()}/extension/provider-sign-up?${params.toString()}`
+					: `${getRooCodeApiUrl()}/extension/sign-in?${params.toString()}`
 
 			await vscode.env.openExternal(vscode.Uri.parse(url))
 		} catch (error) {
@@ -294,11 +297,13 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	 * @param code The authorization code from the callback
 	 * @param state The state parameter from the callback
 	 * @param organizationId The organization ID from the callback (null for personal accounts)
+	 * @param providerModel The model ID selected during signup (optional)
 	 */
 	public async handleCallback(
 		code: string | null,
 		state: string | null,
 		organizationId?: string | null,
+		providerModel?: string | null,
 	): Promise<void> {
 		if (!code || !state) {
 			const vscode = await importVscode()
@@ -325,6 +330,12 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 			credentials.organizationId = organizationId || null
 
 			await this.storeCredentials(credentials)
+
+			// Store the provider model if provided
+			if (providerModel) {
+				await this.context.globalState.update("roo-provider-model", providerModel)
+				this.log(`[auth] Stored provider model: ${providerModel}`)
+			}
 
 			const vscode = await importVscode()
 

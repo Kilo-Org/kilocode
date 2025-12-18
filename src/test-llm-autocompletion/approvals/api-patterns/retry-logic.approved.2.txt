@@ -4,4 +4,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
 			return await fetch(url);
 		} catch (error) {
 			if (attempt === maxRetries - 1) throw error;
-			await new Promise(resolve => setTimeout(resolve, 1000)
+			await new Promise(resolve => setTimeout(resolve, 1000));
+		}
+	}
+}

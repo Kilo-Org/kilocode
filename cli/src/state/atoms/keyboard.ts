@@ -42,7 +42,7 @@ import {
 } from "./textBuffer.js"
 import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
-import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
+import { cancelTaskAtom, resumeTaskAtom, toggleYoloModeAtom } from "./actions.js"
 import {
 	historyModeAtom,
 	historyEntriesAtom,
@@ -803,16 +803,34 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 				const isStreaming = get(isStreamingAtom)
 				if (isStreaming) {
 					set(cancelTaskAtom)
+					return true
 				}
-				return true
+				// If not streaming, don't consume the key
 			}
 			break
+		case "escape": {
+			// ESC cancels the task when streaming (same as Ctrl+X)
+			const isStreaming = get(isStreamingAtom)
+			if (isStreaming) {
+				set(cancelTaskAtom)
+				return true
+			}
+			// If not streaming, don't consume the key - let mode-specific handlers deal with it
+			break
+		}
 		case "r":
 			if (key.ctrl) {
 				const hasResumeTask = get(hasResumeTaskAtom)
 				if (hasResumeTask) {
 					set(resumeTaskAtom)
 				}
+				return true
+			}
+			break
+		case "y":
+			// Toggle YOLO mode with Ctrl+Y
+			if (key.ctrl) {
+				set(toggleYoloModeAtom)
 				return true
 			}
 			break

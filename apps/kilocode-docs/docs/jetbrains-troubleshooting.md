@@ -111,4 +111,52 @@ For WebStorm, PyCharm, PhpStorm, RubyMine, CLion, GoLand, DataGrip, and Rider:
     - Navigate to Advanced Settings
     - Enable any JCEF-related options
 
-_For general Kilo Code support and documentation, visit [kilocode.ai/docs](https://kilocode.ai/docs)_
+## Authentication Issues
+
+### Incomplete Kilo Code authentication
+
+**Important:** The Kilo Code authentication callback requires [JetBrains Toolbox](https://www.jetbrains.com/toolbox-app/) to be installed on your system.
+
+#### Why Toolbox is Required
+
+When you authenticate with Kilo Code, the browser redirects back to your IDE using a special URL scheme (`jetbrains://`). This URL scheme is **only registered on your system when JetBrains Toolbox is installed**. Without Toolbox:
+
+- The authentication redirect will fail silently
+- Your browser may show an error like "Cannot open link" or "No application is set to open this link"
+- The token will not be passed back to your IDE
+
+#### Symptoms of Missing Toolbox
+
+If you're experiencing authentication issues, you may notice:
+
+1. **Browser doesn't redirect after login** - After entering your credentials, the browser stays on the authentication page or shows an error
+2. **"Open in IDE" prompts don't work** - Links that should open in your JetBrains IDE do nothing
+3. **No logs in the IDE** - The authentication handler never fires because the URL scheme isn't registered
+
+#### Installing JetBrains Toolbox
+
+1. **Download JetBrains Toolbox:**
+
+    - Visit [https://www.jetbrains.com/toolbox-app/](https://www.jetbrains.com/toolbox-app/)
+    - Download the installer for your operating system
+
+2. **Install and Launch:**
+
+    - Run the installer
+    - Launch JetBrains Toolbox
+
+3. **Retry Authentication:**
+    - Return to Kilo Code in your JetBrains IDE
+    - Attempt the authentication flow again
+    - The `jetbrains://` URL should now work correctly
+
+#### Alternative: Manual Token Entry
+
+If you cannot install JetBrains Toolbox, you can manually configure your API provider:
+
+1. Go to Kilo Code Settings
+2. Select your API provider
+3. Manually enter your API key or authentication token
+4. Save your settings
+
+_For general Kilo Code support and documentation, visit [kilo.ai/docs](https://kilo.ai/docs)_

@@ -17,6 +17,24 @@
 		}
 	},
 	"chooseProvider": "Щоб творити магію, Kilo Code потребує API ключ.",
+	"providerSignup": {
+		"rooCloudProvider": "Провайдер Roo Code Cloud",
+		"rooCloudDescription": "Найпростіший спосіб використовувати Roo. Кураторська суміш безкоштовних та платних моделей за низьку ціну",
+		"learnMore": "дізнатися більше",
+		"useAnotherProvider": "Використати іншого провайдера",
+		"useAnotherProviderDescription": "Введи API ключ і почни.",
+		"noApiKeys": "Не хочеш мати справу з ключами? Обери Провайдер Roo Code Cloud.",
+		"getStarted": "Почати"
+	},
+	"waitingForCloud": {
+		"heading": "Переходимо до Roo Code Cloud...",
+		"description": "Заверши реєстрацію в браузері, потім ти автоматично повернешся сюди.",
+		"noPrompt": "Якщо не з'явилась пропозиція відкрити URL, <clickHere>клікни тут</clickHere>.",
+		"havingTrouble": "Якщо ти завершив реєстрацію, але є проблеми, <clickHere>клікни тут</clickHere>.",
+		"pasteUrl": "Вклей callback URL з браузера:",
+		"invalidURL": "Це не схоже на валідний callback URL. Будь ласка, скопіюй те, що показує Roo Code Cloud у твоєму браузері.",
+		"goBack": "Повернутися"
+	},
 	"startRouter": "Ми рекомендуємо використовувати LLM Router:",
 	"startCustom": "Або ти можеш використати свій власний API ключ постачальника:",
 	"telemetry": {

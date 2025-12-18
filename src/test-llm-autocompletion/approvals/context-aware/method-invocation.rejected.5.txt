@@ -1,0 +1,12 @@
+import { UserService } from './services/user-service';
+
+const userService = new UserService();
+const user = userService.getUser();
+
+const userName = document.getElementById('user-name');
+const userEmail = document.getElementById('user-email');
+
+if (userName && userEmail) {
+  userName.innerText = user.name;
+  userEmail.innerText = user.email;
+}

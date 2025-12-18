@@ -24,11 +24,13 @@ When enabled, native JSON function calling improves reliability via explicit sig
 
 It replaces brittle XML-style prompts that risk mixed prose/markup, missing fields, and regex-heavy cleanup, yielding more deterministic tool use and clearer error handling.
 
-[More Details are available](native-function-calling)
+[More details are available](native-function-calling)
 
-## Autocomplete
+## Voice Transcription
 
-When enabled, Kilo Code will provide inline code suggestions as you type. Currently this requires the Kilo Gateway Provider in order to use it.
+When enabled, voice transcription allows you to dictate messages using speech-to-text in the chat interface. Powered by OpenAI's Whisper API and FFmpeg for audio capture.
+
+[More details are available](voice-transcription)
 
 ## Concurrent file edits
 

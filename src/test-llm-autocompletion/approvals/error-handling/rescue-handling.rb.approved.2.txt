@@ -1,5 +1,9 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		rescue JSON::ParserError => e
-		<<<AUTOCOMPLETE_HERE>>>
+		result["status"] = "success"
+		return result
+	rescue JSON::ParserError => e
+		return { "status" => "error", "error" => "Invalid JSON" }
+	end
+end

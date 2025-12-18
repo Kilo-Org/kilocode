@@ -30,6 +30,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	writeDelayMs: number
 	includeCurrentTime?: boolean
 	includeCurrentCost?: boolean
+	maxGitStatusFiles?: number
 	setCachedStateField: SetCachedStateField<
 		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
@@ -47,6 +48,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "writeDelayMs"
 		| "includeCurrentTime"
 		| "includeCurrentCost"
+		| "maxGitStatusFiles"
 	>
 }
 
@@ -69,6 +71,7 @@ export const ContextManagementSettings = ({
 	writeDelayMs,
 	includeCurrentTime,
 	includeCurrentCost,
+	maxGitStatusFiles,
 	className,
 	...props
 }: ContextManagementSettingsProps) => {
@@ -146,6 +149,26 @@ export const ContextManagementSettings = ({
 					</div>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.workspaceFiles.description")}
+					</div>
+				</div>
+
+				<div>
+					<span className="block font-medium mb-1">
+						{t("settings:contextManagement.maxGitStatusFiles.label")}
+					</span>
+					<div className="flex items-center gap-2">
+						<Slider
+							min={0}
+							max={50}
+							step={1}
+							value={[maxGitStatusFiles ?? 0]}
+							onValueChange={([value]) => setCachedStateField("maxGitStatusFiles", value)}
+							data-testid="max-git-status-files-slider"
+						/>
+						<span className="w-10">{maxGitStatusFiles ?? 0}</span>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:contextManagement.maxGitStatusFiles.description")}
 					</div>
 				</div>
 

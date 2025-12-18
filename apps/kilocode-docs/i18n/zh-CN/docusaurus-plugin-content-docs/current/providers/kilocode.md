@@ -6,7 +6,7 @@ sidebar_label: Kilo Code Provider
 
 Kilo Code 提供自己的内置 API 提供商，通过简单的注册过程即可访问最新的前沿编码模型。无需管理来自多个提供商的 API 密钥——只需注册即可开始编码。
 
-**网站：** [https://kilocode.ai/](https://kilocode.ai/)
+**网站：** [https://kilo.ai/](https://kilo.ai/)
 
 ## 免费积分入门
 
@@ -28,10 +28,10 @@ Kilo Code 提供自己的内置 API 提供商，通过简单的注册过程即�
 
 Kilo Code 提供简化的注册流程，可将您直接连接到前沿编码模型：
 
-1.  **开始注册：** 在扩展中单击“免费试用 Kilo Code”
-2.  **登录：** 使用您的 Google 帐户在 kilocode.ai 登录
+1.  **开始注册：** 在扩展中单击"免费试用 Kilo Code"
+2.  **登录：** 使用您的 Google 帐户在 kilo.ai 登录
 3.  **授权 VS Code：**
-    - kilocode.ai 将提示您打开 Visual Studio Code
+    - kilo.ai 将提示您打开 Visual Studio Code
     - 对于基于 Web 的 IDE，您将手动复制 API 密钥
 4.  **完成设置：** 提示时允许 VS Code 打开授权 URL
 
@@ -55,6 +55,6 @@ Kilo Code 通过其内置提供商提供对最新前沿编码模型的访问。�
 - **身份验证：** 临时冻结系统确保服务可靠性，同时防止滥用
 - **无缝集成：** 无需管理多个 API 密钥或提供商配置
 - **最新模型：** 自动访问最新的前沿编码模型
-- **提供支持：** 有关定价或 token 的问题，请联系 [hi@kilocode.ai](mailto:hi@kilocode.ai)
+- **提供支持：** 有关定价或 token 的问题，请联系 [hi@kilo.ai](mailto:hi@kilo.ai)
 
 有关详细设置说明，请参阅[设置 Kilo Code](/getting-started/setting-up)。

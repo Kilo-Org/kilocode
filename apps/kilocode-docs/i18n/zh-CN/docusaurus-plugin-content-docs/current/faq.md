@@ -164,7 +164,7 @@ Kilo Code支持多种API提供商，包括：
 - 检查你的互联网连接
 - 检查你选择的API提供商的状态
 - 尝试重启VS Code
-- 如果问题仍然存在，请在[GitHub](https://github.com/Kilo-Org/kilocode/issues)或[Discord](https://kilocode.ai/discord)上报告问题
+- 如果问题仍然存在，请在[GitHub](https://github.com/Kilo-Org/kilocode/issues)或[Discord](https://kilo.ai/discord)上报告问题
 
 ### 我看到错误消息。这是什么意思？
 

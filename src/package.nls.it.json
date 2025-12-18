@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "Richiedere il parametro todos quando si creano nuove attività con lo strumento new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La dimensione del batch per le operazioni di embedding durante l'indicizzazione del codice. Regola questo in base ai limiti del tuo provider API. Il valore predefinito è 60.",
 	"settings.toolProtocol.description": "Protocollo dello strumento da utilizzare per le interazioni AI. XML è il protocollo predefinito e consigliato. Nativo è sperimentale e potrebbe non funzionare con tutti i provider.",
+	"settings.debug.description": "Abilita la modalità debug per mostrare pulsanti aggiuntivi per visualizzare la cronologia delle conversazioni API e i messaggi dell'interfaccia utente come JSON formattato in file temporanei.",
 	"ghost.input.title": "Scrittore Fantasma Kilo Code",
 	"ghost.input.placeholder": "Descrivi cosa vuoi programmare...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Genera Modifiche Suggerite",

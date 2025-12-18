@@ -101,6 +101,12 @@
 					"description": "Seleziona quale configurazione API utilizzare per generare comandi terminali. Lascia come 'Usa configurazione attuale' per utilizzare le tue impostazioni predefinite."
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Dimensione Batch Embedding",
+			"embeddingBatchSizeDescription": "Numero di segmenti di codice da raggruppare insieme per la generazione degli embedding e gli aggiornamenti del vector store. Valori più alti possono migliorare la velocità di indicizzazione ma potrebbero aumentare l'utilizzo della memoria. Valori più bassi riducono l'utilizzo della memoria ma potrebbero rallentare l'indicizzazione.",
+			"scannerMaxBatchRetriesLabel": "Tentativi Massimi Batch Scanner",
+			"scannerMaxBatchRetriesDescription": "Numero massimo di tentativi per riprovare un batch fallito durante la scansione delle directory. Valori più alti aumentano la resilienza agli errori transitori ma potrebbero rallentare l'indicizzazione se gli errori persistono. Valori più bassi falliscono più rapidamente ma potrebbero saltare contenuti in caso di problemi temporanei."
 		}
 	},
 	"chat": {
@@ -232,7 +238,25 @@
 			"noModelConfigured": "Nessun modello di autocompletamento adatto trovato. Configura un provider nelle impostazioni API.",
 			"configureAutocompleteProfile": "Usa qualsiasi modello andando nei profili e configurando un Profilo del Tipo di Profilo Autocompletamento.",
 			"model": "Modello",
-			"provider": "Provider"
+			"provider": "Provider",
+			"enableChatAutocomplete": {
+				"label": "Completamento Automatico dell'Input della Chat",
+				"description": "Quando abilitato, Kilo Code suggerirà completamenti mentre digiti nell'area di chat. Premi Tab per accettare i suggerimenti."
+			},
+			"snooze": {
+				"label": "Sospendi Autocomplete",
+				"description": "Metti in pausa temporaneamente i suggerimenti di autocompletamento per una durata specificata.",
+				"button": "Sospendi",
+				"unsnooze": "Riattiva",
+				"currentlySnoozed": "L'autocompletamento è attualmente sospeso.",
+				"duration": {
+					"1min": "1 minuto",
+					"5min": "5 minuti",
+					"15min": "15 minuti",
+					"30min": "30 minuti",
+					"1hour": "1 ora"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Novità: Condividi le modalità creando un'organizzazione"
+	},
+	"deviceAuth": {
+		"title": "Accedi a Kilo Code",
+		"step1": "Apri il seguente URL nel tuo browser",
+		"step2": "Verifica il codice e autorizza questo dispositivo nel tuo browser",
+		"scanQr": "Oppure scansiona questo codice QR con il tuo telefono",
+		"openBrowser": "Apri Browser",
+		"copyUrl": "Copia URL",
+		"waiting": "In attesa di autorizzazione...",
+		"timeRemaining": "Il codice scade tra {{time}}",
+		"success": "Accesso effettuato con successo!",
+		"authenticatedAs": "Autenticato come {{email}}",
+		"error": "Errore di autenticazione",
+		"unknownError": "Si è verificato un errore. Riprova.",
+		"cancel": "Annulla",
+		"retry": "Riprova",
+		"tryAgain": "Riprova",
+		"cancelled": "Autenticazione annullata",
+		"initiating": "Avvio autenticazione..."
+	},
+	"speechToText": {
+		"startRecording": "Inizia l'input vocale",
+		"stopRecording": "Interrompi input vocale",
+		"unavailableOpenAiKeyMissing": "La conversione da voce a testo non è disponibile. Richiede un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
+		"unavailableFfmpegNotInstalled": "La conversione vocale in testo non è disponibile. Installa FFmpeg per utilizzare la trascrizione vocale.",
+		"unavailableBoth": "Il riconoscimento vocale non è disponibile. Richiede un provider OpenAI valido e FFmpeg deve essere installato."
 	}
 }

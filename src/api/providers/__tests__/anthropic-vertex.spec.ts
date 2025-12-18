@@ -601,6 +601,146 @@ describe("VertexHandler", () => {
 				text: "Second thinking block",
 			})
 		})
+
+		it("should filter out internal reasoning blocks before sending to API", async () => {
+			handler = new AnthropicVertexHandler({
+				apiModelId: "claude-3-5-sonnet-v2@20241022",
+				vertexProjectId: "test-project",
+				vertexRegion: "us-central1",
+			})
+
+			const mockCreate = vitest.fn().mockImplementation(async (options) => {
+				return {
+					async *[Symbol.asyncIterator]() {
+						yield {
+							type: "message_start",
+							message: {
+								usage: {
+									input_tokens: 10,
+									output_tokens: 0,
+								},
+							},
+						}
+						yield {
+							type: "content_block_start",
+							index: 0,
+							content_block: {
+								type: "text",
+								text: "Response",
+							},
+						}
+					},
+				}
+			})
+			;(handler["client"].messages as any).create = mockCreate
+
+			// Messages with internal reasoning blocks (from stored conversation history)
+			const messagesWithReasoning: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Hello",
+				},
+				{
+					role: "assistant",
+					content: [
+						{
+							type: "reasoning" as any,
+							text: "This is internal reasoning that should be filtered",
+						},
+						{
+							type: "text",
+							text: "This is the response",
+						},
+					],
+				},
+				{
+					role: "user",
+					content: "Continue",
+				},
+			]
+
+			const stream = handler.createMessage(systemPrompt, messagesWithReasoning)
+			const chunks: ApiStreamChunk[] = []
+
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify the API was called with filtered messages (no reasoning blocks)
+			const calledMessages = mockCreate.mock.calls[0][0].messages
+			expect(calledMessages).toHaveLength(3)
+
+			// Check user message 1
+			expect(calledMessages[0]).toMatchObject({
+				role: "user",
+			})
+
+			// Check assistant message - should have reasoning block filtered out
+			const assistantMessage = calledMessages.find((m: any) => m.role === "assistant")
+			expect(assistantMessage).toBeDefined()
+			expect(assistantMessage.content).toEqual([{ type: "text", text: "This is the response" }])
+
+			// Verify reasoning blocks were NOT sent to the API
+			expect(assistantMessage.content).not.toContainEqual(expect.objectContaining({ type: "reasoning" }))
+		})
+
+		it("should filter empty messages after removing all reasoning blocks", async () => {
+			handler = new AnthropicVertexHandler({
+				apiModelId: "claude-3-5-sonnet-v2@20241022",
+				vertexProjectId: "test-project",
+				vertexRegion: "us-central1",
+			})
+
+			const mockCreate = vitest.fn().mockImplementation(async (options) => {
+				return {
+					async *[Symbol.asyncIterator]() {
+						yield {
+							type: "message_start",
+							message: {
+								usage: {
+									input_tokens: 10,
+									output_tokens: 0,
+								},
+							},
+						}
+					},
+				}
+			})
+			;(handler["client"].messages as any).create = mockCreate
+
+			// Message with only reasoning content (should be completely filtered)
+			const messagesWithOnlyReasoning: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Hello",
+				},
+				{
+					role: "assistant",
+					content: [
+						{
+							type: "reasoning" as any,
+							text: "Only reasoning, no actual text",
+						},
+					],
+				},
+				{
+					role: "user",
+					content: "Continue",
+				},
+			]
+
+			const stream = handler.createMessage(systemPrompt, messagesWithOnlyReasoning)
+			const chunks: ApiStreamChunk[] = []
+
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify empty message was filtered out
+			const calledMessages = mockCreate.mock.calls[0][0].messages
+			expect(calledMessages).toHaveLength(2) // Only the two user messages
+			expect(calledMessages.every((m: any) => m.role === "user")).toBe(true)
+		})
 	})
 
 	describe("completePrompt", () => {

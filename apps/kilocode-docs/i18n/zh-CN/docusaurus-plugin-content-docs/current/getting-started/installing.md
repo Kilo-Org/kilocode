@@ -105,6 +105,6 @@ Kilo Code是一款VS Code扩展，可将AI编程助手直接集成到编辑器�
 
 若遇到其他问题：
 
-- 加入[Discord社区](https://kilocode.ai/discord)获取实时支持
+- 加入[Discord社区](https://kilo.ai/discord)获取实时支持
 - 在[GitHub](https://github.com/Kilo-Org/kilocode/issues)提交问题报告
 - 访问[Reddit社区](https://www.reddit.com/r/KiloCode)

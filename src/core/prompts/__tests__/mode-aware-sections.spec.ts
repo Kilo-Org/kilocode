@@ -29,7 +29,6 @@ describe("Mode-aware system prompt sections", () => {
 
 			expect(result).toContain("apply_diff")
 			expect(result).toContain("write_to_file")
-			expect(result).toContain("insert_content")
 		})
 
 		it('should NOT include editing tools in "ask" mode', () => {
@@ -38,7 +37,6 @@ describe("Mode-aware system prompt sections", () => {
 			// Ask mode doesn't have the "edit" group, so editing tools shouldn't be mentioned
 			expect(result).not.toContain("apply_diff")
 			expect(result).not.toContain("write_to_file")
-			expect(result).not.toContain("insert_content")
 		})
 
 		it('should include editing tools in "architect" mode', () => {
@@ -73,7 +71,6 @@ describe("Mode-aware system prompt sections", () => {
 			expect(result).toContain("For editing files")
 			expect(result).toContain("apply_diff")
 			expect(result).toContain("write_to_file")
-			expect(result).toContain("insert_content")
 		})
 
 		it('should NOT include editing instructions in "ask" mode', () => {
@@ -92,7 +89,6 @@ describe("Mode-aware system prompt sections", () => {
 			expect(result).not.toContain("For editing files")
 			expect(result).not.toContain("apply_diff")
 			expect(result).not.toContain("write_to_file")
-			expect(result).not.toContain("insert_content")
 		})
 
 		it('should include editing instructions in "debug" mode', () => {

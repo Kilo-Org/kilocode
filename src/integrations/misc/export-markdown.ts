@@ -3,6 +3,14 @@ import os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
 
+// Extended content block types to support new Anthropic API features
+interface ReasoningBlock {
+	type: "reasoning"
+	text: string
+}
+
+type ExtendedContentBlock = Anthropic.Messages.ContentBlockParam | ReasoningBlock
+
 export async function downloadTask(dateTs: number, conversationHistory: Anthropic.MessageParam[]) {
 	// File name
 	const date = new Date(dateTs)
@@ -22,7 +30,7 @@ export async function downloadTask(dateTs: number, conversationHistory: Anthropi
 		.map((message) => {
 			const role = message.role === "user" ? "**User:**" : "**Assistant:**"
 			const content = Array.isArray(message.content)
-				? message.content.map((block) => formatContentBlockToMarkdown(block)).join("\n")
+				? message.content.map((block) => formatContentBlockToMarkdown(block as ExtendedContentBlock)).join("\n")
 				: message.content
 			return `${role}\n\n${content}\n\n`
 		})
@@ -41,7 +49,7 @@ export async function downloadTask(dateTs: number, conversationHistory: Anthropi
 	}
 }
 
-export function formatContentBlockToMarkdown(block: Anthropic.Messages.ContentBlockParam): string {
+export function formatContentBlockToMarkdown(block: ExtendedContentBlock): string {
 	switch (block.type) {
 		case "text":
 			return block.text
@@ -51,7 +59,13 @@ export function formatContentBlockToMarkdown(block: Anthropic.Messages.ContentBl
 			let input: string
 			if (typeof block.input === "object" && block.input !== null) {
 				input = Object.entries(block.input)
-					.map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`)
+					.map(([key, value]) => {
+						const formattedKey = key.charAt(0).toUpperCase() + key.slice(1)
+						// Handle nested objects/arrays by JSON stringifying them
+						const formattedValue =
+							typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : String(value)
+						return `${formattedKey}: ${formattedValue}`
+					})
 					.join("\n")
 			} else {
 				input = String(block.input)
@@ -72,8 +86,10 @@ export function formatContentBlockToMarkdown(block: Anthropic.Messages.ContentBl
 				return `[${toolName}${block.is_error ? " (Error)" : ""}]`
 			}
 		}
+		case "reasoning":
+			return `[Reasoning]\n${block.text}`
 		default:
-			return "[Unexpected content type]"
+			return `[Unexpected content type: ${block.type}]`
 	}
 }
 

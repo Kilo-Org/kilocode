@@ -21,6 +21,7 @@ export const runs = pgTable("runs", {
 	cacheWritesPrice: real(),
 	cacheReadsPrice: real(),
 	settings: jsonb().$type<RooCodeSettings>(),
+	jobToken: text(),
 	pid: integer(),
 	socketPath: text("socket_path").notNull(),
 	concurrency: integer().default(2).notNull(),
@@ -54,12 +55,20 @@ export const tasks = pgTable(
 		taskMetricsId: integer("task_metrics_id").references(() => taskMetrics.id),
 		language: text().notNull().$type<ExerciseLanguage>(),
 		exercise: text().notNull(),
+		iteration: integer().default(1).notNull(),
 		passed: boolean(),
 		startedAt: timestamp("started_at"),
 		finishedAt: timestamp("finished_at"),
 		createdAt: timestamp("created_at").notNull(),
 	},
-	(table) => [uniqueIndex("tasks_language_exercise_idx").on(table.runId, table.language, table.exercise)],
+	(table) => [
+		uniqueIndex("tasks_language_exercise_iteration_idx").on(
+			table.runId,
+			table.language,
+			table.exercise,
+			table.iteration,
+		),
+	],
 )
 
 export const tasksRelations = relations(tasks, ({ one }) => ({

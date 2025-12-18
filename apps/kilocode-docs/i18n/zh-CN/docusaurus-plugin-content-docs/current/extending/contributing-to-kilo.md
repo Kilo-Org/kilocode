@@ -113,7 +113,7 @@ git checkout -b your-branch-name
 
 如果你需要帮助：
 
-- 加入我们的 [Discord 社区](https://kilocode.ai/discord) 获取实时支持
+- 加入我们的 [Discord 社区](https://kilo.ai/discord) 获取实时支持
 - 在 [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions) 上提问
 - 访问我们的 [Reddit 社区](https://www.reddit.com/r/KiloCode)
 

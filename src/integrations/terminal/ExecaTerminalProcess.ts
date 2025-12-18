@@ -58,6 +58,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				shell: true,
 				cwd: this.terminal.getCurrentWorkingDirectory(),
 				all: true,
+				// Ignore stdin to ensure non-interactive mode and prevent hanging
 				stdin: "ignore", // kilocode_change: ignore stdin to prevent blocking
 				detached: true, // kilocode_change: Process runs independently in background
 				cleanup: true, // kilocode_change: Automatically clean up on process exit

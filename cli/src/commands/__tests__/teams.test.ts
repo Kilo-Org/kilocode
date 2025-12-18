@@ -125,7 +125,7 @@ describe("/teams command", () => {
 
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
-			expect(message.content).toContain("https://app.kilocode.ai/get-started/teams")
+			expect(message.content).toContain("https://app.kilo.ai/get-started/teams")
 		})
 
 		it("should list all teams including organizations", async () => {

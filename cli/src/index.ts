@@ -33,7 +33,9 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("--yolo", "Auto-approve all tool permissions", false)
 	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
+	.option("-i, --json-io", "Bidirectional JSON mode (no TUI, stdin/stdout enabled)", false)
 	.option("-c, --continue", "Resume the last conversation from this workspace", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.option(
@@ -44,7 +46,7 @@ program
 	.option("-pv, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
 	.option("-mo, --model <model>", "Override model for the selected provider")
 	.option("-s, --session <sessionId>", "Restore a session by ID")
-	.option("-f, --fork <shareId>", "Fork a shared session by share ID")
+	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
@@ -68,18 +70,6 @@ program
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
 			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
-			process.exit(1)
-		}
-
-		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
-			console.error("Error: Piped input requires --auto flag to be enabled")
-			process.exit(1)
-		}
-
-		// Validate that JSON mode requires autonomous mode
-		if (options.json && !options.auto) {
-			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -129,6 +119,18 @@ program
 		// Validate that --fork and --session are not used together
 		if (options.fork && options.session) {
 			console.error("Error: --fork and --session options cannot be used together")
+			process.exit(1)
+		}
+
+		// Validate that piped stdin requires autonomous mode or json-io mode
+		if (!process.stdin.isTTY && !options.auto && !options.jsonIo) {
+			console.error("Error: Piped input requires --auto or --json-io flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that --json requires --auto (--json-io is independent)
+		if (options.json && !options.auto) {
+			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -205,11 +207,16 @@ program
 
 		logs.debug("Starting Kilo Code CLI", "Index", { options })
 
+		const jsonIoMode = options.jsonIo
+
 		cli = new CLI({
 			mode: options.mode,
 			workspace: finalWorkspace,
 			ci: options.auto,
-			json: options.json,
+			yolo: options.yolo,
+			// json-io mode implies json output (both modes output JSON to stdout)
+			json: options.json || jsonIoMode,
+			jsonInteractive: jsonIoMode,
 			prompt: finalPrompt,
 			timeout: options.timeout,
 			customModes: customModes,

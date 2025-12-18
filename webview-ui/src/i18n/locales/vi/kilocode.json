@@ -46,6 +46,12 @@
 				"description": "Khi bật, Kilo Code sẽ thực hiện đọc tệp hoặc đầu ra MCP rất lớn ngay cả khi có khả năng cao làm tràn cửa sổ ngữ cảnh (kích thước nội dung >80% cửa sổ ngữ cảnh)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Kích Thước Lô Embedding",
+			"embeddingBatchSizeDescription": "Số lượng đoạn mã được nhóm lại với nhau để tạo embedding và cập nhật vector store. Giá trị cao hơn có thể cải thiện tốc độ lập chỉ mục nhưng có thể tăng mức sử dụng bộ nhớ. Giá trị thấp hơn giảm sử dụng bộ nhớ nhưng có thể làm chậm quá trình lập chỉ mục.",
+			"scannerMaxBatchRetriesLabel": "Số Lần Thử Lại Tối Đa Của Lô Quét",
+			"scannerMaxBatchRetriesDescription": "Số lần tối đa thử lại một lô thất bại trong quá trình quét thư mục. Giá trị cao hơn tăng khả năng phục hồi trước các lỗi tạm thời nhưng có thể làm chậm lập chỉ mục nếu lỗi vẫn tồn tại. Giá trị thấp hơn thất bại nhanh hơn nhưng có thể bỏ qua nội dung khi gặp vấn đề tạm thời."
+		},
 		"provider": {
 			"account": "Tài khoản Kilo Code",
 			"apiKey": "Khóa API Kilo Code",
@@ -232,7 +238,25 @@
 			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
 			"configureAutocompleteProfile": "Sử dụng bất kỳ mô hình nào bằng cách vào hồ sơ và cấu hình Hồ sơ có Loại Hồ sơ là Tự động hoàn thành.",
 			"model": "Mô hình",
-			"provider": "Nhà cung cấp"
+			"provider": "Nhà cung cấp",
+			"enableChatAutocomplete": {
+				"label": "Gợi ý Tự động Hoàn thành Trong Trò chuyện",
+				"description": "Khi được bật, Kilo Code sẽ đề xuất các gợi ý hoàn thành khi bạn nhập trong ô chat. Nhấn Tab để chấp nhận các gợi ý."
+			},
+			"snooze": {
+				"label": "Tạm dừng Autocomplete",
+				"description": "Tạm thời dừng gợi ý tự động hoàn thành trong một khoảng thời gian nhất định.",
+				"button": "Tạm dừng",
+				"unsnooze": "Bỏ tạm dừng",
+				"currentlySnoozed": "Autocomplete hiện đang bị tạm dừng.",
+				"duration": {
+					"1min": "1 phút",
+					"5min": "5 phút",
+					"15min": "15 phút",
+					"30min": "30 phút",
+					"1hour": "1 giờ"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Mới: Chia sẻ chế độ bằng cách tạo một tổ chức"
+	},
+	"deviceAuth": {
+		"title": "Đăng nhập vào Kilo Code",
+		"step1": "Mở URL sau trên trình duyệt của bạn",
+		"step2": "Xác minh mã và ủy quyền thiết bị này trên trình duyệt của bạn",
+		"scanQr": "Hoặc quét mã QR này bằng điện thoại của bạn",
+		"openBrowser": "Mở trình duyệt",
+		"copyUrl": "Sao chép URL",
+		"waiting": "Đang chờ ủy quyền...",
+		"timeRemaining": "Mã hết hạn sau {{time}}",
+		"success": "Đăng nhập thành công!",
+		"authenticatedAs": "Đã xác thực với tư cách {{email}}",
+		"error": "Lỗi xác thực",
+		"unknownError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+		"cancel": "Hủy",
+		"retry": "Thử lại",
+		"tryAgain": "Thử lại",
+		"cancelled": "Đã hủy xác thực",
+		"initiating": "Đang bắt đầu xác thực..."
+	},
+	"speechToText": {
+		"stopRecording": "Dừng nhập giọng nói",
+		"startRecording": "Bắt đầu nhập giọng nói",
+		"unavailableBoth": "Chuyển đổi giọng nói thành văn bản không khả dụng. Nó yêu cầu nhà cung cấp OpenAI hợp lệ và FFmpeg phải được cài đặt.",
+		"unavailableFfmpegNotInstalled": "Chuyển giọng nói thành văn bản hiện không khả dụng. Hãy cài đặt FFmpeg để sử dụng tính năng chuyển giọng nói.",
+		"unavailableOpenAiKeyMissing": "Chuyển giọng nói thành văn bản không khả dụng. Tính năng này yêu cầu một nhà cung cấp OpenAI hợp lệ với khóa API để sử dụng chức năng chuyển giọng nói thành văn bản."
 	}
 }

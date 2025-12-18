@@ -1,7 +1,6 @@
 class Animal {
 	constructor(name) {
-		super(name);
-		this.breed = breed;
+		this.name = name;
 	}
 }
 
@@ -9,4 +8,9 @@ class Dog extends Animal {
 	constructor(name, breed) {
 		super(name);
 		this.breed = breed;
-		<<<AUTOCOMPLETE_HERE>>>
+	}
+}
+
+const dog = new Dog("Rex", "German Shepherd");
+console.log(dog.name); // Rex
+console.log(dog.breed); // German Shepherd

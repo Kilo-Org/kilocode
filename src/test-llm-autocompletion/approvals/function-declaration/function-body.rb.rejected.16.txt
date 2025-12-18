@@ -1,0 +1,67 @@
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+def calculate_difference(a, b)
+	difference = a - b
+	return difference
+end
+
+def calculate_product(a, b)
+	product = a * b
+	return product
+end
+
+def calculate_quotient(a, b)
+	quotient = a / b
+	return quotient
+end
+
+def calculate_remainder(a, b)
+	remainder = a % b
+	return remainder
+end
+
+def calculate_exponent(a, b)
+	exponent = a ** b
+	return exponent
+end
+
+def calculate_square_root(a)
+	square_root = Math.sqrt(a)
+	return square_root
+end
+
+def calculate_absolute_value(a)
+	absolute_value = a.abs
+	return absolute_value
+end
+
+def calculate_round(a)
+	round = a.round
+	return round
+end
+
+def calculate_floor(a)
+	floor = a.floor
+	return floor
+end
+
+def calculate_ceiling(a)
+	ceiling = a.ceil
+	return ceiling
+end
+
+def calculate_truncate(a)
+	truncate = a.truncate
+	return truncate
+end
+
+def calculate_sin(a)
+	sin = Math.sin(a)
+	return sin
+end
+
+def calculate_cos(a)
+	c

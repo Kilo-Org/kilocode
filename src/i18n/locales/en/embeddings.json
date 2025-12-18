@@ -17,6 +17,12 @@
 		"modelNotEmbeddingCapable": "Ollama model is not embedding capable: {{modelId}}",
 		"hostNotFound": "Ollama host not found: {{baseUrl}}"
 	},
+	"bedrock": {
+		"invalidResponseFormat": "Invalid response format from Amazon Bedrock",
+		"invalidCredentials": "Invalid AWS credentials. Please check your AWS configuration.",
+		"accessDenied": "Access denied to Amazon Bedrock service. Please check your IAM permissions.",
+		"modelNotFound": "Model {{model}} not found in Amazon Bedrock"
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Unknown error processing file {{filePath}}",
 		"unknownErrorDeletingPoints": "Unknown error deleting points for {{filePath}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Mistral configuration missing for embedder creation",
 		"openRouterConfigMissing": "OpenRouter configuration missing for embedder creation",
 		"vercelAiGatewayConfigMissing": "Vercel AI Gateway configuration missing for embedder creation",
+		"bedrockConfigMissing": "Amazon Bedrock configuration missing for embedder creation",
 		"invalidEmbedderType": "Invalid embedder type configured: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Could not determine vector dimension for model '{{modelId}}' with provider '{{provider}}'. Please ensure the 'Embedding Dimension' is correctly set in the OpenAI-Compatible provider settings.",
 		"vectorDimensionNotDetermined": "Could not determine vector dimension for model '{{modelId}}' with provider '{{provider}}'. Check model profiles or configuration.",

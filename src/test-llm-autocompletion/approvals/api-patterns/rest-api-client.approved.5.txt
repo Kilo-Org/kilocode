@@ -6,4 +6,14 @@ class ApiClient {
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify(data),
-			<<<AUTOCOMPLETE_HERE>>>
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		return await response.json();
+	}
+}
+
+export default ApiClient;

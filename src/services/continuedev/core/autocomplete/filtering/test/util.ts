@@ -70,5 +70,8 @@ export async function testAutocompleteFiltering(test: AutocompleteFileringTestIn
 	)
 
 	// Ensure that we return the text that is wanted to be displayed
-	expect(result?.completion).toEqual(test.expectedCompletion)
+	// Normalize line endings for cross-platform compatibility
+	const normalizeLineEndings = (str: string | null | undefined) => str?.replace(/\r\n/g, "\n")
+
+	expect(normalizeLineEndings(result?.completion)).toEqual(normalizeLineEndings(test.expectedCompletion))
 }

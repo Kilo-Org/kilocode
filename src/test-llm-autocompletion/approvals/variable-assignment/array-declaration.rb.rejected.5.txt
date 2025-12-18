@@ -1,0 +1,9 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |num|
+  puts num
+end
+
+hash = { a: 1, b: 2, c: 3 }
+hash.each do |key, value|
+  puts "Key: #{key}, Value: #{value}"
+end

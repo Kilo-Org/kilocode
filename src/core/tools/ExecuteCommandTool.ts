@@ -44,7 +44,7 @@ export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 
 	async execute(params: ExecuteCommandParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { command, cwd: customCwd, runInBackground = false } = params // kilocode_change: add runInBackground
-		const { handleError, pushToolResult, askApproval, removeClosingTag } = callbacks
+		const { handleError, pushToolResult, askApproval, removeClosingTag, toolProtocol } = callbacks
 
 		try {
 			if (!command) {
@@ -58,7 +58,7 @@ export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 
 			if (ignoredFileAttemptedToAccess) {
 				await task.say("rooignore_error", ignoredFileAttemptedToAccess)
-				pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(ignoredFileAttemptedToAccess)))
+				pushToolResult(formatResponse.rooIgnoreError(ignoredFileAttemptedToAccess, toolProtocol))
 				return
 			}
 
@@ -319,6 +319,7 @@ export async function executeCommandInTerminal(
 				const status: CommandExecutionStatus = { executionId, status: "timeout" }
 				provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 				await task.say("error", t("common:errors:command_timeout", { seconds: commandExecutionTimeoutSeconds }))
+				task.didToolFailInCurrentTurn = true
 				task.terminalProcess = undefined
 
 				return [

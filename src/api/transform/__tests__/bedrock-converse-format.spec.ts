@@ -67,7 +67,7 @@ describe("convertToBedrockConverseMessages", () => {
 		}
 	})
 
-	it("converts tool use messages correctly", () => {
+	it("converts tool use messages correctly (default XML format)", () => {
 		const messages: Anthropic.Messages.MessageParam[] = [
 			{
 				role: "assistant",
@@ -84,7 +84,44 @@ describe("convertToBedrockConverseMessages", () => {
 			},
 		]
 
+		// Default behavior (useNativeTools: false) converts tool_use to XML text format
 		const result = convertToBedrockConverseMessages(messages)
+
+		if (!result[0] || !result[0].content) {
+			expect.fail("Expected result to have content")
+			return
+		}
+
+		expect(result[0].role).toBe("assistant")
+		const textBlock = result[0].content[0] as ContentBlock
+		if ("text" in textBlock) {
+			expect(textBlock.text).toContain("<tool_use>")
+			expect(textBlock.text).toContain("<tool_name>read_file</tool_name>")
+			expect(textBlock.text).toContain("test.txt")
+		} else {
+			expect.fail("Expected text block with XML content not found")
+		}
+	})
+
+	it("converts tool use messages correctly (native tools format)", () => {
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "assistant",
+				content: [
+					{
+						type: "tool_use",
+						id: "test-id",
+						name: "read_file",
+						input: {
+							path: "test.txt",
+						},
+					},
+				],
+			},
+		]
+
+		// With useNativeTools: true, keeps tool_use as native format
+		const result = convertToBedrockConverseMessages(messages, { useNativeTools: true })
 
 		if (!result[0] || !result[0].content) {
 			expect.fail("Expected result to have content")
@@ -97,7 +134,7 @@ describe("convertToBedrockConverseMessages", () => {
 			expect(toolBlock.toolUse).toEqual({
 				toolUseId: "test-id",
 				name: "read_file",
-				input: "<read_file>\n<path>\ntest.txt\n</path>\n</read_file>",
+				input: { path: "test.txt" },
 			})
 		} else {
 			expect.fail("Expected tool use block not found")
@@ -132,6 +169,40 @@ describe("convertToBedrockConverseMessages", () => {
 			expect(resultBlock.toolResult).toEqual({
 				toolUseId: "test-id",
 				content: expectedContent,
+				status: "success",
+			})
+		} else {
+			expect.fail("Expected tool result block not found")
+		}
+	})
+
+	it("converts tool result messages with string content correctly", () => {
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "test-id",
+						content: "File: test.txt\nLines 1-5:\nHello World",
+					} as any, // Anthropic types don't allow string content but runtime can have it
+				],
+			},
+		]
+
+		const result = convertToBedrockConverseMessages(messages)
+
+		if (!result[0] || !result[0].content) {
+			expect.fail("Expected result to have content")
+			return
+		}
+
+		expect(result[0].role).toBe("user")
+		const resultBlock = result[0].content[0] as ContentBlock
+		if ("toolResult" in resultBlock && resultBlock.toolResult) {
+			expect(resultBlock.toolResult).toEqual({
+				toolUseId: "test-id",
+				content: [{ text: "File: test.txt\nLines 1-5:\nHello World" }],
 				status: "success",
 			})
 		} else {

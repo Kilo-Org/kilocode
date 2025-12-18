@@ -49,6 +49,7 @@
 	"settings.newTaskRequireTodos.description": "使用 new_task 工具建立新工作時需要 todos 參數",
 	"settings.codeIndex.embeddingBatchSize.description": "程式碼索引期間嵌入操作的批次大小。根據 API 提供商的限制調整此設定。預設值為 60。",
 	"settings.toolProtocol.description": "用於 AI 互動的工具協議。XML 是預設且推薦的協議。本機是實驗性的，可能不適用於所有提供商。",
+	"settings.debug.description": "啟用偵錯模式以顯示額外按鈕，用於在暫存檔案中以格式化 JSON 檢視 API 對話歷史紀錄和使用者介面訊息。",
 	"ghost.input.title": "按 'Enter' 確認或按 'Escape' 取消",
 	"ghost.input.placeholder": "描述您想要做什麼...",
 	"ghost.commands.generateSuggestions": "Kilo Code: 產生編輯建議",

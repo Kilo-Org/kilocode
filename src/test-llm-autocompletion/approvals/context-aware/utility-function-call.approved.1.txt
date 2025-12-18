@@ -1,0 +1,17 @@
+import { formatPrice, formatDate } from '../utils/formatters';
+
+interface ProductCardProps {
+  name: string;
+  price: number;
+  releaseDate: Date;
+}
+
+export function ProductCard({ name, price, releaseDate }: ProductCardProps) {
+  return (
+    <div className="product-card">
+      <h2>{name}</h2>
+      <p className="price">{formatPrice(price)}</p>
+      <p className="date">Released: {formatDate(releaseDate)}</p>
+    </div>
+  );
+}

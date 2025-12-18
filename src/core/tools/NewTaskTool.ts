@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import { TodoItem } from "@roo-code/types"
 
 import { Task } from "../task/Task"
-import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
+import { getModeBySlug } from "../../shared/modes"
 import { formatResponse } from "../prompts/responses"
 import { t } from "../../i18n"
 import { parseMarkdownChecklist } from "./UpdateTodoListTool"
@@ -30,13 +30,14 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { mode, message, todos } = params
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol, toolCallId } = callbacks
 
 		try {
 			// Validate required parameters.
 			if (!mode) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "mode"))
 				return
 			}
@@ -44,6 +45,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (!message) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "message"))
 				return
 			}
@@ -69,6 +71,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			if (requireTodos && todos === undefined) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "todos"))
 				return
 			}
@@ -81,6 +84,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("new_task")
+					task.didToolFailInCurrentTurn = true
 					pushToolResult(formatResponse.toolError("Invalid todos format: must be a markdown checklist"))
 					return
 				}
@@ -119,20 +123,16 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				task.checkpointSave(true)
 			}
 
-			// Preserve the current mode so we can resume with it later.
-			task.pausedModeSlug = (await provider.getState()).mode ?? defaultModeSlug
+			// Delegate parent and open child as sole active task
+			const child = await (provider as any).delegateParentAndOpenChild({
+				parentTaskId: task.taskId,
+				message: unescapedMessage,
+				initialTodos: todoItems,
+				mode,
+			})
 
-			const newTask = await task.startSubtask(unescapedMessage, todoItems, mode)
-
-			if (!newTask) {
-				pushToolResult(t("tools:newTask.errors.policy_restriction"))
-				return
-			}
-
-			pushToolResult(
-				`Successfully created new task in ${targetMode.name} mode with message: ${unescapedMessage} and ${todoItems.length} todo items`,
-			)
-
+			// Reflect delegation in tool result (no pause/unpause, no wait)
+			pushToolResult(`Delegated to child task ${child.taskId}`)
 			return
 		} catch (error) {
 			await handleError("creating new task", error)

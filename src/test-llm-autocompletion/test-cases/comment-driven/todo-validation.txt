@@ -1,5 +1,6 @@
-# Description: Should add input validation after TODO comment
+#### Description: Should add input validation after TODO comment
+#### Filename: auth-service.js
 function registerUser(email, password) {
-  // TODO: Add input validation for email and password<<<CURSOR>>>
+  // TODO: Add input validation for email and password<<<AUTOCOMPLETE_HERE>>>
   return createUser(email, password);
 }

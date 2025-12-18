@@ -262,6 +262,7 @@ describe("mergeExtensionState", () => {
 			remoteControlEnabled: false,
 			taskSyncEnabled: false,
 			featureRoomoteControlEnabled: false,
+			isBrowserSessionActive: false,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS, // Add the checkpoint timeout property
 		}
 
@@ -280,9 +281,12 @@ describe("mergeExtensionState", () => {
 				multiFileApplyDiff: true,
 				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
+				speechToText: false, // kilocode_change
 				newTaskRequireTodos: false,
 				imageGeneration: false,
 				runSlashCommand: false,
+				nativeToolCalling: false,
+				multipleNativeToolCalls: false,
 			} as Record<ExperimentId, boolean>,
 			checkpointTimeout: DEFAULT_CHECKPOINT_TIMEOUT_SECONDS + 5,
 		}
@@ -299,9 +303,12 @@ describe("mergeExtensionState", () => {
 			multiFileApplyDiff: true,
 			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
+			speechToText: false, // kilocode_change
 			newTaskRequireTodos: false,
 			imageGeneration: false,
 			runSlashCommand: false,
+			nativeToolCalling: false,
+			multipleNativeToolCalls: false,
 		})
 	})
 })

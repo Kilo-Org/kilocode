@@ -95,7 +95,7 @@ describe("VertexHandler", () => {
 					model: expect.any(String),
 					contents: [{ role: "user", parts: [{ text: "Test prompt" }] }],
 					config: expect.objectContaining({
-						temperature: 0,
+						temperature: 1,
 					}),
 				}),
 			)
