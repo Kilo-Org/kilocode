@@ -6,6 +6,7 @@ import * as vscode from "vscode"
 import { Task } from "../../task/Task"
 import { formatResponse } from "../../prompts/responses"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../../shared/tools"
+import { TOOL_PROTOCOL } from "@roo-code/types"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 
 // Mock dependencies
@@ -301,6 +302,7 @@ describe("executeCommandTool", () => {
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
 				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
+				toolProtocol: TOOL_PROTOCOL.XML,
 			})
 
 			// Verify the command was approved and executed
@@ -315,6 +317,7 @@ describe("executeCommandTool", () => {
 				handleError: mockHandleError as unknown as HandleError,
 				pushToolResult: mockPushToolResult as unknown as PushToolResult,
 				removeClosingTag: mockRemoveClosingTag as unknown as RemoveClosingTag,
+				toolProtocol: TOOL_PROTOCOL.XML,
 			})
 
 			// Verify the command was approved and executed

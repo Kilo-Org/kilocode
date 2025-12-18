@@ -1069,6 +1069,7 @@ export async function presentAssistantMessage(cline: Task) {
 						handleError,
 						pushToolResult,
 						removeClosingTag,
+						toolProtocol,
 					})
 					break
 				// kilocode_change end: Add new tool case executions
