@@ -56,6 +56,7 @@ export enum TelemetryEventName {
 	AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
 	AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",
 	AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
+	AGENT_MANAGER_LOGIN_ISSUE = "Agent Manager Login Issue",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -235,6 +236,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AGENT_MANAGER_SESSION_COMPLETED, // kilocode_change
 			TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, // kilocode_change
 			TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

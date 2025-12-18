@@ -30,6 +30,8 @@ import {
 	captureAgentManagerSessionCompleted,
 	captureAgentManagerSessionStopped,
 	captureAgentManagerSessionError,
+	captureAgentManagerLoginIssue,
+	getPlatformDiagnostics,
 } from "./telemetry"
 import type { ClineProvider } from "../../webview/ClineProvider"
 import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
@@ -1156,6 +1158,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private showPaymentRequiredPrompt(payload?: KilocodePayload | { text?: string; content?: string }): void {
 		const { title, message, buyCreditsUrl, rawText } = this.parsePaymentRequiredPayload(payload)
 
+		captureAgentManagerLoginIssue({
+			issueType: "payment_required",
+		})
+
 		const actionLabel = buyCreditsUrl ? "Open billing" : undefined
 		const actions = actionLabel ? [actionLabel] : []
 
@@ -1169,6 +1175,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private showCliNotFoundError(): void {
+		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+		const { platform, shell } = getPlatformDiagnostics()
+		captureAgentManagerLoginIssue({
+			issueType: "cli_not_found",
+			hasNpm,
+			platform,
+			shell,
+		})
 		this.showCliError({ type: "spawn_error", message: "CLI not found" })
 	}
 
@@ -1234,6 +1248,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	private handleStartSessionApiFailure(error: { message?: string; authError?: boolean }): void {
+		captureAgentManagerLoginIssue({
+			issueType: error.authError ? "auth_error" : "api_error",
+			httpStatusCode: error.authError ? 401 : undefined,
+		})
+
 		const message =
 			error.authError === true
 				? this.buildAuthReminderMessage(error.message || t("kilocode:agentManager.errors.sessionFailed"))
@@ -1380,6 +1399,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
 		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+
+		const { platform, shell } = getPlatformDiagnostics()
+		if (error?.type === "cli_outdated") {
+			captureAgentManagerLoginIssue({
+				issueType: "cli_outdated",
+				hasNpm,
+				platform,
+				shell,
+			})
+		} else if (error?.type === "spawn_error" && error.message !== "CLI not found") {
+			captureAgentManagerLoginIssue({
+				issueType: "cli_spawn_error",
+				hasNpm,
+				platform,
+				shell,
+			})
+		}
 
 		switch (error?.type) {
 			case "cli_outdated":
