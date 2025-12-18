@@ -3,6 +3,7 @@ import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 import { VisibleCodeContext } from "../types"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 
 /**
  * Service for providing FIM-based autocomplete suggestions in ChatTextArea
@@ -64,6 +65,9 @@ export class ChatTextAreaAutocomplete {
 		}
 
 		const cleanedSuggestion = this.cleanSuggestion(response, userText)
+		console.log(
+			`[ChatAutocomplete] prefix: ${JSON.stringify(userText)} | response: ${JSON.stringify(response)} | cleanedSuggestion: ${JSON.stringify(cleanedSuggestion)}`,
+		)
 
 		return { suggestion: cleanedSuggestion }
 	}
@@ -81,6 +85,8 @@ export class ChatTextAreaAutocomplete {
 - Use context from visible code if relevant
 - NEVER repeat what the user already typed
 - NEVER start with comments (//, /*, #)
+- If the user is in the middle of typing a word (e.g., "hel"), include the COMPLETE word in your response (e.g., "hello world" not just "lo world")
+- This allows proper prefix matching to remove the overlap correctly
 - Return ONLY the completion text, no explanations or formatting`
 	}
 
@@ -90,7 +96,9 @@ export class ChatTextAreaAutocomplete {
 	private getChatUserPrompt(prefix: string): string {
 		return `${prefix}
 
-TASK: Complete the user's message naturally. Return ONLY the completion text (what comes next), no explanations.`
+TASK: Complete the user's message naturally. 
+- If the user is mid-word (e.g., typed "hel"), return the COMPLETE word (e.g., "hello world") so prefix matching can work correctly
+- Return ONLY the completion text (what comes next), no explanations.`
 	}
 
 	/**
@@ -146,18 +154,15 @@ TASK: Complete the user's message naturally. Return ONLY the completion text (wh
 	 * and filtering out unwanted patterns like comments
 	 */
 	private cleanSuggestion(suggestion: string, userText: string): string {
-		let cleaned = suggestion.trim()
+		let cleaned = suggestion
 
-		if (cleaned.startsWith(userText)) {
-			cleaned = cleaned.substring(userText.length)
-		}
+		cleaned = removePrefixOverlap(cleaned, userText)
 
 		const firstNewline = cleaned.indexOf("\n")
 		if (firstNewline !== -1) {
 			cleaned = cleaned.substring(0, firstNewline)
 		}
-
-		cleaned = cleaned.trimStart()
+		cleaned = cleaned.trimEnd() // Do NOT trim the end of the suggestion
 
 		// Filter out suggestions that start with comment patterns
 		// This happens because the context uses // prefixes for labels

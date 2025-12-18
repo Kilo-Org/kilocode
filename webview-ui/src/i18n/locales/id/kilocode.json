@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
 				"label": "Pelengkapan Otomatis Input Obrolan"
+			},
+			"snooze": {
+				"label": "Tunda Autocomplete",
+				"description": "Jeda sementara saran autocomplete untuk durasi tertentu.",
+				"button": "Tunda",
+				"unsnooze": "Aktifkan Kembali",
+				"currentlySnoozed": "Autocomplete sedang ditunda.",
+				"duration": {
+					"1min": "1 menit",
+					"5min": "5 menit",
+					"15min": "15 menit",
+					"30min": "30 menit",
+					"1hour": "1 jam"
+				}
 			}
 		}
 	},
@@ -313,7 +327,10 @@
 		"initiating": "Memulai autentikasi..."
 	},
 	"speechToText": {
-		"startRecording": "Mulai input suara",
-		"stopRecording": "Hentikan input suara"
+		"startRecording": "Mulai masukan suara",
+		"stopRecording": "Hentikan input suara",
+		"unavailableOpenAiKeyMissing": "Ucapan-ke-teks tidak tersedia. Ini memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
+		"unavailableFfmpegNotInstalled": "Ucapan-ke-teks tidak tersedia. Pasang FFmpeg untuk menggunakan transkripsi suara.",
+		"unavailableBoth": "Ucapan-ke-teks tidak tersedia. Fitur ini memerlukan penyedia OpenAI yang valid dan FFmpeg harus terpasang."
 	}
 }

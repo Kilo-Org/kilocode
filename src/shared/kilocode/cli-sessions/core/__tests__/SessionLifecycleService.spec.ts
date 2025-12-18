@@ -415,6 +415,132 @@ describe("SessionLifecycleService", () => {
 				sessionId: "session-123",
 			})
 		})
+
+		describe("empty session handling", () => {
+			it("creates empty JSON files when session has no blob URLs", async () => {
+				const emptySession = {
+					session_id: "session-123",
+					title: "Empty Session",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: undefined,
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(emptySession)
+
+				await service.restoreSession("session-123")
+
+				// Should create empty ui_messages.json
+				expect(writeFileSync).toHaveBeenCalledWith(
+					"/mock/tasks/session-123/ui_messages.json",
+					JSON.stringify([], null, 2),
+				)
+
+				// Should create empty api_conversation_history.json
+				expect(writeFileSync).toHaveBeenCalledWith(
+					"/mock/tasks/session-123/api_conversation_history.json",
+					JSON.stringify([], null, 2),
+				)
+
+				// Should log debug messages about creating empty files
+				expect(mockLogger.debug).toHaveBeenCalledWith(
+					"Created empty ui_messages.json for session without messages",
+					expect.any(String),
+					{ sessionId: "session-123" },
+				)
+				expect(mockLogger.debug).toHaveBeenCalledWith(
+					"Created empty api_conversation_history.json for session without history",
+					expect.any(String),
+					{ sessionId: "session-123" },
+				)
+			})
+
+			it("restores empty session successfully and calls onSessionRestored", async () => {
+				const emptySession = {
+					session_id: "session-123",
+					title: "Empty Session",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: undefined,
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(emptySession)
+
+				await service.restoreSession("session-123")
+
+				// Should proceed with restore
+				expect(mockOnSessionRestored).toHaveBeenCalled()
+				expect(mockStateManager.setActiveSessionId).toHaveBeenCalledWith("session-123")
+				expect(mockPersistenceManager.setLastSession).toHaveBeenCalledWith("session-123")
+			})
+
+			it("creates empty ui_messages.json only when ui_messages_blob_url is missing", async () => {
+				const sessionWithApiHistory = {
+					session_id: "session-123",
+					title: "Session With API History",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: "https://api.example.com",
+					ui_messages_blob_url: undefined,
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(sessionWithApiHistory)
+
+				await service.restoreSession("session-123")
+
+				// Should create empty ui_messages.json
+				expect(writeFileSync).toHaveBeenCalledWith(
+					"/mock/tasks/session-123/ui_messages.json",
+					JSON.stringify([], null, 2),
+				)
+
+				// Should NOT create empty api_conversation_history.json (it has a blob URL)
+				const apiHistoryCalls = vi
+					.mocked(writeFileSync)
+					.mock.calls.filter(
+						(call) =>
+							(call[0] as string).includes("api_conversation_history.json") &&
+							call[1] === JSON.stringify([], null, 2),
+					)
+				expect(apiHistoryCalls).toHaveLength(0)
+			})
+
+			it("creates empty api_conversation_history.json only when api_conversation_history_blob_url is missing", async () => {
+				const sessionWithUiMessages = {
+					session_id: "session-123",
+					title: "Session With UI Messages",
+					version: 1,
+					created_at: "2023-01-01T00:00:00Z",
+					api_conversation_history_blob_url: undefined,
+					ui_messages_blob_url: "https://ui.example.com",
+					task_metadata_blob_url: undefined,
+					git_state_blob_url: undefined,
+				}
+				mockSessionClient.get.mockResolvedValue(sessionWithUiMessages)
+
+				await service.restoreSession("session-123")
+
+				// Should create empty api_conversation_history.json
+				expect(writeFileSync).toHaveBeenCalledWith(
+					"/mock/tasks/session-123/api_conversation_history.json",
+					JSON.stringify([], null, 2),
+				)
+
+				// Should NOT create empty ui_messages.json (it has a blob URL)
+				const uiMessagesCalls = vi
+					.mocked(writeFileSync)
+					.mock.calls.filter(
+						(call) =>
+							(call[0] as string).includes("ui_messages.json") && call[1] === JSON.stringify([], null, 2),
+					)
+				expect(uiMessagesCalls).toHaveLength(0)
+			})
+		})
 	})
 
 	describe("shareSession", () => {

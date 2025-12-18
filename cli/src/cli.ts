@@ -274,10 +274,15 @@ export class CLI {
 			logs.debug("CLI configuration injected into extension", "CLI")
 
 			const extensionHost = this.service.getExtensionHost()
-			extensionHost.sendWebviewMessage({
-				type: "yoloMode",
-				bool: Boolean(this.options.ci || this.options.yolo),
-			})
+			// In JSON-IO mode, don't set yoloMode on the extension host.
+			// This prevents Task.ts from auto-answering followup questions.
+			// The CLI's approval layer handles YOLO behavior and correctly excludes followups.
+			if (!this.options.jsonInteractive) {
+				extensionHost.sendWebviewMessage({
+					type: "yoloMode",
+					bool: Boolean(this.options.ci || this.options.yolo),
+				})
+			}
 
 			// Request router models after configuration is injected
 			void this.requestRouterModels()

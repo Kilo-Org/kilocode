@@ -2213,8 +2213,11 @@ ${prompt}
 		// kilocode_change end
 
 		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
-		let speechToTextAvailable =
-			experiments?.speechToText && (await checkSpeechToTextAvailable(this.providerSettingsManager))
+		let speechToTextStatus: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } | undefined =
+			undefined
+		if (experiments?.speechToText) {
+			speechToTextStatus = await checkSpeechToTextAvailable(this.providerSettingsManager)
+		}
 		// kilocode_change end - checkSpeechToTextAvailable
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
@@ -2261,7 +2264,7 @@ ${prompt}
 			apiConfiguration,
 			customInstructions,
 			alwaysAllowReadOnly: alwaysAllowReadOnly ?? true,
-			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? true,
+			alwaysAllowReadOnlyOutsideWorkspace: alwaysAllowReadOnlyOutsideWorkspace ?? false,
 			alwaysAllowWrite: alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: alwaysAllowWriteProtected ?? false,
@@ -2440,7 +2443,7 @@ ${prompt}
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
-			speechToTextAvailable, // kilocode_change: Whether speech-to-text is fully configured
+			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		}
 	}
 
@@ -2556,7 +2559,7 @@ ${prompt}
 			customInstructions: stateValues.customInstructions,
 			apiModelId: stateValues.apiModelId,
 			alwaysAllowReadOnly: stateValues.alwaysAllowReadOnly ?? true,
-			alwaysAllowReadOnlyOutsideWorkspace: stateValues.alwaysAllowReadOnlyOutsideWorkspace ?? true,
+			alwaysAllowReadOnlyOutsideWorkspace: stateValues.alwaysAllowReadOnlyOutsideWorkspace ?? false,
 			alwaysAllowWrite: stateValues.alwaysAllowWrite ?? true,
 			alwaysAllowWriteOutsideWorkspace: stateValues.alwaysAllowWriteOutsideWorkspace ?? false,
 			alwaysAllowWriteProtected: stateValues.alwaysAllowWriteProtected ?? false,

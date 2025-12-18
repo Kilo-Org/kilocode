@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Hentikan Agen",
 		"newButtonTitle": "Agen Baru",
 		"refreshButtonTitle": "Refresh pesan",
-		"autoModeWarning": "Berjalan dalam mode otomatis penuh - agen akan menjalankan tindakan tanpa konfirmasi",
+		"autoModeWarning": "Mode YOLO - operasi alat disetujui secara otomatis",
 		"starting": "Memulai...",
 		"startAriaLabel": "Mulai agen dengan prompt yang diberikan",
 		"keyboardHint": "Tekan Enter untuk memulai, Shift+Enter untuk baris baru",
@@ -47,7 +47,14 @@
 		"launchVersions": "Luncurkan {{count}} versi",
 		"startAgent": "Mulai Agen",
 		"cancelCreating": "Batalkan pembuatan sesi",
-		"cancelButton": "Batal"
+		"cancelButton": "Batal",
+		"selectBranch": "Pilih cabang",
+		"searchBranches": "Ketik untuk mencari semua cabang",
+		"yourBranches": "Cabang kamu",
+		"otherBranches": "Cabang lain",
+		"branchPickerTooltip": "Ganti cabang dasar",
+		"noBranches": "Tidak ada cabang ditemukan",
+		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code memiliki pertanyaan",
 		"command": "Kilo ingin menjalankan perintah",
 		"tool": "Kilo ingin menggunakan alat",
-		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}"
+		"usingTool": "Menggunakan alat: **{{tool}}** {{details}}",
+		"expandOutput": "Perluas output",
+		"collapseOutput": "Ciutkan output",
+		"copyCommand": "Salin perintah"
 	},
 	"chatInput": {
 		"autoMode": "Agen berjalan dalam mode otomatis penuh - input tidak diizinkan",

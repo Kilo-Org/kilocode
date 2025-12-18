@@ -38,7 +38,7 @@
 		"branch": "Branch",
 		"creatingSession": "Creating session...",
 		"waitingForCli": "Initializing agent session...",
-		"autoModeWarning": "Running in full-auto mode - agent will execute actions without confirmation",
+		"autoModeWarning": "YOLO mode - tool operations are auto-approved",
 		"versions": "Versions",
 		"versionsTooltip": "Parallel agents exploring different approaches",
 		"versionsHelperText": "{{count}} parallel agents on separate branches",
@@ -47,7 +47,14 @@
 		"launchVersions": "Launch {{count}} versions",
 		"startAgent": "Start agent",
 		"cancelCreating": "Cancel session creation",
-		"cancelButton": "Cancel"
+		"cancelButton": "Cancel",
+		"selectBranch": "Select branch",
+		"searchBranches": "Type to search all branches",
+		"yourBranches": "Your branches",
+		"otherBranches": "Other branches",
+		"branchPickerTooltip": "Switch base branch",
+		"noBranches": "No branches found",
+		"noMatchingBranches": "No branches match your search"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code has a question",
 		"command": "Kilo wants to run a command",
 		"tool": "Kilo wants to use a tool",
-		"usingTool": "Using tool: **{{tool}}** {{details}}"
+		"usingTool": "Using tool: **{{tool}}** {{details}}",
+		"expandOutput": "Expand output",
+		"collapseOutput": "Collapse output",
+		"copyCommand": "Copy command"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",

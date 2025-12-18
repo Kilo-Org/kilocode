@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Aturar agent",
 		"newButtonTitle": "Agent nou",
 		"refreshButtonTitle": "Actualitzar missatges",
-		"autoModeWarning": "Executant en mode completament automàtic - l'agent executarà accions sense confirmació",
+		"autoModeWarning": "Mode YOLO - les operacions d'eines s'aproven automàticament",
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
 		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
@@ -47,7 +47,14 @@
 		"launchVersions": "Llançar {{count}} versions",
 		"startAgent": "Iniciar agent",
 		"cancelCreating": "Cancel·la la creació de la sessió",
-		"cancelButton": "Cancel·la"
+		"cancelButton": "Cancel·la",
+		"selectBranch": "Selecciona branca",
+		"searchBranches": "Escriu per cercar totes les branques",
+		"yourBranches": "Les teves branques",
+		"otherBranches": "Altres branques",
+		"branchPickerTooltip": "Canvia la branca base",
+		"noBranches": "No s'han trobat branques",
+		"noMatchingBranches": "No hi ha branques que coincideixin amb la teva cerca"
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code té una pregunta",
 		"command": "Kilo vol executar una comanda",
 		"tool": "Kilo vol utilitzar una eina",
-		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}"
+		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
+		"expandOutput": "Expandir sortida",
+		"collapseOutput": "Replegar sortida",
+		"copyCommand": "Copiar comanda"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",

@@ -98,7 +98,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setCustomCondensingPrompt: (value: string) => void
 	yoloGatekeeperApiConfigId?: string // kilocode_change: AI gatekeeper for YOLO mode
 	setYoloGatekeeperApiConfigId: (value: string) => void // kilocode_change: AI gatekeeper for YOLO mode
-	speechToTextAvailable?: boolean // kilocode_change: Whether voice transcription is fully configured
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
 	marketplaceItems?: any[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
 	profileThresholds: Record<string, number>

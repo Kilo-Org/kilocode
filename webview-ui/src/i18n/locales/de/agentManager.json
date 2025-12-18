@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Agent stoppen",
 		"newButtonTitle": "Neuer Agent",
 		"refreshButtonTitle": "Nachrichten aktualisieren",
-		"autoModeWarning": "Läuft im Vollautomatik-Modus - Agent führt Aktionen ohne Bestätigung aus",
+		"autoModeWarning": "YOLO-Modus - Tool-Operationen werden automatisch genehmigt",
 		"starting": "Wird gestartet...",
 		"startAriaLabel": "Agent mit angegebenem Prompt starten",
 		"keyboardHint": "Enter zum Starten, Shift+Enter für neue Zeile",
@@ -47,7 +47,14 @@
 		"launchVersions": "{{count}} Versionen starten",
 		"startAgent": "Agent starten",
 		"cancelCreating": "Sitzungserstellung abbrechen",
-		"cancelButton": "Abbrechen"
+		"cancelButton": "Abbrechen",
+		"selectBranch": "Branch auswählen",
+		"searchBranches": "Tippe, um alle Branches zu durchsuchen",
+		"yourBranches": "Deine Branches",
+		"otherBranches": "Andere Branches",
+		"branchPickerTooltip": "Basis-Branch wechseln",
+		"noBranches": "Keine Branches gefunden",
+		"noMatchingBranches": "Keine Branches entsprechen deiner Suche"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code hat eine Frage",
 		"command": "Kilo möchte einen Befehl ausführen",
 		"tool": "Kilo möchte ein Werkzeug verwenden",
-		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}"
+		"usingTool": "Verwende Werkzeug: **{{tool}}** {{details}}",
+		"expandOutput": "Ausgabe erweitern",
+		"collapseOutput": "Ausgabe einklappen",
+		"copyCommand": "Befehl kopieren"
 	},
 	"chatInput": {
 		"autoMode": "Agent läuft im Vollautomatik-Modus - keine Eingabe möglich",

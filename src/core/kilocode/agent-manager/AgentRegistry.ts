@@ -2,7 +2,6 @@ import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelM
 
 export interface CreateSessionOptions {
 	parallelMode?: boolean
-	autoMode?: boolean
 }
 
 const MAX_SESSIONS = 10
@@ -36,7 +35,6 @@ export class AgentRegistry {
 			startTime: Date.now(),
 			parallelMode: options?.parallelMode,
 			gitUrl: options?.gitUrl,
-			autoMode: options?.autoMode,
 		}
 		return this._pendingSession
 	}
@@ -69,7 +67,6 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
-			...(options?.autoMode && { autoMode: true }),
 		}
 
 		this.sessions.set(sessionId, session)
@@ -148,7 +145,7 @@ export class AgentRegistry {
 	}
 
 	/**
-	 * Update the autoMode flag on a session.
+	 * Update parallel mode info on a session.
 	 */
 	public updateParallelModeInfo(
 		id: string,

@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "聊天输入自动完成",
 				"description": "启用后，Kilo Code 将在您输入聊天内容时提供补全建议。按 Tab 键接受建议。"
+			},
+			"snooze": {
+				"label": "暂停自动补全",
+				"description": "在指定时间内暂时停止自动补全建议。",
+				"button": "暂停",
+				"unsnooze": "取消暂停",
+				"currentlySnoozed": "自动补全当前已暂停。",
+				"duration": {
+					"1min": "1 分钟",
+					"5min": "5 分钟",
+					"15min": "15 分钟",
+					"30min": "30 分钟",
+					"1hour": "1 小时"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "开始语音输入",
-		"stopRecording": "停止语音输入"
+		"stopRecording": "停止语音输入",
+		"unavailableOpenAiKeyMissing": "语音转文字功能不可用。使用语音转录需要有效的OpenAI提供商及其API密钥。",
+		"unavailableFfmpegNotInstalled": "语音转文字功能不可用。请安装FFmpeg以使用语音转录功能。",
+		"unavailableBoth": "语音转文字功能不可用。它需要有效的OpenAI提供商，且必须安装FFmpeg。"
 	}
 }

@@ -25,7 +25,7 @@
 		"stopButtonTitle": "एजेंट रोकें",
 		"newButtonTitle": "नया एजेंट",
 		"refreshButtonTitle": "संदेश रीफ्रेश करें",
-		"autoModeWarning": "पूर्ण-स्वचालित मोड में चल रहा है - एजेंट बिना पुष्टि के कार्य करेगा",
+		"autoModeWarning": "YOLO मोड - टूल ऑपरेशन स्वचालित रूप से स्वीकृत हैं",
 		"starting": "शुरू हो रहा है...",
 		"startAriaLabel": "दिए गए प्रॉम्प्ट के साथ एजेंट शुरू करें",
 		"keyboardHint": "शुरू करने के लिए Enter दबाएं, नई पंक्ति के लिए Shift+Enter",
@@ -47,7 +47,14 @@
 		"launchVersions": "{{count}} संस्करण लॉन्च करें",
 		"startAgent": "एजेंट शुरू करें",
 		"cancelCreating": "सत्र निर्माण रद्द करें",
-		"cancelButton": "रद्द करें"
+		"cancelButton": "रद्द करें",
+		"selectBranch": "ब्रांच चुनें",
+		"searchBranches": "सभी ब्रांच खोजने के लिए टाइप करें",
+		"yourBranches": "आपकी ब्रांच",
+		"otherBranches": "अन्य ब्रांच",
+		"branchPickerTooltip": "बेस ब्रांच बदलें",
+		"noBranches": "कोई ब्रांच नहीं मिली",
+		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code का एक प्रश्न है",
 		"command": "Kilo एक कमांड चलाना चाहता है",
 		"tool": "Kilo एक टूल का उपयोग करना चाहता है",
-		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}"
+		"usingTool": "टूल का उपयोग: **{{tool}}** {{details}}",
+		"expandOutput": "आउटपुट विस्तार करें",
+		"collapseOutput": "आउटपुट संक्षिप्त करें",
+		"copyCommand": "कमांड कॉपी करें"
 	},
 	"chatInput": {
 		"autoMode": "एजेंट पूर्ण-स्वचालित मोड में चल रहा है - इनपुट की अनुमति नहीं है",

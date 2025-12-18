@@ -1,24 +1,27 @@
 export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
-	autoMode?: boolean
+	existingBranch?: string
 }
 
 /**
  * Builds CLI arguments for spawning kilocode agent processes.
  * Uses --json-io for bidirectional communication via stdin/stdout.
+ * Runs in interactive mode - approvals are handled via the JSON-IO protocol.
  */
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
-	// Always use --json-io for Agent Manager (enables stdin for bidirectional communication)
+	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
-	const args = ["--json-io", `--workspace=${workspace}`]
-
-	if (options?.autoMode) {
-		args.push("--auto")
-	}
+	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
+	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
 
 	if (options?.parallelMode) {
 		args.push("--parallel")
+
+		// Add existing branch flag if specified (resume on existing branch)
+		if (options.existingBranch) {
+			args.push(`--existing-branch=${options.existingBranch}`)
+		}
 	}
 
 	if (options?.sessionId) {

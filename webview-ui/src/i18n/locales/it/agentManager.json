@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Ferma agente",
 		"newButtonTitle": "Nuovo agente",
 		"refreshButtonTitle": "Aggiorna messaggi",
-		"autoModeWarning": "In esecuzione in modalità completamente automatica - l'agente eseguirà le azioni senza conferma",
+		"autoModeWarning": "Modalità YOLO - le operazioni degli strumenti vengono approvate automaticamente",
 		"starting": "Avvio in corso...",
 		"startAriaLabel": "Avvia agente con il prompt fornito",
 		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga",
@@ -47,7 +47,14 @@
 		"launchVersions": "Avvia {{count}} versioni",
 		"startAgent": "Avvia agente",
 		"cancelCreating": "Annulla creazione sessione",
-		"cancelButton": "Annulla"
+		"cancelButton": "Annulla",
+		"selectBranch": "Seleziona branch",
+		"searchBranches": "Digita per cercare tutti i branch",
+		"yourBranches": "I tuoi branch",
+		"otherBranches": "Altri branch",
+		"branchPickerTooltip": "Cambia branch di base",
+		"noBranches": "Nessun branch trovato",
+		"noMatchingBranches": "Nessun branch corrisponde alla tua ricerca"
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code ha una domanda",
 		"command": "Kilo vuole eseguire un comando",
 		"tool": "Kilo vuole usare uno strumento",
-		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}"
+		"usingTool": "Utilizzo strumento: **{{tool}}** {{details}}",
+		"expandOutput": "Espandi output",
+		"collapseOutput": "Comprimi output",
+		"copyCommand": "Copia comando"
 	},
 	"chatInput": {
 		"autoMode": "Agent in esecuzione in modalità completamente automatica - input non consentito",

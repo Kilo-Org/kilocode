@@ -1,5 +1,33 @@
 # kilo-code
 
+## 4.139.0
+
+### Minor Changes
+
+- [#4481](https://github.com/Kilo-Org/kilocode/pull/4481) [`61c951c`](https://github.com/Kilo-Org/kilocode/commit/61c951c0ad11d60b07406338b6053cc5d1f01cac) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improved command output rendering in Agent Manager with new CommandExecutionBlock component that displays terminal output with status indicators, collapsible output sections, and proper escape sequence handling.
+
+- [#4483](https://github.com/Kilo-Org/kilocode/pull/4483) [`fd639ab`](https://github.com/Kilo-Org/kilocode/commit/fd639ab78aa4ab62ea2d120bd2844d1160b20067) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add branch picker to Agent Manager for selecting base branch in worktree mode
+
+- [#4539](https://github.com/Kilo-Org/kilocode/pull/4539) [`62a0241`](https://github.com/Kilo-Org/kilocode/commit/62a02418cafa23a733f92a9e14ba904552acdcc4) Thanks [@brianc](https://github.com/brianc)! - Improve managed indexer error handling & backoff.
+
+### Patch Changes
+
+- [#4512](https://github.com/Kilo-Org/kilocode/pull/4512) [`f979b56`](https://github.com/Kilo-Org/kilocode/commit/f979b56b6a631eeeb671caaca276316b63b5fb82) Thanks [@hassoncs](https://github.com/hassoncs)! - Add a tooltip explaining why speech-to-text may be unavailable
+
+- [#4424](https://github.com/Kilo-Org/kilocode/pull/4424) [`cd0cd88`](https://github.com/Kilo-Org/kilocode/commit/cd0cd8833f0e892cc2f1c96bb24ede6254cf12c9) Thanks [@markijbema](https://github.com/markijbema)! - Added a snooze for autocomplete in the settings
+
+- [#4519](https://github.com/Kilo-Org/kilocode/pull/4519) [`a9fd203`](https://github.com/Kilo-Org/kilocode/commit/a9fd2038ecb60fd799d164bcf1b2e4393302d15a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix text.startsWith is not a function crash
+
+- [#4536](https://github.com/Kilo-Org/kilocode/pull/4536) [`51f4774`](https://github.com/Kilo-Org/kilocode/commit/51f4774adcb90778826e00e9a50c45bb7bf11bc8) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix image generation handler not using Kilo Gateway properly
+
+- [#4491](https://github.com/Kilo-Org/kilocode/pull/4491) [`823b86f`](https://github.com/Kilo-Org/kilocode/commit/823b86f196868f12efc60e5acb9b385d014bc644) Thanks [@markijbema](https://github.com/markijbema)! - Prevent autocomplete from showing suggestions duplicating the previous or next line
+
+- [#4531](https://github.com/Kilo-Org/kilocode/pull/4531) [`9413d73`](https://github.com/Kilo-Org/kilocode/commit/9413d730814d88ac67c88e6eec9a66c2c701613e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix duplicate tool processing in OpenAI-compatible provider
+
+- [#4533](https://github.com/Kilo-Org/kilocode/pull/4533) [`20b2c29`](https://github.com/Kilo-Org/kilocode/commit/20b2c29140f401ac65d437e35c52b48329e5f52d) Thanks [@mcowger](https://github.com/mcowger)! - Add gemini-3-flash-preview model configuration to vertex models
+
+- [#4520](https://github.com/Kilo-Org/kilocode/pull/4520) [`8342fc4`](https://github.com/Kilo-Org/kilocode/commit/8342fc4fbdc2a83601c706e734ef3377ef114f98) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Normalize line endings in search and replace tool
+
 ## 4.138.0
 
 ### Minor Changes

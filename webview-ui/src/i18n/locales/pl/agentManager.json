@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Zatrzymaj agenta",
 		"newButtonTitle": "Nowy agent",
 		"refreshButtonTitle": "Odśwież wiadomości",
-		"autoModeWarning": "Działa w trybie w pełni automatycznym - agent będzie wykonywał akcje bez potwierdzenia",
+		"autoModeWarning": "Tryb YOLO - operacje narzędzi są automatycznie zatwierdzane",
 		"starting": "Uruchamianie...",
 		"startAriaLabel": "Uruchom agenta z podanym poleceniem",
 		"keyboardHint": "Naciśnij Enter, aby uruchomić, Shift+Enter dla nowej linii",
@@ -49,7 +49,14 @@
 		"launchVersions": "Uruchom {{count}} wersje",
 		"startAgent": "Uruchom agenta",
 		"cancelCreating": "Anuluj tworzenie sesji",
-		"cancelButton": "Anuluj"
+		"cancelButton": "Anuluj",
+		"selectBranch": "Wybierz gałąź",
+		"searchBranches": "Wpisz, aby przeszukać wszystkie gałęzie",
+		"yourBranches": "Twoje gałęzie",
+		"otherBranches": "Inne gałęzie",
+		"branchPickerTooltip": "Zmień gałąź bazową",
+		"noBranches": "Nie znaleziono gałęzi",
+		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",
@@ -61,7 +68,10 @@
 		"question": "Kilo Code ma pytanie",
 		"command": "Kilo chce wykonać polecenie",
 		"tool": "Kilo chce użyć narzędzia",
-		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}"
+		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}",
+		"expandOutput": "Rozwiń wyjście",
+		"collapseOutput": "Zwiń wyjście",
+		"copyCommand": "Kopiuj polecenie"
 	},
 	"chatInput": {
 		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",

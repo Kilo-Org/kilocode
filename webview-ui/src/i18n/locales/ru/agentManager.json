@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Остановить агента",
 		"newButtonTitle": "Новый агент",
 		"refreshButtonTitle": "Обновить сообщения",
-		"autoModeWarning": "Работает в полностью автоматическом режиме - агент будет выполнять действия без подтверждения",
+		"autoModeWarning": "Режим YOLO - операции с инструментами одобряются автоматически",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустить агента с указанным промптом",
 		"keyboardHint": "Нажмите Enter для запуска, Shift+Enter для новой строки",
@@ -49,7 +49,14 @@
 		"launchVersions": "Запустить {{count}} версий",
 		"startAgent": "Запустить агента",
 		"cancelCreating": "Отменить создание сессии",
-		"cancelButton": "Отмена"
+		"cancelButton": "Отмена",
+		"selectBranch": "Выбери ветку",
+		"searchBranches": "Введи для поиска всех веток",
+		"yourBranches": "Твои ветки",
+		"otherBranches": "Другие ветки",
+		"branchPickerTooltip": "Сменить базовую ветку",
+		"noBranches": "Ветки не найдены",
+		"noMatchingBranches": "Нет веток, соответствующих твоему поиску"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
@@ -61,7 +68,10 @@
 		"question": "У Kilo Code есть вопрос",
 		"command": "Kilo хочет выполнить команду",
 		"tool": "Kilo хочет использовать инструмент",
-		"usingTool": "Использование инструмента: **{{tool}}** {{details}}"
+		"usingTool": "Использование инструмента: **{{tool}}** {{details}}",
+		"expandOutput": "Развернуть вывод",
+		"collapseOutput": "Свернуть вывод",
+		"copyCommand": "Копировать команду"
 	},
 	"chatInput": {
 		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",

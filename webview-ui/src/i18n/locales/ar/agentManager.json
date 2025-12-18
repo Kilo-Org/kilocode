@@ -25,7 +25,7 @@
 		"stopButtonTitle": "إيقاف الوكيل",
 		"newButtonTitle": "وكيل جديد",
 		"refreshButtonTitle": "تحديث الرسائل",
-		"autoModeWarning": "يعمل في الوضع التلقائي الكامل - سينفذ الوكيل الإجراءات دون تأكيد",
+		"autoModeWarning": "وضع YOLO - تتم الموافقة على عمليات الأدوات تلقائيًا",
 		"starting": "جاري البدء...",
 		"startAriaLabel": "بدء الوكيل بالأمر المقدم",
 		"keyboardHint": "اضغط Enter للبدء، Shift+Enter لسطر جديد",
@@ -51,7 +51,14 @@
 		"launchVersions": "إطلاق {{count}} إصدارات",
 		"startAgent": "بدء الوكيل",
 		"cancelCreating": "إلغاء إنشاء الجلسة",
-		"cancelButton": "إلغاء"
+		"cancelButton": "إلغاء",
+		"selectBranch": "اختر فرع",
+		"searchBranches": "اكتب للبحث في جميع الفروع",
+		"yourBranches": "فروعك",
+		"otherBranches": "فروع أخرى",
+		"branchPickerTooltip": "تبديل الفرع الأساسي",
+		"noBranches": "لم يتم العثور على فروع",
+		"noMatchingBranches": "لا توجد فروع تطابق بحثك"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",
@@ -63,7 +70,10 @@
 		"question": "لدى Kilo Code سؤال",
 		"command": "يريد Kilo تشغيل أمر",
 		"tool": "يريد Kilo استخدام أداة",
-		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}"
+		"usingTool": "استخدام الأداة: **{{tool}}** {{details}}",
+		"expandOutput": "توسيع المخرجات",
+		"collapseOutput": "طي المخرجات",
+		"copyCommand": "نسخ الأمر"
 	},
 	"chatInput": {
 		"autoMode": "الوكيل يعمل في وضع الأتمتة الكاملة - لا يُسمح بالإدخال",

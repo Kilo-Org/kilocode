@@ -25,7 +25,7 @@
 		"stopButtonTitle": "หยุดเอเจนต์",
 		"newButtonTitle": "เอเจนต์ใหม่",
 		"refreshButtonTitle": "รีเฟรชข้อความ",
-		"autoModeWarning": "ทำงานในโหมดอัตโนมัติเต็มรูปแบบ - เอเจนต์จะดำเนินการโดยไม่ต้องยืนยัน",
+		"autoModeWarning": "โหมด YOLO - การดำเนินการของเครื่องมือได้รับการอนุมัติอัตโนมัติ",
 		"starting": "กำลังเริ่ม...",
 		"startAriaLabel": "เริ่มเอเจนต์ด้วยพรอมต์ที่ให้มา",
 		"keyboardHint": "กด Enter เพื่อเริ่ม, Shift+Enter สำหรับบรรทัดใหม่",
@@ -47,7 +47,14 @@
 		"launchVersions": "เปิดตัว {{count}} เวอร์ชัน",
 		"startAgent": "เริ่มเอเจนต์",
 		"cancelCreating": "ยกเลิกการสร้างเซสชัน",
-		"cancelButton": "ยกเลิก"
+		"cancelButton": "ยกเลิก",
+		"selectBranch": "เลือกสาขา",
+		"searchBranches": "พิมพ์เพื่อค้นหาสาขาทั้งหมด",
+		"yourBranches": "สาขาของคุณ",
+		"otherBranches": "สาขาอื่นๆ",
+		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
+		"noBranches": "ไม่พบสาขา",
+		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code มีคำถาม",
 		"command": "Kilo ต้องการรันคำสั่ง",
 		"tool": "Kilo ต้องการใช้เครื่องมือ",
-		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}"
+		"usingTool": "กำลังใช้เครื่องมือ: **{{tool}}** {{details}}",
+		"expandOutput": "ขยายผลลัพธ์",
+		"collapseOutput": "ยุบผลลัพธ์",
+		"copyCommand": "คัดลอกคำสั่ง"
 	},
 	"chatInput": {
 		"autoMode": "เอเจนต์กำลังทำงานในโหมดอัตโนมัติเต็มรูปแบบ - ไม่อนุญาตให้ป้อนข้อมูล",

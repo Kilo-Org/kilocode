@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Ajanı Durdur",
 		"newButtonTitle": "Yeni Ajan",
 		"refreshButtonTitle": "Mesajları yenile",
-		"autoModeWarning": "Tam otomatik modda çalışıyor - ajan onay almadan eylemleri gerçekleştirecek",
+		"autoModeWarning": "YOLO modu - araç işlemleri otomatik olarak onaylanır",
 		"starting": "Başlatılıyor...",
 		"startAriaLabel": "Verilen istemle ajanı başlat",
 		"keyboardHint": "Başlatmak için Enter, yeni satır için Shift+Enter",
@@ -47,7 +47,14 @@
 		"launchVersions": "{{count}} sürüm başlat",
 		"startAgent": "Ajanı Başlat",
 		"cancelCreating": "Oturum oluşturmayı iptal et",
-		"cancelButton": "İptal"
+		"cancelButton": "İptal",
+		"selectBranch": "Dal seç",
+		"searchBranches": "Tüm dalları aramak için yaz",
+		"yourBranches": "Senin dalların",
+		"otherBranches": "Diğer dallar",
+		"branchPickerTooltip": "Temel dalı değiştir",
+		"noBranches": "Dal bulunamadı",
+		"noMatchingBranches": "Aramanla eşleşen dal yok"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code'un bir sorusu var",
 		"command": "Kilo bir komut çalıştırmak istiyor",
 		"tool": "Kilo bir araç kullanmak istiyor",
-		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}"
+		"usingTool": "Araç kullanılıyor: **{{tool}}** {{details}}",
+		"expandOutput": "Çıktıyı genişlet",
+		"collapseOutput": "Çıktıyı daralt",
+		"copyCommand": "Komutu kopyala"
 	},
 	"chatInput": {
 		"autoMode": "Agent tam otomatik modda çalışıyor - girişe izin verilmiyor",

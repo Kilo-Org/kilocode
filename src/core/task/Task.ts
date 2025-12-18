@@ -1950,9 +1950,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			} else {
 				throw new Error("Unexpected: Last message is not a user or assistant message")
 			}
+			// kilocode_change start: Handle empty API conversation history for CLI session restoration
 		} else {
-			throw new Error("Unexpected: No existing API conversation history")
+			// Empty API conversation history - this can happen when restoring an empty session
+			// (e.g., a session created but not yet used). Treat it like a fresh start.
+			modifiedApiConversationHistory = []
+			modifiedOldUserContent = []
 		}
+		// kilocode_change end
 
 		let newUserContent: Anthropic.Messages.ContentBlockParam[] = [...modifiedOldUserContent]
 

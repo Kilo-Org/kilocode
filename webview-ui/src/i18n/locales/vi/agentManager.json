@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Dừng Agent",
 		"newButtonTitle": "Agent mới",
 		"refreshButtonTitle": "Làm mới tin nhắn",
-		"autoModeWarning": "Đang chạy ở chế độ tự động hoàn toàn - agent sẽ thực hiện các hành động mà không cần xác nhận",
+		"autoModeWarning": "Chế độ YOLO - các thao tác công cụ được tự động phê duyệt",
 		"starting": "Đang khởi động...",
 		"startAriaLabel": "Khởi động agent với prompt đã cung cấp",
 		"keyboardHint": "Nhấn Enter để bắt đầu, Shift+Enter cho dòng mới",
@@ -47,7 +47,14 @@
 		"launchVersions": "Khởi chạy {{count}} phiên bản",
 		"startAgent": "Khởi động Agent",
 		"cancelCreating": "Hủy tạo phiên",
-		"cancelButton": "Hủy"
+		"cancelButton": "Hủy",
+		"selectBranch": "Chọn nhánh",
+		"searchBranches": "Nhập để tìm kiếm tất cả các nhánh",
+		"yourBranches": "Nhánh của bạn",
+		"otherBranches": "Nhánh khác",
+		"branchPickerTooltip": "Chuyển nhánh cơ sở",
+		"noBranches": "Không tìm thấy nhánh nào",
+		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code có một câu hỏi",
 		"command": "Kilo muốn chạy một lệnh",
 		"tool": "Kilo muốn sử dụng một công cụ",
-		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}"
+		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}",
+		"expandOutput": "Mở rộng đầu ra",
+		"collapseOutput": "Thu gọn đầu ra",
+		"copyCommand": "Sao chép lệnh"
 	},
 	"chatInput": {
 		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",

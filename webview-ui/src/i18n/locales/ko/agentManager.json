@@ -25,7 +25,7 @@
 		"stopButtonTitle": "에이전트 중지",
 		"newButtonTitle": "새 에이전트",
 		"refreshButtonTitle": "메시지 새로고침",
-		"autoModeWarning": "전자동 모드로 실행 중 - 에이전트가 확인 없이 작업을 실행합니다",
+		"autoModeWarning": "YOLO 모드 - 도구 작업이 자동 승인됩니다",
 		"starting": "시작 중...",
 		"startAriaLabel": "제공된 프롬프트로 에이전트 시작",
 		"keyboardHint": "Enter를 눌러 시작, Shift+Enter로 줄 바꿈",
@@ -47,7 +47,14 @@
 		"launchVersions": "{{count}}개 버전 실행",
 		"startAgent": "에이전트 시작",
 		"cancelCreating": "세션 생성 취소",
-		"cancelButton": "취소"
+		"cancelButton": "취소",
+		"selectBranch": "브랜치 선택",
+		"searchBranches": "모든 브랜치를 검색하려면 입력하세요",
+		"yourBranches": "내 브랜치",
+		"otherBranches": "다른 브랜치",
+		"branchPickerTooltip": "기본 브랜치 변경",
+		"noBranches": "브랜치를 찾을 수 없습니다",
+		"noMatchingBranches": "검색과 일치하는 브랜치가 없습니다"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code가 질문이 있습니다",
 		"command": "Kilo가 명령을 실행하려고 합니다",
 		"tool": "Kilo가 도구를 사용하려고 합니다",
-		"usingTool": "도구 사용 중: **{{tool}}** {{details}}"
+		"usingTool": "도구 사용 중: **{{tool}}** {{details}}",
+		"expandOutput": "출력 펼치기",
+		"collapseOutput": "출력 접기",
+		"copyCommand": "명령 복사"
 	},
 	"chatInput": {
 		"autoMode": "에이전트가 완전 자동 모드로 실행 중 - 입력이 허용되지 않습니다",

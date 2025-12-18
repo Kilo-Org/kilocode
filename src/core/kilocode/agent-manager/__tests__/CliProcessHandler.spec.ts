@@ -83,13 +83,13 @@ describe("CliProcessHandler", () => {
 	})
 
 	describe("spawnProcess", () => {
-		it("spawns a CLI process with correct arguments", () => {
+		it("spawns a CLI process with correct arguments (yolo mode for testing)", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
 			expect(spawnMock).toHaveBeenCalledWith(
 				"/path/to/kilocode",
-				["--json-io", "--workspace=/workspace", "test prompt"],
+				["--json-io", "--yolo", "--workspace=/workspace", "test prompt"],
 				expect.objectContaining({
 					cwd: "/workspace",
 					stdio: ["pipe", "pipe", "pipe"],
@@ -677,7 +677,7 @@ describe("CliProcessHandler", () => {
 			)
 		})
 
-		it("handles exit with signal", () => {
+		it("handles exit with signal (null code)", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
@@ -687,6 +687,59 @@ describe("CliProcessHandler", () => {
 			const session = registry.getSession("session-1")
 			expect(session?.status).toBe("error")
 			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", expect.stringContaining("signal SIGTERM"))
+		})
+
+		it("handles timeout exit (code 124)", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			mockProcess.emit("exit", 124, null)
+
+			const session = registry.getSession("session-1")
+			expect(session?.status).toBe("error")
+			expect(session?.exitCode).toBe(124)
+			expect(session?.error).toBe("CLI timeout exceeded")
+			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", "Agent timed out")
+		})
+
+		it("handles SIGINT interrupted exit (code 130)", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			mockProcess.emit("exit", 130, null)
+
+			const session = registry.getSession("session-1")
+			expect(session?.status).toBe("stopped")
+			expect(session?.exitCode).toBe(130)
+			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", "Agent was interrupted")
+		})
+
+		it("handles SIGKILL interrupted exit (code 137)", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			mockProcess.emit("exit", 137, null)
+
+			const session = registry.getSession("session-1")
+			expect(session?.status).toBe("stopped")
+			expect(session?.exitCode).toBe(137)
+			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", "Agent was interrupted")
+		})
+
+		it("handles SIGTERM interrupted exit (code 143)", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			mockProcess.emit("exit", 143, null)
+
+			const session = registry.getSession("session-1")
+			expect(session?.status).toBe("stopped")
+			expect(session?.exitCode).toBe(143)
+			expect(callbacks.onSessionLog).toHaveBeenCalledWith("session-1", "Agent was interrupted")
 		})
 
 		it("flushes parser buffer on exit", () => {

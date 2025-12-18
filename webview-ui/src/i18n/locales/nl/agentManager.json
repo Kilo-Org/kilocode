@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Agent stoppen",
 		"newButtonTitle": "Nieuwe agent",
 		"refreshButtonTitle": "Berichten vernieuwen",
-		"autoModeWarning": "Draait in volledig automatische modus - agent voert acties uit zonder bevestiging",
+		"autoModeWarning": "YOLO-modus - tool-operaties worden automatisch goedgekeurd",
 		"starting": "Starten...",
 		"startAriaLabel": "Agent starten met opgegeven prompt",
 		"keyboardHint": "Druk op Enter om te starten, Shift+Enter voor nieuwe regel",
@@ -47,7 +47,14 @@
 		"launchVersions": "Start {{count}} versies",
 		"startAgent": "Agent starten",
 		"cancelCreating": "Sessie aanmaken annuleren",
-		"cancelButton": "Annuleren"
+		"cancelButton": "Annuleren",
+		"selectBranch": "Branch selecteren",
+		"searchBranches": "Typ om alle branches te doorzoeken",
+		"yourBranches": "Jouw branches",
+		"otherBranches": "Andere branches",
+		"branchPickerTooltip": "Wijzig basisbranch",
+		"noBranches": "Geen branches gevonden",
+		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",
@@ -59,7 +66,10 @@
 		"question": "Kilo Code heeft een vraag",
 		"command": "Kilo wil een commando uitvoeren",
 		"tool": "Kilo wil een tool gebruiken",
-		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}"
+		"usingTool": "Tool gebruiken: **{{tool}}** {{details}}",
+		"expandOutput": "Uitvoer uitvouwen",
+		"collapseOutput": "Uitvoer invouwen",
+		"copyCommand": "Opdracht kopiëren"
 	},
 	"chatInput": {
 		"autoMode": "Agent draait in volledig automatische modus - geen invoer toegestaan",

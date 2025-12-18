@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Zastavit agenta",
 		"newButtonTitle": "Nový agent",
 		"refreshButtonTitle": "Obnovit zprávy",
-		"autoModeWarning": "Běží v plně automatickém režimu - agent bude provádět akce bez potvrzení",
+		"autoModeWarning": "Režim YOLO - operace nástrojů jsou automaticky schváleny",
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
 		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
@@ -48,7 +48,14 @@
 		"launchVersions": "Spustit {{count}} verzí",
 		"startAgent": "Spustit agenta",
 		"cancelCreating": "Zrušit vytváření relace",
-		"cancelButton": "Zrušit"
+		"cancelButton": "Zrušit",
+		"selectBranch": "Vyber větev",
+		"searchBranches": "Zadej text pro prohledání všech větví",
+		"yourBranches": "Tvoje větve",
+		"otherBranches": "Ostatní větve",
+		"branchPickerTooltip": "Změnit základní větev",
+		"noBranches": "Nebyly nalezeny žádné větve",
+		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",
@@ -60,7 +67,10 @@
 		"question": "Kilo Code má otázku",
 		"command": "Kilo chce spustit příkaz",
 		"tool": "Kilo chce použít nástroj",
-		"usingTool": "Používání nástroje: **{{tool}}** {{details}}"
+		"usingTool": "Používání nástroje: **{{tool}}** {{details}}",
+		"expandOutput": "Rozbalit výstup",
+		"collapseOutput": "Sbalit výstup",
+		"copyCommand": "Kopírovat příkaz"
 	},
 	"chatInput": {
 		"autoMode": "Agent běží v plně automatickém režimu - vstup není povolen",

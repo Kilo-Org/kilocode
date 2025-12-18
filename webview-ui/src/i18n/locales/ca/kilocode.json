@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"description": "Quan està activat, Kilo Code suggerirà complecions mentre escriviu a l'entrada del xat. Premeu Tab per acceptar els suggeriments.",
 				"label": "Autocompletat d'entrada de xat"
+			},
+			"snooze": {
+				"label": "Posposar Autocomplete",
+				"description": "Pausa temporalment els suggeriments d'autocompletat durant un temps especificat.",
+				"button": "Posposar",
+				"unsnooze": "Reactivar",
+				"currentlySnoozed": "L'autocompletat està actualment posposat.",
+				"duration": {
+					"1min": "1 minut",
+					"5min": "5 minuts",
+					"15min": "15 minuts",
+					"30min": "30 minuts",
+					"1hour": "1 hora"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"stopRecording": "Atura l'entrada de veu",
-		"startRecording": "Inicia l'entrada de veu"
+		"startRecording": "Inicia l'entrada de veu",
+		"unavailableFfmpegNotInstalled": "La transcripció de veu a text no està disponible. Instal·leu FFmpeg per utilitzar la transcripció de veu.",
+		"unavailableOpenAiKeyMissing": "La transcripció de veu a text no està disponible. Requereix un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+		"unavailableBoth": "La conversió de veu a text no està disponible. Requereix un proveïdor vàlid d'OpenAI i FFmpeg ha d'estar instal·lat."
 	}
 }

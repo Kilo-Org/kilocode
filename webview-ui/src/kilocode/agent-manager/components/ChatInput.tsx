@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
 import { GitBranch, SendHorizontal, Square } from "lucide-react"
@@ -9,13 +9,13 @@ import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
+import { addToQueueAtom } from "../state/atoms/messageQueue"
 
 interface ChatInputProps {
 	sessionId: string
 	sessionLabel?: string
 	isActive?: boolean
 	showCancel?: boolean
-	autoMode?: boolean // True if session is running in auto mode (non-interactive)
 	showFinishToBranch?: boolean
 	worktreeBranchName?: string
 	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
@@ -26,7 +26,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	sessionLabel,
 	isActive = false,
 	showCancel = false,
-	autoMode = false,
 	showFinishToBranch = false,
 	worktreeBranchName,
 	sessionStatus,
@@ -36,6 +35,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const addToQueue = useSetAtom(addToQueueAtom)
 
 	// Auto-focus the textarea when the session changes (user selects a different session)
 	useEffect(() => {
@@ -44,26 +44,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
+	const isSessionCompleted = sessionStatus === "done" || sessionStatus === "error" || sessionStatus === "stopped"
 
-	// Input is disabled when:
-	// - In auto mode (non-interactive)
-	// - Session is not in "running" status (done, stopped, error, etc.)
-	const isSessionRunning = sessionStatus === "running"
-	const inputDisabled = autoMode || !isSessionRunning
-	const sendDisabled = isEmpty || autoMode || !isSessionRunning
+	// Send is disabled when empty
+	// Note: Users CAN queue multiple messages while one is sending (for running sessions)
+	// Note: Users CAN send messages to completed sessions (to resume them)
+	const sendDisabled = isEmpty
 
 	const handleSend = () => {
-		if (isEmpty || autoMode || !isSessionRunning) return
+		if (isEmpty) return
 
-		// For running sessions, send as follow-up message
-		vscode.postMessage({
-			type: "agentManager.sendMessage",
-			sessionId,
-			sessionLabel,
-			content: trimmedMessage,
-		})
+		if (isSessionCompleted) {
+			// Resume a completed session with a new message (sent directly, not queued)
+			vscode.postMessage({
+				type: "agentManager.resumeSession",
+				sessionId,
+				sessionLabel,
+				content: trimmedMessage,
+			})
+			setMessageText("")
+		} else {
+			// For running sessions, queue the message instead of sending directly
+			const queuedMsg = addToQueue({ sessionId, content: trimmedMessage })
 
-		setMessageText("")
+			if (queuedMsg) {
+				// Notify the extension that a message has been queued
+				vscode.postMessage({
+					type: "agentManager.messageQueued",
+					sessionId,
+					messageId: queuedMsg.id,
+					sessionLabel,
+					content: trimmedMessage,
+				})
+
+				setMessageText("")
+			}
+		}
 	}
 
 	const handleCancel = () => {
@@ -113,14 +129,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("chatInput.ariaLabel")}
-						placeholder={
-							!isSessionRunning
-								? t("chatInput.sessionEnded")
-								: autoMode
-									? t("chatInput.autoMode")
-									: t("chatInput.placeholderTypeTask")
-						}
-						disabled={inputDisabled}
+						placeholder={t("chatInput.placeholderTypeTask")}
 						minRows={3}
 						maxRows={15}
 						className={cn(
@@ -211,10 +220,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
-						<StandardTooltip
-							content={inputDisabled ? t("chatInput.sessionEnded") : t("chatInput.sendTitle")}>
+						<StandardTooltip content={t("chatInput.sendTitle")}>
 							<button
-								aria-label={inputDisabled ? t("chatInput.sessionEnded") : t("chatInput.sendTitle")}
+								aria-label={t("chatInput.sendTitle")}
 								disabled={sendDisabled}
 								onClick={handleSend}
 								className={cn(

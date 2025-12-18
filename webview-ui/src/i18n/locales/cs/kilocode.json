@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "Automatické doplňování při psaní zpráv",
 				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+			},
+			"snooze": {
+				"label": "Pozastavit Autocomplete",
+				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"button": "Pozastavit",
+				"unsnooze": "Obnovit",
+				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 hodina"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Spustit hlasový vstup",
-		"stopRecording": "Zastavit hlasový vstup"
+		"stopRecording": "Zastavit hlasový vstup",
+		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
+		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
+		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
 	}
 }
