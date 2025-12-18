@@ -11,6 +11,7 @@ vi.mock("../telemetry", () => ({
 	captureAgentManagerSessionCompleted: vi.fn(),
 	captureAgentManagerSessionStopped: vi.fn(),
 	captureAgentManagerSessionError: vi.fn(),
+	captureAgentManagerLoginIssue: vi.fn(),
 }))
 
 let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerProvider
