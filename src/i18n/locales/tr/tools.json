@@ -6,13 +6,26 @@
 		"imageTooLarge": "Görüntü dosyası çok büyük ({{size}} MB). İzin verilen maksimum boyut {{max}} MB.",
 		"imageWithSize": "Görüntü dosyası ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Model bir döngüye takılmış gibi görünüyor, aynı eylemi ({{toolName}}) tekrar tekrar deniyor. Bu, mevcut stratejisinde bir sorun olduğunu gösterebilir. Görevi yeniden ifade etmeyi, daha spesifik talimatlar vermeyi veya onu farklı bir yaklaşıma yönlendirmeyi düşünün.",
+	"toolRepetitionLimitReached": "Kilo bir döngüye takılmış gibi görünüyor, aynı eylemi ({{toolName}}) tekrar tekrar deniyor. Bu, mevcut stratejisinde bir sorun olduğunu gösterebilir. Görevi yeniden ifade etmeyi, daha spesifik talimatlar vermeyi veya onu farklı bir yaklaşıma yönlendirmeyi düşünün.",
+	"unknownToolError": "Kilo bilinmeyen bir araç kullanmaya çalıştı: \"{{toolName}}\". Yeniden deneniyor...",
 	"codebaseSearch": {
 		"approval": "Kod tabanında '{{query}}' aranıyor..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "Politika kısıtlamaları nedeniyle yeni görev oluşturulamadı."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "OpenRouter modelleriyle görüntü oluşturma için OpenRouter API anahtarı gereklidir. Lütfen Görüntü Oluşturma deneysel ayarlarında yapılandırın.",
+		"failedWithStatus": "Görüntü oluşturma başarısız: {{status}} {{statusText}}",
+		"failedWithMessage": "Görüntü oluşturma başarısız: {{message}}",
+		"noImageGenerated": "Yanıtta görüntü oluşturulmadı",
+		"invalidImageData": "Yanıtta geçersiz görüntü verisi",
+		"invalidImageFormat": "Geçersiz görüntü formatı alındı",
+		"unknownError": "Bilinmeyen bir hata oluştu",
+		"roo": {
+			"authRequired": "Görüntü oluşturma için Roo Code Cloud kimlik doğrulaması gereklidir. Lütfen Roo Code Cloud'da oturum açın."
 		}
 	}
 }

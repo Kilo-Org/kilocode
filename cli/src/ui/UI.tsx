@@ -6,9 +6,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
+import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom, yoloModeAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
+import { taskResumedViaContinueOrSessionAtom } from "../state/atoms/extension.js"
+import { useTaskState } from "../state/hooks/useTaskState.js"
 import { isParallelModeAtom } from "../state/atoms/index.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
@@ -52,14 +54,17 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const notifications = useAtomValue(notificationsAtom)
 	const [versionStatus, setVersionStatus] = useState<Awaited<ReturnType<typeof getAutoUpdateStatus>>>()
 
-	// Initialize CI mode configuration
+	// Initialize CI mode and YOLO mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
+	const setYoloMode = useSetAtom(yoloModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
+	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
+	const { hasActiveTask } = useTaskState()
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -105,6 +110,14 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci, options.timeout, setCIMode])
 
+	// Initialize YOLO mode atom
+	useEffect(() => {
+		if (options.yolo) {
+			logs.info("Initializing YOLO mode", "UI")
+			setYoloMode(true)
+		}
+	}, [options.yolo, setYoloMode])
+
 	// Set parallel mode flag
 	useEffect(() => {
 		if (options.parallel) {
@@ -133,6 +146,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {
 		if (options.prompt && !promptExecutedRef.current && configValidation.valid) {
+			// If a session was restored, wait for the task messages to be loaded
+			// This prevents creating a new task instead of continuing the restored one
+			if (taskResumedViaSession && !hasActiveTask) {
+				logs.debug("Waiting for restored session messages to load", "UI")
+				return
+			}
+
 			promptExecutedRef.current = true
 			const trimmedPrompt = options.prompt.trim()
 
@@ -147,7 +167,15 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				}
 			}
 		}
-	}, [options.prompt])
+	}, [
+		options.prompt,
+		taskResumedViaSession,
+		hasActiveTask,
+		configValidation.valid,
+		executeCommand,
+		sendUserMessage,
+		onExit,
+	])
 
 	// Simplified submit handler that delegates to appropriate hook
 	const handleSubmit = useCallback(
@@ -262,8 +290,8 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [configValidation])
 
 	// If JSON mode is enabled, use JSON renderer instead of UI components
-	if (options.json && options.ci) {
-		return <JsonRenderer />
+	if (options.json && (options.ci || options.jsonInteractive)) {
+		return <JsonRenderer jsonInteractive={options.jsonInteractive === true} />
 	}
 
 	return (

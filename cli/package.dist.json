@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.10.2",
+	"version": "0.17.0",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "index.js",
@@ -126,7 +126,7 @@
 	"author": {
 		"name": "Kilo Code"
 	},
-	"homepage": "https://kilocode.ai/cli",
+	"homepage": "https://kilo.ai/cli",
 	"bugs": {
 		"url": "https://github.com/Kilo-Org/kilocode/issues"
 	},

@@ -6,12 +6,16 @@ import z from "zod"
 
 export type KilocodeConfigProject = z.infer<typeof KilocodeConfigProject>
 export const KilocodeConfigProject = z.object({
-	id: z.string(),
+	id: z.string().optional(),
+	managedIndexingEnabled: z.boolean().optional(),
+	baseBranch: z.string().optional(),
 })
-export type KilocodeConfig = z.infer<typeof KilocodeConfig>
+
 export const KilocodeConfig = z.object({
 	project: KilocodeConfigProject.optional(),
 })
+
+export type KilocodeConfig = z.infer<typeof KilocodeConfig>
 
 /**
  * Normalizes a project identifier for consistent tracking.
@@ -41,11 +45,12 @@ export function normalizeProjectId(projectId?: KilocodeConfigProject["id"]): str
 		// Extract the last path component and remove .git extension if present
 		const parts = projectId.split("/")
 		const lastPart = parts[parts.length - 1]
-		return lastPart.replace(/\.git$/i, "")
+		return lastPart.replace(/\.git$/i, "").slice(-100)
 	}
 
 	// If it's not a git URL, return as-is
-	return projectId
+	// only return last 100 characters to avoid issues with very long names
+	return projectId.slice(-100)
 }
 
 export async function getKilocodeConfig(
@@ -54,15 +59,27 @@ export async function getKilocodeConfig(
 ): Promise<KilocodeConfig | null> {
 	console.log("getKilocodeConfig", workspaceRoot, gitRepositoryUrl)
 
-	const config = await getKilocodeConfigFile(workspaceRoot)
+	let config = await getKilocodeConfigFile(workspaceRoot)
 
-	if (!config?.project?.id) {
-		const id = normalizeProjectId(gitRepositoryUrl)
-		return id ? { project: { id } } : null
+	if (config?.project?.id) {
+		const normalized = normalizeProjectId(config.project.id)
+		if (normalized) {
+			config.project.id = normalized
+		}
+	} else if (gitRepositoryUrl) {
+		const normalized = normalizeProjectId(gitRepositoryUrl)
+		if (normalized) {
+			config = config || {}
+			config = {
+				...config,
+				project: {
+					...config.project,
+					id: normalized,
+				},
+			}
+		}
 	}
-
-	const id = normalizeProjectId(config.project.id)
-	return id ? { project: { id } } : null
+	return config
 }
 
 /**
@@ -77,10 +94,6 @@ export async function getKilocodeConfigFile(workspaceRoot: string): Promise<Kilo
 	try {
 		const content = await fs.readFile(configPath, "utf8")
 		const config = KilocodeConfig.parse(JSON.parse(content))
-		// Return null if project.id is missing or empty
-		if (!config.project?.id || config.project.id.trim() === "") {
-			return null
-		}
 		return config
 	} catch (error) {
 		// File doesn't exist or can't be read

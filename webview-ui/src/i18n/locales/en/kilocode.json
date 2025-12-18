@@ -108,6 +108,12 @@
 					"current": "Use Current Configuration"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding Batch Size",
+			"embeddingBatchSizeDescription": "Number of code segments to batch together for embedding generation and vector store upserts. Higher values can improve indexing speed but may increase memory usage. Lower values reduce memory usage but may slow down indexing.",
+			"scannerMaxBatchRetriesLabel": "Scanner Max Batch Retries",
+			"scannerMaxBatchRetriesDescription": "Maximum number of times to retry a failed batch during directory scanning. Higher values increase resilience to transient errors but may slow down indexing if errors persist. Lower values fail faster but may skip content on temporary issues."
 		}
 	},
 	"chat": {
@@ -243,6 +249,24 @@
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
 			},
+			"enableChatAutocomplete": {
+				"label": "Chat Input Autocomplete",
+				"description": "When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Autocomplete",
+				"description": "Temporarily pause autocomplete suggestions for a specified duration.",
+				"button": "Snooze",
+				"unsnooze": "Unsnooze",
+				"currentlySnoozed": "Autocomplete is currently snoozed.",
+				"duration": {
+					"1min": "1 minute",
+					"5min": "5 minutes",
+					"15min": "15 minutes",
+					"30min": "30 minutes",
+					"1hour": "1 hour"
+				}
+			},
 			"keybindingNotFound": "not found",
 			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."
@@ -280,5 +304,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "New: Share modes by creating an organization"
+	},
+	"deviceAuth": {
+		"title": "Sign in to Kilo Code",
+		"step1": "Open the following URL on your browser",
+		"step2": "Verify the code and authorize this device on your browser",
+		"scanQr": "Or scan this QR code with your phone",
+		"openBrowser": "Open Browser",
+		"copyUrl": "Copy URL",
+		"waiting": "Waiting for authorization...",
+		"timeRemaining": "Code expires in {{time}}",
+		"success": "Successfully signed in!",
+		"authenticatedAs": "Authenticated as {{email}}",
+		"error": "Authentication Error",
+		"unknownError": "An error occurred. Please try again.",
+		"cancel": "Cancel",
+		"retry": "Try Again",
+		"tryAgain": "Try Again",
+		"cancelled": "Authentication Cancelled",
+		"initiating": "Starting authentication..."
+	},
+	"speechToText": {
+		"startRecording": "Start voice input",
+		"stopRecording": "Stop voice input",
+		"unavailableOpenAiKeyMissing": "Speech-to-text is unavailable. It requires a valid OpenAI provider with an API key to use voice transcription.",
+		"unavailableFfmpegNotInstalled": "Speech-to-text is unavailable. Install FFmpeg to use voice transcription.",
+		"unavailableBoth": "Speech-to-text is unavailable. It requires a valid OpenAI provider and FFmpeg must be installed."
 	}
 }

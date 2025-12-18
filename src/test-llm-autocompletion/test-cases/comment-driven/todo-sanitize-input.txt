@@ -1,5 +1,6 @@
-# Description: Should sanitize user input to prevent XSS attacks
+#### Description: Should sanitize user input to prevent XSS attacks
+#### Filename: comment-renderer.js
 function renderUserComment(comment) {
-  // TODO: Sanitize input to prevent XSS attacks<<<CURSOR>>>
+  // TODO: Sanitize input to prevent XSS attacks<<<AUTOCOMPLETE_HERE>>>
   document.getElementById('comments').innerHTML = comment;
 }

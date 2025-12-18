@@ -1,5 +1,6 @@
 import { longestCommonSubsequence } from "../../util/lcs.js"
 import { lineIsRepeated } from "../util/textSimilarity.js"
+import { removePrefixOverlap } from "./removePrefixOverlap.js"
 
 function rewritesLineAbove(completion: string, prefix: string): boolean {
 	const lineAbove = prefix
@@ -143,21 +144,7 @@ export function postprocessCompletion({
 	}
 
 	if (llm.model.includes("mercury") || llm.model.includes("granite")) {
-		// Granite tends to repeat the start of the line in the completion output
-		const prefixEnd = prefix.split("\n").pop()
-		if (prefixEnd) {
-			if (completion.startsWith(prefixEnd)) {
-				completion = completion.slice(prefixEnd.length)
-			} else {
-				const trimmedPrefix = prefixEnd.trim()
-				const lastWord = trimmedPrefix.split(/\s+/).pop()
-				if (lastWord && completion.startsWith(lastWord)) {
-					completion = completion.slice(lastWord.length)
-				} else if (completion.startsWith(trimmedPrefix)) {
-					completion = completion.slice(trimmedPrefix.length)
-				}
-			}
-		}
+		completion = removePrefixOverlap(completion, prefix)
 	}
 
 	// // If completion starts with multiple whitespaces, but the cursor is at the end of the line

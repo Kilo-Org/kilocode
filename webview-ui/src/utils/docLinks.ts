@@ -12,6 +12,6 @@ export function buildDocLink(path: string, _campaign: string): string {
 		.replace(/^\//, "")
 		.replace("troubleshooting/shell-integration/", "features/shell-integration") // kilocode_change
 	const [basePath, hash] = cleanPath.split("#")
-	const baseUrl = `https://kilocode.ai/docs/${basePath}`
+	const baseUrl = `https://kilo.ai/docs/${basePath}`
 	return hash ? `${baseUrl}#${hash}` : baseUrl
 }

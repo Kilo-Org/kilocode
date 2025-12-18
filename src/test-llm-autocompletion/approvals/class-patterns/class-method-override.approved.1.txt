@@ -13,3 +13,5 @@ class Rectangle extends Shape {
 	
 	area() {
 		return this.width * this.height;
+	}
+}

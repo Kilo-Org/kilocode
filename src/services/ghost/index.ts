@@ -2,10 +2,14 @@
 import * as vscode from "vscode"
 import { GhostServiceManager } from "./GhostServiceManager"
 import { ClineProvider } from "../../core/webview/ClineProvider"
+import { registerGhostJetbrainsBridge } from "./GhostJetbrainsBridge"
 
 export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
-	const ghost = GhostServiceManager.initialize(context, cline)
+	const ghost = new GhostServiceManager(context, cline)
 	context.subscriptions.push(ghost)
+
+	// Register JetBrains Bridge if applicable
+	registerGhostJetbrainsBridge(context, cline, ghost)
 
 	// Register GhostServiceManager Commands
 	context.subscriptions.push(

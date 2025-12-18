@@ -158,6 +158,55 @@ describe("OpenAiHandler", () => {
 			expect(usageChunk?.outputTokens).toBe(5)
 		})
 
+		it("should handle tool calls in non-streaming mode", async () => {
+			mockCreate.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_1",
+									type: "function",
+									function: {
+										name: "test_tool",
+										arguments: '{"arg":"value"}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+				usage: {
+					prompt_tokens: 10,
+					completion_tokens: 5,
+					total_tokens: 15,
+				},
+			})
+
+			const handler = new OpenAiHandler({
+				...mockOptions,
+				openAiStreamingEnabled: false,
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const toolCallChunks = chunks.filter((chunk) => chunk.type === "tool_call")
+			expect(toolCallChunks).toHaveLength(1)
+			expect(toolCallChunks[0]).toEqual({
+				type: "tool_call",
+				id: "call_1",
+				name: "test_tool",
+				arguments: '{"arg":"value"}',
+			})
+		})
+
 		it("should handle streaming responses", async () => {
 			const stream = handler.createMessage(systemPrompt, messages)
 			const chunks: any[] = []
@@ -169,6 +218,135 @@ describe("OpenAiHandler", () => {
 			const textChunks = chunks.filter((chunk) => chunk.type === "text")
 			expect(textChunks).toHaveLength(1)
 			expect(textChunks[0].text).toBe("Test response")
+		})
+
+		it("should handle tool calls in streaming responses", async () => {
+			mockCreate.mockImplementation(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [
+											{
+												index: 0,
+												id: "call_1",
+												function: { name: "test_tool", arguments: "" },
+											},
+										],
+									},
+									finish_reason: null,
+								},
+							],
+						}
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [{ index: 0, function: { arguments: '{"arg":' } }],
+									},
+									finish_reason: null,
+								},
+							],
+						}
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [{ index: 0, function: { arguments: '"value"}' } }],
+									},
+									finish_reason: "tool_calls",
+								},
+							],
+						}
+					},
+				}
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Provider now yields tool_call_partial chunks, NativeToolCallParser handles reassembly
+			const toolCallPartialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			expect(toolCallPartialChunks).toHaveLength(3)
+			// First chunk has id and name
+			expect(toolCallPartialChunks[0]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: "call_1",
+				name: "test_tool",
+				arguments: "",
+			})
+			// Subsequent chunks have arguments
+			expect(toolCallPartialChunks[1]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: undefined,
+				name: undefined,
+				arguments: '{"arg":',
+			})
+			expect(toolCallPartialChunks[2]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: undefined,
+				name: undefined,
+				arguments: '"value"}',
+			})
+		})
+
+		it("should yield tool calls even when finish_reason is not set (fallback behavior)", async () => {
+			mockCreate.mockImplementation(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [
+											{
+												index: 0,
+												id: "call_fallback",
+												function: { name: "fallback_tool", arguments: '{"test":"fallback"}' },
+											},
+										],
+									},
+									finish_reason: null,
+								},
+							],
+						}
+						// Stream ends without finish_reason being set to "tool_calls"
+						yield {
+							choices: [
+								{
+									delta: {},
+									finish_reason: "stop", // Different finish reason
+								},
+							],
+						}
+					},
+				}
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Provider now yields tool_call_partial chunks, NativeToolCallParser handles reassembly
+			const toolCallPartialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			expect(toolCallPartialChunks).toHaveLength(1)
+			expect(toolCallPartialChunks[0]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: "call_fallback",
+				name: "fallback_tool",
+				arguments: '{"test":"fallback"}',
+			})
 		})
 
 		it("should include reasoning_effort when reasoning effort is enabled", async () => {
@@ -619,6 +797,120 @@ describe("OpenAiHandler", () => {
 			)
 		})
 
+		it("should handle tool calls with O3 model in streaming mode", async () => {
+			const o3Handler = new OpenAiHandler(o3Options)
+
+			mockCreate.mockImplementation(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [
+											{
+												index: 0,
+												id: "call_1",
+												function: { name: "test_tool", arguments: "" },
+											},
+										],
+									},
+									finish_reason: null,
+								},
+							],
+						}
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [{ index: 0, function: { arguments: "{}" } }],
+									},
+									finish_reason: "tool_calls",
+								},
+							],
+						}
+					},
+				}
+			})
+
+			const stream = o3Handler.createMessage("system", [])
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Provider now yields tool_call_partial chunks, NativeToolCallParser handles reassembly
+			const toolCallPartialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			expect(toolCallPartialChunks).toHaveLength(2)
+			expect(toolCallPartialChunks[0]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: "call_1",
+				name: "test_tool",
+				arguments: "",
+			})
+			expect(toolCallPartialChunks[1]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: undefined,
+				name: undefined,
+				arguments: "{}",
+			})
+		})
+
+		it("should yield tool calls for O3 model even when finish_reason is not set (fallback behavior)", async () => {
+			const o3Handler = new OpenAiHandler(o3Options)
+
+			mockCreate.mockImplementation(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										tool_calls: [
+											{
+												index: 0,
+												id: "call_o3_fallback",
+												function: { name: "o3_fallback_tool", arguments: '{"o3":"test"}' },
+											},
+										],
+									},
+									finish_reason: null,
+								},
+							],
+						}
+						// Stream ends with different finish reason
+						yield {
+							choices: [
+								{
+									delta: {},
+									finish_reason: "length", // Different finish reason
+								},
+							],
+						}
+					},
+				}
+			})
+
+			const stream = o3Handler.createMessage("system", [])
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Provider now yields tool_call_partial chunks, NativeToolCallParser handles reassembly
+			const toolCallPartialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			expect(toolCallPartialChunks).toHaveLength(1)
+			expect(toolCallPartialChunks[0]).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: "call_o3_fallback",
+				name: "o3_fallback_tool",
+				arguments: '{"o3":"test"}',
+			})
+		})
+
 		it("should handle O3 model with streaming and exclude max_tokens when includeMaxTokens is false", async () => {
 			const o3Handler = new OpenAiHandler({
 				...o3Options,
@@ -704,6 +996,55 @@ describe("OpenAiHandler", () => {
 			// Verify stream is not set
 			const callArgs = mockCreate.mock.calls[0][0]
 			expect(callArgs).not.toHaveProperty("stream")
+		})
+
+		it("should handle tool calls with O3 model in non-streaming mode", async () => {
+			const o3Handler = new OpenAiHandler({
+				...o3Options,
+				openAiStreamingEnabled: false,
+			})
+
+			mockCreate.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_1",
+									type: "function",
+									function: {
+										name: "test_tool",
+										arguments: "{}",
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+				usage: {
+					prompt_tokens: 10,
+					completion_tokens: 5,
+					total_tokens: 15,
+				},
+			})
+
+			const stream = o3Handler.createMessage("system", [])
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const toolCallChunks = chunks.filter((chunk) => chunk.type === "tool_call")
+			expect(toolCallChunks).toHaveLength(1)
+			expect(toolCallChunks[0]).toEqual({
+				type: "tool_call",
+				id: "call_1",
+				name: "test_tool",
+				arguments: "{}",
+			})
 		})
 
 		it("should use default temperature of 0 when not specified for O3 models", async () => {

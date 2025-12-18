@@ -24,5 +24,5 @@ import { DISCORD_URL } from '@site/src/constants.ts'
 - 更多支付选项和其他计划正在开发中
 
 :::tip 需要帮助？
-如果你对定价或 tokens 有任何疑问，请联系我们的[支持团队](mailto:hi@kilocode.ai) 或在我们的 <a href={DISCORD_URL} target='_blank'>Discord 社区</a>中提问。
+如果你对定价或 tokens 有任何疑问，请联系我们的[支持团队](mailto:hi@kilo.ai) 或在我们的 <a href={DISCORD_URL} target='_blank'>Discord 社区</a>中提问。
 :::

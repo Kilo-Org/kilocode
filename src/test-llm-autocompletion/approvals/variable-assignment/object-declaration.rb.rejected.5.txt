@@ -1,0 +1,24 @@
+user = {
+	name: 'John',
+	email: 'john@email.com',
+	age: 25,
+	location: 'New York',
+	blog: [
+		{title: 'My new website', likes: 30},
+		{title: 'Sports', likes: 10}
+	],
+	login: function(){
+		console.log('The user logged in');
+	},
+	logBlogs: function(){
+		console.log('This user has written the following blogs:');
+		this.blog.forEach(blog => {
+			console.log(blog.title, blog.likes);
+		})
+	},
+	logName: function(){
+		console.log(`The name is ${this.name}`);
+	}
+};
+
+user.logBlogs();

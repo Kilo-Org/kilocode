@@ -7,12 +7,25 @@
 		"imageWithSize": "ملف صورة ({{size}} كيلوبايت)"
 	},
 	"toolRepetitionLimitReached": "يبدو أن النموذج علق في حلقة تكرار، يحاول نفس العملية ({{toolName}}) مراراً وتكراراً. قد يشير هذا إلى مشكلة في استراتيجيته الحالية. فكر في إعادة صياغة المهمة، أو تقديم تعليمات أكثر تحديداً، أو توجيهه نحو نهج مختلف.",
+	"unknownToolError": "حاول Kilo استخدام أداة غير معروفة: \"{{toolName}}\". جاري إعادة المحاولة...",
 	"codebaseSearch": {
 		"approval": "جاري البحث عن '{{query}}' داخل الكود..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "ما قدرنا ننشئ مهمة جديدة بسبب قيود السياسات."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب لتوليد الصور باستخدام نماذج OpenRouter. يرجى إعداده في إعدادات تجريبية لتوليد الصور.",
+		"failedWithStatus": "فشل توليد الصورة: {{status}} {{statusText}}",
+		"failedWithMessage": "فشل توليد الصورة: {{message}}",
+		"noImageGenerated": "لم يتم توليد صورة في الاستجابة",
+		"invalidImageData": "بيانات صورة غير صالحة في الاستجابة",
+		"invalidImageFormat": "تم استلام تنسيق صورة غير صالح",
+		"unknownError": "حدث خطأ غير معروف",
+		"roo": {
+			"authRequired": "يتطلب توليد الصور المصادقة على Roo Code Cloud. يرجى تسجيل الدخول إلى Roo Code Cloud."
 		}
 	}
 }

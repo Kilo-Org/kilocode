@@ -1,16 +1,6 @@
 import * as vscode from "vscode"
 import { t } from "../../i18n"
-
-interface GhostStatusBarStateProps {
-	enabled?: boolean
-	model?: string
-	provider?: string
-	profileName?: string | null
-	hasValidToken: boolean
-	totalSessionCost: number
-	completionCount: number
-	sessionStartTime: number
-}
+import type { GhostStatusBarStateProps } from "./types"
 
 export class GhostStatusBar {
 	statusBar: vscode.StatusBarItem
@@ -69,7 +59,8 @@ export class GhostStatusBar {
 		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})`
+		const snoozedSuffix = this.props.snoozed ? ` (${t("kilocode:ghost.statusBar.snoozed")})` : ""
+		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})${snoozedSuffix}`
 
 		this.statusBar.tooltip = [
 			t("kilocode:ghost.statusBar.tooltip.completionSummary", {

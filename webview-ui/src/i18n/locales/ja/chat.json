@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
 		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました",
 		"openInCloud": "Roo Code Cloudでタスクを開く",
-		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。"
+		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。",
+		"openApiHistory": "API履歴を開く",
+		"openUiHistory": "UI履歴を開く"
 	},
 	"history": {
 		"title": "履歴"
@@ -142,7 +144,18 @@
 		"failed": "APIリクエスト失敗",
 		"streaming": "APIリクエスト...",
 		"cancelled": "APIリクエストキャンセル",
-		"streamingFailed": "APIストリーミング失敗"
+		"streamingFailed": "APIストリーミング失敗",
+		"errorTitle": "APIエラー {{code}}",
+		"errorMessage": {
+			"docs": "ドキュメント",
+			"400": "プロバイダーはリクエストをそのまま処理できませんでした。タスクを停止して別のアプローチを試してください。",
+			"401": "プロバイダーで認証できませんでした。API キーの設定を確認してください。",
+			"402": "アカウントの資金/クレジットが不足しているようです。プロバイダーに移動してさらに追加してください。",
+			"403": "認可されていません。API キーは有効ですが、プロバイダーがこのリクエストの完了を拒否しました。",
+			"429": "リクエストが多すぎます。プロバイダーによってレート制限されています。次の API 呼び出しの前にお待ちください。",
+			"500": "プロバイダー サーバー エラー。プロバイダー側に問題があり、リクエスト自体に問題はありません。",
+			"unknown": "不明な API エラー。Roo Code のサポートにお問い合わせください。"
+		}
 	},
 	"checkpoint": {
 		"regular": "チェックポイント",
@@ -301,21 +314,21 @@
 			"goToSettingsButton": "設定に移動"
 		},
 		"release": {
-			"heading": "拡張機能の新機能:",
-			"openRouterEmbeddings": "OpenRouter埋め込みモデルのサポート",
-			"chutesDynamic": "Chutesが最新モデルを動的にロード",
-			"queuedMessagesFix": "キューメッセージが失われる問題の修正"
+			"heading": "このバージョンの新機能:",
+			"contextRewind": "改善されたコンテキスト圧縮により、チェックポイントに巻き戻すときに以前の完全なコンテキストを復元できるようになりました",
+			"rooProvider": "Roo Code Cloud プロバイダーはレジーニングコンテンツを保持し、デフォルトでネイティブ ツールを使用してパフォーマンスを向上させます"
 		},
 		"cloudAgents": {
 			"heading": "クラウドの新機能:",
-			"prFixer": "PRレビューアを補完するクラウドエージェント<bold>PR Fixer</bold>を導入します。",
-			"prFixerDescription": "Roo CodeのPR FixerはGitHubから直接、高品質な変更をPRに適用します。PRコメントから呼び出すと、コメント履歴全体を読んでコンテキスト、合意、トレードオフを理解し、適切な修正を実装します。",
-			"tryPrFixerButton": "PR Fixerを試す"
+			"specialized": "<bold>Explainer</bold>、<bold>Planner</bold>、<bold>Coder</bold> の 3 つの専門クラウドエージェントを紹介します。ワークフローを強化します。",
+			"description": "エージェントはクラウドで連携して動作し、Web または Slack からトリガーできます。",
+			"tryButton": "クラウドエージェントを試す"
 		},
 		"careers": "また、<careersLink>採用中です！</careersLink>",
-		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/KiloCode</redditLink>でフォローしてください 🚀"
 	},
 	"browser": {
+		"session": "ブラウザセッション",
 		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
 		"consoleLogs": "コンソールログ",
 		"noNewLogs": "(新しいログはありません)",
@@ -328,12 +341,14 @@
 		},
 		"sessionStarted": "ブラウザセッション開始",
 		"actions": {
-			"title": "ブラウザアクション: ",
+			"title": "ブラウザ操作: ",
 			"launch": "{{url}} でブラウザを起動",
 			"click": "クリック ({{coordinate}})",
 			"type": "入力 \"{{text}}\"",
+			"press": "{{key}}を押す",
 			"scrollDown": "下にスクロール",
 			"scrollUp": "上にスクロール",
+			"hover": "ホバー ({{coordinate}})",
 			"close": "ブラウザを閉じる"
 		}
 	},

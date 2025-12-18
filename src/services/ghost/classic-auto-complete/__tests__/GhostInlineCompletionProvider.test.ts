@@ -2,13 +2,18 @@ import * as vscode from "vscode"
 import {
 	GhostInlineCompletionProvider,
 	findMatchingSuggestion,
+	applyFirstLineOnly,
 	stringToInlineCompletions,
+	shouldShowOnlyFirstLine,
+	getFirstLine,
+	countLines,
 	CostTrackingCallback,
 } from "../GhostInlineCompletionProvider"
 import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
-import { GhostContextProvider } from "../GhostContextProvider"
+import { AutocompleteTelemetry } from "../AutocompleteTelemetry"
+import * as GhostContextProviderModule from "../getProcessedSnippets"
 
 // Mock RooIgnoreController to prevent vscode.RelativePattern errors
 vi.mock("../../../../core/ignore/RooIgnoreController", () => {
@@ -21,6 +26,9 @@ vi.mock("../../../../core/ignore/RooIgnoreController", () => {
 	}
 })
 
+// Mock AutocompleteTelemetry class - don't mock it, let it be created normally
+// The tests will create real instances or null as needed
+
 // Mock vscode InlineCompletionTriggerKind enum and event listeners
 vi.mock("vscode", async () => {
 	const actual = await vi.importActual<typeof vscode>("vscode")
@@ -30,6 +38,22 @@ vi.mock("vscode", async () => {
 			Invoke: 0,
 			Automatic: 1,
 		},
+		// Mock InlineCompletionItem class for use in stringToInlineCompletions
+		InlineCompletionItem: class MockInlineCompletionItem {
+			insertText: string | { value: string }
+			range?: { start: { line: number; character: number }; end: { line: number; character: number } }
+			command?: { command: string; title: string }
+
+			constructor(
+				insertText: string | { value: string },
+				range?: { start: { line: number; character: number }; end: { line: number; character: number } },
+				command?: { command: string; title: string },
+			) {
+				this.insertText = insertText
+				this.range = range
+				this.command = command
+			}
+		},
 		window: {
 			...actual.window,
 			onDidChangeTextEditorSelection: vi.fn(() => ({ dispose: vi.fn() })),
@@ -37,6 +61,10 @@ vi.mock("vscode", async () => {
 		workspace: {
 			...actual.workspace,
 			onDidChangeTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+		},
+		commands: {
+			...actual.commands,
+			registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
 		},
 	}
 })
@@ -53,7 +81,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("")
+			expect(result).toEqual({ text: "", matchType: "exact" })
 		})
 
 		it("should skip failed lookups and find successful suggestions", () => {
@@ -71,7 +99,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("console.log('success');")
+			expect(result).toEqual({ text: "console.log('success');", matchType: "exact" })
 		})
 
 		it("should return empty string for failed lookup even when other suggestions exist", () => {
@@ -89,7 +117,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("")
+			expect(result).toEqual({ text: "", matchType: "exact" })
 		})
 	})
 
@@ -104,7 +132,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("console.log('Hello, World!');")
+			expect(result).toEqual({ text: "console.log('Hello, World!');", matchType: "exact" })
 		})
 
 		it("should return null when prefix does not match", () => {
@@ -151,7 +179,7 @@ describe("findMatchingSuggestion", () => {
 
 			// User backspaced from "foo" to "f"
 			const result = findMatchingSuggestion("f", "bar", suggestions)
-			expect(result).toBe("oohenk")
+			expect(result).toEqual({ text: "oohenk", matchType: "backward_deletion" })
 		})
 
 		it("should return full prefix plus suggestion when user deletes entire prefix", () => {
@@ -165,7 +193,7 @@ describe("findMatchingSuggestion", () => {
 
 			// User deleted entire prefix
 			const result = findMatchingSuggestion("", "!", suggestions)
-			expect(result).toBe("helloworld")
+			expect(result).toEqual({ text: "helloworld", matchType: "backward_deletion" })
 		})
 
 		it("should return null when suffix does not match during backward deletion", () => {
@@ -196,7 +224,7 @@ describe("findMatchingSuggestion", () => {
 			expect(result).toBeNull()
 		})
 
-		it("should handle backward deletion with empty suggestion text", () => {
+		it("should not use backward deletion when suggestion text is empty", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
 				{
 					text: "",
@@ -205,9 +233,9 @@ describe("findMatchingSuggestion", () => {
 				},
 			]
 
-			// User backspaced - should return just the deleted portion
+			// User backspaced - should return null because the original suggestion was empty
 			const result = findMatchingSuggestion("f", "bar", suggestions)
-			expect(result).toBe("oo")
+			expect(result).toBeNull()
 		})
 
 		it("should prefer exact match over backward deletion match", () => {
@@ -226,7 +254,7 @@ describe("findMatchingSuggestion", () => {
 
 			// Should match the exact prefix "f" first (most recent)
 			const result = findMatchingSuggestion("f", "bar", suggestions)
-			expect(result).toBe("exact")
+			expect(result).toEqual({ text: "exact", matchType: "exact" })
 		})
 
 		it("should handle multi-character backward deletion", () => {
@@ -240,7 +268,7 @@ describe("findMatchingSuggestion", () => {
 
 			// User deleted "unc" from "function myFunc"
 			const result = findMatchingSuggestion("function myF", " { }", suggestions)
-			expect(result).toBe("unctest()")
+			expect(result).toEqual({ text: "unctest()", matchType: "backward_deletion" })
 		})
 	})
 
@@ -256,7 +284,7 @@ describe("findMatchingSuggestion", () => {
 
 			// User typed "cons" after the prefix
 			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
-			expect(result).toBe("ole.log('Hello, World!');")
+			expect(result).toEqual({ text: "ole.log('Hello, World!');", matchType: "partial_typing" })
 		})
 
 		it("should return full suggestion when no partial typing", () => {
@@ -269,7 +297,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("console.log('test');")
+			expect(result).toEqual({ text: "console.log('test');", matchType: "exact" })
 		})
 
 		it("should return null when partially typed content does not match suggestion", () => {
@@ -296,7 +324,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1console.log('test');", "\nconst y = 2", suggestions)
-			expect(result).toBe("")
+			expect(result).toEqual({ text: "", matchType: "partial_typing" })
 		})
 
 		it("should return null when suffix has changed during partial typing", () => {
@@ -324,7 +352,7 @@ describe("findMatchingSuggestion", () => {
 
 			// User typed "function te"
 			const result = findMatchingSuggestion("const x = 1function te", "\nconst y = 2", suggestions)
-			expect(result).toBe("st() { return 42; }")
+			expect(result).toEqual({ text: "st() { return 42; }", matchType: "partial_typing" })
 		})
 
 		it("should be case-sensitive in partial matching", () => {
@@ -358,7 +386,7 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("second suggestion")
+			expect(result).toEqual({ text: "second suggestion", matchType: "exact" })
 		})
 
 		it("should match different suggestions based on context", () => {
@@ -376,10 +404,10 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result1 = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result1).toBe("first suggestion")
+			expect(result1).toEqual({ text: "first suggestion", matchType: "exact" })
 
 			const result2 = findMatchingSuggestion("const a = 1", "\nconst b = 2", suggestions)
-			expect(result2).toBe("second suggestion")
+			expect(result2).toEqual({ text: "second suggestion", matchType: "exact" })
 		})
 
 		it("should prefer exact match over partial match", () => {
@@ -398,8 +426,124 @@ describe("findMatchingSuggestion", () => {
 
 			// User is at position that matches exact prefix of second suggestion
 			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
-			expect(result).toBe("exact match")
+			expect(result).toEqual({ text: "exact match", matchType: "exact" })
 		})
+	})
+
+	describe("match type tracking", () => {
+		it("should return exact matchType for exact prefix/suffix match", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "test",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			const result = findMatchingSuggestion("foo", "bar", suggestions)
+			expect(result?.matchType).toBe("exact")
+		})
+
+		it("should return partial_typing matchType when user has typed part of suggestion", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "console.log('test');",
+					prefix: "const x = 1",
+					suffix: "\nconst y = 2",
+				},
+			]
+
+			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
+			expect(result?.matchType).toBe("partial_typing")
+		})
+
+		it("should return backward_deletion matchType when user has backspaced", () => {
+			const suggestions: FillInAtCursorSuggestion[] = [
+				{
+					text: "test",
+					prefix: "foo",
+					suffix: "bar",
+				},
+			]
+
+			const result = findMatchingSuggestion("f", "bar", suggestions)
+			expect(result?.matchType).toBe("backward_deletion")
+		})
+	})
+})
+
+describe("shouldShowOnlyFirstLine", () => {
+	it.each([
+		["\\n", "\nconst y = 2"],
+		["\\r\\n", "\r\nconst y = 2"],
+	])("returns false when suggestion starts with %s", (_label, suggestion) => {
+		expect(shouldShowOnlyFirstLine("const x = foo", suggestion)).toBe(false)
+	})
+
+	it("returns true when cursor is mid-line (current line has non-whitespace)", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\nconst y = foo", "bar\nbaz")).toBe(true)
+	})
+
+	it("returns true at start of line when suggestion is 3+ lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n    ", "l1\nl2\nl3")).toBe(true)
+	})
+
+	it("returns false at start of line when suggestion is 2 lines", () => {
+		expect(shouldShowOnlyFirstLine("const x = 1\n", "l1\nl2")).toBe(false)
+	})
+})
+
+describe("countLines", () => {
+	it("returns 0 for empty string", () => {
+		expect(countLines("")).toBe(0)
+	})
+
+	it("counts mixed \\n and \\r\\n correctly", () => {
+		expect(countLines("l1\nl2\r\nl3")).toBe(3)
+	})
+
+	it("does not count trailing newline as an additional line", () => {
+		expect(countLines("l1\nl2\n")).toBe(2)
+	})
+})
+
+describe("getFirstLine", () => {
+	it("returns the entire text when there is no newline", () => {
+		expect(getFirstLine("console.log('test');")).toBe("console.log('test');")
+	})
+
+	it.each([
+		["\\n", "first line\nsecond line"],
+		["\\r\\n", "first line\r\nsecond line"],
+	])("returns first line for %s line endings", (_label, text) => {
+		expect(getFirstLine(text)).toBe("first line")
+	})
+
+	it("returns empty string when text starts with a newline", () => {
+		expect(getFirstLine("\nsecond line")).toBe("")
+	})
+})
+
+describe("applyFirstLineOnly", () => {
+	it("returns null when input is null", () => {
+		expect(applyFirstLineOnly(null, "const x = foo")).toBeNull()
+	})
+
+	it("returns result unchanged when text is empty", () => {
+		expect(applyFirstLineOnly({ text: "", matchType: "exact" }, "const x = foo")).toEqual({
+			text: "",
+			matchType: "exact",
+		})
+	})
+
+	it("truncates to first line and preserves matchType when enabled", () => {
+		const result = applyFirstLineOnly({ text: "line1\nline2\nline3", matchType: "partial_typing" }, "const x = foo")
+		expect(result).toEqual({ text: "line1", matchType: "partial_typing" })
+	})
+
+	it("does not truncate when suggestion starts with newline", () => {
+		const result = applyFirstLineOnly({ text: "\nline1\nline2", matchType: "exact" }, "const x = foo")
+		expect(result).toEqual({ text: "\nline1\nline2", matchType: "exact" })
 	})
 })
 
@@ -450,8 +594,10 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockSettings: { enableAutoTrigger: boolean } | null
 	let mockExtensionContext: vscode.ExtensionContext
 	let mockClineProvider: { cwd: string }
+	let mockTelemetry: AutocompleteTelemetry
 
 	// Helper to call provideInlineCompletionItems and advance timers
+	// With leading edge debounce, first call executes immediately, subsequent calls wait for 300ms of inactivity
 	async function provideWithDebounce(
 		doc: vscode.TextDocument,
 		pos: vscode.Position,
@@ -459,7 +605,7 @@ describe("GhostInlineCompletionProvider", () => {
 		token: vscode.CancellationToken,
 	) {
 		const promise = provider.provideInlineCompletionItems(doc, pos, ctx, token)
-		await vi.advanceTimersByTimeAsync(300) // Advance past debounce delay
+		await vi.advanceTimersByTimeAsync(300) // Advance past debounce delay for any pending calls
 		return promise
 	}
 
@@ -509,15 +655,7 @@ describe("GhostInlineCompletionProvider", () => {
 			languageModelAccessInformation: {} as any,
 		} as unknown as vscode.ExtensionContext
 
-		// Mock GhostContextProvider
-		const mockIde = {
-			getWorkspaceDirs: vi.fn().mockResolvedValue([]),
-			getOpenFiles: vi.fn().mockResolvedValue([]),
-			readFile: vi.fn().mockResolvedValue(""),
-		}
-
-		vi.spyOn(GhostContextProvider.prototype, "getIde").mockReturnValue(mockIde as any)
-		vi.spyOn(GhostContextProvider.prototype, "getProcessedSnippets").mockResolvedValue({
+		vi.spyOn(GhostContextProviderModule, "getProcessedSnippets").mockResolvedValue({
 			filepathUri: "file:///test.ts",
 			helper: {
 				filepath: "file:///test.ts",
@@ -539,10 +677,13 @@ describe("GhostInlineCompletionProvider", () => {
 				cacheReadTokens: 0,
 			}),
 			getModelName: vi.fn().mockReturnValue("test-model"),
+			getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
+			hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 		mockClineProvider = { cwd: "/test/workspace" }
+		mockTelemetry = new AutocompleteTelemetry()
 
 		provider = new GhostInlineCompletionProvider(
 			mockExtensionContext,
@@ -550,6 +691,7 @@ describe("GhostInlineCompletionProvider", () => {
 			mockCostTrackingCallback,
 			() => mockSettings,
 			mockClineProvider as any,
+			mockTelemetry,
 		)
 	})
 
@@ -604,8 +746,29 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe(fimContent.text)
 			expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
-			// No command property - VSCode handles acceptance automatically
-			expect(result[0].command).toBeUndefined()
+			// Command is attached to track acceptance telemetry
+			expect(result[0].command).toEqual({
+				command: "kilocode.ghost.inline-completion.accepted",
+				title: "Autocomplete Accepted",
+			})
+		})
+
+		it("should truncate cached multi-line suggestions to first line when cursor is mid-line", async () => {
+			provider.updateSuggestions({
+				text: "line1\nline2\nline3",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("line1")
 		})
 
 		it("should return empty array when prefix does not match", async () => {
@@ -1044,11 +1207,14 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		describe("dispose", () => {
-			it("should clear pending debounce timer when disposed", () => {
-				// Start a debounced fetch (don't await it)
+			it("should clear pending debounce timer when disposed", async () => {
+				// First call executes immediately (leading edge)
+				await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+				// Second call should set a debounce timer
 				provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
 
-				// Verify timer is set
+				// Verify timer is set for trailing edge
 				const timerCountBeforeDispose = vi.getTimerCount()
 				expect(timerCountBeforeDispose).toBeGreaterThan(0)
 
@@ -1195,7 +1361,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 			expect(result1).toHaveLength(0)
 			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
-			expect(mockCostTrackingCallback).toHaveBeenCalledWith(0.01, 100, 50, 0, 0)
+			expect(mockCostTrackingCallback).toHaveBeenCalledWith(0.01, 100, 50)
 
 			// Second call with same prefix/suffix - should NOT invoke LLM
 			vi.mocked(mockModel.generateResponse).mockClear()
@@ -1375,7 +1541,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 			// First call - should invoke LLM
 			await provideWithDebounce(mockDocument, mockPosition, mockContext, mockToken)
-			expect(mockCostTrackingCallback).toHaveBeenCalledWith(0.01, 100, 50, 10, 20)
+			expect(mockCostTrackingCallback).toHaveBeenCalledWith(0.01, 100, 50)
 
 			// Second call - should use failed cache with zero cost
 			vi.mocked(mockCostTrackingCallback).mockClear()
@@ -1515,6 +1681,73 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 	})
 
+	describe("credentials validation", () => {
+		it("should return empty array when model has no valid credentials", async () => {
+			// Set hasValidCredentials to return false
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
+
+			// Set up a suggestion that would normally be returned
+			provider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			// Should return empty array because credentials are not valid
+			expect(result).toHaveLength(0)
+			// Model should not be called
+			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should not attempt an LLM call if credentials become invalid before the debounced fetch executes", async () => {
+			// First call executes immediately (leading edge) - just to move provider into debounced mode
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+
+			// Second call will be debounced. Simulate a model reload happening before the timer fires.
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
+
+			const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Let the trailing-edge debounce fire
+			await vi.advanceTimersByTimeAsync(300)
+			await promise
+
+			// If fetch-time validation is working, we do not call generateResponse again.
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+		})
+
+		it("should return suggestions when model has valid credentials", async () => {
+			// Ensure hasValidCredentials returns true
+			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(true)
+
+			// Set up a suggestion
+			provider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			const result = (await provideWithDebounce(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			// Should return the suggestion because credentials are valid
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("console.log('test');")
+		})
+	})
+
 	describe("untitled document handling", () => {
 		it("should provide completions for untitled documents", async () => {
 			// Create an untitled document using MockTextDocument
@@ -1620,30 +1853,31 @@ describe("GhostInlineCompletionProvider", () => {
 			const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
 			const pos1 = new vscode.Position(0, 11)
 
-			// Start first request (don't await - it will be cancelled by the second request)
-			provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
-
-			// Advance time partially (not past debounce)
-			await vi.advanceTimersByTimeAsync(100)
+			// Start first request - with leading edge, this executes immediately
+			await provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+			expect(callCount).toBe(1) // First call executed immediately (leading edge)
 
 			// Second request: suffix changed (different text after cursor)
-			// This will cancel the first request's debounce timer and start a new one
+			// This cannot reuse the first request because suffix changed
 			const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst z = 3")
 			const pos2 = new vscode.Position(0, 11)
 
-			// Start second request
+			// Start second request - this will be debounced (not leading edge anymore)
 			const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
 
-			// Advance time past debounce to let the second request complete
-			await vi.advanceTimersByTimeAsync(500)
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
 
+			// Advance time past debounce to let the second request complete
+			await vi.advanceTimersByTimeAsync(300)
 			await promise2
 
-			// The model should have been called once (only the second request fires,
-			// the first was cancelled by the debounce)
-			// But the key point is that the second request was NOT reused from the first
+			// The model should have been called twice:
+			// 1. First request executed immediately (leading edge)
+			// 2. Second request executed after debounce (different suffix, couldn't reuse)
+			// The key point is that the second request was NOT reused from the first
 			// because the suffix changed - it started a new debounce cycle
-			expect(callCount).toBe(1)
+			expect(callCount).toBe(2)
 		})
 
 		it("should NOT reuse pending request when user backspaces (prefix shrinks)", async () => {
@@ -1693,6 +1927,407 @@ describe("GhostInlineCompletionProvider", () => {
 			// But the key point is that the second request was NOT reused from the first
 			// because the prefix shrunk - it started a new debounce cycle
 			expect(callCount).toBe(1)
+		})
+	})
+
+	describe("debounce with leading edge behavior", () => {
+		it("should execute immediately on first call (leading edge)", async () => {
+			vi.mocked(mockModel.generateResponse).mockResolvedValue({
+				cost: 0.01,
+				inputTokens: 100,
+				outputTokens: 50,
+				cacheWriteTokens: 0,
+				cacheReadTokens: 0,
+			})
+
+			// First call should execute immediately without waiting
+			const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Model should be called immediately (no timer needed)
+			await promise
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+		})
+
+		it("should debounce subsequent calls (wait for 300ms of inactivity)", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call immediately after - should be debounced
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
+
+			// Advance time past debounce delay
+			await vi.advanceTimersByTimeAsync(300)
+			await promise2
+
+			// Now it should have been called
+			expect(callCount).toBe(2)
+		})
+
+		it("should reset debounce timer on each call (only execute after 300ms of inactivity)", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Multiple rapid calls - each resets the debounce timer
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+
+			const mockDocument3 = new MockTextDocument(vscode.Uri.file("/test3.ts"), "const c = 1\nconst d = 2")
+			const mockPosition3 = new vscode.Position(0, 11)
+
+			// First debounced call
+			provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Advance 150ms (half the debounce time)
+			await vi.advanceTimersByTimeAsync(150)
+			expect(callCount).toBe(1)
+
+			// Second debounced call - resets the timer
+			const promise3 = provider.provideInlineCompletionItems(mockDocument3, mockPosition3, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Advance another 150ms (total 300ms from first debounced call, but only 150ms from second)
+			await vi.advanceTimersByTimeAsync(150)
+			expect(callCount).toBe(1) // Still not called because timer was reset
+
+			// Advance remaining 150ms to complete the debounce from the last call
+			await vi.advanceTimersByTimeAsync(150)
+			await promise3
+			expect(callCount).toBe(2) // Now it should be called
+		})
+
+		it("should allow immediate execution after debounce completes (new leading edge)", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call - debounced
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Wait for debounce to complete
+			await vi.advanceTimersByTimeAsync(300)
+			await promise2
+			expect(callCount).toBe(2)
+
+			// Third call after debounce completed - should execute immediately (new leading edge)
+			const mockDocument3 = new MockTextDocument(vscode.Uri.file("/test3.ts"), "const c = 1\nconst d = 2")
+			const mockPosition3 = new vscode.Position(0, 11)
+			await provider.provideInlineCompletionItems(mockDocument3, mockPosition3, mockContext, mockToken)
+
+			// Should have executed immediately without waiting
+			expect(callCount).toBe(3)
+		})
+	})
+
+	describe("adaptive debounce delay", () => {
+		it("should start with initial debounce delay of 300ms", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call - should be debounced with initial 300ms delay
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
+
+			// Advance 200ms - should still be waiting
+			await vi.advanceTimersByTimeAsync(200)
+			expect(callCount).toBe(1)
+
+			// Advance remaining 100ms to complete the 300ms debounce
+			await vi.advanceTimersByTimeAsync(100)
+			await promise2
+			expect(callCount).toBe(2)
+		})
+
+		it("should record latency and not update debounce delay until 10 samples collected", () => {
+			// Record 9 latencies - should not update debounce delay yet
+			for (let i = 0; i < 9; i++) {
+				provider.recordLatency(100 + i * 10) // 100, 110, 120, ..., 180
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(9)
+			expect(providerAny.debounceDelayMs).toBe(300) // Still initial value
+		})
+
+		it("should update debounce delay to average after exceeding 10 samples", () => {
+			// Record 10 latencies of 200ms each - debounce delay not updated yet
+			for (let i = 0; i < 10; i++) {
+				provider.recordLatency(200)
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(10)
+			expect(providerAny.debounceDelayMs).toBe(300) // Still initial value (not updated until > 10)
+
+			// Record 11th latency - now debounce delay is updated
+			provider.recordLatency(200)
+			expect(providerAny.latencyHistory.length).toBe(10) // Still 10 (oldest removed)
+			expect(providerAny.debounceDelayMs).toBe(200) // Now updated to average
+		})
+
+		it("should maintain rolling window of 10 latencies", () => {
+			// Record 15 latencies
+			for (let i = 0; i < 15; i++) {
+				provider.recordLatency(100 + i * 10) // 100, 110, 120, ..., 240
+			}
+
+			// Access private field via any cast for testing
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(10) // Only last 10 kept
+
+			// Last 10 values should be 150, 160, 170, 180, 190, 200, 210, 220, 230, 240
+			// Average = (150+160+170+180+190+200+210+220+230+240) / 10 = 195
+			expect(providerAny.debounceDelayMs).toBe(195)
+		})
+
+		it("should update debounce delay on each new latency after exceeding 10 samples", () => {
+			// Record 11 latencies of 200ms each (need > 10 to trigger update)
+			for (let i = 0; i < 11; i++) {
+				provider.recordLatency(200)
+			}
+
+			const providerAny = provider as any
+			expect(providerAny.debounceDelayMs).toBe(200)
+
+			// Add one more latency of 300ms
+			// New average = (200*9 + 300) / 10 = 210
+			provider.recordLatency(300)
+			expect(providerAny.debounceDelayMs).toBe(210)
+
+			// Add another latency of 400ms
+			// New average = (200*8 + 300 + 400) / 10 = 230
+			provider.recordLatency(400)
+			expect(providerAny.debounceDelayMs).toBe(230)
+		})
+
+		it("should use adaptive debounce delay after collecting enough samples", async () => {
+			let callCount = 0
+			vi.mocked(mockModel.generateResponse).mockImplementation(async () => {
+				callCount++
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// Record 11 latencies of 150ms each to set debounce delay to 150ms
+			// (need > 10 to trigger update)
+			for (let i = 0; i < 11; i++) {
+				provider.recordLatency(150)
+			}
+
+			const providerAny = provider as any
+			expect(providerAny.debounceDelayMs).toBe(150)
+
+			// First call - executes immediately (leading edge)
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			expect(callCount).toBe(1)
+
+			// Second call - should be debounced with adaptive 150ms delay
+			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
+			const mockPosition2 = new vscode.Position(0, 11)
+			const promise2 = provider.provideInlineCompletionItems(mockDocument2, mockPosition2, mockContext, mockToken)
+
+			// Should not have called yet (debounced)
+			expect(callCount).toBe(1)
+
+			// Advance 100ms - should still be waiting (150ms debounce)
+			await vi.advanceTimersByTimeAsync(100)
+			expect(callCount).toBe(1)
+
+			// Advance remaining 50ms to complete the 150ms debounce
+			await vi.advanceTimersByTimeAsync(50)
+			await promise2
+			expect(callCount).toBe(2)
+		})
+
+		it("should record latency from LLM requests", async () => {
+			// Mock the model to simulate a delay
+			vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
+				// Simulate some processing time
+				if (onChunk) {
+					onChunk({ type: "text", text: "<COMPLETION>" })
+					onChunk({ type: "text", text: "console.log('test');" })
+					onChunk({ type: "text", text: "</COMPLETION>" })
+				}
+				return {
+					cost: 0.01,
+					inputTokens: 100,
+					outputTokens: 50,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			const providerAny = provider as any
+			expect(providerAny.latencyHistory.length).toBe(0)
+
+			// Make a request that will record latency
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+			// Latency should have been recorded
+			expect(providerAny.latencyHistory.length).toBe(1)
+		})
+	})
+
+	describe("telemetry tracking", () => {
+		it("should track acceptance when suggestion is accepted via command", async () => {
+			// Capture the registered command callback by setting up mock before provider creation
+			let acceptCallback: (() => void) | undefined
+			const originalMock = vi.mocked(vscode.commands.registerCommand)
+			originalMock.mockImplementation((cmd, callback) => {
+				if (cmd === "kilocode.ghost.inline-completion.accepted") {
+					acceptCallback = callback as () => void
+				}
+				return { dispose: vi.fn() }
+			})
+
+			// Create new telemetry instance for this test
+			const testTelemetry = new AutocompleteTelemetry()
+			vi.spyOn(testTelemetry, "captureAcceptSuggestion")
+
+			// Create new provider to capture the command
+			const testProvider = new GhostInlineCompletionProvider(
+				mockExtensionContext,
+				mockModel,
+				mockCostTrackingCallback,
+				() => mockSettings,
+				mockClineProvider as any,
+				testTelemetry,
+			)
+
+			// Verify callback was captured
+			expect(acceptCallback).toBeDefined()
+
+			// Set up and show a suggestion
+			testProvider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			// Call provideInlineCompletionItems to trigger trackSuggestionShown
+			const promise = testProvider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+			await vi.advanceTimersByTimeAsync(300)
+			const result = await promise
+
+			// Verify we got a suggestion (which means trackSuggestionShown was called)
+			expect(Array.isArray(result) ? result.length : 0).toBeGreaterThan(0)
+
+			// Simulate accepting the suggestion
+			acceptCallback!()
+
+			expect(testTelemetry.captureAcceptSuggestion).toHaveBeenCalled()
+
+			// Cleanup
+			testProvider.dispose()
+		})
+
+		it("should work without telemetry when null is passed", async () => {
+			// Create provider without telemetry
+			const testProvider = new GhostInlineCompletionProvider(
+				mockExtensionContext,
+				mockModel,
+				mockCostTrackingCallback,
+				() => mockSettings,
+				mockClineProvider as any,
+				null,
+			)
+
+			// Set up a suggestion
+			testProvider.updateSuggestions({
+				text: "console.log('test');",
+				prefix: "const x = 1",
+				suffix: "\nconst y = 2",
+			})
+
+			// Should work without errors
+			const promise = testProvider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+			await vi.advanceTimersByTimeAsync(300)
+			const result = await promise
+
+			// Should still return suggestions
+			expect(Array.isArray(result) ? result.length : 0).toBeGreaterThan(0)
+
+			// Cleanup
+			testProvider.dispose()
 		})
 	})
 })

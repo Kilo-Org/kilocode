@@ -36,7 +36,7 @@ export class CodebaseSearchTool extends BaseTool<"codebase_search"> {
 	}
 
 	async execute(params: CodebaseSearchParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 		let { query, path: directoryPrefix } = params // kilocode_change: const=>let
 
 		const workspacePath = task.cwd && task.cwd.trim() !== "" ? task.cwd : getWorkspacePath()
@@ -48,6 +48,7 @@ export class CodebaseSearchTool extends BaseTool<"codebase_search"> {
 
 		if (!query) {
 			task.consecutiveMistakeCount++
+			task.didToolFailInCurrentTurn = true
 			pushToolResult(await task.sayAndCreateMissingParamError("codebase_search", "query"))
 			return
 		}

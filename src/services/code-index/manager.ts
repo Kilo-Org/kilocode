@@ -228,6 +228,16 @@ export class CodeIndexManager {
 			this._orchestrator.cancelIndexing()
 		}
 	}
+
+	/**
+	 * Updates the batch segment threshold for indexing operations
+	 * @param newThreshold New batch segment threshold value
+	 */
+	public updateBatchSegmentThreshold(newThreshold: number): void {
+		if (this._orchestrator) {
+			this._orchestrator.updateBatchSegmentThreshold(newThreshold)
+		}
+	}
 	// kilocode_change end
 
 	/**
@@ -292,6 +302,12 @@ export class CodeIndexManager {
 		await this._orchestrator!.clearIndexData()
 		await this._cacheManager!.clearCacheFile()
 	}
+
+	// kilocode_change start
+	public clearErrorState(): void {
+		this._stateManager.setSystemState("Standby", "")
+	}
+	// kilocode_change end
 
 	// --- Private Helpers ---
 

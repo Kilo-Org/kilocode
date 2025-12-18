@@ -26,6 +26,12 @@ kilocode --continue
 
 to start the CLI and begin a new task with your preferred model and relevant mode.
 
+## Update
+
+Upgrade the Kilo CLI package:
+
+`npm update -g @kilocode/cli`
+
 ## What you can do with Kilo Code CLI
 
 - **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
@@ -212,57 +218,11 @@ kilocode --parallel --auto "improve xyz"
 kilocode --parallel --auto "improve abc"
 ```
 
-## Autonomous mode (Non-Interactive)
+## Auto-approval settings
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Auto-approval allows the Kilo Code CLI to perform operations without first requiring user confirmation. These settings can either be built up over time in interactive mode, or by editing your config file using `kilocode config` or editing the file directly at `~/.kilocode/config.json`.
 
-```bash
-# Run in autonomous mode with a prompt
-kilocode --auto "Implement feature X"
-
-# Run in autonomous mode with piped input
-echo "Fix the bug in app.ts" | kilocode --auto
-
-# Run in autonomous mode with timeout (in seconds)
-kilocode --auto "Run tests" --timeout 300
-
-# Run in autonomous mode with JSON output for structured parsing
-kilocode --auto --json "Implement feature X"
-```
-
-### Autonomous Mode Behavior
-
-When running in Autonomous mode (`--auto` flag):
-
-1. **No User Interaction**: All approval requests are handled automatically based on configuration
-2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
-3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
-4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
-
-### JSON Output Mode
-
-Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
-
-```bash
-# Standard autonomous mode with terminal UI
-kilocode --auto "Fix the bug"
-
-# Autonomous mode with JSON output
-kilocode --auto --json "Fix the bug"
-
-# With piped input
-echo "Implement feature X" | kilocode --auto --json
-```
-
-**Requirements:**
-
-- The `--json` flag requires `--auto` mode to be enabled
-- Output is sent to stdout as structured JSON for easy parsing
-- Ideal for CI/CD pipelines and automated workflows
-
-### Auto-Approval Configuration
-
-Autonomous mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
+### Default auto-approval settings
 
 ```json
 {
@@ -270,7 +230,7 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 		"enabled": true,
 		"read": {
 			"enabled": true,
-			"outside": true
+			"outside": false
 		},
 		"write": {
 			"enabled": true,
@@ -353,6 +313,12 @@ The `execute.allowed` and `execute.denied` lists support hierarchical pattern ma
 }
 ```
 
+## Interactive Mode
+
+Interactive mode is the default mode when running Kilo Code without the `--auto` flag, designed to work interactively with a user through the console.
+
+In interactive mode Kilo Code will request approval for operations which have not been auto-approved, allowing the user to review and approve operations before they are executed, and optionally add them to the auto-approval list.
+
 ### Interactive Command Approval
 
 When running in interactive mode, command approval requests now show hierarchical options:
@@ -373,6 +339,58 @@ Selecting an "Always run" option will:
 3. Auto-approve matching commands in the future
 
 This allows you to progressively build your auto-approval rules without manually editing the config file.
+
+## Autonomous mode (Non-Interactive)
+
+Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+
+```bash
+# Run in autonomous mode with a prompt
+kilocode --auto "Implement feature X"
+
+# Run in autonomous mode with piped input
+echo "Fix the bug in app.ts" | kilocode --auto
+
+# Run in autonomous mode with timeout (in seconds)
+kilocode --auto "Run tests" --timeout 300
+
+# Run in autonomous mode with JSON output for structured parsing
+kilocode --auto --json "Implement feature X"
+```
+
+### Autonomous Mode Behavior
+
+When running in Autonomous mode (`--auto` flag):
+
+1. **No User Interaction**: All approval requests are handled automatically based on configuration
+2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
+3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
+4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
+
+### JSON Output Mode
+
+Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
+
+```bash
+# Standard autonomous mode with terminal UI
+kilocode --auto "Fix the bug"
+
+# Autonomous mode with JSON output
+kilocode --auto --json "Fix the bug"
+
+# With piped input
+echo "Implement feature X" | kilocode --auto --json
+```
+
+**Requirements:**
+
+- The `--json` flag requires `--auto` mode to be enabled
+- Output is sent to stdout as structured JSON for easy parsing
+- Ideal for CI/CD pipelines and automated workflows
+
+### Auto-Approval in Autonomous Mode
+
+Autonomous mode respects your [auto-approval configuration](#auto-approval-settings). Operations which are not auto-approved will not be allowed.
 
 ### Autonomous Mode Follow-up Questions
 

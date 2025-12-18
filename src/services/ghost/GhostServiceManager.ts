@@ -5,14 +5,16 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
+import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
-	private static instance: GhostServiceManager | null = null
+	private static _instance: GhostServiceManager | null = null
+
 	private readonly model: GhostModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
@@ -26,41 +28,45 @@ export class GhostServiceManager {
 	private completionCount: number = 0
 	private sessionStartTime: number = Date.now()
 
+	private snoozeTimer: NodeJS.Timeout | null = null
+
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
 	public readonly inlineCompletionProvider: GhostInlineCompletionProvider
-	private newAutocompleteProvider: NewAutocompleteProvider | null = null
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
-	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
+	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
+		if (GhostServiceManager._instance) {
+			throw new Error("GhostServiceManager is a singleton. Use GhostServiceManager.getInstance() instead.")
+		}
+
 		this.context = context
 		this.cline = cline
+		GhostServiceManager._instance = this
 
 		// Register Internal Components
 		this.model = new GhostModel()
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
+		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
+			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
 		)
 
 		void this.load()
 	}
 
-	// Singleton Management
-	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostServiceManager {
-		if (GhostServiceManager.instance) {
-			throw new Error(
-				"GhostServiceManager is already initialized. Restart VS code, or change this to return the cached instance.",
-			)
-		}
-		GhostServiceManager.instance = new GhostServiceManager(context, cline)
-		return GhostServiceManager.instance
+	/**
+	 * Get the singleton instance of GhostServiceManager
+	 */
+	public static getInstance(): GhostServiceManager | null {
+		return GhostServiceManager._instance
 	}
 
 	public async load() {
@@ -71,15 +77,17 @@ export class GhostServiceManager {
 			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
-		// 1% rollout: auto-enable autocomplete for a small subset of logged-in KiloCode users
-		// who have never explicitly toggled enableAutoTrigger.
+		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
+		// JetBrains users can manually enable it if they want to test the feature
 		if (this.settings.enableAutoTrigger == undefined) {
-			this.settings.enableAutoTrigger = true
+			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
+			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
 		}
 
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
+		this.setupSnoozeTimerIfNeeded()
 		const settingsWithModelInfo = {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
@@ -90,34 +98,22 @@ export class GhostServiceManager {
 	}
 
 	private async updateInlineCompletionProviderRegistration() {
-		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+		const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
 
 		// First, dispose any existing registration
 		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
 			this.inlineCompletionProviderDisposable = null
 		}
-		if (this.newAutocompleteProvider && (!shouldBeRegistered || !this.settings?.useNewAutocomplete)) {
-			// Dispose new autocomplete provider if registration is disabled
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
 
 		if (!shouldBeRegistered) return
 
-		if (this.settings?.useNewAutocomplete) {
-			// Initialize new autocomplete provider if not already created, otherwise reload
-			this.newAutocompleteProvider ??= new NewAutocompleteProvider(this.context, this.cline)
-			await this.newAutocompleteProvider.load()
-			// New autocomplete provider registers itself internally
-		} else {
-			// Register classic provider
-			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-				{ scheme: "file" },
-				this.inlineCompletionProvider,
-			)
-			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-		}
+		// Register classic provider
+		this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+			{ scheme: "file" },
+			this.inlineCompletionProvider,
+		)
+		this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
 	}
 
 	public async disable() {
@@ -136,6 +132,101 @@ export class GhostServiceManager {
 		await this.load()
 	}
 
+	/**
+	 * Check if autocomplete is currently snoozed
+	 */
+	public isSnoozed(): boolean {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return false
+		return Date.now() < snoozeUntil
+	}
+
+	/**
+	 * Get remaining snooze time in seconds
+	 */
+	public getSnoozeRemainingSeconds(): number {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return 0
+		const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
+		return remaining
+	}
+
+	/**
+	 * Snooze autocomplete for a specified number of seconds
+	 */
+	public async snooze(seconds: number): Promise<void> {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const snoozeUntil = Date.now() + seconds * 1000
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil,
+			},
+		})
+
+		this.snoozeTimer = setTimeout(() => {
+			void this.unsnooze()
+		}, seconds * 1000)
+
+		await this.load()
+	}
+
+	/**
+	 * Cancel snooze and re-enable autocomplete
+	 */
+	public async unsnooze(): Promise<void> {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil: undefined,
+			},
+		})
+
+		await this.load()
+	}
+
+	/**
+	 * Set up a timer to auto-unsnooze if we're currently in a snoozed state.
+	 * This handles the case where the extension restarts while snoozed -
+	 * the persisted snoozeUntil timestamp keeps autocomplete disabled,
+	 * and this timer ensures we unsnooze at the correct time.
+	 */
+	private setupSnoozeTimerIfNeeded(): void {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const remainingMs = this.getSnoozeRemainingMs()
+		if (remainingMs <= 0) {
+			return
+		}
+
+		this.snoozeTimer = setTimeout(() => {
+			void this.unsnooze()
+		}, remainingMs)
+	}
+
+	/**
+	 * Get remaining snooze time in milliseconds
+	 */
+	private getSnoozeRemainingMs(): number {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return 0
+		return Math.max(0, snoozeUntil - Date.now())
+	}
+
 	public async codeSuggestion() {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
@@ -148,13 +239,6 @@ export class GhostServiceManager {
 		})
 
 		const document = editor.document
-
-		// Check if using new autocomplete
-		if (this.settings?.useNewAutocomplete) {
-			// New autocomplete doesn't support manual code suggestion yet
-			// Just return for now
-			return
-		}
 
 		// Ensure model is loaded
 		if (!this.model.loaded) {
@@ -241,31 +325,10 @@ export class GhostServiceManager {
 		return this.model.loaded && this.model.hasValidCredentials()
 	}
 
-	private updateCostTracking(
-		cost: number,
-		inputTokens: number,
-		outputTokens: number,
-		cacheWriteTokens: number,
-		cacheReadTokens: number,
-	): void {
-		if (inputTokens === 0 && outputTokens === 0) {
-			// Only count completions that actually hit the LLM (not cached)
-			// A cached completion will have 0 input and output tokens
-			return
-		}
+	private updateCostTracking(cost: number, inputTokens: number, outputTokens: number): void {
 		this.completionCount++
 		this.sessionCost += cost
 		this.updateStatusBar()
-
-		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-			taskId: this.taskId,
-			inputTokens,
-			outputTokens,
-			cacheWriteTokens,
-			cacheReadTokens,
-			cost,
-			service: "INLINE_ASSIST",
-		})
 	}
 
 	private updateStatusBar() {
@@ -275,6 +338,7 @@ export class GhostServiceManager {
 
 		this.statusBar?.update({
 			enabled: this.settings?.enableAutoTrigger,
+			snoozed: this.isSnoozed(),
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
 			profileName: this.model.profileName,
@@ -304,6 +368,11 @@ export class GhostServiceManager {
 	public dispose(): void {
 		this.statusBar?.dispose()
 
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
 		// Dispose inline completion provider registration
 		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
@@ -313,12 +382,15 @@ export class GhostServiceManager {
 		// Dispose inline completion provider resources
 		this.inlineCompletionProvider.dispose()
 
-		// Dispose new autocomplete provider if it exists
-		if (this.newAutocompleteProvider) {
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
+		// Clear singleton instance
+		GhostServiceManager._instance = null
+	}
 
-		GhostServiceManager.instance = null // Reset singleton
+	/**
+	 * Reset the singleton instance (for testing purposes only)
+	 * @internal
+	 */
+	public static _resetInstance(): void {
+		GhostServiceManager._instance = null
 	}
 }

@@ -94,6 +94,12 @@
 				},
 				"provider": "Penyedia Pembuat Perintah Terminal"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Ukuran Batch Embedding",
+			"embeddingBatchSizeDescription": "Jumlah segmen kode yang digabung untuk pembuatan embedding dan penyisipan vector store. Nilai lebih tinggi dapat meningkatkan kecepatan pengindeksan tetapi dapat meningkatkan penggunaan memori. Nilai lebih rendah mengurangi penggunaan memori tetapi dapat memperlambat pengindeksan.",
+			"scannerMaxBatchRetriesLabel": "Maksimum Percobaan Ulang Batch Scanner",
+			"scannerMaxBatchRetriesDescription": "Jumlah maksimum percobaan ulang batch yang gagal selama pemindaian direktori. Nilai lebih tinggi meningkatkan ketahanan terhadap error sementara tetapi dapat memperlambat pengindeksan jika error berlanjut. Nilai lebih rendah gagal lebih cepat tetapi dapat melewatkan konten pada masalah sementara."
 		}
 	},
 	"chat": {
@@ -225,7 +231,25 @@
 			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
 			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
-			"provider": "Penyedia"
+			"provider": "Penyedia",
+			"enableChatAutocomplete": {
+				"description": "Jika diaktifkan, Kilo Code akan menyarankan pelengkapan saat Anda mengetik di kotak obrolan. Tekan Tab untuk menerima saran.",
+				"label": "Pelengkapan Otomatis Input Obrolan"
+			},
+			"snooze": {
+				"label": "Tunda Autocomplete",
+				"description": "Jeda sementara saran autocomplete untuk durasi tertentu.",
+				"button": "Tunda",
+				"unsnooze": "Aktifkan Kembali",
+				"currentlySnoozed": "Autocomplete sedang ditunda.",
+				"duration": {
+					"1min": "1 menit",
+					"5min": "5 menit",
+					"15min": "15 menit",
+					"30min": "30 menit",
+					"1hour": "1 jam"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
+	},
+	"deviceAuth": {
+		"title": "Masuk ke Kilo Code",
+		"step1": "Buka URL berikut di browser kamu",
+		"step2": "Verifikasi kode dan otorisasi perangkat ini di browser kamu",
+		"scanQr": "Atau pindai kode QR ini dengan ponsel kamu",
+		"openBrowser": "Buka Browser",
+		"copyUrl": "Salin URL",
+		"waiting": "Menunggu otorisasi...",
+		"timeRemaining": "Kode kedaluwarsa dalam {{time}}",
+		"success": "Berhasil masuk!",
+		"authenticatedAs": "Diautentikasi sebagai {{email}}",
+		"error": "Kesalahan Autentikasi",
+		"unknownError": "Terjadi kesalahan. Silakan coba lagi.",
+		"cancel": "Batal",
+		"retry": "Coba Lagi",
+		"tryAgain": "Coba Lagi",
+		"cancelled": "Autentikasi Dibatalkan",
+		"initiating": "Memulai autentikasi..."
+	},
+	"speechToText": {
+		"startRecording": "Mulai masukan suara",
+		"stopRecording": "Hentikan input suara",
+		"unavailableOpenAiKeyMissing": "Ucapan-ke-teks tidak tersedia. Ini memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
+		"unavailableFfmpegNotInstalled": "Ucapan-ke-teks tidak tersedia. Pasang FFmpeg untuk menggunakan transkripsi suara.",
+		"unavailableBoth": "Ucapan-ke-teks tidak tersedia. Fitur ini memerlukan penyedia OpenAI yang valid dan FFmpeg harus terpasang."
 	}
 }

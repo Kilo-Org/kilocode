@@ -34,7 +34,8 @@ vi.mock("simple-git", () => ({
 
 describe("sessionCommand", () => {
 	let mockContext: CommandContext
-	let mockSessionManager: Partial<SessionManager>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let mockSessionManager: any // Use any to allow mocking the sessionId getter
 	let mockSessionClient: Partial<SessionClient>
 
 	beforeEach(() => {
@@ -54,6 +55,7 @@ describe("sessionCommand", () => {
 				limit: 20,
 				offset: 0,
 			}),
+			delete: vi.fn().mockResolvedValue({ success: true }),
 		}
 
 		// Create a mock session manager instance with sessionClient property
@@ -61,6 +63,10 @@ describe("sessionCommand", () => {
 			sessionId: null,
 			restoreSession: vi.fn().mockResolvedValue(undefined),
 			sessionClient: mockSessionClient as SessionClient,
+			// Add facade methods that delegate to sessionClient
+			listSessions: vi.fn().mockImplementation((input) => mockSessionClient.list?.(input)),
+			searchSessions: vi.fn().mockImplementation((input) => mockSessionClient.search?.(input)),
+			deleteSession: vi.fn().mockImplementation((input) => mockSessionClient.delete?.(input)),
 		}
 
 		// Mock SessionManager.init to return our mock instance
@@ -100,7 +106,7 @@ describe("sessionCommand", () => {
 			expect(sessionCommand.examples).toContain("/session search <query>")
 			expect(sessionCommand.examples).toContain("/session select <sessionId>")
 			expect(sessionCommand.examples).toContain("/session share")
-			expect(sessionCommand.examples).toContain("/session fork <shareId>")
+			expect(sessionCommand.examples).toContain("/session fork <id>")
 			expect(sessionCommand.examples).toContain("/session delete <sessionId>")
 			expect(sessionCommand.examples).toContain("/session rename <new name>")
 		})
@@ -621,7 +627,7 @@ describe("sessionCommand", () => {
 
 			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(replacedMessages).toHaveLength(2)
-			expect(replacedMessages[1].content).toContain("Forking session from share ID")
+			expect(replacedMessages[1].content).toContain("Forking session from ID")
 			expect(replacedMessages[1].content).toContain("share-123")
 		})
 
@@ -633,7 +639,7 @@ describe("sessionCommand", () => {
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
-			expect(message.content).toContain("Usage: /session fork <shareId>")
+			expect(message.content).toContain("Usage: /session fork <id>")
 			expect(mockSessionManager.forkSession).not.toHaveBeenCalled()
 		})
 
@@ -645,7 +651,7 @@ describe("sessionCommand", () => {
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("error")
-			expect(message.content).toContain("Usage: /session fork <shareId>")
+			expect(message.content).toContain("Usage: /session fork <id>")
 		})
 
 		it("should handle fork error gracefully", async () => {
@@ -687,7 +693,7 @@ describe("sessionCommand", () => {
 			await sessionCommand.handler(mockContext)
 
 			expect(SessionManager.init).toHaveBeenCalled()
-			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("My New Session Name")
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("test-session-123", "My New Session Name")
 			expect(mockContext.addMessage).toHaveBeenCalledTimes(1)
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
@@ -701,7 +707,7 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("SingleWord")
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("test-session-123", "SingleWord")
 			const message = (mockContext.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("SingleWord")
@@ -720,7 +726,7 @@ describe("sessionCommand", () => {
 		})
 
 		it("should handle rename error when no active session", async () => {
-			mockSessionManager.renameSession = vi.fn().mockRejectedValue(new Error("No active session"))
+			mockSessionManager.sessionId = null
 			mockContext.args = ["rename", "New", "Name"]
 
 			await sessionCommand.handler(mockContext)
@@ -750,10 +756,11 @@ describe("sessionCommand", () => {
 
 			await sessionCommand.handler(mockContext)
 
-			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("New Name")
+			expect(mockSessionManager.renameSession).toHaveBeenCalledWith("test-session-123", "New Name")
 		})
 
 		it("should handle backend error gracefully", async () => {
+			mockSessionManager.sessionId = "test-session-123"
 			mockSessionManager.renameSession = vi.fn().mockRejectedValue(new Error("Network error"))
 			mockContext.args = ["rename", "New", "Name"]
 

@@ -44,7 +44,7 @@ export function getCapabilitiesSection(
 	)
 
 	// Build the tool list for the example, filtering for main editing tools
-	const editingToolsExample = (["apply_diff", "write_to_file", "insert_content"] as const).filter((tool) => {
+	const editingToolsExample = (["apply_diff", "write_to_file"] as const).filter((tool) => {
 		if (tool === "apply_diff") return diffStrategy && availableEditTools.includes(tool as ToolName)
 		return availableEditTools.includes(tool as ToolName)
 	})

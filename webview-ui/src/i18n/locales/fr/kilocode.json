@@ -101,6 +101,12 @@
 					"label": "Configuration de l'API"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Taille du lot d'embedding",
+			"embeddingBatchSizeDescription": "Nombre de segments de code à regrouper pour la génération d'embeddings et les upserts de stockage vectoriel. Des valeurs plus élevées peuvent améliorer la vitesse d'indexation mais peuvent augmenter l'utilisation de la mémoire. Des valeurs plus faibles réduisent l'utilisation de la mémoire mais peuvent ralentir l'indexation.",
+			"scannerMaxBatchRetriesLabel": "Nombre max. de tentatives de lot du scanner",
+			"scannerMaxBatchRetriesDescription": "Nombre maximum de tentatives pour un lot échoué lors de l'analyse de répertoire. Des valeurs plus élevées augmentent la résilience aux erreurs transitoires mais peuvent ralentir l'indexation si les erreurs persistent. Des valeurs plus faibles échouent plus rapidement mais peuvent ignorer du contenu en cas de problèmes temporaires."
 		}
 	},
 	"toolCallStyle": {
@@ -239,7 +245,25 @@
 			"noModelConfigured": "Aucun modèle d'autocomplétion approprié trouvé. Configure un fournisseur dans les paramètres API.",
 			"configureAutocompleteProfile": "Utilise n'importe quel modèle en allant dans les profils et en configurant un Profil du Type de Profil Autocomplétion.",
 			"model": "Modèle",
-			"provider": "Fournisseur"
+			"provider": "Fournisseur",
+			"enableChatAutocomplete": {
+				"label": "Saisie automatique de discussion",
+				"description": "Lorsqu'il est activé, Kilo Code proposera des suggestions de complétion pendant que vous tapez dans le champ de discussion. Appuyez sur Tab pour accepter les suggestions."
+			},
+			"snooze": {
+				"label": "Mettre en pause l'autocomplétion",
+				"description": "Suspendre temporairement les suggestions d'autocomplétion pour une durée spécifiée.",
+				"button": "Mettre en pause",
+				"unsnooze": "Réactiver",
+				"currentlySnoozed": "L'autocomplétion est actuellement en pause.",
+				"duration": {
+					"1min": "1 minute",
+					"5min": "5 minutes",
+					"15min": "15 minutes",
+					"30min": "30 minutes",
+					"1hour": "1 heure"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nouveau : Partagez des modes en créant une organisation"
+	},
+	"deviceAuth": {
+		"title": "Se connecter à Kilo Code",
+		"step1": "Ouvre l'URL suivante dans ton navigateur",
+		"step2": "Vérifie le code et autorise cet appareil dans ton navigateur",
+		"scanQr": "Ou scanne ce code QR avec ton téléphone",
+		"openBrowser": "Ouvrir le navigateur",
+		"copyUrl": "Copier l'URL",
+		"waiting": "En attente d'autorisation...",
+		"timeRemaining": "Le code expire dans {{time}}",
+		"success": "Connexion réussie !",
+		"authenticatedAs": "Authentifié en tant que {{email}}",
+		"error": "Erreur d'authentification",
+		"unknownError": "Une erreur s'est produite. Réessaye.",
+		"cancel": "Annuler",
+		"retry": "Réessayer",
+		"tryAgain": "Réessayer",
+		"cancelled": "Authentification annulée",
+		"initiating": "Démarrage de l'authentification..."
+	},
+	"speechToText": {
+		"startRecording": "Démarrer la saisie vocale",
+		"stopRecording": "Arrêter la saisie vocale",
+		"unavailableOpenAiKeyMissing": "La reconnaissance vocale est indisponible. Elle nécessite un fournisseur OpenAI valide avec une clé API pour utiliser la transcription vocale.",
+		"unavailableFfmpegNotInstalled": "La reconnaissance vocale n'est pas disponible. Installez FFmpeg pour utiliser la transcription vocale.",
+		"unavailableBoth": "La reconnaissance vocale n'est pas disponible. Elle nécessite un fournisseur OpenAI valide et FFmpeg doit être installé."
 	}
 }

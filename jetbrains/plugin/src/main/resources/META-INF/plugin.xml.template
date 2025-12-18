@@ -14,7 +14,7 @@ SPDX-License-Identifier: Apache-2.0
     <name>Kilo Code</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://kilocode.ai">Kilo Code</vendor>
+    <vendor url="https://kilo.ai">Kilo Code</vendor>
 
     <!-- Resource bundles for internationalization -->
     <resource-bundle>messages.JetbrainsBundle</resource-bundle>
@@ -56,6 +56,7 @@ SPDX-License-Identifier: Apache-2.0
         />
         <checkinHandlerFactory implementation="ai.kilocode.jetbrains.git.CommitMessageHandlerFactory"/>
         <applicationService serviceImplementation="ai.kilocode.jetbrains.git.CommitMessageService"/>
+        <applicationService serviceImplementation="ai.kilocode.jetbrains.inline.InlineCompletionService"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">

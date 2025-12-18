@@ -47,7 +47,7 @@ export function doesFileMatchRegex(filePath: string, pattern: string): boolean {
 export function getToolsForMode(groups: readonly GroupEntry[]): string[] {
 	const tools = new Set<string>()
 
-	// Add tools from each group
+	// Add tools from each group (excluding customTools which are opt-in only)
 	groups.forEach((group) => {
 		const groupName = getGroupName(group)
 		const groupConfig = TOOL_GROUPS[groupName]
@@ -173,11 +173,16 @@ export function isToolAllowedForMode(
 	toolRequirements?: Record<string, boolean>,
 	toolParams?: Record<string, any>, // All tool parameters
 	experiments?: Record<string, boolean>,
+	includedTools?: string[], // Opt-in tools explicitly included (e.g., from modelInfo)
 ): boolean {
 	// Always allow these tools
 	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
 		return true
 	}
+
+	// Check if this is a dynamic MCP tool (mcp_serverName_toolName)
+	// These should be allowed if the mcp group is allowed for the mode
+	const isDynamicMcpTool = tool.startsWith("mcp_")
 	if (experiments && Object.values(EXPERIMENT_IDS).includes(tool as ExperimentId)) {
 		if (!experiments[tool]) {
 			return false
@@ -206,8 +211,20 @@ export function isToolAllowedForMode(
 
 		const groupConfig = TOOL_GROUPS[groupName]
 
-		// If the tool isn't in this group's tools, continue to next group
-		if (!groupConfig.tools.includes(tool)) {
+		// Check if this is a dynamic MCP tool and the mcp group is allowed
+		if (isDynamicMcpTool && groupName === "mcp") {
+			// Dynamic MCP tools are allowed if the mcp group is in the mode's groups
+			return true
+		}
+
+		// Check if the tool is in the group's regular tools
+		const isRegularTool = groupConfig.tools.includes(tool)
+
+		// Check if the tool is a custom tool that has been explicitly included
+		const isCustomTool = groupConfig.customTools?.includes(tool) && includedTools?.includes(tool)
+
+		// If the tool isn't in regular tools and isn't an included custom tool, continue to next group
+		if (!isRegularTool && !isCustomTool) {
 			continue
 		}
 

@@ -1,0 +1,49 @@
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+def calculate_difference(a, b)
+	difference = a - b
+	return difference
+end
+
+def calculate_product(a, b)
+	product = a * b
+	return product
+end
+
+def calculate_quotient(a, b)
+	quotient = a / b
+	return quotient
+end
+
+def calculate_remainder(a, b)
+	remainder = a % b
+	return remainder
+end
+
+def calculate_exponent(a, b)
+	exponent = a ** b
+	return exponent
+end
+
+def calculate_average(a, b)
+	average = (a + b) / 2.0
+	return average
+end
+
+def calculate_absolute_difference(a, b)
+	absolute_difference = (a - b).abs
+	return absolute_difference
+end
+
+def calculate_maximum(a, b)
+	maximum = [a, b].max
+	return maximum
+end
+
+def calculate_minimum(a, b)
+	minimum = [a, b].min
+	return minimum
+end

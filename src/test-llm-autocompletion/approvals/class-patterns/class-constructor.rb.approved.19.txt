@@ -1,0 +1,14 @@
+class User
+	def initialize(username, email, role)
+		@username = username
+		@email = email
+		@role = role
+	end
+
+	def to_s
+		"#{@username} - #{@email} - #{@role}"
+	end
+end
+
+user = User.new("john", "john@doe.com", "admin")
+puts user

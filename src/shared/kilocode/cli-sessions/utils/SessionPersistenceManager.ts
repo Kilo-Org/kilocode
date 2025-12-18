@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs"
 import path from "path"
 import type { IPathProvider } from "../types/IPathProvider.js"
+import type { SessionStateManager } from "../core/SessionStateManager.js"
 
 interface WorkspaceSessionState {
 	lastSession?: {
@@ -12,21 +13,19 @@ interface WorkspaceSessionState {
 
 export class SessionPersistenceManager {
 	private pathProvider: IPathProvider
-	private workspaceDir: string | null = null
+	private stateManager: SessionStateManager
 
-	constructor(pathProvider: IPathProvider) {
+	constructor(pathProvider: IPathProvider, stateManager: SessionStateManager) {
 		this.pathProvider = pathProvider
-	}
-
-	setWorkspaceDir(dir: string): void {
-		this.workspaceDir = dir
+		this.stateManager = stateManager
 	}
 
 	private getSessionStatePath(): string | null {
-		if (!this.workspaceDir) {
+		const workspaceDir = this.stateManager.getWorkspaceDir()
+		if (!workspaceDir) {
 			return null
 		}
-		return this.pathProvider.getSessionFilePath(this.workspaceDir)
+		return this.pathProvider.getSessionFilePath(workspaceDir)
 	}
 
 	private readWorkspaceState(): WorkspaceSessionState {
@@ -75,7 +74,24 @@ export class SessionPersistenceManager {
 	getTaskSessionMap(): Record<string, string> {
 		const state = this.readWorkspaceState()
 
-		return state.taskSessionMap
+		return this.deduplicateTaskSessionMap(state.taskSessionMap)
+	}
+
+	private deduplicateTaskSessionMap(taskSessionMap: Record<string, string>): Record<string, string> {
+		const entries = Object.entries(taskSessionMap)
+		const sessionToLastTaskId = new Map<string, string>()
+
+		for (const [taskId, sessionId] of entries) {
+			sessionToLastTaskId.set(sessionId, taskId)
+		}
+
+		const result: Record<string, string> = {}
+
+		for (const [sessionId, taskId] of sessionToLastTaskId) {
+			result[taskId] = sessionId
+		}
+
+		return result
 	}
 
 	setTaskSessionMap(taskSessionMap: Record<string, string>): void {
@@ -87,12 +103,12 @@ export class SessionPersistenceManager {
 	}
 
 	getSessionForTask(taskId: string): string | undefined {
-		const taskSessionMap = this.getTaskSessionMap()
-
-		return taskSessionMap[taskId]
+		return this.stateManager.getSessionForTask(taskId) || this.getTaskSessionMap()[taskId]
 	}
 
 	setSessionForTask(taskId: string, sessionId: string): void {
+		this.stateManager.setSessionForTask(taskId, sessionId)
+
 		const state = this.readWorkspaceState()
 
 		state.taskSessionMap[taskId] = sessionId

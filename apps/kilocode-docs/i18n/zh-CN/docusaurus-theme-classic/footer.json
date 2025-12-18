@@ -45,7 +45,7 @@
 	},
 	"link.item.label.Contact": {
 		"message": "联系我们",
-		"description": "The label of footer link with label=Contact linking to mailto:hi@kilocode.ai"
+		"description": "The label of footer link with label=Contact linking to mailto:hi@kilo.ai"
 	},
 	"link.item.label.Careers": {
 		"message": "官网",

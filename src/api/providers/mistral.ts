@@ -1,5 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Mistral } from "@mistralai/mistralai"
+import OpenAI from "openai"
 
 import { type MistralModelId, mistralDefaultModelId, mistralModels, MISTRAL_DEFAULT_TEMPERATURE } from "@roo-code/types"
 
@@ -17,6 +18,26 @@ type ContentChunkWithThinking = {
 	type: string
 	text?: string
 	thinking?: Array<{ type: string; text?: string }>
+}
+
+// Type for Mistral tool calls in stream delta
+type MistralToolCall = {
+	id?: string
+	type?: string
+	function?: {
+		name?: string
+		arguments?: string
+	}
+}
+
+// Type for Mistral tool definition - matches Mistral SDK Tool type
+type MistralTool = {
+	type: "function"
+	function: {
+		name: string
+		description?: string
+		parameters: Record<string, unknown>
+	}
 }
 
 export class MistralHandler extends BaseProvider implements SingleCompletionHandler {
@@ -47,14 +68,35 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const { id: model, maxTokens, temperature } = this.getModel()
+		const { id: model, info, maxTokens, temperature } = this.getModel()
 
-		const response = await this.client.chat.stream({
+		// Build request options
+		const requestOptions: {
+			model: string
+			messages: ReturnType<typeof convertToMistralMessages>
+			maxTokens: number
+			temperature: number
+			tools?: MistralTool[]
+			toolChoice?: "auto" | "none" | "any" | "required" | { type: "function"; function: { name: string } }
+		} = {
 			model,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToMistralMessages(messages)],
-			maxTokens,
+			maxTokens: maxTokens ?? info.maxTokens,
 			temperature,
-		})
+		}
+
+		// Add tools if provided and toolProtocol is not 'xml' and model supports native tools
+		const supportsNativeTools = info.supportsNativeTools ?? false
+		if (metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml" && supportsNativeTools) {
+			requestOptions.tools = this.convertToolsForMistral(metadata.tools)
+			// Always use "any" to require tool use
+			requestOptions.toolChoice = "any"
+		}
+
+		// Temporary debug log for QA
+		// console.log("[MISTRAL DEBUG] Raw API request body:", requestOptions)
+
+		const response = await this.client.chat.stream(requestOptions)
 
 		for await (const event of response) {
 			const delta = event.data.choices[0]?.delta
@@ -83,6 +125,22 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 				}
 			}
 
+			// Handle tool calls in stream
+			// Mistral SDK provides tool_calls in delta similar to OpenAI format
+			const toolCalls = (delta as { toolCalls?: MistralToolCall[] })?.toolCalls
+			if (toolCalls) {
+				for (let i = 0; i < toolCalls.length; i++) {
+					const toolCall = toolCalls[i]
+					yield {
+						type: "tool_call_partial",
+						index: i,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
+			}
+
 			if (event.data.usage) {
 				yield {
 					type: "usage",
@@ -91,6 +149,24 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 				}
 			}
 		}
+	}
+
+	/**
+	 * Convert OpenAI tool definitions to Mistral format.
+	 * Mistral uses the same format as OpenAI for function tools.
+	 */
+	private convertToolsForMistral(tools: OpenAI.Chat.ChatCompletionTool[]): MistralTool[] {
+		return tools
+			.filter((tool) => tool.type === "function")
+			.map((tool) => ({
+				type: "function" as const,
+				function: {
+					name: tool.function.name,
+					description: tool.function.description,
+					// Mistral SDK requires parameters to be defined, use empty object as fallback
+					parameters: (tool.function.parameters as Record<string, unknown>) || {},
+				},
+			}))
 	}
 
 	override getModel() {

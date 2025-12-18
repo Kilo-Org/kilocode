@@ -1,14 +1,13 @@
 {
 	"name": "llm-autocompletion-tests",
 	"version": "1.0.0",
-	"description": "Standalone test suite for AutoTriggerStrategy with real LLM calls",
+	"description": "Standalone test suite for GhostInlineCompletionProvider with real LLM calls",
 	"type": "module",
 	"scripts": {
 		"test": "tsx runner.ts",
 		"test:verbose": "tsx runner.ts --verbose",
-		"test:fim": "tsx runner.ts --fim",
-		"test:fim:verbose": "tsx runner.ts --fim --verbose",
-		"clean": "tsx runner.ts clean"
+		"clean": "tsx runner.ts clean",
+		"report": "tsx runner.ts report"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.51.0",

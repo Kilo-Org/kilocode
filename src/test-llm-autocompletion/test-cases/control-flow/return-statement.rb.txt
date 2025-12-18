@@ -1,4 +1,5 @@
-# Description: Should complete Ruby return statement
+#### Description: Should complete Ruby return statement
+#### Filename: calculator.rb
 def calculate_total(items)
 	sum = 0
 	items.each { |item| sum += item }

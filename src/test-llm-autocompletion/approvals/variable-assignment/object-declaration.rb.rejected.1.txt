@@ -1,3 +1,0 @@
-user = {
-	name: 'John',
-	email: <<<AUTOCOMPLETE_HERE>>>

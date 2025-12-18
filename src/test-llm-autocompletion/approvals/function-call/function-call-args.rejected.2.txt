@@ -1,2 +1,11 @@
 function greet(name) { return 'Hello ' + name; }
-greet("")];
+greet('world'); // 'Hello world'
+
+function greet(name) { return 'Hello ' + name; }
+greet('world'); // 'Hello world'
+
+function greet(name) { return 'Hello ' + name; }
+greet('world'); // 'Hello world'
+
+function greet(name) { return 'Hello ' + name; }
+greet('world'); // 'Hello world'

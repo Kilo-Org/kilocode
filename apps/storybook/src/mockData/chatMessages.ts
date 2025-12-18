@@ -82,17 +82,6 @@ export const ASK_PRESETS = {
 		}),
 	} satisfies ClineMessageData,
 
-	tool_insert_content: {
-		type: "ask",
-		ask: "tool",
-		text: JSON.stringify({
-			tool: "insert_content",
-			path: "src/app.ts",
-			lineNumber: 42,
-			content: "// New import added\nimport { newFunction } from './utils'",
-		}),
-	} satisfies ClineMessageData,
-
 	tool_read_file: {
 		type: "ask",
 		ask: "tool",

@@ -52,5 +52,6 @@
 		"mostTokens": "Meiste Tokens",
 		"mostRelevant": "Relevanteste"
 	},
-	"viewAllHistory": "Alle anzeigen"
+	"viewAllHistory": "Alle anzeigen",
+	"shareSession": "Sitzung teilen"
 }

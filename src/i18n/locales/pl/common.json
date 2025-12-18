@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Niestandardowa ścieżka przechowywania \"{{path}}\" nie jest użyteczna, zostanie użyta domyślna ścieżka",
 		"cannot_access_path": "Nie można uzyskać dostępu do ścieżki {{path}}: {{error}}",
 		"settings_import_failed": "Nie udało się zaimportować ustawień: {{error}}.",
-		"mistake_limit_guidance": "To może wskazywać na błąd w procesie myślowym modelu lub niezdolność do prawidłowego użycia narzędzia, co można złagodzić poprzez wskazówki użytkownika (np. \"Spróbuj podzielić zadanie na mniejsze kroki\").",
+		"mistake_limit_guidance": "To może wskazywać na błąd w rozumowaniu modelu lub niezdolność do prawidłowego użycia narzędzia. Spróbuj jednego z poniższych:\n\n• Użyj mądrzejszego modelu lub po prostu innego modelu (każdy model ma swoje słabości)\n• Zmniejsz ilość kontekstu (uprość prompt dla LLM)\n• Podaj dodatkowe instrukcje, które pomogą LLM (np. \"Spróbuj podzielić zadanie na mniejsze kroki\")",
 		"violated_organization_allowlist": "Nie udało się uruchomić zadania: bieżący profil nie jest kompatybilny z ustawieniami Twojej organizacji",
 		"condense_failed": "Nie udało się skondensować kontekstu",
 		"condense_not_enough_messages": "Za mało wiadomości do skondensowania kontekstu {{prevContextTokens}} tokenów. Wymagane jest co najmniej {{minimumMessageCount}} wiadomości, ale dostępnych jest tylko {{messageCount}}.",
@@ -168,6 +168,7 @@
 		"image_saved": "Obraz zapisany w {{path}}",
 		"organization_share_link_copied": "Link udostępniania organizacji skopiowany do schowka!",
 		"public_share_link_copied": "Publiczny link udostępniania skopiowany do schowka!",
+		"session_share_link_copied_with_url": "Sesja udostępniona! Link skopiowany do schowka: {{url}}",
 		"mode_exported": "Tryb '{{mode}}' pomyślnie wyeksportowany",
 		"mode_imported": "Tryb pomyślnie zaimportowany"
 	},
@@ -265,7 +266,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://kilo.ai/docs"
 	},
 	"errorBoundary": {
 		"title": "Błąd",

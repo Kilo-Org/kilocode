@@ -101,6 +101,12 @@
 					"description": "Wähle aus, welche API-Konfiguration für die Generierung von Terminal-Befehlen verwendet werden soll. Belasse es bei \"Aktuelle Konfiguration verwenden\", um Ihre Standardeinstellungen zu nutzen."
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding-Stapelgröße",
+			"embeddingBatchSizeDescription": "Anzahl der Code-Segmente, die für die Embedding-Generierung und Vektorspeicher-Upserts zusammengefasst werden. Höhere Werte können die Indizierungsgeschwindigkeit verbessern, aber den Speicherverbrauch erhöhen. Niedrigere Werte reduzieren den Speicherverbrauch, können aber die Indizierung verlangsamen.",
+			"scannerMaxBatchRetriesLabel": "Scanner Max. Stapel-Wiederholungen",
+			"scannerMaxBatchRetriesDescription": "Maximale Anzahl von Wiederholungsversuchen für einen fehlgeschlagenen Stapel während des Verzeichnis-Scans. Höhere Werte erhöhen die Widerstandsfähigkeit gegen vorübergehende Fehler, können aber die Indizierung verlangsamen, wenn Fehler bestehen bleiben. Niedrigere Werte schlagen schneller fehl, können aber Inhalte bei temporären Problemen überspringen."
 		}
 	},
 	"chat": {
@@ -231,7 +237,25 @@
 			},
 			"keybindingNotFound": "nicht gefunden",
 			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen.",
-			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst."
+			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst.",
+			"enableChatAutocomplete": {
+				"label": "Chat-Eingabe-Autovervollständigung",
+				"description": "Wenn aktiviert, wird Kilo Code Vervollständigungen vorschlagen, während Sie im Chat-Eingabefeld tippen. Drücken Sie Tab, um Vorschläge zu akzeptieren."
+			},
+			"snooze": {
+				"label": "Autocomplete pausieren",
+				"description": "Autocomplete-Vorschläge vorübergehend für eine bestimmte Dauer pausieren.",
+				"button": "Pausieren",
+				"unsnooze": "Fortsetzen",
+				"currentlySnoozed": "Autocomplete ist derzeit pausiert.",
+				"duration": {
+					"1min": "1 Minute",
+					"5min": "5 Minuten",
+					"15min": "15 Minuten",
+					"30min": "30 Minuten",
+					"1hour": "1 Stunde"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -281,5 +305,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Neu: Modi teilen durch Erstellen einer Organisation"
+	},
+	"deviceAuth": {
+		"title": "Bei Kilo Code anmelden",
+		"step1": "Öffne die folgende URL in deinem Browser",
+		"step2": "Überprüfe den Code und autorisiere dieses Gerät in deinem Browser",
+		"scanQr": "Oder scanne diesen QR-Code mit deinem Handy",
+		"openBrowser": "Browser öffnen",
+		"copyUrl": "URL kopieren",
+		"waiting": "Warte auf Autorisierung...",
+		"timeRemaining": "Code läuft ab in {{time}}",
+		"success": "Erfolgreich angemeldet!",
+		"authenticatedAs": "Authentifiziert als {{email}}",
+		"error": "Authentifizierungsfehler",
+		"unknownError": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+		"cancel": "Abbrechen",
+		"retry": "Erneut versuchen",
+		"tryAgain": "Erneut versuchen",
+		"cancelled": "Authentifizierung abgebrochen",
+		"initiating": "Authentifizierung wird gestartet..."
+	},
+	"speechToText": {
+		"startRecording": "Spracheingabe starten",
+		"stopRecording": "Spracheingabe beenden",
+		"unavailableBoth": "Spracherkennung ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter und FFmpeg muss installiert sein.",
+		"unavailableFfmpegNotInstalled": "Sprache-zu-Text ist nicht verfügbar. Installieren Sie FFmpeg, um Sprachtranskription zu nutzen.",
+		"unavailableOpenAiKeyMissing": "Sprache-zu-Text ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um Sprachtranskription zu nutzen."
 	}
 }

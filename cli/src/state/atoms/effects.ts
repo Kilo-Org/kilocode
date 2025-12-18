@@ -176,6 +176,23 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			return
 		}
 
+		// NOTE: Copied from ClineProvider - make sure the two match.
+		if (message.type === "apiMessagesSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
+		} else if (message.type === "taskMessagesSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "uiMessagesPath", filePath)
+		} else if (message.type === "taskMetadataSaved" && message.payload) {
+			const [taskId, filePath] = message.payload as [string, string]
+
+			SessionManager.init()?.handleFileUpdate(taskId, "taskMetadataPath", filePath)
+		} else if (message.type === "currentCheckpointUpdated") {
+			SessionManager.init()?.doSync()
+		}
+
 		// Handle different message types
 		switch (message.type) {
 			case "state":
@@ -377,43 +394,6 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 			}
 
-			case "apiMessagesSaved": {
-				const payload = message.payload as [string, string] | undefined
-
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [taskId, filePath] = payload
-
-					SessionManager.init().setPath(taskId, "apiConversationHistoryPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid apiMessagesSaved payload`, "effects", { payload })
-				}
-				break
-			}
-
-			case "taskMessagesSaved": {
-				const payload = message.payload as [string, string] | undefined
-
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [taskId, filePath] = payload
-
-					SessionManager.init().setPath(taskId, "uiMessagesPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid taskMessagesSaved payload`, "effects", { payload })
-				}
-				break
-			}
-
-			case "taskMetadataSaved": {
-				const payload = message.payload as [string, string] | undefined
-				if (payload && Array.isArray(payload) && payload.length === 2) {
-					const [taskId, filePath] = payload
-
-					SessionManager.init().setPath(taskId, "taskMetadataPath", filePath)
-				} else {
-					logs.warn(`[DEBUG] Invalid taskMetadataSaved payload`, "effects", { payload })
-				}
-				break
-			}
 			case "commandExecutionStatus": {
 				// Handle command execution status messages
 				// Store output updates and apply them when the ask appears
@@ -580,12 +560,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 						if (messageIndex !== -1) {
 							const pendingUpdate = newPendingUpdates.get(statusData.executionId)
+							const exitCode =
+								statusData.status === "exited" && "exitCode" in statusData
+									? statusData.exitCode
+									: undefined
 							const updatedAsk: ExtensionChatMessage = {
 								...currentMessages[messageIndex]!,
 								text: JSON.stringify({
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									...(exitCode !== undefined && { exitCode }),
 								}),
 								partial: false, // Command completed
 								isAnswered: false, // Still needs user response
@@ -621,7 +606,10 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			const lastMessage = message.state.chatMessages[message.state.chatMessages.length - 1]
 			if (lastMessage?.type === "ask" && lastMessage?.ask === "completion_result") {
 				logs.info("Completion result detected in state update", "effects")
+
 				set(ciCompletionDetectedAtom, true)
+
+				SessionManager.init()?.doSync(true)
 			}
 		}
 	} catch (error) {

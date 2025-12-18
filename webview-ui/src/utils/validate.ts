@@ -195,6 +195,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			}
 			break
 		// kilocode_change end
+		case "baseten":
+			if (!apiConfiguration.basetenApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined

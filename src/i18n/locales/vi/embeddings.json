@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "Không thể tạo nhúng sau {{attempts}} lần thử",
 	"textExceedsTokenLimit": "Văn bản tại chỉ mục {{index}} vượt quá giới hạn mã thông báo tối đa ({{itemTokens}} > {{maxTokens}}). Bỏ qua.",
 	"rateLimitRetry": "Đã đạt đến giới hạn tốc độ, thử lại sau {{delayMs}}ms (lần thử {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Định dạng phản hồi không hợp lệ từ Amazon Bedrock",
+		"invalidCredentials": "Thông tin đăng nhập AWS không hợp lệ. Vui lòng kiểm tra cấu hình AWS của bạn.",
+		"accessDenied": "Bị từ chối truy cập dịch vụ Amazon Bedrock. Vui lòng kiểm tra quyền IAM của bạn.",
+		"modelNotFound": "Không tìm thấy mô hình {{model}} trong Amazon Bedrock"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Không thể đọc nội dung lỗi",
 		"requestFailed": "Yêu cầu API Ollama thất bại với trạng thái {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Thiếu cấu hình Mistral để tạo trình nhúng",
 		"openRouterConfigMissing": "Thiếu cấu hình OpenRouter để tạo trình nhúng",
 		"vercelAiGatewayConfigMissing": "Thiếu cấu hình Vercel AI Gateway để tạo trình nhúng",
+		"bedrockConfigMissing": "Thiếu cấu hình Amazon Bedrock để tạo trình nhúng",
 		"invalidEmbedderType": "Loại embedder được cấu hình không hợp lệ: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Không thể xác định kích thước vector cho mô hình '{{modelId}}' với nhà cung cấp '{{provider}}'. Hãy đảm bảo 'Kích thước Embedding' được cài đặt đúng trong cài đặt nhà cung cấp tương thích OpenAI.",
 		"vectorDimensionNotDetermined": "Không thể xác định kích thước vector cho mô hình '{{modelId}}' với nhà cung cấp '{{provider}}'. Kiểm tra hồ sơ mô hình hoặc cấu hình.",

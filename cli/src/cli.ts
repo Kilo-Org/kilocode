@@ -11,9 +11,14 @@ import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
-import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
+import {
+	addPendingRequestAtom,
+	TaskHistoryData,
+	taskHistoryDataAtom,
+	updateTaskHistoryFiltersAtom,
+} from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
-import { taskResumedViaContinueOrSessionAtom } from "./state/atoms/extension.js"
+import { taskResumedViaContinueOrSessionAtom, currentTaskAtom } from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -24,6 +29,7 @@ import type { CLIOptions } from "./types/cli.js"
 import type { CLIConfig, ProviderConfig } from "./config/types.js"
 import { getModelIdKey } from "./constants/providers/models.js"
 import type { ProviderName } from "./types/messages.js"
+import { getSelectedModelId } from "./utils/providers.js"
 import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
@@ -135,6 +141,11 @@ export class CLI {
 			const kiloToken = getKiloToken(config)
 
 			if (kiloToken) {
+				// Inject CLI configuration into ExtensionHost
+				// This must happen BEFORE session restoration to ensure org ID is set
+				await this.injectConfigurationToExtension()
+				logs.debug("CLI configuration injected into extension", "CLI")
+
 				const pathProvider = new KiloCodePathProvider()
 				const extensionMessenger = new ExtensionMessengerAdapter(this.service)
 
@@ -153,20 +164,102 @@ export class CLI {
 							this.store.set(taskResumedViaContinueOrSessionAtom, true)
 						}
 					},
+					onSessionSynced: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
 					platform: "cli",
+					getOrganizationId: async () => {
+						const state = this.service?.getState()
+						const result = state?.apiConfiguration?.kilocodeOrganizationId
+
+						logs.debug(`Resolved organization ID: "${result}"`, "SessionManager")
+
+						return result
+					},
+					getMode: async () => {
+						const state = this.service?.getState()
+						const result = state?.mode
+
+						logs.debug(`Resolved mode: "${result}"`, "SessionManager")
+
+						return result
+					},
+					getModel: async () => {
+						const state = this.service?.getState()
+						const provider = state?.apiConfiguration?.apiProvider
+						const result = getSelectedModelId(provider || "unknown", state?.apiConfiguration)
+
+						logs.debug(`Resolved model: "${result}"`, "SessionManager")
+
+						return result
+					},
+					getParentTaskId: async (taskId: string) => {
+						const result = await (async () => {
+							try {
+								// Check if the current task matches the taskId
+								const currentTask = this.store?.get(currentTaskAtom)
+
+								if (currentTask?.id === taskId) {
+									return currentTask.parentTaskId
+								}
+
+								// Otherwise, fetch the task from history using promise-based request/response pattern
+								const requestId = crypto.randomUUID()
+
+								// Create a promise that will be resolved when the response arrives
+								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
+									const timeout = setTimeout(() => {
+										reject(new Error("Task history request timed out"))
+									}, 5000) // 5 second timeout as fallback
+
+									this.store?.set(addPendingRequestAtom, {
+										requestId,
+										resolve,
+										reject,
+										timeout,
+									})
+								})
+
+								// Send task history request to get the specific task
+								await this.store?.set(sendWebviewMessageAtom, {
+									type: "taskHistoryRequest",
+									payload: {
+										requestId,
+										workspace: "current",
+										sort: "newest",
+										favoritesOnly: false,
+										pageIndex: 0,
+									},
+								})
+
+								// Wait for the actual response (not a timer)
+								const taskHistoryData = await responsePromise
+								const task = taskHistoryData.historyItems.find((item) => item.id === taskId)
+
+								return task?.parentTaskId
+							} catch {
+								return undefined
+							}
+						})()
+
+						logs.debug(`Resolved parent task ID for task ${taskId}: "${result}"`, "SessionManager")
+
+						return result || undefined
+					},
 				})
 				logs.debug("SessionManager initialized with dependencies", "CLI")
 
 				const workspace = this.options.workspace || process.cwd()
-				this.sessionService.setWorkspaceDirectory(workspace)
+				this.sessionService?.setWorkspaceDirectory(workspace)
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
-					await this.sessionService.restoreSession(this.options.session)
+					await this.sessionService?.restoreSession(this.options.session)
 				} else if (this.options.fork) {
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-
-					await this.sessionService.forkSession(this.options.fork)
+					await this.sessionService?.forkSession(this.options.fork)
 				}
 			}
 
@@ -175,14 +268,21 @@ export class CLI {
 			logs.debug("Command history loaded", "CLI")
 
 			// Inject CLI configuration into ExtensionHost
+			// This happens after session restoration (if any) to ensure CLI config takes precedence
+			// Session restoration may have activated a saved profile that doesn't include org ID from env vars
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
 			const extensionHost = this.service.getExtensionHost()
-			extensionHost.sendWebviewMessage({
-				type: "yoloMode",
-				bool: Boolean(this.options.ci),
-			})
+			// In JSON-IO mode, don't set yoloMode on the extension host.
+			// This prevents Task.ts from auto-answering followup questions.
+			// The CLI's approval layer handles YOLO behavior and correctly excludes followups.
+			if (!this.options.jsonInteractive) {
+				extensionHost.sendWebviewMessage({
+					type: "yoloMode",
+					bool: Boolean(this.options.ci || this.options.yolo),
+				})
+			}
 
 			// Request router models after configuration is injected
 			void this.requestRouterModels()
@@ -224,7 +324,7 @@ export class CLI {
 		// Render UI with store
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
-		const shouldDisableStdin = this.options.ci || !process.stdin.isTTY
+		const shouldDisableStdin = this.options.jsonInteractive || this.options.ci || !process.stdin.isTTY
 
 		this.ui = render(
 			React.createElement(App, {
@@ -233,7 +333,9 @@ export class CLI {
 					mode: this.options.mode || "code",
 					workspace: this.options.workspace || process.cwd(),
 					ci: this.options.ci || false,
+					yolo: this.options.yolo || false,
 					json: this.options.json || false,
+					jsonInteractive: this.options.jsonInteractive || false,
 					prompt: this.options.prompt || "",
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
 					parallel: this.options.parallel || false,
@@ -317,7 +419,7 @@ export class CLI {
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
 
-			await this.sessionService?.destroy()
+			await this.sessionService?.doSync(true)
 
 			// Signal codes take precedence over CI logic
 			if (signal === "SIGINT") {

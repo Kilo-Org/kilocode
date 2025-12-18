@@ -78,6 +78,12 @@
 				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Mida del Lot d'Incrustació",
+			"embeddingBatchSizeDescription": "Nombre de segments de codi a agrupar per a la generació d'incrustacions i actualitzacions del magatzem vectorial. Valors més alts poden millorar la velocitat d'indexació però poden augmentar l'ús de memòria. Valors més baixos redueixen l'ús de memòria però poden alentir la indexació.",
+			"scannerMaxBatchRetriesLabel": "Nombre Màxim de Reintents de Lot de l'Escàner",
+			"scannerMaxBatchRetriesDescription": "Nombre màxim de vegades per reintentar un lot fallit durant l'escaneig de directoris. Valors més alts augmenten la resiliència als errors transitoris però poden alentir la indexació si els errors persisteixen. Valors més baixos fallen més ràpidament però poden ometre contingut en problemes temporals."
+		},
 		"systemNotifications": {
 			"label": "Activar notificacions del sistema",
 			"description": "Quan està activat, Kilo Code enviarà notificacions del sistema per a esdeveniments importants com la finalització de tasques o errors.",
@@ -225,7 +231,25 @@
 			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
 			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
-			"provider": "Proveïdor"
+			"provider": "Proveïdor",
+			"enableChatAutocomplete": {
+				"description": "Quan està activat, Kilo Code suggerirà complecions mentre escriviu a l'entrada del xat. Premeu Tab per acceptar els suggeriments.",
+				"label": "Autocompletat d'entrada de xat"
+			},
+			"snooze": {
+				"label": "Posposar Autocomplete",
+				"description": "Pausa temporalment els suggeriments d'autocompletat durant un temps especificat.",
+				"button": "Posposar",
+				"unsnooze": "Reactivar",
+				"currentlySnoozed": "L'autocompletat està actualment posposat.",
+				"duration": {
+					"1min": "1 minut",
+					"5min": "5 minuts",
+					"15min": "15 minuts",
+					"30min": "30 minuts",
+					"1hour": "1 hora"
+				}
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +306,31 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
+	},
+	"deviceAuth": {
+		"title": "Inicia sessió a Kilo Code",
+		"step1": "Obre la següent URL al teu navegador",
+		"step2": "Verifica el codi i autoritza aquest dispositiu al teu navegador",
+		"scanQr": "O escaneja aquest codi QR amb el teu telèfon",
+		"openBrowser": "Obre el navegador",
+		"copyUrl": "Copia l'URL",
+		"waiting": "Esperant autorització...",
+		"timeRemaining": "El codi caduca en {{time}}",
+		"success": "Sessió iniciada correctament!",
+		"authenticatedAs": "Autenticat com a {{email}}",
+		"error": "Error d'autenticació",
+		"unknownError": "S'ha produït un error. Torna-ho a provar.",
+		"cancel": "Cancel·la",
+		"retry": "Torna-ho a provar",
+		"tryAgain": "Torna-ho a provar",
+		"cancelled": "Autenticació cancel·lada",
+		"initiating": "Iniciant autenticació..."
+	},
+	"speechToText": {
+		"stopRecording": "Atura l'entrada de veu",
+		"startRecording": "Inicia l'entrada de veu",
+		"unavailableFfmpegNotInstalled": "La transcripció de veu a text no està disponible. Instal·leu FFmpeg per utilitzar la transcripció de veu.",
+		"unavailableOpenAiKeyMissing": "La transcripció de veu a text no està disponible. Requereix un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+		"unavailableBoth": "La conversió de veu a text no està disponible. Requereix un proveïdor vàlid d'OpenAI i FFmpeg ha d'estar instal·lat."
 	}
 }

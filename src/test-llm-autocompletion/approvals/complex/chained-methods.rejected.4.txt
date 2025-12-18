@@ -1,0 +1,13 @@
+const result = [1, 2, 3]
+	.map(x => x * 2)
+	.filter(x => x > 2)
+	.reduce((acc, x) => acc + x, 0)
+
+console.log(result)
+
+const result2 = [1, 2, 3]
+	.map(x => x * 2)
+	.filter(x => x > 2)
+	.reduce((acc, x) => acc + x, 0)
+
+console.log(result2)

@@ -80,6 +80,22 @@ _Complete settings panel view_
 **Risk level:** Medium
 
 While this setting only allows reading files (not modifying them), it could potentially expose sensitive data. Still recommended as a starting point for most users, but be mindful of what files Kilo Code can access.
+
+#### Read Outside Workspace
+
+**Setting:** "Allow reading files outside the workspace"
+
+**Description:** "When enabled, Kilo Code can read files outside the current workspace directory without asking for approval."
+
+**Risk level:** Medium-High
+
+This setting extends read permissions beyond your project folder. Consider the security implications:
+
+- Kilo Code could access sensitive files in your home directory
+- Configuration files, SSH keys, or credentials could be read
+- Only enable if you trust the AI and need it to access external files
+
+**Recommendation:** Keep disabled unless you specifically need Kilo Code to read files outside your project.
 :::
 
 ### Write Operations
@@ -102,25 +118,52 @@ This setting allows Kilo Code to modify your files without confirmation. The del
 - Lower values: Use only when speed is critical and you're in a controlled environment
 - Zero: No delay for diagnostics (not recommended for critical code)
 
-#### Write Delay & Problems Pane Integration
+#### Write Outside Workspace
 
-<img src="/docs/img/auto-approving-actions/auto-approving-actions-5.png" alt="VSCode Problems pane showing diagnostic information" width="600" />
+**Setting:** "Allow writing files outside the workspace"
 
-_VSCode Problems pane that Kilo Code checks during the write delay_
+**Description:** "When enabled, Kilo Code can create or modify files outside the current workspace directory without asking for approval."
 
-When you enable auto-approval for writing files, the delay timer works with VSCode's Problems pane:
+**Risk level:** Very High
 
-1. Kilo Code makes a change to your file
-2. VSCode's diagnostic tools analyze the change
-3. The Problems pane updates with any errors or warnings
-4. Kilo Code notices these issues before continuing
+Use with caution and in controlled environments. It allows Kilo Code to:
 
-This works like a human developer pausing to check for errors after changing code. You can adjust the delay time based on:
+- Modify your shell configuration files
+- Change system configurations
+- Write to any location your user has access to
 
-- Project complexity
-- Language server speed
-- How important error detection is for your workflow
-  :::
+**Recommendation:** Keep disabled unless absolutely necessary. Even experienced users should avoid this setting.
+
+#### Write to Protected Files
+
+**Setting:** "Allow writing to protected files"
+
+**Description:** "When enabled, Kilo Code can overwrite or modify files that are normally protected by the `.kilocodeignore` file."
+
+**Risk level:** Very High
+
+Protected files are intentionally shielded from modification. Enable only if you understand the consequences.
+
+### Delete Operations
+
+:::danger Delete Operations
+
+**Setting:** "Always approve delete operations"
+
+**Description:** "Automatically delete files and directories without requiring approval"
+
+**Risk level:** Very High
+
+This setting allows Kilo Code to permanently remove files without confirmation.
+
+**Safeguards:**
+
+- Kilo Code still respects `.kilocodeignore` rules
+- Protected files cannot be deleted
+- The delete tool shows what will be removed before execution
+
+**Recommendation:** Enable only in isolated environments or when working with temporary/generated files. Always ensure you have backups, checkpoints, or version control.
+:::
 
 ### Browser Actions
 
@@ -153,11 +196,11 @@ Consider the security implications of allowing automated browser access.
 
 **Description:** "Automatically retry failed API requests when server returns an error response"
 
-**Delay slider:** "Delay before retrying the request" (Default: 5s)
-
 **Risk level:** Low
 
-This setting automatically retries API calls when they fail. The delay controls how long Kilo Code waits before trying again:
+This setting automatically retries API calls when they fail.
+
+The delay controls how long Kilo Code waits before trying again:
 
 - Longer delays are gentler on API rate limits
 - Shorter delays give faster recovery from transient errors
@@ -214,23 +257,34 @@ Enables Kilo Code to create and complete subtasks automatically. This relates to
 
 **Description:** "Automatically execute allowed terminal commands without requiring approval"
 
-**Command management:** "Command prefixes that can be auto-executed when 'Always approve execute operations' is enabled. Add \* to allow all commands (use with caution)."
-
 **Risk level:** High
 
-This setting allows terminal command execution with controls. While risky, the whitelist feature limits what commands can run. Important security features:
+This setting allows terminal command execution with controls. While risky, the allowlist and denylist features limit what commands can run.
 
-- Whitelist specific command prefixes (recommended)
+- Allowlist specific command prefixes (recommended)
 - Never use \* wildcard in production or with sensitive data
 - Consider security implications of each allowed command
+- Consider including potentially dangerous common commands in the deny list
 - Always verify commands that interact with external systems
+
+#### Allowed Commands
+
+**Setting:** "Command prefixes that can be auto-executed"
+
+Add command prefixes (e.g., `git`, `npm`, `ls`) that Kilo Code can run without asking. Use `*` to allow all commands (use with caution).
 
 **Interface elements:**
 
 - Text field to enter command prefixes (e.g., 'git')
 - "Add" button to add new prefixes
 - Clickable command buttons with X to remove them
-  :::
+
+#### Denied Commands
+
+**Setting:** "Command prefixes that are always blocked"
+
+Commands in this list will never run, even if `*` is in the allowed list. Use this to create exceptions for potentially dangerous commands.
+:::
 
 ### Follow-Up Questions
 
@@ -240,9 +294,9 @@ This setting allows terminal command execution with controls. While risky, the w
 
 **Description:** Automatically selects the first AI-suggested answer for a follow-up question after a configurable timeout. This speeds up your workflow by letting Kilo Code proceed without manual intervention.
 
-**Visual countdown:** When enabled, a countdown timer appears on the first suggestion button, showing the remaining time before auto-selection. The timer is displayed as a circular progress indicator that depletes as time passes.
+**Visual countdown:** When enabled, a countdown timer appears on the first suggestion button in the chat interface, showing the remaining time before auto-selection. The timer displays seconds remaining (e.g., "3s") and counts down in real-time.
 
-**Timeout slider:** Use the slider to set the wait time from 1 to 300 seconds (Default: 60s).
+**Timeout slider:** Use the slider to set the wait time (Range: 1-300 seconds, Default: 60s).
 
 **Override options:** You can cancel the auto-selection at any time by:
 
@@ -277,13 +331,6 @@ This setting allows Kilo Code to automatically update task progress and todo lis
 - Updating task status (pending, in progress, completed)
 - Reorganizing task priorities
 
-**Benefits:**
-
-- Maintains real-time task progress visibility
-- Reduces interruptions during multi-step workflows
-- Keeps project status accurately reflected
-- Helps track complex task dependencies
-
 **Use cases:**
 
 - Long-running development sessions
@@ -294,7 +341,7 @@ This setting allows Kilo Code to automatically update task progress and todo lis
 This is particularly useful when combined with the Subtasks permission, as it allows Kilo Code to maintain a complete picture of project progress without constant approval requests.
 :::
 
-## YOLO mode
+## YOLO Mode
 
 :::danger YOLO Mode (Risk: Maximum)
 

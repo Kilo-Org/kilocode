@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Organisationslink in die Zwischenablage kopiert",
 		"shareSuccessPublic": "Öffentlicher Link in die Zwischenablage kopiert",
 		"openInCloud": "Aufgabe in Roo Code Cloud öffnen",
-		"openInCloudIntro": "Überwache oder interagiere mit Roo von überall aus. Scanne, klicke oder kopiere zum Öffnen."
+		"openInCloudIntro": "Überwache oder interagiere mit Roo von überall aus. Scanne, klicke oder kopiere zum Öffnen.",
+		"openApiHistory": "API-Verlauf öffnen",
+		"openUiHistory": "UI-Verlauf öffnen"
 	},
 	"history": {
 		"title": "Verlauf"
@@ -142,7 +144,18 @@
 		"failed": "API-Anfrage fehlgeschlagen",
 		"streaming": "API-Anfrage...",
 		"cancelled": "API-Anfrage abgebrochen",
-		"streamingFailed": "API-Streaming fehlgeschlagen"
+		"streamingFailed": "API-Streaming fehlgeschlagen",
+		"errorTitle": "API-Fehler {{code}}",
+		"errorMessage": {
+			"docs": "Dokumentation",
+			"400": "Der Anbieter konnte die Anfrage nicht wie gestellt verarbeiten. Beende die Aufgabe und versuche einen anderen Ansatz.",
+			"401": "Authentifizierung beim Anbieter fehlgeschlagen. Bitte überprüfe deine API-Schlüssel-Konfiguration.",
+			"402": "Es sieht so aus, als ob dir die Guthaben/Credits in deinem Konto ausgegangen sind. Gehe zu deinem Anbieter und füge mehr hinzu, um fortzufahren.",
+			"403": "Nicht autorisiert. Dein API-Schlüssel ist gültig, aber der Anbieter hat sich geweigert, diese Anfrage zu erfüllen.",
+			"429": "Zu viele Anfragen. Du wirst vom Anbieter rate-limitiert. Bitte warte ein wenig, bevor du den nächsten API-Aufruf machst.",
+			"500": "Fehler auf dem Server des Anbieters. Es stimmt etwas mit der Anbieterseite nicht, mit deiner Anfrage stimmt alles.",
+			"unknown": "Unbekannter API-Fehler. Bitte kontaktiere den Roo Code Support."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -301,21 +314,21 @@
 			"goToSettingsButton": "Zu den Einstellungen"
 		},
 		"release": {
-			"heading": "Neu in der Extension:",
-			"openRouterEmbeddings": "Unterstützung für OpenRouter-Embedding-Modelle",
-			"chutesDynamic": "Chutes lädt die neuesten Modelle jetzt dynamisch",
-			"queuedMessagesFix": "Behebungen für verlorene Nachrichten in der Warteschlange"
+			"heading": "Neu in dieser Version:",
+			"contextRewind": "Verbessertes Kontext-Komprimieren ermöglicht es dir nun, den vollständigen vorherigen Kontext wiederherzustellen, wenn du zu einem Checkpoint zurückspulst",
+			"rooProvider": "Der Roo Code Cloud-Provider behält nun den Reasoning-Inhalt bei und nutzt standardmäßig native Tools für bessere Performance"
 		},
 		"cloudAgents": {
 			"heading": "Neu in der Cloud:",
-			"prFixer": "Wir stellen den <bold>PR Fixer</bold> Cloud-Agent vor, der den PR Reviewer ergänzt.",
-			"prFixerDescription": "Roo Codes PR Fixer wendet hochwertige Änderungen direkt auf deine PRs in GitHub an. Rufe ihn über einen PR-Kommentar auf und er liest den gesamten Kommentarverlauf, um Kontext, Vereinbarungen und Kompromisse zu verstehen — dann setzt er die richtige Lösung um.",
-			"tryPrFixerButton": "PR Fixer ausprobieren"
+			"specialized": "Wir stellen <bold>Explainer</bold>, <bold>Planner</bold> und <bold>Coder</bold> vor - drei spezialisierte Cloud-Agenten zur Verbesserung deiner Workflows.",
+			"description": "Die Agenten arbeiten zusammen in der Cloud und können vom Web oder über Slack ausgelöst werden.",
+			"tryButton": "Probiere Cloud-Agenten aus"
 		},
 		"careers": "Außerdem, <careersLink>wir stellen ein!</careersLink>",
-		"socialLinks": "Folge uns auf <xLink>X</xLink>, <discordLink>Discord</discordLink> oder <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Folge uns auf <xLink>X</xLink>, <discordLink>Discord</discordLink> oder <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Browser-Sitzung",
 		"rooWantsToUse": "Kilo Code möchte den Browser verwenden",
 		"consoleLogs": "Konsolenprotokolle",
 		"noNewLogs": "(Keine neuen Protokolle)",
@@ -332,8 +345,10 @@
 			"launch": "Browser starten auf {{url}}",
 			"click": "Klicken ({{coordinate}})",
 			"type": "Eingeben \"{{text}}\"",
+			"press": "{{key}} drücken",
 			"scrollDown": "Nach unten scrollen",
 			"scrollUp": "Nach oben scrollen",
+			"hover": "Hover ({{coordinate}})",
 			"close": "Browser schließen"
 		}
 	},

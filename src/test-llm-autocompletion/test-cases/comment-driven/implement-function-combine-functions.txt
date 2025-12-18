@@ -1,4 +1,5 @@
-# Description: Should fix bug described in FIXME comment
+#### Description: Should fix bug described in FIXME comment
+#### Filename: math-operations.js
 
 function addNumbers(a, b) {
     return a + b
@@ -8,4 +9,4 @@ function multiplyBy5(a) {
     return a * 5
 }
 
-// Implement function to combine above functions<<<CURSOR>>>
+// Implement function to combine above functions<<<AUTOCOMPLETE_HERE>>>

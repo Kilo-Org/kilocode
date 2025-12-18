@@ -178,7 +178,7 @@ describe("IOIntelligenceHandler", () => {
 		expect(results).toHaveLength(3)
 		expect(results[0]).toEqual({ type: "text", text: "Hello" })
 		expect(results[1]).toEqual({ type: "text", text: " world" })
-		expect(results[2]).toEqual({
+		expect(results[2]).toMatchObject({
 			type: "usage",
 			inputTokens: 10,
 			outputTokens: 5,
@@ -243,7 +243,7 @@ describe("IOIntelligenceHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
 	it("should return model info from cache when available", () => {
@@ -255,6 +255,7 @@ describe("IOIntelligenceHandler", () => {
 			description: "Llama 4 Maverick 17B model",
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 		})
 	})
 
@@ -271,6 +272,7 @@ describe("IOIntelligenceHandler", () => {
 			description: "Llama 4 Maverick 17B model",
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 		})
 	})
 

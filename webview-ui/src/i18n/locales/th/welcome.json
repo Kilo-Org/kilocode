@@ -17,6 +17,37 @@
 		}
 	},
 	"chooseProvider": "เพื่อทำสิ่งมหัศจรรย์ Kilo Code ต้องการ API key",
+	"providerSignup": {
+		"rooCloudProvider": "Roo Code Cloud Provider",
+		"rooCloudProviderHeading": "ผู้ให้บริการ Roo Code Cloud",
+		"rooCloudProviderBody": "วิธีที่ง่ายที่สุดในการใช้ Roo โมเดลฟรีและแบบเสียค่าใช้จ่ายแบบผสมที่ได้รับการคัดสรรมาในราคาถูก",
+		"rooCloudProviderSignUp": "สมัครสมาชิก Roo Code Cloud",
+		"rooCloudProviderSignUpDesc": "เข้าถึงโมเดลฟรีและแบบเสียค่าใช้จ่ายที่ได้รับการคัดสรรมา",
+		"rooCloudProviderAuthButtonText": "เชื่อมต่อกับ Roo Code Cloud",
+		"rooCloudProviderPaidModelAnnouncement": "ประกาศ: โมเดลแบบเสียเงินใน Roo Code Cloud",
+		"rooCloudProviderPaidModelAnnouncementDesc": "ผู้ให้บริการ Roo Code Cloud ตอนนี้เสนอโมเดลแบบเสียเงิน: ซื้อเครดิตและใช้สำหรับทั้งเอเจนต์คลาวด์และการอนุมาน",
+		"rooCloudProviderExplainer": "ผู้อธิบาย",
+		"rooCloudProviderExplainerDesc": "เอเจนต์เฉพาะทางสำหรับการอธิบายและการวิเคราะห์โค้ด",
+		"rooCloudProviderPlanner": "ผู้วางแผน",
+		"rooCloudProviderPlannerDesc": "เอเจนต์เฉพาะทางสำหรับการออกแบบและการวางแผนโครงการ",
+		"rooCloudProviderCoder": "นักเขียนโค้ด",
+		"rooCloudProviderCoderDesc": "เอเจนต์เฉพาะทางสำหรับการเขียนและการปรับปรุงโค้ด",
+		"rooCloudDescription": "วิธีที่ง่ายที่สุดในการใช้ Roo โมเดลฟรีและแบบเสียค่าใช้จ่ายแบบผสมที่ได้รับการคัดสรรมาในราคาถูก",
+		"learnMore": "เรียนรู้เพิ่มเติม",
+		"useAnotherProvider": "ใช้ผู้ให้บริการอื่น",
+		"useAnotherProviderDescription": "ป้อน API key และเริ่มใช้งาน",
+		"noApiKeys": "ไม่ต้องการจัดการกับ key หรือไม่? ใช้ Roo Code Cloud Provider",
+		"getStarted": "เริ่มต้นใช้งาน"
+	},
+	"waitingForCloud": {
+		"heading": "กำลังพาคุณไปยัง Roo Code Cloud...",
+		"description": "ดำเนินการสมัครสมาชิกในเบราว์เซอร์ของคุณให้เสร็จสิ้น จากนั้นคุณจะกลับมาที่นี่โดยอัตโนมัติ",
+		"noPrompt": "หากคุณไม่ได้รับการแจ้งให้เปิด URL <clickHere>คลิกที่นี่</clickHere>",
+		"havingTrouble": "หากคุณดำเนินการสมัครสมาชิกเสร็จสิ้นแล้วแต่มีปัญหา <clickHere>คลิกที่นี่</clickHere>",
+		"pasteUrl": "วาง URL callback จากเบราว์เซอร์ของคุณ:",
+		"invalidURL": "นี่ดูไม่เหมือน callback URL ที่ถูกต้อง โปรดคัดลอกสิ่งที่ Roo Code Cloud แสดงในเบราว์เซอร์ของคุณ",
+		"goBack": "ย้อนกลับ"
+	},
 	"startRouter": "เราแนะนำให้ใช้ LLM Router:",
 	"startCustom": "หรือคุณสามารถใช้ API key ของผู้ให้บริการของคุณเอง:",
 	"telemetry": {

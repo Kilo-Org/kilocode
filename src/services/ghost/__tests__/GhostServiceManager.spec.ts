@@ -1,388 +1,355 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
-import { MockWorkspace } from "./MockWorkspace"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import * as vscode from "vscode"
-import { parseGhostResponse } from "../classic-auto-complete/HoleFiller"
-import { extractPrefixSuffix } from "../types"
+import { GhostServiceManager } from "../GhostServiceManager"
 
-vi.mock("vscode", () => ({
-	Uri: {
-		parse: (uriString: string) => ({
-			toString: () => uriString,
-			fsPath: uriString.replace("file://", ""),
-			scheme: "file",
-			path: uriString.replace("file://", ""),
-		}),
-	},
-	Position: class {
+vi.mock("vscode", () => {
+	class Position {
 		constructor(
 			public line: number,
 			public character: number,
 		) {}
-	},
-	Range: class {
+	}
+
+	class Range {
 		constructor(
 			public start: any,
 			public end: any,
 		) {}
-	},
-	WorkspaceEdit: class {
-		private _edits = new Map()
+	}
 
-		insert(uri: any, position: any, newText: string) {
-			const key = uri.toString()
-			if (!this._edits.has(key)) {
-				this._edits.set(key, [])
-			}
-			this._edits.get(key).push({ range: { start: position, end: position }, newText })
+	class CancellationTokenSource {
+		public token = {
+			isCancellationRequested: false,
+			onCancellationRequested: vi.fn(),
 		}
 
-		delete(uri: any, range: any) {
-			const key = uri.toString()
-			if (!this._edits.has(key)) {
-				this._edits.set(key, [])
-			}
-			this._edits.get(key).push({ range, newText: "" })
+		dispose = vi.fn()
+	}
+
+	return {
+		Uri: {
+			parse: (uriString: string) => ({
+				toString: () => uriString,
+				fsPath: uriString.replace("file://", ""),
+				scheme: "file",
+				path: uriString.replace("file://", ""),
+			}),
+		},
+		Position,
+		Range,
+		CancellationTokenSource,
+		InlineCompletionTriggerKind: {
+			Invoke: 1,
+		},
+		workspace: {
+			openTextDocument: vi.fn(),
+			applyEdit: vi.fn(),
+			asRelativePath: vi.fn().mockImplementation((uri) => {
+				if (typeof uri === "string") return uri.replace("file:///", "")
+				return uri.toString().replace("file:///", "")
+			}),
+		},
+		window: {
+			activeTextEditor: null as any,
+		},
+		languages: {
+			registerInlineCompletionItemProvider: vi.fn(),
+		},
+		commands: {
+			executeCommand: vi.fn(),
+		},
+	}
+})
+
+vi.mock("../GhostModel", () => {
+	class GhostModel {
+		public loaded = false
+		public profileName = "test-profile"
+
+		public async reload(): Promise<void> {
+			this.loaded = true
 		}
 
-		entries() {
-			return Array.from(this._edits.entries()).map(([uriString, edits]) => [{ toString: () => uriString }, edits])
+		public getModelName(): string {
+			return "test-model"
 		}
-	},
-	workspace: {
-		openTextDocument: vi.fn(),
-		applyEdit: vi.fn(),
-		asRelativePath: vi.fn().mockImplementation((uri) => {
-			if (typeof uri === "string") {
-				return uri.replace("file:///", "")
-			}
-			return uri.toString().replace("file:///", "")
-		}),
-	},
-	window: {
-		activeTextEditor: null,
+
+		public getProviderDisplayName(): string {
+			return "test-provider"
+		}
+
+		public hasValidCredentials(): boolean {
+			return true
+		}
+	}
+
+	return { GhostModel }
+})
+
+vi.mock("../GhostStatusBar", () => {
+	class GhostStatusBar {
+		public update = vi.fn()
+		public dispose = vi.fn()
+		constructor(_args: any) {}
+	}
+	return { GhostStatusBar }
+})
+
+vi.mock("../GhostCodeActionProvider", () => {
+	class GhostCodeActionProvider {}
+	return { GhostCodeActionProvider }
+})
+
+vi.mock("../classic-auto-complete/GhostInlineCompletionProvider", () => {
+	class GhostInlineCompletionProvider {
+		public provideInlineCompletionItems_Internal = vi.fn()
+		public dispose = vi.fn()
+
+		constructor(..._args: any[]) {}
+	}
+	return { GhostInlineCompletionProvider }
+})
+
+vi.mock("../classic-auto-complete/AutocompleteTelemetry", () => {
+	class AutocompleteTelemetry {}
+	return { AutocompleteTelemetry }
+})
+
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureEvent: vi.fn(),
+		},
 	},
 }))
 
-describe("GhostServiceManager", () => {
-	let mockWorkspace: MockWorkspace
+vi.mock("../../../core/kilocode/wrapper", () => ({
+	getKiloCodeWrapperProperties: () => ({ kiloCodeWrapperJetbrains: false }),
+}))
 
-	beforeEach(() => {
-		vi.clearAllMocks()
-		mockWorkspace = new MockWorkspace()
+vi.mock("../../../core/config/ContextProxy", () => {
+	const state: Record<string, any> = {}
 
-		vi.mocked(vscode.workspace.openTextDocument).mockImplementation(async (uri: any) => {
-			const uriObj = typeof uri === "string" ? vscode.Uri.parse(uri) : uri
-			return await mockWorkspace.openTextDocument(uriObj)
-		})
-		vi.mocked(vscode.workspace.applyEdit).mockImplementation(async (edit) => {
-			await mockWorkspace.applyEdit(edit)
-			return true
-		})
-	})
-
-	// Helper function to set up test document
-	async function setupTestDocument(filename: string, content: string) {
-		const testUri = vscode.Uri.parse(`file://${filename}`)
-		mockWorkspace.addDocument(testUri, content)
-		;(vscode.window as any).activeTextEditor = {
-			document: { uri: testUri },
-		}
-
-		const mockDocument = await mockWorkspace.openTextDocument(testUri)
-		;(mockDocument as any).uri = testUri
-
-		return { testUri, mockDocument }
+	const api = {
+		getGlobalState: (key: string) => state[key],
+		setValues: async (values: Record<string, any>) => {
+			Object.assign(state, values)
+		},
 	}
 
-	describe("Error Handling", () => {
-		it("should handle empty responses", async () => {
-			const initialContent = `console.log('test');`
-			const { mockDocument } = await setupTestDocument("empty.js", initialContent)
+	class ContextProxy {
+		static instance = api
+	}
 
-			// Test empty response
-			const position = new vscode.Position(0, 0)
-			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
-			const result = parseGhostResponse("", prefix, suffix)
-			expect(result.text).toBe("")
-		})
+	const __resetState = () => {
+		for (const key of Object.keys(state)) delete state[key]
+	}
 
-		it("should handle invalid COMPLETION format", async () => {
-			const initialContent = `console.log('test');`
-			const { mockDocument } = await setupTestDocument("invalid.js", initialContent)
+	const __setState = (values: Record<string, any>) => {
+		Object.assign(state, values)
+	}
 
-			const invalidCOMPLETION = "This is not a valid COMPLETION format"
-			const position = new vscode.Position(0, 0)
-			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
-			const result = parseGhostResponse(invalidCOMPLETION, prefix, suffix)
-			expect(result.text).toBe("")
-		})
+	return { ContextProxy, __resetState, __setState }
+})
 
-		it("should handle file not found in context", async () => {
-			const initialContent = `console.log('test');`
-			const { mockDocument } = await setupTestDocument("missing.js", initialContent)
+type TestCline = {
+	providerSettingsManager: { initialize: () => Promise<void> }
+	postStateToWebview: () => Promise<void>
+}
 
-			const completionResponse = `<COMPLETION>// Added comment
-console.log('test');</COMPLETION>`
+async function createManager(): Promise<GhostServiceManager> {
+	const { __setState } = (await import("../../../core/config/ContextProxy")) as any
 
-			const position = new vscode.Position(0, 0)
-			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
-			const result = parseGhostResponse(completionResponse, prefix, suffix)
-			expect(result.text).toBe("// Added comment\nconsole.log('test');")
-		})
+	__setState({
+		ghostServiceSettings: {
+			enableAutoTrigger: false,
+			enableQuickInlineTaskKeybinding: true,
+			enableSmartInlineTaskKeybinding: true,
+		},
 	})
 
-	describe("codeSuggestion", () => {
-		it("should call provideInlineCompletionItems and directly insert completion", async () => {
-			// This test verifies that codeSuggestion calls the provider directly
-			// and inserts the completion without using the VSCode inline suggest UI
-			const initialContent = `console.log('test');`
-			const { mockDocument } = await setupTestDocument("test.js", initialContent)
+	const context = { subscriptions: [] } as unknown as vscode.ExtensionContext
+	const cline: TestCline = {
+		providerSettingsManager: { initialize: vi.fn().mockResolvedValue(undefined) },
+		postStateToWebview: vi.fn().mockResolvedValue(undefined),
+	}
 
-			const suggestionText = "// suggestion"
+	const manager = new GhostServiceManager(context, cline as any)
 
-			// Mock the inline completion provider
-			const mockProvider = {
-				provideInlineCompletionItems: vi.fn().mockResolvedValue([
-					{
-						insertText: suggestionText,
-						range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
-					},
-				]),
-			}
+	await manager.load()
 
-			// Mock editor.edit
-			const mockEdit = vi.fn().mockImplementation((callback) => {
-				const editBuilder = {
-					insert: vi.fn(),
-				}
-				callback(editBuilder)
-				return Promise.resolve(true)
-			})
+	return manager
+}
 
-			// Mock the GhostServiceManager instance with necessary properties
-			const mockManager = {
-				inlineCompletionProvider: mockProvider,
-				model: { loaded: true },
-				taskId: null,
-				async hasAccess(_document: any) {
-					return true
-				},
-				async load() {},
-				async codeSuggestion() {
-					const editor = vscode.window.activeTextEditor
-					if (!editor) {
-						return
-					}
+describe("GhostServiceManager (less mocked logic)", () => {
+	beforeEach(async () => {
+		vi.clearAllMocks()
 
-					const document = editor.document
-					if (!(await this.hasAccess(document))) {
-						return
-					}
+		const { __resetState } = (await import("../../../core/config/ContextProxy")) as any
+		__resetState()
+		;(vscode.window as any).activeTextEditor = null
+		vi.mocked(vscode.languages.registerInlineCompletionItemProvider).mockReset()
 
-					if (!this.model.loaded) {
-						await this.load()
-					}
+		// Reset singleton instance before each test
+		GhostServiceManager._resetInstance()
+	})
 
-					const position = editor.selection.active
-					const context: vscode.InlineCompletionContext = {
-						triggerKind: 1, // InlineCompletionTriggerKind.Invoke
-						selectedCompletionInfo: undefined,
-					}
-					const tokenSource = {
-						token: { isCancellationRequested: false, onCancellationRequested: vi.fn() },
-						dispose: vi.fn(),
-					}
+	afterEach(() => {
+		;(vscode.window as any).activeTextEditor = null
+	})
 
-					try {
-						const completions = await this.inlineCompletionProvider.provideInlineCompletionItems(
-							document,
-							position,
-							context,
-							tokenSource.token,
-						)
+	describe("codeSuggestion()", () => {
+		it("calls the provider and inserts the first completion into the editor", async () => {
+			const manager = await createManager()
 
-						if (
-							completions &&
-							(Array.isArray(completions) ? completions.length > 0 : completions.items.length > 0)
-						) {
-							const items = Array.isArray(completions) ? completions : completions.items
-							const firstCompletion = items[0]
+			const document = { uri: vscode.Uri.parse("file:///test.ts") }
+			const position = new vscode.Position(0, 0)
+			const inserted: { position?: any; text?: string } = {}
 
-							if (firstCompletion && firstCompletion.insertText) {
-								const insertText =
-									typeof firstCompletion.insertText === "string"
-										? firstCompletion.insertText
-										: firstCompletion.insertText.value
-
-								await editor.edit((editBuilder) => {
-									editBuilder.insert(position, insertText)
-								})
-							}
-						}
-					} finally {
-						tokenSource.dispose()
-					}
-				},
-			}
-
-			// Set up active editor with mock edit function
 			;(vscode.window as any).activeTextEditor = {
-				document: mockDocument,
-				selection: {
-					active: new vscode.Position(0, 0),
-				},
-				edit: mockEdit,
+				document,
+				selection: { active: position },
+				edit: vi.fn().mockImplementation(async (cb: any) => {
+					const editBuilder = {
+						insert: vi.fn((pos: any, text: string) => {
+							inserted.position = pos
+							inserted.text = text
+						}),
+					}
+					cb(editBuilder)
+					return true
+				}),
 			}
 
-			// Call codeSuggestion
-			await mockManager.codeSuggestion()
+			const provider = manager.inlineCompletionProvider as any
+			provider.provideInlineCompletionItems_Internal.mockResolvedValueOnce([
+				{
+					insertText: "// suggestion",
+					range: new vscode.Range(position, position),
+				},
+			])
 
-			// Verify that provideInlineCompletionItems was called with correct parameters
-			expect(mockProvider.provideInlineCompletionItems).toHaveBeenCalledWith(
-				mockDocument,
-				expect.any(vscode.Position),
+			await manager.codeSuggestion()
+
+			expect(provider.provideInlineCompletionItems_Internal).toHaveBeenCalledWith(
+				document,
+				position,
 				expect.objectContaining({
-					triggerKind: 1, // InlineCompletionTriggerKind.Invoke
+					triggerKind: vscode.InlineCompletionTriggerKind.Invoke,
 				}),
 				expect.any(Object),
 			)
 
-			// Verify that editor.edit was called to insert the completion
-			expect(mockEdit).toHaveBeenCalled()
+			expect(inserted.position).toBe(position)
+			expect(inserted.text).toBe("// suggestion")
 		})
 
-		it("should not call provider when no active editor", async () => {
-			const mockProvider = {
-				provideInlineCompletionItems: vi.fn(),
-			}
+		it("does nothing when there is no active editor", async () => {
+			const manager = await createManager()
 
-			const mockManager = {
-				inlineCompletionProvider: mockProvider,
-				async codeSuggestion() {
-					const editor = vscode.window.activeTextEditor
-					if (!editor) {
-						return
-					}
-					// Rest of the logic would go here
-				},
-			}
-
-			// No active editor
 			;(vscode.window as any).activeTextEditor = null
 
-			await mockManager.codeSuggestion()
+			await manager.codeSuggestion()
 
-			// Verify provider was not called
-			expect(mockProvider.provideInlineCompletionItems).not.toHaveBeenCalled()
+			const provider = manager.inlineCompletionProvider as any
+			expect(provider.provideInlineCompletionItems_Internal).not.toHaveBeenCalled()
 		})
 	})
 
-	describe("updateInlineCompletionProviderRegistration", () => {
-		it("should register provider when enableAutoTrigger is true", async () => {
-			const mockDisposable = { dispose: vi.fn() }
-			const mockRegister = vi.fn().mockReturnValue(mockDisposable)
+	describe("updateInlineCompletionProviderRegistration()", () => {
+		it("registers the provider when enableAutoTrigger is true and not snoozed", async () => {
+			const manager = await createManager()
 
-			const mockManager = {
-				settings: { enableAutoTrigger: true } as any,
-				inlineCompletionProviderDisposable: null as any,
-				inlineCompletionProvider: {} as any,
-				context: { subscriptions: [] as any[] },
-				async updateInlineCompletionProviderRegistration() {
-					const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-
-					if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable = mockRegister("*", this.inlineCompletionProvider)
-						this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-					} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable.dispose()
-						this.inlineCompletionProviderDisposable = null
-					}
-				},
+			const disposable = { dispose: vi.fn() }
+			vi.mocked(vscode.languages.registerInlineCompletionItemProvider).mockReturnValue(disposable as any)
+			;(manager as any).settings = {
+				enableAutoTrigger: true,
+				enableQuickInlineTaskKeybinding: true,
+				enableSmartInlineTaskKeybinding: true,
 			}
 
-			await mockManager.updateInlineCompletionProviderRegistration()
+			await (manager as any).updateInlineCompletionProviderRegistration()
 
-			expect(mockRegister).toHaveBeenCalledWith("*", mockManager.inlineCompletionProvider)
-			expect(mockManager.inlineCompletionProviderDisposable).toBe(mockDisposable)
-			expect(mockManager.context.subscriptions).toContain(mockDisposable)
+			expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
+				{ scheme: "file" },
+				manager.inlineCompletionProvider,
+			)
+			expect((manager as any).inlineCompletionProviderDisposable).toBe(disposable)
 		})
 
-		it("should deregister provider when enableAutoTrigger is false", async () => {
-			const mockDisposable = { dispose: vi.fn() }
+		it("does not register the provider when snoozed", async () => {
+			const manager = await createManager()
 
-			const mockManager = {
-				settings: { enableAutoTrigger: false } as any,
-				inlineCompletionProviderDisposable: mockDisposable as any,
-				inlineCompletionProvider: {} as any,
-				context: { subscriptions: [mockDisposable] as any[] },
-				async updateInlineCompletionProviderRegistration() {
-					const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-
-					if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-						// Register logic (not executed in this test)
-					} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable.dispose()
-						this.inlineCompletionProviderDisposable = null
-					}
-				},
+			vi.mocked(vscode.languages.registerInlineCompletionItemProvider).mockReturnValue({
+				dispose: vi.fn(),
+			} as any)
+			;(manager as any).settings = {
+				enableAutoTrigger: true,
+				snoozeUntil: Date.now() + 60_000,
+				enableQuickInlineTaskKeybinding: true,
+				enableSmartInlineTaskKeybinding: true,
 			}
 
-			await mockManager.updateInlineCompletionProviderRegistration()
+			await (manager as any).updateInlineCompletionProviderRegistration()
 
-			expect(mockDisposable.dispose).toHaveBeenCalled()
-			expect(mockManager.inlineCompletionProviderDisposable).toBeNull()
+			expect(vscode.languages.registerInlineCompletionItemProvider).not.toHaveBeenCalled()
+			expect((manager as any).inlineCompletionProviderDisposable).toBeNull()
 		})
 
-		it("should not register provider twice when already registered", async () => {
-			const mockDisposable = { dispose: vi.fn() }
-			const mockRegister = vi.fn().mockReturnValue(mockDisposable)
+		it("disposes an existing registration before applying the new registration decision", async () => {
+			const manager = await createManager()
 
-			const mockManager = {
-				settings: { enableAutoTrigger: true } as any,
-				inlineCompletionProviderDisposable: mockDisposable as any,
-				inlineCompletionProvider: {} as any,
-				context: { subscriptions: [mockDisposable] as any[] },
-				async updateInlineCompletionProviderRegistration() {
-					const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-
-					if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable = mockRegister("*", this.inlineCompletionProvider)
-						this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-					} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable.dispose()
-						this.inlineCompletionProviderDisposable = null
-					}
-				},
+			const existingDisposable = { dispose: vi.fn() }
+			;(manager as any).inlineCompletionProviderDisposable = existingDisposable
+			;(manager as any).settings = {
+				enableAutoTrigger: false,
+				enableQuickInlineTaskKeybinding: true,
+				enableSmartInlineTaskKeybinding: true,
 			}
 
-			await mockManager.updateInlineCompletionProviderRegistration()
+			await (manager as any).updateInlineCompletionProviderRegistration()
 
-			expect(mockRegister).not.toHaveBeenCalled()
-			expect(mockManager.inlineCompletionProviderDisposable).toBe(mockDisposable)
+			expect(existingDisposable.dispose).toHaveBeenCalledTimes(1)
+			expect((manager as any).inlineCompletionProviderDisposable).toBeNull()
+		})
+	})
+
+	describe("snooze state helpers", () => {
+		it("isSnoozed() returns false when snoozeUntil is not set", async () => {
+			const manager = await createManager()
+			;(manager as any).settings = { enableAutoTrigger: true }
+
+			expect(manager.isSnoozed()).toBe(false)
 		})
 
-		it("should not deregister when already deregistered", async () => {
-			const mockManager = {
-				settings: { enableAutoTrigger: false } as any,
-				inlineCompletionProviderDisposable: null as any,
-				inlineCompletionProvider: {} as any,
-				context: { subscriptions: [] as any[] },
-				async updateInlineCompletionProviderRegistration() {
-					const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+		it("isSnoozed() returns false when snoozeUntil is in the past", async () => {
+			const manager = await createManager()
+			;(manager as any).settings = { snoozeUntil: Date.now() - 1000 }
 
-					if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-						// Register logic (not executed in this test)
-					} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-						this.inlineCompletionProviderDisposable.dispose()
-						this.inlineCompletionProviderDisposable = null
-					}
-				},
-			}
+			expect(manager.isSnoozed()).toBe(false)
+		})
 
-			// Should not throw or cause issues
-			await mockManager.updateInlineCompletionProviderRegistration()
+		it("isSnoozed() returns true when snoozeUntil is in the future", async () => {
+			const manager = await createManager()
+			;(manager as any).settings = { snoozeUntil: Date.now() + 60_000 }
 
-			expect(mockManager.inlineCompletionProviderDisposable).toBeNull()
+			expect(manager.isSnoozed()).toBe(true)
+		})
+
+		it("getSnoozeRemainingSeconds() returns 0 when not snoozed", async () => {
+			const manager = await createManager()
+			;(manager as any).settings = {}
+
+			expect(manager.getSnoozeRemainingSeconds()).toBe(0)
+		})
+
+		it("getSnoozeRemainingSeconds() returns a positive number when snoozed", async () => {
+			const manager = await createManager()
+			;(manager as any).settings = { snoozeUntil: Date.now() + 30_000 }
+
+			const remaining = manager.getSnoozeRemainingSeconds()
+			expect(remaining).toBeGreaterThan(0)
+			expect(remaining).toBeLessThanOrEqual(30)
 		})
 	})
 })

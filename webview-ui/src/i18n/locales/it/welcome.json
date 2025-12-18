@@ -17,6 +17,24 @@
 		}
 	},
 	"chooseProvider": "Per fare la sua magia, Kilo Code ha bisogno di una chiave API.",
+	"providerSignup": {
+		"rooCloudProvider": "Provider Roo Code Cloud",
+		"rooCloudDescription": "Il modo più semplice per usare Roo. Un mix curato di modelli gratuiti e a pagamento a basso costo",
+		"learnMore": "scopri di più",
+		"useAnotherProvider": "Usa un altro provider",
+		"useAnotherProviderDescription": "Inserisci una chiave API e inizia.",
+		"noApiKeys": "Non vuoi occuparti di chiavi? Scegli il Provider Roo Code Cloud.",
+		"getStarted": "Inizia"
+	},
+	"waitingForCloud": {
+		"heading": "Ti stiamo portando a Roo Code Cloud...",
+		"description": "Completa l'iscrizione nel tuo browser e tornerai qui automaticamente.",
+		"noPrompt": "Se non ti viene chiesto di aprire un URL, <clickHere>fai clic qui</clickHere>.",
+		"havingTrouble": "Se hai completato l'iscrizione ma hai problemi, <clickHere>fai clic qui</clickHere>.",
+		"pasteUrl": "Incolla l'URL di callback dal tuo browser:",
+		"invalidURL": "Questo non sembra un URL di callback valido. Copia quello che Roo Code Cloud mostra nel tuo browser.",
+		"goBack": "Indietro"
+	},
 	"startRouter": "Consigliamo di utilizzare un router LLM:",
 	"startCustom": "Oppure puoi utilizzare la tua chiave API:",
 	"telemetry": {

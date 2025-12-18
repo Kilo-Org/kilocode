@@ -1,3 +1,0 @@
-# Description: Should complete closing brace for function
-function test() {
-	console.log('hello')<<<AUTOCOMPLETE_HERE>>>

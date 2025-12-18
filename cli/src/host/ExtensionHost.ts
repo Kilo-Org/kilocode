@@ -965,6 +965,78 @@ export class ExtensionHost extends EventEmitter {
 				updatedSettings: { experiments },
 			})
 		}
+
+		// Sync auto-approval settings to the extension
+		// These settings control whether the extension auto-approves operations
+		// or defers to the CLI's approval flow (which prompts the user)
+		const autoApprovalSettings: Record<string, unknown> = {}
+
+		// Only include settings that are explicitly set in configState
+		if (configState.autoApprovalEnabled !== undefined) {
+			autoApprovalSettings.autoApprovalEnabled = configState.autoApprovalEnabled
+		}
+		if (configState.alwaysAllowReadOnly !== undefined) {
+			autoApprovalSettings.alwaysAllowReadOnly = configState.alwaysAllowReadOnly
+		}
+		if (configState.alwaysAllowReadOnlyOutsideWorkspace !== undefined) {
+			autoApprovalSettings.alwaysAllowReadOnlyOutsideWorkspace = configState.alwaysAllowReadOnlyOutsideWorkspace
+		}
+		if (configState.alwaysAllowWrite !== undefined) {
+			autoApprovalSettings.alwaysAllowWrite = configState.alwaysAllowWrite
+		}
+		if (configState.alwaysAllowWriteOutsideWorkspace !== undefined) {
+			autoApprovalSettings.alwaysAllowWriteOutsideWorkspace = configState.alwaysAllowWriteOutsideWorkspace
+		}
+		if (configState.alwaysAllowWriteProtected !== undefined) {
+			autoApprovalSettings.alwaysAllowWriteProtected = configState.alwaysAllowWriteProtected
+		}
+		if (configState.alwaysAllowBrowser !== undefined) {
+			autoApprovalSettings.alwaysAllowBrowser = configState.alwaysAllowBrowser
+		}
+		if (configState.alwaysApproveResubmit !== undefined) {
+			autoApprovalSettings.alwaysApproveResubmit = configState.alwaysApproveResubmit
+		}
+		if (configState.requestDelaySeconds !== undefined) {
+			autoApprovalSettings.requestDelaySeconds = configState.requestDelaySeconds
+		}
+		if (configState.alwaysAllowMcp !== undefined) {
+			autoApprovalSettings.alwaysAllowMcp = configState.alwaysAllowMcp
+		}
+		if (configState.alwaysAllowModeSwitch !== undefined) {
+			autoApprovalSettings.alwaysAllowModeSwitch = configState.alwaysAllowModeSwitch
+		}
+		if (configState.alwaysAllowSubtasks !== undefined) {
+			autoApprovalSettings.alwaysAllowSubtasks = configState.alwaysAllowSubtasks
+		}
+		if (configState.alwaysAllowExecute !== undefined) {
+			autoApprovalSettings.alwaysAllowExecute = configState.alwaysAllowExecute
+		}
+		if (configState.allowedCommands !== undefined) {
+			autoApprovalSettings.allowedCommands = configState.allowedCommands
+		}
+		if (configState.deniedCommands !== undefined) {
+			autoApprovalSettings.deniedCommands = configState.deniedCommands
+		}
+		if (configState.alwaysAllowFollowupQuestions !== undefined) {
+			autoApprovalSettings.alwaysAllowFollowupQuestions = configState.alwaysAllowFollowupQuestions
+		}
+		if (configState.followupAutoApproveTimeoutMs !== undefined) {
+			autoApprovalSettings.followupAutoApproveTimeoutMs = configState.followupAutoApproveTimeoutMs
+		}
+		if (configState.alwaysAllowUpdateTodoList !== undefined) {
+			autoApprovalSettings.alwaysAllowUpdateTodoList = configState.alwaysAllowUpdateTodoList
+		}
+
+		// Send auto-approval settings if any are present
+		if (Object.keys(autoApprovalSettings).length > 0) {
+			await this.sendWebviewMessage({
+				type: "updateSettings",
+				updatedSettings: autoApprovalSettings,
+			})
+			logs.debug("Auto-approval settings synchronized to extension", "ExtensionHost", {
+				settings: Object.keys(autoApprovalSettings),
+			})
+		}
 	}
 
 	/**

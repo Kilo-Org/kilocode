@@ -27,6 +27,17 @@ export class CodeIndexOrchestrator {
 		private readonly fileWatcher: IFileWatcher,
 	) {}
 
+	// kilocode_change start
+	/**
+	 * Updates the batch segment threshold for both scanner and file watcher
+	 * @param newThreshold New batch segment threshold value
+	 */
+	public updateBatchSegmentThreshold(newThreshold: number): void {
+		this.scanner.updateBatchSegmentThreshold(newThreshold)
+		this.fileWatcher.updateBatchSegmentThreshold(newThreshold)
+	}
+	// kilocode_change end
+
 	/**
 	 * Starts the file watcher if not already running.
 	 */
