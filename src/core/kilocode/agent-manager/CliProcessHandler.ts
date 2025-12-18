@@ -37,6 +37,7 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
+	provisionalSessionId?: string // Temporary session ID created when api_req_started arrives (before session_created)
 }
 
 interface ActiveProcessInfo {
@@ -60,6 +61,7 @@ export interface CliProcessHandlerCallbacks {
 	onSessionCreated: (sawApiReqStarted: boolean) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
+	onSessionRenamed?: (oldId: string, newId: string) => void // Called when provisional session is upgraded to real session ID
 }
 
 export class CliProcessHandler {
@@ -365,10 +367,11 @@ export class CliProcessHandler {
 				}
 				return
 			}
-			// Track api_req_started that arrives before session_created
-			// This is needed so KilocodeEventProcessor knows the user echo has already happened
+			// Handle kilocode events during pending state
 			if (event.streamEventType === "kilocode") {
 				const payload = (event as KilocodeStreamEvent).payload
+
+				// Handle error cases that should abort session creation
 				if (payload?.ask === "payment_required_prompt") {
 					this.handlePaymentRequiredDuringPending(payload)
 					return
@@ -377,11 +380,34 @@ export class CliProcessHandler {
 					this.handleApiReqFailedDuringPending(payload)
 					return
 				}
+
+				// Track api_req_started for KilocodeEventProcessor
 				if (payload?.say === "api_req_started") {
 					this.pendingProcess.sawApiReqStarted = true
 					this.debugLog(`Captured api_req_started before session_created`)
 				}
+
+				// Create provisional session on first content event (text, api_req_started, etc.)
+				// This ensures we don't lose the user's prompt echo or other early events
+				if (!this.pendingProcess.provisionalSessionId) {
+					this.createProvisionalSession(proc)
+				}
+
+				// Forward the event to the provisional session
+				if (this.pendingProcess?.provisionalSessionId) {
+					onCliEvent(this.pendingProcess.provisionalSessionId, event)
+					this.callbacks.onStateChanged()
+				}
+				return
 			}
+
+			// If we have a provisional session, forward non-kilocode events to it
+			if (this.pendingProcess?.provisionalSessionId) {
+				onCliEvent(this.pendingProcess.provisionalSessionId, event)
+				this.callbacks.onStateChanged()
+				return
+			}
+
 			// Events before session_created are typically status messages
 			if (event.streamEventType === "status") {
 				this.debugLog(`Pending session status: ${event.message}`)
@@ -395,6 +421,50 @@ export class CliProcessHandler {
 			onCliEvent(sessionId, event)
 			this.callbacks.onStateChanged()
 		}
+	}
+
+	/**
+	 * Create a provisional session when api_req_started arrives before session_created.
+	 * This allows streaming content to show immediately instead of waiting for session_created.
+	 * The session ID will be updated when the real session_created event arrives.
+	 */
+	private createProvisionalSession(proc: ChildProcess): void {
+		if (!this.pendingProcess || this.pendingProcess.provisionalSessionId) {
+			return
+		}
+
+		// Generate a temporary session ID (will be replaced when session_created arrives)
+		const provisionalId = `provisional-${Date.now()}`
+		this.pendingProcess.provisionalSessionId = provisionalId
+
+		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser } = this.pendingProcess
+
+		// Create the session in the registry
+		this.registry.createSession(provisionalId, prompt, startTime, {
+			parallelMode,
+			labelOverride: desiredLabel,
+			gitUrl,
+		})
+
+		// Move to active sessions so events get forwarded
+		this.activeSessions.set(provisionalId, {
+			process: proc,
+			parser,
+		})
+
+		if (proc.pid) {
+			this.registry.setSessionPid(provisionalId, proc.pid)
+		}
+
+		// Clear the pending session UI state (session is now "running")
+		this.registry.clearPendingSession()
+		this.callbacks.onPendingSessionChanged(null)
+		// Pass the actual sawApiReqStarted value - it may be false if provisional session
+		// was created on a text event before api_req_started arrived
+		this.callbacks.onSessionCreated(this.pendingProcess?.sawApiReqStarted ?? false)
+
+		this.debugLog(`Created provisional session: ${provisionalId}`)
+		this.callbacks.onStateChanged()
 	}
 
 	private handlePendingTimeout(): void {
@@ -445,10 +515,45 @@ export class CliProcessHandler {
 			desiredLabel,
 			sawApiReqStarted,
 			gitUrl,
+			provisionalSessionId,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
 		const sessionId = desiredSessionId ?? event.sessionId
+
+		// Handle provisional session upgrade: we already created a session with a temporary ID,
+		// now we need to update it to use the real session ID from the CLI
+		if (provisionalSessionId) {
+			this.debugLog(`Upgrading provisional session ${provisionalSessionId} to real session ${sessionId}`)
+
+			// Update the registry: rename the session from provisional ID to real ID
+			this.registry.renameSession(provisionalSessionId, sessionId)
+
+			// Update activeSessions map: move from provisional ID to real ID
+			const activeInfo = this.activeSessions.get(provisionalSessionId)
+			if (activeInfo) {
+				this.activeSessions.delete(provisionalSessionId)
+				this.activeSessions.set(sessionId, activeInfo)
+			}
+
+			// Notify callback so AgentManagerProvider can update its maps (sessionMessages, firstApiReqStarted, etc.)
+			this.callbacks.onSessionRenamed?.(provisionalSessionId, sessionId)
+
+			// Apply worktree branch if captured from welcome event
+			if (worktreeBranch && parallelMode) {
+				this.registry.updateParallelModeInfo(sessionId, { branch: worktreeBranch })
+				this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
+			}
+
+			// Clear pending process state (session is already active)
+			this.pendingProcess = null
+
+			this.debugLog(`Session upgraded: ${sessionId}`)
+			this.callbacks.onStateChanged()
+			return
+		}
+
+		// Normal path: no provisional session, create the session now
 		const existing = this.registry.getSession(sessionId)
 
 		let session: ReturnType<typeof this.registry.createSession>
