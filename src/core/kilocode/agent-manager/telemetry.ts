@@ -35,6 +35,10 @@ export interface AgentManagerLoginIssueProperties {
 	stderrPreview?: string
 	/** For session_timeout: whether shell PATH was captured and used */
 	hadShellPath?: boolean
+	// Spawn error details for debugging Windows issues
+	errorMessage?: string
+	cliPath?: string
+	cliPathExtension?: string
 }
 
 export function captureAgentManagerOpened(): void {
