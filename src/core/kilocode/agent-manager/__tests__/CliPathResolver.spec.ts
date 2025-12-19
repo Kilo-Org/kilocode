@@ -132,9 +132,11 @@ describe("findExecutable", () => {
 		vi.resetModules()
 	})
 
-	const loginShellTests = isWindows ? it.skip : it
+	// These tests use Unix-style paths which are not absolute on Windows
+	// Skip on Windows - the Windows-specific behavior is tested below
+	const unixOnlyTest = isWindows ? it.skip : it
 
-	it("returns absolute path if file exists", async () => {
+	unixOnlyTest("returns absolute path if file exists", async () => {
 		const statMock = vi.fn().mockResolvedValue({ isFile: () => true })
 		vi.doMock("node:fs", () => ({
 			promises: { stat: statMock },
@@ -146,7 +148,7 @@ describe("findExecutable", () => {
 		expect(result).toBe("/usr/bin/kilocode")
 	})
 
-	it("returns undefined for absolute path if file does not exist", async () => {
+	unixOnlyTest("returns undefined for absolute path if file does not exist", async () => {
 		const statMock = vi.fn().mockRejectedValue(new Error("ENOENT"))
 		vi.doMock("node:fs", () => ({
 			promises: { stat: statMock },
@@ -158,7 +160,7 @@ describe("findExecutable", () => {
 		expect(result).toBeUndefined()
 	})
 
-	it("searches PATH entries for command", async () => {
+	unixOnlyTest("searches PATH entries for command", async () => {
 		const statMock = vi.fn().mockImplementation((filePath: string) => {
 			if (filePath === "/custom/bin/myapp") {
 				return Promise.resolve({ isFile: () => true })
@@ -277,6 +279,9 @@ describe("findExecutable", () => {
 		expect(result).toBe("/usr/bin/kilocode")
 		expect(statMock).not.toHaveBeenCalledWith(expect.stringContaining(".CMD"))
 	})
+
+	// Login shell PATH capture test - skipped on Windows
+	const loginShellTests = isWindows ? it.skip : it
 
 	loginShellTests("captures shell PATH for spawning CLI on macOS", async () => {
 		// spawnSync with stdio: ['ignore', 'pipe', 'pipe'] to prevent stdin blocking
