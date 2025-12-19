@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { useAtom, useAtomValue, useSetAtom } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
 	selectedSessionAtom,
-	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	pendingSessionAtom,
 	preferredRunModeAtom,
@@ -19,19 +18,7 @@ import { ChatInput } from "./ChatInput"
 import { BranchPicker } from "./BranchPicker"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import {
-	Loader2,
-	SendHorizontal,
-	RefreshCw,
-	GitBranch,
-	Folder,
-	ChevronDown,
-	AlertCircle,
-	Zap,
-	Layers,
-	X,
-	Plus,
-} from "lucide-react"
+import { Loader2, SendHorizontal, GitBranch, Folder, ChevronDown, AlertCircle, Zap, Layers, X } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -43,7 +30,6 @@ export function SessionDetail() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
-	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
 
 	// Hooks must be called unconditionally before any early returns
@@ -77,14 +63,6 @@ export function SessionDetail() {
 
 	if (!selectedSession) {
 		return <NewAgentForm />
-	}
-
-	const handleRefresh = () => {
-		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
-	}
-
-	const handleNew = () => {
-		setSelectedSessionId(null)
 	}
 
 	// Use state machine UI state as the single source of truth for activity/spinner
@@ -135,27 +113,6 @@ export function SessionDetail() {
 							</div>
 						)}
 					</div>
-				</div>
-
-				<div className="am-header-actions">
-					{!showSpinner && (
-						<button
-							className="am-icon-btn"
-							onClick={handleNew}
-							aria-label={t("sessionDetail.newButtonTitle")}
-							title={t("sessionDetail.newButtonTitle")}>
-							<Plus size={14} />
-						</button>
-					)}
-					{!isActive && (
-						<button
-							className="am-icon-btn"
-							onClick={handleRefresh}
-							aria-label={t("sessionDetail.refreshButtonTitle")}
-							title={t("sessionDetail.refreshButtonTitle")}>
-							<RefreshCw size={14} />
-						</button>
-					)}
 				</div>
 			</div>
 

@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.17.1
+
+### Patch Changes
+
+- [#4186](https://github.com/Kilo-Org/kilocode/pull/4186) [`6078a9c`](https://github.com/Kilo-Org/kilocode/commit/6078a9ce77512faaebcda54ea9d2e909cf6b340c) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Default read permissions now require approval for read operations outside the workspace
+
 ## 0.17.0
 
 ### Minor Changes

@@ -209,6 +209,31 @@ export class AgentRegistry {
 		return this.sessions.delete(sessionId)
 	}
 
+	/**
+	 * Rename a session from one ID to another.
+	 * Used when upgrading a provisional session to a real session ID.
+	 */
+	public renameSession(oldId: string, newId: string): boolean {
+		const session = this.sessions.get(oldId)
+		if (!session) {
+			return false
+		}
+
+		// Update the session's internal ID
+		session.sessionId = newId
+
+		// Move in the map
+		this.sessions.delete(oldId)
+		this.sessions.set(newId, session)
+
+		// Update selectedId if it was pointing to the old ID
+		if (this._selectedId === oldId) {
+			this._selectedId = newId
+		}
+
+		return true
+	}
+
 	private pruneOldSessions(): void {
 		const sessions = this.getSessions()
 		const overflow = sessions.length - MAX_SESSIONS

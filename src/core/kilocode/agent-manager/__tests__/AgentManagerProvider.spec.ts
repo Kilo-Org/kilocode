@@ -630,10 +630,23 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 	})
 
 	it("handles git URL retrieval errors gracefully", async () => {
+		// Need to recreate provider with the mock rejection set up BEFORE construction
+		// because pre-warming happens in the constructor
+		provider.dispose()
 		mockGetRemoteUrl.mockRejectedValue(new Error("No remote configured"))
-		const spawnProcessSpy = vi.spyOn((provider as any).processHandler, "spawnProcess")
 
-		await (provider as any).startAgentSession("test prompt")
+		const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 } as any
+		const mockOutputChannel = { appendLine: vi.fn() } as any
+		const mockClineProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
+
+		const module = await import("../AgentManagerProvider")
+		const newProvider = new module.AgentManagerProvider(mockContext, mockOutputChannel, mockClineProvider as any)
+
+		const spawnProcessSpy = vi.spyOn((newProvider as any).processHandler, "spawnProcess")
+
+		await (newProvider as any).startAgentSession("test prompt")
 
 		// Should still spawn process without gitUrl
 		expect(spawnProcessSpy).toHaveBeenCalledWith(
@@ -643,6 +656,8 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			expect.objectContaining({ gitUrl: undefined }),
 			expect.any(Function),
 		)
+
+		newProvider.dispose()
 	})
 
 	it("stores gitUrl on created session", async () => {

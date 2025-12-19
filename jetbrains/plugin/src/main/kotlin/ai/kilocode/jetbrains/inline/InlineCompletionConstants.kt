@@ -8,7 +8,13 @@ object InlineCompletionConstants {
      * VSCode extension command ID for inline completion generation.
      */
     const val EXTERNAL_COMMAND_ID = "kilo-code.jetbrains.getInlineCompletions"
-    
+
+    /**
+     * Command ID registered in the VSCode extension for tracking acceptance events.
+     * This matches the command registered in GhostInlineCompletionProvider.
+     */
+    const val INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.ghost.inline-completion.accepted"
+
     /**
      * Default timeout in milliseconds for inline completion requests.
      * Set to 10 seconds to allow sufficient time for LLM response.
