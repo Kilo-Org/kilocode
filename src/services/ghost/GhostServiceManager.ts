@@ -49,14 +49,13 @@ export class GhostServiceManager {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
-		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
-			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
+			new AutocompleteTelemetry(),
 		)
 
 		void this.load()

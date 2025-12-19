@@ -332,22 +332,34 @@ function getSelectedModel({
 			const info = apiConfiguration?.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
 			return { id, info }
 		}
+		// kilocode_change start - improved context window handling
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
 			const info = ollamaModels && ollamaModels[apiConfiguration.ollamaModelId!]
+			const userContextWindow = apiConfiguration?.ollamaNumCtx
 
-			const adjustedInfo =
-				info?.contextWindow &&
-				apiConfiguration?.ollamaNumCtx &&
-				apiConfiguration.ollamaNumCtx < info.contextWindow
-					? { ...info, contextWindow: apiConfiguration.ollamaNumCtx }
-					: info
+			// If user has set ollamaNumCtx, always use it as the context window (user's explicit setting takes precedence)
+			// If no user setting, use the fetched model info's context window
+			// If neither, provide a sensible default so UI doesn't show undefined
+			let adjustedInfo: ModelInfo | undefined
+			if (info) {
+				adjustedInfo = userContextWindow ? { ...info, contextWindow: userContextWindow } : info
+			} else if (userContextWindow) {
+				// No fetched model info but user has set context window - provide default model info with user's setting
+				adjustedInfo = {
+					maxTokens: userContextWindow,
+					contextWindow: userContextWindow,
+					supportsImages: true,
+					supportsPromptCache: true,
+				}
+			}
 
 			return {
 				id,
 				info: adjustedInfo || undefined,
 			}
 		}
+		// kilocode_change end
 		case "lmstudio": {
 			const id = apiConfiguration.lmStudioModelId ?? ""
 			const info = lmStudioModels && lmStudioModels[apiConfiguration.lmStudioModelId!]
