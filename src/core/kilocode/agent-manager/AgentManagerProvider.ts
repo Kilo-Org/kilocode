@@ -9,21 +9,20 @@ import {
 	isParallelModeCompletionMessage,
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
-import { findKilocodeCli } from "./CliPathResolver"
 import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { extractRawText, tryParsePayloadJson } from "./askErrorParser"
 import { RemoteSessionService } from "./RemoteSessionService"
 import { KilocodeEventProcessor } from "./KilocodeEventProcessor"
+import { CliSessionLauncher } from "./CliSessionLauncher"
 import type { RemoteSession } from "./types"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
-import type { ClineMessage } from "@roo-code/types"
-import type { ProviderSettings } from "@roo-code/types"
+import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -53,6 +52,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private remoteSessionService: RemoteSessionService
 	private processHandler: CliProcessHandler
 	private eventProcessor: KilocodeEventProcessor
+	private sessionLauncher: CliSessionLauncher
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
 	// Track first api_req_started per session to filter user-input echoes
 	private firstApiReqStarted: Map<string, boolean> = new Map()
@@ -63,9 +63,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private processStartTimes: Map<string, number> = new Map()
 	// Track currently sending message per session (for one-at-a-time constraint)
 	private sendingMessageMap: Map<string, string> = new Map()
-	// Pre-warm promises for CLI path and git URL lookups (started on construction)
-	private cliPathPromise: Promise<string | null> | null = null
-	private gitUrlPromise: Promise<string | undefined> | null = null
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -75,13 +72,14 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
 
+		// Initialize session launcher with pre-warming
+		// Pre-warming starts slow lookups (CLI: 500-2000ms, git: 50-100ms) immediately
+		// so they complete before the user clicks "Start" to reduce time-to-first-token
+		this.sessionLauncher = new CliSessionLauncher(outputChannel, () => this.getApiConfigurationForCli())
+		this.sessionLauncher.startPrewarm()
+
 		// Initialize currentGitUrl from workspace
 		void this.initializeCurrentGitUrl()
-
-		// Start pre-warming CLI path and git URL lookups immediately on construction
-		// These are slow operations (CLI: 500-2000ms, git: 50-100ms) that we want
-		// to complete before the user clicks "Start" to reduce time-to-first-token
-		this.startPrewarm()
 
 		const isDevelopment = this.context.extensionMode === vscode.ExtensionMode.Development
 
@@ -150,49 +148,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				})
 			},
 			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
-			onSessionRenamed: (oldId, newId) => {
-				// When a provisional session is upgraded to a real session ID,
-				// we need to update all maps that use session ID as key
-				this.outputChannel.appendLine(`[AgentManager] Renaming session maps: ${oldId} -> ${newId}`)
-
-				// Move sessionMessages from old ID to new ID
-				const messages = this.sessionMessages.get(oldId)
-				if (messages) {
-					this.sessionMessages.delete(oldId)
-					this.sessionMessages.set(newId, messages)
-				}
-
-				// Move firstApiReqStarted from old ID to new ID
-				const apiReqStarted = this.firstApiReqStarted.get(oldId)
-				if (apiReqStarted !== undefined) {
-					this.firstApiReqStarted.delete(oldId)
-					this.firstApiReqStarted.set(newId, apiReqStarted)
-				}
-
-				// Move processStartTimes from old ID to new ID
-				const startTime = this.processStartTimes.get(oldId)
-				if (startTime !== undefined) {
-					this.processStartTimes.delete(oldId)
-					this.processStartTimes.set(newId, startTime)
-				}
-
-				// Move sendingMessageMap from old ID to new ID
-				const sendingMessage = this.sendingMessageMap.get(oldId)
-				if (sendingMessage !== undefined) {
-					this.sendingMessageMap.delete(oldId)
-					this.sendingMessageMap.set(newId, sendingMessage)
-				}
-
-				// Re-post messages to webview with the new session ID
-				// This ensures the UI updates to show messages under the correct session
-				if (messages) {
-					this.postMessage({
-						type: "agentManager.chatMessages",
-						sessionId: newId,
-						messages,
-					})
-				}
-			},
+			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
 		}
 
 		this.processHandler = new CliProcessHandler(this.registry, callbacks)
@@ -247,9 +203,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			() => {
 				this.panel = undefined
 				this.stopAllAgents()
-				// Clear pre-warm promises when panel closes
-				this.cliPathPromise = null
-				this.gitUrlPromise = null
+				// Clear pre-warm state when panel closes
+				this.sessionLauncher.clearPrewarm()
 			},
 			null,
 			this.disposables,
@@ -262,49 +217,32 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Start pre-warming slow lookups (CLI path and git URL) in parallel.
-	 * Called from constructor so these complete well before user clicks "Start".
-	 * The AgentManagerProvider is instantiated when the extension activates,
-	 * giving maximum time for these slow operations to complete.
+	 * Handle session ID rename when provisional session is upgraded to real session ID.
+	 * Moves all session-keyed data from old ID to new ID.
 	 */
-	private startPrewarm(): void {
-		const prewarmStart = Date.now()
-		this.outputChannel.appendLine(`[AgentManager] Starting pre-warm lookups`)
+	private handleSessionRenamed(oldId: string, newId: string): void {
+		this.outputChannel.appendLine(`[AgentManager] Renaming session: ${oldId} -> ${newId}`)
 
-		// Pre-warm CLI path lookup (500-2000ms typically)
-		if (!this.cliPathPromise) {
-			const cliStart = Date.now()
-			this.cliPathPromise = findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`)).then(
-				(result) => {
-					this.outputChannel.appendLine(
-						`[AgentManager] Pre-warm: CLI path lookup completed in ${Date.now() - cliStart}ms`,
-					)
-					return result
-				},
-			)
+		// Helper to move a value from one key to another in a Map
+		const moveMapEntry = <T>(map: Map<string, T>, from: string, to: string): T | undefined => {
+			const value = map.get(from)
+			if (value !== undefined) {
+				map.delete(from)
+				map.set(to, value)
+			}
+			return value
 		}
 
-		// Pre-warm git URL lookup (50-100ms typically)
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-		if (!this.gitUrlPromise && workspaceFolder) {
-			const gitStart = Date.now()
-			this.gitUrlPromise = getRemoteUrl(workspaceFolder)
-				.then((url) => {
-					const normalized = normalizeGitUrl(url)
-					this.outputChannel.appendLine(
-						`[AgentManager] Pre-warm: Git URL lookup completed in ${Date.now() - gitStart}ms`,
-					)
-					return normalized
-				})
-				.catch((error) => {
-					this.outputChannel.appendLine(
-						`[AgentManager] Pre-warm: Git URL lookup failed in ${Date.now() - gitStart}ms: ${error instanceof Error ? error.message : String(error)}`,
-					)
-					return undefined
-				})
-		}
+		// Move all session-keyed data
+		const messages = moveMapEntry(this.sessionMessages, oldId, newId)
+		moveMapEntry(this.firstApiReqStarted, oldId, newId)
+		moveMapEntry(this.processStartTimes, oldId, newId)
+		moveMapEntry(this.sendingMessageMap, oldId, newId)
 
-		this.outputChannel.appendLine(`[AgentManager] Pre-warm lookups initiated in ${Date.now() - prewarmStart}ms`)
+		// Re-post messages to webview with the new session ID
+		if (messages) {
+			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
+		}
 	}
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
@@ -549,8 +487,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Common helper to spawn a CLI process with standard setup.
-	 * Handles CLI path lookup, workspace folder validation, API config, and event callback wiring.
-	 * Uses pre-warmed promises for CLI path and git URL when available (started in openPanel).
+	 * Delegates to CliSessionLauncher for pre-warming and spawning.
 	 * @returns true if process was spawned, false if setup failed
 	 */
 	private async spawnCliWithCommonSetup(
@@ -564,74 +501,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
-		const spawnStart = Date.now()
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-		if (!workspaceFolder) {
-			this.outputChannel.appendLine("ERROR: No workspace folder open")
-			onSetupFailed?.()
-			return false
-		}
-
-		// Use pre-warmed CLI path promise if available, otherwise start fresh lookup
-		const cliPathPromise =
-			this.cliPathPromise ?? findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
-
-		// Use pre-warmed git URL promise if available and no gitUrl provided in options
-		// (options.gitUrl is passed from startAgentSession which already does its own lookup)
-		const gitUrlPromise =
-			!options.gitUrl && this.gitUrlPromise
-				? this.gitUrlPromise
-				: options.gitUrl
-					? Promise.resolve(options.gitUrl)
-					: getRemoteUrl(workspaceFolder)
-							.then(normalizeGitUrl)
-							.catch(() => undefined)
-
-		// Run CLI path lookup, git URL lookup, and API config fetch in parallel
-		const [cliPath, resolvedGitUrl, apiConfiguration] = await Promise.all([
-			cliPathPromise,
-			gitUrlPromise,
-			this.getApiConfigurationForCli().catch((error) => {
-				this.outputChannel.appendLine(
-					`[AgentManager] Failed to read provider settings for CLI: ${
-						error instanceof Error ? error.message : String(error)
-					}`,
-				)
-				return undefined
-			}),
-		])
-
-		this.outputChannel.appendLine(
-			`[AgentManager] Parallel lookups completed in ${Date.now() - spawnStart}ms (CLI: ${cliPath ? "found" : "not found"}, gitUrl: ${resolvedGitUrl ?? "none"})`,
-		)
-
-		// Clear pre-warm promises after use (they're single-use per panel open)
-		this.cliPathPromise = null
-		this.gitUrlPromise = null
-
-		if (!cliPath) {
-			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
-			this.showCliNotFoundError()
-			onSetupFailed?.()
-			return false
-		}
-
-		const processStartTime = Date.now()
-
-		this.processHandler.spawnProcess(
-			cliPath,
-			workspaceFolder,
+		const result = await this.sessionLauncher.spawn(
 			prompt,
-			{ ...options, gitUrl: resolvedGitUrl, apiConfiguration },
+			options,
+			this.processHandler,
 			(sid, event) => {
-				if (!this.processStartTimes.has(sid)) {
-					this.processStartTimes.set(sid, processStartTime)
+				if (result.processStartTime && !this.processStartTimes.has(sid)) {
+					this.processStartTimes.set(sid, result.processStartTime)
 				}
 				this.handleCliEvent(sid, event)
 			},
+			() => {
+				this.showCliNotFoundError()
+				onSetupFailed?.()
+			},
 		)
 
-		return true
+		return result.success
 	}
 
 	/**
@@ -1265,10 +1151,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.processHandler.dispose()
 		this.sessionMessages.clear()
 		this.firstApiReqStarted.clear()
-		// Clear pre-warm promises
-		this.cliPathPromise = null
-		this.gitUrlPromise = null
-
+		this.sessionLauncher.clearPrewarm()
 		this.panel?.dispose()
 		this.disposables.forEach((d) => d.dispose())
 	}
