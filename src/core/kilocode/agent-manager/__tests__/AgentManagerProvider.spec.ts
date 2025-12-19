@@ -6,6 +6,7 @@ const MOCK_CLI_PATH = "/mock/path/to/kilocode"
 
 // Mock the local telemetry module
 vi.mock("../telemetry", () => ({
+	getPlatformDiagnostics: vi.fn(() => ({ platform: "darwin", shell: "bash" })),
 	captureAgentManagerOpened: vi.fn(),
 	captureAgentManagerSessionStarted: vi.fn(),
 	captureAgentManagerSessionCompleted: vi.fn(),
