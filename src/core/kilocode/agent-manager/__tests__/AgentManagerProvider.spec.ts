@@ -18,8 +18,12 @@ vi.mock("../telemetry", () => ({
 }))
 
 // Mock CliPathResolver to return CliDiscoveryResult object
+// Note: vi.mock is hoisted, so we inline the platform check instead of using MOCK_CLI_PATH
 vi.mock("../CliPathResolver", () => ({
-	findKilocodeCli: vi.fn().mockResolvedValue({ cliPath: "/mock/path/to/kilocode", shellPath: undefined }),
+	findKilocodeCli: vi.fn().mockResolvedValue({
+		cliPath: process.platform === "win32" ? "C:\\mock\\path\\to\\kilocode" : "/mock/path/to/kilocode",
+		shellPath: undefined,
+	}),
 	findExecutable: vi.fn().mockResolvedValue(undefined),
 }))
 
