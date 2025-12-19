@@ -12,12 +12,13 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 			if (key === "chat:followUpSuggest.countdownDisplay" && options?.count !== undefined) {
 				return `${options.count}s`
 			}
-			if (key === "chat:followUpSuggest.autoSelectCountdown" && options?.count !== undefined) {
-				return `Auto-selecting in ${options.count} seconds`
-			}
 			if (key === "chat:followUpSuggest.copyToInput") {
 				return "Copy to input"
 			}
+			if (key === "chat:followUpSuggest.timerPrefix" && options?.seconds !== undefined) {
+				return "Auto-approve enabled. Selecting in " + options.seconds + "s…"
+			}
+
 			return key
 		},
 	}),
@@ -93,8 +94,9 @@ describe("FollowUpSuggest", () => {
 			defaultTestState,
 		)
 
-		// Should show initial countdown (3 seconds)
+		// Should countdown and mention
 		expect(screen.getByText(/3s/)).toBeInTheDocument()
+		expect(screen.getByText(/Selecting in 3s/)).toBeInTheDocument()
 	})
 
 	it("should not display countdown timer when isAnswered is true", () => {
@@ -409,5 +411,185 @@ describe("FollowUpSuggest", () => {
 
 		// onSuggestionClick should NOT have been called (component doesn't auto-select)
 		expect(mockOnSuggestionClick).not.toHaveBeenCalled()
+	})
+
+	describe("isFollowUpAutoApprovalPaused prop", () => {
+		it("should not display countdown timer when isFollowUpAutoApprovalPaused is true", () => {
+			renderWithTestProviders(
+				<FollowUpSuggest
+					suggestions={mockSuggestions}
+					onSuggestionClick={mockOnSuggestionClick}
+					ts={123}
+					onCancelAutoApproval={mockOnCancelAutoApproval}
+					isFollowUpAutoApprovalPaused={true}
+				/>,
+				defaultTestState,
+			)
+
+			// Should not show countdown when user is typing
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+		})
+
+		it("should stop countdown when user starts typing (isFollowUpAutoApprovalPaused becomes true)", () => {
+			const { rerender } = renderWithTestProviders(
+				<FollowUpSuggest
+					suggestions={mockSuggestions}
+					onSuggestionClick={mockOnSuggestionClick}
+					ts={123}
+					onCancelAutoApproval={mockOnCancelAutoApproval}
+					isFollowUpAutoApprovalPaused={false}
+				/>,
+				defaultTestState,
+			)
+
+			// Initially should show countdown
+			expect(screen.getByText(/3s/)).toBeInTheDocument()
+
+			// Simulate user starting to type by setting isFollowUpAutoApprovalPaused to true
+			rerender(
+				<TestExtensionStateProvider value={defaultTestState}>
+					<TooltipProvider>
+						<FollowUpSuggest
+							suggestions={mockSuggestions}
+							onSuggestionClick={mockOnSuggestionClick}
+							ts={123}
+							onCancelAutoApproval={mockOnCancelAutoApproval}
+							isFollowUpAutoApprovalPaused={true}
+						/>
+					</TooltipProvider>
+				</TestExtensionStateProvider>,
+			)
+
+			// Countdown should be hidden immediately when user starts typing
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+
+			// Advance timer to ensure countdown doesn't continue
+			vi.advanceTimersByTime(5000)
+
+			// onSuggestionClick should not have been called
+			expect(mockOnSuggestionClick).not.toHaveBeenCalled()
+
+			// Countdown should still not be visible
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+		})
+
+		it("should resume countdown when user clears input (isFollowUpAutoApprovalPaused becomes false)", async () => {
+			const { rerender } = renderWithTestProviders(
+				<FollowUpSuggest
+					suggestions={mockSuggestions}
+					onSuggestionClick={mockOnSuggestionClick}
+					ts={123}
+					onCancelAutoApproval={mockOnCancelAutoApproval}
+					isFollowUpAutoApprovalPaused={true}
+				/>,
+				defaultTestState,
+			)
+
+			// Should not show countdown when paused
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+
+			// Simulate user clearing input by setting isFollowUpAutoApprovalPaused to false
+			rerender(
+				<TestExtensionStateProvider value={defaultTestState}>
+					<TooltipProvider>
+						<FollowUpSuggest
+							suggestions={mockSuggestions}
+							onSuggestionClick={mockOnSuggestionClick}
+							ts={123}
+							onCancelAutoApproval={mockOnCancelAutoApproval}
+							isFollowUpAutoApprovalPaused={false}
+						/>
+					</TooltipProvider>
+				</TestExtensionStateProvider>,
+			)
+
+			// Countdown should resume from the full timeout
+			expect(screen.getByText(/3s/)).toBeInTheDocument()
+		})
+
+		it("should not show countdown when both isAnswered and isFollowUpAutoApprovalPaused are true", () => {
+			renderWithTestProviders(
+				<FollowUpSuggest
+					suggestions={mockSuggestions}
+					onSuggestionClick={mockOnSuggestionClick}
+					ts={123}
+					onCancelAutoApproval={mockOnCancelAutoApproval}
+					isAnswered={true}
+					isFollowUpAutoApprovalPaused={true}
+				/>,
+				defaultTestState,
+			)
+
+			// Should not show countdown
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+		})
+
+		it("should handle pause during countdown progress", async () => {
+			const { rerender } = renderWithTestProviders(
+				<FollowUpSuggest
+					suggestions={mockSuggestions}
+					onSuggestionClick={mockOnSuggestionClick}
+					ts={123}
+					onCancelAutoApproval={mockOnCancelAutoApproval}
+					isFollowUpAutoApprovalPaused={false}
+				/>,
+				defaultTestState,
+			)
+
+			// Initially should show 3s
+			expect(screen.getByText(/3s/)).toBeInTheDocument()
+
+			// Advance timer by 1 second
+			await act(async () => {
+				vi.advanceTimersByTime(1000)
+			})
+
+			// Should show 2s
+			expect(screen.getByText(/2s/)).toBeInTheDocument()
+
+			// User starts typing (pause)
+			rerender(
+				<TestExtensionStateProvider value={defaultTestState}>
+					<TooltipProvider>
+						<FollowUpSuggest
+							suggestions={mockSuggestions}
+							onSuggestionClick={mockOnSuggestionClick}
+							ts={123}
+							onCancelAutoApproval={mockOnCancelAutoApproval}
+							isFollowUpAutoApprovalPaused={true}
+						/>
+					</TooltipProvider>
+				</TestExtensionStateProvider>,
+			)
+
+			// Countdown should be hidden
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+
+			// Advance timer while paused
+			await act(async () => {
+				vi.advanceTimersByTime(2000)
+			})
+
+			// Countdown should still be hidden
+			expect(screen.queryByText(/\d+s/)).not.toBeInTheDocument()
+
+			// User clears input (unpause) - countdown should restart from full duration
+			rerender(
+				<TestExtensionStateProvider value={defaultTestState}>
+					<TooltipProvider>
+						<FollowUpSuggest
+							suggestions={mockSuggestions}
+							onSuggestionClick={mockOnSuggestionClick}
+							ts={123}
+							onCancelAutoApproval={mockOnCancelAutoApproval}
+							isFollowUpAutoApprovalPaused={false}
+						/>
+					</TooltipProvider>
+				</TestExtensionStateProvider>,
+			)
+
+			// Countdown should restart from full timeout (3s)
+			expect(screen.getByText(/3s/)).toBeInTheDocument()
+		})
 	})
 })

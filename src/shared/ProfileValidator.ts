@@ -85,8 +85,10 @@ export class ProfileValidator {
 				return profile.vsCodeLmModelSelector?.id
 			case "openrouter":
 				return profile.openRouterModelId
+			// kilocode_change start
 			case "glama":
 				return profile.glamaModelId
+			// kilocode_change end
 			case "ollama":
 				return profile.ollamaModelId
 			case "requesty":

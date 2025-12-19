@@ -188,10 +188,11 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 					: undefined
 				// kilocode_change end
 
+				const timeout = getApiRequestTimeout() // kilocode_change
 				this.client = new Ollama({
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
 					// kilocode_change start
-					fetch: fetchWithTimeout(getApiRequestTimeout(), headers),
+					fetch: timeout ? fetchWithTimeout(timeout, headers) : undefined,
 					headers: headers,
 					// kilocode_change end
 				})

@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
 			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
-			"sources": "Kaynaklar:"
+			"sources": "Kaynaklar:",
+			"thinking_complete_no_output": "(Düşünme tamamlandı, ancak çıktı oluşturulmadı.)",
+			"thinking_complete_truncated": "(Düşünme tamamlandı, ancak çıktı jeton sınırı nedeniyle kesildi.)",
+			"thinking_complete_safety": "(Düşünme tamamlandı, ancak çıktı güvenlik ayarları nedeniyle engellendi.)",
+			"thinking_complete_recitation": "(Düşünme tamamlandı, ancak çıktı okuma kontrolü nedeniyle engellendi.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API kimlik doğrulama başarısız oldu. API anahtarınızın geçerli olduğunu ve süresi dolmadığını kontrol edin.",

@@ -1,15 +1,25 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
+import { FoldVertical } from "lucide-react"
 
 import type { ContextCondense } from "@roo-code/types"
 
-import { Markdown } from "./Markdown"
-import { ProgressIndicator } from "./ProgressIndicator"
+import { Markdown } from "../Markdown"
 
-export const ContextCondenseRow = ({ cost, prevContextTokens, newContextTokens, summary }: ContextCondense) => {
+interface CondensationResultRowProps {
+	data: ContextCondense
+}
+
+/**
+ * Displays the result of a successful context condensation operation.
+ * Shows token reduction, cost, and an expandable summary section.
+ */
+export function CondensationResultRow({ data }: CondensationResultRowProps) {
 	const { t } = useTranslation()
 	const [isExpanded, setIsExpanded] = useState(false)
+
+	const { cost, prevContextTokens, newContextTokens, summary } = data
 
 	// Handle null/undefined token values to prevent crashes
 	const prevTokens = prevContextTokens ?? 0
@@ -21,24 +31,14 @@ export const ContextCondenseRow = ({ cost, prevContextTokens, newContextTokens, 
 			<div
 				className="flex items-center justify-between cursor-pointer select-none"
 				onClick={() => setIsExpanded(!isExpanded)}>
-				<div
-					style={{
-						width: 16,
-						height: 16,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}>
-					<span
-						className={`codicon codicon-check`}
-						style={{ color: "var(--vscode-charts-green)", fontSize: 16, marginBottom: "-1.5px" }}
-					/>
-				</div>
 				<div className="flex items-center gap-2 flex-grow">
-					<span className="codicon codicon-compress text-blue-400" />
-					<span className="font-bold text-vscode-foreground">{t("chat:contextCondense.title")}</span>
+					<FoldVertical size={16} className="text-vscode-foreground" />
+					<span className="font-bold text-vscode-foreground">
+						{t("chat:contextManagement.condensation.title")}
+					</span>
 					<span className="text-vscode-descriptionForeground text-sm">
-						{prevTokens.toLocaleString()} → {newTokens.toLocaleString()} {t("tokens")}
+						{prevTokens.toLocaleString()} → {newTokens.toLocaleString()}{" "}
+						{t("chat:contextManagement.tokens")}
 					</span>
 					<VSCodeBadge className={displayCost > 0 ? "opacity-100" : "opacity-0"}>
 						${displayCost.toFixed(2)}
@@ -52,17 +52,6 @@ export const ContextCondenseRow = ({ cost, prevContextTokens, newContextTokens, 
 					<Markdown markdown={summary} />
 				</div>
 			)}
-		</div>
-	)
-}
-
-export const CondensingContextRow = () => {
-	const { t } = useTranslation()
-	return (
-		<div className="flex items-center gap-2">
-			<ProgressIndicator />
-			<span className="codicon codicon-compress text-blue-400" />
-			<span className="font-bold text-vscode-foreground">{t("chat:contextCondense.condensing")}</span>
 		</div>
 	)
 }

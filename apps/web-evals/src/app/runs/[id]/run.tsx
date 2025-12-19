@@ -242,7 +242,7 @@ function formatLogContent(log: string): React.ReactNode[] {
 
 export function Run({ run }: { run: Run }) {
 	const runStatus = useRunStatus(run)
-	const { tasks, tokenUsage, usageUpdatedAt, heartbeat, runners } = runStatus
+	const { tasks, tokenUsage, toolUsage, usageUpdatedAt, heartbeat, runners } = runStatus
 
 	const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 	const [taskLog, setTaskLog] = useState<string | null>(null)
@@ -336,37 +336,70 @@ export function Run({ run }: { run: Run }) {
 	)
 
 	const taskMetrics: Record<number, TaskMetrics> = useMemo(() => {
+		// Reference usageUpdatedAt to trigger recomputation when Map contents change
+		void usageUpdatedAt
 		const metrics: Record<number, TaskMetrics> = {}
 
 		tasks?.forEach((task) => {
-			const usage = tokenUsage.get(task.id)
+			const streamingUsage = tokenUsage.get(task.id)
+			const dbMetrics = task.taskMetrics
 
-			if (task.finishedAt && task.taskMetrics) {
-				metrics[task.id] = task.taskMetrics
-			} else if (usage) {
+			// For finished tasks, prefer DB values but fall back to streaming values
+			// This handles race conditions during timeout where DB might not have latest data
+			if (task.finishedAt) {
+				// Check if DB metrics have meaningful values (not just default/empty)
+				const dbHasData = dbMetrics && (dbMetrics.tokensIn > 0 || dbMetrics.tokensOut > 0 || dbMetrics.cost > 0)
+				if (dbHasData) {
+					metrics[task.id] = dbMetrics
+				} else if (streamingUsage) {
+					// Fall back to streaming values if DB is empty/stale
+					metrics[task.id] = {
+						tokensIn: streamingUsage.totalTokensIn,
+						tokensOut: streamingUsage.totalTokensOut,
+						tokensContext: streamingUsage.contextTokens,
+						duration: streamingUsage.duration ?? 0,
+						cost: streamingUsage.totalCost,
+					}
+				}
+			} else if (streamingUsage) {
+				// For running tasks, use streaming values
 				metrics[task.id] = {
-					tokensIn: usage.totalTokensIn,
-					tokensOut: usage.totalTokensOut,
-					tokensContext: usage.contextTokens,
-					duration: usage.duration ?? 0,
-					cost: usage.totalCost,
+					tokensIn: streamingUsage.totalTokensIn,
+					tokensOut: streamingUsage.totalTokensOut,
+					tokensContext: streamingUsage.contextTokens,
+					duration: streamingUsage.duration ?? 0,
+					cost: streamingUsage.totalCost,
 				}
 			}
 		})
 
 		return metrics
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [tasks, tokenUsage, usageUpdatedAt])
 
 	// Collect all unique tool names from all tasks and sort by total attempts
 	const toolColumns = useMemo<ToolName[]>(() => {
+		// Reference usageUpdatedAt to trigger recomputation when Map contents change
+		void usageUpdatedAt
 		if (!tasks) return []
 
 		const toolTotals = new Map<ToolName, number>()
 
 		for (const task of tasks) {
-			if (task.taskMetrics?.toolUsage) {
-				for (const [toolName, usage] of Object.entries(task.taskMetrics.toolUsage)) {
+			// Get both DB and streaming values
+			const dbToolUsage = task.taskMetrics?.toolUsage
+			const streamingToolUsage = toolUsage.get(task.id)
+
+			// For finished tasks, prefer DB values but fall back to streaming values
+			// For running tasks, use streaming values
+			// This handles race conditions during timeout where DB might not have latest data
+			const taskToolUsage = task.finishedAt
+				? dbToolUsage && Object.keys(dbToolUsage).length > 0
+					? dbToolUsage
+					: streamingToolUsage
+				: streamingToolUsage
+
+			if (taskToolUsage) {
+				for (const [toolName, usage] of Object.entries(taskToolUsage)) {
 					const tool = toolName as ToolName
 					const current = toolTotals.get(tool) ?? 0
 					toolTotals.set(tool, current + usage.attempts)
@@ -378,10 +411,13 @@ export function Run({ run }: { run: Run }) {
 		return Array.from(toolTotals.entries())
 			.sort((a, b) => b[1] - a[1])
 			.map(([name]): ToolName => name)
-	}, [tasks])
+		// toolUsage ref is stable; usageUpdatedAt triggers recomputation when Map contents change
+	}, [tasks, toolUsage, usageUpdatedAt])
 
 	// Compute aggregate stats
 	const stats = useMemo(() => {
+		// Reference usageUpdatedAt to trigger recomputation when Map contents change
+		void usageUpdatedAt
 		if (!tasks) return null
 
 		const passed = tasks.filter((t) => t.passed === true).length
@@ -393,8 +429,8 @@ export function Run({ run }: { run: Run }) {
 		let totalCost = 0
 		let totalDuration = 0
 
-		// Aggregate tool usage from completed tasks
-		const toolUsage: ToolUsage = {}
+		// Aggregate tool usage from all tasks (both finished and running)
+		const toolUsageAggregate: ToolUsage = {}
 
 		for (const task of tasks) {
 			const metrics = taskMetrics[task.id]
@@ -405,15 +441,24 @@ export function Run({ run }: { run: Run }) {
 				totalDuration += metrics.duration
 			}
 
-			// Aggregate tool usage from finished tasks with taskMetrics
-			if (task.finishedAt && task.taskMetrics?.toolUsage) {
-				for (const [key, usage] of Object.entries(task.taskMetrics.toolUsage)) {
+			// Aggregate tool usage: prefer DB values for finished tasks, fall back to streaming values
+			// This handles race conditions during timeout where DB might not have latest data
+			const dbToolUsage = task.taskMetrics?.toolUsage
+			const streamingToolUsage = toolUsage.get(task.id)
+			const taskToolUsage = task.finishedAt
+				? dbToolUsage && Object.keys(dbToolUsage).length > 0
+					? dbToolUsage
+					: streamingToolUsage
+				: streamingToolUsage
+
+			if (taskToolUsage) {
+				for (const [key, usage] of Object.entries(taskToolUsage)) {
 					const tool = key as keyof ToolUsage
-					if (!toolUsage[tool]) {
-						toolUsage[tool] = { attempts: 0, failures: 0 }
+					if (!toolUsageAggregate[tool]) {
+						toolUsageAggregate[tool] = { attempts: 0, failures: 0 }
 					}
-					toolUsage[tool].attempts += usage.attempts
-					toolUsage[tool].failures += usage.failures
+					toolUsageAggregate[tool].attempts += usage.attempts
+					toolUsageAggregate[tool].failures += usage.failures
 				}
 			}
 		}
@@ -427,13 +472,15 @@ export function Run({ run }: { run: Run }) {
 			totalTokensOut,
 			totalCost,
 			totalDuration,
-			toolUsage,
+			toolUsage: toolUsageAggregate,
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [tasks, taskMetrics, tokenUsage, usageUpdatedAt])
+		// Map refs are stable; usageUpdatedAt triggers recomputation when Map contents change
+	}, [tasks, taskMetrics, toolUsage, usageUpdatedAt])
 
 	// Calculate elapsed time (wall-clock time from run creation to completion or now)
 	const elapsedTime = useMemo(() => {
+		// Reference usageUpdatedAt to trigger recomputation for live elapsed time updates
+		void usageUpdatedAt
 		if (!tasks || tasks.length === 0) return null
 
 		const startTime = new Date(run.createdAt).getTime()
@@ -452,7 +499,6 @@ export function Run({ run }: { run: Run }) {
 
 		// If still running, use current time
 		return Date.now() - startTime
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [tasks, run.createdAt, run.taskMetricsId, usageUpdatedAt])
 
 	return (
@@ -655,7 +701,14 @@ export function Run({ run }: { run: Run }) {
 													{formatTokens(taskMetrics[task.id]!.tokensContext)}
 												</TableCell>
 												{toolColumns.map((toolName) => {
-													const usage = task.taskMetrics?.toolUsage?.[toolName]
+													// Use DB values for finished tasks, but fall back to streaming values
+													// if DB values are missing (handles race condition during timeout)
+													const dbUsage = task.taskMetrics?.toolUsage?.[toolName]
+													const streamingUsage = toolUsage.get(task.id)?.[toolName]
+													const usage = task.finishedAt
+														? (dbUsage ?? streamingUsage)
+														: streamingUsage
+
 													const successRate =
 														usage && usage.attempts > 0
 															? ((usage.attempts - usage.failures) / usage.attempts) * 100

@@ -10,7 +10,6 @@ export function isReadOnlyToolAction(tool: ClineSayTool): boolean {
 		"listFiles",
 		"listFilesTopLevel",
 		"listFilesRecursive",
-		"listCodeDefinitionNames",
 		"searchFiles",
 		"codebaseSearch",
 		"runSlashCommand",

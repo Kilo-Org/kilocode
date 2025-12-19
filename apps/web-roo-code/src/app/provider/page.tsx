@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ModelCard } from "./components/model-card"
+import { ModelCard } from "./pricing/components/model-card"
 import { Model, ModelWithTotalPrice, ModelsResponse, SortOption } from "@/lib/types/models"
 import Link from "next/link"
-import { ChevronDown, CircleX, Loader, LoaderCircle, Search } from "lucide-react"
+import { ChevronDown, CircleX, Cloud, Loader, LoaderCircle, Puzzle, Search } from "lucide-react"
 
 const API_URL = "https://api.roocode.com/proxy/v1/models?include_paid=true"
 
@@ -14,27 +14,28 @@ const faqs = [
 		answer: "AI model providers offer various language models with different capabilities and pricing.",
 	},
 	{
-		question: "How is pricing calculated?",
-		answer: "Pricing is based on token usage for input and output, measured per million tokens, like pretty much any other provider out there.",
-	},
-	{
 		question: "What is the Roo Code Cloud Provider?",
 		answer: (
 			<>
 				<p>This is our very own model provider, optimized to work seamlessly with Roo Code Cloud.</p>
-				<p>
-					It offers a selection of state-of-the-art LLMs (both closed and open weight) we know work well with
-					Roo for you to choose, with no markup.
-				</p>
-				<p>
-					We also often feature 100% free models which labs share with us for the community to use and provide
-					feedback.
-				</p>
+				<p>You don&apos;t have to use it to use Roo Code, but it&apos;s the easiest way to do it.</p>
 			</>
 		),
 	},
 	{
-		question: "But how much does the Roo Code Cloud service cost?",
+		question: "Do I have to use the Roo Code Cloud Provider to use the Roo Code products?",
+		answer: "Not at all! You can bring your own provider key, no problem. This is just meant to make it easier.",
+	},
+	{
+		question: "How is pricing calculated?",
+		answer: "Pricing is based on token usage for input and output, measured per million tokens, like pretty much any other provider out there.",
+	},
+	{
+		question: "How is my data treated?",
+		answer: "The Roo Code Cloud provider doesn't keep any of your data, the service only aims to make it easier to use Roo Code. Each model vendor has their own privacy policy though, and usually free models use your data for training, so keep that in mind.",
+	},
+	{
+		question: "How much does the Roo Code Cloud service cost?",
 		answer: (
 			<>
 				Our{" "}
@@ -57,7 +58,7 @@ function enrichModelWithTotalPrice(model: Model): ModelWithTotalPrice {
 	}
 }
 
-export default function ProviderPricingPage() {
+export default function ProviderPage() {
 	const [models, setModels] = useState<ModelWithTotalPrice[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -133,13 +134,22 @@ export default function ProviderPricingPage() {
 			<section className="relative overflow-hidden py-16">
 				<div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center">
-						<h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-							Roo Code Cloud Provider Pricing
-						</h1>
-						<p className="mx-auto mt-4 max-w-2xl md:text-lg text-muted-foreground">
-							See pricing and features for all models we offer in our selection.
-							<br />
-							You can always bring your own key (
+						<h1 className="text-4xl md:text-5xl font-bold tracking-tight">The Roo Code Cloud Provider</h1>
+						<p className="mx-auto mt-4 max-w-3xl md:text-lg text-muted-foreground">
+							The easiest way to use Roo Code (in the{" "}
+							<Link href="/cloud" className="underline hover:no-underline">
+								<Cloud className="inline size-5 mx-1 -mt-0.5" />
+								Cloud
+							</Link>{" "}
+							or the{" "}
+							<Link href="/extension" className="underline hover:no-underline">
+								<Puzzle className="inline size-5 mx-1 -mt-0.5" />
+								Extension
+							</Link>
+							) with the best free and paid models – no separate accounts, no messing with API keys.
+						</p>
+						<p className="mx-auto mt-2 max-w-2xl md:text-lg text-muted-foreground">
+							And you can always bring your own key (
 							<Link href="#faq" className="underline hover:no-underline">
 								FAQ
 							</Link>
@@ -240,7 +250,7 @@ export default function ProviderPricingPage() {
 					</div>
 					<div className="mx-auto mt-12 grid max-w-5xl gap-8 md:grid-cols-2">
 						{faqs.map((faq, index) => (
-							<div key={index} className="rounded-lg border border-border bg-card p-6">
+							<div key={index} className="rounded-2xl border border-border bg-card p-6">
 								<h3 className="font-semibold">{faq.question}</h3>
 								<p className="mt-2 text-sm text-muted-foreground">{faq.answer}</p>
 							</div>

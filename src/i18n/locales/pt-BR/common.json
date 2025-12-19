@@ -128,7 +128,11 @@
 		"gemini": {
 			"generate_stream": "Erro de fluxo de contexto de geração do Gemini: {{error}}",
 			"generate_complete_prompt": "Erro de conclusão do Gemini: {{error}}",
-			"sources": "Fontes:"
+			"sources": "Fontes:",
+			"thinking_complete_no_output": "(Pensamento concluído, mas nenhuma saída foi gerada.)",
+			"thinking_complete_truncated": "(Pensamento concluído, mas a saída foi truncada devido ao limite de tokens.)",
+			"thinking_complete_safety": "(Pensamento concluído, mas a saída foi bloqueada devido às configurações de segurança.)",
+			"thinking_complete_recitation": "(Pensamento concluído, mas a saída foi bloqueada devido à verificação de recitação.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Falha na autenticação da API Cerebras. Verifique se sua chave de API é válida e não expirou.",

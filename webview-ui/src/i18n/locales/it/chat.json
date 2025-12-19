@@ -112,6 +112,7 @@
 	"enhancePrompt": "Migliora prompt con contesto aggiuntivo",
 	"addImages": "Aggiungi immagini al messaggio",
 	"sendMessage": "Invia messaggio",
+	"pressToSend": "Premi {{keyCombination}} per inviare",
 	"stopTts": "Interrompi sintesi vocale",
 	"typeMessage": "Scrivi un messaggio...",
 	"typeTask": "Scrivi la tua attività qui...",
@@ -157,7 +158,8 @@
 			"403": "Non autorizzato. La tua chiave API è valida, ma il provider ha rifiutato di completare questa richiesta.",
 			"429": "Troppe richieste. Sei limitato dal provider. Attendi un po' prima della tua prossima chiamata API.",
 			"500": "Errore del server del provider. C'è qualcosa di sbagliato dal lato del provider, non c'è nulla di sbagliato nella tua richiesta.",
-			"unknown": "Errore API sconosciuto. Contatta il supporto di Roo Code."
+			"unknown": "Errore API sconosciuto. Contatta il supporto di Kilo.",
+			"connection": "Errore di connessione. Assicurati di avere una connessione Internet funzionante."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"hasQuestion": "Kilo ha una domanda"
 	},
 	"taskCompleted": "Attività completata",
+	"errorDetails": {
+		"title": "Dettagli errore",
+		"copyToClipboard": "Copia negli appunti",
+		"copied": "Copiato!"
+	},
 	"powershell": {
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
 	},
@@ -293,19 +300,28 @@
 		"thinking": "Sto pensando",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Contesto condensato",
-		"condensing": "Condensazione del contesto...",
-		"errorHeader": "Impossibile condensare il contesto",
-		"tokens": "token"
+	"contextManagement": {
+		"tokens": "token",
+		"condensation": {
+			"title": "Contesto condensato",
+			"inProgress": "Condensazione del contesto...",
+			"errorHeader": "Impossibile condensare il contesto"
+		},
+		"truncation": {
+			"title": "Contesto troncato",
+			"inProgress": "Troncamento del contesto...",
+			"messagesRemoved": "{{count}} messaggio rimosso",
+			"messagesRemoved_other": "{{count}} messaggi rimossi",
+			"description": "I messaggi più vecchi sono stati rimossi dalla conversazione per rimanere entro il limite della finestra di contesto. Questo è un approccio veloce ma meno conservativo del contesto rispetto alla condensazione."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copia nell'input (o Shift + clic)",
-		"autoSelectCountdown": "Selezione automatica in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Approvazione automatica abilitata. Selezione tra {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Rilasciato Roo Code {{version}}",
+		"title": "Rilasciato Roo Code {{version}}",
+		"support": "Sostieni Roo Code lasciandoci una stella su <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Modello stealth GRATUITO per tempo limitato</bold> - Code Supernova: Ora potenziato con una <bold>finestra di contesto da 1M token</bold>! Un modello di codificazione agentiva versatile che supporta input di immagini, accessibile tramite Roo Code Cloud.",
 			"note": "(Nota: i prompt e le completazioni vengono registrati dal creatore del modello e utilizzati per migliorarlo)",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Sessione browser avviata",
 		"actions": {
 			"title": "Azione browser: ",
+			"launched": "Browser avviato",
 			"launch": "Avvia browser su {{url}}",
+			"clicked": "Cliccato su: {{coordinate}}",
 			"click": "Clic ({{coordinate}})",
+			"typed": "Digitato: {{text}}",
 			"type": "Digita \"{{text}}\"",
+			"pressed": "Premuto: {{key}}",
 			"press": "Premi {{key}}",
+			"scrolledDown": "Scorso verso il basso",
 			"scrollDown": "Scorri verso il basso",
+			"scrolledUp": "Scorso verso l'alto",
 			"scrollUp": "Scorri verso l'alto",
+			"hovered": "Passato il mouse su: {{coordinate}}",
 			"hover": "Passa il mouse ({{coordinate}})",
+			"resized": "Ridimensionato a: {{size}}",
+			"resize": "Ridimensiona a {{size}}",
+			"screenshotSaved": "Screenshot salvato",
+			"screenshot": "Salva screenshot in {{path}}",
+			"closed": "Browser chiuso",
 			"close": "Chiudi browser"
 		}
 	},

@@ -71,6 +71,10 @@
 		"collapseThinking": {
 			"label": "ย่อข้อความ Thinking โดยค่าเริ่มต้น",
 			"description": "เมื่อเปิดใช้งาน บล็อก thinking จะถูกย่อโดยค่าเริ่มต้นจนกว่าคุณจะโต้ตอบกับมัน"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "ต้องใช้ {{primaryMod}}+Enter เพื่อส่งข้อความ",
+			"description": "เมื่อเปิดใช้งาน คุณต้องกด {{primaryMod}}+Enter เพื่อส่งข้อความแทนที่จะกด Enter เพียงอย่างเดียว"
 		}
 	},
 	"prompts": {

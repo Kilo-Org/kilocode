@@ -11,6 +11,7 @@ vi.mock("../telemetry", () => ({
 	captureAgentManagerSessionCompleted: vi.fn(),
 	captureAgentManagerSessionStopped: vi.fn(),
 	captureAgentManagerSessionError: vi.fn(),
+	captureAgentManagerLoginIssue: vi.fn(),
 }))
 
 let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerProvider
@@ -86,6 +87,70 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(cmd).toBe(MOCK_CLI_PATH)
 		expect(args[args.length - 1]).toBe('echo "$(whoami)"')
 		expect(options?.shell).not.toBe(true)
+	})
+
+	it("spawns with shell: true on Windows when CLI path ends with .cmd", async () => {
+		// Reset modules to set up Windows-specific mock
+		vi.resetModules()
+
+		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
+
+		vi.doMock("vscode", () => ({
+			workspace: { workspaceFolders: [mockWorkspaceFolder] },
+			window: { showErrorMessage: vi.fn(), showWarningMessage: vi.fn(), ViewColumn: { One: 1 } },
+			env: { openExternal: vi.fn() },
+			Uri: { parse: vi.fn(), joinPath: vi.fn() },
+			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+		}))
+
+		vi.doMock("../../../../utils/fs", () => ({
+			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+		}))
+
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+		}))
+
+		class TestProc extends EventEmitter {
+			stdout = new EventEmitter()
+			stderr = new EventEmitter()
+			kill = vi.fn()
+			pid = 1234
+		}
+
+		const spawnMock = vi.fn(() => new TestProc())
+		// Return a .cmd path to simulate Windows local CLI installation
+		const execSyncMock = vi.fn(() => "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd")
+
+		vi.doMock("node:child_process", () => ({
+			spawn: spawnMock,
+			execSync: execSyncMock,
+		}))
+
+		// Mock process.platform to be win32
+		const originalPlatform = process.platform
+		Object.defineProperty(process, "platform", { value: "win32", writable: true })
+
+		try {
+			const module = await import("../AgentManagerProvider")
+			const windowsProvider = new module.AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			await (windowsProvider as any).startAgentSession("test windows cmd")
+
+			expect(spawnMock).toHaveBeenCalledTimes(1)
+			const [cmd, , options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
+			expect(cmd.toLowerCase()).toContain(".cmd")
+			expect(options?.shell).toBe(true)
+
+			windowsProvider.dispose()
+		} finally {
+			// Restore original platform
+			Object.defineProperty(process, "platform", { value: originalPlatform, writable: true })
+		}
 	})
 
 	it("creates pending session and waits for session_created event", async () => {

@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Gemini generate context stream error: {{error}}",
 			"generate_complete_prompt": "Gemini completion error: {{error}}",
-			"sources": "Sources:"
+			"sources": "Sources:",
+			"thinking_complete_no_output": "(Thinking complete, but no output was generated.)",
+			"thinking_complete_truncated": "(Thinking complete, but output was truncated due to token limit.)",
+			"thinking_complete_safety": "(Thinking complete, but output was blocked due to safety settings.)",
+			"thinking_complete_recitation": "(Thinking complete, but output was blocked due to recitation check.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API authentication failed. Please check your API key is valid and not expired.",

@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 生成コンテキスト ストリーム エラー: {{error}}",
 			"generate_complete_prompt": "Gemini 完了エラー: {{error}}",
-			"sources": "ソース:"
+			"sources": "ソース:",
+			"thinking_complete_no_output": "（思考完了、出力なし）",
+			"thinking_complete_truncated": "（思考完了、トークン制限により出力切り捨て）",
+			"thinking_complete_safety": "（思考完了、安全設定により出力ブロック）",
+			"thinking_complete_recitation": "（思考完了、引用チェックにより出力ブロック）"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API認証が失敗しました。APIキーが有効で期限切れではないことを確認してください。",

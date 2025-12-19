@@ -5,8 +5,11 @@ import os from "os"
 import crypto from "crypto"
 import EventEmitter from "events"
 
+import { AskIgnoredError } from "./AskIgnoredError"
+
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
+import debounce from "lodash.debounce"
 import delay from "delay"
 import pWaitFor from "p-wait-for"
 import { serializeError } from "serialize-error"
@@ -63,7 +66,7 @@ import { combineApiRequests } from "../../shared/combineApiRequests"
 import { combineCommandSequences } from "../../shared/combineCommandSequences"
 import { t } from "../../i18n"
 import { ClineApiReqCancelReason, ClineApiReqInfo } from "../../shared/ExtensionMessage"
-import { getApiMetrics, hasTokenUsageChanged } from "../../shared/getApiMetrics"
+import { getApiMetrics, hasTokenUsageChanged, hasToolUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { DiffStrategy, type ToolUse, type ToolParamName, toolParamNames } from "../../shared/tools"
@@ -101,7 +104,7 @@ import { RooProtectedController } from "../protect/RooProtectedController"
 import { type AssistantMessageContent, presentAssistantMessage } from "../assistant-message"
 import { AssistantMessageParser } from "../assistant-message/AssistantMessageParser"
 import { NativeToolCallParser } from "../assistant-message/NativeToolCallParser"
-import { manageContext } from "../context-management"
+import { manageContext, willManageContext } from "../context-management"
 import { ClineProvider } from "../webview/ClineProvider"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
@@ -139,6 +142,7 @@ import { getAppUrl } from "@roo-code/types"
 import { mergeApiMessages, addOrMergeUserContent } from "./kilocode"
 import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
 import { MessageManager } from "../message-manager"
+import { validateAndFixToolResultIds } from "./validateToolResultIds"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -293,6 +297,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private askResponseText?: string
 	private askResponseImages?: string[]
 	public lastMessageTs?: number
+	private autoApprovalTimeoutRef?: NodeJS.Timeout
 
 	// Tool Use
 	consecutiveMistakeCount: number = 0
@@ -344,6 +349,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// Token Usage Cache
 	private tokenUsageSnapshot?: TokenUsage
 	private tokenUsageSnapshotAt?: number
+
+	// Tool Usage Cache
+	private toolUsageSnapshot?: ToolUsage
+
+	// Token Usage Throttling - Debounced emit function
+	private readonly TOKEN_USAGE_EMIT_INTERVAL_MS = 2000 // 2 seconds
+	private debouncedEmitTokenUsage: ReturnType<typeof debounce>
 
 	// Cloud Sync Tracking
 	private cloudSyncedMessageTimestamps: Set<number> = new Set()
@@ -533,6 +545,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (initialTodos && initialTodos.length > 0) {
 			this.todoList = initialTodos
 		}
+
+		// Initialize debounced token usage emit function
+		// Uses debounce with maxWait to achieve throttle-like behavior:
+		// - leading: true  - Emit immediately on first call
+		// - trailing: true - Emit final state when updates stop
+		// - maxWait        - Ensures at most one emit per interval during rapid updates (throttle behavior)
+		this.debouncedEmitTokenUsage = debounce(
+			(tokenUsage: TokenUsage, toolUsage: ToolUsage) => {
+				const tokenChanged = hasTokenUsageChanged(tokenUsage, this.tokenUsageSnapshot)
+				const toolChanged = hasToolUsageChanged(toolUsage, this.toolUsageSnapshot)
+
+				if (tokenChanged || toolChanged) {
+					this.emit(RooCodeEventName.TaskTokenUsageUpdated, this.taskId, tokenUsage, toolUsage)
+					this.tokenUsageSnapshot = tokenUsage
+					this.tokenUsageSnapshotAt = this.clineMessages.at(-1)?.ts
+					// Deep copy tool usage for snapshot
+					this.toolUsageSnapshot = JSON.parse(JSON.stringify(toolUsage))
+				}
+			},
+			this.TOKEN_USAGE_EMIT_INTERVAL_MS,
+			{ leading: true, trailing: true, maxWait: this.TOKEN_USAGE_EMIT_INTERVAL_MS },
+		)
 
 		onCreated?.(this)
 
@@ -857,7 +891,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			this.apiConversationHistory.push(messageWithTs)
 		} else {
-			const messageWithTs = { ...message, ts: Date.now() }
+			// For user messages, validate and fix tool_result IDs against the previous assistant message
+			const validatedMessage = validateAndFixToolResultIds(message, this.apiConversationHistory)
+			const messageWithTs = { ...validatedMessage, ts: Date.now() }
 			this.apiConversationHistory.push(messageWithTs)
 		}
 
@@ -895,7 +931,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			role: "user",
 			content: this.userMessageContent,
 		}
-		const userMessageWithTs = { ...userMessage, ts: Date.now() }
+
+		// Validate and fix tool_result IDs against the previous assistant message
+		const validatedMessage = validateAndFixToolResultIds(userMessage, this.apiConversationHistory)
+		const userMessageWithTs = { ...validatedMessage, ts: Date.now() }
 		this.apiConversationHistory.push(userMessageWithTs as ApiMessage)
 
 		await this.saveApiConversationHistory()
@@ -913,15 +952,21 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			})
 
 			// kilocode_change start
-			// Post directly to webview for CLI to react to file save
-			const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
-			const filePath = path.join(taskDir, GlobalFileNames.apiConversationHistory)
-			const provider = this.providerRef.deref()
-			if (provider) {
-				await provider.postMessageToWebview({
-					type: "apiMessagesSaved",
-					payload: [this.taskId, filePath],
-				})
+			// Post directly to webview for CLI to react to file save.
+			// This must not prevent saving history or emitting usage events if
+			// storage is unavailable (e.g., during unit tests).
+			try {
+				const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
+				const filePath = path.join(taskDir, GlobalFileNames.apiConversationHistory)
+				const provider = this.providerRef.deref()
+				if (provider) {
+					await provider.postMessageToWebview({
+						type: "apiMessagesSaved",
+						payload: [this.taskId, filePath],
+					})
+				}
+			} catch (error) {
+				console.warn("Failed to notify webview about saved API messages:", error)
 			}
 			// kilocode_change end
 		} catch (error) {
@@ -1000,15 +1045,21 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			})
 
 			// kilocode_change start
-			// Post directly to webview for CLI to react to file save
-			const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
-			const filePath = path.join(taskDir, GlobalFileNames.uiMessages)
-			const provider = this.providerRef.deref()
-			if (provider) {
-				await provider.postMessageToWebview({
-					type: "taskMessagesSaved",
-					payload: [this.taskId, filePath],
-				})
+			// Post directly to webview for CLI to react to file save.
+			// Keep this isolated so filesystem issues don't prevent token usage
+			// updates (important for unit tests and degraded environments).
+			try {
+				const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
+				const filePath = path.join(taskDir, GlobalFileNames.uiMessages)
+				const provider = this.providerRef.deref()
+				if (provider) {
+					await provider.postMessageToWebview({
+						type: "taskMessagesSaved",
+						payload: [this.taskId, filePath],
+					})
+				}
+			} catch (error) {
+				console.warn("Failed to notify webview about saved task messages:", error)
 			}
 			// kilocode_change end
 
@@ -1024,11 +1075,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				initialStatus: this.initialStatus,
 			})
 
-			if (hasTokenUsageChanged(tokenUsage, this.tokenUsageSnapshot)) {
-				this.emit(RooCodeEventName.TaskTokenUsageUpdated, this.taskId, tokenUsage)
-				this.tokenUsageSnapshot = undefined
-				this.tokenUsageSnapshotAt = undefined
-			}
+			// Emit token/tool usage updates using debounced function
+			// The debounce with maxWait ensures:
+			// - Immediate first emit (leading: true)
+			// - At most one emit per interval during rapid updates (maxWait)
+			// - Final state is emitted when updates stop (trailing: true)
+			this.debouncedEmitTokenUsage(tokenUsage, this.toolUsage)
 
 			await this.providerRef.deref()?.updateTaskHistory(historyItem)
 		} catch (error) {
@@ -1099,7 +1151,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// whole array in new listener.
 					this.updateClineMessage(lastMessage)
 					// console.log("Task#ask: current ask promise was ignored (#1)")
-					throw new Error("Current ask promise was ignored (#1)")
+					throw new AskIgnoredError("updating existing partial")
 				} else {
 					// This is a new partial message, so add it with partial
 					// state.
@@ -1108,7 +1160,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					console.log(`Task#ask: new partial ask -> ${type} @ ${askTs}`)
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, partial, isProtected })
 					// console.log("Task#ask: current ask promise was ignored (#2)")
-					throw new Error("Current ask promise was ignored (#2)")
+					throw new AskIgnoredError("new partial")
 				}
 			} else {
 				if (isUpdatingPreviousPartial) {
@@ -1205,12 +1257,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		} else if (approval.decision === "deny") {
 			this.denyAsk()
 		} else if (approval.decision === "timeout") {
-			timeouts.push(
-				setTimeout(() => {
-					const { askResponse, text, images } = approval.fn()
-					this.handleWebviewAskResponse(askResponse, text, images)
-				}, approval.timeout),
-			)
+			// Store the auto-approval timeout so it can be cancelled if user interacts
+			this.autoApprovalTimeoutRef = setTimeout(() => {
+				const { askResponse, text, images } = approval.fn()
+				this.handleWebviewAskResponse(askResponse, text, images)
+				this.autoApprovalTimeoutRef = undefined
+			}, approval.timeout)
+			timeouts.push(this.autoApprovalTimeoutRef)
 		}
 
 		// The state is mutable if the message is complete and the task will
@@ -1295,7 +1348,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// command_output. It's important that when we know an ask could
 			// fail, it is handled gracefully.
 			console.log("Task#ask: current ask promise was ignored")
-			throw new Error("Current ask promise was ignored")
+			throw new AskIgnoredError("superseded")
 		}
 
 		const result = { response: this.askResponse!, text: this.askResponseText, images: this.askResponseImages }
@@ -1319,6 +1372,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+		// Clear any pending auto-approval timeout when user responds
+		this.cancelAutoApprovalTimeout()
+
 		// this.askResponse = askResponse kilocode_change
 		this.askResponseText = text
 		this.askResponseImages = images
@@ -1352,6 +1408,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					console.error("Failed to save answered follow-up state:", error)
 				})
 			}
+		}
+	}
+
+	/**
+	 * Cancel any pending auto-approval timeout.
+	 * Called when user interacts (types, clicks buttons, etc.) to prevent the timeout from firing.
+	 */
+	public cancelAutoApprovalTimeout(): void {
+		if (this.autoApprovalTimeoutRef) {
+			clearTimeout(this.autoApprovalTimeoutRef)
+			this.autoApprovalTimeoutRef = undefined
 		}
 	}
 
@@ -2023,6 +2090,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	/**
+	 * Force emit a final token usage update, ignoring throttle.
+	 * Called before task completion or abort to ensure final stats are captured.
+	 * Triggers the debounce with current values and immediately flushes to ensure emit.
+	 */
+	public emitFinalTokenUsageUpdate(): void {
+		const tokenUsage = this.getTokenUsage()
+		this.debouncedEmitTokenUsage(tokenUsage, this.toolUsage)
+		this.debouncedEmitTokenUsage.flush()
+	}
+
 	public async abortTask(isAbandoned = false) {
 		// Aborting task
 
@@ -2032,6 +2110,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		this.abort = true
+
+		// Force final token usage update before abort event
+		this.emitFinalTokenUsageUpdate()
+
 		this.emit(RooCodeEventName.TaskAborted)
 
 		try {
@@ -3330,10 +3412,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								// nativeArgs is already in the correct API format for all tools
 								const input = toolUse.nativeArgs || toolUse.params
 
+								// Use originalName (alias) if present for API history consistency.
+								// When tool aliases are used (e.g., "edit_file" -> "search_and_replace"),
+								// we want the alias name in the conversation history to match what the model
+								// was told the tool was named, preventing confusion in multi-turn conversations.
+								const toolNameForHistory = toolUse.originalName ?? toolUse.name
+
 								assistantContent.push({
 									type: "tool_use" as const,
 									id: toolCallId,
-									name: toolUse.name,
+									name: toolNameForHistory,
 									input,
 								})
 							}
@@ -3733,6 +3821,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const protocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 		const useNativeTools = isNativeProtocol(protocol)
 
+		// Send condenseTaskContextStarted to show in-progress indicator
+		await this.providerRef.deref()?.postMessageToWebview({ type: "condenseTaskContextStarted", text: this.taskId })
+
 		// Force aggressive truncation by keeping only 75% of the conversation history
 		const truncateResult = await manageContext({
 			messages: this.apiConversationHistory,
@@ -3772,6 +3863,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				truncationId: truncateResult.truncationId,
 				messagesRemoved: truncateResult.messagesRemoved ?? 0,
 				prevContextTokens: truncateResult.prevContextTokens,
+				newContextTokens: truncateResult.newContextTokensAfterTruncation ?? 0,
 			}
 			await this.say(
 				"sliding_window_truncation",
@@ -3785,6 +3877,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				contextTruncation,
 			)
 		}
+
+		// Notify webview that context management is complete (removes in-progress spinner)
+		await this.providerRef.deref()?.postMessageToWebview({ type: "condenseTaskContextResponse", text: this.taskId })
 	}
 
 	public async *attemptApiRequest(retryAttempt: number = 0): ApiStream {
@@ -3878,6 +3973,38 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const protocol = resolveToolProtocol(this.apiConfiguration, modelInfoForProtocol)
 			const useNativeTools = isNativeProtocol(protocol)
 
+			// Check if context management will likely run (threshold check)
+			// This allows us to show an in-progress indicator to the user
+			// We use the centralized willManageContext helper to avoid duplicating threshold logic
+			const lastMessage = this.apiConversationHistory[this.apiConversationHistory.length - 1]
+			const lastMessageContent = lastMessage?.content
+			let lastMessageTokens = 0
+			if (lastMessageContent) {
+				lastMessageTokens = Array.isArray(lastMessageContent)
+					? await this.api.countTokens(lastMessageContent)
+					: await this.api.countTokens([{ type: "text", text: lastMessageContent as string }])
+			}
+
+			const contextManagementWillRun = willManageContext({
+				totalTokens: contextTokens,
+				contextWindow,
+				maxTokens,
+				autoCondenseContext,
+				autoCondenseContextPercent,
+				profileThresholds,
+				currentProfileId,
+				lastMessageTokens,
+			})
+
+			// Send condenseTaskContextStarted BEFORE manageContext to show in-progress indicator
+			// This notification must be sent here (not earlier) because the early check uses stale token count
+			// (before user message is added to history), which could incorrectly skip showing the indicator
+			if (contextManagementWillRun && autoCondenseContext) {
+				await this.providerRef
+					.deref()
+					?.postMessageToWebview({ type: "condenseTaskContextStarted", text: this.taskId })
+			}
+
 			const truncateResult = await manageContext({
 				messages: this.apiConversationHistory,
 				totalTokens: contextTokens,
@@ -3924,6 +4051,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					truncationId: truncateResult.truncationId,
 					messagesRemoved: truncateResult.messagesRemoved ?? 0,
 					prevContextTokens: truncateResult.prevContextTokens,
+					newContextTokens: truncateResult.newContextTokensAfterTruncation ?? 0,
 				}
 				await this.say(
 					"sliding_window_truncation",
@@ -3936,6 +4064,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					undefined /* contextCondense */,
 					contextTruncation,
 				)
+			}
+
+			// Notify webview that context management is complete (sets isCondensing = false)
+			// This removes the in-progress spinner and allows the completed result to show
+			if (contextManagementWillRun && autoCondenseContext) {
+				await this.providerRef
+					.deref()
+					?.postMessageToWebview({ type: "condenseTaskContextResponse", text: this.taskId })
 			}
 		}
 
@@ -3992,6 +4128,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				state,
 				// kilocode_change end
 				modelInfo,
+				diffEnabled: this.diffEnabled,
 			})
 		}
 
@@ -4218,7 +4355,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					throw new Error(`[Task#${this.taskId}] Aborted during retry countdown`)
 				}
 
-				await this.say("api_req_retry_delayed", `${headerText}\n↻ ${i}s...`, undefined, true)
+				await this.say("api_req_retry_delayed", `${headerText}<retry_timer>${i}</retry_timer>`, undefined, true)
 				await delay(1000)
 			}
 

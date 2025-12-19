@@ -14,7 +14,7 @@ import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout" // kilocode_change
-import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
+import { ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers" // kilocode_change
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import {
 	buildResponsesRequestBody,
@@ -24,6 +24,7 @@ import {
 	supportsResponsesApiForBaseUrl,
 	type OpenAiResponsesMode,
 } from "./utils/openai-responses-adapter"
+import { getApiRequestTimeout } from "./utils/timeout-config"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -78,7 +79,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			defaultHeaders: DEFAULT_HEADERS,
 			// kilocode_change start
 			timeout: timeout,
-			fetch: fetchWithTimeout(timeout),
+			fetch: timeout ? fetchWithTimeout(timeout) : undefined,
 			// kilocode_change end
 		})
 

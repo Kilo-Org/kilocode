@@ -1,7 +1,17 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Shield, Users2, ReplaceAll, Keyboard, LucideIcon, CheckCheck, GitPullRequest } from "lucide-react"
+import {
+	Shield,
+	Users2,
+	ReplaceAll,
+	Keyboard,
+	LucideIcon,
+	CheckCheck,
+	GitPullRequest,
+	Boxes,
+	TextSearch,
+} from "lucide-react"
 import Image from "next/image"
 
 export interface Feature {
@@ -21,7 +31,8 @@ export const features: Feature[] = [
 	{
 		icon: ReplaceAll,
 		title: "Model-agnostic",
-		description: "Bring your own provider key or even run local inference — no markup, lock-in, no restrictions.",
+		description:
+			"Use the Roo Code cloud Provider, bring your own provider key or even run local inference — no markup, lock-in, no restrictions.",
 		logos: ["Anthropic", "OpenAI", "Gemini", "Grok", "Qwen", "Kimi", "Mistral", "Ollama"],
 	},
 	{
@@ -31,16 +42,27 @@ export const features: Feature[] = [
 			"Control each action and make Roo as autonomous as you want as you build confidence. Or go YOLO and let it rip.",
 	},
 	{
-		icon: GitPullRequest,
-		title: "Proudly open source",
+		icon: Boxes,
+		title: "Large task coordination",
 		description:
-			"Community-driven and fully auditable: no throttling or surprises about what's happening behind the scenes.",
+			"Orchestrator mode handles large tasks by coordinating tasks for other agents, running for hours and delivering.",
+	},
+	{
+		icon: TextSearch,
+		title: "Performant with large codebases",
+		description: "Configurable integrated semantic search for quicker retrieval in large codebases.",
 	},
 	{
 		icon: Keyboard,
 		title: "Highly customizable",
 		description:
-			"Fine-tune settings for Roo to work for you, like inference context, model properties, slash commands and more.",
+			"Fine-tune settings for Roo to work for you, like inference context, model properties, slash commands and more. Most settings can be global or serialized in your repository.",
+	},
+	{
+		icon: GitPullRequest,
+		title: "Proudly open source",
+		description:
+			"Community-driven and fully auditable: no throttling or surprises about what's happening behind the scenes.",
 	},
 	{
 		icon: Shield,

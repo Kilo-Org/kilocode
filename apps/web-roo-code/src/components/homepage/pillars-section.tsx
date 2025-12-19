@@ -71,14 +71,14 @@ export function PillarsSection() {
 								<div className="text-muted-foreground my-4 space-y-1">
 									<p>
 										&quot;The best model in the world&quot; changes every other week. Providers
-							throttle models with no warning. 1st-party coding agents only work with their own
-										models.
+										throttle models with no warning. 1st-party coding agents only work with their
+										own models.
 									</p>
 									<p>Roo doesn&apos;t care.</p>
 									<p>
 										It works great with 10s of models, from frontier to open weight. Choose from{" "}
-										<Link href="/provider/pricing">the curated selection we offer at-cost</Link> or
-										bring your own key.
+										<Link href="/provider">the curated selection we offer at-cost</Link> or bring
+										your own key.
 									</p>
 								</div>
 								<div className="mt-6">
@@ -164,7 +164,7 @@ export function PillarsSection() {
 										Developer tools need to fit like gloves. Highly tweakable,
 										keyboard-shortcut-heavy gloves.
 									</p>
-								<p>We made Roo thoughtfully configurable to fit your workflow as best it can.</p>
+									<p>We made Roo thoughtfully configurable to fit your workflow as best it can.</p>
 								</div>
 							</div>
 						</div>
@@ -188,7 +188,7 @@ export function PillarsSection() {
 										your data for training.
 									</p>
 									<p>
-							Plus we&apos;re fully SOC2 Type 2 compliant and follow industry-standard
+										Plus we&apos;re fully SOC2 Type 2 compliant and follow industry-standard
 										security practices.
 									</p>
 								</div>

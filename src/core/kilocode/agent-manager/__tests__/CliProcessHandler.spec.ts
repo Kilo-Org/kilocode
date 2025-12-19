@@ -316,6 +316,116 @@ describe("CliProcessHandler", () => {
 			if (previousProviderType === undefined) delete process.env.KILO_PROVIDER_TYPE
 			else process.env.KILO_PROVIDER_TYPE = previousProviderType
 		})
+
+		describe("Windows .cmd file handling", () => {
+			it("uses shell: true for .cmd files on Windows", () => {
+				const originalPlatform = process.platform
+				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
+
+				try {
+					const onCliEvent = vi.fn()
+					handler.spawnProcess(
+						"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
+						"/workspace",
+						"test prompt",
+						undefined,
+						onCliEvent,
+					)
+
+					expect(spawnMock).toHaveBeenCalledWith(
+						"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
+						expect.any(Array),
+						expect.objectContaining({ shell: true }),
+					)
+				} finally {
+					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+				}
+			})
+
+			it("uses shell: true for .CMD files (case insensitive) on Windows", () => {
+				const originalPlatform = process.platform
+				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
+
+				try {
+					const onCliEvent = vi.fn()
+					handler.spawnProcess(
+						"C:\\Users\\test\\kilocode.CMD",
+						"/workspace",
+						"test prompt",
+						undefined,
+						onCliEvent,
+					)
+
+					expect(spawnMock).toHaveBeenCalledWith(
+						"C:\\Users\\test\\kilocode.CMD",
+						expect.any(Array),
+						expect.objectContaining({ shell: true }),
+					)
+				} finally {
+					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+				}
+			})
+
+			it("uses shell: false for non-.cmd executables on Windows", () => {
+				const originalPlatform = process.platform
+				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
+
+				try {
+					const onCliEvent = vi.fn()
+					handler.spawnProcess(
+						"C:\\Users\\test\\kilocode.exe",
+						"/workspace",
+						"test prompt",
+						undefined,
+						onCliEvent,
+					)
+
+					expect(spawnMock).toHaveBeenCalledWith(
+						"C:\\Users\\test\\kilocode.exe",
+						expect.any(Array),
+						expect.objectContaining({ shell: false }),
+					)
+				} finally {
+					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+				}
+			})
+
+			it("uses shell: false on macOS regardless of extension", () => {
+				const originalPlatform = process.platform
+				Object.defineProperty(process, "platform", { value: "darwin", configurable: true })
+
+				try {
+					const onCliEvent = vi.fn()
+					handler.spawnProcess("/usr/local/bin/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+					expect(spawnMock).toHaveBeenCalledWith(
+						"/usr/local/bin/kilocode",
+						expect.any(Array),
+						expect.objectContaining({ shell: false }),
+					)
+				} finally {
+					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+				}
+			})
+
+			it("uses shell: false on Linux regardless of extension", () => {
+				const originalPlatform = process.platform
+				Object.defineProperty(process, "platform", { value: "linux", configurable: true })
+
+				try {
+					const onCliEvent = vi.fn()
+					handler.spawnProcess("/usr/bin/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+					expect(spawnMock).toHaveBeenCalledWith(
+						"/usr/bin/kilocode",
+						expect.any(Array),
+						expect.objectContaining({ shell: false }),
+					)
+				} finally {
+					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+				}
+			})
+		})
 	})
 
 	describe("session_created event handling", () => {

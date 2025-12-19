@@ -1,11 +1,35 @@
+import * as path from "node:path"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 
-/**
- * Agent Manager telemetry helpers.
- * These functions encapsulate the TelemetryService.hasInstance() check
- * and keep telemetry logic co-located with the agent-manager feature.
- */
+export function getPlatformDiagnostics(): { platform: "darwin" | "win32" | "linux" | "other"; shell?: string } {
+	const platform =
+		process.platform === "darwin" || process.platform === "win32" || process.platform === "linux"
+			? process.platform
+			: "other"
+
+	const shellPath = process.env.SHELL
+	const shell = shellPath ? path.basename(shellPath) : undefined
+
+	return { platform, shell }
+}
+
+export type AgentManagerLoginIssueType =
+	| "cli_not_found"
+	| "cli_outdated"
+	| "cli_spawn_error"
+	| "auth_error"
+	| "payment_required"
+	| "api_error"
+	| "session_timeout"
+
+export interface AgentManagerLoginIssueProperties {
+	issueType: AgentManagerLoginIssueType
+	hasNpm?: boolean
+	httpStatusCode?: number
+	platform?: "darwin" | "win32" | "linux" | "other"
+	shell?: string
+}
 
 export function captureAgentManagerOpened(): void {
 	if (!TelemetryService.hasInstance()) return
@@ -37,4 +61,9 @@ export function captureAgentManagerSessionError(sessionId: string, useWorktree: 
 		useWorktree,
 		error,
 	})
+}
+
+export function captureAgentManagerLoginIssue(properties: AgentManagerLoginIssueProperties): void {
+	if (!TelemetryService.hasInstance()) return
+	TelemetryService.instance.captureEvent(TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE, properties)
 }

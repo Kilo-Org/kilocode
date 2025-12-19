@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Error del flux de context de generació de Gemini: {{error}}",
 			"generate_complete_prompt": "Error de finalització de Gemini: {{error}}",
-			"sources": "Fonts:"
+			"sources": "Fonts:",
+			"thinking_complete_no_output": "(Pensament completat, però no s'ha generat cap sortida.)",
+			"thinking_complete_truncated": "(Pensament completat, però la sortida s'ha truncat a causa del límit de fitxes.)",
+			"thinking_complete_safety": "(Pensament completat, però la sortida s'ha bloquejat a causa de la configuració de seguretat.)",
+			"thinking_complete_recitation": "(Pensament completat, però la sortida s'ha bloquejat a causa de la comprovació de recitació.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Ha fallat l'autenticació de l'API de Cerebras. Comproveu que la vostra clau d'API sigui vàlida i no hagi caducat.",

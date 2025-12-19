@@ -307,6 +307,7 @@ describe("ProfileValidator", () => {
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
 		})
 
+		// kilocode_change start
 		it("should extract glamaModelId for glama provider", () => {
 			const allowList: OrganizationAllowList = {
 				allowAll: false,
@@ -321,6 +322,7 @@ describe("ProfileValidator", () => {
 
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
 		})
+		// kilocode_change end
 
 		it("should extract requestyModelId for requesty provider", () => {
 			const allowList: OrganizationAllowList = {

@@ -129,7 +129,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 生成上下文流错误：{{error}}",
 			"generate_complete_prompt": "Gemini 完成错误：{{error}}",
-			"sources": "来源："
+			"sources": "来源：",
+			"thinking_complete_no_output": "（思考完成，但未生成输出。）",
+			"thinking_complete_truncated": "（思考完成，但由于 Token 限制输出被截断。）",
+			"thinking_complete_safety": "（思考完成，但由于安全设置输出被阻止。）",
+			"thinking_complete_recitation": "（思考完成，但由于引用检查输出被阻止。）"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API 身份验证失败。请检查你的 API 密钥是否有效且未过期。",

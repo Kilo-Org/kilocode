@@ -6,12 +6,14 @@ import {
 	toolParamNames,
 	type NativeToolArgs,
 } from "../../shared/tools"
+import { resolveToolAlias } from "../../shared/tool-aliases" // kilocode_change
 import { parseJSON } from "partial-json"
 import type {
 	ApiStreamToolCallStartChunk,
 	ApiStreamToolCallDeltaChunk,
 	ApiStreamToolCallEndChunk,
 } from "../../api/transform/stream"
+import { MCP_TOOL_PREFIX, MCP_TOOL_SEPARATOR, parseMcpToolName } from "../../utils/mcp-name"
 
 /**
  * Helper type to extract properly typed native arguments for a given tool.
@@ -156,7 +158,6 @@ export class NativeToolCallParser {
 					id: tracked.id,
 				})
 			}
-			this.rawChunkTracker.clear()
 		}
 
 		return events
@@ -238,7 +239,8 @@ export class NativeToolCallParser {
 		toolCall.argumentsAccumulator += chunk
 
 		// For dynamic MCP tools, we don't return partial updates - wait for final
-		if (toolCall.name.startsWith("mcp_")) {
+		const mcpPrefix = MCP_TOOL_PREFIX + MCP_TOOL_SEPARATOR
+		if (toolCall.name.startsWith(mcpPrefix)) {
 			return null
 		}
 
@@ -247,12 +249,18 @@ export class NativeToolCallParser {
 		try {
 			const partialArgs = parseJSON(toolCall.argumentsAccumulator)
 
+			// Resolve tool alias to canonical name
+			const resolvedName = resolveToolAlias(toolCall.name) as ToolName
+			// Preserve original name if it differs from resolved (i.e., it was an alias)
+			const originalName = toolCall.name !== resolvedName ? toolCall.name : undefined
+
 			// Create partial ToolUse with extracted values
 			return this.createPartialToolUse(
 				toolCall.id,
-				toolCall.name as ToolName,
+				resolvedName,
 				partialArgs || {},
 				true, // partial
+				originalName,
 			)
 		} catch {
 			// Even partial-json-parser can fail on severely malformed JSON
@@ -328,12 +336,14 @@ export class NativeToolCallParser {
 	/**
 	 * Create a partial ToolUse from currently parsed arguments.
 	 * Used during streaming to show progress.
+	 * @param originalName - The original tool name as called by the model (if different from canonical name)
 	 */
 	private static createPartialToolUse(
 		id: string,
 		name: ToolName,
 		partialArgs: Record<string, any>,
 		partial: boolean,
+		originalName?: string,
 	): ToolUse | null {
 		// Build legacy params for display
 		// NOTE: For streaming partial updates, we MUST populate params even for complex types
@@ -406,6 +416,7 @@ export class NativeToolCallParser {
 						coordinate: partialArgs.coordinate,
 						size: partialArgs.size,
 						text: partialArgs.text,
+						path: partialArgs.path,
 					}
 				}
 				break
@@ -433,14 +444,6 @@ export class NativeToolCallParser {
 						prompt: partialArgs.prompt,
 						path: partialArgs.path,
 						image: partialArgs.image,
-					}
-				}
-				break
-
-			case "list_code_definition_names":
-				if (partialArgs.path !== undefined) {
-					nativeArgs = {
-						path: partialArgs.path,
 					}
 				}
 				break
@@ -499,18 +502,47 @@ export class NativeToolCallParser {
 				}
 				break
 
-			// Add other tools as needed
+			case "search_replace":
+				if (
+					partialArgs.file_path !== undefined ||
+					partialArgs.old_string !== undefined ||
+					partialArgs.new_string !== undefined
+				) {
+					nativeArgs = {
+						file_path: partialArgs.file_path,
+						old_string: partialArgs.old_string,
+						new_string: partialArgs.new_string,
+					}
+				}
+				break
+
+			case "search_and_replace":
+				if (partialArgs.path !== undefined || partialArgs.operations !== undefined) {
+					nativeArgs = {
+						path: partialArgs.path,
+						operations: partialArgs.operations,
+					}
+				}
+				break
+
 			default:
 				break
 		}
 
-		return {
+		const result: ToolUse = {
 			type: "tool_use" as const,
 			name,
 			params,
 			partial,
 			nativeArgs,
 		}
+
+		// Preserve original name for API history when an alias was used
+		if (originalName) {
+			result.originalName = originalName
+		}
+
+		return result
 	}
 
 	/**
@@ -524,14 +556,18 @@ export class NativeToolCallParser {
 		name: TName
 		arguments: string
 	}): ToolUse<TName> | McpToolUse | null {
-		// Check if this is a dynamic MCP tool (mcp_serverName_toolName)
-		if (typeof toolCall.name === "string" && toolCall.name.startsWith("mcp_")) {
+		// Check if this is a dynamic MCP tool (mcp--serverName--toolName)
+		const mcpPrefix = MCP_TOOL_PREFIX + MCP_TOOL_SEPARATOR
+		if (typeof toolCall.name === "string" && toolCall.name.startsWith(mcpPrefix)) {
 			return this.parseDynamicMcpTool(toolCall)
 		}
 
-		// Validate tool name
-		if (!toolNames.includes(toolCall.name as ToolName)) {
-			console.error(`Invalid tool name: ${toolCall.name}`)
+		// Resolve tool alias to canonical name (e.g., "edit_file" -> "apply_diff", "temp_edit_file" -> "search_and_replace")
+		const resolvedName = resolveToolAlias(toolCall.name as string) as TName
+
+		// Validate tool name (after alias resolution)
+		if (!toolNames.includes(resolvedName as ToolName)) {
+			console.error(`Invalid tool name: ${toolCall.name} (resolved: ${resolvedName})`)
 			console.error(`Valid tool names:`, toolNames)
 			return null
 		}
@@ -548,13 +584,13 @@ export class NativeToolCallParser {
 				// Skip complex parameters that have been migrated to nativeArgs.
 				// For read_file, the 'files' parameter is a FileEntry[] array that can't be
 				// meaningfully stringified. The properly typed data is in nativeArgs instead.
-				if (toolCall.name === "read_file" && key === "files") {
+				if (resolvedName === "read_file" && key === "files") {
 					continue
 				}
 
 				// Validate parameter name
 				if (!toolParamNames.includes(key as ToolParamName)) {
-					console.warn(`Unknown parameter '${key}' for tool '${toolCall.name}'`)
+					console.warn(`Unknown parameter '${key}' for tool '${resolvedName}'`)
 					console.warn(`Valid param names:`, toolParamNames)
 					continue
 				}
@@ -574,7 +610,7 @@ export class NativeToolCallParser {
 			// will fall back to legacy parameter parsing if supported.
 			let nativeArgs: NativeArgsFor<TName> | undefined = undefined
 
-			switch (toolCall.name) {
+			switch (resolvedName) {
 				case "read_file":
 					if (args.files && Array.isArray(args.files)) {
 						nativeArgs = { files: this.convertFileEntries(args.files) } as NativeArgsFor<TName>
@@ -640,6 +676,7 @@ export class NativeToolCallParser {
 							coordinate: args.coordinate,
 							size: args.size,
 							text: args.text,
+							path: args.path,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -667,14 +704,6 @@ export class NativeToolCallParser {
 							prompt: args.prompt,
 							path: args.path,
 							image: args.image,
-						} as NativeArgsFor<TName>
-					}
-					break
-
-				case "list_code_definition_names":
-					if (args.path !== undefined) {
-						nativeArgs = {
-							path: args.path,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -751,28 +780,50 @@ export class NativeToolCallParser {
 					}
 					break
 
+				case "search_replace":
+					if (
+						args.file_path !== undefined &&
+						args.old_string !== undefined &&
+						args.new_string !== undefined
+					) {
+						nativeArgs = {
+							file_path: args.file_path,
+							old_string: args.old_string,
+							new_string: args.new_string,
+						} as NativeArgsFor<TName>
+					}
+					break
+
 				default:
 					break
 			}
 
 			const result: ToolUse<TName> = {
 				type: "tool_use" as const,
-				name: toolCall.name,
+				name: resolvedName,
 				params,
 				partial: false, // Native tool calls are always complete when yielded
 				nativeArgs,
 			}
 
+			// Preserve original name for API history when an alias was used
+			if (toolCall.name !== resolvedName) {
+				result.originalName = toolCall.name
+			}
+
 			return result
 		} catch (error) {
-			console.error(`Failed to parse tool call arguments:`, error)
-			console.error(`Error details:`, error instanceof Error ? error.message : String(error))
+			console.error(
+				`Failed to parse tool call arguments: ${error instanceof Error ? error.message : String(error)}`,
+			)
+
+			console.error(`Tool call: ${JSON.stringify(toolCall, null, 2)}`)
 			return null
 		}
 	}
 
 	/**
-	 * Parse dynamic MCP tools (named mcp_serverName_toolName).
+	 * Parse dynamic MCP tools (named mcp--serverName--toolName).
 	 * These are generated dynamically by getMcpServerTools() and are returned
 	 * as McpToolUse objects that preserve the original tool name.
 	 *
@@ -786,26 +837,19 @@ export class NativeToolCallParser {
 			const args = JSON.parse(toolCall.arguments || "{}")
 
 			// Extract server_name and tool_name from the tool name itself
-			// Format: mcp_serverName_toolName
-			const nameParts = toolCall.name.split("_")
-			if (nameParts.length < 3 || nameParts[0] !== "mcp") {
+			// Format: mcp--serverName--toolName (using -- separator)
+			const parsed = parseMcpToolName(toolCall.name)
+			if (!parsed) {
 				console.error(`Invalid dynamic MCP tool name format: ${toolCall.name}`)
 				return null
 			}
 
-			// Server name is the second part, tool name is everything after
-			const serverName = nameParts[1]
-			const toolName = nameParts.slice(2).join("_")
-
-			if (!serverName || !toolName) {
-				console.error(`Could not extract server_name or tool_name from: ${toolCall.name}`)
-				return null
-			}
+			const { serverName, toolName } = parsed
 
 			const result: McpToolUse = {
 				type: "mcp_tool_use" as const,
 				id: toolCall.id,
-				// Keep the original tool name (e.g., "mcp_serverName_toolName") for API history
+				// Keep the original tool name (e.g., "mcp--serverName--toolName") for API history
 				name: toolCall.name,
 				serverName,
 				toolName,

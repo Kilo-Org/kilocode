@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "जेमिनी जनरेट कॉन्टेक्स्ट स्ट्रीम त्रुटि: {{error}}",
 			"generate_complete_prompt": "जेमिनी समापन त्रुटि: {{error}}",
-			"sources": "स्रोत:"
+			"sources": "स्रोत:",
+			"thinking_complete_no_output": "(सोचना पूरा हुआ, लेकिन कोई आउटपुट नहीं बना।)",
+			"thinking_complete_truncated": "(सोचना पूरा हुआ, लेकिन टोकन सीमा के कारण आउटपुट काट दिया गया।)",
+			"thinking_complete_safety": "(सोचना पूरा हुआ, लेकिन सुरक्षा सेटिंग्स के कारण आउटपुट अवरुद्ध कर दिया गया।)",
+			"thinking_complete_recitation": "(सोचना पूरा हुआ, लेकिन पाठ जाँच के कारण आउटपुट अवरुद्ध कर दिया गया।)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API प्रमाणीकरण विफल हुआ। कृपया जांचें कि आपकी API कुंजी वैध है और समाप्त नहीं हुई है।",

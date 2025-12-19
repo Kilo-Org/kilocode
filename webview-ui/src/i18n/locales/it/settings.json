@@ -312,9 +312,9 @@
 		"getOpenRouterApiKey": "Ottieni chiave API OpenRouter",
 		"vercelAiGatewayApiKey": "Chiave API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Ottieni chiave API Vercel AI Gateway",
-		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
 		"glamaApiKey": "Chiave API Glama",
 		"getGlamaApiKey": "Ottieni chiave API Glama",
+		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
 		"useCustomBaseUrl": "Usa URL base personalizzato",
 		"useReasoning": "Abilita ragionamento",
 		"useHostHeader": "Usa intestazione Host personalizzata",
@@ -583,6 +583,7 @@
 			"none": "Nessuno",
 			"minimal": "Minimo (più veloce)",
 			"high": "Alto",
+			"xhigh": "Molto alto",
 			"medium": "Medio",
 			"low": "Basso",
 			"xhigh": "Extra Alto"
@@ -1147,6 +1148,10 @@
 		"collapseThinking": {
 			"label": "Comprimi i messaggi di pensiero per impostazione predefinita",
 			"description": "Se abilitato, i blocchi di pensiero verranno compressi per impostazione predefinita finché non interagisci con essi"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Richiedi {{primaryMod}}+Invio per inviare messaggi",
+			"description": "Quando abilitato, devi premere {{primaryMod}}+Invio per inviare messaggi invece di solo Invio"
 		}
 	}
 }

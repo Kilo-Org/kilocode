@@ -85,6 +85,9 @@ export const toolParamNames = [
 	"files", // Native protocol parameter for read_file
 	"operations", // search_and_replace parameter for multiple operations
 	"patch", // apply_patch parameter
+	"file_path", // search_replace parameter
+	"old_string", // search_replace parameter
+	"new_string", // search_replace parameter
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -102,6 +105,7 @@ export type NativeToolArgs = {
 	execute_command: { command: string; cwd?: string }
 	apply_diff: { path: string; diff: string }
 	search_and_replace: { path: string; operations: Array<{ search: string; replace: string }> }
+	search_replace: { file_path: string; old_string: string; new_string: string }
 	apply_patch: { patch: string }
 	ask_followup_question: {
 		question: string
@@ -111,7 +115,6 @@ export type NativeToolArgs = {
 	codebase_search: { query: string; path?: string }
 	fetch_instructions: { task: string }
 	generate_image: GenerateImageParams
-	list_code_definition_names: { path: string }
 	run_slash_command: { command: string; args?: string }
 	search_files: { path: string; regex: string; file_pattern?: string | null }
 	switch_mode: { mode_slug: string; reason: string }
@@ -130,6 +133,12 @@ export interface ToolUse<TName extends ToolName = ToolName> {
 	type: "tool_use"
 	id?: string // Optional ID to track tool calls
 	name: TName
+	/**
+	 * The original tool name as called by the model (e.g. an alias like "edit_file"),
+	 * if it differs from the canonical tool name used for execution.
+	 * Used to preserve tool names in API conversation history.
+	 */
+	originalName?: string
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
@@ -201,14 +210,9 @@ export interface ListFilesToolUse extends ToolUse<"list_files"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "recursive">>
 }
 
-export interface ListCodeDefinitionNamesToolUse extends ToolUse<"list_code_definition_names"> {
-	name: "list_code_definition_names"
-	params: Partial<Pick<Record<ToolParamName, string>, "path">>
-}
-
 export interface BrowserActionToolUse extends ToolUse<"browser_action"> {
 	name: "browser_action"
-	params: Partial<Pick<Record<ToolParamName, string>, "action" | "url" | "coordinate" | "text" | "size">>
+	params: Partial<Pick<Record<ToolParamName, string>, "action" | "url" | "coordinate" | "text" | "size" | "path">>
 }
 
 export interface UseMcpToolToolUse extends ToolUse<"use_mcp_tool"> {
@@ -278,10 +282,10 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	condense: "condense the current context window",
 	// kilocode_change start
 	search_and_replace: "apply changes using search and replace",
+	search_replace: "apply single search and replace",
 	apply_patch: "apply patches using codex format",
 	search_files: "search files",
 	list_files: "list files",
-	list_code_definition_names: "list definitions",
 	browser_action: "use a browser",
 	use_mcp_tool: "use mcp tools",
 	access_mcp_resource: "access mcp resources",
@@ -299,14 +303,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 // Define available tool groups.
 export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
-		tools: [
-			"read_file",
-			"fetch_instructions",
-			"search_files",
-			"list_files",
-			"list_code_definition_names",
-			"codebase_search",
-		],
+		tools: ["read_file", "fetch_instructions", "search_files", "list_files", "codebase_search"],
 	},
 	edit: {
 		tools: [
@@ -317,7 +314,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"new_rule", // kilocode_change
 			"generate_image",
 		],
-		customTools: ["search_and_replace", "apply_patch"],
+		customTools: ["search_and_replace", "search_replace", "apply_patch"],
 	},
 	browser: {
 		tools: ["browser_action"],
@@ -345,6 +342,22 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"update_todo_list",
 	"run_slash_command",
 ] as const
+
+/**
+ * Central registry of tool aliases.
+ * Maps alias name -> canonical tool name.
+ *
+ * This allows models to use alternative names for tools (e.g., "edit_file" instead of "apply_diff").
+ * When a model calls a tool by its alias, the system resolves it to the canonical name for execution,
+ * but preserves the alias in API conversation history for consistency.
+ *
+ * To add a new alias, simply add an entry here. No other files need to be modified.
+ */
+export const TOOL_ALIASES: Record<string, ToolName> = {
+	edit_file: "apply_diff",
+	write_file: "write_to_file",
+	temp_edit_file: "search_and_replace",
+} as const
 
 export type DiffResult =
 	| { success: true; content: string; failParts?: DiffResult[] }

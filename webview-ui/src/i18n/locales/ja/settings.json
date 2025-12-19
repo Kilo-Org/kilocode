@@ -303,9 +303,9 @@
 		"getOpenRouterApiKey": "OpenRouter APIキーを取得",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway APIキー",
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway APIキーを取得",
-		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
 		"glamaApiKey": "Glama APIキー",
 		"getGlamaApiKey": "Glama APIキーを取得",
+		"apiKeyStorageNotice": "APIキーはVSCodeのシークレットストレージに安全に保存されます",
 		"useCustomBaseUrl": "カスタムベースURLを使用",
 		"useReasoning": "推論を有効化",
 		"useHostHeader": "カスタムHostヘッダーを使用",
@@ -574,6 +574,7 @@
 			"none": "なし",
 			"minimal": "最小 (最速)",
 			"high": "高",
+			"xhigh": "非常に高い",
 			"medium": "中",
 			"low": "低",
 			"xhigh": "極高"
@@ -1147,6 +1148,10 @@
 		"collapseThinking": {
 			"label": "デフォルトで思考メッセージを折りたたむ",
 			"description": "有効にすると、操作するまで思考ブロックがデフォルトで折りたたまれます"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "メッセージを送信するには{{primaryMod}}+Enterが必要",
+			"description": "有効にすると、Enterだけでなく{{primaryMod}}+Enterを押してメッセージを送信する必要があります"
 		}
 	}
 }

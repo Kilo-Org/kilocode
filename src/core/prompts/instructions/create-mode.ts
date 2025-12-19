@@ -49,7 +49,7 @@ customModes:
       or ensuring responsive web interfaces. This mode is especially effective with CSS,
       HTML, and modern frontend frameworks.  # Optional but recommended
     groups:  # Required: array of tool groups (can be empty)
-      - read     # Read files group (read_file, fetch_instructions, search_files, list_files, list_code_definition_names)
+      - read     # Read files group (read_file, fetch_instructions, search_files, list_files)
       - edit     # Edit files group (apply_diff, write_to_file) - allows editing any file
       # Or with file restrictions:
       # - - edit

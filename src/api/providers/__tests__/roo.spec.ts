@@ -452,7 +452,7 @@ describe("RooHandler", () => {
 	})
 
 	describe("temperature and model configuration", () => {
-		it("should use default temperature of 0.7", async () => {
+		it("should use default temperature of 0", async () => {
 			handler = new RooHandler(mockOptions)
 			const stream = handler.createMessage(systemPrompt, messages)
 			for await (const _chunk of stream) {
@@ -461,7 +461,7 @@ describe("RooHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					temperature: 0.7,
+					temperature: 0,
 				}),
 				expect.objectContaining({
 					headers: expect.objectContaining({
@@ -1001,6 +1001,69 @@ describe("RooHandler", () => {
 
 			const rawChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
 			expect(rawChunks).toHaveLength(0)
+		})
+
+		it("should yield tool_call_end events when finish_reason is tool_calls", async () => {
+			// Import NativeToolCallParser to set up state
+			const { NativeToolCallParser } = await import("../../../core/assistant-message/NativeToolCallParser")
+
+			// Clear any previous state
+			NativeToolCallParser.clearRawChunkState()
+
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: async function* () {
+					yield {
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											index: 0,
+											id: "call_finish_test",
+											function: { name: "read_file", arguments: '{"path":"test.ts"}' },
+										},
+									],
+								},
+								index: 0,
+							},
+						],
+					}
+					yield {
+						choices: [
+							{
+								delta: {},
+								finish_reason: "tool_calls",
+								index: 0,
+							},
+						],
+						usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+					}
+				},
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				// Simulate what Task.ts does: when we receive tool_call_partial,
+				// process it through NativeToolCallParser to populate rawChunkTracker
+				if (chunk.type === "tool_call_partial") {
+					NativeToolCallParser.processRawChunk({
+						index: chunk.index,
+						id: chunk.id,
+						name: chunk.name,
+						arguments: chunk.arguments,
+					})
+				}
+				chunks.push(chunk)
+			}
+
+			// Should have tool_call_partial and tool_call_end
+			const partialChunks = chunks.filter((chunk) => chunk.type === "tool_call_partial")
+			const endChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
+
+			expect(partialChunks).toHaveLength(1)
+			expect(endChunks).toHaveLength(1)
+			expect(endChunks[0].id).toBe("call_finish_test")
 		})
 	})
 })

@@ -123,7 +123,11 @@
 		"gemini": {
 			"generate_stream": "خطأ في تدفق السياق من Gemini: {{error}}",
 			"generate_complete_prompt": "خطأ في إكمال Gemini: {{error}}",
-			"sources": "المصادر:"
+			"sources": "المصادر:",
+			"thinking_complete_no_output": "(اكتمل التفكير، لكن لم يتم إنشاء أي مخرجات.)",
+			"thinking_complete_truncated": "(اكتمل التفكير، لكن تم اقتطاع المخرجات بسبب حد الرموز.)",
+			"thinking_complete_safety": "(اكتمل التفكير، لكن تم حظر المخرجات بسبب إعدادات الأمان.)",
+			"thinking_complete_recitation": "(اكتمل التفكير، لكن تم حظر المخرجات بسبب فحص التلاوة.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "فشل تسجيل الدخول في Cerebras API. تأكد من صحة مفتاح API وأنه لم ينته.",
