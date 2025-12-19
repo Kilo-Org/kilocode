@@ -3,7 +3,7 @@ title: Kilo Integrations
 sidebar_label: Kilo Integrations
 ---
 
-Kilo Integrations lets you connect your GitHub account (and soon, GitLab and Bitbucket) to enable advanced features inside Kilo Code. Once connected, Kilo can access your repositories securely through the **KiloConnect** GitHub App, enabling features like **Cloud Agents** and **Kilo Deploy**.
+Kilo Integrations lets you connect external services like GitHub and Slack to enable advanced features inside Kilo Code. Once connected, Kilo can access your repositories securely through the **KiloConnect** GitHub App and bring AI assistance directly into your Slack workspace.
 
 ---
 
@@ -12,6 +12,7 @@ Kilo Integrations lets you connect your GitHub account (and soon, GitLab and Bit
 - **Connect GitHub to Kilo Code** in a few clicks
 - **Authorize the KiloConnect App** for repo access
 - **Enable advanced features** like Cloud Agents and Kilo Deploy
+- **Connect Slack** to bring Kilo Bot into your workspace
 
 ---
 
@@ -71,6 +72,13 @@ Once GitHub is connected, the following features will be enabled in Kilo:
 - Deploy Next.js 14 & 15 apps directly from Kilo
 - Trigger rebuilds automatically on push
 - Manage deployment logs and history
+
+### Kilo Slackbot
+
+- Bring AI assistance directly into Slack
+- Answer questions and spawn Cloud Agents from Slack
+- Access your GitHub repositories through Slack
+- [Learn more about Kilo Slackbot](./slack-bot.md)
 
 ### Upcoming:
 
