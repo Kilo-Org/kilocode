@@ -252,7 +252,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// 1. It's a manual trigger (triggerKind === Invoke), OR
 		// 2. Auto-trigger is enabled (enableAutoTrigger === true)
 		const isManualTrigger = context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke
-		const isAutoTriggerEnabled = this.settings?.enableAutoTrigger ?? false
+		const isAutoTriggerEnabled = this.settings?.enableAutoTrigger ?? true
 
 		if (!isManualTrigger && !isAutoTriggerEnabled) {
 			// Auto-trigger is disabled and this is not a manual trigger

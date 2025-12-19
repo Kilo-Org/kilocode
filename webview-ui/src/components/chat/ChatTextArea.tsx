@@ -1,11 +1,11 @@
 import React, { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import DynamicTextArea from "react-textarea-autosize"
 import { useEvent } from "react-use"
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { Mode, getAllModes } from "@roo/modes"
+import { getIconForFilePath, getIconUrlByName } from "vscode-material-icons"
 
 import { Button, StandardTooltip } from "@/components/ui" // kilocode_change
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -64,7 +64,7 @@ interface ChatTextAreaProps {
 	sendMessageOnEnter?: boolean // kilocode_change
 }
 
-export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+export const ChatTextArea = forwardRef<HTMLDivElement, ChatTextAreaProps>(
 	(
 		{
 			inputValue,
@@ -187,65 +187,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			return () => document.removeEventListener("mousedown", handleClickOutside)
 		}, [showDropdown])
 
-		// Handle enhanced prompt response and search results.
-		useEffect(() => {
-			const messageHandler = (event: MessageEvent) => {
-				const message = event.data
-
-				if (message.type === "enhancedPrompt") {
-					if (message.text && textAreaRef.current) {
-						try {
-							// Use execCommand to replace text while preserving undo history
-							if (document.execCommand) {
-								// Use native browser methods to preserve undo stack
-								const textarea = textAreaRef.current
-
-								// Focus the textarea to ensure it's the active element
-								textarea.focus()
-
-								// Select all text first
-								textarea.select()
-								document.execCommand("insertText", false, message.text)
-							} else {
-								setInputValue(message.text)
-							}
-						} catch {
-							setInputValue(message.text)
-						}
-					}
-				} else if (message.type === "commitSearchResults") {
-					const commits = message.commits.map((commit: any) => ({
-						type: ContextMenuOptionType.Git,
-						value: commit.hash,
-						label: commit.subject,
-						description: `${commit.shortHash} by ${commit.author} on ${commit.date}`,
-						icon: "$(git-commit)",
-					}))
-
-					setGitCommits(commits)
-				} else if (message.type === "fileSearchResults") {
-					setSearchLoading(false)
-					if (message.requestId === searchRequestId) {
-						setFileSearchResults(message.results || [])
-					}
-					// kilocode_change start
-				} else if (message.type === "insertTextToChatArea") {
-					if (message.text) {
-						setInputValue(message.text)
-						setTimeout(() => {
-							if (textAreaRef.current) {
-								textAreaRef.current.focus()
-							}
-						}, 0)
-					}
-				}
-				// kilocode_change end
-			}
-
-			window.addEventListener("message", messageHandler)
-			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId])
-
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		// kilocode_change start: pull slash commands from Cline
 		const [showSlashCommandsMenu, setShowSlashCommandsMenu] = useState(false)
@@ -253,13 +194,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [slashCommandsQuery, setSlashCommandsQuery] = useState("")
 		const slashCommandsMenuContainerRef = useRef<HTMLDivElement>(null)
 		// kilocode_end
-		const [textAreaBaseHeight, setTextAreaBaseHeight] = useState<number | undefined>(undefined)
 		const [showContextMenu, setShowContextMenu] = useState(false)
 		const [cursorPosition, setCursorPosition] = useState(0)
 		const [searchQuery, setSearchQuery] = useState("")
-		const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
+		const textAreaRef = useRef<HTMLDivElement | null>(null)
 		const [isMouseDownOnMenu, setIsMouseDownOnMenu] = useState(false)
-		const highlightLayerRef = useRef<HTMLDivElement>(null)
 		const [selectedMenuIndex, setSelectedMenuIndex] = useState(-1)
 		const [selectedType, setSelectedType] = useState<ContextMenuOptionType | null>(null)
 		const [justDeletedSpaceAfterMention, setJustDeletedSpaceAfterMention] = useState(false)
@@ -267,6 +206,21 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isFocused, setIsFocused] = useState(false)
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
+		const [materialIconsBaseUri, setMaterialIconsBaseUri] = useState("")
+
+		// get the icons base uri on mount
+		useEffect(() => {
+			const w = window as any
+			setMaterialIconsBaseUri(w.MATERIAL_ICONS_BASE_URI)
+		}, [])
+
+		const applyCursorPosition = useCallback(
+			(position: number) => {
+				setCursorPosition(position)
+				setIntendedCursorPosition(position)
+			},
+			[setCursorPosition, setIntendedCursorPosition],
+		)
 
 		// Use custom hook for prompt history navigation
 		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
@@ -275,6 +229,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cwd,
 			inputValue,
 			setInputValue,
+			cursorPosition,
+			applyCursorPosition,
 		})
 
 		// Fetch git commits when Git is selected or when typing a hash.
@@ -356,22 +312,19 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			(type: ContextMenuOptionType, value?: string) => {
 				// kilocode_change start
 				if (type === ContextMenuOptionType.Image) {
-					// Close the context menu and remove the @character in this case
 					setShowContextMenu(false)
 					setSelectedType(null)
 
-					if (textAreaRef.current) {
-						const beforeCursor = textAreaRef.current.value.slice(0, cursorPosition)
-						const afterCursor = textAreaRef.current.value.slice(cursorPosition)
-						const lastAtIndex = beforeCursor.lastIndexOf("@")
+					const beforeCursor = inputValue.slice(0, cursorPosition)
+					const afterCursor = inputValue.slice(cursorPosition)
+					const lastAtIndex = beforeCursor.lastIndexOf("@")
 
-						if (lastAtIndex !== -1) {
-							const newValue = beforeCursor.slice(0, lastAtIndex) + afterCursor
-							setInputValue(newValue)
-						}
+					if (lastAtIndex !== -1) {
+						const newValue = beforeCursor.slice(0, lastAtIndex) + afterCursor
+						setInputValue(newValue)
+						setIntendedCursorPosition(lastAtIndex)
 					}
 
-					// Call the image selection function
 					onSelectImages()
 					return
 				}
@@ -406,55 +359,42 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowContextMenu(false)
 				setSelectedType(null)
 
-				if (textAreaRef.current) {
-					let insertValue = value || ""
+				let insertValue = value || ""
 
-					if (type === ContextMenuOptionType.URL) {
-						insertValue = value || ""
-					} else if (
-						type === ContextMenuOptionType.File ||
-						type === ContextMenuOptionType.Folder ||
-						type === ContextMenuOptionType.OpenedFile
-					) {
-						// Extract filename and store mapping for compact chip display
-						const fullPath = value || ""
-						if (fullPath.startsWith("/")) {
-							const segments = fullPath.split("/").filter(Boolean)
-							const filename = segments.pop() || fullPath
-							// Store just filename - cursor will align perfectly with visible chip
-							insertValue = filename
-							// Store mapping for expansion before send
-							mentionMapRef.current.set(filename, fullPath)
-						} else {
-							insertValue = fullPath
-						}
-					} else if (type === ContextMenuOptionType.Problems) {
-						insertValue = "problems"
-					} else if (type === ContextMenuOptionType.Terminal) {
-						insertValue = "terminal"
-					} else if (type === ContextMenuOptionType.Git) {
-						insertValue = value || ""
+				if (type === ContextMenuOptionType.URL) {
+					insertValue = value || ""
+				} else if (
+					type === ContextMenuOptionType.File ||
+					type === ContextMenuOptionType.Folder ||
+					type === ContextMenuOptionType.OpenedFile
+				) {
+					const fullPath = value || ""
+					if (fullPath.startsWith("/")) {
+						const segments = fullPath.split("/").filter(Boolean)
+						const filename = segments.pop() || fullPath
+						insertValue = filename
+						mentionMapRef.current.set(filename, fullPath)
+					} else {
+						insertValue = fullPath
 					}
-
-					const { newValue, mentionIndex } = insertMention(
-						textAreaRef.current.value,
-						cursorPosition,
-						insertValue,
-					)
-
-					setInputValue(newValue)
-					const newCursorPosition = newValue.indexOf(" ", mentionIndex + insertValue.length) + 1
-					setCursorPosition(newCursorPosition)
-					setIntendedCursorPosition(newCursorPosition)
-
-					// Scroll to cursor.
-					setTimeout(() => {
-						if (textAreaRef.current) {
-							textAreaRef.current.blur()
-							textAreaRef.current.focus()
-						}
-					}, 0)
+				} else if (type === ContextMenuOptionType.Problems) {
+					insertValue = "problems"
+				} else if (type === ContextMenuOptionType.Terminal) {
+					insertValue = "terminal"
+				} else if (type === ContextMenuOptionType.Git) {
+					insertValue = value || ""
 				}
+
+				const { newValue, mentionIndex } = insertMention(inputValue, cursorPosition, insertValue)
+
+				setInputValue(newValue)
+				const newCursorPosition = newValue.indexOf(" ", mentionIndex + insertValue.length) + 1
+				setCursorPosition(newCursorPosition)
+				setIntendedCursorPosition(newCursorPosition)
+
+				setTimeout(() => {
+					textAreaRef.current?.focus()
+				}, 0)
 			},
 			// eslint-disable-next-line react-hooks/exhaustive-deps
 			[setInputValue, cursorPosition],
@@ -476,331 +416,20 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 
 				// Handle other slash commands (like newtask)
-				if (textAreaRef.current) {
-					const { newValue, commandIndex } = insertSlashCommand(textAreaRef.current.value, command.name)
-					const newCursorPosition = newValue.indexOf(" ", commandIndex + 1 + command.name.length) + 1
+				const { newValue, commandIndex } = insertSlashCommand(inputValue, command.name)
+				const newCursorPosition = newValue.indexOf(" ", commandIndex + 1 + command.name.length) + 1
 
-					setInputValue(newValue)
-					setCursorPosition(newCursorPosition)
-					setIntendedCursorPosition(newCursorPosition)
+				setInputValue(newValue)
+				setCursorPosition(newCursorPosition)
+				setIntendedCursorPosition(newCursorPosition)
 
-					setTimeout(() => {
-						if (textAreaRef.current) {
-							textAreaRef.current.blur()
-							textAreaRef.current.focus()
-						}
-					}, 0)
-				}
+				setTimeout(() => {
+					textAreaRef.current?.focus()
+				}, 0)
 			},
-			[setInputValue, setMode, customModes],
+			[inputValue, setInputValue, setMode, customModes],
 		)
 		// kilocode_change end
-
-		const handleKeyDown = useCallback(
-			(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-				// kilocode_change start: pull slash commands from Cline
-				if (showSlashCommandsMenu) {
-					if (event.key === "Escape") {
-						setShowSlashCommandsMenu(false)
-						return
-					}
-
-					if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-						event.preventDefault()
-						setSelectedSlashCommandsIndex((prevIndex) => {
-							const direction = event.key === "ArrowUp" ? -1 : 1
-							const commands = getMatchingSlashCommands(
-								slashCommandsQuery,
-								customModes,
-								localWorkflows,
-								globalWorkflows,
-							) // kilocode_change
-
-							if (commands.length === 0) {
-								return prevIndex
-							}
-
-							const newIndex = (prevIndex + direction + commands.length) % commands.length
-							return newIndex
-						})
-						return
-					}
-
-					if ((event.key === "Enter" || event.key === "Tab") && selectedSlashCommandsIndex !== -1) {
-						event.preventDefault()
-						const commands = getMatchingSlashCommands(
-							slashCommandsQuery,
-							customModes,
-							localWorkflows,
-							globalWorkflows,
-						) // kilocode_change
-						if (commands.length > 0) {
-							handleSlashCommandsSelect(commands[selectedSlashCommandsIndex])
-						}
-						return
-					}
-				}
-				// kilocode_change end
-				if (showContextMenu) {
-					if (event.key === "Escape") {
-						setSelectedType(null)
-						setSelectedMenuIndex(3) // File by default
-						return
-					}
-
-					if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-						event.preventDefault()
-						setSelectedMenuIndex((prevIndex) => {
-							const direction = event.key === "ArrowUp" ? -1 : 1
-							const options = getContextMenuOptions(
-								searchQuery,
-								selectedType,
-								queryItems,
-								fileSearchResults,
-								allModes,
-							)
-							const optionsLength = options.length
-
-							if (optionsLength === 0) return prevIndex
-
-							// Find selectable options (non-URL types)
-							const selectableOptions = options.filter(
-								(option) =>
-									option.type !== ContextMenuOptionType.URL &&
-									option.type !== ContextMenuOptionType.NoResults,
-							)
-
-							if (selectableOptions.length === 0) return -1 // No selectable options
-
-							// Find the index of the next selectable option
-							const currentSelectableIndex = selectableOptions.findIndex(
-								(option) => option === options[prevIndex],
-							)
-
-							const newSelectableIndex =
-								(currentSelectableIndex + direction + selectableOptions.length) %
-								selectableOptions.length
-
-							// Find the index of the selected option in the original options array
-							return options.findIndex((option) => option === selectableOptions[newSelectableIndex])
-						})
-						return
-					}
-					if ((event.key === "Enter" || event.key === "Tab") && selectedMenuIndex !== -1) {
-						event.preventDefault()
-						const selectedOption = getContextMenuOptions(
-							searchQuery,
-							selectedType,
-							queryItems,
-							fileSearchResults,
-							allModes,
-						)[selectedMenuIndex]
-						if (
-							selectedOption &&
-							selectedOption.type !== ContextMenuOptionType.URL &&
-							selectedOption.type !== ContextMenuOptionType.NoResults
-						) {
-							handleMentionSelect(selectedOption.type, selectedOption.value)
-						}
-						return
-					}
-				}
-
-				const isComposing = event.nativeEvent?.isComposing ?? false
-
-				// kilocode_change start
-				const shouldSendMessage =
-					!isComposing &&
-					event.key === "Enter" &&
-					((sendMessageOnEnter && !event.shiftKey) || (!sendMessageOnEnter && event.shiftKey))
-
-				if (shouldSendMessage) {
-					event.preventDefault()
-
-					resetHistoryNavigation()
-					handleSend()
-				}
-
-				// Handle prompt history navigation using custom hook
-				if (handleHistoryNavigation(event, showContextMenu, isComposing)) {
-					return
-				}
-				// kilocode_change end
-
-				if (event.key === "Backspace" && !isComposing) {
-					const charBeforeCursor = inputValue[cursorPosition - 1]
-					const charAfterCursor = inputValue[cursorPosition + 1]
-
-					const charBeforeIsWhitespace =
-						charBeforeCursor === " " || charBeforeCursor === "\n" || charBeforeCursor === "\r\n"
-
-					const charAfterIsWhitespace =
-						charAfterCursor === " " || charAfterCursor === "\n" || charAfterCursor === "\r\n"
-
-					// Checks if char before cusor is whitespace after a mention.
-					if (
-						charBeforeIsWhitespace &&
-						// "$" is added to ensure the match occurs at the end of the string.
-						inputValue.slice(0, cursorPosition - 1).match(new RegExp(mentionRegex.source + "$"))
-					) {
-						const newCursorPosition = cursorPosition - 1
-						// If mention is followed by another word, then instead
-						// of deleting the space separating them we just move
-						// the cursor to the end of the mention.
-						if (!charAfterIsWhitespace) {
-							event.preventDefault()
-							textAreaRef.current?.setSelectionRange(newCursorPosition, newCursorPosition)
-							setCursorPosition(newCursorPosition)
-						}
-
-						setCursorPosition(newCursorPosition)
-						setJustDeletedSpaceAfterMention(true)
-					} else if (justDeletedSpaceAfterMention) {
-						const { newText, newPosition } = removeMention(inputValue, cursorPosition)
-
-						if (newText !== inputValue) {
-							event.preventDefault()
-							setInputValue(newText)
-							setIntendedCursorPosition(newPosition) // Store the new cursor position in state
-						}
-
-						setJustDeletedSpaceAfterMention(false)
-						setShowContextMenu(false)
-					} else {
-						setJustDeletedSpaceAfterMention(false)
-					}
-				}
-			},
-			[
-				// kilocode_change start
-				showSlashCommandsMenu,
-				localWorkflows,
-				globalWorkflows,
-				customModes,
-				handleSlashCommandsSelect,
-				selectedSlashCommandsIndex,
-				slashCommandsQuery,
-				// kilocode_change end
-				handleSend,
-				showContextMenu,
-				searchQuery,
-				selectedMenuIndex,
-				handleMentionSelect,
-				selectedType,
-				inputValue,
-				cursorPosition,
-				setInputValue,
-				justDeletedSpaceAfterMention,
-				queryItems,
-				allModes,
-				fileSearchResults,
-				handleHistoryNavigation,
-				resetHistoryNavigation,
-				sendMessageOnEnter,
-			],
-		)
-
-		useLayoutEffect(() => {
-			if (intendedCursorPosition !== null && textAreaRef.current) {
-				textAreaRef.current.setSelectionRange(intendedCursorPosition, intendedCursorPosition)
-				setIntendedCursorPosition(null) // Reset the state.
-			}
-		}, [inputValue, intendedCursorPosition])
-
-		// Ref to store the search timeout.
-		const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-		const handleInputChange = useCallback(
-			(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-				const newValue = e.target.value
-				setInputValue(newValue)
-
-				// Reset history navigation when user types
-				resetOnInputChange()
-
-				const newCursorPosition = e.target.selectionStart + 200
-				setCursorPosition(newCursorPosition)
-
-				// kilocode_change start: pull slash commands from Cline
-				let showMenu = shouldShowContextMenu(newValue, newCursorPosition)
-				const showSlashCommandsMenu = shouldShowSlashCommandsMenu(newValue, newCursorPosition)
-
-				// we do not allow both menus to be shown at the same time
-				// the slash commands menu has precedence bc its a narrower component
-				if (showSlashCommandsMenu) {
-					showMenu = false
-				}
-
-				setShowSlashCommandsMenu(showSlashCommandsMenu)
-				// kilocode_change end
-
-				setShowContextMenu(showMenu)
-
-				// kilocode_change start: pull slash commands from Cline
-				if (showSlashCommandsMenu) {
-					const slashIndex = newValue.indexOf("/")
-					const query = newValue.slice(slashIndex + 1, newCursorPosition)
-					setSlashCommandsQuery(query)
-					setSelectedSlashCommandsIndex(0)
-				} else {
-					setSlashCommandsQuery("")
-					setSelectedSlashCommandsIndex(0)
-				}
-				// kilocode_change end
-
-				if (showMenu) {
-					// kilocode_change start - check lastAtIndex before handling slash commands
-					const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
-
-					// if (newValue.startsWith("/")) { ⚠️ kilocode_change added lastAtIndex check
-					if (newValue.startsWith("/") && lastAtIndex === -1) {
-						// Handle slash command.
-						const query = newValue
-						setSearchQuery(query)
-						setSelectedMenuIndex(0)
-					} else {
-						// Existing @ mention handling.
-						const query = newValue.slice(lastAtIndex + 1, newCursorPosition)
-						setSearchQuery(query)
-
-						// Send file search request if query is not empty.
-						if (query.length > 0) {
-							setSelectedMenuIndex(0)
-
-							// Don't clear results until we have new ones. This
-							// prevents flickering.
-
-							// Clear any existing timeout.
-							if (searchTimeoutRef.current) {
-								clearTimeout(searchTimeoutRef.current)
-							}
-
-							// Set a timeout to debounce the search requests.
-							searchTimeoutRef.current = setTimeout(() => {
-								// Generate a request ID for this search.
-								const reqId = Math.random().toString(36).substring(2, 9)
-								setSearchRequestId(reqId)
-								setSearchLoading(true)
-
-								// Send message to extension to search files.
-								vscode.postMessage({
-									type: "searchFiles",
-									query: unescapeSpaces(query),
-									requestId: reqId,
-								})
-							}, 200) // 200ms debounce.
-						} else {
-							setSelectedMenuIndex(-1)
-						}
-					}
-				} else {
-					setSearchQuery("")
-					setSelectedMenuIndex(-1)
-					setFileSearchResults([]) // Clear file search results.
-				}
-			},
-			[setInputValue, setSearchRequestId, setFileSearchResults, setSearchLoading, resetOnInputChange],
-		)
 
 		useEffect(() => {
 			if (!showContextMenu) {
@@ -935,7 +564,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const formatMentionChipParts = useCallback((rawMention: string) => {
 			const mention = unescapeSpaces(rawMention)
 
-			// Basic url + special keyword handling
 			if (/^\w+:\/\/\S+/.test(mention)) {
 				try {
 					const url = new URL(mention)
@@ -957,7 +585,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				return { primary: mention.slice(0, 7), meta: ["commit"] }
 			}
 
-			// File / folder / snippet path handling
 			if (!mention.startsWith("/")) {
 				return { primary: mention, meta: [] }
 			}
@@ -965,13 +592,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			let pathPart = mention
 			let lineInfo: string | undefined
 
-			// Support #L10-20 or #L10 snippets
 			const hashMatch = mention.match(/^(.*)#L(\d+(?:-\d+)?)/)
 			if (hashMatch) {
 				pathPart = hashMatch[1]
 				lineInfo = `L${hashMatch[2]}`
 			} else {
-				// Support :10 or :10-20 suffixes for ranges
 				const lastColonIndex = mention.lastIndexOf(":")
 				if (lastColonIndex > mention.lastIndexOf("/")) {
 					const maybeRange = mention.slice(lastColonIndex + 1)
@@ -993,87 +618,610 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			return { primary, meta: metaParts }
 		}, [])
 
+		const getFileIconForMention = useCallback(
+			(rawMention: string): string => {
+				// Only show icons for file mentions (those with extensions)
+				const mention = unescapeSpaces(rawMention)
+				const filename = mention.split("/").pop() || ""
+
+				// Check if it's a file with an extension
+				if (filename.includes(".")) {
+					const iconName = getIconForFilePath(filename)
+					return getIconUrlByName(iconName, materialIconsBaseUri)
+				}
+
+				// For folders or other mentions, return empty string
+				return ""
+			},
+			[materialIconsBaseUri],
+		)
+
 		const renderMentionChip = useCallback(
 			(rawMention: string, isCompactFile: boolean = false) => {
-				// For compact file mentions, rawMention is just the filename
-				// For standard mentions, extract the display name from the path
 				const displayText = isCompactFile
 					? rawMention
 					: formatMentionChipParts(rawMention).primary || rawMention
 				const escapedPrimary = escapeHtml(displayText)
 				const label = escapeHtml(`${isCompactFile ? rawMention : unescapeSpaces(rawMention)}`)
+				const mentionValue = escapeHtml(`@${isCompactFile ? rawMention : unescapeSpaces(rawMention)}`)
 
-				return `<span class="mention-chip" data-mention="${label}" aria-label="${label}"><span class="mention-chip__at">@</span><span class="mention-chip__primary">${escapedPrimary}</span></span>`
+				// Get file icon for file mentions
+				const fileIconUrl = getFileIconForMention(rawMention)
+				const iconHtml = fileIconUrl ? `<img src="${fileIconUrl}" class="mention-chip__icon" alt="" />` : ""
+
+				return `<span class="mention-chip" data-mention-value="${mentionValue}" aria-label="${label}">${iconHtml}<span class="mention-chip__primary">${escapedPrimary}</span></span>`
 			},
-			[formatMentionChipParts],
+			[formatMentionChipParts, getFileIconForMention],
 		)
 
-		const updateHighlights = useCallback(() => {
-			if (!textAreaRef.current || !highlightLayerRef.current) return
+		const valueToHtml = useCallback(
+			(value: string) => {
+				let processedText = escapeHtml(value || "")
 
-			// kilocode_change start: pull slash commands from Cline
-			let processedText = textAreaRef.current.value
+				processedText = processedText
+					.replace(/\n/g, '<br data-plain-break="true">')
+					.replace(/@([a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+)(?=\s|$)/g, (_match, filename) => {
+						if (mentionMapRef.current.has(filename)) {
+							return renderMentionChip(filename, true)
+						}
+						return _match
+					})
+					.replace(mentionRegexGlobal, (_match, mention) => renderMentionChip(mention, false))
 
-			processedText = processedText
-				.replace(/\n$/, "\n\n")
-				.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
-				// Handle compact file mentions @filename (in mention map)
-				.replace(/@([a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+)(?=\s|$)/g, (_match, filename) => {
-					// Check if this filename is in our mention map (it's a compact file mention)
-					if (mentionMapRef.current.has(filename)) {
-						return renderMentionChip(filename, true)
+				if (/^\s*\//.test(processedText)) {
+					const slashIndex = processedText.indexOf("/")
+					const spaceIndex = processedText.indexOf(" ", slashIndex)
+					const endIndex = spaceIndex > -1 ? spaceIndex : processedText.length
+					const commandText = processedText.substring(slashIndex + 1, endIndex)
+					const isValidCommand = validateSlashCommand(commandText, customModes)
+
+					if (isValidCommand) {
+						const fullCommand = processedText.substring(slashIndex, endIndex)
+						const highlighted = `<mark class="slash-command-match-textarea-highlight">${fullCommand}</mark>`
+						processedText =
+							processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
 					}
-					// Not in map, return original text
-					return _match
-				})
-				// Handle standard mentions (URLs, problems, terminal, git hashes, etc.)
-				.replace(mentionRegexGlobal, (_match, mention) => renderMentionChip(mention, false))
-
-			// check for highlighting /slash-commands
-			if (/^\s*\//.test(processedText)) {
-				const slashIndex = processedText.indexOf("/")
-
-				// end of command is end of text or first whitespace
-				const spaceIndex = processedText.indexOf(" ", slashIndex)
-				const endIndex = spaceIndex > -1 ? spaceIndex : processedText.length
-
-				// extract and validate the exact command text
-				const commandText = processedText.substring(slashIndex + 1, endIndex)
-				const isValidCommand = validateSlashCommand(commandText, customModes)
-
-				if (isValidCommand) {
-					const fullCommand = processedText.substring(slashIndex, endIndex) // includes slash
-
-					const highlighted = `<mark class="slash-command-match-textarea-highlight">${fullCommand}</mark>`
-					processedText =
-						processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
 				}
+
+				return processedText || '<br data-plain-break="true">'
+			},
+			[customModes, renderMentionChip],
+		)
+
+		const getNodeTextLength = useCallback((node: Node): number => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				return node.textContent?.length || 0
 			}
-			// kilocode_change end
 
-			highlightLayerRef.current.innerHTML = processedText
-			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
-			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes, renderMentionChip])
+			if (node.nodeType === Node.ELEMENT_NODE) {
+				const el = node as HTMLElement
+				if (el.dataset?.mentionValue) {
+					return el.dataset.mentionValue.length
+				}
 
-		useLayoutEffect(() => {
-			updateHighlights()
-		}, [inputValue, updateHighlights])
+				if (el.tagName === "BR") {
+					return 1
+				}
 
-		const updateCursorPosition = useCallback(() => {
-			if (textAreaRef.current) {
-				setCursorPosition(textAreaRef.current.selectionStart)
+				return Array.from(el.childNodes).reduce((total, child) => total + getNodeTextLength(child), 0)
 			}
+
+			return 0
 		}, [])
 
+		const toPlainText = useCallback((node: Node, isLastSibling: boolean): string => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				return node.textContent || ""
+			}
+
+			if (node.nodeType === Node.ELEMENT_NODE) {
+				const el = node as HTMLElement
+
+				if (el.dataset?.mentionValue) {
+					return el.dataset.mentionValue
+				}
+
+				if (el.tagName === "BR") {
+					return "\n"
+				}
+
+				const children = Array.from(el.childNodes)
+				const text = children.map((child, idx) => toPlainText(child, idx === children.length - 1)).join("")
+
+				if ((el.tagName === "DIV" || el.tagName === "P") && !isLastSibling) {
+					return text + "\n"
+				}
+
+				return text
+			}
+
+			return ""
+		}, [])
+
+		const getPlainTextFromInput = useCallback(() => {
+			if (!textAreaRef.current) return ""
+			const children = Array.from(textAreaRef.current.childNodes)
+			return children.map((child, idx) => toPlainText(child, idx === children.length - 1)).join("")
+		}, [toPlainText])
+
+		const getCaretPosition = useCallback(() => {
+			if (!textAreaRef.current) return 0
+			const selection = window.getSelection()
+			if (!selection || selection.rangeCount === 0) return 0
+
+			const { anchorNode, anchorOffset } = selection
+			if (!anchorNode || !textAreaRef.current.contains(anchorNode)) {
+				return 0
+			}
+
+			const computeOffset = (root: Node, target: Node, offset: number): number => {
+				if (root === target) {
+					return offset
+				}
+
+				let total = 0
+				for (const child of Array.from(root.childNodes)) {
+					if (child === target) {
+						return total + computeOffset(child, target, offset)
+					}
+
+					if (child.contains(target)) {
+						return total + computeOffset(child, target, offset)
+					}
+
+					total += getNodeTextLength(child)
+				}
+
+				return total
+			}
+
+			return computeOffset(textAreaRef.current, anchorNode, anchorOffset)
+		}, [getNodeTextLength])
+
+		const setCaretPosition = useCallback(
+			(position: number) => {
+				const el = textAreaRef.current
+				if (!el) return
+
+				let remaining = position
+
+				const createRangeAt = (node: Node, offset: number): Range => {
+					const range = document.createRange()
+					range.setStart(node, offset)
+					range.collapse(true)
+					return range
+				}
+
+				const walk = (node: Node): Range | null => {
+					if (node.nodeType === Node.TEXT_NODE) {
+						const textLength = node.textContent?.length || 0
+						const pos = Math.min(remaining, textLength)
+						remaining -= pos
+						return createRangeAt(node, pos)
+					}
+
+					if (node.nodeType === Node.ELEMENT_NODE) {
+						const elNode = node as HTMLElement
+
+						if (elNode.dataset?.mentionValue) {
+							const parent = elNode.parentNode
+							if (!parent) return null
+							const siblings = Array.from(parent.childNodes)
+							const index = siblings.indexOf(elNode)
+							const targetIndex = remaining === 0 ? index : index + 1
+							remaining = Math.max(remaining - elNode.dataset.mentionValue.length, 0)
+							return createRangeAt(parent, targetIndex)
+						}
+
+						if (elNode.tagName === "BR") {
+							const parent = elNode.parentNode
+							if (!parent) return null
+							const siblings = Array.from(parent.childNodes)
+							const index = siblings.indexOf(elNode)
+							const targetIndex = remaining === 0 ? index : index + 1
+							remaining = Math.max(remaining - 1, 0)
+							return createRangeAt(parent, targetIndex)
+						}
+
+						for (const child of Array.from(elNode.childNodes)) {
+							const childLength = getNodeTextLength(child)
+							if (remaining <= childLength) {
+								return walk(child)
+							}
+							remaining -= childLength
+						}
+					}
+
+					return null
+				}
+
+				const range = walk(el)
+				if (!range) return
+
+				const selection = window.getSelection()
+				if (!selection) return
+				selection.removeAllRanges()
+				selection.addRange(range)
+			},
+			[getNodeTextLength],
+		)
+
+		useLayoutEffect(() => {
+			if (!textAreaRef.current) return
+			const html = valueToHtml(inputValue)
+			if (textAreaRef.current.innerHTML !== html) {
+				textAreaRef.current.innerHTML = html
+			}
+		}, [inputValue, valueToHtml])
+
+		const updateCursorPosition = useCallback(() => {
+			setCursorPosition(getCaretPosition())
+		}, [getCaretPosition])
+
 		const handleKeyUp = useCallback(
-			(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+			(e: React.KeyboardEvent<HTMLDivElement>) => {
 				if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) {
 					updateCursorPosition()
 				}
 			},
 			[updateCursorPosition],
 		)
+
+		const handleKeyDown = useCallback(
+			(event: React.KeyboardEvent<HTMLDivElement>) => {
+				if (showSlashCommandsMenu) {
+					if (event.key === "Escape") {
+						setShowSlashCommandsMenu(false)
+						return
+					}
+
+					if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+						event.preventDefault()
+						setSelectedSlashCommandsIndex((prevIndex) => {
+							const direction = event.key === "ArrowUp" ? -1 : 1
+							const commands = getMatchingSlashCommands(
+								slashCommandsQuery,
+								customModes,
+								localWorkflows,
+								globalWorkflows,
+							)
+
+							if (commands.length === 0) {
+								return prevIndex
+							}
+
+							const newIndex = (prevIndex + direction + commands.length) % commands.length
+							return newIndex
+						})
+						return
+					}
+
+					if ((event.key === "Enter" || event.key === "Tab") && selectedSlashCommandsIndex !== -1) {
+						event.preventDefault()
+						const commands = getMatchingSlashCommands(
+							slashCommandsQuery,
+							customModes,
+							localWorkflows,
+							globalWorkflows,
+						)
+						if (commands.length > 0) {
+							handleSlashCommandsSelect(commands[selectedSlashCommandsIndex])
+						}
+						return
+					}
+				}
+
+				if (showContextMenu) {
+					if (event.key === "Escape") {
+						setSelectedType(null)
+						setSelectedMenuIndex(3)
+						return
+					}
+
+					if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+						event.preventDefault()
+						setSelectedMenuIndex((prevIndex) => {
+							const direction = event.key === "ArrowUp" ? -1 : 1
+							const options = getContextMenuOptions(
+								searchQuery,
+								selectedType,
+								queryItems,
+								fileSearchResults,
+								allModes,
+							)
+							const optionsLength = options.length
+
+							if (optionsLength === 0) return prevIndex
+
+							const selectableOptions = options.filter(
+								(option) =>
+									option.type !== ContextMenuOptionType.URL &&
+									option.type !== ContextMenuOptionType.NoResults,
+							)
+
+							if (selectableOptions.length === 0) return -1
+
+							const currentSelectableIndex = selectableOptions.findIndex(
+								(option) => option === options[prevIndex],
+							)
+
+							const newSelectableIndex =
+								(currentSelectableIndex + direction + selectableOptions.length) %
+								selectableOptions.length
+
+							return options.findIndex((option) => option === selectableOptions[newSelectableIndex])
+						})
+						return
+					}
+					if ((event.key === "Enter" || event.key === "Tab") && selectedMenuIndex !== -1) {
+						event.preventDefault()
+						const selectedOption = getContextMenuOptions(
+							searchQuery,
+							selectedType,
+							queryItems,
+							fileSearchResults,
+							allModes,
+						)[selectedMenuIndex]
+						if (
+							selectedOption &&
+							selectedOption.type !== ContextMenuOptionType.URL &&
+							selectedOption.type !== ContextMenuOptionType.NoResults
+						) {
+							handleMentionSelect(selectedOption.type, selectedOption.value)
+						}
+						return
+					}
+				}
+
+				const isComposing = event.nativeEvent?.isComposing ?? false
+
+				const shouldSendMessage =
+					!isComposing &&
+					event.key === "Enter" &&
+					((sendMessageOnEnter && !event.shiftKey) || (!sendMessageOnEnter && event.shiftKey))
+
+				if (shouldSendMessage) {
+					event.preventDefault()
+
+					resetHistoryNavigation()
+					handleSend()
+				}
+
+				if (handleHistoryNavigation(event, showContextMenu, isComposing)) {
+					return
+				}
+
+				if (event.key === "Backspace" && !isComposing) {
+					const charBeforeCursor = inputValue[cursorPosition - 1]
+					const charAfterCursor = inputValue[cursorPosition + 1]
+
+					const charBeforeIsWhitespace =
+						charBeforeCursor === " " || charBeforeCursor === "\n" || charBeforeCursor === "\r\n"
+
+					const charAfterIsWhitespace =
+						charAfterCursor === " " || charAfterCursor === "\n" || charAfterCursor === "\r\n"
+
+					if (
+						charBeforeIsWhitespace &&
+						inputValue.slice(0, cursorPosition - 1).match(new RegExp(mentionRegex.source + "$"))
+					) {
+						const newCursorPosition = cursorPosition - 1
+						if (!charAfterIsWhitespace) {
+							event.preventDefault()
+							setCaretPosition(newCursorPosition)
+							setCursorPosition(newCursorPosition)
+						}
+
+						setCursorPosition(newCursorPosition)
+						setJustDeletedSpaceAfterMention(true)
+					} else if (justDeletedSpaceAfterMention) {
+						const { newText, newPosition } = removeMention(inputValue, cursorPosition)
+
+						if (newText !== inputValue) {
+							event.preventDefault()
+							setInputValue(newText)
+							setIntendedCursorPosition(newPosition)
+						}
+
+						setJustDeletedSpaceAfterMention(false)
+						setShowContextMenu(false)
+					} else {
+						setJustDeletedSpaceAfterMention(false)
+					}
+				}
+			},
+			[
+				showSlashCommandsMenu,
+				localWorkflows,
+				globalWorkflows,
+				customModes,
+				handleSlashCommandsSelect,
+				selectedSlashCommandsIndex,
+				slashCommandsQuery,
+				handleSend,
+				showContextMenu,
+				searchQuery,
+				selectedMenuIndex,
+				handleMentionSelect,
+				selectedType,
+				inputValue,
+				cursorPosition,
+				setInputValue,
+				justDeletedSpaceAfterMention,
+				queryItems,
+				allModes,
+				fileSearchResults,
+				handleHistoryNavigation,
+				resetHistoryNavigation,
+				sendMessageOnEnter,
+				setCaretPosition,
+			],
+		)
+
+		useLayoutEffect(() => {
+			if (intendedCursorPosition !== null) {
+				setCaretPosition(intendedCursorPosition)
+				setIntendedCursorPosition(null)
+			}
+		}, [inputValue, intendedCursorPosition, setCaretPosition])
+
+		const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+		const handleInputChange = useCallback(() => {
+			const newValue = getPlainTextFromInput()
+			setInputValue(newValue)
+			resetOnInputChange()
+
+			const newCursorPosition = getCaretPosition()
+			setCursorPosition(newCursorPosition)
+			setIntendedCursorPosition(newCursorPosition)
+
+			let showMenu = shouldShowContextMenu(newValue, newCursorPosition)
+			const slashMenuVisible = shouldShowSlashCommandsMenu(newValue, newCursorPosition)
+
+			if (slashMenuVisible) {
+				showMenu = false
+			}
+
+			setShowSlashCommandsMenu(slashMenuVisible)
+			setShowContextMenu(showMenu)
+
+			if (slashMenuVisible) {
+				const slashIndex = newValue.indexOf("/")
+				const query = newValue.slice(slashIndex + 1, newCursorPosition)
+				setSlashCommandsQuery(query)
+				setSelectedSlashCommandsIndex(0)
+			} else {
+				setSlashCommandsQuery("")
+				setSelectedSlashCommandsIndex(0)
+			}
+
+			if (showMenu) {
+				const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
+
+				if (newValue.startsWith("/") && lastAtIndex === -1) {
+					const query = newValue
+					setSearchQuery(query)
+					setSelectedMenuIndex(0)
+				} else {
+					const query = newValue.slice(lastAtIndex + 1, newCursorPosition)
+					setSearchQuery(query)
+
+					if (query.length > 0) {
+						setSelectedMenuIndex(0)
+
+						if (searchTimeoutRef.current) {
+							clearTimeout(searchTimeoutRef.current)
+						}
+
+						searchTimeoutRef.current = setTimeout(() => {
+							const reqId = Math.random().toString(36).substring(2, 9)
+							setSearchRequestId(reqId)
+							setSearchLoading(true)
+
+							vscode.postMessage({
+								type: "searchFiles",
+								query: unescapeSpaces(query),
+								requestId: reqId,
+							})
+						}, 200)
+					} else {
+						setSelectedMenuIndex(-1)
+					}
+				}
+			} else {
+				setSearchQuery("")
+				setSelectedMenuIndex(-1)
+				setFileSearchResults([])
+			}
+
+			if (textAreaRef.current) {
+				onHeightChange?.(textAreaRef.current.clientHeight)
+			}
+		}, [
+			getPlainTextFromInput,
+			getCaretPosition,
+			resetOnInputChange,
+			setInputValue,
+			setCursorPosition,
+			setIntendedCursorPosition,
+			setShowSlashCommandsMenu,
+			setShowContextMenu,
+			setSlashCommandsQuery,
+			setSelectedSlashCommandsIndex,
+			setSearchQuery,
+			setSelectedMenuIndex,
+			setSearchRequestId,
+			setSearchLoading,
+			setFileSearchResults,
+			onHeightChange,
+		])
+
+		// Handle enhanced prompt response and search results.
+		useEffect(() => {
+			const messageHandler = (event: MessageEvent) => {
+				const message = event.data
+
+				if (message.type === "enhancedPrompt") {
+					if (message.text && textAreaRef.current) {
+						try {
+							// Use execCommand to replace text while preserving undo history
+							if (document.execCommand) {
+								// Use native browser methods to preserve undo stack
+								const textarea = textAreaRef.current
+
+								// Focus the textarea to ensure it's the active element
+								textarea.focus()
+
+								// Select all text first
+								const selection = window.getSelection()
+								if (selection) {
+									selection.removeAllRanges()
+									const range = document.createRange()
+									range.selectNodeContents(textarea)
+									selection.addRange(range)
+								}
+								document.execCommand("insertText", false, message.text)
+								handleInputChange()
+							} else {
+								setInputValue(message.text)
+							}
+						} catch {
+							setInputValue(message.text)
+						}
+					}
+				} else if (message.type === "commitSearchResults") {
+					const commits = message.commits.map((commit: any) => ({
+						type: ContextMenuOptionType.Git,
+						value: commit.hash,
+						label: commit.subject,
+						description: `${commit.shortHash} by ${commit.author} on ${commit.date}`,
+						icon: "$(git-commit)",
+					}))
+
+					setGitCommits(commits)
+				} else if (message.type === "fileSearchResults") {
+					setSearchLoading(false)
+					if (message.requestId === searchRequestId) {
+						setFileSearchResults(message.results || [])
+					}
+					// kilocode_change start
+				} else if (message.type === "insertTextToChatArea") {
+					if (message.text) {
+						setInputValue(message.text)
+						setTimeout(() => {
+							if (textAreaRef.current) {
+								textAreaRef.current.focus()
+							}
+						}, 0)
+					}
+				}
+				// kilocode_change end
+			}
+
+			window.addEventListener("message", messageHandler)
+			return () => window.removeEventListener("message", messageHandler)
+		}, [handleInputChange, searchRequestId, setInputValue])
 
 		const handleDrop = useCallback(
 			async (e: React.DragEvent<HTMLDivElement>) => {
@@ -1360,32 +1508,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					"outline-none",
 				)}>
 				<div
-					ref={highlightLayerRef}
-					data-testid="highlight-layer"
-					className={cn(
-						"absolute",
-						"inset-0",
-						"pointer-events-none",
-						"whitespace-pre-wrap",
-						"break-words",
-						"overflow-hidden",
-						"font-vscode-font-family",
-						"text-vscode-editor-font-size",
-						"leading-vscode-editor-line-height",
-						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
-						"px-[8px]",
-						"pr-9",
-						"z-10",
-						"outline-none",
-						"rounded-xl",
-						"forced-color-adjust-none",
-						"pb-16", // kilocode_change
-					)}
-					style={{
-						color: "var(--vscode-input-foreground)",
-					}}
-				/>
-				<DynamicTextArea
 					ref={(el) => {
 						if (typeof ref === "function") {
 							ref(el)
@@ -1394,14 +1516,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						}
 						textAreaRef.current = el
 					}}
-					value={inputValue}
-					onChange={(e) => {
-						handleInputChange(e)
-						updateHighlights()
-					}}
+					role="textbox"
+					contentEditable
+					suppressContentEditableWarning
+					aria-multiline="true"
+					data-testid="chat-input"
+					onInput={handleInputChange}
 					onFocus={() => setIsFocused(true)}
 					onKeyDown={(e) => {
-						// Handle ESC to cancel in edit mode
 						if (isEditMode && e.key === "Escape" && !e.nativeEvent?.isComposing) {
 							e.preventDefault()
 							onCancel?.()
@@ -1414,18 +1536,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					onPaste={handlePaste}
 					onSelect={updateCursorPosition}
 					onMouseUp={updateCursorPosition}
-					onHeightChange={(height) => {
-						if (textAreaBaseHeight === undefined || height < textAreaBaseHeight) {
-							setTextAreaBaseHeight(height)
-						}
-
-						onHeightChange?.(height)
-					}}
-					// kilocode_change: combine placeholderText and placeholderBottomText here
-					placeholder={`${placeholderBottomText}`}
-					minRows={3}
-					maxRows={15}
-					autoFocus={true}
+					onScroll={updateCursorPosition}
+					spellCheck={false}
+					autoFocus
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",
@@ -1448,7 +1561,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"min-h-[110px]",
 						"box-border",
 						"rounded-xl",
-						"resize-none",
 						"overflow-x-hidden",
 						"overflow-y-auto",
 						"pr-9",
@@ -1457,12 +1569,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"scrollbar-none",
 						"scrollbar-hide",
 						"pb-14",
+						"whitespace-pre-wrap",
+						"break-words",
 					)}
 					style={{
-						color: inputValue ? "transparent" : undefined,
 						caretColor: "var(--vscode-input-foreground)",
 					}}
-					onScroll={() => updateHighlights()}
 				/>
 				{/* kilocode_change {Transparent overlay at bottom of textArea to avoid text overlap } */}
 				<div
@@ -1566,14 +1678,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				{!inputValue && (
 					<div
-						className="absolute left-2 z-30 pr-9 flex items-center h-8"
+						className="absolute inset-0 z-[3] px-2 pr-9 flex items-start pt-1.5"
 						style={{
-							bottom: "0.25rem",
 							color: "var(--vscode-tab-inactiveForeground)",
 							userSelect: "none",
 							pointerEvents: "none",
+							whiteSpace: "pre-wrap",
+							lineHeight: "var(--vscode-editor-line-height)",
 						}}>
-						{/* kilocode_change {placeholderBottomText} */}
+						<span>{placeholderBottomText}</span>
 					</div>
 				)}
 			</div>

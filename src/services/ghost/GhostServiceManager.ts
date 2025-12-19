@@ -363,7 +363,7 @@ export class GhostServiceManager {
 		}
 
 		this.statusBar?.update({
-			enabled: this.settings?.enableAutoTrigger,
+			enabled: this.settings?.enableAutoTrigger ?? true,
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
 			hasValidToken: this.hasValidApiToken(),

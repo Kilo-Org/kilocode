@@ -72,7 +72,7 @@ export const GhostServiceSettingsView = ({
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<ControlledCheckbox checked={enableAutoTrigger || false} onChange={onEnableAutoTriggerChange}>
+						<ControlledCheckbox checked={enableAutoTrigger ?? true} onChange={onEnableAutoTriggerChange}>
 							<span className="font-medium">{t("kilocode:ghost.settings.enableAutoTrigger.label")}</span>
 						</ControlledCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">

@@ -441,22 +441,28 @@ vscode-text-field::part(input) {
 	display: inline-flex;
 	align-items: center;
 	gap: 1px;
-	padding: 0px 1.5px;
-	border-radius: 2px;
+	padding: 1px 4px;
+	border-radius: 4px;
 	font-size: 10px;
-	background-color: color-mix(in srgb, var(--vscode-charts-blue) 30%, black);
+	background-color: #265b8d49;
 	color: var(--vscode-foreground);
 	font-size: inherit;
-	letter-spacing: 0em;
-	font-weight: 300;
+	font-weight: 400;
 	vertical-align: baseline;
+}
+
+.mention-chip__icon {
+	width: 12px;
+	height: 12px;
+	margin-right: 2px;
+	flex-shrink: 0;
 }
 
 .mention-chip__at {
 	padding: 0px;
 	color: white;
-	font-size: 11px;
-	font-weight: 200;
+	font-size: 12px;
+	font-weight: 400;
 }
 
 .mention-chip__primary,

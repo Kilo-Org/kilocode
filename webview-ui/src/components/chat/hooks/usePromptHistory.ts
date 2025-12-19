@@ -8,6 +8,8 @@ interface UsePromptHistoryProps {
 	cwd: string | undefined
 	inputValue: string
 	setInputValue: (value: string) => void
+	cursorPosition: number
+	applyCursorPosition: (position: number) => void
 }
 
 export interface UsePromptHistoryReturn {
@@ -17,7 +19,7 @@ export interface UsePromptHistoryReturn {
 	setTempInput: (input: string) => void
 	promptHistory: string[]
 	handleHistoryNavigation: (
-		event: React.KeyboardEvent<HTMLTextAreaElement>,
+		event: React.KeyboardEvent<HTMLElement>,
 		showContextMenu: boolean,
 		isComposing: boolean,
 	) => boolean
@@ -31,6 +33,8 @@ export const usePromptHistory = ({
 	cwd,
 	inputValue,
 	setInputValue,
+	cursorPosition,
+	applyCursorPosition,
 }: UsePromptHistoryProps): UsePromptHistoryReturn => {
 	// Maximum number of prompts to keep in history for memory management
 	const MAX_PROMPT_HISTORY_SIZE = 100
@@ -104,26 +108,9 @@ export const usePromptHistory = ({
 		}
 	}, [historyIndex])
 
-	// Helper to set cursor position after React renders
-	const setCursorPosition = useCallback(
-		(textarea: HTMLTextAreaElement, position: number | "start" | "end", length?: number) => {
-			setTimeout(() => {
-				if (position === "start") {
-					textarea.setSelectionRange(0, 0)
-				} else if (position === "end") {
-					const len = length ?? textarea.value.length
-					textarea.setSelectionRange(len, len)
-				} else {
-					textarea.setSelectionRange(position, position)
-				}
-			}, 0)
-		},
-		[],
-	)
-
 	// Helper to navigate to a specific history entry
 	const navigateToHistory = useCallback(
-		(newIndex: number, textarea: HTMLTextAreaElement, cursorPos: "start" | "end" = "start"): boolean => {
+		(newIndex: number, cursorPos: "start" | "end" = "start"): boolean => {
 			if (newIndex < 0 || newIndex >= promptHistory.length) return false
 
 			const historicalPrompt = promptHistory[newIndex]
@@ -131,62 +118,55 @@ export const usePromptHistory = ({
 
 			setHistoryIndex(newIndex)
 			setInputValue(historicalPrompt)
-			setCursorPosition(textarea, cursorPos, historicalPrompt.length)
+			const targetPosition = cursorPos === "start" ? 0 : historicalPrompt.length
+			applyCursorPosition(targetPosition)
 
 			return true
 		},
-		[promptHistory, setInputValue, setCursorPosition],
+		[promptHistory, setInputValue, applyCursorPosition],
 	)
 
 	// Helper to return to current input
 	const returnToCurrentInput = useCallback(
-		(textarea: HTMLTextAreaElement, cursorPos: "start" | "end" = "end") => {
+		(cursorPos: "start" | "end" = "end") => {
 			setHistoryIndex(-1)
 			setInputValue(tempInput)
-			setCursorPosition(textarea, cursorPos, tempInput.length)
+			const targetPosition = cursorPos === "start" ? 0 : tempInput.length
+			applyCursorPosition(targetPosition)
 		},
-		[tempInput, setInputValue, setCursorPosition],
+		[tempInput, setInputValue, applyCursorPosition],
 	)
 
 	const handleHistoryNavigation = useCallback(
-		(event: React.KeyboardEvent<HTMLTextAreaElement>, showContextMenu: boolean, isComposing: boolean): boolean => {
-			// Handle prompt history navigation
+		(event: React.KeyboardEvent<HTMLElement>, showContextMenu: boolean, isComposing: boolean): boolean => {
 			if (!showContextMenu && promptHistory.length > 0 && !isComposing) {
-				const textarea = event.currentTarget
-				const { selectionStart, selectionEnd, value } = textarea
-				const hasSelection = selectionStart !== selectionEnd
+				const selectionStart = cursorPosition
+				const selectionEnd = cursorPosition
 				const isAtBeginning = selectionStart === 0 && selectionEnd === 0
-				const isAtEnd = selectionStart === value.length && selectionEnd === value.length
+				const isAtEnd = selectionStart === inputValue.length && selectionEnd === inputValue.length
 
-				// Handle smart navigation
-				if (!hasSelection) {
-					// Only navigate history with UP if cursor is at the very beginning
-					if (event.key === "ArrowUp" && isAtBeginning) {
-						event.preventDefault()
-						// Save current input if starting navigation
-						if (historyIndex === -1) {
-							setTempInput(inputValue)
-						}
-						return navigateToHistory(historyIndex + 1, textarea, "start")
+				if (event.key === "ArrowUp" && isAtBeginning) {
+					event.preventDefault()
+					if (historyIndex === -1) {
+						setTempInput(inputValue)
 					}
+					return navigateToHistory(historyIndex + 1, "start")
+				}
 
-					// Handle DOWN arrow - only in history navigation mode
-					if (event.key === "ArrowDown" && historyIndex >= 0 && (isAtBeginning || isAtEnd)) {
-						event.preventDefault()
+				if (event.key === "ArrowDown" && historyIndex >= 0 && (isAtBeginning || isAtEnd)) {
+					event.preventDefault()
 
-						if (historyIndex > 0) {
-							// Keep cursor position consistent with where we started
-							return navigateToHistory(historyIndex - 1, textarea, isAtBeginning ? "start" : "end")
-						} else if (historyIndex === 0) {
-							returnToCurrentInput(textarea, isAtBeginning ? "start" : "end")
-							return true
-						}
+					if (historyIndex > 0) {
+						return navigateToHistory(historyIndex - 1, isAtBeginning ? "start" : "end")
+					} else if (historyIndex === 0) {
+						returnToCurrentInput(isAtBeginning ? "start" : "end")
+						return true
 					}
 				}
 			}
 			return false
 		},
-		[promptHistory, historyIndex, inputValue, navigateToHistory, returnToCurrentInput],
+		[promptHistory, historyIndex, inputValue, navigateToHistory, returnToCurrentInput, cursorPosition],
 	)
 
 	const resetHistoryNavigation = useCallback(() => {

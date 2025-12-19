@@ -186,7 +186,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const [inputValue, setInputValue] = useState("")
 	const inputValueRef = useRef(inputValue)
-	const textAreaRef = useRef<HTMLTextAreaElement>(null)
+	const textAreaRef = useRef<HTMLDivElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
 

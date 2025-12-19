@@ -1,12 +1,10 @@
 // kilocode_change: new file
 import { validateSlashCommand } from "@/utils/slash-commands"
 import { memo, useRef, useState } from "react"
-import { useTranslation } from "react-i18next"
 
 import type { ClineMessage } from "@roo-code/types"
 
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
-import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { cn } from "@src/lib/utils"
 
@@ -44,13 +42,13 @@ const KiloTaskHeader = ({
 	// contextTokens,
 	// buttonsDisabled,
 	// handleCondenseContext,
-	onClose,
+	// onClose,
 	// groupedMessages,
 	// onMessageClick,
 	// isTaskActive = false,
 	todos,
 }: TaskHeaderProps) => {
-	const { t } = useTranslation()
+	// const { t } = useTranslation()
 	// const { showTaskTimeline } = useExtensionState()
 	const { apiConfiguration, customModes } = useExtensionState()
 	const { info: model } = useSelectedModel(apiConfiguration)
@@ -76,13 +74,20 @@ const KiloTaskHeader = ({
 	// const hasTodos = todos && Array.isArray(todos) && todos.length > 0
 
 	return (
-		<div className="py-2 px-3">
+		<div className="px-3">
 			<div
 				className={cn(
 					"p-2.5 flex flex-col relative z-1 border",
 					"rounded-xl",
 					"border border-[var(--color-matterai-border)] outline-none",
-				)}>
+				)}
+				style={{
+					boxShadow:
+						"0 4px 6px -1px rgba(0, 0, 0, 80%), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+					backgroundColor: "var(--vscode-editor-background)",
+					position: "relative",
+					zIndex: 1,
+				}}>
 				<div className="flex justify-between items-center gap-2">
 					<div
 						className="flex items-center cursor-pointer -ml-0.5 select-none grow min-w-0"
@@ -90,21 +95,31 @@ const KiloTaskHeader = ({
 						<div className="flex items-center shrink-0">
 							<span className={`codicon codicon-chevron-${isTaskExpanded ? "down" : "right"}`}></span>
 						</div>
-						<div className="ml-1.5 whitespace-nowrap overflow-hidden text-ellipsis grow min-w-0">
-							<span className="font-bold">
+						<div className="ml-1.5 grow min-w-0">
+							{/* <span className="font-bold">
 								{t("chat:task.title")}
 								{!isTaskExpanded && ":"}
-							</span>
+							</span> */}
 							{!isTaskExpanded && (
-								<span style={{ marginLeft: 4 }}>{highlightText(task.text, false, customModes)}</span>
+								<div
+									style={{
+										marginLeft: 4,
+										display: "-webkit-box",
+										WebkitLineClamp: 2,
+										WebkitBoxOrient: "vertical",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+									}}>
+									{highlightText(task.text, false, customModes)}
+								</div>
 							)}
 						</div>
 					</div>
-					<StandardTooltip content={t("chat:task.closeAndStart")}>
+					{/* <StandardTooltip content={t("chat:task.closeAndStart")}>
 						<Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 w-5 h-5">
 							<span className="codicon codicon-close" />
 						</Button>
-					</StandardTooltip>
+					</StandardTooltip> */}
 				</div>
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
