@@ -453,11 +453,91 @@ kilocode --continue
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous task in the workspace
 
+## Ephemeral Mode
+
+Ephemeral mode prevents the CLI from writing to the `config.json` file, which is useful for:
+
+- **Testing and development**: Prevent accidentally injecting test credentials or settings into your config
+- **Parallel execution**: Run multiple CLI instances simultaneously without config file race conditions
+- **CI/CD pipelines**: Use environment variables for configuration without persisting them to disk
+- **Temporary sessions**: Try different configurations without modifying your saved settings
+
+### Enabling Ephemeral Mode
+
+Ephemeral mode can be enabled in two ways:
+
+**1. CLI Argument (Recommended)**
+
+```bash
+# Run with ephemeral mode enabled
+kilocode --ephemeral "implement feature X"
+
+# Works with other flags
+kilocode --ephemeral --auto "run tests"
+kilocode --ephemeral --parallel "improve performance"
+```
+
+**2. Environment Variable**
+
+```bash
+# Set environment variable
+export KILO_EPHEMERAL_MODE=true
+kilocode "implement feature X"
+
+# Or inline
+KILO_EPHEMERAL_MODE=true kilocode "implement feature X"
+```
+
+:::tip
+The `--ephemeral` CLI flag takes precedence over the `KILO_EPHEMERAL_MODE` environment variable.
+:::
+
+### Behavior in Ephemeral Mode
+
+When ephemeral mode is enabled:
+
+- Configuration is loaded from `config.json` (if it exists) or environment variables
+- All configuration changes are kept in memory only
+- No writes are made to `config.json` during the session
+- Provider/model overrides from CLI arguments are not persisted
+- Auto-approval settings changes are not saved
+
+### Use Cases
+
+**Parallel Testing**
+
+```bash
+# Run multiple instances without config conflicts
+kilocode --ephemeral --auto "test feature A" &
+kilocode --ephemeral --auto "test feature B" &
+kilocode --ephemeral --auto "test feature C" &
+wait
+```
+
+**CI/CD Integration**
+
+```bash
+# Use environment variables without persisting them
+export KILO_PROVIDER_TYPE=anthropic
+export KILO_API_KEY=$ANTHROPIC_API_KEY
+export KILO_API_MODEL_ID=claude-3-5-sonnet-20241022
+kilocode --ephemeral --auto "run integration tests"
+```
+
+**Development Testing**
+
+```bash
+# Test with different models without changing config
+kilocode --ephemeral --model "gpt-4" "test prompt"
+kilocode --ephemeral --model "claude-3-opus" "test prompt"
+```
+
 ## Environment Variable Overrides
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
 
 - `KILO_PROVIDER`: Override the active provider ID
+- `KILO_EPHEMERAL_MODE`: Enable ephemeral mode (prevents config.json writes)
 - For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
 - For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
 

@@ -14,7 +14,7 @@ import openConfigFile from "./config/openConfig.js"
 import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
 import { loadCustomModes } from "./config/customModes.js"
-import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
+import { envConfigExists, getMissingEnvVars, setEphemeralMode } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
@@ -48,6 +48,7 @@ program
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
+	.option("-e, --ephemeral", "Run in ephemeral mode (prevent config.json updates)", false)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate that --existing-branch requires --parallel
@@ -147,6 +148,11 @@ program
 			}
 		}
 
+		// Set ephemeral mode if CLI flag is provided
+		if (options.ephemeral) {
+			setEphemeralMode(true)
+		}
+
 		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
@@ -228,6 +234,7 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
+			ephemeral: options.ephemeral,
 		})
 		await cli.start()
 		await cli.dispose()

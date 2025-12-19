@@ -18,6 +18,22 @@ export { envConfigExists, getMissingEnvVars }
 export { PROVIDER_ENV_VAR, KILOCODE_PREFIX, KILO_PREFIX }
 
 /**
+ * Global ephemeral mode flag set by CLI argument
+ * This is separate from the environment variable to allow CLI control
+ */
+let cliEphemeralMode = false
+
+/**
+ * Set the ephemeral mode flag from CLI argument
+ */
+export function setEphemeralMode(enabled: boolean): void {
+	cliEphemeralMode = enabled
+	if (enabled) {
+		logs.info("Ephemeral mode enabled via CLI argument", "EnvConfig")
+	}
+}
+
+/**
  * Build auto-approval configuration from environment variables
  * Used when building config from scratch (no config.json)
  */
@@ -476,7 +492,15 @@ export function applyEnvOverrides(config: CLIConfig): CLIConfig {
 
 /**
  * Check if running in ephemeral mode (config from env only, no file)
+ * Ephemeral mode can be enabled via:
+ * 1. CLI argument: --ephemeral
+ * 2. Environment variable: KILO_EPHEMERAL_MODE (when env config exists)
  */
 export function isEphemeralMode(): boolean {
+	// CLI argument takes precedence
+	if (cliEphemeralMode) {
+		return true
+	}
+	// Fall back to environment variable (only when env config exists)
 	return envConfigExists() && process.env.KILO_EPHEMERAL_MODE !== "false"
 }
