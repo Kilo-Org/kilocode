@@ -19,7 +19,9 @@ const colorToChalk = (color: string) => {
 		return chalk.hex(color)
 	}
 	// Otherwise, it's a named color - use chalk's named color methods
-	return (chalk as any)[color] || chalk.white
+	// Type assertion is safe here as we're accessing chalk's color methods dynamically
+	type ChalkColor = keyof typeof chalk
+	return chalk[color as ChalkColor] || chalk.white
 }
 
 /**
