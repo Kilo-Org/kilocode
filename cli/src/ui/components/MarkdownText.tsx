@@ -242,7 +242,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...
 	try {
 		// Merge theme colors with user options if theme is provided
 		const rendererOptions: TerminalRendererOptions = theme
-			? {
+			? ({
 					...options,
 					text: theme.markdown.text,
 					heading: theme.markdown.heading,
@@ -252,7 +252,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...
 					blockquote: theme.markdown.blockquote,
 					link: theme.markdown.link,
 					list: theme.markdown.list,
-				}
+				} as TerminalRendererOptions)
 			: options
 
 		// Configure marked to use the terminal renderer
