@@ -121,6 +121,17 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
+			label: "Integrations",
+			items: [
+				"integrations/index",
+				"integrations/slackbot",
+				"integrations/cloud-agent",
+				"integrations/appbuilder",
+				"integrations/deploy",
+			],
+		},
+		{
+			type: "category",
 			label: "Advanced Usage",
 			items: [
 				"advanced-usage/prompt-engineering",
@@ -156,12 +167,7 @@ const sidebars: SidebarsConfig = {
 				},
 				"features/auto-launch-configuration",
 				"advanced-usage/auto-cleanup",
-				"advanced-usage/integrations",
-				"advanced-usage/slackbot",
-				"advanced-usage/appbuilder",
-				"advanced-usage/cloud-agent",
 				"advanced-usage/code-reviews",
-				"advanced-usage/deploy",
 				"advanced-usage/managed-indexing",
 				"advanced-usage/agent-manager",
 				"advanced-usage/sessions",
