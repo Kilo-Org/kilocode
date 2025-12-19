@@ -60,7 +60,7 @@ const CodeAccordian = ({
 					) : (
 						<>
 							{path?.startsWith(".") && <span>.</span>}
-							<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+							<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left rtl">
 								{removeLeadingNonAlphanumeric(path ?? "") + "\u200E"}
 							</span>
 						</>
