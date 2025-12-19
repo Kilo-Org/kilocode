@@ -29,6 +29,10 @@ export interface AgentManagerLoginIssueProperties {
 	httpStatusCode?: number
 	platform?: "darwin" | "win32" | "linux" | "other"
 	shell?: string
+	// Spawn error details for debugging Windows issues
+	errorMessage?: string
+	cliPath?: string
+	cliPathExtension?: string
 }
 
 export function captureAgentManagerOpened(): void {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
+import * as path from "node:path"
 
 const isWindows = process.platform === "win32"
 
@@ -10,40 +11,45 @@ describe("findKilocodeCli", () => {
 	const loginShellTests = isWindows ? it.skip : it
 
 	loginShellTests("finds CLI via login shell and returns trimmed result", async () => {
-		// Login shell is tried first, so mock it to succeed
 		const execSyncMock = vi.fn().mockReturnValue("/Users/test/.nvm/versions/node/v20/bin/kilocode\n")
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: { stat: vi.fn().mockRejectedValue(new Error("ENOENT")) },
+		}))
 
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const result = await findKilocodeCli()
 
 		expect(result).toBe("/Users/test/.nvm/versions/node/v20/bin/kilocode")
-		// First call should be login shell (on non-Windows)
 		expect(execSyncMock).toHaveBeenCalledWith(
 			expect.stringContaining("which kilocode"),
 			expect.objectContaining({ encoding: "utf-8" }),
 		)
 	})
 
-	loginShellTests("falls back to direct PATH when login shell fails", async () => {
-		let callCount = 0
-		const execSyncMock = vi.fn().mockImplementation((cmd: string) => {
-			callCount++
-			// First call (login shell) fails, second call (direct PATH) succeeds
-			if (callCount === 1) {
-				throw new Error("login shell failed")
+	loginShellTests("falls back to findExecutable when login shell fails", async () => {
+		const execSyncMock = vi.fn().mockImplementation(() => {
+			throw new Error("login shell failed")
+		})
+		const statMock = vi.fn().mockImplementation((filePath: string) => {
+			if (filePath === "/usr/local/bin/kilocode") {
+				return Promise.resolve({ isFile: () => true })
 			}
-			return "/usr/local/bin/kilocode\n"
+			return Promise.reject(new Error("ENOENT"))
 		})
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: { stat: statMock },
+		}))
 
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const result = await findKilocodeCli()
 
 		expect(result).toBe("/usr/local/bin/kilocode")
-		expect(execSyncMock).toHaveBeenCalledTimes(2)
 	})
 
 	it("falls back to npm paths when all PATH lookups fail", async () => {
@@ -51,11 +57,14 @@ describe("findKilocodeCli", () => {
 			throw new Error("not found")
 		})
 		const fileExistsMock = vi.fn().mockImplementation((path: string) => {
-			// Return true for first path checked to verify fallback works
 			return Promise.resolve(path.includes("kilocode"))
 		})
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: fileExistsMock }))
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: { stat: vi.fn().mockRejectedValue(new Error("ENOENT")) },
+		}))
 
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const result = await findKilocodeCli()
@@ -71,6 +80,10 @@ describe("findKilocodeCli", () => {
 			}),
 		}))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: { stat: vi.fn().mockRejectedValue(new Error("ENOENT")) },
+		}))
 
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const logMock = vi.fn()
@@ -80,18 +93,176 @@ describe("findKilocodeCli", () => {
 		expect(logMock).toHaveBeenCalledWith("kilocode CLI not found")
 	})
 
-	it("logs when kilocode not in direct PATH", async () => {
+	it("logs when kilocode not in PATH", async () => {
 		vi.doMock("node:child_process", () => ({
 			execSync: vi.fn().mockImplementation(() => {
 				throw new Error("not found")
 			}),
 		}))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: { stat: vi.fn().mockRejectedValue(new Error("ENOENT")) },
+		}))
 
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const logMock = vi.fn()
 		await findKilocodeCli(logMock)
 
-		expect(logMock).toHaveBeenCalledWith("kilocode not found in direct PATH lookup")
+		expect(logMock).toHaveBeenCalledWith("kilocode not found in PATH lookup")
+	})
+})
+
+describe("findExecutable", () => {
+	beforeEach(() => {
+		vi.resetModules()
+	})
+
+	// These tests use Unix-style paths which are not absolute on Windows
+	// Skip on Windows - the Windows-specific behavior is tested below
+	const unixOnlyTest = isWindows ? it.skip : it
+
+	unixOnlyTest("returns absolute path if file exists", async () => {
+		const statMock = vi.fn().mockResolvedValue({ isFile: () => true })
+		vi.doMock("node:fs", () => ({
+			promises: { stat: statMock },
+		}))
+
+		const { findExecutable } = await import("../CliPathResolver")
+		const result = await findExecutable("/usr/bin/kilocode")
+
+		expect(result).toBe("/usr/bin/kilocode")
+	})
+
+	unixOnlyTest("returns undefined for absolute path if file does not exist", async () => {
+		const statMock = vi.fn().mockRejectedValue(new Error("ENOENT"))
+		vi.doMock("node:fs", () => ({
+			promises: { stat: statMock },
+		}))
+
+		const { findExecutable } = await import("../CliPathResolver")
+		const result = await findExecutable("/usr/bin/nonexistent")
+
+		expect(result).toBeUndefined()
+	})
+
+	unixOnlyTest("searches PATH entries for command", async () => {
+		const statMock = vi.fn().mockImplementation((filePath: string) => {
+			if (filePath === "/custom/bin/myapp") {
+				return Promise.resolve({ isFile: () => true })
+			}
+			return Promise.reject(new Error("ENOENT"))
+		})
+		vi.doMock("node:fs", () => ({
+			promises: { stat: statMock },
+		}))
+
+		const { findExecutable } = await import("../CliPathResolver")
+		const result = await findExecutable("myapp", "/home/user", ["/usr/bin", "/custom/bin"])
+
+		expect(result).toBe("/custom/bin/myapp")
+	})
+
+	// Windows PATHEXT tests - run only on Windows CI
+	// We don't simulate Windows on other platforms - let actual Windows CI test it
+	describe("Windows PATHEXT handling", () => {
+		const windowsOnlyTest = isWindows ? it : it.skip
+		const testDir = "C:\\npm"
+		const testCwd = "C:\\home\\test"
+
+		const createFsMock = (matchPaths: string[]) => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: {
+				stat: vi.fn().mockImplementation((filePath: string) => {
+					if (matchPaths.some((p) => filePath === p)) {
+						return Promise.resolve({ isFile: () => true })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+				lstat: vi.fn().mockImplementation((filePath: string) => {
+					if (matchPaths.some((p) => filePath === p)) {
+						return Promise.resolve({ isFile: () => true, isSymbolicLink: () => false })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+			},
+		})
+
+		windowsOnlyTest("finds .CMD file via PATHEXT", async () => {
+			const expectedPath = path.join(testDir, "kilocode") + ".CMD"
+			vi.doMock("node:fs", () => createFsMock([expectedPath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, [testDir], {
+				PATH: testDir,
+				PATHEXT: ".COM;.EXE;.BAT;.CMD",
+			})
+
+			expect(result).toBe(expectedPath)
+		})
+
+		windowsOnlyTest("uses default PATHEXT when not in env", async () => {
+			const expectedPath = path.join(testDir, "kilocode") + ".CMD"
+			vi.doMock("node:fs", () => createFsMock([expectedPath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, [testDir], {
+				PATH: testDir,
+			})
+
+			expect(result).toBe(expectedPath)
+		})
+
+		windowsOnlyTest("handles case-insensitive env var lookup", async () => {
+			const expectedPath = path.join(testDir, "kilocode") + ".EXE"
+			vi.doMock("node:fs", () => createFsMock([expectedPath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, undefined, {
+				Path: testDir, // lowercase 'ath' - Windows env vars are case-insensitive
+				PathExt: ".COM;.EXE;.BAT;.CMD",
+			})
+
+			expect(result).toBe(expectedPath)
+		})
+
+		windowsOnlyTest("returns first matching PATHEXT extension", async () => {
+			const comPath = path.join(testDir, "kilocode") + ".COM"
+			const exePath = path.join(testDir, "kilocode") + ".EXE"
+			vi.doMock("node:fs", () => createFsMock([comPath, exePath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, [testDir], {
+				PATH: testDir,
+				PATHEXT: ".COM;.EXE;.BAT;.CMD",
+			})
+
+			expect(result).toBe(comPath)
+		})
+	})
+
+	// Non-Windows test - skipped on Windows since we can't simulate other platforms
+	const nonWindowsTest = isWindows ? it.skip : it
+
+	nonWindowsTest("does not use PATHEXT on non-Windows platforms", async () => {
+		const statMock = vi.fn().mockImplementation((filePath: string) => {
+			if (filePath === "/usr/bin/kilocode") {
+				return Promise.resolve({ isFile: () => true })
+			}
+			return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+		})
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: {
+				stat: statMock,
+				lstat: vi.fn().mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" })),
+			},
+		}))
+
+		const { findExecutable } = await import("../CliPathResolver")
+		const result = await findExecutable("kilocode", "/home/user", ["/usr/bin"])
+
+		expect(result).toBe("/usr/bin/kilocode")
+		expect(statMock).not.toHaveBeenCalledWith(expect.stringContaining(".CMD"))
 	})
 })
