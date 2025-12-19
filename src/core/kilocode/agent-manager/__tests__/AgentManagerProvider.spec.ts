@@ -98,13 +98,15 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(options?.shell).not.toBe(true)
 	})
 
-	it("spawns with shell: true on Windows when CLI path ends with .cmd", async () => {
-		// Reset modules to set up Windows-specific mock
+	// Windows-specific test - runs only on Windows CI
+	// We don't simulate Windows on other platforms - let the actual Windows CI test it
+	const windowsOnlyTest = isWindows ? it : it.skip
+
+	windowsOnlyTest("spawns with shell: true when CLI path ends with .cmd", async () => {
 		vi.resetModules()
 
-		// Use platform-appropriate paths for the test
-		const testNpmDir = isWindows ? "C:\\npm" : "/npm"
-		const testWorkspace = isWindows ? "C:\\tmp\\workspace" : "/tmp/workspace"
+		const testNpmDir = "C:\\npm"
+		const testWorkspace = "C:\\tmp\\workspace"
 		const cmdPath = path.join(testNpmDir, "kilocode") + ".CMD"
 
 		const mockWorkspaceFolder = { uri: { fsPath: testWorkspace } }
@@ -114,7 +116,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 		vi.doMock("vscode", () => ({
 			workspace: { workspaceFolders: [mockWorkspaceFolder] },
-			window: { showErrorMessage: vi.fn(), showWarningMessage: vi.fn(), ViewColumn: { One: 1 } },
+			window: { showErrorMessage: vi.fn().mockResolvedValue(undefined), showWarningMessage: vi.fn().mockResolvedValue(undefined), ViewColumn: { One: 1 } },
 			env: { openExternal: vi.fn() },
 			Uri: { parse: vi.fn(), joinPath: vi.fn() },
 			ViewColumn: { One: 1 },
@@ -134,7 +136,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 			findKilocodeCli: vi.fn().mockResolvedValue({ cliPath: cmdPath, shellPath: undefined }),
 			findExecutable: vi.fn().mockResolvedValue(cmdPath),
 		}))
-		// Mock fs to make findExecutable find the .cmd file
+
 		vi.doMock("node:fs", () => ({
 			existsSync: vi.fn().mockReturnValue(false),
 			readdirSync: vi.fn().mockReturnValue([]),
@@ -143,7 +145,13 @@ describe("AgentManagerProvider CLI spawning", () => {
 					if (filePath === cmdPath) {
 						return Promise.resolve({ isFile: () => true })
 					}
-					return Promise.reject(new Error("ENOENT"))
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+				lstat: vi.fn().mockImplementation((filePath: string) => {
+					if (filePath === cmdPath) {
+						return Promise.resolve({ isFile: () => true, isSymbolicLink: () => false })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
 				}),
 			},
 		}))
@@ -156,19 +164,14 @@ describe("AgentManagerProvider CLI spawning", () => {
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
-		const execSyncMock = vi.fn().mockImplementation(() => {
-			throw new Error("not found")
-		})
-
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
-			execSync: execSyncMock,
+			execSync: vi.fn().mockImplementation(() => {
+				throw new Error("not found")
+			}),
 		}))
 
-		// Mock process.platform to be win32 and set PATH
-		const originalPlatform = process.platform
 		const originalPath = process.env.PATH
-		Object.defineProperty(process, "platform", { value: "win32", writable: true })
 		process.env.PATH = testNpmDir
 
 		try {
@@ -184,8 +187,6 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 			windowsProvider.dispose()
 		} finally {
-			// Restore original platform and PATH
-			Object.defineProperty(process, "platform", { value: originalPlatform, writable: true })
 			process.env.PATH = originalPath
 		}
 	})
