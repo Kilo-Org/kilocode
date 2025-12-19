@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Text } from "ink"
 import { parse, setOptions } from "marked"
 import TerminalRenderer, { type TerminalRendererOptions } from "marked-terminal"
+import type { Theme } from "../../types/theme.js"
 
 export type MarkdownTextProps = TerminalRendererOptions & {
 	children: string
+	theme?: Theme
 }
 
 /**
@@ -108,7 +110,7 @@ const calculateAdaptiveSpeed = (
  * @param options - Optional TerminalRenderer configuration
  * @returns Rendered markdown text with typewriter animation for streaming content
  */
-export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, ...options }) => {
+export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...options }) => {
 	// State for displayed text (what user sees)
 	const [displayedText, setDisplayedText] = useState("")
 
@@ -238,9 +240,24 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, ...options
 	}
 
 	try {
+		// Merge theme colors with user options if theme is provided
+		const rendererOptions: TerminalRendererOptions = theme
+			? {
+					...options,
+					text: theme.markdown.text,
+					heading: theme.markdown.heading,
+					strong: theme.markdown.strong,
+					em: theme.markdown.em,
+					code: theme.markdown.code,
+					blockquote: theme.markdown.blockquote,
+					link: theme.markdown.link,
+					list: theme.markdown.list,
+				}
+			: options
+
 		// Configure marked to use the terminal renderer
 		setOptions({
-			renderer: new TerminalRenderer(options),
+			renderer: new TerminalRenderer(rendererOptions),
 		})
 
 		// Parse markdown on the displayed text (efficient - only once per update)
