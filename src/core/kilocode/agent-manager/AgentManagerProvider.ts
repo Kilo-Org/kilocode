@@ -3,6 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { t } from "i18next"
 import { AgentRegistry } from "./AgentRegistry"
+import { renameMapKey } from "./mapUtils"
 import {
 	parseParallelModeBranch,
 	parseParallelModeWorktreePath,
@@ -216,30 +217,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 		captureAgentManagerOpened()
 	}
 
-	/**
-	 * Handle session ID rename when provisional session is upgraded to real session ID.
-	 * Moves all session-keyed data from old ID to new ID.
-	 */
+	/** Rename session key in all session-keyed maps. */
 	private handleSessionRenamed(oldId: string, newId: string): void {
 		this.outputChannel.appendLine(`[AgentManager] Renaming session: ${oldId} -> ${newId}`)
 
-		// Helper to move a value from one key to another in a Map
-		const moveMapEntry = <T>(map: Map<string, T>, from: string, to: string): T | undefined => {
-			const value = map.get(from)
-			if (value !== undefined) {
-				map.delete(from)
-				map.set(to, value)
-			}
-			return value
-		}
+		renameMapKey(this.sessionMessages, oldId, newId)
+		renameMapKey(this.firstApiReqStarted, oldId, newId)
+		renameMapKey(this.processStartTimes, oldId, newId)
+		renameMapKey(this.sendingMessageMap, oldId, newId)
 
-		// Move all session-keyed data
-		const messages = moveMapEntry(this.sessionMessages, oldId, newId)
-		moveMapEntry(this.firstApiReqStarted, oldId, newId)
-		moveMapEntry(this.processStartTimes, oldId, newId)
-		moveMapEntry(this.sendingMessageMap, oldId, newId)
-
-		// Re-post messages to webview with the new session ID
+		const messages = this.sessionMessages.get(newId)
 		if (messages) {
 			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
 		}
