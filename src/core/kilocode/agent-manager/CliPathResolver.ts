@@ -220,6 +220,11 @@ function getLoginShellPath(log?: (msg: string) => void): string | undefined {
 			stdio: ["ignore", "pipe", "pipe"], // stdin ignored, stdout/stderr captured
 		})
 
+		if (result.error) {
+			log?.(`Could not capture shell PATH: ${result.error}`)
+			return undefined
+		}
+
 		const shellPath = result.stdout?.trim()
 		if (shellPath && shellPath !== process.env.PATH) {
 			log?.(`Captured shell PATH (${shellPath.split(":").length} entries)`)
