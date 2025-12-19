@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest"
 import { EventEmitter } from "node:events"
+import * as path from "node:path"
 import * as telemetry from "../telemetry"
 
-const MOCK_CLI_PATH = "/mock/path/to/kilocode"
+const isWindows = process.platform === "win32"
+const MOCK_CLI_PATH = isWindows ? "C:\\mock\\path\\to\\kilocode" : "/mock/path/to/kilocode"
 
 // Mock the local telemetry module
 vi.mock("../telemetry", () => ({
+	getPlatformDiagnostics: vi.fn(() => ({ platform: "darwin", shell: "bash" })),
 	captureAgentManagerOpened: vi.fn(),
 	captureAgentManagerSessionStarted: vi.fn(),
 	captureAgentManagerSessionCompleted: vi.fn(),
@@ -99,7 +102,12 @@ describe("AgentManagerProvider CLI spawning", () => {
 		// Reset modules to set up Windows-specific mock
 		vi.resetModules()
 
-		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
+		// Use platform-appropriate paths for the test
+		const testNpmDir = isWindows ? "C:\\npm" : "/npm"
+		const testWorkspace = isWindows ? "C:\\tmp\\workspace" : "/tmp/workspace"
+		const cmdPath = path.join(testNpmDir, "kilocode") + ".CMD"
+
+		const mockWorkspaceFolder = { uri: { fsPath: testWorkspace } }
 		const mockProvider = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}
@@ -122,12 +130,10 @@ describe("AgentManagerProvider CLI spawning", () => {
 		}))
 
 		// Mock CliPathResolver to return .cmd path for Windows test
-		const cmdPath = "/npm/kilocode.CMD"
 		vi.doMock("../CliPathResolver", () => ({
 			findKilocodeCli: vi.fn().mockResolvedValue({ cliPath: cmdPath, shellPath: undefined }),
 			findExecutable: vi.fn().mockResolvedValue(cmdPath),
 		}))
-
 		// Mock fs to make findExecutable find the .cmd file
 		vi.doMock("node:fs", () => ({
 			existsSync: vi.fn().mockReturnValue(false),
@@ -163,7 +169,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const originalPlatform = process.platform
 		const originalPath = process.env.PATH
 		Object.defineProperty(process, "platform", { value: "win32", writable: true })
-		process.env.PATH = "/npm"
+		process.env.PATH = testNpmDir
 
 		try {
 			const module = await import("../AgentManagerProvider")
