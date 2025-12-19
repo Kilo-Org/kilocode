@@ -46,8 +46,15 @@ describe("AgentManagerProvider CLI spawning", () => {
 			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
 		}))
 
+		// Mock CliInstaller so getLocalCliPath returns our mock path
+		vi.doMock("../CliInstaller", () => ({
+			getLocalCliPath: () => MOCK_CLI_PATH,
+		}))
+
+		// Mock fileExistsAtPath to return true only for MOCK_CLI_PATH
+		// This ensures findKilocodeCli finds the CLI via local path check (works on all platforms)
 		vi.doMock("../../../../utils/fs", () => ({
-			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+			fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
 		}))
 
 		// Mock getRemoteUrl for gitUrl support
@@ -494,8 +501,13 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
 		}))
 
+		// Mock CliInstaller so getLocalCliPath returns our mock path
+		vi.doMock("../CliInstaller", () => ({
+			getLocalCliPath: () => MOCK_CLI_PATH,
+		}))
+
 		vi.doMock("../../../../utils/fs", () => ({
-			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+			fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
 		}))
 
 		mockGetRemoteUrl = vi.fn().mockResolvedValue("https://github.com/org/repo.git")
@@ -731,8 +743,13 @@ describe("AgentManagerProvider telemetry", () => {
 			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
 		}))
 
+		// Mock CliInstaller so getLocalCliPath returns our mock path
+		vi.doMock("../CliInstaller", () => ({
+			getLocalCliPath: () => MOCK_CLI_PATH,
+		}))
+
 		vi.doMock("../../../../utils/fs", () => ({
-			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+			fileExistsAtPath: vi.fn().mockImplementation((p: string) => Promise.resolve(p === MOCK_CLI_PATH)),
 		}))
 
 		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
