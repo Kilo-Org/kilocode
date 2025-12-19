@@ -423,47 +423,61 @@ export class CliProcessHandler {
 		}
 	}
 
-	/**
-	 * Create a provisional session when api_req_started arrives before session_created.
-	 * This allows streaming content to show immediately instead of waiting for session_created.
-	 * The session ID will be updated when the real session_created event arrives.
-	 */
+	/** Create a provisional session to show streaming content before session_created arrives. */
 	private createProvisionalSession(proc: ChildProcess): void {
 		if (!this.pendingProcess || this.pendingProcess.provisionalSessionId) {
 			return
 		}
 
-		// Generate a temporary session ID (will be replaced when session_created arrives)
 		const provisionalId = `provisional-${Date.now()}`
 		this.pendingProcess.provisionalSessionId = provisionalId
 
 		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser } = this.pendingProcess
 
-		// Create the session in the registry
 		this.registry.createSession(provisionalId, prompt, startTime, {
 			parallelMode,
 			labelOverride: desiredLabel,
 			gitUrl,
 		})
 
-		// Move to active sessions so events get forwarded
-		this.activeSessions.set(provisionalId, {
-			process: proc,
-			parser,
-		})
+		this.activeSessions.set(provisionalId, { process: proc, parser })
 
 		if (proc.pid) {
 			this.registry.setSessionPid(provisionalId, proc.pid)
 		}
 
-		// Clear the pending session UI state (session is now "running")
 		this.registry.clearPendingSession()
 		this.callbacks.onPendingSessionChanged(null)
-		// Pass the actual sawApiReqStarted value - it may be false if provisional session
-		// was created on a text event before api_req_started arrived
 		this.callbacks.onSessionCreated(this.pendingProcess?.sawApiReqStarted ?? false)
 
 		this.debugLog(`Created provisional session: ${provisionalId}`)
+		this.callbacks.onStateChanged()
+	}
+
+	/** Upgrade provisional session to real session ID when session_created arrives. */
+	private upgradeProvisionalSession(
+		provisionalSessionId: string,
+		realSessionId: string,
+		worktreeBranch: string | undefined,
+		parallelMode: boolean | undefined,
+	): void {
+		this.debugLog(`Upgrading provisional session ${provisionalSessionId} -> ${realSessionId}`)
+
+		this.registry.renameSession(provisionalSessionId, realSessionId)
+
+		const activeInfo = this.activeSessions.get(provisionalSessionId)
+		if (activeInfo) {
+			this.activeSessions.delete(provisionalSessionId)
+			this.activeSessions.set(realSessionId, activeInfo)
+		}
+
+		this.callbacks.onSessionRenamed?.(provisionalSessionId, realSessionId)
+
+		if (worktreeBranch && parallelMode) {
+			this.registry.updateParallelModeInfo(realSessionId, { branch: worktreeBranch })
+		}
+
+		this.pendingProcess = null
 		this.callbacks.onStateChanged()
 	}
 
@@ -521,35 +535,9 @@ export class CliProcessHandler {
 		// Use desired sessionId when provided (resuming) to keep UI continuity
 		const sessionId = desiredSessionId ?? event.sessionId
 
-		// Handle provisional session upgrade: we already created a session with a temporary ID,
-		// now we need to update it to use the real session ID from the CLI
+		// Handle provisional session upgrade if one exists
 		if (provisionalSessionId) {
-			this.debugLog(`Upgrading provisional session ${provisionalSessionId} to real session ${sessionId}`)
-
-			// Update the registry: rename the session from provisional ID to real ID
-			this.registry.renameSession(provisionalSessionId, sessionId)
-
-			// Update activeSessions map: move from provisional ID to real ID
-			const activeInfo = this.activeSessions.get(provisionalSessionId)
-			if (activeInfo) {
-				this.activeSessions.delete(provisionalSessionId)
-				this.activeSessions.set(sessionId, activeInfo)
-			}
-
-			// Notify callback so AgentManagerProvider can update its maps (sessionMessages, firstApiReqStarted, etc.)
-			this.callbacks.onSessionRenamed?.(provisionalSessionId, sessionId)
-
-			// Apply worktree branch if captured from welcome event
-			if (worktreeBranch && parallelMode) {
-				this.registry.updateParallelModeInfo(sessionId, { branch: worktreeBranch })
-				this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
-			}
-
-			// Clear pending process state (session is already active)
-			this.pendingProcess = null
-
-			this.debugLog(`Session upgraded: ${sessionId}`)
-			this.callbacks.onStateChanged()
+			this.upgradeProvisionalSession(provisionalSessionId, sessionId, worktreeBranch, parallelMode)
 			return
 		}
 
