@@ -2,11 +2,24 @@ import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Text } from "ink"
 import { parse, setOptions } from "marked"
 import TerminalRenderer, { type TerminalRendererOptions } from "marked-terminal"
+import chalk from "chalk"
 import type { Theme } from "../../types/theme.js"
 
 export type MarkdownTextProps = TerminalRendererOptions & {
 	children: string
 	theme?: Theme
+}
+
+/**
+ * Convert a color string (hex or named) to a chalk function
+ */
+const colorToChalk = (color: string) => {
+	// If it starts with #, it's a hex color
+	if (color.startsWith("#")) {
+		return chalk.hex(color)
+	}
+	// Otherwise, it's a named color - use chalk's named color methods
+	return (chalk as any)[color] || chalk.white
 }
 
 /**
@@ -242,17 +255,17 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, theme, ...
 	try {
 		// Merge theme colors with user options if theme is provided
 		const rendererOptions: TerminalRendererOptions = theme
-			? ({
+			? {
 					...options,
-					text: theme.markdown.text,
-					heading: theme.markdown.heading,
-					strong: theme.markdown.strong,
-					em: theme.markdown.em,
-					code: theme.markdown.code,
-					blockquote: theme.markdown.blockquote,
-					link: theme.markdown.link,
-					list: theme.markdown.list,
-				} as TerminalRendererOptions)
+					text: colorToChalk(theme.markdown.text),
+					heading: colorToChalk(theme.markdown.heading),
+					strong: colorToChalk(theme.markdown.strong),
+					em: colorToChalk(theme.markdown.em),
+					code: colorToChalk(theme.markdown.code),
+					blockquote: colorToChalk(theme.markdown.blockquote),
+					link: colorToChalk(theme.markdown.link),
+					list: colorToChalk(theme.markdown.list),
+				}
 			: options
 
 		// Configure marked to use the terminal renderer
