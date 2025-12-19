@@ -160,12 +160,16 @@ describe("findExecutable", () => {
 	})
 
 	describe("Windows PATHEXT handling", () => {
+		// Use platform-appropriate test paths
+		const testDir = isWindows ? "C:\\npm" : "/npm"
+		const testCwd = isWindows ? "C:\\home\\test" : "/home/test"
+
 		it("tries PATHEXT extensions on Windows", async () => {
 			const originalPlatform = process.platform
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
-				const expectedPath = path.join("/npm", "kilocode") + ".CMD"
+				const expectedPath = path.join(testDir, "kilocode") + ".CMD"
 				const statMock = vi.fn().mockImplementation((filePath: string) => {
 					if (filePath === expectedPath) {
 						return Promise.resolve({ isFile: () => true })
@@ -177,8 +181,8 @@ describe("findExecutable", () => {
 				}))
 
 				const { findExecutable } = await import("../CliPathResolver")
-				const result = await findExecutable("kilocode", "/home/test", ["/npm"], {
-					PATH: "/npm",
+				const result = await findExecutable("kilocode", testCwd, [testDir], {
+					PATH: testDir,
 					PATHEXT: ".COM;.EXE;.BAT;.CMD",
 				})
 
@@ -193,7 +197,7 @@ describe("findExecutable", () => {
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
-				const expectedPath = path.join("/npm", "kilocode") + ".CMD"
+				const expectedPath = path.join(testDir, "kilocode") + ".CMD"
 				const statMock = vi.fn().mockImplementation((filePath: string) => {
 					if (filePath === expectedPath) {
 						return Promise.resolve({ isFile: () => true })
@@ -205,8 +209,8 @@ describe("findExecutable", () => {
 				}))
 
 				const { findExecutable } = await import("../CliPathResolver")
-				const result = await findExecutable("kilocode", "/home/test", ["/npm"], {
-					PATH: "/npm",
+				const result = await findExecutable("kilocode", testCwd, [testDir], {
+					PATH: testDir,
 				})
 
 				expect(result).toBe(expectedPath)
@@ -220,7 +224,7 @@ describe("findExecutable", () => {
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
-				const expectedPath = path.join("/npm", "kilocode") + ".EXE"
+				const expectedPath = path.join(testDir, "kilocode") + ".EXE"
 				const statMock = vi.fn().mockImplementation((filePath: string) => {
 					if (filePath === expectedPath) {
 						return Promise.resolve({ isFile: () => true })
@@ -232,8 +236,8 @@ describe("findExecutable", () => {
 				}))
 
 				const { findExecutable } = await import("../CliPathResolver")
-				const result = await findExecutable("kilocode", "/home/test", undefined, {
-					Path: "/npm",
+				const result = await findExecutable("kilocode", testCwd, undefined, {
+					Path: testDir,
 					PathExt: ".COM;.EXE;.BAT;.CMD",
 				})
 
@@ -248,8 +252,8 @@ describe("findExecutable", () => {
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
-				const comPath = path.join("/npm", "kilocode") + ".COM"
-				const exePath = path.join("/npm", "kilocode") + ".EXE"
+				const comPath = path.join(testDir, "kilocode") + ".COM"
+				const exePath = path.join(testDir, "kilocode") + ".EXE"
 				const statMock = vi.fn().mockImplementation((filePath: string) => {
 					if (filePath === comPath || filePath === exePath) {
 						return Promise.resolve({ isFile: () => true })
@@ -261,8 +265,8 @@ describe("findExecutable", () => {
 				}))
 
 				const { findExecutable } = await import("../CliPathResolver")
-				const result = await findExecutable("kilocode", "/home/test", ["/npm"], {
-					PATH: "/npm",
+				const result = await findExecutable("kilocode", testCwd, [testDir], {
+					PATH: testDir,
 					PATHEXT: ".COM;.EXE;.BAT;.CMD",
 				})
 
