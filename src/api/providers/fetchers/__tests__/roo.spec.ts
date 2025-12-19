@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { getRooModels } from "../roo"
+import { Package } from "../../../../shared/package"
 
 // Mock fetch globally
 const mockFetch = vi.fn()
@@ -800,5 +801,229 @@ describe("getRooModels", () => {
 		expect(model.customProperty).toBe("custom-value")
 		expect(model.anotherSetting).toBe(42)
 		expect(model.nestedConfig).toEqual({ key: "value" })
+	})
+
+	it("should apply versioned settings when version matches", async () => {
+		const mockResponse = {
+			object: "list",
+			data: [
+				{
+					id: "test/versioned-model",
+					object: "model",
+					created: 1234567890,
+					owned_by: "test",
+					name: "Model with Versioned Settings",
+					description: "Model with versioned settings",
+					context_window: 128000,
+					max_tokens: 8192,
+					type: "language",
+					tags: ["tool-use"],
+					pricing: {
+						input: "0.0001",
+						output: "0.0002",
+					},
+					// Plain settings for backward compatibility with old clients
+					settings: {
+						includedTools: ["apply_patch"],
+						excludedTools: ["write_to_file"],
+					},
+					// Versioned settings keyed by version number (low version - always met)
+					versionedSettings: {
+						"1.0.0": {
+							includedTools: ["apply_patch", "search_replace"],
+							excludedTools: ["apply_diff", "write_to_file"],
+						},
+					},
+				},
+			],
+		}
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockResponse,
+		})
+
+		const models = await getRooModels(baseUrl, apiKey)
+
+		// Versioned settings should be used instead of plain settings
+		expect(models["test/versioned-model"].includedTools).toEqual(["apply_patch", "search_replace"])
+		expect(models["test/versioned-model"].excludedTools).toEqual(["apply_diff", "write_to_file"])
+	})
+
+	it("should use plain settings when no versioned settings version matches", async () => {
+		const mockResponse = {
+			object: "list",
+			data: [
+				{
+					id: "test/old-version-model",
+					object: "model",
+					created: 1234567890,
+					owned_by: "test",
+					name: "Model for Old Version",
+					description: "Model with versioned settings for newer version",
+					context_window: 128000,
+					max_tokens: 8192,
+					type: "language",
+					tags: ["tool-use"],
+					pricing: {
+						input: "0.0001",
+						output: "0.0002",
+					},
+					settings: {
+						includedTools: ["apply_patch"],
+					},
+					// Versioned settings keyed by very high version - never met
+					versionedSettings: {
+						"99.0.0": {
+							includedTools: ["apply_patch", "search_replace"],
+						},
+					},
+				},
+			],
+		}
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockResponse,
+		})
+
+		const models = await getRooModels(baseUrl, apiKey)
+
+		// Should use plain settings since no versioned settings match current version
+		expect(models["test/old-version-model"].includedTools).toEqual(["apply_patch"])
+	})
+
+	it("should handle model with only versionedSettings and no plain settings", async () => {
+		const mockResponse = {
+			object: "list",
+			data: [
+				{
+					id: "test/versioned-only-model",
+					object: "model",
+					created: 1234567890,
+					owned_by: "test",
+					name: "Model with Only Versioned Settings",
+					description: "Model with only versioned settings",
+					context_window: 128000,
+					max_tokens: 8192,
+					type: "language",
+					tags: [],
+					pricing: {
+						input: "0.0001",
+						output: "0.0002",
+					},
+					// No plain settings, only versionedSettings keyed by version
+					versionedSettings: {
+						"1.0.0": {
+							customFeature: true,
+						},
+					},
+				},
+			],
+		}
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockResponse,
+		})
+
+		const models = await getRooModels(baseUrl, apiKey)
+		const model = models["test/versioned-only-model"] as Record<string, unknown>
+
+		expect(model.customFeature).toBe(true)
+	})
+
+	it("should select highest matching version from versionedSettings", async () => {
+		const mockResponse = {
+			object: "list",
+			data: [
+				{
+					id: "test/multi-version-model",
+					object: "model",
+					created: 1234567890,
+					owned_by: "test",
+					name: "Model with Multiple Versions",
+					description: "Model with multiple version settings",
+					context_window: 128000,
+					max_tokens: 8192,
+					type: "language",
+					tags: [],
+					pricing: {
+						input: "0.0001",
+						output: "0.0002",
+					},
+					settings: {
+						feature: "default",
+					},
+					// Multiple version keys - should use highest one <= current version
+					versionedSettings: {
+						"99.0.0": { feature: "future" },
+						"3.0.0": { feature: "current" },
+						"2.0.0": { feature: "old" },
+						"1.0.0": { feature: "very_old" },
+					},
+				},
+			],
+		}
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockResponse,
+		})
+
+		const models = await getRooModels(baseUrl, apiKey)
+		const model = models["test/multi-version-model"] as Record<string, unknown>
+
+		// Should use 3.0.0 version settings (highest that's <= current plugin version)
+		expect(model.feature).toBe("current")
+	})
+
+	it("should apply highest versionedSettings for nightly builds (package name)", async () => {
+		const mockResponse = {
+			object: "list",
+			data: [
+				{
+					id: "test/nightly-version-model",
+					object: "model",
+					created: 1234567890,
+					owned_by: "test",
+					name: "Nightly Model",
+					description: "Model with multiple versioned settings",
+					context_window: 128000,
+					max_tokens: 8192,
+					type: "language",
+					pricing: {
+						input: "0.0001",
+						output: "0.0002",
+					},
+					settings: {
+						feature: "plain",
+					},
+					versionedSettings: {
+						"3.36.3": { feature: "v3" },
+						"2.0.0": { feature: "v2" },
+					},
+				},
+			],
+		}
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockResponse,
+		})
+
+		// Simulate nightly build via package name
+		const originalName = Package.name
+		;(Package as { name: string }).name = "roo-code-nightly"
+
+		try {
+			const models = await getRooModels(baseUrl, apiKey)
+			const model = models["test/nightly-version-model"] as Record<string, unknown>
+
+			// Should pick the highest available versionedSettings even though 3.36.3 > 0.0.7465
+			expect(model.feature).toBe("v3")
+		} finally {
+			;(Package as { name: string }).name = originalName
+		}
 	})
 })

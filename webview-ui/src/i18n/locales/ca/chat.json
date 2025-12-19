@@ -112,6 +112,7 @@
 	"enhancePrompt": "Millora la sol·licitud amb context addicional",
 	"addImages": "Afegeix imatges al missatge",
 	"sendMessage": "Envia el missatge",
+	"pressToSend": "Prem {{keyCombination}} per enviar",
 	"stopTts": "Atura la síntesi de veu",
 	"typeMessage": "Escriu un missatge...",
 	"typeTask": "Escriu la teva tasca aquí...",
@@ -154,7 +155,8 @@
 			"403": "No autoritzat. La teva clau API és vàlida, però el proveïdor ha rebutjat completar aquesta sol·licitud.",
 			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
 			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
-			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Roo Code."
+			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Kilo.",
+			"connection": "Error de connexió. Assegureu-vos que teniu una connexió a Internet funcional."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"hasQuestion": "Kilo Code té una pregunta"
 	},
 	"taskCompleted": "Tasca completada",
+	"errorDetails": {
+		"title": "Detalls de l'error",
+		"copyToClipboard": "Copiar al porta-retalls",
+		"copied": "Copiat!"
+	},
 	"powershell": {
 		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
 	},
@@ -293,19 +300,28 @@
 		"thinking": "Pensant",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Context condensat",
-		"condensing": "Condensant context...",
-		"errorHeader": "Error en condensar el context",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context condensat",
+			"inProgress": "Condensant context...",
+			"errorHeader": "Error en condensar el context"
+		},
+		"truncation": {
+			"title": "Context truncat",
+			"inProgress": "Truncant context...",
+			"messagesRemoved": "{{count}} missatge eliminat",
+			"messagesRemoved_other": "{{count}} missatges eliminats",
+			"description": "S'han eliminat missatges més antics de la conversa per mantenir-se dins del límit de la finestra de context. Aquest és un enfocament ràpid però menys conservador del context en comparació amb la condensació."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copiar a l'entrada (o Shift + clic)",
-		"autoSelectCountdown": "Selecció automàtica en {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Aprovació automàtica habilitada. Seleccionant en {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Llançat",
+		"title": "Roo Code {{version}} Llançat",
+		"support": "Si us plau, dona suport a Roo Code fent una estrella al nostre <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Model stealth GRATUÏT per temps limitat</bold> - Code Supernova: Ara actualitzat amb una <bold>finestra de context d'1M tokens</bold>! Un model de codificació agèntica versàtil que suporta entrades d'imatges, disponible a través de Roo Code Cloud.",
 			"note": "(Nota: els prompts i completacions són registrats pel creador del model i utilitzats per millorar-lo)",
@@ -325,7 +341,7 @@
 			"tryButton": "Prova els Agents al Núvol"
 		},
 		"careers": "A més, <careersLink>estem contractant!</careersLink>",
-		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
 		"session": "Sessió del navegador",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Sessió de navegador iniciada",
 		"actions": {
 			"title": "Acció del navegador: ",
+			"launched": "Navegador iniciat",
 			"launch": "Iniciar navegador a {{url}}",
+			"clicked": "Fet clic ({{coordinate}})",
 			"click": "Clic ({{coordinate}})",
+			"typed": "Escrit: {{text}}",
 			"type": "Escriure \"{{text}}\"",
+			"pressed": "Premut: {{key}}",
 			"press": "Prem {{key}}",
+			"scrolledDown": "Desplaçat avall",
 			"scrollDown": "Desplaçar avall",
+			"scrolledUp": "Desplaçat amunt",
 			"scrollUp": "Desplaçar amunt",
+			"hovered": "Planat sobre ({{coordinate}})",
 			"hover": "Plana sobre ({{coordinate}})",
+			"resized": "Mida canviada a: {{size}}",
+			"resize": "Canvia la mida a {{size}}",
+			"screenshotSaved": "Captura de pantalla guardada",
+			"screenshot": "Guarda la captura de pantalla a {{path}}",
+			"closed": "Navegador tancat",
 			"close": "Tancar navegador"
 		}
 	},

@@ -194,8 +194,8 @@ export default function PricingPage() {
 											</>
 										)}
 										Inference:{" "}
-										<Link href="/provider/pricing" className="underline hover:no-underline">
-											Roo Provider
+										<Link href="/provider" className="underline hover:no-underline">
+											Roo Provider pricing
 										</Link>{" "}
 										credits or{" "}
 										<abbr title="Bring Your Own Model" className="cursor-help">

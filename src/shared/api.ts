@@ -193,7 +193,9 @@ const dynamicProviderExtras = {
 	"io-intelligence": {} as { apiKey: string },
 	requesty: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
+	// kilocode_change start
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	// kilocode_change end
 	"nano-gpt": {} as { nanoGptModelList?: "all" | "personalized" | "subscription" }, // kilocode_change
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type

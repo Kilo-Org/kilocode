@@ -330,7 +330,7 @@ interface FastApplyConfiguration {
 
 function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfiguration {
 	// Check if Fast Apply is enabled in API configuration
-	if (state.experiments.morphFastApply !== true) {
+	if (state?.experiments?.morphFastApply !== true) {
 		return {
 			available: false,
 			error: "Fast Apply is disabled. Enable it in API Options > Enable Editing with Fast Apply",

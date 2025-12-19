@@ -3,27 +3,27 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { t } from "i18next"
 import { AgentRegistry } from "./AgentRegistry"
+import { renameMapKey } from "./mapUtils"
 import {
 	parseParallelModeBranch,
 	parseParallelModeWorktreePath,
 	isParallelModeCompletionMessage,
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
-import { findKilocodeCli } from "./CliPathResolver"
 import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
 import { extractRawText, tryParsePayloadJson } from "./askErrorParser"
 import { RemoteSessionService } from "./RemoteSessionService"
 import { KilocodeEventProcessor } from "./KilocodeEventProcessor"
+import { CliSessionLauncher } from "./CliSessionLauncher"
 import type { RemoteSession } from "./types"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
-import type { ClineMessage } from "@roo-code/types"
-import type { ProviderSettings } from "@roo-code/types"
+import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -53,6 +53,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private remoteSessionService: RemoteSessionService
 	private processHandler: CliProcessHandler
 	private eventProcessor: KilocodeEventProcessor
+	private sessionLauncher: CliSessionLauncher
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
 	// Track first api_req_started per session to filter user-input echoes
 	private firstApiReqStarted: Map<string, boolean> = new Map()
@@ -71,6 +72,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 	) {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
+
+		// Initialize session launcher with pre-warming
+		// Pre-warming starts slow lookups (CLI: 500-2000ms, git: 50-100ms) immediately
+		// so they complete before the user clicks "Start" to reduce time-to-first-token
+		this.sessionLauncher = new CliSessionLauncher(outputChannel, () => this.getApiConfigurationForCli())
+		this.sessionLauncher.startPrewarm()
 
 		// Initialize currentGitUrl from workspace
 		void this.initializeCurrentGitUrl()
@@ -142,6 +149,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				})
 			},
 			onPaymentRequiredPrompt: (payload) => this.showPaymentRequiredPrompt(payload),
+			onSessionRenamed: (oldId, newId) => this.handleSessionRenamed(oldId, newId),
 		}
 
 		this.processHandler = new CliProcessHandler(this.registry, callbacks)
@@ -196,6 +204,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			() => {
 				this.panel = undefined
 				this.stopAllAgents()
+				// Clear pre-warm state when panel closes
+				this.sessionLauncher.clearPrewarm()
 			},
 			null,
 			this.disposables,
@@ -205,6 +215,21 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// Track Agent Manager panel opened
 		captureAgentManagerOpened()
+	}
+
+	/** Rename session key in all session-keyed maps. */
+	private handleSessionRenamed(oldId: string, newId: string): void {
+		this.outputChannel.appendLine(`[AgentManager] Renaming session: ${oldId} -> ${newId}`)
+
+		renameMapKey(this.sessionMessages, oldId, newId)
+		renameMapKey(this.firstApiReqStarted, oldId, newId)
+		renameMapKey(this.processStartTimes, oldId, newId)
+		renameMapKey(this.sendingMessageMap, oldId, newId)
+
+		const messages = this.sessionMessages.get(newId)
+		if (messages) {
+			this.postMessage({ type: "agentManager.chatMessages", sessionId: newId, messages })
+		}
 	}
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
@@ -419,22 +444,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 
-		// Get workspace folder early to fetch git URL before spawning
 		// Note: we intentionally allow starting parallel mode from within an existing git worktree.
 		// Git worktrees share a common .git dir, so `git worktree add/remove` still works from a worktree root.
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-
-		// Get git URL for the workspace (used for filtering sessions)
-		let gitUrl: string | undefined
-		if (workspaceFolder) {
-			try {
-				gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
-			} catch (error) {
-				this.outputChannel.appendLine(
-					`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
-				)
-			}
-		}
 
 		const onSetupFailed = () => {
 			if (!workspaceFolder) {
@@ -443,12 +455,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 			this.postMessage({ type: "agentManager.startSessionFailed" })
 		}
 
+		// Git URL lookup is now handled by spawnCliWithCommonSetup using pre-warmed promise
 		await this.spawnCliWithCommonSetup(
 			prompt,
 			{
 				parallelMode: options?.parallelMode,
 				label: options?.labelOverride,
-				gitUrl,
 				existingBranch: options?.existingBranch,
 			},
 			onSetupFailed,
@@ -462,7 +474,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	/**
 	 * Common helper to spawn a CLI process with standard setup.
-	 * Handles CLI path lookup, workspace folder validation, API config, and event callback wiring.
+	 * Delegates to CliSessionLauncher for pre-warming and spawning.
 	 * @returns true if process was spawned, false if setup failed
 	 */
 	private async spawnCliWithCommonSetup(
@@ -476,47 +488,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 		},
 		onSetupFailed?: () => void,
 	): Promise<boolean> {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-		if (!workspaceFolder) {
-			this.outputChannel.appendLine("ERROR: No workspace folder open")
-			onSetupFailed?.()
-			return false
-		}
-
-		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
-		if (!cliPath) {
-			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
-			this.showCliNotFoundError()
-			onSetupFailed?.()
-			return false
-		}
-
-		const processStartTime = Date.now()
-		let apiConfiguration: ProviderSettings | undefined
-		try {
-			apiConfiguration = await this.getApiConfigurationForCli()
-		} catch (error) {
-			this.outputChannel.appendLine(
-				`[AgentManager] Failed to read provider settings for CLI: ${
-					error instanceof Error ? error.message : String(error)
-				}`,
-			)
-		}
-
-		this.processHandler.spawnProcess(
-			cliPath,
-			workspaceFolder,
+		const result = await this.sessionLauncher.spawn(
 			prompt,
-			{ ...options, apiConfiguration },
+			options,
+			this.processHandler,
 			(sid, event) => {
-				if (!this.processStartTimes.has(sid)) {
-					this.processStartTimes.set(sid, processStartTime)
+				if (result.processStartTime && !this.processStartTimes.has(sid)) {
+					this.processStartTimes.set(sid, result.processStartTime)
 				}
 				this.handleCliEvent(sid, event)
 			},
+			() => {
+				this.showCliNotFoundError()
+				onSetupFailed?.()
+			},
 		)
 
-		return true
+		return result.success
 	}
 
 	/**
@@ -1150,7 +1138,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.processHandler.dispose()
 		this.sessionMessages.clear()
 		this.firstApiReqStarted.clear()
-
+		this.sessionLauncher.clearPrewarm()
 		this.panel?.dispose()
 		this.disposables.forEach((d) => d.dispose())
 	}

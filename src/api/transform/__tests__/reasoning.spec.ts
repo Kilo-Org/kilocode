@@ -14,6 +14,7 @@ import {
 	OpenAiReasoningParams,
 	RooReasoningParams,
 	GeminiReasoningParams,
+	GeminiThinkingLevel,
 } from "../reasoning"
 
 describe("reasoning.ts", () => {
@@ -641,6 +642,201 @@ describe("reasoning.ts", () => {
 
 			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
 			expect(result).toEqual({ thinkingLevel: "high", includeThoughts: true })
+		})
+
+		it("should return thinkingLevel for minimal effort", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "high",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				reasoningEffort: "minimal",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: undefined,
+				reasoningEffort: "minimal",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			expect(result).toEqual({ thinkingLevel: "minimal", includeThoughts: true })
+		})
+
+		it("should return thinkingLevel for medium effort", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "low",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				reasoningEffort: "medium",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: undefined,
+				reasoningEffort: "medium",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			expect(result).toEqual({ thinkingLevel: "medium", includeThoughts: true })
+		})
+
+		it("should handle all four Gemini thinking levels", () => {
+			const levels: GeminiThinkingLevel[] = ["minimal", "low", "medium", "high"]
+
+			levels.forEach((level) => {
+				const geminiModel: ModelInfo = {
+					...baseModel,
+					supportsReasoningEffort: [
+						"minimal",
+						"low",
+						"medium",
+						"high",
+					] as ModelInfo["supportsReasoningEffort"],
+					reasoningEffort: "low",
+				}
+
+				const settings: ProviderSettings = {
+					apiProvider: "gemini",
+					reasoningEffort: level,
+				}
+
+				const options: GetModelReasoningOptions = {
+					model: geminiModel,
+					reasoningBudget: undefined,
+					reasoningEffort: level,
+					settings,
+				}
+
+				const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+				expect(result).toEqual({ thinkingLevel: level, includeThoughts: true })
+			})
+		})
+
+		it("should return undefined for disable effort", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "low",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				reasoningEffort: "disable",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: undefined,
+				reasoningEffort: "disable",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options)
+			expect(result).toBeUndefined()
+		})
+
+		it("should return undefined for none effort (invalid for Gemini)", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "low",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				reasoningEffort: "none",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: undefined,
+				reasoningEffort: "none",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options)
+			expect(result).toBeUndefined()
+		})
+
+		it("should use thinkingBudget for budget-based models", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningBudget: true,
+				requiredReasoningBudget: true,
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				enableReasoningEffort: true,
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: 4096,
+				reasoningEffort: "high",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			expect(result).toEqual({ thinkingBudget: 4096, includeThoughts: true })
+		})
+
+		it("should prioritize budget over effort when model has requiredReasoningBudget", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningBudget: true,
+				requiredReasoningBudget: true,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+				enableReasoningEffort: true,
+				reasoningEffort: "high",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: 8192,
+				reasoningEffort: "high",
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			// Budget should take precedence
+			expect(result).toEqual({ thinkingBudget: 8192, includeThoughts: true })
+		})
+
+		it("should fall back to model default effort when settings.reasoningEffort is undefined", () => {
+			const geminiModel: ModelInfo = {
+				...baseModel,
+				supportsReasoningEffort: ["minimal", "low", "medium", "high"] as ModelInfo["supportsReasoningEffort"],
+				reasoningEffort: "medium",
+			}
+
+			const settings: ProviderSettings = {
+				apiProvider: "gemini",
+			}
+
+			const options: GetModelReasoningOptions = {
+				model: geminiModel,
+				reasoningBudget: undefined,
+				reasoningEffort: undefined,
+				settings,
+			}
+
+			const result = getGeminiReasoning(options) as GeminiReasoningParams | undefined
+			expect(result).toEqual({ thinkingLevel: "medium", includeThoughts: true })
 		})
 	})
 

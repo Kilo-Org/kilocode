@@ -471,6 +471,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		return content?.type === "text" ? content.text : ""
 	}
 
+	// kilocode_change start
 	/**
 	 * Counts tokens for the given content using Anthropic's API
 	 *
@@ -497,4 +498,5 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			return super.countTokens(content)
 		}
 	}
+	// kilocode_change end
 }

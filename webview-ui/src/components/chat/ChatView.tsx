@@ -220,6 +220,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		inputValueRef.current = inputValue
 	}, [inputValue])
 
+	// Compute whether auto-approval is paused (user is typing in a followup)
+	const isFollowUpAutoApprovalPaused = useMemo(() => {
+		return !!(inputValue && inputValue.trim().length > 0 && clineAsk === "followup")
+	}, [inputValue, clineAsk])
+
+	// Cancel auto-approval timeout when user starts typing
+	useEffect(() => {
+		// Only send cancel if there's actual input (user is typing)
+		// and we have a pending follow-up question
+		if (isFollowUpAutoApprovalPaused) {
+			vscode.postMessage({ type: "cancelAutoApproval" })
+		}
+	}, [isFollowUpAutoApprovalPaused])
+
 	useEffect(() => {
 		isMountedRef.current = true
 		return () => {
@@ -886,8 +900,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							break
 					}
 					break
+				case "condenseTaskContextStarted":
+					// Handle both manual and automatic condensation start
+					// We don't check the task ID because:
+					// 1. There can only be one active task at a time
+					// 2. Task switching resets isCondensing to false (see useEffect with task?.ts dependency)
+					// 3. For new tasks, currentTaskItem may not be populated yet due to async state updates
+					if (message.text) {
+						setIsCondensing(true)
+						// Note: sendingDisabled is only set for manual condensation via handleCondenseContext
+						// Automatic condensation doesn't disable sending since the task is already running
+					}
+					break
 				case "condenseTaskContextResponse":
-					if (message.text && message.text === currentTaskItem?.id) {
+					// Same reasoning as above - we trust this is for the current task
+					if (message.text) {
 						if (isCondensing && sendingDisabled) {
 							setSendingDisabled(false)
 						}
@@ -910,7 +937,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			isHidden,
 			sendingDisabled,
 			enableButtons,
-			currentTaskItem,
 			handleChatReset,
 			handleSendMessage,
 			handleSetChatBoxMessage,
@@ -1352,6 +1378,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
 					enableCheckpoints={enableCheckpoints} // kilocode_change
 					isFollowUpAnswered={messageOrGroup.isAnswered === true || messageOrGroup.ts === currentFollowUpTs}
+					isFollowUpAutoApprovalPaused={isFollowUpAutoApprovalPaused}
 					editable={
 						messageOrGroup.type === "ask" &&
 						messageOrGroup.ask === "tool" &&
@@ -1386,6 +1413,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
 			enableCheckpoints, // kilocode_change
 			currentFollowUpTs,
+			isFollowUpAutoApprovalPaused,
 			alwaysAllowUpdateTodoList,
 			enableButtons,
 			primaryButtonText,

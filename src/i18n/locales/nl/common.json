@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Fout bij het genereren van contextstream door Gemini: {{error}}",
 			"generate_complete_prompt": "Fout bij het voltooien door Gemini: {{error}}",
-			"sources": "Bronnen:"
+			"sources": "Bronnen:",
+			"thinking_complete_no_output": "(Nadenken voltooid, maar er is geen uitvoer gegenereerd.)",
+			"thinking_complete_truncated": "(Nadenken voltooid, maar uitvoer is afgekapt vanwege tokenlimiet.)",
+			"thinking_complete_safety": "(Nadenken voltooid, maar uitvoer is geblokkeerd vanwege veiligheidsinstellingen.)",
+			"thinking_complete_recitation": "(Nadenken voltooid, maar uitvoer is geblokkeerd vanwege recitatiecontrole.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API-authenticatie mislukt. Controleer of je API-sleutel geldig is en niet verlopen.",

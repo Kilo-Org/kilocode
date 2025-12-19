@@ -77,8 +77,8 @@ export function PillarsSection() {
 									<p>Roo doesn&apos;t care.</p>
 									<p>
 										It works great with 10s of models, from frontier to open weight. Choose from{" "}
-										<Link href="/provider/pricing">the curated selection we offer at-cost</Link> or
-										bring your own key.
+										<Link href="/provider">the curated selection we offer at-cost</Link> or bring
+										your own key.
 									</p>
 								</div>
 								<div className="mt-6">

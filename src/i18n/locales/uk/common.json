@@ -120,7 +120,11 @@
 		"gemini": {
 			"generate_stream": "Помилка генерації контекстного потоку Gemini: {{error}}",
 			"generate_complete_prompt": "Помилка завершення Gemini: {{error}}",
-			"sources": "Джерела:"
+			"sources": "Джерела:",
+			"thinking_complete_no_output": "(Міркування завершено, але вивід не було згенеровано.)",
+			"thinking_complete_truncated": "(Міркування завершено, але вивід було скорочено через ліміт токенів.)",
+			"thinking_complete_safety": "(Міркування завершено, але вивід було заблоковано через налаштування безпеки.)",
+			"thinking_complete_recitation": "(Міркування завершено, але вивід було заблоковано через перевірку цитування.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Автентифікація Cerebras API не вдалася. Будь ласка, перевірте, що ваш API ключ дійсний і не прострочений.",

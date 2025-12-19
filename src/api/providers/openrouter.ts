@@ -7,7 +7,11 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	ApiProviderError,
 } from "@roo-code/types"
+import { TelemetryService } from "@roo-code/telemetry"
+
+import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 
@@ -53,6 +57,13 @@ type OpenRouterChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
 	// https://openrouter.ai/docs/use-cases/reasoning-tokens
 	reasoning?: OpenRouterReasoningParams
 	provider?: OpenRouterProviderParams // kilocode_change
+}
+
+// OpenRouter error structure that may include metadata.raw with actual upstream error
+interface OpenRouterErrorResponse {
+	message?: string
+	code?: number
+	metadata?: { raw?: string }
 }
 
 // See `OpenAI.Chat.Completions.ChatCompletionChunk["usage"]`
@@ -171,6 +182,29 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		return this.currentReasoningDetails.length > 0 ? this.currentReasoningDetails : undefined
 	}
 
+	/**
+	 * Handle OpenRouter streaming error response and report to telemetry.
+	 * OpenRouter may include metadata.raw with the actual upstream provider error.
+	 */
+	private handleStreamingError(error: OpenRouterErrorResponse, modelId: string, operation: string): never {
+		const rawErrorMessage = error?.metadata?.raw || error?.message
+
+		const apiError = Object.assign(
+			new ApiProviderError(
+				rawErrorMessage ?? "Unknown error",
+				this.providerName,
+				modelId,
+				operation,
+				error?.code,
+			),
+			{ status: error?.code, error: { message: error?.message, metadata: error?.metadata } },
+		)
+
+		TelemetryService.instance.captureException(apiError)
+
+		throw new Error(`OpenRouter API Error ${error?.code}: ${rawErrorMessage}`)
+	}
+
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
@@ -277,23 +311,31 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			verbosity: model.verbosity, // kilocode_change
 		}
 
-		// Add Anthropic beta header for fine-grained tool streaming when using Anthropic models
-		const requestOptions = modelId.startsWith("anthropic/")
-			? { headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } }
-			: undefined
+		// kilocode_change start
+		const requestOptions = this.customRequestOptions(metadata) ?? { headers: {} }
+		if (modelId.startsWith("anthropic/")) {
+			requestOptions.headers["x-anthropic-beta"] =
+				"fine-grained-tool-streaming-2025-05-14,structured-outputs-2025-11-13"
+		}
+		// kilocode_change end
 
 		let stream
 		try {
-			stream = await this.client.chat.completions.create(
-				completionParams,
-				this.customRequestOptions(metadata), // kilocode_change
-			)
+			stream = await this.client.chat.completions.create(completionParams, requestOptions)
 		} catch (error) {
 			// kilocode_change start
-			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
+			// KiloCode backend errors are already user-readable and should be handled upstream.
+			if (this.providerName === "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
 				throw error
 			}
-			throw new Error(makeOpenRouterErrorReadable(error))
+
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "createMessage")
+			TelemetryService.instance.captureException(apiError)
+
+			// Preserve existing readability improvements for user-facing errors.
+			const readableMessage = makeOpenRouterErrorReadable(error)
+			throw new Error(readableMessage)
 			// kilocode_change end
 		}
 
@@ -318,9 +360,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		for await (const chunk of stream) {
 			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
 			if ("error" in chunk) {
-				const error = chunk.error as { message?: string; code?: number }
-				console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
-				throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+				this.handleStreamingError(chunk.error as OpenRouterErrorResponse, modelId, "createMessage")
 			}
 
 			// kilocode_change start
@@ -429,6 +469,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 			}
 
+			// Process finish_reason to emit tool_call_end events
+			// This ensures tool calls are finalized even if the stream doesn't properly close
+			if (finishReason) {
+				const endEvents = NativeToolCallParser.processFinishReason(finishReason)
+				for (const event of endEvents) {
+					yield event
+				}
+			}
+
 			if (chunk.usage) {
 				lastUsage = chunk.usage
 			}
@@ -512,24 +561,27 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			verbosity, // kilocode_change
 		}
 
-		// Add Anthropic beta header for fine-grained tool streaming when using Anthropic models
-		const requestOptions = modelId.startsWith("anthropic/")
-			? { headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } }
-			: undefined
+		// kilocode_change start
+		const requestOptions = this.customRequestOptions() ?? { headers: {} }
+		if (modelId.startsWith("anthropic/")) {
+			requestOptions.headers["x-anthropic-beta"] =
+				"fine-grained-tool-streaming-2025-05-14,structured-outputs-2025-11-13"
+		}
+		// kilocode_change end
 
 		let response
+
 		try {
-			response = await this.client.chat.completions.create(
-				completionParams,
-				this.customRequestOptions(), // kilocode_change
-			)
+			response = await this.client.chat.completions.create(completionParams, requestOptions)
 		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			const apiError = new ApiProviderError(errorMessage, this.providerName, modelId, "completePrompt")
+			TelemetryService.instance.captureException(apiError)
 			throw handleOpenAIError(error, this.providerName)
 		}
 
 		if ("error" in response) {
-			const error = response.error as { message?: string; code?: number }
-			throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+			this.handleStreamingError(response.error as OpenRouterErrorResponse, modelId, "completePrompt")
 		}
 
 		const completion = response as OpenAI.Chat.ChatCompletion

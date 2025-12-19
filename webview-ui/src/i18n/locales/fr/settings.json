@@ -556,6 +556,7 @@
 			"none": "Aucun",
 			"minimal": "Minimal (le plus rapide)",
 			"high": "Élevé",
+			"xhigh": "Très élevé",
 			"medium": "Moyen",
 			"low": "Faible",
 			"xhigh": "Très élevé"
@@ -1145,6 +1146,10 @@
 		"collapseThinking": {
 			"label": "Réduire les messages de réflexion par défaut",
 			"description": "Si activé, les blocs de réflexion seront réduits par défaut jusqu'à ce que vous interagissiez avec eux"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Exiger {{primaryMod}}+Entrée pour envoyer les messages",
+			"description": "Lorsqu'activé, tu dois appuyer sur {{primaryMod}}+Entrée pour envoyer des messages au lieu de simplement Entrée"
 		}
 	}
 }

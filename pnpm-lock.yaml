@@ -1883,6 +1883,9 @@ importers:
       say:
         specifier: ^0.16.0
         version: 0.16.0
+      semver-compare:
+        specifier: ^1.0.0
+        version: 1.0.0
       serialize-error:
         specifier: ^12.0.0
         version: 12.0.0
@@ -2007,6 +2010,9 @@ importers:
       '@types/ps-tree':
         specifier: ^1.1.6
         version: 1.1.6
+      '@types/semver-compare':
+        specifier: ^1.0.3
+        version: 1.0.3
       '@types/shell-quote':
         specifier: ^1.7.5
         version: 1.7.5
@@ -2226,6 +2232,9 @@ importers:
       react-i18next:
         specifier: ^15.4.1
         version: 15.5.1(i18next@25.2.1(typescript@5.8.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.8.3)
+      react-icons:
+        specifier: ^5.5.0
+        version: 5.5.0(react@18.3.1)
       react-markdown:
         specifier: ^9.0.3
         version: 9.1.0(@types/react@18.3.23)(react@18.3.1)
@@ -8041,6 +8050,9 @@ packages:
 
   '@types/seedrandom@3.0.8':
     resolution: {integrity: sha512-TY1eezMU2zH2ozQoAFAQFOPpvP15g+ZgSfTZt31AUUH/Rxtnz3H+A/Sv1Snw2/amp//omibc+AEkTaA8KUeOLQ==}
+
+  '@types/semver-compare@1.0.3':
+    resolution: {integrity: sha512-mVZkB2QjXmZhh+MrtwMlJ8BqUnmbiSkpd88uOWskfwB8yitBT0tBRAKt+41VRgZD9zr9Sc+Xs02qGgvzd1Rq/Q==}
 
   '@types/semver@7.7.1':
     resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
@@ -27567,6 +27579,8 @@ snapshots:
 
   '@types/seedrandom@3.0.8': {}
 
+  '@types/semver-compare@1.0.3': {}
+
   '@types/semver@7.7.1': {}
 
   '@types/send@0.17.6':
@@ -39196,8 +39210,7 @@ snapshots:
       '@types/node-forge': 1.3.14
       node-forge: 1.3.1
 
-  semver-compare@1.0.0:
-    optional: true
+  semver-compare@1.0.0: {}
 
   semver-diff@4.0.0:
     dependencies:

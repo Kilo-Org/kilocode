@@ -240,13 +240,23 @@ export const ZAI_DEFAULT_TEMPERATURE = 0.6
 
 export const zaiApiLineConfigs = {
 	international_coding: {
-		name: "International",
+		name: "International Coding",
 		baseUrl: "https://api.z.ai/api/coding/paas/v4",
 		isChina: false,
 	},
 	china_coding: {
-		name: "China",
+		name: "China Coding",
 		baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
+		isChina: true,
+	},
+	international_api: {
+		name: "International API",
+		baseUrl: "https://api.z.ai/api/paas/v4",
+		isChina: false,
+	},
+	china_api: {
+		name: "China API",
+		baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 		isChina: true,
 	},
 } satisfies Record<ZaiApiLine, { name: string; baseUrl: string; isChina: boolean }>

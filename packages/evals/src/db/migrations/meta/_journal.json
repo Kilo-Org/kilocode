@@ -36,6 +36,13 @@
 			"when": 1764201678953,
 			"tag": "0004_sloppy_black_knight",
 			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1765167049182,
+			"tag": "0005_strong_skrulls",
+			"breakpoints": true
 		}
 	]
 }

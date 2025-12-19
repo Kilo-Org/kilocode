@@ -70,6 +70,10 @@
 		"collapseThinking": {
 			"label": "طوي رسائل التفكير افتراضياً",
 			"description": "عند التفعيل، ستكون كتل التفكير مطوية افتراضياً حتى تتفاعل معها"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "يتطلب {{primaryMod}}+Enter لإرسال الرسائل",
+			"description": "عند التفعيل، يجب الضغط على {{primaryMod}}+Enter لإرسال الرسائل بدلاً من Enter فقط"
 		}
 	},
 	"prompts": {

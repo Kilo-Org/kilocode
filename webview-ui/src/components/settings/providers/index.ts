@@ -6,7 +6,7 @@ export { ClaudeCode } from "./ClaudeCode"
 export { DeepSeek } from "./DeepSeek"
 export { Doubao } from "./Doubao"
 export { Gemini } from "./Gemini"
-export { Glama } from "./Glama"
+export { Glama } from "./Glama" // kilocode_change
 export { Groq } from "./Groq"
 export { HuggingFace } from "./HuggingFace"
 export { IOIntelligence } from "./IOIntelligence"

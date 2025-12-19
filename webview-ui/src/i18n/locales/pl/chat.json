@@ -112,6 +112,7 @@
 	"enhancePrompt": "Ulepsz podpowiedź dodatkowym kontekstem",
 	"addImages": "Dodaj obrazy do wiadomości",
 	"sendMessage": "Wyślij wiadomość",
+	"pressToSend": "Naciśnij {{keyCombination}}, aby wysłać",
 	"stopTts": "Zatrzymaj syntezę mowy",
 	"typeMessage": "Wpisz wiadomość...",
 	"typeTask": "Wpisz swoje zadanie tutaj...",
@@ -154,7 +155,8 @@
 			"403": "Brak autoryzacji. Twój klucz API jest ważny, ale dostawca odmówił ukończenia tego żądania.",
 			"429": "Zbyt wiele żądań. Dostawca ogranicza Ci szybkość żądań. Poczekaj chwilę przed następnym wywołaniem API.",
 			"500": "Błąd serwera dostawcy. Po stronie dostawcy coś się nie powiodło, w Twoim żądaniu nie ma nic złego.",
-			"unknown": "Nieznany błąd API. Skontaktuj się z pomocą techniczną Roo Code."
+			"unknown": "Nieznany błąd API. Skontaktuj się z pomocą techniczną Kilo.",
+			"connection": "Błąd połączenia. Upewnij się, że masz działające połączenie internetowe."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"hasQuestion": "Kilo Code ma pytanie"
 	},
 	"taskCompleted": "Zadanie zakończone",
+	"errorDetails": {
+		"title": "Szczegóły błędu",
+		"copyToClipboard": "Kopiuj do schowka",
+		"copied": "Skopiowano!"
+	},
 	"powershell": {
 		"issues": "Wygląda na to, że masz problemy z Windows PowerShell, proszę zapoznaj się z tym"
 	},
@@ -293,19 +300,28 @@
 		"thinking": "Myślenie",
 		"seconds": "{{count}} s"
 	},
-	"contextCondense": {
-		"title": "Kontekst skondensowany",
-		"condensing": "Kondensowanie kontekstu...",
-		"errorHeader": "Nie udało się skondensować kontekstu",
-		"tokens": "tokeny"
+	"contextManagement": {
+		"tokens": "tokeny",
+		"condensation": {
+			"title": "Kontekst skondensowany",
+			"inProgress": "Kondensowanie kontekstu...",
+			"errorHeader": "Nie udało się skondensować kontekstu"
+		},
+		"truncation": {
+			"title": "Kontekst obcięty",
+			"inProgress": "Obcinanie kontekstu...",
+			"messagesRemoved": "{{count}} wiadomość usunięta",
+			"messagesRemoved_other": "{{count}} wiadomości usunięte",
+			"description": "Starsze wiadomości zostały usunięte z konwersacji, aby pozostać w granicach okna kontekstu. To szybsze, ale mniej zachowujące kontekst podejście w porównaniu z kondensacją."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiuj do pola wprowadzania (lub Shift + kliknięcie)",
-		"autoSelectCountdown": "Automatyczny wybór za {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Automatyczne zatwierdzanie włączone. Zaznaczanie za {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} wydany",
+		"title": "Roo Code {{version}} wydany",
+		"support": "Wesprzyj Roo Code, dając nam gwiazdkę na <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Darmowy model stealth na ograniczony czas</bold> - Code Supernova: Teraz ulepszony z <bold>oknem kontekstu 1M tokenów</bold>! Wszechstronny model kodowania agentowego, który obsługuje wprowadzanie obrazów, dostępny przez Roo Code Cloud.",
 			"note": "(Uwaga: prompty i uzupełnienia są rejestrowane przez twórcę modelu i używane do jego ulepszania)",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Sesja przeglądarki rozpoczęta",
 		"actions": {
 			"title": "Akcja przeglądarki: ",
+			"launched": "Przeglądarka uruchomiona",
 			"launch": "Uruchom przeglądarkę na {{url}}",
+			"clicked": "Kliknięto ({{coordinate}})",
 			"click": "Kliknij ({{coordinate}})",
+			"typed": "Wpisano: {{text}}",
 			"type": "Wpisz \"{{text}}\"",
+			"pressed": "Naciśnięto: {{key}}",
 			"press": "Naciśnij {{key}}",
+			"scrolledDown": "Przewinięto w dół",
 			"scrollDown": "Przewiń w dół",
+			"scrolledUp": "Przewinięto w górę",
 			"scrollUp": "Przewiń w górę",
+			"hovered": "Najechano ({{coordinate}})",
 			"hover": "Najedź ({{coordinate}})",
+			"resized": "Zmieniono rozmiar na: {{size}}",
+			"resize": "Zmień rozmiar na {{size}}",
+			"screenshotSaved": "Zrzut ekranu zapisany",
+			"screenshot": "Zapisz zrzut ekranu do {{path}}",
+			"closed": "Przeglądarka zamknięta",
 			"close": "Zamknij przeglądarkę"
 		}
 	},
