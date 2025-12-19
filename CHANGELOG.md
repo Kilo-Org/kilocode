@@ -1,5 +1,57 @@
 # Changelog
 
+## [v4.203.0] - 2025-12-19
+
+### Added
+
+- Enhanced chat text area with improved mention chip functionality
+- New mention chip demo component for better user interaction
+
+### Changed
+
+- Refactored ChatTextArea component for better performance and maintainability
+- Updated ChatRow component with streamlined UI elements
+- Improved CodeAccordian component for enhanced code display
+- Enhanced useOpenRouterModelProviders hook for better model management
+- Updated prettyModelName utility for improved model name formatting
+- Refined KiloTaskHeader component with better task management
+- Improved GhostServiceSettings component for enhanced configuration
+
+### Fixed
+
+- Better handling of chat text area interactions
+- Improved mention chip display and functionality
+- Enhanced UI cleanup and consistency across components
+
+---
+
+## [v4.202.0] - 2025-12-18
+
+### Added
+
+- Enhanced UI components with improved user experience
+- Better error handling and display components
+- Improved model provider integration
+
+### Changed
+
+- Streamlined ChatRow component with enhanced functionality
+- Updated ErrorRow component for better error display
+- Refined AcceptRejectButtons component for improved user interaction
+- Enhanced CodeAccordian component for better code presentation
+- Improved ToolUseBlock component for better tool usage display
+- Updated ModelSelector component for enhanced model selection
+- Enhanced select-dropdown component for better user experience
+- Improved prettyModelName utility for better model name handling
+
+### Fixed
+
+- Better handling of fill-diff viewer edge cases
+- Enhanced UI consistency and visual improvements
+- Better error handling in various components
+
+---
+
 ## [v4.201.0] - 2025-12-16
 
 ### Added
