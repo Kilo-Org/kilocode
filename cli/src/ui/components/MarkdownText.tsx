@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Text } from "ink"
 import { parse, setOptions } from "marked"
 import TerminalRenderer, { type TerminalRendererOptions } from "marked-terminal"
-import chalk from "chalk"
+import chalk, { type ChalkInstance } from "chalk"
 import type { Theme } from "../../types/theme.js"
 
 export type MarkdownTextProps = TerminalRendererOptions & {
@@ -11,17 +11,69 @@ export type MarkdownTextProps = TerminalRendererOptions & {
 }
 
 /**
+ * Named chalk color methods that return ChalkInstance
+ */
+type ChalkColorMethod =
+	| "black"
+	| "red"
+	| "green"
+	| "yellow"
+	| "blue"
+	| "magenta"
+	| "cyan"
+	| "white"
+	| "gray"
+	| "grey"
+	| "blackBright"
+	| "redBright"
+	| "greenBright"
+	| "yellowBright"
+	| "blueBright"
+	| "magentaBright"
+	| "cyanBright"
+	| "whiteBright"
+
+/**
  * Convert a color string (hex or named) to a chalk function
  */
-const colorToChalk = (color: string) => {
+const colorToChalk = (color: string): ChalkInstance => {
 	// If it starts with #, it's a hex color
 	if (color.startsWith("#")) {
 		return chalk.hex(color)
 	}
 	// Otherwise, it's a named color - use chalk's named color methods
-	// Type assertion is safe here as we're accessing chalk's color methods dynamically
-	type ChalkColor = keyof typeof chalk
-	return chalk[color as ChalkColor] || chalk.white
+	// Check if it's a valid color method name
+	if (isChalkColorMethod(color)) {
+		return chalk[color]
+	}
+	return chalk.white
+}
+
+/**
+ * Type guard to check if a string is a valid chalk color method
+ */
+const isChalkColorMethod = (color: string): color is ChalkColorMethod => {
+	const validColors: ChalkColorMethod[] = [
+		"black",
+		"red",
+		"green",
+		"yellow",
+		"blue",
+		"magenta",
+		"cyan",
+		"white",
+		"gray",
+		"grey",
+		"blackBright",
+		"redBright",
+		"greenBright",
+		"yellowBright",
+		"blueBright",
+		"magentaBright",
+		"cyanBright",
+		"whiteBright",
+	]
+	return validColors.includes(color as ChalkColorMethod)
 }
 
 /**
