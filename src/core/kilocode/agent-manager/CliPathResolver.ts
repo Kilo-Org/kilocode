@@ -16,13 +16,14 @@ function getCaseInsensitive(target: NodeJS.ProcessEnv, key: string): string | un
 
 /**
  * Check if a path exists and is a file (not a directory).
+ * Follows symlinks - a symlink to a file returns true, symlink to a directory returns false.
  */
-async function fileExistsAsFile(filePath: string): Promise<boolean> {
+async function pathExistsAsFile(filePath: string): Promise<boolean> {
 	try {
 		const stat = await fs.promises.stat(filePath)
-		return stat.isFile() || stat.isSymbolicLink()
+		return stat.isFile()
 	} catch (e: unknown) {
-		if (e instanceof Error && e.message.startsWith("EACCES")) {
+		if (e instanceof Error && "code" in e && e.code === "EACCES") {
 			try {
 				const lstat = await fs.promises.lstat(filePath)
 				return lstat.isFile() || lstat.isSymbolicLink()
@@ -44,7 +45,7 @@ export async function findExecutable(
 	env: NodeJS.ProcessEnv = process.env,
 ): Promise<string | undefined> {
 	if (path.isAbsolute(command)) {
-		return (await fileExistsAsFile(command)) ? command : undefined
+		return (await pathExistsAsFile(command)) ? command : undefined
 	}
 
 	if (cwd === undefined) {
@@ -54,7 +55,7 @@ export async function findExecutable(
 	const dir = path.dirname(command)
 	if (dir !== ".") {
 		const fullPath = path.join(cwd, command)
-		return (await fileExistsAsFile(fullPath)) ? fullPath : undefined
+		return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
 	}
 
 	const envPath = getCaseInsensitive(env, "PATH")
@@ -64,7 +65,7 @@ export async function findExecutable(
 
 	if (paths === undefined || paths.length === 0) {
 		const fullPath = path.join(cwd, command)
-		return (await fileExistsAsFile(fullPath)) ? fullPath : undefined
+		return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
 	}
 
 	for (const pathEntry of paths) {
@@ -79,19 +80,19 @@ export async function findExecutable(
 			const pathExt = getCaseInsensitive(env, "PATHEXT") || ".COM;.EXE;.BAT;.CMD"
 			for (const ext of pathExt.split(";")) {
 				const withExtension = fullPath + ext
-				if (await fileExistsAsFile(withExtension)) {
+				if (await pathExistsAsFile(withExtension)) {
 					return withExtension
 				}
 			}
 		}
 
-		if (await fileExistsAsFile(fullPath)) {
+		if (await pathExistsAsFile(fullPath)) {
 			return fullPath
 		}
 	}
 
 	const fullPath = path.join(cwd, command)
-	return (await fileExistsAsFile(fullPath)) ? fullPath : undefined
+	return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
 }
 
 /**
