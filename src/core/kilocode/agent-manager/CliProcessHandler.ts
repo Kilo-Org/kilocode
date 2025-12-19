@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from "node:child_process"
+import * as path from "node:path"
 import {
 	CliOutputParser,
 	type StreamEvent,
@@ -37,6 +38,7 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
+	cliPath?: string // CLI path for error telemetry
 }
 
 interface ActiveProcessInfo {
@@ -209,6 +211,7 @@ export class CliProcessHandler {
 				gitUrl: options?.gitUrl,
 				stderrBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
+				cliPath,
 			}
 		}
 
@@ -573,10 +576,24 @@ export class CliProcessHandler {
 
 	private handleProcessError(proc: ChildProcess, error: Error): void {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			const cliPath = this.pendingProcess.cliPath
 			this.clearPendingTimeout()
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
+
+			// Capture spawn error telemetry with context for debugging
+			const { platform, shell } = getPlatformDiagnostics()
+			const cliPathExtension = cliPath ? path.extname(cliPath).slice(1).toLowerCase() || undefined : undefined
+			captureAgentManagerLoginIssue({
+				issueType: "cli_spawn_error",
+				platform,
+				shell,
+				errorMessage: error.message,
+				cliPath,
+				cliPathExtension,
+			})
+
 			this.callbacks.onStartSessionFailed({
 				type: "spawn_error",
 				message: error.message,

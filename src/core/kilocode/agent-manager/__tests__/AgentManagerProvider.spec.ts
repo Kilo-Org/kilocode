@@ -115,6 +115,21 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
+		// Mock fs to make findExecutable find the .cmd file
+		const cmdPath = "/npm/kilocode.CMD"
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			readdirSync: vi.fn().mockReturnValue([]),
+			promises: {
+				stat: vi.fn().mockImplementation((filePath: string) => {
+					if (filePath === cmdPath) {
+						return Promise.resolve({ isFile: () => true })
+					}
+					return Promise.reject(new Error("ENOENT"))
+				}),
+			},
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
@@ -123,17 +138,20 @@ describe("AgentManagerProvider CLI spawning", () => {
 		}
 
 		const spawnMock = vi.fn(() => new TestProc())
-		// Return a .cmd path to simulate Windows local CLI installation
-		const execSyncMock = vi.fn(() => "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd")
+		const execSyncMock = vi.fn().mockImplementation(() => {
+			throw new Error("not found")
+		})
 
 		vi.doMock("node:child_process", () => ({
 			spawn: spawnMock,
 			execSync: execSyncMock,
 		}))
 
-		// Mock process.platform to be win32
+		// Mock process.platform to be win32 and set PATH
 		const originalPlatform = process.platform
+		const originalPath = process.env.PATH
 		Object.defineProperty(process, "platform", { value: "win32", writable: true })
+		process.env.PATH = "/npm"
 
 		try {
 			const module = await import("../AgentManagerProvider")
@@ -148,8 +166,9 @@ describe("AgentManagerProvider CLI spawning", () => {
 
 			windowsProvider.dispose()
 		} finally {
-			// Restore original platform
+			// Restore original platform and PATH
 			Object.defineProperty(process, "platform", { value: originalPlatform, writable: true })
+			process.env.PATH = originalPath
 		}
 	})
 
