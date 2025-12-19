@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react"
+import { memo, type ReactNode, useMemo } from "react"
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { type ToolProgressStatus } from "@roo-code/types"
 import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
@@ -17,6 +17,7 @@ interface CodeAccordianProps {
 	isFeedback?: boolean
 	onToggleExpand: () => void
 	header?: string
+	headerContent?: ReactNode
 	onJumpToFile?: () => void
 }
 
@@ -30,18 +31,21 @@ const CodeAccordian = ({
 	isFeedback,
 	onToggleExpand,
 	header,
+	headerContent,
 	onJumpToFile,
 }: CodeAccordianProps) => {
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
 	const source = useMemo(() => String(code).trim() /*kilocode_change: coerce to string*/, [code])
-	const hasHeader = Boolean(path || isFeedback || header)
+	const hasHeader = Boolean(path || isFeedback || header || headerContent)
 
 	return (
 		<ToolUseBlock>
 			{hasHeader && (
 				<ToolUseBlockHeader onClick={onToggleExpand} className="group">
 					{isLoading && <VSCodeProgressRing className="size-3 mr-2" />}
-					{header ? (
+					{headerContent ? (
+						headerContent
+					) : header ? (
 						<div className="flex items-center">
 							<span className="codicon codicon-server mr-1.5"></span>
 							<span className="whitespace-nowrap overflow-hidden text-ellipsis mr-2">{header}</span>
@@ -72,7 +76,7 @@ const CodeAccordian = ({
 					)}
 					{onJumpToFile && path && (
 						<span
-							className="codicon codicon-link-external mr-1"
+							className="codicon codicon-link-external mr-0"
 							style={{ fontSize: 13.5 }}
 							onClick={(e) => {
 								e.stopPropagation()
@@ -83,7 +87,7 @@ const CodeAccordian = ({
 					)}
 					{!onJumpToFile && (
 						<span
-							className={`opacity-0 group-hover:opacity-100 codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
+							className={`ml-1 opacity-50 group-hover:opacity-100 codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 					)}
 				</ToolUseBlockHeader>
 			)}

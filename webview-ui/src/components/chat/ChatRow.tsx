@@ -537,27 +537,15 @@ export const ChatRowContent = ({
 											</span>
 										) : null}
 										{diffStats ? (
-											<span className="text-xs text-vscode-descriptionForeground">
+											<span className="text-xs text-vscode-descriptionForeground flex gap-1">
 												<span style={{ color: "var(--vscode-charts-green)" }}>
 													+{diffStats.added}
-												</span>{" "}
+												</span>
 												<span style={{ color: "var(--vscode-charts-red)" }}>
 													-{diffStats.removed}
 												</span>
 											</span>
 										) : null}
-										<div className="flex-grow" />
-										{tool.path && (
-											<span
-												className="codicon codicon-link-external"
-												style={{ fontSize: 13.5 }}
-												onClick={(e) => {
-													e.stopPropagation()
-													vscode.postMessage({ type: "openFile", text: "./" + tool.path })
-												}}
-												aria-label={`Open file: ${tool.path}`}
-											/>
-										)}
 									</div>
 								}
 								isLoading={message.partial}
