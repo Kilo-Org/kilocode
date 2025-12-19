@@ -37,6 +37,7 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
+	hadShellPath?: boolean // Track if shell PATH was used (for telemetry)
 }
 
 interface ActiveProcessInfo {
@@ -83,8 +84,16 @@ export class CliProcessHandler {
 		}
 	}
 
-	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings, shellPath?: string): NodeJS.ProcessEnv {
 		const baseEnv = { ...process.env }
+
+		// On macOS/Linux, use the shell PATH to ensure CLI can access tools like git
+		// This is critical when the editor is launched from Finder/Spotlight, as the
+		// extension host doesn't inherit the user's shell environment
+		if (shellPath) {
+			baseEnv.PATH = shellPath
+			this.debugLog(`Using shell PATH for CLI spawn`)
+		}
 
 		const overrides = buildProviderEnvOverrides(
 			apiConfiguration,
@@ -114,6 +123,8 @@ export class CliProcessHandler {
 					gitUrl?: string
 					apiConfiguration?: ProviderSettings
 					existingBranch?: string
+					/** Shell PATH from login shell - ensures CLI can access tools like git on macOS */
+					shellPath?: string
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -156,7 +167,7 @@ export class CliProcessHandler {
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
-		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
 
 		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
 		// Without this, spawn() fails silently because .cmd files are batch scripts
@@ -209,6 +220,7 @@ export class CliProcessHandler {
 				gitUrl: options?.gitUrl,
 				stderrBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
+				hadShellPath: !!options?.shellPath, // Track for telemetry
 			}
 		}
 
@@ -407,15 +419,23 @@ export class CliProcessHandler {
 		)
 
 		const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
+		const hadShellPath = this.pendingProcess.hadShellPath
 		this.pendingProcess.process.kill("SIGTERM")
 		this.registry.clearPendingSession()
 		this.pendingProcess = null
 
 		const { platform, shell } = getPlatformDiagnostics()
+
+		// Enhanced telemetry for session_timeout to help diagnose issues like #4579
 		captureAgentManagerLoginIssue({
 			issueType: "session_timeout",
 			platform,
 			shell,
+			hasStderr: !!stderrOutput,
+			// Truncate stderr to first 500 chars to avoid sending too much data
+			stderrPreview: stderrOutput ? stderrOutput.slice(0, 500) : undefined,
+			// Track if our shell PATH fix was applied (helps verify fix effectiveness)
+			hadShellPath,
 		})
 
 		this.callbacks.onPendingSessionChanged(null)

@@ -9,7 +9,7 @@ import {
 	isParallelModeCompletionMessage,
 	parseParallelModeCompletionBranch,
 } from "./parallelModeParser"
-import { findKilocodeCli } from "./CliPathResolver"
+import { findKilocodeCli, type CliDiscoveryResult } from "./CliPathResolver"
 import { canInstallCli, getCliInstallCommand, getLocalCliInstallCommand, getLocalCliBinDir } from "./CliInstaller"
 import { CliProcessHandler, type CliProcessHandlerCallbacks } from "./CliProcessHandler"
 import type { StreamEvent, KilocodeStreamEvent, KilocodePayload, WelcomeStreamEvent } from "./CliOutputParser"
@@ -483,8 +483,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return false
 		}
 
-		const cliPath = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
-		if (!cliPath) {
+		const cliDiscovery = await findKilocodeCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
+		if (!cliDiscovery) {
 			this.outputChannel.appendLine("ERROR: kilocode CLI not found")
 			this.showCliNotFoundError()
 			onSetupFailed?.()
@@ -504,10 +504,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 		}
 
 		this.processHandler.spawnProcess(
-			cliPath,
+			cliDiscovery.cliPath,
 			workspaceFolder,
 			prompt,
-			{ ...options, apiConfiguration },
+			{ ...options, apiConfiguration, shellPath: cliDiscovery.shellPath },
 			(sid, event) => {
 				if (!this.processStartTimes.has(sid)) {
 					this.processStartTimes.set(sid, processStartTime)

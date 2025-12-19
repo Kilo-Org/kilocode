@@ -1,8 +1,20 @@
 import * as path from "node:path"
 import * as fs from "node:fs"
-import { execSync } from "node:child_process"
+import { execSync, spawnSync } from "node:child_process"
 import { fileExistsAtPath } from "../../../utils/fs"
 import { getLocalCliPath } from "./CliInstaller"
+
+/**
+ * Result of CLI discovery including optional shell environment.
+ * The shellPath is captured from login shell lookup on macOS/Linux to ensure
+ * the spawned CLI process has access to the same tools (like git) that were
+ * available when finding the CLI.
+ */
+export interface CliDiscoveryResult {
+	cliPath: string
+	/** PATH from login shell - use this when spawning CLI on macOS to ensure tools like git are available */
+	shellPath?: string
+}
 
 /**
  * Find the kilocode CLI executable.
@@ -20,8 +32,15 @@ import { getLocalCliPath } from "./CliInstaller"
  * - Direct PATH might find stale system-wide installations (e.g., old homebrew version)
  * - When we auto-update via `npm install -g`, it installs to the user's node (nvm etc.)
  * - So we need to find the CLI in the same location where updates go
+ *
+ * @returns CliDiscoveryResult with cliPath and optional shellPath for spawning
  */
-export async function findKilocodeCli(log?: (msg: string) => void): Promise<string | null> {
+export async function findKilocodeCli(log?: (msg: string) => void): Promise<CliDiscoveryResult | null> {
+	// Capture shell PATH early for use when spawning (macOS/Linux only)
+	// This ensures the CLI has access to the same tools (git, etc.) that were available
+	// when finding it, even when the editor is launched from Finder/Spotlight
+	const shellEnv = process.platform !== "win32" ? getLoginShellPath(log) : undefined
+
 	// 1) Explicit override from settings
 	try {
 		// Lazy import avoids hard dep when running in non-extension contexts
@@ -31,7 +50,7 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 		if (overridePath) {
 			log?.(`Using CLI path override from settings: ${overridePath}`)
 			if (await fileExistsAtPath(overridePath)) {
-				return overridePath
+				return { cliPath: overridePath, shellPath: shellEnv }
 			}
 			log?.(`WARNING: Override path does not exist: ${overridePath}`)
 		}
@@ -42,7 +61,7 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 			const localCli = path.join(workspacePath, "cli", "dist", "index.js")
 			if (await fileExistsAtPath(localCli)) {
 				log?.(`Using workspace CLI: ${localCli}`)
-				return localCli
+				return { cliPath: localCli, shellPath: shellEnv }
 			}
 		}
 	} catch (error) {
@@ -54,18 +73,18 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 	const localCliPath = getLocalCliPath()
 	if (await fileExistsAtPath(localCliPath)) {
 		log?.(`Found local CLI installation: ${localCliPath}`)
-		return localCliPath
+		return { cliPath: localCliPath, shellPath: shellEnv }
 	}
 
 	// 4) Try login shell FIRST to pick up user's shell environment (nvm, fnm, volta, asdf, etc.)
 	// This is preferred because it respects the user's actual node environment.
 	// When we run `npm install -g`, it installs to this environment, so we should find CLI here.
 	const loginShellResult = findViaLoginShell(log)
-	if (loginShellResult) return loginShellResult
+	if (loginShellResult) return { cliPath: loginShellResult, shellPath: shellEnv }
 
 	// 5) Fall back to direct PATH lookup (for users without version managers)
 	const directPathResult = findInPath(log)
-	if (directPathResult) return directPathResult
+	if (directPathResult) return { cliPath: directPathResult, shellPath: shellEnv }
 
 	// 6) Last resort: scan common npm installation paths
 	log?.("Falling back to scanning common installation paths...")
@@ -73,7 +92,7 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 		try {
 			if (await fileExistsAtPath(candidate)) {
 				log?.(`Found CLI at: ${candidate}`)
-				return candidate
+				return { cliPath: candidate, shellPath: shellEnv }
 			}
 		} catch (error) {
 			log?.(`Error checking path ${candidate}: ${error}`)
@@ -100,6 +119,44 @@ function findInPath(log?: (msg: string) => void): string | null {
 		log?.("kilocode not found in direct PATH lookup")
 	}
 	return null
+}
+
+/**
+ * Get the PATH from the user's login shell.
+ * This is essential on macOS when the editor is launched from Finder/Spotlight,
+ * as the extension host doesn't inherit the user's shell environment.
+ * The captured PATH ensures spawned CLI processes can access tools like git.
+ */
+function getLoginShellPath(log?: (msg: string) => void): string | undefined {
+	if (process.platform === "win32") {
+		return undefined
+	}
+
+	const userShell = process.env.SHELL || "/bin/bash"
+	const shellName = path.basename(userShell)
+
+	// Use -i -l (interactive + login) to source both .zprofile/.bash_profile AND .zshrc/.bashrc
+	// stdio: ['ignore', 'pipe', 'pipe'] prevents stdin from blocking
+	const shellArgs = shellName === "tcsh" || shellName === "csh" ? ["-ic"] : ["-i", "-l", "-c"]
+
+	try {
+		const result = spawnSync(userShell, [...shellArgs, 'echo "$PATH"'], {
+			encoding: "utf-8",
+			timeout: 10000,
+			env: { ...process.env, HOME: process.env.HOME },
+			stdio: ["ignore", "pipe", "pipe"], // stdin ignored, stdout/stderr captured
+		})
+
+		const shellPath = result.stdout?.trim()
+		if (shellPath && shellPath !== process.env.PATH) {
+			log?.(`Captured shell PATH (${shellPath.split(":").length} entries)`)
+			return shellPath
+		}
+	} catch (error) {
+		log?.(`Could not capture shell PATH: ${error}`)
+	}
+
+	return undefined
 }
 
 /**
