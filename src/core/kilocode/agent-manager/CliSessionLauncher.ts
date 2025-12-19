@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { findKilocodeCli } from "./CliPathResolver"
+import { findKilocodeCli, type CliDiscoveryResult } from "./CliPathResolver"
 import { CliProcessHandler } from "./CliProcessHandler"
 import type { StreamEvent } from "./CliOutputParser"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
@@ -44,7 +44,7 @@ export type GetApiConfigurationFn = () => Promise<ProviderSettings | undefined>
  */
 export class CliSessionLauncher {
 	// Pre-warm promises for CLI path and git URL lookups
-	private cliPathPromise: Promise<string | null> | null = null
+	private cliPathPromise: Promise<CliDiscoveryResult | null> | null = null
 	private gitUrlPromise: Promise<string | undefined> | null = null
 
 	constructor(
@@ -125,7 +125,7 @@ export class CliSessionLauncher {
 		const gitUrlPromise = this.resolveGitUrlPromise(options.gitUrl, workspaceFolder)
 
 		// Run CLI path lookup, git URL lookup, and API config fetch in parallel
-		const [cliPath, resolvedGitUrl, apiConfiguration] = await Promise.all([
+		const [cliDiscovery, resolvedGitUrl, apiConfiguration] = await Promise.all([
 			cliPathPromise,
 			gitUrlPromise,
 			this.getApiConfiguration().catch((error) => {
@@ -137,13 +137,13 @@ export class CliSessionLauncher {
 		])
 
 		this.log(
-			`Parallel lookups completed in ${Date.now() - spawnStart}ms (CLI: ${cliPath ? "found" : "not found"}, gitUrl: ${resolvedGitUrl ?? "none"})`,
+			`Parallel lookups completed in ${Date.now() - spawnStart}ms (CLI: ${cliDiscovery ? "found" : "not found"}, gitUrl: ${resolvedGitUrl ?? "none"})`,
 		)
 
 		// Clear pre-warm promises after use (they're single-use per panel open)
 		this.clearPrewarm()
 
-		if (!cliPath) {
+		if (!cliDiscovery) {
 			this.log("ERROR: kilocode CLI not found")
 			onSetupFailed?.()
 			return { success: false }
@@ -152,10 +152,10 @@ export class CliSessionLauncher {
 		const processStartTime = Date.now()
 
 		processHandler.spawnProcess(
-			cliPath,
+			cliDiscovery.cliPath,
 			workspaceFolder,
 			prompt,
-			{ ...options, gitUrl: resolvedGitUrl, apiConfiguration },
+			{ ...options, gitUrl: resolvedGitUrl, apiConfiguration, shellPath: cliDiscovery.shellPath },
 			onCliEvent,
 		)
 
