@@ -164,21 +164,35 @@ describe("findExecutable", () => {
 		const testDir = isWindows ? "C:\\npm" : "/npm"
 		const testCwd = isWindows ? "C:\\home\\test" : "/home/test"
 
-		it("tries PATHEXT extensions on Windows", async () => {
+		// Helper to create fs mock with both stat and lstat
+		const createFsMock = (matchPaths: string[]) => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			promises: {
+				stat: vi.fn().mockImplementation((filePath: string) => {
+					if (matchPaths.some((p) => filePath === p)) {
+						return Promise.resolve({ isFile: () => true })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+				lstat: vi.fn().mockImplementation((filePath: string) => {
+					if (matchPaths.some((p) => filePath === p)) {
+						return Promise.resolve({ isFile: () => true, isSymbolicLink: () => false })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+			},
+		})
+
+		// Skip platform-switching tests when already on target platform
+		const windowsSimulationTest = isWindows ? it.skip : it
+
+		windowsSimulationTest("tries PATHEXT extensions on Windows", async () => {
 			const originalPlatform = process.platform
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
 				const expectedPath = path.join(testDir, "kilocode") + ".CMD"
-				const statMock = vi.fn().mockImplementation((filePath: string) => {
-					if (filePath === expectedPath) {
-						return Promise.resolve({ isFile: () => true })
-					}
-					return Promise.reject(new Error("ENOENT"))
-				})
-				vi.doMock("node:fs", () => ({
-					promises: { stat: statMock },
-				}))
+				vi.doMock("node:fs", () => createFsMock([expectedPath]))
 
 				const { findExecutable } = await import("../CliPathResolver")
 				const result = await findExecutable("kilocode", testCwd, [testDir], {
@@ -192,21 +206,13 @@ describe("findExecutable", () => {
 			}
 		})
 
-		it("uses default PATHEXT if not in env", async () => {
+		windowsSimulationTest("uses default PATHEXT if not in env", async () => {
 			const originalPlatform = process.platform
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
 				const expectedPath = path.join(testDir, "kilocode") + ".CMD"
-				const statMock = vi.fn().mockImplementation((filePath: string) => {
-					if (filePath === expectedPath) {
-						return Promise.resolve({ isFile: () => true })
-					}
-					return Promise.reject(new Error("ENOENT"))
-				})
-				vi.doMock("node:fs", () => ({
-					promises: { stat: statMock },
-				}))
+				vi.doMock("node:fs", () => createFsMock([expectedPath]))
 
 				const { findExecutable } = await import("../CliPathResolver")
 				const result = await findExecutable("kilocode", testCwd, [testDir], {
@@ -219,21 +225,13 @@ describe("findExecutable", () => {
 			}
 		})
 
-		it("handles case-insensitive PATH lookup", async () => {
+		windowsSimulationTest("handles case-insensitive PATH lookup", async () => {
 			const originalPlatform = process.platform
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
 				const expectedPath = path.join(testDir, "kilocode") + ".EXE"
-				const statMock = vi.fn().mockImplementation((filePath: string) => {
-					if (filePath === expectedPath) {
-						return Promise.resolve({ isFile: () => true })
-					}
-					return Promise.reject(new Error("ENOENT"))
-				})
-				vi.doMock("node:fs", () => ({
-					promises: { stat: statMock },
-				}))
+				vi.doMock("node:fs", () => createFsMock([expectedPath]))
 
 				const { findExecutable } = await import("../CliPathResolver")
 				const result = await findExecutable("kilocode", testCwd, undefined, {
@@ -247,22 +245,14 @@ describe("findExecutable", () => {
 			}
 		})
 
-		it("returns first matching PATHEXT extension", async () => {
+		windowsSimulationTest("returns first matching PATHEXT extension", async () => {
 			const originalPlatform = process.platform
 			Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 			try {
 				const comPath = path.join(testDir, "kilocode") + ".COM"
 				const exePath = path.join(testDir, "kilocode") + ".EXE"
-				const statMock = vi.fn().mockImplementation((filePath: string) => {
-					if (filePath === comPath || filePath === exePath) {
-						return Promise.resolve({ isFile: () => true })
-					}
-					return Promise.reject(new Error("ENOENT"))
-				})
-				vi.doMock("node:fs", () => ({
-					promises: { stat: statMock },
-				}))
+				vi.doMock("node:fs", () => createFsMock([comPath, exePath]))
 
 				const { findExecutable } = await import("../CliPathResolver")
 				const result = await findExecutable("kilocode", testCwd, [testDir], {
@@ -275,9 +265,41 @@ describe("findExecutable", () => {
 				Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 			}
 		})
+
+		// Native Windows tests - these run only on Windows
+		const nativeWindowsTest = isWindows ? it : it.skip
+
+		nativeWindowsTest("finds .CMD file on native Windows", async () => {
+			const expectedPath = path.join(testDir, "kilocode") + ".CMD"
+			vi.doMock("node:fs", () => createFsMock([expectedPath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, [testDir], {
+				PATH: testDir,
+				PATHEXT: ".COM;.EXE;.BAT;.CMD",
+			})
+
+			expect(result).toBe(expectedPath)
+		})
+
+		nativeWindowsTest("uses case-insensitive env lookup on native Windows", async () => {
+			const expectedPath = path.join(testDir, "kilocode") + ".EXE"
+			vi.doMock("node:fs", () => createFsMock([expectedPath]))
+
+			const { findExecutable } = await import("../CliPathResolver")
+			const result = await findExecutable("kilocode", testCwd, undefined, {
+				Path: testDir, // lowercase 'ath'
+				PathExt: ".COM;.EXE;.BAT;.CMD", // lowercase 'athExt'
+			})
+
+			expect(result).toBe(expectedPath)
+		})
 	})
 
-	it("does not use PATHEXT on non-Windows platforms", async () => {
+	// Skip darwin simulation on Windows - can't simulate non-Windows on Windows
+	const darwinSimulationTest = isWindows ? it.skip : it
+
+	darwinSimulationTest("does not use PATHEXT on non-Windows platforms", async () => {
 		const originalPlatform = process.platform
 		Object.defineProperty(process, "platform", { value: "darwin", configurable: true })
 
@@ -286,10 +308,14 @@ describe("findExecutable", () => {
 				if (filePath === "/usr/bin/kilocode") {
 					return Promise.resolve({ isFile: () => true })
 				}
-				return Promise.reject(new Error("ENOENT"))
+				return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
 			})
 			vi.doMock("node:fs", () => ({
-				promises: { stat: statMock },
+				existsSync: vi.fn().mockReturnValue(false),
+				promises: {
+					stat: statMock,
+					lstat: vi.fn().mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" })),
+				},
 			}))
 
 			const { findExecutable } = await import("../CliPathResolver")

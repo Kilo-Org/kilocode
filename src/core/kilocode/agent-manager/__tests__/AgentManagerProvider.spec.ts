@@ -92,13 +92,36 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(options?.shell).not.toBe(true)
 	})
 
-	it("spawns with shell: true on Windows when CLI path ends with .cmd", async () => {
+	// Helper to create fs mock for Windows tests
+	const createWindowsFsMock = (cmdPath: string) => ({
+		existsSync: vi.fn().mockReturnValue(false),
+		readdirSync: vi.fn().mockReturnValue([]),
+		promises: {
+			stat: vi.fn().mockImplementation((filePath: string) => {
+				if (filePath === cmdPath) {
+					return Promise.resolve({ isFile: () => true })
+				}
+				return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+			}),
+			lstat: vi.fn().mockImplementation((filePath: string) => {
+				if (filePath === cmdPath) {
+					return Promise.resolve({ isFile: () => true, isSymbolicLink: () => false })
+				}
+				return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+			}),
+		},
+	})
+
+	// Skip Windows simulation on actual Windows - run native test instead
+	const windowsSimulationTest = isWindows ? it.skip : it
+
+	windowsSimulationTest("spawns with shell: true on Windows when CLI path ends with .cmd (simulated)", async () => {
 		// Reset modules to set up Windows-specific mock
 		vi.resetModules()
 
-		// Use platform-appropriate paths for the test
-		const testNpmDir = isWindows ? "C:\\npm" : "/npm"
-		const testWorkspace = isWindows ? "C:\\tmp\\workspace" : "/tmp/workspace"
+		// Use Unix paths for simulation test (run on non-Windows)
+		const testNpmDir = "/npm"
+		const testWorkspace = "/tmp/workspace"
 		const cmdPath = path.join(testNpmDir, "kilocode") + ".CMD"
 
 		const mockWorkspaceFolder = { uri: { fsPath: testWorkspace } }
@@ -123,19 +146,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
-		// Mock fs to make findExecutable find the .cmd file
-		vi.doMock("node:fs", () => ({
-			existsSync: vi.fn().mockReturnValue(false),
-			readdirSync: vi.fn().mockReturnValue([]),
-			promises: {
-				stat: vi.fn().mockImplementation((filePath: string) => {
-					if (filePath === cmdPath) {
-						return Promise.resolve({ isFile: () => true })
-					}
-					return Promise.reject(new Error("ENOENT"))
-				}),
-			},
-		}))
+		vi.doMock("node:fs", () => createWindowsFsMock(cmdPath))
 
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
@@ -175,6 +186,79 @@ describe("AgentManagerProvider CLI spawning", () => {
 		} finally {
 			// Restore original platform and PATH
 			Object.defineProperty(process, "platform", { value: originalPlatform, writable: true })
+			process.env.PATH = originalPath
+		}
+	})
+
+	// Native Windows test - runs only on Windows
+	const nativeWindowsTest = isWindows ? it : it.skip
+
+	nativeWindowsTest("spawns with shell: true on native Windows when CLI path ends with .cmd", async () => {
+		// Reset modules to set up Windows-specific mock
+		vi.resetModules()
+
+		// Use Windows paths for native test
+		const testNpmDir = "C:\\npm"
+		const testWorkspace = "C:\\tmp\\workspace"
+		const cmdPath = path.join(testNpmDir, "kilocode") + ".CMD"
+
+		const mockWorkspaceFolder = { uri: { fsPath: testWorkspace } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
+
+		vi.doMock("vscode", () => ({
+			workspace: { workspaceFolders: [mockWorkspaceFolder] },
+			window: { showErrorMessage: vi.fn().mockResolvedValue(undefined), showWarningMessage: vi.fn().mockResolvedValue(undefined), ViewColumn: { One: 1 } },
+			env: { openExternal: vi.fn() },
+			Uri: { parse: vi.fn(), joinPath: vi.fn() },
+			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+		}))
+
+		vi.doMock("../../../../utils/fs", () => ({
+			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+		}))
+
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+		}))
+
+		vi.doMock("node:fs", () => createWindowsFsMock(cmdPath))
+
+		class TestProc extends EventEmitter {
+			stdout = new EventEmitter()
+			stderr = new EventEmitter()
+			kill = vi.fn()
+			pid = 1234
+		}
+
+		const spawnMock = vi.fn(() => new TestProc())
+		const execSyncMock = vi.fn().mockImplementation(() => {
+			throw new Error("not found")
+		})
+
+		vi.doMock("node:child_process", () => ({
+			spawn: spawnMock,
+			execSync: execSyncMock,
+		}))
+
+		const originalPath = process.env.PATH
+		process.env.PATH = testNpmDir
+
+		try {
+			const module = await import("../AgentManagerProvider")
+			const windowsProvider = new module.AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			await (windowsProvider as any).startAgentSession("test windows cmd")
+
+			expect(spawnMock).toHaveBeenCalledTimes(1)
+			const [cmd, , options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
+			expect(cmd.toLowerCase()).toContain(".cmd")
+			expect(options?.shell).toBe(true)
+
+			windowsProvider.dispose()
+		} finally {
 			process.env.PATH = originalPath
 		}
 	})
