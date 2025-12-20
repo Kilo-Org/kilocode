@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Benvenuto in Kilo Code!",
+		"greeting": "Benvenuto in SovCode!",
 		"introText1": "Kilo Code è un agente di coding AI gratuito e open source.",
 		"introText2": "Funziona con i più recenti modelli AI come Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e oltre 450 altri.",
 		"introText3": "Crea un account gratuito e ottieni $20 di crediti bonus quando ricarichi per la prima volta.",
@@ -106,7 +106,11 @@
 			"embeddingBatchSizeLabel": "Dimensione Batch Embedding",
 			"embeddingBatchSizeDescription": "Numero di segmenti di codice da raggruppare insieme per la generazione degli embedding e gli aggiornamenti del vector store. Valori più alti possono migliorare la velocità di indicizzazione ma potrebbero aumentare l'utilizzo della memoria. Valori più bassi riducono l'utilizzo della memoria ma potrebbero rallentare l'indicizzazione.",
 			"scannerMaxBatchRetriesLabel": "Tentativi Massimi Batch Scanner",
-			"scannerMaxBatchRetriesDescription": "Numero massimo di tentativi per riprovare un batch fallito durante la scansione delle directory. Valori più alti aumentano la resilienza agli errori transitori ma potrebbero rallentare l'indicizzazione se gli errori persistono. Valori più bassi falliscono più rapidamente ma potrebbero saltare contenuti in caso di problemi temporanei."
+			"scannerMaxBatchRetriesDescription": "Numero massimo di tentativi per riprovare un batch fallito durante la scansione delle directory. Valori più alti aumentano la resilienza agli errori transitori ma potrebbero rallentare l'indicizzazione se gli errori persistono. Valori più bassi falliscono più rapidamente ma potrebbero saltare contenuti in caso di problemi temporanei.",
+			"parserMinChunkSizeLabel": "Dimensione minima frammento (caratteri)",
+			"parserMinChunkSizeDescription": "Numero minimo di caratteri per un frammento di codice da indicizzare. Valori più piccoli catturano segmenti di codice più granulari. Valori più grandi saltano blocchi di codice più piccoli. Le modifiche richiedono la reindicizzazione.",
+			"parserMaxChunkSizeLabel": "Dimensione massima frammento (caratteri)",
+			"parserMaxChunkSizeDescription": "Numero massimo di caratteri per un singolo frammento di codice prima della divisione. Valori più piccoli creano frammenti più mirati. Valori più grandi conservano più contesto per frammento. Le modifiche richiedono la reindicizzazione."
 		}
 	},
 	"chat": {

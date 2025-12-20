@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Selamat datang di Kilo Code!",
+		"greeting": "Selamat datang di SovCode!",
 		"introText1": "Kilo Code adalah agen coding AI gratis dan open source.",
 		"introText2": "Bekerja dengan model AI terbaru seperti Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, dan lebih dari 450 model lainnya.",
 		"introText3": "Buat akun gratis dan dapatkan $20 kredit bonus saat top-up pertama kali.",
@@ -99,7 +99,11 @@
 			"embeddingBatchSizeLabel": "Ukuran Batch Embedding",
 			"embeddingBatchSizeDescription": "Jumlah segmen kode yang digabung untuk pembuatan embedding dan penyisipan vector store. Nilai lebih tinggi dapat meningkatkan kecepatan pengindeksan tetapi dapat meningkatkan penggunaan memori. Nilai lebih rendah mengurangi penggunaan memori tetapi dapat memperlambat pengindeksan.",
 			"scannerMaxBatchRetriesLabel": "Maksimum Percobaan Ulang Batch Scanner",
-			"scannerMaxBatchRetriesDescription": "Jumlah maksimum percobaan ulang batch yang gagal selama pemindaian direktori. Nilai lebih tinggi meningkatkan ketahanan terhadap error sementara tetapi dapat memperlambat pengindeksan jika error berlanjut. Nilai lebih rendah gagal lebih cepat tetapi dapat melewatkan konten pada masalah sementara."
+			"scannerMaxBatchRetriesDescription": "Jumlah maksimum percobaan ulang batch yang gagal selama pemindaian direktori. Nilai lebih tinggi meningkatkan ketahanan terhadap error sementara tetapi dapat memperlambat pengindeksan jika error berlanjut. Nilai lebih rendah gagal lebih cepat tetapi dapat melewatkan konten pada masalah sementara.",
+			"parserMinChunkSizeLabel": "Ukuran Chunk Minimal (karakter)",
+			"parserMinChunkSizeDescription": "Jumlah minimum karakter untuk chunk kode yang akan diindeks. Nilai yang lebih kecil menangkap segmen kode yang lebih granular. Nilai yang lebih besar melewatkan blok kode yang lebih kecil. Perubahan memerlukan pengindeksan ulang.",
+			"parserMaxChunkSizeLabel": "Ukuran Chunk Maksimal (karakter)",
+			"parserMaxChunkSizeDescription": "Jumlah maksimum karakter untuk satu chunk kode sebelum pemisahan. Nilai yang lebih kecil membuat chunk yang lebih terfokus. Nilai yang lebih besar mempertahankan lebih banyak konteks per chunk. Perubahan memerlukan pengindeksan ulang."
 		}
 	},
 	"chat": {

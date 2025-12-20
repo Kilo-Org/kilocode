@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Benvingut a Kilo Code!",
+		"greeting": "Benvingut a SovCode!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
 		"introText2": "Funciona amb els models d'IA més recents com Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, i més de 450 més.",
 		"introText3": "Crea un compte gratuït i obtén $20 en crèdits de bonificació quan recarreguis per primera vegada.",
@@ -82,7 +82,11 @@
 			"embeddingBatchSizeLabel": "Mida del Lot d'Incrustació",
 			"embeddingBatchSizeDescription": "Nombre de segments de codi a agrupar per a la generació d'incrustacions i actualitzacions del magatzem vectorial. Valors més alts poden millorar la velocitat d'indexació però poden augmentar l'ús de memòria. Valors més baixos redueixen l'ús de memòria però poden alentir la indexació.",
 			"scannerMaxBatchRetriesLabel": "Nombre Màxim de Reintents de Lot de l'Escàner",
-			"scannerMaxBatchRetriesDescription": "Nombre màxim de vegades per reintentar un lot fallit durant l'escaneig de directoris. Valors més alts augmenten la resiliència als errors transitoris però poden alentir la indexació si els errors persisteixen. Valors més baixos fallen més ràpidament però poden ometre contingut en problemes temporals."
+			"scannerMaxBatchRetriesDescription": "Nombre màxim de vegades per reintentar un lot fallit durant l'escaneig de directoris. Valors més alts augmenten la resiliència als errors transitoris però poden alentir la indexació si els errors persisteixen. Valors més baixos fallen més ràpidament però poden ometre contingut en problemes temporals.",
+			"parserMinChunkSizeLabel": "Mida mínima del fragment (caràcters)",
+			"parserMinChunkSizeDescription": "Nombre mínim de caràcters per a un fragment de codi per ser indexat. Valors més petits capturen segments de codi més granulars. Valors més grans salten blocs de codi més petits. Els canvis requereixen reindexar.",
+			"parserMaxChunkSizeLabel": "Mida màxima del fragment (caràcters)",
+			"parserMaxChunkSizeDescription": "Nombre màxim de caràcters per a un sol fragment de codi abans de dividir-lo. Valors més petits creen fragments més enfocats. Valors més grans preserven més context per fragment. Els canvis requereixen reindexar."
 		},
 		"systemNotifications": {
 			"label": "Activar notificacions del sistema",

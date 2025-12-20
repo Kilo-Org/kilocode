@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Welcome to Kilo Code!",
+		"greeting": "Welcome to SovCode!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
 		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
 		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
@@ -113,7 +113,11 @@
 			"embeddingBatchSizeLabel": "Embedding Batch Size",
 			"embeddingBatchSizeDescription": "Number of code segments to batch together for embedding generation and vector store upserts. Higher values can improve indexing speed but may increase memory usage. Lower values reduce memory usage but may slow down indexing.",
 			"scannerMaxBatchRetriesLabel": "Scanner Max Batch Retries",
-			"scannerMaxBatchRetriesDescription": "Maximum number of times to retry a failed batch during directory scanning. Higher values increase resilience to transient errors but may slow down indexing if errors persist. Lower values fail faster but may skip content on temporary issues."
+			"scannerMaxBatchRetriesDescription": "Maximum number of times to retry a failed batch during directory scanning. Higher values increase resilience to transient errors but may slow down indexing if errors persist. Lower values fail faster but may skip content on temporary issues.",
+			"parserMinChunkSizeLabel": "Min Chunk Size (chars)",
+			"parserMinChunkSizeDescription": "Minimum number of characters for a code chunk to be indexed. Smaller values capture more granular code segments. Larger values skip smaller code blocks. Changes require re-indexing.",
+			"parserMaxChunkSizeLabel": "Max Chunk Size (chars)",
+			"parserMaxChunkSizeDescription": "Maximum number of characters for a single code chunk before splitting. Smaller values create more focused chunks. Larger values preserve more context per chunk. Changes require re-indexing."
 		}
 	},
 	"chat": {

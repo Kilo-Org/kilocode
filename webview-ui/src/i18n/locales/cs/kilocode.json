@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Vítej v Kilo Code!",
+		"greeting": "Vítej v SovCode!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
 		"introText2": "Funguje s nejnovějšími AI modely jako Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 a více než 450 dalšími.",
 		"introText3": "Vytvoř si bezplatný účet a získej $20 bonusových kreditů při prvním dobití.",
@@ -106,7 +106,11 @@
 			"embeddingBatchSizeLabel": "Velikost dávky embeddingu",
 			"embeddingBatchSizeDescription": "Počet segmentů kódu, které se seskupí pro generování embeddingů a vektové upserty. Vyšší hodnoty mohou zlepšit rychlost indexování, ale mohou zvýšit spotřebu paměti. Nižší hodnoty snižují spotřebu paměti, ale mohou zpomalit indexování.",
 			"scannerMaxBatchRetriesLabel": "Maximální počet opakování dávky skeneru",
-			"scannerMaxBatchRetriesDescription": "Maximální počet pokusů o opakování neúspěšné dávky během skenování adresářů. Vyšší hodnoty zvyšují odolnost vůči přechodným chybám, ale mohou zpomalit indexování, pokud chyby přetrvávají. Nižší hodnoty selhávají rychleji, ale mohou při dočasných problémech přeskočit obsah."
+			"scannerMaxBatchRetriesDescription": "Maximální počet pokusů o opakování neúspěšné dávky během skenování adresářů. Vyšší hodnoty zvyšují odolnost vůči přechodným chybám, ale mohou zpomalit indexování, pokud chyby přetrvávají. Nižší hodnoty selhávají rychleji, ale mohou při dočasných problémech přeskočit obsah.",
+			"parserMinChunkSizeLabel": "Minimální velikost fragmentu (znaky)",
+			"parserMinChunkSizeDescription": "Minimální počet znaků pro fragment kódu, který má být indexován. Menší hodnoty zachycují jemnější segmenty kódu. Větší hodnoty přeskakují menší bloky kódu. Změny vyžadují přeindexování.",
+			"parserMaxChunkSizeLabel": "Maximální velikost fragmentu (znaky)",
+			"parserMaxChunkSizeDescription": "Maximální počet znaků pro jeden fragment kódu před rozdělením. Menší hodnoty vytvářejí soustředěnější fragmenty. Větší hodnoty zachovávají více kontextu na fragment. Změny vyžadují přeindexování."
 		}
 	},
 	"chat": {

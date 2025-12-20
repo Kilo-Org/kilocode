@@ -390,6 +390,8 @@ export interface WebviewMessage {
 		// kilocode_change start
 		codebaseIndexEmbeddingBatchSize?: number
 		codebaseIndexScannerMaxBatchRetries?: number
+		codebaseIndexParserMinChunkSize?: number
+		codebaseIndexParserMaxChunkSize?: number
 		// kilocode_change end
 		codebaseIndexOpenRouterSpecificProvider?: string // OpenRouter provider routing
 

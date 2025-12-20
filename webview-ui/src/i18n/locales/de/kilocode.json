@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Willkommen bei Kilo Code!",
+		"greeting": "Willkommen bei SovCode!",
 		"introText1": "Kilo Code ist ein kostenloser Open-Source-KI-Coding-Agent.",
 		"introText2": "Er funktioniert mit den neuesten KI-Modellen wie Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 und über 450 weiteren.",
 		"introText3": "Erstelle ein kostenloses Konto und erhalte $20 Bonusguthaben bei deiner ersten Aufladung.",
@@ -106,7 +106,11 @@
 			"embeddingBatchSizeLabel": "Embedding-Stapelgröße",
 			"embeddingBatchSizeDescription": "Anzahl der Code-Segmente, die für die Embedding-Generierung und Vektorspeicher-Upserts zusammengefasst werden. Höhere Werte können die Indizierungsgeschwindigkeit verbessern, aber den Speicherverbrauch erhöhen. Niedrigere Werte reduzieren den Speicherverbrauch, können aber die Indizierung verlangsamen.",
 			"scannerMaxBatchRetriesLabel": "Scanner Max. Stapel-Wiederholungen",
-			"scannerMaxBatchRetriesDescription": "Maximale Anzahl von Wiederholungsversuchen für einen fehlgeschlagenen Stapel während des Verzeichnis-Scans. Höhere Werte erhöhen die Widerstandsfähigkeit gegen vorübergehende Fehler, können aber die Indizierung verlangsamen, wenn Fehler bestehen bleiben. Niedrigere Werte schlagen schneller fehl, können aber Inhalte bei temporären Problemen überspringen."
+			"scannerMaxBatchRetriesDescription": "Maximale Anzahl von Wiederholungsversuchen für einen fehlgeschlagenen Stapel während des Verzeichnis-Scans. Höhere Werte erhöhen die Widerstandsfähigkeit gegen vorübergehende Fehler, können aber die Indizierung verlangsamen, wenn Fehler bestehen bleiben. Niedrigere Werte schlagen schneller fehl, können aber Inhalte bei temporären Problemen überspringen.",
+			"parserMinChunkSizeLabel": "Minimale Blockgröße (Zeichen)",
+			"parserMinChunkSizeDescription": "Mindestanzahl an Zeichen für einen Code-Block, der indexiert werden soll. Kleinere Werte erfassen granularere Codesegmente. Größere Werte überspringen kleinere Codeblöcke. Änderungen erfordern eine Neuindexierung.",
+			"parserMaxChunkSizeLabel": "Maximale Blockgröße (Zeichen)",
+			"parserMaxChunkSizeDescription": "Maximale Anzahl an Zeichen für einen einzelnen Code-Block vor der Aufteilung. Kleinere Werte erzeugen fokussiertere Blöcke. Größere Werte bewahren mehr Kontext pro Block. Änderungen erfordern eine Neuindexierung."
 		}
 	},
 	"chat": {

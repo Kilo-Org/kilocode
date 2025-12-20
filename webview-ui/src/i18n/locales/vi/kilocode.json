@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Chào mừng bạn đến với Kilo Code!",
+		"greeting": "Chào mừng bạn đến với SovCode!",
 		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
 		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
@@ -50,7 +50,11 @@
 			"embeddingBatchSizeLabel": "Kích Thước Lô Embedding",
 			"embeddingBatchSizeDescription": "Số lượng đoạn mã được nhóm lại với nhau để tạo embedding và cập nhật vector store. Giá trị cao hơn có thể cải thiện tốc độ lập chỉ mục nhưng có thể tăng mức sử dụng bộ nhớ. Giá trị thấp hơn giảm sử dụng bộ nhớ nhưng có thể làm chậm quá trình lập chỉ mục.",
 			"scannerMaxBatchRetriesLabel": "Số Lần Thử Lại Tối Đa Của Lô Quét",
-			"scannerMaxBatchRetriesDescription": "Số lần tối đa thử lại một lô thất bại trong quá trình quét thư mục. Giá trị cao hơn tăng khả năng phục hồi trước các lỗi tạm thời nhưng có thể làm chậm lập chỉ mục nếu lỗi vẫn tồn tại. Giá trị thấp hơn thất bại nhanh hơn nhưng có thể bỏ qua nội dung khi gặp vấn đề tạm thời."
+			"scannerMaxBatchRetriesDescription": "Số lần tối đa thử lại một lô thất bại trong quá trình quét thư mục. Giá trị cao hơn tăng khả năng phục hồi trước các lỗi tạm thời nhưng có thể làm chậm lập chỉ mục nếu lỗi vẫn tồn tại. Giá trị thấp hơn thất bại nhanh hơn nhưng có thể bỏ qua nội dung khi gặp vấn đề tạm thời.",
+			"parserMinChunkSizeLabel": "Kích thước đoạn tối thiểu (ký tự)",
+			"parserMinChunkSizeDescription": "Số ký tự tối thiểu để một đoạn mã được lập chỉ mục. Giá trị nhỏ hơn sẽ nắm bắt các phân đoạn mã chi tiết hơn. Giá trị lớn hơn sẽ bỏ qua các khối mã nhỏ hơn. Thay đổi yêu cầu lập chỉ mục lại.",
+			"parserMaxChunkSizeLabel": "Kích thước đoạn tối đa (ký tự)",
+			"parserMaxChunkSizeDescription": "Số ký tự tối đa cho một đoạn mã duy nhất trước khi tách. Giá trị nhỏ hơn sẽ tạo ra các đoạn tập trung hơn. Giá trị lớn hơn sẽ giữ lại nhiều ngữ cảnh hơn cho mỗi đoạn. Thay đổi yêu cầu lập chỉ mục lại."
 		},
 		"provider": {
 			"account": "Tài khoản Kilo Code",

@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "欢迎使用 Kilo Code！",
+		"greeting": "欢迎使用 SovCode！",
 		"introText1": "Kilo Code 是一个免费的开源 AI 编程代理。",
 		"introText2": "它适用于最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多个其他模型。",
 		"introText3": "创建免费账户，首次充值即可获得 20 美元奖励额度。",
@@ -96,7 +96,11 @@
 			"embeddingBatchSizeLabel": "Embedding 批次大小",
 			"embeddingBatchSizeDescription": "用于 Embedding 生成和向量存储更新的代码片段批次大小。较大的值可以提高索引速度，但可能增加内存使用量。较小的值可以减少内存使用量，但可能降低索引速度。",
 			"scannerMaxBatchRetriesLabel": "扫描器最大批次重试次数",
-			"scannerMaxBatchRetriesDescription": "目录扫描期间重试失败批次的最大次数。较大的值可以提高对临时错误的容错能力，但如果错误持续存在可能会降低索引速度。较小的值会更快失败，但可能在临时问题时跳过内容。"
+			"scannerMaxBatchRetriesDescription": "目录扫描期间重试失败批次的最大次数。较大的值可以提高对临时错误的容错能力，但如果错误持续存在可能会降低索引速度。较小的值会更快失败，但可能在临时问题时跳过内容。",
+			"parserMinChunkSizeLabel": "最小分块大小（字符）",
+			"parserMinChunkSizeDescription": "要索引的代码分块的最小字符数。较小的值可以捕获更细粒度的代码段。较大的值会跳过较小的代码块。更改需要重新索引。",
+			"parserMaxChunkSizeLabel": "最大分块大小（字符）",
+			"parserMaxChunkSizeDescription": "分割前单个代码分块的最大字符数。较小的值会创建更集中的分块。较大的值会在每个分块中保留更多上下文。更改需要重新索引。"
 		},
 		"terminal": {
 			"commandGenerator": {

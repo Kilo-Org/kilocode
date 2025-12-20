@@ -1,17 +1,19 @@
 import React from "react"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { Slider, StandardTooltip } from "@src/components/ui"
+import { StandardTooltip } from "@src/components/ui"
+import { cn } from "@src/lib/utils"
 
-interface MaxBatchRetriesSliderProps {
+interface MaxBatchRetriesInputProps {
 	value: number | undefined
 	onChange: (value: number) => void
+	error?: string
 }
 
-export const MaxBatchRetriesSlider: React.FC<MaxBatchRetriesSliderProps> = ({ value, onChange }) => {
+export const MaxBatchRetriesInput: React.FC<MaxBatchRetriesInputProps> = ({ value, onChange, error }) => {
 	const { t } = useAppTranslation()
 
 	const currentValue = value ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES
@@ -27,16 +29,18 @@ export const MaxBatchRetriesSlider: React.FC<MaxBatchRetriesSliderProps> = ({ va
 				</StandardTooltip>
 			</div>
 			<div className="flex items-center gap-2">
-				<Slider
-					min={CODEBASE_INDEX_DEFAULTS.MIN_SCANNER_MAX_BATCH_RETRIES}
-					max={CODEBASE_INDEX_DEFAULTS.MAX_SCANNER_MAX_BATCH_RETRIES}
-					step={CODEBASE_INDEX_DEFAULTS.SCANNER_MAX_BATCH_RETRIES_STEP}
-					value={[currentValue]}
-					onValueChange={(values) => onChange(values[0])}
-					className="flex-1"
-					data-testid="scanner-max-batch-retries-slider"
+				<VSCodeTextField
+					value={currentValue.toString()}
+					onInput={(e: any) => {
+						const val = parseInt(e.target.value, 10)
+						if (!isNaN(val)) {
+							onChange(val)
+						}
+					}}
+					className={cn("flex-1", {
+						"border-red-500": error,
+					})}
 				/>
-				<span className="w-12 text-center">{currentValue}</span>
 				<VSCodeButton
 					appearance="icon"
 					title={t("settings:codeIndex.resetToDefault")}
@@ -44,6 +48,7 @@ export const MaxBatchRetriesSlider: React.FC<MaxBatchRetriesSliderProps> = ({ va
 					<span className="codicon codicon-discard" />
 				</VSCodeButton>
 			</div>
+			{error && <p className="text-xs text-vscode-errorForeground mt-1 mb-0">{error}</p>}
 		</div>
 	)
 }

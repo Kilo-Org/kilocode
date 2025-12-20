@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Kilo Code'a hoş geldiniz!",
+		"greeting": "SovCode'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
 		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
 		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
@@ -43,7 +43,11 @@
 			"embeddingBatchSizeLabel": "Gömme Toplu İşlem Boyutu",
 			"embeddingBatchSizeDescription": "Gömme üretimi ve vektör deposu güncellemeleri için birlikte toplu işleme alınacak kod segmentlerinin sayısı. Daha yüksek değerler indeksleme hızını artırabilir ancak bellek kullanımını artırabilir. Daha düşük değerler bellek kullanımını azaltır ancak indekslemeyi yavaşlatabilir.",
 			"scannerMaxBatchRetriesLabel": "Tarayıcı Maksimum Toplu İşlem Yeniden Denemeleri",
-			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir."
+			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir.",
+			"parserMinChunkSizeLabel": "Minimum Parça Boyutu (karakter)",
+			"parserMinChunkSizeDescription": "İndekslenecek bir kod parçası için minimum karakter sayısı. Daha küçük değerler daha ayrıntılı kod segmentlerini yakalar. Daha büyük değerler daha küçük kod bloklarını atlar. Değişiklikler yeniden indeksleme gerektirir.",
+			"parserMaxChunkSizeLabel": "Maksimum Parça Boyutu (karakter)",
+			"parserMaxChunkSizeDescription": "Bölünmeden önceki tek bir kod parçası için maksimum karakter sayısı. Daha küçük değerler daha odaklanmış parçalar oluşturur. Daha büyük değerler parça başına daha fazla bağlam korur. Değişiklikler yeniden indeksleme gerektirir."
 		},
 		"provider": {
 			"account": "Kilo Code Hesabı",

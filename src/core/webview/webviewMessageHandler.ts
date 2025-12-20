@@ -3096,6 +3096,8 @@ export const webviewMessageHandler = async (
 					// kilocode_change start
 					codebaseIndexEmbeddingBatchSize: settings.codebaseIndexEmbeddingBatchSize,
 					codebaseIndexScannerMaxBatchRetries: settings.codebaseIndexScannerMaxBatchRetries,
+					codebaseIndexParserMinChunkSize: settings.codebaseIndexParserMinChunkSize,
+					codebaseIndexParserMaxChunkSize: settings.codebaseIndexParserMaxChunkSize,
 					// kilocode_change end
 					codebaseIndexOpenRouterSpecificProvider: settings.codebaseIndexOpenRouterSpecificProvider,
 				}

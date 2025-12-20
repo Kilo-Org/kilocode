@@ -10,7 +10,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
-import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
+import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
 import { CacheManager } from "./cache-manager"
@@ -188,6 +188,18 @@ export class CodeIndexServiceFactory {
 	}
 
 	/**
+	 * Creates a code parser instance with the current configuration.
+	 * kilocode_change: Parser now uses configurable chunk sizes from user settings
+	 */
+	public createParser(): ICodeParser {
+		const config = this.configManager.getConfig()
+		return new CodeParser({
+			minBlockChars: config.parserMinChunkSize,
+			maxBlockChars: config.parserMaxChunkSize,
+		})
+	}
+
+	/**
 	 * Creates a directory scanner instance with its required dependencies.
 	 */
 	public createDirectoryScanner(
@@ -264,7 +276,8 @@ export class CodeIndexServiceFactory {
 
 		const embedder = this.createEmbedder()
 		const vectorStore = this.createVectorStore()
-		const parser = codeParser
+		// kilocode_change: Use configured parser with user-defined chunk sizes
+		const parser = this.createParser()
 		const scanner = this.createDirectoryScanner(embedder, vectorStore, parser, ignoreInstance)
 		const fileWatcher = this.createFileWatcher(
 			context,

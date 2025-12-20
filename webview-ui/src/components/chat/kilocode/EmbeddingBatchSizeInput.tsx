@@ -1,17 +1,19 @@
 import React from "react"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { Slider, StandardTooltip } from "@src/components/ui"
+import { StandardTooltip } from "@src/components/ui"
+import { cn } from "@src/lib/utils"
 
-interface EmbeddingBatchSizeSliderProps {
+interface EmbeddingBatchSizeInputProps {
 	value: number | undefined
 	onChange: (value: number) => void
+	error?: string
 }
 
-export const EmbeddingBatchSizeSlider: React.FC<EmbeddingBatchSizeSliderProps> = ({ value, onChange }) => {
+export const EmbeddingBatchSizeInput: React.FC<EmbeddingBatchSizeInputProps> = ({ value, onChange, error }) => {
 	const { t } = useAppTranslation()
 
 	const currentValue = value ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE
@@ -27,16 +29,18 @@ export const EmbeddingBatchSizeSlider: React.FC<EmbeddingBatchSizeSliderProps> =
 				</StandardTooltip>
 			</div>
 			<div className="flex items-center gap-2">
-				<Slider
-					min={CODEBASE_INDEX_DEFAULTS.MIN_EMBEDDING_BATCH_SIZE}
-					max={CODEBASE_INDEX_DEFAULTS.MAX_EMBEDDING_BATCH_SIZE}
-					step={CODEBASE_INDEX_DEFAULTS.EMBEDDING_BATCH_SIZE_STEP}
-					value={[currentValue]}
-					onValueChange={(values) => onChange(values[0])}
-					className="flex-1"
-					data-testid="embedding-batch-size-slider"
+				<VSCodeTextField
+					value={currentValue.toString()}
+					onInput={(e: any) => {
+						const val = parseInt(e.target.value, 10)
+						if (!isNaN(val)) {
+							onChange(val)
+						}
+					}}
+					className={cn("flex-1", {
+						"border-red-500": error,
+					})}
 				/>
-				<span className="w-12 text-center">{currentValue}</span>
 				<VSCodeButton
 					appearance="icon"
 					title={t("settings:codeIndex.resetToDefault")}
@@ -44,6 +48,7 @@ export const EmbeddingBatchSizeSlider: React.FC<EmbeddingBatchSizeSliderProps> =
 					<span className="codicon codicon-discard" />
 				</VSCodeButton>
 			</div>
+			{error && <p className="text-xs text-vscode-errorForeground mt-1 mb-0">{error}</p>}
 		</div>
 	)
 }

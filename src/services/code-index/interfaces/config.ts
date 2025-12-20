@@ -28,6 +28,8 @@ export interface CodeIndexConfig {
 	// kilocode_change start
 	embeddingBatchSize?: number
 	scannerMaxBatchRetries?: number
+	parserMinChunkSize?: number
+	parserMaxChunkSize?: number
 	// kilocode_change end
 }
 

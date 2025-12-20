@@ -46,8 +46,10 @@ import {
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 // kilocode_change start
-import { EmbeddingBatchSizeSlider } from "./kilocode/EmbeddingBatchSizeSlider"
-import { MaxBatchRetriesSlider } from "./kilocode/MaxBatchRetriesSlider"
+import { EmbeddingBatchSizeInput } from "./kilocode/EmbeddingBatchSizeInput"
+import { MaxBatchRetriesInput } from "./kilocode/MaxBatchRetriesInput"
+import { ParserMinChunkSizeInput } from "./kilocode/ParserMinChunkSizeInput"
+import { ParserMaxChunkSizeInput } from "./kilocode/ParserMaxChunkSizeInput"
 // kilocode_change end
 import {
 	useOpenRouterModelProviders,
@@ -85,6 +87,8 @@ interface LocalCodeIndexSettings {
 	codebaseIndexSearchMinScore?: number
 	codebaseIndexEmbeddingBatchSize?: number
 	codebaseIndexScannerMaxBatchRetries?: number
+	codebaseIndexParserMinChunkSize?: number
+	codebaseIndexParserMaxChunkSize?: number
 
 	// Bedrock-specific settings
 	codebaseIndexBedrockRegion?: string
@@ -254,6 +258,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
 		codebaseIndexEmbeddingBatchSize: CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
 		codebaseIndexScannerMaxBatchRetries: CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
+		codebaseIndexParserMinChunkSize: CODEBASE_INDEX_DEFAULTS.DEFAULT_PARSER_MIN_CHUNK_SIZE,
+		codebaseIndexParserMaxChunkSize: CODEBASE_INDEX_DEFAULTS.DEFAULT_PARSER_MAX_CHUNK_SIZE,
 		codebaseIndexBedrockRegion: "",
 		codebaseIndexBedrockProfile: "",
 		codeIndexOpenAiKey: "",
@@ -311,6 +317,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexScannerMaxBatchRetries:
 					codebaseIndexConfig.codebaseIndexScannerMaxBatchRetries ??
 					CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
+				codebaseIndexParserMinChunkSize:
+					codebaseIndexConfig.codebaseIndexParserMinChunkSize ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_PARSER_MIN_CHUNK_SIZE,
+				codebaseIndexParserMaxChunkSize:
+					codebaseIndexConfig.codebaseIndexParserMaxChunkSize ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_PARSER_MAX_CHUNK_SIZE,
 				codebaseIndexBedrockRegion: codebaseIndexConfig.codebaseIndexBedrockRegion || "",
 				codebaseIndexBedrockProfile: codebaseIndexConfig.codebaseIndexBedrockProfile || "",
 				codeIndexOpenAiKey: "",
@@ -1771,16 +1783,30 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 									</div>
 
 									{/* kilocode_change start */}
-									<EmbeddingBatchSizeSlider
+									<EmbeddingBatchSizeInput
 										value={currentSettings.codebaseIndexEmbeddingBatchSize}
 										onChange={(value) => updateSetting("codebaseIndexEmbeddingBatchSize", value)}
+										error={formErrors.codebaseIndexEmbeddingBatchSize}
 									/>
 
-									<MaxBatchRetriesSlider
+									<MaxBatchRetriesInput
 										value={currentSettings.codebaseIndexScannerMaxBatchRetries}
 										onChange={(value) =>
 											updateSetting("codebaseIndexScannerMaxBatchRetries", value)
 										}
+										error={formErrors.codebaseIndexScannerMaxBatchRetries}
+									/>
+
+									<ParserMinChunkSizeInput
+										value={currentSettings.codebaseIndexParserMinChunkSize}
+										onChange={(value) => updateSetting("codebaseIndexParserMinChunkSize", value)}
+										error={formErrors.codebaseIndexParserMinChunkSize}
+									/>
+
+									<ParserMaxChunkSizeInput
+										value={currentSettings.codebaseIndexParserMaxChunkSize}
+										onChange={(value) => updateSetting("codebaseIndexParserMaxChunkSize", value)}
+										error={formErrors.codebaseIndexParserMaxChunkSize}
 									/>
 									{/* kilocode_change end */}
 								</div>

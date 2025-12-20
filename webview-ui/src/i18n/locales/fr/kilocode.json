@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Bienvenue dans Kilo Code !",
+		"greeting": "Bienvenue dans SovCode !",
 		"introText1": "Kilo Code est un agent de codage IA gratuit et open source.",
 		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, et plus de 450 autres.",
 		"introText3": "Créez un compte gratuit et obtenez 20 $ de crédits bonus lors de votre première recharge.",
@@ -106,7 +106,11 @@
 			"embeddingBatchSizeLabel": "Taille du lot d'embedding",
 			"embeddingBatchSizeDescription": "Nombre de segments de code à regrouper pour la génération d'embeddings et les upserts de stockage vectoriel. Des valeurs plus élevées peuvent améliorer la vitesse d'indexation mais peuvent augmenter l'utilisation de la mémoire. Des valeurs plus faibles réduisent l'utilisation de la mémoire mais peuvent ralentir l'indexation.",
 			"scannerMaxBatchRetriesLabel": "Nombre max. de tentatives de lot du scanner",
-			"scannerMaxBatchRetriesDescription": "Nombre maximum de tentatives pour un lot échoué lors de l'analyse de répertoire. Des valeurs plus élevées augmentent la résilience aux erreurs transitoires mais peuvent ralentir l'indexation si les erreurs persistent. Des valeurs plus faibles échouent plus rapidement mais peuvent ignorer du contenu en cas de problèmes temporaires."
+			"scannerMaxBatchRetriesDescription": "Nombre maximum de tentatives pour un lot échoué lors de l'analyse de répertoire. Des valeurs plus élevées augmentent la résilience aux erreurs transitoires mais peuvent ralentir l'indexation si les erreurs persistent. Des valeurs plus faibles échouent plus rapidement mais peuvent ignorer du contenu en cas de problèmes temporaires.",
+			"parserMinChunkSizeLabel": "Taille min. du bloc (caractères)",
+			"parserMinChunkSizeDescription": "Nombre minimal de caractères pour qu'un bloc de code soit indexé. Des valeurs plus petites capturent des segments de code plus granulaires. Des valeurs plus grandes ignorent les blocs de code plus petits. Les modifications nécessitent une réindexation.",
+			"parserMaxChunkSizeLabel": "Taille max. du bloc (caractères)",
+			"parserMaxChunkSizeDescription": "Nombre maximal de caractères pour un seul bloc de code avant division. Des valeurs plus petites créent des blocs plus ciblés. Des valeurs plus grandes préservent plus de contexte par bloc. Les modifications nécessitent une réindexation."
 		}
 	},
 	"toolCallStyle": {

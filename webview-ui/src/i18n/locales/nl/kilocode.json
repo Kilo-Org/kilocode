@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "Welkom bij Kilo Code!",
+		"greeting": "Welkom bij SovCode!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
 		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
 		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
@@ -89,7 +89,11 @@
 			"embeddingBatchSizeLabel": "Embedding Batchgrootte",
 			"embeddingBatchSizeDescription": "Aantal codesegmenten om samen te verwerken voor embedding generatie en vector store updates. Hogere waarden kunnen de indexeringssnelheid verbeteren maar kunnen het geheugengebruik verhogen. Lagere waarden verminderen het geheugengebruik maar kunnen de indexering vertragen.",
 			"scannerMaxBatchRetriesLabel": "Scanner Maximaal Aantal Batch Pogingen",
-			"scannerMaxBatchRetriesDescription": "Maximaal aantal keren om een mislukte batch opnieuw te proberen tijdens het scannen van mappen. Hogere waarden verhogen de veerkracht tegen tijdelijke fouten maar kunnen de indexering vertragen als fouten aanhouden. Lagere waarden falen sneller maar kunnen inhoud overslaan bij tijdelijke problemen."
+			"scannerMaxBatchRetriesDescription": "Maximaal aantal keren om een mislukte batch opnieuw te proberen tijdens het scannen van mappen. Hogere waarden verhogen de veerkracht tegen tijdelijke fouten maar kunnen de indexering vertragen als fouten aanhouden. Lagere waarden falen sneller maar kunnen inhoud overslaan bij tijdelijke problemen.",
+			"parserMinChunkSizeLabel": "Minimale fragmentgrootte (tekens)",
+			"parserMinChunkSizeDescription": "Minimum aantal tekens voor een codefragment om te worden geïndexeerd. Lagere waarden leggen meer granulaire codesegmenten vast. Hogere waarden slaan kleinere codeblokken over. Wijzigingen vereisen herindexering.",
+			"parserMaxChunkSizeLabel": "Maximale fragmentgrootte (tekens)",
+			"parserMaxChunkSizeDescription": "Maximum aantal tekens voor een enkel codefragment vóór splitsing. Lagere waarden creëren meer gefocuste fragmenten. Hogere waarden behouden meer context per fragment. Wijzigingen vereisen herindexering."
 		},
 		"systemNotifications": {
 			"label": "Systeemmeldingen inschakelen",

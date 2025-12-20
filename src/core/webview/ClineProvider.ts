@@ -2399,6 +2399,8 @@ ${prompt}
 				// kilocode_change start
 				codebaseIndexEmbeddingBatchSize: codebaseIndexConfig?.codebaseIndexEmbeddingBatchSize,
 				codebaseIndexScannerMaxBatchRetries: codebaseIndexConfig?.codebaseIndexScannerMaxBatchRetries,
+				codebaseIndexParserMinChunkSize: codebaseIndexConfig?.codebaseIndexParserMinChunkSize,
+				codebaseIndexParserMaxChunkSize: codebaseIndexConfig?.codebaseIndexParserMaxChunkSize,
 				// kilocode_change end
 				codebaseIndexBedrockRegion: codebaseIndexConfig?.codebaseIndexBedrockRegion,
 				codebaseIndexBedrockProfile: codebaseIndexConfig?.codebaseIndexBedrockProfile,
@@ -2700,6 +2702,8 @@ ${prompt}
 				codebaseIndexEmbeddingBatchSize: stateValues.codebaseIndexConfig?.codebaseIndexEmbeddingBatchSize,
 				codebaseIndexScannerMaxBatchRetries:
 					stateValues.codebaseIndexConfig?.codebaseIndexScannerMaxBatchRetries,
+				codebaseIndexParserMinChunkSize: stateValues.codebaseIndexConfig?.codebaseIndexParserMinChunkSize,
+				codebaseIndexParserMaxChunkSize: stateValues.codebaseIndexConfig?.codebaseIndexParserMaxChunkSize,
 				// kilocode_change end
 				codebaseIndexBedrockRegion: stateValues.codebaseIndexConfig?.codebaseIndexBedrockRegion,
 				codebaseIndexBedrockProfile: stateValues.codebaseIndexConfig?.codebaseIndexBedrockProfile,

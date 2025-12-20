@@ -33,6 +33,8 @@ export class CodeIndexConfigManager {
 	// kilocode_change start
 	private embeddingBatchSize?: number
 	private scannerMaxBatchRetries?: number
+	private parserMinChunkSize?: number
+	private parserMaxChunkSize?: number
 	// kilocode_change end
 
 	// kilocode_change start: Kilo org indexing props
@@ -103,6 +105,8 @@ export class CodeIndexConfigManager {
 			// kilocode_change start
 			codebaseIndexEmbeddingBatchSize: undefined,
 			codebaseIndexScannerMaxBatchRetries: undefined,
+			codebaseIndexParserMinChunkSize: undefined,
+			codebaseIndexParserMaxChunkSize: undefined,
 			// kilocode_change end
 			codebaseIndexBedrockRegion: "us-east-1",
 			codebaseIndexBedrockProfile: "",
@@ -120,6 +124,8 @@ export class CodeIndexConfigManager {
 			// kilocode_change start
 			codebaseIndexEmbeddingBatchSize,
 			codebaseIndexScannerMaxBatchRetries,
+			codebaseIndexParserMinChunkSize,
+			codebaseIndexParserMaxChunkSize,
 			// kilocode_change end
 		} = codebaseIndexConfig
 		// kilocode_change
@@ -151,6 +157,8 @@ export class CodeIndexConfigManager {
 		// kilocode_change start
 		this.embeddingBatchSize = codebaseIndexEmbeddingBatchSize
 		this.scannerMaxBatchRetries = codebaseIndexScannerMaxBatchRetries
+		this.parserMinChunkSize = codebaseIndexParserMinChunkSize
+		this.parserMaxChunkSize = codebaseIndexParserMaxChunkSize
 		// kilocode_change end
 
 		// Validate and set model dimension
@@ -560,6 +568,8 @@ export class CodeIndexConfigManager {
 			// kilocode_change start
 			embeddingBatchSize: this.currentEmbeddingBatchSize,
 			scannerMaxBatchRetries: this.currentScannerMaxBatchRetries,
+			parserMinChunkSize: this.currentParserMinChunkSize,
+			parserMaxChunkSize: this.currentParserMaxChunkSize,
 			// kilocode_change end
 		}
 	}
@@ -658,6 +668,22 @@ export class CodeIndexConfigManager {
 	 */
 	public get currentScannerMaxBatchRetries(): number | undefined {
 		return this.scannerMaxBatchRetries
+	}
+
+	/**
+	 * Gets the configured parser minimum chunk size.
+	 * Returns user setting if configured, otherwise returns undefined (will use default from constants).
+	 */
+	public get currentParserMinChunkSize(): number | undefined {
+		return this.parserMinChunkSize
+	}
+
+	/**
+	 * Gets the configured parser maximum chunk size.
+	 * Returns user setting if configured, otherwise returns undefined (will use default from constants).
+	 */
+	public get currentParserMaxChunkSize(): number | undefined {
+		return this.parserMaxChunkSize
 	}
 	// kilocode_change end
 }

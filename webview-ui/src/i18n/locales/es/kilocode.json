@@ -1,6 +1,6 @@
 {
 	"welcome": {
-		"greeting": "¡Bienvenido a Kilo Code!",
+		"greeting": "¡Bienvenido a SovCode!",
 		"introText1": "Kilo Code es un agente de codificación de IA gratuito y de código abierto.",
 		"introText2": "Funciona con los modelos de IA más recientes como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, y más de 450 modelos adicionales.",
 		"introText3": "Crea una cuenta gratuita y obtén $20 en créditos de bonificación cuando recargues por primera vez.",
@@ -99,7 +99,11 @@
 			"embeddingBatchSizeLabel": "Tamaño de Lote de Embeddings",
 			"embeddingBatchSizeDescription": "Número de segmentos de código a agrupar juntos para la generación de embeddings y actualizaciones del almacén vectorial. Valores más altos pueden mejorar la velocidad de indexación pero pueden aumentar el uso de memoria. Valores más bajos reducen el uso de memoria pero pueden ralentizar la indexación.",
 			"scannerMaxBatchRetriesLabel": "Reintentos Máximos de Lote del Escáner",
-			"scannerMaxBatchRetriesDescription": "Número máximo de veces para reintentar un lote fallido durante el escaneo de directorios. Valores más altos aumentan la resistencia a errores transitorios pero pueden ralentizar la indexación si los errores persisten. Valores más bajos fallan más rápido pero pueden omitir contenido en problemas temporales."
+			"scannerMaxBatchRetriesDescription": "Número máximo de veces para reintentar un lote fallido durante el escaneo de directorios. Valores más altos aumentan la resistencia a errores transitorios pero pueden ralentizar la indexación si los errores persisten. Valores más bajos fallan más rápido pero pueden omitir contenido en problemas temporales.",
+			"parserMinChunkSizeLabel": "Tamaño mínimo del fragmento (caracteres)",
+			"parserMinChunkSizeDescription": "Número mínimo de caracteres para que un fragmento de código sea indexado. Los valores más pequeños capturan segmentos de código más granulares. Los valores más grandes omiten bloques de código más pequeños. Los cambios requieren reindexación.",
+			"parserMaxChunkSizeLabel": "Tamaño máximo del fragmento (caracteres)",
+			"parserMaxChunkSizeDescription": "Número máximo de caracteres para un solo fragmento de código antes de dividirlo. Los valores más pequeños crean fragmentos más enfocados. Los valores más grandes conservan más contexto por fragmento. Los cambios requieren reindexación."
 		}
 	},
 	"toolCallStyle": {
