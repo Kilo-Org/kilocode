@@ -11,8 +11,11 @@ describe("findKilocodeCli", () => {
 	const loginShellTests = isWindows ? it.skip : it
 
 	loginShellTests("finds CLI via login shell and returns CliDiscoveryResult with cliPath", async () => {
-		// spawnSync is used for getLoginShellPath, execSync for findViaLoginShell
-		const spawnSyncMock = vi.fn().mockReturnValue({ stdout: "/custom/path:/usr/bin\n" })
+		// spawnSync is used for getLoginShellPath (with markers), execSync for findViaLoginShell
+		const testShellPath = "/custom/path:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `__KILO_PATH_START__${testShellPath}__KILO_PATH_END__\n` })
 		const execSyncMock = vi.fn().mockReturnValue("/Users/test/.nvm/versions/node/v20/bin/kilocode\n")
 
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
@@ -28,11 +31,14 @@ describe("findKilocodeCli", () => {
 		expect(result).not.toBeNull()
 		expect(result?.cliPath).toBe("/Users/test/.nvm/versions/node/v20/bin/kilocode")
 		// shellPath should be captured from login shell via spawnSync
-		expect(result?.shellPath).toBe("/custom/path:/usr/bin")
+		expect(result?.shellPath).toBe(testShellPath)
 	})
 
 	loginShellTests("falls back to findExecutable when login shell fails", async () => {
-		const spawnSyncMock = vi.fn().mockReturnValue({ stdout: "/custom/path:/usr/bin\n" })
+		const testShellPath = "/custom/path:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `__KILO_PATH_START__${testShellPath}__KILO_PATH_END__\n` })
 		const execSyncMock = vi.fn().mockImplementation(() => {
 			throw new Error("login shell failed")
 		})
@@ -284,8 +290,11 @@ describe("findExecutable", () => {
 	const loginShellTests = isWindows ? it.skip : it
 
 	loginShellTests("captures shell PATH for spawning CLI on macOS", async () => {
-		// spawnSync with stdio: ['ignore', 'pipe', 'pipe'] to prevent stdin blocking
-		const spawnSyncMock = vi.fn().mockReturnValue({ stdout: "/opt/homebrew/bin:/usr/local/bin:/usr/bin\n" })
+		// spawnSync returns output with markers to handle shell startup noise
+		const testPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `some banner\n__KILO_PATH_START__${testPath}__KILO_PATH_END__\n` })
 		const execSyncMock = vi.fn().mockReturnValue("/opt/homebrew/bin/kilocode\n")
 
 		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
@@ -296,7 +305,7 @@ describe("findExecutable", () => {
 
 		expect(result).not.toBeNull()
 		expect(result?.cliPath).toBe("/opt/homebrew/bin/kilocode")
-		expect(result?.shellPath).toBe("/opt/homebrew/bin:/usr/local/bin:/usr/bin")
+		expect(result?.shellPath).toBe(testPath)
 
 		// Verify spawnSync was called with correct args for login shell
 		expect(spawnSyncMock).toHaveBeenCalledWith(

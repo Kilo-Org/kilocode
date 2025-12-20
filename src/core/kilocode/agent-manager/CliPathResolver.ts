@@ -200,6 +200,9 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<CliD
  * This is essential on macOS when the editor is launched from Finder/Spotlight,
  * as the extension host doesn't inherit the user's shell environment.
  * The captured PATH ensures spawned CLI processes can access tools like git.
+ *
+ * Uses markers to reliably extract PATH even if shell startup scripts print
+ * banners, warnings, or other output that would otherwise pollute the result.
  */
 function getLoginShellPath(log?: (msg: string) => void): string | undefined {
 	if (process.platform === "win32") {
@@ -213,8 +216,13 @@ function getLoginShellPath(log?: (msg: string) => void): string | undefined {
 	// stdio: ['ignore', 'pipe', 'pipe'] prevents stdin from blocking
 	const shellArgs = shellName === "tcsh" || shellName === "csh" ? ["-ic"] : ["-i", "-l", "-c"]
 
+	// Use markers to reliably extract PATH even if shell prints banners/warnings
+	const startMarker = "__KILO_PATH_START__"
+	const endMarker = "__KILO_PATH_END__"
+	const command = `printf '${startMarker}%s${endMarker}\\n' "$PATH"`
+
 	try {
-		const result = spawnSync(userShell, [...shellArgs, 'echo "$PATH"'], {
+		const result = spawnSync(userShell, [...shellArgs, command], {
 			encoding: "utf-8",
 			timeout: 10000,
 			env: { ...process.env, HOME: process.env.HOME },
@@ -226,7 +234,19 @@ function getLoginShellPath(log?: (msg: string) => void): string | undefined {
 			return undefined
 		}
 
-		const shellPath = result.stdout?.trim()
+		const output = result.stdout ?? ""
+
+		// Extract PATH from between markers
+		const startIdx = output.indexOf(startMarker)
+		const endIdx = output.indexOf(endMarker)
+
+		if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+			log?.(`Could not find PATH markers in shell output`)
+			return undefined
+		}
+
+		const shellPath = output.slice(startIdx + startMarker.length, endIdx)
+
 		if (shellPath && shellPath !== process.env.PATH) {
 			log?.(`Captured shell PATH (${shellPath.split(":").length} entries)`)
 			return shellPath
