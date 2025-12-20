@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "你的 Kilocode CLI 版本已过时，不支持 Agent Manager。请更新到最新版本。",
 			"cliNotFound": "未找到 Kilocode CLI。请安装以使用 Agent Manager。",
+			"cliMisconfigured": "Kilocode CLI 未配置。请运行 'kilocode auth' 登录或 'kilocode config' 进行配置。",
 			"sessionFailed": "启动代理会话失败",
 			"sessionFailedWithMessage": "启动代理会话失败: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "获取帮助",
 			"runInTerminal": "运行命令",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "全局更新",
 			"updateLocal": "本地更新",
 			"installGlobal": "全局安装",

@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "Твоя версия Kilocode CLI устарела и не поддерживает Agent Manager. Обнови до последней версии.",
 			"cliNotFound": "Kilocode CLI не найден. Установи его для использования Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI не настроен. Выполни 'kilocode auth' для входа или 'kilocode config' для настройки.",
 			"sessionFailed": "Не удалось запустить сессию агента",
 			"sessionFailedWithMessage": "Не удалось запустить сессию агента: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Получить Помощь",
 			"runInTerminal": "Запустить в Терминале",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Обновить Глобально",
 			"updateLocal": "Обновить Локально",
 			"installGlobal": "Установить Глобально",
