@@ -82,6 +82,7 @@ describe("parseCliChunk", () => {
 			streamEventType: "welcome",
 			worktreeBranch: "feature/test-branch",
 			timestamp: 1234567890,
+			instructions: undefined,
 		})
 	})
 
@@ -92,6 +93,33 @@ describe("parseCliChunk", () => {
 			streamEventType: "welcome",
 			worktreeBranch: undefined,
 			timestamp: 1234567890,
+			instructions: undefined,
+		})
+	})
+
+	it("should parse welcome event with configuration error instructions", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete","kilocodeToken is required"]}},"timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: undefined,
+			timestamp: 1234567890,
+			instructions: ["Configuration Error: config.json is incomplete", "kilocodeToken is required"],
+		})
+	})
+
+	it("should not include instructions when array is empty", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":[]}},"timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: undefined,
+			timestamp: 1234567890,
+			instructions: undefined,
 		})
 	})
 

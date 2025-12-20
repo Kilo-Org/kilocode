@@ -18,6 +18,7 @@ export type AgentManagerLoginIssueType =
 	| "cli_not_found"
 	| "cli_outdated"
 	| "cli_spawn_error"
+	| "cli_configuration_error"
 	| "auth_error"
 	| "payment_required"
 	| "api_error"

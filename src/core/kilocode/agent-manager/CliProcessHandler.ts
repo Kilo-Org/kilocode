@@ -22,6 +22,12 @@ import { captureAgentManagerLoginIssue, getPlatformDiagnostics } from "./telemet
 const PENDING_SESSION_TIMEOUT_MS = 30_000
 
 /**
+ * Maximum size for stdout buffer (bytes) - prevents memory issues when buffering output
+ * before session_created. We only need enough to detect configuration errors.
+ */
+const MAX_STDOUT_BUFFER_SIZE = 64 * 1024
+
+/**
  * Tracks a pending session while waiting for CLI's session_created event.
  * Note: This is only used for NEW sessions. Resume sessions go directly to activeSessions.
  */
@@ -37,9 +43,11 @@ interface PendingProcessInfo {
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
+	stdoutBuffer: string[] // Capture raw stdout for configuration error detection when JSON is truncated
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
 	cliPath?: string // CLI path for error telemetry
 	provisionalSessionId?: string // Temporary session ID created when api_req_started arrives (before session_created)
+	configurationError?: string // Captured from welcome event instructions (indicates misconfigured CLI)
 }
 
 interface ActiveProcessInfo {
@@ -55,7 +63,7 @@ export interface CliProcessHandlerCallbacks {
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
 	onStartSessionFailed: (
 		error?:
-			| { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }
+			| { type: "cli_outdated" | "spawn_error" | "unknown" | "cli_configuration_error"; message: string }
 			| { type: "api_req_failed"; message: string; payload?: KilocodePayload; authError?: boolean }
 			| { type: "payment_required"; message: string; payload?: KilocodePayload },
 	) => void
@@ -212,6 +220,7 @@ export class CliProcessHandler {
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
 				stderrBuffer: [],
+				stdoutBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
 				cliPath,
 			}
@@ -221,6 +230,13 @@ export class CliProcessHandler {
 		proc.stdout?.on("data", (chunk) => {
 			const chunkStr = chunk.toString()
 			this.debugLog(`stdout chunk (${chunkStr.length} bytes): ${chunkStr.slice(0, 200)}`)
+
+			// Capture raw stdout for configuration error detection (in case JSON is truncated)
+			// Cap buffer size to prevent memory issues
+			if (this.pendingProcess && this.pendingProcess.process === proc) {
+				this.pendingProcess.stdoutBuffer.push(chunkStr)
+				this.capStdoutBuffer()
+			}
 
 			const { events } = parser.parse(chunkStr)
 
@@ -361,12 +377,17 @@ export class CliProcessHandler {
 
 		// If this is the pending process, handle specially
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
-			// Capture worktree branch from welcome event (arrives before session_created)
+			// Capture worktree branch and configuration errors from welcome event (arrives before session_created)
 			if (event.streamEventType === "welcome") {
 				const welcomeEvent = event as WelcomeStreamEvent
 				if (welcomeEvent.worktreeBranch) {
 					this.pendingProcess.worktreeBranch = welcomeEvent.worktreeBranch
 					this.debugLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
+				}
+				// Capture configuration error instructions (indicates misconfigured CLI)
+				if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
+					this.pendingProcess.configurationError = welcomeEvent.instructions.join("\n")
+					this.debugLog(`Captured CLI configuration error: ${this.pendingProcess.configurationError}`)
 				}
 				return
 			}
@@ -601,15 +622,62 @@ export class CliProcessHandler {
 	): void {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
 			this.clearPendingTimeout()
+
+			// Flush any buffered parser output before checking for errors
+			// This is important because the welcome event JSON might be split across chunks
+			const { events } = this.pendingProcess.parser.flush()
+			for (const event of events) {
+				// Process welcome events to capture configuration errors
+				if (event.streamEventType === "welcome") {
+					const welcomeEvent = event as WelcomeStreamEvent
+					if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
+						this.pendingProcess.configurationError = welcomeEvent.instructions.join("\n")
+						this.debugLog(
+							`Captured CLI configuration error from flush: ${this.pendingProcess.configurationError}`,
+						)
+					}
+				}
+			}
+
+			// Fallback: Check raw stdout for configuration error patterns if JSON parsing didn't capture it
+			// This handles cases where the CLI sends truncated JSON before exiting
+			if (!this.pendingProcess.configurationError) {
+				const rawStdout = this.pendingProcess.stdoutBuffer.join("")
+				const configError = this.detectConfigurationErrorFromRawOutput(rawStdout)
+				if (configError) {
+					this.pendingProcess.configurationError = configError
+					this.debugLog(`Captured CLI configuration error from raw output: ${configError}`)
+				}
+			}
+
 			const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
+			const configurationError = this.pendingProcess.configurationError
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
+
+			// Check for CLI configuration error (e.g., missing kilocodeToken)
+			// CLI may exit with code 0 when showing configuration error instructions
+			if (configurationError) {
+				this.callbacks.onStartSessionFailed({
+					type: "cli_configuration_error",
+					message: configurationError,
+				})
+				this.callbacks.onStateChanged()
+				return
+			}
 
 			if (code !== 0) {
 				// Detect CLI version/compatibility issues from stderr
 				const errorInfo = this.detectCliError(stderrOutput, code)
 				this.callbacks.onStartSessionFailed(errorInfo)
+			} else {
+				// Generic fallback: CLI exited with code 0 before session_created
+				// This ensures the user never gets "nothing happened"
+				this.callbacks.onStartSessionFailed({
+					type: "unknown",
+					message: stderrOutput || "CLI exited before creating a session",
+				})
 			}
 			this.callbacks.onStateChanged()
 			return
@@ -793,5 +861,50 @@ export class CliProcessHandler {
 			type: "unknown",
 			message: stderrOutput || "Unknown error",
 		}
+	}
+
+	/**
+	 * Cap the stdout buffer size to prevent memory issues.
+	 * Keeps the most recent data up to MAX_STDOUT_BUFFER_SIZE.
+	 */
+	private capStdoutBuffer(): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		const buffer = this.pendingProcess.stdoutBuffer
+		const totalSize = buffer.reduce((sum, chunk) => sum + chunk.length, 0)
+
+		if (totalSize > MAX_STDOUT_BUFFER_SIZE) {
+			// Join, trim from the start, and replace buffer with single trimmed string
+			const joined = buffer.join("")
+			const trimmed = joined.slice(joined.length - MAX_STDOUT_BUFFER_SIZE)
+			this.pendingProcess.stdoutBuffer = [trimmed]
+		}
+	}
+
+	/**
+	 * Detect configuration errors from raw stdout output.
+	 * This is a fallback for when the CLI sends truncated JSON that can't be parsed.
+	 * Looks for patterns like "Configuration Error" or "instructions" containing error text.
+	 */
+	private detectConfigurationErrorFromRawOutput(rawOutput: string): string | undefined {
+		// Look for "Configuration Error" pattern in the raw output
+		// The CLI outputs this when config.json is incomplete or invalid
+		if (rawOutput.includes('"instructions":') && rawOutput.includes("Configuration Error")) {
+			// Return a generic configuration error message since we can't parse the full details
+			return "CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure."
+		}
+
+		// Also check for common configuration error indicators
+		if (
+			rawOutput.includes("kilocodeToken is required") ||
+			rawOutput.includes("config.json is incomplete") ||
+			rawOutput.includes("apiKey is required")
+		) {
+			return "CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure."
+		}
+
+		return undefined
 	}
 }

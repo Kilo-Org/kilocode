@@ -885,7 +885,7 @@ describe("CliProcessHandler", () => {
 			expect(callbacks.onStartSessionFailed).toHaveBeenCalled()
 		})
 
-		it("handles pending process exit with success (no session created)", () => {
+		it("handles pending process exit with success (no session created) - shows generic error", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
@@ -893,7 +893,168 @@ describe("CliProcessHandler", () => {
 			mockProcess.emit("exit", 0, null)
 
 			expect(registry.pendingSession).toBeNull()
-			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+			// Generic fallback ensures user never gets "nothing happened"
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "CLI exited before creating a session",
+			})
+		})
+
+		it("handles CLI configuration error from welcome event instructions", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event with configuration error instructions (like misconfigured CLI)
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete","kilocodeToken is required"]}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0 (CLI exits normally after showing configuration error)
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: config.json is incomplete\nkilocodeToken is required",
+			})
+		})
+
+		it("reports generic error when no instructions present but exits before session created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit normal welcome event without instructions
+			const welcomeEvent = '{"type":"welcome","metadata":{"welcomeOptions":{}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			// Generic fallback - not a configuration error, but still an error
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "CLI exited before creating a session",
+			})
+		})
+
+		it("handles CLI configuration error when welcome event JSON is split across chunks", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event split across multiple chunks (simulating real CLI behavior)
+			// First chunk contains partial JSON
+			const chunk1 =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete",'
+			mockProcess.stdout.emit("data", Buffer.from(chunk1))
+
+			// Second chunk contains the rest of the JSON with newline
+			const chunk2 = '"kilocodeToken is required"]}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(chunk2))
+
+			// Exit with code 0 (CLI exits normally after showing configuration error)
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: config.json is incomplete\nkilocodeToken is required",
+			})
+		})
+
+		it("handles CLI configuration error when welcome event is flushed on process exit", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event WITHOUT trailing newline (will be buffered)
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: missing token"]}}}'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0 - parser should flush and capture the configuration error
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: missing token",
+			})
+		})
+
+		it("handles CLI configuration error from truncated JSON using raw output fallback", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit truncated JSON (simulating CLI exiting before sending complete JSON)
+			// This is the real-world scenario where the CLI sends partial output
+			const truncatedJson = '{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error'
+			mockProcess.stdout.emit("data", Buffer.from(truncatedJson))
+
+			// Exit with code 0 - JSON can't be parsed, but raw output should be checked
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
+		})
+
+		it("handles CLI configuration error when raw output contains kilocodeToken error", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit output containing the specific error message
+			const output = "Some output... kilocodeToken is required and cannot be empty... more output"
+			mockProcess.stdout.emit("data", Buffer.from(output))
+
+			mockProcess.emit("exit", 0, null)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
+		})
+
+		it("caps stdout buffer to prevent memory issues with large output", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Send a lot of data to the stdout buffer (more than 64KB)
+			const largeChunk = "x".repeat(32 * 1024) // 32KB chunks
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk))
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk))
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk)) // 96KB total
+
+			// Access the private pendingProcess to check buffer size
+			const pendingProcess = (handler as any).pendingProcess
+			const bufferSize = pendingProcess.stdoutBuffer.reduce((sum: number, chunk: string) => sum + chunk.length, 0)
+
+			// Buffer should be capped at 64KB
+			expect(bufferSize).toBeLessThanOrEqual(64 * 1024)
+		})
+
+		it("preserves most recent data when capping buffer", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Send chunks with identifiable content
+			const oldData = "OLD_DATA_".repeat(8 * 1024) // ~80KB of old data
+			const newData = "kilocodeToken is required" // This should be preserved
+
+			mockProcess.stdout.emit("data", Buffer.from(oldData))
+			mockProcess.stdout.emit("data", Buffer.from(newData))
+
+			// Exit with code 0 - should detect config error from preserved recent data
+			mockProcess.emit("exit", 0, null)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
 		})
 	})
 

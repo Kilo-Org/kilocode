@@ -75,6 +75,8 @@ export interface WelcomeStreamEvent {
 	streamEventType: "welcome"
 	worktreeBranch?: string
 	timestamp: number
+	/** Configuration error instructions from CLI (indicates misconfigured CLI) */
+	instructions?: string[]
 }
 
 export type StreamEvent =
@@ -223,14 +225,16 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 		}
 	}
 
-	// Detect welcome event from CLI (format: { type: "welcome", metadata: { welcomeOptions: { worktreeBranch: "..." } }, ... })
+	// Detect welcome event from CLI (format: { type: "welcome", metadata: { welcomeOptions: { worktreeBranch: "...", instructions: [...] } }, ... })
 	if (parsed.type === "welcome") {
 		const metadata = parsed.metadata as Record<string, unknown> | undefined
 		const welcomeOptions = metadata?.welcomeOptions as Record<string, unknown> | undefined
+		const instructions = welcomeOptions?.instructions as string[] | undefined
 		return {
 			streamEventType: "welcome",
 			worktreeBranch: welcomeOptions?.worktreeBranch as string | undefined,
 			timestamp: (parsed.timestamp as number) || Date.now(),
+			instructions: Array.isArray(instructions) && instructions.length > 0 ? instructions : undefined,
 		}
 	}
 

@@ -90,6 +90,14 @@ export class CliSessionLauncher {
 	}
 
 	/**
+	 * Get the pre-warmed CLI path, or null if not available.
+	 * This is useful for terminal commands that need the resolved CLI path.
+	 */
+	public async getPrewarmedCliPath(): Promise<string | null> {
+		return this.cliPathPromise ?? null
+	}
+
+	/**
 	 * Spawn a CLI process with all the standard setup.
 	 * Handles CLI path lookup, git URL resolution, API config, and event callback wiring.
 	 * Uses pre-warmed promises when available.

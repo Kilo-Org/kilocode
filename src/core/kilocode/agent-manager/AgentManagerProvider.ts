@@ -1215,7 +1215,24 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 		terminal.show()
-		terminal.sendText("kilocode auth")
+		// Use resolved CLI path if available, fallback to "kilocode" for PATH lookup
+		void this.sessionLauncher.getPrewarmedCliPath().then((cliPath) => {
+			const cmd = cliPath ? `"${cliPath}" auth` : "kilocode auth"
+			terminal.sendText(cmd)
+		})
+	}
+
+	private runConfigureInTerminal(): void {
+		const terminal = this.createCliTerminal("Kilocode CLI Config")
+		if (!terminal) {
+			return
+		}
+		terminal.show()
+		// Use resolved CLI path if available, fallback to "kilocode" for PATH lookup
+		void this.sessionLauncher.getPrewarmedCliPath().then((cliPath) => {
+			const cmd = cliPath ? `"${cliPath}" config` : "kilocode config"
+			terminal.sendText(cmd)
+		})
 	}
 
 	private showCliAuthReminder(message?: string): void {
@@ -1389,7 +1406,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 		terminal.sendText(commands.join(" && "))
 	}
 
-	private showCliError(error?: { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }): void {
+	private showCliError(error?: {
+		type: "cli_outdated" | "spawn_error" | "unknown" | "cli_configuration_error"
+		message: string
+	}): void {
 		const hasNpm = canInstallCli((msg) => this.outputChannel.appendLine(`[AgentManager] ${msg}`))
 
 		const { platform, shell } = getPlatformDiagnostics()
@@ -1404,6 +1424,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 			captureAgentManagerLoginIssue({
 				issueType: "cli_spawn_error",
 				hasNpm,
+				platform,
+				shell,
+			})
+		} else if (error?.type === "cli_configuration_error") {
+			captureAgentManagerLoginIssue({
+				issueType: "cli_configuration_error",
 				platform,
 				shell,
 			})
@@ -1477,6 +1503,21 @@ export class AgentManagerProvider implements vscode.Disposable {
 							}
 						})
 				}
+				break
+			}
+			case "cli_configuration_error": {
+				// CLI is installed but misconfigured (e.g., missing kilocodeToken)
+				// Offer to configure via terminal
+				const configureLabel = t("kilocode:agentManager.actions.configureCli")
+				const authLabel = t("kilocode:agentManager.actions.loginCli")
+				const errorMessage = t("kilocode:agentManager.errors.cliMisconfigured")
+				void vscode.window.showErrorMessage(errorMessage, authLabel, configureLabel).then((selection) => {
+					if (selection === authLabel) {
+						this.runAuthInTerminal()
+					} else if (selection === configureLabel) {
+						this.runConfigureInTerminal()
+					}
+				})
 				break
 			}
 			default: {
