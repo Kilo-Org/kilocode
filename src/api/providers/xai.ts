@@ -15,7 +15,7 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason" // kilocode_change
 import { handleOpenAIError } from "./utils/openai-error-handler"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams } from "./kilocode/nativeToolCallHelpers"
 
 const XAI_DEFAULT_TEMPERATURE = 0
 
@@ -84,13 +84,10 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 			throw handleOpenAIError(error, this.providerName)
 		}
 
-		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
 			const finishReason = chunk.choices[0]?.finish_reason
-
-			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 			if (delta?.content) {
 				yield {
@@ -106,7 +103,7 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 				}
 			}
 
-			// Handle tool calls in stream - emit partial chunks for NativeToolCallParser
+			// Emit raw tool call chunks - NativeToolCallParser handles state management
 			if (delta?.tool_calls) {
 				for (const toolCall of delta.tool_calls) {
 					yield {

@@ -12,7 +12,7 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { RouterProvider } from "./router-provider"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams } from "./kilocode/nativeToolCallHelpers"
 
 /**
  * LiteLLM provider handler
@@ -153,18 +153,15 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 
 			let lastUsage
 
-			const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 			for await (const chunk of completion) {
 				const delta = chunk.choices[0]?.delta
 				const usage = chunk.usage as LiteLLMUsage
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					yield { type: "text", text: delta.content }
 				}
 
-				// Handle tool calls in stream - emit partial chunks for NativeToolCallParser
+				// Emit raw tool call chunks - NativeToolCallParser handles state management
 				if (delta?.tool_calls) {
 					for (const toolCall of delta.tool_calls) {
 						yield {

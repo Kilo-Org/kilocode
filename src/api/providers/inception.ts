@@ -13,7 +13,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import OpenAI from "openai"
 import { convertToOpenAiMessages } from "../transform/openai-format"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams } from "./kilocode/nativeToolCallHelpers"
 
 export class InceptionLabsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -83,10 +83,8 @@ export class InceptionLabsHandler extends RouterProvider implements SingleComple
 			.withResponse()
 
 		let lastUsage: OpenAI.CompletionUsage | undefined
-		const toolCallAccumulator = new ToolCallAccumulator()
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
-			yield* toolCallAccumulator.processChunk(chunk)
 
 			if (delta?.content) {
 				yield { type: "text", text: delta.content }
@@ -95,6 +93,20 @@ export class InceptionLabsHandler extends RouterProvider implements SingleComple
 			if (delta && "reasoning_content" in delta && delta.reasoning_content) {
 				yield { type: "reasoning", text: (delta.reasoning_content as string | undefined) || "" }
 			}
+
+			// Emit raw tool call chunks - NativeToolCallParser handles state management
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					yield {
+						type: "tool_call_partial",
+						index: toolCall.index,
+						id: toolCall.id,
+						name: toolCall.function?.name,
+						arguments: toolCall.function?.arguments,
+					}
+				}
+			}
+
 			if (chunk.usage) {
 				lastUsage = chunk.usage
 			}
