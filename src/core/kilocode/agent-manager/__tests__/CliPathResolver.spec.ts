@@ -10,9 +10,15 @@ describe("findKilocodeCli", () => {
 
 	const loginShellTests = isWindows ? it.skip : it
 
-	loginShellTests("finds CLI via login shell and returns trimmed result", async () => {
+	loginShellTests("finds CLI via login shell and returns CliDiscoveryResult with cliPath", async () => {
+		// spawnSync is used for getLoginShellPath (with markers), execSync for findViaLoginShell
+		const testShellPath = "/custom/path:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `__KILO_PATH_START__${testShellPath}__KILO_PATH_END__\n` })
 		const execSyncMock = vi.fn().mockReturnValue("/Users/test/.nvm/versions/node/v20/bin/kilocode\n")
-		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
+
+		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
 		vi.doMock("node:fs", () => ({
 			existsSync: vi.fn().mockReturnValue(false),
@@ -22,14 +28,17 @@ describe("findKilocodeCli", () => {
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const result = await findKilocodeCli()
 
-		expect(result).toBe("/Users/test/.nvm/versions/node/v20/bin/kilocode")
-		expect(execSyncMock).toHaveBeenCalledWith(
-			expect.stringContaining("which kilocode"),
-			expect.objectContaining({ encoding: "utf-8" }),
-		)
+		expect(result).not.toBeNull()
+		expect(result?.cliPath).toBe("/Users/test/.nvm/versions/node/v20/bin/kilocode")
+		// shellPath should be captured from login shell via spawnSync
+		expect(result?.shellPath).toBe(testShellPath)
 	})
 
 	loginShellTests("falls back to findExecutable when login shell fails", async () => {
+		const testShellPath = "/custom/path:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `__KILO_PATH_START__${testShellPath}__KILO_PATH_END__\n` })
 		const execSyncMock = vi.fn().mockImplementation(() => {
 			throw new Error("login shell failed")
 		})
@@ -39,7 +48,8 @@ describe("findKilocodeCli", () => {
 			}
 			return Promise.reject(new Error("ENOENT"))
 		})
-		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
+
+		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
 		vi.doMock("node:fs", () => ({
 			existsSync: vi.fn().mockReturnValue(false),
@@ -49,17 +59,20 @@ describe("findKilocodeCli", () => {
 		const { findKilocodeCli } = await import("../CliPathResolver")
 		const result = await findKilocodeCli()
 
-		expect(result).toBe("/usr/local/bin/kilocode")
+		expect(result?.cliPath).toBe("/usr/local/bin/kilocode")
 	})
 
 	it("falls back to npm paths when all PATH lookups fail", async () => {
+		const spawnSyncMock = vi.fn().mockImplementation(() => {
+			throw new Error("not found")
+		})
 		const execSyncMock = vi.fn().mockImplementation(() => {
 			throw new Error("not found")
 		})
 		const fileExistsMock = vi.fn().mockImplementation((path: string) => {
 			return Promise.resolve(path.includes("kilocode"))
 		})
-		vi.doMock("node:child_process", () => ({ execSync: execSyncMock }))
+		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
 		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: fileExistsMock }))
 		vi.doMock("node:fs", () => ({
 			existsSync: vi.fn().mockReturnValue(false),
@@ -70,12 +83,16 @@ describe("findKilocodeCli", () => {
 		const result = await findKilocodeCli()
 
 		expect(result).not.toBeNull()
+		expect(result?.cliPath).toBeDefined()
 		expect(fileExistsMock).toHaveBeenCalled()
 	})
 
 	it("returns null when CLI is not found anywhere", async () => {
 		vi.doMock("node:child_process", () => ({
 			execSync: vi.fn().mockImplementation(() => {
+				throw new Error("not found")
+			}),
+			spawnSync: vi.fn().mockImplementation(() => {
 				throw new Error("not found")
 			}),
 		}))
@@ -96,6 +113,9 @@ describe("findKilocodeCli", () => {
 	it("logs when kilocode not in PATH", async () => {
 		vi.doMock("node:child_process", () => ({
 			execSync: vi.fn().mockImplementation(() => {
+				throw new Error("not found")
+			}),
+			spawnSync: vi.fn().mockImplementation(() => {
 				throw new Error("not found")
 			}),
 		}))
@@ -264,5 +284,36 @@ describe("findExecutable", () => {
 
 		expect(result).toBe("/usr/bin/kilocode")
 		expect(statMock).not.toHaveBeenCalledWith(expect.stringContaining(".CMD"))
+	})
+
+	// Login shell PATH capture test - skipped on Windows
+	const loginShellTests = isWindows ? it.skip : it
+
+	loginShellTests("captures shell PATH for spawning CLI on macOS", async () => {
+		// spawnSync returns output with markers to handle shell startup noise
+		const testPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin"
+		const spawnSyncMock = vi
+			.fn()
+			.mockReturnValue({ stdout: `some banner\n__KILO_PATH_START__${testPath}__KILO_PATH_END__\n` })
+		const execSyncMock = vi.fn().mockReturnValue("/opt/homebrew/bin/kilocode\n")
+
+		vi.doMock("node:child_process", () => ({ execSync: execSyncMock, spawnSync: spawnSyncMock }))
+		vi.doMock("../../../../utils/fs", () => ({ fileExistsAtPath: vi.fn().mockResolvedValue(false) }))
+
+		const { findKilocodeCli } = await import("../CliPathResolver")
+		const result = await findKilocodeCli()
+
+		expect(result).not.toBeNull()
+		expect(result?.cliPath).toBe("/opt/homebrew/bin/kilocode")
+		expect(result?.shellPath).toBe(testPath)
+
+		// Verify spawnSync was called with correct args for login shell
+		expect(spawnSyncMock).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.arrayContaining(["-i", "-l", "-c"]),
+			expect.objectContaining({
+				stdio: ["ignore", "pipe", "pipe"],
+			}),
+		)
 	})
 })

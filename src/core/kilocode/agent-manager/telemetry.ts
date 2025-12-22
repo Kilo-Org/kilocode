@@ -30,6 +30,12 @@ export interface AgentManagerLoginIssueProperties {
 	httpStatusCode?: number
 	platform?: "darwin" | "win32" | "linux" | "other"
 	shell?: string
+	/** For session_timeout: whether stderr had any output */
+	hasStderr?: boolean
+	/** For session_timeout: first 500 chars of stderr (truncated for privacy) */
+	stderrPreview?: string
+	/** For session_timeout: whether shell PATH was captured and used */
+	hadShellPath?: boolean
 	// Spawn error details for debugging Windows issues
 	errorMessage?: string
 	cliPath?: string
