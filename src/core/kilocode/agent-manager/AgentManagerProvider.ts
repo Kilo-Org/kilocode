@@ -1244,11 +1244,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 		terminal.show()
-		// Use resolved CLI path if available, fallback to "kilocode" for PATH lookup
-		void this.sessionLauncher.getPrewarmedCliPath().then((cliPath) => {
-			const cmd = cliPath ? `"${cliPath}" auth` : "kilocode auth"
-			terminal.sendText(cmd)
-		})
+		terminal.sendText("kilocode auth")
 	}
 
 	private runConfigureInTerminal(): void {
@@ -1257,11 +1253,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 			return
 		}
 		terminal.show()
-		// Use resolved CLI path if available, fallback to "kilocode" for PATH lookup
-		void this.sessionLauncher.getPrewarmedCliPath().then((cliPath) => {
-			const cmd = cliPath ? `"${cliPath}" config` : "kilocode config"
-			terminal.sendText(cmd)
-		})
+		terminal.sendText("kilocode config")
 	}
 
 	private showCliAuthReminder(message?: string): void {

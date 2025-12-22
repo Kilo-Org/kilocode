@@ -94,7 +94,8 @@ export class CliSessionLauncher {
 	 * This is useful for terminal commands that need the resolved CLI path.
 	 */
 	public async getPrewarmedCliPath(): Promise<string | null> {
-		return this.cliPathPromise ?? null
+		const result = await this.cliPathPromise
+		return result?.cliPath ?? null
 	}
 
 	/**
