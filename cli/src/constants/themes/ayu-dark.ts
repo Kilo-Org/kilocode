@@ -54,6 +54,17 @@ export const ayuDarkTheme: Theme = {
 		lineNumber: "#646A71",
 	},
 
+	markdown: {
+		text: "#aeaca6",
+		heading: "#FFB454",
+		strong: "#ffffff",
+		em: "#aeaca6",
+		code: "#AAD94C",
+		blockquote: "#646A71",
+		link: "#59C2FF",
+		list: "#aeaca6",
+	},
+
 	ui: {
 		border: {
 			default: "#3D4149",
