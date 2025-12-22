@@ -315,5 +315,17 @@ export const parseOpenRouterModel = ({
 		modelInfo.maxTokens = 32768
 	}
 
+	// kilocode_change start: Configure GLM-4.7 reasoning model
+	// GLM-4.7 is a reasoning model from Z.ai available via OpenRouter
+	// See: https://docs.z.ai/guides/llm/glm-4.7 and https://openrouter.ai/z-ai/glm-4.7
+	if (id === "z-ai/glm-4.7") {
+		modelInfo.supportsReasoningBudget = true
+		// Ensure reasoning capabilities are properly configured
+		if (modelInfo.supportsReasoningEffort === undefined) {
+			modelInfo.supportsReasoningEffort = true
+		}
+	}
+	// kilocode_change end
+
 	return modelInfo
 }
