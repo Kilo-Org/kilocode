@@ -139,11 +139,14 @@ describe("AgentManagerProvider CLI spawning", () => {
 				showErrorMessage: vi.fn().mockResolvedValue(undefined),
 				showWarningMessage: vi.fn().mockResolvedValue(undefined),
 				ViewColumn: { One: 1 },
+				onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+				createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
 			},
 			env: { openExternal: vi.fn() },
 			Uri: { parse: vi.fn(), joinPath: vi.fn() },
 			ViewColumn: { One: 1 },
 			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+			ThemeIcon: vi.fn(),
 		}))
 
 		vi.doMock("../../../../utils/fs", () => ({
