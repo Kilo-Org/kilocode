@@ -5,22 +5,37 @@ import type { AutocompleteContext, CacheMatchType } from "../types"
 export type { AutocompleteContext, CacheMatchType }
 
 /**
+ * Type of autocomplete being used
+ * - "inline": Classic inline code completion in the editor
+ * - "chat-textarea": Autocomplete in the chat input textarea
+ */
+export type AutocompleteType = "inline" | "chat-textarea"
+
+/**
  * Telemetry service for autocomplete events.
  * Can be initialized without parameters and injected into components that need telemetry tracking.
+ * Supports different autocomplete types via the `autocompleteType` property.
  */
 export class AutocompleteTelemetry {
-	constructor() {}
+	private readonly autocompleteType: AutocompleteType
+
+	/**
+	 * Create a new AutocompleteTelemetry instance
+	 * @param autocompleteType - The type of autocomplete (defaults to "inline" for backward compatibility)
+	 */
+	constructor(autocompleteType: AutocompleteType = "inline") {
+		this.autocompleteType = autocompleteType
+	}
 
 	private captureEvent(event: TelemetryEventName, properties?: Record<string, unknown>): void {
 		// also log to console:
 		if (TelemetryService.hasInstance()) {
-			if (properties !== undefined) {
-				TelemetryService.instance.captureEvent(event, properties)
-				console.log(`Autocomplete Telemetry event: ${event}`, properties)
-			} else {
-				TelemetryService.instance.captureEvent(event)
-				console.log(`Autocomplete Telemetry event: ${event}`)
+			const propsWithType = {
+				...properties,
+				autocompleteType: this.autocompleteType,
 			}
+			TelemetryService.instance.captureEvent(event, propsWithType)
+			console.log(`Autocomplete Telemetry event: ${event}`, propsWithType)
 		}
 	}
 
@@ -98,9 +113,9 @@ export class AutocompleteTelemetry {
 	public captureLlmRequestCompleted(
 		properties: {
 			latencyMs: number
-			cost: number
-			inputTokens: number
-			outputTokens: number
+			cost?: number
+			inputTokens?: number
+			outputTokens?: number
 		},
 		context: AutocompleteContext,
 	): void {
@@ -132,8 +147,12 @@ export class AutocompleteTelemetry {
 	 * There are two ways to analyze what percentage was accepted:
 	 * 1. Sum of this event divided by the sum of the suggestion returned event
 	 * 2. Sum of this event divided by the sum of the suggestion returned + cache hit events
+	 *
+	 * @param suggestionLength - Optional length of the accepted suggestion
 	 */
-	public captureAcceptSuggestion(): void {
-		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION)
+	public captureAcceptSuggestion(suggestionLength?: number): void {
+		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, {
+			...(suggestionLength !== undefined && { suggestionLength }),
+		})
 	}
 }

@@ -130,6 +130,7 @@
 	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
+	"pressToSend": "Tekan {{keyCombination}} untuk mengirim",
 	"stopTts": "Hentikan text-to-speech",
 	"typeMessage": "Ketik pesan...",
 	"typeTask": "Bangun, cari, tanya sesuatu",
@@ -157,7 +158,8 @@
 			"403": "Tidak sah. Kunci API Anda valid, tetapi penyedia menolak untuk menyelesaikan permintaan ini.",
 			"429": "Terlalu banyak permintaan. Anda dibatasi tingkat oleh penyedia. Harap tunggu sebentar sebelum panggilan API berikutnya Anda.",
 			"500": "Kesalahan server penyedia. Ada yang salah di sisi penyedia, tidak ada yang salah dengan permintaan Anda.",
-			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Roo Code."
+			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Kilo.",
+			"connection": "Kesalahan koneksi. Pastikan Anda memiliki koneksi internet yang berfungsi."
 		}
 	},
 	"checkpoint": {
@@ -179,11 +181,20 @@
 		},
 		"current": "Saat Ini"
 	},
-	"contextCondense": {
-		"title": "Konteks Dikondensasi",
-		"condensing": "Mengondensasi konteks...",
-		"errorHeader": "Gagal mengondensasi konteks",
-		"tokens": "token"
+	"contextManagement": {
+		"tokens": "token",
+		"condensation": {
+			"title": "Konteks Dikondensasi",
+			"inProgress": "Mengondensasi konteks...",
+			"errorHeader": "Gagal mengondensasi konteks"
+		},
+		"truncation": {
+			"title": "Konteks Dipotong",
+			"inProgress": "Memotong konteks...",
+			"messagesRemoved": "{{count}} pesan dihapus",
+			"messagesRemoved_other": "{{count}} pesan dihapus",
+			"description": "Pesan lama telah dihapus dari percakapan untuk tetap dalam batas jendela konteks. Ini adalah pendekatan yang cepat tetapi kurang mempertahankan konteks dibandingkan dengan kondensasi."
+		}
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
@@ -289,6 +300,11 @@
 		"title": "Edit Tidak Berhasil"
 	},
 	"troubleMessage": "Kilo Code mengalami masalah...",
+	"errorDetails": {
+		"title": "Detail Kesalahan",
+		"copyToClipboard": "Salin ke Clipboard",
+		"copied": "Disalin!"
+	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
 	},
@@ -311,7 +327,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Dirilis",
+		"title": "Roo Code {{version}} Dirilis",
+		"support": "Dukung Roo Code dengan memberi kami bintang di <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Code Supernova: Sekarang diupgrade dengan <bold>jendela konteks 1M token</bold>! Model coding agentik serbaguna yang mendukung input gambar, tersedia melalui Roo Code Cloud.",
 			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
@@ -339,8 +356,7 @@
 	},
 	"followUpSuggest": {
 		"copyToInput": "Salin ke input (sama dengan shift + klik)",
-		"autoSelectCountdown": "Pemilihan otomatis dalam {{count}}dtk",
-		"countdownDisplay": "{{count}}dtk"
+		"timerPrefix": "Persetujuan otomatis diaktifkan. Memilih dalam {{seconds}}s…"
 	},
 	"browser": {
 		"session": "Sesi Browser",
@@ -357,13 +373,25 @@
 		"sessionStarted": "Sesi Browser Dimulai",
 		"actions": {
 			"title": "Aksi Browser: ",
+			"launched": "Browser diluncurkan",
 			"launch": "Luncurkan browser di {{url}}",
+			"clicked": "Diklik ({{coordinate}})",
 			"click": "Klik ({{coordinate}})",
+			"typed": "Diketik: {{text}}",
 			"type": "Ketik \"{{text}}\"",
+			"pressed": "Ditekan: {{key}}",
 			"press": "Tekan {{key}}",
+			"scrolledDown": "Digulir ke bawah",
 			"scrollDown": "Gulir ke bawah",
+			"scrolledUp": "Digulir ke atas",
 			"scrollUp": "Gulir ke atas",
+			"hovered": "Diarahkan ({{coordinate}})",
 			"hover": "Arahkan ({{coordinate}})",
+			"resized": "Ukuran diubah ke: {{size}}",
+			"resize": "Ubah ukuran ke {{size}}",
+			"screenshotSaved": "Screenshot disimpan",
+			"screenshot": "Simpan screenshot ke {{path}}",
+			"closed": "Browser ditutup",
 			"close": "Tutup browser"
 		}
 	},

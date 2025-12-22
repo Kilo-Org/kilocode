@@ -33,7 +33,7 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 			apiKey: "noop",
 			// kilocode_change start
 			timeout: timeout,
-			fetch: fetchWithTimeout(timeout),
+			fetch: timeout ? fetchWithTimeout(timeout) : undefined,
 			// kilocode_change end
 		})
 	}

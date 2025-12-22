@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "カスタムストレージパス \"{{path}}\" が使用できないため、デフォルトパスを使用します",
 		"cannot_access_path": "パス {{path}} にアクセスできません：{{error}}",
 		"settings_import_failed": "設定のインポートに失敗しました：{{error}}",
-		"mistake_limit_guidance": "これは、モデルの思考プロセスの失敗やツールを適切に使用できないことを示している可能性があり、ユーザーのガイダンスによって軽減できます（例：「タスクをより小さなステップに分割してみてください」）。",
+		"mistake_limit_guidance": "これは、モデルの推論の失敗やツールを適切に使用できないことを示している可能性があります。次のいずれかを試してください：\n\n• より賢いモデル、または単に別のモデルを使用する（各モデルには独自の弱点があります）\n• コンテキストの量を減らす（LLMへのプロンプトを簡素化する）\n• LLMを助ける追加の指示を提供する（例：「タスクをより小さなステップに分割してみてください」）",
 		"violated_organization_allowlist": "タスクの実行に失敗しました: 現在のプロファイルは組織の設定と互換性がありません",
 		"condense_failed": "コンテキストの圧縮に失敗しました",
 		"condense_not_enough_messages": "{{prevContextTokens}}トークンのコンテキストを圧縮するのに十分なメッセージがありません。最低{{minimumMessageCount}}件のメッセージが必要ですが、{{messageCount}}件しか利用できません。",
@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 生成コンテキスト ストリーム エラー: {{error}}",
 			"generate_complete_prompt": "Gemini 完了エラー: {{error}}",
-			"sources": "ソース:"
+			"sources": "ソース:",
+			"thinking_complete_no_output": "（思考完了、出力なし）",
+			"thinking_complete_truncated": "（思考完了、トークン制限により出力切り捨て）",
+			"thinking_complete_safety": "（思考完了、安全設定により出力ブロック）",
+			"thinking_complete_recitation": "（思考完了、引用チェックにより出力ブロック）"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API認証が失敗しました。APIキーが有効で期限切れではないことを確認してください。",

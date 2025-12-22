@@ -71,6 +71,10 @@
 		"collapseThinking": {
 			"label": "Згортати повідомлення Thinking за замовчуванням",
 			"description": "Коли увімкнено, блоки thinking будуть згорнуті за замовчуванням, поки ви не взаємодієте з ними"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Вимагати {{primaryMod}}+Enter для надсилання повідомлень",
+			"description": "Коли увімкнено, ви повинні натискати {{primaryMod}}+Enter для надсилання повідомлень замість простого Enter"
 		}
 	},
 	"prompts": {

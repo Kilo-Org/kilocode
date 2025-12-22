@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "채팅 입력 자동완성",
 				"description": "활성화되면, Kilo Code는 채팅 입력 시 입력하는 대로 완성 제안을 제공합니다. Tab 키를 눌러 제안을 수락하세요."
+			},
+			"snooze": {
+				"label": "자동완성 일시 중지",
+				"description": "지정된 시간 동안 자동완성 제안을 일시적으로 중지합니다.",
+				"button": "일시 중지",
+				"unsnooze": "일시 중지 해제",
+				"currentlySnoozed": "자동완성이 현재 일시 중지되어 있습니다.",
+				"duration": {
+					"1min": "1분",
+					"5min": "5분",
+					"15min": "15분",
+					"30min": "30분",
+					"1hour": "1시간"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"stopRecording": "음성 입력 중지",
-		"startRecording": "음성 입력 시작"
+		"startRecording": "음성 입력 시작",
+		"unavailableBoth": "음성-텍스트 변환을 사용할 수 없습니다. OpenAI 제공업체가 유효해야 하며 FFmpeg가 설치되어 있어야 합니다.",
+		"unavailableFfmpegNotInstalled": "음성-텍스트 변환을 사용할 수 없습니다. 음성 전사를 위해 FFmpeg를 설치하세요.",
+		"unavailableOpenAiKeyMissing": "음성-텍스트 변환을 사용할 수 없습니다. 음성 전사를 사용하려면 API 키가 있는 유효한 OpenAI 제공업체가 필요합니다."
 	}
 }

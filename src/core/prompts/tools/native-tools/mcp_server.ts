@@ -1,5 +1,6 @@
 import type OpenAI from "openai"
 import { McpHub } from "../../../../services/mcp/McpHub"
+import { buildMcpToolName } from "../../../../utils/mcp-name"
 
 /**
  * Dynamically generates native tool definitions for all enabled tools across connected MCP servers.
@@ -43,11 +44,14 @@ export function getMcpServerTools(mcpHub?: McpHub): OpenAI.Chat.ChatCompletionTo
 				parameters.required = toolInputRequired
 			}
 
-			// Use mcp_ prefix to identify dynamic MCP tools
+			// Build sanitized tool name for API compliance
+			// The name is sanitized to conform to API requirements (e.g., Gemini's function name restrictions)
+			const toolName = buildMcpToolName(server.name, tool.name)
+
 			const toolDefinition: OpenAI.Chat.ChatCompletionTool = {
 				type: "function",
 				function: {
-					name: `mcp_${server.name}_${tool.name}`,
+					name: toolName,
 					description: tool.description,
 					parameters: parameters,
 				},

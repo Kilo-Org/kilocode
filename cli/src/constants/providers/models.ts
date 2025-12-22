@@ -93,7 +93,7 @@ export interface ModelInfo {
 	cacheWritesPrice?: number
 	cacheReadsPrice?: number
 	description?: string
-	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high"
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
 	minTokensPerCachePoint?: number
 	maxCachePoints?: number
 	cachableFields?: string[]

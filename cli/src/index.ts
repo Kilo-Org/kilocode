@@ -33,6 +33,7 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("--yolo", "Auto-approve all tool permissions", false)
 	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
 	.option("-i, --json-io", "Bidirectional JSON mode (no TUI, stdin/stdout enabled)", false)
 	.option("-c, --continue", "Resume the last conversation from this workspace", false)
@@ -212,6 +213,7 @@ program
 			mode: options.mode,
 			workspace: finalWorkspace,
 			ci: options.auto,
+			yolo: options.yolo,
 			// json-io mode implies json output (both modes output JSON to stdout)
 			json: options.json || jsonIoMode,
 			jsonInteractive: jsonIoMode,

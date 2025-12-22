@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"label": "Saisie automatique de discussion",
 				"description": "Lorsqu'il est activé, Kilo Code proposera des suggestions de complétion pendant que vous tapez dans le champ de discussion. Appuyez sur Tab pour accepter les suggestions."
+			},
+			"snooze": {
+				"label": "Mettre en pause l'autocomplétion",
+				"description": "Suspendre temporairement les suggestions d'autocomplétion pour une durée spécifiée.",
+				"button": "Mettre en pause",
+				"unsnooze": "Réactiver",
+				"currentlySnoozed": "L'autocomplétion est actuellement en pause.",
+				"duration": {
+					"1min": "1 minute",
+					"5min": "5 minutes",
+					"15min": "15 minutes",
+					"30min": "30 minutes",
+					"1hour": "1 heure"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Démarrer la saisie vocale",
-		"stopRecording": "Arrêter la saisie vocale"
+		"stopRecording": "Arrêter la saisie vocale",
+		"unavailableOpenAiKeyMissing": "La reconnaissance vocale est indisponible. Elle nécessite un fournisseur OpenAI valide avec une clé API pour utiliser la transcription vocale.",
+		"unavailableFfmpegNotInstalled": "La reconnaissance vocale n'est pas disponible. Installez FFmpeg pour utiliser la transcription vocale.",
+		"unavailableBoth": "La reconnaissance vocale n'est pas disponible. Elle nécessite un fournisseur OpenAI valide et FFmpeg doit être installé."
 	}
 }

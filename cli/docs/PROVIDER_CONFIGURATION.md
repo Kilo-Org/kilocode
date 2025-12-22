@@ -6,6 +6,7 @@ This guide provides detailed information on how to configure each provider in Ki
 
 - [Introduction](#introduction)
 - [Configuration Methods](#configuration-methods)
+- [Common Parameters](#common-parameters)
 - [Provider Details](#provider-details)
     - [Kilo Code](#kilocode)
     - [Anthropic](#anthropic)
@@ -63,6 +64,17 @@ You can configure providers using:
 3. **Environment Variables**: Some providers support environment variable configuration
 
 ---
+
+## Common Parameters
+
+**Description**: Parameters that are shared by all providers.
+
+**Optional Fields**:
+
+- `enableReasoningEffort` (boolean): Enable or disable reasoning for supported models. Many models have no, dynamic or compulsive reasoning regardless of this setting. Must be set to `true` for `reasoningEffort` or `modelMaxThinkingTokens` to take effect.
+- `reasoningEffort` (text): Specify reasoning effort for supported models. Can be `"low"`, `"medium"`, `"high"` or `"xhigh"`. Requires `enableReasoningEffort` to be `true`, mutually exclusive with `modelMaxThinkingTokens`.
+- `modelMaxThinkingTokens` (number): Specify reasoning token limit for supported models (mainly Claude models). Requires `enableReasoningEffort` to be `true`, mutually exclusive with `reasoningEffort`.
+- `verbosity` (text): Controls the verbosity and length of the model response for supported models (mainly GPT-5.x and Claude Opus 4.5). Also known as output effort. Supported values are `"low"`, `"medium"` and `"high"`.
 
 ## Provider Details
 

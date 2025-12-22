@@ -267,6 +267,9 @@
 	color: var(--vscode-descriptionForeground);
 	display: flex;
 	gap: 12px;
+	flex-wrap: wrap;
+	align-items: center;
+	min-width: 0;
 }
 
 .am-header-actions {
@@ -603,6 +606,18 @@
 	font-size: 11px;
 	background: var(--vscode-badge-background);
 	color: var(--vscode-badge-foreground);
+	white-space: nowrap;
+	min-width: 0;
+	flex-shrink: 1;
+	max-width: 200px;
+}
+
+.am-worktree-badge span,
+.am-local-badge span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
 }
 
 /* Inline Run Mode Dropdown (next to send button) */

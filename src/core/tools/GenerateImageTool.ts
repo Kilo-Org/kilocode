@@ -203,17 +203,12 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 			}
 
 			let result
-			if (modelProvider === "kilocode") {
-				// kilocode_change: Updated from "roo" to "kilocode" provider
-				// Use Kilo Code Cloud provider (supports both chat completions and images API via OpenRouter)
-				const rooHandler = new RooHandler({} as any)
-				result = await rooHandler.generateImage(prompt, selectedModel, inputImageData, apiMethod)
-			} else {
-				// Use OpenRouter provider (only supports chat completions API)
-				// kilocode_change start
-				const openRouterHandler = openRouterApiKey
-					? new OpenRouterHandler({})
-					: new KilocodeOpenrouterHandler({
+			// kilocode_change start: Updated from "roo" to "kilocode" provider
+			// Use Kilo Code Cloud provider (supports both chat completions and images API via OpenRouter)
+			// Use OpenRouter provider (only supports chat completions API)
+			const handler =
+				modelProvider === "kilocode"
+					? new KilocodeOpenrouterHandler({
 							kilocodeToken: kiloCodeApiKey,
 							kilocodeOrganizationId:
 								task.apiConfiguration.apiProvider === "kilocode" &&
@@ -221,21 +216,21 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 									? task.apiConfiguration.kilocodeOrganizationId
 									: undefined,
 						})
-				// kilocode_change end
-				result = await openRouterHandler.generateImage(
-					prompt,
-					selectedModel,
-					// kilocode_change start
-					openRouterApiKey ||
-						kiloCodeApiKey ||
-						(() => {
-							throw new Error("Unreachable because of earlier check.")
-						})(),
-					// kilocode_change end
-					inputImageData,
-					task.taskId, // kilocode_change
-				)
-			}
+					: new OpenRouterHandler({})
+			result = await handler.generateImage(
+				prompt,
+				selectedModel,
+				openRouterApiKey ||
+					kiloCodeApiKey ||
+					(() => {
+						throw new Error("Unreachable because of earlier check.")
+					})(),
+
+				inputImageData,
+				task.taskId,
+			)
+
+			// kilocode_change end
 
 			if (!result.success) {
 				await task.say("error", result.error || "Failed to generate image")

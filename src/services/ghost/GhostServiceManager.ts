@@ -13,6 +13,8 @@ import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
+	private static _instance: GhostServiceManager | null = null
+
 	private readonly model: GhostModel
 	private readonly cline: ClineProvider
 	private readonly context: vscode.ExtensionContext
@@ -26,31 +28,44 @@ export class GhostServiceManager {
 	private completionCount: number = 0
 	private sessionStartTime: number = Date.now()
 
+	private snoozeTimer: NodeJS.Timeout | null = null
+
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
 	public readonly inlineCompletionProvider: GhostInlineCompletionProvider
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
+		if (GhostServiceManager._instance) {
+			throw new Error("GhostServiceManager is a singleton. Use GhostServiceManager.getInstance() instead.")
+		}
+
 		this.context = context
 		this.cline = cline
+		GhostServiceManager._instance = this
 
 		// Register Internal Components
 		this.model = new GhostModel()
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
-		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
-			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
+			new AutocompleteTelemetry(),
 		)
 
 		void this.load()
+	}
+
+	/**
+	 * Get the singleton instance of GhostServiceManager
+	 */
+	public static getInstance(): GhostServiceManager | null {
+		return GhostServiceManager._instance
 	}
 
 	public async load() {
@@ -71,6 +86,7 @@ export class GhostServiceManager {
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
+		this.setupSnoozeTimerIfNeeded()
 		const settingsWithModelInfo = {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
@@ -81,7 +97,7 @@ export class GhostServiceManager {
 	}
 
 	private async updateInlineCompletionProviderRegistration() {
-		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+		const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
 
 		// First, dispose any existing registration
 		if (this.inlineCompletionProviderDisposable) {
@@ -113,6 +129,101 @@ export class GhostServiceManager {
 		TelemetryService.instance.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
 
 		await this.load()
+	}
+
+	/**
+	 * Check if autocomplete is currently snoozed
+	 */
+	public isSnoozed(): boolean {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return false
+		return Date.now() < snoozeUntil
+	}
+
+	/**
+	 * Get remaining snooze time in seconds
+	 */
+	public getSnoozeRemainingSeconds(): number {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return 0
+		const remaining = Math.max(0, Math.ceil((snoozeUntil - Date.now()) / 1000))
+		return remaining
+	}
+
+	/**
+	 * Snooze autocomplete for a specified number of seconds
+	 */
+	public async snooze(seconds: number): Promise<void> {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const snoozeUntil = Date.now() + seconds * 1000
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil,
+			},
+		})
+
+		this.snoozeTimer = setTimeout(() => {
+			void this.unsnooze()
+		}, seconds * 1000)
+
+		await this.load()
+	}
+
+	/**
+	 * Cancel snooze and re-enable autocomplete
+	 */
+	public async unsnooze(): Promise<void> {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				snoozeUntil: undefined,
+			},
+		})
+
+		await this.load()
+	}
+
+	/**
+	 * Set up a timer to auto-unsnooze if we're currently in a snoozed state.
+	 * This handles the case where the extension restarts while snoozed -
+	 * the persisted snoozeUntil timestamp keeps autocomplete disabled,
+	 * and this timer ensures we unsnooze at the correct time.
+	 */
+	private setupSnoozeTimerIfNeeded(): void {
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
+		const remainingMs = this.getSnoozeRemainingMs()
+		if (remainingMs <= 0) {
+			return
+		}
+
+		this.snoozeTimer = setTimeout(() => {
+			void this.unsnooze()
+		}, remainingMs)
+	}
+
+	/**
+	 * Get remaining snooze time in milliseconds
+	 */
+	private getSnoozeRemainingMs(): number {
+		const snoozeUntil = this.settings?.snoozeUntil
+		if (!snoozeUntil) return 0
+		return Math.max(0, snoozeUntil - Date.now())
 	}
 
 	public async codeSuggestion() {
@@ -226,6 +337,7 @@ export class GhostServiceManager {
 
 		this.statusBar?.update({
 			enabled: this.settings?.enableAutoTrigger,
+			snoozed: this.isSnoozed(),
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
 			profileName: this.model.profileName,
@@ -255,6 +367,11 @@ export class GhostServiceManager {
 	public dispose(): void {
 		this.statusBar?.dispose()
 
+		if (this.snoozeTimer) {
+			clearTimeout(this.snoozeTimer)
+			this.snoozeTimer = null
+		}
+
 		// Dispose inline completion provider registration
 		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
@@ -263,5 +380,16 @@ export class GhostServiceManager {
 
 		// Dispose inline completion provider resources
 		this.inlineCompletionProvider.dispose()
+
+		// Clear singleton instance
+		GhostServiceManager._instance = null
+	}
+
+	/**
+	 * Reset the singleton instance (for testing purposes only)
+	 * @internal
+	 */
+	public static _resetInstance(): void {
+		GhostServiceManager._instance = null
 	}
 }

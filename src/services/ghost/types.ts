@@ -142,6 +142,7 @@ export type GhostPrompt = FimGhostPrompt | HoleFillerGhostPrompt
 
 export interface GhostStatusBarStateProps {
 	enabled?: boolean
+	snoozed?: boolean
 	model?: string
 	provider?: string
 	profileName?: string | null

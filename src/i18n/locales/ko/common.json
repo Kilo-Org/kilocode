@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "사용자 지정 저장 경로 \"{{path}}\"를 사용할 수 없어 기본 경로를 사용합니다",
 		"cannot_access_path": "경로 {{path}}에 접근할 수 없습니다: {{error}}",
 		"settings_import_failed": "설정 가져오기 실패: {{error}}.",
-		"mistake_limit_guidance": "이는 모델의 사고 과정 실패나 도구를 제대로 사용하지 못하는 것을 나타낼 수 있으며, 사용자 가이드를 통해 완화할 수 있습니다 (예: \"작업을 더 작은 단계로 나누어 시도해보세요\").",
+		"mistake_limit_guidance": "이는 모델의 추론 실패나 도구를 제대로 사용하지 못하는 것을 나타낼 수 있습니다. 다음 중 하나를 시도해 보세요:\n\n• 더 똑똑한 모델이나 단순히 다른 모델을 사용하세요 (각 모델마다 고유한 약점이 있습니다)\n• 컨텍스트 양을 줄이세요 (LLM에 대한 프롬프트를 단순화하세요)\n• LLM에 도움이 되는 추가 지침을 제공하세요 (예: \"작업을 더 작은 단계로 나누어 시도해보세요\")",
 		"violated_organization_allowlist": "작업 실행 실패: 현재 프로필이 조직 설정과 호환되지 않습니다",
 		"condense_failed": "컨텍스트 압축에 실패했습니다",
 		"condense_not_enough_messages": "{{prevContextTokens}} 토큰의 컨텍스트를 압축할 메시지가 충분하지 않습니다. 최소 {{minimumMessageCount}}개의 메시지가 필요하지만 {{messageCount}}개만 사용 가능합니다.",
@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
 			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",
-			"sources": "출처:"
+			"sources": "출처:",
+			"thinking_complete_no_output": "(생각 완료, 출력 없음)",
+			"thinking_complete_truncated": "(생각 완료, 토큰 제한으로 출력 잘림)",
+			"thinking_complete_safety": "(생각 완료, 안전 설정으로 출력 차단됨)",
+			"thinking_complete_recitation": "(생각 완료, 암송 확인으로 출력 차단됨)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API 인증에 실패했습니다. API 키가 유효하고 만료되지 않았는지 확인하세요.",

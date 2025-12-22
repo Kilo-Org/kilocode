@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from "node:child_process"
+import * as path from "node:path"
 import {
 	CliOutputParser,
 	type StreamEvent,
@@ -9,8 +10,10 @@ import {
 } from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
-import type { ClineMessage } from "@roo-code/types"
+import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import { extractApiReqFailedMessage, extractPayloadMessage } from "./askErrorParser"
+import { buildProviderEnvOverrides } from "./providerEnvMapper"
+import { captureAgentManagerLoginIssue, getPlatformDiagnostics } from "./telemetry"
 
 /**
  * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
@@ -28,7 +31,6 @@ interface PendingProcessInfo {
 	prompt: string
 	startTime: number
 	parallelMode?: boolean
-	autoMode?: boolean // True if session was started with --auto flag
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
@@ -36,6 +38,8 @@ interface PendingProcessInfo {
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
+	cliPath?: string // CLI path for error telemetry
+	provisionalSessionId?: string // Temporary session ID created when api_req_started arrives (before session_created)
 }
 
 interface ActiveProcessInfo {
@@ -59,6 +63,7 @@ export interface CliProcessHandlerCallbacks {
 	onSessionCreated: (sawApiReqStarted: boolean) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
+	onSessionRenamed?: (oldId: string, newId: string) => void // Called when provisional session is upgraded to real session ID
 }
 
 export class CliProcessHandler {
@@ -82,12 +87,38 @@ export class CliProcessHandler {
 		}
 	}
 
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+		const baseEnv = { ...process.env }
+
+		const overrides = buildProviderEnvOverrides(
+			apiConfiguration,
+			baseEnv,
+			(message) => this.callbacks.onLog(message),
+			(message) => this.debugLog(message),
+		)
+
+		return {
+			...baseEnv,
+			...overrides,
+			NO_COLOR: "1",
+			FORCE_COLOR: "0",
+			KILO_PLATFORM: "agent-manager",
+		}
+	}
+
 	public spawnProcess(
 		cliPath: string,
 		workspace: string,
 		prompt: string,
 		options:
-			| { parallelMode?: boolean; autoMode?: boolean; sessionId?: string; label?: string; gitUrl?: string }
+			| {
+					parallelMode?: boolean
+					sessionId?: string
+					label?: string
+					gitUrl?: string
+					apiConfiguration?: ProviderSettings
+					existingBranch?: string
+			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
 	): void {
@@ -114,7 +145,6 @@ export class CliProcessHandler {
 			// New session - create pending session state
 			const pendingSession = this.registry.setPendingSession(prompt, {
 				parallelMode: options?.parallelMode,
-				autoMode: options?.autoMode,
 				gitUrl: options?.gitUrl,
 			})
 			this.debugLog(`Pending session created, waiting for CLI session_created event`)
@@ -124,18 +154,24 @@ export class CliProcessHandler {
 		// Build CLI command
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			parallelMode: options?.parallelMode,
-			autoMode: options?.autoMode,
 			sessionId: options?.sessionId,
+			existingBranch: options?.existingBranch,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
+
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
+
+		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
+		// Without this, spawn() fails silently because .cmd files are batch scripts
+		const needsShell = process.platform === "win32" && cliPath.toLowerCase().endsWith(".cmd")
 
 		// Spawn CLI process
 		const proc = spawn(cliPath, cliArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", KILO_PLATFORM: "agent-manager" },
-			shell: false,
+			env,
+			shell: needsShell,
 		})
 
 		if (proc.pid) {
@@ -172,12 +208,12 @@ export class CliProcessHandler {
 				prompt,
 				startTime: Date.now(),
 				parallelMode: options?.parallelMode,
-				autoMode: options?.autoMode,
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
 				stderrBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
+				cliPath,
 			}
 		}
 
@@ -224,6 +260,20 @@ export class CliProcessHandler {
 			info.process.kill("SIGTERM")
 			this.activeSessions.delete(sessionId)
 		}
+	}
+
+	/**
+	 * Terminate a running process but keep it tracked until it exits.
+	 * This is useful when we want the normal CLI shutdown logic to run and for
+	 * the exit handler to update session status (e.g., "Finish to branch").
+	 */
+	public terminateProcess(sessionId: string, signal: NodeJS.Signals = "SIGTERM"): void {
+		const info = this.activeSessions.get(sessionId)
+		if (!info) {
+			return
+		}
+
+		info.process.kill(signal)
 	}
 
 	public stopAllProcesses(): void {
@@ -320,10 +370,11 @@ export class CliProcessHandler {
 				}
 				return
 			}
-			// Track api_req_started that arrives before session_created
-			// This is needed so KilocodeEventProcessor knows the user echo has already happened
+			// Handle kilocode events during pending state
 			if (event.streamEventType === "kilocode") {
 				const payload = (event as KilocodeStreamEvent).payload
+
+				// Handle error cases that should abort session creation
 				if (payload?.ask === "payment_required_prompt") {
 					this.handlePaymentRequiredDuringPending(payload)
 					return
@@ -332,11 +383,34 @@ export class CliProcessHandler {
 					this.handleApiReqFailedDuringPending(payload)
 					return
 				}
+
+				// Track api_req_started for KilocodeEventProcessor
 				if (payload?.say === "api_req_started") {
 					this.pendingProcess.sawApiReqStarted = true
 					this.debugLog(`Captured api_req_started before session_created`)
 				}
+
+				// Create provisional session on first content event (text, api_req_started, etc.)
+				// This ensures we don't lose the user's prompt echo or other early events
+				if (!this.pendingProcess.provisionalSessionId) {
+					this.createProvisionalSession(proc)
+				}
+
+				// Forward the event to the provisional session
+				if (this.pendingProcess?.provisionalSessionId) {
+					onCliEvent(this.pendingProcess.provisionalSessionId, event)
+					this.callbacks.onStateChanged()
+				}
+				return
 			}
+
+			// If we have a provisional session, forward non-kilocode events to it
+			if (this.pendingProcess?.provisionalSessionId) {
+				onCliEvent(this.pendingProcess.provisionalSessionId, event)
+				this.callbacks.onStateChanged()
+				return
+			}
+
 			// Events before session_created are typically status messages
 			if (event.streamEventType === "status") {
 				this.debugLog(`Pending session status: ${event.message}`)
@@ -352,6 +426,64 @@ export class CliProcessHandler {
 		}
 	}
 
+	/** Create a provisional session to show streaming content before session_created arrives. */
+	private createProvisionalSession(proc: ChildProcess): void {
+		if (!this.pendingProcess || this.pendingProcess.provisionalSessionId) {
+			return
+		}
+
+		const provisionalId = `provisional-${Date.now()}`
+		this.pendingProcess.provisionalSessionId = provisionalId
+
+		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser } = this.pendingProcess
+
+		this.registry.createSession(provisionalId, prompt, startTime, {
+			parallelMode,
+			labelOverride: desiredLabel,
+			gitUrl,
+		})
+
+		this.activeSessions.set(provisionalId, { process: proc, parser })
+
+		if (proc.pid) {
+			this.registry.setSessionPid(provisionalId, proc.pid)
+		}
+
+		this.registry.clearPendingSession()
+		this.callbacks.onPendingSessionChanged(null)
+		this.callbacks.onSessionCreated(this.pendingProcess?.sawApiReqStarted ?? false)
+
+		this.debugLog(`Created provisional session: ${provisionalId}`)
+		this.callbacks.onStateChanged()
+	}
+
+	/** Upgrade provisional session to real session ID when session_created arrives. */
+	private upgradeProvisionalSession(
+		provisionalSessionId: string,
+		realSessionId: string,
+		worktreeBranch: string | undefined,
+		parallelMode: boolean | undefined,
+	): void {
+		this.debugLog(`Upgrading provisional session ${provisionalSessionId} -> ${realSessionId}`)
+
+		this.registry.renameSession(provisionalSessionId, realSessionId)
+
+		const activeInfo = this.activeSessions.get(provisionalSessionId)
+		if (activeInfo) {
+			this.activeSessions.delete(provisionalSessionId)
+			this.activeSessions.set(realSessionId, activeInfo)
+		}
+
+		this.callbacks.onSessionRenamed?.(provisionalSessionId, realSessionId)
+
+		if (worktreeBranch && parallelMode) {
+			this.registry.updateParallelModeInfo(realSessionId, { branch: worktreeBranch })
+		}
+
+		this.pendingProcess = null
+		this.callbacks.onStateChanged()
+	}
+
 	private handlePendingTimeout(): void {
 		if (!this.pendingProcess) {
 			return
@@ -365,6 +497,13 @@ export class CliProcessHandler {
 		this.pendingProcess.process.kill("SIGTERM")
 		this.registry.clearPendingSession()
 		this.pendingProcess = null
+
+		const { platform, shell } = getPlatformDiagnostics()
+		captureAgentManagerLoginIssue({
+			issueType: "session_timeout",
+			platform,
+			shell,
+		})
 
 		this.callbacks.onPendingSessionChanged(null)
 		this.callbacks.onStartSessionFailed({
@@ -388,16 +527,24 @@ export class CliProcessHandler {
 			startTime,
 			parser,
 			parallelMode,
-			autoMode,
 			worktreeBranch,
 			desiredSessionId,
 			desiredLabel,
 			sawApiReqStarted,
 			gitUrl,
+			provisionalSessionId,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
 		const sessionId = desiredSessionId ?? event.sessionId
+
+		// Handle provisional session upgrade if one exists
+		if (provisionalSessionId) {
+			this.upgradeProvisionalSession(provisionalSessionId, sessionId, worktreeBranch, parallelMode)
+			return
+		}
+
+		// Normal path: no provisional session, create the session now
 		const existing = this.registry.getSession(sessionId)
 
 		let session: ReturnType<typeof this.registry.createSession>
@@ -412,7 +559,6 @@ export class CliProcessHandler {
 			// Create new session (also sets selectedId)
 			session = this.registry.createSession(sessionId, prompt, startTime, {
 				parallelMode,
-				autoMode,
 				labelOverride: desiredLabel,
 				gitUrl,
 			})
@@ -489,11 +635,28 @@ export class CliProcessHandler {
 		// Clean up
 		this.activeSessions.delete(sessionId)
 
+		// Exit code handling (matching cloud-agent backend behavior):
+		// - 0: Success
+		// - 124: CLI timeout exceeded
+		// - 130 (128+2): SIGINT - user interrupted
+		// - 137 (128+9): SIGKILL - force killed
+		// - 143 (128+15): SIGTERM - terminated
+		// - Other non-zero: Error
+		const INTERRUPTED_EXIT_CODES = [130, 137, 143]
+		const TIMEOUT_EXIT_CODE = 124
+
 		if (code === 0) {
 			this.registry.updateSessionStatus(sessionId, "done", code)
 			this.callbacks.onSessionLog(sessionId, "Agent completed")
 			// Notify that session completed successfully (for state machine transition)
 			this.callbacks.onSessionCompleted?.(sessionId, code)
+		} else if (code === TIMEOUT_EXIT_CODE) {
+			this.registry.updateSessionStatus(sessionId, "error", code, "CLI timeout exceeded")
+			this.callbacks.onSessionLog(sessionId, "Agent timed out")
+		} else if (code !== null && INTERRUPTED_EXIT_CODES.includes(code)) {
+			// User or system interrupted - not an error, just stopped
+			this.registry.updateSessionStatus(sessionId, "stopped", code)
+			this.callbacks.onSessionLog(sessionId, "Agent was interrupted")
 		} else {
 			this.registry.updateSessionStatus(sessionId, "error", code ?? undefined)
 			this.callbacks.onSessionLog(
@@ -506,10 +669,24 @@ export class CliProcessHandler {
 
 	private handleProcessError(proc: ChildProcess, error: Error): void {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			const cliPath = this.pendingProcess.cliPath
 			this.clearPendingTimeout()
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
+
+			// Capture spawn error telemetry with context for debugging
+			const { platform, shell } = getPlatformDiagnostics()
+			const cliPathExtension = cliPath ? path.extname(cliPath).slice(1).toLowerCase() || undefined : undefined
+			captureAgentManagerLoginIssue({
+				issueType: "cli_spawn_error",
+				platform,
+				shell,
+				errorMessage: error.message,
+				cliPath,
+				cliPathExtension,
+			})
+
 			this.callbacks.onStartSessionFailed({
 				type: "spawn_error",
 				message: error.message,

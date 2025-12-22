@@ -249,6 +249,20 @@
 			"enableChatAutocomplete": {
 				"description": "有効にすると、Kilo Codeはチャット入力の入力中に候補を提案します。Tabキーを押して候補を受け入れることができます。",
 				"label": "チャット入力オートコンプリート"
+			},
+			"snooze": {
+				"label": "オートコンプリートをスヌーズ",
+				"description": "指定した時間、オートコンプリートの提案を一時的に停止します。",
+				"button": "スヌーズ",
+				"unsnooze": "スヌーズ解除",
+				"currentlySnoozed": "オートコンプリートは現在スヌーズ中です。",
+				"duration": {
+					"1min": "1分",
+					"5min": "5分",
+					"15min": "15分",
+					"30min": "30分",
+					"1hour": "1時間"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "音声入力を開始",
-		"stopRecording": "音声入力を停止"
+		"stopRecording": "音声入力を停止",
+		"unavailableOpenAiKeyMissing": "音声認識は利用できません。音声文字変換を使用するには、APIキーを持つ有効なOpenAIプロバイダーが必要です。",
+		"unavailableFfmpegNotInstalled": "音声からテキストへの変換は利用できません。音声の文字起こしを使用するにはFFmpegをインストールしてください。",
+		"unavailableBoth": "音声からテキストへの変換は利用できません。有効なOpenAIプロバイダーが必要で、FFmpegがインストールされている必要があります。"
 	}
 }

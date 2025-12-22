@@ -235,6 +235,20 @@
 			"enableChatAutocomplete": {
 				"label": "चैट इनपुट स्वतःपूर्ण",
 				"description": "जब सक्षम होता है, Kilo Code चैट इनपुट में टाइप करते समय पूर्णताएं सुझाएगा। सुझावों को स्वीकार करने के लिए Tab दबाएं।"
+			},
+			"snooze": {
+				"label": "Autocomplete स्नूज़ करें",
+				"description": "निर्दिष्ट अवधि के लिए Autocomplete सुझावों को अस्थायी रूप से रोकें।",
+				"button": "स्नूज़",
+				"unsnooze": "अनस्नूज़",
+				"currentlySnoozed": "Autocomplete वर्तमान में स्नूज़ है।",
+				"duration": {
+					"1min": "1 मिनट",
+					"5min": "5 मिनट",
+					"15min": "15 मिनट",
+					"30min": "30 मिनट",
+					"1hour": "1 घंटा"
+				}
 			}
 		}
 	},
@@ -313,7 +327,10 @@
 		"initiating": "प्रमाणीकरण शुरू हो रहा है..."
 	},
 	"speechToText": {
-		"stopRecording": "वॉइस इनपुट बंद करें",
-		"startRecording": "वॉयस इनपुट शुरू करें"
+		"stopRecording": "आवाज़ इनपुट बंद करें",
+		"startRecording": "आवाज से इनपुट शुरू करें",
+		"unavailableFfmpegNotInstalled": "स्पीच-टू-टेक्स्ट अनुपलब्ध है। वॉयस ट्रांसक्रिप्शन का उपयोग करने के लिए FFmpeg इंस्टॉल करें।",
+		"unavailableOpenAiKeyMissing": "स्पीच-से-टेक्स्ट उपलब्ध नहीं है। इसके लिए आवाज़ ट्रांसक्रिप्शन का उपयोग करने के लिए एक वैध OpenAI प्रदाता और API कुंजी की आवश्यकता है।",
+		"unavailableBoth": "स्पीच-टू-टेक्स्ट उपलब्ध नहीं है। इसके लिए एक मान्य OpenAI प्रदाता की आवश्यकता है और FFmpeg इंस्टॉल होना चाहिए।"
 	}
 }

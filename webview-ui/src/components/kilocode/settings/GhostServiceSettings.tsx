@@ -1,14 +1,14 @@
 //kilocode_change - new file
-import { HTMLAttributes, useCallback } from "react"
+import { HTMLAttributes, useCallback, useEffect, useState } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { Bot, Zap } from "lucide-react"
+import { Bot, Zap, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
-import { GhostServiceSettings, MODEL_SELECTION_ENABLED } from "@roo-code/types"
+import { EXTREME_SNOOZE_VALUES_ENABLED, GhostServiceSettings, MODEL_SELECTION_ENABLED } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeButton, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
 import { useExtensionState } from "../../../context/ExtensionStateContext"
 
@@ -37,6 +37,19 @@ export const GhostServiceSettingsView = ({
 		model,
 	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
+	const [snoozeDuration, setSnoozeDuration] = useState<number>(300)
+	const [currentTime, setCurrentTime] = useState<number>(Date.now())
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setCurrentTime(Date.now())
+		}, 30_000)
+
+		return () => clearInterval(interval)
+	}, [])
+
+	const snoozeUntil = ghostServiceSettings?.snoozeUntil
+	const isSnoozed = snoozeUntil ? currentTime < snoozeUntil : false
 
 	const onEnableAutoTriggerChange = useCallback(
 		(e: any) => {
@@ -70,6 +83,14 @@ export const GhostServiceSettingsView = ({
 		vscode.postMessage({ type: "openGlobalKeybindings", text: filter })
 	}
 
+	const handleSnooze = useCallback(() => {
+		vscode.postMessage({ type: "snoozeAutocomplete", value: snoozeDuration })
+	}, [snoozeDuration])
+
+	const handleUnsnooze = useCallback(() => {
+		vscode.postMessage({ type: "snoozeAutocomplete", value: 0 })
+	}, [])
+
 	return (
 		<div className={cn("flex flex-col", className)} {...props}>
 			<SectionHeader>
@@ -95,6 +116,55 @@ export const GhostServiceSettingsView = ({
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans i18nKey="kilocode:ghost.settings.enableAutoTrigger.description" />
 						</div>
+
+						{enableAutoTrigger && (
+							<div className="flex flex-col gap-2 mt-2 ml-6">
+								<div className="flex items-center gap-2">
+									<Clock className="w-4" />
+									<span className="font-medium">{t("kilocode:ghost.settings.snooze.label")}</span>
+								</div>
+								{isSnoozed ? (
+									<div className="flex items-center gap-2">
+										<span className="text-vscode-descriptionForeground text-sm">
+											{t("kilocode:ghost.settings.snooze.currentlySnoozed")}
+										</span>
+										<VSCodeButton appearance="secondary" onClick={handleUnsnooze}>
+											{t("kilocode:ghost.settings.snooze.unsnooze")}
+										</VSCodeButton>
+									</div>
+								) : (
+									<div className="flex items-center gap-2">
+										<VSCodeDropdown
+											value={snoozeDuration.toString()}
+											onChange={(e: any) => setSnoozeDuration(Number(e.target.value))}>
+											{EXTREME_SNOOZE_VALUES_ENABLED && (
+												<VSCodeOption value="60">
+													{t("kilocode:ghost.settings.snooze.duration.1min")}
+												</VSCodeOption>
+											)}
+											<VSCodeOption value="300">
+												{t("kilocode:ghost.settings.snooze.duration.5min")}
+											</VSCodeOption>
+											<VSCodeOption value="900">
+												{t("kilocode:ghost.settings.snooze.duration.15min")}
+											</VSCodeOption>
+											<VSCodeOption value="1800">
+												{t("kilocode:ghost.settings.snooze.duration.30min")}
+											</VSCodeOption>
+											<VSCodeOption value="3600">
+												{t("kilocode:ghost.settings.snooze.duration.1hour")}
+											</VSCodeOption>
+										</VSCodeDropdown>
+										<VSCodeButton appearance="secondary" onClick={handleSnooze}>
+											{t("kilocode:ghost.settings.snooze.button")}
+										</VSCodeButton>
+									</div>
+								)}
+								<div className="text-vscode-descriptionForeground text-sm">
+									{t("kilocode:ghost.settings.snooze.description")}
+								</div>
+							</div>
+						)}
 					</div>
 
 					{!kiloCodeWrapperProperties?.kiloCodeWrapped && (

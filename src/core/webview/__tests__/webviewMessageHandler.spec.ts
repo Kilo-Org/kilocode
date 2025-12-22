@@ -188,7 +188,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiConfiguration: {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
-				glamaApiKey: "glama-key",
+				glamaApiKey: "glama-key", // kilocode_change
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
@@ -230,7 +230,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		// Verify getModels was called for each provider
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" }) // kilocode_change
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		// kilocode_change start
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
@@ -274,7 +274,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
-				glama: mockModels,
+				glama: mockModels, // kilocode_change
 				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
 				litellm: mockModels,
@@ -300,7 +300,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiConfiguration: {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
-				glamaApiKey: "glama-key",
+				glamaApiKey: "glama-key", // kilocode_change
 				unboundApiKey: "unbound-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 				// Missing litellm config
@@ -339,7 +339,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiConfiguration: {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
-				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
@@ -381,7 +380,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
-				glama: mockModels,
+				glama: mockModels, // kilocode_change
 				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
 				roo: mockModels,
@@ -417,7 +416,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // openrouter
 			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockResolvedValueOnce(mockModels) // glama
+			.mockResolvedValueOnce(mockModels) // kilocode_change: glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
@@ -487,7 +486,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: {},
-				glama: mockModels,
+				glama: mockModels, // kilocode_change
 				unbound: {},
 				roo: mockModels,
 				chutes: {},
@@ -517,7 +516,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
 			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockRejectedValueOnce(new Error("Glama API error")) // glama
+			.mockRejectedValueOnce(new Error("Glama API error")) // kilocode_change: glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
@@ -559,12 +558,14 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "requesty" },
 		})
 
+		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Glama API error",
 			values: { provider: "glama" },
 		})
+		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",

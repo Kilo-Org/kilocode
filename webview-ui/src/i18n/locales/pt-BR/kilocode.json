@@ -242,6 +242,20 @@
 			"enableChatAutocomplete": {
 				"label": "Preenchimento Automático do Chat",
 				"description": "Quando ativado, o Kilo Code irá sugerir conclusões enquanto você digita no campo de chat. Pressione Tab para aceitar as sugestões."
+			},
+			"snooze": {
+				"label": "Adiar Autocomplete",
+				"description": "Pausar temporariamente as sugestões de autocomplete por um período especificado.",
+				"button": "Adiar",
+				"unsnooze": "Reativar",
+				"currentlySnoozed": "O autocomplete está adiado no momento.",
+				"duration": {
+					"1min": "1 minuto",
+					"5min": "5 minutos",
+					"15min": "15 minutos",
+					"30min": "30 minutos",
+					"1hour": "1 hora"
+				}
 			}
 		}
 	},
@@ -314,6 +328,9 @@
 	},
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
-		"stopRecording": "Parar entrada de voz"
+		"stopRecording": "Parar entrada de voz",
+		"unavailableOpenAiKeyMissing": "Conversão de voz para texto indisponível. É necessário um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
+		"unavailableBoth": "O reconhecimento de voz não está disponível. Ele requer um provedor OpenAI válido e o FFmpeg deve estar instalado.",
+		"unavailableFfmpegNotInstalled": "Transcrição de voz não está disponível. Instale o FFmpeg para usar a transcrição de voz."
 	}
 }

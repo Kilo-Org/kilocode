@@ -70,6 +70,10 @@
 		"collapseThinking": {
 			"label": "Sbalit zprávy Přemýšlení ve výchozím nastavení",
 			"description": "Když je povoleno, bloky přemýšlení budou ve výchozím nastavení sbalené, dokud s nimi neinteragujete"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Vyžadovat {{primaryMod}}+Enter pro odeslání zpráv",
+			"description": "Když je povoleno, musíš stisknout {{primaryMod}}+Enter pro odeslání zpráv místo pouhého Enter"
 		}
 	},
 	"prompts": {

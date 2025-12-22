@@ -68,7 +68,7 @@
 		"custom_storage_path_unusable": "O caminho de armazenamento personalizado \"{{path}}\" não pode ser usado, será usado o caminho padrão",
 		"cannot_access_path": "Não é possível acessar o caminho {{path}}: {{error}}",
 		"settings_import_failed": "Falha ao importar configurações: {{error}}",
-		"mistake_limit_guidance": "Isso pode indicar uma falha no processo de pensamento do modelo ou incapacidade de usar uma ferramenta adequadamente, o que pode ser mitigado com orientação do usuário (ex. \"Tente dividir a tarefa em etapas menores\").",
+		"mistake_limit_guidance": "Isso pode indicar uma falha no raciocínio do modelo ou incapacidade de usar uma ferramenta adequadamente. Tente uma das seguintes opções:\n\n• Use um modelo mais inteligente, ou simplesmente um modelo diferente (cada modelo tem suas próprias fraquezas)\n• Reduza a quantidade de contexto (simplifique o prompt para o LLM)\n• Forneça instruções adicionais que ajudem o LLM (ex. \"Tente dividir a tarefa em etapas menores\")",
 		"violated_organization_allowlist": "Falha ao executar a tarefa: o perfil atual não é compatível com as configurações da sua organização",
 		"condense_failed": "Falha ao condensar o contexto",
 		"condense_not_enough_messages": "Não há mensagens suficientes para condensar o contexto de {{prevContextTokens}} tokens. Pelo menos {{minimumMessageCount}} mensagens são necessárias, mas apenas {{messageCount}} estão disponíveis.",
@@ -128,7 +128,11 @@
 		"gemini": {
 			"generate_stream": "Erro de fluxo de contexto de geração do Gemini: {{error}}",
 			"generate_complete_prompt": "Erro de conclusão do Gemini: {{error}}",
-			"sources": "Fontes:"
+			"sources": "Fontes:",
+			"thinking_complete_no_output": "(Pensamento concluído, mas nenhuma saída foi gerada.)",
+			"thinking_complete_truncated": "(Pensamento concluído, mas a saída foi truncada devido ao limite de tokens.)",
+			"thinking_complete_safety": "(Pensamento concluído, mas a saída foi bloqueada devido às configurações de segurança.)",
+			"thinking_complete_recitation": "(Pensamento concluído, mas a saída foi bloqueada devido à verificação de recitação.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Falha na autenticação da API Cerebras. Verifique se sua chave de API é válida e não expirou.",
