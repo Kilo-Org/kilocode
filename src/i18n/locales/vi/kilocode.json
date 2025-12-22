@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "Phiên bản Kilocode CLI của bạn đã cũ và không hỗ trợ Agent Manager. Vui lòng cập nhật lên phiên bản mới nhất.",
 			"cliNotFound": "Không tìm thấy Kilocode CLI. Vui lòng cài đặt để sử dụng Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI chưa được cấu hình. Chạy 'kilocode auth' để đăng nhập hoặc 'kilocode config' để cấu hình.",
 			"sessionFailed": "Không thể khởi động phiên agent",
 			"sessionFailedWithMessage": "Không thể khởi động phiên agent: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Nhận Trợ Giúp",
 			"runInTerminal": "Chạy trong Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Cập Nhật Toàn Cục",
 			"updateLocal": "Cập Nhật Cục Bộ",
 			"installGlobal": "Cài Đặt Toàn Cục",

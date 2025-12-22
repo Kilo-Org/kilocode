@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "เวอร์ชัน Kilocode CLI ของคุณล้าสมัยและไม่รองรับ Agent Manager โปรดอัปเดตเป็นเวอร์ชันล่าสุด",
 			"cliNotFound": "ไม่พบ Kilocode CLI โปรดติดตั้งเพื่อใช้งาน Agent Manager",
+			"cliMisconfigured": "Kilocode CLI ยังไม่ได้ตั้งค่า เรียกใช้ 'kilocode auth' เพื่อลงชื่อเข้าใช้ หรือ 'kilocode config' เพื่อตั้งค่า",
 			"sessionFailed": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ",
 			"sessionFailedWithMessage": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "รับความช่วยเหลือ",
 			"runInTerminal": "เรียกใช้ในเทอร์มินัล",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "อัปเดตแบบ Global",
 			"updateLocal": "อัปเดตแบบ Local",
 			"installGlobal": "ติดตั้งแบบ Global",

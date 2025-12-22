@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "आपका Kilocode CLI संस्करण पुराना है और Agent Manager का समर्थन नहीं करता। कृपया नवीनतम संस्करण में अपडेट करें।",
 			"cliNotFound": "Kilocode CLI नहीं मिला। Agent Manager का उपयोग करने के लिए कृपया इसे इंस्टॉल करें।",
+			"cliMisconfigured": "Kilocode CLI कॉन्फ़िगर नहीं है। साइन इन करने के लिए 'kilocode auth' चलाएं या कॉन्फ़िगर करने के लिए 'kilocode config' चलाएं।",
 			"sessionFailed": "एजेंट सत्र प्रारंभ करने में विफल",
 			"sessionFailedWithMessage": "एजेंट सत्र प्रारंभ करने में विफल: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "सहायता प्राप्त करें",
 			"runInTerminal": "टर्मिनल में चलाएं",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "ग्लोबल अपडेट करें",
 			"updateLocal": "लोकल अपडेट करें",
 			"installGlobal": "ग्लोबल इंस्टॉल करें",

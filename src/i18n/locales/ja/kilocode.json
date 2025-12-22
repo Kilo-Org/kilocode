@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "Kilocode CLIのバージョンが古く、Agent Managerをサポートしていません。最新バージョンに更新してください。",
 			"cliNotFound": "Kilocode CLIが見つかりません。Agent Managerを使用するにはインストールしてください。",
+			"cliMisconfigured": "Kilocode CLIが設定されていません。'kilocode auth'でサインインするか、'kilocode config'で設定してください。",
 			"sessionFailed": "エージェントセッションの開始に失敗しました",
 			"sessionFailedWithMessage": "エージェントセッションの開始に失敗しました: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "ヘルプを表示",
 			"runInTerminal": "ターミナルで実行",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "グローバル更新",
 			"updateLocal": "ローカル更新",
 			"installGlobal": "グローバルインストール",

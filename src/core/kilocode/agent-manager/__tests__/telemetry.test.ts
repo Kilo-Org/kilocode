@@ -251,6 +251,23 @@ describe("Agent Manager Telemetry", () => {
 			)
 		})
 
+		it("captures cli_configuration_error issue with platform diagnostics", () => {
+			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
+
+			const props: AgentManagerLoginIssueProperties = {
+				issueType: "cli_configuration_error",
+				platform: "darwin",
+				shell: "fish",
+			}
+
+			captureAgentManagerLoginIssue(props)
+
+			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
+				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
+				props,
+			)
+		})
+
 		it("captures cli_not_found with platform and shell diagnostics", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
 
