@@ -73,6 +73,37 @@ describe("parseCliChunk", () => {
 		expect(event.timestamp).toBeLessThanOrEqual(after)
 	})
 
+	it("should parse session_title_generated event from CLI", () => {
+		const result = parseCliChunk(
+			'{"event":"session_title_generated","sessionId":"sess-abc-123","title":"My Session Title","timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "session_title_generated",
+			sessionId: "sess-abc-123",
+			title: "My Session Title",
+			timestamp: 1234567890,
+		})
+	})
+
+	it("should use current timestamp when session_title_generated has no timestamp", () => {
+		const before = Date.now()
+		const result = parseCliChunk(
+			'{"event":"session_title_generated","sessionId":"sess-xyz","title":"Test Title"}\n',
+		)
+		const after = Date.now()
+
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({
+			streamEventType: "session_title_generated",
+			sessionId: "sess-xyz",
+			title: "Test Title",
+		})
+		const event = result.events[0] as { timestamp: number }
+		expect(event.timestamp).toBeGreaterThanOrEqual(before)
+		expect(event.timestamp).toBeLessThanOrEqual(after)
+	})
+
 	it("should parse welcome event with worktree branch", () => {
 		const result = parseCliChunk(
 			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}},"timestamp":1234567890}\n',

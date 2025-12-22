@@ -19,6 +19,22 @@ export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.
 		" }] }. " +
 		"The 'path' is required and relative to workspace. "
 
+	// kilocode_change start
+	const example = {
+		files: [
+			{
+				path: "relative/path.ts",
+				line_ranges: partialReadsEnabled
+					? [
+							[1, 50],
+							[100, 150],
+						]
+					: undefined,
+			},
+		],
+	}
+	// kilocode_change end
+
 	const optionalRangesDescription = partialReadsEnabled
 		? "The 'line_ranges' is optional for reading specific sections. Each range is a [start, end] tuple (1-based inclusive). "
 		: ""
@@ -81,6 +97,7 @@ export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.
 					},
 				},
 				required: ["files"],
+				examples: [example], // kilocode_change
 				additionalProperties: false,
 			},
 		},

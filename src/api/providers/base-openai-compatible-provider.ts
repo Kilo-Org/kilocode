@@ -14,7 +14,6 @@ import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { fetchWithTimeout } from "./kilocode/fetchWithTimeout" // kilocode_change
-import { ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers" // kilocode_change
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import { getApiRequestTimeout } from "./utils/timeout-config"
 
