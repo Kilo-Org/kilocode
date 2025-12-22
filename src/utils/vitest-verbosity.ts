@@ -1,3 +1,4 @@
+// kilocode_change start
 export function resolveVerbosity(argv = process.argv, env = process.env) {
 	// Check if running in CI environment
 	const isCI = env.CI === "true" || env.CI === "1" || Boolean(env.CI)
@@ -26,3 +27,4 @@ export function resolveVerbosity(argv = process.argv, env = process.env) {
 		},
 	}
 }
+// kilocode_change end
