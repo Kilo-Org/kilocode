@@ -204,20 +204,20 @@ export class CliProcessHandler {
 			this.callbacks.onStateChanged()
 		} else {
 			// Store pending process info for new sessions
-				this.pendingProcess = {
-					process: proc,
-					parser,
-					prompt,
-					startTime: Date.now(),
-					parallelMode: options?.parallelMode,
-					desiredSessionId: options?.sessionId,
-					desiredLabel: options?.label,
-					gitUrl: options?.gitUrl,
-					stderrBuffer: [],
-					timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
-					cliPath,
-				}
+			this.pendingProcess = {
+				process: proc,
+				parser,
+				prompt,
+				startTime: Date.now(),
+				parallelMode: options?.parallelMode,
+				desiredSessionId: options?.sessionId,
+				desiredLabel: options?.label,
+				gitUrl: options?.gitUrl,
+				stderrBuffer: [],
+				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
+				cliPath,
 			}
+		}
 
 		// Parse nd-json output from stdout
 		proc.stdout?.on("data", (chunk) => {
@@ -521,6 +521,7 @@ export class CliProcessHandler {
 		this.pendingProcess = null
 		this.callbacks.onStateChanged()
 	}
+
 	private handlePendingTimeout(): void {
 		if (!this.pendingProcess) {
 			return
@@ -729,30 +730,30 @@ export class CliProcessHandler {
 		this.callbacks.onStateChanged()
 	}
 
-		private handleProcessError(proc: ChildProcess, error: Error): void {
-			if (this.pendingProcess && this.pendingProcess.process === proc) {
-				const cliPath = this.pendingProcess.cliPath
-				this.clearPendingTimeout()
-				this.registry.clearPendingSession()
-				this.callbacks.onPendingSessionChanged(null)
-				this.pendingProcess = null
+	private handleProcessError(proc: ChildProcess, error: Error): void {
+		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			const cliPath = this.pendingProcess.cliPath
+			this.clearPendingTimeout()
+			this.registry.clearPendingSession()
+			this.callbacks.onPendingSessionChanged(null)
+			this.pendingProcess = null
 
-				// Capture spawn error telemetry with context for debugging.
-				const { platform, shell } = getPlatformDiagnostics()
-				const cliPathExtension = cliPath ? path.extname(cliPath).slice(1).toLowerCase() || undefined : undefined
-				captureAgentManagerLoginIssue({
-					issueType: "cli_spawn_error",
-					platform,
-					shell,
-					errorMessage: error.message,
-					cliPath,
-					cliPathExtension,
-				})
+			// Capture spawn error telemetry with context for debugging.
+			const { platform, shell } = getPlatformDiagnostics()
+			const cliPathExtension = cliPath ? path.extname(cliPath).slice(1).toLowerCase() || undefined : undefined
+			captureAgentManagerLoginIssue({
+				issueType: "cli_spawn_error",
+				platform,
+				shell,
+				errorMessage: error.message,
+				cliPath,
+				cliPathExtension,
+			})
 
-				this.callbacks.onStartSessionFailed({
-					type: "spawn_error",
-					message: error.message,
-				})
+			this.callbacks.onStartSessionFailed({
+				type: "spawn_error",
+				message: error.message,
+			})
 			this.callbacks.onStateChanged()
 			return
 		}
