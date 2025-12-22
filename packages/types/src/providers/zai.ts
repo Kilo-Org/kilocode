@@ -5,6 +5,7 @@ import { ZaiApiLine } from "../provider-settings.js"
 // https://docs.z.ai/guides/llm/glm-4-32b-0414-128k
 // https://docs.z.ai/guides/llm/glm-4.5
 // https://docs.z.ai/guides/llm/glm-4.6
+// https://docs.z.ai/guides/llm/glm-4.7
 // https://docs.z.ai/guides/overview/pricing
 // https://bigmodel.cn/pricing
 
@@ -99,6 +100,20 @@ export const internationalZAiModels = {
 		cacheReadsPrice: 0.11,
 		description:
 			"GLM-4.6 is Zhipu's newest model with an extended context window of up to 200k tokens, providing enhanced capabilities for processing longer documents and conversations.",
+	},
+	"glm-4.7": {
+		maxTokens: 98_304,
+		contextWindow: 200_000,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		inputPrice: 0.6,
+		outputPrice: 2.2,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0.11,
+		description:
+			"GLM-4.7 is Zhipu's latest model with enhanced capabilities for reasoning, coding, and agent tasks, building upon the GLM-4.6 foundation with improved performance.",
 	},
 	// kilocode_change start
 	"glm-4.6v": {
@@ -233,6 +248,20 @@ export const mainlandZAiModels = {
 		cacheReadsPrice: 0.057,
 		description:
 			"GLM-4.6 is Zhipu's newest model with an extended context window of up to 200k tokens, providing enhanced capabilities for processing longer documents and conversations.",
+	},
+	"glm-4.7": {
+		maxTokens: 98_304,
+		contextWindow: 204_800,
+		supportsImages: false,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
+		inputPrice: 0.29,
+		outputPrice: 1.14,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0.057,
+		description:
+			"GLM-4.7 is Zhipu's latest model with enhanced capabilities for reasoning, coding, and agent tasks, building upon the GLM-4.6 foundation with improved performance.",
 	},
 } as const satisfies Record<string, ModelInfo>
 
