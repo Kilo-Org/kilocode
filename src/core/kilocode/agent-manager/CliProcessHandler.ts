@@ -89,6 +89,14 @@ export class CliProcessHandler {
 		this.callbacks.onDebugLog?.(message)
 	}
 
+	/** Extract configuration error from welcome event if present */
+	private extractConfigErrorFromWelcome(welcomeEvent: WelcomeStreamEvent): string | undefined {
+		if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
+			return welcomeEvent.instructions.join("\n")
+		}
+		return undefined
+	}
+
 	/** Clear the pending session timeout if it exists */
 	private clearPendingTimeout(): void {
 		if (this.pendingProcess?.timeoutId) {
@@ -396,10 +404,10 @@ export class CliProcessHandler {
 					this.pendingProcess.worktreeBranch = welcomeEvent.worktreeBranch
 					this.debugLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
 				}
-				// Capture configuration error instructions (indicates misconfigured CLI)
-				if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
-					this.pendingProcess.configurationError = welcomeEvent.instructions.join("\n")
-					this.debugLog(`Captured CLI configuration error: ${this.pendingProcess.configurationError}`)
+				const configError = this.extractConfigErrorFromWelcome(welcomeEvent)
+				if (configError) {
+					this.pendingProcess.configurationError = configError
+					this.debugLog(`Captured CLI configuration error: ${configError}`)
 				}
 				return
 			}
@@ -649,29 +657,28 @@ export class CliProcessHandler {
 			for (const event of events) {
 				// Process welcome events to capture configuration errors
 				if (event.streamEventType === "welcome") {
-					const welcomeEvent = event as WelcomeStreamEvent
-					if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
-						this.pendingProcess.configurationError = welcomeEvent.instructions.join("\n")
-						this.debugLog(
-							`Captured CLI configuration error from flush: ${this.pendingProcess.configurationError}`,
-						)
+					const configError = this.extractConfigErrorFromWelcome(event as WelcomeStreamEvent)
+					if (configError) {
+						this.pendingProcess.configurationError = configError
+						this.debugLog(`Captured CLI configuration error from flush: ${configError}`)
 					}
 				}
 			}
 
+			// Extract configuration error to local variable before clearing pendingProcess
+			let configurationError = this.pendingProcess.configurationError
+
 			// Fallback: Check raw stdout for configuration error patterns if JSON parsing didn't capture it
 			// This handles cases where the CLI sends truncated JSON before exiting
-			if (!this.pendingProcess.configurationError) {
+			if (!configurationError) {
 				const rawStdout = this.pendingProcess.stdoutBuffer.join("")
-				const configError = this.detectConfigurationErrorFromRawOutput(rawStdout)
-				if (configError) {
-					this.pendingProcess.configurationError = configError
-					this.debugLog(`Captured CLI configuration error from raw output: ${configError}`)
+				configurationError = this.detectConfigurationErrorFromRawOutput(rawStdout)
+				if (configurationError) {
+					this.debugLog(`Captured CLI configuration error from raw output: ${configurationError}`)
 				}
 			}
 
 			const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
-			const configurationError = this.pendingProcess.configurationError
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
