@@ -589,7 +589,8 @@
 			"description": "เส้นทางที่ไม่บังคับไปยัง Claude Code CLI ของคุณ ค่าเริ่มต้นคือ 'claude' หากไม่ได้ตั้งค่า",
 			"placeholder": "ค่าเริ่มต้น: claude",
 			"maxTokensLabel": "โทเค็นเอาต์พุตสูงสุด",
-			"maxTokensDescription": "จำนวนโทเค็นเอาต์พุตสูงสุดสำหรับการตอบสนองของ Claude Code ค่าเริ่มต้นคือ 8000"
+			"maxTokensDescription": "จำนวนโทเค็นเอาต์พุตสูงสุดสำหรับการตอบสนองของ Claude Code ค่าเริ่มต้นคือ 8000",
+			"LongLivedToken": "โทเค็นอายุยืนของ Claude Code"
 		},
 		"geminiCli": {
 			"description": "ผู้ให้บริการนี้ใช้การยืนยันตัวตน OAuth จากเครื่องมือ Gemini CLI และไม่ต้องการกุญแจ API",

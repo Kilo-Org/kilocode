@@ -630,7 +630,8 @@
 			"description": "مسار CLI اختياري (الافتراضي 'claude').",
 			"placeholder": "الافتراضي: claude",
 			"maxTokensLabel": "أقصى توكنات المخرجات",
-			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
+			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000.",
+			"LongLivedToken": "رمز Claude Code طويل الأمد"
 		},
 		"geminiCli": {
 			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",

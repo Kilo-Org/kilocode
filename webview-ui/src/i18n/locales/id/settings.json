@@ -591,7 +591,8 @@
 			"description": "Jalur opsional ke Claude Code CLI Anda. Defaultnya adalah 'claude' jika tidak diatur.",
 			"placeholder": "Default: claude",
 			"maxTokensLabel": "Token Output Maks",
-			"maxTokensDescription": "Jumlah maksimum token output untuk respons Claude Code. Default adalah 8000."
+			"maxTokensDescription": "Jumlah maksimum token output untuk respons Claude Code. Default adalah 8000.",
+			"LongLivedToken": "Token Berumur Panjang Claude Code"
 		},
 		"geminiCli": {
 			"description": "Penyedia ini menggunakan autentikasi OAuth dari alat Gemini CLI dan tidak memerlukan kunci API.",

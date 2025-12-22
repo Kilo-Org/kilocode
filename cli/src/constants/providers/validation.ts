@@ -14,6 +14,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	bedrock: ["awsAccessKey", "awsSecretKey", "awsRegion", "apiModelId"],
 	gemini: ["geminiApiKey", "apiModelId"],
 	"claude-code": ["claudeCodePath", "apiModelId"],
+	claudecodenative: ["apiKey", "apiModelId"],
 	mistral: ["mistralApiKey", "apiModelId"],
 	groq: ["groqApiKey", "apiModelId"],
 	deepseek: ["deepSeekApiKey", "apiModelId"],

@@ -13,6 +13,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	gemini: "Google Gemini",
 	vertex: "GCP Vertex AI",
 	"claude-code": "Claude Code",
+	claudecodenative: "Claude Code Native",
 	mistral: "Mistral",
 	groq: "Groq",
 	deepseek: "DeepSeek",

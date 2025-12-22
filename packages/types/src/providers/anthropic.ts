@@ -63,6 +63,19 @@ export const anthropicModels = {
 		supportsReasoningBudget: true,
 		supportsVerbosity: true, // kilocode_change
 	},
+	"claude-opus-4-5": {
+		maxTokens: 32_000, // Overridden to 8k if `enableReasoningEffort` is false.
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		inputPrice: 5.0, // $5 per million input tokens
+		outputPrice: 25.0, // $25 per million output tokens
+		cacheWritesPrice: 6.25, // $6.25 per million tokens
+		cacheReadsPrice: 0.5, // $0.50 per million tokens
+		supportsReasoningBudget: true,
+		supportsVerbosity: true, // kilocode_change
+	},
 	"claude-opus-4-1-20250805": {
 		maxTokens: 32_000, // Overridden to 8k if `enableReasoningEffort` is false.
 		contextWindow: 200_000,
@@ -156,6 +169,21 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.03,
 	},
 	"claude-haiku-4-5-20251001": {
+		maxTokens: 64_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native", // kilocode_change
+		inputPrice: 1.0,
+		outputPrice: 5.0,
+		cacheWritesPrice: 1.25,
+		cacheReadsPrice: 0.1,
+		supportsReasoningBudget: true,
+		description:
+			"Claude Haiku 4.5 delivers near-frontier intelligence at lightning speeds with extended thinking, vision, and multilingual support.",
+	},
+	"claude-haiku-4-5": {
 		maxTokens: 64_000,
 		contextWindow: 200_000,
 		supportsImages: true,

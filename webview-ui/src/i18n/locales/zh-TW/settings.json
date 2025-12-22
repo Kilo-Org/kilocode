@@ -566,7 +566,8 @@
 			"description": "可選的 Claude Code CLI 路徑。如果未設定，則預設為 'claude'。",
 			"placeholder": "預設：claude",
 			"maxTokensLabel": "最大輸出 Token",
-			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
+			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。",
+			"LongLivedToken": "Claude Code 長期 Token"
 		},
 		"geminiCli": {
 			"description": "此供應商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",

@@ -23,8 +23,8 @@ import { calculateApiCostAnthropic } from "../../shared/cost"
 import { convertOpenAIToolsToAnthropic } from "./kilocode/nativeToolCallHelpers"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
-	private options: ApiHandlerOptions
-	private client: Anthropic
+	protected options: ApiHandlerOptions // kilocode_change
+	protected client: Anthropic // kilocode_change
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -125,7 +125,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						temperature,
 						thinking,
 						// Setting cache breakpoint for system prompt so new tasks can reuse it.
-						system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
+						system: this.getSystemPrompt(systemPrompt, cacheControl), //kilocode_change
 						messages: sanitizedMessages.map((message, index) => {
 							if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
 								return {
@@ -186,7 +186,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 					model: apiModelId, // kilocode_change
 					max_tokens: maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS,
 					temperature,
-					system: [{ text: systemPrompt, type: "text" }],
+					system: this.getSystemPrompt(systemPrompt), // kilocode_change
 					messages: sanitizedMessages,
 					stream: true,
 					...nativeToolParams,
@@ -494,6 +494,20 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			// Use the base provider's implementation as fallback
 			return super.countTokens(content)
 		}
+	}
+
+	protected getSystemPrompt(
+		systemPrompt: string,
+		cacheControl?: CacheControlEphemeral,
+	): Anthropic.Messages.TextBlockParam[] {
+		const content: Anthropic.Messages.TextBlockParam = {
+			type: "text",
+			text: systemPrompt,
+		}
+		if (cacheControl) {
+			content.cache_control = cacheControl
+		}
+		return [content]
 	}
 	// kilocode_change end
 }

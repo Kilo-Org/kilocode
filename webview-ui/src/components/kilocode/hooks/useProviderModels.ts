@@ -54,6 +54,8 @@ import {
 	inceptionDefaultModelId,
 	minimaxModels,
 	minimaxDefaultModelId,
+	claudecodenativeModels,
+	claudecodenativeDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -308,6 +310,12 @@ export const getModelsByProvider = ({
 			return {
 				models: basetenModels,
 				defaultModel: basetenDefaultModelId,
+			}
+		}
+		case "claudecodenative": {
+			return {
+				models: claudecodenativeModels,
+				defaultModel: claudecodenativeDefaultModelId,
 			}
 		}
 		default:

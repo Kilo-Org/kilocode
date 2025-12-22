@@ -629,7 +629,8 @@
 			"description": "Необов'язковий шлях до вашого Claude Code CLI. За замовчуванням 'claude', якщо не встановлено.",
 			"placeholder": "За замовчуванням: claude",
 			"maxTokensLabel": "Макс. вихідних токенів",
-			"maxTokensDescription": "Максимальна кількість вихідних токенів для відповідей Claude Code. За замовчуванням 8000."
+			"maxTokensDescription": "Максимальна кількість вихідних токенів для відповідей Claude Code. За замовчуванням 8000.",
+			"LongLivedToken": "Довговічний токен Claude Code"
 		},
 		"geminiCli": {
 			"description": "Цей провайдер використовує OAuth-аутентифікацію інструменту Gemini CLI і не потребує API-ключів.",

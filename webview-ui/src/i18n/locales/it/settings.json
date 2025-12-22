@@ -601,7 +601,8 @@
 			"description": "Percorso facoltativo per la tua CLI Claude Code. Predefinito 'claude' se non impostato.",
 			"placeholder": "Predefinito: claude",
 			"maxTokensLabel": "Token di output massimi",
-			"maxTokensDescription": "Numero massimo di token di output per le risposte di Claude Code. Il valore predefinito è 8000."
+			"maxTokensDescription": "Numero massimo di token di output per le risposte di Claude Code. Il valore predefinito è 8000.",
+			"LongLivedToken": "Token a lunga durata Claude Code"
 		},
 		"geminiCli": {
 			"description": "Questo provider utilizza l'autenticazione OAuth dallo strumento Gemini CLI e non richiede chiavi API.",
