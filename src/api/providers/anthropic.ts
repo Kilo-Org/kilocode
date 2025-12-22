@@ -20,7 +20,7 @@ import { filterNonAnthropicBlocks } from "../transform/anthropic-filter"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
-import { convertOpenAIToolsToAnthropic, ToolCallAccumulatorAnthropic } from "./kilocode/nativeToolCallHelpers"
+import { convertOpenAIToolsToAnthropic } from "./kilocode/nativeToolCallHelpers"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -204,12 +204,9 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		let thinkingDeltaAccumulator = ""
 		let thinkText = ""
 		let thinkSignature = ""
-		const toolCallAccumulator = new ToolCallAccumulatorAnthropic()
 		// kilocode_change end
 
 		for await (const chunk of stream) {
-			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
-
 			switch (chunk.type) {
 				case "message_start": {
 					// Tells us cache reads/writes/input/output.
