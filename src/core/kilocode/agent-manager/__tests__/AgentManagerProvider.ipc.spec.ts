@@ -9,6 +9,8 @@ vi.mock("vscode", () => {
 	const window = {
 		showErrorMessage: vi.fn(),
 		showWarningMessage: vi.fn(),
+		onDidCloseTerminal: vi.fn(() => ({ dispose: vi.fn() })),
+		createTerminal: vi.fn(() => ({ show: vi.fn(), dispose: vi.fn() })),
 	}
 	const Uri = {
 		joinPath: vi.fn(),
@@ -22,7 +24,8 @@ vi.mock("vscode", () => {
 		Production: 2,
 		Test: 3,
 	}
-	return { window, Uri, workspace, ExtensionMode }
+	const ThemeIcon = vi.fn()
+	return { window, Uri, workspace, ExtensionMode, ThemeIcon }
 })
 
 describe("AgentManagerProvider IPC paths", () => {

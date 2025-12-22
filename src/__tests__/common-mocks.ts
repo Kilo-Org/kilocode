@@ -128,12 +128,6 @@ export function setupCommonMocks() {
 			joinPath: vi.fn(),
 			file: vi.fn(),
 		},
-		RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
-		Disposable: {
-			from: vi.fn().mockImplementation((...disposables) => ({
-				dispose: vi.fn(),
-			})),
-		},
 		CodeActionKind: {
 			QuickFix: { value: "quickfix" },
 			RefactorRewrite: { value: "refactor.rewrite" },
