@@ -55,8 +55,12 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			verbosity, // kilocode_change
 		} = this.getModel()
 
+		// kilocode_change start
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
-		const sanitizedMessages = filterNonAnthropicBlocks(messages)
+		// When thinking is disabled (undefined), also strip thinking/redacted_thinking blocks from history
+		// to prevent the error: "When thinking is disabled, an 'assistant' message cannot contain 'thinking'"
+		const sanitizedMessages = filterNonAnthropicBlocks(messages, thinking)
+		// kilocode_change end
 		const apiModelId = this.options.anthropicDeploymentName?.trim() || modelId // kilocode_change
 
 		// Add 1M context beta flag if enabled for Claude Sonnet 4 and 4.5
