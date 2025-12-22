@@ -65,6 +65,11 @@ export function useChatGhostText({
 				event.preventDefault()
 				skipNextCompletionRef.current = true
 				insertTextAtCursor(textArea, ghostText)
+				// Send telemetry event for accepted suggestion
+				vscode.postMessage({
+					type: "chatCompletionAccepted",
+					suggestionLength: ghostText.length,
+				})
 				setGhostText("")
 				return true
 			}
@@ -81,6 +86,11 @@ export function useChatGhostText({
 				skipNextCompletionRef.current = true
 				const { word, remainder } = extractNextWord(ghostText)
 				insertTextAtCursor(textArea, word)
+				// Send telemetry event for accepted word
+				vscode.postMessage({
+					type: "chatCompletionAccepted",
+					suggestionLength: word.length,
+				})
 				setGhostText(remainder)
 				return true
 			}

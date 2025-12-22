@@ -1,7 +1,12 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 import { Message, Ollama, Tool as OllamaTool, type Config as OllamaOptions } from "ollama"
-import { ModelInfo, openAiModelInfoSaneDefaults, DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import {
+	ModelInfo,
+	openAiModelInfoSaneDefaults,
+	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	ollamaDefaultModelInfo,
+} from "@roo-code/types"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -162,11 +167,13 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	private client: Ollama | undefined
 	protected models: Record<string, ModelInfo> = {}
 	private isInitialized = false // kilocode_change
+	private modelFetchError: string | null = null // kilocode_change - track fetch errors for better diagnostics
+	private initializationPromise: Promise<void> | null = null // kilocode_change - prevent race condition
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		this.initialize() // kilocode_change
+		this.initializationPromise = this.initialize() // kilocode_change - store the promise
 	}
 
 	// kilocode_change start
@@ -176,6 +183,12 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		}
 		await this.fetchModel()
 		this.isInitialized = true
+	}
+
+	private async ensureInitialized(): Promise<void> {
+		if (this.initializationPromise) {
+			await this.initializationPromise
+		}
 	}
 	// kilocode_change end
 
@@ -231,9 +244,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		// kilocode_change start
-		if (!this.isInitialized) {
-			await this.initialize()
-		}
+		await this.ensureInitialized()
 		// kilocode_change end
 
 		const client = this.ensureClient()
@@ -377,42 +388,76 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 
 	async fetchModel() {
 		// kilocode_change start
-		this.models = await getOllamaModels(
-			this.options.ollamaBaseUrl,
-			this.options.ollamaApiKey,
-			this.options.ollamaNumCtx,
-		)
+		try {
+			this.modelFetchError = null
+			this.models = await getOllamaModels(
+				this.options.ollamaBaseUrl,
+				this.options.ollamaApiKey,
+				this.options.ollamaNumCtx,
+			)
+			if (Object.keys(this.models).length === 0) {
+				this.modelFetchError = "noModelsReturned"
+			}
+		} catch (error: any) {
+			this.modelFetchError = error.message || "unknownError"
+			this.models = {}
+		}
 		return this.models
 		// kilocode_change end
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.ollamaModelId || ""
+		const userContextWindow = this.options.ollamaNumCtx
 
 		// kilocode_change start
+		// If not yet initialized, return default model info to allow getEnvironmentDetails to work
+		// The actual model validation will happen in createMessage() after ensureInitialized()
+		if (!this.isInitialized) {
+			const contextWindow = userContextWindow || ollamaDefaultModelInfo.contextWindow
+			return {
+				id: modelId,
+				info: {
+					...ollamaDefaultModelInfo,
+					contextWindow: contextWindow,
+				},
+			}
+		}
+
 		const modelInfo = this.models[modelId]
 		if (!modelInfo) {
 			const availableModels = Object.keys(this.models)
-			const errorMessage =
-				availableModels.length > 0
-					? `Model ${modelId} not found. Available models: ${availableModels.join(", ")}`
-					: `Model ${modelId} not found. No models available.`
-			throw new Error(errorMessage)
+			if (availableModels.length > 0) {
+				throw new Error(`Model ${modelId} not found. Available models: ${availableModels.join(", ")}`)
+			}
+
+			const baseUrl = this.options.ollamaBaseUrl || "http://localhost:11434"
+			const troubleshooting = [
+				`1. Ensure Ollama is running (try: ollama serve)`,
+				`2. Verify the base URL is correct: ${baseUrl}`,
+				`3. Check that models are installed (try: ollama list)`,
+				`4. Pull the model if needed: ollama pull ${modelId}`,
+			].join("\n")
+
+			throw new Error(
+				`Model ${modelId} not found. Could not retrieve models from Ollama.\n\nTroubleshooting:\n${troubleshooting}`,
+			)
 		}
+
+		// Override contextWindow with user's setting if provided
+		const finalModelInfo = userContextWindow ? { ...modelInfo, contextWindow: userContextWindow } : modelInfo
 		// kilocode_change end
 
 		return {
 			id: modelId,
-			info: modelInfo, // kilocode_change
+			info: finalModelInfo, // kilocode_change
 		}
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
 		try {
 			// kilocode_change start
-			if (!this.isInitialized) {
-				await this.initialize()
-			}
+			await this.ensureInitialized()
 			// kilocode_change end
 
 			const client = this.ensureClient()

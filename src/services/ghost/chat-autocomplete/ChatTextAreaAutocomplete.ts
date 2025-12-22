@@ -1,9 +1,10 @@
 import * as vscode from "vscode"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
-import { VisibleCodeContext } from "../types"
+import { AutocompleteContext, VisibleCodeContext } from "../types"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
+import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 
 /**
  * Service for providing FIM-based autocomplete suggestions in ChatTextArea
@@ -11,10 +12,12 @@ import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postpro
 export class ChatTextAreaAutocomplete {
 	private model: GhostModel
 	private providerSettingsManager: ProviderSettingsManager
+	private telemetry: AutocompleteTelemetry
 
 	constructor(providerSettingsManager: ProviderSettingsManager) {
 		this.model = new GhostModel()
 		this.providerSettingsManager = providerSettingsManager
+		this.telemetry = new AutocompleteTelemetry("chat-textarea")
 	}
 
 	async initialize(): Promise<boolean> {
@@ -30,6 +33,18 @@ export class ChatTextAreaAutocomplete {
 	}
 
 	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
+		const startTime = Date.now()
+
+		// Build context for telemetry
+		const context: AutocompleteContext = {
+			languageId: "chat", // Chat textarea doesn't have a language ID
+			modelId: this.model.getModelName(),
+			provider: this.model.getProviderDisplayName(),
+		}
+
+		// Capture suggestion requested
+		this.telemetry.captureSuggestionRequested(context)
+
 		if (!this.model.loaded) {
 			const loaded = await this.initialize()
 			if (!loaded) {
@@ -47,29 +62,60 @@ export class ChatTextAreaAutocomplete {
 
 		let response = ""
 
-		// Use FIM if supported, otherwise fall back to chat-based completion
-		if (this.model.supportsFim()) {
-			await this.model.generateFimResponse(prefix, suffix, (chunk) => {
-				response += chunk
-			})
-		} else {
-			// Fall back to chat-based completion for models without FIM support
-			const systemPrompt = this.getChatSystemPrompt()
-			const userPrompt = this.getChatUserPrompt(prefix)
+		try {
+			// Use FIM if supported, otherwise fall back to chat-based completion
+			if (this.model.supportsFim()) {
+				await this.model.generateFimResponse(prefix, suffix, (chunk) => {
+					response += chunk
+				})
+			} else {
+				// Fall back to chat-based completion for models without FIM support
+				const systemPrompt = this.getChatSystemPrompt()
+				const userPrompt = this.getChatUserPrompt(prefix)
 
-			await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
-				if (chunk.type === "text") {
-					response += chunk.text
+				await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
+					if (chunk.type === "text") {
+						response += chunk.text
+					}
+				})
+			}
+
+			const latencyMs = Date.now() - startTime
+
+			// Capture successful LLM request
+			this.telemetry.captureLlmRequestCompleted(
+				{
+					latencyMs,
+					// Token counts not available from current API
+				},
+				context,
+			)
+
+			const cleanedSuggestion = this.cleanSuggestion(response, userText)
+
+			// Track if suggestion was filtered or returned
+			if (!cleanedSuggestion) {
+				if (!response.trim()) {
+					this.telemetry.captureSuggestionFiltered("empty_response", context)
+				} else {
+					this.telemetry.captureSuggestionFiltered("filtered_by_postprocessing", context)
 				}
-			})
+			} else {
+				this.telemetry.captureLlmSuggestionReturned(context, cleanedSuggestion.length)
+			}
+
+			return { suggestion: cleanedSuggestion }
+		} catch (error) {
+			const latencyMs = Date.now() - startTime
+			this.telemetry.captureLlmRequestFailed(
+				{
+					latencyMs,
+					error: error instanceof Error ? error.message : String(error),
+				},
+				context,
+			)
+			return { suggestion: "" }
 		}
-
-		const cleanedSuggestion = this.cleanSuggestion(response, userText)
-		console.log(
-			`[ChatAutocomplete] prefix: ${JSON.stringify(userText)} | response: ${JSON.stringify(response)} | cleanedSuggestion: ${JSON.stringify(cleanedSuggestion)}`,
-		)
-
-		return { suggestion: cleanedSuggestion }
 	}
 
 	/**

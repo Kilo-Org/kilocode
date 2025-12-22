@@ -5,6 +5,97 @@ import { fileExistsAtPath } from "../../../utils/fs"
 import { getLocalCliPath } from "./CliInstaller"
 
 /**
+ * Case-insensitive lookup for environment variables.
+ * Windows environment variables can have inconsistent casing (PATH, Path, path).
+ */
+function getCaseInsensitive(target: NodeJS.ProcessEnv, key: string): string | undefined {
+	const lowercaseKey = key.toLowerCase()
+	const equivalentKey = Object.keys(target).find((k) => k.toLowerCase() === lowercaseKey)
+	return equivalentKey ? target[equivalentKey] : target[key]
+}
+
+/**
+ * Check if a path exists and is a file (not a directory).
+ * Follows symlinks - a symlink to a file returns true, symlink to a directory returns false.
+ */
+async function pathExistsAsFile(filePath: string): Promise<boolean> {
+	try {
+		const stat = await fs.promises.stat(filePath)
+		return stat.isFile()
+	} catch (e: unknown) {
+		if (e instanceof Error && "code" in e && e.code === "EACCES") {
+			try {
+				const lstat = await fs.promises.lstat(filePath)
+				return lstat.isFile() || lstat.isSymbolicLink()
+			} catch {
+				return false
+			}
+		}
+		return false
+	}
+}
+
+/**
+ * Find an executable by name, resolving it against PATH and PATHEXT (on Windows).
+ */
+export async function findExecutable(
+	command: string,
+	cwd?: string,
+	paths?: string[],
+	env: NodeJS.ProcessEnv = process.env,
+): Promise<string | undefined> {
+	if (path.isAbsolute(command)) {
+		return (await pathExistsAsFile(command)) ? command : undefined
+	}
+
+	if (cwd === undefined) {
+		cwd = process.cwd()
+	}
+
+	const dir = path.dirname(command)
+	if (dir !== ".") {
+		const fullPath = path.join(cwd, command)
+		return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
+	}
+
+	const envPath = getCaseInsensitive(env, "PATH")
+	if (paths === undefined && typeof envPath === "string") {
+		paths = envPath.split(path.delimiter)
+	}
+
+	if (paths === undefined || paths.length === 0) {
+		const fullPath = path.join(cwd, command)
+		return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
+	}
+
+	for (const pathEntry of paths) {
+		let fullPath: string
+		if (path.isAbsolute(pathEntry)) {
+			fullPath = path.join(pathEntry, command)
+		} else {
+			fullPath = path.join(cwd, pathEntry, command)
+		}
+
+		if (process.platform === "win32") {
+			const pathExt = getCaseInsensitive(env, "PATHEXT") || ".COM;.EXE;.BAT;.CMD"
+			for (const ext of pathExt.split(";")) {
+				const withExtension = fullPath + ext
+				if (await pathExistsAsFile(withExtension)) {
+					return withExtension
+				}
+			}
+		}
+
+		if (await pathExistsAsFile(fullPath)) {
+			return fullPath
+		}
+	}
+
+	const fullPath = path.join(cwd, command)
+	return (await pathExistsAsFile(fullPath)) ? fullPath : undefined
+}
+
+/**
  * Find the kilocode CLI executable.
  *
  * Resolution order:
@@ -12,7 +103,7 @@ import { getLocalCliPath } from "./CliInstaller"
  * 2. Workspace-local build at <workspace>/cli/dist/index.js
  * 3. Local installation at ~/.kilocode/cli/pkg (for immutable systems like NixOS)
  * 4. Login shell lookup (respects user's nvm, fnm, volta, asdf config)
- * 5. Direct PATH lookup (fallback for system-wide installs)
+ * 5. Direct PATH lookup using findExecutable (handles PATHEXT on Windows)
  * 6. Common npm installation paths (last resort)
  *
  * IMPORTANT: Login shell is checked BEFORE direct PATH because:
@@ -50,7 +141,6 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 	}
 
 	// 3) Check local installation (for immutable systems like NixOS)
-	// This is checked early because it's a deliberate user choice for systems that can't use global install
 	const localCliPath = getLocalCliPath()
 	if (await fileExistsAtPath(localCliPath)) {
 		log?.(`Found local CLI installation: ${localCliPath}`)
@@ -58,14 +148,16 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 	}
 
 	// 4) Try login shell FIRST to pick up user's shell environment (nvm, fnm, volta, asdf, etc.)
-	// This is preferred because it respects the user's actual node environment.
-	// When we run `npm install -g`, it installs to this environment, so we should find CLI here.
 	const loginShellResult = findViaLoginShell(log)
 	if (loginShellResult) return loginShellResult
 
-	// 5) Fall back to direct PATH lookup (for users without version managers)
-	const directPathResult = findInPath(log)
-	if (directPathResult) return directPathResult
+	// 5) Use findExecutable to resolve CLI path (handles PATHEXT on Windows)
+	const executablePath = await findExecutable("kilocode")
+	if (executablePath) {
+		log?.(`Found CLI via PATH: ${executablePath}`)
+		return executablePath
+	}
+	log?.("kilocode not found in PATH lookup")
 
 	// 6) Last resort: scan common npm installation paths
 	log?.("Falling back to scanning common installation paths...")
@@ -85,43 +177,18 @@ export async function findKilocodeCli(log?: (msg: string) => void): Promise<stri
 }
 
 /**
- * Try to find kilocode in the current process PATH.
- * This works when CLI is installed in a system-wide location.
- */
-function findInPath(log?: (msg: string) => void): string | null {
-	const cmd = process.platform === "win32" ? "where kilocode" : "which kilocode"
-	try {
-		const result = execSync(cmd, { encoding: "utf-8", timeout: 5000 }).split(/\r?\n/)[0]?.trim()
-		if (result) {
-			log?.(`Found CLI in PATH: ${result}`)
-			return result
-		}
-	} catch {
-		log?.("kilocode not found in direct PATH lookup")
-	}
-	return null
-}
-
-/**
  * Try to find kilocode by running `which` in a login shell.
  * This sources the user's shell profile (~/.zshrc, ~/.bashrc, etc.)
  * which sets up version managers like nvm, fnm, volta, asdf, etc.
- *
- * This is the most reliable way to find CLI installed via version managers
- * because VS Code's extension host doesn't inherit the user's shell environment.
  */
 function findViaLoginShell(log?: (msg: string) => void): string | null {
 	if (process.platform === "win32") {
-		// Windows doesn't have the same shell environment concept
 		return null
 	}
 
-	// Detect user's shell from SHELL env var, default to bash
 	const userShell = process.env.SHELL || "/bin/bash"
 	const shellName = path.basename(userShell)
 
-	// Use login shell (-l) to source profile files, interactive (-i) for some shells
-	// that only source certain files in interactive mode
 	const shellFlags = shellName === "zsh" ? "-l -i" : "-l"
 	const cmd = `${userShell} ${shellFlags} -c 'which kilocode' 2>/dev/null`
 
@@ -129,8 +196,8 @@ function findViaLoginShell(log?: (msg: string) => void): string | null {
 		log?.(`Trying login shell lookup: ${cmd}`)
 		const result = execSync(cmd, {
 			encoding: "utf-8",
-			timeout: 10000, // 10s timeout - login shells can be slow
-			env: { ...process.env, HOME: process.env.HOME }, // Ensure HOME is set
+			timeout: 10000,
+			env: { ...process.env, HOME: process.env.HOME },
 		})
 			.split(/\r?\n/)[0]
 			?.trim()
@@ -140,7 +207,6 @@ function findViaLoginShell(log?: (msg: string) => void): string | null {
 			return result
 		}
 	} catch (error) {
-		// This is expected if CLI is not installed or shell init is slow/broken
 		log?.(`Login shell lookup failed (this is normal if CLI not installed via version manager): ${error}`)
 	}
 
@@ -149,7 +215,6 @@ function findViaLoginShell(log?: (msg: string) => void): string | null {
 
 /**
  * Get fallback paths to check for CLI installation.
- * This is used when login shell lookup fails or on Windows.
  */
 function getNpmPaths(log?: (msg: string) => void): string[] {
 	const home = process.env.HOME || process.env.USERPROFILE || ""
@@ -164,27 +229,16 @@ function getNpmPaths(log?: (msg: string) => void): string[] {
 		].filter(Boolean)
 	}
 
-	// macOS and Linux paths
 	const paths = [
-		// Local installation (for immutable systems like NixOS)
 		getLocalCliPath(),
-		// macOS Homebrew (Apple Silicon)
 		"/opt/homebrew/bin/kilocode",
-		// macOS Homebrew (Intel) and Linux standard
 		"/usr/local/bin/kilocode",
-		// Common user-local npm prefix
 		path.join(home, ".npm-global", "bin", "kilocode"),
-		// nvm: scan installed versions
 		...getNvmPaths(home, log),
-		// fnm
 		path.join(home, ".local", "share", "fnm", "aliases", "default", "bin", "kilocode"),
-		// volta
 		path.join(home, ".volta", "bin", "kilocode"),
-		// asdf nodejs plugin
 		path.join(home, ".asdf", "shims", "kilocode"),
-		// Linux snap
 		"/snap/bin/kilocode",
-		// Linux user local bin
 		path.join(home, ".local", "bin", "kilocode"),
 	]
 
@@ -193,10 +247,6 @@ function getNpmPaths(log?: (msg: string) => void): string[] {
 
 /**
  * Get potential nvm paths for the kilocode CLI.
- * nvm installs node versions in ~/.nvm/versions/node/
- *
- * Note: This is a fallback - the login shell approach (findViaLoginShell)
- * is preferred because it respects the user's shell configuration.
  */
 function getNvmPaths(home: string, log?: (msg: string) => void): string[] {
 	const nvmDir = process.env.NVM_DIR || path.join(home, ".nvm")
@@ -204,16 +254,13 @@ function getNvmPaths(home: string, log?: (msg: string) => void): string[] {
 
 	const paths: string[] = []
 
-	// Check NVM_BIN if set (current nvm version in the shell)
 	if (process.env.NVM_BIN) {
 		paths.push(path.join(process.env.NVM_BIN, "kilocode"))
 	}
 
-	// Scan the nvm versions directory for installed node versions
 	try {
 		if (fs.existsSync(versionsDir)) {
 			const versions = fs.readdirSync(versionsDir)
-			// Sort versions in reverse order to check newer versions first
 			versions.sort().reverse()
 			log?.(`Found ${versions.length} nvm node versions to check`)
 			for (const version of versions) {
@@ -221,7 +268,6 @@ function getNvmPaths(home: string, log?: (msg: string) => void): string[] {
 			}
 		}
 	} catch (error) {
-		// This is normal if user doesn't have nvm installed
 		log?.(`Could not scan nvm versions directory: ${error}`)
 	}
 
