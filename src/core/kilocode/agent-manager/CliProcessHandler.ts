@@ -651,25 +651,21 @@ export class CliProcessHandler {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
 			this.clearPendingTimeout()
 
-			// Flush any buffered parser output before checking for errors
-			// This is important because the welcome event JSON might be split across chunks
+			// Start with any config error captured during streaming
+			let configurationError = this.pendingProcess.configurationError
+
+			// Flush any buffered parser output - welcome event JSON might be split across chunks
 			const { events } = this.pendingProcess.parser.flush()
 			for (const event of events) {
-				// Process welcome events to capture configuration errors
-				if (event.streamEventType === "welcome") {
-					const configError = this.extractConfigErrorFromWelcome(event as WelcomeStreamEvent)
-					if (configError) {
-						this.pendingProcess.configurationError = configError
-						this.debugLog(`Captured CLI configuration error from flush: ${configError}`)
+				if (event.streamEventType === "welcome" && !configurationError) {
+					configurationError = this.extractConfigErrorFromWelcome(event as WelcomeStreamEvent)
+					if (configurationError) {
+						this.debugLog(`Captured CLI configuration error from flush: ${configurationError}`)
 					}
 				}
 			}
 
-			// Extract configuration error to local variable before clearing pendingProcess
-			let configurationError = this.pendingProcess.configurationError
-
 			// Fallback: Check raw stdout for configuration error patterns if JSON parsing didn't capture it
-			// This handles cases where the CLI sends truncated JSON before exiting
 			if (!configurationError) {
 				const rawStdout = this.pendingProcess.stdoutBuffer.join("")
 				configurationError = this.detectConfigurationErrorFromRawOutput(rawStdout)
