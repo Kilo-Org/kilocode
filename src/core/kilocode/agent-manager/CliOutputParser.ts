@@ -74,6 +74,7 @@ export interface SessionCreatedStreamEvent {
 export interface WelcomeStreamEvent {
 	streamEventType: "welcome"
 	worktreeBranch?: string
+	worktreePath?: string
 	timestamp: number
 }
 
@@ -143,8 +144,20 @@ export function parseCliChunk(chunk: string, buffer: string = ""): ParseResult {
 			continue
 		}
 
-		// Not JSON - strip VT characters before treating as plain text output event
+		// Fallback: handle concatenated JSON objects on a single line
 		const cleanLine = stripVTControlCharacters(trimmedLine)
+		const extracted = extractJsonObjects(cleanLine)
+		if (extracted.length > 0) {
+			for (const obj of extracted) {
+				const extractedEvent = toStreamEvent(obj)
+				if (extractedEvent !== null) {
+					events.push(extractedEvent)
+				}
+			}
+			continue
+		}
+
+		// Not JSON - treat as plain text output event
 		if (cleanLine) {
 			events.push(createOutputEvent(cleanLine))
 		}
@@ -192,6 +205,13 @@ export class CliOutputParser {
 
 		// Not JSON - strip VT characters before treating as plain text
 		const cleanLine = stripVTControlCharacters(trimmedBuffer)
+		const extracted = extractJsonObjects(cleanLine)
+		if (extracted.length > 0) {
+			const events = extracted
+				.map((obj) => toStreamEvent(obj))
+				.filter((extractedEvent): extractedEvent is StreamEvent => extractedEvent !== null)
+			return { events, remainingBuffer: "" }
+		}
 		if (cleanLine) {
 			return { events: [createOutputEvent(cleanLine)], remainingBuffer: "" }
 		}
@@ -223,13 +243,15 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 		}
 	}
 
-	// Detect welcome event from CLI (format: { type: "welcome", metadata: { welcomeOptions: { worktreeBranch: "..." } }, ... })
+	// Detect welcome event from CLI (format: { type: "welcome", metadata: { welcomeOptions: { worktreeBranch: "...", workspace: "..." } }, ... })
 	if (parsed.type === "welcome") {
 		const metadata = parsed.metadata as Record<string, unknown> | undefined
 		const welcomeOptions = metadata?.welcomeOptions as Record<string, unknown> | undefined
+		const worktreePath = (welcomeOptions?.workspace || welcomeOptions?.worktreePath) as string | undefined
 		return {
 			streamEventType: "welcome",
 			worktreeBranch: welcomeOptions?.worktreeBranch as string | undefined,
+			worktreePath,
 			timestamp: (parsed.timestamp as number) || Date.now(),
 		}
 	}
@@ -247,6 +269,59 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 		streamEventType: "kilocode",
 		payload: parsed as KilocodePayload,
 	}
+}
+
+function extractJsonObjects(line: string): Record<string, unknown>[] {
+	const objects: Record<string, unknown>[] = []
+	let depth = 0
+	let startIndex = -1
+	let inString = false
+	let isEscaped = false
+
+	for (let i = 0; i < line.length; i++) {
+		const ch = line[i]
+
+		if (isEscaped) {
+			isEscaped = false
+			continue
+		}
+
+		if (inString) {
+			if (ch === "\\") {
+				isEscaped = true
+			} else if (ch === '"') {
+				inString = false
+			}
+			continue
+		}
+
+		if (ch === '"') {
+			inString = true
+			continue
+		}
+
+		if (ch === "{") {
+			if (depth === 0) {
+				startIndex = i
+			}
+			depth += 1
+			continue
+		}
+
+		if (ch === "}") {
+			depth -= 1
+			if (depth === 0 && startIndex !== -1) {
+				const candidate = line.slice(startIndex, i + 1)
+				const parsed = tryParseJson(candidate)
+				if (parsed) {
+					objects.push(parsed)
+				}
+				startIndex = -1
+			}
+		}
+	}
+
+	return objects
 }
 
 function createOutputEvent(content: string): OutputStreamEvent {

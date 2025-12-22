@@ -5,6 +5,7 @@ import { t } from "i18next"
 import { AgentRegistry } from "./AgentRegistry"
 import { renameMapKey } from "./mapUtils"
 import {
+	buildParallelModeWorktreePath,
 	parseParallelModeBranch,
 	parseParallelModeWorktreePath,
 	isParallelModeCompletionMessage,
@@ -37,6 +38,7 @@ import type { ClineProvider } from "../../webview/ClineProvider"
 import { extractSessionConfigs, MAX_VERSION_COUNT } from "./multiVersionUtils"
 import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/SessionManager"
 import { WorkspaceGitService } from "./WorkspaceGitService"
+import { SessionTerminalManager } from "./SessionTerminalManager"
 
 /**
  * AgentManagerProvider
@@ -53,6 +55,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private remoteSessionService: RemoteSessionService
 	private processHandler: CliProcessHandler
 	private eventProcessor: KilocodeEventProcessor
+	private terminalManager: SessionTerminalManager
 	private sessionLauncher: CliSessionLauncher
 	private sessionMessages: Map<string, ClineMessage[]> = new Map()
 	// Track first api_req_started per session to filter user-input echoes
@@ -72,6 +75,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	) {
 		this.registry = new AgentRegistry()
 		this.remoteSessionService = new RemoteSessionService({ outputChannel })
+		this.terminalManager = new SessionTerminalManager(this.registry, this.outputChannel)
 
 		// Initialize session launcher with pre-warming
 		// Pre-warming starts slow lookups (CLI: 500-2000ms, git: 50-100ms) immediately
@@ -295,6 +299,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 					break
 				case "agentManager.refreshSessionMessages":
 					void this.refreshSessionMessages(message.sessionId as string)
+					break
+				case "agentManager.showTerminal":
+					this.terminalManager.showTerminal(message.sessionId as string)
 					break
 				case "agentManager.sessionShare":
 					SessionManager.init()
@@ -640,16 +647,41 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Handle welcome event from CLI - extracts worktree branch for parallel mode sessions
+	 * Handle welcome event from CLI - extracts worktree branch and path for parallel mode sessions
 	 */
 	private handleWelcomeEvent(sessionId: string, event: WelcomeStreamEvent): void {
+		let updated = false
+		const session = this.registry.getSession(sessionId)
+		const existingWorktreePath = session?.parallelMode?.worktreePath
+
 		if (event.worktreeBranch) {
 			this.outputChannel.appendLine(
 				`[AgentManager] Session ${sessionId} worktree branch: ${event.worktreeBranch}`,
 			)
 			if (this.registry.updateParallelModeInfo(sessionId, { branch: event.worktreeBranch })) {
-				this.postStateToWebview()
+				updated = true
 			}
+		}
+
+		if (event.worktreePath) {
+			this.outputChannel.appendLine(`[AgentManager] Session ${sessionId} worktree path: ${event.worktreePath}`)
+			if (this.registry.updateParallelModeInfo(sessionId, { worktreePath: event.worktreePath })) {
+				updated = true
+			}
+		}
+
+		if (!event.worktreePath && event.worktreeBranch && !existingWorktreePath) {
+			const derivedWorktreePath = buildParallelModeWorktreePath(event.worktreeBranch)
+			this.outputChannel.appendLine(
+				`[AgentManager] Session ${sessionId} derived worktree path: ${derivedWorktreePath}`,
+			)
+			if (this.registry.updateParallelModeInfo(sessionId, { worktreePath: derivedWorktreePath })) {
+				updated = true
+			}
+		}
+
+		if (updated) {
+			this.postStateToWebview()
 		}
 	}
 
@@ -669,6 +701,8 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.postStateToWebview()
 
 		if (!sessionId) return
+
+		this.terminalManager.showExistingTerminal(sessionId)
 
 		// Check if we have cached messages to send immediately
 		const cachedMessages = this.sessionMessages.get(sessionId)
@@ -1136,6 +1170,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 	public dispose(): void {
 		this.processHandler.dispose()
+		this.terminalManager.dispose()
 		this.sessionMessages.clear()
 		this.firstApiReqStarted.clear()
 		this.sessionLauncher.clearPrewarm()

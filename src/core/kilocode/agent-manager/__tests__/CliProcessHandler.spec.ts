@@ -12,6 +12,11 @@ vi.mock("node:child_process", () => ({
 	spawn: vi.fn(),
 }))
 
+vi.mock("../telemetry", () => ({
+	captureAgentManagerLoginIssue: vi.fn(),
+	getPlatformDiagnostics: vi.fn(() => ({ platform: "darwin", shell: "bash" })),
+}))
+
 /**
  * Creates a mock ChildProcess with EventEmitter capabilities
  */
@@ -504,18 +509,19 @@ describe("CliProcessHandler", () => {
 			expect(registry.getSessions()).toHaveLength(0)
 		})
 
-		it("captures worktree branch from welcome event and applies it on session creation", () => {
+		it("captures worktree branch and path from welcome event and applies them on session creation", () => {
 			const onCliEvent = vi.fn()
 			// Start in parallel mode
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
 
 			// First, emit welcome event with worktree branch (this arrives before session_created)
 			const welcomeEvent =
-				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}}}\n'
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
 			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
 
 			// Verify branch was captured in pending process
 			expect((handler as any).pendingProcess.worktreeBranch).toBe("feature/test-branch")
+			expect((handler as any).pendingProcess.worktreePath).toBe("/tmp/worktree-path")
 
 			// Then emit session_created
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
@@ -524,6 +530,24 @@ describe("CliProcessHandler", () => {
 			const session = registry.getSession("session-1")
 			expect(session?.parallelMode?.enabled).toBe(true)
 			expect(session?.parallelMode?.branch).toBe("feature/test-branch")
+			expect(session?.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
+		})
+
+		it("derives worktree path from branch when welcome event has no workspace", () => {
+			const onCliEvent = vi.fn()
+			const branch = "feature/test-branch"
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent = `{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"${branch}"}}}\n`
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const expectedPath = path.join(os.tmpdir(), `kilocode-worktree-${branch}`)
+			expect((handler as any).pendingProcess.worktreePath).toBe(expectedPath)
+
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			const session = registry.getSession("session-1")
+			expect(session?.parallelMode?.worktreePath).toBe(expectedPath)
 		})
 
 		it("does not apply worktree branch when not in parallel mode", () => {
@@ -1006,6 +1030,30 @@ describe("CliProcessHandler", () => {
 				}),
 			)
 		})
+
+		it("emits spawn error telemetry when process fails during pending state", async () => {
+			const telemetry = await import("../telemetry")
+
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode.cmd", "/workspace", "test prompt", undefined, onCliEvent)
+
+			mockProcess.emit("error", new Error("ENOENT"))
+
+			expect(telemetry.getPlatformDiagnostics).toHaveBeenCalled()
+			expect(telemetry.captureAgentManagerLoginIssue).toHaveBeenCalledWith(
+				expect.objectContaining({
+					issueType: "cli_spawn_error",
+					platform: "darwin",
+					shell: "bash",
+					errorMessage: "ENOENT",
+					cliPath: "/path/to/kilocode.cmd",
+					cliPathExtension: "cmd",
+				}),
+			)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith(
+				expect.objectContaining({ type: "spawn_error", message: "ENOENT" }),
+			)
+		})
 	})
 
 	describe("pending session timeout", () => {
@@ -1301,6 +1349,50 @@ describe("CliProcessHandler", () => {
 			expect(sessions[0].sessionId).toBe("real-session-123")
 			expect(registry.getSession(provisionalId)).toBeUndefined()
 			expect(registry.getSession("real-session-123")).toBeDefined()
+		})
+
+		it("applies worktree info to provisional session from welcome event", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const kilocodeEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "say", say: "user_feedback", content: "test prompt" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(kilocodeEvent + "\n"))
+
+			const provisionalSession = registry.getSessions()[0]
+			expect(provisionalSession.sessionId).toMatch(/^provisional-/)
+			expect(provisionalSession.parallelMode?.branch).toBe("feature/test-branch")
+			expect(provisionalSession.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
+		})
+
+		it("preserves worktree path when provisional session is upgraded", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const kilocodeEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "say", say: "user_feedback", content: "test prompt" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(kilocodeEvent + "\n"))
+
+			const provisionalId = registry.getSessions()[0].sessionId
+			expect(provisionalId).toMatch(/^provisional-/)
+
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"real-session-123"}\n'))
+
+			const session = registry.getSession("real-session-123")
+			expect(session?.parallelMode?.branch).toBe("feature/test-branch")
+			expect(session?.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
 		})
 
 		it("calls onSessionRenamed callback when provisional session is upgraded", () => {

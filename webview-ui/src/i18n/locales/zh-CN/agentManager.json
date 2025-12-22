@@ -54,7 +54,8 @@
 		"otherBranches": "其他 Branch",
 		"branchPickerTooltip": "切换基础 Branch",
 		"noBranches": "未找到 Branch",
-		"noMatchingBranches": "没有匹配的 Branch"
+		"noMatchingBranches": "没有匹配的 Branch",
+		"openTerminal": "打开终端"
 	},
 	"messages": {
 		"waiting": "等待代理响应...",

@@ -21,7 +21,13 @@ describe("AgentManagerProvider CLI spawning", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
 	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
-	let mockWindow: { showErrorMessage: Mock; showWarningMessage: Mock; ViewColumn: { One: number } }
+	let mockWindow: {
+		showErrorMessage: Mock
+		showWarningMessage: Mock
+		ViewColumn: { One: number }
+		onDidCloseTerminal: Mock
+		createTerminal: Mock
+	}
 
 	beforeEach(async () => {
 		vi.resetModules()
@@ -35,6 +41,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 			showErrorMessage: vi.fn().mockResolvedValue(undefined),
 			showWarningMessage: vi.fn().mockResolvedValue(undefined),
 			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
 		}
 
 		vi.doMock("vscode", () => ({
@@ -124,6 +132,19 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions).toHaveLength(1)
 		expect(sessions[0].sessionId).toBe("cli-session-123")
+	})
+
+	it("shows existing terminal when selecting a session", () => {
+		const sessionId = "session-terminal"
+		const registry = (provider as any).registry
+		registry.createSession(sessionId, "prompt")
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		const showExistingTerminal = vi.spyOn((provider as any).terminalManager, "showExistingTerminal")
+
+		;(provider as any).selectSession(sessionId)
+
+		expect(showExistingTerminal).toHaveBeenCalledWith(sessionId)
 	})
 
 	it("adds metadata text for tool requests and skips non chat events", async () => {
@@ -487,7 +508,12 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		vi.resetModules()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
-		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockWindow = {
+			showErrorMessage: () => undefined,
+			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+		}
 		const mockProvider = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}
@@ -729,7 +755,12 @@ describe("AgentManagerProvider telemetry", () => {
 		vi.clearAllMocks()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
-		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockWindow = {
+			showErrorMessage: () => undefined,
+			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+		}
 		const mockProvider = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}

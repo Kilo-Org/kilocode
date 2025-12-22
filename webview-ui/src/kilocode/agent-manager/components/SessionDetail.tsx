@@ -18,7 +18,18 @@ import { ChatInput } from "./ChatInput"
 import { BranchPicker } from "./BranchPicker"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
-import { Loader2, SendHorizontal, GitBranch, Folder, ChevronDown, AlertCircle, Zap, Layers, X } from "lucide-react"
+import {
+	Loader2,
+	SendHorizontal,
+	GitBranch,
+	Folder,
+	ChevronDown,
+	AlertCircle,
+	Zap,
+	Layers,
+	X,
+	Terminal,
+} from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -71,6 +82,7 @@ export function SessionDetail() {
 	const showSpinner = sessionUiState?.showSpinner ?? false
 	const isWorktree = selectedSession.parallelMode?.enabled
 	const branchName = selectedSession.parallelMode?.branch
+	const isProvisionalSession = selectedSession.sessionId.startsWith("provisional-")
 
 	// Determine if "Finish to Branch" button should be shown
 	// Simplified logic: show when session is a worktree session and running
@@ -113,6 +125,22 @@ export function SessionDetail() {
 							</div>
 						)}
 					</div>
+				</div>
+				<div className="am-header-actions">
+					{!isProvisionalSession && (
+						<button
+							className="am-icon-btn"
+							onClick={() => {
+								vscode.postMessage({
+									type: "agentManager.showTerminal",
+									sessionId: selectedSession.sessionId,
+								})
+							}}
+							aria-label={t("sessionDetail.openTerminal")}
+							title={t("sessionDetail.openTerminal")}>
+							<Terminal size={14} />
+						</button>
+					)}
 				</div>
 			</div>
 

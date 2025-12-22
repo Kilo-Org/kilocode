@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
+	buildParallelModeWorktreePath,
 	parseParallelModeBranch,
 	parseParallelModeWorktreePath,
 	isParallelModeCompletionMessage,
@@ -110,6 +111,14 @@ describe("parallelModeParser", () => {
 		it("returns undefined for incomplete completion messages", () => {
 			expect(parseParallelModeCompletionBranch("Parallel mode complete")).toBeUndefined()
 			expect(parseParallelModeCompletionBranch("Parallel mode complete!")).toBeUndefined()
+		})
+	})
+
+	describe("buildParallelModeWorktreePath", () => {
+		it("uses the OS temp directory with the kilocode worktree prefix", () => {
+			const branch = "feature-123"
+			const result = buildParallelModeWorktreePath(branch)
+			expect(result).toContain(`kilocode-worktree-${branch}`)
 		})
 	})
 })

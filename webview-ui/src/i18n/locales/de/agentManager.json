@@ -54,7 +54,8 @@
 		"otherBranches": "Andere Branches",
 		"branchPickerTooltip": "Basis-Branch wechseln",
 		"noBranches": "Keine Branches gefunden",
-		"noMatchingBranches": "Keine Branches entsprechen deiner Suche"
+		"noMatchingBranches": "Keine Branches entsprechen deiner Suche",
+		"openTerminal": "Terminal öffnen"
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",

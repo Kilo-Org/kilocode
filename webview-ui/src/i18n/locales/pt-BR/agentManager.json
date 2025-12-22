@@ -54,7 +54,8 @@
 		"otherBranches": "Outros branches",
 		"branchPickerTooltip": "Mudar branch base",
 		"noBranches": "Nenhum branch encontrado",
-		"noMatchingBranches": "Nenhum branch corresponde à sua pesquisa"
+		"noMatchingBranches": "Nenhum branch corresponde à sua pesquisa",
+		"openTerminal": "Abrir terminal"
 	},
 	"messages": {
 		"waiting": "Aguardando resposta do agente...",

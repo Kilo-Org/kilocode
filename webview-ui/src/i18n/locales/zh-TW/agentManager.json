@@ -54,7 +54,8 @@
 		"otherBranches": "其他 Branch",
 		"branchPickerTooltip": "切換基礎 Branch",
 		"noBranches": "找不到 Branch",
-		"noMatchingBranches": "沒有符合的 Branch"
+		"noMatchingBranches": "沒有符合的 Branch",
+		"openTerminal": "開啟終端機"
 	},
 	"messages": {
 		"waiting": "等待代理回應...",

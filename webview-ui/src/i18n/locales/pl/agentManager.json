@@ -56,7 +56,8 @@
 		"otherBranches": "Inne gałęzie",
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
-		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania"
+		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
+		"openTerminal": "Otwórz terminal"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",

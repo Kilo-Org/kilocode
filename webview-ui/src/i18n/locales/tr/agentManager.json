@@ -54,7 +54,8 @@
 		"otherBranches": "Diğer dallar",
 		"branchPickerTooltip": "Temel dalı değiştir",
 		"noBranches": "Dal bulunamadı",
-		"noMatchingBranches": "Aramanla eşleşen dal yok"
+		"noMatchingBranches": "Aramanla eşleşen dal yok",
+		"openTerminal": "Terminali aç"
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

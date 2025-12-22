@@ -54,7 +54,8 @@
 		"otherBranches": "สาขาอื่นๆ",
 		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
 		"noBranches": "ไม่พบสาขา",
-		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ"
+		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
+		"openTerminal": "เปิดเทอร์มินัล"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
