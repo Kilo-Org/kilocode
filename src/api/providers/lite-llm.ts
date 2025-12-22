@@ -12,7 +12,6 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { RouterProvider } from "./router-provider"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 /**
  * LiteLLM provider handler
@@ -153,12 +152,9 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 
 			let lastUsage
 
-			const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 			for await (const chunk of completion) {
 				const delta = chunk.choices[0]?.delta
 				const usage = chunk.usage as LiteLLMUsage
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					yield { type: "text", text: delta.content }
@@ -236,13 +232,12 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 				requestOptions.temperature = this.options.modelTemperature ?? 0
 			}
 
-			// kilocode_change start
+			// GPT-5 models require max_completion_tokens instead of the deprecated max_tokens parameter
 			if (isGPT5Model && info.maxTokens) {
 				requestOptions.max_completion_tokens = info.maxTokens
 			} else if (info.maxTokens) {
 				requestOptions.max_tokens = info.maxTokens
 			}
-			// kilocode_change end
 
 			const response = await this.client.chat.completions.create(requestOptions)
 			return response.choices[0]?.message.content || ""

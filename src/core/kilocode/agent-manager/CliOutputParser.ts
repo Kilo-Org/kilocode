@@ -71,6 +71,13 @@ export interface SessionCreatedStreamEvent {
 	timestamp: number
 }
 
+export interface SessionTitleGeneratedStreamEvent {
+	streamEventType: "session_title_generated"
+	sessionId: string
+	title: string
+	timestamp: number
+}
+
 export interface WelcomeStreamEvent {
 	streamEventType: "welcome"
 	worktreeBranch?: string
@@ -86,6 +93,7 @@ export type StreamEvent =
 	| CompleteStreamEvent
 	| InterruptedStreamEvent
 	| SessionCreatedStreamEvent
+	| SessionTitleGeneratedStreamEvent
 	| WelcomeStreamEvent
 
 /**
@@ -239,6 +247,16 @@ function toStreamEvent(parsed: Record<string, unknown>): StreamEvent | null {
 		return {
 			streamEventType: "session_created",
 			sessionId: parsed.sessionId as string,
+			timestamp: (parsed.timestamp as number) || Date.now(),
+		}
+	}
+
+	// Detect session_title_generated event from CLI (format: { event: "session_title_generated", sessionId: "...", title: "...", timestamp: ... })
+	if (parsed.event === "session_title_generated" && typeof parsed.sessionId === "string" && typeof parsed.title === "string") {
+		return {
+			streamEventType: "session_title_generated",
+			sessionId: parsed.sessionId as string,
+			title: parsed.title as string,
 			timestamp: (parsed.timestamp as number) || Date.now(),
 		}
 	}

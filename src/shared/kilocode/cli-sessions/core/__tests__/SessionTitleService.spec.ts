@@ -215,16 +215,36 @@ describe("SessionTitleService", () => {
 
 		it("updates state manager with timestamp", async () => {
 			await service.updateTitle("session-123", "Test title")
-
+	
 			expect(mockStateManager.updateTimestamp).toHaveBeenCalledWith("session-123", "2023-01-01T10:00:00Z")
 		})
-
+	
 		it("logs success message", async () => {
 			await service.updateTitle("session-123", "Test title")
-
+	
 			expect(mockLogger.info).toHaveBeenCalledWith("Session title updated successfully", "SessionTitleService", {
 				sessionId: "session-123",
 				title: "Test title",
+			})
+		})
+	
+		it("emits session_title_generated event", async () => {
+			const onSessionTitleGenerated = vi.fn()
+			const serviceWithCallback = new SessionTitleService({
+				sessionClient: mockSessionClient as any,
+				stateManager: mockStateManager as any,
+				extensionMessenger: mockExtensionMessenger as any,
+				logger: mockLogger as any,
+				onSessionTitleGenerated,
+			})
+	
+			await serviceWithCallback.updateTitle("session-123", "Test title")
+	
+			expect(onSessionTitleGenerated).toHaveBeenCalledWith({
+				sessionId: "session-123",
+				title: "Test title",
+				timestamp: expect.any(Number),
+				event: "session_title_generated",
 			})
 		})
 	})

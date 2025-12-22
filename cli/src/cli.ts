@@ -169,6 +169,11 @@ export class CLI {
 							console.log(JSON.stringify(message))
 						}
 					},
+					onSessionTitleGenerated: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
 					platform: "cli",
 					getOrganizationId: async () => {
 						const state = this.service?.getState()

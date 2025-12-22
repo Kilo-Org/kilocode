@@ -19,13 +19,18 @@ import { GitStateService } from "./GitStateService.js"
 import { SessionStateManager } from "./SessionStateManager.js"
 import { SyncQueue } from "./SyncQueue.js"
 import { TokenValidationService } from "./TokenValidationService.js"
-import { SessionTitleService } from "./SessionTitleService.js"
+import { SessionTitleService, type SessionTitleGeneratedMessage } from "./SessionTitleService.js"
 import { SessionLifecycleService } from "./SessionLifecycleService.js"
-import { SessionSyncService, type SessionCreatedMessage, type SessionSyncedMessage } from "./SessionSyncService.js"
+import {
+	SessionSyncService,
+	type SessionCreatedMessage,
+	type SessionSyncedMessage,
+} from "./SessionSyncService.js"
 import { LOG_SOURCES } from "../config.js"
 
 // Re-export types for external consumers
 export type { SessionCreatedMessage, SessionSyncedMessage } from "./SessionSyncService.js"
+export type { SessionTitleGeneratedMessage } from "./SessionTitleService.js"
 export type {
 	ListSessionsInput,
 	ListSessionsOutput,
@@ -45,6 +50,7 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 	onSessionCreated: (message: SessionCreatedMessage) => void
 	onSessionRestored: () => void
 	onSessionSynced: (message: SessionSyncedMessage) => void
+	onSessionTitleGenerated: (message: SessionTitleGeneratedMessage) => void
 	getOrganizationId: (taskId: string) => Promise<string | undefined>
 	getMode: (taskId: string) => Promise<string | undefined>
 	getModel: (taskId: string) => Promise<string | undefined>
@@ -126,6 +132,7 @@ export class SessionManager {
 			stateManager: this.stateManager,
 			extensionMessenger: dependencies.extensionMessenger,
 			logger: this.logger,
+			onSessionTitleGenerated: dependencies.onSessionTitleGenerated,
 		})
 		this.gitStateService = new GitStateService({
 			logger: this.logger,
