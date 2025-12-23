@@ -160,11 +160,13 @@ export function MessageList({ sessionId }: MessageListProps) {
 
 			// Regular message
 			const msg = item as ClineMessage
+			// isLastCombinedMessage: true for the last regular message, excluding queued user messages
+			const isLastCombinedMessage = index === combinedMessages.length - 1
 			return (
 				<MessageItem
 					key={msg.ts || index}
 					message={msg}
-					isLast={index === combinedMessages.length - 1}
+					isLast={isLastCombinedMessage}
 					commandExecutionByTs={commandExecutionByTs}
 					onSuggestionClick={handleSuggestionClick}
 					onCopyToInput={handleCopyToInput}
