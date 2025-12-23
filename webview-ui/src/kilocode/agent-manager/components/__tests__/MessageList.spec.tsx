@@ -29,6 +29,17 @@ vi.mock("../../../../components/ui", () => ({
 	StandardTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+// Mock react-virtuoso
+vi.mock("react-virtuoso", () => ({
+	Virtuoso: ({ data, itemContent }: any) => (
+		<div data-testid="virtuoso-list">
+			{data.map((item: any, index: number) => (
+				<div key={index}>{itemContent(index, item)}</div>
+			))}
+		</div>
+	),
+}))
+
 describe("MessageList", () => {
 	const sessionId = "test-session"
 
