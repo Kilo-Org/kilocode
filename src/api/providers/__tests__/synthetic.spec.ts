@@ -103,6 +103,28 @@ describe("SyntheticHandler", () => {
 		expect(model.info).toEqual(expect.objectContaining(syntheticModels[testModelId]))
 	})
 
+	it("should return GLM-4.7 model with correct configuration", () => {
+		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.7"
+		const handlerWithModel = new SyntheticHandler({
+			apiModelId: testModelId,
+			syntheticApiKey: "test-synthetic-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 128000,
+				contextWindow: 128000,
+				supportsImages: false,
+				supportsPromptCache: true,
+				supportsReasoningBudget: true,
+				inputPrice: 0.55,
+				outputPrice: 2.19,
+				supportsNativeTools: true,
+			}),
+		)
+	})
+
 	it("should return GLM model with correct configuration", () => {
 		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 		const handlerWithModel = new SyntheticHandler({
