@@ -779,8 +779,8 @@ importers:
         specifier: ^1.1.12
         version: 1.1.12
       ollama:
-        specifier: ^0.5.17
-        version: 0.5.17
+        specifier: ^0.6.3
+        version: 0.6.3
       openai:
         specifier: ^5.12.2
         version: 5.12.2(ws@8.18.3)(zod@3.25.76)
@@ -1830,8 +1830,8 @@ importers:
         specifier: ^1.1.12
         version: 1.1.12
       ollama:
-        specifier: ^0.5.17
-        version: 0.5.17
+        specifier: ^0.6.3
+        version: 0.6.3
       openai:
         specifier: ^5.12.2
         version: 5.12.2(ws@8.18.3)(zod@3.25.61)
@@ -15352,8 +15352,8 @@ packages:
   obuf@1.1.2:
     resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
 
-  ollama@0.5.17:
-    resolution: {integrity: sha512-q5LmPtk6GLFouS+3aURIVl+qcAOPC4+Msmx7uBb3pd+fxI55WnGjmLZ0yijI/CYy79x0QPGx3BwC3u5zv9fBvQ==}
+  ollama@0.6.3:
+    resolution: {integrity: sha512-KEWEhIqE5wtfzEIZbDCLH51VFZ6Z3ZSa6sIOg/E/tBV8S51flyqBOXi+bRxlOYKDf8i327zG9eSTb8IJxvm3Zg==}
 
   on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
@@ -36733,7 +36733,7 @@ snapshots:
 
   obuf@1.1.2: {}
 
-  ollama@0.5.17:
+  ollama@0.6.3:
     dependencies:
       whatwg-fetch: 3.6.20
 
