@@ -333,7 +333,7 @@ describe("MessageList", () => {
 					status: "queued" as const,
 					retryCount: 0,
 					maxRetries: 3,
-					createdAt: Date.now(),
+					timestamp: Date.now(),
 				},
 			])
 
@@ -371,7 +371,7 @@ describe("MessageList", () => {
 					status: "queued" as const,
 					retryCount: 0,
 					maxRetries: 3,
-					createdAt: Date.now(),
+					timestamp: Date.now(),
 				},
 				{
 					id: "queued-2",
@@ -380,7 +380,7 @@ describe("MessageList", () => {
 					status: "queued" as const,
 					retryCount: 0,
 					maxRetries: 3,
-					createdAt: Date.now(),
+					timestamp: Date.now(),
 				},
 			])
 
