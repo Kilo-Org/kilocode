@@ -380,8 +380,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 */
 	private waitForPendingSessionToClear(): Promise<void> {
 		return new Promise((resolve) => {
-			// Check immediately - if no pending session, resolve right away
-			if (!this.registry.pendingSession) {
+			const hasPending = () => !!this.registry.pendingSession || this.processHandler?.hasPendingProcess()
+
+			// Check immediately - if no pending session/process, resolve right away
+			if (!hasPending()) {
 				resolve()
 				return
 			}
@@ -391,7 +393,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 			// Poll until pending session clears
 			const checkInterval = setInterval(() => {
-				if (!this.registry.pendingSession) {
+				if (!hasPending()) {
 					clearInterval(checkInterval)
 					if (timeoutId) {
 						clearTimeout(timeoutId)

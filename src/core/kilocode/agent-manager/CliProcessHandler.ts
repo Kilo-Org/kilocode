@@ -353,6 +353,10 @@ export class CliProcessHandler {
 		return this.activeSessions.has(sessionId)
 	}
 
+	public hasPendingProcess(): boolean {
+		return this.pendingProcess !== null
+	}
+
 	/**
 	 * Write a JSON message to a session's stdin
 	 */
