@@ -473,6 +473,29 @@ export const updateAutoApprovalAtom = atom(
 )
 
 /**
+ * Replace the auto approval configuration (used by Agent Manager permission sync).
+ */
+export const setAutoApprovalConfigAtom = atom(null, async (get, set, autoApproval: AutoApprovalConfig) => {
+	const config = get(configAtom)
+
+	const updatedConfig = {
+		...config,
+		autoApproval,
+	}
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info("Auto approval configuration replaced", "ConfigAtoms")
+
+	// Import from config-sync to avoid circular dependency
+	const { syncConfigToExtensionEffectAtom } = await import("./config-sync.js")
+
+	// Trigger sync to extension after permission update
+	await set(syncConfigToExtensionEffectAtom)
+})
+
+/**
  * Action atom to update a specific auto approval setting
  */
 export const updateAutoApprovalSettingAtom = atom(

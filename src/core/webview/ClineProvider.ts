@@ -2339,7 +2339,7 @@ ${prompt}
 			enhancementApiConfigId,
 			commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId, // kilocode_change
-			autoApprovalEnabled: autoApprovalEnabled ?? true,
+			autoApprovalEnabled: autoApprovalEnabled ?? (process.env.KILO_CLI_MODE === "true" ? false : true),
 			customModes,
 			experiments: experiments ?? experimentDefault,
 			mcpServers: this.mcpHub?.getAllServers() ?? [],
@@ -2641,7 +2641,7 @@ ${prompt}
 			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
-			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
+			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? (process.env.KILO_CLI_MODE === "true" ? false : true),
 			customModes,
 			maxOpenTabsContext: stateValues.maxOpenTabsContext ?? 20,
 			maxWorkspaceFiles: stateValues.maxWorkspaceFiles ?? 200,

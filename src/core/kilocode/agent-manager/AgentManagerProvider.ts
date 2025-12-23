@@ -19,6 +19,7 @@ import { extractRawText, tryParsePayloadJson } from "./askErrorParser"
 import { RemoteSessionService } from "./RemoteSessionService"
 import { KilocodeEventProcessor } from "./KilocodeEventProcessor"
 import type { RemoteSession } from "./types"
+import { extractAutoApprovalConfig } from "./autoApprovalEnv"
 import { getUri } from "../../webview/getUri"
 import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
@@ -67,6 +68,10 @@ export class AgentManagerProvider implements vscode.Disposable {
 	private processStartTimes: Map<string, number> = new Map()
 	// Track currently sending message per session (for one-at-a-time constraint)
 	private sendingMessageMap: Map<string, string> = new Map()
+
+	private permissionSyncIntervalId: NodeJS.Timeout | undefined
+	private permissionSyncInFlight = false
+	private lastAutoApprovalConfigJson: string | undefined
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -201,6 +206,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 		this.panel.onDidDispose(
 			() => {
 				this.panel = undefined
+				this.stopPermissionSync()
 				this.stopAllAgents()
 			},
 			null,
@@ -211,6 +217,77 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		// Track Agent Manager panel opened
 		captureAgentManagerOpened()
+
+		this.startPermissionSync()
+	}
+
+	private startPermissionSync(): void {
+		if (this.permissionSyncIntervalId) {
+			return
+		}
+
+		// Polling is intentionally simple for the MVP and avoids wiring into internal state stores.
+		// We only broadcast when the derived config changes.
+		this.permissionSyncIntervalId = setInterval(() => {
+			void this.syncPermissionConfigToRunningSessions()
+		}, 1000)
+
+		void this.syncPermissionConfigToRunningSessions()
+	}
+
+	private stopPermissionSync(): void {
+		if (!this.permissionSyncIntervalId) {
+			return
+		}
+
+		clearInterval(this.permissionSyncIntervalId)
+		this.permissionSyncIntervalId = undefined
+		this.permissionSyncInFlight = false
+	}
+
+	private async syncPermissionConfigToRunningSessions(): Promise<void> {
+		if (this.permissionSyncInFlight) {
+			return
+		}
+
+		const runningSessionIds = this.registry
+			.getSessions()
+			.map((s) => s.sessionId)
+			.filter((sessionId) => this.processHandler.hasStdin(sessionId))
+
+		if (runningSessionIds.length === 0) {
+			return
+		}
+
+		this.permissionSyncInFlight = true
+
+		try {
+			const state = await this.provider.getState()
+			const autoApprovalConfig = extractAutoApprovalConfig(state)
+			const configJson = JSON.stringify(autoApprovalConfig)
+
+			if (configJson === this.lastAutoApprovalConfigJson) {
+				return
+			}
+
+			this.lastAutoApprovalConfigJson = configJson
+
+			const message = { type: "permissionConfigUpdate", config: autoApprovalConfig }
+
+			await Promise.all(
+				runningSessionIds.map(async (sessionId) => {
+					try {
+						// Don't fail the whole broadcast if one session is shutting down.
+						// safeWriteToStdin already surfaces errors to the user.
+						await this.safeWriteToStdin(sessionId, message, "permission-config-update")
+					} catch {
+						// Continue broadcasting to other sessions
+					}
+				}),
+			)
+		} finally {
+			this.permissionSyncInFlight = false
+		}
 	}
 
 	/** Rename session key in all session-keyed maps when provisional session is upgraded. */
@@ -485,6 +562,16 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	/**
+	 * Get auto-approval configuration from extension state for CLI processes.
+	 * This enables Agent Manager sessions to respect the same permission settings
+	 * as the main sidebar.
+	 */
+	private async getAutoApprovalConfigForCli() {
+		const state = await this.provider.getState()
+		return extractAutoApprovalConfig(state)
+	}
+
+	/**
 	 * Common helper to spawn a CLI process with standard setup.
 	 * Handles CLI path lookup, workspace folder validation, API config, and event callback wiring.
 	 * @returns true if process was spawned, false if setup failed
@@ -527,11 +614,33 @@ export class AgentManagerProvider implements vscode.Disposable {
 			)
 		}
 
+		// Get permission settings from extension state
+		// This enables Agent Manager sessions to respect the same permission settings as the sidebar
+		const state = await this.provider.getState()
+		const autoApprovalConfig = extractAutoApprovalConfig(state)
+
+		// Check if YOLO mode is enabled (full auto-approval of everything)
+		const yoloMode = (state as { yoloMode?: boolean }).yoloMode ?? false
+
+		// Debug: Log extracted permission settings
+		this.outputChannel.appendLine(
+			`[AgentManager] Permission settings from state: autoApprovalEnabled=${state.autoApprovalEnabled}, yoloMode=${yoloMode}`,
+		)
+		this.outputChannel.appendLine(
+			`[AgentManager] Extracted config: enabled=${autoApprovalConfig.enabled}, execute.enabled=${autoApprovalConfig.execute?.enabled}`,
+		)
+
 		this.processHandler.spawnProcess(
 			cliDiscovery.cliPath,
 			workspaceFolder,
 			prompt,
-			{ ...options, apiConfiguration, shellPath: cliDiscovery.shellPath },
+			{
+				...options,
+				apiConfiguration,
+				shellPath: cliDiscovery.shellPath,
+				autoApprovalConfig,
+				yolo: yoloMode,
+			},
 			(sid, event) => {
 				if (!this.processStartTimes.has(sid)) {
 					this.processStartTimes.set(sid, processStartTime)
@@ -1198,6 +1307,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 	}
 
 	public dispose(): void {
+		this.stopPermissionSync()
 		this.processHandler.dispose()
 		this.terminalManager.dispose()
 		this.sessionMessages.clear()

@@ -2,10 +2,12 @@ import type { CLIConfig, AutoApprovalConfig } from "./types.js"
 
 /**
  * Default auto approval configuration
- * Matches the defaults from the webview settings
+ * Safe defaults: auto-approval is disabled by default.
+ * When running via Agent Manager, the extension passes its config via KILO_AUTO_APPROVAL_JSON env var.
+ * When running standalone CLI, user must explicitly enable auto-approval in config.
  */
 export const DEFAULT_AUTO_APPROVAL: AutoApprovalConfig = {
-	enabled: true,
+	enabled: false,
 	read: {
 		enabled: true,
 		outside: false,

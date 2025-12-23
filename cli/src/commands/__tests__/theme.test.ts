@@ -97,162 +97,20 @@ describe("/theme command", () => {
 		refreshTerminalMock = vi.fn().mockResolvedValue(undefined)
 
 		// Create mock config
-		mockConfig = {
-			version: "1.0.0",
-			mode: "code",
-			telemetry: true,
-			provider: "test-provider",
-			providers: [],
-			customThemes: {
-				"custom-theme": mockTheme,
-			},
-		}
-
-		// Mock config loading
-		vi.doMock("../../config/persistence.js", () => ({
-			loadConfig: vi.fn().mockResolvedValue({
-				config: {
-					customThemes: {
-						"custom-theme": mockTheme,
-					},
-				},
-			}),
-		}))
-
-		// Mock the constants/themes/index.js functions
-		vi.doMock("../../constants/themes/index.js", () => ({
-			getAvailableThemes: vi.fn(() => [
-				"alpha",
-				"dark",
-				"dracula",
-				"github-dark",
-				"light",
-				"github-light",
-				"custom-theme",
-			]),
-			getThemeById: vi.fn((id: string) => {
-				const themes: Record<string, Theme> = {
-					dark: {
-						id: "dark",
-						name: "Dark",
-						type: "dark",
-						brand: { primary: "#3b82f6", secondary: "#1d4ed8" },
-						semantic: {
-							success: "#4ade80",
-							error: "#f87171",
-							warning: "#fbbf24",
-							info: "#60a5fa",
-							neutral: "#6b7280",
-						},
-						interactive: {
-							prompt: "#3b82f6",
-							selection: "#1e40af",
-							hover: "#2563eb",
-							disabled: "#9ca3af",
-							focus: "#1d4ed8",
-						},
-						messages: { user: "#10b981", assistant: "#8b5cf6", system: "#f59e0b", error: "#ef4444" },
-						actions: { approve: "#10b981", reject: "#ef4444", cancel: "#6b7280", pending: "#f59e0b" },
-						code: {
-							addition: "#10b981",
-							deletion: "#ef4444",
-							modification: "#f59e0b",
-							context: "#6b7280",
-							lineNumber: "#9ca3af",
-						},
-						ui: {
-							border: { default: "#374151", active: "#3b82f6", warning: "#f59e0b", error: "#ef4444" },
-							text: { primary: "#f9fafb", secondary: "#d1d5db", dimmed: "#9ca3af", highlight: "#fbbf24" },
-							background: { default: "#111827", elevated: "#1f2937" },
-						},
-						status: { online: "#10b981", offline: "#6b7280", busy: "#f59e0b", idle: "#94a3b8" },
-					},
-					light: {
-						id: "light",
-						name: "Light",
-						type: "light",
-						brand: { primary: "#3b82f6", secondary: "#1d4ed8" },
-						semantic: {
-							success: "#4ade80",
-							error: "#f87171",
-							warning: "#fbbf24",
-							info: "#60a5fa",
-							neutral: "#6b7280",
-						},
-						interactive: {
-							prompt: "#3b82f6",
-							selection: "#1e40af",
-							hover: "#2563eb",
-							disabled: "#9ca3af",
-							focus: "#1d4ed8",
-						},
-						messages: { user: "#10b981", assistant: "#8b5cf6", system: "#f59e0b", error: "#ef4444" },
-						actions: { approve: "#10b981", reject: "#ef4444", cancel: "#6b7280", pending: "#f59e0b" },
-						code: {
-							addition: "#10b981",
-							deletion: "#ef4444",
-							modification: "#f59e0b",
-							context: "#6b7280",
-							lineNumber: "#9ca3af",
-						},
-						ui: {
-							border: { default: "#e5e7eb", active: "#3b82f6", warning: "#f59e0b", error: "#ef4444" },
-							text: { primary: "#111827", secondary: "#6b7280", dimmed: "#9ca3af", highlight: "#fbbf24" },
-							background: { default: "#ffffff", elevated: "#f9fafb" },
-						},
-						status: { online: "#10b981", offline: "#6b7280", busy: "#f59e0b", idle: "#94a3b8" },
-					},
+			mockConfig = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "test-provider",
+				providers: [],
+				customThemes: {
 					"custom-theme": mockTheme,
-				}
-				return (
-					themes[id] || {
-						id: "unknown",
-						name: "Unknown Theme",
-						type: "dark",
-						brand: { primary: "#000000", secondary: "#000000" },
-						semantic: {
-							success: "#000000",
-							error: "#000000",
-							warning: "#000000",
-							info: "#000000",
-							neutral: "#000000",
-						},
-						interactive: {
-							prompt: "#000000",
-							selection: "#000000",
-							hover: "#000000",
-							disabled: "#000000",
-							focus: "#000000",
-						},
-						messages: { user: "#000000", assistant: "#000000", system: "#000000", error: "#000000" },
-						actions: { approve: "#000000", reject: "#000000", cancel: "#000000", pending: "#000000" },
-						code: {
-							addition: "#000000",
-							deletion: "#000000",
-							modification: "#000000",
-							context: "#000000",
-							lineNumber: "#000000",
-						},
-						ui: {
-							border: { default: "#000000", active: "#000000", warning: "#000000", error: "#000000" },
-							text: { primary: "#000000", secondary: "#000000", dimmed: "#000000", highlight: "#000000" },
-							background: { default: "#000000", elevated: "#000000" },
-						},
-						status: { online: "#000000", offline: "#000000", busy: "#000000", idle: "#000000" },
-					}
-				)
-			}),
-			isValidThemeId: vi.fn(() => true),
-		}))
+				},
+			}
 
-		// Mock getBuiltinThemeIds
-		vi.doMock("../../constants/themes/custom.js", () => ({
-			getBuiltinThemeIds: vi.fn(() => ["alpha", "dark", "dracula", "github-dark", "light", "github-light"]),
-		}))
-
-		mockContext = createMockContext({
-			input: "/theme",
-			config: mockConfig,
+			mockContext = createMockContext({
+				input: "/theme",
+				config: mockConfig,
 			addMessage: addMessageMock,
 			setTheme: setThemeMock,
 			refreshTerminal: refreshTerminalMock,

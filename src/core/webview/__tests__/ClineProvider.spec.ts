@@ -498,19 +498,39 @@ describe("ClineProvider", () => {
 		})
 	})
 
-	test("constructor initializes correctly", () => {
-		expect(provider).toBeInstanceOf(ClineProvider)
-		// Since getVisibleInstance returns the last instance where view.visible is true
-		// @ts-ignore - accessing private property for testing
-		provider.view = mockWebviewView
-		expect(ClineProvider.getVisibleInstance()).toBe(provider)
-	})
+		test("constructor initializes correctly", () => {
+			expect(provider).toBeInstanceOf(ClineProvider)
+			// Since getVisibleInstance returns the last instance where view.visible is true
+			// @ts-ignore - accessing private property for testing
+			provider.view = mockWebviewView
+			expect(ClineProvider.getVisibleInstance()).toBe(provider)
+		})
 
-	test("resolveWebviewView sets up webview correctly", async () => {
-		await provider.resolveWebviewView(mockWebviewView)
+		test("getState defaults autoApprovalEnabled to false in CLI mode when unset", async () => {
+			const originalCliMode = process.env.KILO_CLI_MODE
+			process.env.KILO_CLI_MODE = "true"
 
-		expect(mockWebviewView.webview.options).toEqual({
-			enableScripts: true,
+			try {
+				// Create a fresh provider after setting env to ensure getState reads the correct default.
+				const cliProvider = new ClineProvider(mockContext, mockOutputChannel, "sidebar", new ContextProxy(mockContext))
+				const state = await cliProvider.getState()
+
+				// Safe default: CLI mode should never auto-approve unless explicitly configured.
+				expect(state.autoApprovalEnabled).toBe(false)
+			} finally {
+				if (originalCliMode === undefined) {
+					delete process.env.KILO_CLI_MODE
+				} else {
+					process.env.KILO_CLI_MODE = originalCliMode
+				}
+			}
+		})
+
+		test("resolveWebviewView sets up webview correctly", async () => {
+			await provider.resolveWebviewView(mockWebviewView)
+
+			expect(mockWebviewView.webview.options).toEqual({
+				enableScripts: true,
 			localResourceRoots: [mockContext.extensionUri],
 		})
 

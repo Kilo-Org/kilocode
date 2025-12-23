@@ -4,10 +4,14 @@ import { loadConfigAtom, configAtom, configValidationAtom } from "../config.js"
 import * as persistence from "../../../config/persistence.js"
 
 // Mock the persistence module
-vi.mock("../../../config/persistence.js", () => ({
-	loadConfig: vi.fn(),
-	saveConfig: vi.fn(),
-}))
+vi.mock("../../../config/persistence.js", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../../config/persistence.js")>()
+	return {
+		...actual,
+		loadConfig: vi.fn(),
+		saveConfig: vi.fn(),
+	}
+})
 
 describe("loadConfigAtom", () => {
 	beforeEach(() => {

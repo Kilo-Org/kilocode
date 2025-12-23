@@ -2,18 +2,29 @@ export interface BuildCliArgsOptions {
 	parallelMode?: boolean
 	sessionId?: string
 	existingBranch?: string
+	/**
+	 * When true, adds --yolo flag for auto-approval of all tool operations.
+	 * By default (when undefined/false), the CLI runs in permission-aware mode,
+	 * respecting the extension's auto-approval settings.
+	 */
+	yolo?: boolean
 }
 
 /**
  * Builds CLI arguments for spawning kilocode agent processes.
  * Uses --json-io for bidirectional communication via stdin/stdout.
- * Runs in interactive mode - approvals are handled via the JSON-IO protocol.
+ * Runs in permission-aware mode by default - approvals are handled via the JSON-IO protocol.
  */
 export function buildCliArgs(workspace: string, prompt: string, options?: BuildCliArgsOptions): string[] {
 	// --json-io: enables bidirectional JSON communication via stdin/stdout
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
-	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
-	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
+	const args = ["--json-io", `--workspace=${workspace}`]
+
+	// Only add --yolo when explicitly requested
+	// By default, the CLI runs in permission-aware mode, respecting extension settings
+	if (options?.yolo) {
+		args.push("--yolo")
+	}
 
 	if (options?.parallelMode) {
 		args.push("--parallel")

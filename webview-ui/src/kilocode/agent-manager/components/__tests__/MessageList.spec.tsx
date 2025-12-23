@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { Provider, createStore } from "jotai"
 import { MessageList } from "../MessageList"
 import { sessionMessagesAtomFamily } from "../../state/atoms/messages"
 import { sessionInputAtomFamily } from "../../state/atoms/sessions"
 import type { ClineMessage } from "@roo-code/types"
+import { vscode } from "../../utils/vscode"
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -31,6 +32,10 @@ vi.mock("../../../../components/ui", () => ({
 
 describe("MessageList", () => {
 	const sessionId = "test-session"
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
 
 	describe("handleCopyToInput", () => {
 		it("appends suggestion to empty input", () => {
@@ -291,6 +296,87 @@ describe("MessageList", () => {
 
 			// Other tool messages should still be rendered
 			expect(screen.getByText("messages.tool")).toBeInTheDocument()
+		})
+	})
+
+	describe("approval buttons", () => {
+		it("renders approve/reject for ask:command and posts approval response", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "ask",
+					ask: "command",
+					text: "echo hello",
+					partial: false,
+					isAnswered: false,
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			fireEvent.click(screen.getByText("messages.approve"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "agentManager.respondToApproval",
+				sessionId,
+				approved: true,
+			})
+		})
+
+		it("posts reject response when clicking reject", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "ask",
+					ask: "tool",
+					text: JSON.stringify({ tool: "readFile", path: "foo.txt" }),
+					partial: false,
+					isAnswered: false,
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			fireEvent.click(screen.getByText("messages.reject"))
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "agentManager.respondToApproval",
+				sessionId,
+				approved: false,
+			})
+		})
+
+		it("does not render buttons for answered asks", () => {
+			const store = createStore()
+			store.set(sessionMessagesAtomFamily(sessionId), [
+				{
+					ts: 1,
+					type: "ask",
+					ask: "command",
+					text: "echo hello",
+					partial: false,
+					isAnswered: true,
+				} as ClineMessage,
+			])
+
+			render(
+				<Provider store={store}>
+					<MessageList sessionId={sessionId} />
+				</Provider>,
+			)
+
+			expect(screen.queryByText("messages.approve")).not.toBeInTheDocument()
+			expect(screen.queryByText("messages.reject")).not.toBeInTheDocument()
 		})
 	})
 })

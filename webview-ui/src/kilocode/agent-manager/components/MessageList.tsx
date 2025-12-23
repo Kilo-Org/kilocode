@@ -27,6 +27,8 @@ import {
 	User,
 	Clock,
 	Loader,
+	Check,
+	X,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 
@@ -137,6 +139,29 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[removeFromQueue],
 	)
 
+	// Approval handlers - send approval/rejection to extension
+	const handleApprove = useCallback(
+		(sid: string) => {
+			vscode.postMessage({
+				type: "agentManager.respondToApproval",
+				sessionId: sid,
+				approved: true,
+			})
+		},
+		[],
+	)
+
+	const handleReject = useCallback(
+		(sid: string) => {
+			vscode.postMessage({
+				type: "agentManager.respondToApproval",
+				sessionId: sid,
+				approved: false,
+			})
+		},
+		[],
+	)
+
 	if (messages.length === 0 && queue.length === 0) {
 		return (
 			<div className="am-messages-empty">
@@ -154,9 +179,12 @@ export function MessageList({ sessionId }: MessageListProps) {
 						key={msg.ts || idx}
 						message={msg}
 						isLast={idx === combinedMessages.length - 1}
+						sessionId={sessionId}
 						commandExecutionByTs={commandExecutionByTs}
 						onSuggestionClick={handleSuggestionClick}
 						onCopyToInput={handleCopyToInput}
+						onApprove={handleApprove}
+						onReject={handleReject}
 					/>
 				))}
 				{/* Display queued messages */}
@@ -194,13 +222,37 @@ function extractFollowUpData(message: ClineMessage): { question: string; suggest
 interface MessageItemProps {
 	message: ClineMessage
 	isLast: boolean
+	sessionId: string
 	commandExecutionByTs: Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>
 	onSuggestionClick?: (suggestion: SuggestionItem) => void
 	onCopyToInput?: (suggestion: SuggestionItem) => void
+	onApprove?: (sessionId: string) => void
+	onReject?: (sessionId: string) => void
 }
 
-function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick, onCopyToInput }: MessageItemProps) {
+function MessageItem({
+	message,
+	isLast,
+	sessionId,
+	commandExecutionByTs,
+	onSuggestionClick,
+	onCopyToInput,
+	onApprove,
+	onReject,
+}: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
+
+	// --- 0. Determine if approval buttons should be shown ---
+	// Show buttons for ask messages that require approval (not answered, not partial)
+	// Note: We don't require isLast because the CLI waits for approval before continuing,
+	// so this ask message should remain actionable until answered.
+	const approvalAskTypes = ["tool", "command", "browser_action_launch", "use_mcp_server"]
+	const needsApproval =
+		message.type === "ask" &&
+		message.ask &&
+		approvalAskTypes.includes(message.ask) &&
+		!message.isAnswered &&
+		!message.partial
 
 	// --- 1. Determine Message Style & Content ---
 	// Note: CLI JSON output uses "content" instead of "text" for message body
@@ -332,6 +384,23 @@ function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick,
 					{extraInfo}
 				</div>
 				{content && <div className="am-message-body">{content}</div>}
+				{/* Approval buttons for ask messages that require user approval */}
+				{needsApproval && onApprove && onReject && (
+					<div className="am-approval-buttons mt-2 flex gap-2">
+						<button
+							onClick={() => onApprove(sessionId)}
+							className="flex items-center gap-1 px-3 py-1.5 rounded text-sm bg-vscode-button-background hover:bg-vscode-button-hoverBackground text-vscode-button-foreground">
+							<Check size={14} />
+							{t("messages.approve")}
+						</button>
+						<button
+							onClick={() => onReject(sessionId)}
+							className="flex items-center gap-1 px-3 py-1.5 rounded text-sm bg-vscode-button-secondaryBackground hover:bg-vscode-button-secondaryHoverBackground text-vscode-button-secondaryForeground">
+							<X size={14} />
+							{t("messages.reject")}
+						</button>
+					</div>
+				)}
 				{suggestions && suggestions.length > 0 && onSuggestionClick && (
 					<FollowUpSuggestions
 						suggestions={suggestions}

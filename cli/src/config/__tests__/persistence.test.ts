@@ -13,6 +13,7 @@ import {
 	getKiloToken,
 } from "../persistence.js"
 import { DEFAULT_CONFIG } from "../defaults.js"
+import { ENV_VARS } from "../env-utils.js"
 
 // Mock the logs service
 vi.mock("../../services/logs.js", () => ({
@@ -189,6 +190,55 @@ describe("Config Persistence", () => {
 			expect(result.validation.valid).toBe(false)
 			expect(result.validation.errors).toBeDefined()
 			expect(result.validation.errors!.length).toBeGreaterThan(0)
+		})
+
+		it("applies KILO_AUTO_APPROVAL_JSON at load time without persisting it", async () => {
+			const originalEnvValue = process.env[ENV_VARS.AUTO_APPROVAL_JSON]
+
+			const jsonConfig = {
+				enabled: false,
+				execute: { enabled: false },
+			}
+
+			process.env[ENV_VARS.AUTO_APPROVAL_JSON] = JSON.stringify(jsonConfig)
+
+			try {
+				// Write a config file with auto-approval enabled so we can verify env overrides
+				const fileConfig: CLIConfig = {
+					...DEFAULT_CONFIG,
+					providers: [
+						{
+							id: "default",
+							provider: "kilocode",
+							kilocodeToken: "valid-token-1234567890",
+							kilocodeModel: "anthropic/claude-sonnet-4.5",
+						},
+					],
+					autoApproval: {
+						...DEFAULT_CONFIG.autoApproval,
+						enabled: true,
+					},
+					theme: "dark",
+					customThemes: {},
+				}
+
+				await saveConfig(fileConfig)
+
+				const result = await loadConfig()
+
+				// Returned config should reflect env override
+				expect(result.config.autoApproval).toEqual(jsonConfig)
+
+				// File should NOT persist env overrides
+				const persisted = JSON.parse(await fs.readFile(TEST_CONFIG_FILE, "utf-8"))
+				expect(persisted.autoApproval.enabled).toBe(true)
+			} finally {
+				if (originalEnvValue === undefined) {
+					delete process.env[ENV_VARS.AUTO_APPROVAL_JSON]
+				} else {
+					process.env[ENV_VARS.AUTO_APPROVAL_JSON] = originalEnvValue
+				}
+			}
 		})
 	})
 
