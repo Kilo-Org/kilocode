@@ -775,6 +775,9 @@ importers:
       node-ipc:
         specifier: npm:catrielmuller-node-ipc@12.0.1
         version: catrielmuller-node-ipc@12.0.1
+      node-machine-id:
+        specifier: ^1.1.12
+        version: 1.1.12
       ollama:
         specifier: ^0.5.17
         version: 0.5.17
@@ -1823,6 +1826,9 @@ importers:
       node-ipc:
         specifier: ^12.0.0
         version: 12.0.0
+      node-machine-id:
+        specifier: ^1.1.12
+        version: 1.1.12
       ollama:
         specifier: ^0.5.17
         version: 0.5.17
@@ -4973,6 +4979,7 @@ packages:
   '@lancedb/lancedb@0.21.3':
     resolution: {integrity: sha512-hfzp498BfcCJ730fV1YGGoXVxRgE+W1n0D0KwanKlbt8bBPSQ6E6Tf8mPXc8rKdAXIRR3o5mTzMG3z3Fda+m3Q==}
     engines: {node: '>= 18'}
+    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -15151,6 +15158,9 @@ packages:
   node-ipc@12.0.0:
     resolution: {integrity: sha512-QHJ2gAJiqA3cM7cQiRjLsfCOBRB0TwQ6axYD4FSllQWipEbP6i7Se1dP8EzPKk5J1nCe27W69eqPmCoKyQ61Vg==}
     engines: {node: '>=14'}
+
+  node-machine-id@1.1.12:
+    resolution: {integrity: sha512-QNABxbrPa3qEIfrE6GOJ7BYIuignnJw7iQ2YPbc3Nla1HzRJjXzZOiikfF8m7eAMfichLt3M4VgLOetqgDmgGQ==}
 
   node-preload@0.2.1:
     resolution: {integrity: sha512-RM5oyBy45cLEoHqCeh+MNuFAxO0vTFBLskvQbOKnEE7YTTSN4tbN8QWDIPQ6L+WvKsB/qLEGpYe2ZZ9d4W9OIQ==}
@@ -36486,6 +36496,8 @@ snapshots:
       js-message: 1.0.7
       js-queue: 2.0.2
       strong-type: 1.1.0
+
+  node-machine-id@1.1.12: {}
 
   node-preload@0.2.1:
     dependencies:

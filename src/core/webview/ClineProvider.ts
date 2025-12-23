@@ -3285,12 +3285,15 @@ ${prompt}
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
-				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
-				wrapped: kiloCodeWrapped, // kilocode_change
-				wrapper: kiloCodeWrapper, // kilocode_change
-				wrapperCode: kiloCodeWrapperCode, // kilocode_change
-				wrapperVersion: kiloCodeWrapperVersion, // kilocode_change
-				wrapperTitle: kiloCodeWrapperTitle, // kilocode_change
+				// kilocode_change start
+				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName,
+				wrapped: kiloCodeWrapped,
+				wrapper: kiloCodeWrapper,
+				wrapperCode: kiloCodeWrapperCode,
+				wrapperVersion: kiloCodeWrapperVersion,
+				wrapperTitle: kiloCodeWrapperTitle,
+				machineId: vscode.env.machineId,
+				// kilocode_change end
 			}
 		}
 

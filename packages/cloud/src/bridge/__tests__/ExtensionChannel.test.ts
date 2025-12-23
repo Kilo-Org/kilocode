@@ -32,6 +32,7 @@ describe("ExtensionChannel", () => {
 		wrapperTitle: null,
 		wrapperCode: null,
 		wrapperVersion: null,
+		machineId: null,
 		// kilocode_change end
 		hostname: "test-host",
 	}
