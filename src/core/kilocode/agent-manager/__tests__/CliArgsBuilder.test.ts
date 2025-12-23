@@ -13,6 +13,32 @@ describe("CliArgsBuilder", () => {
 		expect(args).toContain(prompt)
 	})
 
+	describe("yolo mode", () => {
+		it("does NOT include --yolo by default (permission-aware mode)", () => {
+			const args = buildCliArgs(workspace, prompt)
+
+			expect(args).not.toContain("--yolo")
+		})
+
+		it("includes --yolo only when explicitly requested via options", () => {
+			const args = buildCliArgs(workspace, prompt, { yolo: true })
+
+			expect(args).toContain("--yolo")
+		})
+
+		it("does not include --yolo when yolo option is false", () => {
+			const args = buildCliArgs(workspace, prompt, { yolo: false })
+
+			expect(args).not.toContain("--yolo")
+		})
+
+		it("does not include --yolo when yolo option is undefined", () => {
+			const args = buildCliArgs(workspace, prompt, { parallelMode: true })
+
+			expect(args).not.toContain("--yolo")
+		})
+	})
+
 	it("adds --parallel flag when parallelMode is true", () => {
 		const args = buildCliArgs(workspace, prompt, { parallelMode: true })
 

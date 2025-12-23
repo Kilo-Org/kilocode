@@ -5,7 +5,7 @@ import type { CLIConfig, AutoApprovalConfig } from "./types.js"
 import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL } from "./defaults.js"
 import { validateConfig, type ValidationResult } from "./validation.js"
 import { logs } from "../services/logs.js"
-import { buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
+import { applyEnvOverrides, buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
 
 /**
  * Result of loading config, includes both the config and validation status
@@ -173,26 +173,36 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 		const loadedConfig = JSON.parse(content)
 
 		// Merge with defaults to fill in missing keys
-		const config = mergeWithDefaults(loadedConfig)
+		const mergedConfig = mergeWithDefaults(loadedConfig)
 
-		// Validate merged config
-		const validation = await validateConfig(config)
-		if (!validation.valid) {
-			logs.error("Invalid config file", "ConfigPersistence", { errors: validation.errors })
+		// Apply environment variable overrides for runtime use.
+		// IMPORTANT: Env overrides should NOT be persisted back to disk.
+		const runtimeConfig = applyEnvOverrides(mergedConfig)
+
+		// Validate runtime config (this is what the CLI will actually use)
+		const runtimeValidation = await validateConfig(runtimeConfig)
+		if (!runtimeValidation.valid) {
+			logs.error("Invalid config after applying env overrides", "ConfigPersistence", {
+				errors: runtimeValidation.errors,
+			})
 			// Return config with validation errors instead of throwing
 			return {
-				config,
-				validation,
+				config: runtimeConfig,
+				validation: runtimeValidation,
 			}
 		}
 
-		// Save the merged config back to ensure all defaults are persisted
-		// Only save if validation passed
-		await saveConfig(config)
+		// Validate the merged (non-env) config before persisting defaults.
+		// This avoids writing env-only values (like tokens) to disk.
+		const mergedValidation = await validateConfig(mergedConfig)
+		if (mergedValidation.valid) {
+			// Save the merged config back to ensure all defaults are persisted
+			await saveConfig(mergedConfig)
+		}
 
 		return {
-			config: config as CLIConfig,
-			validation,
+			config: runtimeConfig,
+			validation: runtimeValidation,
 		}
 	} catch (error) {
 		// For errors (e.g., file read errors, JSON parse errors), log and throw

@@ -7,6 +7,8 @@ import { useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { createInterface } from "readline"
 import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { setAutoApprovalConfigAtom } from "../atoms/config.js"
+import type { AutoApprovalConfig } from "../../config/types.js"
 import { logs } from "../../services/logs.js"
 
 export interface StdinMessage {
@@ -15,6 +17,7 @@ export interface StdinMessage {
 	text?: string
 	images?: string[]
 	approved?: boolean
+	config?: AutoApprovalConfig
 }
 
 export interface StdinMessageHandlers {
@@ -25,6 +28,7 @@ export interface StdinMessageHandlers {
 		text?: string
 		images?: string[]
 	}) => Promise<void>
+	setAutoApprovalConfig: (config: AutoApprovalConfig) => Promise<void>
 }
 
 /**
@@ -73,6 +77,14 @@ export async function handleStdinMessage(
 			}
 			return { handled: true }
 
+		case "permissionConfigUpdate":
+			if (!message.config) {
+				return { handled: false, error: "Missing config for permissionConfigUpdate" }
+			}
+
+			await handlers.setAutoApprovalConfig(message.config)
+			return { handled: true }
+
 		default:
 			return { handled: false, error: `Unknown message type: ${message.type}` }
 	}
@@ -82,6 +94,7 @@ export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
+	const setAutoApprovalConfig = useSetAtom(setAutoApprovalConfigAtom)
 
 	useEffect(() => {
 		if (!enabled) {
@@ -104,6 +117,9 @@ export function useStdinJsonHandler(enabled: boolean) {
 			},
 			respondToTool: async (params) => {
 				await respondToTool(params)
+			},
+			setAutoApprovalConfig: async (config) => {
+				await setAutoApprovalConfig(config)
 			},
 		}
 
@@ -142,5 +158,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 		return () => {
 			rl.close()
 		}
-	}, [enabled, sendAskResponse, cancelTask, respondToTool])
+	}, [enabled, sendAskResponse, cancelTask, respondToTool, setAutoApprovalConfig])
 }

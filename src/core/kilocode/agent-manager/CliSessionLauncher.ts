@@ -6,6 +6,7 @@ import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
 import { buildProviderEnvOverrides } from "./providerEnvMapper"
 import type { ProviderSettings } from "@roo-code/types"
+import type { AutoApprovalEnvConfig } from "./autoApprovalEnv"
 
 /**
  * Options for spawning a CLI session
@@ -16,6 +17,17 @@ export interface SpawnOptions {
 	gitUrl?: string
 	existingBranch?: string
 	sessionId?: string
+	/**
+	 * Auto-approval configuration to pass to CLI.
+	 * When provided, the CLI runs in permission-aware mode.
+	 * When omitted, the CLI uses its default behavior.
+	 */
+	autoApprovalConfig?: AutoApprovalEnvConfig
+	/**
+	 * When true, adds --yolo flag for auto-approval of ALL tool operations.
+	 * This corresponds to the extension's "YOLO Mode" setting.
+	 */
+	yolo?: boolean
 }
 
 /**

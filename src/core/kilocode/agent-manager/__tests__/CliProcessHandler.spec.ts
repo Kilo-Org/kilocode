@@ -90,13 +90,14 @@ describe("CliProcessHandler", () => {
 	})
 
 	describe("spawnProcess", () => {
-		it("spawns a CLI process with correct arguments (yolo mode for testing)", () => {
+		it("spawns a CLI process with correct arguments (permission-aware mode by default)", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
+			// By default, --yolo is NOT included - runs in permission-aware mode
 			expect(spawnMock).toHaveBeenCalledWith(
 				"/path/to/kilocode",
-				["--json-io", "--yolo", "--workspace=/workspace", "test prompt"],
+				["--json-io", "--workspace=/workspace", "test prompt"],
 				expect.objectContaining({
 					cwd: "/workspace",
 					stdio: ["pipe", "pipe", "pipe"],

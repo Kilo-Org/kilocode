@@ -18,10 +18,44 @@ export { envConfigExists, getMissingEnvVars }
 export { PROVIDER_ENV_VAR, KILOCODE_PREFIX, KILO_PREFIX }
 
 /**
+ * Try to parse auto-approval config from JSON environment variable.
+ * This is used by Agent Manager to pass the complete config from extension state.
+ * Returns null if the env var is not set or parsing fails.
+ */
+function parseAutoApprovalFromJsonEnv(): AutoApprovalConfig | null {
+	const jsonValue = process.env[ENV_VARS.AUTO_APPROVAL_JSON]
+	if (!jsonValue) {
+		return null
+	}
+
+	try {
+		const parsed = JSON.parse(jsonValue) as AutoApprovalConfig
+		logs.info("Loaded auto-approval config from KILO_AUTO_APPROVAL_JSON", "EnvConfig")
+		return parsed
+	} catch (error) {
+		logs.warn(
+			`Failed to parse KILO_AUTO_APPROVAL_JSON: ${error instanceof Error ? error.message : String(error)}`,
+			"EnvConfig",
+		)
+		return null
+	}
+}
+
+/**
  * Build auto-approval configuration from environment variables
  * Used when building config from scratch (no config.json)
+ *
+ * If KILO_AUTO_APPROVAL_JSON is set, uses that (from Agent Manager).
+ * Otherwise, reads individual KILO_AUTO_APPROVAL_* env vars.
  */
 function buildAutoApprovalFromEnv(): AutoApprovalConfig {
+	// Check for JSON config first (from Agent Manager)
+	const jsonConfig = parseAutoApprovalFromJsonEnv()
+	if (jsonConfig) {
+		return jsonConfig
+	}
+
+	// Fall back to individual env vars
 	return {
 		enabled: parseBoolean(process.env[ENV_VARS.AUTO_APPROVAL_ENABLED], DEFAULT_AUTO_APPROVAL.enabled ?? true)!,
 		read: {
@@ -118,8 +152,17 @@ function buildAutoApprovalFromEnv(): AutoApprovalConfig {
 /**
  * Apply auto-approval configuration overrides from environment variables
  * Used when applying overrides to existing config
+ *
+ * If KILO_AUTO_APPROVAL_JSON is set, uses that (from Agent Manager).
+ * Otherwise, reads individual KILO_AUTO_APPROVAL_* env vars.
  */
 function applyAutoApprovalOverrides(config: CLIConfig): CLIConfig {
+	// Check for JSON config first (from Agent Manager)
+	const jsonConfig = parseAutoApprovalFromJsonEnv()
+	if (jsonConfig) {
+		return { ...config, autoApproval: jsonConfig }
+	}
+
 	// Track if any overrides were applied
 	let hasOverrides = false
 	const overriddenConfig = { ...config }

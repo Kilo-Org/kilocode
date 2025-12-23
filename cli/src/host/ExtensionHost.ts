@@ -58,6 +58,8 @@ export class ExtensionHost extends EventEmitter {
 	private webviewProviders: Map<string, WebviewProvider> = new Map()
 	private webviewInitialized = false
 	private pendingMessages: WebviewMessage[] = []
+	private isFlushingPendingMessages = false
+	private pendingFlushPromise: Promise<void> | null = null
 	private isInitialSetup = true
 	private originalConsole: {
 		log: typeof console.log
@@ -298,6 +300,36 @@ export class ExtensionHost extends EventEmitter {
 		}
 	}
 
+	private async processWebviewMessage(message: WebviewMessage): Promise<void> {
+		// Track extension message sent
+		getTelemetryService().trackExtensionMessageSent(message.type)
+
+		// Handle webviewDidLaunch for CLI state synchronization
+		if (message.type === "webviewDidLaunch") {
+			// Prevent rapid-fire webviewDidLaunch messages
+			const now = Date.now()
+			if (now - this.lastWebviewLaunchTime < 1000) {
+				logs.debug("Ignoring webviewDidLaunch - too soon after last one", "ExtensionHost")
+				return
+			}
+			this.lastWebviewLaunchTime = now
+			await this.handleWebviewLaunch()
+		}
+
+		// Forward message directly to the webview provider instead of emitting event
+		// This prevents duplicate handling (event listener + direct call)
+		const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
+
+		if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
+			await webviewProvider.handleCLIMessage(message)
+		} else {
+			logs.warn(`No webview provider found or handleCLIMessage not available for: ${message.type}`, "ExtensionHost")
+		}
+
+		// Handle local state updates for CLI display after forwarding
+		await this.handleLocalStateUpdates(message)
+	}
+
 	async sendWebviewMessage(message: WebviewMessage): Promise<void> {
 		try {
 			logs.debug(`Processing webview message: ${message.type}`, "ExtensionHost")
@@ -307,43 +339,18 @@ export class ExtensionHost extends EventEmitter {
 				return
 			}
 
-			// Queue messages if webview not initialized
-			if (!this.webviewInitialized) {
+			// Queue messages if webview not initialized OR while we're flushing queued messages.
+			// This prevents tasks from starting before configuration sync (e.g. updateSettings) is applied.
+			if (!this.webviewInitialized || this.isFlushingPendingMessages) {
 				this.pendingMessages.push(message)
-				logs.debug(`Queued message ${message.type} - webview not ready`, "ExtensionHost")
+				logs.debug(
+					`Queued message ${message.type} - ${!this.webviewInitialized ? "webview not ready" : "flushing"}`,
+					"ExtensionHost",
+				)
 				return
 			}
 
-			// Track extension message sent
-			getTelemetryService().trackExtensionMessageSent(message.type)
-
-			// Handle webviewDidLaunch for CLI state synchronization
-			if (message.type === "webviewDidLaunch") {
-				// Prevent rapid-fire webviewDidLaunch messages
-				const now = Date.now()
-				if (now - this.lastWebviewLaunchTime < 1000) {
-					logs.debug("Ignoring webviewDidLaunch - too soon after last one", "ExtensionHost")
-					return
-				}
-				this.lastWebviewLaunchTime = now
-				await this.handleWebviewLaunch()
-			}
-
-			// Forward message directly to the webview provider instead of emitting event
-			// This prevents duplicate handling (event listener + direct call)
-			const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
-
-			if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
-				await webviewProvider.handleCLIMessage(message)
-			} else {
-				logs.warn(
-					`No webview provider found or handleCLIMessage not available for: ${message.type}`,
-					"ExtensionHost",
-				)
-			}
-
-			// Handle local state updates for CLI display after forwarding
-			await this.handleLocalStateUpdates(message)
+			await this.processWebviewMessage(message)
 		} catch (error) {
 			logs.error("Error handling webview message", "ExtensionHost", { error })
 			// Don't emit "error" event - emit non-fatal event instead
@@ -1085,32 +1092,68 @@ export class ExtensionHost extends EventEmitter {
 	 * Called by VSCode mock after resolveWebviewView completes
 	 */
 	public markWebviewReady(): void {
-		this.webviewInitialized = true
-		this.isInitialSetup = false
+		if (!this.webviewInitialized) {
+			this.webviewInitialized = true
+			this.isInitialSetup = false
+		}
+
+		// Nothing to flush - treat as ready immediately.
+		if (this.pendingMessages.length === 0) {
+			return
+		}
+
+		// Avoid starting multiple concurrent flushes.
+		if (this.pendingFlushPromise) {
+			return
+		}
+
+		this.isFlushingPendingMessages = true
 		logs.info("Webview marked as ready, flushing pending messages", "ExtensionHost")
-		void this.flushPendingMessages()
+
+		this.pendingFlushPromise = this.flushPendingMessages()
+			.catch((error) => {
+				logs.error("Error flushing pending messages", "ExtensionHost", { error })
+			})
+			.finally(() => {
+				this.isFlushingPendingMessages = false
+				this.pendingFlushPromise = null
+
+				// If messages were enqueued right as the flush finished, start another flush.
+				if (this.webviewInitialized && this.pendingMessages.length > 0) {
+					this.markWebviewReady()
+				}
+			})
+
+		void this.pendingFlushPromise
 	}
 
 	/**
 	 * Flush all pending messages that were queued before webview was ready
 	 */
 	private async flushPendingMessages(): Promise<void> {
-		const upsertMessages = this.pendingMessages.filter((m) => m.type === "upsertApiConfiguration")
-		const otherMessages = this.pendingMessages.filter((m) => m.type !== "upsertApiConfiguration")
-		this.pendingMessages = []
+		// Messages can be enqueued while flushing (e.g. UI startup sending newTask),
+		// so drain the queue until it's empty.
+		while (this.pendingMessages.length > 0) {
+			const batch = this.pendingMessages
+			this.pendingMessages = []
 
-		logs.info(`Flushing ${upsertMessages.length + otherMessages.length} pending messages`, "ExtensionHost")
+			const upsertMessages = batch.filter((m) => m.type === "upsertApiConfiguration")
+			const otherMessages = batch.filter((m) => m.type !== "upsertApiConfiguration")
 
-		// Ensure the API configuration is applied before anything tries to read it
-		for (const message of upsertMessages) {
-			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
-			// Serialize upserts so provider settings are persisted before readers run
-			await this.sendWebviewMessage(message)
-		}
+			logs.info(`Flushing ${upsertMessages.length + otherMessages.length} pending messages`, "ExtensionHost")
 
-		for (const message of otherMessages) {
-			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
-			void this.sendWebviewMessage(message)
+			// Ensure the API configuration is applied before anything tries to read it.
+			// Serialize upserts so provider settings are persisted before readers run.
+			for (const message of upsertMessages) {
+				logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
+				await this.processWebviewMessage(message)
+			}
+
+			// Flush remaining messages in order, awaiting each to preserve ordering guarantees.
+			for (const message of otherMessages) {
+				logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
+				await this.processWebviewMessage(message)
+			}
 		}
 	}
 

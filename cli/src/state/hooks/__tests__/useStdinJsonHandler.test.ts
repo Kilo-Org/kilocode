@@ -13,16 +13,19 @@ describe("handleStdinMessage", () => {
 	let sendAskResponse: ReturnType<typeof vi.fn>
 	let cancelTask: ReturnType<typeof vi.fn>
 	let respondToTool: ReturnType<typeof vi.fn>
+	let setAutoApprovalConfig: ReturnType<typeof vi.fn>
 
 	beforeEach(() => {
 		sendAskResponse = vi.fn().mockResolvedValue(undefined)
 		cancelTask = vi.fn().mockResolvedValue(undefined)
 		respondToTool = vi.fn().mockResolvedValue(undefined)
+		setAutoApprovalConfig = vi.fn().mockResolvedValue(undefined)
 
 		handlers = {
 			sendAskResponse,
 			cancelTask,
 			respondToTool,
+			setAutoApprovalConfig,
 		}
 	})
 
@@ -199,6 +202,36 @@ describe("handleStdinMessage", () => {
 		})
 	})
 
+	describe("permissionConfigUpdate messages", () => {
+		it("should call setAutoApprovalConfig when config is provided", async () => {
+			const message: StdinMessage = {
+				type: "permissionConfigUpdate",
+				config: {
+					enabled: false,
+					read: { enabled: true, outside: false },
+					execute: { enabled: false, allowed: [], denied: [] },
+				},
+			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(true)
+			expect(setAutoApprovalConfig).toHaveBeenCalledWith(message.config)
+		})
+
+		it("should return handled: false when config is missing", async () => {
+			const message: StdinMessage = {
+				type: "permissionConfigUpdate",
+			}
+
+			const result = await handleStdinMessage(message, handlers)
+
+			expect(result.handled).toBe(false)
+			expect(result.error).toBe("Missing config for permissionConfigUpdate")
+			expect(setAutoApprovalConfig).not.toHaveBeenCalled()
+		})
+	})
+
 	describe("unknown message types", () => {
 		it("should return handled: false for unknown types", async () => {
 			const message: StdinMessage = {
@@ -212,6 +245,7 @@ describe("handleStdinMessage", () => {
 			expect(sendAskResponse).not.toHaveBeenCalled()
 			expect(cancelTask).not.toHaveBeenCalled()
 			expect(respondToTool).not.toHaveBeenCalled()
+			expect(setAutoApprovalConfig).not.toHaveBeenCalled()
 		})
 	})
 

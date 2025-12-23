@@ -2,6 +2,28 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { ExtensionHost } from "../ExtensionHost.js"
 import type { WebviewMessage } from "../../types/messages.js"
 
+async function waitForCondition(condition: () => boolean, timeoutMs: number): Promise<void> {
+	await new Promise<void>((resolve, reject) => {
+		const start = Date.now()
+
+		const check = () => {
+			if (condition()) {
+				resolve()
+				return
+			}
+
+			if (Date.now() - start > timeoutMs) {
+				reject(new Error(`Timed out waiting for condition after ${timeoutMs}ms`))
+				return
+			}
+
+			setTimeout(check, 0)
+		}
+
+		check()
+	})
+}
+
 // Type for accessing private members in tests
 interface ExtensionHostInternal {
 	initializeState: () => void
@@ -270,6 +292,81 @@ describe("ExtensionHost Race Condition Fix", () => {
 
 			// Verify config was sent before task
 			expect(callOrder).toEqual(["mode", "newTask"])
+		})
+
+		it("should not process newTask until queued configuration is applied", async () => {
+			// This reproduces a real startup race:
+			// - CLI injects configuration before the webview is ready (messages are queued)
+			// - Webview becomes ready and flush begins
+			// - A newTask arrives while the flush is still applying updateSettings
+			// Without proper gating, newTask can be processed with default auto-approval settings.
+
+			const configMessage: WebviewMessage = {
+				type: "updateSettings",
+				updatedSettings: {
+					autoApprovalEnabled: false,
+					alwaysAllowExecute: false,
+				},
+			}
+
+			const taskMessage: WebviewMessage = {
+				type: "newTask",
+				text: "Test task",
+			}
+
+			// Queue the configuration message before webview is ready
+			await extensionHost.sendWebviewMessage(configMessage)
+
+			let configApplied = false
+			let updateSettingsStarted = false
+			let observedConfigAppliedAtTask: boolean | undefined
+
+			const deferred = (() => {
+				let resolve!: () => void
+				const promise = new Promise<void>((r) => {
+					resolve = r
+				})
+				return { promise, resolve }
+			})()
+
+			// Mock provider - delay updateSettings application so we can race a newTask against it
+			const mockProvider = {
+				handleCLIMessage: vi.fn(async (msg: WebviewMessage) => {
+					if (msg.type === "updateSettings") {
+						updateSettingsStarted = true
+						await deferred.promise
+						configApplied = true
+						return
+					}
+
+					if (msg.type === "newTask") {
+						observedConfigAppliedAtTask = configApplied
+					}
+				}),
+			}
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
+
+			// Mark webview as ready (starts async flush)
+			extensionHost.markWebviewReady()
+
+			// Wait until the queued updateSettings has started processing
+			await waitForCondition(() => updateSettingsStarted, 50)
+			expect(updateSettingsStarted).toBe(true)
+
+			// Send a task while configuration is still being applied
+			await extensionHost.sendWebviewMessage(taskMessage)
+			const observedBeforeConfigApplied = observedConfigAppliedAtTask
+
+			// Allow configuration to apply and flush to continue
+			deferred.resolve()
+			await new Promise((resolve) => setTimeout(resolve, 0))
+
+			// Correct behavior: task should not be processed until config is applied
+			expect(observedBeforeConfigApplied).toBeUndefined()
+			expect(observedConfigAppliedAtTask).toBe(true)
 		})
 	})
 

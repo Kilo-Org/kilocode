@@ -6,7 +6,7 @@ describe("Auto Approval Configuration", () => {
 	describe("DEFAULT_AUTO_APPROVAL", () => {
 		it("should have correct default values", () => {
 			expect(DEFAULT_AUTO_APPROVAL).toEqual({
-				enabled: true,
+				enabled: false, // Safe default: auto-approval disabled until explicitly enabled
 				read: {
 					enabled: true,
 					outside: false,
@@ -47,8 +47,10 @@ describe("Auto Approval Configuration", () => {
 			})
 		})
 
-		it("should have global enabled set to true by default", () => {
-			expect(DEFAULT_AUTO_APPROVAL.enabled).toBe(true)
+		it("should have global enabled set to false by default for safety", () => {
+			// Safe default: auto-approval is disabled until explicitly enabled
+			// This prevents accidental auto-approval when config isn't loaded yet
+			expect(DEFAULT_AUTO_APPROVAL.enabled).toBe(false)
 		})
 
 		it("should have safe defaults for write operations", () => {

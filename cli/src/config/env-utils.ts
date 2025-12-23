@@ -15,6 +15,9 @@ export const ENV_VARS = {
 	PROVIDER_TYPE: "KILO_PROVIDER_TYPE",
 
 	// Auto-approval settings
+	// JSON format for complete config (takes precedence when set)
+	AUTO_APPROVAL_JSON: "KILO_AUTO_APPROVAL_JSON",
+	// Individual settings (used when JSON not set)
 	AUTO_APPROVAL_ENABLED: "KILO_AUTO_APPROVAL_ENABLED",
 	AUTO_APPROVAL_READ_ENABLED: "KILO_AUTO_APPROVAL_READ_ENABLED",
 	AUTO_APPROVAL_READ_OUTSIDE: "KILO_AUTO_APPROVAL_READ_OUTSIDE",
@@ -59,6 +62,11 @@ export const SPECIFIC_ENV_VARS = new Set([
 	ENV_VARS.MODE,
 	ENV_VARS.TELEMETRY,
 	ENV_VARS.THEME,
+	// Internal flags (not provider fields)
+	"KILO_CLI_MODE",
+	"KILO_EPHEMERAL_MODE",
+	"KILO_PLATFORM",
+	"KILO_TELEMETRY_DEBUG",
 ])
 
 /**

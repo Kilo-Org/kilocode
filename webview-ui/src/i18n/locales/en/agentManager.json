@@ -70,7 +70,9 @@
 		"usingTool": "Using tool: **{{tool}}** {{details}}",
 		"expandOutput": "Expand output",
 		"collapseOutput": "Collapse output",
-		"copyCommand": "Copy command"
+		"copyCommand": "Copy command",
+		"approve": "Approve",
+		"reject": "Reject"
 	},
 	"chatInput": {
 		"autoMode": "Agent running in full-auto mode - no input allowed",

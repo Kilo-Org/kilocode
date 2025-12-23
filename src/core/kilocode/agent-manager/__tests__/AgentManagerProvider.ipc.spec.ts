@@ -34,6 +34,7 @@ describe("AgentManagerProvider IPC paths", () => {
 	let mockPanel: any
 	let output: string[]
 	let registry: AgentRegistry
+	let providerStub: { getState: ReturnType<typeof vi.fn> }
 
 	beforeEach(() => {
 		output = []
@@ -67,7 +68,7 @@ describe("AgentManagerProvider IPC paths", () => {
 			asAbsolutePath: (p: string) => p,
 			extensionMode: 1, // Development mode
 		} as unknown as vscode.ExtensionContext
-		const providerStub = {
+		providerStub = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}
 
@@ -104,5 +105,81 @@ describe("AgentManagerProvider IPC paths", () => {
 		await expect(provider.respondToApproval("sess", true, "ok")).rejects.toThrow("denied")
 
 		expect(vscode.window.showErrorMessage).toHaveBeenLastCalledWith("Failed to send approval-yes to agent: denied")
+	})
+
+	it("syncPermissionConfigToRunningSessions sends updates only when config changes", async () => {
+		registry.createSession("sess", "prompt")
+		mockProcessHandler.hasStdin.mockImplementation((id) => id === "sess")
+
+		providerStub.getState.mockResolvedValue({
+			autoApprovalEnabled: false,
+			alwaysAllowReadOnly: true,
+			alwaysAllowReadOnlyOutsideWorkspace: false,
+			alwaysAllowWrite: true,
+			alwaysAllowWriteOutsideWorkspace: false,
+			alwaysAllowWriteProtected: false,
+			alwaysAllowBrowser: false,
+			alwaysApproveResubmit: false,
+			requestDelaySeconds: 10,
+			alwaysAllowMcp: false,
+			alwaysAllowModeSwitch: false,
+			alwaysAllowSubtasks: false,
+			alwaysAllowExecute: false,
+			allowedCommands: ["npm test"],
+			deniedCommands: ["rm -rf"],
+			alwaysAllowFollowupQuestions: false,
+			followupAutoApproveTimeoutMs: 60000,
+			alwaysAllowUpdateTodoList: false,
+		})
+
+		await (provider as any).syncPermissionConfigToRunningSessions()
+
+		expect(mockProcessHandler.writeToStdin).toHaveBeenCalledWith("sess", {
+			type: "permissionConfigUpdate",
+			config: {
+				enabled: false,
+				read: { enabled: true, outside: false },
+				write: { enabled: true, outside: false, protected: false },
+				browser: { enabled: false },
+				retry: { enabled: false, delay: 10 },
+				mcp: { enabled: false },
+				mode: { enabled: false },
+				subtasks: { enabled: false },
+				execute: { enabled: false, allowed: ["npm test"], denied: ["rm -rf"] },
+				question: { enabled: false, timeout: 60000 },
+				todo: { enabled: false },
+			},
+		})
+
+		mockProcessHandler.writeToStdin.mockClear()
+
+		// Same config => no-op
+		await (provider as any).syncPermissionConfigToRunningSessions()
+		expect(mockProcessHandler.writeToStdin).not.toHaveBeenCalled()
+
+		// Change config => broadcast
+		providerStub.getState.mockResolvedValue({
+			autoApprovalEnabled: true,
+			alwaysAllowReadOnly: true,
+			alwaysAllowReadOnlyOutsideWorkspace: true,
+			alwaysAllowWrite: false,
+			alwaysAllowWriteOutsideWorkspace: false,
+			alwaysAllowWriteProtected: false,
+			alwaysAllowBrowser: false,
+			alwaysApproveResubmit: false,
+			requestDelaySeconds: 10,
+			alwaysAllowMcp: false,
+			alwaysAllowModeSwitch: false,
+			alwaysAllowSubtasks: false,
+			alwaysAllowExecute: false,
+			allowedCommands: ["npm test"],
+			deniedCommands: ["rm -rf"],
+			alwaysAllowFollowupQuestions: false,
+			followupAutoApproveTimeoutMs: 60000,
+			alwaysAllowUpdateTodoList: false,
+		})
+
+		await (provider as any).syncPermissionConfigToRunningSessions()
+		expect(mockProcessHandler.writeToStdin).toHaveBeenCalledTimes(1)
 	})
 })

@@ -15,6 +15,7 @@ import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import { extractApiReqFailedMessage, extractPayloadMessage } from "./askErrorParser"
 import { buildProviderEnvOverrides } from "./providerEnvMapper"
 import { captureAgentManagerLoginIssue, getPlatformDiagnostics } from "./telemetry"
+import { type AutoApprovalEnvConfig, buildAutoApprovalEnv } from "./autoApprovalEnv"
 
 /**
  * Timeout for pending sessions (ms) - if session_created event doesn't arrive within this time,
@@ -106,7 +107,11 @@ export class CliProcessHandler {
 		}
 	}
 
-	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings, shellPath?: string): NodeJS.ProcessEnv {
+	private buildEnvWithApiConfiguration(
+		apiConfiguration?: ProviderSettings,
+		autoApprovalConfig?: AutoApprovalEnvConfig,
+		shellPath?: string,
+	): NodeJS.ProcessEnv {
 		const baseEnv = { ...process.env }
 
 		// On macOS/Linux, use the shell PATH to ensure CLI can access tools like git
@@ -124,9 +129,22 @@ export class CliProcessHandler {
 			(message) => this.debugLog(message),
 		)
 
+		// Build auto-approval env if config provided
+		const autoApprovalEnv = autoApprovalConfig ? buildAutoApprovalEnv(autoApprovalConfig) : {}
+
+		// Debug: log auto-approval config being passed to CLI
+		if (autoApprovalConfig) {
+			this.callbacks.onLog(
+				`[AgentManager] Auto-approval config: enabled=${autoApprovalConfig.enabled}, execute.enabled=${autoApprovalConfig.execute?.enabled}`,
+			)
+		} else {
+			this.callbacks.onLog(`[AgentManager] No auto-approval config provided to CLI`)
+		}
+
 		return {
 			...baseEnv,
 			...overrides,
+			...autoApprovalEnv,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",
 			KILO_PLATFORM: "agent-manager",
@@ -147,6 +165,17 @@ export class CliProcessHandler {
 					existingBranch?: string
 					/** Shell PATH from login shell - ensures CLI can access tools like git on macOS */
 					shellPath?: string
+					/**
+					 * Auto-approval configuration to pass to CLI.
+					 * When provided, the CLI runs in permission-aware mode.
+					 * When omitted, the CLI uses its default behavior.
+					 */
+					autoApprovalConfig?: AutoApprovalEnvConfig
+					/**
+					 * When true, adds --yolo flag for auto-approval of ALL tool operations.
+					 * This corresponds to the extension's "YOLO Mode" setting.
+					 */
+					yolo?: boolean
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -185,11 +214,16 @@ export class CliProcessHandler {
 			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
 			existingBranch: options?.existingBranch,
+			yolo: options?.yolo,
 		})
 		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
-		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
+		const env = this.buildEnvWithApiConfiguration(
+			options?.apiConfiguration,
+			options?.autoApprovalConfig,
+			options?.shellPath,
+		)
 
 		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
 		// Without this, spawn() fails silently because .cmd files are batch scripts
