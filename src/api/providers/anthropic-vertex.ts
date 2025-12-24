@@ -74,7 +74,9 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		} = this.getModel()
 
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
-		const sanitizedMessages = filterNonAnthropicBlocks(messages)
+		// kilocode_change start
+		const sanitizedMessages = filterNonAnthropicBlocks(messages, thinking)
+		// kilocode_change end
 
 		/**
 		 * Vertex API has specific limitations for prompt caching:
