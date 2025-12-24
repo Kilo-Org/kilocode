@@ -1,5 +1,17 @@
 # kilo-code
 
+## 4.140.3
+
+### Patch Changes
+
+- [#4648](https://github.com/Kilo-Org/kilocode/pull/4648) [`4710d11`](https://github.com/Kilo-Org/kilocode/commit/4710d119ba6ead7f0198c22ae4e902478a63867e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager multi-version sessions to wait for pending CLI processes so terminals are available per worktree.
+
+- [#4658](https://github.com/Kilo-Org/kilocode/pull/4658) [`e189583`](https://github.com/Kilo-Org/kilocode/commit/e1895837b7dde1b8302f3d3eb49dad2b417fc1bb) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improve Agent Manager telemetry
+
+- [#4647](https://github.com/Kilo-Org/kilocode/pull/4647) [`c1a0692`](https://github.com/Kilo-Org/kilocode/commit/c1a06926e838af15e4be27a476ea3e35be430551) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix: reduce GPU usage in Agent Manager with message virtualization
+
+- [#4659](https://github.com/Kilo-Org/kilocode/pull/4659) [`fa42cfa`](https://github.com/Kilo-Org/kilocode/commit/fa42cfaa7b77a7f410c26eaf3810808cf3631ced) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager CLI detection and Windows spawn by sanitizing shell output and running .cmd via cmd.exe.
+
 ## 4.140.2
 
 ### Patch Changes
