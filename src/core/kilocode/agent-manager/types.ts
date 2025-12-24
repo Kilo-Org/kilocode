@@ -13,7 +13,8 @@ export type SessionSource = "local" | "remote"
 export interface ParallelModeInfo {
 	enabled: boolean
 	branch?: string // e.g., "add-authentication-1702734891234"
-	worktreePath?: string // e.g., "/tmp/kilocode-worktree-add-auth..."
+	worktreePath?: string // e.g., ".kilocode/worktrees/add-auth..."
+	parentBranch?: string // e.g., "main" - the branch worktree was created from
 	completionMessage?: string // Merge instructions from CLI on completion
 }
 

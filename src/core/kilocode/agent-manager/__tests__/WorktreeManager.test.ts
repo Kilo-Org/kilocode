@@ -1,0 +1,315 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import * as path from "path"
+import * as fs from "fs"
+
+// Mock simple-git
+const mockGit = {
+	checkIsRepo: vi.fn(),
+	raw: vi.fn(),
+	revparse: vi.fn(),
+	branch: vi.fn(),
+	status: vi.fn(),
+	add: vi.fn(),
+	commit: vi.fn(),
+	diff: vi.fn(),
+}
+
+vi.mock("simple-git", () => ({
+	default: vi.fn(() => mockGit),
+}))
+
+// Mock fs using importOriginal
+vi.mock("fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("fs")>()
+	return {
+		...actual,
+		default: {
+			...actual,
+			existsSync: vi.fn(),
+			promises: {
+				...actual.promises,
+				mkdir: vi.fn(),
+				readFile: vi.fn(),
+				appendFile: vi.fn(),
+				rm: vi.fn(),
+				readdir: vi.fn(),
+				stat: vi.fn(),
+			},
+		},
+		existsSync: vi.fn(),
+		promises: {
+			mkdir: vi.fn(),
+			readFile: vi.fn(),
+			appendFile: vi.fn(),
+			rm: vi.fn(),
+			readdir: vi.fn(),
+			stat: vi.fn(),
+		},
+	}
+})
+
+// Mock vscode
+vi.mock("vscode", () => ({
+	default: {},
+}))
+
+import { WorktreeManager, WorktreeError, generateBranchName } from "../WorktreeManager"
+
+describe("WorktreeManager", () => {
+	const projectRoot = "/test/project"
+	const mockOutputChannel = {
+		appendLine: vi.fn(),
+	}
+
+	let manager: WorktreeManager
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+		manager = new WorktreeManager(projectRoot, mockOutputChannel as any)
+	})
+
+	describe("createWorktree", () => {
+		it("throws if workspace is not a git repo", async () => {
+			mockGit.checkIsRepo.mockResolvedValue(false)
+
+			await expect(manager.createWorktree({ prompt: "test" })).rejects.toThrow(WorktreeError)
+			await expect(manager.createWorktree({ prompt: "test" })).rejects.toThrow("not a git repository")
+		})
+
+		it("creates worktree with generated branch name from prompt", async () => {
+			mockGit.checkIsRepo.mockResolvedValue(true)
+			mockGit.revparse.mockResolvedValue("main")
+			mockGit.raw.mockResolvedValue("")
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			const result = await manager.createWorktree({ prompt: "Add authentication" })
+
+			expect(result.branch).toMatch(/^add-authentication-\d+$/)
+			expect(result.path).toContain(".kilocode/worktrees")
+			expect(result.parentBranch).toBe("main")
+		})
+
+		it("uses existing branch when provided", async () => {
+			mockGit.checkIsRepo.mockResolvedValue(true)
+			mockGit.revparse.mockResolvedValue("main")
+			mockGit.branch.mockResolvedValue({ all: ["feature/existing-branch"] })
+			mockGit.raw.mockResolvedValue("")
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			const result = await manager.createWorktree({ existingBranch: "feature/existing-branch" })
+
+			expect(result.branch).toBe("feature/existing-branch")
+			expect(mockGit.raw).toHaveBeenCalledWith([
+				"worktree",
+				"add",
+				expect.stringContaining("feature/existing-branch"),
+				"feature/existing-branch",
+			])
+		})
+
+		it("throws if existing branch does not exist", async () => {
+			mockGit.checkIsRepo.mockResolvedValue(true)
+			mockGit.revparse.mockResolvedValue("main")
+			mockGit.branch.mockResolvedValue({ all: [] })
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("")
+
+			await expect(manager.createWorktree({ existingBranch: "nonexistent" })).rejects.toThrow(WorktreeError)
+			await expect(manager.createWorktree({ existingBranch: "nonexistent" })).rejects.toThrow("does not exist")
+		})
+
+		it("removes existing worktree directory before creating", async () => {
+			mockGit.checkIsRepo.mockResolvedValue(true)
+			mockGit.revparse.mockResolvedValue("main")
+			mockGit.raw.mockResolvedValue("")
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				// Return true for worktree path check, false for gitignore
+				return String(p).includes(".kilocode/worktrees")
+			})
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.rm).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.createWorktree({ prompt: "test" })
+
+			expect(fs.promises.rm).toHaveBeenCalledWith(expect.stringContaining(".kilocode/worktrees"), {
+				recursive: true,
+				force: true,
+			})
+		})
+	})
+
+	describe("stageAllChanges", () => {
+		it("returns false when no changes", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => true })
+
+			const result = await manager.stageAllChanges("/worktree/path")
+
+			expect(result).toBe(false)
+		})
+
+		it("stages changes and returns true", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => false })
+			mockGit.add.mockResolvedValue(undefined)
+			mockGit.diff.mockResolvedValue("some diff content")
+
+			const result = await manager.stageAllChanges("/worktree/path")
+
+			expect(result).toBe(true)
+			expect(mockGit.add).toHaveBeenCalledWith("-A")
+		})
+	})
+
+	describe("commitChanges", () => {
+		it("skips commit when no changes", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => true })
+
+			const result = await manager.commitChanges("/worktree/path")
+
+			expect(result.success).toBe(true)
+			expect(result.skipped).toBe(true)
+			expect(result.reason).toBe("no_changes")
+		})
+
+		it("commits all changes with default message", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => false })
+			mockGit.add.mockResolvedValue(undefined)
+			mockGit.diff.mockResolvedValue("some diff content")
+			mockGit.commit.mockResolvedValue(undefined)
+
+			const result = await manager.commitChanges("/worktree/path")
+
+			expect(result.success).toBe(true)
+			expect(result.skipped).toBe(false)
+			expect(mockGit.add).toHaveBeenCalledWith("-A")
+			expect(mockGit.commit).toHaveBeenCalledWith("chore: parallel mode task completion")
+		})
+
+		it("uses custom commit message when provided", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => false })
+			mockGit.add.mockResolvedValue(undefined)
+			mockGit.diff.mockResolvedValue("some diff content")
+			mockGit.commit.mockResolvedValue(undefined)
+
+			await manager.commitChanges("/worktree/path", "feat: add auth")
+
+			expect(mockGit.commit).toHaveBeenCalledWith("feat: add auth")
+		})
+
+		it("returns error on commit failure", async () => {
+			mockGit.status.mockResolvedValue({ isClean: () => false })
+			mockGit.add.mockResolvedValue(undefined)
+			mockGit.diff.mockResolvedValue("some diff content")
+			mockGit.commit.mockRejectedValue(new Error("commit failed"))
+
+			const result = await manager.commitChanges("/worktree/path")
+
+			expect(result.success).toBe(false)
+			expect(result.error).toBe("commit failed")
+		})
+	})
+
+	describe("removeWorktree", () => {
+		it("removes worktree normally", async () => {
+			mockGit.raw.mockResolvedValue("")
+
+			await manager.removeWorktree("/worktree/path")
+
+			expect(mockGit.raw).toHaveBeenCalledWith(["worktree", "remove", "/worktree/path"])
+		})
+
+		it("force removes worktree on failure", async () => {
+			mockGit.raw.mockRejectedValueOnce(new Error("worktree has changes")).mockResolvedValueOnce("")
+
+			await manager.removeWorktree("/worktree/path")
+
+			expect(mockGit.raw).toHaveBeenCalledWith(["worktree", "remove", "--force", "/worktree/path"])
+		})
+	})
+
+	describe("discoverWorktrees", () => {
+		it("returns empty array when worktrees dir does not exist", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(false)
+
+			const result = await manager.discoverWorktrees()
+
+			expect(result).toEqual([])
+		})
+
+		it("discovers valid worktrees", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.readdir).mockResolvedValue([
+				{ name: "feature-branch", isDirectory: () => true },
+			] as any)
+			vi.mocked(fs.promises.stat).mockResolvedValue({
+				isFile: () => true,
+				birthtimeMs: 1234567890,
+			} as any)
+			mockGit.revparse.mockResolvedValue("feature-branch\n")
+			mockGit.branch.mockResolvedValue({ all: ["main"] })
+
+			const result = await manager.discoverWorktrees()
+
+			expect(result).toHaveLength(1)
+			expect(result[0].branch).toBe("feature-branch")
+		})
+	})
+
+	describe("ensureGitignore", () => {
+		it("adds gitignore entry when not present", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("node_modules/\n")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitignore()
+
+			expect(fs.promises.appendFile).toHaveBeenCalledWith(
+				path.join(projectRoot, ".gitignore"),
+				expect.stringContaining(".kilocode/worktrees/"),
+			)
+		})
+
+		it("skips adding entry when already present", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/\n")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitignore()
+
+			expect(fs.promises.appendFile).not.toHaveBeenCalled()
+		})
+	})
+
+})
+
+describe("generateBranchName", () => {
+	it("sanitizes prompt to valid branch name", () => {
+		const result = generateBranchName("Add User Authentication!!")
+		expect(result).toMatch(/^add-user-authentication-\d+$/)
+	})
+
+	it("truncates long prompts", () => {
+		const longPrompt = "A".repeat(100)
+		const result = generateBranchName(longPrompt)
+		// Branch name should be truncated (50 chars max from prompt)
+		expect(result.length).toBeLessThan(70)
+	})
+
+	it("handles special characters", () => {
+		const result = generateBranchName("Fix bug #123 & add feature!")
+		expect(result).toMatch(/^fix-bug-123-add-feature-\d+$/)
+	})
+
+	it("handles empty prompt", () => {
+		const result = generateBranchName("")
+		expect(result).toMatch(/^kilo-\d+$/)
+	})
+})

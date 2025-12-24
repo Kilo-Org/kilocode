@@ -43,10 +43,11 @@ describe("buildCliArgs", () => {
 		expect(args[3]).toBe(prompt)
 	})
 
-	it("includes --parallel flag when parallelMode is true", () => {
-		const args = buildCliArgs("/workspace", "prompt", { parallelMode: true })
+	it("does not include --parallel flag (worktree handled by extension)", () => {
+		// CLI is now worktree-agnostic - extension creates worktree and passes path as workspace
+		const args = buildCliArgs("/workspace", "prompt")
 
-		expect(args).toContain("--parallel")
+		expect(args).not.toContain("--parallel")
 	})
 
 	it("includes --session flag when sessionId is provided", () => {
@@ -55,20 +56,12 @@ describe("buildCliArgs", () => {
 		expect(args).toContain("--session=abc123")
 	})
 
-	it("combines all options correctly", () => {
+	it("combines session option correctly", () => {
 		const args = buildCliArgs("/workspace", "prompt", {
-			parallelMode: true,
 			sessionId: "session-id",
 		})
 
-		expect(args).toEqual([
-			"--json-io",
-			"--yolo",
-			"--workspace=/workspace",
-			"--parallel",
-			"--session=session-id",
-			"prompt",
-		])
+		expect(args).toEqual(["--json-io", "--yolo", "--workspace=/workspace", "--session=session-id", "prompt"])
 	})
 
 	it("uses --yolo for auto-approval of tool uses", () => {
