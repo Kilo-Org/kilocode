@@ -138,6 +138,7 @@ export interface ExtensionMessage {
 		| "stt:transcript" // kilocode_change: STT transcript update
 		| "stt:volume" // kilocode_change: STT volume level
 		| "stt:stopped" // kilocode_change: STT session stopped
+		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -275,6 +276,7 @@ export interface ExtensionMessage {
 	isFinal?: boolean // kilocode_change: STT transcript is final
 	level?: number // kilocode_change: STT volume level (0-1)
 	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]

@@ -96,7 +96,6 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import { checkSpeechToTextAvailable } from "./speechToTextCheck" // kilocode_change
 import type { ClineMessage, TodoItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
@@ -2215,14 +2214,6 @@ ${prompt}
 				: undefined
 		// kilocode_change end
 
-		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
-		let speechToTextStatus: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } | undefined =
-			undefined
-		if (experiments?.speechToText) {
-			speechToTextStatus = await checkSpeechToTextAvailable(this.providerSettingsManager)
-		}
-		// kilocode_change end - checkSpeechToTextAvailable
-
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
 		try {
@@ -2447,7 +2438,6 @@ ${prompt}
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
-			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		}
 	}
 

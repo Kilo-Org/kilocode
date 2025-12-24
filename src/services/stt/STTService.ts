@@ -91,6 +91,7 @@ export class STTService {
 
 			this.emitter.onStarted(this.sessionId)
 		} catch (error) {
+			this.isActive = false
 			const errorMessage = error instanceof Error ? error.message : "Failed to start"
 			this.emitter.onStopped("error", undefined, errorMessage)
 			await this.cleanupOnError()
@@ -348,14 +349,17 @@ export class STTService {
 	 * Handle recoverable errors by emitting to UI and cleaning up
 	 */
 	private async handleRecoverableError(error: Error): Promise<void> {
+		// Immediately stop processing to prevent any new audio/data from being processed
+		this.isActive = false
+
+		// Send error to frontend immediately
 		this.emitter.onStopped("error", undefined, error.message)
 
-		if (this.isActive) {
-			try {
-				await this.cleanupOnError()
-			} catch (cleanupError) {
-				console.error("Failed to cleanup after error:", cleanupError)
-			}
+		// Cleanup resources asynchronously
+		try {
+			await this.cleanupOnError()
+		} catch (cleanupError) {
+			console.error("🎙️ [STTService] Failed to cleanup after error:", cleanupError)
 		}
 	}
 
@@ -394,21 +398,11 @@ export class STTService {
 	private async cleanupOnError(): Promise<void> {
 		this.isActive = false
 
-		// Force kill FFmpeg and disconnect - use Promise.allSettled to ensure both run
-		const cleanupResults = await Promise.allSettled([
-			this.audioCapture.stop(),
-			this.transcriptionClient?.disconnect() ?? Promise.resolve(),
-		])
-
-		// Log cleanup results for debugging
-		cleanupResults.forEach((result, index) => {
-			const name = index === 0 ? "audioCapture" : "transcriptionClient"
-			if (result.status === "rejected") {
-				console.error(`🎙️ [STTService] Failed to cleanup ${name}:`, result.reason)
-			} else {
-				console.log(`🎙️ [STTService] ${name} cleaned up successfully`)
-			}
-		})
+		await Promise.allSettled(
+			[this.audioCapture?.stop().catch(() => {}), this.transcriptionClient?.disconnect().catch(() => {})].filter(
+				Boolean,
+			),
+		)
 
 		this.resetSession()
 	}
