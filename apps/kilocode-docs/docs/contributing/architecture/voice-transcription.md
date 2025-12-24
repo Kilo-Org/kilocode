@@ -1,9 +1,9 @@
 ---
 sidebar_position: 10
-title: "Spec: Live Voice Transcription"
+title: "Live Voice Transcription"
 ---
 
-# SPEC: Live Voice Transcription
+# Live Voice Transcription
 
 # Overview
 

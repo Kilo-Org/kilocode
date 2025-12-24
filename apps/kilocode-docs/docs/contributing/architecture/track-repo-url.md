@@ -1,9 +1,9 @@
 ---
 sidebar_position: 8
-title: "Spec: Track Usage by Repository URL"
+title: "Track Usage by Repository URL"
 ---
 
-# Spec: Track Usage by Project
+# Track Usage by Project
 
 # Overview
 

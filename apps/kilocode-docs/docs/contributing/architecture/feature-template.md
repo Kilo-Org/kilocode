@@ -3,7 +3,7 @@ sidebar_position: 2
 title: "Spec Template"
 ---
 
-# SPEC: Template
+# Template
 
 # Overview
 
