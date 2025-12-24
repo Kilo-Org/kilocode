@@ -28,8 +28,13 @@ export abstract class BaseTelemetryClient implements TelemetryClient {
 	/**
 	 * Determines if a specific property should be included in telemetry events
 	 * Override in subclasses to filter specific properties
+	 * @param _propertyName The name of the property to check
+	 * @param _allProperties All properties for context (e.g., to check organization membership) // kilocode_change
 	 */
-	protected isPropertyCapturable(_propertyName: string): boolean {
+	protected isPropertyCapturable(
+		_propertyName: string,
+		_allProperties: Record<string, unknown>, // kilocode_change
+	): boolean {
 		return true
 	}
 
@@ -63,7 +68,9 @@ export abstract class BaseTelemetryClient implements TelemetryClient {
 		// kilocode_change end
 
 		// Filter out properties that shouldn't be captured by this client
-		return Object.fromEntries(Object.entries(mergedProperties).filter(([key]) => this.isPropertyCapturable(key)))
+		return Object.fromEntries(
+			Object.entries(mergedProperties).filter(([key]) => this.isPropertyCapturable(key, mergedProperties)), // kilocode_change: pass mergedProperties for org filtering
+		)
 	}
 
 	public abstract capture(event: TelemetryEvent): Promise<void>
