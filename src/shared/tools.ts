@@ -82,6 +82,8 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"run_in_background", // kilocode_change
+	"terminal_id", // kilocode_change
 	"files", // Native protocol parameter for read_file
 	"operations", // search_and_replace parameter for multiple operations
 	"patch", // apply_patch parameter
@@ -102,7 +104,7 @@ export type NativeToolArgs = {
 	access_mcp_resource: { server_name: string; uri: string }
 	read_file: { files: FileEntry[] }
 	attempt_completion: { result: string }
-	execute_command: { command: string; cwd?: string }
+	execute_command: { command: string; cwd?: string; run_in_background?: boolean } // kilocode_change: add run_in_background
 	apply_diff: { path: string; diff: string }
 	search_and_replace: { path: string; operations: Array<{ search: string; replace: string }> }
 	search_replace: { file_path: string; old_string: string; new_string: string }
@@ -170,8 +172,15 @@ export interface McpToolUse {
 export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
-	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd" | "run_in_background">> // kilocode_change - add run_in_background
 }
+
+// kilocode_change start: Add terminal control tool interface
+export interface TerminalCtrlToolUse extends ToolUse {
+	name: "terminal_kill"
+	params: Partial<Pick<Record<ToolParamName, string>, "action" | "terminal_id">>
+}
+// kilocode_change end: Add terminal control tool interface
 
 export interface ReadFileToolUse extends ToolUse<"read_file"> {
 	name: "read_file"
@@ -280,7 +289,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	delete_file: "delete files",
 	report_bug: "report bug",
 	condense: "condense the current context window",
-	// kilocode_change start
+	// kilocode_change end
 	search_and_replace: "apply changes using search and replace",
 	search_replace: "apply single search and replace",
 	apply_patch: "apply patches using codex format",
@@ -294,6 +303,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	switch_mode: "switch modes",
 	new_task: "create new task",
 	new_rule: "create new rule",
+	terminal_kill: "control terminals", // kilocode_change: new terminal control tool
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
@@ -320,7 +330,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["browser_action"],
 	},
 	command: {
-		tools: ["execute_command"],
+		tools: ["execute_command", "terminal_kill"], // kilocode_change add terminal_kill
 	},
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],
