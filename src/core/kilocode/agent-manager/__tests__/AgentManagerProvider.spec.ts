@@ -121,7 +121,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 	// We don't simulate Windows on other platforms - let the actual Windows CI test it
 	const windowsOnlyTest = isWindows ? it : it.skip
 
-	windowsOnlyTest("spawns with shell: true when CLI path ends with .cmd", async () => {
+	windowsOnlyTest("spawns via cmd.exe when CLI path ends with .cmd", async () => {
 		vi.resetModules()
 
 		const testNpmDir = "C:\\npm"
@@ -207,9 +207,16 @@ describe("AgentManagerProvider CLI spawning", () => {
 			await (windowsProvider as any).startAgentSession("test windows cmd")
 
 			expect(spawnMock).toHaveBeenCalledTimes(1)
-			const [cmd, , options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
-			expect(cmd.toLowerCase()).toContain(".cmd")
-			expect(options?.shell).toBe(true)
+			const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [
+				string,
+				string[],
+				Record<string, unknown>,
+			]
+			const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+			expect(cmd.toLowerCase()).toBe(expectedCommand.toLowerCase())
+			expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
+			expect(args).toEqual(expect.arrayContaining([cmdPath]))
+			expect(options?.shell).toBe(false)
 
 			windowsProvider.dispose()
 		} finally {

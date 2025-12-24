@@ -1,9 +1,9 @@
 import * as path from "node:path"
 import * as fs from "node:fs"
 import { execSync, spawnSync } from "node:child_process"
-import stripAnsi from "strip-ansi"
 import { fileExistsAtPath } from "../../../utils/fs"
 import { getLocalCliPath } from "./CliInstaller"
+import { stripShellControlCodes } from "./ShellOutput"
 
 /**
  * Result of CLI discovery including optional shell environment.
@@ -25,11 +25,6 @@ function getCaseInsensitive(target: NodeJS.ProcessEnv, key: string): string | un
 	const lowercaseKey = key.toLowerCase()
 	const equivalentKey = Object.keys(target).find((k) => k.toLowerCase() === lowercaseKey)
 	return equivalentKey ? target[equivalentKey] : target[key]
-}
-
-function stripShellControlCodes(value: string): string {
-	const withoutOsc = value.replace(/\x1b\][^\x07]*\x07/gs, "").replace(/\x1b\].*?\x1b\\/gs, "")
-	return stripAnsi(withoutOsc)
 }
 
 function extractAbsolutePath(line: string): string | null {
