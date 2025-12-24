@@ -1,5 +1,15 @@
 # kilo-code
 
+## 4.140.2
+
+### Patch Changes
+
+- [#4628](https://github.com/Kilo-Org/kilocode/pull/4628) [`ab0085e`](https://github.com/Kilo-Org/kilocode/commit/ab0085ea0ba6226f6adce508965302b101f60233) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add GLM-4.7 model support to Z.ai provider
+
+- [#4622](https://github.com/Kilo-Org/kilocode/pull/4622) [`25de94b`](https://github.com/Kilo-Org/kilocode/commit/25de94b22fc103ebb9747433444f3fef9a7eeeb8) Thanks [@alvinward](https://github.com/alvinward)! - Added model selection support below prompt for Z.ai
+
+- [#4637](https://github.com/Kilo-Org/kilocode/pull/4637) [`b47994f`](https://github.com/Kilo-Org/kilocode/commit/b47994f0b6186490230c7eac01c5b9b75146d47a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add MiniMax-M2.1 model for MiniMax provider
+
 ## 4.140.1
 
 ### Patch Changes
