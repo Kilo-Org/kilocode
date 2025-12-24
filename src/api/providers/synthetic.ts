@@ -34,8 +34,33 @@ export class SyntheticHandler extends BaseOpenAiCompatibleProvider<SyntheticMode
 	}
 
 	override getModel() {
-		const id = (this.options.apiModelId as SyntheticModelId) ?? syntheticDefaultModelId
-		const info = this.models[id] ?? syntheticModels[id] ?? syntheticModels[syntheticDefaultModelId]
+		const requestedId = (this.options.apiModelId as SyntheticModelId) ?? syntheticDefaultModelId
+		let id = requestedId
+		let info = this.models[id] ?? syntheticModels[id]
+
+		// Debug logging
+		console.log(`[SYNTHETIC_HANDLER] Requested model: ${requestedId}`)
+		console.log(`[SYNTHETIC_HANDLER] Available API models:`, Object.keys(this.models))
+		console.log(`[SYNTHETIC_HANDLER] Static models:`, Object.keys(syntheticModels))
+
+		// If the requested model is not available from API or static config, fall back to default
+		if (!info) {
+			console.warn(`[SYNTHETIC_HANDLER] Model ${id} not found, trying default model`)
+			// Try to use the default model
+			id = syntheticDefaultModelId
+			info = this.models[id] ?? syntheticModels[id]
+
+			// If default is also not available, fall back to GLM-4.6 as a last resort
+			if (!info) {
+				console.warn(
+					`[SYNTHETIC_HANDLER] Default model ${syntheticDefaultModelId} not found, falling back to GLM-4.6`,
+				)
+				id = "hf:zai-org/GLM-4.6"
+				info = this.models[id] ?? syntheticModels[id]
+			}
+		}
+
+		console.log(`[SYNTHETIC_HANDLER] Using model: ${id}`)
 
 		const params = getModelParams({
 			format: "openai",
