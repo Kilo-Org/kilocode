@@ -1734,6 +1734,21 @@ ${prompt}
 
 	// Requesty
 
+	async handleMcpOAuthCallback(serverHash: string, code: string, state: string | null) {
+		try {
+			if (!this.mcpHub) {
+				throw new Error("MCP Hub is not initialized")
+			}
+
+			await this.mcpHub.completeOAuth(serverHash, code, state)
+			vscode.window.showInformationMessage("MCP server authenticated successfully")
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			console.error(`Failed to complete MCP OAuth: ${errorMessage}`)
+			vscode.window.showErrorMessage(`Failed to authenticate MCP server: ${errorMessage}`)
+		}
+	}
+
 	async handleRequestyCallback(code: string, baseUrl: string | null) {
 		let { apiConfiguration } = await this.getState()
 

@@ -57,6 +57,7 @@
 		"retrying": "Retrying...",
 		"retryConnection": "Retry Connection"
 	},
+	"authenticate": "Authenticate",
 	"execution": {
 		"running": "Running",
 		"completed": "Completed",

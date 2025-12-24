@@ -13,6 +13,19 @@ export const handleUri = async (uri: vscode.Uri) => {
 		return
 	}
 
+	// Match /mcp-auth/callback/{hash} - handle before switch since it uses regex
+	const mcpAuthMatch = path.match(/^\/mcp-auth\/callback\/([^/]+)$/)
+	if (mcpAuthMatch) {
+		const serverHash = mcpAuthMatch[1]
+		const code = query.get("code")
+		const state = query.get("state")
+
+		if (code && serverHash) {
+			await visibleProvider.handleMcpOAuthCallback(serverHash, code, state)
+		}
+		return
+	}
+
 	switch (path) {
 		// kilocode_change start
 		case "/glama": {

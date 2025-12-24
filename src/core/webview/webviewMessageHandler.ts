@@ -1513,6 +1513,25 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "authenticateMcpServer": {
+			if (!message.serverName) {
+				break
+			}
+
+			try {
+				provider.log(`Attempting to authenticate MCP server: ${message.serverName}`)
+				await provider.getMcpHub()?.initiateOAuth(message.serverName, message.source as "global" | "project")
+				provider.log(`OAuth flow initiated for MCP server: ${message.serverName}`)
+			} catch (error) {
+				provider.log(
+					`Failed to initiate OAuth for ${message.serverName}: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+				vscode.window.showErrorMessage(
+					`Failed to authenticate MCP server ${message.serverName}: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+			break
+		}
 		case "toggleToolAlwaysAllow": {
 			try {
 				await provider
