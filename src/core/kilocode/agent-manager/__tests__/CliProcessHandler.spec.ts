@@ -325,8 +325,9 @@ describe("CliProcessHandler", () => {
 		})
 
 		describe("Windows .cmd file handling", () => {
-			it("uses shell: true for .cmd files on Windows", () => {
+			it("uses cmd.exe for .cmd files on Windows", () => {
 				const originalPlatform = process.platform
+				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
@@ -340,17 +341,20 @@ describe("CliProcessHandler", () => {
 					)
 
 					expect(spawnMock).toHaveBeenCalledWith(
-						"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
-						expect.any(Array),
-						expect.objectContaining({ shell: true }),
+						expectedCommand,
+						expect.arrayContaining(["/c", "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd"]),
+						expect.objectContaining({ shell: false }),
 					)
+					const args = spawnMock.mock.calls[0]?.[1] as string[]
+					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}
 			})
 
-			it("uses shell: true for .CMD files (case insensitive) on Windows", () => {
+			it("uses cmd.exe for .CMD files (case insensitive) on Windows", () => {
 				const originalPlatform = process.platform
+				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
@@ -364,10 +368,12 @@ describe("CliProcessHandler", () => {
 					)
 
 					expect(spawnMock).toHaveBeenCalledWith(
-						"C:\\Users\\test\\kilocode.CMD",
-						expect.any(Array),
-						expect.objectContaining({ shell: true }),
+						expectedCommand,
+						expect.arrayContaining(["/c", "C:\\Users\\test\\kilocode.CMD"]),
+						expect.objectContaining({ shell: false }),
 					)
+					const args = spawnMock.mock.calls[0]?.[1] as string[]
+					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}

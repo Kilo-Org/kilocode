@@ -1,6 +1,7 @@
 import * as path from "node:path"
 import * as fs from "node:fs"
 import { execSync, spawnSync } from "node:child_process"
+import stripAnsi from "strip-ansi"
 import { fileExistsAtPath } from "../../../utils/fs"
 import { getLocalCliPath } from "./CliInstaller"
 
@@ -24,6 +25,33 @@ function getCaseInsensitive(target: NodeJS.ProcessEnv, key: string): string | un
 	const lowercaseKey = key.toLowerCase()
 	const equivalentKey = Object.keys(target).find((k) => k.toLowerCase() === lowercaseKey)
 	return equivalentKey ? target[equivalentKey] : target[key]
+}
+
+function stripShellControlCodes(value: string): string {
+	const withoutOsc = value.replace(/\x1b\][^\x07]*\x07/gs, "").replace(/\x1b\].*?\x1b\\/gs, "")
+	return stripAnsi(withoutOsc)
+}
+
+function extractAbsolutePath(line: string): string | null {
+	const trimmed = line.trim()
+	if (!trimmed) {
+		return null
+	}
+	if (path.isAbsolute(trimmed)) {
+		return trimmed
+	}
+	const parts = trimmed.split(/\s+/)
+	const last = parts[parts.length - 1]
+	return path.isAbsolute(last) ? last : null
+}
+
+function isExecutablePath(candidate: string): boolean {
+	try {
+		const stat = fs.statSync(candidate)
+		return stat.isFile()
+	} catch {
+		return false
+	}
 }
 
 /**
@@ -276,17 +304,25 @@ function findViaLoginShell(log?: (msg: string) => void): string | null {
 
 	try {
 		log?.(`Trying login shell lookup: ${cmd}`)
-		const result = execSync(cmd, {
+		const rawOutput = execSync(cmd, {
 			encoding: "utf-8",
 			timeout: 10000,
 			env: { ...process.env, HOME: process.env.HOME },
 		})
-			.split(/\r?\n/)[0]
-			?.trim()
+		const lines = stripShellControlCodes(rawOutput)
+			.split(/\r?\n/)
+			.map((line) => line.trim())
+			.filter(Boolean)
 
-		if (result && !result.includes("not found")) {
-			log?.(`Found CLI via login shell: ${result}`)
-			return result
+		for (const line of lines) {
+			if (line.includes("not found")) {
+				continue
+			}
+			const candidate = extractAbsolutePath(line)
+			if (candidate && isExecutablePath(candidate)) {
+				log?.(`Found CLI via login shell: ${candidate}`)
+				return candidate
+			}
 		}
 	} catch (error) {
 		log?.(`Login shell lookup failed (this is normal if CLI not installed via version manager): ${error}`)
@@ -304,11 +340,10 @@ function getNpmPaths(log?: (msg: string) => void): string[] {
 	if (process.platform === "win32") {
 		const appData = process.env.APPDATA || ""
 		const localAppData = process.env.LOCALAPPDATA || ""
-		return [
-			appData ? path.join(appData, "npm", "kilocode.cmd") : "",
-			appData ? path.join(appData, "npm", "kilocode") : "",
-			localAppData ? path.join(localAppData, "npm", "kilocode.cmd") : "",
-		].filter(Boolean)
+		const basePaths = [appData, localAppData].filter(Boolean).map((base) => path.join(base, "npm", "kilocode"))
+		const pathExt = getCaseInsensitive(process.env, "PATHEXT") || ".COM;.EXE;.BAT;.CMD"
+		const extensions = pathExt.split(";").filter(Boolean)
+		return basePaths.flatMap((basePath) => extensions.map((ext) => `${basePath}${ext}`))
 	}
 
 	const paths = [
