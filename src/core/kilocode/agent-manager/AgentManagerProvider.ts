@@ -1482,6 +1482,7 @@ export class AgentManagerProvider implements vscode.Disposable {
 				hasNpm,
 				platform,
 				shell,
+				errorMessage: error.message,
 			})
 		} else if (error?.type === "cli_configuration_error") {
 			captureAgentManagerLoginIssue({
