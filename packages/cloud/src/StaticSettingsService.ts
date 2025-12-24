@@ -8,6 +8,7 @@ import {
 	organizationSettingsSchema,
 	ORGANIZATION_ALLOW_ALL,
 } from "@roo-code/types"
+import { ZodError } from "zod"
 
 export class StaticSettingsService implements SettingsService {
 	private settings: OrganizationSettings
@@ -19,18 +20,44 @@ export class StaticSettingsService implements SettingsService {
 	}
 
 	private parseEnvironmentSettings(envValue: string): OrganizationSettings {
-		try {
-			const decodedValue = Buffer.from(envValue, "base64").toString("utf-8")
-			const parsedJson = JSON.parse(decodedValue)
-			return organizationSettingsSchema.parse(parsedJson)
-		} catch (error) {
-			this.log(
-				`[StaticSettingsService] failed to parse static settings: ${error instanceof Error ? error.message : String(error)}`,
-				error,
-			)
-
-			throw new Error("Failed to parse static settings", { cause: error })
+		if (!envValue || typeof envValue !== "string") {
+			return this.logAndThrow("Failed to parse static settings", new Error("Missing static settings value")) // kilocode_change
 		}
+
+		let decodedValue: string // kilocode_change
+		try {
+			decodedValue = Buffer.from(envValue, "base64").toString("utf-8")
+		} catch (error) {
+			return this.logAndThrow("Failed to parse static settings", error) // kilocode_change
+		}
+
+		let parsedJson: unknown // kilocode_change
+		try {
+			parsedJson = JSON.parse(decodedValue)
+		} catch (error) {
+			return this.logAndThrow("Failed to parse static settings", error) // kilocode_change
+		}
+
+		let parsed // kilocode_change
+		try {
+			parsed = organizationSettingsSchema.safeParse(parsedJson) // kilocode_change
+		} catch (error) {
+			return this.logAndThrow("Failed to parse static settings", error) // kilocode_change
+		}
+
+		if (!parsed.success) {
+			return this.logAndThrow("Failed to parse static settings", parsed.error) // kilocode_change
+		}
+
+		return parsed.data // kilocode_change
+	}
+
+	private logAndThrow(message: string, error: unknown): never {
+		const err = error instanceof Error ? error : new Error(String(error)) // kilocode_change
+		const safeMessage = err instanceof ZodError ? "Invalid static settings schema" : err.message // kilocode_change
+		const loggableError = new Error(safeMessage) // kilocode_change
+		this.log(`[StaticSettingsService] failed to parse static settings: ${safeMessage}`, loggableError) // kilocode_change
+		throw new Error(message, { cause: err }) // kilocode_change
 	}
 
 	public getAllowList(): OrganizationAllowList {
