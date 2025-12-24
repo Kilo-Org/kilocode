@@ -1,5 +1,6 @@
 import stripAnsi from "strip-ansi"
 
+// this strips any form os OSC sequences from a value coming from a terminal command execution
 export function stripOscSequences(value: string): string {
 	let result = ""
 	let index = 0
