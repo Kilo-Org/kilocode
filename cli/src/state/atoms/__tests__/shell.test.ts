@@ -9,38 +9,38 @@ import {
 	navigateShellHistoryUpAtom,
 	navigateShellHistoryDownAtom,
 	addToShellHistoryAtom,
+	shellSessionAtom,
+	currentShellDirectoryAtom,
+	initializeShellSessionAtom,
+	disposeShellSessionAtom,
+	applyShellWorkspaceAtom,
+	workspacePathAtom,
 } from "../shell.js"
-import { textBufferStringAtom, setTextAtom } from "../textBuffer.js"
+import { textBufferStringAtom, setTextAtom, clearTextAtom } from "../textBuffer.js"
 
-// Mock child_process to avoid actual command execution
-vi.mock("child_process", () => ({
-	exec: vi.fn((command) => {
-		// Simulate successful command execution
-		const stdout = `Mock output for: ${command}`
-		const stderr = ""
-		const process = {
-			stdout: {
-				on: vi.fn((event, handler) => {
-					if (event === "data") {
-						setTimeout(() => handler(stdout), 10)
-					}
-				}),
-			},
-			stderr: {
-				on: vi.fn((event, handler) => {
-					if (event === "data") {
-						setTimeout(() => handler(stderr), 10)
-					}
-				}),
-			},
-			on: vi.fn((event, handler) => {
-				if (event === "close") {
-					setTimeout(() => handler(0), 20)
-				}
-			}),
-		}
-		return process
-	}),
+// Type for partial mock of ShellSession
+type PartialShellSession = {
+	ensureSession?: () => Promise<void>
+	dispose?: () => void
+	getCurrentDirectory?: () => string
+	isSessionReady?: () => boolean
+	run?: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number; cwd: string }>
+}
+
+// Mock ShellSession to avoid actual shell spawning
+vi.mock("../../../services/shell/session.js", () => ({
+	ShellSession: vi.fn().mockImplementation(() => ({
+		ensureSession: vi.fn().mockResolvedValue(undefined),
+		run: vi.fn().mockResolvedValue({
+			stdout: "command output",
+			stderr: "",
+			exitCode: 0,
+			cwd: "/tmp/test",
+		}),
+		getCurrentDirectory: vi.fn().mockReturnValue("/tmp/test"),
+		isSessionReady: vi.fn().mockReturnValue(true),
+		dispose: vi.fn(),
+	})),
 }))
 
 describe("shell mode - comprehensive tests", () => {
@@ -53,6 +53,8 @@ describe("shell mode - comprehensive tests", () => {
 		store.set(shellModeActiveAtom, false)
 		store.set(inputModeAtom, "normal" as const)
 		store.set(shellHistoryIndexAtom, -1)
+		// Clear text buffer
+		store.set(clearTextAtom)
 	})
 
 	describe("shell mode activation", () => {
@@ -668,6 +670,136 @@ describe("shell mode - comprehensive tests", () => {
 			store.set(navigateShellHistoryUpAtom)
 			// Index should remain unchanged when history is empty
 			expect(store.get(shellHistoryIndexAtom)).toBe(indexBeforeClear)
+		})
+	})
+
+	describe("shell session management", () => {
+		it("should initialize shell session", async () => {
+			store.set(workspacePathAtom, "/tmp/workspace")
+			await store.set(initializeShellSessionAtom)
+
+			const session = store.get(shellSessionAtom)
+			expect(session).toBeDefined()
+			expect(session?.ensureSession).toHaveBeenCalledWith("/tmp/workspace")
+		})
+
+		it("should not reinitialize if session already exists", async () => {
+			const mockSession: PartialShellSession = { ensureSession: vi.fn() }
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+
+			await store.set(initializeShellSessionAtom)
+
+			expect(mockSession.ensureSession).not.toHaveBeenCalled()
+		})
+
+		it("should dispose shell session", () => {
+			const mockSession: PartialShellSession = { dispose: vi.fn() }
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+
+			store.set(disposeShellSessionAtom)
+
+			expect(mockSession.dispose).toHaveBeenCalled()
+			expect(store.get(shellSessionAtom)).toBeNull()
+			expect(store.get(currentShellDirectoryAtom)).toBe(process.cwd())
+		})
+
+		it("should apply shell workspace changes", () => {
+			const mockSession: PartialShellSession = {
+				getCurrentDirectory: vi.fn().mockReturnValue("/new/directory"),
+				isSessionReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+			store.set(workspacePathAtom, "/old/workspace")
+
+			// Mock process.chdir
+			const originalChdir = process.chdir
+			process.chdir = vi.fn()
+
+			store.set(applyShellWorkspaceAtom)
+
+			expect(process.chdir).toHaveBeenCalledWith("/new/directory")
+			expect(store.get(workspacePathAtom)).toBe("/new/directory")
+
+			// Restore original chdir
+			process.chdir = originalChdir
+		})
+
+		it("should not apply workspace changes if directories are the same", () => {
+			const mockSession: PartialShellSession = {
+				getCurrentDirectory: vi.fn().mockReturnValue("/same/directory"),
+				isSessionReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+			store.set(workspacePathAtom, "/same/directory")
+
+			const originalChdir = process.chdir
+			process.chdir = vi.fn()
+
+			store.set(applyShellWorkspaceAtom)
+
+			expect(process.chdir).not.toHaveBeenCalled()
+			expect(store.get(workspacePathAtom)).toBe("/same/directory")
+
+			process.chdir = originalChdir
+		})
+	})
+
+	describe("shell session integration with shell mode", () => {
+		it("should initialize shell session when entering shell mode", () => {
+			store.set(workspacePathAtom, "/tmp/test")
+
+			store.set(toggleShellModeAtom)
+
+			expect(store.get(shellModeActiveAtom)).toBe(true)
+			const session = store.get(shellSessionAtom)
+			expect(session).toBeDefined()
+		})
+
+		it("should apply workspace changes when exiting shell mode", () => {
+			// Enter shell mode
+			store.set(toggleShellModeAtom)
+			expect(store.get(shellModeActiveAtom)).toBe(true)
+
+			// Set up session with different directory
+			const mockSession: PartialShellSession = {
+				getCurrentDirectory: vi.fn().mockReturnValue("/changed/directory"),
+				isSessionReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+			store.set(workspacePathAtom, "/original/directory")
+
+			// Mock process.chdir
+			const originalChdir = process.chdir
+			process.chdir = vi.fn()
+
+			// Exit shell mode
+			store.set(toggleShellModeAtom)
+
+			expect(store.get(shellModeActiveAtom)).toBe(false)
+			expect(process.chdir).toHaveBeenCalledWith("/changed/directory")
+			expect(store.get(workspacePathAtom)).toBe("/changed/directory")
+
+			process.chdir = originalChdir
+		})
+
+		it("should execute commands using shell session", async () => {
+			// Set up session
+			const mockSession: PartialShellSession = {
+				run: vi.fn().mockResolvedValue({
+					stdout: "session output",
+					stderr: "",
+					exitCode: 0,
+					cwd: "/tmp/test",
+				}),
+				isSessionReady: vi.fn().mockReturnValue(true),
+			}
+			store.set(shellSessionAtom, mockSession as PartialShellSession)
+
+			await store.set(executeShellCommandAtom, "test command")
+
+			expect(mockSession.run).toHaveBeenCalledWith("test command")
+			expect(store.get(shellHistoryAtom)).toContain("test command")
+			expect(store.get(currentShellDirectoryAtom)).toBe("/tmp/test")
 		})
 	})
 })
