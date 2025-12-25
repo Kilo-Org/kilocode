@@ -255,7 +255,7 @@ export class BrowserSession {
 			lastLogTs = Date.now()
 		}
 
-		const errorListener = (err: Error) => {
+		const errorListener = (err: any) => {
 			logs.push(`[Page Error] ${err.toString()}`)
 			lastLogTs = Date.now()
 		}

@@ -78,5 +78,8 @@
 			"bluebird": ">=3.7.2",
 			"glob": ">=11.1.0"
 		}
+	},
+	"dependencies": {
+		"puppeteer-core": "^24.34.0"
 	}
 }

@@ -6,13 +6,15 @@ import { type ModelInfo, chutesModels } from "@roo-code/types"
 import { DEFAULT_HEADERS } from "../constants"
 
 // Chutes models endpoint follows OpenAI /models shape with additional fields.
+// Some models may have incomplete data, so we make id and max_model_len optional
+// and filter out invalid models later
 const ChutesModelSchema = z.object({
-	id: z.string(),
+	id: z.string().optional(),
 	object: z.literal("model").optional(),
 	owned_by: z.string().optional(),
 	created: z.number().optional(),
 	context_length: z.number().optional(),
-	max_model_len: z.number(),
+	max_model_len: z.number().optional(),
 	input_modalities: z.array(z.string()).optional(),
 	supported_features: z.array(z.string()).optional(),
 })
@@ -37,6 +39,11 @@ export async function getChutesModels(apiKey?: string): Promise<Record<string, M
 
 		if (parsed.success) {
 			for (const m of parsed.data.data) {
+				// Skip models without required fields
+				if (!m.id || !m.max_model_len) {
+					continue
+				}
+
 				const contextWindow = m.context_length
 
 				if (!contextWindow) {
@@ -58,7 +65,8 @@ export async function getChutesModels(apiKey?: string): Promise<Record<string, M
 				models[m.id] = info
 			}
 		} else {
-			console.error(`Error parsing Chutes models: ${JSON.stringify(parsed.error.format(), null, 2)}`)
+			// Silently skip parsing errors - we still have hardcoded models as fallback
+			console.debug(`Chutes API returned some invalid models, using hardcoded models as fallback`)
 		}
 	} catch (error) {
 		console.error(`Error fetching Chutes models: ${error instanceof Error ? error.message : String(error)}`)
