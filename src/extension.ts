@@ -50,6 +50,7 @@ import { SettingsSyncService } from "./services/settings-sync/SettingsSyncServic
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
+import { activateContextEngine, registerContextEngineCommands } from "./context-engine/integration/vscode-integration" // Context Engine
 
 // kilocode_change start
 async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
@@ -542,6 +543,36 @@ export async function activate(context: vscode.ExtensionContext) {
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+
+	// Initialize Context Engine
+	try {
+		outputChannel.appendLine("[ContextEngine] Initializing Advanced Context Engine...")
+		const contextEngine = await activateContextEngine(context)
+		registerContextEngineCommands(context, contextEngine)
+
+		// Create bridge to integrate with existing CodeIndexManager
+		const { IndexingBridge } = require("./context-engine/integration/indexing-bridge")
+		const indexingBridge = new IndexingBridge(contextEngine)
+
+		// Connect to CodeIndexManagers if available
+		if (codeIndexManagers.length > 0) {
+			// Use the first workspace's index manager for now
+			indexingBridge.setCodeIndexManager(codeIndexManagers[0])
+			outputChannel.appendLine(
+				`[ContextEngine] Connected to CodeIndexManager for ${vscode.workspace.workspaceFolders?.[0]?.name}`,
+			)
+		}
+
+		// Store bridge in context for later use
+		;(context as any).indexingBridge = indexingBridge
+
+		outputChannel.appendLine("[ContextEngine] Advanced Context Engine initialized successfully")
+	} catch (error) {
+		outputChannel.appendLine(
+			`[ContextEngine] Failed to initialize Context Engine: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
 	await checkAndRunAutoLaunchingTask(context)
 	// kilocode_change end
 	// Initialize background model cache refresh
