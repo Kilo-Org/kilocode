@@ -245,6 +245,99 @@ export const moveToAtom = atom(null, (get, set, position: { row: number; column:
 	})
 })
 
+/**
+ * Move cursor to start of previous word
+ */
+export const moveToPreviousWordAtom = atom(null, (get, set) => {
+	const state = get(textBufferStateAtom)
+	let { row, column } = state.cursor
+
+	if (row === 0 && column === 0) {
+		return false
+	}
+
+	// If starting at col 0, move to end of previous line
+	if (column === 0) {
+		row--
+		column = (state.lines[row] || "").length
+		// Now cursor is at the end of the previous line.
+		// We will continue to find the word from here.
+	} else {
+		column-- // Move one char left to start processing
+	}
+
+	// Step 1: Skip any whitespace backwards
+	while (true) {
+		const line = state.lines[row] || ""
+		if (column < 0) {
+			// Reached start of line, need to go to previous line
+			if (row === 0) break // Cannot go further back
+			row--
+			column = (state.lines[row] || "").length - 1 // Start from end of previous line, minus 1 for loop condition
+		}
+		if (line[column] === " ") {
+			column--
+		} else {
+			break // Found non-whitespace
+		}
+	}
+	// Now column is at -1 or at the last char of a non-whitespace sequence
+
+	// Step 2: Skip over the word characters backwards
+	while (true) {
+		const line = state.lines[row] || ""
+		if (column < 0) {
+			// Reached start of line, need to go to previous line
+			if (row === 0) break // Cannot go further back
+			row--
+			column = (state.lines[row] || "").length - 1 // Start from end of previous line, minus 1
+		}
+		if (line[column] !== " ") {
+			// Is a word character
+			column--
+		} else {
+			break // Found whitespace, which is the word boundary
+		}
+	}
+	// column is now at -1 or at a space before the word.
+
+	column = Math.max(0, column + 1) // Adjust to land at the start of the word.
+
+	set(textBufferStateAtom, { ...state, cursor: { row, column } })
+	return true
+})
+
+/**
+ * Move cursor to start of next word
+ */
+export const moveToNextWordAtom = atom(null, (get, set) => {
+	const state = get(textBufferStateAtom)
+	const { row, column } = state.cursor
+	const line = state.lines[row] || ""
+
+	if (column === line.length) {
+		if (row < state.lines.length - 1) {
+			set(textBufferStateAtom, { ...state, cursor: { row: row + 1, column: 0 } })
+		}
+		return true
+	}
+
+	let pos = column
+
+	// Skip current word's characters
+	while (pos < line.length && line[pos] !== " ") {
+		pos++
+	}
+
+	// Skip whitespace
+	while (pos < line.length && line[pos] === " ") {
+		pos++
+	}
+
+	set(textBufferStateAtom, { ...state, cursor: { row, column: pos } })
+	return true
+})
+
 // ============================================================================
 // Action Atoms - Text Editing
 // ============================================================================
