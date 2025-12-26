@@ -114,6 +114,7 @@ import {
 	OvhCloudAiEndpoints,
 	Inception,
 	SapAiCore,
+	IntelligentProvider,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -846,6 +847,16 @@ const ApiOptions = ({
 					setApiConfigurationField={setApiConfigurationField}
 				/>
 			)}
+
+			{selectedProvider === "intelligent" && (
+				<IntelligentProvider
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					onValidationChange={(_isValid, errorMessage) => {
+						setErrorMessage(errorMessage)
+					}}
+				/>
+			)}
 			{/* kilocode_change end */}
 
 			{selectedProvider === "litellm" && (
@@ -857,7 +868,6 @@ const ApiOptions = ({
 					simplifySettings={fromWelcomeView}
 				/>
 			)}
-
 			{selectedProvider === "sambanova" && (
 				<SambaNova apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
