@@ -25,7 +25,7 @@
 		"stopButtonTitle": "Detener agente",
 		"newButtonTitle": "Nuevo agente",
 		"refreshButtonTitle": "Actualizar mensajes",
-		"autoModeWarning": "Ejecutando en modo completamente automático - el agente ejecutará acciones sin confirmación",
+		"autoModeWarning": "Modo YOLO - las operaciones de herramientas se aprueban automáticamente",
 		"starting": "Iniciando...",
 		"startAriaLabel": "Iniciar agente con el prompt proporcionado",
 		"keyboardHint": "Presiona Enter para iniciar, Shift+Enter para nueva línea",
@@ -47,7 +47,15 @@
 		"launchVersions": "Lanzar {{count}} versiones",
 		"startAgent": "Iniciar agente",
 		"cancelCreating": "Cancelar creación de sesión",
-		"cancelButton": "Cancelar"
+		"cancelButton": "Cancelar",
+		"selectBranch": "Seleccionar rama",
+		"searchBranches": "Escribe para buscar todas las ramas",
+		"yourBranches": "Tus ramas",
+		"otherBranches": "Otras ramas",
+		"branchPickerTooltip": "Cambiar rama base",
+		"noBranches": "No se encontraron ramas",
+		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda",
+		"openTerminal": "Abrir terminal"
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",
@@ -59,13 +67,19 @@
 		"question": "Kilo Code tiene una pregunta",
 		"command": "Kilo quiere ejecutar un comando",
 		"tool": "Kilo quiere usar una herramienta",
-		"usingTool": "Usando herramienta: **{{tool}}** {{details}}"
+		"usingTool": "Usando herramienta: **{{tool}}** {{details}}",
+		"expandOutput": "Expandir salida",
+		"collapseOutput": "Colapsar salida",
+		"copyCommand": "Copiar comando"
 	},
 	"chatInput": {
-		"autonomous": "Agente ejecutando en modo autónomo",
+		"autoMode": "Agente ejecutándose en modo totalmente automático - no se permite entrada",
+		"sessionEnded": "Sesión finalizada, por favor inicia una nueva sesión",
 		"placeholderTypeTask": "Escribe tu tarea aquí...",
 		"ariaLabel": "Entrada de mensaje",
 		"cancelTitle": "Cancelar agente",
+		"finishToBranchTitle": "Finalizar worktree y preparar branch: {{branch}}",
+		"finishToBranchTitleNoBranch": "Finalizar worktree y preparar branch",
 		"sendTitle": "Enviar mensaje",
 		"resumeTitle": "Reanudar agente",
 		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea"

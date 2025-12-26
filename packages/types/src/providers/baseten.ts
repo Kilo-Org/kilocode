@@ -5,7 +5,7 @@ import type { ModelInfo } from "../model.js"
 
 export const basetenModels = {
 	"moonshotai/Kimi-K2-Thinking": {
-		maxTokens: 163_800,
+		maxTokens: 16_384,
 		contextWindow: 262_000,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -17,7 +17,7 @@ export const basetenModels = {
 		description: "Kimi K2 Thinking - A model with enhanced reasoning capabilities from Kimi K2",
 	},
 	"zai-org/GLM-4.6": {
-		maxTokens: 200_000,
+		maxTokens: 16_384,
 		contextWindow: 200_000,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -29,7 +29,7 @@ export const basetenModels = {
 		description: "Frontier open model with advanced agentic, reasoning and coding capabilities",
 	},
 	"deepseek-ai/DeepSeek-R1": {
-		maxTokens: 131_072,
+		maxTokens: 16_384,
 		contextWindow: 163_840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -40,7 +40,7 @@ export const basetenModels = {
 		description: "DeepSeek's first-generation reasoning model",
 	},
 	"deepseek-ai/DeepSeek-R1-0528": {
-		maxTokens: 131_072,
+		maxTokens: 16_384,
 		contextWindow: 163_840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -51,7 +51,7 @@ export const basetenModels = {
 		description: "The latest revision of DeepSeek's first-generation reasoning model",
 	},
 	"deepseek-ai/DeepSeek-V3-0324": {
-		maxTokens: 131_072,
+		maxTokens: 16_384,
 		contextWindow: 163_840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -62,7 +62,7 @@ export const basetenModels = {
 		description: "Fast general-purpose LLM with enhanced reasoning capabilities",
 	},
 	"deepseek-ai/DeepSeek-V3.1": {
-		maxTokens: 131_072,
+		maxTokens: 16_384,
 		contextWindow: 163_840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -73,8 +73,21 @@ export const basetenModels = {
 		description:
 			"Extremely capable general-purpose LLM with hybrid reasoning capabilities and advanced tool calling",
 	},
+	"deepseek-ai/DeepSeek-V3.2": {
+		maxTokens: 16_384,
+		contextWindow: 163_840,
+		supportsImages: false,
+		supportsPromptCache: false,
+		supportsNativeTools: true,
+		inputPrice: 0.3,
+		outputPrice: 0.45,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0,
+		description:
+			"DeepSeek's hybrid reasoning model with efficient long context scaling with GPT-5 level performance",
+	},
 	"Qwen/Qwen3-235B-A22B-Instruct-2507": {
-		maxTokens: 262_144,
+		maxTokens: 16_384,
 		contextWindow: 262_144,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -85,7 +98,7 @@ export const basetenModels = {
 		description: "Mixture-of-experts LLM with math and reasoning capabilities",
 	},
 	"Qwen/Qwen3-Coder-480B-A35B-Instruct": {
-		maxTokens: 262_144,
+		maxTokens: 16_384,
 		contextWindow: 262_144,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -96,7 +109,7 @@ export const basetenModels = {
 		description: "Mixture-of-experts LLM with advanced coding and reasoning capabilities",
 	},
 	"openai/gpt-oss-120b": {
-		maxTokens: 128_072,
+		maxTokens: 16_384,
 		contextWindow: 128_072,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -108,7 +121,7 @@ export const basetenModels = {
 		description: "Extremely capable general-purpose LLM with strong, controllable reasoning capabilities",
 	},
 	"moonshotai/Kimi-K2-Instruct-0905": {
-		maxTokens: 168_000,
+		maxTokens: 16_384,
 		contextWindow: 262_000,
 		supportsImages: false,
 		supportsPromptCache: false,

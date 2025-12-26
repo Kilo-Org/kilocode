@@ -55,6 +55,12 @@ export function kilo_initializeSessionManager({
 				onSessionRestored: () => {
 					log("Session restored")
 				},
+				onSessionSynced: (message) => {
+					log(`Session synced: ${message.sessionId}`)
+				},
+				onSessionTitleGenerated: (message) => {
+					log(`Session title generated: ${message.sessionId} - ${message.title}`)
+				},
 				platform: vscode.env.appName,
 				getOrganizationId: async (taskId: string) => {
 					const result = await (async () => {
@@ -86,7 +92,7 @@ export function kilo_initializeSessionManager({
 								return await currentTask.getTaskMode()
 							}
 
-							const task = await provider.getTaskWithId(taskId)
+							const task = await provider.getTaskWithId(taskId, false)
 							const globalMode = await provider.getMode()
 
 							return task?.historyItem?.mode || globalMode
@@ -121,11 +127,32 @@ export function kilo_initializeSessionManager({
 
 					return result || undefined
 				},
+				getParentTaskId: async (taskId: string) => {
+					const result = await (async () => {
+						try {
+							const currentTask = provider.getCurrentTask()
+
+							if (currentTask?.taskId === taskId) {
+								return currentTask.parentTaskId
+							}
+
+							const task = await provider.getTaskWithId(taskId, false)
+
+							return task?.historyItem?.parentTaskId
+						} catch {
+							return undefined
+						}
+					})()
+
+					logger.debug(`Resolved parent task ID for task ${taskId}: "${result}"`, "SessionManager")
+
+					return result || undefined
+				},
 			})
 
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
 			if (workspaceFolder) {
-				sessionManager.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
+				sessionManager?.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
 			}
 
 			log("SessionManager initialized successfully")

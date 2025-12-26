@@ -112,6 +112,7 @@
 	"enhancePrompt": "Prompt mit zusätzlichem Kontext verbessern",
 	"addImages": "Bilder zur Nachricht hinzufügen",
 	"sendMessage": "Nachricht senden",
+	"pressToSend": "Drücke {{keyCombination}} zum Senden",
 	"stopTts": "Text-in-Sprache beenden",
 	"typeMessage": "Nachricht eingeben...",
 	"typeTask": "Gib deine Aufgabe hier ein...",
@@ -154,7 +155,8 @@
 			"403": "Nicht autorisiert. Dein API-Schlüssel ist gültig, aber der Anbieter hat sich geweigert, diese Anfrage zu erfüllen.",
 			"429": "Zu viele Anfragen. Du wirst vom Anbieter rate-limitiert. Bitte warte ein wenig, bevor du den nächsten API-Aufruf machst.",
 			"500": "Fehler auf dem Server des Anbieters. Es stimmt etwas mit der Anbieterseite nicht, mit deiner Anfrage stimmt alles.",
-			"unknown": "Unbekannter API-Fehler. Bitte kontaktiere den Roo Code Support."
+			"unknown": "Unbekannter API-Fehler. Bitte kontaktiere den Kilo Support.",
+			"connection": "Verbindungsfehler. Stelle sicher, dass du eine funktionierende Internetverbindung hast."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"hasQuestion": "Kilo Code hat eine Frage"
 	},
 	"taskCompleted": "Aufgabe abgeschlossen",
+	"errorDetails": {
+		"title": "Fehlerdetails",
+		"copyToClipboard": "In Zwischenablage kopieren",
+		"copied": "Kopiert!"
+	},
 	"powershell": {
 		"issues": "Es scheint, dass du Probleme mit Windows PowerShell hast, bitte sieh dir dies an"
 	},
@@ -293,19 +300,28 @@
 		"thinking": "Denke nach",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Kontext komprimiert",
-		"condensing": "Kontext wird komprimiert...",
-		"errorHeader": "Kontext konnte nicht komprimiert werden",
-		"tokens": "Tokens"
+	"contextManagement": {
+		"tokens": "Tokens",
+		"condensation": {
+			"title": "Kontext komprimiert",
+			"inProgress": "Kontext wird komprimiert...",
+			"errorHeader": "Kontext konnte nicht komprimiert werden"
+		},
+		"truncation": {
+			"title": "Kontext gekürzt",
+			"inProgress": "Kontext wird gekürzt...",
+			"messagesRemoved": "{{count}} Nachricht entfernt",
+			"messagesRemoved_other": "{{count}} Nachrichten entfernt",
+			"description": "Ältere Nachrichten wurden aus der Konversation entfernt, um innerhalb des Kontextfenster-Limits zu bleiben. Dies ist ein schnellerer, aber weniger kontexterhaltender Ansatz im Vergleich zur Komprimierung."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "In Eingabefeld kopieren (oder Shift + Klick)",
-		"autoSelectCountdown": "Automatische Auswahl in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Automatische Genehmigung aktiviert. Wähle in {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} veröffentlicht",
+		"title": "Roo Code {{version}} veröffentlicht",
+		"support": "Bitte unterstütze Roo Code, indem du uns auf <githubLink>GitHub</githubLink> einen Stern gibst.",
 		"stealthModel": {
 			"feature": "<bold>Zeitlich begrenztes KOSTENLOSES Stealth-Modell</bold> - Code Supernova: Jetzt mit einem <bold>1M Token Kontextfenster</bold> erweitert! Ein vielseitiges agentisches Coding-Modell, das Bildeingaben unterstützt und über Roo Code Cloud zugänglich ist.",
 			"note": "(Hinweis: Prompts und Vervollständigungen werden vom Modellersteller protokolliert und zur Verbesserung des Modells verwendet)",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Browser-Sitzung gestartet",
 		"actions": {
 			"title": "Browser-Aktion: ",
+			"launched": "Browser gestartet",
 			"launch": "Browser starten auf {{url}}",
+			"clicked": "Geklickt auf: {{coordinate}}",
 			"click": "Klicken ({{coordinate}})",
+			"typed": "Eingegeben: {{text}}",
 			"type": "Eingeben \"{{text}}\"",
+			"pressed": "{{key}} gedrückt",
 			"press": "{{key}} drücken",
+			"scrolledDown": "Nach unten gescrollt",
 			"scrollDown": "Nach unten scrollen",
+			"scrolledUp": "Nach oben gescrollt",
 			"scrollUp": "Nach oben scrollen",
+			"hovered": "Gehovered auf: {{coordinate}}",
 			"hover": "Hover ({{coordinate}})",
+			"resized": "Größe geändert auf: {{size}}",
+			"resize": "Größe ändern auf {{size}}",
+			"screenshotSaved": "Screenshot gespeichert",
+			"screenshot": "Screenshot speichern unter {{path}}",
+			"closed": "Browser geschlossen",
 			"close": "Browser schließen"
 		}
 	},

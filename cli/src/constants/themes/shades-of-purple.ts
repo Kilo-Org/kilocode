@@ -54,6 +54,17 @@ export const shadesOfPurpleTheme: Theme = {
 		lineNumber: "#726c86",
 	},
 
+	markdown: {
+		text: "#e3dfff",
+		heading: "#4d21fc",
+		strong: "#ffffff",
+		em: "#e3dfff",
+		code: "#A5FF90",
+		blockquote: "#726c86",
+		link: "#a1feff",
+		list: "#e3dfff",
+	},
+
 	ui: {
 		border: {
 			default: "#a599e9",

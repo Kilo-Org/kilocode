@@ -31,7 +31,6 @@ export interface AgentSession {
 	source: SessionSource
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
-	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
 }
 
 /**
@@ -43,7 +42,6 @@ export interface PendingSession {
 	startTime: number
 	parallelMode?: boolean
 	gitUrl?: string
-	autoMode?: boolean // True if session will be started with --auto flag
 }
 
 // Re-export remote session shape from shared session client for consistency
@@ -59,10 +57,11 @@ export interface AgentManagerState {
  */
 export type AgentManagerMessage =
 	| { type: "agentManager.webviewReady" }
-	| { type: "agentManager.startSession"; prompt: string; parallelMode?: boolean }
+	| { type: "agentManager.startSession"; prompt: string; parallelMode?: boolean; existingBranch?: string }
 	| { type: "agentManager.stopSession"; sessionId: string }
 	| { type: "agentManager.selectSession"; sessionId: string }
 	| { type: "agentManager.refreshRemoteSessions" }
+	| { type: "agentManager.listBranches" }
 
 /**
  * Messages from Extension to Webview
@@ -73,3 +72,4 @@ export type AgentManagerExtensionMessage =
 	| { type: "agentManager.sessionRemoved"; sessionId: string }
 	| { type: "agentManager.error"; error: string }
 	| { type: "agentManager.remoteSessions"; sessions: RemoteSession[] }
+	| { type: "agentManager.branches"; branches: string[]; currentBranch?: string }

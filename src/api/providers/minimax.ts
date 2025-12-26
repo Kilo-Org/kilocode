@@ -303,27 +303,4 @@ export class MiniMaxHandler extends BaseProvider implements SingleCompletionHand
 		const content = message.content.find(({ type }) => type === "text")
 		return content?.type === "text" ? content.text : ""
 	}
-
-	/**
-	 * Counts tokens for the given content using Anthropic's token counting
-	 * Falls back to base provider's tiktoken estimation if counting fails
-	 */
-	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		try {
-			const { id: model } = this.getModel()
-
-			const response = await this.client.messages.countTokens({
-				model,
-				messages: [{ role: "user", content: content }],
-			})
-
-			return response.input_tokens
-		} catch (error) {
-			// Log error but fallback to tiktoken estimation
-			console.warn("MiniMax token counting failed, using fallback", error)
-
-			// Use the base provider's implementation as fallback
-			return super.countTokens(content)
-		}
-	}
 }

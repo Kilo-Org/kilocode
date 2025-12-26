@@ -1,3 +1,4 @@
+// kilocode_change: kilo file
 import type { ModelInfo } from "../model.js"
 
 // https://glama.ai/models

@@ -276,6 +276,44 @@ vi.mock("../services/terminal-welcome/TerminalWelcomeService", () => ({
 	},
 }))
 
+// Mock ClineProvider - remoteControlEnabled must call BridgeOrchestrator.disconnect for the test
+vi.mock("../core/webview/ClineProvider", async () => {
+	const { BridgeOrchestrator } = await import("@roo-code/cloud")
+	const mockInstance = {
+		resolveWebviewView: vi.fn(),
+		postMessageToWebview: vi.fn(),
+		postStateToWebview: vi.fn(),
+		getState: vi.fn().mockResolvedValue({}),
+		remoteControlEnabled: vi.fn().mockImplementation(async (enabled: boolean) => {
+			if (!enabled) {
+				await BridgeOrchestrator.disconnect()
+			}
+		}),
+		initializeCloudProfileSyncWhenReady: vi.fn().mockResolvedValue(undefined),
+		providerSettingsManager: {},
+		contextProxy: { getGlobalState: vi.fn() },
+		customModesManager: {},
+		upsertProviderProfile: vi.fn().mockResolvedValue(undefined),
+	}
+	return {
+		ClineProvider: Object.assign(
+			vi.fn().mockImplementation(() => mockInstance),
+			{
+				// Static method used by extension.ts
+				getVisibleInstance: vi.fn().mockReturnValue(mockInstance),
+				sideBarId: "roo-cline-sidebar",
+			},
+		),
+	}
+})
+
+// Mock modelCache to prevent network requests during module loading
+vi.mock("../api/providers/fetchers/modelCache", () => ({
+	flushModels: vi.fn(),
+	getModels: vi.fn().mockResolvedValue([]),
+	initializeModelCacheRefresh: vi.fn(),
+}))
+
 describe("extension.ts", () => {
 	let mockContext: vscode.ExtensionContext
 	let authStateChangedHandler:

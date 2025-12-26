@@ -203,13 +203,15 @@ describe("KilocodeOpenrouterHandler", () => {
 			// Verify the second argument (options) contains our custom headers
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.any(Object),
+				// kilocode_change start
 				expect.objectContaining({
-					headers: {
+					headers: expect.objectContaining({
 						[X_KILOCODE_TASKID]: "test-task-id",
 						[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
 						[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
-					},
+					}),
 				}),
+				// kilocode_change end
 			)
 		})
 	})

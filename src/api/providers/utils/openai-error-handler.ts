@@ -13,7 +13,7 @@ import i18n from "../../../i18n/setup"
  */
 export function handleOpenAIError(error: unknown, providerName: string): Error {
 	if (error instanceof Error) {
-		const msg = error.message || ""
+		const msg = (error as any)?.error?.metadata?.raw || error.message || ""
 
 		// Log the original error details for debugging
 		console.error(`[${providerName}] API error:`, {

@@ -1,5 +1,6 @@
 // npx vitest services/browser/__tests__/BrowserSession.spec.ts
 
+import * as path from "path"
 import { BrowserSession } from "../BrowserSession"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "../browserDiscovery"
 
@@ -393,6 +394,179 @@ describe("cursor visualization", () => {
 
 		// Verify no cursor position in result
 		expect(result.currentMousePosition).toBeUndefined()
+	})
+
+	describe("saveScreenshot", () => {
+		// Use a cross-platform workspace path for testing
+		const testWorkspace = path.resolve("/workspace")
+
+		it("should save screenshot to specified path with png format", async () => {
+			const mockFs = await import("fs/promises")
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn(), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			await session.saveScreenshot("screenshots/test.png", testWorkspace)
+
+			expect(mockFs.mkdir).toHaveBeenCalledWith(path.join(testWorkspace, "screenshots"), { recursive: true })
+			expect(page.screenshot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					path: path.join(testWorkspace, "screenshots", "test.png"),
+					type: "png",
+				}),
+			)
+		})
+
+		it("should save screenshot with jpeg format for .jpg extension", async () => {
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn().mockReturnValue(80), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			await session.saveScreenshot("screenshots/test.jpg", testWorkspace)
+
+			expect(page.screenshot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					path: path.join(testWorkspace, "screenshots", "test.jpg"),
+					type: "jpeg",
+					quality: 80,
+				}),
+			)
+		})
+
+		it("should save screenshot with webp format", async () => {
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn().mockReturnValue(75), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			await session.saveScreenshot("test.webp", testWorkspace)
+
+			expect(page.screenshot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					path: path.join(testWorkspace, "test.webp"),
+					type: "webp",
+					quality: 75,
+				}),
+			)
+		})
+
+		it("should reject absolute file paths outside workspace", async () => {
+			// Create a cross-platform absolute path for testing
+			const absolutePath = path.resolve("/absolute/path/screenshot.png")
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn(), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			await expect(session.saveScreenshot(absolutePath, testWorkspace)).rejects.toThrow(/outside the workspace/)
+
+			expect(page.screenshot).not.toHaveBeenCalled()
+		})
+
+		it("should reject paths with .. that escape the workspace", async () => {
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn(), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			await expect(session.saveScreenshot("../../etc/passwd", testWorkspace)).rejects.toThrow(
+				/outside the workspace/,
+			)
+
+			expect(page.screenshot).not.toHaveBeenCalled()
+		})
+
+		it("should allow paths with .. that stay within workspace", async () => {
+			const mockFs = await import("fs/promises")
+			const page: any = {
+				on: vi.fn(),
+				off: vi.fn(),
+				screenshot: vi.fn().mockResolvedValue("mockScreenshotBase64"),
+				url: vi.fn().mockReturnValue("https://example.com"),
+				viewport: vi.fn().mockReturnValue({ width: 900, height: 600 }),
+				evaluate: vi.fn().mockResolvedValue(undefined),
+			}
+
+			const mockCtx: any = {
+				globalState: { get: vi.fn(), update: vi.fn() },
+				globalStorageUri: { fsPath: "/mock/global/storage/path" },
+				extensionUri: { fsPath: "/mock/extension/path" },
+			}
+			const session = new BrowserSession(mockCtx)
+			;(session as any).page = page
+
+			// Path like "subdir/../screenshot.png" should resolve to "screenshot.png" within workspace
+			await session.saveScreenshot("subdir/../screenshot.png", testWorkspace)
+
+			expect(page.screenshot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					path: path.join(testWorkspace, "screenshot.png"),
+					type: "png",
+				}),
+			)
+		})
 	})
 
 	describe("getViewportSize", () => {

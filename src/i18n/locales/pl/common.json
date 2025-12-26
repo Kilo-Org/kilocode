@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Niestandardowa ścieżka przechowywania \"{{path}}\" nie jest użyteczna, zostanie użyta domyślna ścieżka",
 		"cannot_access_path": "Nie można uzyskać dostępu do ścieżki {{path}}: {{error}}",
 		"settings_import_failed": "Nie udało się zaimportować ustawień: {{error}}.",
-		"mistake_limit_guidance": "To może wskazywać na błąd w procesie myślowym modelu lub niezdolność do prawidłowego użycia narzędzia, co można złagodzić poprzez wskazówki użytkownika (np. \"Spróbuj podzielić zadanie na mniejsze kroki\").",
+		"mistake_limit_guidance": "To może wskazywać na błąd w rozumowaniu modelu lub niezdolność do prawidłowego użycia narzędzia. Spróbuj jednego z poniższych:\n\n• Użyj mądrzejszego modelu lub po prostu innego modelu (każdy model ma swoje słabości)\n• Zmniejsz ilość kontekstu (uprość prompt dla LLM)\n• Podaj dodatkowe instrukcje, które pomogą LLM (np. \"Spróbuj podzielić zadanie na mniejsze kroki\")",
 		"violated_organization_allowlist": "Nie udało się uruchomić zadania: bieżący profil nie jest kompatybilny z ustawieniami Twojej organizacji",
 		"condense_failed": "Nie udało się skondensować kontekstu",
 		"condense_not_enough_messages": "Za mało wiadomości do skondensowania kontekstu {{prevContextTokens}} tokenów. Wymagane jest co najmniej {{minimumMessageCount}} wiadomości, ale dostępnych jest tylko {{messageCount}}.",
@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Błąd strumienia kontekstu generowania Gemini: {{error}}",
 			"generate_complete_prompt": "Błąd uzupełniania Gemini: {{error}}",
-			"sources": "Źródła:"
+			"sources": "Źródła:",
+			"thinking_complete_no_output": "(Myślenie zakończone, ale nie wygenerowano żadnych danych wyjściowych.)",
+			"thinking_complete_truncated": "(Myślenie zakończone, ale dane wyjściowe zostały obcięte z powodu limitu tokenów.)",
+			"thinking_complete_safety": "(Myślenie zakończone, ale dane wyjściowe zostały zablokowane przez ustawienia bezpieczeństwa.)",
+			"thinking_complete_recitation": "(Myślenie zakończone, ale dane wyjściowe zostały zablokowane przez kontrolę recytacji.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Uwierzytelnianie API Cerebras nie powiodło się. Sprawdź, czy twój klucz API jest ważny i nie wygasł.",

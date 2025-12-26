@@ -1,33 +1,41 @@
 import React, { useState, useRef, useEffect } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { SendHorizontal, Square } from "lucide-react"
+import { GitBranch, SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
+import { addToQueueAtom } from "../state/atoms/messageQueue"
 
 interface ChatInputProps {
 	sessionId: string
 	sessionLabel?: string
 	isActive?: boolean
-	autoMode?: boolean // True if session is running in auto mode (non-interactive)
+	showCancel?: boolean
+	showFinishToBranch?: boolean
+	worktreeBranchName?: string
+	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
 	sessionId,
 	sessionLabel,
 	isActive = false,
-	autoMode = false,
+	showCancel = false,
+	showFinishToBranch = false,
+	worktreeBranchName,
+	sessionStatus,
 }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const addToQueue = useSetAtom(addToQueueAtom)
 
 	// Auto-focus the textarea when the session changes (user selects a different session)
 	useEffect(() => {
@@ -36,28 +44,54 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
+	const isSessionCompleted = sessionStatus === "done" || sessionStatus === "error" || sessionStatus === "stopped"
 
-	// In auto mode, input and sending are always disabled (non-interactive)
-	const inputDisabled = autoMode
-	const sendDisabled = isEmpty || autoMode
+	// Send is disabled when empty
+	// Note: Users CAN queue multiple messages while one is sending (for running sessions)
+	// Note: Users CAN send messages to completed sessions (to resume them)
+	const sendDisabled = isEmpty
 
 	const handleSend = () => {
-		if (isEmpty || autoMode) return
+		if (isEmpty) return
 
-		// For running sessions, send as follow-up message
-		vscode.postMessage({
-			type: "agentManager.sendMessage",
-			sessionId,
-			sessionLabel,
-			content: trimmedMessage,
-		})
+		if (isSessionCompleted) {
+			// Resume a completed session with a new message (sent directly, not queued)
+			vscode.postMessage({
+				type: "agentManager.resumeSession",
+				sessionId,
+				sessionLabel,
+				content: trimmedMessage,
+			})
+			setMessageText("")
+		} else {
+			// For running sessions, queue the message instead of sending directly
+			const queuedMsg = addToQueue({ sessionId, content: trimmedMessage })
 
-		setMessageText("")
+			if (queuedMsg) {
+				// Notify the extension that a message has been queued
+				vscode.postMessage({
+					type: "agentManager.messageQueued",
+					sessionId,
+					messageId: queuedMsg.id,
+					sessionLabel,
+					content: trimmedMessage,
+				})
+
+				setMessageText("")
+			}
+		}
 	}
 
 	const handleCancel = () => {
 		vscode.postMessage({
 			type: "agentManager.cancelSession",
+			sessionId,
+		})
+	}
+
+	const handleFinishToBranch = () => {
+		vscode.postMessage({
+			type: "agentManager.finishWorktreeSession",
 			sessionId,
 		})
 	}
@@ -95,8 +129,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("chatInput.ariaLabel")}
-						placeholder={inputDisabled ? t("chatInput.autonomous") : t("chatInput.placeholderTypeTask")}
-						disabled={inputDisabled}
+						placeholder={t("chatInput.placeholderTypeTask")}
 						minRows={3}
 						maxRows={15}
 						className={cn(
@@ -138,7 +171,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 					{/* Floating Actions */}
 					<div className="absolute bottom-2 right-2 z-30 flex gap-1">
-						{isActive && (
+						{showFinishToBranch && (
+							<StandardTooltip
+								content={
+									worktreeBranchName
+										? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+										: t("chatInput.finishToBranchTitleNoBranch")
+								}>
+								<button
+									aria-label={
+										worktreeBranchName
+											? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+											: t("chatInput.finishToBranchTitleNoBranch")
+									}
+									onClick={handleFinishToBranch}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<GitBranch size={14} />
+								</button>
+							</StandardTooltip>
+						)}
+						{isActive && showCancel && (
 							<StandardTooltip content={t("chatInput.cancelTitle")}>
 								<button
 									aria-label={t("chatInput.cancelTitle")}
@@ -158,9 +220,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
-						<StandardTooltip content={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}>
+						<StandardTooltip content={t("chatInput.sendTitle")}>
 							<button
-								aria-label={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}
+								aria-label={t("chatInput.sendTitle")}
 								disabled={sendDisabled}
 								onClick={handleSend}
 								className={cn(

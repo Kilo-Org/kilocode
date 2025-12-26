@@ -180,6 +180,7 @@ describe("Nested delegation resume (A → B → C)", () => {
 			clineMessages: [],
 			userMessageContent: [],
 			consecutiveMistakeCount: 0,
+			emitFinalTokenUsageUpdate: vi.fn(),
 		} as unknown as Task
 
 		const blockC = {
@@ -223,6 +224,7 @@ describe("Nested delegation resume (A → B → C)", () => {
 			clineMessages: [],
 			userMessageContent: [],
 			consecutiveMistakeCount: 0,
+			emitFinalTokenUsageUpdate: vi.fn(),
 		} as unknown as Task
 
 		const blockB = {

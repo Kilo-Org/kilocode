@@ -12,6 +12,7 @@ export interface Session {
 	organization_id: string | null
 	last_mode: string | null
 	last_model: string | null
+	parent_session_id: string | null
 }
 
 export interface SessionWithSignedUrls extends Session {
@@ -36,6 +37,7 @@ export interface CreateSessionInput {
 	last_mode?: string | null | undefined
 	last_model?: string | null | undefined
 	organization_id?: string | undefined
+	parent_session_id?: string | null | undefined
 }
 
 export type CreateSessionOutput = Session
@@ -123,7 +125,7 @@ export class SessionClient {
 	 * Create a new session
 	 */
 	async create(input: CreateSessionInput): Promise<CreateSessionOutput> {
-		return await this.trpcClient.request<CreateSessionInput, CreateSessionOutput>("cliSessions.create", "POST", {
+		return await this.trpcClient.request<CreateSessionInput, CreateSessionOutput>("cliSessions.createV2", "POST", {
 			...input,
 			created_on_platform: process.env.KILO_PLATFORM || input.created_on_platform,
 		})

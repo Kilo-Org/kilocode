@@ -73,15 +73,48 @@ describe("parseCliChunk", () => {
 		expect(event.timestamp).toBeLessThanOrEqual(after)
 	})
 
-	it("should parse welcome event with worktree branch", () => {
+	it("should parse session_title_generated event from CLI", () => {
 		const result = parseCliChunk(
-			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}},"timestamp":1234567890}\n',
+			'{"event":"session_title_generated","sessionId":"sess-abc-123","title":"My Session Title","timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "session_title_generated",
+			sessionId: "sess-abc-123",
+			title: "My Session Title",
+			timestamp: 1234567890,
+		})
+	})
+
+	it("should use current timestamp when session_title_generated has no timestamp", () => {
+		const before = Date.now()
+		const result = parseCliChunk(
+			'{"event":"session_title_generated","sessionId":"sess-xyz","title":"Test Title"}\n',
+		)
+		const after = Date.now()
+
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toMatchObject({
+			streamEventType: "session_title_generated",
+			sessionId: "sess-xyz",
+			title: "Test Title",
+		})
+		const event = result.events[0] as { timestamp: number }
+		expect(event.timestamp).toBeGreaterThanOrEqual(before)
+		expect(event.timestamp).toBeLessThanOrEqual(after)
+	})
+
+	it("should parse welcome event with worktree branch and path", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}},"timestamp":1234567890}\n',
 		)
 		expect(result.events).toHaveLength(1)
 		expect(result.events[0]).toEqual({
 			streamEventType: "welcome",
 			worktreeBranch: "feature/test-branch",
+			worktreePath: "/tmp/worktree-path",
 			timestamp: 1234567890,
+			instructions: undefined,
 		})
 	})
 
@@ -91,7 +124,35 @@ describe("parseCliChunk", () => {
 		expect(result.events[0]).toEqual({
 			streamEventType: "welcome",
 			worktreeBranch: undefined,
+			worktreePath: undefined,
 			timestamp: 1234567890,
+			instructions: undefined,
+		})
+	})
+
+	it("should parse welcome event with configuration error instructions", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete","kilocodeToken is required"]}},"timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: undefined,
+			timestamp: 1234567890,
+			instructions: ["Configuration Error: config.json is incomplete", "kilocodeToken is required"],
+		})
+	})
+
+	it("should not include instructions when array is empty", () => {
+		const result = parseCliChunk(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":[]}},"timestamp":1234567890}\n',
+		)
+		expect(result.events).toHaveLength(1)
+		expect(result.events[0]).toEqual({
+			streamEventType: "welcome",
+			worktreeBranch: undefined,
+			timestamp: 1234567890,
+			instructions: undefined,
 		})
 	})
 
@@ -153,6 +214,23 @@ describe("parseCliChunk", () => {
 		const result = parseCliChunk(input)
 		expect(result.events).toHaveLength(1)
 		expect(result.events[0]).toMatchObject({ streamEventType: "kilocode", payload: { timestamp: 123 } })
+	})
+
+	it("should parse concatenated JSON objects on a single line", () => {
+		const input =
+			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test","workspace":"/tmp/worktree"}},"timestamp":1}' +
+			'{"event":"session_created","sessionId":"sess-1","timestamp":2}\n'
+		const result = parseCliChunk(input)
+		expect(result.events).toHaveLength(2)
+		expect(result.events[0]).toMatchObject({
+			streamEventType: "welcome",
+			worktreeBranch: "feature/test",
+			worktreePath: "/tmp/worktree",
+		})
+		expect(result.events[1]).toMatchObject({
+			streamEventType: "session_created",
+			sessionId: "sess-1",
+		})
 	})
 
 	it("should collect non-JSON lines as output events with VT codes stripped", () => {
@@ -244,5 +322,24 @@ describe("CliOutputParser class", () => {
 		expect(events[0]).toMatchObject({ streamEventType: "kilocode", payload: { content: "Hello" } })
 		expect(events[1]).toMatchObject({ streamEventType: "kilocode", payload: { content: "Hello World" } })
 		expect(events[2]).toMatchObject({ streamEventType: "status" })
+	})
+
+	it("should flush concatenated JSON objects", () => {
+		const parser = new CliOutputParser()
+		parser.parse(
+			'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test","workspace":"/tmp/worktree"}},"timestamp":1}' +
+				'{"event":"session_created","sessionId":"sess-1","timestamp":2}',
+		)
+		const result = parser.flush()
+		expect(result.events).toHaveLength(2)
+		expect(result.events[0]).toMatchObject({
+			streamEventType: "welcome",
+			worktreeBranch: "feature/test",
+			worktreePath: "/tmp/worktree",
+		})
+		expect(result.events[1]).toMatchObject({
+			streamEventType: "session_created",
+			sessionId: "sess-1",
+		})
 	})
 })

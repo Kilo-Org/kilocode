@@ -28,6 +28,9 @@ vi.mock("vscode", () => ({
 	env: {
 		language: "en-US",
 	},
+	workspace: {
+		workspaceFolders: [],
+	},
 }))
 
 vi.mock("p-wait-for", () => ({

@@ -10,6 +10,10 @@ export interface RemoteSessionServiceOptions {
 	outputChannel: vscode.OutputChannel
 }
 
+/**
+ * Service for fetching remote session data from the cloud.
+ * Uses SessionManager facade methods for all session operations.
+ */
 export class RemoteSessionService {
 	private outputChannel: vscode.OutputChannel
 
@@ -17,13 +21,17 @@ export class RemoteSessionService {
 		this.outputChannel = options.outputChannel
 	}
 
+	/**
+	 * Fetches a list of remote sessions from the cloud.
+	 * @returns Array of remote sessions, or empty array if SessionManager is not initialized
+	 */
 	async fetchRemoteSessions(): Promise<RemoteSession[]> {
-		const sessionClient = this.getSessionClient()
-		if (!sessionClient) {
+		const sessionManager = this.getSessionManager()
+		if (!sessionManager) {
 			return []
 		}
 
-		const response = await sessionClient.list({ limit: REMOTE_SESSIONS_FETCH_LIMIT })
+		const response = await sessionManager.listSessions({ limit: REMOTE_SESSIONS_FETCH_LIMIT })
 		const remoteSessions: RemoteSession[] = response.cliSessions
 
 		this.log(`Fetched ${remoteSessions.length} remote sessions`)
@@ -31,6 +39,11 @@ export class RemoteSessionService {
 		return remoteSessions
 	}
 
+	/**
+	 * Fetches messages for a specific session.
+	 * @param sessionId - The session ID to fetch messages for
+	 * @returns Array of messages, or null if not available
+	 */
 	async fetchSessionMessages(sessionId: string): Promise<ClineMessage[] | null> {
 		const blobUrl = await this.getSessionMessageBlobUrl(sessionId)
 		if (!blobUrl) {
@@ -41,14 +54,14 @@ export class RemoteSessionService {
 	}
 
 	private async getSessionMessageBlobUrl(sessionId: string): Promise<string | null> {
-		const sessionClient = this.getSessionClient()
-		if (!sessionClient) {
+		const sessionManager = this.getSessionManager()
+		if (!sessionManager) {
 			return null
 		}
 
 		this.log(`Fetching messages for session: ${sessionId}`)
 
-		const session = await sessionClient.get({
+		const session = await sessionManager.getSession({
 			session_id: sessionId,
 			include_blob_urls: true,
 		})
@@ -67,13 +80,13 @@ export class RemoteSessionService {
 		return messages.filter((message) => message.say !== "checkpoint_saved")
 	}
 
-	private getSessionClient() {
-		const sessionClient = SessionManager.init()?.sessionClient
-		if (!sessionClient) {
-			this.log("SessionClient not available")
+	private getSessionManager(): SessionManager | null {
+		const sessionManager = SessionManager.init()
+		if (!sessionManager) {
+			this.log("SessionManager not available")
 			return null
 		}
-		return sessionClient
+		return sessionManager
 	}
 
 	private log(message: string): void {

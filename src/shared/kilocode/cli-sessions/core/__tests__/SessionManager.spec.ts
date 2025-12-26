@@ -1,1530 +1,446 @@
-import path from "path"
-import { SessionManager, SessionManagerDependencies } from "../SessionManager"
-import { SessionClient, CliSessionSharedState, SessionWithSignedUrls } from "../SessionClient"
+import { SessionManager } from "../SessionManager"
+import { SessionClient } from "../SessionClient"
+import { TrpcClient } from "../TrpcClient"
+import { SessionStateManager } from "../SessionStateManager"
 import { SessionPersistenceManager } from "../../utils/SessionPersistenceManager"
+import { TokenValidationService } from "../TokenValidationService"
+import { SessionTitleService } from "../SessionTitleService"
+import { SessionLifecycleService } from "../SessionLifecycleService"
+import { SessionSyncService } from "../SessionSyncService"
+import { GitStateService } from "../GitStateService"
+import { SyncQueue } from "../SyncQueue"
+import type { IPathProvider } from "../../types/IPathProvider"
+import type { ILogger } from "../../types/ILogger"
+import type { IExtensionMessenger } from "../../types/IExtensionMessenger"
 import type { ITaskDataProvider } from "../../types/ITaskDataProvider"
-import type { ClineMessage } from "@roo-code/types"
-import { readFileSync, writeFileSync, mkdirSync } from "fs"
-import simpleGit from "simple-git"
 
-vi.mock("fs", () => ({
-	readFileSync: vi.fn(),
-	writeFileSync: vi.fn(),
-	mkdirSync: vi.fn(),
-	mkdtempSync: vi.fn(),
-	rmSync: vi.fn(),
-}))
-
-vi.mock("simple-git", () => ({
-	default: vi.fn(() => ({
-		getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-		revparse: vi.fn().mockResolvedValue("abc123def456"),
-		raw: vi.fn().mockResolvedValue(""),
-		diff: vi.fn().mockResolvedValue("diff content"),
-		stash: vi.fn().mockResolvedValue(undefined),
-		stashList: vi.fn().mockResolvedValue({ total: 0 }),
-		checkout: vi.fn().mockResolvedValue(undefined),
-		applyPatch: vi.fn().mockResolvedValue(undefined),
-	})),
-}))
-
-vi.mock("../TrpcClient", () => ({
-	TrpcClient: vi.fn().mockImplementation(() => ({
-		endpoint: "https://api.kilocode.ai",
-		getToken: vi.fn().mockResolvedValue("test-token"),
-		request: vi.fn(),
-	})),
-}))
-
-vi.mock("../SessionClient", () => ({
-	SessionClient: vi.fn().mockImplementation(() => ({
-		get: vi.fn(),
-		create: vi.fn(),
-		update: vi.fn(),
-		share: vi.fn(),
-		fork: vi.fn(),
-		uploadBlob: vi.fn(),
-		tokenValid: vi.fn().mockResolvedValue(true),
-	})),
-	CliSessionSharedState: {
-		Public: "public",
-	},
-}))
-
-vi.mock("../../utils/SessionPersistenceManager", () => ({
-	SessionPersistenceManager: vi.fn().mockImplementation(() => ({
-		setWorkspaceDir: vi.fn(),
-		getLastSession: vi.fn(),
-		setLastSession: vi.fn(),
-		getSessionForTask: vi.fn(),
-		setSessionForTask: vi.fn(),
-	})),
-}))
-
-const MOCK_TASKS_DIR = path.join("mock", "user", ".kilocode", "tasks")
-
-const createMockDependencies = (): SessionManagerDependencies => ({
-	platform: "vscode",
-	getToken: vi.fn().mockResolvedValue("test-token"),
-	getOrganizationId: vi.fn().mockReturnValue(undefined),
-	getMode: vi.fn().mockReturnValue(undefined),
-	getModel: vi.fn().mockReturnValue(undefined),
-	pathProvider: {
-		getTasksDir: vi.fn().mockReturnValue(MOCK_TASKS_DIR),
-		getSessionFilePath: vi.fn().mockImplementation((dir: string) => path.join(dir, ".kilocode", "session.json")),
-	},
-	logger: {
-		debug: vi.fn(),
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-	},
-	extensionMessenger: {
-		sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
-		requestSingleCompletion: vi.fn().mockResolvedValue("Generated title"),
-	},
-	onSessionCreated: vi.fn(),
-	onSessionRestored: vi.fn(),
-})
+vi.mock("../SessionClient")
+vi.mock("../TrpcClient")
+vi.mock("../SessionStateManager")
+vi.mock("../../utils/SessionPersistenceManager")
+vi.mock("../TokenValidationService")
+vi.mock("../SessionTitleService")
+vi.mock("../SessionLifecycleService")
+vi.mock("../SessionSyncService")
+vi.mock("../GitStateService")
+vi.mock("../SyncQueue")
 
 describe("SessionManager", () => {
-	let manager: SessionManager
-	let mockDependencies: SessionManagerDependencies
+	let mockSessionClient: any
+	let mockTrpcClient: any
+	let mockStateManager: any
+	let mockPersistenceManager: any
+	let mockTokenValidationService: any
+	let mockTitleService: any
+	let mockLifecycleService: any
+	let mockSyncService: any
+	let mockGitStateService: any
+	let mockSyncQueue: any
+	let mockPathProvider: IPathProvider
+	let mockLogger: ILogger
+	let mockExtensionMessenger: IExtensionMessenger
+	let mockGetToken: any
+	let mockOnSessionCreated: any
+	let mockOnSessionRestored: any
+	let mockOnSessionSynced: any
+	let mockOnSessionTitleGenerated: any
+	let mockGetOrganizationId: any
+	let mockGetMode: any
+	let mockGetModel: any
+	let mockGetParentTaskId: any
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		vi.useFakeTimers()
 
-		mockDependencies = createMockDependencies()
+		// Reset singleton
+		;(SessionManager as any).instance = null
 
-		const privateInstance = (SessionManager as unknown as { instance: SessionManager }).instance
-		if (privateInstance) {
-			;(privateInstance as unknown as { sessionClient: SessionClient | undefined }).sessionClient = undefined
-			;(
-				privateInstance as unknown as { sessionPersistenceManager: SessionPersistenceManager | undefined }
-			).sessionPersistenceManager = undefined
-			;(privateInstance as unknown as { queue: unknown[] }).queue = []
-			;(privateInstance as unknown as { lastActiveSessionId: string | null }).lastActiveSessionId = null
+		mockSessionClient = {
+			list: vi.fn(),
+			get: vi.fn(),
 		}
 
-		manager = SessionManager.init(mockDependencies)
+		mockTrpcClient = {}
+
+		mockStateManager = {
+			getActiveSessionId: vi.fn(),
+			setWorkspaceDir: vi.fn(),
+		}
+
+		mockPersistenceManager = {
+			getLastSession: vi.fn(),
+		}
+
+		mockTokenValidationService = {}
+
+		mockTitleService = {}
+
+		mockLifecycleService = {
+			restoreLastSession: vi.fn(),
+			restoreSession: vi.fn(),
+			shareSession: vi.fn(),
+			renameSession: vi.fn(),
+			forkSession: vi.fn(),
+			getOrCreateSessionForTask: vi.fn(),
+		}
+
+		mockSyncService = {
+			handleFileUpdate: vi.fn(),
+			doSync: vi.fn(),
+		}
+
+		mockGitStateService = {}
+
+		mockSyncQueue = {
+			setFlushHandler: vi.fn(),
+		}
+
+		// Mock constructors
+		vi.mocked(SessionClient).mockImplementation(() => mockSessionClient)
+		vi.mocked(TrpcClient).mockImplementation(() => mockTrpcClient)
+		vi.mocked(SessionStateManager).mockImplementation(() => mockStateManager)
+		vi.mocked(SessionPersistenceManager).mockImplementation(() => mockPersistenceManager)
+		vi.mocked(TokenValidationService).mockImplementation(() => mockTokenValidationService)
+		vi.mocked(SessionTitleService).mockImplementation(() => mockTitleService)
+		vi.mocked(SessionLifecycleService).mockImplementation(() => mockLifecycleService)
+		vi.mocked(SessionSyncService).mockImplementation(() => mockSyncService)
+		vi.mocked(GitStateService).mockImplementation(() => mockGitStateService)
+		vi.mocked(SyncQueue).mockImplementation(() => mockSyncQueue)
+
+		mockPathProvider = {
+			getTasksDir: vi.fn().mockReturnValue("/mock/tasks"),
+			getSessionFilePath: vi.fn(),
+		}
+
+		mockLogger = {
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+		}
+
+		mockExtensionMessenger = {
+			sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
+			requestSingleCompletion: vi.fn().mockResolvedValue("Generated title"),
+		}
+
+		mockGetToken = vi.fn().mockReturnValue("mock-token")
+		mockOnSessionCreated = vi.fn()
+		mockOnSessionRestored = vi.fn()
+		mockOnSessionSynced = vi.fn()
+		mockOnSessionTitleGenerated = vi.fn()
+		mockGetOrganizationId = vi.fn().mockResolvedValue("org-123")
+		mockGetMode = vi.fn().mockResolvedValue("code")
+		mockGetModel = vi.fn().mockResolvedValue("gpt-4")
+		mockGetParentTaskId = vi.fn().mockResolvedValue(undefined)
 	})
 
-	afterEach(() => {
-		vi.useRealTimers()
+	describe("Singleton Pattern", () => {
+		it("init creates instance with dependencies", () => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
+			}
+
+			const instance = SessionManager.init(dependencies)
+
+			expect(instance).toBeDefined()
+			expect(SessionClient).toHaveBeenCalledWith(mockTrpcClient)
+			expect(SessionStateManager).toHaveBeenCalled()
+			expect(SessionPersistenceManager).toHaveBeenCalledWith(mockPathProvider, mockStateManager)
+			expect(TokenValidationService).toHaveBeenCalled()
+			expect(SessionTitleService).toHaveBeenCalled()
+			expect(GitStateService).toHaveBeenCalled()
+			expect(SyncQueue).toHaveBeenCalled()
+			expect(SessionSyncService).toHaveBeenCalled()
+			expect(SessionLifecycleService).toHaveBeenCalled()
+			expect(mockSyncQueue.setFlushHandler).toHaveBeenCalled()
+			expect(mockLogger.debug).toHaveBeenCalledWith("Initialized SessionManager", expect.any(String))
+		})
+
+		it("init returns existing instance when called without deps", () => {
+			// First init with deps
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
+			}
+			const firstInstance = SessionManager.init(dependencies)
+
+			// Second init without deps
+			const secondInstance = SessionManager.init()
+
+			expect(secondInstance).toBe(firstInstance)
+		})
+
+		it("init returns null when no instance and no deps", () => {
+			const result = SessionManager.init()
+
+			expect(result).toBeNull()
+		})
 	})
 
-	describe("init", () => {
-		it("should return the singleton instance", () => {
-			const instance1 = SessionManager.init()
-			const instance2 = SessionManager.init()
-
-			expect(instance1).toBe(instance2)
+	describe("sessionId Property", () => {
+		beforeEach(() => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
+			}
+			SessionManager.init(dependencies)
 		})
 
-		it("should initialize dependencies when provided", () => {
-			expect(manager.sessionClient).toBeDefined()
-			expect(manager.sessionPersistenceManager).toBeDefined()
+		it("returns active session ID when available", () => {
+			mockStateManager.getActiveSessionId.mockReturnValue("active-session-123")
+
+			const result = (SessionManager.init() as any).sessionId
+
+			expect(result).toBe("active-session-123")
 		})
 
-		it("should initialize pendingSync as null", () => {
-			const pendingSync = (manager as unknown as { pendingSync: Promise<void> | null }).pendingSync
-			expect(pendingSync).toBeNull()
-		})
-	})
-
-	describe("sessionId", () => {
-		it("should return null when no active session", () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue(undefined)
-
-			expect(manager.sessionId).toBeUndefined()
-		})
-
-		it("should return persisted session ID when available", () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue({
+		it("falls back to last persisted session", () => {
+			mockStateManager.getActiveSessionId.mockReturnValue(null)
+			mockPersistenceManager.getLastSession.mockReturnValue({
 				sessionId: "persisted-session-123",
-				timestamp: Date.now(),
+				timestamp: 1234567890,
 			})
 
-			expect(manager.sessionId).toBe("persisted-session-123")
+			const result = (SessionManager.init() as any).sessionId
+
+			expect(result).toBe("persisted-session-123")
+		})
+
+		it("returns undefined when no session", () => {
+			mockStateManager.getActiveSessionId.mockReturnValue(null)
+			mockPersistenceManager.getLastSession.mockReturnValue(undefined)
+
+			const result = (SessionManager.init() as any).sessionId
+
+			expect(result).toBeUndefined()
 		})
 	})
 
-	describe("setWorkspaceDirectory", () => {
-		it("should set workspace directory on persistence manager", () => {
-			manager.setWorkspaceDirectory("/workspace/project")
+	describe("Delegation Methods", () => {
+		let manager: any
 
-			expect(manager.sessionPersistenceManager!.setWorkspaceDir).toHaveBeenCalledWith("/workspace/project")
-		})
-	})
-
-	describe("handleFileUpdate", () => {
-		it("should add api conversation history to queue", () => {
-			manager.handleFileUpdate("task-123", "apiConversationHistoryPath", "/path/to/file.json")
-
-			const queue = (manager as unknown as { queue: unknown[] }).queue
-			expect(queue).toHaveLength(1)
-			expect(queue[0]).toMatchObject({
-				taskId: "task-123",
-				blobName: "api_conversation_history",
-				blobPath: "/path/to/file.json",
-			})
-		})
-
-		it("should add ui messages to queue", () => {
-			manager.handleFileUpdate("task-123", "uiMessagesPath", "/path/to/ui.json")
-
-			const queue = (manager as unknown as { queue: unknown[] }).queue
-			expect(queue).toHaveLength(1)
-			expect(queue[0]).toMatchObject({
-				taskId: "task-123",
-				blobName: "ui_messages",
-			})
-		})
-
-		it("should add task metadata to queue", () => {
-			manager.handleFileUpdate("task-123", "taskMetadataPath", "/path/to/metadata.json")
-
-			const queue = (manager as unknown as { queue: unknown[] }).queue
-			expect(queue).toHaveLength(1)
-			expect(queue[0]).toMatchObject({
-				taskId: "task-123",
-				blobName: "task_metadata",
-			})
-		})
-
-		it("should not add unknown path keys to queue", () => {
-			manager.handleFileUpdate("task-123", "unknownPath", "/path/to/file.json")
-
-			const queue = (manager as unknown as { queue: unknown[] }).queue
-			expect(queue).toHaveLength(0)
-		})
-	})
-
-	describe("restoreLastSession", () => {
-		it("should return false when no persisted session exists", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue(undefined)
-
-			const result = await manager.restoreLastSession()
-
-			expect(result).toBe(false)
-		})
-
-		it("should return false when manager not initialized", async () => {
-			;(manager as unknown as { sessionPersistenceManager: undefined }).sessionPersistenceManager = undefined
-
-			const result = await manager.restoreLastSession()
-
-			expect(result).toBe(false)
-		})
-
-		it("should attempt to restore persisted session", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue({
-				sessionId: "session-to-restore",
-				timestamp: Date.now(),
-			})
-
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-to-restore",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
+		beforeEach(() => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
+			manager = SessionManager.init(dependencies)
+		})
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+		it("handleFileUpdate delegates to syncService", () => {
+			manager.handleFileUpdate("task-123", "key", "value")
+
+			expect(mockSyncService.handleFileUpdate).toHaveBeenCalledWith("task-123", "key", "value")
+		})
+
+		it("setWorkspaceDirectory delegates to stateManager", () => {
+			manager.setWorkspaceDirectory("/workspace")
+
+			expect(mockStateManager.setWorkspaceDir).toHaveBeenCalledWith("/workspace")
+		})
+
+		it("restoreLastSession delegates to lifecycleService", async () => {
+			mockLifecycleService.restoreLastSession.mockResolvedValue(true)
 
 			const result = await manager.restoreLastSession()
 
+			expect(mockLifecycleService.restoreLastSession).toHaveBeenCalled()
 			expect(result).toBe(true)
-			expect(manager.sessionClient!.get).toHaveBeenCalledWith({
-				session_id: "session-to-restore",
-				include_blob_urls: true,
-			})
 		})
 
-		it("should return false when restore fails", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue({
-				sessionId: "session-to-restore",
-				timestamp: Date.now(),
-			})
-
-			vi.mocked(manager.sessionClient!.get).mockRejectedValue(new Error("Network error"))
-
-			const result = await manager.restoreLastSession()
-
-			expect(result).toBe(false)
-			expect(mockDependencies.logger.warn).toHaveBeenCalled()
-		})
-	})
-
-	describe("restoreSession", () => {
-		it("should throw error when manager not initialized and rethrowError is true", async () => {
-			;(manager as unknown as { pathProvider: undefined }).pathProvider = undefined
-
-			await expect(manager.restoreSession("session-123", true)).rejects.toThrow(
-				"SessionManager used before initialization",
-			)
-		})
-
-		it("should not throw error when manager not initialized and rethrowError is false", async () => {
-			;(manager as unknown as { pathProvider: undefined }).pathProvider = undefined
-
-			await expect(manager.restoreSession("session-123")).resolves.toBeUndefined()
-			expect(mockDependencies.logger.error).toHaveBeenCalled()
-		})
-
-		it("should throw error when session not found", async () => {
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(undefined as unknown as SessionWithSignedUrls)
-
-			await expect(manager.restoreSession("session-123", true)).rejects.toThrow("Failed to obtain session")
-		})
-
-		it("should create session directory", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
-			}
-
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+		it("restoreSession delegates to lifecycleService", async () => {
+			mockLifecycleService.restoreSession.mockResolvedValue(undefined)
 
 			await manager.restoreSession("session-123")
 
-			expect(mkdirSync).toHaveBeenCalledWith(path.join(MOCK_TASKS_DIR, "session-123"), { recursive: true })
+			expect(mockLifecycleService.restoreSession).toHaveBeenCalledWith("session-123", false)
 		})
 
-		it("should send webview messages to register and show task", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
-			}
+		it("shareSession delegates to lifecycleService", async () => {
+			mockLifecycleService.shareSession.mockResolvedValue({ share_id: "share-123" })
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			const result = await manager.shareSession("session-123")
 
-			await manager.restoreSession("session-123")
-
-			expect(mockDependencies.extensionMessenger.sendWebviewMessage).toHaveBeenCalledWith(
-				expect.objectContaining({
-					type: "addTaskToHistory",
-				}),
-			)
-			expect(mockDependencies.extensionMessenger.sendWebviewMessage).toHaveBeenCalledWith({
-				type: "showTaskWithId",
-				text: "session-123",
-			})
+			expect(mockLifecycleService.shareSession).toHaveBeenCalledWith("session-123")
+			expect(result).toEqual({ share_id: "share-123" })
 		})
 
-		it("should call onSessionRestored callback", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
-			}
+		it("renameSession delegates to lifecycleService", async () => {
+			mockLifecycleService.renameSession.mockResolvedValue(undefined)
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			await manager.renameSession("session-123", "New Title")
 
-			await manager.restoreSession("session-123")
-
-			expect(mockDependencies.onSessionRestored).toHaveBeenCalled()
+			expect(mockLifecycleService.renameSession).toHaveBeenCalledWith("session-123", "New Title")
 		})
 
-		it("should add restored session to verified cache", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
-			}
+		it("forkSession delegates to lifecycleService", async () => {
+			mockLifecycleService.forkSession.mockResolvedValue(undefined)
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			await manager.forkSession("share-or-session-123")
 
-			const verifiedSessions = (manager as unknown as { verifiedSessions: Set<string> }).verifiedSessions
-			verifiedSessions.clear()
-			expect(verifiedSessions.has("session-123")).toBe(false)
-
-			await manager.restoreSession("session-123")
-
-			expect(verifiedSessions.has("session-123")).toBe(true)
+			expect(mockLifecycleService.forkSession).toHaveBeenCalledWith("share-or-session-123", false)
 		})
 
-		it("should persist task-to-session mapping and set lastActiveSessionId when restoring session", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
+		it("getSessionFromTask delegates to lifecycleService", async () => {
+			const mockProvider: ITaskDataProvider = {
+				getTaskWithId: vi.fn(),
 			}
+			mockLifecycleService.getOrCreateSessionForTask.mockResolvedValue("session-123")
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			const result = await manager.getSessionFromTask("task-123", mockProvider)
 
-			await manager.restoreSession("session-123")
-
-			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
-				"session-123",
-				"session-123",
-			)
-			// Verify that sessionId getter returns the restored session ID
-			// This ensures lastActiveSessionId was properly set during restoration
-			expect(manager.sessionId).toBe("session-123")
+			expect(mockLifecycleService.getOrCreateSessionForTask).toHaveBeenCalledWith("task-123", mockProvider)
+			expect(result).toBe("session-123")
 		})
 
-		it("should fetch and write blobs when URLs are provided", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: "https://storage.example.com/api_history.json",
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: 1,
-			}
+		it("doSync delegates to syncService", async () => {
+			mockSyncService.doSync.mockResolvedValue(undefined)
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			await manager.doSync(true)
 
-			global.fetch = vi.fn().mockResolvedValue({
-				ok: true,
-				json: vi.fn().mockResolvedValue([{ role: "user", content: "test" }]),
-			})
-
-			await manager.restoreSession("session-123")
-
-			expect(global.fetch).toHaveBeenCalledWith("https://storage.example.com/api_history.json")
-			expect(writeFileSync).toHaveBeenCalled()
+			expect(mockSyncService.doSync).toHaveBeenCalledWith(true)
 		})
 
-		it("should filter checkpoint_saved messages from ui_messages", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: "https://storage.example.com/ui_messages.json",
-				git_state_blob_url: null,
-				version: 1,
-			}
+		it("listSessions delegates to sessionClient", async () => {
+			const mockResult = { sessions: [], cursor: null }
+			mockSessionClient.list.mockResolvedValue(mockResult)
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			const result = await manager.listSessions({ limit: 10 })
 
-			const uiMessages = [
-				{ say: "text", text: "Hello" },
-				{ say: "checkpoint_saved", text: "Checkpoint" },
-				{ say: "text", text: "World" },
-			]
+			expect(mockSessionClient.list).toHaveBeenCalledWith({ limit: 10 })
+			expect(result).toEqual(mockResult)
+		})
 
-			global.fetch = vi.fn().mockResolvedValue({
-				ok: true,
-				json: vi.fn().mockResolvedValue(uiMessages),
-			})
+		it("getSession delegates to sessionClient", async () => {
+			const mockResult = { session_id: "session-123", title: "Test" }
+			mockSessionClient.get.mockResolvedValue(mockResult)
 
-			await manager.restoreSession("session-123")
+			const result = await manager.getSession({ session_id: "session-123" })
 
-			const writeCall = vi
-				.mocked(writeFileSync)
-				.mock.calls.find((call) => (call[0] as string).includes("ui_messages"))
-			expect(writeCall).toBeDefined()
-			const writtenContent = JSON.parse(writeCall![1] as string)
-			expect(writtenContent).toHaveLength(2)
-			expect(writtenContent.every((msg: ClineMessage) => msg.say !== "checkpoint_saved")).toBe(true)
+			expect(mockSessionClient.get).toHaveBeenCalledWith({ session_id: "session-123" })
+			expect(result).toEqual(mockResult)
 		})
 	})
 
-	describe("shareSession", () => {
-		it("should throw error when manager not initialized", async () => {
-			;(manager as unknown as { sessionClient: undefined }).sessionClient = undefined
-
-			await expect(manager.shareSession()).rejects.toThrow("SessionManager used before initialization")
-		})
-
-		it("should throw error when no active session", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue(undefined)
-
-			await expect(manager.shareSession()).rejects.toThrow("No active session")
-		})
-
-		it("should share session with provided session ID", async () => {
-			vi.mocked(manager.sessionClient!.share).mockResolvedValue({
-				share_id: "share-123",
-				session_id: "session-456",
-			})
-
-			const result = await manager.shareSession("session-456")
-
-			expect(manager.sessionClient!.share).toHaveBeenCalledWith({
-				session_id: "session-456",
-				shared_state: CliSessionSharedState.Public,
-			})
-			expect(result).toEqual({ share_id: "share-123", session_id: "session-456" })
-		})
-
-		it("should use current session ID when not provided", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getLastSession).mockReturnValue({
-				sessionId: "current-session",
-				timestamp: Date.now(),
-			})
-			vi.mocked(manager.sessionClient!.share).mockResolvedValue({
-				share_id: "share-123",
-				session_id: "current-session",
-			})
-
-			await manager.shareSession()
-
-			expect(manager.sessionClient!.share).toHaveBeenCalledWith({
-				session_id: "current-session",
-				shared_state: CliSessionSharedState.Public,
-			})
-		})
-	})
-
-	describe("renameSession", () => {
-		it("should throw error when manager not initialized", async () => {
-			;(manager as unknown as { sessionClient: undefined }).sessionClient = undefined
-
-			await expect(manager.renameSession("session-123", "New Title")).rejects.toThrow(
-				"SessionManager used before initialization",
-			)
-		})
-
-		it("should throw error when session ID is empty", async () => {
-			await expect(manager.renameSession("", "New Title")).rejects.toThrow("No active session")
-		})
-
-		it("should throw error when title is empty or whitespace", async () => {
-			await expect(manager.renameSession("session-123", "   ")).rejects.toThrow("Session title cannot be empty")
-		})
-
-		it("should update session with trimmed title", async () => {
-			vi.mocked(manager.sessionClient!.update).mockResolvedValue({
-				session_id: "session-123",
-				title: "New Title",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-
-			await manager.renameSession("session-123", "  New Title  ")
-
-			expect(manager.sessionClient!.update).toHaveBeenCalledWith({
-				session_id: "session-123",
-				title: "New Title",
-			})
-		})
-	})
-
-	describe("forkSession", () => {
-		it("should throw error when manager not initialized", async () => {
-			;(manager as unknown as { platform: undefined }).platform = undefined
-
-			await expect(manager.forkSession("share-123")).rejects.toThrow("SessionManager used before initialization")
-		})
-
-		it("should fork session and restore it", async () => {
-			vi.mocked(manager.sessionClient!.fork).mockResolvedValue({
-				session_id: "forked-session-456",
-				title: "Forked Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "forked-session-456",
-				title: "Forked Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: SessionManager.VERSION,
+	describe("Service Initialization", () => {
+		it("creates all required services", () => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			SessionManager.init(dependencies)
 
-			await manager.forkSession("share-123")
-
-			expect(manager.sessionClient!.fork).toHaveBeenCalledWith({
-				share_or_session_id: "share-123",
-				created_on_platform: "vscode",
-			})
-			expect(manager.sessionClient!.get).toHaveBeenCalledWith({
-				session_id: "forked-session-456",
-				include_blob_urls: true,
-			})
+			expect(SessionClient).toHaveBeenCalled()
+			expect(SessionStateManager).toHaveBeenCalled()
+			expect(SessionPersistenceManager).toHaveBeenCalled()
+			expect(TokenValidationService).toHaveBeenCalled()
+			expect(SessionTitleService).toHaveBeenCalled()
+			expect(GitStateService).toHaveBeenCalled()
+			expect(SyncQueue).toHaveBeenCalled()
+			expect(SessionSyncService).toHaveBeenCalled()
+			expect(SessionLifecycleService).toHaveBeenCalled()
 		})
-	})
 
-	describe("getSessionFromTask", () => {
-		let mockTaskDataProvider: ITaskDataProvider
-
-		beforeEach(() => {
-			mockTaskDataProvider = {
-				getTaskWithId: vi.fn().mockResolvedValue({
-					historyItem: { task: "Test task" },
-					apiConversationHistoryFilePath: "/path/to/api_history.json",
-					uiMessagesFilePath: "/path/to/ui_messages.json",
-				}),
+		it("sets flush handler on sync queue", () => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
-			const verifiedSessions = (manager as unknown as { verifiedSessions: Set<string> }).verifiedSessions
-			verifiedSessions.clear()
+			SessionManager.init(dependencies)
+
+			expect(mockSyncQueue.setFlushHandler).toHaveBeenCalledWith(expect.any(Function))
 		})
 
-		it("should throw error when manager not initialized", async () => {
-			;(manager as unknown as { platform: undefined }).platform = undefined
-
-			await expect(manager.getSessionFromTask("task-123", mockTaskDataProvider)).rejects.toThrow(
-				"SessionManager used before initialization",
-			)
-		})
-
-		it("should return existing session ID when task is already mapped and session exists", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("existing-session-123")
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue({
-				session_id: "existing-session-123",
-				title: "Existing Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-
-			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(result).toBe("existing-session-123")
-			expect(manager.sessionClient!.get).toHaveBeenCalledWith({
-				session_id: "existing-session-123",
-				include_blob_urls: false,
-			})
-			expect(manager.sessionClient!.create).not.toHaveBeenCalled()
-		})
-
-		it("should verify session existence and cache the result", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("existing-session-123")
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue({
-				session_id: "existing-session-123",
-				title: "Existing Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-
-			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			const verifiedSessions = (manager as unknown as { verifiedSessions: Set<string> }).verifiedSessions
-			expect(verifiedSessions.has("existing-session-123")).toBe(true)
-		})
-
-		it("should skip verification for already verified sessions (cached)", async () => {
-			const verifiedSessions = (manager as unknown as { verifiedSessions: Set<string> }).verifiedSessions
-			verifiedSessions.add("cached-session-123")
-
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("cached-session-123")
-
-			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(result).toBe("cached-session-123")
-			expect(manager.sessionClient!.get).not.toHaveBeenCalled()
-			expect(manager.sessionClient!.create).not.toHaveBeenCalled()
-		})
-
-		it("should create new session when existing session no longer exists (returns null)", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("deleted-session-123")
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(undefined as unknown as SessionWithSignedUrls)
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-				session_id: "new-session-456",
-				title: "Test task",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(result).toBe("new-session-456")
-			expect(manager.sessionClient!.get).toHaveBeenCalledWith({
-				session_id: "deleted-session-123",
-				include_blob_urls: false,
-			})
-			expect(manager.sessionClient!.create).toHaveBeenCalled()
-			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
-				"task-123",
-				"new-session-456",
-			)
-		})
-
-		it("should create new session when existing session verification throws error", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue("error-session-123")
-			vi.mocked(manager.sessionClient!.get).mockRejectedValue(new Error("Session not found"))
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-				session_id: "new-session-789",
-				title: "Test task",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(result).toBe("new-session-789")
-			expect(manager.sessionClient!.get).toHaveBeenCalledWith({
-				session_id: "error-session-123",
-				include_blob_urls: false,
-			})
-			expect(manager.sessionClient!.create).toHaveBeenCalled()
-			expect(mockDependencies.logger.info).toHaveBeenCalledWith(
-				"Session verification failed, will create new session",
-				"SessionManager",
-				expect.objectContaining({
-					taskId: "task-123",
-					sessionId: "error-session-123",
-				}),
-			)
-		})
-
-		it("should add newly created session to verified cache", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-				session_id: "brand-new-session",
-				title: "Test task",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			const verifiedSessions = (manager as unknown as { verifiedSessions: Set<string> }).verifiedSessions
-			expect(verifiedSessions.has("brand-new-session")).toBe(true)
-		})
-
-		it("should create new session when task is not mapped", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-			vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-				session_id: "new-session-456",
-				title: "Test task",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			const result = await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(result).toBe("new-session-456")
-			expect(manager.sessionClient!.create).toHaveBeenCalledWith({
-				title: "Test task",
-				created_on_platform: "vscode",
-				version: SessionManager.VERSION,
-			})
-			expect(manager.sessionPersistenceManager!.setSessionForTask).toHaveBeenCalledWith(
-				"task-123",
-				"new-session-456",
-			)
-		})
-
-		it("should upload conversation blobs for new session", async () => {
-			vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-			vi.mocked(readFileSync).mockReturnValue(JSON.stringify([{ role: "user", content: "test" }]))
-			vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-				session_id: "new-session-456",
-				title: "Test task",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				version: SessionManager.VERSION,
-			})
-			vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-			await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-			expect(manager.sessionClient!.uploadBlob).toHaveBeenCalledWith(
-				"new-session-456",
-				"api_conversation_history",
-				expect.any(Array),
-			)
-			expect(manager.sessionClient!.uploadBlob).toHaveBeenCalledWith(
-				"new-session-456",
-				"ui_messages",
-				expect.any(Array),
-			)
-		})
-	})
-
-	describe("getOrganizationId and getMode", () => {
-		let mockTaskDataProvider: ITaskDataProvider
-
-		beforeEach(() => {
-			mockTaskDataProvider = {
-				getTaskWithId: vi.fn().mockResolvedValue({
-					historyItem: { task: "Test task" },
-					apiConversationHistoryFilePath: "/path/to/api.json",
-					uiMessagesFilePath: "/path/to/ui.json",
-				}),
-			}
-		})
-
-		describe("getOrganizationId", () => {
-			it("should call getOrganizationId when creating a new session", async () => {
-				const mockGetOrganizationId = vi.fn().mockResolvedValue("org-123")
-				mockDependencies.getOrganizationId = mockGetOrganizationId
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: "org-123",
-					last_mode: null,
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetOrganizationId).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						organization_id: "org-123",
-					}),
-				)
-			})
-
-			it("should pass undefined organization_id when getOrganizationId returns undefined", async () => {
-				const mockGetOrganizationId = vi.fn().mockResolvedValue(undefined)
-				mockDependencies.getOrganizationId = mockGetOrganizationId
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: null,
-					last_mode: null,
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetOrganizationId).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						organization_id: undefined,
-					}),
-				)
-			})
-		})
-
-		describe("getMode", () => {
-			it("should call getMode when creating a new session", async () => {
-				const mockGetMode = vi.fn().mockResolvedValue("code")
-				mockDependencies.getMode = mockGetMode
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: null,
-					last_mode: "code",
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetMode).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						last_mode: "code",
-					}),
-				)
-			})
-
-			it("should pass undefined last_mode when getMode returns undefined", async () => {
-				const mockGetMode = vi.fn().mockResolvedValue(undefined)
-				mockDependencies.getMode = mockGetMode
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: null,
-					last_mode: null,
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetMode).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						last_mode: undefined,
-					}),
-				)
-			})
-		})
-
-		describe("getModel", () => {
-			it("should call getModel when creating a new session", async () => {
-				const mockGetModel = vi.fn().mockResolvedValue("claude-sonnet-4")
-				mockDependencies.getModel = mockGetModel
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: null,
-					last_mode: null,
-					last_model: "claude-sonnet-4",
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetModel).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						last_model: "claude-sonnet-4",
-					}),
-				)
-			})
-
-			it("should pass undefined last_model when getModel returns undefined", async () => {
-				const mockGetModel = vi.fn().mockResolvedValue(undefined)
-				mockDependencies.getModel = mockGetModel
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-123",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: null,
-					last_mode: null,
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-123", mockTaskDataProvider)
-
-				expect(mockGetModel).toHaveBeenCalledWith("task-123")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						last_model: undefined,
-					}),
-				)
-			})
-		})
-
-		describe("getOrganizationId and getMode together", () => {
-			it("should include both organization_id and last_mode when creating a session", async () => {
-				const mockGetOrganizationId = vi.fn().mockResolvedValue("org-combined")
-				const mockGetMode = vi.fn().mockResolvedValue("architect")
-				mockDependencies.getOrganizationId = mockGetOrganizationId
-				mockDependencies.getMode = mockGetMode
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-combined",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: "org-combined",
-					last_mode: "architect",
-					last_model: null,
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-combined", mockTaskDataProvider)
-
-				expect(mockGetOrganizationId).toHaveBeenCalledWith("task-combined")
-				expect(mockGetMode).toHaveBeenCalledWith("task-combined")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						organization_id: "org-combined",
-						last_mode: "architect",
-					}),
-				)
-			})
-
-			it("should include organization_id, last_mode, and last_model when all are provided", async () => {
-				const mockGetOrganizationId = vi.fn().mockResolvedValue("org-all")
-				const mockGetMode = vi.fn().mockResolvedValue("code")
-				const mockGetModel = vi.fn().mockResolvedValue("gpt-4")
-				mockDependencies.getOrganizationId = mockGetOrganizationId
-				mockDependencies.getMode = mockGetMode
-				mockDependencies.getModel = mockGetModel
-
-				manager = SessionManager.init(mockDependencies)
-
-				vi.mocked(manager.sessionPersistenceManager!.getSessionForTask).mockReturnValue(undefined)
-				vi.mocked(readFileSync).mockReturnValue(JSON.stringify([]))
-				vi.mocked(manager.sessionClient!.create).mockResolvedValue({
-					session_id: "session-all",
-					title: "Test Session",
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-					git_url: null,
-					cloud_agent_session_id: null,
-					created_on_platform: "vscode",
-					organization_id: "org-all",
-					last_mode: "code",
-					last_model: "gpt-4",
-					version: SessionManager.VERSION,
-				})
-				vi.mocked(manager.sessionClient!.uploadBlob).mockResolvedValue({ updated_at: new Date().toISOString() })
-
-				await manager.getSessionFromTask("task-all", mockTaskDataProvider)
-
-				expect(mockGetOrganizationId).toHaveBeenCalledWith("task-all")
-				expect(mockGetMode).toHaveBeenCalledWith("task-all")
-				expect(mockGetModel).toHaveBeenCalledWith("task-all")
-				expect(manager.sessionClient!.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						organization_id: "org-all",
-						last_mode: "code",
-						last_model: "gpt-4",
-					}),
-				)
-			})
-		})
-	})
-
-	describe("getFirstMessageText", () => {
-		it("should return null for empty messages array", () => {
-			const result = manager.getFirstMessageText([])
-
-			expect(result).toBeNull()
-		})
-
-		it("should return null when no message has text", () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text" } as ClineMessage]
-
-			const result = manager.getFirstMessageText(messages)
-
-			expect(result).toBeNull()
-		})
-
-		it("should return first message text", () => {
-			const messages: ClineMessage[] = [
-				{ type: "say", say: "text", text: "Hello world" } as ClineMessage,
-				{ type: "say", say: "text", text: "Second message" } as ClineMessage,
-			]
-
-			const result = manager.getFirstMessageText(messages)
-
-			expect(result).toBe("Hello world")
-		})
-
-		it("should normalize whitespace in message text", () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Hello   \n\t  world" } as ClineMessage]
-
-			const result = manager.getFirstMessageText(messages)
-
-			expect(result).toBe("Hello world")
-		})
-
-		it("should truncate long messages when truncate is true", () => {
-			const longText = "A".repeat(200)
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: longText } as ClineMessage]
-
-			const result = manager.getFirstMessageText(messages, true)
-
-			expect(result).toHaveLength(140)
-			expect(result?.endsWith("...")).toBe(true)
-		})
-
-		it("should not truncate short messages when truncate is true", () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Short message" } as ClineMessage]
-
-			const result = manager.getFirstMessageText(messages, true)
-
-			expect(result).toBe("Short message")
-		})
-
-		it("should skip messages without text and return first with text", () => {
-			const messages: ClineMessage[] = [
-				{ type: "say", say: "text" } as ClineMessage,
-				{ type: "say", say: "text", text: "" } as ClineMessage,
-				{ type: "say", say: "text", text: "Found it" } as ClineMessage,
-			]
-
-			const result = manager.getFirstMessageText(messages)
-
-			expect(result).toBe("Found it")
-		})
-	})
-
-	describe("generateTitle", () => {
-		it("should return null for empty messages", async () => {
-			const result = await manager.generateTitle([])
-
-			expect(result).toBeNull()
-		})
-
-		it("should generate title using LLM", async () => {
-			const messages: ClineMessage[] = [
-				{ type: "say", say: "text", text: "Create a React component for user authentication" } as ClineMessage,
-			]
-
-			vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockResolvedValue(
-				"React auth component",
-			)
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toBe("React auth component")
-			expect(mockDependencies.extensionMessenger.requestSingleCompletion).toHaveBeenCalledWith(
-				expect.stringContaining("Create a React component"),
-				30000,
-			)
-		})
-
-		it("should clean quotes from generated title", async () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Test message" } as ClineMessage]
-
-			vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockResolvedValue('"Quoted title"')
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toBe("Quoted title")
-		})
-
-		it("should return long generated titles without truncation", async () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Test message" } as ClineMessage]
-
-			vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockResolvedValue("A".repeat(200))
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toHaveLength(200)
-			expect(result).toBe("A".repeat(200))
-		})
-
-		it("should fall back to truncated message on LLM error", async () => {
-			const longMessage = "B".repeat(200)
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: longMessage } as ClineMessage]
-
-			vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockRejectedValue(
-				new Error("LLM error"),
-			)
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toHaveLength(140)
-			expect(result?.endsWith("...")).toBe(true)
-			expect(mockDependencies.logger.warn).toHaveBeenCalled()
-		})
-
-		it("should return raw text when short and LLM fails", async () => {
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Short message" } as ClineMessage]
-
-			vi.mocked(mockDependencies.extensionMessenger.requestSingleCompletion).mockRejectedValue(
-				new Error("LLM error"),
-			)
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toBe("Short message")
-		})
-
-		it("should fall back to raw text when extension messenger not initialized", async () => {
-			;(manager as unknown as { extensionMessenger: undefined }).extensionMessenger = undefined
-
-			const messages: ClineMessage[] = [{ type: "say", say: "text", text: "Test message" } as ClineMessage]
-
-			const result = await manager.generateTitle(messages)
-
-			expect(result).toBe("Test message")
-		})
-	})
-
-	describe("getGitState patch size limit", () => {
-		it("should return patch when size is under the limit", async () => {
-			const smallPatch = "a".repeat(1000)
-
-			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit).mockReturnValue({
-				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-				revparse: vi.fn().mockResolvedValue("abc123def456"),
-				raw: mockRaw,
-				diff: vi.fn().mockResolvedValue(smallPatch),
-				stash: vi.fn().mockResolvedValue(undefined),
-				stashList: vi.fn().mockResolvedValue({ total: 0 }),
-				checkout: vi.fn().mockResolvedValue(undefined),
-				applyPatch: vi.fn().mockResolvedValue(undefined),
-			} as unknown as ReturnType<typeof simpleGit>)
-
-			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
-			const result = await getGitState.call(manager)
-
-			expect(result.patch).toBe(smallPatch)
-		})
-
-		it("should return empty string patch when size exceeds the limit", async () => {
-			const largePatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
-
-			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit).mockReturnValue({
-				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-				revparse: vi.fn().mockResolvedValue("abc123def456"),
-				raw: mockRaw,
-				diff: vi.fn().mockResolvedValue(largePatch),
-				stash: vi.fn().mockResolvedValue(undefined),
-				stashList: vi.fn().mockResolvedValue({ total: 0 }),
-				checkout: vi.fn().mockResolvedValue(undefined),
-				applyPatch: vi.fn().mockResolvedValue(undefined),
-			} as unknown as ReturnType<typeof simpleGit>)
-
-			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
-			const result = await getGitState.call(manager)
-
-			expect(result.patch).toBe("")
-		})
-
-		it("should log warning when patch exceeds size limit", async () => {
-			const largePatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
-
-			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit).mockReturnValue({
-				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-				revparse: vi.fn().mockResolvedValue("abc123def456"),
-				raw: mockRaw,
-				diff: vi.fn().mockResolvedValue(largePatch),
-				stash: vi.fn().mockResolvedValue(undefined),
-				stashList: vi.fn().mockResolvedValue({ total: 0 }),
-				checkout: vi.fn().mockResolvedValue(undefined),
-				applyPatch: vi.fn().mockResolvedValue(undefined),
-			} as unknown as ReturnType<typeof simpleGit>)
-
-			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
-			await getGitState.call(manager)
-
-			expect(mockDependencies.logger.warn).toHaveBeenCalledWith("Git patch too large", "SessionManager", {
-				patchSize: largePatch.length,
-				maxSize: SessionManager.MAX_PATCH_SIZE_BYTES,
-			})
-		})
-
-		it("should return patch when size is exactly at the limit", async () => {
-			const exactLimitPatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES)
-
-			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit).mockReturnValue({
-				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-				revparse: vi.fn().mockResolvedValue("abc123def456"),
-				raw: mockRaw,
-				diff: vi.fn().mockResolvedValue(exactLimitPatch),
-				stash: vi.fn().mockResolvedValue(undefined),
-				stashList: vi.fn().mockResolvedValue({ total: 0 }),
-				checkout: vi.fn().mockResolvedValue(undefined),
-				applyPatch: vi.fn().mockResolvedValue(undefined),
-			} as unknown as ReturnType<typeof simpleGit>)
-
-			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
-			const result = await getGitState.call(manager)
-
-			expect(result.patch).toBe(exactLimitPatch)
-		})
-
-		it("should return empty string patch when size is one byte over the limit", async () => {
-			const overLimitPatch = "a".repeat(SessionManager.MAX_PATCH_SIZE_BYTES + 1)
-
-			const mockRaw = vi.fn().mockResolvedValue("")
-			vi.mocked(simpleGit).mockReturnValue({
-				getRemotes: vi.fn().mockResolvedValue([{ refs: { fetch: "https://github.com/test/repo.git" } }]),
-				revparse: vi.fn().mockResolvedValue("abc123def456"),
-				raw: mockRaw,
-				diff: vi.fn().mockResolvedValue(overLimitPatch),
-				stash: vi.fn().mockResolvedValue(undefined),
-				stashList: vi.fn().mockResolvedValue({ total: 0 }),
-				checkout: vi.fn().mockResolvedValue(undefined),
-				applyPatch: vi.fn().mockResolvedValue(undefined),
-			} as unknown as ReturnType<typeof simpleGit>)
-
-			const getGitState = (manager as unknown as { getGitState: () => Promise<{ patch?: string }> }).getGitState
-			const result = await getGitState.call(manager)
-
-			expect(result.patch).toBe("")
-		})
-	})
-	describe("restoreSession version mismatch", () => {
-		it("should log warning when session version does not match", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: null,
-				version: 999,
+		it("logs initialization message", () => {
+			const dependencies = {
+				platform: "test-platform",
+				pathProvider: mockPathProvider,
+				logger: mockLogger,
+				extensionMessenger: mockExtensionMessenger,
+				getToken: mockGetToken,
+				onSessionCreated: mockOnSessionCreated,
+				onSessionRestored: mockOnSessionRestored,
+				onSessionSynced: mockOnSessionSynced,
+				onSessionTitleGenerated: mockOnSessionTitleGenerated,
+				getOrganizationId: mockGetOrganizationId,
+				getMode: mockGetMode,
+				getModel: mockGetModel,
+				getParentTaskId: mockGetParentTaskId,
 			}
 
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
+			SessionManager.init(dependencies)
 
-			await manager.restoreSession("session-123")
-
-			expect(mockDependencies.logger.warn).toHaveBeenCalledWith("Session version mismatch", "SessionManager", {
-				sessionId: "session-123",
-				expectedVersion: SessionManager.VERSION,
-				actualVersion: 999,
-			})
-		})
-	})
-
-	describe("restoreSession git state restoration", () => {
-		it("should execute git restore when git_state blob is present", async () => {
-			const mockSession: SessionWithSignedUrls = {
-				session_id: "session-123",
-				title: "Test Session",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-				git_url: null,
-				cloud_agent_session_id: null,
-				created_on_platform: "vscode",
-				organization_id: null,
-				last_mode: null,
-				last_model: null,
-				api_conversation_history_blob_url: null,
-				task_metadata_blob_url: null,
-				ui_messages_blob_url: null,
-				git_state_blob_url: "https://storage.example.com/git_state.json",
-				version: SessionManager.VERSION,
-			}
-
-			vi.mocked(manager.sessionClient!.get).mockResolvedValue(mockSession)
-
-			const gitState = {
-				head: "abc123",
-				patch: "diff content",
-				branch: "main",
-			}
-
-			global.fetch = vi.fn().mockResolvedValue({
-				ok: true,
-				json: vi.fn().mockResolvedValue(gitState),
-			})
-
-			await manager.restoreSession("session-123")
-
-			expect(global.fetch).toHaveBeenCalledWith("https://storage.example.com/git_state.json")
+			expect(mockLogger.debug).toHaveBeenCalledWith("Initialized SessionManager", expect.any(String))
 		})
 	})
 })

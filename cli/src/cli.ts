@@ -11,9 +11,14 @@ import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
-import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
+import {
+	addPendingRequestAtom,
+	TaskHistoryData,
+	taskHistoryDataAtom,
+	updateTaskHistoryFiltersAtom,
+} from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
-import { taskResumedViaContinueOrSessionAtom } from "./state/atoms/extension.js"
+import { taskResumedViaContinueOrSessionAtom, currentTaskAtom } from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -164,6 +169,11 @@ export class CLI {
 							console.log(JSON.stringify(message))
 						}
 					},
+					onSessionTitleGenerated: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
 					platform: "cli",
 					getOrganizationId: async () => {
 						const state = this.service?.getState()
@@ -190,18 +200,71 @@ export class CLI {
 
 						return result
 					},
+					getParentTaskId: async (taskId: string) => {
+						const result = await (async () => {
+							try {
+								// Check if the current task matches the taskId
+								const currentTask = this.store?.get(currentTaskAtom)
+
+								if (currentTask?.id === taskId) {
+									return currentTask.parentTaskId
+								}
+
+								// Otherwise, fetch the task from history using promise-based request/response pattern
+								const requestId = crypto.randomUUID()
+
+								// Create a promise that will be resolved when the response arrives
+								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
+									const timeout = setTimeout(() => {
+										reject(new Error("Task history request timed out"))
+									}, 5000) // 5 second timeout as fallback
+
+									this.store?.set(addPendingRequestAtom, {
+										requestId,
+										resolve,
+										reject,
+										timeout,
+									})
+								})
+
+								// Send task history request to get the specific task
+								await this.store?.set(sendWebviewMessageAtom, {
+									type: "taskHistoryRequest",
+									payload: {
+										requestId,
+										workspace: "current",
+										sort: "newest",
+										favoritesOnly: false,
+										pageIndex: 0,
+									},
+								})
+
+								// Wait for the actual response (not a timer)
+								const taskHistoryData = await responsePromise
+								const task = taskHistoryData.historyItems.find((item) => item.id === taskId)
+
+								return task?.parentTaskId
+							} catch {
+								return undefined
+							}
+						})()
+
+						logs.debug(`Resolved parent task ID for task ${taskId}: "${result}"`, "SessionManager")
+
+						return result || undefined
+					},
 				})
 				logs.debug("SessionManager initialized with dependencies", "CLI")
 
 				const workspace = this.options.workspace || process.cwd()
-				this.sessionService.setWorkspaceDirectory(workspace)
+				this.sessionService?.setWorkspaceDirectory(workspace)
 				logs.debug("SessionManager workspace directory set", "CLI", { workspace })
 
 				if (this.options.session) {
-					await this.sessionService.restoreSession(this.options.session)
+					await this.sessionService?.restoreSession(this.options.session)
 				} else if (this.options.fork) {
 					logs.info("Forking session from share ID", "CLI", { shareId: this.options.fork })
-					await this.sessionService.forkSession(this.options.fork)
+					await this.sessionService?.forkSession(this.options.fork)
 				}
 			}
 
@@ -216,10 +279,15 @@ export class CLI {
 			logs.debug("CLI configuration injected into extension", "CLI")
 
 			const extensionHost = this.service.getExtensionHost()
-			extensionHost.sendWebviewMessage({
-				type: "yoloMode",
-				bool: Boolean(this.options.ci),
-			})
+			// In JSON-IO mode, don't set yoloMode on the extension host.
+			// This prevents Task.ts from auto-answering followup questions.
+			// The CLI's approval layer handles YOLO behavior and correctly excludes followups.
+			if (!this.options.jsonInteractive) {
+				extensionHost.sendWebviewMessage({
+					type: "yoloMode",
+					bool: Boolean(this.options.ci || this.options.yolo),
+				})
+			}
 
 			// Request router models after configuration is injected
 			void this.requestRouterModels()
@@ -270,6 +338,7 @@ export class CLI {
 					mode: this.options.mode || "code",
 					workspace: this.options.workspace || process.cwd(),
 					ci: this.options.ci || false,
+					yolo: this.options.yolo || false,
 					json: this.options.json || false,
 					jsonInteractive: this.options.jsonInteractive || false,
 					prompt: this.options.prompt || "",

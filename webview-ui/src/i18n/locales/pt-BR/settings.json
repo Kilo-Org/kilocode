@@ -302,9 +302,9 @@
 		"getOpenRouterApiKey": "Obter chave de API OpenRouter",
 		"vercelAiGatewayApiKey": "Chave API do Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Obter chave API do Vercel AI Gateway",
+		"glamaApiKey": "Chave API do Glama",
+		"getGlamaApiKey": "Obter chave API do Glama",
 		"apiKeyStorageNotice": "As chaves de API são armazenadas com segurança no Armazenamento Secreto do VSCode",
-		"glamaApiKey": "Chave de API Glama",
-		"getGlamaApiKey": "Obter chave de API Glama",
 		"useCustomBaseUrl": "Usar URL base personalizado",
 		"useReasoning": "Habilitar raciocínio",
 		"useHostHeader": "Usar cabeçalho Host personalizado",
@@ -547,6 +547,7 @@
 			"none": "Nenhum",
 			"minimal": "Mínimo (mais rápido)",
 			"high": "Alto",
+			"xhigh": "Muito alto",
 			"medium": "Médio",
 			"low": "Baixo",
 			"xhigh": "Extra Alto"
@@ -1146,6 +1147,10 @@
 		"collapseThinking": {
 			"label": "Recolher mensagens de pensamento por padrão",
 			"description": "Quando ativado, os blocos de pensamento serão recolhidos por padrão até que você interaja com eles"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Requer {{primaryMod}}+Enter para enviar mensagens",
+			"description": "Quando ativado, você deve pressionar {{primaryMod}}+Enter para enviar mensagens em vez de apenas Enter"
 		}
 	}
 }

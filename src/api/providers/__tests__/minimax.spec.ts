@@ -16,12 +16,10 @@ import { MiniMaxHandler } from "../minimax"
 
 vitest.mock("@anthropic-ai/sdk", () => {
 	const mockCreate = vitest.fn()
-	const mockCountTokens = vitest.fn()
 	return {
 		Anthropic: vitest.fn(() => ({
 			messages: {
 				create: mockCreate,
-				countTokens: mockCountTokens,
 			},
 		})),
 	}
@@ -30,13 +28,11 @@ vitest.mock("@anthropic-ai/sdk", () => {
 describe("MiniMaxHandler", () => {
 	let handler: MiniMaxHandler
 	let mockCreate: any
-	let mockCountTokens: any
 
 	beforeEach(() => {
 		vitest.clearAllMocks()
 		const anthropicInstance = (Anthropic as unknown as any)()
 		mockCreate = anthropicInstance.messages.create
-		mockCountTokens = anthropicInstance.messages.countTokens
 	})
 
 	describe("International MiniMax (default)", () => {

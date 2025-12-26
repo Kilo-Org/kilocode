@@ -122,6 +122,7 @@
 	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
+	"pressToSend": "Druk op {{keyCombination}} om te verzenden",
 	"stopTts": "Stop tekst-naar-spraak",
 	"typeMessage": "Typ een bericht...",
 	"typeTask": "Typ hier je taak...",
@@ -149,7 +150,8 @@
 			"403": "Niet geautoriseerd. Je API-sleutel is geldig, maar de provider weigerde dit verzoek in te willigen.",
 			"429": "Te veel verzoeken. Je bent rate-gelimiteerd door de provider. Wacht alsjeblieft even voor je volgende API-aanroep.",
 			"500": "Provider-serverfout. Er is iets mis aan de kant van de provider, er is niets mis met je verzoek.",
-			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Roo Code-ondersteuning."
+			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Kilo-ondersteuning.",
+			"connection": "Verbindingsfout. Zorg ervoor dat je een werkende internetverbinding hebt."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"title": "Bewerking mislukt"
 	},
 	"troubleMessage": "Kilo Code ondervindt problemen...",
+	"errorDetails": {
+		"title": "Foutdetails",
+		"copyToClipboard": "Naar klembord kopiëren",
+		"copied": "Gekopieerd!"
+	},
 	"powershell": {
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
 	},
@@ -290,7 +297,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} uitgebracht",
+		"title": "Roo Code {{version}} uitgebracht",
+		"support": "Steun Roo Code door ons een ster te geven op <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Beperkt tijd GRATIS stealth model</bold> - Code Supernova: Nu geüpgraded met een <bold>1M token contextvenster</bold>! Een veelzijdig agentisch codeermodel dat beeldinvoer ondersteunt, beschikbaar via Roo Code Cloud.",
 			"note": "(Opmerking: prompts en aanvullingen worden gelogd door de modelmaker en gebruikt om het model te verbeteren)",
@@ -316,16 +324,24 @@
 		"thinking": "Denkt na",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Context samengevat",
-		"condensing": "Context aan het samenvatten...",
-		"errorHeader": "Context samenvatten mislukt",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context samengevat",
+			"inProgress": "Context aan het samenvatten...",
+			"errorHeader": "Context samenvatten mislukt"
+		},
+		"truncation": {
+			"title": "Context ingekort",
+			"inProgress": "Context aan het inkorten...",
+			"messagesRemoved": "{{count}} bericht verwijderd",
+			"messagesRemoved_other": "{{count}} berichten verwijderd",
+			"description": "Oudere berichten zijn uit het gesprek verwijderd om binnen de limiet van het contextvenster te blijven. Dit is een snelle maar minder contextbehoudende aanpak in vergelijking met samenvoeging."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)",
-		"autoSelectCountdown": "Automatische selectie in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Automatisch goedkeuren ingeschakeld. Selecteren in {{seconds}}s…"
 	},
 	"browser": {
 		"session": "Browsersessie",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Browsersessie gestart",
 		"actions": {
 			"title": "Browseractie: ",
+			"launched": "Browser gestart",
 			"launch": "Browser starten op {{url}}",
+			"clicked": "Geklikt ({{coordinate}})",
 			"click": "Klik ({{coordinate}})",
+			"typed": "Getypt: {{text}}",
 			"type": "Typ \"{{text}}\"",
+			"pressed": "Ingedrukt: {{key}}",
 			"press": "Druk op {{key}}",
+			"scrolledDown": "Naar beneden gescrolld",
 			"scrollDown": "Scroll naar beneden",
+			"scrolledUp": "Naar boven gescrolld",
 			"scrollUp": "Scroll naar boven",
+			"hovered": "Zweefde ({{coordinate}})",
 			"hover": "Zweven ({{coordinate}})",
+			"resized": "Grootte gewijzigd naar: {{size}}",
+			"resize": "Grootte wijzigen naar {{size}}",
+			"screenshotSaved": "Schermopname opgeslagen",
+			"screenshot": "Schermopname opslaan naar {{path}}",
+			"closed": "Browser gesloten",
 			"close": "Browser sluiten"
 		}
 	},

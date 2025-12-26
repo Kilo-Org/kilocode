@@ -7,12 +7,18 @@ import {
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
 	anthropicModels,
-	toolNames, // kilocode_change
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
 import { DEFAULT_HEADERS } from "../constants" // kilocode_change
+import {
+	ModelSettings,
+	ModelSettingsSchema,
+	parseModelSettings,
+	VersionedModelSettingsSchema,
+} from "../kilocode/model-settings"
+import { resolveVersionedSettings } from "./versionedSettings" // kilocode_change
 
 /**
  * OpenRouterBaseModel
@@ -40,12 +46,8 @@ const modelRouterBaseModelSchema = z.object({
 
 	// kilocode_change start
 	preferredIndex: z.number().nullish(),
-	settings: z
-		.object({
-			included_tools: z.array(z.enum(toolNames)).nullish(),
-			excluded_tools: z.array(z.enum(toolNames)).nullish(),
-		})
-		.nullish(),
+	settings: ModelSettingsSchema.nullish(),
+	versioned_settings: VersionedModelSettingsSchema.nullish(),
 	// kilocode_change end
 })
 
@@ -238,6 +240,12 @@ export const parseOpenRouterModel = ({
 
 	const supportsNativeTools = supportedParameters ? supportedParameters.includes("tools") : undefined
 
+	// kilocode_change start
+	const resolvedVersionedSettings = model.versioned_settings
+		? resolveVersionedSettings<ModelSettings>(model.versioned_settings)
+		: {}
+	// kilocode_change end
+
 	const modelInfo: ModelInfo = {
 		maxTokens: maxTokens || Math.ceil(model.context_length * 0.2),
 		contextWindow: model.context_length,
@@ -255,8 +263,9 @@ export const parseOpenRouterModel = ({
 		displayName,
 		preferredIndex: model.preferredIndex,
 		supportsVerbosity: !!supportedParameters?.includes("verbosity") || undefined,
-		includedTools: model.settings?.included_tools || undefined,
-		excludedTools: model.settings?.excluded_tools || undefined,
+		...parseModelSettings(
+			Object.keys(resolvedVersionedSettings).length > 0 ? resolvedVersionedSettings : (model.settings ?? {}),
+		),
 		// kilocode_change end
 		// Default to native tool protocol when native tools are supported
 		defaultToolProtocol: supportsNativeTools ? ("native" as const) : undefined,

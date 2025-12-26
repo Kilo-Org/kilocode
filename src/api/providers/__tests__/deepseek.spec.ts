@@ -168,7 +168,7 @@ describe("DeepSeekHandler", () => {
 			const model = handlerWithReasoner.getModel()
 			expect(model.id).toBe("deepseek-reasoner")
 			expect(model.info).toBeDefined()
-			expect(model.info.maxTokens).toBe(65536) // deepseek-reasoner has 64K max
+			expect(model.info.maxTokens).toBe(8192) // deepseek-reasoner has 8K max
 			expect(model.info.contextWindow).toBe(128_000)
 			expect(model.info.supportsImages).toBe(false)
 			expect(model.info.supportsPromptCache).toBe(true)

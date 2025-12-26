@@ -15,12 +15,12 @@ import {
 import { sessionMachineUiStateAtom, selectedSessionMachineStateAtom } from "../state/atoms/stateMachine"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
+import { BranchPicker } from "./BranchPicker"
 import { vscode } from "../utils/vscode"
 import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
 import {
 	Loader2,
 	SendHorizontal,
-	RefreshCw,
 	GitBranch,
 	Folder,
 	ChevronDown,
@@ -28,6 +28,7 @@ import {
 	Zap,
 	Layers,
 	X,
+	Terminal,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -40,9 +41,31 @@ export function SessionDetail() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
+	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
 
 	// Hooks must be called unconditionally before any early returns
 	const timeLabels = useMemo(() => createRelativeTimeLabels(t), [t])
+
+	// Auto-cancel session when it ends (as if user clicked the red cancel button)
+	// Only send cancel once when transitioning from "running" to a terminal state
+	// Track both sessionId and status to avoid spurious cancels on session switches
+	useEffect(() => {
+		if (!selectedSession) return
+
+		const prevState = prevSessionStateRef.current
+		const currentState = { id: selectedSession.sessionId, status: selectedSession.status }
+
+		// Update the ref for next render
+		prevSessionStateRef.current = currentState
+
+		// Only send cancel if same session transitioned from running to terminal state
+		if (prevState?.id === currentState.id && prevState.status === "running" && currentState.status !== "running") {
+			vscode.postMessage({
+				type: "agentManager.cancelSession",
+				sessionId: selectedSession.sessionId,
+			})
+		}
+	}, [selectedSession])
 
 	// Show pending session view only when no other session is selected
 	if (pendingSession && !selectedSession) {
@@ -53,16 +76,19 @@ export function SessionDetail() {
 		return <NewAgentForm />
 	}
 
-	const handleRefresh = () => {
-		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
-	}
-
 	// Use state machine UI state as the single source of truth for activity/spinner
 	const sessionUiState = machineUiState[selectedSession.sessionId]
 	const isActive = sessionUiState?.isActive ?? false
 	const showSpinner = sessionUiState?.showSpinner ?? false
 	const isWorktree = selectedSession.parallelMode?.enabled
 	const branchName = selectedSession.parallelMode?.branch
+	const isProvisionalSession = selectedSession.sessionId.startsWith("provisional-")
+
+	// Determine if "Finish to Branch" button should be shown
+	// Simplified logic: show when session is a worktree session and running
+	// Users should be able to finish at any point while the session is active
+	const isSessionRunning = selectedSession.status === "running"
+	const canFinishWorktree = !!isWorktree && isSessionRunning
 
 	return (
 		<div className="am-session-detail">
@@ -100,15 +126,19 @@ export function SessionDetail() {
 						)}
 					</div>
 				</div>
-
 				<div className="am-header-actions">
-					{!isActive && (
+					{!isProvisionalSession && (
 						<button
 							className="am-icon-btn"
-							onClick={handleRefresh}
-							aria-label={t("sessionDetail.refreshButtonTitle")}
-							title={t("sessionDetail.refreshButtonTitle")}>
-							<RefreshCw size={14} />
+							onClick={() => {
+								vscode.postMessage({
+									type: "agentManager.showTerminal",
+									sessionId: selectedSession.sessionId,
+								})
+							}}
+							aria-label={t("sessionDetail.openTerminal")}
+							title={t("sessionDetail.openTerminal")}>
+							<Terminal size={14} />
 						</button>
 					)}
 				</div>
@@ -134,7 +164,10 @@ export function SessionDetail() {
 				sessionId={selectedSession.sessionId}
 				sessionLabel={selectedSession.label}
 				isActive={isActive}
-				autoMode={selectedSession.autoMode}
+				showCancel={isActive}
+				showFinishToBranch={canFinishWorktree}
+				worktreeBranchName={branchName}
+				sessionStatus={selectedSession.status}
 			/>
 		</div>
 	)
@@ -200,6 +233,8 @@ function NewAgentForm() {
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false)
+	const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
+	const [isBranchPickerOpen, setIsBranchPickerOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
 	const versionDropdownRef = useRef<HTMLDivElement>(null)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
@@ -214,6 +249,18 @@ function NewAgentForm() {
 			setIsStarting(false)
 		}
 	}, [startSessionFailedCounter])
+
+	// Request branches on mount and when switching to worktree mode
+	useEffect(() => {
+		vscode.postMessage({ type: "agentManager.listBranches" })
+	}, [])
+
+	// Also request when switching to worktree mode
+	useEffect(() => {
+		if (effectiveRunMode === "worktree") {
+			vscode.postMessage({ type: "agentManager.listBranches" })
+		}
+	}, [effectiveRunMode])
 
 	// Close dropdowns when clicking outside
 	useEffect(() => {
@@ -252,6 +299,7 @@ function NewAgentForm() {
 			parallelMode: effectiveRunMode === "worktree",
 			versions: versionCount,
 			labels,
+			existingBranch: selectedBranch || undefined,
 		})
 	}
 
@@ -263,10 +311,6 @@ function NewAgentForm() {
 	}
 
 	const handleSelectMode = (mode: RunMode) => {
-		if (mode === "worktree" && !isMultiVersion) {
-			// Worktree mode is not yet available for users (unless in multi-version mode)
-			return
-		}
 		setRunMode(mode)
 		setIsDropdownOpen(false)
 	}
@@ -283,7 +327,7 @@ function NewAgentForm() {
 				style={{ width: 48, height: 48, margin: "0 auto 16px auto" }}>
 				<KiloLogo />
 			</div>
-			<div style={{ width: "100%", maxWidth: "100%" }}>
+			<div style={{ width: "100%", maxWidth: "100%", minWidth: "280px" }}>
 				<div
 					className={cn(
 						"relative",
@@ -337,15 +381,12 @@ function NewAgentForm() {
 						)}
 					/>
 
-					{/* Transparent overlay */}
 					<div
 						className="absolute bottom-[1px] left-2 right-2 h-10 bg-gradient-to-t from-[var(--vscode-input-background)] via-[var(--vscode-input-background)] to-transparent pointer-events-none z-[2]"
 						aria-hidden="true"
 					/>
 
-					{/* Controls Container */}
 					<div className="absolute bottom-2 right-2 z-30 flex items-center gap-2">
-						{/* Run Mode Dropdown */}
 						<div ref={dropdownRef} className="am-run-mode-dropdown-inline relative">
 							<StandardTooltip
 								content={
@@ -382,23 +423,21 @@ function NewAgentForm() {
 										<span>{t("sessionDetail.runModeLocal")}</span>
 										{runMode === "local" && <span className="am-checkmark">✓</span>}
 									</button>
-									<StandardTooltip content={t("sessionDetail.comingSoon")}>
-										<button
-											className={cn("am-run-mode-option-inline", "am-disabled")}
-											onClick={() => handleSelectMode("worktree")}
-											type="button"
-											disabled>
-											<GitBranch size={12} />
-											<span className="am-run-mode-label">
-												{t("sessionDetail.runModeWorktree")}
-											</span>
-										</button>
-									</StandardTooltip>
+									<button
+										className={cn(
+											"am-run-mode-option-inline",
+											runMode === "worktree" && "am-selected",
+										)}
+										onClick={() => handleSelectMode("worktree")}
+										type="button">
+										<GitBranch size={12} />
+										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
+										{runMode === "worktree" && <span className="am-checkmark">✓</span>}
+									</button>
 								</div>
 							)}
 						</div>
 
-						{/* Version Count Dropdown */}
 						<div ref={versionDropdownRef} className="am-run-mode-dropdown-inline relative">
 							<StandardTooltip content={t("sessionDetail.versionsTooltip")}>
 								<button
@@ -434,7 +473,23 @@ function NewAgentForm() {
 							)}
 						</div>
 
-						{/* Start Button */}
+						{effectiveRunMode === "worktree" && !isMultiVersion && (
+							<StandardTooltip content={t("sessionDetail.branchPickerTooltip")}>
+								<button
+									className="am-run-mode-trigger-inline"
+									onClick={() => setIsBranchPickerOpen(true)}
+									disabled={isStarting}
+									type="button"
+									title={t("sessionDetail.selectBranch")}>
+									<GitBranch size={14} />
+									<span className="truncate max-w-[80px] text-sm">
+										{selectedBranch || t("sessionDetail.selectBranch")}
+									</span>
+									<ChevronDown size={10} className="am-chevron" />
+								</button>
+							</StandardTooltip>
+						)}
+
 						<button
 							className={cn(
 								"relative inline-flex items-center justify-center",
@@ -464,7 +519,7 @@ function NewAgentForm() {
 					{/* Hint Text inside input */}
 					{!promptText && (
 						<div
-							className="absolute left-3 right-[90px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							className="absolute left-3 right-[140px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 							style={{
 								bottom: "0.25rem",
 								color: "var(--vscode-descriptionForeground)",
@@ -478,6 +533,14 @@ function NewAgentForm() {
 					)}
 				</div>
 			</div>
+
+			{isBranchPickerOpen && (
+				<BranchPicker
+					selectedBranch={selectedBranch}
+					onSelect={setSelectedBranch}
+					onClose={() => setIsBranchPickerOpen(false)}
+				/>
+			)}
 		</div>
 	)
 }
