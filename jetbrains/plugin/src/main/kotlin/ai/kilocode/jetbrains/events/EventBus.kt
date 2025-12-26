@@ -147,6 +147,12 @@ open class AbsEventBus : Disposable {
     }
 
     override fun dispose() {
+        logger.info("Disposing EventBus, clearing ${listeners.size} listener types")
+        
+        // Clear all listeners to prevent memory leaks
+        listeners.clear()
+        
+        logger.info("EventBus disposed")
     }
 }
 

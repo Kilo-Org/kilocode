@@ -21,6 +21,10 @@ class PluginContext {
     // RPC protocol instance
     @Volatile
     private var rpcProtocol: IRPCProtocol? = null
+    
+    // Extension host manager instance
+    @Volatile
+    private var extensionHostManager: ExtensionHostManager? = null
 
     /**
      * Set RPC protocol instance
@@ -38,6 +42,23 @@ class PluginContext {
     fun getRPCProtocol(): IRPCProtocol? {
         return rpcProtocol
     }
+    
+    /**
+     * Set extension host manager instance
+     * @param manager Extension host manager instance
+     */
+    fun setExtensionHostManager(manager: ExtensionHostManager) {
+        logger.info("Setting extension host manager instance")
+        extensionHostManager = manager
+    }
+    
+    /**
+     * Get extension host manager instance
+     * @return Extension host manager instance, or null if not set
+     */
+    fun getExtensionHostManager(): ExtensionHostManager? {
+        return extensionHostManager
+    }
 
     /**
      * Clear all resources
@@ -45,6 +66,7 @@ class PluginContext {
     fun clear() {
         logger.info("Clearing resources in PluginContext")
         rpcProtocol = null
+        extensionHostManager = null
     }
 
     companion object {

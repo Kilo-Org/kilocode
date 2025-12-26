@@ -14,6 +14,8 @@ class PendingRPCReply(
     private val promise: LazyPromise,
     private val disposable: Disposable,
 ) {
+    val creationTime: Long = System.currentTimeMillis()
+    
     /**
      * Resolve reply successfully
      * @param value Result value

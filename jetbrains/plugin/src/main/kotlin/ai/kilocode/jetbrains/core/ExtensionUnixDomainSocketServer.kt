@@ -4,6 +4,7 @@
 
 package ai.kilocode.jetbrains.core
 
+import ai.kilocode.jetbrains.plugin.SystemObjectProvider
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import java.io.IOException
@@ -146,6 +147,24 @@ class ExtensionUnixDomainSocketServer : ISocketServer {
                 logger.info("[UDS] New client connected")
                 val manager = ExtensionHostManager(clientChannel, projectPath, project)
                 clientManagers[clientChannel] = manager
+                
+                // Register ExtensionHostManager in SystemObjectProvider for access by other components
+                try {
+                    val systemObjectProvider = SystemObjectProvider.getInstance(project)
+                    systemObjectProvider.register("extensionHostManager", manager)
+                    logger.info("[UDS] Registered ExtensionHostManager in SystemObjectProvider")
+                } catch (e: Exception) {
+                    logger.error("[UDS] Failed to register ExtensionHostManager in SystemObjectProvider", e)
+                }
+                
+                // Also register with PluginContext for UI access
+                try {
+                    project.getService(PluginContext::class.java).setExtensionHostManager(manager)
+                    logger.info("[UDS] Registered ExtensionHostManager in PluginContext")
+                } catch (e: Exception) {
+                    logger.error("[UDS] Failed to register ExtensionHostManager in PluginContext", e)
+                }
+                
                 handleClient(clientChannel, manager) // Start client handler thread
             } catch (e: Exception) {
                 if (isRunning) {
@@ -202,6 +221,24 @@ class ExtensionUnixDomainSocketServer : ISocketServer {
             // Connection close and resource release
             manager.dispose()
             clientManagers.remove(clientChannel)
+            
+            // Remove ExtensionHostManager from SystemObjectProvider
+            try {
+                val systemObjectProvider = SystemObjectProvider.getInstance(project)
+                systemObjectProvider.remove("extensionHostManager")
+                logger.info("[UDS] Removed ExtensionHostManager from SystemObjectProvider")
+            } catch (e: Exception) {
+                logger.warn("[UDS] Failed to remove ExtensionHostManager from SystemObjectProvider", e)
+            }
+            
+            // Also clear from PluginContext
+            try {
+                project.getService(PluginContext::class.java).clear()
+                logger.info("[UDS] Cleared PluginContext")
+            } catch (e: Exception) {
+                logger.warn("[UDS] Failed to clear PluginContext", e)
+            }
+            
             try {
                 clientChannel.close()
             } catch (e: IOException) {

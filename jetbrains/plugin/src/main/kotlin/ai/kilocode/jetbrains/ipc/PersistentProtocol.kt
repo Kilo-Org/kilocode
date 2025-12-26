@@ -116,19 +116,36 @@ class PersistentProtocol(opts: PersistentProtocolOptions, msgListener: ((data: B
     }
 
     override fun dispose() {
-        _outgoingAckTimeout?.cancel()
+        // Cancel and purge all timers to prevent memory leaks
+        _outgoingAckTimeout?.let { timer ->
+            timer.cancel()
+            timer.purge()
+        }
         _outgoingAckTimeout = null
 
-        _incomingAckTimeout?.cancel()
+        _incomingAckTimeout?.let { timer ->
+            timer.cancel()
+            timer.purge()
+        }
         _incomingAckTimeout = null
 
-        _keepAliveInterval?.cancel()
+        _keepAliveInterval?.let { timer ->
+            timer.cancel()
+            timer.purge()
+        }
         _keepAliveInterval = null
 
+        // Dispose socket-related resources
         _socketDisposables.forEach { it.dispose() }
         _socketDisposables.clear()
 
+        // Clear message queues to free memory
+        val unackMsgCount = _outgoingUnackMsg.size
+        _outgoingUnackMsg.clear()
+
         _isDisposed = true
+        
+        LOG.info("PersistentProtocol disposed, cleared $unackMsgCount unacknowledged messages")
     }
 
     override suspend fun drain() {

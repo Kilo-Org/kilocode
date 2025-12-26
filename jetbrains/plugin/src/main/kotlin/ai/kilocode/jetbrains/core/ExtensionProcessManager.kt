@@ -20,6 +20,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Extension process manager
@@ -57,6 +59,13 @@ class ExtensionProcessManager : Disposable {
     // Whether running
     @Volatile
     private var isRunning = false
+    
+    // Crash recovery state
+    private val crashCount = AtomicInteger(0)
+    private val lastCrashTime = AtomicLong(0)
+    private val maxCrashesBeforeGiveUp = 3
+    private val crashResetWindow = 300000L // 5 minutes
+    private var lastPortOrPath: Any? = null
 
     /**
      * Start extension process
@@ -68,6 +77,10 @@ class ExtensionProcessManager : Disposable {
             LOG.info("Extension process is already running")
             return true
         }
+        
+        // Store for potential restart
+        lastPortOrPath = portOrPath
+        
         val isUds = portOrPath is String
         if (!ExtensionUtils.isValidPortOrPath(portOrPath)) {
             LOG.error("Invalid socket info: $portOrPath")
@@ -219,12 +232,14 @@ class ExtensionProcessManager : Disposable {
             logThread.start()
 
             // Wait for process to end
-            try {
-                val exitCode = proc.waitFor()
-                LOG.info("Extension process exited with code: $exitCode")
+            val exitCode = try {
+                proc.waitFor()
             } catch (e: InterruptedException) {
                 LOG.info("Process monitor interrupted")
+                -1
             }
+            
+            LOG.info("Extension process exited with code: $exitCode")
 
             // Ensure log thread ends
             logThread.interrupt()
@@ -232,6 +247,11 @@ class ExtensionProcessManager : Disposable {
                 logThread.join(1000)
             } catch (e: InterruptedException) {
                 // Ignore
+            }
+            
+            // Handle unexpected crashes
+            if (exitCode != 0 && !Thread.currentThread().isInterrupted) {
+                handleProcessCrash(exitCode)
             }
         } catch (e: Exception) {
             LOG.error("Error monitoring extension process", e)
@@ -242,6 +262,56 @@ class ExtensionProcessManager : Disposable {
                     process = null
                 }
             }
+        }
+    }
+    
+    /**
+     * Handle process crash and attempt recovery
+     */
+    private fun handleProcessCrash(exitCode: Int) {
+        val now = System.currentTimeMillis()
+        
+        // Reset crash count if enough time has passed
+        if (now - lastCrashTime.get() > crashResetWindow) {
+            crashCount.set(0)
+        }
+        
+        val crashes = crashCount.incrementAndGet()
+        lastCrashTime.set(now)
+        
+        LOG.error("Extension process crashed with exit code $exitCode (crash #$crashes)")
+        
+        if (crashes <= maxCrashesBeforeGiveUp) {
+            LOG.info("Attempting automatic restart (attempt $crashes/$maxCrashesBeforeGiveUp)")
+            
+            try {
+                // Wait before restart with exponential backoff
+                val delay = 2000L * crashes
+                Thread.sleep(delay)
+                
+                // Attempt restart
+                val portOrPath = lastPortOrPath
+                if (portOrPath != null) {
+                    val restarted = start(portOrPath)
+                    if (restarted) {
+                        LOG.info("Extension process restarted successfully after crash")
+                    } else {
+                        LOG.error("Failed to restart extension process after crash")
+                    }
+                } else {
+                    LOG.error("Cannot restart: no port/path information available")
+                }
+            } catch (e: InterruptedException) {
+                LOG.info("Restart attempt interrupted")
+            } catch (e: Exception) {
+                LOG.error("Error during crash recovery", e)
+            }
+        } else {
+            LOG.error("Max crash count reached ($crashes), giving up on automatic restart")
+            NotificationUtil.showError(
+                I18n.t("jetbrains:errors.extensionCrashed.title"),
+                I18n.t("jetbrains:errors.extensionCrashed.message", mapOf("crashes" to crashes))
+            )
         }
     }
 
