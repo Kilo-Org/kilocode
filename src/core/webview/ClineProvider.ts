@@ -87,6 +87,7 @@ import { t } from "../../i18n"
 
 import { buildApiHandler } from "../../api"
 import { forceFullModelDetailsLoad, hasLoadedFullDetails } from "../../api/providers/fetchers/lmstudio"
+import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
 
 import { ContextProxy } from "../config/ContextProxy"
 import { getEnabledRules } from "./kilorules"
@@ -2211,7 +2212,13 @@ ${prompt}
 		// kilocode_change start: Get active model for virtual quota fallback UI display
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
-				? this.getCurrentTask()!.api.getModel()
+				? {
+						...this.getCurrentTask()!.api.getModel(),
+						activeProfileNumber:
+							this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
+								? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
+								: undefined,
+					}
 				: undefined
 		// kilocode_change end
 
