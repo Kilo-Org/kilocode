@@ -79,7 +79,10 @@ function parseSyntheticModel(model: SyntheticModel): ModelInfo {
 	}
 }
 
-export async function getSyntheticModels(apiKey?: string): Promise<Record<string, ModelInfo>> {
+// Default base URL for Synthetic provider
+const SYNTHETIC_DEFAULT_BASE_URL = "https://api.synthetic.new/openai/v1"
+
+export async function getSyntheticModels(apiKey?: string, baseUrl?: string): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
 
 	try {
@@ -91,7 +94,10 @@ export async function getSyntheticModels(apiKey?: string): Promise<Record<string
 			headers.Authorization = `Bearer ${apiKey}`
 		}
 
-		const response = await axios.get<SyntheticModelsResponse>("https://api.synthetic.new/openai/v1/models", {
+		const effectiveBaseUrl = baseUrl || SYNTHETIC_DEFAULT_BASE_URL
+		const modelsUrl = effectiveBaseUrl.endsWith("/") ? `${effectiveBaseUrl}models` : `${effectiveBaseUrl}/models`
+
+		const response = await axios.get<SyntheticModelsResponse>(modelsUrl, {
 			headers,
 			timeout: 10_000,
 		})
