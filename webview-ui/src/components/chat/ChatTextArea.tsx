@@ -50,6 +50,7 @@ import {
 	validateSlashCommand,
 } from "@/utils/slash-commands"
 // kilocode_change end
+import { isStartWithArabic } from "@/utils/rtlUtils"
 
 interface ChatTextAreaProps {
 	inputValue: string
@@ -1504,7 +1505,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"z-10",
 						"forced-color-adjust-none",
 						"pb-16", // kilocode_change
+						isStartWithArabic(inputValue) ? "rtl text-right" : "",
 					)}
+					dir={isStartWithArabic(inputValue) ? "rtl" : "ltr"}
 					style={{
 						color: "transparent",
 					}}
@@ -1593,7 +1596,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"scrollbar-none",
 						"scrollbar-hide",
 						"pb-16", // kilocode_change: Increased padding to prevent overlap with control bar
+						isStartWithArabic(inputValue) ? "rtl text-right" : "",
 					)}
+					dir={isStartWithArabic(inputValue) ? "rtl" : "ltr"}
 					onScroll={() => updateHighlights()}
 				/>
 				{/* kilocode_change {Transparent overlay at bottom of textArea to avoid text overlap } */}
