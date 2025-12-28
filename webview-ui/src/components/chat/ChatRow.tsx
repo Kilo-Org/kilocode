@@ -79,6 +79,7 @@ import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
 // kilocode_change end
+import { isStartWithArabic } from "@/utils/rtlUtils"
 
 // Helper function to get previous todos before a specific message
 function getPreviousTodos(messages: ClineMessage[], currentMessageTs: number): any[] {
@@ -1282,7 +1283,9 @@ export const ChatRowContent = ({
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
 							</div>
-							<div className="pl-6">
+							<div
+								className={`pl-6 ${isStartWithArabic(message.text) ? "rtl text-right" : ""}`}
+								dir={isStartWithArabic(message.text) ? "rtl" : "ltr"}>
 								<Markdown markdown={message.text} partial={message.partial} />
 								{message.images && message.images.length > 0 && (
 									<div style={{ marginTop: "10px" }}>
@@ -1308,7 +1311,9 @@ export const ChatRowContent = ({
 									isEditing
 										? "bg-vscode-editor-background text-vscode-editor-foreground"
 										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
-								)}>
+									isStartWithArabic(message.text) ? "rtl text-right" : "",
+								)}
+								dir={isStartWithArabic(message.text) ? "rtl" : "ltr"}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
 										<ChatTextArea
