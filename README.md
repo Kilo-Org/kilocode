@@ -108,3 +108,5 @@ Thanks to all the contributors who help make Kilo better!
     </td>
   </tr>
 </table>
+
+I love kilo
