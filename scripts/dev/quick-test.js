@@ -1,5 +1,7 @@
 // Quick integration test for skills feature
-const { CodeStyleExtractor } = require('../../src/services/claude-code-styles/index.js')
+// This script requires the TypeScript files to be compiled first
+// Run: pnpm build before executing this script
+const { CodeStyleExtractor } = require('../../dist/services/claude-code-styles/index.js')
 
 async function quickTest() {
   console.log('🧪 Testing Skills Feature...\n')
