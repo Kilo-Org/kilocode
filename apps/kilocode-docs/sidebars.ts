@@ -171,7 +171,7 @@ const sidebars: SidebarsConfig = {
 		{
 			type: "category",
 			label: "Customization",
-			items: ["features/settings-management", "features/custom-modes"],
+			items: ["features/settings-management", "features/custom-modes", "features/skills"],
 		},
 		{
 			type: "category",

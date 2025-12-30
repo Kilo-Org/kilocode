@@ -1,13 +1,11 @@
-// SPDX-FileCopyrightText: 2025 Weibo, Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package ai.kilocode.jetbrains.ui
 
 import ai.kilocode.jetbrains.actions.OpenDevToolsAction
+import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.plugin.DebugMode
 import ai.kilocode.jetbrains.plugin.WecoderPlugin
 import ai.kilocode.jetbrains.plugin.WecoderPluginService
+import ai.kilocode.jetbrains.util.NodeVersionUtil
 import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.webview.DragDropHandler
 import ai.kilocode.jetbrains.webview.WebViewCreationCallback
@@ -80,8 +78,49 @@ class RooToolWindowFactory : ToolWindowFactory {
         // Placeholder label
         private val placeholderLabel = JLabel(createSystemInfoText())
 
-        // System info text for copying
-        private val systemInfoText = createSystemInfoPlainText()
+        // System info text for copying - will be updated
+        private var systemInfoText = createSystemInfoPlainText()
+        
+        // Timer for updating status display
+        private var statusUpdateTimer: java.util.Timer? = null
+
+        /**
+         * Get initialization state text from state machine
+         */
+        private fun getInitStateText(): String {
+            val pluginContext = try {
+                project.getService(PluginContext::class.java)
+            } catch (e: Exception) {
+                null
+            }
+            
+            val extensionHostManager = pluginContext?.getExtensionHostManager()
+            val initState = extensionHostManager?.stateMachine?.getCurrentState()
+            return when (initState?.name) {
+                null -> "Initializing..."
+                "NOT_STARTED" -> "Starting..."
+                "SOCKET_CONNECTING" -> "Connecting to extension host..."
+                "SOCKET_CONNECTED" -> "Connected to extension host"
+                "READY_RECEIVED" -> "Extension host ready"
+                "INIT_DATA_SENT" -> "Sending initialization data..."
+                "INITIALIZED_RECEIVED" -> "Extension host initialized"
+                "RPC_CREATING" -> "Creating RPC protocol..."
+                "RPC_CREATED" -> "RPC protocol created"
+                "EXTENSION_ACTIVATING" -> "Activating extension..."
+                "EXTENSION_ACTIVATED" -> "Extension activated"
+                "WEBVIEW_REGISTERING" -> "Registering webview..."
+                "WEBVIEW_REGISTERED" -> "Webview registered"
+                "WEBVIEW_RESOLVING" -> "Resolving webview..."
+                "WEBVIEW_RESOLVED" -> "Webview resolved"
+                "HTML_LOADING" -> "Loading UI..."
+                "HTML_LOADED" -> "UI loaded"
+                "THEME_INJECTING" -> "Applying theme..."
+                "THEME_INJECTED" -> "Theme applied"
+                "COMPLETE" -> "Ready"
+                "FAILED" -> "Failed"
+                else -> initState.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+            }
+        }
 
         /**
          * Create system information text in HTML format
@@ -97,12 +136,36 @@ class RooToolWindowFactory : ToolWindowFactory {
 
             // Check for Linux ARM system
             val isLinuxArm = osName.lowercase().contains("linux") && (osArch.lowercase().contains("aarch64") || osArch.lowercase().contains("arm"))
+            
+            // Get initialization status
+            val initStateText = getInitStateText()
+            
+            // Get Node.js version
+            val nodeVersion = try {
+                val nodePath = ai.kilocode.jetbrains.util.PluginResourceUtil.getResourcePath(
+                    PluginConstants.PLUGIN_ID,
+                    PluginConstants.NODE_MODULES_PATH
+                )?.let { resourcePath ->
+                    val nodeFile = java.io.File(resourcePath, if (System.getProperty("os.name").lowercase().contains("windows")) "node.exe" else ".bin/node")
+                    if (nodeFile.exists()) nodeFile.absolutePath else null
+                } ?: com.intellij.execution.configurations.PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS("node")?.absolutePath
+                
+                if (nodePath != null) {
+                    NodeVersionUtil.getNodeVersion(nodePath)?.toString() ?: "unknown"
+                } else {
+                    "not found"
+                }
+            } catch (e: Exception) {
+                "error: ${e.message}"
+            }
 
             return buildString {
-                append("<html><body style='width: 300px; padding: 8px;'>")
-                append("<p>Kilo Code is initializing...")
+                append("<html><body style='width: 400px; padding: 8px;'>")
+                append("<h3>Kilo Code Initialization</h3>")
+                append("<p><b>Status:</b> $initStateText</p>")                
                 append("<h3>System Information</h3>")
                 append("<table>")
+                append("<tr><td><b>Node.js Version:</b></td><td>$nodeVersion</td></tr>")
                 append("<tr><td><b>CPU Architecture:</b></td><td>$osArch</td></tr>")
                 append("<tr><td><b>Operating System:</b></td><td>$osName $osVersion</td></tr>")
                 append("<tr><td><b>IDE Version:</b></td><td>${appInfo.fullApplicationName} (build ${appInfo.build})</td></tr>")
@@ -153,10 +216,37 @@ class RooToolWindowFactory : ToolWindowFactory {
 
             // Check for Linux ARM system
             val isLinuxArm = osName.lowercase().contains("linux") && (osArch.lowercase().contains("aarch64") || osArch.lowercase().contains("arm"))
+            
+            // Get initialization status
+            val initStateText = getInitStateText()
+            
+            // Get Node.js version
+            val nodeVersion = try {
+                val nodePath = ai.kilocode.jetbrains.util.PluginResourceUtil.getResourcePath(
+                    PluginConstants.PLUGIN_ID,
+                    PluginConstants.NODE_MODULES_PATH
+                )?.let { resourcePath ->
+                    val nodeFile = java.io.File(resourcePath, if (System.getProperty("os.name").lowercase().contains("windows")) "node.exe" else ".bin/node")
+                    if (nodeFile.exists()) nodeFile.absolutePath else null
+                } ?: com.intellij.execution.configurations.PathEnvironmentVariableUtil.findExecutableInPathOnAnyOS("node")?.absolutePath
+                
+                if (nodePath != null) {
+                    NodeVersionUtil.getNodeVersion(nodePath)?.toString() ?: "unknown"
+                } else {
+                    "not found"
+                }
+            } catch (e: Exception) {
+                "error: ${e.message}"
+            }
 
             return buildString {
+                append("Kilo Code Initialization\n")
+                append("========================\n")
+                append("Status: $initStateText\n")
+                append("\n")
                 append("System Information\n")
                 append("==================\n")
+                append("Node.js Version: $nodeVersion\n")
                 append("CPU Architecture: $osArch\n")
                 append("Operating System: $osName $osVersion\n")
                 append("IDE Version: ${appInfo.fullApplicationName} (build ${appInfo.build})\n")
@@ -226,6 +316,9 @@ class RooToolWindowFactory : ToolWindowFactory {
         }
 
         init {
+            // Start timer to update status display
+            startStatusUpdateTimer()
+            
             // Try to get existing WebView
             webViewManager.getLatestWebView()?.let { webView ->
                 // Add WebView component immediately when created
@@ -236,15 +329,53 @@ class RooToolWindowFactory : ToolWindowFactory {
                 webView.setPageLoadCallback {
                     ApplicationManager.getApplication().invokeLater {
                         hideSystemInfo()
+                        stopStatusUpdateTimer()
                     }
                 }
                 // If page is already loaded, hide system info immediately
                 if (webView.isPageLoaded()) {
                     ApplicationManager.getApplication().invokeLater {
                         hideSystemInfo()
+                        stopStatusUpdateTimer()
                     }
                 }
             } ?: webViewManager.addCreationCallback(this, toolWindow.disposable)
+        }
+        
+        /**
+         * Start timer to update status display
+         */
+        private fun startStatusUpdateTimer() {
+            statusUpdateTimer = java.util.Timer().apply {
+                scheduleAtFixedRate(object : java.util.TimerTask() {
+                    override fun run() {
+                        ApplicationManager.getApplication().invokeLater {
+                            updateStatusDisplay()
+                        }
+                    }
+                }, 500, 500) // Update every 500ms
+            }
+        }
+        
+        /**
+         * Stop status update timer
+         */
+        private fun stopStatusUpdateTimer() {
+            statusUpdateTimer?.cancel()
+            statusUpdateTimer?.purge()
+            statusUpdateTimer = null
+        }
+        
+        /**
+         * Update status display
+         */
+        private fun updateStatusDisplay() {
+            try {
+                placeholderLabel.text = createSystemInfoText()
+                systemInfoText = createSystemInfoPlainText()
+            } catch (e: Exception) {
+                logger.error("Error updating status display", e)
+            }
         }
 
         /**
@@ -278,8 +409,11 @@ class RooToolWindowFactory : ToolWindowFactory {
                     return
                 }
             }
+            
+            // Remove placeholder and buttons before adding webview
+            contentPanel.removeAll()
 
-            // Add WebView component without removing existing components
+            // Add WebView component
             contentPanel.add(webView.browser.component, BorderLayout.CENTER)
 
             setupDragAndDropSupport(webView)
@@ -287,8 +421,11 @@ class RooToolWindowFactory : ToolWindowFactory {
             // Relayout
             contentPanel.revalidate()
             contentPanel.repaint()
+            
+            // Stop status update timer since webview is now visible
+            stopStatusUpdateTimer()
 
-            logger.info("WebView component added to tool window")
+            logger.info("WebView component added to tool window, placeholder removed")
         }
 
         /**
@@ -296,6 +433,9 @@ class RooToolWindowFactory : ToolWindowFactory {
          */
         private fun hideSystemInfo() {
             logger.info("Hiding system info placeholder")
+            
+            // Stop status update timer
+            stopStatusUpdateTimer()
 
             // Remove all components from content panel except WebView component
             val components = contentPanel.components
