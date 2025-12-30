@@ -11,6 +11,8 @@ import { ApiStream } from "../transform/stream"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
+import { DEFAULT_HEADERS } from "./constants"
+import { streamSse } from "../../services/continuedev/core/fetch/stream"
 
 // Type helper to handle thinking chunks from Mistral API
 // The SDK includes ThinkChunk but TypeScript has trouble with the discriminated union
@@ -209,4 +211,66 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 			throw error
 		}
 	}
+
+	// kilocode_change start
+	supportsFim(): boolean {
+		const modelId = this.options.apiModelId ?? mistralDefaultModelId
+		return modelId.startsWith("codestral-")
+	}
+
+	async completeFim(prefix: string, suffix: string): Promise<string> {
+		let result = ""
+		for await (const chunk of this.streamFim(prefix, suffix)) {
+			result += chunk
+		}
+		return result
+	}
+
+	async *streamFim(prefix: string, suffix: string): AsyncGenerator<string> {
+		const { id: model, maxTokens } = this.getModel()
+
+		// Get the base URL for the model
+		const baseUrl = model.startsWith("codestral-")
+			? this.options.mistralCodestralUrl || "https://codestral.mistral.ai"
+			: "https://api.mistral.ai"
+
+		const endpoint = new URL("v1/fim/completions", baseUrl)
+
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			Authorization: `Bearer ${this.options.mistralApiKey}`,
+		}
+
+		// temperature: 0.2 is mentioned as a sane example in mistral's docs
+		const temperature = 0.2
+		const requestMaxTokens = 256
+
+		const response = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({
+				model,
+				prompt: prefix,
+				suffix,
+				max_tokens: Math.min(requestMaxTokens, maxTokens ?? requestMaxTokens),
+				temperature,
+				stream: true,
+			}),
+			headers,
+		})
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			throw new Error(`FIM streaming failed: ${response.status} ${response.statusText} - ${errorText}`)
+		}
+
+		for await (const data of streamSse(response)) {
+			const content = data.choices?.[0]?.delta?.content
+			if (content) {
+				yield content
+			}
+		}
+	}
+	// kilocode_change end
 }
