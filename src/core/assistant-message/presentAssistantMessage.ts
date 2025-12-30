@@ -1229,7 +1229,8 @@ async function checkpointSaveAndMark(task: Task) {
 	try {
 		// kilocode_change: order changed to prevent second execution while still awaiting the save
 		task.currentStreamingDidCheckpoint = true
-		await task.checkpointSave(true)
+		// Don't force empty checkpoints - only create checkpoint if there are actual file changes
+		await task.checkpointSave(false)
 	} catch (error) {
 		console.error(`[Task#presentAssistantMessage] Error saving checkpoint: ${error.message}`, error)
 	}
