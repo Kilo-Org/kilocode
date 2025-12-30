@@ -6,27 +6,11 @@ import { Node as SyntaxNode, Query, Point } from "web-tree-sitter"
 import { IDE } from "../../.."
 import { getFullLanguageName, getQueryForFile, IGNORE_PATH_PATTERNS, LanguageName } from "../../../util/treeSitter"
 import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../snippets/types"
-import { AutocompleteSnippetDeprecated } from "../../types"
 import { AstPath } from "../../util/ast"
 import { ImportDefinitionsService } from "../ImportDefinitionsService"
 
-// function getSyntaxTreeString(
-//   node: Parser.SyntaxNode,
-//   indent: string = "",
-// ): string {
-//   let result = "";
-//   const nodeInfo = `${node.type} [${node.startPosition.row}:${node.startPosition.column} - ${node.endPosition.row}:${node.endPosition.column}]`;
-//   result += `${indent}${nodeInfo}\n`;
-
-//   for (const child of node.children) {
-//     result += getSyntaxTreeString(child, indent + "  ");
-//   }
-
-//   return result;
-// }
-
 export class RootPathContextService {
-	private cache = new LRUCache<string, AutocompleteSnippetDeprecated[]>({
+	private cache = new LRUCache<string, AutocompleteCodeSnippet[]>({
 		max: 100,
 	})
 
@@ -62,8 +46,8 @@ export class RootPathContextService {
 			.digest("hex")
 	}
 
-	private async getSnippetsForNode(filepath: string, node: SyntaxNode): Promise<AutocompleteSnippetDeprecated[]> {
-		const snippets: AutocompleteSnippetDeprecated[] = []
+	private async getSnippetsForNode(filepath: string, node: SyntaxNode): Promise<AutocompleteCodeSnippet[]> {
+		const snippets: AutocompleteCodeSnippet[] = []
 		const language = getFullLanguageName(filepath)
 
 		let query: Query | undefined
@@ -72,9 +56,6 @@ export class RootPathContextService {
 				this.importDefinitionsService.get(filepath)
 				break
 			default:
-				// const type = node.type;
-				// console.log(getSyntaxTreeString(node));
-
 				query = await getQueryForFile(filepath, `root-path-context-queries/${language}/${node.type}.scm`)
 				break
 		}
@@ -100,7 +81,7 @@ export class RootPathContextService {
 		filepath: string,
 		endPosition: Point,
 		language: LanguageName,
-	): Promise<AutocompleteSnippetDeprecated[]> {
+	): Promise<AutocompleteCodeSnippet[]> {
 		const definitions = await this.ide.gotoDefinition({
 			filepath,
 			position: {
@@ -108,7 +89,7 @@ export class RootPathContextService {
 				character: endPosition.column,
 			},
 		})
-		const newSnippets = await Promise.all(
+		const newSnippets: AutocompleteCodeSnippet[] = await Promise.all(
 			definitions
 				.filter((definition) => {
 					const isIgnoredPath = IGNORE_PATH_PATTERNS[language]?.some((pattern) =>
@@ -117,37 +98,29 @@ export class RootPathContextService {
 
 					return !isIgnoredPath
 				})
-				.map(async (def) => ({
-					...def,
-					contents: await this.ide.readRangeInFile(def.filepath, def.range),
-				})),
+				.map(
+					async (def): Promise<AutocompleteCodeSnippet> => ({
+						filepath: def.filepath,
+						content: await this.ide.readRangeInFile(def.filepath, def.range),
+						type: AutocompleteSnippetType.Code,
+					}),
+				),
 		)
 
 		return newSnippets
 	}
 
-	async getContextForPath(
-		filepath: string,
-		astPath: AstPath,
-		// cursorIndex: number,
-	): Promise<AutocompleteCodeSnippet[]> {
+	async getContextForPath(filepath: string, astPath: AstPath): Promise<AutocompleteCodeSnippet[]> {
 		const snippets: AutocompleteCodeSnippet[] = []
 
 		let parentKey = filepath
 		for (const astNode of astPath.filter((node) => RootPathContextService.TYPES_TO_USE.has(node.type))) {
 			const key = RootPathContextService.keyFromNode(parentKey, astNode)
-			// const type = astNode.type;
 
 			const foundInCache = this.cache.get(key)
 			const newSnippets = foundInCache ?? (await this.getSnippetsForNode(filepath, astNode))
 
-			const formattedSnippets: AutocompleteCodeSnippet[] = newSnippets.map((item) => ({
-				filepath: item.filepath,
-				content: item.contents,
-				type: AutocompleteSnippetType.Code,
-			}))
-
-			snippets.push(...formattedSnippets)
+			snippets.push(...newSnippets)
 
 			if (!foundInCache) {
 				this.cache.set(key, newSnippets)
