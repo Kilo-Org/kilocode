@@ -1,0 +1,14 @@
+diff --git a/node_modules/@vscode/policy-watcher/src/macos/PreferencesPolicy.hh b/node_modules/@vscode/policy-watcher/src/macos/PreferencesPolicy.hh
+index 0000000..1111111 100644
+--- a/node_modules/@vscode/policy-watcher/src/macos/PreferencesPolicy.hh
++++ b/node_modules/@vscode/policy-watcher/src/macos/PreferencesPolicy.hh
+@@ -7,6 +7,7 @@
+ #ifndef PREFERENCES_POLICY_H
+ #define PREFERENCES_POLICY_H
+ 
+ #include <napi.h>
+ #include <CoreFoundation/CoreFoundation.h>
++#include <optional>
+ #include "../Policy.hh"
+ 
+ using namespace Napi;
