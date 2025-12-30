@@ -110,7 +110,8 @@ export class CodeStyleExtractor {
       }
 
       // Check for TypeScript config
-      const tsconfigPath = path.join(this.workspaceRoot, "tsconfig.json")
+        await fs.readFile(tsconfigPath, "utf8")
+        // tsconfig.json exists
       try {
         const tsconfigContent = await fs.readFile(tsconfigPath, "utf8")
         const tsconfig = JSON.parse(tsconfigContent)
