@@ -91,6 +91,16 @@ You can customize each Cloud Agent session by defining:
 
 ---
 
+## Skills
+
+Cloud Agents support project-level [skills](../cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
+
+:::note
+Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
+:::
+
+---
+
 ## Perfect For
 
 Cloud Agents are great for:

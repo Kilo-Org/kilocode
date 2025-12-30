@@ -65,8 +65,9 @@ class WecoderPlugin : StartupActivity.DumbAware {
                 LOG.info("Project closed: ${project.name}")
                 // Clean up resources for closed project
                 try {
-                    val pluginService = getInstance(project)
-                    pluginService.dispose()
+                    // Use getServiceIfCreated to avoid initializing service during disposal
+                    val pluginService = project.getServiceIfCreated(WecoderPluginService::class.java)
+                    pluginService?.dispose()
                 } catch (e: Exception) {
                     LOG.error("Failed to dispose plugin for closed project: ${project.name}", e)
                 }
@@ -191,6 +192,13 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
     // Whether initialized
     @Volatile
     private var isInitialized = false
+    
+    // Disposal state
+    @Volatile
+    private var isDisposing = false
+    
+    @Volatile
+    private var isDisposed = false
 
     // Plugin initialization complete flag
     private var initializationComplete = CompletableFuture<Boolean>()
@@ -265,6 +273,12 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
      * Initialize plugin service
      */
     fun initialize(project: Project) {
+        // Check if disposing or disposed
+        if (isDisposing || isDisposed) {
+            LOG.warn("Cannot initialize: service is disposing or disposed")
+            return
+        }
+        
         // Check if already initialized for the same project
         if (isInitialized && this.currentProject == project) {
             LOG.info("WecoderPluginService already initialized for project: ${project.name}")
@@ -481,10 +495,17 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
      * Close service
      */
     override fun dispose() {
+        if (isDisposed) {
+            LOG.warn("Service already disposed")
+            return
+        }
+        
         if (!isInitialized) {
+            isDisposed = true
             return
         }
 
+        isDisposing = true
         LOG.info("Disposing WecoderPluginService")
 
         currentProject?.getService(WebViewManager::class.java)?.dispose()
@@ -495,6 +516,8 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
         // Clean up resources
         cleanup()
 
+        isDisposed = true
+        isDisposing = false
         LOG.info("WecoderPluginService disposed")
     }
 }

@@ -43,7 +43,7 @@ class CommitMessageHandler(
 ) : CheckinHandler() {
 
     private val logger: Logger = Logger.getInstance(CommitMessageHandler::class.java)
-    private val commitMessageService = CommitMessageService.getInstance()
+    private val commitMessageService by lazy { CommitMessageService.getInstance(panel.project) }
     private val fileDiscoveryService = FileDiscoveryService()
 
     private lateinit var generateButton: JButton
