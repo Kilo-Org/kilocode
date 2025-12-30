@@ -1,4 +1,4 @@
-import type { ModeConfig } from "@kilocode/types"
+import type { ModeConfig } from "../types/messages.js"
 import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
 import { getAllModes } from "../constants/modes/defaults.js"
 

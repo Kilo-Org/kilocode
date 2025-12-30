@@ -267,31 +267,31 @@ export function useCommandInput(): UseCommandInputReturn {
 			setArgumentSuggestionsAction([])
 		} else if (state.type === "argument") {
 			// Create command context for argument providers
-				const customModes = extensionState?.customModes || []
-				const commandContext = {
-					config,
-					routerModels,
-					currentProvider: currentProvider || null,
-					kilocodeDefaultModel,
-					profileData,
-					profileLoading,
-					taskHistoryData,
-					chatMessages: [] as ExtensionMessage[],
-					customModes,
-					updateProviderModel: async (modelId: string) => {
-						if (!currentProvider) {
-							throw new Error("No provider configured")
-						}
-						const modelIdKey = getModelIdKey(currentProvider.provider)
-						await updateProvider(currentProvider.id, {
-							[modelIdKey]: modelId,
-						})
-					},
-					refreshRouterModels: async () => {
-						await refreshRouterModels()
-					},
-				}
-
+			const customModes = extensionState?.customModes || []
+			const commandContext = {
+				config,
+				routerModels,
+				currentProvider: currentProvider || null,
+				kilocodeDefaultModel,
+				profileData,
+				profileLoading,
+				taskHistoryData,
+				chatMessages: [] as ExtensionMessage[],
+				customModes,
+				updateProviderModel: async (modelId: string) => {
+					if (!currentProvider) {
+						throw new Error("No provider configured")
+					}
+					const modelIdKey = getModelIdKey(currentProvider.provider)
+					await updateProvider(currentProvider.id, {
+						[modelIdKey]: modelId,
+					})
+				},
+				refreshRouterModels: async () => {
+					await refreshRouterModels()
+				},
+			}
+	
 			// Get argument suggestions with command context
 			const suggestions = await getArgumentSuggestions(inputValue, commandContext)
 			setArgumentSuggestionsAction(suggestions)
