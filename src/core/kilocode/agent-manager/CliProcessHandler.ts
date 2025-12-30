@@ -190,21 +190,23 @@ export class CliProcessHandler {
 		const cliArgs = buildCliArgs(workspace, prompt, {
 			sessionId: options?.sessionId,
 		})
-		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
-		this.debugLog(`Working dir: ${workspace}`)
-
 		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
 
-		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
-		// Without this, spawn() fails silently because .cmd files are batch scripts
-		const needsShell = process.platform === "win32" && cliPath.toLowerCase().endsWith(".cmd")
+		// On Windows, batch files must be launched via cmd.exe to handle paths with spaces reliably.
+		const isWindowsBatch =
+			process.platform === "win32" && [".cmd", ".bat"].includes(path.extname(cliPath).toLowerCase())
+		const spawnCommand = isWindowsBatch ? process.env.ComSpec || "cmd.exe" : cliPath
+		const spawnArgs = isWindowsBatch ? ["/d", "/s", "/c", cliPath, ...cliArgs] : cliArgs
+
+		this.debugLog(`Command: ${spawnCommand} ${spawnArgs.join(" ")}`)
+		this.debugLog(`Working dir: ${workspace}`)
 
 		// Spawn CLI process
-		const proc = spawn(cliPath, cliArgs, {
+		const proc = spawn(spawnCommand, spawnArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
 			env,
-			shell: needsShell,
+			shell: false,
 		})
 
 		if (proc.pid) {
@@ -356,6 +358,10 @@ export class CliProcessHandler {
 
 	public hasProcess(sessionId: string): boolean {
 		return this.activeSessions.has(sessionId)
+	}
+
+	public hasPendingProcess(): boolean {
+		return this.pendingProcess !== null
 	}
 
 	/**

@@ -144,7 +144,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 	// We don't simulate Windows on other platforms - let the actual Windows CI test it
 	const windowsOnlyTest = isWindows ? it : it.skip
 
-	windowsOnlyTest("spawns with shell: true when CLI path ends with .cmd", async () => {
+	windowsOnlyTest("spawns via cmd.exe when CLI path ends with .cmd", async () => {
 		vi.resetModules()
 
 		const testNpmDir = "C:\\npm"
@@ -230,9 +230,16 @@ describe("AgentManagerProvider CLI spawning", () => {
 			await (windowsProvider as any).startAgentSession("test windows cmd")
 
 			expect(spawnMock).toHaveBeenCalledTimes(1)
-			const [cmd, , options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
-			expect(cmd.toLowerCase()).toContain(".cmd")
-			expect(options?.shell).toBe(true)
+			const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [
+				string,
+				string[],
+				Record<string, unknown>,
+			]
+			const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+			expect(cmd.toLowerCase()).toBe(expectedCommand.toLowerCase())
+			expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
+			expect(args).toEqual(expect.arrayContaining([cmdPath]))
+			expect(options?.shell).toBe(false)
 
 			windowsProvider.dispose()
 		} finally {
@@ -267,6 +274,33 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions).toHaveLength(1)
 		expect(sessions[0].sessionId).toBe("cli-session-123")
+	})
+
+	it("waits for pending processes to clear before resolving multi-version sequencing", async () => {
+		vi.useFakeTimers()
+
+		try {
+			const registry = (provider as any).registry
+			const processHandler = (provider as any).processHandler
+
+			registry.clearPendingSession()
+			processHandler.pendingProcess = {}
+
+			let resolved = false
+			const waitPromise = (provider as any).waitForPendingSessionToClear().then(() => {
+				resolved = true
+			})
+
+			await Promise.resolve()
+			expect(resolved).toBe(false)
+
+			processHandler.pendingProcess = null
+			vi.advanceTimersByTime(200)
+			await waitPromise
+			expect(resolved).toBe(true)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it("shows existing terminal when selecting a session", () => {
