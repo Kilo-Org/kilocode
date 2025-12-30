@@ -1,241 +1,97 @@
 # Kilo Code CLI
 
-Terminal User Interface for Kilo Code
+Agentic coding from your terminal. Plan, debug, and build with the same powerful agents from the Kilo IDE extensions, all from the command line.
 
-## Installation
+Switch between 500+ models, run parallel agents without conflicts, and automate tasks in CI/CD pipelines. Your sessions sync across CLI, VS Code, JetBrains, and web so you never lose context.
+
+[Documentation](https://kilo.ai/docs/cli) · [Discord](https://discord.gg/rrAeUT9d) · [Website](https://kilo.ai)
+
+![Terminal-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/8356e318-580d-4ea2-86f5-61a96b35cc1c)
+
+
+## Install
 
 ```bash
 npm install -g @kilocode/cli
 ```
 
-Then, make sure you place your Kilo Code API token in the CLI config:
+Then configure your API token:
 
 ```bash
-kilocode config # this opens up your editor
+kilocode config
 ```
 
-You can find your Kilo Code API token on your profile page at [app.kilo.ai](https://app.kilo.ai), and place it in the `kilocodeToken` field in the CLI config.
+You can find your token at [app.kilo.ai](https://app.kilo.ai) in your profile settings.
 
-## Known Issues
-
-### Theme Detection
-
-We don't detect the theme of your terminal, and are aware the the current theme doesn't work well on light mode terminals. Switch to the light theme using using `kilocode config`.
-
-### Outdated dependency warnings
-
-When installing Kilo Code CLI you'll be greeted by some scary looking dependency deprecation warnings. We're aware of the issue and will resolve it shortly.
-
-### Windows Support
-
-We've only tested the CLI on Mac and Linux, and are aware that there are some issues on Windows. For now, if you can, we advise you to use a WSL environment to run the CLI.
-
-## Usage
-
-### Interactive Mode
+## Quick start
 
 ```bash
-# Start interactive chat session
+# Start an interactive session
 kilocode
 
 # Start with a specific mode
 kilocode --mode architect
 
-# Start with a specific workspace
-kilocode --workspace /path/to/project
-
-# Resume the last conversation from this workspace
-kilocode -c
-# or
+# Resume your last conversation
 kilocode --continue
-```
 
-### Parallel mode
-
-Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
-
-```bash
-# Prerequisite: must be within a valid git repository
-
-# In interactive mode, changes will be committed on /exit
-# Terminal 1
-kilocode --parallel "improve xyz"
-# Terminal 2
-kilocode --parallel "improve abc"
-
-# Pairs great with auto mode 🚀
-# Terminal 1
-kilocode --parallel --auto "improve xyz"
-# Terminal 2
-kilocode --parallel --auto "improve abc"
-```
-
-### Autonomous mode (Non-Interactive)
-
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
-
-```bash
-# Run in autonomous mode with a prompt
+# Run autonomously (for CI/CD or scripting)
 kilocode --auto "Implement feature X"
-
-# Run in autonomous mode with piped input
-echo "Fix the bug in app.ts" | kilocode --auto
-
-# Run in autonomous mode with timeout (in seconds)
-kilocode --auto "Run tests" --timeout 300
 ```
 
-#### Autonomous mode Behavior
+## What you can do
 
-When running in Autonomous mode (`--auto` flag):
+**Use the right mode for the job.** Switch between Code, Ask, Debug, Architect, and Orchestrator modes depending on what you're working on.
 
-1. **No User Interaction**: All approval requests are handled automatically based on configuration
-2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
-3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
-4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
+**Run parallel agents.** Spin up multiple Kilo instances on the same codebase without conflicts. Each agent works on a separate git branch.
 
-#### Auto-Approval Configuration
+```bash
+# Terminal 1
+kilocode --parallel "refactor auth module"
 
-Autonomous mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
+# Terminal 2
+kilocode --parallel "add unit tests for payments"
+```
+
+**Automate with autonomous mode.** Run Kilo in CI/CD pipelines or scripts without user interaction.
+
+```bash
+kilocode --auto "Implement feature X" --timeout 300
+```
+
+**Switch models on the fly.** Use `/model select` to change models mid-session. Pick the right tradeoff between speed, cost, and reasoning for each task.
+
+## Configuration
+
+Auto-approval settings let Kilo execute commands without confirmation. Build these up interactively or edit `~/.kilocode/config.json` directly.
 
 ```json
 {
-	"autoApproval": {
-		"enabled": true,
-		"read": {
-			"enabled": true,
-			"outside": true
-		},
-		"write": {
-			"enabled": true,
-			"outside": false,
-			"protected": false
-		},
-		"execute": {
-			"enabled": true,
-			"allowed": ["npm", "git", "pnpm"],
-			"denied": ["rm -rf", "sudo"]
-		},
-		"browser": {
-			"enabled": false
-		},
-		"mcp": {
-			"enabled": true
-		},
-		"mode": {
-			"enabled": true
-		},
-		"subtasks": {
-			"enabled": true
-		},
-		"question": {
-			"enabled": false,
-			"timeout": 60
-		},
-		"retry": {
-			"enabled": true,
-			"delay": 10
-		},
-		"todo": {
-			"enabled": true
-		}
-	}
+  "autoApproval": {
+    "enabled": true,
+    "execute": {
+      "allowed": ["npm", "git", "pnpm"],
+      "denied": ["rm -rf", "sudo"]
+    }
+  }
 }
 ```
 
-**Configuration Options:**
+See the [full configuration reference](https://kilo.ai/docs/cli#config-reference) for all options.
 
-- `read`: Auto-approve file read operations
-    - `outside`: Allow reading files outside workspace
-- `write`: Auto-approve file write operations
-    - `outside`: Allow writing files outside workspace
-    - `protected`: Allow writing to protected files (e.g., package.json)
-- `execute`: Auto-approve command execution
-    - `allowed`: List of allowed command patterns (e.g., ["npm", "git"])
-    - `denied`: List of denied command patterns (takes precedence)
-- `browser`: Auto-approve browser operations
-- `mcp`: Auto-approve MCP tool usage
-- `mode`: Auto-approve mode switching
-- `subtasks`: Auto-approve subtask creation
-- `question`: Auto-approve follow-up questions
-- `retry`: Auto-approve API retry requests
-- `todo`: Auto-approve todo list updates
+## Known issues
 
-#### Command Approval Patterns
+- **Light mode terminals:** Theme detection isn't automatic yet. Run `kilocode config` to switch themes.
+- **Windows:** We recommend using WSL for now. Native Windows support is in progress.
+- **Dependency warnings:** You may see deprecation warnings during install. These are cosmetic and will be resolved soon.
 
-The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
+## Feedback
 
-- **Base command**: `"git"` matches any git command (e.g., `git status`, `git commit`, `git push`)
-- **Command + subcommand**: `"git status"` matches any git status command (e.g., `git status --short`, `git status -v`)
-- **Full command**: `"git status --short"` only matches exactly `git status --short`
+Report bugs or request features on [GitHub](https://github.com/Kilo-Org/kilocode) or join our [Discord](https://discord.gg/rrAeUT9d).
 
-**Example:**
+## Local development
 
-```json
-{
-	"execute": {
-		"enabled": true,
-		"allowed": [
-			"npm", // Allows all npm commands
-			"git status", // Allows all git status commands
-			"ls -la" // Only allows exactly "ls -la"
-		],
-		"denied": [
-			"git push --force" // Denies this specific command even if "git" is allowed
-		]
-	}
-}
-```
-
-#### Interactive Command Approval
-
-When running in interactive mode, command approval requests now show hierarchical options:
-
-```
-[!] Action Required:
-> ✓ Run Command (y)
-  ✓ Always run git (1)
-  ✓ Always run git status (2)
-  ✓ Always run git status --short --branch (3)
-  ✗ Reject (n)
-```
-
-Selecting an "Always run" option will:
-
-1. Approve and execute the current command
-2. Add the pattern to your `execute.allowed` list in the config
-3. Auto-approve matching commands in the future
-
-This allows you to progressively build your auto-approval rules without manually editing the config file.
-
-#### Autonomous mode Follow-up Questions
-
-In Autonomous mode, when the AI asks a follow-up question, it receives this response:
-
-> "This process is running in non-interactive Autonomous mode. The user cannot make decisions, so you should make the decision autonomously."
-
-This instructs the AI to proceed without user input.
-
-#### Exit Codes
-
-- `0`: Success (task completed)
-- `124`: Timeout (task exceeded time limit)
-- `130`: SIGINT interruption (Ctrl+C)
-- `143`: SIGTERM interruption (system termination)
-- `1`: Error (initialization or execution failure)
-
-#### Example CI/CD Integration
-
-```yaml
-# GitHub Actions example
-- name: Run Kilo Code
-  run: |
-      echo "Implement the new feature" | kilocode --auto --timeout 600
-```
-
-## Local Development
-
-### Getting Started
+### Getting started
 
 To build and run the CLI locally off your branch:
 
@@ -280,4 +136,4 @@ pnpm start
 
 ### Using DevTools
 
-In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
+To run the CLI with devtools, add `DEV=true` to your `pnpm start` command, then run `npx react-devtools` to show the devtools inspector.
