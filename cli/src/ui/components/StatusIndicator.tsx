@@ -53,12 +53,13 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 
 	// Safety timeout to prevent getting stuck if extension doesn't respond
 	useEffect(() => {
-		if (isCancelling) {
-			const timeout = setTimeout(() => {
-				setIsCancelling(false)
-			}, CANCELLING_SAFETY_TIMEOUT_MS)
-			return () => clearTimeout(timeout)
+		if (!isCancelling) {
+			return
 		}
+		const timeout = setTimeout(() => {
+			setIsCancelling(false)
+		}, CANCELLING_SAFETY_TIMEOUT_MS)
+		return () => clearTimeout(timeout)
 	}, [isCancelling, setIsCancelling])
 
 	// Don't render if no hotkeys to show or disabled
