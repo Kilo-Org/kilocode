@@ -405,36 +405,39 @@ export const clearTextBufferAtom = atom(null, (get, set) => {
 
 /**
  * Action atom to set command suggestions
+ * Only resets selectedIndex if this is the active suggestion type
  */
 export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSuggestion[]) => {
 	set(suggestionsAtom, suggestions)
-	if (suggestions.length === 0) {
-		set(selectedIndexAtom, -1)
-	} else {
+	// Only update selection if we have suggestions (setting to 0)
+	// Don't reset to -1 when clearing - let other suggestion types handle their own selection
+	if (suggestions.length > 0) {
 		set(selectedIndexAtom, 0)
 	}
 })
 
 /**
  * Action atom to set argument suggestions
+ * Only resets selectedIndex if this is the active suggestion type
  */
 export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: ArgumentSuggestion[]) => {
 	set(argumentSuggestionsAtom, suggestions)
-	if (suggestions.length === 0) {
-		set(selectedIndexAtom, -1)
-	} else {
+	// Only update selection if we have suggestions (setting to 0)
+	// Don't reset to -1 when clearing - let other suggestion types handle their own selection
+	if (suggestions.length > 0) {
 		set(selectedIndexAtom, 0)
 	}
 })
 
 /**
  * Action atom to set file mention suggestions
+ * Only resets selectedIndex if this is the active suggestion type
  */
 export const setFileMentionSuggestionsAtom = atom(null, (get, set, suggestions: FileMentionSuggestion[]) => {
 	set(fileMentionSuggestionsAtom, suggestions)
-	if (suggestions.length === 0) {
-		set(selectedIndexAtom, -1)
-	} else {
+	// Only update selection if we have suggestions (setting to 0)
+	// Don't reset to -1 when clearing - let other suggestion types handle their own selection
+	if (suggestions.length > 0) {
 		set(selectedIndexAtom, 0)
 	}
 })
