@@ -6,8 +6,23 @@ const { renderMock } = vi.hoisted(() => ({
 	renderMock: vi.fn<[React.ReactElement, RenderOptions?], Instance>(),
 }))
 
-// Mock yoga-layout to prevent WASM loading issues in CI
-vi.mock("yoga-layout", () => ({}))
+// Mock yoga-layout WASM binary to prevent loading issues in CI
+// Must mock both the main module and the WASM loader
+vi.mock("yoga-layout", () => ({
+	loadYoga: () =>
+		Promise.resolve({
+			Node: { create: vi.fn() },
+			Config: { create: vi.fn() },
+		}),
+}))
+
+vi.mock("yoga-layout/load", () => ({
+	loadYoga: () =>
+		Promise.resolve({
+			Node: { create: vi.fn() },
+			Config: { create: vi.fn() },
+		}),
+}))
 
 vi.mock("ink", () => ({
 	render: renderMock,
