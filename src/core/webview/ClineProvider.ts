@@ -3307,6 +3307,7 @@ ${prompt}
 				wrapperVersion: kiloCodeWrapperVersion,
 				wrapperTitle: kiloCodeWrapperTitle,
 				machineId: vscode.env.machineId,
+				vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
 				// kilocode_change end
 			}
 		}
