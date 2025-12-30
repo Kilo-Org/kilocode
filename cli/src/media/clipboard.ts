@@ -13,7 +13,7 @@ import {
 	type ClipboardInfoResult,
 	type SaveClipboardResult,
 } from "./clipboard-shared.js"
-import { hasClipboardImageMacOS, readClipboardImageMacOS, saveClipboardImageMacOS } from "./clipboard-macos.js"
+import { hasClipboardImageMacOS, saveClipboardImageMacOS } from "./clipboard-macos.js"
 
 export {
 	buildDataUrl,
@@ -44,24 +44,6 @@ export async function clipboardHasImage(): Promise<boolean> {
 			code: err?.code,
 		})
 		return false
-	}
-}
-
-export async function readClipboardImage(): Promise<ClipboardImageResult> {
-	if (process.platform !== "darwin") {
-		return {
-			success: false,
-			error: getUnsupportedClipboardPlatformMessage(),
-		}
-	}
-
-	try {
-		return await readClipboardImageMacOS()
-	} catch (error) {
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : String(error),
-		}
 	}
 }
 
