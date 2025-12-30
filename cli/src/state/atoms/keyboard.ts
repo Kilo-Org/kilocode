@@ -58,6 +58,8 @@ import {
 	navigateShellHistoryDownAtom,
 	executeShellCommandAtom,
 } from "./shell.js"
+import { saveClipboardImage, clipboardHasImage, cleanupOldClipboardImages } from "../../media/clipboard.js"
+import { logs } from "../../services/logs.js"
 
 // Export shell atoms for backward compatibility
 export {
@@ -66,6 +68,65 @@ export {
 	navigateShellHistoryUpAtom,
 	navigateShellHistoryDownAtom,
 	executeShellCommandAtom,
+}
+
+// ============================================================================
+// Clipboard Image Atoms
+// ============================================================================
+
+/**
+ * Map of image reference numbers to file paths for current message
+ * e.g., { 1: "/tmp/kilocode-clipboard/clipboard-xxx.png", 2: "/tmp/..." }
+ */
+export const imageReferencesAtom = atom<Map<number, string>>(new Map())
+
+/**
+ * Current image reference counter (increments with each paste)
+ */
+export const imageReferenceCounterAtom = atom<number>(0)
+
+/**
+ * Add a clipboard image and get its reference number
+ * Returns the reference number assigned to this image
+ */
+export const addImageReferenceAtom = atom(null, (get, set, filePath: string): number => {
+	const counter = get(imageReferenceCounterAtom) + 1
+	set(imageReferenceCounterAtom, counter)
+
+	const refs = new Map(get(imageReferencesAtom))
+	refs.set(counter, filePath)
+	set(imageReferencesAtom, refs)
+
+	return counter
+})
+
+/**
+ * Clear image references (after message is sent)
+ */
+export const clearImageReferencesAtom = atom(null, (_get, set) => {
+	set(imageReferencesAtom, new Map())
+	set(imageReferenceCounterAtom, 0)
+})
+
+/**
+ * Get all image references as an object for easier consumption
+ */
+export const getImageReferencesAtom = atom((get) => {
+	return Object.fromEntries(get(imageReferencesAtom))
+})
+
+/**
+ * Status message for clipboard operations
+ */
+export const clipboardStatusAtom = atom<string | null>(null)
+let clipboardStatusTimer: NodeJS.Timeout | null = null
+
+function setClipboardStatusWithTimeout(set: Setter, message: string, timeoutMs: number): void {
+	if (clipboardStatusTimer) {
+		clearTimeout(clipboardStatusTimer)
+	}
+	set(clipboardStatusAtom, message)
+	clipboardStatusTimer = setTimeout(() => set(clipboardStatusAtom, null), timeoutMs)
 }
 
 // ============================================================================
@@ -827,10 +888,39 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 }
 
 function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
+	// Debug logging for key detection
+	if (key.ctrl || key.sequence === "\x16") {
+		logs.debug(
+			`Key detected: name=${key.name}, ctrl=${key.ctrl}, meta=${key.meta}, sequence=${JSON.stringify(key.sequence)}`,
+			"clipboard",
+		)
+	}
+
+	// Check for Ctrl+V by sequence first (ASCII 0x16 = SYN character)
+	// This is how Ctrl+V appears in most terminals
+	if (key.sequence === "\x16") {
+		logs.debug("Detected Ctrl+V via sequence \\x16", "clipboard")
+		handleClipboardImagePaste(get, set).catch((err) =>
+			logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+		)
+		return true
+	}
+
 	switch (key.name) {
 		case "c":
 			if (key.ctrl) {
 				set(triggerExitConfirmationAtom)
+				return true
+			}
+			break
+		case "v":
+			// Ctrl+V - check for clipboard image
+			if (key.ctrl) {
+				logs.debug("Detected Ctrl+V via key.name", "clipboard")
+				// Handle clipboard image paste asynchronously
+				handleClipboardImagePaste(get, set).catch((err) =>
+					logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+				)
 				return true
 			}
 			break
@@ -883,6 +973,65 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 		}
 	}
 	return false
+}
+
+/**
+ * Handle clipboard image paste (Ctrl+V)
+ * Saves clipboard image to a temp file and inserts @path reference into text buffer
+ */
+async function handleClipboardImagePaste(get: Getter, set: Setter): Promise<void> {
+	logs.debug("handleClipboardImagePaste called", "clipboard")
+	try {
+		// Check if clipboard has an image
+		logs.debug("Checking clipboard for image...", "clipboard")
+		const hasImage = await clipboardHasImage()
+		logs.debug(`clipboardHasImage returned: ${hasImage}`, "clipboard")
+		if (!hasImage) {
+			setClipboardStatusWithTimeout(set, "No image in clipboard", 2000)
+			logs.debug("No image in clipboard", "clipboard")
+			return
+		}
+
+		// Save the image to a file in temp directory
+		const result = await saveClipboardImage()
+		if (result.success && result.filePath) {
+			// Add image to references and get its number
+			const refNumber = set(addImageReferenceAtom, result.filePath)
+
+			// Build the [Image #N] reference to insert
+			// Add space before and after if needed
+			const currentText = get(textBufferStringAtom)
+			let insertText = `[Image #${refNumber}]`
+
+			// Check if we need spaces around the insertion
+			const charBefore = currentText.length > 0 ? currentText[currentText.length - 1] : ""
+			if (charBefore && charBefore !== " " && charBefore !== "\n") {
+				insertText = " " + insertText
+			}
+			insertText = insertText + " "
+
+			// Insert at current cursor position
+			set(insertTextAtom, insertText)
+
+			setClipboardStatusWithTimeout(set, `Image #${refNumber} attached`, 2000)
+			logs.debug(`Inserted clipboard image #${refNumber}: ${result.filePath}`, "clipboard")
+
+			// Clean up old clipboard images in the background
+			cleanupOldClipboardImages().catch((cleanupError) => {
+				logs.debug("Clipboard cleanup failed", "clipboard", {
+					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+				})
+			})
+		} else {
+			setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
+		}
+	} catch (error) {
+		setClipboardStatusWithTimeout(
+			set,
+			`Clipboard error: ${error instanceof Error ? error.message : String(error)}`,
+			3000,
+		)
+	}
 }
 
 /**
