@@ -9,7 +9,13 @@ import {
 	fileMentionSuggestionsAtom,
 } from "../ui.js"
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
-import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
+import {
+	exitPromptVisibleAtom,
+	exitRequestCounterAtom,
+	keyboardHandlerAtom,
+	submissionCallbackAtom,
+	submitInputAtom,
+} from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
 import { chatMessagesAtom } from "../extension.js"
@@ -1086,6 +1092,27 @@ describe("keypress atoms", () => {
 
 			// When not streaming, ESC should clear the buffer (normal behavior)
 			expect(store.get(textBufferStringAtom)).toBe("")
+		})
+
+		it("should require confirmation before exiting on Ctrl+C", async () => {
+			const ctrlCKey: Key = {
+				name: "c",
+				sequence: "\u0003",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			await store.set(keyboardHandlerAtom, ctrlCKey)
+
+			expect(store.get(exitPromptVisibleAtom)).toBe(true)
+			expect(store.get(exitRequestCounterAtom)).toBe(0)
+
+			await store.set(keyboardHandlerAtom, ctrlCKey)
+
+			expect(store.get(exitPromptVisibleAtom)).toBe(false)
+			expect(store.get(exitRequestCounterAtom)).toBe(1)
 		})
 	})
 })

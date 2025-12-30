@@ -12,6 +12,7 @@ import { ThinkingAnimation } from "./ThinkingAnimation.js"
 import { useAtomValue } from "jotai"
 import { isStreamingAtom } from "../../state/atoms/ui.js"
 import { hasResumeTaskAtom } from "../../state/atoms/extension.js"
+import { exitPromptVisibleAtom } from "../../state/atoms/keyboard.js"
 
 export interface StatusIndicatorProps {
 	/** Whether the indicator is disabled */
@@ -34,6 +35,8 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const { hotkeys, shouldShow } = useHotkeys()
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
+	const exitPromptVisible = useAtomValue(exitPromptVisibleAtom)
+	const exitModifierKey = process.platform === "darwin" ? "Cmd" : "Ctrl"
 
 	// Don't render if no hotkeys to show or disabled
 	if (!shouldShow || disabled) {
@@ -44,8 +47,14 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 		<Box borderStyle="round" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
 			{/* Status text on the left */}
 			<Box>
-				{isStreaming && <ThinkingAnimation />}
-				{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
+				{exitPromptVisible ? (
+					<Text color={theme.semantic.warning}>Press {exitModifierKey}+C again to exit.</Text>
+				) : (
+					<>
+						{isStreaming && <ThinkingAnimation />}
+						{hasResumeTask && <Text color={theme.ui.text.dimmed}>Task ready to resume</Text>}
+					</>
+				)}
 			</Box>
 
 			{/* Hotkeys on the right */}

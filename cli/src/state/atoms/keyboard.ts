@@ -93,6 +93,41 @@ export const kittyProtocolEnabledAtom = atom<boolean>(false)
 export const debugKeystrokeLoggingAtom = atom<boolean>(false)
 
 // ============================================================================
+// Exit Confirmation State
+// ============================================================================
+
+const EXIT_CONFIRMATION_WINDOW_MS = 2000
+
+type ExitPromptTimeout = ReturnType<typeof setTimeout>
+
+export const exitPromptVisibleAtom = atom<boolean>(false)
+const exitPromptTimeoutAtom = atom<ExitPromptTimeout | null>(null)
+export const exitRequestCounterAtom = atom<number>(0)
+
+export const triggerExitConfirmationAtom = atom(null, (get, set) => {
+	const exitPromptVisible = get(exitPromptVisibleAtom)
+	const existingTimeout = get(exitPromptTimeoutAtom)
+
+	if (existingTimeout) {
+		clearTimeout(existingTimeout)
+		set(exitPromptTimeoutAtom, null)
+	}
+
+	if (exitPromptVisible) {
+		set(exitPromptVisibleAtom, false)
+		set(exitRequestCounterAtom, (count) => count + 1)
+		return
+	}
+
+	set(exitPromptVisibleAtom, true)
+	const timeout = setTimeout(() => {
+		set(exitPromptVisibleAtom, false)
+		set(exitPromptTimeoutAtom, null)
+	}, EXIT_CONFIRMATION_WINDOW_MS)
+	set(exitPromptTimeoutAtom, timeout)
+})
+
+// ============================================================================
 // Buffer Atoms
 // ============================================================================
 
@@ -795,7 +830,8 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 	switch (key.name) {
 		case "c":
 			if (key.ctrl) {
-				process.exit(0)
+				set(triggerExitConfirmationAtom)
+				return true
 			}
 			break
 		case "x":
