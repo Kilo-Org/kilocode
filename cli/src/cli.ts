@@ -1,5 +1,5 @@
 import { basename } from "node:path"
-import { render, Instance } from "ink"
+import { render, Instance, type RenderOptions } from "ink"
 import React from "react"
 import { createStore } from "jotai"
 import { createExtensionService, ExtensionService } from "./services/extension.js"
@@ -331,6 +331,13 @@ export class CLI {
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.jsonInteractive || this.options.ci || !process.stdin.isTTY
 
+		const renderOptions: RenderOptions = {
+			// Enable Ink's incremental renderer to avoid redrawing the entire screen on every update.
+			// This reduces flickering for frequently updating UIs.
+			incrementalRendering: true,
+			...(shouldDisableStdin ? { stdout: process.stdout, stderr: process.stderr } : {}),
+		}
+
 		this.ui = render(
 			React.createElement(App, {
 				store: this.store,
@@ -349,12 +356,7 @@ export class CLI {
 				},
 				onExit: () => this.dispose(),
 			}),
-			shouldDisableStdin
-				? {
-						stdout: process.stdout,
-						stderr: process.stderr,
-					}
-				: undefined,
+			renderOptions,
 		)
 
 		// Wait for UI to exit
