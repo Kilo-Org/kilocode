@@ -5,7 +5,7 @@
 	},
 	"exclude": ["node_modules"],
 	"include": [
-		"**/*.ts",
-		"**/*.tsx"
+		"scripts/**/*.ts",
+		"scripts/**/*.tsx"
 	]
 }

@@ -1,4 +1,4 @@
-import * as vscode from "vscode"
+// ...existing code...
 import * as path from "node:path"
 import * as fs from "node:fs/promises"
 import { glob } from "glob"
