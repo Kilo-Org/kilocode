@@ -9,10 +9,11 @@ import { chatMessagesAtom } from "../extension.js"
 import { cancelTaskAtom } from "../actions.js"
 import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
+import type { ExtensionService } from "../../../services/extension.js"
 
 // Mock the extension service
 const mockSendWebviewMessage = vi.fn().mockResolvedValue(undefined)
-const mockExtensionService = {
+const mockExtensionService: Pick<ExtensionService, "sendWebviewMessage" | "isReady"> = {
 	sendWebviewMessage: mockSendWebviewMessage,
 	isReady: () => true,
 }
@@ -24,7 +25,7 @@ describe("isCancellingAtom", () => {
 		store = createStore()
 		vi.clearAllMocks()
 		// Set up mock extension service
-		store.set(extensionServiceAtom, mockExtensionService as any)
+		store.set(extensionServiceAtom, mockExtensionService as ExtensionService)
 		store.set(isServiceReadyAtom, true)
 	})
 
