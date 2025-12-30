@@ -56,7 +56,8 @@
 		"otherBranches": "Другие ветки",
 		"branchPickerTooltip": "Сменить базовую ветку",
 		"noBranches": "Ветки не найдены",
-		"noMatchingBranches": "Нет веток, соответствующих твоему поиску"
+		"noMatchingBranches": "Нет веток, соответствующих твоему поиску",
+		"openTerminal": "Открыть терминал"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",

@@ -181,6 +181,7 @@
 		"errors": {
 			"cliOutdated": "إصدار Kilocode CLI لديك قديم ولا يدعم مدير الوكلاء. يرجى التحديث إلى أحدث إصدار.",
 			"cliNotFound": "لم يتم العثور على Kilocode CLI. يرجى تثبيته لاستخدام مدير الوكلاء.",
+			"cliMisconfigured": "Kilocode CLI غير مُهيأ. قم بتشغيل 'kilocode auth' لتسجيل الدخول أو 'kilocode config' للإعداد.",
 			"sessionFailed": "فشل بدء جلسة الوكيل",
 			"sessionFailedWithMessage": "فشل بدء جلسة الوكيل: {{message}}"
 		},
@@ -190,6 +191,7 @@
 			"getHelp": "الحصول على المساعدة",
 			"runInTerminal": "تشغيل في الطرفية",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "تحديث عام",
 			"updateLocal": "تحديث محلي",
 			"installGlobal": "تثبيت عام",

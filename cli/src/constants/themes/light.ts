@@ -54,6 +54,17 @@ export const lightTheme: Theme = {
 		lineNumber: "#237893",
 	},
 
+	markdown: {
+		text: "#616161",
+		heading: "#000000",
+		strong: "#000000",
+		em: "#616161",
+		code: "#388a34",
+		blockquote: "#717171",
+		link: "#006ab1",
+		list: "#616161",
+	},
+
 	ui: {
 		border: {
 			default: "#cecece",

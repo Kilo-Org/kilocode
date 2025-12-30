@@ -12,6 +12,11 @@ vi.mock("node:child_process", () => ({
 	spawn: vi.fn(),
 }))
 
+vi.mock("../telemetry", () => ({
+	captureAgentManagerLoginIssue: vi.fn(),
+	getPlatformDiagnostics: vi.fn(() => ({ platform: "darwin", shell: "bash" })),
+}))
+
 /**
  * Creates a mock ChildProcess with EventEmitter capabilities
  */
@@ -320,8 +325,9 @@ describe("CliProcessHandler", () => {
 		})
 
 		describe("Windows .cmd file handling", () => {
-			it("uses shell: true for .cmd files on Windows", () => {
+			it("uses cmd.exe for .cmd files on Windows", () => {
 				const originalPlatform = process.platform
+				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
@@ -335,17 +341,20 @@ describe("CliProcessHandler", () => {
 					)
 
 					expect(spawnMock).toHaveBeenCalledWith(
-						"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
-						expect.any(Array),
-						expect.objectContaining({ shell: true }),
+						expectedCommand,
+						expect.arrayContaining(["/c", "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd"]),
+						expect.objectContaining({ shell: false }),
 					)
+					const args = spawnMock.mock.calls[0]?.[1] as string[]
+					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}
 			})
 
-			it("uses shell: true for .CMD files (case insensitive) on Windows", () => {
+			it("uses cmd.exe for .CMD files (case insensitive) on Windows", () => {
 				const originalPlatform = process.platform
+				const expectedCommand = process.env.ComSpec ?? "cmd.exe"
 				Object.defineProperty(process, "platform", { value: "win32", configurable: true })
 
 				try {
@@ -359,10 +368,12 @@ describe("CliProcessHandler", () => {
 					)
 
 					expect(spawnMock).toHaveBeenCalledWith(
-						"C:\\Users\\test\\kilocode.CMD",
-						expect.any(Array),
-						expect.objectContaining({ shell: true }),
+						expectedCommand,
+						expect.arrayContaining(["/c", "C:\\Users\\test\\kilocode.CMD"]),
+						expect.objectContaining({ shell: false }),
 					)
+					const args = spawnMock.mock.calls[0]?.[1] as string[]
+					expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
 				} finally {
 					Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
 				}
@@ -504,18 +515,19 @@ describe("CliProcessHandler", () => {
 			expect(registry.getSessions()).toHaveLength(0)
 		})
 
-		it("captures worktree branch from welcome event and applies it on session creation", () => {
+		it("captures worktree branch and path from welcome event and applies them on session creation", () => {
 			const onCliEvent = vi.fn()
 			// Start in parallel mode
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
 
 			// First, emit welcome event with worktree branch (this arrives before session_created)
 			const welcomeEvent =
-				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch"}}}\n'
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
 			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
 
 			// Verify branch was captured in pending process
 			expect((handler as any).pendingProcess.worktreeBranch).toBe("feature/test-branch")
+			expect((handler as any).pendingProcess.worktreePath).toBe("/tmp/worktree-path")
 
 			// Then emit session_created
 			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
@@ -524,6 +536,24 @@ describe("CliProcessHandler", () => {
 			const session = registry.getSession("session-1")
 			expect(session?.parallelMode?.enabled).toBe(true)
 			expect(session?.parallelMode?.branch).toBe("feature/test-branch")
+			expect(session?.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
+		})
+
+		it("derives worktree path from branch when welcome event has no workspace", () => {
+			const onCliEvent = vi.fn()
+			const branch = "feature/test-branch"
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent = `{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"${branch}"}}}\n`
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const expectedPath = path.join(os.tmpdir(), `kilocode-worktree-${branch}`)
+			expect((handler as any).pendingProcess.worktreePath).toBe(expectedPath)
+
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"session-1"}\n'))
+
+			const session = registry.getSession("session-1")
+			expect(session?.parallelMode?.worktreePath).toBe(expectedPath)
 		})
 
 		it("does not apply worktree branch when not in parallel mode", () => {
@@ -885,7 +915,7 @@ describe("CliProcessHandler", () => {
 			expect(callbacks.onStartSessionFailed).toHaveBeenCalled()
 		})
 
-		it("handles pending process exit with success (no session created)", () => {
+		it("handles pending process exit with success (no session created) - shows generic error", () => {
 			const onCliEvent = vi.fn()
 			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
 
@@ -893,7 +923,168 @@ describe("CliProcessHandler", () => {
 			mockProcess.emit("exit", 0, null)
 
 			expect(registry.pendingSession).toBeNull()
-			expect(callbacks.onStartSessionFailed).not.toHaveBeenCalled()
+			// Generic fallback ensures user never gets "nothing happened"
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "CLI exited before creating a session",
+			})
+		})
+
+		it("handles CLI configuration error from welcome event instructions", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event with configuration error instructions (like misconfigured CLI)
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete","kilocodeToken is required"]}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0 (CLI exits normally after showing configuration error)
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: config.json is incomplete\nkilocodeToken is required",
+			})
+		})
+
+		it("reports generic error when no instructions present but exits before session created", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit normal welcome event without instructions
+			const welcomeEvent = '{"type":"welcome","metadata":{"welcomeOptions":{}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			// Generic fallback - not a configuration error, but still an error
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "unknown",
+				message: "CLI exited before creating a session",
+			})
+		})
+
+		it("handles CLI configuration error when welcome event JSON is split across chunks", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event split across multiple chunks (simulating real CLI behavior)
+			// First chunk contains partial JSON
+			const chunk1 =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: config.json is incomplete",'
+			mockProcess.stdout.emit("data", Buffer.from(chunk1))
+
+			// Second chunk contains the rest of the JSON with newline
+			const chunk2 = '"kilocodeToken is required"]}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(chunk2))
+
+			// Exit with code 0 (CLI exits normally after showing configuration error)
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: config.json is incomplete\nkilocodeToken is required",
+			})
+		})
+
+		it("handles CLI configuration error when welcome event is flushed on process exit", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit welcome event WITHOUT trailing newline (will be buffered)
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error: missing token"]}}}'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			// Exit with code 0 - parser should flush and capture the configuration error
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message: "Configuration Error: missing token",
+			})
+		})
+
+		it("handles CLI configuration error from truncated JSON using raw output fallback", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit truncated JSON (simulating CLI exiting before sending complete JSON)
+			// This is the real-world scenario where the CLI sends partial output
+			const truncatedJson = '{"type":"welcome","metadata":{"welcomeOptions":{"instructions":["Configuration Error'
+			mockProcess.stdout.emit("data", Buffer.from(truncatedJson))
+
+			// Exit with code 0 - JSON can't be parsed, but raw output should be checked
+			mockProcess.emit("exit", 0, null)
+
+			expect(registry.pendingSession).toBeNull()
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
+		})
+
+		it("handles CLI configuration error when raw output contains kilocodeToken error", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Emit output containing the specific error message
+			const output = "Some output... kilocodeToken is required and cannot be empty... more output"
+			mockProcess.stdout.emit("data", Buffer.from(output))
+
+			mockProcess.emit("exit", 0, null)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
+		})
+
+		it("caps stdout buffer to prevent memory issues with large output", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Send a lot of data to the stdout buffer (more than 64KB)
+			const largeChunk = "x".repeat(32 * 1024) // 32KB chunks
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk))
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk))
+			mockProcess.stdout.emit("data", Buffer.from(largeChunk)) // 96KB total
+
+			// Access the private pendingProcess to check buffer size
+			const pendingProcess = (handler as any).pendingProcess
+			const bufferSize = pendingProcess.stdoutBuffer.reduce((sum: number, chunk: string) => sum + chunk.length, 0)
+
+			// Buffer should be capped at 64KB
+			expect(bufferSize).toBeLessThanOrEqual(64 * 1024)
+		})
+
+		it("preserves most recent data when capping buffer", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", undefined, onCliEvent)
+
+			// Send chunks with identifiable content
+			const oldData = "OLD_DATA_".repeat(8 * 1024) // ~80KB of old data
+			const newData = "kilocodeToken is required" // This should be preserved
+
+			mockProcess.stdout.emit("data", Buffer.from(oldData))
+			mockProcess.stdout.emit("data", Buffer.from(newData))
+
+			// Exit with code 0 - should detect config error from preserved recent data
+			mockProcess.emit("exit", 0, null)
+
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith({
+				type: "cli_configuration_error",
+				message:
+					"CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure.",
+			})
 		})
 	})
 
@@ -1004,6 +1195,30 @@ describe("CliProcessHandler", () => {
 				expect.objectContaining({
 					payload: expect.objectContaining({ content: "from session 2" }),
 				}),
+			)
+		})
+
+		it("emits spawn error telemetry when process fails during pending state", async () => {
+			const telemetry = await import("../telemetry")
+
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode.cmd", "/workspace", "test prompt", undefined, onCliEvent)
+
+			mockProcess.emit("error", new Error("ENOENT"))
+
+			expect(telemetry.getPlatformDiagnostics).toHaveBeenCalled()
+			expect(telemetry.captureAgentManagerLoginIssue).toHaveBeenCalledWith(
+				expect.objectContaining({
+					issueType: "cli_spawn_error",
+					platform: "darwin",
+					shell: "bash",
+					errorMessage: "ENOENT",
+					cliPath: "/path/to/kilocode.cmd",
+					cliPathExtension: "cmd",
+				}),
+			)
+			expect(callbacks.onStartSessionFailed).toHaveBeenCalledWith(
+				expect.objectContaining({ type: "spawn_error", message: "ENOENT" }),
 			)
 		})
 	})
@@ -1301,6 +1516,50 @@ describe("CliProcessHandler", () => {
 			expect(sessions[0].sessionId).toBe("real-session-123")
 			expect(registry.getSession(provisionalId)).toBeUndefined()
 			expect(registry.getSession("real-session-123")).toBeDefined()
+		})
+
+		it("applies worktree info to provisional session from welcome event", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const kilocodeEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "say", say: "user_feedback", content: "test prompt" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(kilocodeEvent + "\n"))
+
+			const provisionalSession = registry.getSessions()[0]
+			expect(provisionalSession.sessionId).toMatch(/^provisional-/)
+			expect(provisionalSession.parallelMode?.branch).toBe("feature/test-branch")
+			expect(provisionalSession.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
+		})
+
+		it("preserves worktree path when provisional session is upgraded", () => {
+			const onCliEvent = vi.fn()
+			handler.spawnProcess("/path/to/kilocode", "/workspace", "test prompt", { parallelMode: true }, onCliEvent)
+
+			const welcomeEvent =
+				'{"type":"welcome","metadata":{"welcomeOptions":{"worktreeBranch":"feature/test-branch","workspace":"/tmp/worktree-path"}}}\n'
+			mockProcess.stdout.emit("data", Buffer.from(welcomeEvent))
+
+			const kilocodeEvent = JSON.stringify({
+				streamEventType: "kilocode",
+				payload: { type: "say", say: "user_feedback", content: "test prompt" },
+			})
+			mockProcess.stdout.emit("data", Buffer.from(kilocodeEvent + "\n"))
+
+			const provisionalId = registry.getSessions()[0].sessionId
+			expect(provisionalId).toMatch(/^provisional-/)
+
+			mockProcess.stdout.emit("data", Buffer.from('{"event":"session_created","sessionId":"real-session-123"}\n'))
+
+			const session = registry.getSession("real-session-123")
+			expect(session?.parallelMode?.branch).toBe("feature/test-branch")
+			expect(session?.parallelMode?.worktreePath).toBe("/tmp/worktree-path")
 		})
 
 		it("calls onSessionRenamed callback when provisional session is upgraded", () => {

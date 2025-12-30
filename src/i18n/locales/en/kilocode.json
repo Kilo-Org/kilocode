@@ -162,6 +162,7 @@
 		"errors": {
 			"cliOutdated": "Your Kilocode CLI version is outdated and doesn't support the Agent Manager. Please update to the latest version.",
 			"cliNotFound": "Kilocode CLI not found. Please install it to use the Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI is not configured. Please run 'kilocode auth' to sign in or 'kilocode config' to configure.",
 			"sessionFailed": "Failed to start agent session",
 			"sessionFailedWithMessage": "Failed to start agent session: {{message}}"
 		},
@@ -174,7 +175,8 @@
 			"updateLocal": "Update Local",
 			"installGlobal": "Install Global",
 			"installLocal": "Install Local",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config"
 		},
 		"terminal": {
 			"installMessage": "Running npm install to install the Kilocode CLI. Once complete, you can close this terminal and try starting the Agent Manager again.",

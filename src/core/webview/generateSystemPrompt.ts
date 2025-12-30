@@ -100,11 +100,10 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			toolProtocol,
 			isStealthModel: modelInfo?.isStealthModel,
 		},
-		// kilocode_change start
-		undefined,
-		undefined,
-		state,
-		// kilocode_change end
+		undefined, // todoList
+		undefined, // modelId
+		provider.getSkillsManager(),
+		state, // kilocode_change
 	)
 
 	return systemPrompt

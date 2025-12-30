@@ -126,11 +126,15 @@ export const staticAppPropertiesSchema = z.object({
 	vscodeVersion: z.string(),
 	platform: z.string(),
 	editorName: z.string(),
-	wrapped: z.boolean(), // kilocode_change
-	wrapper: z.string().nullable(), // kilocode_change
-	wrapperTitle: z.string().nullable(), // kilocode_change
-	wrapperCode: z.string().nullable(), // kilocode_change
-	wrapperVersion: z.string().nullable(), // kilocode_change
+	// kilocode_change start
+	wrapped: z.boolean(),
+	wrapper: z.string().nullable(),
+	wrapperTitle: z.string().nullable(),
+	wrapperCode: z.string().nullable(),
+	wrapperVersion: z.string().nullable(),
+	machineId: z.string().nullable(),
+	vscodeIsTelemetryEnabled: z.boolean().nullable(),
+	// kilocode_change end
 	hostname: z.string().optional(),
 })
 

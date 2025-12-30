@@ -6,6 +6,16 @@ import type { SessionClient } from "./SessionClient.js"
 import type { SessionStateManager } from "./SessionStateManager.js"
 
 /**
+ * Message emitted when a session title has been generated and updated.
+ */
+export interface SessionTitleGeneratedMessage {
+	sessionId: string
+	title: string
+	timestamp: number
+	event: "session_title_generated"
+}
+
+/**
  * Dependencies required by SessionTitleService.
  */
 export interface SessionTitleServiceDependencies {
@@ -13,6 +23,7 @@ export interface SessionTitleServiceDependencies {
 	stateManager: SessionStateManager
 	extensionMessenger: IExtensionMessenger
 	logger: ILogger
+	onSessionTitleGenerated?: (message: SessionTitleGeneratedMessage) => void
 }
 
 /**
@@ -35,6 +46,7 @@ export class SessionTitleService {
 	private readonly stateManager: SessionStateManager
 	private readonly extensionMessenger: IExtensionMessenger
 	private readonly logger: ILogger
+	private readonly onSessionTitleGenerated: (message: SessionTitleGeneratedMessage) => void
 
 	/**
 	 * Creates a new SessionTitleService instance.
@@ -55,6 +67,7 @@ export class SessionTitleService {
 		this.stateManager = dependencies.stateManager
 		this.extensionMessenger = dependencies.extensionMessenger
 		this.logger = dependencies.logger
+		this.onSessionTitleGenerated = dependencies.onSessionTitleGenerated ?? (() => {})
 
 		this.maxTitleLength = config.maxLength ?? DEFAULT_CONFIG.title.maxLength
 		this.truncatedTitleLength = config.truncatedLength ?? DEFAULT_CONFIG.title.truncatedLength
@@ -168,6 +181,14 @@ Summary:`
 		this.logger.info("Session title updated successfully", LOG_SOURCES.SESSION_TITLE, {
 			sessionId,
 			title: trimmedTitle,
+		})
+
+		// Emit session_title_generated event
+		this.onSessionTitleGenerated({
+			sessionId,
+			title: trimmedTitle,
+			timestamp: Date.now(),
+			event: "session_title_generated",
 		})
 	}
 

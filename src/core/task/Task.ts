@@ -3773,9 +3773,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				},
 				undefined, // todoList
 				this.api.getModel().id,
-				// kilocode_change start
-				state,
-				// kilocode_change end
+				provider.getSkillsManager(),
+				state, // kilocode_change
 			)
 		})()
 	}

@@ -321,6 +321,7 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 			{ provider: "glama", options: { provider: "glama" } }, // kilocode_change
 			{ provider: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
 			{ provider: "chutes", options: { provider: "chutes" } },
+			{ provider: "synthetic", options: { provider: "synthetic" } }, // kilocode_change: Add synthetic to background refresh
 		]
 
 		// Refresh each provider in background (fire and forget)

@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "Sua versão do Kilocode CLI está desatualizada e não suporta o Gerenciador de Agentes. Atualize para a versão mais recente.",
 			"cliNotFound": "Kilocode CLI não encontrado. Instale-o para usar o Gerenciador de Agentes.",
+			"cliMisconfigured": "Kilocode CLI não está configurado. Execute 'kilocode auth' para entrar ou 'kilocode config' para configurar.",
 			"sessionFailed": "Falha ao iniciar sessão do agente",
 			"sessionFailedWithMessage": "Falha ao iniciar sessão do agente: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Obter Ajuda",
 			"runInTerminal": "Executar no Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Atualizar Global",
 			"updateLocal": "Atualizar Local",
 			"installGlobal": "Instalar Global",

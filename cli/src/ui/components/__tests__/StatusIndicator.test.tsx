@@ -10,6 +10,7 @@ import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
 import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
 import { chatMessagesAtom } from "../../../state/atoms/extension.js"
+import { exitPromptVisibleAtom } from "../../../state/atoms/keyboard.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 // Mock the hooks
@@ -90,6 +91,19 @@ describe("StatusIndicator", () => {
 		const output = lastFrame()
 		expect(output).toContain("/help")
 		expect(output).toContain("for commands")
+	})
+
+	it("should show exit confirmation prompt when Ctrl+C is pressed once", () => {
+		store.set(exitPromptVisibleAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		expect(output).toMatch(/Press (?:Ctrl|Cmd)\+C again to exit\./)
 	})
 
 	it("should not show Thinking status when not streaming", () => {

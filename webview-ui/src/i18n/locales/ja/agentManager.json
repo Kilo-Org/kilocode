@@ -54,7 +54,8 @@
 		"otherBranches": "その他のブランチ",
 		"branchPickerTooltip": "ベースブランチを切り替え",
 		"noBranches": "ブランチが見つかりません",
-		"noMatchingBranches": "検索に一致するブランチがありません"
+		"noMatchingBranches": "検索に一致するブランチがありません",
+		"openTerminal": "ターミナルを開く"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

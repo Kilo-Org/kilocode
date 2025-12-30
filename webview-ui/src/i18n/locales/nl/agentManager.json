@@ -54,7 +54,8 @@
 		"otherBranches": "Andere branches",
 		"branchPickerTooltip": "Wijzig basisbranch",
 		"noBranches": "Geen branches gevonden",
-		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht"
+		"noMatchingBranches": "Geen branches komen overeen met je zoekopdracht",
+		"openTerminal": "Terminal openen"
 	},
 	"messages": {
 		"waiting": "Wachten op antwoord van agent...",

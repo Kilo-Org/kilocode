@@ -1,5 +1,63 @@
 # kilo-code
 
+## 4.140.3
+
+### Patch Changes
+
+- [#4648](https://github.com/Kilo-Org/kilocode/pull/4648) [`4710d11`](https://github.com/Kilo-Org/kilocode/commit/4710d119ba6ead7f0198c22ae4e902478a63867e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager multi-version sessions to wait for pending CLI processes so terminals are available per worktree.
+
+- [#4658](https://github.com/Kilo-Org/kilocode/pull/4658) [`e189583`](https://github.com/Kilo-Org/kilocode/commit/e1895837b7dde1b8302f3d3eb49dad2b417fc1bb) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improve Agent Manager telemetry
+
+- [#4647](https://github.com/Kilo-Org/kilocode/pull/4647) [`c1a0692`](https://github.com/Kilo-Org/kilocode/commit/c1a06926e838af15e4be27a476ea3e35be430551) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix: reduce GPU usage in Agent Manager with message virtualization
+
+- [#4693](https://github.com/Kilo-Org/kilocode/pull/4693) [`eb5e835`](https://github.com/Kilo-Org/kilocode/commit/eb5e835be3f3c5a7cf5f7cc4baec87bfade6e2b2) Thanks [@keeganwitt](https://github.com/keeganwitt)! - Add Requesty Codestral to autocomplete provider models
+
+- [#4659](https://github.com/Kilo-Org/kilocode/pull/4659) [`fa42cfa`](https://github.com/Kilo-Org/kilocode/commit/fa42cfaa7b77a7f410c26eaf3810808cf3631ced) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager CLI detection and Windows spawn by sanitizing shell output and running .cmd via cmd.exe.
+
+- [#4692](https://github.com/Kilo-Org/kilocode/pull/4692) [`1401220`](https://github.com/Kilo-Org/kilocode/commit/140122089a4de591c80573306ce81cd49091b510) Thanks [@mcowger](https://github.com/mcowger)! - Fix loss of Synthetic auto model refresh
+
+## 4.140.2
+
+### Patch Changes
+
+- [#4628](https://github.com/Kilo-Org/kilocode/pull/4628) [`ab0085e`](https://github.com/Kilo-Org/kilocode/commit/ab0085ea0ba6226f6adce508965302b101f60233) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add GLM-4.7 model support to Z.ai provider
+
+- [#4622](https://github.com/Kilo-Org/kilocode/pull/4622) [`25de94b`](https://github.com/Kilo-Org/kilocode/commit/25de94b22fc103ebb9747433444f3fef9a7eeeb8) Thanks [@alvinward](https://github.com/alvinward)! - Added model selection support below prompt for Z.ai
+
+- [#4637](https://github.com/Kilo-Org/kilocode/pull/4637) [`b47994f`](https://github.com/Kilo-Org/kilocode/commit/b47994f0b6186490230c7eac01c5b9b75146d47a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add MiniMax-M2.1 model for MiniMax provider
+
+## 4.140.1
+
+### Patch Changes
+
+- [#4615](https://github.com/Kilo-Org/kilocode/pull/4615) [`6909640`](https://github.com/Kilo-Org/kilocode/commit/690964040770cd21248e1bea964c995d8620d8e8) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add Agent Manager terminal switching so existing session terminals are revealed when changing sessions.
+
+- [#4586](https://github.com/Kilo-Org/kilocode/pull/4586) [`a3988cd`](https://github.com/Kilo-Org/kilocode/commit/a3988cd201f21f7b7616d68cb2bb2c0387dd91c2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager failing to start on macOS when launched from Finder/Spotlight
+
+- [#4561](https://github.com/Kilo-Org/kilocode/pull/4561) [`3c18860`](https://github.com/Kilo-Org/kilocode/commit/3c188603cc4d8375be4abf6e1bb9217b64e9cd2b) Thanks [@jrf0110](https://github.com/jrf0110)! - Introduces AI contribution tracking so users can better understand agentic coding impact
+
+- [#4526](https://github.com/Kilo-Org/kilocode/pull/4526) [`10b4d6c`](https://github.com/Kilo-Org/kilocode/commit/10b4d6c02f5b310dd6e44204fa40675ca4d3d99b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Reduce the incidence of read_file errors when using Claude models.
+
+- [#4560](https://github.com/Kilo-Org/kilocode/pull/4560) [`5bdfe6b`](https://github.com/Kilo-Org/kilocode/commit/5bdfe6b9b68acf345e302791c15291c05a043204) Thanks [@crazyrabbit0](https://github.com/crazyrabbit0)! - chore: update Gemini Cli models and metadata
+
+    - Added gemini-3-flash-preview model configuration.
+    - Updated maxThinkingTokens for gemini-3-pro-preview to 32,768.
+    - Reordered model definitions to prioritize newer versions.
+
+- [#4596](https://github.com/Kilo-Org/kilocode/pull/4596) [`1c33884`](https://github.com/Kilo-Org/kilocode/commit/1c3388442bd9a06dcb8aed29431c138726dbedc8) Thanks [@hank9999](https://github.com/hank9999)! - Fix duplicate tool use in Anthropic
+
+- [#4620](https://github.com/Kilo-Org/kilocode/pull/4620) [`ae6818b`](https://github.com/Kilo-Org/kilocode/commit/ae6818b5ea2d5504f9ee5eff9bdd963d9d82c51e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix duplictate tool call processing in Chutes, DeepInfra, LiteLLM and xAI providers.
+
+- [#4597](https://github.com/Kilo-Org/kilocode/pull/4597) [`e2bb5c1`](https://github.com/Kilo-Org/kilocode/commit/e2bb5c1891b6319954b46fcca3b35807fc1f8f90) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager not showing error when CLI is misconfigured. When the CLI exits with a configuration error (e.g., missing kilocodeToken), the extension now detects this and shows an error popup with options to run `kilocode auth` or `kilocode config`.
+
+- [#4590](https://github.com/Kilo-Org/kilocode/pull/4590) [`f2cc065`](https://github.com/Kilo-Org/kilocode/commit/f2cc0657870ae77a5720a872c9cd11b8315799b7) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - feat: add session_title_generated event emission to CLI
+
+- [#4523](https://github.com/Kilo-Org/kilocode/pull/4523) [`e259b04`](https://github.com/Kilo-Org/kilocode/commit/e259b04037c71a9bdd9e53c174b70a975e772833) Thanks [@markijbema](https://github.com/markijbema)! - Add chat autocomplete telemetry
+
+- [#4582](https://github.com/Kilo-Org/kilocode/pull/4582) [`3de2547`](https://github.com/Kilo-Org/kilocode/commit/3de254757049d08d3c0c100768acc564d6de4888) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Autocomplete Telemetry
+
+- [#4488](https://github.com/Kilo-Org/kilocode/pull/4488) [`f7c3715`](https://github.com/Kilo-Org/kilocode/commit/f7c3715b4b7fea9fcd363d12bfb9467e9f169729) Thanks [@lifesized](https://github.com/lifesized)! - fix(ollama): fix model not found error and context window display
+
 ## 4.140.0
 
 ### Minor Changes

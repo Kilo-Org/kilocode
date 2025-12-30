@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.140.0",
+	"version": "4.140.3",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -719,6 +719,7 @@
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
+		"node-machine-id": "^1.1.12",
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",

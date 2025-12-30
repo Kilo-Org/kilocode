@@ -200,6 +200,26 @@ describe("Agent Manager Telemetry", () => {
 			)
 		})
 
+		it("captures session_timeout with enhanced diagnostic fields", () => {
+			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
+
+			const props: AgentManagerLoginIssueProperties = {
+				issueType: "session_timeout",
+				platform: "darwin",
+				shell: "zsh",
+				hasStderr: true,
+				stderrPreview: "error: git command not found",
+				hadShellPath: false,
+			}
+
+			captureAgentManagerLoginIssue(props)
+
+			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
+				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
+				props,
+			)
+		})
+
 		it("captures api_error issue", () => {
 			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
 
@@ -221,6 +241,23 @@ describe("Agent Manager Telemetry", () => {
 			const props: AgentManagerLoginIssueProperties = {
 				issueType: "cli_spawn_error",
 				hasNpm: true,
+			}
+
+			captureAgentManagerLoginIssue(props)
+
+			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledWith(
+				TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE,
+				props,
+			)
+		})
+
+		it("captures cli_configuration_error issue with platform diagnostics", () => {
+			vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
+
+			const props: AgentManagerLoginIssueProperties = {
+				issueType: "cli_configuration_error",
+				platform: "darwin",
+				shell: "fish",
 			}
 
 			captureAgentManagerLoginIssue(props)

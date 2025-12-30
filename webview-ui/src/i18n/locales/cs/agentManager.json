@@ -55,7 +55,8 @@
 		"otherBranches": "Ostatní větve",
 		"branchPickerTooltip": "Změnit základní větev",
 		"noBranches": "Nebyly nalezeny žádné větve",
-		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání"
+		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání",
+		"openTerminal": "Otevřít terminál"
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",

@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.17.1",
+	"version": "0.18.0",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "dist/index.js",
@@ -94,6 +94,7 @@
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "npm:catrielmuller-node-ipc@12.0.1",
+		"node-machine-id": "^1.1.12",
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",

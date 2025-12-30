@@ -54,7 +54,8 @@
 		"otherBranches": "Nhánh khác",
 		"branchPickerTooltip": "Chuyển nhánh cơ sở",
 		"noBranches": "Không tìm thấy nhánh nào",
-		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn"
+		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn",
+		"openTerminal": "Mở terminal"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

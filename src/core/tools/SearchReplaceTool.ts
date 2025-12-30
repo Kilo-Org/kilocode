@@ -13,6 +13,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
 
 interface SearchReplaceParams {
 	file_path: string
@@ -114,8 +115,11 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 				return
 			}
 
+			const useCrLf_kilocode = fileContent.includes("\r\n")
+			const normalizedOldString_kilocode = normalizeLineEndings_kilocode(old_string, useCrLf_kilocode)
+
 			// Check for exact match (literal string, not regex)
-			const matchCount = fileContent.split(old_string).length - 1
+			const matchCount = fileContent.split(normalizedOldString_kilocode).length - 1
 
 			if (matchCount === 0) {
 				task.consecutiveMistakeCount++
@@ -142,7 +146,8 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 			}
 
 			// Apply the single replacement
-			const newContent = fileContent.replace(old_string, new_string)
+			const normalizedNewString_kilocode = normalizeLineEndings_kilocode(new_string, useCrLf_kilocode)
+			const newContent = fileContent.replace(normalizedOldString_kilocode, normalizedNewString_kilocode)
 
 			// Check if any changes were made
 			if (newContent === fileContent) {

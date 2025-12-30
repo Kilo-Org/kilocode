@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "Twoja wersja Kilocode CLI jest przestarzała i nie obsługuje Agent Managera. Zaktualizuj do najnowszej wersji.",
 			"cliNotFound": "Nie znaleziono Kilocode CLI. Zainstaluj go, aby korzystać z Agent Managera.",
+			"cliMisconfigured": "Kilocode CLI nie jest skonfigurowany. Uruchom 'kilocode auth', aby się zalogować lub 'kilocode config', aby skonfigurować.",
 			"sessionFailed": "Nie udało się uruchomić sesji agenta",
 			"sessionFailedWithMessage": "Nie udało się uruchomić sesji agenta: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "Uzyskaj Pomoc",
 			"runInTerminal": "Uruchom w Terminalu",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Aktualizuj Globalnie",
 			"updateLocal": "Aktualizuj Lokalnie",
 			"installGlobal": "Zainstaluj Globalnie",

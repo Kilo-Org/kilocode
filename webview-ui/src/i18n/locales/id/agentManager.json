@@ -54,7 +54,8 @@
 		"otherBranches": "Cabang lain",
 		"branchPickerTooltip": "Ganti cabang dasar",
 		"noBranches": "Tidak ada cabang ditemukan",
-		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu"
+		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu",
+		"openTerminal": "Buka terminal"
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

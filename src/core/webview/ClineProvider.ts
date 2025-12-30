@@ -74,6 +74,7 @@ import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
 import { MdmService } from "../../services/mdm/MdmService"
 import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager"
+import { SkillsManager } from "../../services/skills/SkillsManager"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
@@ -157,6 +158,7 @@ export class ClineProvider
 	private codeIndexManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
 	protected mcpHub?: McpHub // Change from private to protected
+	protected skillsManager?: SkillsManager
 	private marketplaceManager: MarketplaceManager
 	private mdmService?: MdmService
 	private taskCreationCallback: (task: Task) => void
@@ -218,6 +220,12 @@ export class ClineProvider
 			.catch((error) => {
 				this.log(`Failed to initialize MCP Hub: ${error}`)
 			})
+
+		// Initialize Skills Manager for skill discovery
+		this.skillsManager = new SkillsManager(this)
+		this.skillsManager.initialize().catch((error) => {
+			this.log(`Failed to initialize Skills Manager: ${error}`)
+		})
 
 		this.marketplaceManager = new MarketplaceManager(this.context, this.customModesManager)
 
@@ -678,6 +686,8 @@ export class ClineProvider
 		this._workspaceTracker = undefined
 		await this.mcpHub?.unregisterClient()
 		this.mcpHub = undefined
+		await this.skillsManager?.dispose()
+		this.skillsManager = undefined
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
 
@@ -2851,6 +2861,10 @@ ${prompt}
 		return this.mcpHub
 	}
 
+	public getSkillsManager(): SkillsManager | undefined {
+		return this.skillsManager
+	}
+
 	/**
 	 * Check if the current state is compliant with MDM policy
 	 * @returns true if compliant or no MDM policy exists, false if MDM policy exists and user is non-compliant
@@ -3285,12 +3299,16 @@ ${prompt}
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
-				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
-				wrapped: kiloCodeWrapped, // kilocode_change
-				wrapper: kiloCodeWrapper, // kilocode_change
-				wrapperCode: kiloCodeWrapperCode, // kilocode_change
-				wrapperVersion: kiloCodeWrapperVersion, // kilocode_change
-				wrapperTitle: kiloCodeWrapperTitle, // kilocode_change
+				// kilocode_change start
+				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName,
+				wrapped: kiloCodeWrapped,
+				wrapper: kiloCodeWrapper,
+				wrapperCode: kiloCodeWrapperCode,
+				wrapperVersion: kiloCodeWrapperVersion,
+				wrapperTitle: kiloCodeWrapperTitle,
+				machineId: vscode.env.machineId,
+				vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
+				// kilocode_change end
 			}
 		}
 

@@ -9,6 +9,7 @@ import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.ipc.NodeSocket
 import ai.kilocode.jetbrains.ipc.PersistentProtocol
 import ai.kilocode.jetbrains.ipc.proxy.ResponsiveState
+import ai.kilocode.jetbrains.util.MachineIdUtil
 import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.util.PluginResourceUtil
 import ai.kilocode.jetbrains.util.URI
@@ -269,7 +270,7 @@ class ExtensionHostManager : Disposable {
             ),
             "telemetryInfo" to mapOf(
                 "sessionId" to "intellij-session",
-                "machineId" to "intellij-machine",
+                "machineId" to MachineIdUtil.getMachineId(),
                 "sqmId" to "",
                 "devDeviceId" to "",
                 "firstSessionDate" to java.time.Instant.now().toString(),

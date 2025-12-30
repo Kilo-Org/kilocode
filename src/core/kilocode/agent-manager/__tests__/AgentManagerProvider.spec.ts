@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest"
 import { EventEmitter } from "node:events"
+import * as path from "node:path"
 import * as telemetry from "../telemetry"
 
-const MOCK_CLI_PATH = "/mock/path/to/kilocode"
+const isWindows = process.platform === "win32"
+const MOCK_CLI_PATH = isWindows ? "C:\\mock\\path\\to\\kilocode" : "/mock/path/to/kilocode"
 
 // Mock the local telemetry module
 vi.mock("../telemetry", () => ({
@@ -15,13 +17,29 @@ vi.mock("../telemetry", () => ({
 	captureAgentManagerLoginIssue: vi.fn(),
 }))
 
+// Mock CliPathResolver to return CliDiscoveryResult object
+// Note: vi.mock is hoisted, so we inline the platform check instead of using MOCK_CLI_PATH
+vi.mock("../CliPathResolver", () => ({
+	findKilocodeCli: vi.fn().mockResolvedValue({
+		cliPath: process.platform === "win32" ? "C:\\mock\\path\\to\\kilocode" : "/mock/path/to/kilocode",
+		shellPath: undefined,
+	}),
+	findExecutable: vi.fn().mockResolvedValue(undefined),
+}))
+
 let AgentManagerProvider: typeof import("../AgentManagerProvider").AgentManagerProvider
 
 describe("AgentManagerProvider CLI spawning", () => {
 	let provider: InstanceType<typeof AgentManagerProvider>
 	const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 /* Development */ } as any
 	const mockOutputChannel = { appendLine: vi.fn() } as any
-	let mockWindow: { showErrorMessage: Mock; showWarningMessage: Mock; ViewColumn: { One: number } }
+	let mockWindow: {
+		showErrorMessage: Mock
+		showWarningMessage: Mock
+		ViewColumn: { One: number }
+		onDidCloseTerminal: Mock
+		createTerminal: Mock
+	}
 
 	beforeEach(async () => {
 		vi.resetModules()
@@ -35,6 +53,8 @@ describe("AgentManagerProvider CLI spawning", () => {
 			showErrorMessage: vi.fn().mockResolvedValue(undefined),
 			showWarningMessage: vi.fn().mockResolvedValue(undefined),
 			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
 		}
 
 		vi.doMock("vscode", () => ({
@@ -97,6 +117,113 @@ describe("AgentManagerProvider CLI spawning", () => {
 		expect(options?.shell).not.toBe(true)
 	})
 
+	// Windows-specific test - runs only on Windows CI
+	// We don't simulate Windows on other platforms - let the actual Windows CI test it
+	const windowsOnlyTest = isWindows ? it : it.skip
+
+	windowsOnlyTest("spawns via cmd.exe when CLI path ends with .cmd", async () => {
+		vi.resetModules()
+
+		const testNpmDir = "C:\\npm"
+		const testWorkspace = "C:\\tmp\\workspace"
+		const cmdPath = path.join(testNpmDir, "kilocode") + ".CMD"
+
+		const mockWorkspaceFolder = { uri: { fsPath: testWorkspace } }
+		const mockProvider = {
+			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
+		}
+
+		vi.doMock("vscode", () => ({
+			workspace: { workspaceFolders: [mockWorkspaceFolder] },
+			window: {
+				showErrorMessage: vi.fn().mockResolvedValue(undefined),
+				showWarningMessage: vi.fn().mockResolvedValue(undefined),
+				ViewColumn: { One: 1 },
+				onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+				createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+			},
+			env: { openExternal: vi.fn() },
+			Uri: { parse: vi.fn(), joinPath: vi.fn() },
+			ViewColumn: { One: 1 },
+			ExtensionMode: { Development: 1, Production: 2, Test: 3 },
+			ThemeIcon: vi.fn(),
+		}))
+
+		vi.doMock("../../../../utils/fs", () => ({
+			fileExistsAtPath: vi.fn().mockResolvedValue(false),
+		}))
+
+		vi.doMock("../../../../services/code-index/managed/git-utils", () => ({
+			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
+		}))
+
+		// Mock CliPathResolver to return .cmd path for Windows test
+		vi.doMock("../CliPathResolver", () => ({
+			findKilocodeCli: vi.fn().mockResolvedValue({ cliPath: cmdPath, shellPath: undefined }),
+			findExecutable: vi.fn().mockResolvedValue(cmdPath),
+		}))
+
+		vi.doMock("node:fs", () => ({
+			existsSync: vi.fn().mockReturnValue(false),
+			readdirSync: vi.fn().mockReturnValue([]),
+			promises: {
+				stat: vi.fn().mockImplementation((filePath: string) => {
+					if (filePath === cmdPath) {
+						return Promise.resolve({ isFile: () => true })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+				lstat: vi.fn().mockImplementation((filePath: string) => {
+					if (filePath === cmdPath) {
+						return Promise.resolve({ isFile: () => true, isSymbolicLink: () => false })
+					}
+					return Promise.reject(Object.assign(new Error("ENOENT"), { code: "ENOENT" }))
+				}),
+			},
+		}))
+
+		class TestProc extends EventEmitter {
+			stdout = new EventEmitter()
+			stderr = new EventEmitter()
+			kill = vi.fn()
+			pid = 1234
+		}
+
+		const spawnMock = vi.fn(() => new TestProc())
+		vi.doMock("node:child_process", () => ({
+			spawn: spawnMock,
+			execSync: vi.fn().mockImplementation(() => {
+				throw new Error("not found")
+			}),
+		}))
+
+		const originalPath = process.env.PATH
+		process.env.PATH = testNpmDir
+
+		try {
+			const module = await import("../AgentManagerProvider")
+			const windowsProvider = new module.AgentManagerProvider(mockContext, mockOutputChannel, mockProvider as any)
+
+			await (windowsProvider as any).startAgentSession("test windows cmd")
+
+			expect(spawnMock).toHaveBeenCalledTimes(1)
+			const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [
+				string,
+				string[],
+				Record<string, unknown>,
+			]
+			const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+			expect(cmd.toLowerCase()).toBe(expectedCommand.toLowerCase())
+			expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
+			expect(args).toEqual(expect.arrayContaining([cmdPath]))
+			expect(options?.shell).toBe(false)
+
+			windowsProvider.dispose()
+		} finally {
+			process.env.PATH = originalPath
+		}
+	})
+
 	it("creates pending session and waits for session_created event", async () => {
 		await (provider as any).startAgentSession("test pending")
 
@@ -124,6 +251,46 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions).toHaveLength(1)
 		expect(sessions[0].sessionId).toBe("cli-session-123")
+	})
+
+	it("waits for pending processes to clear before resolving multi-version sequencing", async () => {
+		vi.useFakeTimers()
+
+		try {
+			const registry = (provider as any).registry
+			const processHandler = (provider as any).processHandler
+
+			registry.clearPendingSession()
+			processHandler.pendingProcess = {}
+
+			let resolved = false
+			const waitPromise = (provider as any).waitForPendingSessionToClear().then(() => {
+				resolved = true
+			})
+
+			await Promise.resolve()
+			expect(resolved).toBe(false)
+
+			processHandler.pendingProcess = null
+			vi.advanceTimersByTime(200)
+			await waitPromise
+			expect(resolved).toBe(true)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it("shows existing terminal when selecting a session", () => {
+		const sessionId = "session-terminal"
+		const registry = (provider as any).registry
+		registry.createSession(sessionId, "prompt")
+		;(provider as any).sessionMessages.set(sessionId, [])
+
+		const showExistingTerminal = vi.spyOn((provider as any).terminalManager, "showExistingTerminal")
+
+		;(provider as any).selectSession(sessionId)
+
+		expect(showExistingTerminal).toHaveBeenCalledWith(sessionId)
 	})
 
 	it("adds metadata text for tool requests and skips non chat events", async () => {
@@ -487,7 +654,12 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		vi.resetModules()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
-		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockWindow = {
+			showErrorMessage: () => undefined,
+			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+		}
 		const mockProvider = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}
@@ -560,23 +732,10 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 	})
 
 	it("handles git URL retrieval errors gracefully", async () => {
-		// Need to recreate provider with the mock rejection set up BEFORE construction
-		// because pre-warming happens in the constructor
-		provider.dispose()
 		mockGetRemoteUrl.mockRejectedValue(new Error("No remote configured"))
+		const spawnProcessSpy = vi.spyOn((provider as any).processHandler, "spawnProcess")
 
-		const mockContext = { extensionUri: {}, extensionPath: "", extensionMode: 1 } as any
-		const mockOutputChannel = { appendLine: vi.fn() } as any
-		const mockClineProvider = {
-			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
-		}
-
-		const module = await import("../AgentManagerProvider")
-		const newProvider = new module.AgentManagerProvider(mockContext, mockOutputChannel, mockClineProvider as any)
-
-		const spawnProcessSpy = vi.spyOn((newProvider as any).processHandler, "spawnProcess")
-
-		await (newProvider as any).startAgentSession("test prompt")
+		await (provider as any).startAgentSession("test prompt")
 
 		// Should still spawn process without gitUrl
 		expect(spawnProcessSpy).toHaveBeenCalledWith(
@@ -586,8 +745,6 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 			expect.objectContaining({ gitUrl: undefined }),
 			expect.any(Function),
 		)
-
-		newProvider.dispose()
 	})
 
 	it("stores gitUrl on created session", async () => {
@@ -729,7 +886,12 @@ describe("AgentManagerProvider telemetry", () => {
 		vi.clearAllMocks()
 
 		const mockWorkspaceFolder = { uri: { fsPath: "/tmp/workspace" } }
-		const mockWindow = { showErrorMessage: () => undefined, ViewColumn: { One: 1 } }
+		const mockWindow = {
+			showErrorMessage: () => undefined,
+			ViewColumn: { One: 1 },
+			onDidCloseTerminal: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			createTerminal: vi.fn().mockReturnValue({ show: vi.fn(), sendText: vi.fn(), dispose: vi.fn() }),
+		}
 		const mockProvider = {
 			getState: vi.fn().mockResolvedValue({ apiConfiguration: { apiProvider: "kilocode" } }),
 		}

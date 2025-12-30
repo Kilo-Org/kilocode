@@ -379,4 +379,118 @@ describe("searchReplaceTool", () => {
 			expect(mockCline.fileContextTracker.trackFileContext).toHaveBeenCalledWith(testFilePath, "roo_edited")
 		})
 	})
+
+	// kilocode_change start
+	describe("line ending handling", () => {
+		it("handles files with Unix line endings (LF)", async () => {
+			const fileContent = "Line 1\nLine 2\nLine 3"
+			const oldString = "Line 2"
+			const newString = "Modified Line 2"
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+
+		it("handles files with Windows line endings (CRLF)", async () => {
+			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
+			const oldString = "Line 2"
+			const newString = "Modified Line 2"
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+
+		it("normalizes search string with LF to match file with CRLF", async () => {
+			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
+			const oldString = "Line 1\nLine 2" // LF in search string
+			const newString = "Modified Lines"
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+
+		it("normalizes search string with CRLF to match file with LF", async () => {
+			const fileContent = "Line 1\nLine 2\nLine 3"
+			const oldString = "Line 1\r\nLine 2" // CRLF in search string
+			const newString = "Modified Lines"
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+
+		it("preserves CRLF line endings in replacement text for CRLF files", async () => {
+			const fileContent = "Line 1\r\nLine 2\r\nLine 3"
+			const oldString = "Line 2"
+			const newString = "Modified\nLine 2" // LF in replacement
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			// The tool should normalize the replacement to use CRLF
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+
+		it("preserves LF line endings in replacement text for LF files", async () => {
+			const fileContent = "Line 1\nLine 2\nLine 3"
+			const oldString = "Line 2"
+			const newString = "Modified\r\nLine 2" // CRLF in replacement
+
+			await executeSearchReplaceTool(
+				{
+					old_string: oldString,
+					new_string: newString,
+				},
+				{ fileContent },
+			)
+
+			// The tool should normalize the replacement to use LF
+			expect(mockCline.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockCline.recordToolUsage).toHaveBeenCalledWith("search_replace")
+		})
+	})
+	// kilocode_change end
 })

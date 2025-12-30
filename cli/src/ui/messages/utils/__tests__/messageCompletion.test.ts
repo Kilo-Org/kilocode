@@ -438,4 +438,30 @@ describe("messageCompletion", () => {
 			expect(result.dynamicMessages).toHaveLength(0)
 		})
 	})
+
+	describe("splitMessages with hidePartialMessages option", () => {
+		it("should filter out all partial messages when hidePartialMessages is true", () => {
+			const messages: UnifiedMessage[] = [
+				{
+					source: "cli",
+					message: { id: "1", type: "assistant", content: "A", ts: 1, partial: false },
+				},
+				{
+					source: "cli",
+					message: { id: "2", type: "assistant", content: "B", ts: 2, partial: true },
+				},
+				{
+					source: "cli",
+					message: { id: "3", type: "assistant", content: "C", ts: 3, partial: false },
+				},
+			]
+
+			const result = splitMessages(messages, { hidePartialMessages: true })
+
+			expect(result.staticMessages).toHaveLength(2)
+			expect(result.dynamicMessages).toHaveLength(0)
+			expect((result.staticMessages[0]?.message as CliMessage).id).toBe("1")
+			expect((result.staticMessages[1]?.message as CliMessage).id).toBe("3")
+		})
+	})
 })
