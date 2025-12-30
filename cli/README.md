@@ -233,6 +233,44 @@ This instructs the AI to proceed without user input.
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
 
+## Custom Modes
+
+Kilo Code CLI supports custom modes that allow you to create specialized AI agents with specific roles and capabilities. Custom modes can be defined globally (available across all projects) or per-project.
+
+**Important**: The CLI uses its own configuration directory for global custom modes:
+- **CLI Global Modes**: `~/.kilocode/cli/global/settings/custom_modes.yaml`
+- **Project Modes**: `.kilocodemodes` (in project root)
+
+> **Note**: Global custom modes created in the VSCode extension are stored in a different location and need to be copied to the CLI's location to work in the CLI.
+
+For detailed information on creating and using custom modes, see [Custom Modes Documentation](docs/CUSTOM_MODES.md).
+
+### Quick Start
+
+Create a global custom mode:
+
+```bash
+# Create the directory
+mkdir -p ~/.kilocode/cli/global/settings
+
+# Create custom_modes.yaml
+cat > ~/.kilocode/cli/global/settings/custom_modes.yaml << 'EOF'
+customModes:
+  - slug: code-reviewer
+    name: Code Reviewer
+    roleDefinition: |
+      You are an expert code reviewer focused on finding bugs,
+      security issues, and suggesting improvements.
+    groups:
+      - read
+      - edit
+      - command
+EOF
+
+# Use the custom mode
+kilocode --mode code-reviewer
+```
+
 ## Local Development
 
 ### Getting Started
