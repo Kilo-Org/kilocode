@@ -23,7 +23,7 @@ const requiredFiles = [
 
 let allFilesExist = true
 
-requiredFiles.forEach(file => {
+  const filePath = path.join(__dirname, '../../', file)
   const filePath = path.join(__dirname, file)
   if (fs.existsSync(filePath)) {
     console.log(`✅ ${file}`)
