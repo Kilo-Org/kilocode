@@ -198,6 +198,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		maxWorkspaceFiles,
 		mcpEnabled,
 		requestDelaySeconds,
+		autoRetryMax,
+		autoRetryStrategy,
 		remoteBrowserHost,
 		screenshotQuality,
 		soundEnabled,
@@ -559,6 +561,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 					terminalCompressProgressBar,
 					mcpEnabled,
 					alwaysApproveResubmit: alwaysApproveResubmit ?? false,
+					autoRetryMax: autoRetryMax ?? 0,
+					autoRetryStrategy: autoRetryStrategy ?? "exponential",
 					requestDelaySeconds: requestDelaySeconds ?? 5,
 					maxOpenTabsContext: Math.min(Math.max(0, maxOpenTabsContext ?? 20), 500),
 					maxWorkspaceFiles: Math.min(Math.max(0, maxWorkspaceFiles ?? 200), 500),
@@ -1030,6 +1034,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 							alwaysAllowBrowser={alwaysAllowBrowser}
 							alwaysApproveResubmit={alwaysApproveResubmit}
 							requestDelaySeconds={requestDelaySeconds}
+							autoRetryMax={autoRetryMax}
+							autoRetryStrategy={autoRetryStrategy}
 							alwaysAllowMcp={alwaysAllowMcp}
 							alwaysAllowModeSwitch={alwaysAllowModeSwitch}
 							alwaysAllowSubtasks={alwaysAllowSubtasks}

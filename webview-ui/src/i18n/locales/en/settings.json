@@ -225,7 +225,17 @@
 		"retry": {
 			"label": "Retry",
 			"description": "Automatically retry failed API requests when server returns an error response",
-			"delayLabel": "Delay before retrying the request"
+			"delayLabel": "Delay before retrying the request",
+			"maxLabel": "Maximum number of retries (0 for unlimited)",
+			"strategyLabel": "Retry Strategy",
+			"strategies": {
+				"constant": "Constant",
+				"constantDescription": "Delay remains fixed for every retry (e.g., 5s, 5s, 5s...)",
+				"linear": "Linear",
+				"linearDescription": "Delay increases by a fixed amount on each retry (e.g., 5s, 10s, 15s...)",
+				"exponential": "Exponential",
+				"exponentialDescription": "Delay increases exponentially with each retry (e.g., 5s, 10s, 20s...)"
+			}
 		},
 		"mcp": {
 			"label": "MCP",

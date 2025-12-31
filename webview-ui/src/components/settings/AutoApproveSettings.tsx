@@ -26,6 +26,8 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowBrowser?: boolean
 	alwaysApproveResubmit?: boolean
 	requestDelaySeconds: number
+	autoRetryMax: number
+	autoRetryStrategy?: "constant" | "linear" | "exponential"
 	alwaysAllowMcp?: boolean
 	alwaysAllowModeSwitch?: boolean
 	alwaysAllowSubtasks?: boolean
@@ -50,6 +52,8 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowBrowser"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
+		| "autoRetryMax"
+		| "autoRetryStrategy"
 		| "alwaysAllowMcp"
 		| "alwaysAllowModeSwitch"
 		| "alwaysAllowSubtasks"
@@ -76,6 +80,8 @@ export const AutoApproveSettings = ({
 	alwaysAllowBrowser,
 	alwaysApproveResubmit,
 	requestDelaySeconds,
+	autoRetryMax,
+	autoRetryStrategy,
 	alwaysAllowMcp,
 	alwaysAllowModeSwitch,
 	alwaysAllowSubtasks,
@@ -288,20 +294,74 @@ export const AutoApproveSettings = ({
 							<span className="codicon codicon-refresh" />
 							<div>{t("settings:autoApprove.retry.label")}</div>
 						</div>
-						<div>
-							<div className="flex items-center gap-2">
-								<Slider
-									min={5}
-									max={100}
-									step={1}
-									value={[requestDelaySeconds]}
-									onValueChange={([value]) => setCachedStateField("requestDelaySeconds", value)}
-									data-testid="request-delay-slider"
-								/>
-								<span className="w-20">{requestDelaySeconds}s</span>
+						<div className="flex gap-4">
+							<div className="flex-1">
+								<div className="flex items-center gap-2">
+									<Slider
+										min={5}
+										max={100}
+										step={1}
+										value={[requestDelaySeconds]}
+										onValueChange={([value]) => setCachedStateField("requestDelaySeconds", value)}
+										data-testid="request-delay-slider"
+									/>
+									<span className="w-12 text-right">{requestDelaySeconds}s</span>
+								</div>
+								<div className="text-vscode-descriptionForeground text-xs mt-1">
+									{t("settings:autoApprove.retry.delayLabel")}
+								</div>
 							</div>
+							<div className="flex-1">
+								<div className="flex items-center gap-2">
+									<Slider
+										min={0}
+										max={100}
+										step={1}
+										value={[autoRetryMax]}
+										onValueChange={([value]) => setCachedStateField("autoRetryMax", value)}
+										data-testid="auto-retry-max-slider"
+									/>
+									<span className="w-12 text-right">{autoRetryMax}</span>
+								</div>
+								<div className="text-vscode-descriptionForeground text-xs mt-1">
+									{t("settings:autoApprove.retry.maxLabel")}
+								</div>
+							</div>
+						</div>
+						<div className="mt-3">
+							<label className="block font-medium mb-1">
+								{t("settings:autoApprove.retry.strategyLabel")}
+							</label>
+							<Select
+								value={autoRetryStrategy || "exponential"}
+								onValueChange={(value: any) => {
+									setCachedStateField("autoRetryStrategy", value)
+									vscode.postMessage({
+										type: "updateSettings",
+										updatedSettings: { autoRetryStrategy: value },
+									})
+								}}>
+								<SelectTrigger data-testid="retry-strategy-select" className="w-full">
+									<SelectValue placeholder="Select strategy" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="constant">
+										{t("settings:autoApprove.retry.strategies.constant")}
+									</SelectItem>
+									<SelectItem value="linear">
+										{t("settings:autoApprove.retry.strategies.linear")}
+									</SelectItem>
+									<SelectItem value="exponential">
+										{t("settings:autoApprove.retry.strategies.exponential")}
+									</SelectItem>
+								</SelectContent>
+							</Select>
 							<div className="text-vscode-descriptionForeground text-sm mt-1">
-								{t("settings:autoApprove.retry.delayLabel")}
+								{autoRetryStrategy === "constant"
+									? t("settings:autoApprove.retry.strategies.constantDescription")
+									: autoRetryStrategy === "linear"
+										? t("settings:autoApprove.retry.strategies.linearDescription")
+										: t("settings:autoApprove.retry.strategies.exponentialDescription")}
 							</div>
 						</div>
 					</div>

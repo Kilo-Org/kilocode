@@ -477,6 +477,8 @@ export type ExtensionState = Pick<
 
 	writeDelayMs: number
 	requestDelaySeconds: number
+	autoRetryMax: number
+	autoRetryStrategy: "constant" | "linear" | "exponential"
 
 	enableCheckpoints: boolean
 	checkpointTimeout: number // Timeout for checkpoint initialization in seconds (default: 15)

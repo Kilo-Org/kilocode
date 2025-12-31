@@ -717,6 +717,8 @@ describe("Cline", () => {
 				mockProvider.getState = vi.fn().mockResolvedValue({
 					alwaysApproveResubmit: true,
 					requestDelaySeconds: 3,
+					autoRetryMax: 0,
+					autoRetryStrategy: "exponential",
 				})
 
 				// Mock previous API request message
@@ -842,6 +844,8 @@ describe("Cline", () => {
 				mockProvider.getState = vi.fn().mockResolvedValue({
 					alwaysApproveResubmit: true,
 					requestDelaySeconds: 3,
+					autoRetryMax: 0,
+					autoRetryStrategy: "exponential",
 				})
 
 				// Mock previous API request message

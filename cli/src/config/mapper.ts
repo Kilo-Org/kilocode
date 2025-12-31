@@ -60,6 +60,8 @@ export function mapConfigToExtensionState(
 			alwaysAllowBrowser: autoApprovalEnabled && (autoApproval?.browser?.enabled ?? false),
 			alwaysApproveResubmit: autoApprovalEnabled && (autoApproval?.retry?.enabled ?? false),
 			requestDelaySeconds: autoApproval?.retry?.delay ?? 10,
+			autoRetryMax: autoApproval?.retry?.retries ?? 0,
+			autoRetryStrategy: autoApproval?.retry?.strategy ?? "exponential",
 			alwaysAllowMcp: autoApprovalEnabled && (autoApproval?.mcp?.enabled ?? false),
 			alwaysAllowModeSwitch: autoApprovalEnabled && (autoApproval?.mode?.enabled ?? false),
 			alwaysAllowSubtasks: autoApprovalEnabled && (autoApproval?.subtasks?.enabled ?? false),

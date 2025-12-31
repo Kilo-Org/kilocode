@@ -181,7 +181,12 @@ describe("mapConfigToExtensionState", () => {
 				...baseConfig,
 				autoApproval: {
 					enabled: true,
-					retry: { enabled: true, delay: 15 },
+					retry: {
+						enabled: true,
+						delay: 15,
+						retries: 0,
+						strategy: "exponential",
+					},
 				},
 			}
 
@@ -189,6 +194,8 @@ describe("mapConfigToExtensionState", () => {
 
 			expect(state.alwaysApproveResubmit).toBe(true)
 			expect(state.requestDelaySeconds).toBe(15)
+			expect(state.autoRetryMax).toBe(0)
+			expect(state.autoRetryStrategy).toBe("exponential")
 		})
 
 		it("should set question settings correctly", () => {
