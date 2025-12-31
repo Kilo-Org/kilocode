@@ -82,6 +82,29 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
+		// Mock WorktreeManager for parallel mode tests
+		vi.doMock("../WorktreeManager", () => ({
+			WorktreeManager: vi.fn().mockImplementation(() => ({
+				createWorktree: vi.fn().mockResolvedValue({
+					branch: "test-branch-123",
+					path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+					parentBranch: "main",
+				}),
+				commitChanges: vi.fn().mockResolvedValue({ success: true }),
+				removeWorktree: vi.fn().mockResolvedValue(undefined),
+				discoverWorktrees: vi.fn().mockResolvedValue([]),
+				ensureGitignore: vi.fn().mockResolvedValue(undefined),
+			})),
+			WorktreeError: class WorktreeError extends Error {
+				constructor(
+					public code: string,
+					message: string,
+				) {
+					super(message)
+				}
+			},
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
