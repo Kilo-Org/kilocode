@@ -553,7 +553,9 @@ export async function getOpenAiModels(baseUrl?: string, apiKey?: string, openAiH
 			return []
 		}
 
-		const config: Record<string, any> = {}
+		const config: Record<string, any> = {
+			family: 4, // try ipv4 first, or use `dns.setDefaultResultOrder('ipv4first');` global config
+		}
 		const headers: Record<string, string> = {
 			...DEFAULT_HEADERS,
 			...(openAiHeaders || {}),
