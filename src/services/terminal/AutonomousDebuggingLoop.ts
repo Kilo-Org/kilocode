@@ -374,7 +374,7 @@ export class AutonomousDebuggingLoop extends EventEmitter {
 				}
 				break
 
-			case "python_import_error":
+			case "python_import_error": {
 				const moduleName = error.message.match(/'([^']+)'/)?.[1]
 				if (moduleName) {
 					suggestions.push({
@@ -386,6 +386,7 @@ export class AutonomousDebuggingLoop extends EventEmitter {
 					})
 				}
 				break
+			}
 
 			case "odoo_integrity_error":
 				suggestions.push({
@@ -397,7 +398,7 @@ export class AutonomousDebuggingLoop extends EventEmitter {
 				})
 				break
 
-			case "node_module_not_found":
+			case "node_module_not_found": {
 				const nodeModuleName = error.message.match(/'([^']+)'/)?.[1]
 				if (nodeModuleName) {
 					suggestions.push({
@@ -409,6 +410,7 @@ export class AutonomousDebuggingLoop extends EventEmitter {
 					})
 				}
 				break
+			}
 
 			case "permission_denied":
 				suggestions.push({
