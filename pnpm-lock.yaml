@@ -1707,6 +1707,9 @@ importers:
       '@lmstudio/sdk':
         specifier: ^1.1.1
         version: 1.2.0
+      '@lydell/node-pty':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@mistralai/mistralai':
         specifier: ^1.9.18
         version: 1.9.18(zod@3.25.61)
