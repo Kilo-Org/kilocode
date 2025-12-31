@@ -21,7 +21,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { Package } from "../../shared/package"
 import { BATCH_SEGMENT_THRESHOLD } from "./constants"
-import { getLancedbVectorStoreDirectoryPath } from "../../utils/storage"
+import { getWorkspaceLancedbVectorStoreDirectoryPath } from "../../utils/storage"
 import { LanceDBManager } from "../../utils/lancedb-manager"
 
 /**
@@ -168,7 +168,8 @@ export class CodeIndexServiceFactory {
 			const { workspacePath } = this
 			const globalStorageUri = this.configManager.getContextProxy().globalStorageUri.fsPath
 			const lancedbVectorStoreDirectoryPlaceholder =
-				config.lancedbVectorStoreDirectoryPlaceholder || getLancedbVectorStoreDirectoryPath(globalStorageUri)
+				config.lancedbVectorStoreDirectoryPlaceholder ||
+				getWorkspaceLancedbVectorStoreDirectoryPath(workspacePath, globalStorageUri)
 			return new LanceDBVectorStore(
 				workspacePath,
 				vectorSize,

@@ -42,6 +42,7 @@ export const toolParamNames = [
 	"regex",
 	"file_pattern",
 	"recursive",
+	"depth",
 	"action",
 	"url",
 	"coordinate",
@@ -76,6 +77,7 @@ export const toolParamNames = [
 	"new_str",
 	// kilocode_change end
 	"query",
+	"symbol",
 	"args",
 	"start_line",
 	"end_line",
@@ -112,7 +114,12 @@ export type NativeToolArgs = {
 		follow_up: Array<{ text: string; mode?: string }>
 	}
 	browser_action: BrowserActionParams
-	codebase_search: { query: string; path?: string }
+	codebase_search: { query: string; path?: string | null }
+	// kilocode_change start
+	semantic_search: { query: string; path?: string | null }
+	find_references: { symbol: string; path?: string | null }
+	get_module_structure: { path?: string | null; depth?: number | null }
+	// kilocode_change end
 	fetch_instructions: { task: string }
 	generate_image: GenerateImageParams
 	run_slash_command: { command: string; args?: string }
@@ -276,6 +283,11 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	write_to_file: "write files",
 	apply_diff: "apply changes",
 	// kilocode_change start
+	semantic_search: "semantic search",
+	find_references: "find references",
+	get_module_structure: "get module structure",
+	// kilocode_change end
+	// kilocode_change start
 	edit_file: "edit file",
 	delete_file: "delete files",
 	report_bug: "report bug",
@@ -303,7 +315,18 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 // Define available tool groups.
 export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	read: {
-		tools: ["read_file", "fetch_instructions", "search_files", "list_files", "codebase_search"],
+		tools: [
+			"read_file",
+			"fetch_instructions",
+			"search_files",
+			"list_files",
+			"codebase_search",
+			// kilocode_change start
+			"semantic_search",
+			"find_references",
+			"get_module_structure",
+			// kilocode_change end
+		],
 	},
 	edit: {
 		tools: [

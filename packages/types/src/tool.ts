@@ -34,6 +34,11 @@ export const toolNames = [
 	"fetch_instructions",
 	"codebase_search",
 	// kilocode_change start
+	"semantic_search",
+	"find_references",
+	"get_module_structure",
+	// kilocode_change end
+	// kilocode_change start
 	"edit_file",
 	"new_rule",
 	"report_bug",

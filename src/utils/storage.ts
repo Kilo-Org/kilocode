@@ -113,6 +113,28 @@ export function getLancedbVectorStoreDirectoryPath(globalStoragePath: string): s
 	fsSync.mkdirSync(cacheDir, { recursive: true })
 	return cacheDir
 }
+
+// kilocode_change - start
+export function getKilocodeIndexDirectoryPath(workspacePath: string): string {
+	const dir = path.join(workspacePath, "kilocode-index")
+	try {
+		fsSync.mkdirSync(dir, { recursive: true })
+	} catch {
+		// ignore
+	}
+	return dir
+}
+
+export function getWorkspaceLancedbVectorStoreDirectoryPath(workspacePath: string, globalStoragePath: string): string {
+	const preferred = path.join(getKilocodeIndexDirectoryPath(workspacePath), "vector")
+	try {
+		fsSync.mkdirSync(preferred, { recursive: true })
+		return preferred
+	} catch {
+		return getLancedbVectorStoreDirectoryPath(globalStoragePath)
+	}
+}
+// kilocode_change - end
 // kilocode_change - end
 
 /**
