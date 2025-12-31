@@ -28,12 +28,28 @@ import {
 
 /**
  * Default component for unknown say message types
+ * Handles graceful fallback for unknown or future say types
  */
-const DefaultSayMessage: React.FC<MessageComponentProps> = ({ message }) => {
+export const DefaultSayMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
+	
+	// Try to parse JSON content for better display
+	let displayContent = message.text || `Unknown say type: ${message.say}`
+	
+	// If text looks like JSON, try to format it nicely
+	if (message.text && message.text.trim().startsWith("{") || message.text?.trim().startsWith("[")) {
+		try {
+			const parsed = JSON.parse(message.text)
+			displayContent = JSON.stringify(parsed, null, 2)
+		} catch {
+			// Not valid JSON, use as-is
+			displayContent = message.text
+		}
+	}
+	
 	return (
 		<Box marginY={1}>
-			<Text color={theme.semantic.success}>{message.text || `Unknown say type: ${message.say}`}</Text>
+			<Text color={theme.semantic.success}>{displayContent}</Text>
 		</Box>
 	)
 }

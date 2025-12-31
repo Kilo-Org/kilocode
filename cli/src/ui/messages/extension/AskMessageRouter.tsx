@@ -23,12 +23,28 @@ import {
 
 /**
  * Default component for unknown ask message types
+ * Handles graceful fallback for unknown or future ask types
  */
-const DefaultAskMessage: React.FC<MessageComponentProps> = ({ message }) => {
+export const DefaultAskMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
+	
+	// Try to parse JSON content for better display
+	let displayContent = message.text || `Unknown ask type: ${message.ask}`
+	
+	// If text looks like JSON, try to format it nicely
+	if (message.text && (message.text.trim().startsWith("{") || message.text.trim().startsWith("["))) {
+		try {
+			const parsed = JSON.parse(message.text)
+			displayContent = JSON.stringify(parsed, null, 2)
+		} catch {
+			// Not valid JSON, use as-is
+			displayContent = message.text
+		}
+	}
+	
 	return (
 		<Box marginY={1}>
-			<Text color={theme.semantic.warning}>{message.text || `Unknown ask type: ${message.ask}`}</Text>
+			<Text color={theme.semantic.warning}>{displayContent}</Text>
 		</Box>
 	)
 }
