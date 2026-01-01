@@ -1270,7 +1270,7 @@ export const webviewMessageHandler = async (
 		case "taskHistoryRequest": {
 			await provider.postMessageToWebview({
 				type: "taskHistoryResponse",
-				payload: getTaskHistory(
+				payload: await getTaskHistory(
 					provider.getTaskHistory(),
 					provider.cwd,
 					message.payload as TaskHistoryRequestPayload,

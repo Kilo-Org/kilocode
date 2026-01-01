@@ -1,356 +1,439 @@
 // kilocode_change - new file
 
-import { EventEmitter } from "events"
-import { AgentRegistry } from "../agents/agent-registry"
-import { Blackboard } from "./blackboard"
-import { ExecutionPlan, PlanStep, AgentTask, AgentMessage } from "../agents/types"
-import { AgentRegistryConfig } from "../agents/types"
-import { BlackboardConfig } from "./blackboard"
+import type { DecisionEngine, DecisionResult, DecisionEngineConfig, ObservationStep } from "./decision-engine"
+import { DecisionEngine as DecisionEngineImpl } from "./decision-engine"
+import { SelfHealingStrategy, type ErrorContext, type RecoveryPlan } from "./decision-engine/self-healing-strategy"
+import {
+	UserInterventionService,
+	type InterventionRequest,
+	type InterventionResponse,
+} from "./decision-engine/user-intervention-service"
+import { ConfidenceScorer, type ConfidenceContext } from "./decision-engine/confidence-scorer"
+import { OdooErrorHandler } from "./decision-engine/odoo-error-handler"
+import { createThinkingStateManager, type ThinkingState } from "./decision-engine/thinking-state"
+import { OrchestratorUIBridge } from "./decision-engine/ui-integration"
 
 export interface OrchestratorConfig {
-	agentRegistry: AgentRegistryConfig
-	blackboard: BlackboardConfig
-	workspaceRoot: string
-	enableAutoPlanning: boolean
-	enableAutoExecution: boolean
-	enableAutoVerification: boolean
+	decisionEngine: DecisionEngineConfig
+	selfHealing: { defaultMaxRetries: number }
+	userIntervention: {
+		maxTokenThreshold: number
+		maxCostThreshold: number
+		enableHighRiskDetection: boolean
+	}
+	confidence: { defaultThreshold: number }
+	ui: {
+		showDecisionLogs: boolean
+		showConfidenceScore: boolean
+		enableRealTimeUpdates: boolean
+	}
 }
 
-export class OrchestratorService extends EventEmitter {
-	private _agentRegistry: AgentRegistry
-	private _blackboard: Blackboard
-	private _config: OrchestratorConfig
-	private _activePlans: Map<string, ExecutionPlan> = new Map()
-	private _isRunning: boolean = false
+export interface OrchestratorTask {
+	id: string
+	description: string
+	steps: OrchestratorStep[]
+	context: Record<string, unknown>
+}
 
-	constructor(config: OrchestratorConfig) {
-		super()
-		this._config = config
-		this._agentRegistry = new AgentRegistry(config.agentRegistry)
-		this._blackboard = new Blackboard(config.blackboard)
+export interface OrchestratorStep {
+	id: string
+	description: string
+	action: string
+	target?: string
+	estimatedTokens?: number
+	dependencies?: string[]
+}
 
-		this.setupEventHandlers()
-		console.log("[Orchestrator] Initialized with config:", config)
+export interface OrchestratorResult {
+	success: boolean
+	completedSteps: number
+	totalSteps: number
+	decisions: DecisionResult[]
+	healingAttempts: number
+	interventions: number
+	summary: Record<string, unknown>
+}
+
+export type OrchestratorEventHandler = (event: OrchestratorEvent) => void
+
+export interface OrchestratorEvent {
+	type: string
+	timestamp: number
+	payload?: Record<string, unknown>
+}
+
+export class OrchestratorService {
+	private config: OrchestratorConfig
+	private decisionEngine: DecisionEngine
+	private selfHealing: SelfHealingStrategy
+	private userIntervention: UserInterventionService
+	private confidenceScorer: ConfidenceScorer
+	private odooErrorHandler: OdooErrorHandler
+	private thinkingState: ReturnType<typeof createThinkingStateManager>
+	private uiBridge: OrchestratorUIBridge
+	private eventHandlers: Set<OrchestratorEventHandler>
+	private currentTask: OrchestratorTask | null = null
+	private isRunning: boolean = false
+	private abortController: AbortController | null = null
+
+	constructor(config?: Partial<OrchestratorConfig>) {
+		this.config = this.getDefaultConfig(config)
+
+		// Initialize components
+		this.decisionEngine = new DecisionEngineImpl(this.config.decisionEngine)
+		this.selfHealing = new SelfHealingStrategy({
+			defaultMaxRetries: this.config.selfHealing.defaultMaxRetries,
+		})
+		this.userIntervention = new UserInterventionService({
+			maxTokenThreshold: this.config.userIntervention.maxTokenThreshold,
+			maxCostThreshold: this.config.userIntervention.maxCostThreshold,
+			enableHighRiskDetection: this.config.userIntervention.enableHighRiskDetection,
+		})
+		this.confidenceScorer = new ConfidenceScorer({
+			defaultThreshold: this.config.confidence.defaultThreshold,
+		})
+		this.odooErrorHandler = new OdooErrorHandler()
+		this.thinkingState = createThinkingStateManager()
+		this.uiBridge = new OrchestratorUIBridge({
+			showDecisionLogs: this.config.ui.showDecisionLogs,
+			showConfidenceScore: this.config.ui.showConfidenceScore,
+			enableRealTimeUpdates: this.config.ui.enableRealTimeUpdates,
+		})
+		this.eventHandlers = new Set()
+
+		// Setup user intervention callback
+		this.userIntervention.setCallback(async (request: InterventionRequest) => {
+			return this.handleUserIntervention(request)
+		})
 	}
 
-	/**
-	 * Start the orchestrator
-	 */
-	async start(): Promise<void> {
-		if (this._isRunning) {
-			console.warn("[Orchestrator] Already running")
-			return
-		}
-
-		console.log("[Orchestrator] Starting...")
-		this._isRunning = true
-
-		// Load blackboard data if persistence is enabled
-		if (this._config.blackboard.enablePersistence) {
-			await this._blackboard.load()
-		}
-
-		this.emit("started")
-		console.log("[Orchestrator] Started successfully")
-	}
-
-	/**
-	 * Stop the orchestrator
-	 */
-	async stop(): Promise<void> {
-		if (!this._isRunning) {
-			console.warn("[Orchestrator] Not running")
-			return
-		}
-
-		console.log("[Orchestrator] Stopping...")
-		this._isRunning = false
-
-		// Shutdown all agents
-		await this._agentRegistry.shutdown()
-
-		// Destroy blackboard
-		this._blackboard.destroy()
-
-		this.emit("stopped")
-		console.log("[Orchestrator] Stopped successfully")
-	}
-
-	/**
-	 * Process a user request and create execution plan
-	 */
-	async processRequest(request: string, context?: any): Promise<ExecutionPlan> {
-		console.log("[Orchestrator] Processing request:", request)
-
-		// Store request in blackboard
-		this._blackboard.write(
-			`request:${Date.now()}`,
-			{
-				request,
-				context,
-				status: "processing",
-			},
-			"orchestrator",
-		)
-
-		try {
-			// Get planner agent
-			const plannerAgents = this._agentRegistry.getAgentsByType("planner")
-			if (plannerAgents.length === 0) {
-				throw new Error("No planner agent available")
-			}
-
-			const plannerAgent = plannerAgents[0]
-
-			// Create planning task
-			const task: AgentTask = {
-				id: `plan-${Date.now()}`,
-				type: "analyze_request",
-				assignedTo: plannerAgent.config.id,
-				createdBy: "orchestrator",
-				status: "pending",
-				priority: "medium",
-				input: { request, context },
-				createdAt: new Date(),
-				updatedAt: new Date(),
-			}
-
-			// Submit task to planner
-			await this._agentRegistry.submitTask(task)
-
-			// Wait for plan creation (simplified - in real scenario would use events/promises)
-			await new Promise((resolve) => setTimeout(resolve, 2000))
-
-			// Get the created plan from blackboard or agent state
-			const plan = await this.extractPlanFromAgent(plannerAgent.config.id)
-
-			if (plan) {
-				this._activePlans.set(plan.id, plan)
-
-				// Store plan in blackboard
-				this._blackboard.write(`plan:${plan.id}`, plan, "orchestrator")
-
-				this.emit("planCreated", plan)
-
-				// Auto-execute if enabled
-				if (this._config.enableAutoExecution) {
-					await this.executePlan(plan.id)
-				}
-
-				return plan
-			} else {
-				throw new Error("Failed to create execution plan")
-			}
-		} catch (error) {
-			console.error("[Orchestrator] Error processing request:", error)
-			throw error
-		}
-	}
-
-	/**
-	 * Execute an existing plan
-	 */
-	async executePlan(planId: string): Promise<void> {
-		const plan = this._activePlans.get(planId)
-		if (!plan) {
-			throw new Error(`Plan ${planId} not found`)
-		}
-
-		console.log("[Orchestrator] Executing plan:", planId)
-		plan.status = "active"
-		plan.updatedAt = new Date()
-
-		// Update plan in blackboard
-		this._blackboard.write(`plan:${planId}`, plan, "orchestrator")
-
-		try {
-			// Execute steps in dependency order
-			const executedSteps = new Set<string>()
-			let stepCount = 0
-
-			while (executedSteps.size < plan.steps.length && stepCount < 100) {
-				// Safety limit
-				stepCount++
-
-				for (const step of plan.steps) {
-					if (executedSteps.has(step.id)) {
-						continue
-					}
-
-					// Check if dependencies are satisfied
-					const dependenciesSatisfied = step.dependencies.every((dep) => executedSteps.has(dep))
-
-					if (!dependenciesSatisfied) {
-						continue
-					}
-
-					// Execute step
-					await this.executeStep(step)
-					executedSteps.add(step.id)
-				}
-
-				// Wait a bit between iterations
-				await new Promise((resolve) => setTimeout(resolve, 500))
-			}
-
-			// Check if all steps completed
-			const allCompleted = plan.steps.every((step) => step.status === "completed" || step.status === "skipped")
-
-			plan.status = allCompleted ? "completed" : "failed"
-			plan.updatedAt = new Date()
-
-			// Update plan in blackboard
-			this._blackboard.write(`plan:${planId}`, plan, "orchestrator")
-
-			this.emit("planCompleted", plan)
-			console.log(`[Orchestrator] Plan ${planId} ${plan.status}`)
-		} catch (error) {
-			plan.status = "failed"
-			plan.updatedAt = new Date()
-
-			this._blackboard.write(`plan:${planId}`, plan, "orchestrator")
-			this.emit("planFailed", plan, error)
-
-			console.error(`[Orchestrator] Plan ${planId} failed:`, error)
-		}
-	}
-
-	/**
-	 * Get active plans
-	 */
-	getActivePlans(): ExecutionPlan[] {
-		return Array.from(this._activePlans.values())
-	}
-
-	/**
-	 * Get plan by ID
-	 */
-	getPlan(planId: string): ExecutionPlan | undefined {
-		return this._activePlans.get(planId)
-	}
-
-	/**
-	 * Get orchestrator status
-	 */
-	getStatus(): {
-		isRunning: boolean
-		activePlans: number
-		agentStats: any
-		blackboardStats: any
-	} {
+	private getDefaultConfig(partial?: Partial<OrchestratorConfig>): OrchestratorConfig {
 		return {
-			isRunning: this._isRunning,
-			activePlans: this._activePlans.size,
-			agentStats: this._agentRegistry.getStats(),
-			blackboardStats: this._blackboard.getStats(),
+			decisionEngine: {
+				maxReflections: partial?.decisionEngine?.maxReflections ?? 5,
+				observationThreshold: partial?.decisionEngine?.observationThreshold ?? 0.7,
+				confidenceThreshold: partial?.decisionEngine?.confidenceThreshold ?? 0.7,
+				timeoutMs: partial?.decisionEngine?.timeoutMs ?? 30000,
+			},
+			selfHealing: {
+				defaultMaxRetries: partial?.selfHealing?.defaultMaxRetries ?? 3,
+			},
+			userIntervention: {
+				maxTokenThreshold: partial?.userIntervention?.maxTokenThreshold ?? 100000,
+				maxCostThreshold: partial?.userIntervention?.maxCostThreshold ?? 10.0,
+				enableHighRiskDetection: partial?.userIntervention?.enableHighRiskDetection ?? true,
+			},
+			confidence: {
+				defaultThreshold: partial?.confidence?.defaultThreshold ?? 0.7,
+			},
+			ui: {
+				showDecisionLogs: partial?.ui?.showDecisionLogs ?? true,
+				showConfidenceScore: partial?.ui?.showConfidenceScore ?? true,
+				enableRealTimeUpdates: partial?.ui?.enableRealTimeUpdates ?? true,
+			},
 		}
 	}
 
-	/**
-	 * Get agent registry
-	 */
-	getAgentRegistry(): AgentRegistry {
-		return this._agentRegistry
-	}
+	// Main execution method
+	async runTask(task: OrchestratorTask): Promise<OrchestratorResult> {
+		if (this.isRunning) {
+			throw new Error("Orchestrator is already running a task")
+		}
 
-	/**
-	 * Get blackboard
-	 */
-	getBlackboard(): Blackboard {
-		return this._blackboard
-	}
+		this.isRunning = true
+		this.currentTask = task
+		this.abortController = new AbortController()
 
-	private setupEventHandlers(): void {
-		// Handle agent events
-		this._agentRegistry.on("taskCompleted", (agent: any, task: AgentTask) => {
-			console.log(`[Orchestrator] Task completed: ${task.id} by ${agent.config.id}`)
-			this.emit("taskCompleted", agent, task)
-		})
-
-		this._agentRegistry.on("taskFailed", (agent: any, task: AgentTask) => {
-			console.error(`[Orchestrator] Task failed: ${task.id} by ${agent.config.id}`)
-			this.emit("taskFailed", agent, task)
-		})
-
-		this._agentRegistry.on("messageRouted", (message: AgentMessage) => {
-			console.log(`[Orchestrator] Message routed: ${message.from} -> ${message.to}`)
-			this.emit("messageRouted", message)
-		})
-
-		// Handle blackboard events
-		this._blackboard.on("entryWritten", (entry) => {
-			this.emit("blackboardUpdate", "write", entry)
-		})
-
-		this._blackboard.on("entryRead", (entry) => {
-			this.emit("blackboardUpdate", "read", entry)
-		})
-	}
-
-	private async executeStep(step: PlanStep): Promise<void> {
-		console.log(`[Orchestrator] Executing step: ${step.id}`)
-
-		step.status = "in_progress"
-		step.actualDuration = 0
-		const startTime = Date.now()
+		const decisions: DecisionResult[] = []
+		let healingAttempts = 0
+		let interventions = 0
 
 		try {
-			// Get the assigned agent
-			const agent = this._agentRegistry.getAgent(step.assignedAgent)
-			if (!agent) {
-				throw new Error(`Agent ${step.assignedAgent} not found`)
+			this.thinkingState.setState("analyzing")
+			this.emitEvent("task_started", { taskId: task.id })
+
+			// Pre-execution checks
+			for (const step of task.steps) {
+				if (this.abortController?.signal.aborted) {
+					throw new Error("Task was cancelled")
+				}
+
+				// Check confidence threshold
+				const confidence = this.confidenceScorer.calculateStepConfidence(
+					step.id,
+					step.description,
+					this.buildConfidenceContext(task, step),
+				)
+
+				this.uiBridge.notifyConfidenceUpdate({
+					overall: confidence.confidence,
+					factors: Object.entries(confidence.factors).map(([name, score]) => ({
+						name,
+						score,
+						weight: 1,
+						contribution: score,
+					})),
+					threshold: this.config.confidence.defaultThreshold,
+					isSufficient: confidence.confidence >= this.config.confidence.defaultThreshold,
+					recommendation:
+						confidence.confidence >= this.config.confidence.defaultThreshold
+							? "Proceed"
+							: "User approval recommended",
+				})
+
+				if (confidence.requiresApproval) {
+					this.thinkingState.setState("waiting_user")
+					interventions++
+					const intervention = await this.userIntervention.checkConfidenceThreshold(
+						confidence.confidence,
+						step.description,
+					)
+					if (intervention && !intervention.approved) {
+						return {
+							success: false,
+							completedSteps: 0,
+							totalSteps: task.steps.length,
+							decisions,
+							healingAttempts,
+							interventions,
+							summary: { reason: "User rejected low confidence step" },
+						}
+					}
+				}
+
+				// Check for high-risk actions
+				const riskAssessment = this.userIntervention.assessRisk(step.action, step.target ?? "")
+
+				if (riskAssessment.isHighRisk) {
+					this.thinkingState.setState("waiting_user")
+					interventions++
+					const response = await this.userIntervention.requestIntervention(
+						"high_risk",
+						`High-risk action: ${step.action} on ${step.target}`,
+						{ riskLevel: riskAssessment.riskLevel, riskFactors: riskAssessment.riskFactors },
+					)
+					if (!response.approved) {
+						return {
+							success: false,
+							completedSteps: 0,
+							totalSteps: task.steps.length,
+							decisions,
+							healingAttempts,
+							interventions,
+							summary: { reason: "User rejected high-risk action" },
+						}
+					}
+				}
+
+				// Execute the step through decision engine
+				this.thinkingState.setState("executing")
+
+				const decisionResult = await this.executeWithDecisionLoop(step, task.context)
+				decisions.push(decisionResult)
+
+				// Handle self-healing if needed
+				if (decisionResult.action === "retry" || decisionResult.action === "heal") {
+					healingAttempts++
+					const recoveryPlan = await this.createRecoveryPlan(step, decisionResult)
+					await this.executeRecoveryPlan(recoveryPlan)
+				}
+
+				this.uiBridge.notifyStepComplete(step.id, {
+					success: decisionResult.action === "proceed",
+					confidence: decisionResult.confidence,
+				})
+
+				// Log the decision
+				this.thinkingState.logDecision(decisionResult.action, decisionResult.reasoning, { stepId: step.id })
+				this.uiBridge.notifyDecisionLog({
+					id: `log-${Date.now()}`,
+					timestamp: Date.now(),
+					state: this.thinkingState.state,
+					decision: decisionResult.action,
+					reasoning: decisionResult.reasoning,
+					context: { stepId: step.id },
+				})
 			}
 
-			// Create task for the step
-			const task: AgentTask = {
-				id: `step-${step.id}-${Date.now()}`,
-				type: step.type,
-				assignedTo: step.assignedAgent,
-				createdBy: "orchestrator",
-				status: "pending",
-				priority: "medium",
-				input: step.input,
-				createdAt: new Date(),
-				updatedAt: new Date(),
+			this.thinkingState.setState("completed")
+			this.emitEvent("task_completed", { taskId: task.id })
+
+			return {
+				success: true,
+				completedSteps: task.steps.length,
+				totalSteps: task.steps.length,
+				decisions,
+				healingAttempts,
+				interventions,
+				summary: {
+					taskId: task.id,
+					allStepsCompleted: true,
+				},
 			}
-
-			// Submit task
-			await this._agentRegistry.submitTask(task)
-
-			// Wait for completion (simplified)
-			await new Promise((resolve) => setTimeout(resolve, 3000))
-
-			step.status = "completed"
-			step.actualDuration = Date.now() - startTime
-
-			console.log(`[Orchestrator] Step completed: ${step.id} in ${step.actualDuration}ms`)
 		} catch (error) {
-			step.status = "failed"
-			step.error = error instanceof Error ? error.message : String(error)
-			step.actualDuration = Date.now() - startTime
+			this.thinkingState.setState("error")
+			this.uiBridge.notifyError(error instanceof Error ? error : new Error(String(error)), { taskId: task.id })
+			this.emitEvent("task_error", { taskId: task.id, error })
 
-			console.error(`[Orchestrator] Step failed: ${step.id}`, error)
+			return {
+				success: false,
+				completedSteps: 0,
+				totalSteps: task.steps.length,
+				decisions,
+				healingAttempts,
+				interventions,
+				summary: {
+					error: error instanceof Error ? error.message : String(error),
+				},
+			}
+		} finally {
+			this.isRunning = false
+			this.currentTask = null
 		}
 	}
 
-	private async extractPlanFromAgent(agentId: string): Promise<ExecutionPlan | undefined> {
-		// This is a simplified implementation
-		// In a real scenario, you'd get the plan from the agent's completed tasks or events
-
-		const agent = this._agentRegistry.getAgent(agentId)
-		if (!agent) {
-			return undefined
+	private async executeWithDecisionLoop(
+		step: OrchestratorStep,
+		context: Record<string, unknown>,
+	): Promise<DecisionResult> {
+		// Use the decision engine to make a decision
+		const decisionContext = {
+			...context,
+			step,
+			toolCall: {
+				name: step.action,
+				arguments: { target: step.target },
+			},
 		}
 
-		// Look for recently completed planning tasks
-		const completedTasks = agent.state.completedTasks
-			.filter((task) => task.type === "analyze_request" && task.status === "completed")
-			.sort((a, b) => b.completedAt!.getTime() - a.completedAt!.getTime())
+		return this.decisionEngine.makeDecision(decisionContext)
+	}
 
-		if (completedTasks.length > 0) {
-			return completedTasks[0].output as ExecutionPlan
+	private async createRecoveryPlan(step: OrchestratorStep, decision: DecisionResult): Promise<RecoveryPlan> {
+		const errorContext: ErrorContext = {
+			toolName: step.action,
+			errorMessage:
+				decision.observations
+					.filter((o: ObservationStep) => o.status === "failed")
+					.map((o: ObservationStep) => o.error)
+					.join("; ") || "Unknown error",
+			previousAttempts: decision.reflections.length,
 		}
 
-		return undefined
+		// Check for Odoo-specific errors first
+		if (this.odooErrorHandler.isOdooError(errorContext.errorMessage)) {
+			return this.odooErrorHandler.createRecoveryPlan(errorContext)
+		}
+
+		return this.selfHealing.createRecoveryPlan(errorContext)
+	}
+
+	private async executeRecoveryPlan(plan: RecoveryPlan): Promise<void> {
+		if (plan.escalate) {
+			await this.userIntervention.requestIntervention("high_risk", `Recovery failed: ${plan.escalationReason}`, {
+				recoveryPlan: plan,
+			})
+			return
+		}
+
+		for (const recoveryStep of plan.steps) {
+			this.thinkingState.setState("healing")
+			this.uiBridge.notifyHealingAttempt(
+				{ success: true, action: recoveryStep.action, error: null, retryCount: 1, willRetry: true },
+				1,
+			)
+		}
+	}
+
+	private async handleUserIntervention(request: InterventionRequest): Promise<InterventionResponse> {
+		this.uiBridge.notifyInterventionRequest(request)
+
+		// In a real implementation, this would wait for user input
+		// For now, we use a timeout-based response
+		return new Promise((resolve) => {
+			// This is a placeholder - in production, this would connect to the UI
+			setTimeout(() => {
+				resolve({ approved: false, action: "wait" })
+			}, 100)
+		})
+	}
+
+	private buildConfidenceContext(task: OrchestratorTask, step: OrchestratorStep): ConfidenceContext {
+		return {
+			taskDescription: task.description,
+			availableTools: [step.action],
+			codebaseContext: task.context,
+			complexity: step.estimatedTokens && step.estimatedTokens > 50000 ? "high" : "medium",
+			uncertaintyLevel: 0.3,
+			timeEstimate: 30,
+			hasTests: false,
+			isOdooProject: task.context["odooProject"] as boolean,
+		}
+	}
+
+	// Event handling
+	onEvent(handler: OrchestratorEventHandler): () => void {
+		this.eventHandlers.add(handler)
+		return () => this.eventHandlers.delete(handler)
+	}
+
+	private emitEvent(type: string, payload?: Record<string, unknown>): void {
+		const event: OrchestratorEvent = { type, timestamp: Date.now(), payload }
+		for (const handler of this.eventHandlers) {
+			try {
+				handler(event)
+			} catch (error) {
+				console.error("Error in event handler:", error)
+			}
+		}
+	}
+
+	// Control methods
+	pause(): void {
+		if (this.isRunning) {
+			this.thinkingState.pause("User requested pause")
+			this.abortController?.abort()
+		}
+	}
+
+	resume(): void {
+		if (!this.isRunning && this.currentTask) {
+			this.runTask(this.currentTask)
+		} else {
+			this.thinkingState.resume()
+		}
+	}
+
+	cancel(): void {
+		this.abortController?.abort()
+		this.isRunning = false
+		this.thinkingState.reset()
+	}
+
+	// State inspection
+	getState(): { thinkingState: ThinkingState; isRunning: boolean; task?: string } {
+		return {
+			thinkingState: this.thinkingState.getState(),
+			isRunning: this.isRunning,
+			task: this.currentTask?.id,
+		}
+	}
+
+	getDecisionLogs(): ReturnType<typeof this.thinkingState.getDecisionLogs> {
+		return this.thinkingState.getDecisionLogs()
+	}
+
+	// Configuration
+	updateConfig(updates: Partial<OrchestratorConfig>): void {
+		this.config = { ...this.config, ...updates }
+		this.decisionEngine.updateConfig(this.config.decisionEngine)
+		this.userIntervention.updateConfig(this.config.userIntervention)
+		this.confidenceScorer.updateConfig(this.config.confidence)
+		this.uiBridge.updateConfig(this.config.ui)
+	}
+
+	getConfig(): OrchestratorConfig {
+		return { ...this.config }
 	}
 }
