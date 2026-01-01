@@ -616,7 +616,7 @@ export class DatabaseManager {
 	/**
 	 * Upsert an external relationship
 	 */
-	async upsertExternalRelationship(relationship: Omit<ExternalRelationshipRecord, "created_at">): Promise<void> {
+	async upsertExternalRelationship(relationship: ExternalRelationshipRecord): Promise<void> {
 		if (!this.db) throw new Error("Database not initialized")
 
 		await this.db.run(

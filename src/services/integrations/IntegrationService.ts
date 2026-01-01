@@ -201,7 +201,7 @@ export class IntegrationService {
 					sourceId: discussion.sourceId,
 					targetType: "symbol",
 					targetId: match.symbolId,
-					relationshipType: match.type,
+					relationshipType: match.type as "references" | "mentions" | "discusses" | "implements" | "fixes",
 					confidence: match.confidence,
 					createdAt: Date.now(),
 					metadata: {
