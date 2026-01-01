@@ -448,10 +448,17 @@ export class DatabaseManager {
 		])
 
 		return {
-			files: files?.count || 0,
-			symbols: symbols?.count || 0,
-			relationships: relationships?.count || 0,
-			codeChunks: chunks?.count || 0,
+			files: files.count,
+			symbols: symbols.count,
+			relationships: relationships.count,
+			chunks: chunks.count,
 		}
+	}
+
+	/**
+	 * Get the underlying database instance (for advanced usage)
+	 */
+	getDatabase() {
+		return this.db
 	}
 }

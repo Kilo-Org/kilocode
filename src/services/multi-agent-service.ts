@@ -10,12 +10,15 @@ import {
 	ExecutorConfig,
 	VerifierAgent,
 	VerifierConfig,
+	ResearchAgent,
+	ResearchAgentConfig,
 } from "../agents"
 import { Blackboard, BlackboardConfig } from "../orchestrator"
 import { AIService } from "../ai"
 import { DatabaseManager } from "../storage"
 import { ParserService } from "../parser"
 import { ExecutorService } from "../executor"
+import { KnowledgeService, KnowledgeServiceConfig } from "../knowledge"
 import * as vscode from "vscode"
 
 export interface MultiAgentServiceConfig {
@@ -195,6 +198,26 @@ export class MultiAgentService {
 				typescript: ["eslint", "tsc --noEmit"],
 			},
 		}
+
+		// Initialize knowledge service for research agent
+		const knowledgeService = new KnowledgeService({
+			databaseManager: this._config.databaseManager,
+			workspaceRoot: this._config.workspaceRoot,
+		})
+
+		// Initialize research agent
+		const researchConfig: ResearchAgentConfig = {
+			aiService: this._config.aiService,
+			knowledgeService,
+			workspaceRoot: this._config.workspaceRoot,
+			id: "research-agent",
+			name: "Research Agent",
+			description: "Specialized agent for documentation research and knowledge retrieval",
+			version: "1.0.0",
+		}
+
+		// Register the research agent
+		await agentRegistry.registerAgent("research", researchConfig)
 
 		await agentRegistry.initializeDefaultAgents({
 			planner: plannerConfig,
