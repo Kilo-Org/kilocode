@@ -1,6 +1,6 @@
 // kilocode_change - new file
 
-import { OrchestratorService, OrchestratorConfig } from "../orchestrator"
+import { OrchestratorService, OrchestratorConfig } from "./orchestrator"
 import {
 	AgentRegistry,
 	AgentRegistryConfig,
@@ -12,13 +12,13 @@ import {
 	VerifierConfig,
 	ResearchAgent,
 	ResearchAgentConfig,
-} from "../agents"
-import { Blackboard, BlackboardConfig } from "../orchestrator"
-import { AIService } from "../ai"
-import { DatabaseManager } from "../storage"
-import { ParserService } from "../parser"
-import { ExecutorService } from "../executor"
-import { KnowledgeService, KnowledgeServiceConfig } from "../knowledge"
+} from "./agents"
+import { Blackboard, BlackboardConfig } from "./orchestrator"
+import { AIService } from "./ai"
+import { DatabaseManager } from "./storage"
+import { ParserService } from "./parser"
+import { ExecutorService } from "./executor"
+import { KnowledgeService, KnowledgeServiceConfig } from "./knowledge"
 import * as vscode from "vscode"
 
 export interface MultiAgentServiceConfig {
