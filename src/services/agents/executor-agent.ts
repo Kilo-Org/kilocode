@@ -237,10 +237,11 @@ export class ExecutorAgent extends BaseAgent {
 				await this.updateFile({ filePath, edits: change.edits })
 				break
 
-			case "delete":
+			case "delete": {
 				const fs = require("fs").promises
 				await fs.unlink(filePath)
 				break
+			}
 
 			default:
 				throw new Error(`Unknown change type: ${change.type}`)
