@@ -47,6 +47,42 @@ export interface CodeChunkRecord {
 	created_at: string
 }
 
+// kilocode_change - External context tables for integrations
+export interface ExternalContextSourceRecord {
+	id: string
+	type: string // 'github' | 'jira' | 'slack'
+	source_id: string // External ID
+	title: string
+	url: string
+	author: string
+	created_at: number
+	updated_at: number
+	content: string // Encrypted if sensitive
+	encrypted: boolean
+	metadata: string // JSON metadata
+}
+
+export interface ExternalCommentRecord {
+	id: string
+	discussion_id: string
+	author: string
+	content: string // Encrypted if sensitive
+	encrypted: boolean
+	created_at: number
+	metadata: string // JSON metadata
+}
+
+export interface ExternalRelationshipRecord {
+	id: string
+	source_id: string // ExternalContextSource.id
+	target_type: string // 'file' | 'symbol'
+	target_id: string // File path or symbol ID
+	relationship_type: string // 'mentions' | 'discusses' | 'implements' | 'references' | 'fixes'
+	confidence: number // 0-1
+	created_at: number
+	metadata: string // JSON metadata
+}
+
 export class DatabaseManager {
 	private db: SqliteDatabase | null = null
 	private readonly dbPath: string
@@ -148,6 +184,51 @@ export class DatabaseManager {
 			)
 		`)
 
+		// kilocode_change - External context tables
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS external_context_sources (
+				id TEXT PRIMARY KEY,
+				type TEXT NOT NULL CHECK (type IN ('github', 'jira', 'slack')),
+				source_id TEXT NOT NULL,
+				title TEXT NOT NULL,
+				url TEXT NOT NULL,
+				author TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				content TEXT NOT NULL, -- Encrypted if sensitive
+				encrypted BOOLEAN NOT NULL DEFAULT 0,
+				metadata TEXT, -- JSON metadata
+				UNIQUE(type, source_id)
+			)
+		`)
+
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS external_comments (
+				id TEXT PRIMARY KEY,
+				discussion_id TEXT NOT NULL,
+				author TEXT NOT NULL,
+				content TEXT NOT NULL, -- Encrypted if sensitive
+				encrypted BOOLEAN NOT NULL DEFAULT 0,
+				created_at INTEGER NOT NULL,
+				metadata TEXT, -- JSON metadata
+				FOREIGN KEY (discussion_id) REFERENCES external_context_sources(id) ON DELETE CASCADE
+			)
+		`)
+
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS external_relationships (
+				id TEXT PRIMARY KEY,
+				source_id TEXT NOT NULL,
+				target_type TEXT NOT NULL CHECK (target_type IN ('file', 'symbol')),
+				target_id TEXT NOT NULL,
+				relationship_type TEXT NOT NULL CHECK (relationship_type IN ('mentions', 'discusses', 'implements', 'references', 'fixes')),
+				confidence REAL NOT NULL,
+				created_at INTEGER NOT NULL,
+				metadata TEXT, -- JSON metadata
+				FOREIGN KEY (source_id) REFERENCES external_context_sources(id) ON DELETE CASCADE
+			)
+		`)
+
 		// Create indexes for performance
 		await this.createIndexes()
 	}
@@ -176,6 +257,24 @@ export class DatabaseManager {
 		// Code chunks indexes
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_file_id ON code_chunks(file_id)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_symbol_id ON code_chunks(symbol_id)")
+
+		// kilocode_change - External context indexes
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_external_sources_type ON external_context_sources(type)")
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_external_sources_source_id ON external_context_sources(source_id)",
+		)
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_external_sources_updated ON external_context_sources(updated_at)",
+		)
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_external_comments_discussion ON external_comments(discussion_id)",
+		)
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_external_relationships_source ON external_relationships(source_id)",
+		)
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_external_relationships_target ON external_relationships(target_type, target_id)",
+		)
 	}
 
 	/**
@@ -460,5 +559,166 @@ export class DatabaseManager {
 	 */
 	getDatabase() {
 		return this.db
+	}
+
+	// kilocode_change - External context CRUD methods
+
+	/**
+	 * Upsert an external context source
+	 */
+	async upsertExternalContextSource(
+		source: Omit<ExternalContextSourceRecord, "created_at" | "updated_at">,
+	): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run(
+			`
+			INSERT OR REPLACE INTO external_context_sources
+			(id, type, source_id, title, url, author, created_at, updated_at, content, encrypted, metadata)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`,
+			source.id,
+			source.type,
+			source.source_id,
+			source.title,
+			source.url,
+			source.author,
+			source.created_at,
+			source.updated_at,
+			source.content,
+			source.encrypted ? 1 : 0,
+			source.metadata,
+		)
+	}
+
+	/**
+	 * Upsert an external comment
+	 */
+	async upsertExternalComment(comment: Omit<ExternalCommentRecord, "created_at">): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run(
+			`
+			INSERT OR REPLACE INTO external_comments
+			(id, discussion_id, author, content, encrypted, created_at, metadata)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`,
+			comment.id,
+			comment.discussion_id,
+			comment.author,
+			comment.content,
+			comment.encrypted ? 1 : 0,
+			comment.created_at,
+			comment.metadata,
+		)
+	}
+
+	/**
+	 * Upsert an external relationship
+	 */
+	async upsertExternalRelationship(relationship: Omit<ExternalRelationshipRecord, "created_at">): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run(
+			`
+			INSERT OR REPLACE INTO external_relationships
+			(id, source_id, target_type, target_id, relationship_type, confidence, created_at, metadata)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`,
+			relationship.id,
+			relationship.source_id,
+			relationship.target_type,
+			relationship.target_id,
+			relationship.relationship_type,
+			relationship.confidence,
+			relationship.created_at,
+			relationship.metadata,
+		)
+	}
+
+	/**
+	 * Get external context related to a file or symbol
+	 */
+	async getRelatedExternalContext(targetType: "file" | "symbol", targetId: string, limit = 10): Promise<any[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT
+				ecs.id,
+				ecs.type,
+				ecs.source_id,
+				ecs.title,
+				ecs.url,
+				ecs.author,
+				ecs.content,
+				ecs.encrypted,
+				ecs.metadata,
+				er.relationship_type,
+				er.confidence
+			FROM external_relationships er
+			JOIN external_context_sources ecs ON er.source_id = ecs.id
+			WHERE er.target_type = ? AND er.target_id = ?
+			ORDER BY er.confidence DESC, ecs.updated_at DESC
+			LIMIT ?
+		`,
+			targetType,
+			targetId,
+			limit,
+		)
+	}
+
+	/**
+	 * Get comments for an external discussion
+	 */
+	async getExternalComments(discussionId: string): Promise<any[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT id, author, content, encrypted, created_at, metadata
+			FROM external_comments
+			WHERE discussion_id = ?
+			ORDER BY created_at ASC
+		`,
+			discussionId,
+		)
+	}
+
+	/**
+	 * Delete external context by source type and ID
+	 */
+	async deleteExternalContext(type: string, sourceId: string): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run("DELETE FROM external_context_sources WHERE type = ? AND source_id = ?", type, sourceId)
+	}
+
+	/**
+	 * Get external context updated since a timestamp
+	 */
+	async getExternalContextSince(timestamp: number, type?: string): Promise<any[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		if (type) {
+			return await this.db.all(
+				`
+				SELECT * FROM external_context_sources
+				WHERE type = ? AND updated_at >= ?
+				ORDER BY updated_at DESC
+			`,
+				type,
+				timestamp,
+			)
+		}
+
+		return await this.db.all(
+			`
+			SELECT * FROM external_context_sources
+			WHERE updated_at >= ?
+			ORDER BY updated_at DESC
+		`,
+			timestamp,
+		)
 	}
 }
