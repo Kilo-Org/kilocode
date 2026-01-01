@@ -566,10 +566,15 @@ export class DatabaseManager {
 	/**
 	 * Upsert an external context source
 	 */
-	async upsertExternalContextSource(
-		source: Omit<ExternalContextSourceRecord, "created_at" | "updated_at">,
-	): Promise<void> {
+	async upsertExternalContextSource(source: ExternalContextSourceRecord): Promise<void> {
 		if (!this.db) throw new Error("Database not initialized")
+
+		const now = Date.now()
+		const record: ExternalContextSourceRecord = {
+			...source,
+			created_at: source.created_at || now,
+			updated_at: now,
+		}
 
 		await this.db.run(
 			`
@@ -577,25 +582,30 @@ export class DatabaseManager {
 			(id, type, source_id, title, url, author, created_at, updated_at, content, encrypted, metadata)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`,
-			source.id,
-			source.type,
-			source.source_id,
-			source.title,
-			source.url,
-			source.author,
-			source.created_at,
-			source.updated_at,
-			source.content,
-			source.encrypted ? 1 : 0,
-			source.metadata,
+			record.id,
+			record.type,
+			record.source_id,
+			record.title,
+			record.url,
+			record.author,
+			record.created_at,
+			record.updated_at,
+			record.content,
+			record.encrypted ? 1 : 0,
+			record.metadata,
 		)
 	}
 
 	/**
 	 * Upsert an external comment
 	 */
-	async upsertExternalComment(comment: Omit<ExternalCommentRecord, "created_at">): Promise<void> {
+	async upsertExternalComment(comment: ExternalCommentRecord): Promise<void> {
 		if (!this.db) throw new Error("Database not initialized")
+
+		const record: ExternalCommentRecord = {
+			...comment,
+			created_at: comment.created_at || Date.now(),
+		}
 
 		await this.db.run(
 			`
@@ -603,13 +613,13 @@ export class DatabaseManager {
 			(id, discussion_id, author, content, encrypted, created_at, metadata)
 			VALUES (?, ?, ?, ?, ?, ?, ?)
 		`,
-			comment.id,
-			comment.discussion_id,
-			comment.author,
-			comment.content,
-			comment.encrypted ? 1 : 0,
-			comment.created_at,
-			comment.metadata,
+			record.id,
+			record.discussion_id,
+			record.author,
+			record.content,
+			record.encrypted ? 1 : 0,
+			record.created_at,
+			record.metadata,
 		)
 	}
 
