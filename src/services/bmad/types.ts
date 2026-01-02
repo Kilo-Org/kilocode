@@ -121,7 +121,20 @@ export interface WorkflowStep {
 	requiredTools?: string[]
 	outputs?: string[]
 	dependencies?: string[]
+	type?: "agent" | "task" | "condition" | "loop" | "parallel"
+	agentId?: string
+	task?: string
+	conditions?: any[]
+	condition?: any
+	iterations?: number
+	steps?: WorkflowStep[]
+	continueOnFailure?: boolean
 }
+
+/**
+ * Alias for WorkflowStep for backward compatibility
+ */
+export type BmadWorkflowStep = WorkflowStep
 
 /**
  * Represents a BMAD template (project scaffolding)
@@ -135,6 +148,9 @@ export interface BmadTemplate {
 	files: TemplateFile[]
 	variables: TemplateVariable[]
 	config?: TemplateConfig
+	tags?: string[]
+	recommended?: boolean
+	setupCommands?: string[]
 }
 
 /**
@@ -200,6 +216,9 @@ export interface WorkflowResult {
 	completedSteps: string[]
 	failedSteps: string[]
 	duration: number
+	workflowId?: string
+	steps?: StepResult[]
+	variables?: Record<string, any>
 }
 
 /**
@@ -208,9 +227,12 @@ export interface WorkflowResult {
 export interface StepResult {
 	success: boolean
 	stepId: string
+	stepName?: string
 	outputs: Record<string, any>
 	error?: string
 	duration: number
+	result?: any
+	status?: "pending" | "running" | "completed" | "failed" | "skipped"
 }
 
 /**
@@ -279,6 +301,7 @@ export interface WorkflowExecutionOptions {
 	onProgress?: (progress: WorkflowProgress) => void
 	onStepComplete?: (stepId: string, result: StepResult) => void
 	onError?: (error: Error) => void
+	variables?: Record<string, any>
 }
 
 /**

@@ -100,6 +100,7 @@ export class BmadModesIntegrator {
 				roleDefinition: mode.customInstructions || "",
 				customInstructions: mode.customInstructions || "",
 				icon: mode.icon,
+				groups: ["read", "edit", "browser", "command", "mcp"],
 				// Mark as BMAD mode
 				metadata: mode.metadata,
 			}))

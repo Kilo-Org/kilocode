@@ -1,6 +1,13 @@
 // kilocode_change - new file for BMAD-METHOD workflow execution engine
 
-import type { BmadWorkflow, BmadWorkflowStep, WorkflowExecutionOptions, WorkflowResult, WorkflowSession } from "./types"
+import type {
+	BmadWorkflow,
+	BmadWorkflowStep,
+	WorkflowExecutionOptions,
+	WorkflowResult,
+	WorkflowSession,
+	StepResult,
+} from "./types"
 import { BmadIntegrationService } from "./BmadIntegrationService"
 import { BmadAgentRegistry } from "./BmadAgentRegistry"
 import { logger } from "../../utils/logging"
@@ -140,6 +147,9 @@ export class BmadWorkflowEngine {
 				success: true,
 				sessionId,
 				workflowId,
+				outputs: {},
+				completedSteps: [],
+				failedSteps: [],
 				steps: [],
 				duration: 0,
 				variables: {},
@@ -151,10 +161,29 @@ export class BmadWorkflowEngine {
 					context.currentStepIndex = i
 
 					const stepResult = await this.executeStep(context, step, workflow)
-					result.steps.push(stepResult)
+
+					// Convert WorkflowStepExecution to StepResult
+					const stepResultForOutput: StepResult = {
+						success: stepResult.status === "completed",
+						stepId: stepResult.stepId,
+						stepName: stepResult.stepName,
+						outputs: stepResult.result || {},
+						error: stepResult.error,
+						duration: stepResult.duration || 0,
+						result: stepResult.result,
+						status: stepResult.status,
+					}
+					result.steps.push(stepResultForOutput)
 
 					// Add step result to history
 					context.history.push(stepResult)
+
+					// Track completed/failed steps
+					if (stepResult.status === "completed") {
+						result.completedSteps.push(stepResult.stepId)
+					} else if (stepResult.status === "failed") {
+						result.failedSteps.push(stepResult.stepId)
+					}
 
 					// Check if step failed and workflow should stop
 					if (stepResult.status === "failed" && step.continueOnFailure !== true) {
@@ -164,6 +193,7 @@ export class BmadWorkflowEngine {
 					// Update variables from step result
 					if (stepResult.result) {
 						Object.assign(context.variables, stepResult.result)
+						Object.assign(result.outputs, stepResult.result)
 					}
 				}
 
@@ -171,6 +201,7 @@ export class BmadWorkflowEngine {
 				context.status = "completed"
 				result.success = true
 				result.variables = { ...context.variables }
+				result.outputs = { ...context.variables }
 				result.duration = Date.now() - context.startTime.getTime()
 
 				await this.emitEvent("workflow_completed", {
@@ -219,6 +250,9 @@ export class BmadWorkflowEngine {
 				success: false,
 				sessionId: "",
 				workflowId,
+				outputs: {},
+				completedSteps: [],
+				failedSteps: [],
 				error: errorMessage,
 				steps: [],
 				duration: 0,
@@ -597,7 +631,7 @@ export class BmadWorkflowEngine {
 			return
 		}
 
-		for (const listener of listeners) {
+		for (const listener of Array.from(listeners)) {
 			try {
 				await listener(eventType, data)
 			} catch (error) {
@@ -642,7 +676,7 @@ export class BmadWorkflowEngine {
 	 */
 	dispose(): void {
 		// Cancel all active sessions
-		for (const sessionId of this.activeSessions.keys()) {
+		for (const sessionId of Array.from(this.activeSessions.keys())) {
 			this.cancelSession(sessionId)
 		}
 

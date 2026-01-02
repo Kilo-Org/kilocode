@@ -181,7 +181,7 @@ export class BmadAgentRegistry {
 		const keywords = taskDescription.toLowerCase().split(/\s+/)
 		const recommendations: AgentRecommendation[] = []
 
-		for (const agent of this.agents.values()) {
+		for (const agent of Array.from(this.agents.values())) {
 			if (!agent.isActive) continue
 
 			let score = 0

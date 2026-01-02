@@ -406,7 +406,7 @@ export class BmadIntegrationService {
 	 * Load agents from modules
 	 */
 	private async loadAgents(): Promise<void> {
-		for (const [moduleId, module] of this.modules) {
+		for (const [moduleId, module] of Array.from(this.modules)) {
 			try {
 				const agentsPath = path.join(module.installedPath, "agents")
 				const exists = await fileExistsAtPath(agentsPath)
@@ -487,7 +487,7 @@ export class BmadIntegrationService {
 	 * Load workflows from modules
 	 */
 	private async loadWorkflows(): Promise<void> {
-		for (const [moduleId, module] of this.modules) {
+		for (const [moduleId, module] of Array.from(this.modules)) {
 			try {
 				const workflowsPath = path.join(module.installedPath, "workflows")
 				const exists = await fileExistsAtPath(workflowsPath)
@@ -607,7 +607,7 @@ export class BmadIntegrationService {
 	 * Load templates from modules
 	 */
 	private async loadTemplates(): Promise<void> {
-		for (const [moduleId, module] of this.modules) {
+		for (const [moduleId, module] of Array.from(this.modules)) {
 			try {
 				const templatesPath = path.join(module.installedPath, "templates")
 				const exists = await fileExistsAtPath(templatesPath)
@@ -756,6 +756,13 @@ export class BmadIntegrationService {
 	}
 
 	/**
+	 * Get workflow by ID (alias for getWorkflow)
+	 */
+	getWorkflowById(workflowId: string): BmadWorkflow | undefined {
+		return this.workflows.get(workflowId)
+	}
+
+	/**
 	 * Get all workflows
 	 */
 	getAllWorkflows(): BmadWorkflow[] {
@@ -767,6 +774,15 @@ export class BmadIntegrationService {
 	 */
 	getAllTemplates(): BmadTemplate[] {
 		return Array.from(this.templates.values())
+	}
+
+	/**
+	 * Get templates for a module
+	 */
+	getModuleTemplates(moduleId: string): BmadTemplate[] {
+		const module = this.modules.get(moduleId)
+		if (!module) return []
+		return module.templates
 	}
 
 	/**
@@ -869,7 +885,7 @@ export class BmadIntegrationService {
 	 * Emit an event to all listeners
 	 */
 	private emitEvent(event: BmadServiceEvent): void {
-		for (const listener of this.eventListeners) {
+		for (const listener of Array.from(this.eventListeners)) {
 			try {
 				listener(event)
 			} catch (error) {

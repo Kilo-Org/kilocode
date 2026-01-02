@@ -289,7 +289,7 @@ export class BmadKnowledgeBase {
 		const entriesByModule: Record<string, number> = {}
 		const entriesByTag: Record<string, number> = {}
 
-		for (const entry of this.entries.values()) {
+		for (const entry of Array.from(this.entries.values())) {
 			// Count by agent
 			if (entry.agentId) {
 				entriesByAgent[entry.agentId] = (entriesByAgent[entry.agentId] || 0) + 1
@@ -375,7 +375,7 @@ export class BmadKnowledgeBase {
 		let oldestEntry: KnowledgeEntry | null = null
 		let oldestTime = Date.now()
 
-		for (const entry of this.entries.values()) {
+		for (const entry of Array.from(this.entries.values())) {
 			if (entry.createdAt.getTime() < oldestTime) {
 				oldestTime = entry.createdAt.getTime()
 				oldestEntry = entry

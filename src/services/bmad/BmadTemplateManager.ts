@@ -349,7 +349,7 @@ export class BmadTemplateManager {
 		const templatesByModule: Record<string, number> = {}
 		const templatesByTag: Record<string, number> = {}
 
-		for (const template of this.templates.values()) {
+		for (const template of Array.from(this.templates.values())) {
 			// Count by module
 			templatesByModule[template.moduleId] = (templatesByModule[template.moduleId] || 0) + 1
 

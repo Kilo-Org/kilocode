@@ -253,7 +253,7 @@ export class BmadModeManager {
 		const keywords = taskDescription.toLowerCase().split(/\s+/)
 		const recommendations: AgentModeMapping[] = []
 
-		for (const mapping of this.agentModeMappings.values()) {
+		for (const mapping of Array.from(this.agentModeMappings.values())) {
 			const agent = mapping.agent
 			let score = 0
 
