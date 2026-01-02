@@ -31,6 +31,7 @@
 !assets/vscode-material-icons/**
 !assets/icons/**
 !assets/images/**
+!assets/bmad/**
 
 # Include .env file for telemetry
 !.env

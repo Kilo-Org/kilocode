@@ -54,8 +54,10 @@ export class CodeIndexSearchService {
 				normalizedPrefix = path.normalize(directoryPrefix)
 			}
 
-			// Perform search
-			const results = await this.vectorStore.search(vector, normalizedPrefix, minScore, maxResults)
+			// Perform search (hybrid when available)
+			const results = this.vectorStore.hybridSearch
+				? await this.vectorStore.hybridSearch(vector, query, normalizedPrefix, minScore, maxResults)
+				: await this.vectorStore.search(vector, normalizedPrefix, minScore, maxResults)
 			return results
 		} catch (error) {
 			console.error("[CodeIndexSearchService] Error during search:", error)
