@@ -140,5 +140,61 @@ describe("anthropic-filter", () => {
 			expect(result).toHaveLength(1)
 			expect(result[0].content).toEqual([{ type: "text", text: "Valid text" }])
 		})
+
+		// kilocode_change start
+		describe("thinking parameter handling", () => {
+			it("should preserve thinking blocks when thinking is enabled", () => {
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{
+						role: "assistant",
+						content: [
+							{ type: "thinking", thinking: "Let me think...", signature: "abc123" } as any,
+							{ type: "text", text: "Here is my response" },
+						],
+					},
+				]
+
+				// When thinking is enabled (has a value), preserve thinking blocks
+				const thinkingEnabled = { type: "enabled" as const, budget_tokens: 10000 }
+				const result = filterNonAnthropicBlocks(messages, thinkingEnabled)
+				expect(result[0].content).toHaveLength(2)
+				expect((result[0].content as any[])[0].type).toBe("thinking")
+			})
+
+			it("should strip thinking and redacted_thinking blocks when thinking is undefined (disabled)", () => {
+				const messages: Anthropic.Messages.MessageParam[] = [
+					{ role: "user", content: "First question" },
+					{
+						role: "assistant",
+						content: [
+							{ type: "thinking", thinking: "Thinking about first question" } as any,
+							{ type: "text", text: "First response" },
+						],
+					},
+					{ role: "user", content: "Second question" },
+					{
+						role: "assistant",
+						content: [
+							{ type: "redacted_thinking", data: "encrypted" } as any,
+							{ type: "text", text: "Second response" },
+						],
+					},
+					{
+						role: "assistant",
+						content: [{ type: "thinking", thinking: "Only thinking, no text" } as any],
+					},
+				]
+
+				// When thinking is undefined (disabled), strip thinking blocks
+				const result = filterNonAnthropicBlocks(messages, undefined)
+
+				// Strips thinking blocks but keeps text content
+				expect(result[1].content).toEqual([{ type: "text", text: "First response" }])
+				expect(result[3].content).toEqual([{ type: "text", text: "Second response" }])
+				// Removes messages that become empty after stripping
+				expect(result).toHaveLength(4) // Last assistant message removed (was only thinking)
+			})
+		})
+		// kilocode_change end
 	})
 })
