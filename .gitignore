@@ -73,4 +73,4 @@ kilocode-index/
 # Act Secret Files
 .secrets
 # Architect plans
-plans/
+./plans/

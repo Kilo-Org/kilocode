@@ -413,7 +413,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			handleInputChange: handleGhostTextInputChange,
 		} = useChatGhostText({
 			textAreaRef,
-			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? false,
+			enableChatAutocomplete: ghostServiceSettings?.enableChatAutocomplete ?? true,
 		})
 		// kilocode_change end: FIM autocomplete ghost text
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
