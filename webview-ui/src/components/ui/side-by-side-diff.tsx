@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "./button"
 import { Badge } from "./badge"
-import { Separator } from "./separator"
 import { Check, X, GitBranch, FileText, ChevronDown, ChevronUp, Plus, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 

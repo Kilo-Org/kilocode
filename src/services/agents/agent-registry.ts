@@ -6,6 +6,8 @@ import { AgentConfig, AgentTask, AgentMessage, AgentRegistryConfig, AgentMetrics
 import { PlannerAgent, PlannerConfig } from "./planner-agent.js"
 import { ExecutorAgent, ExecutorConfig } from "./executor-agent.js"
 import { VerifierAgent, VerifierConfig } from "./verifier-agent.js"
+// kilocode_change - Import QA Agent
+import { QAAgent } from "./qa-agent.js"
 
 export class AgentRegistry extends EventEmitter {
 	private _agents: Map<string, IAgent> = new Map()

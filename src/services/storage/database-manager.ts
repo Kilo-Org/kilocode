@@ -83,6 +83,41 @@ export interface ExternalRelationshipRecord {
 	metadata: string // JSON metadata
 }
 
+// kilocode_change - QA State persistence tables
+export interface QASessionRecord {
+	id: string
+	workspace_root: string
+	started_at: number
+	completed_at?: number
+	status: "running" | "completed" | "failed" | "cancelled"
+	total_tests: number
+	passed_tests: number
+	failed_tests: number
+	skipped_tests: number
+	coverage_percentage: number
+	privacy_mode: boolean
+	ai_provider: string
+	metadata: string // JSON metadata
+}
+
+export interface QATestRecord {
+	id: string
+	session_id: string
+	file_path: string
+	operation: "generate_tests" | "run_diagnostics" | "check_coverage" | "validate_manifest" | "security_audit"
+	status: "pending" | "running" | "completed" | "failed" | "skipped"
+	started_at: number
+	completed_at?: number
+	duration_ms?: number
+	confidence: number
+	result_data: string // JSON result data
+	error_message?: string
+	test_count?: number
+	issues_found?: number
+	coverage_lines?: number
+	security_score?: number
+}
+
 export class DatabaseManager {
 	private db: SqliteDatabase | null = null
 	private readonly dbPath: string
@@ -221,11 +256,51 @@ export class DatabaseManager {
 				source_id TEXT NOT NULL,
 				target_type TEXT NOT NULL CHECK (target_type IN ('file', 'symbol')),
 				target_id TEXT NOT NULL,
-				relationship_type TEXT NOT NULL CHECK (relationship_type IN ('mentions', 'discusses', 'implements', 'references', 'fixes')),
+				relationship_type TEXT NOT NULL,
 				confidence REAL NOT NULL,
 				created_at INTEGER NOT NULL,
 				metadata TEXT, -- JSON metadata
 				FOREIGN KEY (source_id) REFERENCES external_context_sources(id) ON DELETE CASCADE
+			)
+		`)
+
+		// kilocode_change - QA State persistence tables
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS qa_sessions (
+				id TEXT PRIMARY KEY,
+				workspace_root TEXT NOT NULL,
+				started_at INTEGER NOT NULL,
+				completed_at INTEGER,
+				status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+				total_tests INTEGER NOT NULL DEFAULT 0,
+				passed_tests INTEGER NOT NULL DEFAULT 0,
+				failed_tests INTEGER NOT NULL DEFAULT 0,
+				skipped_tests INTEGER NOT NULL DEFAULT 0,
+				coverage_percentage REAL NOT NULL DEFAULT 0,
+				privacy_mode BOOLEAN NOT NULL DEFAULT 0,
+				ai_provider TEXT,
+				metadata TEXT -- JSON metadata
+			)
+		`)
+
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS qa_tests (
+				id TEXT PRIMARY KEY,
+				session_id TEXT NOT NULL,
+				file_path TEXT NOT NULL,
+				operation TEXT NOT NULL CHECK (operation IN ('generate_tests', 'run_diagnostics', 'check_coverage', 'validate_manifest', 'security_audit')),
+				status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'skipped')),
+				started_at INTEGER NOT NULL,
+				completed_at INTEGER,
+				duration_ms INTEGER,
+				confidence REAL NOT NULL DEFAULT 0,
+				result_data TEXT, -- JSON result data
+				error_message TEXT,
+				test_count INTEGER,
+				issues_found INTEGER DEFAULT 0,
+				coverage_lines INTEGER,
+				security_score INTEGER,
+				FOREIGN KEY (session_id) REFERENCES qa_sessions(id) ON DELETE CASCADE
 			)
 		`)
 
@@ -275,6 +350,15 @@ export class DatabaseManager {
 		await this.db.exec(
 			"CREATE INDEX IF NOT EXISTS idx_external_relationships_target ON external_relationships(target_type, target_id)",
 		)
+
+		// kilocode_change - QA State indexes
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_sessions_workspace ON qa_sessions(workspace_root)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_sessions_status ON qa_sessions(status)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_sessions_started ON qa_sessions(started_at)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_session ON qa_tests(session_id)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_file ON qa_tests(file_path)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_operation ON qa_tests(operation)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_status ON qa_tests(status)")
 	}
 
 	/**
@@ -730,5 +814,240 @@ export class DatabaseManager {
 		`,
 			timestamp,
 		)
+	}
+
+	// kilocode_change - QA State persistence methods
+
+	/**
+	 * Create a new QA session
+	 */
+	async createQASession(session: Omit<QASessionRecord, "id">): Promise<string> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const id = `qa_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+		await this.db.run(
+			`
+			INSERT INTO qa_sessions (
+				id, workspace_root, started_at, status, total_tests, passed_tests, 
+				failed_tests, skipped_tests, coverage_percentage, privacy_mode, ai_provider, metadata
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`,
+			id,
+			session.workspace_root,
+			session.started_at,
+			session.status,
+			session.total_tests,
+			session.passed_tests,
+			session.failed_tests,
+			session.skipped_tests,
+			session.coverage_percentage,
+			session.privacy_mode ? 1 : 0,
+			session.ai_provider,
+			session.metadata,
+		)
+
+		return id
+	}
+
+	/**
+	 * Update QA session status and metrics
+	 */
+	async updateQASession(id: string, updates: Partial<QASessionRecord>): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const fields = []
+		const values = []
+
+		if (updates.status !== undefined) {
+			fields.push("status = ?")
+			values.push(updates.status)
+		}
+		if (updates.completed_at !== undefined) {
+			fields.push("completed_at = ?")
+			values.push(updates.completed_at)
+		}
+		if (updates.total_tests !== undefined) {
+			fields.push("total_tests = ?")
+			values.push(updates.total_tests)
+		}
+		if (updates.passed_tests !== undefined) {
+			fields.push("passed_tests = ?")
+			values.push(updates.passed_tests)
+		}
+		if (updates.failed_tests !== undefined) {
+			fields.push("failed_tests = ?")
+			values.push(updates.failed_tests)
+		}
+		if (updates.skipped_tests !== undefined) {
+			fields.push("skipped_tests = ?")
+			values.push(updates.skipped_tests)
+		}
+		if (updates.coverage_percentage !== undefined) {
+			fields.push("coverage_percentage = ?")
+			values.push(updates.coverage_percentage)
+		}
+		if (updates.privacy_mode !== undefined) {
+			fields.push("privacy_mode = ?")
+			values.push(updates.privacy_mode ? 1 : 0)
+		}
+		if (updates.ai_provider !== undefined) {
+			fields.push("ai_provider = ?")
+			values.push(updates.ai_provider)
+		}
+		if (updates.metadata !== undefined) {
+			fields.push("metadata = ?")
+			values.push(updates.metadata)
+		}
+
+		if (fields.length === 0) return
+
+		values.push(id)
+		await this.db.run(`UPDATE qa_sessions SET ${fields.join(", ")} WHERE id = ?`, ...values)
+	}
+
+	/**
+	 * Create a new QA test record
+	 */
+	async createQATest(test: Omit<QATestRecord, "id">): Promise<string> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const id = `qa_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+		await this.db.run(
+			`
+			INSERT INTO qa_tests (
+				id, session_id, file_path, operation, status, started_at, completed_at,
+				duration_ms, confidence, result_data, error_message, test_count, 
+				issues_found, coverage_lines, security_score
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`,
+			id,
+			test.session_id,
+			test.file_path,
+			test.operation,
+			test.status,
+			test.started_at,
+			test.completed_at,
+			test.duration_ms,
+			test.confidence,
+			test.result_data,
+			test.error_message,
+			test.test_count,
+			test.issues_found,
+			test.coverage_lines,
+			test.security_score,
+		)
+
+		return id
+	}
+
+	/**
+	 * Update QA test status and results
+	 */
+	async updateQATest(id: string, updates: Partial<QATestRecord>): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const fields = []
+		const values = []
+
+		if (updates.status !== undefined) {
+			fields.push("status = ?")
+			values.push(updates.status)
+		}
+		if (updates.completed_at !== undefined) {
+			fields.push("completed_at = ?")
+			values.push(updates.completed_at)
+		}
+		if (updates.duration_ms !== undefined) {
+			fields.push("duration_ms = ?")
+			values.push(updates.duration_ms)
+		}
+		if (updates.confidence !== undefined) {
+			fields.push("confidence = ?")
+			values.push(updates.confidence)
+		}
+		if (updates.result_data !== undefined) {
+			fields.push("result_data = ?")
+			values.push(updates.result_data)
+		}
+		if (updates.error_message !== undefined) {
+			fields.push("error_message = ?")
+			values.push(updates.error_message)
+		}
+		if (updates.test_count !== undefined) {
+			fields.push("test_count = ?")
+			values.push(updates.test_count)
+		}
+		if (updates.issues_found !== undefined) {
+			fields.push("issues_found = ?")
+			values.push(updates.issues_found)
+		}
+		if (updates.coverage_lines !== undefined) {
+			fields.push("coverage_lines = ?")
+			values.push(updates.coverage_lines)
+		}
+		if (updates.security_score !== undefined) {
+			fields.push("security_score = ?")
+			values.push(updates.security_score)
+		}
+
+		if (fields.length === 0) return
+
+		values.push(id)
+		await this.db.run(`UPDATE qa_tests SET ${fields.join(", ")} WHERE id = ?`, ...values)
+	}
+
+	/**
+	 * Get recent QA sessions for a workspace
+	 */
+	async getQASessions(workspaceRoot: string, limit: number = 10): Promise<QASessionRecord[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT * FROM qa_sessions 
+			WHERE workspace_root = ? 
+			ORDER BY started_at DESC 
+			LIMIT ?
+		`,
+			workspaceRoot,
+			limit,
+		)
+	}
+
+	/**
+	 * Get QA tests for a session
+	 */
+	async getQATests(sessionId: string): Promise<QATestRecord[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT * FROM qa_tests 
+			WHERE session_id = ? 
+			ORDER BY started_at ASC
+		`,
+			sessionId,
+		)
+	}
+
+	/**
+	 * Get latest QA session for a workspace
+	 */
+	async getLatestQASession(workspaceRoot: string): Promise<QASessionRecord | null> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const sessions = await this.db.all(
+			`
+			SELECT * FROM qa_sessions 
+			WHERE workspace_root = ? 
+			ORDER BY started_at DESC 
+			LIMIT 1
+		`,
+			workspaceRoot,
+		)
+
+		return sessions.length > 0 ? sessions[0] : null
 	}
 }

@@ -57,7 +57,7 @@ interface DemoAgentThought {
 export const AgenticIDEInterface: React.FC = () => {
 	// Ghost text state
 	const [editorText, setEditorText] = useState("function calculateSum(a, b) {")
-	const [editorPosition, setEditorPosition] = useState({ line: 1, column: 35 })
+	const [_editorPosition, _setEditorPosition] = useState({ line: 1, column: 35 })
 
 	// Diff state
 	const [fileChanges, setFileChanges] = useState<DemoFileChange[]>([
@@ -148,7 +148,7 @@ export const AgenticIDEInterface: React.FC = () => {
 	const [currentAgent, setCurrentAgent] = useState("coder")
 
 	// Odoo peek definitions
-	const { showPeek, hidePeek, PeekComponent } = useOdooPeekDefinitions()
+	const { showPeek, PeekComponent } = useOdooPeekDefinitions()
 
 	// Ghost text integration
 	const { handleKeyDown, handleTextChange } = useGhostTextEditor()
@@ -181,16 +181,16 @@ export const AgenticIDEInterface: React.FC = () => {
 		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
 			const newText = e.target.value
 			setEditorText(newText)
-			handleTextChange(newText, editorPosition)
+			handleTextChange(newText, _editorPosition)
 		},
-		[handleTextChange, editorPosition],
+		[handleTextChange, _editorPosition],
 	)
 
 	const handleEditorKeyDown = useCallback(
 		(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-			handleKeyDown(e as any, editorText, editorPosition)
+			handleKeyDown(e as any, editorText, _editorPosition)
 		},
-		[handleKeyDown, editorText, editorPosition],
+		[handleKeyDown, editorText, _editorPosition],
 	)
 
 	const handleAcceptFile = useCallback((filePath: string) => {
@@ -213,7 +213,7 @@ export const AgenticIDEInterface: React.FC = () => {
 		setContextItems((prev) => [...prev, newItem])
 	}, [])
 
-	const handleRemoveContext = useCallback((id: string) => {
+	const _handleRemoveContext = useCallback((id: string) => {
 		setContextItems((prev) => prev.filter((item) => item.id !== id))
 	}, [])
 

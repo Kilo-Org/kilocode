@@ -22,6 +22,13 @@ export interface OrchestratorConfig {
 		enableHighRiskDetection: boolean
 	}
 	confidence: { defaultThreshold: number }
+	qa: {
+		enabled: boolean
+		autoVerify: boolean
+		parallelVerification: boolean
+		fastFail: boolean
+		workspaceRoot: string
+	}
 	ui: {
 		showDecisionLogs: boolean
 		showConfidenceScore: boolean
@@ -72,6 +79,7 @@ export class OrchestratorService {
 	private odooErrorHandler: OdooErrorHandler
 	private thinkingState: ReturnType<typeof createThinkingStateManager>
 	private uiBridge: OrchestratorUIBridge
+	private qaAgent: any | null = null
 	private eventHandlers: Set<OrchestratorEventHandler>
 	private currentTask: OrchestratorTask | null = null
 	private isRunning: boolean = false
@@ -102,6 +110,11 @@ export class OrchestratorService {
 		})
 		this.eventHandlers = new Set()
 
+		// Initialize QA Agent if enabled
+		if (this.config.qa.enabled) {
+			this.initializeQAAgent()
+		}
+
 		// Setup user intervention callback
 		this.userIntervention.setCallback(async (request: InterventionRequest) => {
 			return this.handleUserIntervention(request)
@@ -127,11 +140,47 @@ export class OrchestratorService {
 			confidence: {
 				defaultThreshold: partial?.confidence?.defaultThreshold ?? 0.7,
 			},
+			qa: {
+				enabled: partial?.qa?.enabled ?? true,
+				autoVerify: partial?.qa?.autoVerify ?? true,
+				parallelVerification: partial?.qa?.parallelVerification ?? false,
+				fastFail: partial?.qa?.fastFail ?? false,
+				workspaceRoot: partial?.qa?.workspaceRoot ?? process.cwd(),
+			},
 			ui: {
 				showDecisionLogs: partial?.ui?.showDecisionLogs ?? true,
 				showConfidenceScore: partial?.ui?.showConfidenceScore ?? true,
 				enableRealTimeUpdates: partial?.ui?.enableRealTimeUpdates ?? true,
 			},
+		}
+	}
+
+	private async initializeQAAgent(): Promise<void> {
+		try {
+			// Dynamic import to avoid module system issues
+			const { QAAgent } = await import("../agents/qa-agent.js")
+
+			this.qaAgent = new QAAgent(
+				{
+					id: "qa-agent",
+					name: "Quality Assurance Agent",
+					type: "verifier",
+					capabilities: [],
+					enabled: true,
+					priority: 8,
+					maxConcurrentTasks: 3,
+					timeout: 60000,
+				},
+				this.config.qa.workspaceRoot,
+			)
+
+			await this.qaAgent.initialize()
+			await this.qaAgent.start()
+
+			console.log("[Orchestrator] QA Agent initialized successfully")
+		} catch (error) {
+			console.error("[Orchestrator] Failed to initialize QA Agent:", error)
+			this.qaAgent = null
 		}
 	}
 
@@ -237,6 +286,54 @@ export class OrchestratorService {
 					healingAttempts++
 					const recoveryPlan = await this.createRecoveryPlan(step, decisionResult)
 					await this.executeRecoveryPlan(recoveryPlan)
+				}
+
+				// Verification Step with QA Agent
+				if (this.config.qa.autoVerify && this.qaAgent && step.target) {
+					this.thinkingState.setState("analyzing")
+					this.uiBridge.notifyDecisionLog({
+						id: `verify-${Date.now()}`,
+						timestamp: Date.now(),
+						state: this.thinkingState.state,
+						decision: "verify",
+						reasoning: "Running QA verification on modified files",
+						context: { stepId: step.id, target: step.target },
+					})
+
+					try {
+						const verificationResult = await this.runVerificationStep(step.target, step.action)
+						if (!verificationResult.success && this.config.qa.fastFail) {
+							// Fast fail on verification errors
+							return {
+								success: false,
+								completedSteps: 0,
+								totalSteps: task.steps.length,
+								decisions,
+								healingAttempts,
+								interventions,
+								summary: {
+									reason: "QA verification failed",
+									verificationErrors: verificationResult.errors,
+								},
+							}
+						}
+					} catch (error) {
+						console.warn("[Orchestrator] Verification step failed:", error)
+						if (this.config.qa.fastFail) {
+							return {
+								success: false,
+								completedSteps: 0,
+								totalSteps: task.steps.length,
+								decisions,
+								healingAttempts,
+								interventions,
+								summary: {
+									reason: "QA verification error",
+									error: error instanceof Error ? error.message : String(error),
+								},
+							}
+						}
+					}
 				}
 
 				this.uiBridge.notifyStepComplete(step.id, {
@@ -435,5 +532,104 @@ export class OrchestratorService {
 
 	getConfig(): OrchestratorConfig {
 		return { ...this.config }
+	}
+
+	private async runVerificationStep(
+		target: string,
+		action: string,
+	): Promise<{ success: boolean; errors?: string[] }> {
+		if (!this.qaAgent) {
+			return { success: true } // Skip verification if no QA agent
+		}
+
+		try {
+			// Determine verification operations based on action and file type
+			const operations = this.getVerificationOperations(target, action)
+			const results = []
+
+			for (const operation of operations) {
+				const task = {
+					id: `verify-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					type: "qa_task",
+					assignedTo: this.qaAgent.config.id,
+					createdBy: "orchestrator",
+					status: "pending" as const,
+					priority: "medium" as const,
+					input: {
+						filePath: target,
+						operation,
+						options: {
+							framework: this.detectProjectFramework(target),
+						},
+					},
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				}
+
+				const result = await this.qaAgent.executeTask(task)
+				results.push(result)
+
+				// If any verification fails, return failure
+				if (!result.success) {
+					return {
+						success: false,
+						errors: [result.metadata?.error || `Verification failed for ${operation}`],
+					}
+				}
+			}
+
+			return { success: true }
+		} catch (error) {
+			return {
+				success: false,
+				errors: [error instanceof Error ? error.message : String(error)],
+			}
+		}
+	}
+
+	private getVerificationOperations(target: string, action: string): string[] {
+		const operations = []
+		const fileExt = target.split(".").pop()?.toLowerCase()
+
+		// Always run diagnostics for code changes
+		if (["edit", "create", "update"].includes(action) && ["py", "js", "ts"].includes(fileExt || "")) {
+			operations.push("run_diagnostics")
+		}
+
+		// Run security audit for sensitive files
+		if (
+			fileExt === "py" &&
+			(target.includes("__manifest__.py") || target.includes("security/") || target.includes("access_"))
+		) {
+			operations.push("security_audit")
+		}
+
+		// Validate manifest files
+		if (target.endsWith("__manifest__.py")) {
+			operations.push("validate_manifest")
+		}
+
+		// Generate tests for new code files
+		if (action === "create" && ["py", "js", "ts"].includes(fileExt || "")) {
+			operations.push("generate_tests")
+		}
+
+		// Check coverage for modified test files
+		if (action === "edit" && target.includes("test")) {
+			operations.push("check_coverage")
+		}
+
+		return operations.length > 0 ? operations : ["run_diagnostics"]
+	}
+
+	private detectProjectFramework(filePath: string): string {
+		// Simple framework detection based on file structure
+		if (filePath.includes("odoo") || filePath.includes("__manifest__.py")) {
+			return "odoo"
+		}
+		if (filePath.includes("django") || filePath.includes("manage.py")) {
+			return "django"
+		}
+		return "generic"
 	}
 }
