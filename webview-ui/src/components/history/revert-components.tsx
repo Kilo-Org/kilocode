@@ -77,6 +77,18 @@ export const RevertButton: React.FC<RevertButtonProps> = ({
 	)
 }
 
+export interface RevertPreview {
+  messageId: string
+  affectedFiles: Array<{
+    filePath: string
+    currentContent: string
+    revertedContent: string
+    hasConflicts: boolean
+    conflictType?: string
+  }>
+  estimatedImpact: 'low' | 'medium' | 'high'
+}
+
 export interface RevertPreviewModalProps {
 	messageId: string
 	onClose: () => void
@@ -193,7 +205,7 @@ export const RevertPreviewModal: React.FC<RevertPreviewModalProps> = ({ messageI
 					</div>
 
 					<div className="files-list">
-						{preview.affectedFiles.map((file, index) => (
+						{preview.affectedFiles.map((file: any, index: number) => (
 							<div key={index} className="file-preview-item">
 								<div className="file-header">
 									<span className="codicon codicon-file"></span>
@@ -225,10 +237,10 @@ export const RevertPreviewModal: React.FC<RevertPreviewModalProps> = ({ messageI
 					<VSCodeButton
 						appearance="primary"
 						onClick={handleConfirm}
-						disabled={preview.affectedFiles.some((f) => f.hasConflicts)}>
+						disabled={preview.affectedFiles.some((f: any) => f.hasConflicts)}>
 						Confirm Revert
 					</VSCodeButton>
-					{preview.affectedFiles.some((f) => f.hasConflicts) && (
+					{preview.affectedFiles.some((f: any) => f.hasConflicts) && (
 						<div className="conflict-warning">
 							Cannot revert due to conflicts. Please resolve conflicts first.
 						</div>
