@@ -110,12 +110,26 @@ export interface QATestRecord {
 	completed_at?: number
 	duration_ms?: number
 	confidence: number
-	result_data: string // JSON result data
+	result_data?: string // JSON result data
 	error_message?: string
 	test_count?: number
-	issues_found?: number
+	metadata: string // JSON metadata
 	coverage_lines?: number
 	security_score?: number
+}
+
+export interface EditHistoryRecord {
+	id: string
+	message_id: string
+	timestamp: number
+	affected_files: string // JSON array of file paths
+	reverse_patches: string // JSON array of reverse diffs
+	original_snapshots: string // JSON array of original file contents
+	metadata: string // JSON metadata including operation type, user context
+	is_reverted: boolean
+	reverted_at?: number
+	reverted_by?: string // User or system that initiated revert
+	conflict_resolution?: string // JSON for conflict resolution data
 }
 
 export class DatabaseManager {
@@ -297,10 +311,26 @@ export class DatabaseManager {
 				result_data TEXT, -- JSON result data
 				error_message TEXT,
 				test_count INTEGER,
-				issues_found INTEGER DEFAULT 0,
 				coverage_lines INTEGER,
 				security_score INTEGER,
 				FOREIGN KEY (session_id) REFERENCES qa_sessions(id) ON DELETE CASCADE
+			)
+		`)
+
+		// kilocode_change - Edit History table for atomic revert
+		await this.db.exec(`
+			CREATE TABLE IF NOT EXISTS edit_history (
+				id TEXT PRIMARY KEY,
+				message_id TEXT NOT NULL,
+				timestamp INTEGER NOT NULL,
+				affected_files TEXT NOT NULL, -- JSON array of file paths
+				reverse_patches TEXT NOT NULL, -- JSON array of reverse diffs
+				original_snapshots TEXT NOT NULL, -- JSON array of original file contents
+				metadata TEXT, -- JSON metadata including operation type, user context
+				is_reverted BOOLEAN DEFAULT 0,
+				reverted_at INTEGER,
+				reverted_by TEXT, -- User or system that initiated revert
+				conflict_resolution TEXT -- JSON for conflict resolution data
 			)
 		`)
 
@@ -359,6 +389,12 @@ export class DatabaseManager {
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_file ON qa_tests(file_path)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_operation ON qa_tests(operation)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_qa_tests_status ON qa_tests(status)")
+
+		// kilocode_change - Edit History indexes
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_edit_history_message ON edit_history(message_id)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_edit_history_timestamp ON edit_history(timestamp)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_edit_history_reverted ON edit_history(is_reverted)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_edit_history_files ON edit_history(affected_files)")
 	}
 
 	/**
@@ -1049,5 +1085,156 @@ export class DatabaseManager {
 		)
 
 		return sessions.length > 0 ? sessions[0] : null
+	}
+
+	// kilocode_change - Edit History methods
+
+	/**
+	 * Save edit history record for atomic revert
+	 */
+	async saveEditHistory(editHistory: Omit<EditHistoryRecord, "id">): Promise<string> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const id = `edit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+		await this.db.run(
+			`
+			INSERT INTO edit_history 
+			(id, message_id, timestamp, affected_files, reverse_patches, original_snapshots, metadata, is_reverted, reverted_at, reverted_by, conflict_resolution)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`,
+			id,
+			editHistory.message_id,
+			editHistory.timestamp,
+			editHistory.affected_files,
+			editHistory.reverse_patches,
+			editHistory.original_snapshots,
+			editHistory.metadata,
+			editHistory.is_reverted ? 1 : 0,
+			editHistory.reverted_at,
+			editHistory.reverted_by,
+			editHistory.conflict_resolution,
+		)
+
+		return id
+	}
+
+	/**
+	 * Get edit history by message ID
+	 */
+	async getEditHistoryByMessageId(messageId: string): Promise<EditHistoryRecord[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT * FROM edit_history 
+			WHERE message_id = ? 
+			ORDER BY timestamp DESC
+		`,
+			messageId,
+		)
+	}
+
+	/**
+	 * Get edit history by ID
+	 */
+	async getEditHistoryById(id: string): Promise<EditHistoryRecord | null> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const records = await this.db.all(
+			`
+			SELECT * FROM edit_history 
+			WHERE id = ?
+		`,
+			id,
+		)
+
+		return records.length > 0 ? records[0] : null
+	}
+
+	/**
+	 * Mark edit history as reverted
+	 */
+	async markEditHistoryAsReverted(id: string, revertedBy: string): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run(
+			`
+			UPDATE edit_history 
+			SET is_reverted = 1, reverted_at = ?, reverted_by = ?
+			WHERE id = ?
+		`,
+			Date.now(),
+			revertedBy,
+			id,
+		)
+	}
+
+	/**
+	 * Get recent edit history
+	 */
+	async getRecentEditHistory(limit: number = 50): Promise<EditHistoryRecord[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT * FROM edit_history 
+			ORDER BY timestamp DESC 
+			LIMIT ?
+		`,
+			limit,
+		)
+	}
+
+	/**
+	 * Get edit history for file
+	 */
+	async getEditHistoryForFile(filePath: string, limit: number = 20): Promise<EditHistoryRecord[]> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		return await this.db.all(
+			`
+			SELECT * FROM edit_history 
+			WHERE json_extract(affected_files, '$') LIKE ?
+			ORDER BY timestamp DESC 
+			LIMIT ?
+		`,
+			`%${filePath}%`,
+			limit,
+		)
+	}
+
+	/**
+	 * Delete edit history record
+	 */
+	async deleteEditHistory(id: string): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		await this.db.run(
+			`
+			DELETE FROM edit_history 
+			WHERE id = ?
+		`,
+			id,
+		)
+	}
+
+	/**
+	 * Clean up old edit history (older than specified days)
+	 */
+	async cleanupOldEditHistory(daysOld: number = 30): Promise<number> {
+		if (!this.db) throw new Error("Database not initialized")
+
+		const cutoffTime = Date.now() - daysOld * 24 * 60 * 60 * 1000
+
+		const result = await this.db.run(
+			`
+			DELETE FROM edit_history 
+			WHERE timestamp < ? AND is_reverted = 1
+		`,
+			cutoffTime,
+		)
+
+		return result.changes || 0
 	}
 }
