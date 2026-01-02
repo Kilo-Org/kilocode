@@ -1,0 +1,9 @@
+installation:
+  version: 6.0.0-alpha.22
+  installDate: 2026-01-02T00:55:39.155Z
+  lastUpdated: 2026-01-02T00:55:39.155Z
+modules:
+  - core
+  - bmm
+ides:
+  - kilo

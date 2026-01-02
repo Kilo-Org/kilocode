@@ -1,0 +1,42 @@
+name: "BMGB"
+version: "1.0.0"
+description: "BMAD Global Brain - Global knowledge and patterns module"
+type: "global"
+author: "BMAD Team"
+license: "MIT"
+
+# Module metadata
+metadata:
+  category: "global"
+  priority: 7
+  required: false
+
+# Supported modes
+modes:
+  - "bmad-bmm-master"
+  - "bmad-bmm-analyst"
+  - "bmad-bmm-architect"
+  - "bmad-bmm-dev"
+  - "bmad-bmm-pm"
+  - "bmad-bmm-sm"
+  - "bmad-bmm-tea"
+  - "bmad-bmm-tech-writer"
+  - "bmad-bmm-ux-designer"
+  - "bmad-bmm-quick-flow-solo-dev"
+
+# Dependencies
+dependencies:
+  - "bmb"
+
+# Module capabilities
+capabilities:
+  - "global_patterns"
+  - "best_practices"
+  - "industry_standards"
+  - "cross_project_learning"
+
+# Configuration
+config:
+  update_frequency_hours: 24
+  max_patterns_per_category: 100
+  auto_sync: true
