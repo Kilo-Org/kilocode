@@ -628,6 +628,60 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%settings.debug.description%"
+				},
+				"bmad.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable BMAD-METHOD integration"
+				},
+				"bmad.installationPath": {
+					"type": "string",
+					"default": "_bmad",
+					"description": "Path to BMAD-METHOD installation directory"
+				},
+				"bmad.activeModules": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": ["bmm", "bmb", "cis", "bmgd"],
+					"description": "Active BMAD modules to load"
+				},
+				"bmad.defaultWorkflow": {
+					"type": "string",
+					"default": null,
+					"description": "Default workflow to use when starting BMAD"
+				},
+				"bmad.autoSyncModes": {
+					"type": "boolean",
+					"default": true,
+					"description": "Automatically sync BMAD agents as Kilo Code modes"
+				},
+				"bmad.syncInterval": {
+					"type": "number",
+					"default": 300000,
+					"minimum": 60000,
+					"description": "Interval in milliseconds to sync BMAD modes (default: 5 minutes)"
+				},
+				"bmad.knowledgeBaseEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable BMAD knowledge base integration"
+				},
+				"bmad.partyModeEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable BMAD party mode for multi-agent collaboration"
+				},
+				"bmad.customModulesPath": {
+					"type": "string",
+					"default": null,
+					"description": "Path to custom BMAD modules directory"
+				},
+				"bmad.debugMode": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable debug mode for BMAD integration"
 				}
 			}
 		},
