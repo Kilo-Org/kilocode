@@ -158,7 +158,10 @@ export function TestResultsPanel() {
 						{qaState.privacyMode ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
 						<span className="text-sm font-medium">Privacy Mode</span>
 					</div>
-					<ToggleSwitch pressed={qaState.privacyMode} onPressedChange={togglePrivacyMode} />
+					<ToggleSwitch
+						checked={qaState.privacyMode}
+						onChange={() => togglePrivacyMode(!qaState.privacyMode)}
+					/>
 				</div>
 				<div className="text-sm text-muted-foreground">Force all AI operations to stay local</div>
 				{qaState.privacyMode && (
