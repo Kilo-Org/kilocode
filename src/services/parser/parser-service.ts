@@ -11,11 +11,13 @@ import { ISymbolExtractor, ParsedFile, SymbolInfo, ScopeInfo } from "./symbol-ex
 import { readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
+import { WorkerPool } from "../../workers/worker-pool"
 
 export interface ParserServiceConfig {
 	enableIncrementalParsing: boolean
 	maxWorkers: number
 	supportedLanguages: string[]
+	useWorkerThreads: boolean
 }
 
 export interface ParseResult {
@@ -37,7 +39,7 @@ export class ParserService {
 	private databaseManager: DatabaseManager
 	private config: ParserServiceConfig
 	private parseCache: Map<string, ParseResult> = new Map()
-	private workerPool: Worker[] = []
+	private workerPool: WorkerPool | null = null
 
 	constructor(databaseManager: DatabaseManager, config: Partial<ParserServiceConfig> = {}) {
 		this.databaseManager = databaseManager
@@ -45,6 +47,7 @@ export class ParserService {
 			enableIncrementalParsing: true,
 			maxWorkers: 4,
 			supportedLanguages: ["python", "javascript", "typescript", "xml", "json"],
+			useWorkerThreads: true,
 			...config,
 		}
 
@@ -58,8 +61,8 @@ export class ParserService {
 		// Load required language parsers
 		this.languageParsers = await loadRequiredLanguageParsers(filePaths)
 
-		// Initialize worker pool for async parsing
-		if (this.config.maxWorkers > 0) {
+		// Initialize worker pool if enabled
+		if (this.config.useWorkerThreads && this.config.maxWorkers > 0) {
 			await this.initializeWorkerPool()
 		}
 
@@ -70,6 +73,22 @@ export class ParserService {
 	 * Parse a file and extract symbols, relationships, and dependencies
 	 */
 	async parseFile(filePath: string, options?: { content?: string; force?: boolean }): Promise<ParseResult> {
+		// Use worker pool if available and enabled
+		if (this.config.useWorkerThreads && this.workerPool) {
+			return this.workerPool.parseFile(filePath, options)
+		}
+
+		// Fallback to main thread parsing
+		return this.parseFileMainThread(filePath, options)
+	}
+
+	/**
+	 * Parse file on main thread (fallback)
+	 */
+	private async parseFileMainThread(
+		filePath: string,
+		options?: { content?: string; force?: boolean },
+	): Promise<ParseResult> {
 		const startTime = Date.now()
 
 		try {
@@ -167,7 +186,13 @@ export class ParserService {
 	 * Parse multiple files in parallel
 	 */
 	async parseFiles(filePaths: string[], options?: { force?: boolean }): Promise<ParseResult[]> {
-		const promises = filePaths.map((filePath) => this.parseFile(filePath, options))
+		// Use worker pool if available and enabled
+		if (this.config.useWorkerThreads && this.workerPool) {
+			return this.workerPool.parseFiles(filePaths, options)
+		}
+
+		// Fallback to main thread parsing
+		const promises = filePaths.map((filePath) => this.parseFileMainThread(filePath, options))
 		return Promise.all(promises)
 	}
 
@@ -244,11 +269,14 @@ export class ParserService {
 	 * Get parsing statistics
 	 */
 	getStats(): any {
+		const workerStats = this.workerPool ? this.workerPool.getStats() : null
+
 		return {
 			cachedFiles: this.parseCache.size,
 			supportedLanguages: this.config.supportedLanguages,
 			loadedParsers: Object.keys(this.languageParsers).length,
-			workerPoolSize: this.workerPool.length,
+			useWorkerThreads: this.config.useWorkerThreads,
+			workerPool: workerStats,
 		}
 	}
 
@@ -256,11 +284,11 @@ export class ParserService {
 	 * Dispose of resources
 	 */
 	async dispose(): Promise<void> {
-		// Terminate worker pool
-		for (const worker of this.workerPool) {
-			worker.terminate()
+		// Dispose worker pool
+		if (this.workerPool) {
+			await this.workerPool.dispose()
+			this.workerPool = null
 		}
-		this.workerPool = []
 
 		// Clear cache
 		this.parseCache.clear()
@@ -277,9 +305,16 @@ export class ParserService {
 	}
 
 	private async initializeWorkerPool(): Promise<void> {
-		// TODO: Implement worker pool for async parsing
-		// This would use Worker threads to prevent blocking the main thread
-		console.log(`[ParserService] Worker pool initialization not yet implemented`)
+		try {
+			const workerScriptPath = path.join(__dirname, "../../workers/parser-worker.ts")
+			this.workerPool = new WorkerPool(this.config.maxWorkers, workerScriptPath)
+			await this.workerPool.initialize()
+
+			console.log(`[ParserService] Worker pool initialized with ${this.config.maxWorkers} workers`)
+		} catch (error) {
+			console.error(`[ParserService] Failed to initialize worker pool:`, error)
+			this.workerPool = null
+		}
 	}
 
 	private mapExtensionToLanguage(ext: string): string | null {
