@@ -92,6 +92,7 @@ import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-f
 
 import { ContextProxy } from "../config/ContextProxy"
 import { getEnabledRules } from "./kilorules"
+import { refreshWorkflowToggles } from "../context/instructions/workflows"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
@@ -1951,6 +1952,8 @@ export class ClineProvider
 	async postRulesDataToWebview() {
 		const workspacePath = this.cwd
 		if (workspacePath) {
+			// Refresh workflow toggles to ensure newly created workflow files are recognized
+			await refreshWorkflowToggles(this.context, workspacePath)
 			this.postMessageToWebview({
 				type: "rulesData",
 				...(await getEnabledRules(workspacePath, this.contextProxy, this.context)),
