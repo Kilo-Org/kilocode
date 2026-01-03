@@ -537,7 +537,7 @@ export type ExtensionState = Pick<
 	remoteControlEnabled: boolean
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
-	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
+	virtualQuotaActiveModel?: { id: string; info: ModelInfo; activeProfileNumber?: number } // kilocode_change: Add virtual quota active model for UI display with profile number
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason

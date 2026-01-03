@@ -552,7 +552,7 @@ describe("VirtualQuotaFallbackProvider", () => {
 					id: "",
 					info: {
 						maxTokens: 1,
-						contextWindow: 1,
+						contextWindow: 1000000,
 						supportsPromptCache: false,
 					},
 				})

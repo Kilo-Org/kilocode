@@ -13,7 +13,7 @@ interface ModelSelectorProps {
 	currentApiConfigName?: string
 	apiConfiguration: ProviderSettings
 	fallbackText: string
-	virtualQuotaActiveModel?: { id: string; name: string } // kilocode_change: Add virtual quota active model for UI display
+	virtualQuotaActiveModel?: { id: string; name: string; activeProfileNumber?: number } // kilocode_change: Add virtual quota active model for UI display
 }
 
 export const ModelSelector = ({
@@ -72,6 +72,9 @@ export const ModelSelector = ({
 		return (
 			<span className="text-xs text-vscode-descriptionForeground opacity-70 truncate">
 				{prettyModelName(virtualQuotaActiveModel.id)}
+				{virtualQuotaActiveModel.activeProfileNumber !== undefined && (
+					<> ({virtualQuotaActiveModel.activeProfileNumber})</>
+				)}
 			</span>
 		)
 	}
