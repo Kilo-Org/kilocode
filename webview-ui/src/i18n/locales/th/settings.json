@@ -1041,7 +1041,7 @@
 			"warningMissingKey": "⚠️ ต้องใช้ API key สำหรับการสร้างภาพ กรุณาตั้งค่าข้างต้น",
 			"successConfigured": "✓ การสร้างภาพได้รับการตั้งค่าและพร้อมใช้งาน"
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "เปิดใช้งานคำสั่ง slash ที่เริ่มต้นโดยโมเดล",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
 		},

@@ -980,7 +980,7 @@
 				"relace": "Relace Apply v3"
 			}
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "启用模型发起的斜杠命令",
 			"description": "启用后 Kilo Code 可运行斜杠命令执行工作流程。"
 		},

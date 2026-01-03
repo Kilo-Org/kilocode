@@ -1054,7 +1054,7 @@
 			"warningMissingKey": "⚠️ API klíč je vyžadován pro generování obrázků, nakonfigurujte ho výše.",
 			"successConfigured": "✓ Generování obrázků je nakonfigurováno a připraveno k použití"
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Povolit slash příkazy iniciované modelem",
 			"description": "Když je povoleno, Kilo Code může spouštět vaše slash příkazy k provedení pracovních toků."
 		},
