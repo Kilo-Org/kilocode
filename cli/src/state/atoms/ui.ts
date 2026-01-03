@@ -134,6 +134,15 @@ export const isStreamingAtom = atom<boolean>((get) => {
 	return false
 })
 
+/**
+	* Atom to track when a cancellation is in progress
+	* This provides immediate feedback when user presses ESC to cancel
+	* The extension is the source of truth for streaming state, but this atom
+	* allows the CLI to show "Cancelling..." immediately without waiting for
+	* the extension to process the cancellation request
+	*/
+export const isCancellingAtom = atom<boolean>(false)
+
 // ============================================================================
 // Input Mode System
 // ============================================================================
