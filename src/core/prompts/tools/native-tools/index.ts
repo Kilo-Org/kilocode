@@ -17,6 +17,7 @@ import searchAndReplace from "./search_and_replace"
 import searchReplace from "./search_replace"
 import searchFiles from "./search_files"
 import switchMode from "./switch_mode"
+import terminalKill from "./terminal_kill" // kilocode_change
 import updateTodoList from "./update_todo_list"
 import writeToFile from "./write_to_file"
 
@@ -60,6 +61,7 @@ export function getNativeTools(partialReadsEnabled: boolean = true): OpenAI.Chat
 		searchReplace,
 		searchFiles,
 		switchMode,
+		terminalKill, // kilocode_change
 		updateTodoList,
 		writeToFile,
 	] satisfies OpenAI.Chat.ChatCompletionTool[]

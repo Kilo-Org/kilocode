@@ -24,20 +24,26 @@ class ShellIntegrationError extends Error {}
 interface ExecuteCommandParams {
 	command: string
 	cwd?: string
+	runInBackground?: boolean // kilocode_change
 }
 
 export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 	readonly name = "execute_command" as const
 
 	parseLegacy(params: Partial<Record<string, string>>): ExecuteCommandParams {
+		// kilocode_change start - runInBackground support
+		const runInBackgroundParam = params.run_in_background
+		const runInBackground: boolean = runInBackgroundParam === "true"
+		// kilocode_change end
 		return {
 			command: params.command || "",
 			cwd: params.cwd,
+			runInBackground, // kilocode_change
 		}
 	}
 
 	async execute(params: ExecuteCommandParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { command, cwd: customCwd } = params
+		const { command, cwd: customCwd, runInBackground = false } = params // kilocode_change: add runInBackground
 		const { handleError, pushToolResult, askApproval, removeClosingTag, toolProtocol } = callbacks
 
 		try {
@@ -101,6 +107,7 @@ export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 				terminalOutputLineLimit,
 				terminalOutputCharacterLimit,
 				commandExecutionTimeout,
+				runInBackground, // kilocode_change
 			}
 
 			try {
@@ -155,6 +162,7 @@ export type ExecuteCommandOptions = {
 	terminalOutputLineLimit?: number
 	terminalOutputCharacterLimit?: number
 	commandExecutionTimeout?: number
+	runInBackground?: boolean // kilocode_change
 }
 
 export async function executeCommandInTerminal(
@@ -163,7 +171,8 @@ export async function executeCommandInTerminal(
 		executionId,
 		command,
 		customCwd,
-		terminalShellIntegrationDisabled = true,
+		terminalShellIntegrationDisabled = true, // kilocode_change: default
+		runInBackground: runInBackgroundRequested = false, // kilocode_change
 		terminalOutputLineLimit = 500,
 		terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 		commandExecutionTimeout = 0,
@@ -188,7 +197,7 @@ export async function executeCommandInTerminal(
 	}
 
 	let message: { text?: string; images?: string[] } | undefined
-	let runInBackground = false
+	let runInBackground = runInBackgroundRequested // kilocode_change
 	let completed = false
 	let result: string = ""
 	let exitDetails: ExitCodeDetails | undefined
@@ -236,12 +245,31 @@ export async function executeCommandInTerminal(
 				terminalOutputCharacterLimit,
 			)
 
-			task.say("command_output", result)
+			// kilocode_change start: only show command output if not runInBackground
+			if (!runInBackground) {
+				task.say("command_output", result)
+			}
+			// kilocode_change end: only show command output if not runInBackground
 			completed = true
 		},
-		onShellExecutionStarted: (pid: number | undefined) => {
-			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
+		// kilocode_change - add process param
+		onShellExecutionStarted: (pid: number | undefined, process: RooTerminalProcess) => {
+			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
+			const status: CommandExecutionStatus = {
+				executionId,
+				status: "started",
+				pid,
+				command,
+				runInBackground, // kilocode_change - add runInBackground
+				terminalId: terminal.id, // kilocode_change - add terminalId
+			}
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+
+			// kilocode_change start - automatically continue the process
+			if (runInBackground) {
+				process.continue()
+			}
+			// kilocode_change end - automatically continue the process
 		},
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }

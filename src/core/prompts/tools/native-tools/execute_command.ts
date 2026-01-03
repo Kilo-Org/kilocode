@@ -36,8 +36,14 @@ export default {
 					type: ["string", "null"],
 					description: CWD_PARAMETER_DESCRIPTION,
 				},
+				// kilocode_change start - run_in_background
+				run_in_background: {
+					type: ["boolean", "null"],
+					description: "Set to true to run the command in the background without waiting for completion",
+				},
+				// kilocode_change end - run_in_background
 			},
-			required: ["command", "cwd"],
+			required: ["command", "cwd", "run_in_background"], // kilocode_change - add run_in_background
 			additionalProperties: false,
 		},
 	},
