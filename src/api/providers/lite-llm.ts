@@ -1,7 +1,13 @@
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk" // Keep for type usage only
 
-import { litellmDefaultModelId, litellmDefaultModelInfo, TOOL_PROTOCOL } from "@roo-code/types"
+import {
+	litellmDefaultModelId,
+	litellmDefaultModelInfo,
+	TOOL_PROTOCOL,
+	litellmDefaultMaxTokens, // kilocode_change
+	litellmDefaultTemperature, // kilocode_change
+} from "@roo-code/types"
 
 import { calculateApiCostOpenAI } from "../../shared/cost"
 
@@ -110,12 +116,6 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 			enhancedMessages = openAiMessages
 		}
 
-		// Required by some providers; others default to max tokens allowed
-		let maxTokens: number | undefined = info.maxTokens ?? undefined
-
-		// Check if this is a GPT-5 model that requires max_completion_tokens instead of max_tokens
-		const isGPT5Model = this.isGpt5(modelId)
-
 		// Check if model supports native tools and tools are provided with native protocol
 		const supportsNativeTools = info.supportsNativeTools ?? false
 		const useNativeTools =
@@ -135,13 +135,23 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 			...(useNativeTools && metadata.tool_choice && { tool_choice: metadata.tool_choice }),
 			...(useNativeTools && { parallel_tool_calls: metadata?.parallelToolCalls ?? false }),
 		}
+		// Required by some providers; others default to max tokens allowed
+		let maxTokens: number = this.options.litellmMaxTokens || litellmDefaultMaxTokens
 
+		// Check if this is a GPT-5 model that requires max_completion_tokens instead of max_tokens
+		const isGPT5Model = this.isGpt5(modelId)
+
+		// kilocode_change start
 		// GPT-5 models require max_completion_tokens instead of the deprecated max_tokens parameter
-		if (isGPT5Model && maxTokens) {
+		// But blindly using info.maxTokens results in very wasted context windows.
+		// So outside of GPT-5, use a sane default.
+		if (isGPT5Model) {
+			let maxTokens: number | undefined = info.maxTokens ?? undefined
 			requestOptions.max_completion_tokens = maxTokens
-		} else if (maxTokens) {
-			requestOptions.max_tokens = maxTokens
+		} else {
+			requestOptions.max_tokens = this.options.litellmMaxTokens || litellmDefaultMaxTokens
 		}
+		// kilocode_change end
 
 		if (this.supportsTemperature(modelId)) {
 			requestOptions.temperature = this.options.modelTemperature ?? 0
@@ -219,9 +229,6 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 	async completePrompt(prompt: string): Promise<string> {
 		const { id: modelId, info } = await this.fetchModel()
 
-		// Check if this is a GPT-5 model that requires max_completion_tokens instead of max_tokens
-		const isGPT5Model = this.isGpt5(modelId)
-
 		try {
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
@@ -232,6 +239,7 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 				requestOptions.temperature = this.options.modelTemperature ?? 0
 			}
 
+			const isGPT5Model = this.isGpt5(modelId)
 			// GPT-5 models require max_completion_tokens instead of the deprecated max_tokens parameter
 			if (isGPT5Model && info.maxTokens) {
 				requestOptions.max_completion_tokens = info.maxTokens
