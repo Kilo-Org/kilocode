@@ -36,7 +36,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const exitPromptVisible = useAtomValue(exitPromptVisibleAtom)
-	const exitModifierKey = process.platform === "darwin" ? "Cmd" : "Ctrl"
+	const exitModifierKey = "Ctrl" // Ctrl+C is the universal terminal interrupt signal on all platforms
 
 	// Don't render if no hotkeys to show or disabled
 	if (!shouldShow || disabled) {
