@@ -54,6 +54,8 @@ import {
 	inceptionDefaultModelId,
 	minimaxModels,
 	minimaxDefaultModelId,
+	claudecodenativeModels,
+	claudecodenativeDefaultModelId,
 	internationalZAiModels,
 	internationalZAiDefaultModelId,
 	mainlandZAiModels,
@@ -316,6 +318,14 @@ export const getModelsByProvider = ({
 				defaultModel: basetenDefaultModelId,
 			}
 		}
+		//kilocode_change start
+		case "claudecodenative": {
+			return {
+				models: claudecodenativeModels,
+				defaultModel: claudecodenativeDefaultModelId,
+			}
+		}
+		//kilocode_change end
 		case "zai": {
 			if (options.isChina) {
 				return {

@@ -28,6 +28,28 @@ export const anthropicModels = {
 			},
 		],
 	},
+	"claude-sonnet-4-5-20250929": {
+		maxTokens: 64_000, // Overridden to 8k if `enableReasoningEffort` is false.
+		contextWindow: 200_000, // Default 200K, extendable to 1M with beta flag 'context-1m-2025-08-07'
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		inputPrice: 3.0, // $3 per million input tokens (≤200K context)
+		outputPrice: 15.0, // $15 per million output tokens (≤200K context)
+		cacheWritesPrice: 3.75, // $3.75 per million tokens
+		cacheReadsPrice: 0.3, // $0.30 per million tokens
+		supportsReasoningBudget: true,
+		// Tiered pricing for extended context (requires beta flag 'context-1m-2025-08-07')
+		tiers: [
+			{
+				contextWindow: 1_000_000, // 1M tokens with beta flag
+				inputPrice: 6.0, // $6 per million input tokens (>200K context)
+				outputPrice: 22.5, // $22.50 per million output tokens (>200K context)
+				cacheWritesPrice: 7.5, // $7.50 per million tokens (>200K context)
+				cacheReadsPrice: 0.6, // $0.60 per million tokens (>200K context)
+			},
+		],
+	},
 	"claude-sonnet-4-20250514": {
 		maxTokens: 64_000, // Overridden to 8k if `enableReasoningEffort` is false.
 		contextWindow: 200_000, // Default 200K, extendable to 1M with beta flag 'context-1m-2025-08-07'
@@ -51,6 +73,19 @@ export const anthropicModels = {
 		],
 	},
 	"claude-opus-4-5-20251101": {
+		maxTokens: 32_000, // Overridden to 8k if `enableReasoningEffort` is false.
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		inputPrice: 5.0, // $5 per million input tokens
+		outputPrice: 25.0, // $25 per million output tokens
+		cacheWritesPrice: 6.25, // $6.25 per million tokens
+		cacheReadsPrice: 0.5, // $0.50 per million tokens
+		supportsReasoningBudget: true,
+		supportsVerbosity: true, // kilocode_change
+	},
+	"claude-opus-4-5": {
 		maxTokens: 32_000, // Overridden to 8k if `enableReasoningEffort` is false.
 		contextWindow: 200_000,
 		supportsImages: true,
@@ -156,6 +191,21 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.03,
 	},
 	"claude-haiku-4-5-20251001": {
+		maxTokens: 64_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native", // kilocode_change
+		inputPrice: 1.0,
+		outputPrice: 5.0,
+		cacheWritesPrice: 1.25,
+		cacheReadsPrice: 0.1,
+		supportsReasoningBudget: true,
+		description:
+			"Claude Haiku 4.5 delivers near-frontier intelligence at lightning speeds with extended thinking, vision, and multilingual support.",
+	},
+	"claude-haiku-4-5": {
 		maxTokens: 64_000,
 		contextWindow: 200_000,
 		supportsImages: true,

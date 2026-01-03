@@ -839,6 +839,13 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				createFieldConfig("claudeCodeMaxOutputTokens", config, "8000"),
 			]
 
+		case "claudecodenative":
+			return [
+				createFieldConfig("apiKey", config),
+				createFieldConfig("apiModelId", config, "claude-sonnet-4-5"),
+				createFieldConfig("anthropicBaseUrl", config, "Default"),
+			]
+
 		case "mistral":
 			return [
 				createFieldConfig("mistralApiKey", config),
@@ -1059,6 +1066,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	gemini: "gemini-1.5-pro-latest",
 	vertex: "claude-3-5-sonnet@20241022",
 	"claude-code": "claude-3-5-sonnet-20241022",
+	claudecodenative: "claude-sonnet-4-5",
 	mistral: "mistral-large-latest",
 	groq: "llama-3.1-70b-versatile",
 	deepseek: "deepseek-chat",

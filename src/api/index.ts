@@ -51,6 +51,7 @@ import {
 	DeepInfraHandler,
 	MiniMaxHandler,
 	BasetenHandler,
+	ClaudeCodeNativeHandler,
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -156,6 +157,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new AnthropicHandler(options)
 		case "claude-code":
 			return new ClaudeCodeHandler(options)
+		case "claudecodenative":
+			return new ClaudeCodeNativeHandler(options)
 		// kilocode_change start
 		case "glama":
 			return new GlamaHandler(options)

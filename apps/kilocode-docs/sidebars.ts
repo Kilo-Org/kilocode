@@ -56,6 +56,7 @@ const sidebars: SidebarsConfig = {
 								"providers/cerebras", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
+								"providers/claude-code-native",
 								"providers/deepseek",
 								"providers/fireworks",
 								"providers/gemini",

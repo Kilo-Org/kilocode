@@ -43,6 +43,8 @@ import {
 	rooDefaultModelId,
 	claudeCodeModels,
 	claudeCodeDefaultModelId,
+	claudecodenativeModels,
+	claudecodenativeDefaultModelId,
 	geminiCliModels,
 	geminiCliDefaultModelId,
 	minimaxModels,
@@ -158,6 +160,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	featherless: null,
 	roo: null,
 	"claude-code": null,
+	claudecodenative: null,
 	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
@@ -210,6 +213,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	featherless: null,
 	roo: null,
 	"claude-code": null,
+	claudecodenative: "apiModelId",
 	"gemini-cli": null,
 	"virtual-quota-fallback": null,
 	huggingface: null,
@@ -271,6 +275,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	litellm: "gpt-4",
 	"qwen-code": qwenCodeDefaultModelId,
 	"claude-code": claudeCodeDefaultModelId,
+	claudecodenative: claudecodenativeDefaultModelId,
 	doubao: doubaoDefaultModelId,
 	fireworks: fireworksDefaultModelId,
 	"io-intelligence": "deepseek-ai/DeepSeek-R1-0528",
@@ -412,6 +417,11 @@ export function getModelsByProvider(params: {
 			return {
 				models: claudeCodeModels as ModelRecord,
 				defaultModel: claudeCodeDefaultModelId,
+			}
+		case "claudecodenative":
+			return {
+				models: claudecodenativeModels as ModelRecord,
+				defaultModel: claudecodenativeDefaultModelId,
 			}
 		case "gemini-cli":
 			return {

@@ -591,7 +591,8 @@
 			"description": "Optioneel pad naar uw Claude Code CLI. Standaard 'claude' als niet ingesteld.",
 			"placeholder": "Standaard: claude",
 			"maxTokensLabel": "Max Output Tokens",
-			"maxTokensDescription": "Maximaal aantal output-tokens voor Claude Code-reacties. Standaard is 8000."
+			"maxTokensDescription": "Maximaal aantal output-tokens voor Claude Code-reacties. Standaard is 8000.",
+			"LongLivedToken": "Claude Code Long Lived Token"
 		},
 		"geminiCli": {
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Gemini CLI-tool en vereist geen API-sleutels.",

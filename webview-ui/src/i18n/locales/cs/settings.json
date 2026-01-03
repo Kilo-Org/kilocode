@@ -621,7 +621,8 @@
 			"description": "Volitelná cesta k vašemu CLI Claude Code. Ve výchozím nastavení 'claude', pokud není nastaveno.",
 			"placeholder": "Výchozí: claude",
 			"maxTokensLabel": "Maximální počet výstupních tokenů",
-			"maxTokensDescription": "Maximální počet výstupních tokenů pro odpovědi Claude Code. Výchozí je 8000."
+			"maxTokensDescription": "Maximální počet výstupních tokenů pro odpovědi Claude Code. Výchozí je 8000.",
+			"LongLivedToken": "Dlouhodobý token Claude Code"
 		},
 		"geminiCli": {
 			"description": "Tento poskytovatel používá OAuth autentizaci z nástroje Gemini CLI a nevyžaduje klíče API.",

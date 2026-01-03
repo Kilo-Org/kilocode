@@ -29,6 +29,7 @@ import {
 	xaiModels,
 	internationalZAiModels,
 	minimaxModels,
+	claudecodenativeModels,
 } from "./providers/index.js"
 
 /**
@@ -162,6 +163,7 @@ export const providerNames = [
 	"vertex",
 	"xai",
 	"zai",
+	"claudecodenative",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -225,6 +227,8 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 	anthropicDeploymentName: z.string().optional(), // kilocode_change
 	anthropicBeta1MContext: z.boolean().optional(), // Enable 'context-1m-2025-08-07' beta for 1M context window.
 })
+
+const claudecodenativeSchema = anthropicSchema
 
 const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
 	claudeCodePath: z.string().optional(),
@@ -588,6 +592,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
 	sapAiCoreSchema.merge(z.object({ apiProvider: z.literal("sap-ai-core") })), // kilocode_change
+	claudecodenativeSchema.merge(z.object({ apiProvider: z.literal("claudecodenative") })),
 	defaultSchema,
 ])
 
@@ -640,6 +645,7 @@ export const providerSettingsSchema = z.object({
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
 	...sapAiCoreSchema.shape, // kilocode_change
+	...claudecodenativeSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 
@@ -741,6 +747,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	roo: "apiModelId",
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	"virtual-quota-fallback": "apiModelId",
+	claudecodenative: "apiModelId",
 }
 
 /**
@@ -748,7 +755,13 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
  */
 
 // Providers that use Anthropic-style API protocol.
-export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code", "bedrock", "minimax"]
+export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = [
+	"anthropic",
+	"claude-code",
+	"bedrock",
+	"minimax",
+	"claudecodenative",
+]
 
 export const getApiProtocol = (provider: ProviderName | undefined, modelId?: string): "anthropic" | "openai" => {
 	if (provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider)) {
@@ -894,4 +907,9 @@ export const MODELS_BY_PROVIDER: Record<
 	// Local providers; models discovered from localhost endpoints.
 	lmstudio: { id: "lmstudio", label: "LM Studio", models: [] },
 	ollama: { id: "ollama", label: "Ollama", models: [] },
+	claudecodenative: {
+		id: "claudecodenative",
+		label: "Claude Code Native",
+		models: Object.keys(claudecodenativeModels),
+	},
 }

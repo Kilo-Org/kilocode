@@ -565,7 +565,8 @@
 			"description": "Caminho opcional para o seu Claude Code CLI. O padrão é 'claude' se não for definido.",
 			"placeholder": "Padrão: claude",
 			"maxTokensLabel": "Tokens de saída máximos",
-			"maxTokensDescription": "Número máximo de tokens de saída para respostas do Claude Code. O padrão é 8000."
+			"maxTokensDescription": "Número máximo de tokens de saída para respostas do Claude Code. O padrão é 8000.",
+			"LongLivedToken": "Token de longa duração do Claude Code"
 		},
 		"geminiCli": {
 			"description": "Este provedor usa autenticação OAuth da ferramenta Gemini CLI e não requer chaves de API.",

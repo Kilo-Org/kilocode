@@ -574,7 +574,8 @@
 			"description": "Chemin facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
 			"placeholder": "Défaut : claude",
 			"maxTokensLabel": "Jetons de sortie max",
-			"maxTokensDescription": "Nombre maximum de jetons de sortie pour les réponses de Claude Code. La valeur par défaut est 8000."
+			"maxTokensDescription": "Nombre maximum de jetons de sortie pour les réponses de Claude Code. La valeur par défaut est 8000.",
+			"LongLivedToken": "Jeton de longue durée Claude Code"
 		},
 		"geminiCli": {
 			"description": "Ce fournisseur utilise l'authentification OAuth de l'outil Gemini CLI et ne nécessite pas de clés API.",

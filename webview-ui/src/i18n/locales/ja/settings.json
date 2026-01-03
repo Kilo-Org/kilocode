@@ -592,7 +592,8 @@
 			"description": "Claude Code CLIへのオプションパス。設定されていない場合、デフォルトは「claude」です。",
 			"placeholder": "デフォルト：claude",
 			"maxTokensLabel": "最大出力トークン",
-			"maxTokensDescription": "Claude Codeレスポンスの最大出力トークン数。デフォルトは8000です。"
+			"maxTokensDescription": "Claude Codeレスポンスの最大出力トークン数。デフォルトは8000です。",
+			"LongLivedToken": "Claude Code 長期トークン"
 		},
 		"geminiCli": {
 			"description": "このプロバイダーはGemini CLIツールからのOAuth認証を使用し、APIキーは必要ありません。",

@@ -25,6 +25,7 @@ import {
 	featherlessModels,
 	minimaxModels,
 	basetenModels,
+	claudecodenativeModels,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -53,6 +54,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	featherless: featherlessModels,
 	minimax: minimaxModels,
 	baseten: basetenModels,
+	claudecodenative: claudecodenativeModels,
 }
 
 export const PROVIDERS = [
@@ -103,6 +105,7 @@ export const PROVIDERS = [
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
 	{ value: "minimax", label: "MiniMax" },
 	{ value: "baseten", label: "Baseten" },
+	{ value: "claudecodenative", label: "Claude Code Native" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
 PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

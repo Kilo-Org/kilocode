@@ -10,6 +10,7 @@ export * from "./featherless.js"
 export * from "./fireworks.js"
 export * from "./gemini.js"
 // kilocode_change start
+export * from "./claudecodenative.js"
 export * from "./gemini-cli.js"
 export * from "./ovhcloud.js"
 export * from "./synthetic.js"
@@ -71,6 +72,7 @@ import { vercelAiGatewayDefaultModelId } from "./vercel-ai-gateway.js"
 import { internationalZAiDefaultModelId, mainlandZAiDefaultModelId } from "./zai.js"
 import { deepInfraDefaultModelId } from "./deepinfra.js"
 import { minimaxDefaultModelId } from "./minimax.js"
+import { claudecodenativeDefaultModelId } from "./claudecodenative.js"
 
 // Import the ProviderName type from provider-settings to avoid duplication
 import type { ProviderName } from "../provider-settings.js"
@@ -155,6 +157,8 @@ export function getProviderDefaultModelId(
 			return qwenCodeDefaultModelId
 		case "vercel-ai-gateway":
 			return vercelAiGatewayDefaultModelId
+		case "claudecodenative":
+			return claudecodenativeDefaultModelId
 		case "anthropic":
 		case "gemini-cli":
 		case "human-relay":
