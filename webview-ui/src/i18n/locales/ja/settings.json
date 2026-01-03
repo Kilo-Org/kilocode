@@ -991,7 +991,7 @@
 				"relace": "Relace Apply v3"
 			}
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "モデル開始スラッシュコマンドを有効にする",
 			"description": "有効にすると、Kilo Codeがワークフローを実行するためにあなたのスラッシュコマンドを実行できます。"
 		},
