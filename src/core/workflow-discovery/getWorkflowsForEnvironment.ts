@@ -85,8 +85,8 @@ export async function getWorkflowsForEnvironment(
 	enabledWorkflows?: Map<string, boolean>,
 ): Promise<string> {
 	// kilocode_change: Use Experiments.isEnabled to properly check experiment status with fallback to defaults
-	// Check if workflow discovery experiment is enabled
-	if (!Experiments.isEnabled(experiments, EXPERIMENT_IDS.WORKFLOW_DISCOVERY)) {
+	// Check if workflow discovery experiment is enabled // kilocode_change
+	if (!Experiments.isEnabled(experiments, EXPERIMENT_IDS.AUTO_EXECUTE_WORKFLOW)) {
 		return ""
 	}
 
