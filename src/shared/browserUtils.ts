@@ -36,6 +36,7 @@ export function scaleCoordinate(coordinate: string, viewportWidth: number, viewp
  */
 export function prettyKey(k?: string): string {
 	if (!k) return ""
+	if (typeof k !== "string") return String(k)
 	return k
 		.split("+")
 		.map((part) => {
@@ -69,7 +70,8 @@ export function prettyKey(k?: string): string {
 			if (keyMatch) return keyMatch[1].toUpperCase()
 			const digitMatch = /^Digit([0-9])$/.exec(p)
 			if (digitMatch) return digitMatch[1]
-			const spaced = p.replace(/([a-z])([A-Z])/g, "$1 $2")
+			// Guard against non-string p (though unlikely from split) to be safe
+			const spaced = typeof p === "string" ? p.replace(/([a-z])([A-Z])/g, "$1 $2") : String(p || "")
 			return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 		})
 		.join(" + ")

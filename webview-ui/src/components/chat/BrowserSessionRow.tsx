@@ -69,7 +69,9 @@ const getBrowserActionText = (
 				coordinate: executedCoordinate || getViewportCoordinate(coordinate),
 			})
 		case "resize":
-			return t("chat:browser.actions.resized", { size: size?.split(/[x,]/).join(" x ") })
+			return t("chat:browser.actions.resized", {
+				size: typeof size === "string" ? size.split(/[x,]/).join(" x ") : String(size || ""),
+			})
 		case "screenshot":
 			return t("chat:browser.actions.screenshotSaved")
 		case "close":
