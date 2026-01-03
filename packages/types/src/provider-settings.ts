@@ -496,6 +496,7 @@ const fireworksSchema = apiModelIdProviderModelSchema.extend({
 // kilocode_change start
 const syntheticSchema = apiModelIdProviderModelSchema.extend({
 	syntheticApiKey: z.string().optional(),
+	syntheticBaseUrl: z.string().optional(),
 })
 // kilocode_change end
 

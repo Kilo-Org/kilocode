@@ -115,7 +115,7 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			break
 		}
 		case "synthetic":
-			models = await getSyntheticModels(options.apiKey)
+			models = await getSyntheticModels(options.apiKey, options.baseUrl)
 			break
 		case "gemini":
 			models = await getGeminiModels({

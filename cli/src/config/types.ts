@@ -412,6 +412,7 @@ type SyntheticProviderConfig = BaseProviderConfig & {
 	provider: "synthetic"
 	apiModelId?: string
 	syntheticApiKey?: string
+	syntheticBaseUrl?: string
 }
 
 type VirtualQuotaFallbackProviderConfig = BaseProviderConfig & {

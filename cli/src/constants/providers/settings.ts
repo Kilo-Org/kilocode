@@ -633,6 +633,12 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		type: "password",
 		placeholder: "Enter Synthetic API key...",
 	},
+	syntheticBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
 
 	// SAP AI Core fields
 	sapAiCoreServiceKey: {

@@ -76,6 +76,17 @@ describe("SyntheticHandler", () => {
 		expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: "https://api.synthetic.new/openai/v1" }))
 	})
 
+	it("should use custom base URL when syntheticBaseUrl is provided", () => {
+		const customBaseUrl = "https://custom.synthetic.example.com/v1"
+		new SyntheticHandler({ syntheticApiKey: "test-synthetic-api-key", syntheticBaseUrl: customBaseUrl })
+		expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: customBaseUrl }))
+	})
+
+	it("should use default base URL when syntheticBaseUrl is empty string", () => {
+		new SyntheticHandler({ syntheticApiKey: "test-synthetic-api-key", syntheticBaseUrl: "" })
+		expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: "https://api.synthetic.new/openai/v1" }))
+	})
+
 	it("should use the provided API key", () => {
 		const syntheticApiKey = "test-synthetic-api-key"
 		new SyntheticHandler({ syntheticApiKey })
@@ -133,9 +144,7 @@ describe("SyntheticHandler", () => {
 	it("should handle errors in completePrompt", async () => {
 		const errorMessage = "synthetic API error"
 		mockCreate.mockRejectedValueOnce(new Error(errorMessage))
-		await expect(handler.completePrompt("test prompt")).rejects.toThrow(
-			`Synthetic completion error: ${errorMessage}`,
-		)
+		await expect(handler.completePrompt("test prompt")).rejects.toThrow(errorMessage)
 	})
 
 	it("createMessage should yield text content from stream", async () => {
@@ -222,8 +231,8 @@ describe("SyntheticHandler", () => {
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,
 				stream_options: { include_usage: true },
+				max_tokens: expect.any(Number),
 			}),
-			undefined,
 		)
 	})
 
@@ -297,5 +306,200 @@ describe("SyntheticHandler", () => {
 				totalCost: expect.any(Number),
 			},
 		])
+	})
+
+	describe("includeMaxTokens and modelMaxTokens", () => {
+		const SYNTHETIC_DEFAULT_MAX_TOKENS = 8192
+
+		it("should include max_tokens with default value of 8192 when includeMaxTokens not set", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: SYNTHETIC_DEFAULT_MAX_TOKENS,
+				}),
+			)
+		})
+
+		it("should include max_tokens with default value of 8192 when includeMaxTokens is true", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: true,
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: SYNTHETIC_DEFAULT_MAX_TOKENS,
+				}),
+			)
+		})
+
+		it("should NOT include max_tokens when includeMaxTokens is false", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: false,
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.max_tokens).toBeUndefined()
+		})
+
+		it("should use modelMaxTokens when provided and includeMaxTokens is true", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const customMaxTokens = 4096
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: true,
+				modelMaxTokens: customMaxTokens,
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: customMaxTokens,
+				}),
+			)
+		})
+
+		it("should use modelMaxTokens when provided (includeMaxTokens defaults to true)", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const customMaxTokens = 8192
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				modelMaxTokens: customMaxTokens,
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: customMaxTokens,
+				}),
+			)
+		})
+
+		it("should NOT use modelMaxTokens when includeMaxTokens is false", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const customMaxTokens = 4096
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: false,
+				modelMaxTokens: customMaxTokens,
+			})
+
+			mockCreate.mockImplementationOnce(() => ({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}))
+
+			const stream = handlerWithModel.createMessage("system prompt", [])
+			await stream.next()
+
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.max_tokens).toBeUndefined()
+		})
+
+		it("completePrompt should respect includeMaxTokens setting", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: false,
+			})
+
+			mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: "response" } }] })
+
+			await handlerWithModel.completePrompt("test prompt")
+
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs.max_tokens).toBeUndefined()
+		})
+
+		it("completePrompt should use modelMaxTokens when provided", async () => {
+			const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
+			const customMaxTokens = 2048
+			const handlerWithModel = new SyntheticHandler({
+				apiModelId: modelId,
+				syntheticApiKey: "test-synthetic-api-key",
+				includeMaxTokens: true,
+				modelMaxTokens: customMaxTokens,
+			})
+
+			mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: "response" } }] })
+
+			await handlerWithModel.completePrompt("test prompt")
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: customMaxTokens,
+				}),
+			)
+		})
 	})
 })
