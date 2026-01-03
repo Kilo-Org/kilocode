@@ -180,6 +180,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private context: vscode.ExtensionContext // kilocode_change
 
 	readonly taskId: string
+	private rawInputValue: string | undefined = undefined
 	private taskIsFavorited?: boolean // kilocode_change
 	readonly rootTaskId?: string
 	readonly parentTaskId?: string
@@ -281,6 +282,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	// Computer User
 	browserSession: BrowserSession
 
+	// Intelligent Provider
+
 	// Editing
 	diffViewProvider: DiffViewProvider
 	diffStrategy?: DiffStrategy
@@ -297,6 +300,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private askResponseText?: string
 	private askResponseImages?: string[]
 	public lastMessageTs?: number
+	private assessmentDone: boolean = false // Track if difficulty assessment is done for current message
 	private autoApprovalTimeoutRef?: NodeJS.Timeout
 
 	// Tool Use
@@ -439,9 +443,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.apiConfiguration = apiConfiguration
 		this.api = buildApiHandler(apiConfiguration)
-		// kilocode_change start: Listen for model changes in virtual quota fallback
+
+		// kilocode_change start: Listen for model changes in virtual quota fallback and intelligent provider
 		if (this.api instanceof VirtualQuotaFallbackHandler) {
-			this.api.on("handlerChanged", () => {
+			;(this.api as any).on("handlerChanged", () => {
+				this.emit("modelChanged")
+			})
+		}
+
+		// Listen for handler changes in intelligent provider
+		// Both VirtualQuotaFallbackHandler and IntelligentHandler extend EventEmitter and emit handlerChanged events
+		// We can't import IntelligentHandler here due to circular dependency, so we check by name
+		if (this.api.constructor.name === "IntelligentHandler" && typeof (this.api as any).on === "function") {
+			;(this.api as any).on("handlerChanged", () => {
 				this.emit("modelChanged")
 			})
 		}
@@ -1372,6 +1386,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+		// Set raw input value for assessment when user sends a message
+		if (askResponse === "messageResponse" && text) {
+			this.rawInputValue = text
+		}
 		// Clear any pending auto-approval timeout when user responds
 		this.cancelAutoApprovalTimeout()
 
@@ -1385,10 +1403,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.askResponse = askResponse // this triggers async callbacks
 		// kilocode_change end
 
-		// Create a checkpoint whenever the user sends a message.
-		// Use allowEmpty=true to ensure a checkpoint is recorded even if there are no file changes.
-		// Suppress the checkpoint_saved chat row for this particular checkpoint to keep the timeline clean.
+		// Reset assessment done flag for new message
 		if (askResponse === "messageResponse") {
+			this.assessmentDone = false
+
+			// Create a checkpoint whenever the user sends a message.
+			// Use allowEmpty=true to ensure a checkpoint is recorded even if there are no file changes.
+			// Suppress the checkpoint_saved chat row for this particular checkpoint to keep the timeline clean.
 			void this.checkpointSave(false, true)
 		}
 
@@ -1784,6 +1805,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.isInitialized = true
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
+
+		// Set initial raw input value for assessment
+		this.rawInputValue = task
 
 		// Task starting
 
@@ -4131,6 +4155,25 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			})
 		}
 
+		// Extract userPrompt from the last user message (current input) for intelligent provider
+		let userPrompt: string | undefined
+		const lastUserMessage = cleanConversationHistory.filter((m) => "role" in m && m.role === "user").at(-1)
+		if (lastUserMessage && "content" in lastUserMessage) {
+			const content = lastUserMessage.content
+			if (Array.isArray(content)) {
+				userPrompt = content
+					.map((block) => {
+						if (typeof block === "object" && block.type === "text") {
+							return block.text
+						}
+						return ""
+					})
+					.filter((text) => text)
+					.join(" ")
+			} else if (typeof content === "string") {
+				userPrompt = content
+			}
+		}
 		// Parallel tool calls are disabled - feature is on hold
 		// Previously resolved from experiments.isEnabled(..., EXPERIMENT_IDS.MULTIPLE_NATIVE_TOOL_CALLS)
 		const parallelToolCallsEnabled = false
@@ -4144,6 +4187,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				? { tools: allTools, tool_choice: "auto", toolProtocol, parallelToolCalls: parallelToolCallsEnabled }
 				: {}),
 			projectId: (await kiloConfig)?.project?.id, // kilocode_change: pass projectId for backend tracking (ignored by other providers)
+			rawUserPrompt: this.rawInputValue,
+			isInitialMessage: !this.assessmentDone, // Mark as initial message for difficulty assessment only if not yet assessed
+		}
+
+		// Mark assessment as done after first createMessage call
+		if (!this.assessmentDone) {
+			this.assessmentDone = true
 		}
 
 		// Create an AbortController to allow cancelling the request mid-stream

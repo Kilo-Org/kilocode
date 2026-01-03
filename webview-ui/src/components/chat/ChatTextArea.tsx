@@ -782,6 +782,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 
 					resetHistoryNavigation()
+
+					setInputValue("")
+					setSelectedImages([])
 					onSend()
 				}
 
@@ -853,6 +856,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				inputValue,
 				cursorPosition,
 				setInputValue,
+				setSelectedImages,
 				justDeletedSpaceAfterMention,
 				queryItems,
 				allModes,
@@ -1731,7 +1735,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							<button
 								aria-label={t("chat:sendMessage")}
 								disabled={sendingDisabled}
-								onClick={!sendingDisabled ? onSend : undefined}
+								onClick={() => {
+								if (!sendingDisabled) {
+									resetHistoryNavigation()
+									setInputValue("")
+									setSelectedImages([])
+									onSend()
+								}
+							}}
 								className={cn(
 									"relative inline-flex items-center justify-center",
 									"bg-transparent border-none p-1.5",
