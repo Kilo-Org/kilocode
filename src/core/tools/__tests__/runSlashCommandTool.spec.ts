@@ -1,15 +1,17 @@
+// kilocode_change start
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { runSlashCommandTool } from "../RunSlashCommandTool"
 import { Task } from "../../task/Task"
 import { formatResponse } from "../../prompts/responses"
-import { getCommand, getCommandNames } from "../../../services/command/commands"
+import { getWorkflow, getWorkflowNames } from "../../../services/workflow/workflows"
 import type { ToolUse } from "../../../shared/tools"
 
 // Mock dependencies
-vi.mock("../../../services/command/commands", () => ({
-	getCommand: vi.fn(),
-	getCommandNames: vi.fn(),
+vi.mock("../../../services/workflow/workflows", () => ({
+	getWorkflow: vi.fn(),
+	getWorkflowNames: vi.fn(),
 }))
+// kilocode_change end
 
 describe("runSlashCommandTool", () => {
 	let mockTask: any
@@ -28,7 +30,7 @@ describe("runSlashCommandTool", () => {
 				deref: vi.fn().mockReturnValue({
 					getState: vi.fn().mockResolvedValue({
 						experiments: {
-							runSlashCommand: true,
+							autoExecuteWorkflow: false,
 						},
 					}),
 				}),
@@ -59,7 +61,7 @@ describe("runSlashCommandTool", () => {
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith("Missing parameter error")
 	})
 
-	it("should handle command not found", async () => {
+	it("should handle workflow not found", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -69,18 +71,18 @@ describe("runSlashCommandTool", () => {
 			partial: false,
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(undefined)
-		vi.mocked(getCommandNames).mockResolvedValue(["init", "test", "deploy"])
+		vi.mocked(getWorkflow).mockResolvedValue(undefined)
+		vi.mocked(getWorkflowNames).mockResolvedValue(["init", "test", "deploy"])
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockTask.recordToolError).toHaveBeenCalledWith("run_slash_command")
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			formatResponse.toolError("Command 'nonexistent' not found. Available commands: init, test, deploy"),
+			formatResponse.toolError("Workflow 'nonexistent' not found. Available workflows: init, test, deploy"),
 		)
 	})
 
-	it("should handle user rejection", async () => {
+	it("should ask for approval when auto-execute is disabled", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -90,15 +92,15 @@ describe("runSlashCommandTool", () => {
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "init",
 			content: "Initialize project",
-			source: "built-in" as const,
-			filePath: "<built-in:init>",
+			source: "project" as const,
+			filePath: ".kilocode/workflows/init.md",
 			description: "Initialize the project",
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 		mockCallbacks.askApproval.mockResolvedValue(false)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
@@ -107,7 +109,7 @@ describe("runSlashCommandTool", () => {
 		expect(mockCallbacks.pushToolResult).not.toHaveBeenCalled()
 	})
 
-	it("should successfully execute built-in command", async () => {
+	it("should auto-execute when auto-execute experiment is enabled", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -117,15 +119,57 @@ describe("runSlashCommandTool", () => {
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
+			name: "init",
+			content: "Initialize project",
+			source: "project" as const,
+			filePath: ".kilocode/workflows/init.md",
+			description: "Initialize the project",
+		}
+
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
+
+		// Mock task with auto-execute enabled
+		const mockTaskWithAutoExecute = {
+			...mockTask,
+			providerRef: {
+				deref: vi.fn().mockReturnValue({
+					getState: vi.fn().mockResolvedValue({
+						experiments: {
+							autoExecuteWorkflow: true,
+						},
+					}),
+				}),
+			},
+		}
+
+		await runSlashCommandTool.handle(mockTaskWithAutoExecute as Task, block, mockCallbacks)
+
+		// Should not ask for approval when auto-execute is enabled
+		expect(mockCallbacks.askApproval).not.toHaveBeenCalled()
+		// Should still push the workflow result
+		expect(mockCallbacks.pushToolResult).toHaveBeenCalled()
+	})
+
+	it("should successfully execute project workflow", async () => {
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {
+				command: "init",
+			},
+			partial: false,
+		}
+
+		const mockWorkflow = {
 			name: "init",
 			content: "Initialize project content here",
-			source: "built-in" as const,
-			filePath: "<built-in:init>",
+			source: "project" as const,
+			filePath: ".kilocode/workflows/init.md",
 			description: "Analyze codebase and create AGENTS.md",
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
@@ -135,23 +179,23 @@ describe("runSlashCommandTool", () => {
 				tool: "runSlashCommand",
 				command: "init",
 				args: undefined,
-				source: "built-in",
+				source: "project",
 				description: "Analyze codebase and create AGENTS.md",
 			}),
 		)
 
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			`Command: /init
+			`Workflow: /init
 Description: Analyze codebase and create AGENTS.md
-Source: built-in
+Source: project
 
---- Command Content ---
+--- Workflow Content ---
 
 Initialize project content here`,
 		)
 	})
 
-	it("should successfully execute command with arguments", async () => {
+	it("should successfully execute workflow with arguments", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -162,33 +206,33 @@ Initialize project content here`,
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "test",
 			content: "Run tests with specific focus",
 			source: "project" as const,
-			filePath: ".roo/commands/test.md",
+			filePath: ".kilocode/workflows/test.md",
 			description: "Run project tests",
-			argumentHint: "test type or focus area",
+			arguments: "test type or focus area",
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			`Command: /test
+			`Workflow: /test
 Description: Run project tests
-Argument hint: test type or focus area
+Arguments: test type or focus area
 Provided arguments: focus on unit tests
 Source: project
 
---- Command Content ---
+--- Workflow Content ---
 
 Run tests with specific focus`,
 		)
 	})
 
-	it("should handle global command", async () => {
+	it("should handle global workflow", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -198,22 +242,22 @@ Run tests with specific focus`,
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "deploy",
 			content: "Deploy application to production",
 			source: "global" as const,
-			filePath: "~/.roo/commands/deploy.md",
+			filePath: "~/.kilocode/workflows/deploy.md",
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			`Command: /deploy
+			`Workflow: /deploy
 Source: global
 
---- Command Content ---
+--- Workflow Content ---
 
 Deploy application to production`,
 		)
@@ -255,14 +299,14 @@ Deploy application to production`,
 		}
 
 		const error = new Error("Test error")
-		vi.mocked(getCommand).mockRejectedValue(error)
+		vi.mocked(getWorkflow).mockRejectedValue(error)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockCallbacks.handleError).toHaveBeenCalledWith("running slash command", error)
 	})
 
-	it("should handle empty available commands list", async () => {
+	it("should handle empty available workflows list", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -272,17 +316,17 @@ Deploy application to production`,
 			partial: false,
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(undefined)
-		vi.mocked(getCommandNames).mockResolvedValue([])
+		vi.mocked(getWorkflow).mockResolvedValue(undefined)
+		vi.mocked(getWorkflowNames).mockResolvedValue([])
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			formatResponse.toolError("Command 'nonexistent' not found. Available commands: (none)"),
+			formatResponse.toolError("Workflow 'nonexistent' not found. Available workflows: (none)"),
 		)
 	})
 
-	it("should reset consecutive mistake count on valid command", async () => {
+	it("should reset consecutive mistake count on valid workflow", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
@@ -294,14 +338,14 @@ Deploy application to production`,
 
 		mockTask.consecutiveMistakeCount = 5
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "init",
 			content: "Initialize project",
-			source: "built-in" as const,
-			filePath: "<built-in:init>",
+			source: "project" as const,
+			filePath: ".kilocode/workflows/init.md",
 		}
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
