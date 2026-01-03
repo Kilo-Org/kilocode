@@ -1,9 +1,11 @@
+// kilocode_change start
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { getCommand, getCommandNames } from "../../services/command/commands"
+import { getWorkflow, getWorkflowNames } from "../../services/workflow/workflows"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+// kilocode_change end
 
 interface RunSlashCommandParams {
 	command: string
@@ -24,22 +26,13 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 		const { command: commandName, args } = params
 		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 
-		// Check if run slash command experiment is enabled
+		// Check if auto-execute workflow experiment is enabled
 		const provider = task.providerRef.deref()
 		const state = await provider?.getState()
-		const isRunSlashCommandEnabled = experiments.isEnabled(
+		const isAutoExecuteEnabled = experiments.isEnabled(
 			state?.experiments ?? {},
-			EXPERIMENT_IDS.RUN_SLASH_COMMAND,
+			EXPERIMENT_IDS.AUTO_EXECUTE_WORKFLOW,
 		)
-
-		if (!isRunSlashCommandEnabled) {
-			pushToolResult(
-				formatResponse.toolError(
-					"Run slash command is an experimental feature that must be enabled in settings. Please enable 'Run Slash Command' in the Experimental Settings section.",
-				),
-			)
-			return
-		}
 
 		try {
 			if (!commandName) {
@@ -52,17 +45,17 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 
 			task.consecutiveMistakeCount = 0
 
-			// Get the command from the commands service
-			const command = await getCommand(task.cwd, commandName)
+			// Get the workflow from the workflows service
+			const workflow = await getWorkflow(task.cwd, commandName)
 
-			if (!command) {
-				// Get available commands for error message
-				const availableCommands = await getCommandNames(task.cwd)
+			if (!workflow) {
+				// Get available workflows for error message
+				const availableWorkflows = await getWorkflowNames(task.cwd)
 				task.recordToolError("run_slash_command")
 				task.didToolFailInCurrentTurn = true
 				pushToolResult(
 					formatResponse.toolError(
-						`Command '${commandName}' not found. Available commands: ${availableCommands.join(", ") || "(none)"}`,
+						`Workflow '${commandName}' not found. Available workflows: ${availableWorkflows.join(", ") || "(none)"}`,
 					),
 				)
 				return
@@ -72,35 +65,39 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				tool: "runSlashCommand",
 				command: commandName,
 				args: args,
-				source: command.source,
-				description: command.description,
+				source: workflow.source,
+				description: workflow.description,
 			})
 
-			const didApprove = await askApproval("tool", toolMessage)
+			// If auto-execute is disabled, ask for approval
+			// If auto-execute is enabled, skip approval and execute immediately
+			if (!isAutoExecuteEnabled) {
+				const didApprove = await askApproval("tool", toolMessage)
 
-			if (!didApprove) {
-				return
+				if (!didApprove) {
+					return
+				}
 			}
 
 			// Build the result message
-			let result = `Command: /${commandName}`
+			let result = `Workflow: /${commandName}`
 
-			if (command.description) {
-				result += `\nDescription: ${command.description}`
+			if (workflow.description) {
+				result += `\nDescription: ${workflow.description}`
 			}
 
-			if (command.argumentHint) {
-				result += `\nArgument hint: ${command.argumentHint}`
+			if (workflow.arguments) {
+				result += `\nArguments: ${workflow.arguments}`
 			}
 
 			if (args) {
 				result += `\nProvided arguments: ${args}`
 			}
 
-			result += `\nSource: ${command.source}`
-			result += `\n\n--- Command Content ---\n\n${command.content}`
+			result += `\nSource: ${workflow.source}`
+			result += `\n\n--- Workflow Content ---\n\n${workflow.content}`
 
-			// Return the command content as the tool result
+			// Return the workflow content as the tool result
 			pushToolResult(result)
 		} catch (error) {
 			await handleError("running slash command", error as Error)
