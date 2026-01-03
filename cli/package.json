@@ -158,7 +158,7 @@
 		"cpy-cli": "^5.0.0",
 		"del-cli": "^5.1.0",
 		"eslint-config-prettier": "^10.1.1",
-		"eslint-plugin-turbo": "^2.4.4",
+		"eslint-plugin-turbo": "^2.6.3",
 		"ink-testing-library": "^4.0.0",
 		"mkdirp": "^3.0.1",
 		"prettier": "^3.4.2",

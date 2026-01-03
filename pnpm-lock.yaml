@@ -948,8 +948,8 @@ importers:
         specifier: ^10.1.1
         version: 10.1.8(eslint@9.28.0(jiti@2.4.2))
       eslint-plugin-turbo:
-        specifier: ^2.4.4
-        version: 2.5.6(eslint@9.28.0(jiti@2.4.2))(turbo@2.6.1)
+        specifier: ^2.6.3
+        version: 2.6.3(eslint@9.28.0(jiti@2.4.2))(turbo@2.6.1)
       ink-testing-library:
         specifier: ^4.0.0
         version: 4.0.0(@types/react@18.3.23)
@@ -1518,8 +1518,8 @@ importers:
         specifier: ^5.2.0
         version: 5.2.0(eslint@9.27.0(jiti@2.4.2))
       eslint-plugin-turbo:
-        specifier: ^2.4.4
-        version: 2.5.6(eslint@9.27.0(jiti@2.4.2))(turbo@2.6.1)
+        specifier: ^2.6.3
+        version: 2.6.3(eslint@9.27.0(jiti@2.4.2))(turbo@2.6.1)
       globals:
         specifier: ^16.0.0
         version: 16.1.0
@@ -4979,6 +4979,7 @@ packages:
   '@lancedb/lancedb@0.21.3':
     resolution: {integrity: sha512-hfzp498BfcCJ730fV1YGGoXVxRgE+W1n0D0KwanKlbt8bBPSQ6E6Tf8mPXc8rKdAXIRR3o5mTzMG3z3Fda+m3Q==}
     engines: {node: '>= 18'}
+    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'
@@ -11349,8 +11350,8 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7
 
-  eslint-plugin-turbo@2.5.6:
-    resolution: {integrity: sha512-KUDE23aP2JV8zbfZ4TeM1HpAXzMM/AYG/bJam7P4AalUxas8Pd/lS/6R3p4uX91qJcH1LwL4h0ED48nDe8KorQ==}
+  eslint-plugin-turbo@2.6.3:
+    resolution: {integrity: sha512-91WZ+suhT/pk+qNS0/rqT43xLUlUblsa3a8jKmAStGhkJCmR2uX0oWo/e0Edb+It8MdnteXuYpCkvsK4Vw8FtA==}
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -31427,13 +31428,13 @@ snapshots:
       string.prototype.matchall: 4.0.12
       string.prototype.repeat: 1.0.0
 
-  eslint-plugin-turbo@2.5.6(eslint@9.27.0(jiti@2.4.2))(turbo@2.6.1):
+  eslint-plugin-turbo@2.6.3(eslint@9.27.0(jiti@2.4.2))(turbo@2.6.1):
     dependencies:
       dotenv: 16.0.3
       eslint: 9.27.0(jiti@2.4.2)
       turbo: 2.6.1
 
-  eslint-plugin-turbo@2.5.6(eslint@9.28.0(jiti@2.4.2))(turbo@2.6.1):
+  eslint-plugin-turbo@2.6.3(eslint@9.28.0(jiti@2.4.2))(turbo@2.6.1):
     dependencies:
       dotenv: 16.0.3
       eslint: 9.28.0(jiti@2.4.2)
