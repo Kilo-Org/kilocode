@@ -394,6 +394,12 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 			}
 
+			case "condenseTaskContextResponse": {
+				const taskId = message.text
+				logs.info(`Context condensation completed for task: ${taskId || "current task"}`, "effects")
+				break
+			}
+
 			case "commandExecutionStatus": {
 				// Handle command execution status messages
 				// Store output updates and apply them when the ask appears
