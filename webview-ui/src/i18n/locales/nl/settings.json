@@ -976,7 +976,7 @@
 			"name": "Autocomplete",
 			"description": "Schakel Autocomplete-functies in voor snelle codesuggesties en verbeteringen direct in je editor. Bevat Snelle Taak (Cmd+I) voor gerichte wijzigingen en Autocomplete voor contextuele verbeteringen."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Model-geïnitieerde slash-commando's inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code je slash-commando's uitvoeren om workflows uit te voeren."
 		},
