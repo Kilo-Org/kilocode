@@ -2,7 +2,7 @@
 
 import type { DiscoveredWorkflow } from "./types"
 import { WorkflowDiscoveryService } from "./WorkflowDiscoveryService"
-import { EXPERIMENT_IDS } from "../../shared/experiments"
+import { EXPERIMENT_IDS, experiments as Experiments } from "../../shared/experiments"
 
 /**
  * Singleton instance of workflow discovery service
@@ -84,8 +84,9 @@ export async function getWorkflowsForEnvironment(
 	experiments: Record<string, boolean> = {},
 	enabledWorkflows?: Map<string, boolean>,
 ): Promise<string> {
+	// kilocode_change: Use Experiments.isEnabled to properly check experiment status with fallback to defaults
 	// Check if workflow discovery experiment is enabled
-	if (!experiments[EXPERIMENT_IDS.WORKFLOW_DISCOVERY]) {
+	if (!Experiments.isEnabled(experiments, EXPERIMENT_IDS.WORKFLOW_DISCOVERY)) {
 		return ""
 	}
 
@@ -104,7 +105,7 @@ export async function getWorkflowsForEnvironment(
 		return `\n\n# Available Workflows\n${formatted}`
 	} catch (error) {
 		// Log error but don't break environment details generation
-		console.warn("Failed to discover workflows for environment details:", error)
+		console.warn("[WorkflowDiscovery] Failed to discover workflows for environment details:", error)
 		return ""
 	}
 }
