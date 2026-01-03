@@ -69,17 +69,24 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 				description: workflow.description,
 			})
 
-			// If auto-execute is disabled, ask for approval
-			// If auto-execute is enabled, skip approval and execute immediately
+			// kilocode_change: Fix workflow display bug - always send tool message to webview even when auto-execute is enabled
+			// This ensures that user can see what workflow is being executed
+			// If auto-execute is disabled, wait for approval
+			// If auto-execute is enabled, still send message but don't wait for approval
 			if (!isAutoExecuteEnabled) {
 				const didApprove = await askApproval("tool", toolMessage)
-
 				if (!didApprove) {
 					return
 				}
+			} else {
+				// kilocode_change: When auto-execute is enabled, send message to webview without waiting for approval
+				// This ensures that workflow tool UI is displayed even when auto-executing
+				await task.ask("tool", toolMessage, false).catch(() => {})
 			}
+			// kilocode_change end
 
-			// Build the result message
+			// kilocode_change: Update message text with complete tool result content
+			// Build the result message with complete workflow data
 			let result = `Workflow: /${commandName}`
 
 			if (workflow.description) {
@@ -108,13 +115,41 @@ export class RunSlashCommandTool extends BaseTool<"run_slash_command"> {
 		const commandName: string | undefined = block.params.command
 		const args: string | undefined = block.params.args
 
-		const partialMessage = JSON.stringify({
-			tool: "runSlashCommand",
-			command: this.removeClosingTag("command", commandName, block.partial),
-			args: this.removeClosingTag("args", args, block.partial),
-		})
-
-		await task.ask("tool", partialMessage, block.partial).catch(() => {})
+		// kilocode_change: Fix workflow display bug - include complete workflow data when transitioning to complete
+		// When transitioning from partial to complete (block.partial === false), we need to include
+		// the complete workflow data (source, description, content) in the message text.
+		// Without this, the tool object parsed from message.text still contains the old partial
+		// tool message data, which causes SlashCommandItem to render it incorrectly
+		// (e.g., showing partial=true when the workflow is actually complete).
+		if (!block.partial) {
+			// Transitioning to complete - fetch and include complete workflow data
+			const workflow = await getWorkflow(task.cwd, commandName || "")
+			const completeMessage = JSON.stringify({
+				tool: "runSlashCommand",
+				command: commandName,
+				args: args,
+				source: workflow?.source,
+				description: workflow?.description,
+			})
+			// kilocode_change: Add diagnostic logging for workflow tool display issue
+			console.log(`[RunSlashCommandTool.handlePartial] Sending COMPLETE message to webview:`, completeMessage)
+			await task.ask("tool", completeMessage, false).catch(() => {})
+			console.log(`[RunSlashCommandTool.handlePartial] COMPLETE message sent successfully`)
+			// kilocode_change end
+		} else {
+			// Partial message - use minimal data structure
+			const partialMessage = JSON.stringify({
+				tool: "runSlashCommand",
+				command: this.removeClosingTag("command", commandName, block.partial),
+				args: this.removeClosingTag("args", args, block.partial),
+			})
+			// kilocode_change: Add diagnostic logging for workflow tool display issue
+			console.log(`[RunSlashCommandTool.handlePartial] Sending PARTIAL message to webview:`, partialMessage)
+			await task.ask("tool", partialMessage, block.partial).catch(() => {})
+			console.log(`[RunSlashCommandTool.handlePartial] PARTIAL message sent successfully`)
+			// kilocode_change end
+		}
+		// kilocode_change end
 	}
 }
 
