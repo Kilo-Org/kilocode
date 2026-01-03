@@ -1,9 +1,9 @@
 ---
 sidebar_position: 6
-title: "Spec: Organization Modes Library"
+title: "Organization Modes Library"
 ---
 
-# Spec: Organization Modes Library
+# Organization Modes Library
 
 # Overview
 

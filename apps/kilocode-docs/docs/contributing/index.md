@@ -24,7 +24,7 @@ Setting Up the Development Environment is described in details on the [Developme
 
 ## Understanding the Architecture
 
-Before diving into the code, we recommend reviewing the [Architecture Overview](/contributing/architecture) to understand how the different components of Kilo Code fit together.
+Before diving into the code, we recommend reviewing the [Architecture Overview](architecture) to understand how the different components of Kilo Code fit together.
 
 ## Development Workflow
 
@@ -90,7 +90,7 @@ Custom modes are a powerful way to extend Kilo Code's capabilities. To create an
 
 ## Engineering Specs
 
-For larger features, we write engineering specs to align on requirements before implementation. Check out the [Engineering Specs](/contributing/specs) section to see planned features and learn how to contribute specs.
+For larger features, we write engineering specs to align on requirements before implementation. Check out the [Architecture](/contributing/architecture) section to see planned features and learn how to contribute specs.
 
 ## Documentation Contributions
 

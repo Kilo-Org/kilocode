@@ -1,9 +1,9 @@
 ---
 sidebar_position: 5
-title: "Spec: Improve Onboarding Flow"
+title: "Improve Onboarding Flow"
 ---
 
-# SPEC: Kilo Code Onboarding & User Engagement Improvements
+# Kilo Code Onboarding & User Engagement Improvements
 
 # Overview
 
