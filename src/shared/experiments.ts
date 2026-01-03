@@ -23,7 +23,7 @@ interface ExperimentConfig {
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	MORPH_FAST_APPLY: { enabled: false }, // kilocode_change
 	SPEECH_TO_TEXT: { enabled: false }, // kilocode_change
-	WORKFLOW_DISCOVERY: { enabled: false }, // kilocode_change: Enable automatic workflow discovery for agent
+	WORKFLOW_DISCOVERY: { enabled: true }, // kilocode_change: Enable automatic workflow discovery for agent
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
 	PREVENT_FOCUS_DISRUPTION: { enabled: false },

@@ -394,6 +394,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		globalWorkflowToggles = toggles.globalWorkflowToggles
 	}
 	// kilocode_change end
+
 	const enabledWorkflows = new Map<string, boolean>()
 	Object.entries(localWorkflowToggles || {}).forEach(([path, enabled]) => {
 		enabledWorkflows.set(path, enabled)
