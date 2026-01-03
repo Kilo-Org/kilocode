@@ -720,7 +720,7 @@
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
 		"node-machine-id": "^1.1.12",
-		"ollama": "^0.5.17",
+		"ollama": "^0.6.3",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",
 		"p-limit": "^6.2.0",
