@@ -14,6 +14,8 @@ import {
 	type SaveClipboardResult,
 } from "./clipboard-shared.js"
 import { hasClipboardImageMacOS, saveClipboardImageMacOS } from "./clipboard-macos.js"
+import { hasClipboardImageLinux, saveClipboardImageLinux } from "./clipboard-linux.js"
+import { hasClipboardImageWindows, saveClipboardImageWindows } from "./clipboard-windows.js"
 
 export {
 	buildDataUrl,
@@ -28,15 +30,21 @@ export {
 }
 
 export async function isClipboardSupported(): Promise<boolean> {
-	return process.platform === "darwin"
+	return process.platform === "darwin" || process.platform === "linux" || process.platform === "win32"
 }
 
 export async function clipboardHasImage(): Promise<boolean> {
 	try {
-		if (process.platform === "darwin") {
-			return await hasClipboardImageMacOS()
+		switch (process.platform) {
+			case "darwin":
+				return await hasClipboardImageMacOS()
+			case "linux":
+				return await hasClipboardImageLinux()
+			case "win32":
+				return await hasClipboardImageWindows()
+			default:
+				return false
 		}
-		return false
 	} catch (error) {
 		const err = error as NodeJS.ErrnoException
 		logs.debug("clipboardHasImage failed, treating as no image", "clipboard", {
@@ -48,15 +56,20 @@ export async function clipboardHasImage(): Promise<boolean> {
 }
 
 export async function saveClipboardImage(): Promise<SaveClipboardResult> {
-	if (process.platform !== "darwin") {
-		return {
-			success: false,
-			error: getUnsupportedClipboardPlatformMessage(),
-		}
-	}
-
 	try {
-		return await saveClipboardImageMacOS()
+		switch (process.platform) {
+			case "darwin":
+				return await saveClipboardImageMacOS()
+			case "linux":
+				return await saveClipboardImageLinux()
+			case "win32":
+				return await saveClipboardImageWindows()
+			default:
+				return {
+					success: false,
+					error: getUnsupportedClipboardPlatformMessage(),
+				}
+		}
 	} catch (error) {
 		return {
 			success: false,

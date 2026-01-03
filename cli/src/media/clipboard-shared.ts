@@ -86,7 +86,22 @@ export function buildDataUrl(data: Buffer, format: string): string {
 }
 
 export function getUnsupportedClipboardPlatformMessage(): string {
-	return `Clipboard image paste is only supported on macOS.
+	const platform = process.platform
+	if (platform === "linux") {
+		return `Clipboard image paste requires xclip on Linux.
+
+Install with:
+  sudo apt install xclip    # Debian/Ubuntu
+  sudo dnf install xclip    # Fedora
+  sudo pacman -S xclip      # Arch
+
+Alternative:
+  - Use @path/to/image.png to attach images`
+	}
+
+	return `Clipboard image paste is supported on macOS, Linux (with xclip), and Windows.
+
+Your platform (${platform}) is not currently supported.
 
 Alternative:
   - Use @path/to/image.png to attach images`

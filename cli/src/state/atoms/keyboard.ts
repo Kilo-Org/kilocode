@@ -875,12 +875,26 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 		return
 	}
 
-	// Paste
+	// Paste (bracketed paste from Cmd+V on Mac, Ctrl+V on Linux/Windows)
 	if (key.paste) {
 		// Convert tabs to 2 spaces to prevent border corruption
 		// Tabs have variable display widths in terminals which breaks layout
 		const normalizedText = key.sequence.replace(/\t/g, "  ")
-		set(insertTextAtom, normalizedText)
+
+		// Insert the text content if any
+		if (normalizedText.length > 0) {
+			set(insertTextAtom, normalizedText)
+		}
+
+		// Also check if clipboard has an image
+		// This handles the case where user does Cmd+V on Mac with an image in clipboard
+		// The terminal triggers bracketed paste, but we also want to check for images
+		// Pass silent=true to not show "No image" message when pasting text
+		handleClipboardImagePaste(get, set, true).catch((err) =>
+			logs.debug("Clipboard image check during paste failed", "clipboard", {
+				error: err instanceof Error ? err.message : String(err),
+			}),
+		)
 		return
 	}
 
@@ -977,18 +991,21 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 }
 
 /**
- * Handle clipboard image paste (Ctrl+V)
- * Saves clipboard image to a temp file and inserts @path reference into text buffer
+ * Handle clipboard image paste (Ctrl+V or during bracketed paste)
+ * Saves clipboard image to a temp file and inserts [Image #N] reference into text buffer
+ * @param silent - If true, don't show "No image in clipboard" message (used when checking speculatively during text paste)
  */
-async function handleClipboardImagePaste(get: Getter, set: Setter): Promise<void> {
-	logs.debug("handleClipboardImagePaste called", "clipboard")
+async function handleClipboardImagePaste(get: Getter, set: Setter, silent: boolean = false): Promise<void> {
+	logs.debug("handleClipboardImagePaste called", "clipboard", { silent })
 	try {
 		// Check if clipboard has an image
 		logs.debug("Checking clipboard for image...", "clipboard")
 		const hasImage = await clipboardHasImage()
 		logs.debug(`clipboardHasImage returned: ${hasImage}`, "clipboard")
 		if (!hasImage) {
-			setClipboardStatusWithTimeout(set, "No image in clipboard", 2000)
+			if (!silent) {
+				setClipboardStatusWithTimeout(set, "No image in clipboard", 2000)
+			}
 			logs.debug("No image in clipboard", "clipboard")
 			return
 		}
