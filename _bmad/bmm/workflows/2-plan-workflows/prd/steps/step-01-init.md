@@ -1,19 +1,20 @@
 ---
-name: "step-01-init"
-description: "Initialize the PRD workflow by detecting continuation state and setting up the document"
+name: 'step-01-init'
+description: 'Initialize the PRD workflow by detecting continuation state and setting up the document'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-01-init.md"
-nextStepFile: "{workflow_path}/steps/step-02-discovery.md"
-continueStepFile: "{workflow_path}/steps/step-01b-continue.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-01-init.md'
+nextStepFile: '{workflow_path}/steps/step-02-discovery.md'
+continueStepFile: '{workflow_path}/steps/step-01b-continue.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
+
 
 # Template References
-prdTemplate: "{workflow_path}/prd-template.md"
+prdTemplate: '{workflow_path}/prd-template.md'
 ---
 
 # Step 1: Workflow Initialization
@@ -92,16 +93,14 @@ If no document exists or no `stepsCompleted` in frontmatter:
 #### A. Input Document Discovery
 
 Discover and load context documents using smart discovery. Documents can be in the following locations:
+- {planning_artifacts}/**
+- {output_folder}/**
+- {product_knowledge}/**
+- docs/**
 
-- {planning_artifacts}/\*\*
-- {output_folder}/\*\*
-- {product_knowledge}/\*\*
-- docs/\*\*
-
-Also - when searching - documents can be a single markdown file, or a folder with an index and multiple files. For Example, if searching for `*foo*.md` and not found, also search for a folder called _foo_/index.md (which indicates sharded content)
+Also - when searching - documents can be a single markdown file, or a folder with an index and multiple files. For Example, if searching for `*foo*.md` and not found, also search for a folder called *foo*/index.md (which indicates sharded content)
 
 Try to discover the following:
-
 - Product Brief (`*brief*.md`)
 - Research Documents (`/*research*.md`)
 - Project Documentation (generally multiple documents might be found for this in the `{product_knowledge}` or `docs` folder.)

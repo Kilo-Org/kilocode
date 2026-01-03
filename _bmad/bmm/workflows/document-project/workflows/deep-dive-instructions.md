@@ -137,10 +137,10 @@ This will read EVERY file in this area. Proceed? [y/n]
 <action>For each file in file\*inventory, document: - **File Path:** Full path - **Purpose:** What this file does (1-2 sentences) - **Lines of Code:** Total LOC - **Exports:** Complete list with signatures
 
 - Functions: `functionName(param: Type): ReturnType` - Description
-    - Classes: `ClassName` - Description with key methods
-    - Types/Interfaces: `TypeName` - Description
-    - Constants: `CONSTANT_NAME: Type` - Description - **Imports/Dependencies:** What it uses and why - **Used By:** Files that import this (dependents) - **Key Implementation Details:** Important logic, algorithms, patterns - **State Management:** If applicable (Redux, Context, local state) - **Side Effects:** API calls, database queries, file I/O, external services - **Error Handling:** Try/catch blocks, error boundaries, validation - **Testing:** Associated test files and coverage - **Comments/TODOs:** Any inline documentation or planned work
-      </action>
+  - Classes: `ClassName` - Description with key methods
+  - Types/Interfaces: `TypeName` - Description
+  - Constants: `CONSTANT_NAME: Type` - Description - **Imports/Dependencies:** What it uses and why - **Used By:** Files that import this (dependents) - **Key Implementation Details:** Important logic, algorithms, patterns - **State Management:** If applicable (Redux, Context, local state) - **Side Effects:** API calls, database queries, file I/O, external services - **Error Handling:** Try/catch blocks, error boundaries, validation - **Testing:** Associated test files and coverage - **Comments/TODOs:** Any inline documentation or planned work
+    </action>
 
 <template-output>comprehensive_file_inventory</template-output>
 </step>
@@ -224,15 +224,15 @@ Detailed exhaustive analysis of specific areas:
 - [{{target_name}} Deep-Dive](./deep-dive-{{sanitized_target_name}}.md) - Comprehensive analysis of {{target_description}} ({{file_count}} files, {{total_loc}} LOC) - Generated {{date}}
   </action>
 
-    <action>Update index metadata:
-    Last Updated: {{date}}
-    Deep-Dives: {{deep_dive_count}}
-    </action>
+  <action>Update index metadata:
+  Last Updated: {{date}}
+  Deep-Dives: {{deep_dive_count}}
+  </action>
 
-    <action>Save updated index.md</action>
+  <action>Save updated index.md</action>
 
-    <template-output>updated_index</template-output>
-    </step>
+  <template-output>updated_index</template-output>
+  </step>
 
 <step n="13g" goal="Offer to continue or complete">
   <action>Display summary:

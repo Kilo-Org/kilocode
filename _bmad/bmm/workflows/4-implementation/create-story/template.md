@@ -17,9 +17,9 @@ so that {{benefit}}.
 ## Tasks / Subtasks
 
 - [ ] Task 1 (AC: #)
-    - [ ] Subtask 1.1
+  - [ ] Subtask 1.1
 - [ ] Task 2 (AC: #)
-    - [ ] Subtask 2.1
+  - [ ] Subtask 2.1
 
 ## Dev Notes
 

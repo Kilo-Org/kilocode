@@ -27,34 +27,34 @@ Fast feedback loops and transparent debugging artifacts are critical for maintai
 
 ```typescript
 // playwright.config.ts
-import { defineConfig } from "@playwright/test"
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-	use: {
-		// Visual debugging artifacts (space-efficient)
-		trace: "on-first-retry", // Only when test fails once
-		screenshot: "only-on-failure", // Not on success
-		video: "retain-on-failure", // Delete on pass
+  use: {
+    // Visual debugging artifacts (space-efficient)
+    trace: 'on-first-retry', // Only when test fails once
+    screenshot: 'only-on-failure', // Not on success
+    video: 'retain-on-failure', // Delete on pass
 
-		// Context for debugging
-		baseURL: process.env.BASE_URL || "http://localhost:3000",
+    // Context for debugging
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
 
-		// Timeout context
-		actionTimeout: 15_000, // 15s for clicks/fills
-		navigationTimeout: 30_000, // 30s for page loads
-	},
+    // Timeout context
+    actionTimeout: 15_000, // 15s for clicks/fills
+    navigationTimeout: 30_000, // 30s for page loads
+  },
 
-	// CI-specific artifact retention
-	reporter: [
-		["html", { outputFolder: "playwright-report", open: "never" }],
-		["junit", { outputFile: "results.xml" }],
-		["list"], // Console output
-	],
+  // CI-specific artifact retention
+  reporter: [
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['junit', { outputFile: 'results.xml' }],
+    ['list'], // Console output
+  ],
 
-	// Failure handling
-	retries: process.env.CI ? 2 : 0, // Retry in CI to capture trace
-	workers: process.env.CI ? 1 : undefined,
-})
+  // Failure handling
+  retries: process.env.CI ? 2 : 0, // Retry in CI to capture trace
+  workers: process.env.CI ? 1 : undefined,
+});
 ```
 
 **Opening and Using Trace Viewer**:
@@ -93,56 +93,56 @@ npx playwright show-report
 
 ```typescript
 // tests/e2e/checkout-with-har.spec.ts
-import { test, expect } from "@playwright/test"
-import path from "path"
+import { test, expect } from '@playwright/test';
+import path from 'path';
 
-test.describe("Checkout Flow with HAR Recording", () => {
-	test("should complete payment with full network capture", async ({ page, context }) => {
-		// Start HAR recording BEFORE navigation
-		await context.routeFromHAR(path.join(__dirname, "../fixtures/checkout.har"), {
-			url: "**/api/**", // Only capture API calls
-			update: true, // Update HAR if file exists
-		})
+test.describe('Checkout Flow with HAR Recording', () => {
+  test('should complete payment with full network capture', async ({ page, context }) => {
+    // Start HAR recording BEFORE navigation
+    await context.routeFromHAR(path.join(__dirname, '../fixtures/checkout.har'), {
+      url: '**/api/**', // Only capture API calls
+      update: true, // Update HAR if file exists
+    });
 
-		await page.goto("/checkout")
+    await page.goto('/checkout');
 
-		// Interact with page
-		await page.getByTestId("payment-method").selectOption("credit-card")
-		await page.getByTestId("card-number").fill("4242424242424242")
-		await page.getByTestId("submit-payment").click()
+    // Interact with page
+    await page.getByTestId('payment-method').selectOption('credit-card');
+    await page.getByTestId('card-number').fill('4242424242424242');
+    await page.getByTestId('submit-payment').click();
 
-		// Wait for payment confirmation
-		await expect(page.getByTestId("success-message")).toBeVisible()
+    // Wait for payment confirmation
+    await expect(page.getByTestId('success-message')).toBeVisible();
 
-		// HAR file saved to fixtures/checkout.har
-		// Contains all network requests/responses for replay
-	})
-})
+    // HAR file saved to fixtures/checkout.har
+    // Contains all network requests/responses for replay
+  });
+});
 ```
 
 **Using HAR for Deterministic Mocking**:
 
 ```typescript
 // tests/e2e/checkout-replay-har.spec.ts
-import { test, expect } from "@playwright/test"
-import path from "path"
+import { test, expect } from '@playwright/test';
+import path from 'path';
 
-test("should replay checkout flow from HAR", async ({ page, context }) => {
-	// Replay network from HAR (no real API calls)
-	await context.routeFromHAR(path.join(__dirname, "../fixtures/checkout.har"), {
-		url: "**/api/**",
-		update: false, // Read-only mode
-	})
+test('should replay checkout flow from HAR', async ({ page, context }) => {
+  // Replay network from HAR (no real API calls)
+  await context.routeFromHAR(path.join(__dirname, '../fixtures/checkout.har'), {
+    url: '**/api/**',
+    update: false, // Read-only mode
+  });
 
-	await page.goto("/checkout")
+  await page.goto('/checkout');
 
-	// Same test, but network responses come from HAR file
-	await page.getByTestId("payment-method").selectOption("credit-card")
-	await page.getByTestId("card-number").fill("4242424242424242")
-	await page.getByTestId("submit-payment").click()
+  // Same test, but network responses come from HAR file
+  await page.getByTestId('payment-method').selectOption('credit-card');
+  await page.getByTestId('card-number').fill('4242424242424242');
+  await page.getByTestId('submit-payment').click();
 
-	await expect(page.getByTestId("success-message")).toBeVisible()
-})
+  await expect(page.getByTestId('success-message')).toBeVisible();
+});
 ```
 
 **Key Points**:
@@ -169,75 +169,75 @@ test("should replay checkout flow from HAR", async ({ page, context }) => {
 
 ```typescript
 // playwright/support/fixtures/debug-fixture.ts
-import { test as base } from "@playwright/test"
-import fs from "fs"
-import path from "path"
+import { test as base } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
 type DebugFixture = {
-	captureDebugArtifacts: () => Promise<void>
-}
+  captureDebugArtifacts: () => Promise<void>;
+};
 
 export const test = base.extend<DebugFixture>({
-	captureDebugArtifacts: async ({ page }, use, testInfo) => {
-		const consoleLogs: string[] = []
-		const networkRequests: Array<{ url: string; status: number; method: string }> = []
+  captureDebugArtifacts: async ({ page }, use, testInfo) => {
+    const consoleLogs: string[] = [];
+    const networkRequests: Array<{ url: string; status: number; method: string }> = [];
 
-		// Capture console messages
-		page.on("console", (msg) => {
-			consoleLogs.push(`[${msg.type()}] ${msg.text()}`)
-		})
+    // Capture console messages
+    page.on('console', (msg) => {
+      consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
+    });
 
-		// Capture network requests
-		page.on("request", (request) => {
-			networkRequests.push({
-				url: request.url(),
-				method: request.method(),
-				status: 0, // Will be updated on response
-			})
-		})
+    // Capture network requests
+    page.on('request', (request) => {
+      networkRequests.push({
+        url: request.url(),
+        method: request.method(),
+        status: 0, // Will be updated on response
+      });
+    });
 
-		page.on("response", (response) => {
-			const req = networkRequests.find((r) => r.url === response.url())
-			if (req) req.status = response.status()
-		})
+    page.on('response', (response) => {
+      const req = networkRequests.find((r) => r.url === response.url());
+      if (req) req.status = response.status();
+    });
 
-		await use(async () => {
-			// This function can be called manually in tests
-			// But it also runs automatically on failure via afterEach
-		})
+    await use(async () => {
+      // This function can be called manually in tests
+      // But it also runs automatically on failure via afterEach
+    });
 
-		// After test completes, save artifacts if failed
-		if (testInfo.status !== testInfo.expectedStatus) {
-			const artifactDir = path.join(testInfo.outputDir, "debug-artifacts")
-			fs.mkdirSync(artifactDir, { recursive: true })
+    // After test completes, save artifacts if failed
+    if (testInfo.status !== testInfo.expectedStatus) {
+      const artifactDir = path.join(testInfo.outputDir, 'debug-artifacts');
+      fs.mkdirSync(artifactDir, { recursive: true });
 
-			// Save console logs
-			fs.writeFileSync(path.join(artifactDir, "console.log"), consoleLogs.join("\n"), "utf-8")
+      // Save console logs
+      fs.writeFileSync(path.join(artifactDir, 'console.log'), consoleLogs.join('\n'), 'utf-8');
 
-			// Save network summary
-			fs.writeFileSync(path.join(artifactDir, "network.json"), JSON.stringify(networkRequests, null, 2), "utf-8")
+      // Save network summary
+      fs.writeFileSync(path.join(artifactDir, 'network.json'), JSON.stringify(networkRequests, null, 2), 'utf-8');
 
-			console.log(`Debug artifacts saved to: ${artifactDir}`)
-		}
-	},
-})
+      console.log(`Debug artifacts saved to: ${artifactDir}`);
+    }
+  },
+});
 ```
 
 **Usage in Tests**:
 
 ```typescript
 // tests/e2e/payment-with-debug.spec.ts
-import { test, expect } from "../support/fixtures/debug-fixture"
+import { test, expect } from '../support/fixtures/debug-fixture';
 
-test("payment flow captures debug artifacts on failure", async ({ page, captureDebugArtifacts }) => {
-	await page.goto("/checkout")
+test('payment flow captures debug artifacts on failure', async ({ page, captureDebugArtifacts }) => {
+  await page.goto('/checkout');
 
-	// Test will automatically capture console + network on failure
-	await page.getByTestId("submit-payment").click()
-	await expect(page.getByTestId("success-message")).toBeVisible({ timeout: 5000 })
+  // Test will automatically capture console + network on failure
+  await page.getByTestId('submit-payment').click();
+  await expect(page.getByTestId('success-message')).toBeVisible({ timeout: 5000 });
 
-	// If this fails, console.log and network.json saved automatically
-})
+  // If this fails, console.log and network.json saved automatically
+});
 ```
 
 **CI Integration (GitHub Actions)**:
@@ -248,30 +248,30 @@ name: E2E Tests with Artifacts
 on: [push, pull_request]
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version-file: ".nvmrc"
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Run Playwright tests
-              run: npm run test:e2e
-              continue-on-error: true # Capture artifacts even on failure
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        continue-on-error: true # Capture artifacts even on failure
 
-            - name: Upload test artifacts on failure
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: playwright-artifacts
-                  path: |
-                      test-results/
-                      playwright-report/
-                  retention-days: 30
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
 ```
 
 **Key Points**:
@@ -291,54 +291,54 @@ jobs:
 
 ```typescript
 // playwright/support/fixtures/a11y-fixture.ts
-import { test as base } from "@playwright/test"
-import AxeBuilder from "@axe-core/playwright"
+import { test as base } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 type A11yFixture = {
-	checkA11y: () => Promise<void>
-}
+  checkA11y: () => Promise<void>;
+};
 
 export const test = base.extend<A11yFixture>({
-	checkA11y: async ({ page }, use) => {
-		await use(async () => {
-			// Run axe accessibility scan
-			const results = await new AxeBuilder({ page }).analyze()
+  checkA11y: async ({ page }, use) => {
+    await use(async () => {
+      // Run axe accessibility scan
+      const results = await new AxeBuilder({ page }).analyze();
 
-			// Attach results to test report (visible in trace viewer)
-			if (results.violations.length > 0) {
-				console.log(`Found ${results.violations.length} accessibility violations:`)
-				results.violations.forEach((violation) => {
-					console.log(`- [${violation.impact}] ${violation.id}: ${violation.description}`)
-					console.log(`  Help: ${violation.helpUrl}`)
-				})
+      // Attach results to test report (visible in trace viewer)
+      if (results.violations.length > 0) {
+        console.log(`Found ${results.violations.length} accessibility violations:`);
+        results.violations.forEach((violation) => {
+          console.log(`- [${violation.impact}] ${violation.id}: ${violation.description}`);
+          console.log(`  Help: ${violation.helpUrl}`);
+        });
 
-				throw new Error(`Accessibility violations found: ${results.violations.length}`)
-			}
-		})
-	},
-})
+        throw new Error(`Accessibility violations found: ${results.violations.length}`);
+      }
+    });
+  },
+});
 ```
 
 **Usage with Visual Debugging**:
 
 ```typescript
 // tests/e2e/checkout-a11y.spec.ts
-import { test, expect } from "../support/fixtures/a11y-fixture"
+import { test, expect } from '../support/fixtures/a11y-fixture';
 
-test("checkout page is accessible", async ({ page, checkA11y }) => {
-	await page.goto("/checkout")
+test('checkout page is accessible', async ({ page, checkA11y }) => {
+  await page.goto('/checkout');
 
-	// Verify page loaded
-	await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible()
+  // Verify page loaded
+  await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
 
-	// Run accessibility check
-	await checkA11y()
+  // Run accessibility check
+  await checkA11y();
 
-	// If violations found, test fails and trace captures:
-	// - Screenshot showing the problematic element
-	// - Console log with violation details
-	// - Network tab showing any failed resource loads
-})
+  // If violations found, test fails and trace captures:
+  // - Screenshot showing the problematic element
+  // - Console log with violation details
+  // - Network tab showing any failed resource loads
+});
 ```
 
 **Trace Viewer Benefits**:
@@ -352,32 +352,32 @@ test("checkout page is accessible", async ({ page, checkA11y }) => {
 
 ```javascript
 // cypress/support/commands.ts
-import "cypress-axe"
+import 'cypress-axe';
 
-Cypress.Commands.add("checkA11y", (context = null, options = {}) => {
-	cy.injectAxe() // Inject axe-core
-	cy.checkA11y(context, options, (violations) => {
-		if (violations.length) {
-			cy.task("log", `Found ${violations.length} accessibility violations`)
-			violations.forEach((violation) => {
-				cy.task("log", `- [${violation.impact}] ${violation.id}: ${violation.description}`)
-			})
-		}
-	})
-})
+Cypress.Commands.add('checkA11y', (context = null, options = {}) => {
+  cy.injectAxe(); // Inject axe-core
+  cy.checkA11y(context, options, (violations) => {
+    if (violations.length) {
+      cy.task('log', `Found ${violations.length} accessibility violations`);
+      violations.forEach((violation) => {
+        cy.task('log', `- [${violation.impact}] ${violation.id}: ${violation.description}`);
+      });
+    }
+  });
+});
 
 // tests/e2e/checkout-a11y.cy.ts
-describe("Checkout Accessibility", () => {
-	it("should have no a11y violations", () => {
-		cy.visit("/checkout")
-		cy.injectAxe()
-		cy.checkA11y()
-		// On failure, Cypress UI shows:
-		// - Screenshot of page
-		// - Console log with violation details
-		// - Network tab with API calls
-	})
-})
+describe('Checkout Accessibility', () => {
+  it('should have no a11y violations', () => {
+    cy.visit('/checkout');
+    cy.injectAxe();
+    cy.checkA11y();
+    // On failure, Cypress UI shows:
+    // - Screenshot of page
+    // - Console log with violation details
+    // - Network tab with API calls
+  });
+});
 ```
 
 **Key Points**:
@@ -397,30 +397,30 @@ describe("Checkout Accessibility", () => {
 
 ```typescript
 // tests/e2e/checkout-debug.spec.ts
-import { test, expect } from "@playwright/test"
+import { test, expect } from '@playwright/test';
 
-test("debug checkout flow step-by-step", async ({ page }) => {
-	// Set breakpoint by uncommenting this:
-	// await page.pause()
+test('debug checkout flow step-by-step', async ({ page }) => {
+  // Set breakpoint by uncommenting this:
+  // await page.pause()
 
-	await page.goto("/checkout")
+  await page.goto('/checkout');
 
-	// Use Playwright Inspector to:
-	// 1. Step through each action
-	// 2. Inspect DOM at each step
-	// 3. View network calls per action
-	// 4. Take screenshots manually
+  // Use Playwright Inspector to:
+  // 1. Step through each action
+  // 2. Inspect DOM at each step
+  // 3. View network calls per action
+  // 4. Take screenshots manually
 
-	await page.getByTestId("payment-method").selectOption("credit-card")
+  await page.getByTestId('payment-method').selectOption('credit-card');
 
-	// Pause here to inspect form state
-	// await page.pause()
+  // Pause here to inspect form state
+  // await page.pause()
 
-	await page.getByTestId("card-number").fill("4242424242424242")
-	await page.getByTestId("submit-payment").click()
+  await page.getByTestId('card-number').fill('4242424242424242');
+  await page.getByTestId('submit-payment').click();
 
-	await expect(page.getByTestId("success-message")).toBeVisible()
-})
+  await expect(page.getByTestId('success-message')).toBeVisible();
+});
 ```
 
 **Running with Inspector**:
@@ -452,45 +452,45 @@ PWDEBUG=1 npx playwright test
 
 ```typescript
 // Pattern 1: Debug selector issues
-test("debug selector", async ({ page }) => {
-	await page.goto("/dashboard")
-	await page.pause() // Inspector opens
+test('debug selector', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.pause(); // Inspector opens
 
-	// In Inspector console, test selectors:
-	// page.getByTestId('user-menu') ✅
-	// page.getByRole('button', { name: 'Profile' }) ✅
-	// page.locator('.btn-primary') ❌ (fragile)
-})
+  // In Inspector console, test selectors:
+  // page.getByTestId('user-menu') ✅
+  // page.getByRole('button', { name: 'Profile' }) ✅
+  // page.locator('.btn-primary') ❌ (fragile)
+});
 
 // Pattern 2: Debug timing issues
-test("debug network timing", async ({ page }) => {
-	await page.goto("/dashboard")
+test('debug network timing', async ({ page }) => {
+  await page.goto('/dashboard');
 
-	// Set up network listener BEFORE interaction
-	const responsePromise = page.waitForResponse("**/api/users")
-	await page.getByTestId("load-users").click()
+  // Set up network listener BEFORE interaction
+  const responsePromise = page.waitForResponse('**/api/users');
+  await page.getByTestId('load-users').click();
 
-	await page.pause() // Check network panel for timing
+  await page.pause(); // Check network panel for timing
 
-	const response = await responsePromise
-	expect(response.status()).toBe(200)
-})
+  const response = await responsePromise;
+  expect(response.status()).toBe(200);
+});
 
 // Pattern 3: Debug state changes
-test("debug state mutation", async ({ page }) => {
-	await page.goto("/cart")
+test('debug state mutation', async ({ page }) => {
+  await page.goto('/cart');
 
-	// Check initial state
-	await expect(page.getByTestId("cart-count")).toHaveText("0")
+  // Check initial state
+  await expect(page.getByTestId('cart-count')).toHaveText('0');
 
-	await page.pause() // Inspect DOM
+  await page.pause(); // Inspect DOM
 
-	await page.getByTestId("add-to-cart").click()
+  await page.getByTestId('add-to-cart').click();
 
-	await page.pause() // Inspect DOM again (compare state)
+  await page.pause(); // Inspect DOM again (compare state)
 
-	await expect(page.getByTestId("cart-count")).toHaveText("1")
-})
+  await expect(page.getByTestId('cart-count')).toHaveText('1');
+});
 ```
 
 **Key Points**:

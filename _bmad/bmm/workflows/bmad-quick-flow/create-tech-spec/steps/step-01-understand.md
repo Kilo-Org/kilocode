@@ -1,12 +1,12 @@
 ---
-name: "step-01-understand"
-description: "Analyze the requirement delta between current state and what user wants to build"
+name: 'step-01-understand'
+description: 'Analyze the requirement delta between current state and what user wants to build'
 
-workflow_path: "{project-root}/_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec"
-nextStepFile: "{workflow_path}/steps/step-02-investigate.md"
-skipToStepFile: "{workflow_path}/steps/step-03-generate.md"
-templateFile: "{workflow_path}/tech-spec-template.md"
-wipFile: "{implementation_artifacts}/tech-spec-wip.md"
+workflow_path: '{project-root}/_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec'
+nextStepFile: '{workflow_path}/steps/step-02-investigate.md'
+skipToStepFile: '{workflow_path}/steps/step-03-generate.md'
+templateFile: '{workflow_path}/tech-spec-template.md'
+wipFile: '{implementation_artifacts}/tech-spec-wip.md'
 ---
 
 # Step 1: Analyze Requirement Delta
@@ -56,12 +56,12 @@ Is this what you're here to continue?
 a) **Menu Handling:**
 
 - **[y] Continue existing:**
-    - Jump directly to the appropriate step based on `stepsCompleted`:
-        - `[1]` → Load `{nextStepFile}` (Step 2)
-        - `[1, 2]` → Load `{skipToStepFile}` (Step 3)
-        - `[1, 2, 3]` → Load `{workflow_path}/steps/step-04-review.md` (Step 4)
+  - Jump directly to the appropriate step based on `stepsCompleted`:
+    - `[1]` → Load `{nextStepFile}` (Step 2)
+    - `[1, 2]` → Load `{skipToStepFile}` (Step 3)
+    - `[1, 2, 3]` → Load `{workflow_path}/steps/step-04-review.md` (Step 4)
 - **[n] Archive and start fresh:**
-    - Rename `{wipFile}` to `{implementation_artifacts}/tech-spec-{slug}-archived-{date}.md`
+  - Rename `{wipFile}` to `{implementation_artifacts}/tech-spec-{slug}-archived-{date}.md`
 
 ### 1. Greet and Ask for Initial Request
 
@@ -100,7 +100,6 @@ d) **Build mental model:**
 a) **Now ask clarifying questions - but make them INFORMED by what you found:**
 
 Instead of generic questions like "What's the scope?", ask specific ones like:
-
 - "`AuthService` handles validation in the controller — should the new field follow that pattern or move it to a dedicated validator?"
 - "`NavigationSidebar` component uses local state for the 'collapsed' toggle — should we stick with that or move it to the global store?"
 - "The epics doc mentions X - is this related?"
@@ -132,19 +131,19 @@ a) **Create the tech-spec WIP file:**
 1. Copy template from `{templateFile}`
 2. Write to `{wipFile}`
 3. Update frontmatter with captured values:
-    ```yaml
-    ---
-    title: "{title}"
-    slug: "{slug}"
-    created: "{date}"
-    status: "in-progress"
-    stepsCompleted: [1]
-    tech_stack: []
-    files_to_modify: []
-    code_patterns: []
-    test_patterns: []
-    ---
-    ```
+   ```yaml
+   ---
+   title: '{title}'
+   slug: '{slug}'
+   created: '{date}'
+   status: 'in-progress'
+   stepsCompleted: [1]
+   tech_stack: []
+   files_to_modify: []
+   code_patterns: []
+   test_patterns: []
+   ---
+   ```
 4. Fill in Overview section with Problem Statement, Solution, and Scope
 5. Fill in Context for Development section with any technical preferences or constraints gathered during informed discovery.
 6. Write the file

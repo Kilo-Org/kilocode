@@ -1,6 +1,6 @@
 # Workflow Init - Project Setup Instructions
 
-<critical>The workflow execution engine is governed by: {project-root}/\_bmad/core/tasks/workflow.xml</critical>
+<critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
 <critical>You MUST have already loaded and processed: workflow-init/workflow.yaml</critical>
 <critical>Communicate in {communication_language} with {user_name}</critical>
 <critical>This workflow handles BOTH new projects AND legacy projects following the BMad Method</critical>
@@ -16,7 +16,7 @@
 - Implementation: stories, sprint-status, workflow-status
 - Codebase: source directories, package files, git repo
 - Check both {planning_artifacts} and {implementation_artifacts} locations
-  </action>
+</action>
 
 <action>Categorize into one of these states:
 
@@ -25,7 +25,7 @@
 - ACTIVE: Has stories or sprint status
 - LEGACY: Has code but no BMM artifacts
 - UNCLEAR: Mixed state needs clarification
-  </action>
+</action>
 
 <ask>What's your project called? {{#if project_name}}(Config shows: {{project_name}}){{/if}}</ask>
 <action>Store project_name</action>

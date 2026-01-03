@@ -28,22 +28,20 @@ Initialize a production-ready test framework architecture (Playwright or Cypress
 ### Actions
 
 1. **Validate package.json**
-
-    - Read `{project-root}/package.json`
-    - Extract project type (React, Vue, Angular, Next.js, Node, etc.)
-    - Identify bundler (Vite, Webpack, Rollup, esbuild)
-    - Note existing test dependencies
+   - Read `{project-root}/package.json`
+   - Extract project type (React, Vue, Angular, Next.js, Node, etc.)
+   - Identify bundler (Vite, Webpack, Rollup, esbuild)
+   - Note existing test dependencies
 
 2. **Check for Existing Framework**
-
-    - Search for `playwright.config.*`, `cypress.config.*`, `cypress.json`
-    - Check `package.json` for `@playwright/test` or `cypress` dependencies
-    - If found, HALT with message: "Existing test framework detected. Use workflow `upgrade-framework` instead."
+   - Search for `playwright.config.*`, `cypress.config.*`, `cypress.json`
+   - Check `package.json` for `@playwright/test` or `cypress` dependencies
+   - If found, HALT with message: "Existing test framework detected. Use workflow `upgrade-framework` instead."
 
 3. **Gather Context**
-    - Look for architecture documents (`architecture.md`, `tech-spec*.md`)
-    - Check for API documentation or endpoint lists
-    - Identify authentication requirements
+   - Look for architecture documents (`architecture.md`, `tech-spec*.md`)
+   - Check for API documentation or endpoint lists
+   - Identify authentication requirements
 
 **Halt Condition:** If preflight checks fail, stop immediately and report which requirement failed.
 
@@ -55,258 +53,251 @@ Initialize a production-ready test framework architecture (Playwright or Cypress
 
 1. **Framework Selection**
 
-    **Default Logic:**
+   **Default Logic:**
+   - **Playwright** (recommended for):
+     - Large repositories (100+ files)
+     - Performance-critical applications
+     - Multi-browser support needed
+     - Complex user flows requiring video/trace debugging
+     - Projects requiring worker parallelism
 
-    - **Playwright** (recommended for):
+   - **Cypress** (recommended for):
+     - Small teams prioritizing developer experience
+     - Component testing focus
+     - Real-time reloading during test development
+     - Simpler setup requirements
 
-        - Large repositories (100+ files)
-        - Performance-critical applications
-        - Multi-browser support needed
-        - Complex user flows requiring video/trace debugging
-        - Projects requiring worker parallelism
-
-    - **Cypress** (recommended for):
-        - Small teams prioritizing developer experience
-        - Component testing focus
-        - Real-time reloading during test development
-        - Simpler setup requirements
-
-    **Detection Strategy:**
-
-    - Check `package.json` for existing preference
-    - Consider `project_size` variable from workflow config
-    - Use `framework_preference` variable if set
-    - Default to **Playwright** if uncertain
+   **Detection Strategy:**
+   - Check `package.json` for existing preference
+   - Consider `project_size` variable from workflow config
+   - Use `framework_preference` variable if set
+   - Default to **Playwright** if uncertain
 
 2. **Create Directory Structure**
 
-    ```
-    {project-root}/
-    ├── tests/                        # Root test directory
-    │   ├── e2e/                      # Test files (users organize as needed)
-    │   ├── support/                  # Framework infrastructure (key pattern)
-    │   │   ├── fixtures/             # Test fixtures (data, mocks)
-    │   │   ├── helpers/              # Utility functions
-    │   │   └── page-objects/         # Page object models (optional)
-    │   └── README.md                 # Test suite documentation
-    ```
+   ```
+   {project-root}/
+   ├── tests/                        # Root test directory
+   │   ├── e2e/                      # Test files (users organize as needed)
+   │   ├── support/                  # Framework infrastructure (key pattern)
+   │   │   ├── fixtures/             # Test fixtures (data, mocks)
+   │   │   ├── helpers/              # Utility functions
+   │   │   └── page-objects/         # Page object models (optional)
+   │   └── README.md                 # Test suite documentation
+   ```
 
-    **Note**: Users organize test files (e2e/, api/, integration/, component/) as needed. The **support/** folder is the critical pattern for fixtures and helpers used across tests.
+   **Note**: Users organize test files (e2e/, api/, integration/, component/) as needed. The **support/** folder is the critical pattern for fixtures and helpers used across tests.
 
 3. **Generate Configuration File**
 
-    **For Playwright** (`playwright.config.ts` or `playwright.config.js`):
+   **For Playwright** (`playwright.config.ts` or `playwright.config.js`):
 
-    ```typescript
-    import { defineConfig, devices } from "@playwright/test"
+   ```typescript
+   import { defineConfig, devices } from '@playwright/test';
 
-    export default defineConfig({
-    	testDir: "./tests/e2e",
-    	fullyParallel: true,
-    	forbidOnly: !!process.env.CI,
-    	retries: process.env.CI ? 2 : 0,
-    	workers: process.env.CI ? 1 : undefined,
+   export default defineConfig({
+     testDir: './tests/e2e',
+     fullyParallel: true,
+     forbidOnly: !!process.env.CI,
+     retries: process.env.CI ? 2 : 0,
+     workers: process.env.CI ? 1 : undefined,
 
-    	timeout: 60 * 1000, // Test timeout: 60s
-    	expect: {
-    		timeout: 15 * 1000, // Assertion timeout: 15s
-    	},
+     timeout: 60 * 1000, // Test timeout: 60s
+     expect: {
+       timeout: 15 * 1000, // Assertion timeout: 15s
+     },
 
-    	use: {
-    		baseURL: process.env.BASE_URL || "http://localhost:3000",
-    		trace: "retain-on-failure",
-    		screenshot: "only-on-failure",
-    		video: "retain-on-failure",
-    		actionTimeout: 15 * 1000, // Action timeout: 15s
-    		navigationTimeout: 30 * 1000, // Navigation timeout: 30s
-    	},
+     use: {
+       baseURL: process.env.BASE_URL || 'http://localhost:3000',
+       trace: 'retain-on-failure',
+       screenshot: 'only-on-failure',
+       video: 'retain-on-failure',
+       actionTimeout: 15 * 1000, // Action timeout: 15s
+       navigationTimeout: 30 * 1000, // Navigation timeout: 30s
+     },
 
-    	reporter: [
-    		["html", { outputFolder: "test-results/html" }],
-    		["junit", { outputFile: "test-results/junit.xml" }],
-    		["list"],
-    	],
+     reporter: [['html', { outputFolder: 'test-results/html' }], ['junit', { outputFile: 'test-results/junit.xml' }], ['list']],
 
-    	projects: [
-    		{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    		{ name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    		{ name: "webkit", use: { ...devices["Desktop Safari"] } },
-    	],
-    })
-    ```
+     projects: [
+       { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+       { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+       { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+     ],
+   });
+   ```
 
-    **For Cypress** (`cypress.config.ts` or `cypress.config.js`):
+   **For Cypress** (`cypress.config.ts` or `cypress.config.js`):
 
-    ```typescript
-    import { defineConfig } from "cypress"
+   ```typescript
+   import { defineConfig } from 'cypress';
 
-    export default defineConfig({
-    	e2e: {
-    		baseUrl: process.env.BASE_URL || "http://localhost:3000",
-    		specPattern: "tests/e2e/**/*.cy.{js,jsx,ts,tsx}",
-    		supportFile: "tests/support/e2e.ts",
-    		video: false,
-    		screenshotOnRunFailure: true,
+   export default defineConfig({
+     e2e: {
+       baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+       specPattern: 'tests/e2e/**/*.cy.{js,jsx,ts,tsx}',
+       supportFile: 'tests/support/e2e.ts',
+       video: false,
+       screenshotOnRunFailure: true,
 
-    		setupNodeEvents(on, config) {
-    			// implement node event listeners here
-    		},
-    	},
+       setupNodeEvents(on, config) {
+         // implement node event listeners here
+       },
+     },
 
-    	retries: {
-    		runMode: 2,
-    		openMode: 0,
-    	},
+     retries: {
+       runMode: 2,
+       openMode: 0,
+     },
 
-    	defaultCommandTimeout: 15000,
-    	requestTimeout: 30000,
-    	responseTimeout: 30000,
-    	pageLoadTimeout: 60000,
-    })
-    ```
+     defaultCommandTimeout: 15000,
+     requestTimeout: 30000,
+     responseTimeout: 30000,
+     pageLoadTimeout: 60000,
+   });
+   ```
 
 4. **Generate Environment Configuration**
 
-    Create `.env.example`:
+   Create `.env.example`:
 
-    ```bash
-    # Test Environment Configuration
-    TEST_ENV=local
-    BASE_URL=http://localhost:3000
-    API_URL=http://localhost:3001/api
+   ```bash
+   # Test Environment Configuration
+   TEST_ENV=local
+   BASE_URL=http://localhost:3000
+   API_URL=http://localhost:3001/api
 
-    # Authentication (if applicable)
-    TEST_USER_EMAIL=test@example.com
-    TEST_USER_PASSWORD=
+   # Authentication (if applicable)
+   TEST_USER_EMAIL=test@example.com
+   TEST_USER_PASSWORD=
 
-    # Feature Flags (if applicable)
-    FEATURE_FLAG_NEW_UI=true
+   # Feature Flags (if applicable)
+   FEATURE_FLAG_NEW_UI=true
 
-    # API Keys (if applicable)
-    TEST_API_KEY=
-    ```
+   # API Keys (if applicable)
+   TEST_API_KEY=
+   ```
 
 5. **Generate Node Version File**
 
-    Create `.nvmrc`:
+   Create `.nvmrc`:
 
-    ```
-    20.11.0
-    ```
+   ```
+   20.11.0
+   ```
 
-    (Use Node version from existing `.nvmrc` or default to current LTS)
+   (Use Node version from existing `.nvmrc` or default to current LTS)
 
 6. **Implement Fixture Architecture**
 
-    **Knowledge Base Reference**: `testarch/knowledge/fixture-architecture.md`
+   **Knowledge Base Reference**: `testarch/knowledge/fixture-architecture.md`
 
-    Create `tests/support/fixtures/index.ts`:
+   Create `tests/support/fixtures/index.ts`:
 
-    ```typescript
-    import { test as base } from "@playwright/test"
-    import { UserFactory } from "./factories/user-factory"
+   ```typescript
+   import { test as base } from '@playwright/test';
+   import { UserFactory } from './factories/user-factory';
 
-    type TestFixtures = {
-    	userFactory: UserFactory
-    }
+   type TestFixtures = {
+     userFactory: UserFactory;
+   };
 
-    export const test = base.extend<TestFixtures>({
-    	userFactory: async ({}, use) => {
-    		const factory = new UserFactory()
-    		await use(factory)
-    		await factory.cleanup() // Auto-cleanup
-    	},
-    })
+   export const test = base.extend<TestFixtures>({
+     userFactory: async ({}, use) => {
+       const factory = new UserFactory();
+       await use(factory);
+       await factory.cleanup(); // Auto-cleanup
+     },
+   });
 
-    export { expect } from "@playwright/test"
-    ```
+   export { expect } from '@playwright/test';
+   ```
 
 7. **Implement Data Factories**
 
-    **Knowledge Base Reference**: `testarch/knowledge/data-factories.md`
+   **Knowledge Base Reference**: `testarch/knowledge/data-factories.md`
 
-    Create `tests/support/fixtures/factories/user-factory.ts`:
+   Create `tests/support/fixtures/factories/user-factory.ts`:
 
-    ```typescript
-    import { faker } from "@faker-js/faker"
+   ```typescript
+   import { faker } from '@faker-js/faker';
 
-    export class UserFactory {
-    	private createdUsers: string[] = []
+   export class UserFactory {
+     private createdUsers: string[] = [];
 
-    	async createUser(overrides = {}) {
-    		const user = {
-    			email: faker.internet.email(),
-    			name: faker.person.fullName(),
-    			password: faker.internet.password({ length: 12 }),
-    			...overrides,
-    		}
+     async createUser(overrides = {}) {
+       const user = {
+         email: faker.internet.email(),
+         name: faker.person.fullName(),
+         password: faker.internet.password({ length: 12 }),
+         ...overrides,
+       };
 
-    		// API call to create user
-    		const response = await fetch(`${process.env.API_URL}/users`, {
-    			method: "POST",
-    			headers: { "Content-Type": "application/json" },
-    			body: JSON.stringify(user),
-    		})
+       // API call to create user
+       const response = await fetch(`${process.env.API_URL}/users`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify(user),
+       });
 
-    		const created = await response.json()
-    		this.createdUsers.push(created.id)
-    		return created
-    	}
+       const created = await response.json();
+       this.createdUsers.push(created.id);
+       return created;
+     }
 
-    	async cleanup() {
-    		// Delete all created users
-    		for (const userId of this.createdUsers) {
-    			await fetch(`${process.env.API_URL}/users/${userId}`, {
-    				method: "DELETE",
-    			})
-    		}
-    		this.createdUsers = []
-    	}
-    }
-    ```
+     async cleanup() {
+       // Delete all created users
+       for (const userId of this.createdUsers) {
+         await fetch(`${process.env.API_URL}/users/${userId}`, {
+           method: 'DELETE',
+         });
+       }
+       this.createdUsers = [];
+     }
+   }
+   ```
 
 8. **Generate Sample Tests**
 
-    Create `tests/e2e/example.spec.ts`:
+   Create `tests/e2e/example.spec.ts`:
 
-    ```typescript
-    import { test, expect } from "../support/fixtures"
+   ```typescript
+   import { test, expect } from '../support/fixtures';
 
-    test.describe("Example Test Suite", () => {
-    	test("should load homepage", async ({ page }) => {
-    		await page.goto("/")
-    		await expect(page).toHaveTitle(/Home/i)
-    	})
+   test.describe('Example Test Suite', () => {
+     test('should load homepage', async ({ page }) => {
+       await page.goto('/');
+       await expect(page).toHaveTitle(/Home/i);
+     });
 
-    	test("should create user and login", async ({ page, userFactory }) => {
-    		// Create test user
-    		const user = await userFactory.createUser()
+     test('should create user and login', async ({ page, userFactory }) => {
+       // Create test user
+       const user = await userFactory.createUser();
 
-    		// Login
-    		await page.goto("/login")
-    		await page.fill('[data-testid="email-input"]', user.email)
-    		await page.fill('[data-testid="password-input"]', user.password)
-    		await page.click('[data-testid="login-button"]')
+       // Login
+       await page.goto('/login');
+       await page.fill('[data-testid="email-input"]', user.email);
+       await page.fill('[data-testid="password-input"]', user.password);
+       await page.click('[data-testid="login-button"]');
 
-    		// Assert login success
-    		await expect(page.locator('[data-testid="user-menu"]')).toBeVisible()
-    	})
-    })
-    ```
+       // Assert login success
+       await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
+     });
+   });
+   ```
 
 9. **Update package.json Scripts**
 
-    Add minimal test script to `package.json`:
+   Add minimal test script to `package.json`:
 
-    ```json
-    {
-    	"scripts": {
-    		"test:e2e": "playwright test"
-    	}
-    }
-    ```
+   ```json
+   {
+     "scripts": {
+       "test:e2e": "playwright test"
+     }
+   }
+   ```
 
-    **Note**: Users can add additional scripts as needed (e.g., `--ui`, `--headed`, `--debug`, `show-report`).
+   **Note**: Users can add additional scripts as needed (e.g., `--ui`, `--headed`, `--debug`, `show-report`).
 
 10. **Generate Documentation**
 
@@ -319,31 +310,27 @@ Initialize a production-ready test framework architecture (Playwright or Cypress
 ### Primary Artifacts Created
 
 1. **Configuration File**
-
-    - `playwright.config.ts` or `cypress.config.ts`
-    - Timeouts: action 15s, navigation 30s, test 60s
-    - Reporters: HTML + JUnit XML
+   - `playwright.config.ts` or `cypress.config.ts`
+   - Timeouts: action 15s, navigation 30s, test 60s
+   - Reporters: HTML + JUnit XML
 
 2. **Directory Structure**
-
-    - `tests/` with `e2e/`, `api/`, `support/` subdirectories
-    - `support/fixtures/` for test fixtures
-    - `support/helpers/` for utility functions
+   - `tests/` with `e2e/`, `api/`, `support/` subdirectories
+   - `support/fixtures/` for test fixtures
+   - `support/helpers/` for utility functions
 
 3. **Environment Configuration**
-
-    - `.env.example` with `TEST_ENV`, `BASE_URL`, `API_URL`
-    - `.nvmrc` with Node version
+   - `.env.example` with `TEST_ENV`, `BASE_URL`, `API_URL`
+   - `.nvmrc` with Node version
 
 4. **Test Infrastructure**
-
-    - Fixture architecture (`mergeTests` pattern)
-    - Data factories (faker-based, with auto-cleanup)
-    - Sample tests demonstrating patterns
+   - Fixture architecture (`mergeTests` pattern)
+   - Data factories (faker-based, with auto-cleanup)
+   - Sample tests demonstrating patterns
 
 5. **Documentation**
-    - `tests/README.md` with setup instructions
-    - Comments in config files explaining options
+   - `tests/README.md` with setup instructions
+   - Comments in config files explaining options
 
 ### README Contents
 

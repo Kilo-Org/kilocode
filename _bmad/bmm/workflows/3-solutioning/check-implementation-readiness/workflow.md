@@ -1,6 +1,6 @@
 ---
 name: check-implementation-readiness
-description: "Critical validation workflow that assesses PRD, Architecture, and Epics & Stories for completeness and alignment before implementation. Uses adversarial review approach to find gaps and issues."
+description: 'Critical validation workflow that assesses PRD, Architecture, and Epics & Stories for completeness and alignment before implementation. Uses adversarial review approach to find gaps and issues.'
 web_bundle: false
 ---
 
@@ -45,7 +45,7 @@ web_bundle: false
 
 ### 1. Module Configuration Loading
 
-Load and read full config from {project-root}/\_bmad/bmm/config.yaml and resolve:
+Load and read full config from {project-root}/_bmad/bmm/config.yaml and resolve:
 
 - `project_name`, `output_folder`, `planning_artifacts`, `user_name`, `communication_language`, `document_output_language`
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`

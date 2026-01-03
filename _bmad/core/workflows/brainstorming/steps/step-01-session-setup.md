@@ -106,12 +106,12 @@ Update the document frontmatter:
 ---
 stepsCompleted: [1]
 inputDocuments: []
-session_topic: "[session_topic]"
-session_goals: "[session_goals]"
-selected_approach: ""
+session_topic: '[session_topic]'
+session_goals: '[session_goals]'
+selected_approach: ''
 techniques_used: []
 ideas_generated: []
-context_file: "[context_file if provided]"
+context_file: '[context_file if provided]'
 ---
 ```
 

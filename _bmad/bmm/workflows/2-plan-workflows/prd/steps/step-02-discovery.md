@@ -1,23 +1,23 @@
 ---
-name: "step-02-discovery"
-description: "Conduct project and domain discovery with data-driven classification"
+name: 'step-02-discovery'
+description: 'Conduct project and domain discovery with data-driven classification'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-02-discovery.md"
-nextStepFile: "{workflow_path}/steps/step-03-success.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-02-discovery.md'
+nextStepFile: '{workflow_path}/steps/step-03-success.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 
 # Data Files
-projectTypesCSV: "{workflow_path}/project-types.csv"
-domainComplexityCSV: "{workflow_path}/domain-complexity.csv"
+projectTypesCSV: '{workflow_path}/project-types.csv'
+domainComplexityCSV: '{workflow_path}/domain-complexity.csv'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
 # Step 2: Project & Domain Discovery

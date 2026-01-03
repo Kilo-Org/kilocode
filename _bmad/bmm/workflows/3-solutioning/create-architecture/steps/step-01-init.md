@@ -55,16 +55,14 @@ If no document exists or no `stepsCompleted` in frontmatter:
 #### A. Input Document Discovery
 
 Discover and load context documents using smart discovery. Documents can be in the following locations:
+- {planning_artifacts}/**
+- {output_folder}/**
+- {product_knowledge}/**
+- docs/**
 
-- {planning_artifacts}/\*\*
-- {output_folder}/\*\*
-- {product_knowledge}/\*\*
-- docs/\*\*
-
-Also - when searching - documents can be a single markdown file, or a folder with an index and multiple files. For Example, if searching for `*foo*.md` and not found, also search for a folder called _foo_/index.md (which indicates sharded content)
+Also - when searching - documents can be a single markdown file, or a folder with an index and multiple files. For Example, if searching for `*foo*.md` and not found, also search for a folder called *foo*/index.md (which indicates sharded content)
 
 Try to discover the following:
-
 - Product Brief (`*brief*.md`)
 - Product Requirements Document (`*prd*.md`)
 - UX Design (`*ux-design*.md`) and other

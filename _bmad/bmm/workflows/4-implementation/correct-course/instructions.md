@@ -1,7 +1,7 @@
 # Correct Course - Sprint Change Management Instructions
 
-<critical>The workflow execution engine is governed by: {project-root}/\_bmad/core/tasks/workflow.xml</critical>
-<critical>You MUST have already loaded and processed: {project-root}/\_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml</critical>
+<critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
+<critical>You MUST have already loaded and processed: {project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml</critical>
 <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
 <critical>Generate all documents in {document_output_language}</critical>
 
@@ -55,19 +55,19 @@
 - Provide rationale for each change
 - Example format:
 
-    ```
-    Story: [STORY-123] User Authentication
-    Section: Acceptance Criteria
+  ```
+  Story: [STORY-123] User Authentication
+  Section: Acceptance Criteria
 
-    OLD:
-    - User can log in with email/password
+  OLD:
+  - User can log in with email/password
 
-    NEW:
-    - User can log in with email/password
-    - User can enable 2FA via authenticator app
+  NEW:
+  - User can log in with email/password
+  - User can enable 2FA via authenticator app
 
-    Rationale: Security requirement identified during implementation
-    ```
+  Rationale: Security requirement identified during implementation
+  ```
 
 <action>For PRD modifications:</action>
 
@@ -116,9 +116,9 @@
 <action>Section 3: Recommended Approach</action>
 
 - Present chosen path forward from checklist evaluation:
-    - Direct Adjustment: Modify/add stories within existing plan
-    - Potential Rollback: Revert completed work to simplify resolution
-    - MVP Review: Reduce scope or modify goals
+  - Direct Adjustment: Modify/add stories within existing plan
+  - Potential Rollback: Revert completed work to simplify resolution
+  - MVP Review: Reduce scope or modify goals
 - Provide clear rationale for recommendation
 - Include effort estimate, risk assessment, and timeline impact
 
@@ -131,9 +131,9 @@
 <action>Section 5: Implementation Handoff</action>
 
 - Categorize change scope:
-    - Minor: Direct implementation by dev team
-    - Moderate: Backlog reorganization needed (PO/SM)
-    - Major: Fundamental replan required (PM/Architect)
+  - Minor: Direct implementation by dev team
+  - Moderate: Backlog reorganization needed (PO/SM)
+  - Major: Fundamental replan required (PM/Architect)
 - Specify handoff recipients and their responsibilities
 - Define success criteria for implementation
 

@@ -18,10 +18,10 @@ Traditional integration testing requires running both consumer and provider simu
 
 ```typescript
 // tests/contract/user-api.pact.spec.ts
-import { PactV3, MatchersV3 } from "@pact-foundation/pact"
-import { getUserById, createUser, User } from "@/api/user-service"
+import { PactV3, MatchersV3 } from '@pact-foundation/pact';
+import { getUserById, createUser, User } from '@/api/user-service';
 
-const { like, eachLike, string, integer } = MatchersV3
+const { like, eachLike, string, integer } = MatchersV3;
 
 /**
  * Consumer-Driven Contract Test
@@ -31,141 +31,141 @@ const { like, eachLike, string, integer } = MatchersV3
  */
 
 const provider = new PactV3({
-	consumer: "user-management-web",
-	provider: "user-api-service",
-	dir: "./pacts", // Output directory for pact files
-	logLevel: "warn",
-})
+  consumer: 'user-management-web',
+  provider: 'user-api-service',
+  dir: './pacts', // Output directory for pact files
+  logLevel: 'warn',
+});
 
-describe("User API Contract", () => {
-	describe("GET /users/:id", () => {
-		it("should return user when user exists", async () => {
-			// Arrange: Define expected interaction
-			await provider
-				.given("user with id 1 exists") // Provider state
-				.uponReceiving("a request for user 1")
-				.withRequest({
-					method: "GET",
-					path: "/users/1",
-					headers: {
-						Accept: "application/json",
-						Authorization: like("Bearer token123"), // Matcher: any string
-					},
-				})
-				.willRespondWith({
-					status: 200,
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: like({
-						id: integer(1),
-						name: string("John Doe"),
-						email: string("john@example.com"),
-						role: string("user"),
-						createdAt: string("2025-01-15T10:00:00Z"),
-					}),
-				})
-				.executeTest(async (mockServer) => {
-					// Act: Call consumer code against mock server
-					const user = await getUserById(1, {
-						baseURL: mockServer.url,
-						headers: { Authorization: "Bearer token123" },
-					})
+describe('User API Contract', () => {
+  describe('GET /users/:id', () => {
+    it('should return user when user exists', async () => {
+      // Arrange: Define expected interaction
+      await provider
+        .given('user with id 1 exists') // Provider state
+        .uponReceiving('a request for user 1')
+        .withRequest({
+          method: 'GET',
+          path: '/users/1',
+          headers: {
+            Accept: 'application/json',
+            Authorization: like('Bearer token123'), // Matcher: any string
+          },
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: like({
+            id: integer(1),
+            name: string('John Doe'),
+            email: string('john@example.com'),
+            role: string('user'),
+            createdAt: string('2025-01-15T10:00:00Z'),
+          }),
+        })
+        .executeTest(async (mockServer) => {
+          // Act: Call consumer code against mock server
+          const user = await getUserById(1, {
+            baseURL: mockServer.url,
+            headers: { Authorization: 'Bearer token123' },
+          });
 
-					// Assert: Validate consumer behavior
-					expect(user).toEqual(
-						expect.objectContaining({
-							id: 1,
-							name: "John Doe",
-							email: "john@example.com",
-							role: "user",
-						}),
-					)
-				})
-		})
+          // Assert: Validate consumer behavior
+          expect(user).toEqual(
+            expect.objectContaining({
+              id: 1,
+              name: 'John Doe',
+              email: 'john@example.com',
+              role: 'user',
+            }),
+          );
+        });
+    });
 
-		it("should handle 404 when user does not exist", async () => {
-			await provider
-				.given("user with id 999 does not exist")
-				.uponReceiving("a request for non-existent user")
-				.withRequest({
-					method: "GET",
-					path: "/users/999",
-					headers: { Accept: "application/json" },
-				})
-				.willRespondWith({
-					status: 404,
-					headers: { "Content-Type": "application/json" },
-					body: {
-						error: "User not found",
-						code: "USER_NOT_FOUND",
-					},
-				})
-				.executeTest(async (mockServer) => {
-					// Act & Assert: Consumer handles 404 gracefully
-					await expect(getUserById(999, { baseURL: mockServer.url })).rejects.toThrow("User not found")
-				})
-		})
-	})
+    it('should handle 404 when user does not exist', async () => {
+      await provider
+        .given('user with id 999 does not exist')
+        .uponReceiving('a request for non-existent user')
+        .withRequest({
+          method: 'GET',
+          path: '/users/999',
+          headers: { Accept: 'application/json' },
+        })
+        .willRespondWith({
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            error: 'User not found',
+            code: 'USER_NOT_FOUND',
+          },
+        })
+        .executeTest(async (mockServer) => {
+          // Act & Assert: Consumer handles 404 gracefully
+          await expect(getUserById(999, { baseURL: mockServer.url })).rejects.toThrow('User not found');
+        });
+    });
+  });
 
-	describe("POST /users", () => {
-		it("should create user and return 201", async () => {
-			const newUser: Omit<User, "id" | "createdAt"> = {
-				name: "Jane Smith",
-				email: "jane@example.com",
-				role: "admin",
-			}
+  describe('POST /users', () => {
+    it('should create user and return 201', async () => {
+      const newUser: Omit<User, 'id' | 'createdAt'> = {
+        name: 'Jane Smith',
+        email: 'jane@example.com',
+        role: 'admin',
+      };
 
-			await provider
-				.given("no users exist")
-				.uponReceiving("a request to create a user")
-				.withRequest({
-					method: "POST",
-					path: "/users",
-					headers: {
-						"Content-Type": "application/json",
-						Accept: "application/json",
-					},
-					body: like(newUser),
-				})
-				.willRespondWith({
-					status: 201,
-					headers: { "Content-Type": "application/json" },
-					body: like({
-						id: integer(2),
-						name: string("Jane Smith"),
-						email: string("jane@example.com"),
-						role: string("admin"),
-						createdAt: string("2025-01-15T11:00:00Z"),
-					}),
-				})
-				.executeTest(async (mockServer) => {
-					const createdUser = await createUser(newUser, {
-						baseURL: mockServer.url,
-					})
+      await provider
+        .given('no users exist')
+        .uponReceiving('a request to create a user')
+        .withRequest({
+          method: 'POST',
+          path: '/users',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: like(newUser),
+        })
+        .willRespondWith({
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+          body: like({
+            id: integer(2),
+            name: string('Jane Smith'),
+            email: string('jane@example.com'),
+            role: string('admin'),
+            createdAt: string('2025-01-15T11:00:00Z'),
+          }),
+        })
+        .executeTest(async (mockServer) => {
+          const createdUser = await createUser(newUser, {
+            baseURL: mockServer.url,
+          });
 
-					expect(createdUser).toEqual(
-						expect.objectContaining({
-							id: expect.any(Number),
-							name: "Jane Smith",
-							email: "jane@example.com",
-							role: "admin",
-						}),
-					)
-				})
-		})
-	})
-})
+          expect(createdUser).toEqual(
+            expect.objectContaining({
+              id: expect.any(Number),
+              name: 'Jane Smith',
+              email: 'jane@example.com',
+              role: 'admin',
+            }),
+          );
+        });
+    });
+  });
+});
 ```
 
 **package.json scripts**:
 
 ```json
 {
-	"scripts": {
-		"test:contract": "jest tests/contract --testTimeout=30000",
-		"pact:publish": "pact-broker publish ./pacts --consumer-app-version=$GIT_SHA --broker-base-url=$PACT_BROKER_URL --broker-token=$PACT_BROKER_TOKEN"
-	}
+  "scripts": {
+    "test:contract": "jest tests/contract --testTimeout=30000",
+    "pact:publish": "pact-broker publish ./pacts --consumer-app-version=$GIT_SHA --broker-base-url=$PACT_BROKER_URL --broker-token=$PACT_BROKER_TOKEN"
+  }
 }
 ```
 
@@ -187,9 +187,9 @@ describe("User API Contract", () => {
 
 ```typescript
 // tests/contract/user-api.provider.spec.ts
-import { Verifier, VerifierOptions } from "@pact-foundation/pact"
-import { server } from "../../src/server" // Your Express/Fastify app
-import { seedDatabase, resetDatabase } from "../support/db-helpers"
+import { Verifier, VerifierOptions } from '@pact-foundation/pact';
+import { server } from '../../src/server'; // Your Express/Fastify app
+import { seedDatabase, resetDatabase } from '../support/db-helpers';
 
 /**
  * Provider Verification Test
@@ -198,78 +198,78 @@ import { seedDatabase, resetDatabase } from "../support/db-helpers"
  * - Runs before merge to catch breaking changes
  */
 
-describe("Pact Provider Verification", () => {
-	let serverInstance
-	const PORT = 3001
+describe('Pact Provider Verification', () => {
+  let serverInstance;
+  const PORT = 3001;
 
-	beforeAll(async () => {
-		// Start provider server
-		serverInstance = server.listen(PORT)
-		console.log(`Provider server running on port ${PORT}`)
-	})
+  beforeAll(async () => {
+    // Start provider server
+    serverInstance = server.listen(PORT);
+    console.log(`Provider server running on port ${PORT}`);
+  });
 
-	afterAll(async () => {
-		// Cleanup
-		await serverInstance.close()
-	})
+  afterAll(async () => {
+    // Cleanup
+    await serverInstance.close();
+  });
 
-	it("should verify pacts from all consumers", async () => {
-		const opts: VerifierOptions = {
-			// Provider details
-			provider: "user-api-service",
-			providerBaseUrl: `http://localhost:${PORT}`,
+  it('should verify pacts from all consumers', async () => {
+    const opts: VerifierOptions = {
+      // Provider details
+      provider: 'user-api-service',
+      providerBaseUrl: `http://localhost:${PORT}`,
 
-			// Pact Broker configuration
-			pactBrokerUrl: process.env.PACT_BROKER_URL,
-			pactBrokerToken: process.env.PACT_BROKER_TOKEN,
-			publishVerificationResult: process.env.CI === "true",
-			providerVersion: process.env.GIT_SHA || "dev",
+      // Pact Broker configuration
+      pactBrokerUrl: process.env.PACT_BROKER_URL,
+      pactBrokerToken: process.env.PACT_BROKER_TOKEN,
+      publishVerificationResult: process.env.CI === 'true',
+      providerVersion: process.env.GIT_SHA || 'dev',
 
-			// State handlers: Setup provider state for each interaction
-			stateHandlers: {
-				"user with id 1 exists": async () => {
-					await seedDatabase({
-						users: [
-							{
-								id: 1,
-								name: "John Doe",
-								email: "john@example.com",
-								role: "user",
-								createdAt: "2025-01-15T10:00:00Z",
-							},
-						],
-					})
-					return "User seeded successfully"
-				},
+      // State handlers: Setup provider state for each interaction
+      stateHandlers: {
+        'user with id 1 exists': async () => {
+          await seedDatabase({
+            users: [
+              {
+                id: 1,
+                name: 'John Doe',
+                email: 'john@example.com',
+                role: 'user',
+                createdAt: '2025-01-15T10:00:00Z',
+              },
+            ],
+          });
+          return 'User seeded successfully';
+        },
 
-				"user with id 999 does not exist": async () => {
-					// Ensure user doesn't exist
-					await resetDatabase()
-					return "Database reset"
-				},
+        'user with id 999 does not exist': async () => {
+          // Ensure user doesn't exist
+          await resetDatabase();
+          return 'Database reset';
+        },
 
-				"no users exist": async () => {
-					await resetDatabase()
-					return "Database empty"
-				},
-			},
+        'no users exist': async () => {
+          await resetDatabase();
+          return 'Database empty';
+        },
+      },
 
-			// Request filters: Add auth headers to all requests
-			requestFilter: (req, res, next) => {
-				// Mock authentication for verification
-				req.headers["x-user-id"] = "test-user"
-				req.headers["authorization"] = "Bearer valid-test-token"
-				next()
-			},
+      // Request filters: Add auth headers to all requests
+      requestFilter: (req, res, next) => {
+        // Mock authentication for verification
+        req.headers['x-user-id'] = 'test-user';
+        req.headers['authorization'] = 'Bearer valid-test-token';
+        next();
+      },
 
-			// Timeout for verification
-			timeout: 30000,
-		}
+      // Timeout for verification
+      timeout: 30000,
+    };
 
-		// Run verification
-		await new Verifier(opts).verifyProvider()
-	})
-})
+    // Run verification
+    await new Verifier(opts).verifyProvider();
+  });
+});
 ```
 
 **CI integration**:
@@ -278,47 +278,47 @@ describe("Pact Provider Verification", () => {
 # .github/workflows/pact-provider.yml
 name: Pact Provider Verification
 on:
-    pull_request:
-    push:
-        branches: [main]
+  pull_request:
+  push:
+    branches: [main]
 
 jobs:
-    verify-contracts:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  verify-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version-file: ".nvmrc"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Start database
-              run: docker-compose up -d postgres
+      - name: Start database
+        run: docker-compose up -d postgres
 
-            - name: Run migrations
-              run: npm run db:migrate
+      - name: Run migrations
+        run: npm run db:migrate
 
-            - name: Verify pacts
-              run: npm run test:contract:provider
-              env:
-                  PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
-                  GIT_SHA: ${{ github.sha }}
-                  CI: true
+      - name: Verify pacts
+        run: npm run test:contract:provider
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+          GIT_SHA: ${{ github.sha }}
+          CI: true
 
-            - name: Can I Deploy?
-              run: |
-                  npx pact-broker can-i-deploy \
-                    --pacticipant user-api-service \
-                    --version ${{ github.sha }} \
-                    --to-environment production
-              env:
-                  PACT_BROKER_BASE_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Can I Deploy?
+        run: |
+          npx pact-broker can-i-deploy \
+            --pacticipant user-api-service \
+            --version ${{ github.sha }} \
+            --to-environment production
+        env:
+          PACT_BROKER_BASE_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
 ```
 
 **Key Points**:
@@ -341,135 +341,135 @@ jobs:
 # .github/workflows/pact-consumer.yml (Consumer side)
 name: Pact Consumer Tests
 on:
-    pull_request:
-    push:
-        branches: [main]
+  pull_request:
+  push:
+    branches: [main]
 
 jobs:
-    consumer-tests:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  consumer-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version-file: ".nvmrc"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Run consumer contract tests
-              run: npm run test:contract
+      - name: Run consumer contract tests
+        run: npm run test:contract
 
-            - name: Publish pacts to broker
-              if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-              run: |
-                  npx pact-broker publish ./pacts \
-                    --consumer-app-version ${{ github.sha }} \
-                    --branch ${{ github.head_ref || github.ref_name }} \
-                    --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-                    --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Publish pacts to broker
+        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+        run: |
+          npx pact-broker publish ./pacts \
+            --consumer-app-version ${{ github.sha }} \
+            --branch ${{ github.head_ref || github.ref_name }} \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
 
-            - name: Tag pact with environment (main branch only)
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  npx pact-broker create-version-tag \
-                    --pacticipant user-management-web \
-                    --version ${{ github.sha }} \
-                    --tag production \
-                    --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-                    --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Tag pact with environment (main branch only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npx pact-broker create-version-tag \
+            --pacticipant user-management-web \
+            --version ${{ github.sha }} \
+            --tag production \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
 ```
 
 ```yaml
 # .github/workflows/pact-provider.yml (Provider side)
 name: Pact Provider Verification
 on:
-    pull_request:
-    push:
-        branches: [main]
-    repository_dispatch:
-        types: [pact_changed] # Webhook from Pact Broker
+  pull_request:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [pact_changed] # Webhook from Pact Broker
 
 jobs:
-    verify-contracts:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  verify-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version-file: ".nvmrc"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Start dependencies
-              run: docker-compose up -d
+      - name: Start dependencies
+        run: docker-compose up -d
 
-            - name: Run provider verification
-              run: npm run test:contract:provider
-              env:
-                  PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
-                  GIT_SHA: ${{ github.sha }}
-                  CI: true
+      - name: Run provider verification
+        run: npm run test:contract:provider
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+          GIT_SHA: ${{ github.sha }}
+          CI: true
 
-            - name: Publish verification results
-              if: always()
-              run: echo "Verification results published to broker"
+      - name: Publish verification results
+        if: always()
+        run: echo "Verification results published to broker"
 
-            - name: Can I Deploy to Production?
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  npx pact-broker can-i-deploy \
-                    --pacticipant user-api-service \
-                    --version ${{ github.sha }} \
-                    --to-environment production \
-                    --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-                    --broker-token ${{ secrets.PACT_BROKER_TOKEN }} \
-                    --retry-while-unknown 6 \
-                    --retry-interval 10
+      - name: Can I Deploy to Production?
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npx pact-broker can-i-deploy \
+            --pacticipant user-api-service \
+            --version ${{ github.sha }} \
+            --to-environment production \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }} \
+            --retry-while-unknown 6 \
+            --retry-interval 10
 
-            - name: Record deployment (if can-i-deploy passed)
-              if: success() && github.ref == 'refs/heads/main'
-              run: |
-                  npx pact-broker record-deployment \
-                    --pacticipant user-api-service \
-                    --version ${{ github.sha }} \
-                    --environment production \
-                    --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-                    --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Record deployment (if can-i-deploy passed)
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          npx pact-broker record-deployment \
+            --pacticipant user-api-service \
+            --version ${{ github.sha }} \
+            --environment production \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
 ```
 
 **Pact Broker Webhook Configuration**:
 
 ```json
 {
-	"events": [
-		{
-			"name": "contract_content_changed"
-		}
-	],
-	"request": {
-		"method": "POST",
-		"url": "https://api.github.com/repos/your-org/user-api/dispatches",
-		"headers": {
-			"Authorization": "Bearer ${user.githubToken}",
-			"Content-Type": "application/json",
-			"Accept": "application/vnd.github.v3+json"
-		},
-		"body": {
-			"event_type": "pact_changed",
-			"client_payload": {
-				"pact_url": "${pactbroker.pactUrl}",
-				"consumer": "${pactbroker.consumerName}",
-				"provider": "${pactbroker.providerName}"
-			}
-		}
-	}
+  "events": [
+    {
+      "name": "contract_content_changed"
+    }
+  ],
+  "request": {
+    "method": "POST",
+    "url": "https://api.github.com/repos/your-org/user-api/dispatches",
+    "headers": {
+      "Authorization": "Bearer ${user.githubToken}",
+      "Content-Type": "application/json",
+      "Accept": "application/vnd.github.v3+json"
+    },
+    "body": {
+      "event_type": "pact_changed",
+      "client_payload": {
+        "pact_url": "${pactbroker.pactUrl}",
+        "consumer": "${pactbroker.consumerName}",
+        "provider": "${pactbroker.providerName}"
+      }
+    }
+  }
 }
 ```
 
@@ -491,224 +491,224 @@ jobs:
 
 ```typescript
 // tests/contract/user-api-resilience.pact.spec.ts
-import { PactV3, MatchersV3 } from "@pact-foundation/pact"
-import { getUserById, ApiError } from "@/api/user-service"
+import { PactV3, MatchersV3 } from '@pact-foundation/pact';
+import { getUserById, ApiError } from '@/api/user-service';
 
-const { like, string } = MatchersV3
+const { like, string } = MatchersV3;
 
 const provider = new PactV3({
-	consumer: "user-management-web",
-	provider: "user-api-service",
-	dir: "./pacts",
-})
+  consumer: 'user-management-web',
+  provider: 'user-api-service',
+  dir: './pacts',
+});
 
-describe("User API Resilience Contract", () => {
-	/**
-	 * Test 500 error handling
-	 * Verifies consumer handles server errors gracefully
-	 */
-	it("should handle 500 errors with retry logic", async () => {
-		await provider
-			.given("server is experiencing errors")
-			.uponReceiving("a request that returns 500")
-			.withRequest({
-				method: "GET",
-				path: "/users/1",
-				headers: { Accept: "application/json" },
-			})
-			.willRespondWith({
-				status: 500,
-				headers: { "Content-Type": "application/json" },
-				body: {
-					error: "Internal server error",
-					code: "INTERNAL_ERROR",
-					retryable: true,
-				},
-			})
-			.executeTest(async (mockServer) => {
-				// Consumer should retry on 500
-				try {
-					await getUserById(1, {
-						baseURL: mockServer.url,
-						retries: 3,
-						retryDelay: 100,
-					})
-					fail("Should have thrown error after retries")
-				} catch (error) {
-					expect(error).toBeInstanceOf(ApiError)
-					expect((error as ApiError).code).toBe("INTERNAL_ERROR")
-					expect((error as ApiError).retryable).toBe(true)
-				}
-			})
-	})
+describe('User API Resilience Contract', () => {
+  /**
+   * Test 500 error handling
+   * Verifies consumer handles server errors gracefully
+   */
+  it('should handle 500 errors with retry logic', async () => {
+    await provider
+      .given('server is experiencing errors')
+      .uponReceiving('a request that returns 500')
+      .withRequest({
+        method: 'GET',
+        path: '/users/1',
+        headers: { Accept: 'application/json' },
+      })
+      .willRespondWith({
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          error: 'Internal server error',
+          code: 'INTERNAL_ERROR',
+          retryable: true,
+        },
+      })
+      .executeTest(async (mockServer) => {
+        // Consumer should retry on 500
+        try {
+          await getUserById(1, {
+            baseURL: mockServer.url,
+            retries: 3,
+            retryDelay: 100,
+          });
+          fail('Should have thrown error after retries');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe('INTERNAL_ERROR');
+          expect((error as ApiError).retryable).toBe(true);
+        }
+      });
+  });
 
-	/**
-	 * Test 429 rate limiting
-	 * Verifies consumer respects rate limits
-	 */
-	it("should handle 429 rate limit with backoff", async () => {
-		await provider
-			.given("rate limit exceeded for user")
-			.uponReceiving("a request that is rate limited")
-			.withRequest({
-				method: "GET",
-				path: "/users/1",
-			})
-			.willRespondWith({
-				status: 429,
-				headers: {
-					"Content-Type": "application/json",
-					"Retry-After": "60", // Retry after 60 seconds
-				},
-				body: {
-					error: "Too many requests",
-					code: "RATE_LIMIT_EXCEEDED",
-				},
-			})
-			.executeTest(async (mockServer) => {
-				try {
-					await getUserById(1, {
-						baseURL: mockServer.url,
-						respectRateLimit: true,
-					})
-					fail("Should have thrown rate limit error")
-				} catch (error) {
-					expect(error).toBeInstanceOf(ApiError)
-					expect((error as ApiError).code).toBe("RATE_LIMIT_EXCEEDED")
-					expect((error as ApiError).retryAfter).toBe(60)
-				}
-			})
-	})
+  /**
+   * Test 429 rate limiting
+   * Verifies consumer respects rate limits
+   */
+  it('should handle 429 rate limit with backoff', async () => {
+    await provider
+      .given('rate limit exceeded for user')
+      .uponReceiving('a request that is rate limited')
+      .withRequest({
+        method: 'GET',
+        path: '/users/1',
+      })
+      .willRespondWith({
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '60', // Retry after 60 seconds
+        },
+        body: {
+          error: 'Too many requests',
+          code: 'RATE_LIMIT_EXCEEDED',
+        },
+      })
+      .executeTest(async (mockServer) => {
+        try {
+          await getUserById(1, {
+            baseURL: mockServer.url,
+            respectRateLimit: true,
+          });
+          fail('Should have thrown rate limit error');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe('RATE_LIMIT_EXCEEDED');
+          expect((error as ApiError).retryAfter).toBe(60);
+        }
+      });
+  });
 
-	/**
-	 * Test timeout handling
-	 * Verifies consumer has appropriate timeout configuration
-	 */
-	it("should timeout after 10 seconds", async () => {
-		await provider
-			.given("server is slow to respond")
-			.uponReceiving("a request that times out")
-			.withRequest({
-				method: "GET",
-				path: "/users/1",
-			})
-			.willRespondWith({
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-				body: like({ id: 1, name: "John" }),
-			})
-			.withDelay(15000) // Simulate 15 second delay
-			.executeTest(async (mockServer) => {
-				try {
-					await getUserById(1, {
-						baseURL: mockServer.url,
-						timeout: 10000, // 10 second timeout
-					})
-					fail("Should have timed out")
-				} catch (error) {
-					expect(error).toBeInstanceOf(ApiError)
-					expect((error as ApiError).code).toBe("TIMEOUT")
-				}
-			})
-	})
+  /**
+   * Test timeout handling
+   * Verifies consumer has appropriate timeout configuration
+   */
+  it('should timeout after 10 seconds', async () => {
+    await provider
+      .given('server is slow to respond')
+      .uponReceiving('a request that times out')
+      .withRequest({
+        method: 'GET',
+        path: '/users/1',
+      })
+      .willRespondWith({
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: like({ id: 1, name: 'John' }),
+      })
+      .withDelay(15000) // Simulate 15 second delay
+      .executeTest(async (mockServer) => {
+        try {
+          await getUserById(1, {
+            baseURL: mockServer.url,
+            timeout: 10000, // 10 second timeout
+          });
+          fail('Should have timed out');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe('TIMEOUT');
+        }
+      });
+  });
 
-	/**
-	 * Test partial response (optional fields)
-	 * Verifies consumer handles missing optional data
-	 */
-	it("should handle response with missing optional fields", async () => {
-		await provider
-			.given("user exists with minimal data")
-			.uponReceiving("a request for user with partial data")
-			.withRequest({
-				method: "GET",
-				path: "/users/1",
-			})
-			.willRespondWith({
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-				body: {
-					id: integer(1),
-					name: string("John Doe"),
-					email: string("john@example.com"),
-					// role, createdAt, etc. omitted (optional fields)
-				},
-			})
-			.executeTest(async (mockServer) => {
-				const user = await getUserById(1, { baseURL: mockServer.url })
+  /**
+   * Test partial response (optional fields)
+   * Verifies consumer handles missing optional data
+   */
+  it('should handle response with missing optional fields', async () => {
+    await provider
+      .given('user exists with minimal data')
+      .uponReceiving('a request for user with partial data')
+      .withRequest({
+        method: 'GET',
+        path: '/users/1',
+      })
+      .willRespondWith({
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          id: integer(1),
+          name: string('John Doe'),
+          email: string('john@example.com'),
+          // role, createdAt, etc. omitted (optional fields)
+        },
+      })
+      .executeTest(async (mockServer) => {
+        const user = await getUserById(1, { baseURL: mockServer.url });
 
-				// Consumer handles missing optional fields gracefully
-				expect(user.id).toBe(1)
-				expect(user.name).toBe("John Doe")
-				expect(user.role).toBeUndefined() // Optional field
-				expect(user.createdAt).toBeUndefined() // Optional field
-			})
-	})
-})
+        // Consumer handles missing optional fields gracefully
+        expect(user.id).toBe(1);
+        expect(user.name).toBe('John Doe');
+        expect(user.role).toBeUndefined(); // Optional field
+        expect(user.createdAt).toBeUndefined(); // Optional field
+      });
+  });
+});
 ```
 
 **API client with retry logic**:
 
 ```typescript
 // src/api/user-service.ts
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios"
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 export class ApiError extends Error {
-	constructor(
-		message: string,
-		public code: string,
-		public retryable: boolean = false,
-		public retryAfter?: number,
-	) {
-		super(message)
-	}
+  constructor(
+    message: string,
+    public code: string,
+    public retryable: boolean = false,
+    public retryAfter?: number,
+  ) {
+    super(message);
+  }
 }
 
 /**
  * User API client with retry and error handling
  */
 export async function getUserById(
-	id: number,
-	config?: AxiosRequestConfig & { retries?: number; retryDelay?: number; respectRateLimit?: boolean },
+  id: number,
+  config?: AxiosRequestConfig & { retries?: number; retryDelay?: number; respectRateLimit?: boolean },
 ): Promise<User> {
-	const { retries = 3, retryDelay = 1000, respectRateLimit = true, ...axiosConfig } = config || {}
+  const { retries = 3, retryDelay = 1000, respectRateLimit = true, ...axiosConfig } = config || {};
 
-	let lastError: Error
+  let lastError: Error;
 
-	for (let attempt = 1; attempt <= retries; attempt++) {
-		try {
-			const response = await axios.get(`/users/${id}`, axiosConfig)
-			return response.data
-		} catch (error: any) {
-			lastError = error
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await axios.get(`/users/${id}`, axiosConfig);
+      return response.data;
+    } catch (error: any) {
+      lastError = error;
 
-			// Handle rate limiting
-			if (error.response?.status === 429) {
-				const retryAfter = parseInt(error.response.headers["retry-after"] || "60")
-				throw new ApiError("Too many requests", "RATE_LIMIT_EXCEEDED", false, retryAfter)
-			}
+      // Handle rate limiting
+      if (error.response?.status === 429) {
+        const retryAfter = parseInt(error.response.headers['retry-after'] || '60');
+        throw new ApiError('Too many requests', 'RATE_LIMIT_EXCEEDED', false, retryAfter);
+      }
 
-			// Retry on 500 errors
-			if (error.response?.status === 500 && attempt < retries) {
-				await new Promise((resolve) => setTimeout(resolve, retryDelay * attempt))
-				continue
-			}
+      // Retry on 500 errors
+      if (error.response?.status === 500 && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay * attempt));
+        continue;
+      }
 
-			// Handle 404
-			if (error.response?.status === 404) {
-				throw new ApiError("User not found", "USER_NOT_FOUND", false)
-			}
+      // Handle 404
+      if (error.response?.status === 404) {
+        throw new ApiError('User not found', 'USER_NOT_FOUND', false);
+      }
 
-			// Handle timeout
-			if (error.code === "ECONNABORTED") {
-				throw new ApiError("Request timeout", "TIMEOUT", true)
-			}
+      // Handle timeout
+      if (error.code === 'ECONNABORTED') {
+        throw new ApiError('Request timeout', 'TIMEOUT', true);
+      }
 
-			break
-		}
-	}
+      break;
+    }
+  }
 
-	throw new ApiError("Request failed after retries", "INTERNAL_ERROR", true)
+  throw new ApiError('Request failed after retries', 'INTERNAL_ERROR', true);
 }
 ```
 
@@ -737,44 +737,44 @@ export async function getUserById(
  * - Tag releases for environment tracking
  */
 
-import { execSync } from "child_process"
+import { execSync } from 'child_process';
 
-const PACT_BROKER_URL = process.env.PACT_BROKER_URL!
-const PACT_BROKER_TOKEN = process.env.PACT_BROKER_TOKEN!
-const PACTICIPANT = "user-api-service"
+const PACT_BROKER_URL = process.env.PACT_BROKER_URL!;
+const PACT_BROKER_TOKEN = process.env.PACT_BROKER_TOKEN!;
+const PACTICIPANT = 'user-api-service';
 
 /**
  * Tag release with environment
  */
-function tagRelease(version: string, environment: "staging" | "production") {
-	console.log(`🏷️  Tagging ${PACTICIPANT} v${version} as ${environment}`)
+function tagRelease(version: string, environment: 'staging' | 'production') {
+  console.log(`🏷️  Tagging ${PACTICIPANT} v${version} as ${environment}`);
 
-	execSync(
-		`npx pact-broker create-version-tag \
+  execSync(
+    `npx pact-broker create-version-tag \
       --pacticipant ${PACTICIPANT} \
       --version ${version} \
       --tag ${environment} \
       --broker-base-url ${PACT_BROKER_URL} \
       --broker-token ${PACT_BROKER_TOKEN}`,
-		{ stdio: "inherit" },
-	)
+    { stdio: 'inherit' },
+  );
 }
 
 /**
  * Record deployment to environment
  */
-function recordDeployment(version: string, environment: "staging" | "production") {
-	console.log(`📝 Recording deployment of ${PACTICIPANT} v${version} to ${environment}`)
+function recordDeployment(version: string, environment: 'staging' | 'production') {
+  console.log(`📝 Recording deployment of ${PACTICIPANT} v${version} to ${environment}`);
 
-	execSync(
-		`npx pact-broker record-deployment \
+  execSync(
+    `npx pact-broker record-deployment \
       --pacticipant ${PACTICIPANT} \
       --version ${version} \
       --environment ${environment} \
       --broker-base-url ${PACT_BROKER_URL} \
       --broker-token ${PACT_BROKER_TOKEN}`,
-		{ stdio: "inherit" },
-	)
+    { stdio: 'inherit' },
+  );
 }
 
 /**
@@ -782,28 +782,28 @@ function recordDeployment(version: string, environment: "staging" | "production"
  * Keep: last 30 days, all production tags, latest from each branch
  */
 function cleanupOldPacts() {
-	console.log(`🧹 Cleaning up old pacts for ${PACTICIPANT}`)
+  console.log(`🧹 Cleaning up old pacts for ${PACTICIPANT}`);
 
-	execSync(
-		`npx pact-broker clean \
+  execSync(
+    `npx pact-broker clean \
       --pacticipant ${PACTICIPANT} \
       --broker-base-url ${PACT_BROKER_URL} \
       --broker-token ${PACT_BROKER_TOKEN} \
       --keep-latest-for-branch 1 \
       --keep-min-age 30`,
-		{ stdio: "inherit" },
-	)
+    { stdio: 'inherit' },
+  );
 }
 
 /**
  * Check deployment compatibility
  */
 function canIDeploy(version: string, toEnvironment: string): boolean {
-	console.log(`🔍 Checking if ${PACTICIPANT} v${version} can deploy to ${toEnvironment}`)
+  console.log(`🔍 Checking if ${PACTICIPANT} v${version} can deploy to ${toEnvironment}`);
 
-	try {
-		execSync(
-			`npx pact-broker can-i-deploy \
+  try {
+    execSync(
+      `npx pact-broker can-i-deploy \
         --pacticipant ${PACTICIPANT} \
         --version ${version} \
         --to-environment ${toEnvironment} \
@@ -811,59 +811,59 @@ function canIDeploy(version: string, toEnvironment: string): boolean {
         --broker-token ${PACT_BROKER_TOKEN} \
         --retry-while-unknown 6 \
         --retry-interval 10`,
-			{ stdio: "inherit" },
-		)
-		return true
-	} catch (error) {
-		console.error(`❌ Cannot deploy to ${toEnvironment}`)
-		return false
-	}
+      { stdio: 'inherit' },
+    );
+    return true;
+  } catch (error) {
+    console.error(`❌ Cannot deploy to ${toEnvironment}`);
+    return false;
+  }
 }
 
 /**
  * Main housekeeping workflow
  */
 async function main() {
-	const command = process.argv[2]
-	const version = process.argv[3]
-	const environment = process.argv[4] as "staging" | "production"
+  const command = process.argv[2];
+  const version = process.argv[3];
+  const environment = process.argv[4] as 'staging' | 'production';
 
-	switch (command) {
-		case "tag-release":
-			tagRelease(version, environment)
-			break
+  switch (command) {
+    case 'tag-release':
+      tagRelease(version, environment);
+      break;
 
-		case "record-deployment":
-			recordDeployment(version, environment)
-			break
+    case 'record-deployment':
+      recordDeployment(version, environment);
+      break;
 
-		case "can-i-deploy":
-			const canDeploy = canIDeploy(version, environment)
-			process.exit(canDeploy ? 0 : 1)
+    case 'can-i-deploy':
+      const canDeploy = canIDeploy(version, environment);
+      process.exit(canDeploy ? 0 : 1);
 
-		case "cleanup":
-			cleanupOldPacts()
-			break
+    case 'cleanup':
+      cleanupOldPacts();
+      break;
 
-		default:
-			console.error("Unknown command. Use: tag-release | record-deployment | can-i-deploy | cleanup")
-			process.exit(1)
-	}
+    default:
+      console.error('Unknown command. Use: tag-release | record-deployment | can-i-deploy | cleanup');
+      process.exit(1);
+  }
 }
 
-main()
+main();
 ```
 
 **package.json scripts**:
 
 ```json
 {
-	"scripts": {
-		"pact:tag": "ts-node scripts/pact-broker-housekeeping.ts tag-release",
-		"pact:record": "ts-node scripts/pact-broker-housekeeping.ts record-deployment",
-		"pact:can-deploy": "ts-node scripts/pact-broker-housekeeping.ts can-i-deploy",
-		"pact:cleanup": "ts-node scripts/pact-broker-housekeeping.ts cleanup"
-	}
+  "scripts": {
+    "pact:tag": "ts-node scripts/pact-broker-housekeeping.ts tag-release",
+    "pact:record": "ts-node scripts/pact-broker-housekeeping.ts record-deployment",
+    "pact:can-deploy": "ts-node scripts/pact-broker-housekeeping.ts can-i-deploy",
+    "pact:cleanup": "ts-node scripts/pact-broker-housekeeping.ts cleanup"
+  }
 }
 ```
 
@@ -873,34 +873,34 @@ main()
 # .github/workflows/deploy-production.yml
 name: Deploy to Production
 on:
-    push:
-        tags:
-            - "v*"
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-    verify-contracts:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  verify-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Check pact compatibility
-              run: npm run pact:can-deploy ${{ github.ref_name }} production
-              env:
-                  PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Check pact compatibility
+        run: npm run pact:can-deploy ${{ github.ref_name }} production
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
 
-    deploy:
-        needs: verify-contracts
-        runs-on: ubuntu-latest
-        steps:
-            - name: Deploy to production
-              run: ./scripts/deploy.sh production
+  deploy:
+    needs: verify-contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        run: ./scripts/deploy.sh production
 
-            - name: Record deployment in Pact Broker
-              run: npm run pact:record ${{ github.ref_name }} production
-              env:
-                  PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Record deployment in Pact Broker
+        run: npm run pact:record ${{ github.ref_name }} production
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
 ```
 
 **Scheduled cleanup**:
@@ -909,20 +909,20 @@ jobs:
 # .github/workflows/pact-housekeeping.yml
 name: Pact Broker Housekeeping
 on:
-    schedule:
-        - cron: "0 2 * * 0" # Weekly on Sunday at 2 AM
+  schedule:
+    - cron: '0 2 * * 0' # Weekly on Sunday at 2 AM
 
 jobs:
-    cleanup:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Cleanup old pacts
-              run: npm run pact:cleanup
-              env:
-                  PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
-                  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Cleanup old pacts
+        run: npm run pact:cleanup
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
 ```
 
 **Key Points**:

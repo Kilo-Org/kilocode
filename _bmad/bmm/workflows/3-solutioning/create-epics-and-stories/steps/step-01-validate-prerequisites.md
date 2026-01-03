@@ -176,9 +176,9 @@ Load {epicsTemplate} and initialize {outputFile}:
 1. Copy the entire template to {outputFile}
 2. Replace {{project_name}} with the actual project name
 3. Replace placeholder sections with extracted requirements:
-    - {{fr_list}} → extracted FRs
-    - {{nfr_list}} → extracted NFRs
-    - {{additional_requirements}} → extracted additional requirements
+   - {{fr_list}} → extracted FRs
+   - {{nfr_list}} → extracted NFRs
+   - {{additional_requirements}} → extracted additional requirements
 4. Leave {{requirements_coverage_map}} and {{epics_list}} as placeholders for now
 
 ### 8. Present Extracted Requirements

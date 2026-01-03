@@ -25,98 +25,98 @@ Poorly managed feature flags become technical debt: untested variations ship bro
  * - Single source of truth for all flag keys
  */
 export const FLAGS = Object.freeze({
-	// User-facing features
-	NEW_CHECKOUT_FLOW: "new-checkout-flow",
-	DARK_MODE: "dark-mode",
-	ENHANCED_SEARCH: "enhanced-search",
+  // User-facing features
+  NEW_CHECKOUT_FLOW: 'new-checkout-flow',
+  DARK_MODE: 'dark-mode',
+  ENHANCED_SEARCH: 'enhanced-search',
 
-	// Experiments
-	PRICING_EXPERIMENT_A: "pricing-experiment-a",
-	HOMEPAGE_VARIANT_B: "homepage-variant-b",
+  // Experiments
+  PRICING_EXPERIMENT_A: 'pricing-experiment-a',
+  HOMEPAGE_VARIANT_B: 'homepage-variant-b',
 
-	// Infrastructure
-	USE_NEW_API_ENDPOINT: "use-new-api-endpoint",
-	ENABLE_ANALYTICS_V2: "enable-analytics-v2",
+  // Infrastructure
+  USE_NEW_API_ENDPOINT: 'use-new-api-endpoint',
+  ENABLE_ANALYTICS_V2: 'enable-analytics-v2',
 
-	// Killswitches (emergency disables)
-	DISABLE_PAYMENT_PROCESSING: "disable-payment-processing",
-	DISABLE_EMAIL_NOTIFICATIONS: "disable-email-notifications",
-} as const)
+  // Killswitches (emergency disables)
+  DISABLE_PAYMENT_PROCESSING: 'disable-payment-processing',
+  DISABLE_EMAIL_NOTIFICATIONS: 'disable-email-notifications',
+} as const);
 
 /**
  * Type-safe flag keys
  * Prevents typos and ensures autocomplete in IDEs
  */
-export type FlagKey = (typeof FLAGS)[keyof typeof FLAGS]
+export type FlagKey = (typeof FLAGS)[keyof typeof FLAGS];
 
 /**
  * Flag metadata for governance
  */
 type FlagMetadata = {
-	key: FlagKey
-	name: string
-	owner: string
-	createdDate: string
-	expiryDate?: string
-	defaultState: boolean
-	requiresCleanup: boolean
-	dependencies?: FlagKey[]
-	telemetryEvents?: string[]
-}
+  key: FlagKey;
+  name: string;
+  owner: string;
+  createdDate: string;
+  expiryDate?: string;
+  defaultState: boolean;
+  requiresCleanup: boolean;
+  dependencies?: FlagKey[];
+  telemetryEvents?: string[];
+};
 
 /**
  * Flag registry with governance metadata
  * Used for flag lifecycle tracking and cleanup alerts
  */
 export const FLAG_REGISTRY: Record<FlagKey, FlagMetadata> = {
-	[FLAGS.NEW_CHECKOUT_FLOW]: {
-		key: FLAGS.NEW_CHECKOUT_FLOW,
-		name: "New Checkout Flow",
-		owner: "payments-team",
-		createdDate: "2025-01-15",
-		expiryDate: "2025-03-15",
-		defaultState: false,
-		requiresCleanup: true,
-		dependencies: [FLAGS.USE_NEW_API_ENDPOINT],
-		telemetryEvents: ["checkout_started", "checkout_completed"],
-	},
-	[FLAGS.DARK_MODE]: {
-		key: FLAGS.DARK_MODE,
-		name: "Dark Mode UI",
-		owner: "frontend-team",
-		createdDate: "2025-01-10",
-		defaultState: false,
-		requiresCleanup: false, // Permanent feature toggle
-	},
-	// ... rest of registry
-}
+  [FLAGS.NEW_CHECKOUT_FLOW]: {
+    key: FLAGS.NEW_CHECKOUT_FLOW,
+    name: 'New Checkout Flow',
+    owner: 'payments-team',
+    createdDate: '2025-01-15',
+    expiryDate: '2025-03-15',
+    defaultState: false,
+    requiresCleanup: true,
+    dependencies: [FLAGS.USE_NEW_API_ENDPOINT],
+    telemetryEvents: ['checkout_started', 'checkout_completed'],
+  },
+  [FLAGS.DARK_MODE]: {
+    key: FLAGS.DARK_MODE,
+    name: 'Dark Mode UI',
+    owner: 'frontend-team',
+    createdDate: '2025-01-10',
+    defaultState: false,
+    requiresCleanup: false, // Permanent feature toggle
+  },
+  // ... rest of registry
+};
 
 /**
  * Validate flag exists in registry
  * Throws at runtime if flag is unregistered
  */
 export function validateFlag(flag: string): asserts flag is FlagKey {
-	if (!Object.values(FLAGS).includes(flag as FlagKey)) {
-		throw new Error(`Unregistered feature flag: ${flag}`)
-	}
+  if (!Object.values(FLAGS).includes(flag as FlagKey)) {
+    throw new Error(`Unregistered feature flag: ${flag}`);
+  }
 }
 
 /**
  * Check if flag is expired (needs removal)
  */
 export function isFlagExpired(flag: FlagKey): boolean {
-	const metadata = FLAG_REGISTRY[flag]
-	if (!metadata.expiryDate) return false
+  const metadata = FLAG_REGISTRY[flag];
+  if (!metadata.expiryDate) return false;
 
-	const expiry = new Date(metadata.expiryDate)
-	return Date.now() > expiry.getTime()
+  const expiry = new Date(metadata.expiryDate);
+  return Date.now() > expiry.getTime();
 }
 
 /**
  * Get all expired flags requiring cleanup
  */
 export function getExpiredFlags(): FlagMetadata[] {
-	return Object.values(FLAG_REGISTRY).filter((meta) => isFlagExpired(meta.key))
+  return Object.values(FLAG_REGISTRY).filter((meta) => isFlagExpired(meta.key));
 }
 ```
 
@@ -152,8 +152,8 @@ export function Checkout() {
 
 ```typescript
 // tests/e2e/checkout-feature-flag.spec.ts
-import { test, expect } from "@playwright/test"
-import { FLAGS } from "@/utils/feature-flags"
+import { test, expect } from '@playwright/test';
+import { FLAGS } from '@/utils/feature-flags';
 
 /**
  * Feature Flag Testing Strategy:
@@ -163,181 +163,179 @@ import { FLAGS } from "@/utils/feature-flags"
  * 4. Verify telemetry events fire correctly
  */
 
-test.describe("Checkout Flow - Feature Flag Variations", () => {
-	let testUserId: string
+test.describe('Checkout Flow - Feature Flag Variations', () => {
+  let testUserId: string;
 
-	test.beforeEach(async () => {
-		// Generate unique test user ID
-		testUserId = `test-user-${Date.now()}`
-	})
+  test.beforeEach(async () => {
+    // Generate unique test user ID
+    testUserId = `test-user-${Date.now()}`;
+  });
 
-	test.afterEach(async ({ request }) => {
-		// CRITICAL: Clean up flag targeting to prevent shared env pollution
-		await request.post("/api/feature-flags/cleanup", {
-			data: {
-				flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-				userId: testUserId,
-			},
-		})
-	})
+  test.afterEach(async ({ request }) => {
+    // CRITICAL: Clean up flag targeting to prevent shared env pollution
+    await request.post('/api/feature-flags/cleanup', {
+      data: {
+        flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+        userId: testUserId,
+      },
+    });
+  });
 
-	test("should use NEW checkout flow when flag is ENABLED", async ({ page, request }) => {
-		// Arrange: Enable flag for test user
-		await request.post("/api/feature-flags/target", {
-			data: {
-				flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-				userId: testUserId,
-				variation: true, // ENABLED
-			},
-		})
+  test('should use NEW checkout flow when flag is ENABLED', async ({ page, request }) => {
+    // Arrange: Enable flag for test user
+    await request.post('/api/feature-flags/target', {
+      data: {
+        flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+        userId: testUserId,
+        variation: true, // ENABLED
+      },
+    });
 
-		// Act: Navigate as targeted user
-		await page.goto("/checkout", {
-			extraHTTPHeaders: {
-				"X-Test-User-ID": testUserId,
-			},
-		})
+    // Act: Navigate as targeted user
+    await page.goto('/checkout', {
+      extraHTTPHeaders: {
+        'X-Test-User-ID': testUserId,
+      },
+    });
 
-		// Assert: New flow UI elements visible
-		await expect(page.getByTestId("checkout-v2-container")).toBeVisible()
-		await expect(page.getByTestId("express-payment-options")).toBeVisible()
-		await expect(page.getByTestId("saved-addresses-dropdown")).toBeVisible()
+    // Assert: New flow UI elements visible
+    await expect(page.getByTestId('checkout-v2-container')).toBeVisible();
+    await expect(page.getByTestId('express-payment-options')).toBeVisible();
+    await expect(page.getByTestId('saved-addresses-dropdown')).toBeVisible();
 
-		// Assert: Legacy flow NOT visible
-		await expect(page.getByTestId("checkout-v1-container")).not.toBeVisible()
+    // Assert: Legacy flow NOT visible
+    await expect(page.getByTestId('checkout-v1-container')).not.toBeVisible();
 
-		// Assert: Telemetry event fired
-		const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS_EVENTS__ || [])
-		expect(analyticsEvents).toContainEqual(
-			expect.objectContaining({
-				event: "checkout_started",
-				properties: expect.objectContaining({
-					variant: "new_flow",
-				}),
-			}),
-		)
-	})
+    // Assert: Telemetry event fired
+    const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS_EVENTS__ || []);
+    expect(analyticsEvents).toContainEqual(
+      expect.objectContaining({
+        event: 'checkout_started',
+        properties: expect.objectContaining({
+          variant: 'new_flow',
+        }),
+      }),
+    );
+  });
 
-	test("should use LEGACY checkout flow when flag is DISABLED", async ({ page, request }) => {
-		// Arrange: Disable flag for test user (or don't target at all)
-		await request.post("/api/feature-flags/target", {
-			data: {
-				flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-				userId: testUserId,
-				variation: false, // DISABLED
-			},
-		})
+  test('should use LEGACY checkout flow when flag is DISABLED', async ({ page, request }) => {
+    // Arrange: Disable flag for test user (or don't target at all)
+    await request.post('/api/feature-flags/target', {
+      data: {
+        flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+        userId: testUserId,
+        variation: false, // DISABLED
+      },
+    });
 
-		// Act: Navigate as targeted user
-		await page.goto("/checkout", {
-			extraHTTPHeaders: {
-				"X-Test-User-ID": testUserId,
-			},
-		})
+    // Act: Navigate as targeted user
+    await page.goto('/checkout', {
+      extraHTTPHeaders: {
+        'X-Test-User-ID': testUserId,
+      },
+    });
 
-		// Assert: Legacy flow UI elements visible
-		await expect(page.getByTestId("checkout-v1-container")).toBeVisible()
-		await expect(page.getByTestId("legacy-payment-form")).toBeVisible()
+    // Assert: Legacy flow UI elements visible
+    await expect(page.getByTestId('checkout-v1-container')).toBeVisible();
+    await expect(page.getByTestId('legacy-payment-form')).toBeVisible();
 
-		// Assert: New flow NOT visible
-		await expect(page.getByTestId("checkout-v2-container")).not.toBeVisible()
-		await expect(page.getByTestId("express-payment-options")).not.toBeVisible()
+    // Assert: New flow NOT visible
+    await expect(page.getByTestId('checkout-v2-container')).not.toBeVisible();
+    await expect(page.getByTestId('express-payment-options')).not.toBeVisible();
 
-		// Assert: Telemetry event fired with correct variant
-		const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS_EVENTS__ || [])
-		expect(analyticsEvents).toContainEqual(
-			expect.objectContaining({
-				event: "checkout_started",
-				properties: expect.objectContaining({
-					variant: "legacy_flow",
-				}),
-			}),
-		)
-	})
+    // Assert: Telemetry event fired with correct variant
+    const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS_EVENTS__ || []);
+    expect(analyticsEvents).toContainEqual(
+      expect.objectContaining({
+        event: 'checkout_started',
+        properties: expect.objectContaining({
+          variant: 'legacy_flow',
+        }),
+      }),
+    );
+  });
 
-	test("should handle flag evaluation errors gracefully", async ({ page, request }) => {
-		// Arrange: Simulate flag service unavailable
-		await page.route("**/api/feature-flags/evaluate", (route) =>
-			route.fulfill({ status: 500, body: "Service Unavailable" }),
-		)
+  test('should handle flag evaluation errors gracefully', async ({ page, request }) => {
+    // Arrange: Simulate flag service unavailable
+    await page.route('**/api/feature-flags/evaluate', (route) => route.fulfill({ status: 500, body: 'Service Unavailable' }));
 
-		// Act: Navigate (should fallback to default state)
-		await page.goto("/checkout", {
-			extraHTTPHeaders: {
-				"X-Test-User-ID": testUserId,
-			},
-		})
+    // Act: Navigate (should fallback to default state)
+    await page.goto('/checkout', {
+      extraHTTPHeaders: {
+        'X-Test-User-ID': testUserId,
+      },
+    });
 
-		// Assert: Fallback to safe default (legacy flow)
-		await expect(page.getByTestId("checkout-v1-container")).toBeVisible()
+    // Assert: Fallback to safe default (legacy flow)
+    await expect(page.getByTestId('checkout-v1-container')).toBeVisible();
 
-		// Assert: Error logged but no user-facing error
-		const consoleErrors = []
-		page.on("console", (msg) => {
-			if (msg.type() === "error") consoleErrors.push(msg.text())
-		})
-		expect(consoleErrors).toContain(expect.stringContaining("Feature flag evaluation failed"))
-	})
-})
+    // Assert: Error logged but no user-facing error
+    const consoleErrors = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    expect(consoleErrors).toContain(expect.stringContaining('Feature flag evaluation failed'));
+  });
+});
 ```
 
 **Cypress equivalent**:
 
 ```javascript
 // cypress/e2e/checkout-feature-flag.cy.ts
-import { FLAGS } from "@/utils/feature-flags"
+import { FLAGS } from '@/utils/feature-flags';
 
-describe("Checkout Flow - Feature Flag Variations", () => {
-	let testUserId
+describe('Checkout Flow - Feature Flag Variations', () => {
+  let testUserId;
 
-	beforeEach(() => {
-		testUserId = `test-user-${Date.now()}`
-	})
+  beforeEach(() => {
+    testUserId = `test-user-${Date.now()}`;
+  });
 
-	afterEach(() => {
-		// Clean up targeting
-		cy.task("removeFeatureFlagTarget", {
-			flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-			userId: testUserId,
-		})
-	})
+  afterEach(() => {
+    // Clean up targeting
+    cy.task('removeFeatureFlagTarget', {
+      flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+      userId: testUserId,
+    });
+  });
 
-	it("should use NEW checkout flow when flag is ENABLED", () => {
-		// Arrange: Enable flag via Cypress task
-		cy.task("setFeatureFlagVariation", {
-			flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-			userId: testUserId,
-			variation: true,
-		})
+  it('should use NEW checkout flow when flag is ENABLED', () => {
+    // Arrange: Enable flag via Cypress task
+    cy.task('setFeatureFlagVariation', {
+      flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+      userId: testUserId,
+      variation: true,
+    });
 
-		// Act
-		cy.visit("/checkout", {
-			headers: { "X-Test-User-ID": testUserId },
-		})
+    // Act
+    cy.visit('/checkout', {
+      headers: { 'X-Test-User-ID': testUserId },
+    });
 
-		// Assert
-		cy.get('[data-testid="checkout-v2-container"]').should("be.visible")
-		cy.get('[data-testid="checkout-v1-container"]').should("not.exist")
-	})
+    // Assert
+    cy.get('[data-testid="checkout-v2-container"]').should('be.visible');
+    cy.get('[data-testid="checkout-v1-container"]').should('not.exist');
+  });
 
-	it("should use LEGACY checkout flow when flag is DISABLED", () => {
-		// Arrange: Disable flag
-		cy.task("setFeatureFlagVariation", {
-			flagKey: FLAGS.NEW_CHECKOUT_FLOW,
-			userId: testUserId,
-			variation: false,
-		})
+  it('should use LEGACY checkout flow when flag is DISABLED', () => {
+    // Arrange: Disable flag
+    cy.task('setFeatureFlagVariation', {
+      flagKey: FLAGS.NEW_CHECKOUT_FLOW,
+      userId: testUserId,
+      variation: false,
+    });
 
-		// Act
-		cy.visit("/checkout", {
-			headers: { "X-Test-User-ID": testUserId },
-		})
+    // Act
+    cy.visit('/checkout', {
+      headers: { 'X-Test-User-ID': testUserId },
+    });
 
-		// Assert
-		cy.get('[data-testid="checkout-v1-container"]').should("be.visible")
-		cy.get('[data-testid="checkout-v2-container"]').should("not.exist")
-	})
-})
+    // Assert
+    cy.get('[data-testid="checkout-v1-container"]').should('be.visible');
+    cy.get('[data-testid="checkout-v2-container"]').should('not.exist');
+  });
+});
 ```
 
 **Key Points**:
@@ -358,43 +356,43 @@ describe("Checkout Flow - Feature Flag Variations", () => {
 
 ```typescript
 // tests/support/feature-flag-helpers.ts
-import { request as playwrightRequest } from "@playwright/test"
-import { FLAGS, FlagKey } from "@/utils/feature-flags"
+import { request as playwrightRequest } from '@playwright/test';
+import { FLAGS, FlagKey } from '@/utils/feature-flags';
 
 /**
  * LaunchDarkly API client configuration
  * Use test project SDK key (NOT production)
  */
-const LD_SDK_KEY = process.env.LD_SDK_KEY_TEST
-const LD_API_BASE = "https://app.launchdarkly.com/api/v2"
+const LD_SDK_KEY = process.env.LD_SDK_KEY_TEST;
+const LD_API_BASE = 'https://app.launchdarkly.com/api/v2';
 
-type FlagVariation = boolean | string | number | object
+type FlagVariation = boolean | string | number | object;
 
 /**
  * Set flag variation for specific user
  * Uses LaunchDarkly API to create user target
  */
 export async function setFlagForUser(flagKey: FlagKey, userId: string, variation: FlagVariation): Promise<void> {
-	const response = await playwrightRequest.newContext().then((ctx) =>
-		ctx.post(`${LD_API_BASE}/flags/${flagKey}/targeting`, {
-			headers: {
-				Authorization: LD_SDK_KEY!,
-				"Content-Type": "application/json",
-			},
-			data: {
-				targets: [
-					{
-						values: [userId],
-						variation: variation ? 1 : 0, // 0 = off, 1 = on
-					},
-				],
-			},
-		}),
-	)
+  const response = await playwrightRequest.newContext().then((ctx) =>
+    ctx.post(`${LD_API_BASE}/flags/${flagKey}/targeting`, {
+      headers: {
+        Authorization: LD_SDK_KEY!,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        targets: [
+          {
+            values: [userId],
+            variation: variation ? 1 : 0, // 0 = off, 1 = on
+          },
+        ],
+      },
+    }),
+  );
 
-	if (!response.ok()) {
-		throw new Error(`Failed to set flag ${flagKey} for user ${userId}: ${response.status()}`)
-	}
+  if (!response.ok()) {
+    throw new Error(`Failed to set flag ${flagKey} for user ${userId}: ${response.status()}`);
+  }
 }
 
 /**
@@ -402,18 +400,18 @@ export async function setFlagForUser(flagKey: FlagKey, userId: string, variation
  * CRITICAL for test cleanup
  */
 export async function removeFlagTarget(flagKey: FlagKey, userId: string): Promise<void> {
-	const response = await playwrightRequest.newContext().then((ctx) =>
-		ctx.delete(`${LD_API_BASE}/flags/${flagKey}/targeting/users/${userId}`, {
-			headers: {
-				Authorization: LD_SDK_KEY!,
-			},
-		}),
-	)
+  const response = await playwrightRequest.newContext().then((ctx) =>
+    ctx.delete(`${LD_API_BASE}/flags/${flagKey}/targeting/users/${userId}`, {
+      headers: {
+        Authorization: LD_SDK_KEY!,
+      },
+    }),
+  );
 
-	if (!response.ok() && response.status() !== 404) {
-		// 404 is acceptable (user wasn't targeted)
-		throw new Error(`Failed to remove flag ${flagKey} target for user ${userId}: ${response.status()}`)
-	}
+  if (!response.ok() && response.status() !== 404) {
+    // 404 is acceptable (user wasn't targeted)
+    throw new Error(`Failed to remove flag ${flagKey} target for user ${userId}: ${response.status()}`);
+  }
 }
 
 /**
@@ -421,44 +419,44 @@ export async function removeFlagTarget(flagKey: FlagKey, userId: string): Promis
  * Enable flag for N% of users
  */
 export async function setFlagRolloutPercentage(flagKey: FlagKey, percentage: number): Promise<void> {
-	if (percentage < 0 || percentage > 100) {
-		throw new Error("Percentage must be between 0 and 100")
-	}
+  if (percentage < 0 || percentage > 100) {
+    throw new Error('Percentage must be between 0 and 100');
+  }
 
-	const response = await playwrightRequest.newContext().then((ctx) =>
-		ctx.patch(`${LD_API_BASE}/flags/${flagKey}`, {
-			headers: {
-				Authorization: LD_SDK_KEY!,
-				"Content-Type": "application/json",
-			},
-			data: {
-				rollout: {
-					variations: [
-						{ variation: 0, weight: 100 - percentage }, // off
-						{ variation: 1, weight: percentage }, // on
-					],
-				},
-			},
-		}),
-	)
+  const response = await playwrightRequest.newContext().then((ctx) =>
+    ctx.patch(`${LD_API_BASE}/flags/${flagKey}`, {
+      headers: {
+        Authorization: LD_SDK_KEY!,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        rollout: {
+          variations: [
+            { variation: 0, weight: 100 - percentage }, // off
+            { variation: 1, weight: percentage }, // on
+          ],
+        },
+      },
+    }),
+  );
 
-	if (!response.ok()) {
-		throw new Error(`Failed to set rollout for flag ${flagKey}: ${response.status()}`)
-	}
+  if (!response.ok()) {
+    throw new Error(`Failed to set rollout for flag ${flagKey}: ${response.status()}`);
+  }
 }
 
 /**
  * Enable flag globally (100% rollout)
  */
 export async function enableFlagGlobally(flagKey: FlagKey): Promise<void> {
-	await setFlagRolloutPercentage(flagKey, 100)
+  await setFlagRolloutPercentage(flagKey, 100);
 }
 
 /**
  * Disable flag globally (0% rollout)
  */
 export async function disableFlagGlobally(flagKey: FlagKey): Promise<void> {
-	await setFlagRolloutPercentage(flagKey, 0)
+  await setFlagRolloutPercentage(flagKey, 0);
 }
 
 /**
@@ -466,10 +464,10 @@ export async function disableFlagGlobally(flagKey: FlagKey): Promise<void> {
  * Bypasses LaunchDarkly entirely
  */
 export function stubFeatureFlags(flags: Record<FlagKey, FlagVariation>): void {
-	// Set flags in localStorage or inject into window
-	if (typeof window !== "undefined") {
-		;(window as any).__STUBBED_FLAGS__ = flags
-	}
+  // Set flags in localStorage or inject into window
+  if (typeof window !== 'undefined') {
+    (window as any).__STUBBED_FLAGS__ = flags;
+  }
 }
 ```
 
@@ -477,42 +475,42 @@ export function stubFeatureFlags(flags: Record<FlagKey, FlagVariation>): void {
 
 ```typescript
 // playwright/fixtures/feature-flag-fixture.ts
-import { test as base } from "@playwright/test"
-import { setFlagForUser, removeFlagTarget } from "../support/feature-flag-helpers"
-import { FlagKey } from "@/utils/feature-flags"
+import { test as base } from '@playwright/test';
+import { setFlagForUser, removeFlagTarget } from '../support/feature-flag-helpers';
+import { FlagKey } from '@/utils/feature-flags';
 
 type FeatureFlagFixture = {
-	featureFlags: {
-		enable: (flag: FlagKey, userId: string) => Promise<void>
-		disable: (flag: FlagKey, userId: string) => Promise<void>
-		cleanup: (flag: FlagKey, userId: string) => Promise<void>
-	}
-}
+  featureFlags: {
+    enable: (flag: FlagKey, userId: string) => Promise<void>;
+    disable: (flag: FlagKey, userId: string) => Promise<void>;
+    cleanup: (flag: FlagKey, userId: string) => Promise<void>;
+  };
+};
 
 export const test = base.extend<FeatureFlagFixture>({
-	featureFlags: async ({}, use) => {
-		const cleanupQueue: Array<{ flag: FlagKey; userId: string }> = []
+  featureFlags: async ({}, use) => {
+    const cleanupQueue: Array<{ flag: FlagKey; userId: string }> = [];
 
-		await use({
-			enable: async (flag, userId) => {
-				await setFlagForUser(flag, userId, true)
-				cleanupQueue.push({ flag, userId })
-			},
-			disable: async (flag, userId) => {
-				await setFlagForUser(flag, userId, false)
-				cleanupQueue.push({ flag, userId })
-			},
-			cleanup: async (flag, userId) => {
-				await removeFlagTarget(flag, userId)
-			},
-		})
+    await use({
+      enable: async (flag, userId) => {
+        await setFlagForUser(flag, userId, true);
+        cleanupQueue.push({ flag, userId });
+      },
+      disable: async (flag, userId) => {
+        await setFlagForUser(flag, userId, false);
+        cleanupQueue.push({ flag, userId });
+      },
+      cleanup: async (flag, userId) => {
+        await removeFlagTarget(flag, userId);
+      },
+    });
 
-		// Auto-cleanup after test
-		for (const { flag, userId } of cleanupQueue) {
-			await removeFlagTarget(flag, userId)
-		}
-	},
-})
+    // Auto-cleanup after test
+    for (const { flag, userId } of cleanupQueue) {
+      await removeFlagTarget(flag, userId);
+    }
+  },
+});
 ```
 
 **Key Points**:
@@ -538,106 +536,106 @@ export const test = base.extend<FeatureFlagFixture>({
  * Run weekly to detect stale flags requiring cleanup
  */
 
-import { FLAG_REGISTRY, FLAGS, getExpiredFlags, FlagKey } from "../src/utils/feature-flags"
-import * as fs from "fs"
-import * as path from "path"
+import { FLAG_REGISTRY, FLAGS, getExpiredFlags, FlagKey } from '../src/utils/feature-flags';
+import * as fs from 'fs';
+import * as path from 'path';
 
 type AuditResult = {
-	totalFlags: number
-	expiredFlags: FlagKey[]
-	missingOwners: FlagKey[]
-	missingDates: FlagKey[]
-	permanentFlags: FlagKey[]
-	flagsNearingExpiry: FlagKey[]
-}
+  totalFlags: number;
+  expiredFlags: FlagKey[];
+  missingOwners: FlagKey[];
+  missingDates: FlagKey[];
+  permanentFlags: FlagKey[];
+  flagsNearingExpiry: FlagKey[];
+};
 
 /**
  * Audit all feature flags for governance compliance
  */
 function auditFeatureFlags(): AuditResult {
-	const allFlags = Object.keys(FLAG_REGISTRY) as FlagKey[]
-	const expiredFlags = getExpiredFlags().map((meta) => meta.key)
+  const allFlags = Object.keys(FLAG_REGISTRY) as FlagKey[];
+  const expiredFlags = getExpiredFlags().map((meta) => meta.key);
 
-	// Flags expiring in next 30 days
-	const thirtyDaysFromNow = Date.now() + 30 * 24 * 60 * 60 * 1000
-	const flagsNearingExpiry = allFlags.filter((flag) => {
-		const meta = FLAG_REGISTRY[flag]
-		if (!meta.expiryDate) return false
-		const expiry = new Date(meta.expiryDate).getTime()
-		return expiry > Date.now() && expiry < thirtyDaysFromNow
-	})
+  // Flags expiring in next 30 days
+  const thirtyDaysFromNow = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const flagsNearingExpiry = allFlags.filter((flag) => {
+    const meta = FLAG_REGISTRY[flag];
+    if (!meta.expiryDate) return false;
+    const expiry = new Date(meta.expiryDate).getTime();
+    return expiry > Date.now() && expiry < thirtyDaysFromNow;
+  });
 
-	// Missing metadata
-	const missingOwners = allFlags.filter((flag) => !FLAG_REGISTRY[flag].owner)
-	const missingDates = allFlags.filter((flag) => !FLAG_REGISTRY[flag].createdDate)
+  // Missing metadata
+  const missingOwners = allFlags.filter((flag) => !FLAG_REGISTRY[flag].owner);
+  const missingDates = allFlags.filter((flag) => !FLAG_REGISTRY[flag].createdDate);
 
-	// Permanent flags (no expiry, requiresCleanup = false)
-	const permanentFlags = allFlags.filter((flag) => {
-		const meta = FLAG_REGISTRY[flag]
-		return !meta.expiryDate && !meta.requiresCleanup
-	})
+  // Permanent flags (no expiry, requiresCleanup = false)
+  const permanentFlags = allFlags.filter((flag) => {
+    const meta = FLAG_REGISTRY[flag];
+    return !meta.expiryDate && !meta.requiresCleanup;
+  });
 
-	return {
-		totalFlags: allFlags.length,
-		expiredFlags,
-		missingOwners,
-		missingDates,
-		permanentFlags,
-		flagsNearingExpiry,
-	}
+  return {
+    totalFlags: allFlags.length,
+    expiredFlags,
+    missingOwners,
+    missingDates,
+    permanentFlags,
+    flagsNearingExpiry,
+  };
 }
 
 /**
  * Generate markdown report
  */
 function generateReport(audit: AuditResult): string {
-	let report = `# Feature Flag Audit Report\n\n`
-	report += `**Date**: ${new Date().toISOString()}\n`
-	report += `**Total Flags**: ${audit.totalFlags}\n\n`
+  let report = `# Feature Flag Audit Report\n\n`;
+  report += `**Date**: ${new Date().toISOString()}\n`;
+  report += `**Total Flags**: ${audit.totalFlags}\n\n`;
 
-	if (audit.expiredFlags.length > 0) {
-		report += `## ⚠️ EXPIRED FLAGS - IMMEDIATE CLEANUP REQUIRED\n\n`
-		audit.expiredFlags.forEach((flag) => {
-			const meta = FLAG_REGISTRY[flag]
-			report += `- **${meta.name}** (\`${flag}\`)\n`
-			report += `  - Owner: ${meta.owner}\n`
-			report += `  - Expired: ${meta.expiryDate}\n`
-			report += `  - Action: Remove flag code, update tests, deploy\n\n`
-		})
-	}
+  if (audit.expiredFlags.length > 0) {
+    report += `## ⚠️ EXPIRED FLAGS - IMMEDIATE CLEANUP REQUIRED\n\n`;
+    audit.expiredFlags.forEach((flag) => {
+      const meta = FLAG_REGISTRY[flag];
+      report += `- **${meta.name}** (\`${flag}\`)\n`;
+      report += `  - Owner: ${meta.owner}\n`;
+      report += `  - Expired: ${meta.expiryDate}\n`;
+      report += `  - Action: Remove flag code, update tests, deploy\n\n`;
+    });
+  }
 
-	if (audit.flagsNearingExpiry.length > 0) {
-		report += `## ⏰ FLAGS EXPIRING SOON (Next 30 Days)\n\n`
-		audit.flagsNearingExpiry.forEach((flag) => {
-			const meta = FLAG_REGISTRY[flag]
-			report += `- **${meta.name}** (\`${flag}\`)\n`
-			report += `  - Owner: ${meta.owner}\n`
-			report += `  - Expires: ${meta.expiryDate}\n`
-			report += `  - Action: Plan cleanup or extend expiry\n\n`
-		})
-	}
+  if (audit.flagsNearingExpiry.length > 0) {
+    report += `## ⏰ FLAGS EXPIRING SOON (Next 30 Days)\n\n`;
+    audit.flagsNearingExpiry.forEach((flag) => {
+      const meta = FLAG_REGISTRY[flag];
+      report += `- **${meta.name}** (\`${flag}\`)\n`;
+      report += `  - Owner: ${meta.owner}\n`;
+      report += `  - Expires: ${meta.expiryDate}\n`;
+      report += `  - Action: Plan cleanup or extend expiry\n\n`;
+    });
+  }
 
-	if (audit.permanentFlags.length > 0) {
-		report += `## 🔄 PERMANENT FLAGS (No Expiry)\n\n`
-		audit.permanentFlags.forEach((flag) => {
-			const meta = FLAG_REGISTRY[flag]
-			report += `- **${meta.name}** (\`${flag}\`) - Owner: ${meta.owner}\n`
-		})
-		report += `\n`
-	}
+  if (audit.permanentFlags.length > 0) {
+    report += `## 🔄 PERMANENT FLAGS (No Expiry)\n\n`;
+    audit.permanentFlags.forEach((flag) => {
+      const meta = FLAG_REGISTRY[flag];
+      report += `- **${meta.name}** (\`${flag}\`) - Owner: ${meta.owner}\n`;
+    });
+    report += `\n`;
+  }
 
-	if (audit.missingOwners.length > 0 || audit.missingDates.length > 0) {
-		report += `## ❌ GOVERNANCE ISSUES\n\n`
-		if (audit.missingOwners.length > 0) {
-			report += `**Missing Owners**: ${audit.missingOwners.join(", ")}\n`
-		}
-		if (audit.missingDates.length > 0) {
-			report += `**Missing Created Dates**: ${audit.missingDates.join(", ")}\n`
-		}
-		report += `\n`
-	}
+  if (audit.missingOwners.length > 0 || audit.missingDates.length > 0) {
+    report += `## ❌ GOVERNANCE ISSUES\n\n`;
+    if (audit.missingOwners.length > 0) {
+      report += `**Missing Owners**: ${audit.missingOwners.join(', ')}\n`;
+    }
+    if (audit.missingDates.length > 0) {
+      report += `**Missing Created Dates**: ${audit.missingDates.join(', ')}\n`;
+    }
+    report += `\n`;
+  }
 
-	return report
+  return report;
 }
 
 /**
@@ -686,26 +684,26 @@ const FLAG_LIFECYCLE_CHECKLIST = `
 - [ ] **Delete Flag Config**: Remove from LaunchDarkly/registry
 - [ ] **Update Documentation**: Remove references
 - [ ] **Deploy**: Ship cleanup changes
-`
+`;
 
 // Run audit
-const audit = auditFeatureFlags()
-const report = generateReport(audit)
+const audit = auditFeatureFlags();
+const report = generateReport(audit);
 
 // Save report
-const outputPath = path.join(__dirname, "../feature-flag-audit-report.md")
-fs.writeFileSync(outputPath, report)
-fs.writeFileSync(path.join(__dirname, "../FEATURE-FLAG-CHECKLIST.md"), FLAG_LIFECYCLE_CHECKLIST)
+const outputPath = path.join(__dirname, '../feature-flag-audit-report.md');
+fs.writeFileSync(outputPath, report);
+fs.writeFileSync(path.join(__dirname, '../FEATURE-FLAG-CHECKLIST.md'), FLAG_LIFECYCLE_CHECKLIST);
 
-console.log(`✅ Audit complete. Report saved to: ${outputPath}`)
-console.log(`Total flags: ${audit.totalFlags}`)
-console.log(`Expired flags: ${audit.expiredFlags.length}`)
-console.log(`Flags expiring soon: ${audit.flagsNearingExpiry.length}`)
+console.log(`✅ Audit complete. Report saved to: ${outputPath}`);
+console.log(`Total flags: ${audit.totalFlags}`);
+console.log(`Expired flags: ${audit.expiredFlags.length}`);
+console.log(`Flags expiring soon: ${audit.flagsNearingExpiry.length}`);
 
 // Exit with error if expired flags exist
 if (audit.expiredFlags.length > 0) {
-	console.error(`\n❌ EXPIRED FLAGS DETECTED - CLEANUP REQUIRED`)
-	process.exit(1)
+  console.error(`\n❌ EXPIRED FLAGS DETECTED - CLEANUP REQUIRED`);
+  process.exit(1);
 }
 ```
 
@@ -713,10 +711,10 @@ if (audit.expiredFlags.length > 0) {
 
 ```json
 {
-	"scripts": {
-		"feature-flags:audit": "ts-node scripts/feature-flag-audit.ts",
-		"feature-flags:audit:ci": "npm run feature-flags:audit || true"
-	}
+  "scripts": {
+    "feature-flags:audit": "ts-node scripts/feature-flag-audit.ts",
+    "feature-flags:audit:ci": "npm run feature-flags:audit || true"
+  }
 }
 ```
 

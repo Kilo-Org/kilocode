@@ -1,22 +1,22 @@
 ---
-name: "step-03-create-stories"
-description: "Generate all epics with their stories following the template structure"
+name: 'step-03-create-stories'
+description: 'Generate all epics with their stories following the template structure'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories"
+workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-03-create-stories.md"
-nextStepFile: "{workflow_path}/steps/step-04-final-validation.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/epics.md"
+thisStepFile: '{workflow_path}/steps/step-03-create-stories.md'
+nextStepFile: '{workflow_path}/steps/step-04-final-validation.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/epics.md'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 
 # Template References
-epicsTemplate: "{workflow_path}/templates/epics-template.md"
+epicsTemplate: '{workflow_path}/templates/epics-template.md'
 ---
 
 # Step 3: Generate Epics and Stories
@@ -218,10 +218,10 @@ The final {outputFile} must follow this structure exactly:
 3. **FR Coverage Map** showing requirement to epic mapping
 4. **Epic List** with approved epic structure
 5. **Epic sections** for each epic (N = 1, 2, 3...)
-    - Epic title and goal
-    - All stories for that epic (M = 1, 2, 3...)
-        - Story title and user story
-        - Acceptance Criteria using Given/When/Then format
+   - Epic title and goal
+   - All stories for that epic (M = 1, 2, 3...)
+     - Story title and user story
+     - Acceptance Criteria using Given/When/Then format
 
 ### 7. Present FINAL MENU OPTIONS
 

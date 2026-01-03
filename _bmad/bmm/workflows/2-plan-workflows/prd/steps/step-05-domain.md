@@ -1,22 +1,22 @@
 ---
-name: "step-05-domain"
-description: "Explore domain-specific requirements for complex domains (optional step)"
+name: 'step-05-domain'
+description: 'Explore domain-specific requirements for complex domains (optional step)'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-05-domain.md"
-nextStepFile: "{workflow_path}/steps/step-06-innovation.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-05-domain.md'
+nextStepFile: '{workflow_path}/steps/step-06-innovation.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 
 # Data Files
-domainComplexityCSV: "{workflow_path}/domain-complexity.csv"
+domainComplexityCSV: '{workflow_path}/domain-complexity.csv'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
 # Step 5: Domain-Specific Exploration
@@ -53,8 +53,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml
-- When 'P' selected: Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md
+- When 'A' selected: Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml
+- When 'P' selected: Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md
 - PROTOCOLS always return to this step's A/P/C menu
 - User accepts/rejects protocol changes before proceeding
 
@@ -87,10 +87,10 @@ Load domain-specific configuration for complex domains:
 - Load `{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd/domain-complexity.csv` completely
 - Find the row where `domain` matches the detected domain from step-02
 - Extract these columns:
-    - `key_concerns` (semicolon-separated list)
-    - `required_knowledge` (domain expertise needed)
-    - `web_searches` (suggested research queries)
-    - `special_sections` (domain-specific sections to document)
+  - `key_concerns` (semicolon-separated list)
+  - `required_knowledge` (domain expertise needed)
+  - `web_searches` (suggested research queries)
+  - `special_sections` (domain-specific sections to document)
 
 ### 2. Present Domain Complexity Context
 
@@ -208,7 +208,7 @@ Show the generated domain content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml with the current domain content
+- Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml with the current domain content
 - Process the enhanced domain insights that come back
 - Ask user: "Accept these domain requirement improvements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu
@@ -216,7 +216,7 @@ Show the generated domain content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md with the current domain requirements
+- Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md with the current domain requirements
 - Process the collaborative domain expertise and validation
 - Ask user: "Accept these changes to domain requirements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu

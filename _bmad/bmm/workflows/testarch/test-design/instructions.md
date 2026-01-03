@@ -25,32 +25,28 @@ The workflow auto-detects which mode to use based on project phase.
 ### Mode Detection
 
 1. **Check for sprint-status.yaml**
-
-    - If `{output_folder}/bmm-sprint-status.yaml` exists → **Epic-Level Mode** (Phase 4)
-    - If NOT exists → Check workflow status
+   - If `{output_folder}/bmm-sprint-status.yaml` exists → **Epic-Level Mode** (Phase 4)
+   - If NOT exists → Check workflow status
 
 2. **Check workflow-status.yaml**
-
-    - Read `{output_folder}/bmm-workflow-status.yaml`
-    - If `implementation-readiness: required` or `implementation-readiness: recommended` → **System-Level Mode** (Phase 3)
-    - Otherwise → **Epic-Level Mode** (Phase 4 without sprint status yet)
+   - Read `{output_folder}/bmm-workflow-status.yaml`
+   - If `implementation-readiness: required` or `implementation-readiness: recommended` → **System-Level Mode** (Phase 3)
+   - Otherwise → **Epic-Level Mode** (Phase 4 without sprint status yet)
 
 3. **Mode-Specific Requirements**
 
-    **System-Level Mode (Phase 3 - Testability Review):**
+   **System-Level Mode (Phase 3 - Testability Review):**
+   - ✅ Architecture document exists (architecture.md or tech-spec)
+   - ✅ PRD exists with functional and non-functional requirements
+   - ✅ Epics documented (epics.md)
+   - ⚠️ Output: `{output_folder}/test-design-system.md`
 
-    - ✅ Architecture document exists (architecture.md or tech-spec)
-    - ✅ PRD exists with functional and non-functional requirements
-    - ✅ Epics documented (epics.md)
-    - ⚠️ Output: `{output_folder}/test-design-system.md`
-
-    **Epic-Level Mode (Phase 4 - Per-Epic Planning):**
-
-    - ✅ Story markdown with acceptance criteria available
-    - ✅ PRD or epic documentation exists for context
-    - ✅ Architecture documents available (optional but recommended)
-    - ✅ Requirements are clear and testable
-    - ⚠️ Output: `{output_folder}/test-design-epic-{epic_num}.md`
+   **Epic-Level Mode (Phase 4 - Per-Epic Planning):**
+   - ✅ Story markdown with acceptance criteria available
+   - ✅ PRD or epic documentation exists for context
+   - ✅ Architecture documents available (optional but recommended)
+   - ✅ Requirements are clear and testable
+   - ⚠️ Output: `{output_folder}/test-design-epic-{epic_num}.md`
 
 **Halt Condition:** If mode cannot be determined or required files missing, HALT and notify user with missing prerequisites.
 
@@ -63,66 +59,60 @@ The workflow auto-detects which mode to use based on project phase.
 ### System-Level Mode (Phase 3)
 
 1. **Read Architecture Documentation**
-
-    - Load architecture.md or tech-spec (REQUIRED)
-    - Load PRD.md for functional and non-functional requirements
-    - Load epics.md for feature scope
-    - Identify technology stack decisions (frameworks, databases, deployment targets)
-    - Note integration points and external system dependencies
-    - Extract NFR requirements (performance SLOs, security requirements, etc.)
+   - Load architecture.md or tech-spec (REQUIRED)
+   - Load PRD.md for functional and non-functional requirements
+   - Load epics.md for feature scope
+   - Identify technology stack decisions (frameworks, databases, deployment targets)
+   - Note integration points and external system dependencies
+   - Extract NFR requirements (performance SLOs, security requirements, etc.)
 
 2. **Check Playwright Utils Flag**
 
-    Read `{config_source}` and check `config.tea_use_playwright_utils`.
+   Read `{config_source}` and check `config.tea_use_playwright_utils`.
 
-    If true, note that `@seontechnologies/playwright-utils` provides utilities for test implementation. Reference in test design where relevant.
+   If true, note that `@seontechnologies/playwright-utils` provides utilities for test implementation. Reference in test design where relevant.
 
 3. **Load Knowledge Base Fragments (System-Level)**
 
-    **Critical:** Consult `{project-root}/_bmad/bmm/testarch/tea-index.csv` to load:
-
-    - `nfr-criteria.md` - NFR validation approach (security, performance, reliability, maintainability)
-    - `test-levels-framework.md` - Test levels strategy guidance
-    - `risk-governance.md` - Testability risk identification
-    - `test-quality.md` - Quality standards and Definition of Done
+   **Critical:** Consult `{project-root}/_bmad/bmm/testarch/tea-index.csv` to load:
+   - `nfr-criteria.md` - NFR validation approach (security, performance, reliability, maintainability)
+   - `test-levels-framework.md` - Test levels strategy guidance
+   - `risk-governance.md` - Testability risk identification
+   - `test-quality.md` - Quality standards and Definition of Done
 
 4. **Analyze Existing Test Setup (if brownfield)**
-    - Search for existing test directories
-    - Identify current test framework (if any)
-    - Note testability concerns in existing codebase
+   - Search for existing test directories
+   - Identify current test framework (if any)
+   - Note testability concerns in existing codebase
 
 ### Epic-Level Mode (Phase 4)
 
 1. **Read Requirements Documentation**
-
-    - Load PRD.md for high-level product requirements
-    - Read epics.md or specific epic for feature scope
-    - Read story markdown for detailed acceptance criteria
-    - Identify all testable requirements
+   - Load PRD.md for high-level product requirements
+   - Read epics.md or specific epic for feature scope
+   - Read story markdown for detailed acceptance criteria
+   - Identify all testable requirements
 
 2. **Load Architecture Context**
-
-    - Read architecture.md for system design
-    - Read tech-spec for implementation details
-    - Read test-design-system.md (if exists from Phase 3)
-    - Identify technical constraints and dependencies
-    - Note integration points and external systems
+   - Read architecture.md for system design
+   - Read tech-spec for implementation details
+   - Read test-design-system.md (if exists from Phase 3)
+   - Identify technical constraints and dependencies
+   - Note integration points and external systems
 
 3. **Analyze Existing Test Coverage**
-
-    - Search for existing test files in `{test_dir}`
-    - Identify coverage gaps
-    - Note areas with insufficient testing
-    - Check for flaky or outdated tests
+   - Search for existing test files in `{test_dir}`
+   - Identify coverage gaps
+   - Note areas with insufficient testing
+   - Check for flaky or outdated tests
 
 4. **Load Knowledge Base Fragments (Epic-Level)**
 
-    **Critical:** Consult `{project-root}/_bmad/bmm/testarch/tea-index.csv` to load:
-
-    - `risk-governance.md` - Risk classification framework (6 categories: TECH, SEC, PERF, DATA, BUS, OPS), automated scoring, gate decision engine, owner tracking (625 lines, 4 examples)
-    - `probability-impact.md` - Risk scoring methodology (probability × impact matrix, automated classification, dynamic re-assessment, gate integration, 604 lines, 4 examples)
-    - `test-levels-framework.md` - Test level selection guidance (E2E vs API vs Component vs Unit with decision matrix, characteristics, when to use each, 467 lines, 4 examples)
-    - `test-priorities-matrix.md` - P0-P3 prioritization criteria (automated priority calculation, risk-based mapping, tagging strategy, time budgets, 389 lines, 2 examples)
+   **Critical:** Consult `{project-root}/_bmad/bmm/testarch/tea-index.csv` to load:
+   - `risk-governance.md` - Risk classification framework (6 categories: TECH, SEC, PERF, DATA, BUS, OPS), automated scoring, gate decision engine, owner tracking (625 lines, 4 examples)
+   - `probability-impact.md` - Risk scoring methodology (probability × impact matrix, automated classification, dynamic re-assessment, gate integration, 604 lines, 4 examples)
+   - `test-levels-framework.md` - Test level selection guidance (E2E vs API vs Component vs Unit with decision matrix, characteristics, when to use each, 467 lines, 4 examples)
+   - `test-priorities-matrix.md` - P0-P3 prioritization criteria (automated priority calculation, risk-based mapping, tagging strategy, time budgets, 389 lines, 2 examples)
 
 **Halt Condition (Epic-Level only):** If story data or acceptance criteria are missing, check if brownfield exploration is needed. If neither requirements NOR exploration possible, HALT with message: "Epic-level test design requires clear requirements, acceptance criteria, or brownfield app URL for exploration"
 
@@ -136,107 +126,100 @@ The workflow auto-detects which mode to use based on project phase.
 
 1. **Review Architecture for Testability**
 
-    Evaluate architecture against these criteria:
+   Evaluate architecture against these criteria:
 
-    **Controllability:**
+   **Controllability:**
+   - Can we control system state for testing? (API seeding, factories, database reset)
+   - Are external dependencies mockable? (interfaces, dependency injection)
+   - Can we trigger error conditions? (chaos engineering, fault injection)
 
-    - Can we control system state for testing? (API seeding, factories, database reset)
-    - Are external dependencies mockable? (interfaces, dependency injection)
-    - Can we trigger error conditions? (chaos engineering, fault injection)
+   **Observability:**
+   - Can we inspect system state? (logging, metrics, traces)
+   - Are test results deterministic? (no race conditions, clear success/failure)
+   - Can we validate NFRs? (performance metrics, security audit logs)
 
-    **Observability:**
-
-    - Can we inspect system state? (logging, metrics, traces)
-    - Are test results deterministic? (no race conditions, clear success/failure)
-    - Can we validate NFRs? (performance metrics, security audit logs)
-
-    **Reliability:**
-
-    - Are tests isolated? (parallel-safe, stateless, cleanup discipline)
-    - Can we reproduce failures? (deterministic waits, HAR capture, seed data)
-    - Are components loosely coupled? (mockable, testable boundaries)
+   **Reliability:**
+   - Are tests isolated? (parallel-safe, stateless, cleanup discipline)
+   - Can we reproduce failures? (deterministic waits, HAR capture, seed data)
+   - Are components loosely coupled? (mockable, testable boundaries)
 
 2. **Identify Architecturally Significant Requirements (ASRs)**
 
-    From PRD NFRs and architecture decisions, identify quality requirements that:
+   From PRD NFRs and architecture decisions, identify quality requirements that:
+   - Drive architecture decisions (e.g., "Must handle 10K concurrent users" → caching architecture)
+   - Pose testability challenges (e.g., "Sub-second response time" → performance test infrastructure)
+   - Require special test environments (e.g., "Multi-region deployment" → regional test instances)
 
-    - Drive architecture decisions (e.g., "Must handle 10K concurrent users" → caching architecture)
-    - Pose testability challenges (e.g., "Sub-second response time" → performance test infrastructure)
-    - Require special test environments (e.g., "Multi-region deployment" → regional test instances)
-
-    Score each ASR using risk matrix (probability × impact).
+   Score each ASR using risk matrix (probability × impact).
 
 3. **Define Test Levels Strategy**
 
-    Based on architecture (mobile, web, API, microservices, monolith):
-
-    - Recommend unit/integration/E2E split (e.g., 70/20/10 for API-heavy, 40/30/30 for UI-heavy)
-    - Identify test environment needs (local, staging, ephemeral, production-like)
-    - Define testing approach per technology (Playwright for web, Maestro for mobile, k6 for performance)
+   Based on architecture (mobile, web, API, microservices, monolith):
+   - Recommend unit/integration/E2E split (e.g., 70/20/10 for API-heavy, 40/30/30 for UI-heavy)
+   - Identify test environment needs (local, staging, ephemeral, production-like)
+   - Define testing approach per technology (Playwright for web, Maestro for mobile, k6 for performance)
 
 4. **Assess NFR Testing Approach**
 
-    For each NFR category:
-
-    - **Security**: Auth/authz tests, OWASP validation, secret handling (Playwright E2E + security tools)
-    - **Performance**: Load/stress/spike testing with k6, SLO/SLA thresholds
-    - **Reliability**: Error handling, retries, circuit breakers, health checks (Playwright + API tests)
-    - **Maintainability**: Coverage targets, code quality gates, observability validation
+   For each NFR category:
+   - **Security**: Auth/authz tests, OWASP validation, secret handling (Playwright E2E + security tools)
+   - **Performance**: Load/stress/spike testing with k6, SLO/SLA thresholds
+   - **Reliability**: Error handling, retries, circuit breakers, health checks (Playwright + API tests)
+   - **Maintainability**: Coverage targets, code quality gates, observability validation
 
 5. **Flag Testability Concerns**
 
-    Identify architecture decisions that harm testability:
+   Identify architecture decisions that harm testability:
+   - ❌ Tight coupling (no interfaces, hard dependencies)
+   - ❌ No dependency injection (can't mock external services)
+   - ❌ Hardcoded configurations (can't test different envs)
+   - ❌ Missing observability (can't validate NFRs)
+   - ❌ Stateful designs (can't parallelize tests)
 
-    - ❌ Tight coupling (no interfaces, hard dependencies)
-    - ❌ No dependency injection (can't mock external services)
-    - ❌ Hardcoded configurations (can't test different envs)
-    - ❌ Missing observability (can't validate NFRs)
-    - ❌ Stateful designs (can't parallelize tests)
-
-    **Critical:** If testability concerns are blockers (e.g., "Architecture makes performance testing impossible"), document as CONCERNS or FAIL recommendation for gate check.
+   **Critical:** If testability concerns are blockers (e.g., "Architecture makes performance testing impossible"), document as CONCERNS or FAIL recommendation for gate check.
 
 6. **Output System-Level Test Design**
 
-    Write to `{output_folder}/test-design-system.md` containing:
+   Write to `{output_folder}/test-design-system.md` containing:
 
-    ```markdown
-    # System-Level Test Design
+   ```markdown
+   # System-Level Test Design
 
-    ## Testability Assessment
+   ## Testability Assessment
 
-    - Controllability: [PASS/CONCERNS/FAIL with details]
-    - Observability: [PASS/CONCERNS/FAIL with details]
-    - Reliability: [PASS/CONCERNS/FAIL with details]
+   - Controllability: [PASS/CONCERNS/FAIL with details]
+   - Observability: [PASS/CONCERNS/FAIL with details]
+   - Reliability: [PASS/CONCERNS/FAIL with details]
 
-    ## Architecturally Significant Requirements (ASRs)
+   ## Architecturally Significant Requirements (ASRs)
 
-    [Risk-scored quality requirements]
+   [Risk-scored quality requirements]
 
-    ## Test Levels Strategy
+   ## Test Levels Strategy
 
-    - Unit: [X%] - [Rationale]
-    - Integration: [Y%] - [Rationale]
-    - E2E: [Z%] - [Rationale]
+   - Unit: [X%] - [Rationale]
+   - Integration: [Y%] - [Rationale]
+   - E2E: [Z%] - [Rationale]
 
-    ## NFR Testing Approach
+   ## NFR Testing Approach
 
-    - Security: [Approach with tools]
-    - Performance: [Approach with tools]
-    - Reliability: [Approach with tools]
-    - Maintainability: [Approach with tools]
+   - Security: [Approach with tools]
+   - Performance: [Approach with tools]
+   - Reliability: [Approach with tools]
+   - Maintainability: [Approach with tools]
 
-    ## Test Environment Requirements
+   ## Test Environment Requirements
 
-    [Infrastructure needs based on deployment architecture]
+   [Infrastructure needs based on deployment architecture]
 
-    ## Testability Concerns (if any)
+   ## Testability Concerns (if any)
 
-    [Blockers or concerns that should inform solutioning gate check]
+   [Blockers or concerns that should inform solutioning gate check]
 
-    ## Recommendations for Sprint 0
+   ## Recommendations for Sprint 0
 
-    [Specific actions for *framework and *ci workflows]
-    ```
+   [Specific actions for *framework and *ci workflows]
+   ```
 
 **After System-Level Mode:** Skip to Step 4 (Generate Deliverables) - Steps 2-3 are epic-level only.
 
@@ -248,121 +231,111 @@ The workflow auto-detects which mode to use based on project phase.
 
 1. **Detect Planning Mode**
 
-    Determine mode based on context:
+   Determine mode based on context:
 
-    **Requirements-Based Mode (DEFAULT)**:
+   **Requirements-Based Mode (DEFAULT)**:
+   - Have clear story/PRD with acceptance criteria
+   - Uses: Existing workflow (Steps 2-4)
+   - Appropriate for: Documented features, greenfield projects
 
-    - Have clear story/PRD with acceptance criteria
-    - Uses: Existing workflow (Steps 2-4)
-    - Appropriate for: Documented features, greenfield projects
-
-    **Exploratory Mode (OPTIONAL - Brownfield)**:
-
-    - Missing/incomplete requirements AND brownfield application exists
-    - Uses: UI exploration to discover functionality
-    - Appropriate for: Undocumented brownfield apps, legacy systems
+   **Exploratory Mode (OPTIONAL - Brownfield)**:
+   - Missing/incomplete requirements AND brownfield application exists
+   - Uses: UI exploration to discover functionality
+   - Appropriate for: Undocumented brownfield apps, legacy systems
 
 2. **Requirements-Based Mode (DEFAULT - Skip to Step 2)**
 
-    If requirements are clear:
-
-    - Continue with existing workflow (Step 2: Assess and Classify Risks)
-    - Use loaded requirements from Step 1
-    - Proceed with risk assessment based on documented requirements
+   If requirements are clear:
+   - Continue with existing workflow (Step 2: Assess and Classify Risks)
+   - Use loaded requirements from Step 1
+   - Proceed with risk assessment based on documented requirements
 
 3. **Exploratory Mode (OPTIONAL - Brownfield Apps)**
 
-    If exploring brownfield application:
+   If exploring brownfield application:
 
-    **A. Check MCP Availability**
+   **A. Check MCP Availability**
 
-    If config.tea_use_mcp_enhancements is true AND Playwright MCP tools available:
+   If config.tea_use_mcp_enhancements is true AND Playwright MCP tools available:
+   - Use MCP-assisted exploration (Step 3.B)
 
-    - Use MCP-assisted exploration (Step 3.B)
+   If MCP unavailable OR config.tea_use_mcp_enhancements is false:
+   - Use manual exploration fallback (Step 3.C)
 
-    If MCP unavailable OR config.tea_use_mcp_enhancements is false:
+   **B. MCP-Assisted Exploration (If MCP Tools Available)**
 
-    - Use manual exploration fallback (Step 3.C)
+   Use Playwright MCP browser tools to explore UI:
 
-    **B. MCP-Assisted Exploration (If MCP Tools Available)**
+   **Setup:**
 
-    Use Playwright MCP browser tools to explore UI:
+   ```
+   1. Use planner_setup_page to initialize browser
+   2. Navigate to {exploration_url}
+   3. Capture initial state with browser_snapshot
+   ```
 
-    **Setup:**
+   **Exploration Process:**
 
-    ```
-    1. Use planner_setup_page to initialize browser
-    2. Navigate to {exploration_url}
-    3. Capture initial state with browser_snapshot
-    ```
+   ```
+   4. Use browser_navigate to explore different pages
+   5. Use browser_click to interact with buttons, links, forms
+   6. Use browser_hover to reveal hidden menus/tooltips
+   7. Capture browser_snapshot at each significant state
+   8. Take browser_screenshot for documentation
+   9. Monitor browser_console_messages for JavaScript errors
+   10. Track browser_network_requests to identify API calls
+   11. Map user flows and interactive elements
+   12. Document discovered functionality
+   ```
 
-    **Exploration Process:**
+   **Discovery Documentation:**
+   - Create list of discovered features (pages, workflows, forms)
+   - Identify user journeys (navigation paths)
+   - Map API endpoints (from network requests)
+   - Note error states (from console messages)
+   - Capture screenshots for visual reference
 
-    ```
-    4. Use browser_navigate to explore different pages
-    5. Use browser_click to interact with buttons, links, forms
-    6. Use browser_hover to reveal hidden menus/tooltips
-    7. Capture browser_snapshot at each significant state
-    8. Take browser_screenshot for documentation
-    9. Monitor browser_console_messages for JavaScript errors
-    10. Track browser_network_requests to identify API calls
-    11. Map user flows and interactive elements
-    12. Document discovered functionality
-    ```
+   **Convert to Test Scenarios:**
+   - Transform discoveries into testable requirements
+   - Prioritize based on user flow criticality
+   - Identify risks from discovered functionality
+   - Continue with Step 2 (Assess and Classify Risks) using discovered requirements
 
-    **Discovery Documentation:**
+   **C. Manual Exploration Fallback (If MCP Unavailable)**
 
-    - Create list of discovered features (pages, workflows, forms)
-    - Identify user journeys (navigation paths)
-    - Map API endpoints (from network requests)
-    - Note error states (from console messages)
-    - Capture screenshots for visual reference
+   If Playwright MCP is not available:
 
-    **Convert to Test Scenarios:**
+   **Notify User:**
 
-    - Transform discoveries into testable requirements
-    - Prioritize based on user flow criticality
-    - Identify risks from discovered functionality
-    - Continue with Step 2 (Assess and Classify Risks) using discovered requirements
+   ```markdown
+   Exploratory mode enabled but Playwright MCP unavailable.
 
-    **C. Manual Exploration Fallback (If MCP Unavailable)**
+   **Manual exploration required:**
 
-    If Playwright MCP is not available:
+   1. Open application at: {exploration_url}
+   2. Explore all pages, workflows, and features
+   3. Document findings in markdown:
+      - List of pages/features discovered
+      - User journeys identified
+      - API endpoints observed (DevTools Network tab)
+      - JavaScript errors noted (DevTools Console)
+      - Critical workflows mapped
 
-    **Notify User:**
+   4. Provide exploration findings to continue workflow
 
-    ```markdown
-    Exploratory mode enabled but Playwright MCP unavailable.
+   **Alternative:** Disable exploratory_mode and provide requirements documentation
+   ```
 
-    **Manual exploration required:**
-
-    1. Open application at: {exploration_url}
-    2. Explore all pages, workflows, and features
-    3. Document findings in markdown:
-
-        - List of pages/features discovered
-        - User journeys identified
-        - API endpoints observed (DevTools Network tab)
-        - JavaScript errors noted (DevTools Console)
-        - Critical workflows mapped
-
-    4. Provide exploration findings to continue workflow
-
-    **Alternative:** Disable exploratory_mode and provide requirements documentation
-    ```
-
-    Wait for user to provide exploration findings, then:
-
-    - Parse user-provided discovery documentation
-    - Convert to testable requirements
-    - Continue with Step 2 (risk assessment)
+   Wait for user to provide exploration findings, then:
+   - Parse user-provided discovery documentation
+   - Convert to testable requirements
+   - Continue with Step 2 (risk assessment)
 
 4. **Proceed to Risk Assessment**
 
-    After mode selection (Requirements-Based OR Exploratory):
-
-    - Continue to Step 2: Assess and Classify Risks
-    - Use requirements from documentation (Requirements-Based) OR discoveries (Exploratory)
+   After mode selection (Requirements-Based OR Exploratory):
+   - Continue to Step 2: Assess and Classify Risks
+   - Use requirements from documentation (Requirements-Based) OR discoveries (Exploratory)
 
 ---
 
@@ -372,108 +345,97 @@ The workflow auto-detects which mode to use based on project phase.
 
 1. **Identify Genuine Risks**
 
-    Filter requirements to isolate actual risks (not just features):
-
-    - Unresolved technical gaps
-    - Security vulnerabilities
-    - Performance bottlenecks
-    - Data loss or corruption potential
-    - Business impact failures
-    - Operational deployment issues
+   Filter requirements to isolate actual risks (not just features):
+   - Unresolved technical gaps
+   - Security vulnerabilities
+   - Performance bottlenecks
+   - Data loss or corruption potential
+   - Business impact failures
+   - Operational deployment issues
 
 2. **Classify Risks by Category**
 
-    Use these standard risk categories:
+   Use these standard risk categories:
 
-    **TECH** (Technical/Architecture):
+   **TECH** (Technical/Architecture):
+   - Architecture flaws
+   - Integration failures
+   - Scalability issues
+   - Technical debt
 
-    - Architecture flaws
-    - Integration failures
-    - Scalability issues
-    - Technical debt
+   **SEC** (Security):
+   - Missing access controls
+   - Authentication bypass
+   - Data exposure
+   - Injection vulnerabilities
 
-    **SEC** (Security):
+   **PERF** (Performance):
+   - SLA violations
+   - Response time degradation
+   - Resource exhaustion
+   - Scalability limits
 
-    - Missing access controls
-    - Authentication bypass
-    - Data exposure
-    - Injection vulnerabilities
+   **DATA** (Data Integrity):
+   - Data loss
+   - Data corruption
+   - Inconsistent state
+   - Migration failures
 
-    **PERF** (Performance):
+   **BUS** (Business Impact):
+   - User experience degradation
+   - Business logic errors
+   - Revenue impact
+   - Compliance violations
 
-    - SLA violations
-    - Response time degradation
-    - Resource exhaustion
-    - Scalability limits
-
-    **DATA** (Data Integrity):
-
-    - Data loss
-    - Data corruption
-    - Inconsistent state
-    - Migration failures
-
-    **BUS** (Business Impact):
-
-    - User experience degradation
-    - Business logic errors
-    - Revenue impact
-    - Compliance violations
-
-    **OPS** (Operations):
-
-    - Deployment failures
-    - Configuration errors
-    - Monitoring gaps
-    - Rollback issues
+   **OPS** (Operations):
+   - Deployment failures
+   - Configuration errors
+   - Monitoring gaps
+   - Rollback issues
 
 3. **Score Risk Probability**
 
-    Rate likelihood (1-3):
-
-    - **1 (Unlikely)**: <10% chance, edge case
-    - **2 (Possible)**: 10-50% chance, known scenario
-    - **3 (Likely)**: >50% chance, common occurrence
+   Rate likelihood (1-3):
+   - **1 (Unlikely)**: <10% chance, edge case
+   - **2 (Possible)**: 10-50% chance, known scenario
+   - **3 (Likely)**: >50% chance, common occurrence
 
 4. **Score Risk Impact**
 
-    Rate severity (1-3):
-
-    - **1 (Minor)**: Cosmetic, workaround exists, limited users
-    - **2 (Degraded)**: Feature impaired, workaround difficult, affects many users
-    - **3 (Critical)**: System failure, data loss, no workaround, blocks usage
+   Rate severity (1-3):
+   - **1 (Minor)**: Cosmetic, workaround exists, limited users
+   - **2 (Degraded)**: Feature impaired, workaround difficult, affects many users
+   - **3 (Critical)**: System failure, data loss, no workaround, blocks usage
 
 5. **Calculate Risk Score**
 
-    ```
-    Risk Score = Probability × Impact
+   ```
+   Risk Score = Probability × Impact
 
-    Scores:
-    1-2: Low risk (monitor)
-    3-4: Medium risk (plan mitigation)
-    6-9: High risk (immediate mitigation required)
-    ```
+   Scores:
+   1-2: Low risk (monitor)
+   3-4: Medium risk (plan mitigation)
+   6-9: High risk (immediate mitigation required)
+   ```
 
 6. **Highlight High-Priority Risks**
 
-    Flag all risks with score ≥6 for immediate attention.
+   Flag all risks with score ≥6 for immediate attention.
 
 7. **Request Clarification**
 
-    If evidence is missing or assumptions required:
-
-    - Document assumptions clearly
-    - Request user clarification
-    - Do NOT speculate on business impact
+   If evidence is missing or assumptions required:
+   - Document assumptions clearly
+   - Request user clarification
+   - Do NOT speculate on business impact
 
 8. **Plan Mitigations**
 
-    For each high-priority risk:
-
-    - Define mitigation strategy
-    - Assign owner (dev, QA, ops)
-    - Set timeline
-    - Update residual risk expectation
+   For each high-priority risk:
+   - Define mitigation strategy
+   - Assign owner (dev, QA, ops)
+   - Set timeline
+   - Update residual risk expectation
 
 ---
 
@@ -483,99 +445,88 @@ The workflow auto-detects which mode to use based on project phase.
 
 1. **Break Down Acceptance Criteria**
 
-    Convert each acceptance criterion into atomic test scenarios:
-
-    - One scenario per testable behavior
-    - Scenarios are independent
-    - Scenarios are repeatable
-    - Scenarios tie back to risk mitigations
+   Convert each acceptance criterion into atomic test scenarios:
+   - One scenario per testable behavior
+   - Scenarios are independent
+   - Scenarios are repeatable
+   - Scenarios tie back to risk mitigations
 
 2. **Select Appropriate Test Levels**
 
-    **Knowledge Base Reference**: `test-levels-framework.md`
+   **Knowledge Base Reference**: `test-levels-framework.md`
 
-    Map requirements to optimal test levels (avoid duplication):
+   Map requirements to optimal test levels (avoid duplication):
 
-    **E2E (End-to-End)**:
+   **E2E (End-to-End)**:
+   - Critical user journeys
+   - Multi-system integration
+   - Production-like environment
+   - Highest confidence, slowest execution
 
-    - Critical user journeys
-    - Multi-system integration
-    - Production-like environment
-    - Highest confidence, slowest execution
+   **API (Integration)**:
+   - Service contracts
+   - Business logic validation
+   - Fast feedback
+   - Good for complex scenarios
 
-    **API (Integration)**:
+   **Component**:
+   - UI component behavior
+   - Interaction testing
+   - Visual regression
+   - Fast, isolated
 
-    - Service contracts
-    - Business logic validation
-    - Fast feedback
-    - Good for complex scenarios
+   **Unit**:
+   - Business logic
+   - Edge cases
+   - Error handling
+   - Fastest, most granular
 
-    **Component**:
-
-    - UI component behavior
-    - Interaction testing
-    - Visual regression
-    - Fast, isolated
-
-    **Unit**:
-
-    - Business logic
-    - Edge cases
-    - Error handling
-    - Fastest, most granular
-
-    **Avoid duplicate coverage**: Don't test same behavior at multiple levels unless necessary.
+   **Avoid duplicate coverage**: Don't test same behavior at multiple levels unless necessary.
 
 3. **Assign Priority Levels**
 
-    **Knowledge Base Reference**: `test-priorities-matrix.md`
+   **Knowledge Base Reference**: `test-priorities-matrix.md`
 
-    **P0 (Critical)**:
+   **P0 (Critical)**:
+   - Blocks core user journey
+   - High-risk areas (score ≥6)
+   - Revenue-impacting
+   - Security-critical
+   - **Run on every commit**
 
-    - Blocks core user journey
-    - High-risk areas (score ≥6)
-    - Revenue-impacting
-    - Security-critical
-    - **Run on every commit**
+   **P1 (High)**:
+   - Important user features
+   - Medium-risk areas (score 3-4)
+   - Common workflows
+   - **Run on PR to main**
 
-    **P1 (High)**:
+   **P2 (Medium)**:
+   - Secondary features
+   - Low-risk areas (score 1-2)
+   - Edge cases
+   - **Run nightly or weekly**
 
-    - Important user features
-    - Medium-risk areas (score 3-4)
-    - Common workflows
-    - **Run on PR to main**
-
-    **P2 (Medium)**:
-
-    - Secondary features
-    - Low-risk areas (score 1-2)
-    - Edge cases
-    - **Run nightly or weekly**
-
-    **P3 (Low)**:
-
-    - Nice-to-have
-    - Exploratory
-    - Performance benchmarks
-    - **Run on-demand**
+   **P3 (Low)**:
+   - Nice-to-have
+   - Exploratory
+   - Performance benchmarks
+   - **Run on-demand**
 
 4. **Outline Data and Tooling Prerequisites**
 
-    For each test scenario, identify:
-
-    - Test data requirements (factories, fixtures)
-    - External services (mocks, stubs)
-    - Environment setup
-    - Tools and dependencies
+   For each test scenario, identify:
+   - Test data requirements (factories, fixtures)
+   - External services (mocks, stubs)
+   - Environment setup
+   - Tools and dependencies
 
 5. **Define Execution Order**
 
-    Recommend test execution sequence:
-
-    1. **Smoke tests** (P0 subset, <5 min)
-    2. **P0 tests** (critical paths, <10 min)
-    3. **P1 tests** (important features, <30 min)
-    4. **P2/P3 tests** (full regression, <60 min)
+   Recommend test execution sequence:
+   1. **Smoke tests** (P0 subset, <5 min)
+   2. **P0 tests** (critical paths, <10 min)
+   3. **P1 tests** (important features, <30 min)
+   4. **P2/P3 tests** (full regression, <60 min)
 
 ---
 
@@ -585,64 +536,64 @@ The workflow auto-detects which mode to use based on project phase.
 
 1. **Create Risk Assessment Matrix**
 
-    Use template structure:
+   Use template structure:
 
-    ```markdown
-    | Risk ID | Category | Description | Probability | Impact | Score | Mitigation      |
-    | ------- | -------- | ----------- | ----------- | ------ | ----- | --------------- |
-    | R-001   | SEC      | Auth bypass | 2           | 3      | 6     | Add authz check |
-    ```
+   ```markdown
+   | Risk ID | Category | Description | Probability | Impact | Score | Mitigation      |
+   | ------- | -------- | ----------- | ----------- | ------ | ----- | --------------- |
+   | R-001   | SEC      | Auth bypass | 2           | 3      | 6     | Add authz check |
+   ```
 
 2. **Create Coverage Matrix**
 
-    ```markdown
-    | Requirement | Test Level | Priority | Risk Link | Test Count | Owner |
-    | ----------- | ---------- | -------- | --------- | ---------- | ----- |
-    | Login flow  | E2E        | P0       | R-001     | 3          | QA    |
-    ```
+   ```markdown
+   | Requirement | Test Level | Priority | Risk Link | Test Count | Owner |
+   | ----------- | ---------- | -------- | --------- | ---------- | ----- |
+   | Login flow  | E2E        | P0       | R-001     | 3          | QA    |
+   ```
 
 3. **Document Execution Order**
 
-    ```markdown
-    ### Smoke Tests (<5 min)
+   ```markdown
+   ### Smoke Tests (<5 min)
 
-    - Login successful
-    - Dashboard loads
+   - Login successful
+   - Dashboard loads
 
-    ### P0 Tests (<10 min)
+   ### P0 Tests (<10 min)
 
-    - [Full P0 list]
+   - [Full P0 list]
 
-    ### P1 Tests (<30 min)
+   ### P1 Tests (<30 min)
 
-    - [Full P1 list]
-    ```
+   - [Full P1 list]
+   ```
 
 4. **Include Resource Estimates**
 
-    ```markdown
-    ### Test Effort Estimates
+   ```markdown
+   ### Test Effort Estimates
 
-    - P0 scenarios: 15 tests × 2 hours = 30 hours
-    - P1 scenarios: 25 tests × 1 hour = 25 hours
-    - P2 scenarios: 40 tests × 0.5 hour = 20 hours
-    - **Total:** 75 hours (~10 days)
-    ```
+   - P0 scenarios: 15 tests × 2 hours = 30 hours
+   - P1 scenarios: 25 tests × 1 hour = 25 hours
+   - P2 scenarios: 40 tests × 0.5 hour = 20 hours
+   - **Total:** 75 hours (~10 days)
+   ```
 
 5. **Add Gate Criteria**
 
-    ```markdown
-    ### Quality Gate Criteria
+   ```markdown
+   ### Quality Gate Criteria
 
-    - All P0 tests pass (100%)
-    - P1 tests pass rate ≥95%
-    - No high-risk (score ≥6) items unmitigated
-    - Test coverage ≥80% for critical paths
-    ```
+   - All P0 tests pass (100%)
+   - P1 tests pass rate ≥95%
+   - No high-risk (score ≥6) items unmitigated
+   - Test coverage ≥80% for critical paths
+   ```
 
 6. **Write to Output File**
 
-    Save to `{output_folder}/test-design-epic-{epic_num}.md` using template structure.
+   Save to `{output_folder}/test-design-epic-{epic_num}.md` using template structure.
 
 ---
 

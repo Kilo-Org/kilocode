@@ -815,11 +815,11 @@ Generated in {{output_folder}}/:
 
 1. PRIMARY SCAN: Look for exact marker: _(To be generated)_
 2. FALLBACK SCAN: Look for fuzzy patterns (in case agent was lazy):
-    - _(TBD)_
-    - _(TODO)_
-    - _(Coming soon)_
-    - _(Not yet generated)_
-    - _(Pending)_
+   - _(TBD)_
+   - _(TODO)_
+   - _(Coming soon)_
+   - _(Not yet generated)_
+   - _(Pending)_
 3. Extract document metadata from each match for user selection
    </critical>
 
@@ -915,86 +915,77 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 - Store result in {{selected_items}} array
   </action>
 
-    <action>Display: "Generating {{selected_items.length}} document(s)..."</action>
+  <action>Display: "Generating {{selected_items.length}} document(s)..."</action>
 
-    <action>For each item in {{selected_items}}:
+  <action>For each item in {{selected_items}}:
 
 1. **Identify the part and requirements:**
-
-    - Extract part_id from item (if exists)
-    - Look up part data in project_parts array from state file
-    - Load documentation_requirements for that part's project_type_id
+   - Extract part_id from item (if exists)
+   - Look up part data in project_parts array from state file
+   - Load documentation_requirements for that part's project_type_id
 
 2. **Route to appropriate generation substep based on doc_type:**
 
-    **If doc_type == "architecture":**
+   **If doc_type == "architecture":**
+   - Display: "Generating architecture documentation for {{part_id}}..."
+   - Load architecture_match for this part from state file (Step 3 cache)
+   - Re-run Step 8 architecture generation logic ONLY for this specific part
+   - Use matched template and fill with cached data from state file
+   - Write architecture-{{part_id}}.md to disk
+   - Validate completeness
 
-    - Display: "Generating architecture documentation for {{part_id}}..."
-    - Load architecture_match for this part from state file (Step 3 cache)
-    - Re-run Step 8 architecture generation logic ONLY for this specific part
-    - Use matched template and fill with cached data from state file
-    - Write architecture-{{part_id}}.md to disk
-    - Validate completeness
+   **If doc_type == "api-contracts":**
+   - Display: "Generating API contracts for {{part_id}}..."
+   - Load part data and documentation_requirements
+   - Re-run Step 4 API scan substep targeting ONLY this part
+   - Use scan_level from state file (quick/deep/exhaustive)
+   - Generate api-contracts-{{part_id}}.md
+   - Validate document structure
 
-    **If doc_type == "api-contracts":**
+   **If doc_type == "data-models":**
+   - Display: "Generating data models documentation for {{part_id}}..."
+   - Re-run Step 4 data models scan substep targeting ONLY this part
+   - Use schema_migration_patterns from documentation_requirements
+   - Generate data-models-{{part_id}}.md
+   - Validate completeness
 
-    - Display: "Generating API contracts for {{part_id}}..."
-    - Load part data and documentation_requirements
-    - Re-run Step 4 API scan substep targeting ONLY this part
-    - Use scan_level from state file (quick/deep/exhaustive)
-    - Generate api-contracts-{{part_id}}.md
-    - Validate document structure
+   **If doc_type == "component-inventory":**
+   - Display: "Generating component inventory for {{part_id}}..."
+   - Re-run Step 9 component inventory generation for this specific part
+   - Scan components/, ui/, widgets/ folders
+   - Generate component-inventory-{{part_id}}.md
+   - Validate structure
 
-    **If doc_type == "data-models":**
+   **If doc_type == "development-guide":**
+   - Display: "Generating development guide for {{part_id}}..."
+   - Re-run Step 9 development guide generation for this specific part
+   - Use key_file_patterns and test_file_patterns from documentation_requirements
+   - Generate development-guide-{{part_id}}.md
+   - Validate completeness
 
-    - Display: "Generating data models documentation for {{part_id}}..."
-    - Re-run Step 4 data models scan substep targeting ONLY this part
-    - Use schema_migration_patterns from documentation_requirements
-    - Generate data-models-{{part_id}}.md
-    - Validate completeness
+   **If doc_type == "deployment-guide":**
+   - Display: "Generating deployment guide..."
+   - Re-run Step 6 deployment configuration scan
+   - Re-run Step 9 deployment guide generation
+   - Generate deployment-guide.md
+   - Validate structure
 
-    **If doc_type == "component-inventory":**
-
-    - Display: "Generating component inventory for {{part_id}}..."
-    - Re-run Step 9 component inventory generation for this specific part
-    - Scan components/, ui/, widgets/ folders
-    - Generate component-inventory-{{part_id}}.md
-    - Validate structure
-
-    **If doc_type == "development-guide":**
-
-    - Display: "Generating development guide for {{part_id}}..."
-    - Re-run Step 9 development guide generation for this specific part
-    - Use key_file_patterns and test_file_patterns from documentation_requirements
-    - Generate development-guide-{{part_id}}.md
-    - Validate completeness
-
-    **If doc_type == "deployment-guide":**
-
-    - Display: "Generating deployment guide..."
-    - Re-run Step 6 deployment configuration scan
-    - Re-run Step 9 deployment guide generation
-    - Generate deployment-guide.md
-    - Validate structure
-
-    **If doc_type == "integration-architecture":**
-
-    - Display: "Generating integration architecture..."
-    - Re-run Step 7 integration analysis for all parts
-    - Generate integration-architecture.md
-    - Validate completeness
+   **If doc_type == "integration-architecture":**
+   - Display: "Generating integration architecture..."
+   - Re-run Step 7 integration analysis for all parts
+   - Generate integration-architecture.md
+   - Validate completeness
 
 3. **Post-generation actions:**
-
-    - Confirm file was written successfully
-    - Update state file with newly generated output
-    - Add to {{newly_generated_docs}} tracking list
-    - Display: "✓ Generated: {{file_path}}"
+   - Confirm file was written successfully
+   - Update state file with newly generated output
+   - Add to {{newly_generated_docs}} tracking list
+   - Display: "✓ Generated: {{file_path}}"
 
 4. **Handle errors:**
-    - If generation fails, log error and continue with next item
-    - Track failed items in {{failed_generations}} list
-      </action>
+   - If generation fails, log error and continue with next item
+   - Track failed items in {{failed_generations}} list
+     </action>
 
 <action>After all selected items are processed:
 
@@ -1002,9 +993,9 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 
 1. Read current index.md content
 2. For each item in {{newly_generated_docs}}:
-    - Find the line containing the file link and marker
-    - Remove the _(To be generated)_ or fuzzy marker text
-    - Leave the markdown link intact
+   - Find the line containing the file link and marker
+   - Remove the _(To be generated)_ or fuzzy marker text
+   - Leave the markdown link intact
 3. Write updated index.md back to disk
 4. Update state file to record index.md modification
    </action>

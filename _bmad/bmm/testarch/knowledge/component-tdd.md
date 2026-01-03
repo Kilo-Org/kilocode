@@ -459,10 +459,10 @@ export default defineConfig({
 
 - **Used in workflows**: `*atdd` (component test generation), `*automate` (component test expansion), `*framework` (component testing setup)
 - **Related fragments**:
-    - `test-quality.md` - Keep component tests <100 lines, isolated, focused
-    - `fixture-architecture.md` - Provider wrapping patterns, custom mount commands
-    - `data-factories.md` - Factory functions for component props
-    - `test-levels-framework.md` - When to use component tests vs E2E tests
+  - `test-quality.md` - Keep component tests <100 lines, isolated, focused
+  - `fixture-architecture.md` - Provider wrapping patterns, custom mount commands
+  - `data-factories.md` - Factory functions for component props
+  - `test-levels-framework.md` - When to use component tests vs E2E tests
 
 ## TDD Workflow Summary
 

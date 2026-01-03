@@ -22,9 +22,9 @@ Before starting this workflow, verify:
 ### Mode Detection
 
 - [ ] Execution mode correctly determined:
-    - [ ] BMad-Integrated Mode (story_file variable set) OR
-    - [ ] Standalone Mode (target_feature or target_files set) OR
-    - [ ] Auto-discover Mode (no targets specified)
+  - [ ] BMad-Integrated Mode (story_file variable set) OR
+  - [ ] Standalone Mode (target_feature or target_files set) OR
+  - [ ] Auto-discover Mode (no targets specified)
 
 ### BMad Artifacts (If Available - OPTIONAL)
 
@@ -78,10 +78,10 @@ Before starting this workflow, verify:
 - [ ] Specific files analyzed (if `{target_files}` specified)
 - [ ] Features auto-discovered (if `{auto_discover_features}` true)
 - [ ] Features prioritized by:
-    - [ ] No test coverage (highest priority)
-    - [ ] Complex business logic
-    - [ ] External integrations (API, database, auth)
-    - [ ] Critical user paths (login, checkout, etc.)
+  - [ ] No test coverage (highest priority)
+  - [ ] Complex business logic
+  - [ ] External integrations (API, database, auth)
+  - [ ] Critical user paths (login, checkout, etc.)
 
 ### Test Level Selection
 
@@ -107,10 +107,10 @@ Before starting this workflow, verify:
 - [ ] P2 tests: Edge cases, less-critical variations, performance
 - [ ] P3 tests: Nice-to-have, rarely-used features, exploratory
 - [ ] Priority variables respected:
-    - [ ] `{include_p0}` = true (always include)
-    - [ ] `{include_p1}` = true (high priority)
-    - [ ] `{include_p2}` = true (medium priority)
-    - [ ] `{include_p3}` = false (low priority, skip by default)
+  - [ ] `{include_p0}` = true (always include)
+  - [ ] `{include_p1}` = true (high priority)
+  - [ ] `{include_p2}` = true (medium priority)
+  - [ ] `{include_p3}` = false (low priority, skip by default)
 
 ### Coverage Plan Created
 
@@ -130,10 +130,10 @@ Before starting this workflow, verify:
 - [ ] All fixtures use Playwright's `test.extend()` pattern
 - [ ] All fixtures have auto-cleanup in teardown
 - [ ] Common fixtures created/enhanced:
-    - [ ] authenticatedUser (with auto-delete)
-    - [ ] apiRequest (authenticated client)
-    - [ ] mockNetwork (external service mocking)
-    - [ ] testDatabase (with auto-cleanup)
+  - [ ] authenticatedUser (with auto-delete)
+  - [ ] apiRequest (authenticated client)
+  - [ ] mockNetwork (external service mocking)
+  - [ ] testDatabase (with auto-cleanup)
 
 ### Data Factories
 
@@ -142,19 +142,19 @@ Before starting this workflow, verify:
 - [ ] All factories use `@faker-js/faker` for random data (no hardcoded values)
 - [ ] All factories support overrides for specific scenarios
 - [ ] Common factories created/enhanced:
-    - [ ] User factory (email, password, name, role)
-    - [ ] Product factory (name, price, SKU)
-    - [ ] Order factory (items, total, status)
+  - [ ] User factory (email, password, name, role)
+  - [ ] Product factory (name, price, SKU)
+  - [ ] Order factory (items, total, status)
 - [ ] Cleanup helpers provided (e.g., deleteUser(), deleteProduct())
 
 ### Helper Utilities
 
 - [ ] Existing helpers checked in `tests/support/helpers/` (if `{update_helpers}` true)
 - [ ] Common utilities created/enhanced:
-    - [ ] waitFor (polling for complex conditions)
-    - [ ] retry (retry helper for flaky operations)
-    - [ ] testData (test data generation)
-    - [ ] assertions (custom assertion helpers)
+  - [ ] waitFor (polling for complex conditions)
+  - [ ] retry (retry helper for flaky operations)
+  - [ ] testData (test data generation)
+  - [ ] assertions (custom assertion helpers)
 
 ---
 
@@ -163,11 +163,11 @@ Before starting this workflow, verify:
 ### Test File Structure
 
 - [ ] Test files organized correctly:
-    - [ ] `tests/e2e/` for E2E tests
-    - [ ] `tests/api/` for API tests
-    - [ ] `tests/component/` for component tests
-    - [ ] `tests/unit/` for unit tests
-    - [ ] `tests/support/` for fixtures/factories/helpers
+  - [ ] `tests/e2e/` for E2E tests
+  - [ ] `tests/api/` for API tests
+  - [ ] `tests/component/` for component tests
+  - [ ] `tests/unit/` for unit tests
+  - [ ] `tests/support/` for fixtures/factories/helpers
 
 ### E2E Tests (If Applicable)
 
@@ -239,10 +239,10 @@ Before starting this workflow, verify:
 ### Healing Configuration
 
 - [ ] Healing configuration checked:
-    - [ ] `{auto_validate}` setting noted (default: true)
-    - [ ] `{auto_heal_failures}` setting noted (default: false)
-    - [ ] `{max_healing_iterations}` setting noted (default: 3)
-    - [ ] `{use_mcp_healing}` setting noted (default: true)
+  - [ ] `{auto_validate}` setting noted (default: true)
+  - [ ] `{auto_heal_failures}` setting noted (default: false)
+  - [ ] `{max_healing_iterations}` setting noted (default: 3)
+  - [ ] `{use_mcp_healing}` setting noted (default: true)
 
 ### Healing Knowledge Fragments Loaded (If Healing Enabled)
 
@@ -254,47 +254,47 @@ Before starting this workflow, verify:
 
 - [ ] Generated tests executed (if `{auto_validate}` true)
 - [ ] Test results captured:
-    - [ ] Total tests run
-    - [ ] Passing tests count
-    - [ ] Failing tests count
-    - [ ] Error messages and stack traces captured
+  - [ ] Total tests run
+  - [ ] Passing tests count
+  - [ ] Failing tests count
+  - [ ] Error messages and stack traces captured
 
 ### Healing Loop (If Enabled and Tests Failed)
 
 - [ ] Healing loop entered (if `{auto_heal_failures}` true AND tests failed)
 - [ ] For each failing test:
-    - [ ] Failure pattern identified (selector, timing, data, network, hard wait)
-    - [ ] Appropriate healing strategy applied:
-        - [ ] Stale selector → Replaced with data-testid or ARIA role
-        - [ ] Race condition → Added network-first interception or state waits
-        - [ ] Dynamic data → Replaced hardcoded values with regex/dynamic generation
-        - [ ] Network error → Added route mocking
-        - [ ] Hard wait → Replaced with event-based wait
-    - [ ] Healed test re-run to validate fix
-    - [ ] Iteration count tracked (max 3 attempts)
+  - [ ] Failure pattern identified (selector, timing, data, network, hard wait)
+  - [ ] Appropriate healing strategy applied:
+    - [ ] Stale selector → Replaced with data-testid or ARIA role
+    - [ ] Race condition → Added network-first interception or state waits
+    - [ ] Dynamic data → Replaced hardcoded values with regex/dynamic generation
+    - [ ] Network error → Added route mocking
+    - [ ] Hard wait → Replaced with event-based wait
+  - [ ] Healed test re-run to validate fix
+  - [ ] Iteration count tracked (max 3 attempts)
 
 ### Unfixable Tests Handling
 
 - [ ] Tests that couldn't be healed after 3 iterations marked with `test.fixme()` (if `{mark_unhealable_as_fixme}` true)
 - [ ] Detailed comment added to test.fixme() tests:
-    - [ ] What failure occurred
-    - [ ] What healing was attempted (3 iterations)
-    - [ ] Why healing failed
-    - [ ] Manual investigation steps needed
+  - [ ] What failure occurred
+  - [ ] What healing was attempted (3 iterations)
+  - [ ] Why healing failed
+  - [ ] Manual investigation steps needed
 - [ ] Original test logic preserved in comments
 
 ### Healing Report Generated
 
 - [ ] Healing report generated (if healing attempted)
 - [ ] Report includes:
-    - [ ] Auto-heal enabled status
-    - [ ] Healing mode (MCP-assisted or Pattern-based)
-    - [ ] Iterations allowed (max_healing_iterations)
-    - [ ] Validation results (total, passing, failing)
-    - [ ] Successfully healed tests (count, file:line, fix applied)
-    - [ ] Unable to heal tests (count, file:line, reason)
-    - [ ] Healing patterns applied (selector fixes, timing fixes, data fixes)
-    - [ ] Knowledge base references used
+  - [ ] Auto-heal enabled status
+  - [ ] Healing mode (MCP-assisted or Pattern-based)
+  - [ ] Iterations allowed (max_healing_iterations)
+  - [ ] Validation results (total, passing, failing)
+  - [ ] Successfully healed tests (count, file:line, fix applied)
+  - [ ] Unable to heal tests (count, file:line, reason)
+  - [ ] Healing patterns applied (selector fixes, timing fixes, data fixes)
+  - [ ] Knowledge base references used
 
 ---
 
@@ -343,11 +343,11 @@ Before starting this workflow, verify:
 - [ ] Infrastructure created listed (fixtures, factories, helpers)
 - [ ] Test execution instructions provided
 - [ ] Coverage analysis included:
-    - [ ] Total test count
-    - [ ] Priority breakdown (P0, P1, P2, P3 counts)
-    - [ ] Test level breakdown (E2E, API, Component, Unit counts)
-    - [ ] Coverage percentage (if calculated)
-    - [ ] Coverage status (acceptance criteria covered, gaps identified)
+  - [ ] Total test count
+  - [ ] Priority breakdown (P0, P1, P2, P3 counts)
+  - [ ] Test level breakdown (E2E, API, Component, Unit counts)
+  - [ ] Coverage percentage (if calculated)
+  - [ ] Coverage status (acceptance criteria covered, gaps identified)
 - [ ] Definition of Done checklist included
 - [ ] Next steps provided
 - [ ] Recommendations included (if Standalone mode)

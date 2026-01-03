@@ -1,14 +1,14 @@
 ---
-name: "step-06-complete"
-description: "Complete the product brief workflow, update status files, and suggest next steps for the project"
+name: 'step-06-complete'
+description: 'Complete the product brief workflow, update status files, and suggest next steps for the project'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/1-analysis/create-product-brief"
+workflow_path: '{project-root}/_bmad/bmm/workflows/1-analysis/create-product-brief'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-06-complete.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md"
+thisStepFile: '{workflow_path}/steps/step-06-complete.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md'
 ---
 
 # Step 6: Product Brief Completion
@@ -112,10 +112,10 @@ Perform final validation of the product brief:
 Provide guidance on logical next workflows:
 
 1. `create-prd` - Create detailed Product Requirements Document
-    - Brief provides foundation for detailed requirements
-    - User personas inform journey mapping
-    - Success metrics become specific acceptance criteria
-    - MVP scope becomes detailed feature specifications
+   - Brief provides foundation for detailed requirements
+   - User personas inform journey mapping
+   - Success metrics become specific acceptance criteria
+   - MVP scope becomes detailed feature specifications
 
 **Other Potential Next Steps:**
 

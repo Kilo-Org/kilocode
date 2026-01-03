@@ -30,29 +30,29 @@ The `log` utility provides:
 **Implementation**:
 
 ```typescript
-import { log } from "@seontechnologies/playwright-utils"
+import { log } from '@seontechnologies/playwright-utils';
 
-test("logging demo", async ({ page }) => {
-	await log.step("Navigate to login page")
-	await page.goto("/login")
+test('logging demo', async ({ page }) => {
+  await log.step('Navigate to login page');
+  await page.goto('/login');
 
-	await log.info("Entering credentials")
-	await page.fill("#username", "testuser")
+  await log.info('Entering credentials');
+  await page.fill('#username', 'testuser');
 
-	await log.success("Login successful")
+  await log.success('Login successful');
 
-	await log.warning("Rate limit approaching")
+  await log.warning('Rate limit approaching');
 
-	await log.debug({ userId: "123", sessionId: "abc" })
+  await log.debug({ userId: '123', sessionId: 'abc' });
 
-	// Errors still throw but get logged first
-	try {
-		await page.click("#nonexistent")
-	} catch (error) {
-		await log.error("Click failed", false) // false = no console output
-		throw error
-	}
-})
+  // Errors still throw but get logged first
+  try {
+    await page.click('#nonexistent');
+  } catch (error) {
+    await log.error('Click failed', false); // false = no console output
+    throw error;
+  }
+});
 ```
 
 **Key Points**:
@@ -70,35 +70,35 @@ test("logging demo", async ({ page }) => {
 **Implementation**:
 
 ```typescript
-test("object logging", async ({ apiRequest }) => {
-	const { body } = await apiRequest({
-		method: "GET",
-		path: "/api/users",
-	})
+test('object logging', async ({ apiRequest }) => {
+  const { body } = await apiRequest({
+    method: 'GET',
+    path: '/api/users',
+  });
 
-	// Log array of objects
-	await log.debug(body) // Formatted as JSON in report
+  // Log array of objects
+  await log.debug(body); // Formatted as JSON in report
 
-	// Log specific object
-	await log.info({
-		totalUsers: body.length,
-		firstUser: body[0]?.name,
-		timestamp: new Date().toISOString(),
-	})
+  // Log specific object
+  await log.info({
+    totalUsers: body.length,
+    firstUser: body[0]?.name,
+    timestamp: new Date().toISOString(),
+  });
 
-	// Complex nested structures
-	await log.debug({
-		request: {
-			method: "GET",
-			path: "/api/users",
-			timestamp: Date.now(),
-		},
-		response: {
-			status: 200,
-			body: body.slice(0, 3), // First 3 items
-		},
-	})
-})
+  // Complex nested structures
+  await log.debug({
+    request: {
+      method: 'GET',
+      path: '/api/users',
+      timestamp: Date.now(),
+    },
+    response: {
+      status: 200,
+      body: body.slice(0, 3), // First 3 items
+    },
+  });
+});
 ```
 
 **Key Points**:
@@ -115,25 +115,25 @@ test("object logging", async ({ apiRequest }) => {
 **Implementation**:
 
 ```typescript
-test("organized with steps", async ({ page, apiRequest }) => {
-	await log.step("ARRANGE: Setup test data")
-	const { body: user } = await apiRequest({
-		method: "POST",
-		path: "/api/users",
-		body: { name: "Test User" },
-	})
+test('organized with steps', async ({ page, apiRequest }) => {
+  await log.step('ARRANGE: Setup test data');
+  const { body: user } = await apiRequest({
+    method: 'POST',
+    path: '/api/users',
+    body: { name: 'Test User' },
+  });
 
-	await log.step("ACT: Perform user action")
-	await page.goto(`/users/${user.id}`)
-	await page.click("#edit")
-	await page.fill("#name", "Updated Name")
-	await page.click("#save")
+  await log.step('ACT: Perform user action');
+  await page.goto(`/users/${user.id}`);
+  await page.click('#edit');
+  await page.fill('#name', 'Updated Name');
+  await page.click('#save');
 
-	await log.step("ASSERT: Verify changes")
-	await expect(page.getByText("Updated Name")).toBeVisible()
+  await log.step('ASSERT: Verify changes');
+  await expect(page.getByText('Updated Name')).toBeVisible();
 
-	// In Playwright UI, each step is collapsible
-})
+  // In Playwright UI, each step is collapsible
+});
 ```
 
 **Key Points**:
@@ -150,24 +150,24 @@ test("organized with steps", async ({ page, apiRequest }) => {
 **Implementation**:
 
 ```typescript
-test("conditional logging", async ({ page }) => {
-	const isCI = process.env.CI === "true"
+test('conditional logging', async ({ page }) => {
+  const isCI = process.env.CI === 'true';
 
-	if (isCI) {
-		await log.info("Running in CI environment")
-	} else {
-		await log.debug("Running locally")
-	}
+  if (isCI) {
+    await log.info('Running in CI environment');
+  } else {
+    await log.debug('Running locally');
+  }
 
-	const isKafkaWorking = await checkKafkaHealth()
+  const isKafkaWorking = await checkKafkaHealth();
 
-	if (!isKafkaWorking) {
-		await log.warning("Kafka unavailable - skipping event checks")
-	} else {
-		await log.step("Verifying Kafka events")
-		// ... event verification
-	}
-})
+  if (!isKafkaWorking) {
+    await log.warning('Kafka unavailable - skipping event checks');
+  } else {
+    await log.step('Verifying Kafka events');
+    // ... event verification
+  }
+});
 ```
 
 **Key Points**:
@@ -184,34 +184,34 @@ test("conditional logging", async ({ page }) => {
 **Implementation**:
 
 ```typescript
-import { test } from "@seontechnologies/playwright-utils/fixtures"
+import { test } from '@seontechnologies/playwright-utils/fixtures';
 
 // Helper to create safe token preview
 function createTokenPreview(token: string): string {
-	if (!token || token.length < 10) return "[invalid]"
-	return `${token.slice(0, 6)}...${token.slice(-4)}`
+  if (!token || token.length < 10) return '[invalid]';
+  return `${token.slice(0, 6)}...${token.slice(-4)}`;
 }
 
-test("should log auth flow", async ({ authToken, apiRequest }) => {
-	await log.info(`Using token: ${createTokenPreview(authToken)}`)
+test('should log auth flow', async ({ authToken, apiRequest }) => {
+  await log.info(`Using token: ${createTokenPreview(authToken)}`);
 
-	await log.step("Fetch protected resource")
-	const { status, body } = await apiRequest({
-		method: "GET",
-		path: "/api/protected",
-		headers: { Authorization: `Bearer ${authToken}` },
-	})
+  await log.step('Fetch protected resource');
+  const { status, body } = await apiRequest({
+    method: 'GET',
+    path: '/api/protected',
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
 
-	await log.debug({
-		status,
-		bodyPreview: {
-			id: body.id,
-			recordCount: body.data?.length,
-		},
-	})
+  await log.debug({
+    status,
+    bodyPreview: {
+      id: body.id,
+      recordCount: body.data?.length,
+    },
+  });
 
-	await log.success("Protected resource accessed successfully")
-})
+  await log.success('Protected resource accessed successfully');
+});
 ```
 
 **Key Points**:
@@ -254,41 +254,41 @@ test("should log auth flow", async ({ authToken, apiRequest }) => {
 **❌ Logging objects in steps:**
 
 ```typescript
-await log.step({ user: "test", action: "create" }) // Shows empty in UI
+await log.step({ user: 'test', action: 'create' }); // Shows empty in UI
 ```
 
 **✅ Use strings for steps, objects for debug:**
 
 ```typescript
-await log.step("Creating user: test") // Readable in UI
-await log.debug({ user: "test", action: "create" }) // Detailed data
+await log.step('Creating user: test'); // Readable in UI
+await log.debug({ user: 'test', action: 'create' }); // Detailed data
 ```
 
 **❌ Logging sensitive data:**
 
 ```typescript
-await log.info(`Password: ${password}`) // Security risk!
-await log.info(`Token: ${authToken}`) // Full token exposed!
+await log.info(`Password: ${password}`); // Security risk!
+await log.info(`Token: ${authToken}`); // Full token exposed!
 ```
 
 **✅ Use previews or omit sensitive data:**
 
 ```typescript
-await log.info("User authenticated successfully") // No sensitive data
-await log.debug({ tokenPreview: token.slice(0, 6) + "..." })
+await log.info('User authenticated successfully'); // No sensitive data
+await log.debug({ tokenPreview: token.slice(0, 6) + '...' });
 ```
 
 **❌ Excessive logging in loops:**
 
 ```typescript
 for (const item of items) {
-	await log.info(`Processing ${item.id}`) // 100 log entries!
+  await log.info(`Processing ${item.id}`); // 100 log entries!
 }
 ```
 
 **✅ Log summary or use debug level:**
 
 ```typescript
-await log.step(`Processing ${items.length} items`)
-await log.debug({ itemIds: items.map((i) => i.id) }) // One log entry
+await log.step(`Processing ${items.length} items`);
+await log.debug({ itemIds: items.map((i) => i.id) }); // One log entry
 ```

@@ -1,22 +1,22 @@
 ---
-name: "step-06-innovation"
-description: "Detect and explore innovative aspects of the product (optional step)"
+name: 'step-06-innovation'
+description: 'Detect and explore innovative aspects of the product (optional step)'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-06-innovation.md"
-nextStepFile: "{workflow_path}/steps/step-07-project-type.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-06-innovation.md'
+nextStepFile: '{workflow_path}/steps/step-07-project-type.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 
 # Data Files
-projectTypesCSV: "{workflow_path}/project-types.csv"
+projectTypesCSV: '{workflow_path}/project-types.csv'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
 # Step 6: Innovation Discovery
@@ -53,8 +53,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml
-- When 'P' selected: Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md
+- When 'A' selected: Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml
+- When 'P' selected: Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md
 - PROTOCOLS always return to this step's A/P/C menu
 - User accepts/rejects protocol changes before proceeding
 
@@ -187,7 +187,7 @@ Show the generated innovation content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml with the current innovation content
+- Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml with the current innovation content
 - Process the enhanced innovation insights that come back
 - Ask user: "Accept these improvements to the innovation analysis? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu
@@ -195,7 +195,7 @@ Show the generated innovation content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md with the current innovation content
+- Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md with the current innovation content
 - Process the collaborative innovation exploration and ideation
 - Ask user: "Accept these changes to the innovation analysis? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu

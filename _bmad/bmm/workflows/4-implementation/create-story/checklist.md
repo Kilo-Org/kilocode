@@ -34,10 +34,10 @@ This is a COMPETITION to create the **ULTIMATE story context** that makes LLM de
 ### **When Running from Create-Story Workflow:**
 
 - The `{project_root}/_bmad/core/tasks/validate-workflow.xml` framework will automatically:
-    - Load this checklist file
-    - Load the newly created story file (`{story_file_path}`)
-    - Load workflow variables from `{installed_path}/workflow.yaml`
-    - Execute the validation process
+  - Load this checklist file
+  - Load the newly created story file (`{story_file_path}`)
+  - Load workflow variables from `{installed_path}/workflow.yaml`
+  - Execute the validation process
 
 ### **When Running in Fresh Context:**
 
@@ -79,53 +79,53 @@ You will systematically re-do the entire story creation process, but with a crit
 
 - Load `{epics_file}` (or sharded equivalents)
 - Extract **COMPLETE Epic {{epic_num}} context**:
-    - Epic objectives and business value
-    - ALL stories in this epic (for cross-story context)
-    - Our specific story's requirements, acceptance criteria
-    - Technical requirements and constraints
-    - Cross-story dependencies and prerequisites
+  - Epic objectives and business value
+  - ALL stories in this epic (for cross-story context)
+  - Our specific story's requirements, acceptance criteria
+  - Technical requirements and constraints
+  - Cross-story dependencies and prerequisites
 
 #### **2.2 Architecture Deep-Dive**
 
 - Load `{architecture_file}` (single or sharded)
 - **Systematically scan for ANYTHING relevant to this story:**
-    - Technical stack with versions (languages, frameworks, libraries)
-    - Code structure and organization patterns
-    - API design patterns and contracts
-    - Database schemas and relationships
-    - Security requirements and patterns
-    - Performance requirements and optimization strategies
-    - Testing standards and frameworks
-    - Deployment and environment patterns
-    - Integration patterns and external services
+  - Technical stack with versions (languages, frameworks, libraries)
+  - Code structure and organization patterns
+  - API design patterns and contracts
+  - Database schemas and relationships
+  - Security requirements and patterns
+  - Performance requirements and optimization strategies
+  - Testing standards and frameworks
+  - Deployment and environment patterns
+  - Integration patterns and external services
 
 #### **2.3 Previous Story Intelligence (if applicable)**
 
 - If `story_num > 1`, load the previous story file
 - Extract **actionable intelligence**:
-    - Dev notes and learnings
-    - Review feedback and corrections needed
-    - Files created/modified and their patterns
-    - Testing approaches that worked/didn't work
-    - Problems encountered and solutions found
-    - Code patterns and conventions established
+  - Dev notes and learnings
+  - Review feedback and corrections needed
+  - Files created/modified and their patterns
+  - Testing approaches that worked/didn't work
+  - Problems encountered and solutions found
+  - Code patterns and conventions established
 
 #### **2.4 Git History Analysis (if available)**
 
 - Analyze recent commits for patterns:
-    - Files created/modified in previous work
-    - Code patterns and conventions used
-    - Library dependencies added/changed
-    - Architecture decisions implemented
-    - Testing approaches used
+  - Files created/modified in previous work
+  - Code patterns and conventions used
+  - Library dependencies added/changed
+  - Architecture decisions implemented
+  - Testing approaches used
 
 #### **2.5 Latest Technical Research**
 
 - Identify any libraries/frameworks mentioned
 - Research latest versions and critical information:
-    - Breaking changes or security updates
-    - Performance improvements or deprecations
-    - Best practices for current versions
+  - Breaking changes or security updates
+  - Performance improvements or deprecations
+  - Best practices for current versions
 
 ### **Step 3: Disaster Prevention Gap Analysis**
 

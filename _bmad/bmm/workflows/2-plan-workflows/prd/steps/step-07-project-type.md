@@ -1,22 +1,22 @@
 ---
-name: "step-07-project-type"
-description: "Conduct project-type specific discovery using CSV-driven guidance"
+name: 'step-07-project-type'
+description: 'Conduct project-type specific discovery using CSV-driven guidance'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-07-project-type.md"
-nextStepFile: "{workflow_path}/steps/step-08-scoping.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-07-project-type.md'
+nextStepFile: '{workflow_path}/steps/step-08-scoping.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 
 # Data Files
-projectTypesCSV: "{workflow_path}/project-types.csv"
+projectTypesCSV: '{workflow_path}/project-types.csv'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
 # Step 7: Project-Type Deep Dive
@@ -53,8 +53,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml
-- When 'P' selected: Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md
+- When 'A' selected: Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml
+- When 'P' selected: Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md
 - PROTOCOLS always return to this step's A/P/C menu
 - User accepts/rejects protocol changes before proceeding
 
@@ -78,10 +78,10 @@ Load project-type specific configuration:
 - Load `{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd/project-types.csv` completely
 - Find the row where `project_type` matches detected type from step-02
 - Extract these columns:
-    - `key_questions` (semicolon-separated list of discovery questions)
-    - `required_sections` (semicolon-separated list of sections to document)
-    - `skip_sections` (semicolon-separated list of sections to skip)
-    - `innovation_signals` (already explored in step-6)
+  - `key_questions` (semicolon-separated list of discovery questions)
+  - `required_sections` (semicolon-separated list of sections to document)
+  - `skip_sections` (semicolon-separated list of sections to skip)
+  - `innovation_signals` (already explored in step-6)
 
 ### 2. Conduct Guided Discovery Using Key Questions
 
@@ -183,7 +183,7 @@ Show the generated project-type content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml with the current project-type content
+- Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml with the current project-type content
 - Process the enhanced technical insights that come back
 - Ask user: "Accept these improvements to the technical requirements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu
@@ -191,7 +191,7 @@ Show the generated project-type content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md with the current project-type requirements
+- Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md with the current project-type requirements
 - Process the collaborative technical expertise and validation
 - Ask user: "Accept these changes to the technical requirements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu

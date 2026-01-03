@@ -1,16 +1,16 @@
 ---
-name: "step-02-prd-analysis"
-description: "Read and analyze PRD to extract all FRs and NFRs for coverage validation"
+name: 'step-02-prd-analysis'
+description: 'Read and analyze PRD to extract all FRs and NFRs for coverage validation'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/3-solutioning/implementation-readiness"
+workflow_path: '{project-root}/_bmad/bmm/workflows/3-solutioning/implementation-readiness'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-02-prd-analysis.md"
-nextStepFile: "{workflow_path}/steps/step-03-epic-coverage-validation.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/implementation-readiness-report-{{date}}.md"
-epicsFile: "{planning_artifacts}/*epic*.md" # Will be resolved to actual file
+thisStepFile: '{workflow_path}/steps/step-02-prd-analysis.md'
+nextStepFile: '{workflow_path}/steps/step-03-epic-coverage-validation.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/implementation-readiness-report-{{date}}.md'
+epicsFile: '{planning_artifacts}/*epic*.md' # Will be resolved to actual file
 ---
 
 # Step 2: PRD Analysis

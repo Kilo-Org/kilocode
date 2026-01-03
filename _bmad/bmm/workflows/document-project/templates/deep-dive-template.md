@@ -147,47 +147,47 @@
 {{#each apis_consumed}}
 
 - **{{api_endpoint}}**: {{api_description}}
-    - Method: {{method}}
-    - Authentication: {{auth_requirement}}
-    - Response: {{response_schema}}
-      {{/each}}
+  - Method: {{method}}
+  - Authentication: {{auth_requirement}}
+  - Response: {{response_schema}}
+    {{/each}}
 
 ### APIs Exposed
 
 {{#each apis_exposed}}
 
 - **{{api_endpoint}}**: {{api_description}}
-    - Method: {{method}}
-    - Request: {{request_schema}}
-    - Response: {{response_schema}}
-      {{/each}}
+  - Method: {{method}}
+  - Request: {{request_schema}}
+  - Response: {{response_schema}}
+    {{/each}}
 
 ### Shared State
 
 {{#each shared_state}}
 
 - **{{state_name}}**: {{state_description}}
-    - Type: {{state_type}}
-    - Accessed By: {{accessors}}
-      {{/each}}
+  - Type: {{state_type}}
+  - Accessed By: {{accessors}}
+    {{/each}}
 
 ### Events
 
 {{#each events}}
 
 - **{{event_name}}**: {{event_description}}
-    - Type: {{publish_or_subscribe}}
-    - Payload: {{payload_schema}}
-      {{/each}}
+  - Type: {{publish_or_subscribe}}
+  - Payload: {{payload_schema}}
+    {{/each}}
 
 ### Database Access
 
 {{#each database_operations}}
 
 - **{{table_name}}**: {{operation_type}}
-    - Queries: {{query_patterns}}
-    - Indexes Used: {{indexes}}
-      {{/each}}
+  - Queries: {{query_patterns}}
+  - Indexes Used: {{indexes}}
+    {{/each}}
 
 ## Dependency Graph
 
@@ -233,10 +233,10 @@
 {{#each test_files}}
 
 - **{{test_file_path}}**
-    - Tests: {{test_count}}
-    - Approach: {{test_approach}}
-    - Mocking Strategy: {{mocking_strategy}}
-      {{/each}}
+  - Tests: {{test_count}}
+  - Approach: {{test_approach}}
+  - Mocking Strategy: {{mocking_strategy}}
+    {{/each}}
 
 ### Test Utilities Available
 
@@ -259,18 +259,18 @@
 {{#each similar_features}}
 
 - **{{feature_name}}** (`{{feature_path}}`)
-    - Similarity: {{similarity_description}}
-    - Can Reference For: {{reference_use_case}}
-      {{/each}}
+  - Similarity: {{similarity_description}}
+  - Can Reference For: {{reference_use_case}}
+    {{/each}}
 
 ### Reusable Utilities Available
 
 {{#each reusable_utilities}}
 
 - **{{utility_name}}** (`{{utility_path}}`)
-    - Purpose: {{utility_purpose}}
-    - How to Use: {{usage_example}}
-      {{/each}}
+  - Purpose: {{utility_purpose}}
+  - How to Use: {{usage_example}}
+    {{/each}}
 
 ### Patterns to Follow
 

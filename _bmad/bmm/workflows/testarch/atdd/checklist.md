@@ -27,11 +27,11 @@ Before starting this workflow, verify:
 - [ ] Existing fixture patterns reviewed for consistency
 - [ ] Similar test patterns searched and found in `{test_dir}`
 - [ ] Knowledge base fragments loaded:
-    - [ ] `fixture-architecture.md`
-    - [ ] `data-factories.md`
-    - [ ] `component-tdd.md`
-    - [ ] `network-first.md`
-    - [ ] `test-quality.md`
+  - [ ] `fixture-architecture.md`
+  - [ ] `data-factories.md`
+  - [ ] `component-tdd.md`
+  - [ ] `network-first.md`
+  - [ ] `test-quality.md`
 
 ---
 
@@ -55,10 +55,10 @@ Before starting this workflow, verify:
 ### Test File Structure Created
 
 - [ ] Test files organized in appropriate directories:
-    - [ ] `tests/e2e/` for end-to-end tests
-    - [ ] `tests/api/` for API tests
-    - [ ] `tests/component/` for component tests
-    - [ ] `tests/support/` for infrastructure (fixtures, factories, helpers)
+  - [ ] `tests/e2e/` for end-to-end tests
+  - [ ] `tests/api/` for API tests
+  - [ ] `tests/component/` for component tests
+  - [ ] `tests/support/` for infrastructure (fixtures, factories, helpers)
 
 ### E2E Tests (If Applicable)
 
@@ -146,22 +146,22 @@ Before starting this workflow, verify:
 - [ ] Implementation checklist created with clear structure
 - [ ] Each failing test mapped to concrete implementation tasks
 - [ ] Tasks include:
-    - [ ] Route/component creation
-    - [ ] Business logic implementation
-    - [ ] API integration
-    - [ ] data-testid attribute additions
-    - [ ] Error handling
-    - [ ] Test execution command
-    - [ ] Completion checkbox
+  - [ ] Route/component creation
+  - [ ] Business logic implementation
+  - [ ] API integration
+  - [ ] data-testid attribute additions
+  - [ ] Error handling
+  - [ ] Test execution command
+  - [ ] Completion checkbox
 - [ ] Red-Green-Refactor workflow documented in checklist
 - [ ] RED phase marked as complete (TEA responsibility)
 - [ ] GREEN phase tasks listed for DEV team
 - [ ] REFACTOR phase guidance provided
 - [ ] Execution commands provided:
-    - [ ] Run all tests: `npm run test:e2e`
-    - [ ] Run specific test file
-    - [ ] Run in headed mode
-    - [ ] Debug specific test
+  - [ ] Run all tests: `npm run test:e2e`
+  - [ ] Run specific test file
+  - [ ] Run in headed mode
+  - [ ] Debug specific test
 - [ ] Estimated effort included (hours or story points)
 
 ---
@@ -173,17 +173,17 @@ Before starting this workflow, verify:
 - [ ] Output file created at `{output_folder}/atdd-checklist-{story_id}.md`
 - [ ] Document follows template structure from `atdd-checklist-template.md`
 - [ ] Document includes all required sections:
-    - [ ] Story summary
-    - [ ] Acceptance criteria breakdown
-    - [ ] Failing tests created (paths and line counts)
-    - [ ] Data factories created
-    - [ ] Fixtures created
-    - [ ] Mock requirements
-    - [ ] Required data-testid attributes
-    - [ ] Implementation checklist
-    - [ ] Red-green-refactor workflow
-    - [ ] Execution commands
-    - [ ] Next steps for DEV team
+  - [ ] Story summary
+  - [ ] Acceptance criteria breakdown
+  - [ ] Failing tests created (paths and line counts)
+  - [ ] Data factories created
+  - [ ] Fixtures created
+  - [ ] Mock requirements
+  - [ ] Required data-testid attributes
+  - [ ] Implementation checklist
+  - [ ] Red-green-refactor workflow
+  - [ ] Execution commands
+  - [ ] Next steps for DEV team
 - [ ] Output shared with DEV workflow (manual handoff; not auto-consumed)
 
 ### All Tests Verified to Fail (RED Phase)
@@ -198,19 +198,19 @@ Before starting this workflow, verify:
 ### Summary Provided
 
 - [ ] Summary includes:
-    - [ ] Story ID
-    - [ ] Primary test level
-    - [ ] Test counts (E2E, API, Component)
-    - [ ] Test file paths
-    - [ ] Factory count
-    - [ ] Fixture count
-    - [ ] Mock requirements count
-    - [ ] data-testid count
-    - [ ] Implementation task count
-    - [ ] Estimated effort
-    - [ ] Next steps for DEV team
-    - [ ] Output file path
-    - [ ] Knowledge base references applied
+  - [ ] Story ID
+  - [ ] Primary test level
+  - [ ] Test counts (E2E, API, Component)
+  - [ ] Test file paths
+  - [ ] Factory count
+  - [ ] Fixture count
+  - [ ] Mock requirements count
+  - [ ] data-testid count
+  - [ ] Implementation task count
+  - [ ] Estimated effort
+  - [ ] Next steps for DEV team
+  - [ ] Output file path
+  - [ ] Knowledge base references applied
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 stepsCompleted: []
 inputDocuments: []
-workflowType: "prd"
+workflowType: 'prd'
 lastStep: 0
 ---
 

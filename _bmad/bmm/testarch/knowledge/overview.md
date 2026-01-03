@@ -59,26 +59,26 @@ npm install -D @seontechnologies/playwright-utils
 
 ```typescript
 // Direct import (pass Playwright context explicitly)
-import { apiRequest } from "@seontechnologies/playwright-utils"
+import { apiRequest } from '@seontechnologies/playwright-utils';
 
-test("direct usage", async ({ request }) => {
-	const { status, body } = await apiRequest({
-		request, // Must pass request context
-		method: "GET",
-		path: "/api/users",
-	})
-})
+test('direct usage', async ({ request }) => {
+  const { status, body } = await apiRequest({
+    request, // Must pass request context
+    method: 'GET',
+    path: '/api/users',
+  });
+});
 
 // Fixture import (context injected automatically)
-import { test } from "@seontechnologies/playwright-utils/fixtures"
+import { test } from '@seontechnologies/playwright-utils/fixtures';
 
-test("fixture usage", async ({ apiRequest }) => {
-	const { status, body } = await apiRequest({
-		// No need to pass request context
-		method: "GET",
-		path: "/api/users",
-	})
-})
+test('fixture usage', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    // No need to pass request context
+    method: 'GET',
+    path: '/api/users',
+  });
+});
 ```
 
 **Key Points**:
@@ -95,13 +95,13 @@ test("fixture usage", async ({ apiRequest }) => {
 
 ```typescript
 // Import specific utility
-import { apiRequest } from "@seontechnologies/playwright-utils/api-request"
+import { apiRequest } from '@seontechnologies/playwright-utils/api-request';
 
 // Import specific fixture
-import { test } from "@seontechnologies/playwright-utils/api-request/fixtures"
+import { test } from '@seontechnologies/playwright-utils/api-request/fixtures';
 
 // Import everything (use sparingly)
-import { apiRequest, recurse, log } from "@seontechnologies/playwright-utils"
+import { apiRequest, recurse, log } from '@seontechnologies/playwright-utils';
 ```
 
 **Key Points**:
@@ -118,36 +118,36 @@ import { apiRequest, recurse, log } from "@seontechnologies/playwright-utils"
 
 ```typescript
 // playwright/support/merged-fixtures.ts
-import { mergeTests } from "@playwright/test"
-import { test as apiRequestFixture } from "@seontechnologies/playwright-utils/api-request/fixtures"
-import { test as authFixture } from "@seontechnologies/playwright-utils/auth-session/fixtures"
-import { test as recurseFixture } from "@seontechnologies/playwright-utils/recurse/fixtures"
-import { test as logFixture } from "@seontechnologies/playwright-utils/log/fixtures"
+import { mergeTests } from '@playwright/test';
+import { test as apiRequestFixture } from '@seontechnologies/playwright-utils/api-request/fixtures';
+import { test as authFixture } from '@seontechnologies/playwright-utils/auth-session/fixtures';
+import { test as recurseFixture } from '@seontechnologies/playwright-utils/recurse/fixtures';
+import { test as logFixture } from '@seontechnologies/playwright-utils/log/fixtures';
 
 // Merge all fixtures into one test object
-export const test = mergeTests(apiRequestFixture, authFixture, recurseFixture, logFixture)
+export const test = mergeTests(apiRequestFixture, authFixture, recurseFixture, logFixture);
 
-export { expect } from "@playwright/test"
+export { expect } from '@playwright/test';
 ```
 
 ```typescript
 // In your tests
-import { test, expect } from "../support/merged-fixtures"
+import { test, expect } from '../support/merged-fixtures';
 
-test("all utilities available", async ({ apiRequest, authToken, recurse, log }) => {
-	await log.step("Making authenticated API request")
+test('all utilities available', async ({ apiRequest, authToken, recurse, log }) => {
+  await log.step('Making authenticated API request');
 
-	const { body } = await apiRequest({
-		method: "GET",
-		path: "/api/protected",
-		headers: { Authorization: `Bearer ${authToken}` },
-	})
+  const { body } = await apiRequest({
+    method: 'GET',
+    path: '/api/protected',
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
 
-	await recurse(
-		() => apiRequest({ method: "GET", path: `/status/${body.id}` }),
-		(res) => res.body.ready === true,
-	)
-})
+  await recurse(
+    () => apiRequest({ method: 'GET', path: `/status/${body.id}` }),
+    (res) => res.body.ready === true,
+  );
+});
 ```
 
 **Key Points**:
@@ -164,45 +164,45 @@ test("all utilities available", async ({ apiRequest, authToken, recurse, log }) 
 **1. Start with logging** (zero breaking changes):
 
 ```typescript
-import { log } from "@seontechnologies/playwright-utils"
+import { log } from '@seontechnologies/playwright-utils';
 
-test("existing test", async ({ page }) => {
-	await log.step("Navigate to page") // Just add logging
-	await page.goto("/dashboard")
-	// Rest of test unchanged
-})
+test('existing test', async ({ page }) => {
+  await log.step('Navigate to page'); // Just add logging
+  await page.goto('/dashboard');
+  // Rest of test unchanged
+});
 ```
 
 **2. Add API utilities** (for API tests):
 
 ```typescript
-import { test } from "@seontechnologies/playwright-utils/api-request/fixtures"
+import { test } from '@seontechnologies/playwright-utils/api-request/fixtures';
 
-test("API test", async ({ apiRequest }) => {
-	const { status, body } = await apiRequest({
-		method: "GET",
-		path: "/api/users",
-	})
+test('API test', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    method: 'GET',
+    path: '/api/users',
+  });
 
-	expect(status).toBe(200)
-})
+  expect(status).toBe(200);
+});
 ```
 
 **3. Expand to network utilities** (for UI tests):
 
 ```typescript
-import { test } from "@seontechnologies/playwright-utils/fixtures"
+import { test } from '@seontechnologies/playwright-utils/fixtures';
 
-test("UI with network control", async ({ page, interceptNetworkCall }) => {
-	const usersCall = interceptNetworkCall({
-		url: "**/api/users",
-	})
+test('UI with network control', async ({ page, interceptNetworkCall }) => {
+  const usersCall = interceptNetworkCall({
+    url: '**/api/users',
+  });
 
-	await page.goto("/dashboard")
-	const { responseJson } = await usersCall
+  await page.goto('/dashboard');
+  const { responseJson } = await usersCall;
 
-	expect(responseJson).toHaveLength(10)
-})
+  expect(responseJson).toHaveLength(10);
+});
 ```
 
 **4. Full integration** (merged fixtures):
@@ -225,36 +225,36 @@ Create merged-fixtures.ts and use across all tests.
 **❌ Don't mix direct and fixture imports in same test:**
 
 ```typescript
-import { apiRequest } from "@seontechnologies/playwright-utils"
-import { test } from "@seontechnologies/playwright-utils/auth-session/fixtures"
+import { apiRequest } from '@seontechnologies/playwright-utils';
+import { test } from '@seontechnologies/playwright-utils/auth-session/fixtures';
 
-test("bad", async ({ request, authToken }) => {
-	// Confusing - mixing direct (needs request) and fixture (has authToken)
-	await apiRequest({ request, method: "GET", path: "/api/users" })
-})
+test('bad', async ({ request, authToken }) => {
+  // Confusing - mixing direct (needs request) and fixture (has authToken)
+  await apiRequest({ request, method: 'GET', path: '/api/users' });
+});
 ```
 
 **✅ Use consistent import style:**
 
 ```typescript
-import { test } from "../support/merged-fixtures"
+import { test } from '../support/merged-fixtures';
 
-test("good", async ({ apiRequest, authToken }) => {
-	// Clean - all from fixtures
-	await apiRequest({ method: "GET", path: "/api/users" })
-})
+test('good', async ({ apiRequest, authToken }) => {
+  // Clean - all from fixtures
+  await apiRequest({ method: 'GET', path: '/api/users' });
+});
 ```
 
 **❌ Don't import everything when you need one utility:**
 
 ```typescript
-import * as utils from "@seontechnologies/playwright-utils" // Large bundle
+import * as utils from '@seontechnologies/playwright-utils'; // Large bundle
 ```
 
 **✅ Use subpath imports:**
 
 ```typescript
-import { apiRequest } from "@seontechnologies/playwright-utils/api-request" // Small bundle
+import { apiRequest } from '@seontechnologies/playwright-utils/api-request'; // Small bundle
 ```
 
 ## Reference Implementation
