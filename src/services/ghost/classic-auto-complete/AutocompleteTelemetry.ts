@@ -149,10 +149,12 @@ export class AutocompleteTelemetry {
 	 * 2. Sum of this event divided by the sum of the suggestion returned + cache hit events
 	 *
 	 * @param suggestionLength - Optional length of the accepted suggestion
+	 * @param languageId - The language ID of the file where the suggestion was accepted (optional)
 	 */
-	public captureAcceptSuggestion(suggestionLength?: number): void {
+	public captureAcceptSuggestion(suggestionLength?: number, languageId?: string): void {
 		this.captureEvent(TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, {
 			...(suggestionLength !== undefined && { suggestionLength }),
+			...(languageId !== undefined && { languageId }),
 		})
 	}
 }
