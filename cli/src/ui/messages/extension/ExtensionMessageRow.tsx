@@ -30,10 +30,15 @@ export const ExtensionMessageRow: React.FC<ExtensionMessageRowProps> = ({ messag
 			) : message.type === "say" ? (
 				<SayMessageRouter message={message} />
 			) : (
-				<Box>
+				<Box marginY={1}>
 					<Text color={theme.ui.text.dimmed} dimColor>
 						Unknown message type: {message.type}
 					</Text>
+					{message.text && (
+						<Box marginTop={1}>
+							<Text color={theme.ui.text.dimmed}>{message.text}</Text>
+						</Box>
+					)}
 				</Box>
 			)}
 		</ErrorBoundary>
