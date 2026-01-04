@@ -293,6 +293,11 @@
 		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais.",
 		"imagesRemovedNoSupport": "Imagens removidas, não suportadas pelo modelo."
 	},
+	"contextFeedback": {
+		"filesAddedToContext": "{{count}} arquivo(s) adicionado(s) ao contexto",
+		"fileAddedToContext": "Arquivo adicionado ao contexto",
+		"shiftDragHint": "Segure Shift enquanto arrasta para adicionar arquivos ao contexto"
+	},
 	"memoryWarning": {
 		"message": "O uso de memória está em {{percentage}}%. Por favor, reinicie seu IDE para evitar travamentos."
 	},
