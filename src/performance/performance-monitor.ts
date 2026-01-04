@@ -96,7 +96,9 @@ export class PerformanceMonitor {
 			).length
 
 			// Memory usage statistics
-			const memoryUsages = completedMetrics.map((m) => m.memoryUsage).filter(Boolean)
+			const memoryUsages = completedMetrics
+				.map((m) => m.memoryUsage)
+				.filter((m): m is NodeJS.MemoryUsage => m !== undefined)
 			if (memoryUsages.length > 0) {
 				const totalMemory = memoryUsages.reduce((sum, m) => sum + m.heapUsed, 0)
 				this.stats.memoryUsage.average = totalMemory / memoryUsages.length
