@@ -696,7 +696,7 @@ export const resetMessageCutoffAtom = atom(null, (get, set) => {
  */
 export const splitMessagesAtom = atom((get) => {
 	const allMessages = get(mergedMessagesAtom)
-	return splitMessages(allMessages)
+	return splitMessages(allMessages, { hidePartialMessages: true })
 })
 
 /**

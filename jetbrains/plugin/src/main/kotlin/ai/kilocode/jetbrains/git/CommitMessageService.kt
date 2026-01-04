@@ -129,9 +129,10 @@ class CommitMessageService {
     companion object {
         /**
          * Gets or creates the CommitMessageService instance for the project.
+         * @param project The project context for which to get the service
          */
-        fun getInstance(): CommitMessageService {
-            return ApplicationManager.getApplication().getService(CommitMessageService::class.java)
+        fun getInstance(project: Project): CommitMessageService {
+            return project.getService(CommitMessageService::class.java)
         }
     }
 }

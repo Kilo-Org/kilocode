@@ -108,6 +108,16 @@ const sidebars: SidebarsConfig = {
 				"plans/getting-started",
 				"plans/dashboard",
 				"plans/analytics",
+				{
+					type: "category",
+					label: "AI Adoption Dashboard",
+					items: [
+						"plans/adoption-dashboard/overview",
+						"plans/adoption-dashboard/understanding-your-score",
+						"plans/adoption-dashboard/improving-your-score",
+						"plans/adoption-dashboard/for-team-leads",
+					],
+				},
 				"plans/team-management",
 				"plans/custom-modes",
 				"plans/billing",
@@ -171,7 +181,7 @@ const sidebars: SidebarsConfig = {
 		{
 			type: "category",
 			label: "Customization",
-			items: ["features/settings-management", "features/custom-modes"],
+			items: ["features/settings-management", "features/custom-modes", "features/skills"],
 		},
 		{
 			type: "category",
