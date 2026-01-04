@@ -199,7 +199,8 @@ function shouldDisableReasoning(modelId: string, reasoningEffort: ReasoningEffor
 		modelId.startsWith("deepseek/deepseek-v3.1") ||
 		modelId.startsWith("deepseek/deepseek-chat-v3.1") ||
 		modelId.startsWith("x-ai/grok-4-fast") ||
-		modelId.startsWith("z-ai/glm-4.6")
+		modelId.startsWith("z-ai/glm-4.6") ||
+		modelId.startsWith("hf:zai-org/GLM-4.7")
 	return supportsReasoningToggle && reasoningEffort === "minimal"
 }
 // kilocode_change end

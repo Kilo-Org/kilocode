@@ -108,6 +108,12 @@ export async function getSyntheticModels(apiKey?: string): Promise<Record<string
 			models[model.id] = parseSyntheticModel(model)
 		}
 
+		// Debug logging to help with model availability issues
+		console.log(`[SYNTHETIC] Fetched ${Object.keys(models).length} models from API:`, Object.keys(models))
+		if (!models["hf:zai-org/GLM-4.7"]) {
+			console.warn("[SYNTHETIC] GLM-4.7 model not available from API, falling back to static configuration")
+		}
+
 		return models
 	} catch (error) {
 		console.error("Error fetching Synthetic models:", error)
