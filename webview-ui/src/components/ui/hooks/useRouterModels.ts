@@ -66,6 +66,10 @@ type RouterModelsQueryKey = {
 	nanoGptApiKey?: string
 	nanoGptModelList?: "all" | "personalized" | "subscription"
 	syntheticApiKey?: string
+	// OpenAI Compatible provider parameters
+	openAiApiKey?: string
+	openAiBaseUrl?: string
+	openAiHeaders?: Record<string, string>
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 // kilocode_change end

@@ -851,6 +851,7 @@ export const webviewMessageHandler = async (
 						inception: {},
 						kilocode: {},
 						gemini: {},
+						openai: {}, // OpenAI Compatible provider
 						// kilocode_change end
 						openrouter: {},
 						"vercel-ai-gateway": {},
@@ -901,6 +902,17 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.googleGeminiBaseUrl,
 					},
 				},
+				// kilocode_change start - OpenAI Compatible provider for chat panel model selection
+				{
+					key: "openai",
+					options: {
+						provider: "openai",
+						apiKey: apiConfiguration.openAiApiKey,
+						baseUrl: apiConfiguration.openAiBaseUrl,
+						headers: apiConfiguration.openAiHeaders,
+					},
+				},
+				// kilocode_change end
 				{
 					key: "requesty",
 					options: {
