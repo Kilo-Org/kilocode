@@ -22,9 +22,39 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { calculateApiCostAnthropic } from "../../shared/cost"
 import { convertOpenAIToolsToAnthropic } from "./kilocode/nativeToolCallHelpers"
 
+// kilocode_change start
+// Performance optimization: LRU cache for token counting to reduce API calls
+class TokenCache {
+	private cache = new Map<string, number>()
+	private readonly maxSize = 1000
+
+	private getContentHash(content: Array<Anthropic.Messages.ContentBlockParam>): string {
+		return JSON.stringify(content).slice(0, 100) // Simple hash for caching
+	}
+
+	get(content: Array<Anthropic.Messages.ContentBlockParam>): number | null {
+		const hash = this.getContentHash(content)
+		return this.cache.get(hash) || null
+	}
+
+	set(content: Array<Anthropic.Messages.ContentBlockParam>, count: number): void {
+		const hash = this.getContentHash(content)
+		if (this.cache.size >= this.maxSize) {
+			const firstKey = this.cache.keys().next().value
+			if (firstKey) {
+				this.cache.delete(firstKey)
+			}
+		}
+		this.cache.set(hash, count)
+	}
+}
+
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Anthropic
+
+	// Performance optimization: Token cache instance
+	private tokenCache = new TokenCache()
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -476,6 +506,12 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	 * @returns A promise resolving to the token count
 	 */
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+		// Performance optimization: Check cache first
+		const cached = this.tokenCache.get(content)
+		if (cached !== null) {
+			return cached
+		}
+
 		try {
 			// Use the current model
 			const { id: model } = this.getModel()
@@ -486,13 +522,18 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 				messages: [{ role: "user", content: content }],
 			})
 
+			// Cache the result for future use
+			this.tokenCache.set(content, response.input_tokens)
 			return response.input_tokens
 		} catch (error) {
 			// Log error but fallback to tiktoken estimation
 			console.warn("Anthropic token counting failed, using fallback", error)
 
 			// Use the base provider's implementation as fallback
-			return super.countTokens(content)
+			const fallbackCount = await super.countTokens(content)
+			// Cache the fallback result as well
+			this.tokenCache.set(content, fallbackCount)
+			return fallbackCount
 		}
 	}
 	// kilocode_change end
