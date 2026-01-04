@@ -98,6 +98,8 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 			geminiApiKey: apiConfiguration?.geminiApiKey,
 			googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 			syntheticApiKey: apiConfiguration?.syntheticApiKey,
+			zenmuxBaseUrl: apiConfiguration?.zenmuxBaseUrl,
+			zenmuxApiKey: apiConfiguration?.zenmuxApiKey,
 		},
 		// kilocode_change end
 		{
@@ -523,6 +525,11 @@ function getSelectedModel({
 				supportsPromptCache: true,
 				description: "GPT-5: The best model for coding and agentic tasks across domains",
 			}
+			return { id, info }
+		}
+		case "zenmux": {
+			const id = getValidatedModelId(apiConfiguration.zenmuxModelId, routerModels.zenmux, defaultModelId)
+			const info = routerModels.zenmux?.[id]
 			return { id, info }
 		}
 		// kilocode_change end

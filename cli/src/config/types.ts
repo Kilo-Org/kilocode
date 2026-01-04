@@ -166,6 +166,19 @@ type OpenRouterProviderConfig = BaseProviderConfig & {
 	openRouterZdr?: boolean
 }
 
+// kilocode_change start
+type ZenMuxProviderConfig = BaseProviderConfig & {
+	provider: "zenmux"
+	zenmuxModelId?: string
+	zenmuxApiKey?: string
+	zenmuxBaseUrl?: string
+	zenmuxSpecificProvider?: string
+	zenmuxUseMiddleOutTransform?: boolean
+	zenmuxProviderDataCollection?: "allow" | "deny"
+	zenmuxProviderSort?: "price" | "throughput" | "latency"
+}
+// kilocode_change end
+
 type OllamaProviderConfig = BaseProviderConfig & {
 	provider: "ollama"
 	ollamaModelId?: string
@@ -447,6 +460,7 @@ export type ProviderConfig =
 	| OpenAINativeProviderConfig
 	| OpenAIProviderConfig
 	| OpenRouterProviderConfig
+	| ZenMuxProviderConfig // kilocode_change
 	| OllamaProviderConfig
 	| LMStudioProviderConfig
 	| GlamaProviderConfig

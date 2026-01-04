@@ -48,6 +48,7 @@ type ModelIdKey = keyof Pick<
 	| "ioIntelligenceModelId"
 	| "vercelAiGatewayModelId"
 	| "apiModelId"
+	| "zenmuxModelId"
 >
 
 interface ModelPickerProps {

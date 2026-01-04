@@ -11,6 +11,7 @@ import {
 	AwsBedrockHandler,
 	CerebrasHandler,
 	OpenRouterHandler,
+	ZenMuxHandler, // kilocode_change
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
@@ -162,6 +163,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change end
 		case "openrouter":
 			return new OpenRouterHandler(options)
+		case "zenmux": // kilocode_change
+			return new ZenMuxHandler(options) // kilocode_change
 		case "bedrock":
 			return new AwsBedrockHandler(options)
 		case "vertex":

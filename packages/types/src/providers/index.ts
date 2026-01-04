@@ -16,6 +16,7 @@ export * from "./synthetic.js"
 export * from "./inception.js"
 export * from "./minimax.js"
 export * from "./glama.js"
+export * from "./zenmux.js"
 // kilocode_change end
 export * from "./groq.js"
 export * from "./huggingface.js"
@@ -53,6 +54,7 @@ import { featherlessDefaultModelId } from "./featherless.js"
 import { fireworksDefaultModelId } from "./fireworks.js"
 import { geminiDefaultModelId } from "./gemini.js"
 import { glamaDefaultModelId } from "./glama.js" // kilocode_change
+import { zenmuxDefaultModelId } from "./zenmux.js" // kilocode_change
 import { groqDefaultModelId } from "./groq.js"
 import { ioIntelligenceDefaultModelId } from "./io-intelligence.js"
 import { litellmDefaultModelId } from "./lite-llm.js"
@@ -87,6 +89,8 @@ export function getProviderDefaultModelId(
 	switch (provider) {
 		case "openrouter":
 			return openRouterDefaultModelId
+		case "zenmux": // kilocode_change
+			return zenmuxDefaultModelId // kilocode_change
 		case "requesty":
 			return requestyDefaultModelId
 		// kilocode_change start

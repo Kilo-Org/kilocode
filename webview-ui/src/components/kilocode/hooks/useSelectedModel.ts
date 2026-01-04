@@ -19,6 +19,7 @@ export const getModelIdKey = ({
 	| "ovhCloudAiEndpointsModelId" // kilocode_change
 	| "nanoGptModelId" // kilocode_change
 	| "apiModelId"
+	| "zenmuxModelId"
 > => {
 	switch (provider) {
 		case "openrouter": {
@@ -57,6 +58,9 @@ export const getModelIdKey = ({
 		}
 		case "nano-gpt": {
 			return "nanoGptModelId"
+		}
+		case "zenmux": {
+			return "zenmuxModelId"
 		}
 		// kilocode_change end
 		default: {

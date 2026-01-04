@@ -18,6 +18,7 @@ export { Ollama } from "./Ollama"
 export { OpenAI } from "./OpenAI"
 export { OpenAICompatible } from "./OpenAICompatible"
 export { OpenRouter } from "./OpenRouter"
+export { ZenMux } from "./ZenMux" // kilocode_change
 export { QwenCode } from "./QwenCode"
 export { Roo } from "./Roo"
 export { Requesty } from "./Requesty"

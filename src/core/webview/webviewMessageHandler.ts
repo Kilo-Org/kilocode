@@ -842,7 +842,6 @@ export const webviewMessageHandler = async (
 			// Optional single provider filter from webview
 			const requestedProvider = message?.values?.provider
 			const providerFilter = requestedProvider ? toRouterName(requestedProvider) : undefined
-
 			const routerModels: Record<RouterName, ModelRecord> = providerFilter
 				? ({} as Record<RouterName, ModelRecord>)
 				: {
@@ -868,8 +867,8 @@ export const webviewMessageHandler = async (
 						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
 						"nano-gpt": {}, // kilocode_change
+						zenmux: {},
 					}
-
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 				try {
 					return await getModels(options)
@@ -970,6 +969,14 @@ export const webviewMessageHandler = async (
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
 				},
+				{
+					key: "zenmux",
+					options: {
+						provider: "zenmux",
+						apiKey: apiConfiguration.zenmuxApiKey,
+						baseUrl: apiConfiguration.zenmuxBaseUrl ?? "https://zenmux.ai/api/v1",
+					},
+				},
 			]
 			// kilocode_change end
 
@@ -1012,7 +1019,6 @@ export const webviewMessageHandler = async (
 
 			results.forEach((result, index) => {
 				const routerName = modelFetchPromises[index].key
-
 				if (result.status === "fulfilled") {
 					routerModels[routerName] = result.value.models
 
