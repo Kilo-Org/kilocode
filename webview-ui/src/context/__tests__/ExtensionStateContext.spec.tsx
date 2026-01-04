@@ -237,6 +237,8 @@ describe("mergeExtensionState", () => {
 			enableCheckpoints: true,
 			writeDelayMs: 1000,
 			requestDelaySeconds: 5,
+			autoRetryMax: 0,
+			autoRetryStrategy: "exponential",
 			mode: "default",
 			experiments: {} as Record<ExperimentId, boolean>,
 			customModes: [],

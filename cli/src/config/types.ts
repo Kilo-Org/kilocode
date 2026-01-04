@@ -30,6 +30,8 @@ export interface AutoApprovalBrowserConfig {
 export interface AutoApprovalRetryConfig {
 	enabled?: boolean
 	delay?: number
+	retries?: number
+	strategy?: "constant" | "linear" | "exponential"
 }
 
 /**

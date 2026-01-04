@@ -3243,12 +3243,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 							// Apply exponential backoff similar to first-chunk errors when auto-resubmit is enabled
 							const stateForBackoff = await this.providerRef.deref()?.getState()
-							if (stateForBackoff?.autoApprovalEnabled && stateForBackoff?.alwaysApproveResubmit) {
-								await this.backoffAndAnnounce(
-									currentItem.retryAttempt ?? 0,
-									error,
-									streamingFailedMessage,
-								)
+							const currentAttempt = currentItem.retryAttempt ?? 0
+							const maxRetries = stateForBackoff?.autoRetryMax ?? 0
+
+							if (
+								stateForBackoff?.autoApprovalEnabled &&
+								stateForBackoff?.alwaysApproveResubmit &&
+								(maxRetries === 0 || currentAttempt < maxRetries)
+							) {
+								await this.backoffAndAnnounce(currentAttempt, error, streamingFailedMessage)
 
 								// Check if task was aborted during the backoff
 								if (this.abort) {
@@ -3260,17 +3263,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									await this.abortTask()
 									break
 								}
+
+								// Push the same content back onto the stack to retry, incrementing the retry attempt counter
+								stack.push({
+									userContent: currentUserContent,
+									includeFileDetails: false,
+									retryAttempt: currentAttempt + 1,
+								})
+
+								// Continue to retry the request
+								continue
 							}
-
-							// Push the same content back onto the stack to retry, incrementing the retry attempt counter
-							stack.push({
-								userContent: currentUserContent,
-								includeFileDetails: false,
-								retryAttempt: (currentItem.retryAttempt ?? 0) + 1,
-							})
-
-							// Continue to retry the request
-							continue
 						}
 					}
 				} finally {
@@ -3510,13 +3513,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// Check if we should auto-retry or prompt the user
 					// Reuse the state variable from above
-					if (state?.autoApprovalEnabled && state?.alwaysApproveResubmit) {
+					const currentAttemptEmpty = currentItem.retryAttempt ?? 0
+					const maxRetriesEmpty = state?.autoRetryMax ?? 0
+
+					if (
+						state?.autoApprovalEnabled &&
+						state?.alwaysApproveResubmit &&
+						(maxRetriesEmpty === 0 || currentAttemptEmpty < maxRetriesEmpty)
+					) {
 						// Auto-retry with backoff - don't persist failure message when retrying
 						const errorMsg =
 							"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output."
 
 						await this.backoffAndAnnounce(
-							currentItem.retryAttempt ?? 0,
+							currentAttemptEmpty,
 							new Error("Empty assistant response"),
 							errorMsg,
 						)
@@ -3534,7 +3544,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						stack.push({
 							userContent: currentUserContent,
 							includeFileDetails: false,
-							retryAttempt: (currentItem.retryAttempt ?? 0) + 1,
+							retryAttempt: currentAttemptEmpty + 1,
 							userMessageWasRemoved: true,
 						})
 
@@ -3888,7 +3898,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			apiConfiguration,
 			autoApprovalEnabled,
 			alwaysApproveResubmit,
-			requestDelaySeconds,
 			mode,
 			autoCondenseContext = true,
 			autoCondenseContextPercent = 100,
@@ -4229,34 +4238,41 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// kilocode_change end
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
 			if (autoApprovalEnabled && alwaysApproveResubmit) {
-				let errorMsg
-
-				if (error.error?.metadata?.raw) {
-					errorMsg = JSON.stringify(error.error.metadata.raw, null, 2)
-				} else if (error.message) {
-					errorMsg = error.message
+				const maxRetries = state?.autoRetryMax || 0
+				if (maxRetries > 0 && retryAttempt >= maxRetries) {
+					// Max retries reached, fall through to user prompt
 				} else {
-					errorMsg = "Unknown error"
+					let errorMsg
+
+					if (error.error?.metadata?.raw) {
+						errorMsg = JSON.stringify(error.error.metadata.raw, null, 2)
+					} else if (error.message) {
+						errorMsg = error.message
+					} else {
+						errorMsg = "Unknown error"
+					}
+
+					// Apply shared exponential backoff and countdown UX
+					await this.backoffAndAnnounce(retryAttempt, error, errorMsg)
+
+					// CRITICAL: Check if task was aborted during the backoff countdown
+					// This prevents infinite loops when users cancel during auto-retry
+					// Without this check, the recursive call below would continue even after abort
+					if (this.abort) {
+						throw new Error(
+							`[Task#attemptApiRequest] task ${this.taskId}.${this.instanceId} aborted during retry`,
+						)
+					}
+
+					// Delegate generator output from the recursive call with
+					// incremented retry count.
+					yield* this.attemptApiRequest(retryAttempt + 1)
+
+					return
 				}
+			}
 
-				// Apply shared exponential backoff and countdown UX
-				await this.backoffAndAnnounce(retryAttempt, error, errorMsg)
-
-				// CRITICAL: Check if task was aborted during the backoff countdown
-				// This prevents infinite loops when users cancel during auto-retry
-				// Without this check, the recursive call below would continue even after abort
-				if (this.abort) {
-					throw new Error(
-						`[Task#attemptApiRequest] task ${this.taskId}.${this.instanceId} aborted during retry`,
-					)
-				}
-
-				// Delegate generator output from the recursive call with
-				// incremented retry count.
-				yield* this.attemptApiRequest(retryAttempt + 1)
-
-				return
-			} else {
+			{
 				const { response } = await this.ask(
 					"api_req_failed",
 					error.message ?? JSON.stringify(serializeError(error), null, 2),
@@ -4304,11 +4320,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		try {
 			const state = await this.providerRef.deref()?.getState()
 			const baseDelay = state?.requestDelaySeconds || 5
+			const strategy = state?.autoRetryStrategy || "exponential"
 
-			let exponentialDelay = Math.min(
-				Math.ceil(baseDelay * Math.pow(2, retryAttempt)),
-				MAX_EXPONENTIAL_BACKOFF_SECONDS,
-			)
+			let retryDelay = baseDelay
+			if (strategy === "linear") {
+				retryDelay = baseDelay * (retryAttempt + 1)
+			} else if (strategy === "exponential") {
+				retryDelay = Math.min(Math.ceil(baseDelay * Math.pow(2, retryAttempt)), MAX_EXPONENTIAL_BACKOFF_SECONDS)
+			}
 
 			// Respect provider rate limit window
 			let rateLimitDelay = 0
@@ -4325,11 +4344,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				)
 				const match = retryInfo?.retryDelay?.match?.(/^(\d+)s$/)
 				if (match) {
-					exponentialDelay = Number(match[1]) + 1
+					retryDelay = Number(match[1]) + 1
 				}
 			}
 
-			const finalDelay = Math.max(exponentialDelay, rateLimitDelay)
+			const finalDelay = Math.max(retryDelay, rateLimitDelay)
 			if (finalDelay <= 0) return
 
 			// Build header text; fall back to error message if none provided
