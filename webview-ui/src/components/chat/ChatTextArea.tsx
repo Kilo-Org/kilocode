@@ -4,7 +4,7 @@ import DynamicTextArea from "react-textarea-autosize"
 
 import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { WebviewMessage } from "@roo/WebviewMessage"
-import { Mode, getAllModes } from "@roo/modes"
+import { Mode, getAllModes } from "@roo/modes-shared"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import type { ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
 

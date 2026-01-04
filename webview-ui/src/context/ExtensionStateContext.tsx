@@ -20,7 +20,7 @@ import { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata, Command
 import { findLastIndex } from "@roo/array"
 import { McpServer } from "@roo/mcp"
 import { checkExistKey } from "@roo/checkExistApiConfig"
-import { Mode, defaultModeSlug, defaultPrompts } from "@roo/modes"
+import { Mode, defaultModeSlug, defaultPrompts } from "@roo/modes-shared"
 import { CustomSupportPrompts } from "@roo/support-prompt"
 import { experimentDefault } from "@roo/experiments"
 import { RouterModels } from "@roo/api"
