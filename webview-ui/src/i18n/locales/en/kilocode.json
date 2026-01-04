@@ -44,6 +44,11 @@
 		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more.",
 		"imagesRemovedNoSupport": "Images removed, unsupported by model."
 	},
+	"contextFeedback": {
+		"filesAddedToContext": "{{count}} file(s) added to context",
+		"fileAddedToContext": "File added to context",
+		"shiftDragHint": "Hold Shift while dragging to add files to context"
+	},
 	"settings": {
 		"sections": {
 			"mcp": "MCP Servers"

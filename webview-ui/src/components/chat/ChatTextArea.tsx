@@ -31,6 +31,7 @@ import { KiloProfileSelector } from "../kilocode/chat/KiloProfileSelector"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { ImageWarningBanner } from "./ImageWarningBanner"
+import { ContextFeedbackBanner, FeedbackType } from "./ContextFeedbackBanner"
 import { VolumeX, Pin, Check, WandSparkles, SendHorizontal, Paperclip, MessageSquareX } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { MicrophoneButton } from "./MicrophoneButton" // kilocode_change: STT microphone button
@@ -291,6 +292,14 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			return () => window.removeEventListener("message", messageHandler)
 		}, [setInputValue, searchRequestId, inputValue, onSend])
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
+		// kilocode_change start: Context feedback state
+		const [contextFeedback, setContextFeedback] = useState<{
+			visible: boolean
+			type: FeedbackType
+			messageKey: string
+			interpolations?: Record<string, string | number>
+		}>({ visible: false, type: "success", messageKey: "" })
+		// kilocode_change end: Context feedback state
 		// kilocode_change start: Slash commands state
 		const [showSlashCommandsMenu, setShowSlashCommandsMenu] = useState(false)
 		const [selectedSlashCommandsIndex, setSelectedSlashCommandsIndex] = useState(0)
@@ -445,6 +454,19 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
 		}, [inputValue, setInputValue, t])
+
+		// kilocode_change start: Context feedback handlers
+		const showContextFeedback = useCallback(
+			(type: FeedbackType, messageKey: string, interpolations?: Record<string, string | number>) => {
+				setContextFeedback({ visible: true, type, messageKey, interpolations })
+			},
+			[],
+		)
+
+		const dismissContextFeedback = useCallback(() => {
+			setContextFeedback((prev) => ({ ...prev, visible: false }))
+		}, [])
+		// kilocode_change end: Context feedback handlers
 
 		// kilocode_change start: Image and speech handlers
 		const showImageWarning = useCallback(
@@ -1237,8 +1259,18 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						const newCursorPosition = cursorPosition + totalLength
 						setCursorPosition(newCursorPosition)
 						setIntendedCursorPosition(newCursorPosition)
+	
+						// kilocode_change start: Show feedback when files are added
+						if (lines.length === 1) {
+							showContextFeedback("success", "kilocode:contextFeedback.fileAddedToContext")
+						} else {
+							showContextFeedback("success", "kilocode:contextFeedback.filesAddedToContext", {
+								count: lines.length,
+							})
+						}
+						// kilocode_change end: Show feedback when files are added
 					}
-
+	
 					return
 				}
 
@@ -1821,6 +1853,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							isVisible={!!imageWarning}
 						/>
 						{/* kilocode_change end: ImageWarningBanner integration */}
+						{/* kilocode_change start: ContextFeedbackBanner integration */}
+						<ContextFeedbackBanner
+							type={contextFeedback.type}
+							messageKey={contextFeedback.messageKey}
+							interpolations={contextFeedback.interpolations}
+							onDismiss={dismissContextFeedback}
+							isVisible={contextFeedback.visible}
+						/>
+						{/* kilocode_change end: ContextFeedbackBanner integration */}
 						{/* kilocode_change start: pull slash commands from Cline */}
 						{showSlashCommandsMenu && (
 							<div ref={slashCommandsMenuContainerRef}>
