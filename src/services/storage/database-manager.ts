@@ -5,6 +5,9 @@ import { open, Database as SqliteDatabase } from "sqlite"
 import path from "path"
 import fs from "fs/promises"
 
+// Performance optimization: Import background worker
+import { backgroundWorker } from "../../performance/background-worker"
+
 export interface FileRecord {
 	id: string
 	path: string
@@ -107,11 +110,17 @@ export class DatabaseManager {
 			driver: Database,
 		})
 
+		// Performance optimization: Connection pooling settings
 		// Enable WAL mode for better concurrent read/write performance
 		await this.db.exec("PRAGMA journal_mode=WAL")
 		await this.db.exec("PRAGMA synchronous=NORMAL")
 		await this.db.exec("PRAGMA cache_size=10000")
 		await this.db.exec("PRAGMA temp_store=memory")
+
+		// Connection pool optimizations
+		await this.db.exec("PRAGMA busy_timeout=30000") // 30 seconds timeout
+		await this.db.exec("PRAGMA wal_autocheckpoint=1000") // Auto-checkpoint every 1000 pages
+		await this.db.exec("PRAGMA mmap_size=268435456") // Use memory mapping for better performance
 
 		// Create tables with proper indexing
 		await this.createTables()
@@ -248,15 +257,25 @@ export class DatabaseManager {
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_symbols_type ON symbols(type)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_symbols_file_id ON symbols(file_id)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_symbols_parent ON symbols(parent_symbol_id)")
+		// Performance optimization: Composite indexes for common queries
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_symbols_file_type ON symbols(file_id, type)")
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_symbols_name_type ON symbols(name, type)")
 
 		// Relationships indexes
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_relationships_from ON relationships(from_symbol_id)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_relationships_to ON relationships(to_symbol_id)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_relationships_type ON relationships(type)")
+		// Performance optimization: Composite indexes for relationship queries
+		await this.db.exec(
+			"CREATE INDEX IF NOT EXISTS idx_relationships_from_type ON relationships(from_symbol_id, type)",
+		)
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_relationships_to_type ON relationships(to_symbol_id, type)")
 
 		// Code chunks indexes
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_file_id ON code_chunks(file_id)")
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_symbol_id ON code_chunks(symbol_id)")
+		// Performance optimization: Composite index for file+symbol queries
+		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_file_symbol ON code_chunks(file_id, symbol_id)")
 
 		// kilocode_change - External context indexes
 		await this.db.exec("CREATE INDEX IF NOT EXISTS idx_external_sources_type ON external_context_sources(type)")
@@ -384,7 +403,7 @@ export class DatabaseManager {
 
 		if (!symbol) return null
 
-		// Get inheritance chain
+		// Get inheritance chain with depth limit for performance
 		const inheritanceChain = await this.db.all(
 			`
 			WITH RECURSIVE inheritance AS (
@@ -398,7 +417,7 @@ export class DatabaseManager {
 				FROM symbols s2
 				JOIN relationships r ON s2.id = r.to_symbol_id
 				JOIN inheritance ON r.from_symbol_id = inheritance.id
-				WHERE r.type = 'INHERITS'
+				WHERE r.type = 'INHERITS' AND inheritance.level < 10 -- Performance: Limit recursion depth
 			)
 			SELECT * FROM inheritance ORDER BY level
 		`,
@@ -429,17 +448,18 @@ export class DatabaseManager {
 				
 				UNION ALL
 				
-				-- Indirect dependents
+				-- Indirect dependents with depth limit for performance
 				SELECT s.id, s.name, s.type, f.path as file_path, dependents.level + 1
 				FROM symbols s
 				JOIN relationships r ON s.id = r.from_symbol_id
 				JOIN files f ON s.file_id = f.id
 				JOIN dependents ON r.to_symbol_id = dependents.id
-				WHERE r.type IN ('CALLS', 'REFERENCES')
+				WHERE r.type IN ('CALLS', 'REFERENCES') AND dependents.level < 20 -- Performance: Limit recursion depth
 			)
 			SELECT DISTINCT file_path, name, type, level
 			FROM dependents
 			ORDER BY level, file_path
+			LIMIT 1000 -- Performance: Limit total results
 		`,
 			changedSymbolId,
 		)
@@ -500,27 +520,34 @@ export class DatabaseManager {
 	}
 
 	/**
-	 * Clean up orphaned records
+	 * Clean up orphaned records in background
 	 */
 	async cleanupOrphanedRecords(): Promise<void> {
 		if (!this.db) throw new Error("Database not initialized")
 
-		// Clean up orphaned symbols
-		await this.db.run("DELETE FROM symbols WHERE file_id NOT IN (SELECT id FROM files)")
+		// Performance optimization: Run cleanup in background to avoid blocking
+		await backgroundWorker.executeInBackground(
+			"database-cleanup",
+			async () => {
+				// Clean up orphaned symbols
+				await this.db.run("DELETE FROM symbols WHERE file_id NOT IN (SELECT id FROM files)")
 
-		// Clean up orphaned relationships
-		await this.db.run(`
-			DELETE FROM relationships 
-			WHERE from_symbol_id NOT IN (SELECT id FROM symbols) 
-			OR to_symbol_id NOT IN (SELECT id FROM symbols)
-		`)
+				// Clean up orphaned relationships
+				await this.db.run(`
+					DELETE FROM relationships 
+					WHERE from_symbol_id NOT IN (SELECT id FROM symbols) 
+					OR to_symbol_id NOT IN (SELECT id FROM symbols)
+				`)
 
-		// Clean up orphaned code chunks
-		await this.db.run(`
-			DELETE FROM code_chunks 
-			WHERE file_id NOT IN (SELECT id FROM files) 
-			OR (symbol_id IS NOT NULL AND symbol_id NOT IN (SELECT id FROM symbols))
-		`)
+				// Clean up orphaned code chunks
+				await this.db.run(`
+					DELETE FROM code_chunks 
+					WHERE file_id NOT IN (SELECT id FROM files) 
+					OR (symbol_id IS NOT NULL AND symbol_id NOT IN (SELECT id FROM symbols))
+				`)
+			},
+			"low", // Low priority for background tasks
+		)
 	}
 
 	/**
