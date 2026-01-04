@@ -1,5 +1,5 @@
 import React from "react"
-import { Mode, defaultModeSlug, getAllModes } from "@roo/modes"
+import { Mode, defaultModeSlug, getAllModes } from "@roo/modes-shared"
 import { ModeConfig } from "@roo-code/types"
 import { SelectDropdown, DropdownOptionType } from "@/components/ui"
 import type { DropdownOption } from "@/components/ui/select-dropdown" // kilocode_change

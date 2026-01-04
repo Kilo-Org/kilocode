@@ -1,0 +1,49 @@
+name: "CIS"
+version: "1.0.0"
+description: "Code Intelligence System - Code analysis and generation module"
+type: "code"
+author: "BMAD Team"
+license: "MIT"
+
+# Module metadata
+metadata:
+  category: "code"
+  priority: 9
+  required: true
+
+# Supported modes
+modes:
+  - "bmad-bmm-master"
+  - "bmad-bmm-analyst"
+  - "bmad-bmm-architect"
+  - "bmad-bmm-dev"
+  - "bmad-bmm-pm"
+  - "bmad-bmm-sm"
+  - "bmad-bmm-tea"
+  - "bmad-bmm-tech-writer"
+  - "bmad-bmm-ux-designer"
+  - "bmad-bmm-quick-flow-solo-dev"
+
+# Dependencies
+dependencies:
+  - "bmb"
+
+# Module capabilities
+capabilities:
+  - "code_analysis"
+  - "code_generation"
+  - "refactoring"
+  - "test_generation"
+  - "documentation_generation"
+
+# Configuration
+config:
+  max_file_size: 1048576
+  supported_languages:
+    - "typescript"
+    - "javascript"
+    - "python"
+    - "java"
+    - "go"
+    - "rust"
+    - "csharp"

@@ -63,6 +63,9 @@ deps/vscode/*
 # Qdrant
 qdrant_storage/
 
+# Local codebase index
+kilocode-index/
+
 # allow multiple local clones with different workspaces with different colors
 # to make it easier to work on features in parallel
 *.code-workspace

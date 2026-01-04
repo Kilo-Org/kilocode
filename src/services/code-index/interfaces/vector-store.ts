@@ -35,6 +35,20 @@ export interface IVectorStore {
 		maxResults?: number,
 	): Promise<VectorStoreSearchResult[]>
 
+	// kilocode_change start
+	/**
+	 * Optional hybrid search that combines vector similarity with full-text relevance.
+	 * Implementations that don't support hybrid search can omit this method.
+	 */
+	hybridSearch?: (
+		queryVector: number[],
+		queryText: string,
+		directoryPrefix?: string,
+		minScore?: number,
+		maxResults?: number,
+	) => Promise<VectorStoreSearchResult[]>
+	// kilocode_change end
+
 	/**
 	 * Deletes points by file path
 	 * @param filePath Path of the file to delete points for

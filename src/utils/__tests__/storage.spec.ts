@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 
 vi.mock("fs/promises", async () => {
-	const mod = await import("../../__mocks__/fs/promises")
+	const mod = await import("../../__mocks__/fs/promises.js")
 	return (mod as any).default ?? mod
 })
 
@@ -23,7 +23,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		} as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		const result = await getStorageBasePath(defaultPath)
 
@@ -42,7 +42,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		const showErrorSpy = vi.spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		await (fsPromises as any).mkdir(customPath, { recursive: true })
 
@@ -69,7 +69,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		} as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		const result = await getStorageBasePath(defaultPath)
 
@@ -88,7 +88,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		const showErrorSpy = vi.spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		const mkdirMock = (fsPromises as any).mkdir as ReturnType<typeof vi.fn>
 		mkdirMock.mockImplementationOnce(async (p: string) => {
@@ -114,7 +114,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		} as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		await getStorageBasePath(defaultPath)
 
@@ -133,7 +133,7 @@ describe("getStorageBasePath - customStoragePath", () => {
 		const showErrorSpy = vi.spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined as any)
 
 		const fsPromises = await import("fs/promises")
-		const { getStorageBasePath } = await import("../storage")
+		const { getStorageBasePath } = await import("../storage.js")
 
 		const accessMock = (fsPromises as any).access as ReturnType<typeof vi.fn>
 		const constants = (fsPromises as any).constants

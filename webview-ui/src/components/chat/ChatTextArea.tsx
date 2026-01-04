@@ -4,7 +4,7 @@ import DynamicTextArea from "react-textarea-autosize"
 
 import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-mentions"
 import { WebviewMessage } from "@roo/WebviewMessage"
-import { Mode, getAllModes } from "@roo/modes"
+import { Mode, getAllModes } from "@roo/modes-shared"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import type { ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
 
@@ -39,6 +39,9 @@ import { VoiceRecordingCursor } from "./VoiceRecordingCursor" // kilocode_change
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
 import { useSTT } from "@/hooks/useSTT" // kilocode_change: STT hook
+
+// RTL Support
+import { getTextDirection } from "@/utils/rtl-detection"
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -1507,6 +1510,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					)}
 					style={{
 						color: "transparent",
+						direction: getTextDirection(displayValue),
+						textAlign: getTextDirection(displayValue) === "rtl" ? "right" : "left",
+						unicodeBidi: "plaintext",
 					}}
 				/>
 				<DynamicTextArea
@@ -1558,6 +1564,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						border: isRecording
 							? "1px solid var(--vscode-editorError-foreground)"
 							: "1px solid transparent",
+						direction: getTextDirection(displayValue),
+						textAlign: getTextDirection(displayValue) === "rtl" ? "right" : "left",
+						unicodeBidi: "plaintext",
 					}}
 					// kilocode_change end - isRecording active
 					className={cn(

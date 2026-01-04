@@ -1,16 +1,41 @@
-import { Fzf } from "fzf"
-import { HistoryItem } from "@roo-code/types"
-import { highlightFzfMatch } from "../../../webview-ui/src/utils/highlight" // weird hack, but apparently it works
-import { TaskHistoryRequestPayload, TaskHistoryResponsePayload } from "../WebviewMessage"
-
 const PAGE_SIZE = 10
 
-export function getTaskHistory(
-	taskHistory: HistoryItem[],
+// Dynamic import of Fzf since it's an ES module
+async function getFzf() {
+	const fzfModule = await import("fzf")
+	return fzfModule.Fzf
+}
+
+// Dynamic import of highlight function since it's an ES module
+async function getHighlightFzfMatch() {
+	const highlightModule = await import("../../../webview-ui/src/utils/highlight.js")
+	return highlightModule.highlightFzfMatch
+}
+
+export async function getTaskHistory(
+	taskHistory: any[],
 	cwd: string,
-	request: TaskHistoryRequestPayload,
-): TaskHistoryResponsePayload {
-	let tasks = taskHistory.filter((item) => item.ts && item.task)
+	request: any,
+): Promise<{
+	requestId: string
+	historyItems: any[]
+	pageIndex: number
+	pageCount: number
+}> {
+	// Validate input
+	if (!Array.isArray(taskHistory)) {
+		throw new Error("taskHistory must be an array")
+	}
+
+	if (!request || typeof request !== "object") {
+		throw new Error("request must be an object")
+	}
+
+	if (typeof request.requestId !== "string") {
+		throw new Error("request.requestId must be a string")
+	}
+
+	let tasks = taskHistory.filter((item) => item && item.ts && item.task)
 
 	if (request.workspace === "current") {
 		tasks = tasks.filter((item) => item.workspace === cwd)
@@ -20,23 +45,30 @@ export function getTaskHistory(
 		tasks = tasks.filter((item) => item.isFavorited)
 	}
 
-	if (request.search) {
-		const searchResults = new Fzf(tasks, {
-			selector: (item) => item.task,
-		}).find(request.search)
-		tasks = searchResults.map((result) => {
-			const positions = Array.from(result.positions)
-			const taskEndIndex = result.item.task.length
+	if (request.search && typeof request.search === "string") {
+		try {
+			const Fzf = await getFzf()
+			const highlightFzfMatch = await getHighlightFzfMatch()
+			const searchResults = new Fzf(tasks, {
+				selector: (item: any) => item.task || "",
+			}).find(request.search)
+			tasks = searchResults.map((result: any) => {
+				const positions = Array.from(result.positions) as number[]
+				const taskEndIndex = result.item.task?.length || 0
 
-			return {
-				...result.item,
-				highlight: highlightFzfMatch(
-					result.item.task,
-					positions.filter((p) => p < taskEndIndex),
-				),
-				workspace: result.item.workspace,
-			}
-		})
+				return {
+					...result.item,
+					highlight: highlightFzfMatch(
+						result.item.task || "",
+						positions.filter((p) => p < taskEndIndex),
+					),
+					workspace: result.item.workspace,
+				}
+			})
+		} catch (error) {
+			// If search fails, log error and continue without search
+			console.warn("Search failed, continuing without search filtering:", error)
+		}
 	}
 
 	tasks.sort((a, b) => {
@@ -59,11 +91,16 @@ export function getTaskHistory(
 		}
 	})
 
-	const pageCount = Math.ceil(tasks.length / PAGE_SIZE)
-	const pageIndex = Math.max(0, Math.min(request.pageIndex, pageCount - 1))
+	const pageCount = Math.max(1, Math.ceil(tasks.length / PAGE_SIZE))
+	const pageIndex = Math.max(0, Math.min(request.pageIndex || 0, pageCount - 1))
 
 	const startIndex = PAGE_SIZE * pageIndex
 	const historyItems = tasks.slice(startIndex, startIndex + PAGE_SIZE)
 
-	return { requestId: request.requestId, historyItems, pageIndex, pageCount }
+	return {
+		requestId: request.requestId,
+		historyItems: historyItems || [],
+		pageIndex,
+		pageCount,
+	}
 }

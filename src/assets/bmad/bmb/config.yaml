@@ -1,0 +1,41 @@
+name: "BMB"
+version: "1.0.0"
+description: "BMAD Brain - Knowledge base and intelligence module"
+type: "intelligence"
+author: "BMAD Team"
+license: "MIT"
+
+# Module metadata
+metadata:
+  category: "intelligence"
+  priority: 8
+  required: true
+
+# Supported modes
+modes:
+  - "bmad-bmm-master"
+  - "bmad-bmm-analyst"
+  - "bmad-bmm-architect"
+  - "bmad-bmm-dev"
+  - "bmad-bmm-pm"
+  - "bmad-bmm-sm"
+  - "bmad-bmm-tea"
+  - "bmad-bmm-tech-writer"
+  - "bmad-bmm-ux-designer"
+  - "bmad-bmm-quick-flow-solo-dev"
+
+# Dependencies
+dependencies: []
+
+# Module capabilities
+capabilities:
+  - "knowledge_retrieval"
+  - "semantic_search"
+  - "context_awareness"
+  - "pattern_recognition"
+
+# Configuration
+config:
+  max_context_size: 10000
+  similarity_threshold: 0.7
+  cache_enabled: true

@@ -6,6 +6,11 @@ import askFollowupQuestion from "./ask_followup_question"
 import attemptCompletion from "./attempt_completion"
 import browserAction from "./browser_action"
 import codebaseSearch from "./codebase_search"
+// kilocode_change start
+import semanticSearch from "./semantic_search"
+import findReferences from "./find_references"
+import getModuleStructure from "./get_module_structure"
+// kilocode_change end
 import executeCommand from "./execute_command"
 import fetchInstructions from "./fetch_instructions"
 import generateImage from "./generate_image"
@@ -49,6 +54,11 @@ export function getNativeTools(partialReadsEnabled: boolean = true): OpenAI.Chat
 		attemptCompletion,
 		browserAction,
 		codebaseSearch,
+		// kilocode_change start
+		semanticSearch,
+		findReferences,
+		getModuleStructure,
+		// kilocode_change end
 		executeCommand,
 		fetchInstructions,
 		generateImage,

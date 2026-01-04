@@ -11,6 +11,9 @@ import { vscode } from "@src/utils/vscode"
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import MermaidBlock from "./MermaidBlock"
 
+// RTL Support
+import { getLinesWithDirection } from "@/utils/rtl-detection"
+
 interface MarkdownBlockProps {
 	markdown?: string
 }
@@ -121,6 +124,19 @@ const StyledMarkdown = styled.div`
 	p {
 		white-space: pre-wrap;
 		margin: 1em 0 0.25em;
+	}
+
+	/* RTL paragraph support */
+	p[data-rtl="true"] {
+		text-align: right;
+		direction: rtl;
+		unicode-bidi: plaintext;
+	}
+
+	p[data-ltr="true"] {
+		text-align: left;
+		direction: ltr;
+		unicode-bidi: plaintext;
 	}
 
 	/* Prevent layout shifts during streaming */
@@ -251,6 +267,41 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 					<a {...props} href={href} onClick={handleClick}>
 						{children}
 					</a>
+				)
+			},
+			p: ({ children, ...props }: any) => {
+				// Convert children to string to analyze RTL/LTR content
+				const textContent = Array.isArray(children)
+					? children.filter((child) => typeof child === "string").join("")
+					: typeof children === "string"
+						? children
+						: ""
+
+				// Detect direction for this paragraph
+				const lines = getLinesWithDirection(textContent)
+				const hasRTL = lines.some((line) => line.direction === "rtl")
+				const hasLTR = lines.some((line) => line.direction === "ltr")
+
+				// Determine dominant direction
+				let direction: "rtl" | "ltr" | "auto" = "auto"
+				if (hasRTL && !hasLTR) {
+					direction = "rtl"
+				} else if (hasLTR && !hasRTL) {
+					direction = "ltr"
+				}
+
+				const rtlAttrs =
+					direction !== "auto"
+						? {
+								"data-rtl": direction === "rtl" ? "true" : "false",
+								"data-ltr": direction === "ltr" ? "true" : "false",
+							}
+						: {}
+
+				return (
+					<p {...props} {...rtlAttrs}>
+						{children}
+					</p>
 				)
 			},
 			pre: ({ children, ..._props }: any) => {

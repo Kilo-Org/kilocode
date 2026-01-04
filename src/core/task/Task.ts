@@ -73,11 +73,16 @@ import { DiffStrategy, type ToolUse, type ToolParamName, toolParamNames } from "
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
 
+// kilocode_change start
+import { extractLatestUserQuery, formatCodeIndexContext } from "./kilocode/codeIndexContext"
+// kilocode_change end
+
 // services
 import { UrlContentFetcher } from "../../services/browser/UrlContentFetcher"
 import { BrowserSession } from "../../services/browser/BrowserSession"
 import { McpHub } from "../../services/mcp/McpHub"
 import { McpServerManager } from "../../services/mcp/McpServerManager"
+import { CodeIndexManager } from "../../services/code-index/manager" // kilocode_change
 import { RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
 // integrations
@@ -3944,7 +3949,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = performance.now()
 
-		const systemPrompt = await this.getSystemPrompt()
+		let systemPrompt = await this.getSystemPrompt() // kilocode_change: may append retrieved context
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {
@@ -4078,6 +4083,31 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// This allows non-destructive condensing where messages are tagged but not deleted,
 		// enabling accurate rewind operations while still sending condensed history to the API.
 		const effectiveHistory = getEffectiveApiHistory(this.apiConversationHistory)
+
+		// kilocode_change start: Inject retrieved code context from local index (when available)
+		try {
+			const provider = this.providerRef.deref()
+			if (provider) {
+				const manager = CodeIndexManager.getInstance(provider.context, this.cwd)
+				if (manager && manager.isFeatureEnabled && manager.isFeatureConfigured && manager.isInitialized) {
+					const status = manager.getCurrentStatus().systemStatus
+					if (status === "Indexed" || status === "Indexing") {
+						const query = extractLatestUserQuery(effectiveHistory)
+						if (query) {
+							const results = await manager.searchIndex(query)
+							const injected = formatCodeIndexContext(results, { maxResults: 8, maxChars: 6000 })
+							if (injected) {
+								systemPrompt = `${systemPrompt}\n${injected}`
+							}
+						}
+					}
+				}
+			}
+		} catch (error) {
+			console.warn("[Task] Failed to inject code index context:", error)
+		}
+		// kilocode_change end
+
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(effectiveHistory)
 		const messagesWithoutImages = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api)
 		const cleanConversationHistory = this.buildCleanConversationHistory(messagesWithoutImages as ApiMessage[])

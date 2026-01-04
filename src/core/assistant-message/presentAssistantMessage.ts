@@ -39,6 +39,9 @@ import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
 import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
+import { semanticSearchTool } from "../tools/SemanticSearchTool" // kilocode_change
+import { findReferencesTool } from "../tools/FindReferencesTool" // kilocode_change
+import { getModuleStructureTool } from "../tools/GetModuleStructureTool" // kilocode_change
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffTool as applyDiffToolClass } from "../tools/ApplyDiffTool"
 
@@ -451,6 +454,14 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name} to '${block.params.mode_slug}'${block.params.reason ? ` because: ${block.params.reason}` : ""}]`
 					case "codebase_search": // Add case for the new tool
 						return `[${block.name} for '${block.params.query}']`
+					// kilocode_change start
+					case "semantic_search":
+						return `[${block.name} for '${block.params.query}']`
+					case "find_references":
+						return `[${block.name} for '${block.params.symbol}']`
+					case "get_module_structure":
+						return `[${block.name} for '${block.params.path}']`
+					// kilocode_change end
 					case "update_todo_list":
 						return `[${block.name}]`
 					case "new_task": {
@@ -989,6 +1000,35 @@ export async function presentAssistantMessage(cline: Task) {
 						toolProtocol,
 					})
 					break
+				// kilocode_change start
+				case "semantic_search":
+					await semanticSearchTool.handle(cline, block as ToolUse<"semantic_search">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
+				case "find_references":
+					await findReferencesTool.handle(cline, block as ToolUse<"find_references">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
+				case "get_module_structure":
+					await getModuleStructureTool.handle(cline, block as ToolUse<"get_module_structure">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
+				// kilocode_change end
 				case "codebase_search":
 					await codebaseSearchTool.handle(cline, block as ToolUse<"codebase_search">, {
 						askApproval,

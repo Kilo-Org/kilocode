@@ -20,7 +20,7 @@ import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { getApiMetrics } from "@roo/getApiMetrics"
 import { AudioType } from "@roo/WebviewMessage"
-import { getAllModes } from "@roo/modes"
+import { getAllModes } from "@roo/modes-shared"
 import { ProfileValidator } from "@roo/ProfileValidator"
 import { getLatestTodo } from "@roo/todo"
 

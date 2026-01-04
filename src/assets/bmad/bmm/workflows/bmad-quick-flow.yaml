@@ -1,0 +1,49 @@
+name: "bmad-quick-flow"
+display_name: "BMAD Quick Flow"
+description: "Rapid development workflow for quick feature implementation"
+version: "1.0.0"
+category: "development"
+priority: 10
+
+# Workflow steps
+steps:
+  - id: "analyze"
+    name: "Analyze Requirements"
+    agent: "bmad-bmm-quick-flow-solo-dev"
+    description: "Quickly analyze the requirements and propose a solution"
+    required: true
+    
+  - id: "implement"
+    name: "Implement Feature"
+    agent: "bmad-bmm-quick-flow-solo-dev"
+    description: "Rapidly implement the feature"
+    required: true
+    depends_on:
+      - "analyze"
+      
+  - id: "test"
+    name: "Test"
+    agent: "bmad-bmm-quick-flow-solo-dev"
+    description: "Write and run tests"
+    required: true
+    depends_on:
+      - "implement"
+      
+  - id: "document"
+    name: "Document"
+    agent: "bmad-bmm-quick-flow-solo-dev"
+    description: "Create documentation"
+    required: true
+    depends_on:
+      - "test"
+
+# Configuration
+config:
+  timeout_seconds: 300
+  parallel_execution: false
+  auto_continue: true
+
+# Output templates
+output_templates:
+  success: "✅ Quick flow completed successfully"
+  failure: "❌ Quick flow failed"

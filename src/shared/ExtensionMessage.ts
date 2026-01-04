@@ -21,7 +21,7 @@ import { GitCommit } from "../utils/git"
 
 import { McpServer } from "./mcp"
 import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
-import { Mode } from "./modes"
+import { Mode } from "./modes-shared"
 import { ModelRecord, RouterModels } from "./api"
 // kilocode_change start
 import {

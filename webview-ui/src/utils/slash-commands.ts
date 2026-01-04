@@ -1,7 +1,7 @@
 /* eslint no-misleading-character-class: 0 */
 // kilocode_change: this file was pulled from Cline and adjusted for us
 
-import { getAllModes } from "@roo/modes"
+import { getAllModes } from "@roo/modes-shared"
 import { getBasename } from "./kilocode/path-webview"
 import { ClineRulesToggles } from "@roo/cline-rules"
 

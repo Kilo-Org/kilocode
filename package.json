@@ -78,5 +78,9 @@
 			"bluebird": ">=3.7.2",
 			"glob": ">=11.1.0"
 		}
+	},
+	"dependencies": {
+		"sqlite": "^5.1.1",
+		"sqlite3": "^5.1.7"
 	}
 }

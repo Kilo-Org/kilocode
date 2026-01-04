@@ -1,0 +1,431 @@
+/**
+ * Advanced AI UI/UX Theme for Kilo Code
+ * Windsurf-inspired aesthetics with deep teals and grays
+ */
+
+/* Enhanced color palette for AI/UX */
+:root {
+	/* Deep teal and gray palette inspired by Windsurf */
+	--ai-primary: #0891b2;
+	--ai-primary-hover: #0e7490;
+	--ai-primary-light: #22d3ee;
+	--ai-secondary: #1e293b;
+	--ai-secondary-hover: #334155;
+	--ai-accent: #06b6d4;
+	--ai-accent-hover: #0891b2;
+
+	/* Gradient backgrounds for modern look */
+	--ai-gradient-primary: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+	--ai-gradient-secondary: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+	--ai-gradient-accent: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+
+	/* Glass morphism effects */
+	--ai-glass-bg: rgba(30, 41, 59, 0.8);
+	--ai-glass-border: rgba(148, 163, 184, 0.1);
+	--ai-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+	/* Enhanced shadows */
+	--ai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--ai-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+	--ai-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	--ai-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+	--ai-shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+
+	/* Animation durations */
+	--ai-duration-fast: 150ms;
+	--ai-duration-normal: 300ms;
+	--ai-duration-slow: 500ms;
+
+	/* Border radius */
+	--ai-radius-sm: 4px;
+	--ai-radius-md: 8px;
+	--ai-radius-lg: 12px;
+	--ai-radius-xl: 16px;
+}
+
+/* Base enhancements for AI components */
+.ai-ux-container {
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-foreground);
+	background: var(--vscode-editor-background);
+}
+
+/* Glass morphism utility classes */
+.ai-glass {
+	background: var(--ai-glass-bg);
+	backdrop-filter: blur(12px);
+	border: 1px solid var(--ai-glass-border);
+	box-shadow: var(--ai-glass-shadow);
+}
+
+.ai-glass-subtle {
+	background: rgba(255, 255, 255, 0.05);
+	backdrop-filter: blur(8px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Enhanced button styles */
+.ai-button-primary {
+	background: var(--ai-gradient-primary);
+	color: white;
+	border: none;
+	border-radius: var(--ai-radius-md);
+	padding: 8px 16px;
+	font-weight: 500;
+	transition: all var(--ai-duration-fast) ease;
+	box-shadow: var(--ai-shadow-sm);
+}
+
+.ai-button-primary:hover {
+	background: var(--ai-primary-hover);
+	transform: translateY(-1px);
+	box-shadow: var(--ai-shadow-md);
+}
+
+.ai-button-secondary {
+	background: var(--ai-gradient-secondary);
+	color: white;
+	border: none;
+	border-radius: var(--ai-radius-md);
+	padding: 8px 16px;
+	font-weight: 500;
+	transition: all var(--ai-duration-fast) ease;
+	box-shadow: var(--ai-shadow-sm);
+}
+
+.ai-button-secondary:hover {
+	background: var(--ai-secondary-hover);
+	transform: translateY(-1px);
+	box-shadow: var(--ai-shadow-md);
+}
+
+/* Ghost text styling */
+.ai-ghost-text {
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.6;
+	font-style: italic;
+	border-bottom: 1px dashed var(--vscode-descriptionForeground);
+	transition: all var(--ai-duration-fast) ease;
+}
+
+.ai-ghost-text:hover {
+	opacity: 0.8;
+	border-bottom-color: var(--ai-primary);
+}
+
+/* Context chips */
+.ai-context-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 12px;
+	border-radius: 16px;
+	font-size: 12px;
+	font-weight: 500;
+	transition: all var(--ai-duration-fast) ease;
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+.ai-context-chip:hover {
+	transform: scale(1.05);
+	box-shadow: var(--ai-shadow-md);
+}
+
+.ai-context-chip-file {
+	background: rgba(59, 130, 246, 0.1);
+	color: #3b82f6;
+	border-color: rgba(59, 130, 246, 0.3);
+}
+
+.ai-context-chip-documentation {
+	background: rgba(34, 197, 94, 0.1);
+	color: #22c55e0;
+	border-color: rgba(34, 197, 94, 0.3);
+}
+
+.ai-context-chip-chat {
+	background: rgba(168, 85, 247, 0.1);
+	color: #a855f7;
+	border-color: rgba(168, 85, 247, 0.3);
+}
+
+/* Agent status indicators */
+.ai-agent-status {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ai-agent-status::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--vscode-descriptionForeground);
+	transition: all var(--ai-duration-fast) ease;
+}
+
+.ai-agent-status.active::before {
+	background: #22c55e0;
+	box-shadow: 0 0 8px #22c55e0;
+	animation: ai-pulse 2s infinite;
+}
+
+.ai-agent-status.thinking::before {
+	background: #f59e0b;
+	box-shadow: 0 0 8px #f59e0b;
+	animation: ai-pulse 1.5s infinite;
+}
+
+.ai-agent-status.error::before {
+	background: #ef4444;
+	box-shadow: 0 0 8px #ef4444;
+	animation: ai-pulse 1s infinite;
+}
+
+@keyframes ai-pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.7;
+		transform: scale(1.2);
+	}
+}
+
+/* Diff view enhancements */
+.ai-diff-container {
+	border: 1px solid var(--vscode-border);
+	border-radius: var(--ai-radius-lg);
+	overflow: hidden;
+	box-shadow: var(--ai-shadow-lg);
+}
+
+.ai-diff-header {
+	background: var(--ai-gradient-secondary);
+	color: white;
+	padding: 12px 16px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.ai-diff-added {
+	background: rgba(34, 197, 94, 0.1);
+	border-left: 3px solid #22c55e0;
+}
+
+.ai-diff-removed {
+	background: rgba(239, 68, 68, 0.1);
+	border-left: 3px solid #ef4444;
+}
+
+.ai-diff-unchanged {
+	background: transparent;
+}
+
+/* Activity HUD styling */
+.ai-hud-container {
+	background: var(--ai-glass-bg);
+	backdrop-filter: blur(16px);
+	border: 1px solid var(--ai-glass-border);
+	border-radius: var(--ai-radius-lg);
+	box-shadow: var(--ai-shadow-xl);
+}
+
+.ai-hud-header {
+	background: var(--ai-gradient-primary);
+	color: white;
+	padding: 12px 16px;
+	border-radius: var(--ai-radius-lg) var(--ai-radius-lg) 0 0;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ai-thought-item {
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--ai-glass-border);
+	transition: all var(--ai-duration-fast) ease;
+}
+
+.ai-thought-item:hover {
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-thought-item:last-child {
+	border-bottom: none;
+}
+
+/* Peek definition styling */
+.ai-peek-container {
+	background: var(--ai-glass-bg);
+	backdrop-filter: blur(16px);
+	border: 1px solid var(--ai-glass-border);
+	border-radius: var(--ai-radius-lg);
+	box-shadow: var(--ai-shadow-2xl);
+	max-width: 400px;
+	max-height: 80vh;
+	overflow-y: auto;
+}
+
+.ai-peek-header {
+	background: var(--ai-gradient-accent);
+	color: white;
+	padding: 12px 16px;
+	border-radius: var(--ai-radius-lg) var(--ai-radius-lg) 0 0;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.ai-peek-content {
+	padding: 16px;
+}
+
+.ai-peek-field-info {
+	display: grid;
+	gap: 8px;
+	font-size: 12px;
+}
+
+.ai-peek-field-label {
+	color: var(--vscode-descriptionForeground);
+	font-weight: 500;
+}
+
+.ai-peek-field-value {
+	color: var(--vscode-foreground);
+}
+
+/* Loading and progress animations */
+.ai-loading-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--ai-glass-border);
+	border-top: 2px solid var(--ai-primary);
+	border-radius: 50%;
+	animation: ai-spin 1s linear infinite;
+}
+
+@keyframes ai-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.ai-progress-bar {
+	height: 4px;
+	background: var(--ai-glass-border);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.ai-progress-fill {
+	height: 100%;
+	background: var(--ai-gradient-primary);
+	border-radius: 2px;
+	transition: width var(--ai-duration-normal) ease;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+	.ai-hud-container {
+		position: fixed !important;
+		top: 10px !important;
+		right: 10px !important;
+		left: 10px !important;
+		width: auto !important;
+		max-width: none !important;
+	}
+
+	.ai-peek-container {
+		position: fixed !important;
+		top: 50% !important;
+		left: 50% !important;
+		transform: translate(-50%, -50%) !important;
+		width: 90vw !important;
+		max-width: none !important;
+	}
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--ai-glass-bg: rgba(15, 23, 42, 0.9);
+		--ai-glass-border: rgba(71, 85, 105, 0.2);
+		--ai-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	}
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.ai-glass {
+		background: var(--vscode-editor-background);
+		border: 2px solid var(--vscode-foreground);
+	}
+
+	.ai-context-chip {
+		border-width: 2px;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	.ai-button-primary,
+	.ai-button-secondary,
+	.ai-context-chip,
+	.ai-thought-item {
+		transition: none;
+	}
+
+	@keyframes ai-pulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+
+	@keyframes ai-spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+}
+
+/* Scrollbar styling for AI components */
+.ai-custom-scrollbar::-webkit-scrollbar {
+	width: 6px;
+}
+
+.ai-custom-scrollbar::-webkit-scrollbar-track {
+	background: var(--ai-glass-border);
+	border-radius: 3px;
+}
+
+.ai-custom-scrollbar::-webkit-scrollbar-thumb {
+	background: var(--ai-primary);
+	border-radius: 3px;
+	transition: background var(--ai-duration-fast) ease;
+}
+
+.ai-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: var(--ai-primary-hover);
+}

@@ -22,7 +22,7 @@ import {
 	getAllModes,
 	findModeBySlug as findCustomModeBySlug,
 	defaultModeSlug,
-} from "@roo/modes"
+} from "@roo/modes-shared"
 import { TOOL_GROUPS } from "@roo/tools"
 
 import { vscode } from "@src/utils/vscode"

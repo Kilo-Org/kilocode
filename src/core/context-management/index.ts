@@ -24,6 +24,8 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
  */
 export const TOKEN_BUFFER_PERCENTAGE = 0.1
 
+import { countTokensWithCache } from "../task/kilocode/services-integration" // kilocode_change
+
 /**
  * Counts tokens for user content using the provider's token counting implementation.
  *
@@ -36,7 +38,18 @@ export async function estimateTokenCount(
 	apiHandler: ApiHandler,
 ): Promise<number> {
 	if (!content || content.length === 0) return 0
-	return apiHandler.countTokens(content)
+
+	// kilocode_change start: Use token cache if available
+	const modelId = apiHandler.getModel().id
+	try {
+		// Simple serialization for cache key
+		const contentStr = JSON.stringify(content)
+		return await countTokensWithCache(contentStr, modelId, () => apiHandler.countTokens(content))
+	} catch (error) {
+		// Fallback to direct calculation on error
+		return apiHandler.countTokens(content)
+	}
+	// kilocode_change end
 }
 
 /**

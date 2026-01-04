@@ -2,13 +2,23 @@
 
 import { createHash } from "crypto"
 import * as path from "path"
-import { Connection, Table, VectorQuery } from "@lancedb/lancedb"
+import type { Connection, Table, VectorQuery } from "@lancedb/lancedb"
 import { IVectorStore } from "../interfaces/vector-store"
 import { Payload, VectorStoreSearchResult } from "../interfaces"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import { t } from "../../../i18n"
 import { LanceDBManager } from "../../../utils/lancedb-manager"
 const fs = require("fs")
+
+type LanceVectorRow = {
+	_rowid?: number
+	_distance?: number
+	id?: string
+	filePath?: string
+	codeChunk?: string
+	startLine?: number
+	endLine?: number
+}
 
 /**
  * Local implementation of the vector store using LanceDB
@@ -21,6 +31,7 @@ export class LanceDBVectorStore implements IVectorStore {
 	private table: Table | null = null
 	private readonly vectorTableName = "vector"
 	private readonly metadataTableName = "metadata"
+	private readonly ftsIndexedColumnName = "codeChunk"
 	private lancedbManager: LanceDBManager
 	private lancedbModule: any = null
 
@@ -106,6 +117,50 @@ export class LanceDBVectorStore implements IVectorStore {
 			// Table doesn't exist, will be created in initialize()
 			throw new Error(`Table ${this.vectorTableName} does not exist`)
 		}
+	}
+
+	private async ensureFtsIndex(): Promise<void> {
+		const table = await this.getTable()
+		try {
+			const indices = await table.listIndices()
+			const expectedIndexName = `${this.ftsIndexedColumnName}_idx`
+			const hasIndex = indices.some((idx: any) => idx?.name === expectedIndexName)
+			if (hasIndex) {
+				return
+			}
+		} catch {
+			// listIndices may fail if the table doesn't support it yet; we'll just try to create.
+		}
+
+		try {
+			const lancedb = await this.loadLanceDBModule()
+			await table.createIndex(this.ftsIndexedColumnName, {
+				config: lancedb.Index.fts({
+					lowercase: true,
+					removeStopWords: false,
+				}),
+			})
+		} catch (error) {
+			// Index might already exist or column might not be eligible; ignore.
+		}
+	}
+
+	private computeRrfScores(
+		vecResults: LanceVectorRow[],
+		ftsResults: LanceVectorRow[],
+		k: number = 60,
+	): Map<number, number> {
+		const scores = new Map<number, number>()
+		const addRanks = (rows: LanceVectorRow[]) => {
+			rows.forEach((row, idx) => {
+				if (typeof row._rowid !== "number") return
+				const prev = scores.get(row._rowid) ?? 0
+				scores.set(row._rowid, prev + 1 / (k + (idx + 1)))
+			})
+		}
+		addRanks(vecResults)
+		addRanks(ftsResults)
+		return scores
 	}
 
 	/**
@@ -203,6 +258,7 @@ export class LanceDBVectorStore implements IVectorStore {
 			if (!vectorTableExists) {
 				await this._createVectorTable(db)
 				await this._createMetadataTable(db)
+				await this.ensureFtsIndex()
 				return true
 			}
 
@@ -219,10 +275,12 @@ export class LanceDBVectorStore implements IVectorStore {
 				await this._dropTableIfExists(db, this.metadataTableName)
 				await this._createVectorTable(db)
 				await this._createMetadataTable(db)
+				await this.ensureFtsIndex()
 				this.optimizeTable()
 
 				return true
 			}
+			await this.ensureFtsIndex()
 			this.optimizeTable()
 			return false
 		} catch (error) {
@@ -344,6 +402,74 @@ export class LanceDBVectorStore implements IVectorStore {
 			console.error("Failed to search points:", error)
 			throw error
 		}
+	}
+
+	async hybridSearch(
+		queryVector: number[],
+		queryText: string,
+		directoryPrefix?: string,
+		minScore?: number,
+		maxResults?: number,
+	): Promise<VectorStoreSearchResult[]> {
+		const table = await this.getTable()
+		const actualMinScore = minScore ?? DEFAULT_SEARCH_MIN_SCORE
+		const actualMaxResults = maxResults ?? DEFAULT_MAX_SEARCH_RESULTS
+		await this.ensureFtsIndex()
+
+		let filter = ""
+		if (directoryPrefix) {
+			const escapedPrefix = this.escapeSqlLikePattern(directoryPrefix)
+			filter = `\`filePath\` LIKE '${escapedPrefix}%'`
+		}
+
+		const vecQuery = (await table.search(queryVector)) as VectorQuery
+		let vec = vecQuery
+			.withRowId()
+			.distanceType("cosine")
+			.distanceRange(0, 1 - actualMinScore)
+			.limit(actualMaxResults)
+		if (filter !== "") {
+			vec = vec.where(filter)
+		}
+
+		let fts = table.search(queryText, "fts", [this.ftsIndexedColumnName]).withRowId().limit(actualMaxResults)
+		if (filter !== "") {
+			fts = fts.where(filter)
+		}
+
+		const [vecResults, ftsResults] = await Promise.all([
+			vec.toArray() as Promise<LanceVectorRow[]>,
+			fts.toArray() as Promise<LanceVectorRow[]>,
+		])
+
+		const scores = this.computeRrfScores(vecResults, ftsResults)
+		const rowById = new Map<number, LanceVectorRow>()
+		for (const r of [...vecResults, ...ftsResults]) {
+			if (typeof r._rowid === "number" && !rowById.has(r._rowid)) {
+				rowById.set(r._rowid, r)
+			}
+		}
+
+		const ranked = Array.from(scores.entries())
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, actualMaxResults)
+			.map(([rowid, score]) => {
+				const row = rowById.get(rowid)
+				return {
+					id: row?.id ?? rowid,
+					score,
+					payload: row
+						? ({
+								filePath: row.filePath,
+								codeChunk: row.codeChunk,
+								startLine: row.startLine,
+								endLine: row.endLine,
+							} as Payload)
+						: null,
+				} satisfies VectorStoreSearchResult
+			})
+
+		return ranked.filter((r) => r.payload?.filePath && r.payload?.codeChunk) as VectorStoreSearchResult[]
 	}
 
 	async deletePointsByFilePath(filePath: string): Promise<void> {

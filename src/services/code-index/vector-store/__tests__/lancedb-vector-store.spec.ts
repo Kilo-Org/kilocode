@@ -19,6 +19,7 @@ const mockTable = {
 	query: vi.fn().mockReturnThis(),
 	where: vi.fn().mockReturnThis(),
 	toArray: vi.fn().mockResolvedValue([]),
+	withRowId: vi.fn().mockReturnThis(),
 	vectorSearch: vi.fn().mockReturnThis(),
 	limit: vi.fn().mockReturnThis(),
 	refineFactor: vi.fn().mockReturnThis(),
@@ -39,6 +40,7 @@ const mockTable = {
 	find: vi.fn(),
 	remove: vi.fn(),
 	createIndex: vi.fn(),
+	listIndices: vi.fn().mockResolvedValue([]),
 	dropIndex: vi.fn(),
 	indexes: [],
 	columns: [],
@@ -91,6 +93,45 @@ describe("LocalVectorStore", () => {
 		store.db = mockDb
 		// @ts-ignore
 		store.table = mockTable
+	})
+
+	describe("hybridSearch", () => {
+		it("should return fused results (RRF) from vector + fts", async () => {
+			// Ensure ensureFtsIndex succeeds
+			mockTable.listIndices.mockResolvedValue([])
+			mockTable.createIndex.mockResolvedValue(undefined)
+
+			// Mock vector path
+			const vecToArray = vi.fn().mockResolvedValue([
+				{ _rowid: 1, id: "v1", filePath: "a", codeChunk: "x", startLine: 1, endLine: 2, _distance: 0.1 },
+				{ _rowid: 2, id: "v2", filePath: "b", codeChunk: "y", startLine: 3, endLine: 4, _distance: 0.2 },
+			])
+			const ftsToArray = vi.fn().mockResolvedValue([
+				{ _rowid: 2, id: "v2", filePath: "b", codeChunk: "y", startLine: 3, endLine: 4 },
+				{ _rowid: 3, id: "f3", filePath: "c", codeChunk: "z", startLine: 5, endLine: 6 },
+			])
+
+			mockTable.search
+				.mockResolvedValueOnce({
+					withRowId: vi.fn().mockReturnThis(),
+					distanceType: vi.fn().mockReturnThis(),
+					distanceRange: vi.fn().mockReturnThis(),
+					limit: vi.fn().mockReturnThis(),
+					where: vi.fn().mockReturnThis(),
+					toArray: vecToArray,
+				})
+				.mockReturnValueOnce({
+					withRowId: vi.fn().mockReturnThis(),
+					limit: vi.fn().mockReturnThis(),
+					where: vi.fn().mockReturnThis(),
+					toArray: ftsToArray,
+				})
+
+			const results = await store.hybridSearch([1, 2, 3], "query")
+			expect(results.length).toBeGreaterThan(0)
+			// rowid 2 appears in both lists, should be near the top
+			expect(results[0].payload?.filePath).toBeDefined()
+		})
 	})
 
 	afterEach(async () => {

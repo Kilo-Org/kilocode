@@ -3,9 +3,21 @@ import * as path from "path"
 import * as fs from "fs"
 import * as childProcess from "child_process"
 import * as readline from "readline"
-import { byLengthAsc, Fzf } from "fzf"
 import { getBinPath } from "../ripgrep"
 import { Package } from "../../shared/package"
+
+// Custom tiebreaker function to sort by length ascending
+function byLengthAsc<U>(a: any, b: any, selector: (item: U) => string): number {
+	const strA = selector ? selector(a.item) : String(a.item)
+	const strB = selector ? selector(b.item) : String(b.item)
+	return strA.length - strB.length
+}
+
+// Dynamic import of Fzf since it's an ES module
+async function getFzf() {
+	const fzfModule = await import("fzf")
+	return fzfModule.Fzf
+}
 
 export type FileResult = { path: string; type: "file" | "folder"; label?: string }
 
@@ -158,19 +170,22 @@ export async function searchWorkspaceFiles(
 			searchStr: `${item.path} ${item.label || ""}`,
 		}))
 
+		// Dynamically import Fzf since it's an ES module
+		const Fzf = await getFzf()
+
 		// Run fzf search on all items
 		const fzf = new Fzf(searchItems, {
-			selector: (item) => item.searchStr,
+			selector: (item: { original: FileResult; searchStr: string }) => item.searchStr,
 			tiebreakers: [byLengthAsc],
 			limit: limit,
 		})
 
 		// Get all matching results from fzf
-		const fzfResults = fzf.find(query).map((result) => result.item.original)
+		const fzfResults = fzf.find(query).map((result: any) => result.item.original)
 
 		// Verify types of the shortest results
 		const verifiedResults = await Promise.all(
-			fzfResults.map(async (result) => {
+			fzfResults.map(async (result: FileResult) => {
 				const fullPath = path.join(workspacePath, result.path)
 				// Verify if the path exists and is actually a directory
 				if (fs.existsSync(fullPath)) {
