@@ -101,7 +101,7 @@ Grade:                   {grade}
 ```typescript
 // ❌ Bad (current implementation)
 {
-	code_snippet_showing_problem
+  code_snippet_showing_problem;
 }
 ```
 
@@ -110,7 +110,7 @@ Grade:                   {grade}
 ```typescript
 // ✅ Good (recommended approach)
 {
-	code_snippet_showing_solution
+  code_snippet_showing_solution;
 }
 ```
 
@@ -143,7 +143,7 @@ Grade:                   {grade}
 ```typescript
 // ⚠️ Could be improved (current implementation)
 {
-	code_snippet_showing_current_approach
+  code_snippet_showing_current_approach;
 }
 ```
 
@@ -152,7 +152,7 @@ Grade:                   {grade}
 ```typescript
 // ✅ Better approach (recommended)
 {
-	code_snippet_showing_improvement
+  code_snippet_showing_improvement;
 }
 ```
 
@@ -184,7 +184,7 @@ Grade:                   {grade}
 ```typescript
 // ✅ Excellent pattern demonstrated in this test
 {
-	code_snippet_showing_best_practice
+  code_snippet_showing_best_practice;
 }
 ```
 
@@ -214,11 +214,11 @@ Grade:                   {grade}
 
 - **Test IDs**: {test_id_list}
 - **Priority Distribution**:
-    - P0 (Critical): {p0_count} tests
-    - P1 (High): {p1_count} tests
-    - P2 (Medium): {p2_count} tests
-    - P3 (Low): {p3_count} tests
-    - Unknown: {unknown_count} tests
+  - P0 (Critical): {p0_count} tests
+  - P1 (High): {p1_count} tests
+  - P2 (Medium): {p2_count} tests
+  - P3 (Low): {p3_count} tests
+  - Unknown: {unknown_count} tests
 
 ### Assertions Analysis
 
@@ -281,26 +281,24 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 ### Immediate Actions (Before Merge)
 
 1. **{action_1}** - {description}
-
-    - Priority: {P0 | P1 | P2}
-    - Owner: {team_or_person}
-    - Estimated Effort: {time_estimate}
+   - Priority: {P0 | P1 | P2}
+   - Owner: {team_or_person}
+   - Estimated Effort: {time_estimate}
 
 2. **{action_2}** - {description}
-    - Priority: {P0 | P1 | P2}
-    - Owner: {team_or_person}
-    - Estimated Effort: {time_estimate}
+   - Priority: {P0 | P1 | P2}
+   - Owner: {team_or_person}
+   - Estimated Effort: {time_estimate}
 
 ### Follow-up Actions (Future PRs)
 
 1. **{action_1}** - {description}
-
-    - Priority: {P2 | P3}
-    - Target: {next_sprint | backlog}
+   - Priority: {P2 | P3}
+   - Target: {next_sprint | backlog}
 
 2. **{action_2}** - {description}
-    - Priority: {P2 | P3}
-    - Target: {next_sprint | backlog}
+   - Priority: {P2 | P3}
+   - Target: {next_sprint | backlog}
 
 ### Re-Review Needed?
 

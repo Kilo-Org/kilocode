@@ -27,9 +27,9 @@ Will document how to use:
 ```yaml
 # Future workflow.yaml structure
 libraries:
-    - url: "https://libraries.excalidraw.com/libraries/..."
-      filter: ["aws", "cloud"]
-    - path: "{project-root}/_data/custom-library.excalidrawlib"
+  - url: 'https://libraries.excalidraw.com/libraries/...'
+    filter: ['aws', 'cloud']
+  - path: '{project-root}/_data/custom-library.excalidrawlib'
 ```
 
 ## Implementation Notes

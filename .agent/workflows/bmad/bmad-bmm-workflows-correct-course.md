@@ -1,5 +1,5 @@
 ---
-description: "Navigate significant changes during sprint execution by analyzing impact, proposing solutions, and routing for implementation"
+description: 'Navigate significant changes during sprint execution by analyzing impact, proposing solutions, and routing for implementation'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

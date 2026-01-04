@@ -41,17 +41,16 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Resource Usage
 
 - **CPU Usage**
-
-    - **Status:** {STATUS} {STATUS_ICON}
-    - **Threshold:** {THRESHOLD_VALUE}
-    - **Actual:** {ACTUAL_VALUE}
-    - **Evidence:** {EVIDENCE_SOURCE}
+  - **Status:** {STATUS} {STATUS_ICON}
+  - **Threshold:** {THRESHOLD_VALUE}
+  - **Actual:** {ACTUAL_VALUE}
+  - **Evidence:** {EVIDENCE_SOURCE}
 
 - **Memory Usage**
-    - **Status:** {STATUS} {STATUS_ICON}
-    - **Threshold:** {THRESHOLD_VALUE}
-    - **Actual:** {ACTUAL_VALUE}
-    - **Evidence:** {EVIDENCE_SOURCE}
+  - **Status:** {STATUS} {STATUS_ICON}
+  - **Threshold:** {THRESHOLD_VALUE}
+  - **Actual:** {ACTUAL_VALUE}
+  - **Evidence:** {EVIDENCE_SOURCE}
 
 ### Scalability
 
@@ -153,17 +152,16 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Disaster Recovery (if applicable)
 
 - **RTO (Recovery Time Objective)**
-
-    - **Status:** {STATUS} {STATUS_ICON}
-    - **Threshold:** {THRESHOLD_VALUE}
-    - **Actual:** {ACTUAL_VALUE}
-    - **Evidence:** {EVIDENCE_SOURCE}
+  - **Status:** {STATUS} {STATUS_ICON}
+  - **Threshold:** {THRESHOLD_VALUE}
+  - **Actual:** {ACTUAL_VALUE}
+  - **Evidence:** {EVIDENCE_SOURCE}
 
 - **RPO (Recovery Point Objective)**
-    - **Status:** {STATUS} {STATUS_ICON}
-    - **Threshold:** {THRESHOLD_VALUE}
-    - **Actual:** {ACTUAL_VALUE}
-    - **Evidence:** {EVIDENCE_SOURCE}
+  - **Status:** {STATUS} {STATUS_ICON}
+  - **Threshold:** {THRESHOLD_VALUE}
+  - **Actual:** {ACTUAL_VALUE}
+  - **Evidence:** {EVIDENCE_SOURCE}
 
 ---
 
@@ -236,12 +234,11 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 {QUICK_WIN_COUNT} quick wins identified for immediate implementation:
 
 1. **{QUICK_WIN_TITLE_1}** ({NFR_CATEGORY}) - {PRIORITY} - {ESTIMATED_EFFORT}
-
-    - {QUICK_WIN_DESCRIPTION}
-    - No code changes needed / Minimal code changes
+   - {QUICK_WIN_DESCRIPTION}
+   - No code changes needed / Minimal code changes
 
 2. **{QUICK_WIN_TITLE_2}** ({NFR_CATEGORY}) - {PRIORITY} - {ESTIMATED_EFFORT}
-    - {QUICK_WIN_DESCRIPTION}
+   - {QUICK_WIN_DESCRIPTION}
 
 ---
 
@@ -250,29 +247,27 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Immediate (Before Release) - CRITICAL/HIGH Priority
 
 1. **{ACTION_TITLE_1}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
-
-    - {ACTION_DESCRIPTION}
-    - {SPECIFIC_STEPS}
-    - {VALIDATION_CRITERIA}
+   - {ACTION_DESCRIPTION}
+   - {SPECIFIC_STEPS}
+   - {VALIDATION_CRITERIA}
 
 2. **{ACTION_TITLE_2}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
-    - {ACTION_DESCRIPTION}
-    - {SPECIFIC_STEPS}
-    - {VALIDATION_CRITERIA}
+   - {ACTION_DESCRIPTION}
+   - {SPECIFIC_STEPS}
+   - {VALIDATION_CRITERIA}
 
 ### Short-term (Next Sprint) - MEDIUM Priority
 
 1. **{ACTION_TITLE_3}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
-
-    - {ACTION_DESCRIPTION}
+   - {ACTION_DESCRIPTION}
 
 2. **{ACTION_TITLE_4}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
-    - {ACTION_DESCRIPTION}
+   - {ACTION_DESCRIPTION}
 
 ### Long-term (Backlog) - LOW Priority
 
 1. **{ACTION_TITLE_5}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
-    - {ACTION_DESCRIPTION}
+   - {ACTION_DESCRIPTION}
 
 ---
 
@@ -283,31 +278,30 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Performance Monitoring
 
 - [ ] {MONITORING_TOOL_1} - {MONITORING_DESCRIPTION}
-
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
 
 - [ ] {MONITORING_TOOL_2} - {MONITORING_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
 
 ### Security Monitoring
 
 - [ ] {MONITORING_TOOL_3} - {MONITORING_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
 
 ### Reliability Monitoring
 
 - [ ] {MONITORING_TOOL_4} - {MONITORING_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
 
 ### Alerting Thresholds
 
 - [ ] {ALERT_DESCRIPTION} - Notify when {THRESHOLD_CONDITION}
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
 
 ---
 
@@ -318,26 +312,26 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Circuit Breakers (Reliability)
 
 - [ ] {CIRCUIT_BREAKER_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Estimated Effort:** {EFFORT}
+  - **Owner:** {OWNER}
+  - **Estimated Effort:** {EFFORT}
 
 ### Rate Limiting (Performance)
 
 - [ ] {RATE_LIMITING_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Estimated Effort:** {EFFORT}
+  - **Owner:** {OWNER}
+  - **Estimated Effort:** {EFFORT}
 
 ### Validation Gates (Security)
 
 - [ ] {VALIDATION_GATE_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Estimated Effort:** {EFFORT}
+  - **Owner:** {OWNER}
+  - **Estimated Effort:** {EFFORT}
 
 ### Smoke Tests (Maintainability)
 
 - [ ] {SMOKE_TEST_DESCRIPTION}
-    - **Owner:** {OWNER}
-    - **Estimated Effort:** {EFFORT}
+  - **Owner:** {OWNER}
+  - **Estimated Effort:** {EFFORT}
 
 ---
 
@@ -346,17 +340,16 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 {EVIDENCE_GAP_COUNT} evidence gaps identified - action required:
 
 - [ ] **{NFR_NAME_1}** ({NFR_CATEGORY})
-
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
-    - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
-    - **Impact:** {IMPACT_DESCRIPTION}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
+  - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
+  - **Impact:** {IMPACT_DESCRIPTION}
 
 - [ ] **{NFR_NAME_2}** ({NFR_CATEGORY})
-    - **Owner:** {OWNER}
-    - **Deadline:** {DEADLINE}
-    - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
-    - **Impact:** {IMPACT_DESCRIPTION}
+  - **Owner:** {OWNER}
+  - **Deadline:** {DEADLINE}
+  - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
+  - **Impact:** {IMPACT_DESCRIPTION}
 
 ---
 
@@ -376,26 +369,26 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 
 ```yaml
 nfr_assessment:
-    date: "{DATE}"
-    story_id: "{STORY_ID}"
-    feature_name: "{FEATURE_NAME}"
-    categories:
-        performance: "{PERFORMANCE_STATUS}"
-        security: "{SECURITY_STATUS}"
-        reliability: "{RELIABILITY_STATUS}"
-        maintainability: "{MAINTAINABILITY_STATUS}"
-    overall_status: "{OVERALL_STATUS}"
-    critical_issues: { CRITICAL_COUNT }
-    high_priority_issues: { HIGH_COUNT }
-    medium_priority_issues: { MEDIUM_COUNT }
-    concerns: { CONCERNS_COUNT }
-    blockers: { BLOCKER_BOOLEAN } # true/false
-    quick_wins: { QUICK_WIN_COUNT }
-    evidence_gaps: { EVIDENCE_GAP_COUNT }
-    recommendations:
-        - "{RECOMMENDATION_1}"
-        - "{RECOMMENDATION_2}"
-        - "{RECOMMENDATION_3}"
+  date: '{DATE}'
+  story_id: '{STORY_ID}'
+  feature_name: '{FEATURE_NAME}'
+  categories:
+    performance: '{PERFORMANCE_STATUS}'
+    security: '{SECURITY_STATUS}'
+    reliability: '{RELIABILITY_STATUS}'
+    maintainability: '{MAINTAINABILITY_STATUS}'
+  overall_status: '{OVERALL_STATUS}'
+  critical_issues: { CRITICAL_COUNT }
+  high_priority_issues: { HIGH_COUNT }
+  medium_priority_issues: { MEDIUM_COUNT }
+  concerns: { CONCERNS_COUNT }
+  blockers: { BLOCKER_BOOLEAN } # true/false
+  quick_wins: { QUICK_WIN_COUNT }
+  evidence_gaps: { EVIDENCE_GAP_COUNT }
+  recommendations:
+    - '{RECOMMENDATION_1}'
+    - '{RECOMMENDATION_2}'
+    - '{RECOMMENDATION_3}'
 ```
 
 ---
@@ -407,10 +400,10 @@ nfr_assessment:
 - **PRD:** {PRD_PATH} (if available)
 - **Test Design:** {TEST_DESIGN_PATH} (if available)
 - **Evidence Sources:**
-    - Test Results: {TEST_RESULTS_DIR}
-    - Metrics: {METRICS_DIR}
-    - Logs: {LOGS_DIR}
-    - CI Results: {CI_RESULTS_PATH}
+  - Test Results: {TEST_RESULTS_DIR}
+  - Metrics: {METRICS_DIR}
+  - Logs: {LOGS_DIR}
+  - CI Results: {CI_RESULTS_PATH}
 
 ---
 

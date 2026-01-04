@@ -1,5 +1,5 @@
 ---
-description: "Generate failing acceptance tests before implementation using TDD red-green-refactor cycle"
+description: 'Generate failing acceptance tests before implementation using TDD red-green-refactor cycle'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

@@ -1,5 +1,5 @@
 ---
-description: "Expand test automation coverage after implementation or analyze existing codebase to generate comprehensive test suite"
+description: 'Expand test automation coverage after implementation or analyze existing codebase to generate comprehensive test suite'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

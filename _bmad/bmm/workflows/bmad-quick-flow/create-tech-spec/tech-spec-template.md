@@ -1,8 +1,8 @@
 ---
-title: "{title}"
-slug: "{slug}"
-created: "{date}"
-status: "in-progress"
+title: '{title}'
+slug: '{slug}'
+created: '{date}'
+status: 'in-progress'
 stepsCompleted: []
 tech_stack: []
 files_to_modify: []

@@ -1,19 +1,19 @@
 ---
-name: "step-10-nonfunctional"
-description: "Define quality attributes that matter for this specific product"
+name: 'step-10-nonfunctional'
+description: 'Define quality attributes that matter for this specific product'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-10-nonfunctional.md"
-nextStepFile: "{workflow_path}/steps/step-11-complete.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-10-nonfunctional.md'
+nextStepFile: '{workflow_path}/steps/step-11-complete.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 
 # Task References
-advancedElicitationTask: "{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml"
-partyModeWorkflow: "{project-root}/_bmad/core/workflows/party-mode/workflow.md"
+advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
+partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
 
 # Step 10: Non-Functional Requirements
@@ -50,8 +50,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml
-- When 'P' selected: Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md
+- When 'A' selected: Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml
+- When 'P' selected: Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md
 - PROTOCOLS always return to this step's A/P/C menu
 - User accepts/rejects protocol changes before proceeding
 
@@ -210,7 +210,7 @@ Show the generated NFR content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Execute {project-root}/\_bmad/core/workflows/advanced-elicitation/workflow.xml with the current NFR content
+- Execute {project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml with the current NFR content
 - Process the enhanced quality attribute insights that come back
 - Ask user: "Accept these improvements to the non-functional requirements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu
@@ -218,7 +218,7 @@ Show the generated NFR content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Execute {project-root}/\_bmad/core/workflows/party-mode/workflow.md with the current NFR list
+- Execute {project-root}/_bmad/core/workflows/party-mode/workflow.md with the current NFR list
 - Process the collaborative technical validation and additions
 - Ask user: "Accept these changes to the non-functional requirements? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu

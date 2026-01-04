@@ -35,8 +35,8 @@
 {List each E2E test with its current status and expected failure reason}
 
 - ✅ **Test:** {test_name}
-    - **Status:** RED - {failure_reason}
-    - **Verifies:** {what_this_test_validates}
+  - **Status:** RED - {failure_reason}
+  - **Verifies:** {what_this_test_validates}
 
 ### API Tests ({api_test_count} tests)
 
@@ -45,8 +45,8 @@
 {List each API test with its current status and expected failure reason}
 
 - ✅ **Test:** {test_name}
-    - **Status:** RED - {failure_reason}
-    - **Verifies:** {what_this_test_validates}
+  - **Status:** RED - {failure_reason}
+  - **Verifies:** {what_this_test_validates}
 
 ### Component Tests ({component_test_count} tests)
 
@@ -55,8 +55,8 @@
 {List each component test with its current status and expected failure reason}
 
 - ✅ **Test:** {test_name}
-    - **Status:** RED - {failure_reason}
-    - **Verifies:** {what_this_test_validates}
+  - **Status:** RED - {failure_reason}
+  - **Verifies:** {what_this_test_validates}
 
 ---
 
@@ -76,8 +76,8 @@
 **Example Usage:**
 
 ```typescript
-const user = createUser({ email: "specific@example.com" })
-const users = createUsers(5) // Generate 5 random users
+const user = createUser({ email: 'specific@example.com' });
+const users = createUsers(5); // Generate 5 random users
 ```
 
 ---
@@ -93,9 +93,9 @@ const users = createUsers(5) // Generate 5 random users
 **Fixtures:**
 
 - `{fixtureName}` - {description_of_what_fixture_provides}
-    - **Setup:** {what_setup_does}
-    - **Provides:** {what_test_receives}
-    - **Cleanup:** {what_cleanup_does}
+  - **Setup:** {what_setup_does}
+  - **Provides:** {what_test_receives}
+  - **Cleanup:** {what_cleanup_does}
 
 **Example Usage:**
 

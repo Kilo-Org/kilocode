@@ -115,12 +115,12 @@ Load step: `./steps/step-02-discussion-orchestration.md`
 ```yaml
 ---
 stepsCompleted: [1]
-workflowType: "party-mode"
-user_name: "{{user_name}}"
-date: "{{date}}"
+workflowType: 'party-mode'
+user_name: '{{user_name}}'
+date: '{{date}}'
 agents_loaded: true
 party_active: true
-exit_triggers: ["*exit", "goodbye", "end party", "quit"]
+exit_triggers: ['*exit', 'goodbye', 'end party', 'quit']
 ---
 ```
 

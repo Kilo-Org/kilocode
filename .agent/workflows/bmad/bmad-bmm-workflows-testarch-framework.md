@@ -1,5 +1,5 @@
 ---
-description: "Initialize production-ready test framework architecture (Playwright or Cypress) with fixtures, helpers, and configuration"
+description: 'Initialize production-ready test framework architecture (Playwright or Cypress) with fixtures, helpers, and configuration'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

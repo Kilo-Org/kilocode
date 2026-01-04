@@ -80,11 +80,11 @@ This project is organized into {{parts_count}} distinct parts:
   {{#if additional_entry_points}}
 - **Additional:**
   {{#each additional_entry_points}}
-    - `{{path}}`: {{description}}
-      {{/each}}
-      {{/if}}
-      {{else}}
-      {{#each project_parts}}
+  - `{{path}}`: {{description}}
+    {{/each}}
+    {{/if}}
+    {{else}}
+    {{#each project_parts}}
 
 ### {{part_name}}
 

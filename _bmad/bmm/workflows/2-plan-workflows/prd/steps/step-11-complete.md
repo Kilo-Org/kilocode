@@ -1,14 +1,14 @@
 ---
-name: "step-11-complete"
-description: "Complete the PRD workflow, update status files, and suggest next steps"
+name: 'step-11-complete'
+description: 'Complete the PRD workflow, update status files, and suggest next steps'
 
 # Path Definitions
-workflow_path: "{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd"
+workflow_path: '{project-root}/_bmad/bmm/workflows/2-plan-workflows/prd'
 
 # File References
-thisStepFile: "{workflow_path}/steps/step-11-complete.md"
-workflowFile: "{workflow_path}/workflow.md"
-outputFile: "{planning_artifacts}/prd.md"
+thisStepFile: '{workflow_path}/steps/step-11-complete.md'
+workflowFile: '{workflow_path}/workflow.md'
+outputFile: '{planning_artifacts}/prd.md'
 ---
 
 # Step 11: Workflow Completion
@@ -95,18 +95,16 @@ Provide guidance on logical next workflows:
 **Immediate Next Steps:**
 
 1. `workflow create-ux-design` - UX Design (if UI exists)
-
-    - User journey insights from step-04 will inform interaction design
-    - Functional requirements from step-09 define design scope
+   - User journey insights from step-04 will inform interaction design
+   - Functional requirements from step-09 define design scope
 
 2. `workflow create-architecture` - Technical architecture
-
-    - Project-type requirements from step-07 guide technical decisions
-    - Non-functional requirements from step-10 inform architecture choices
+   - Project-type requirements from step-07 guide technical decisions
+   - Non-functional requirements from step-10 inform architecture choices
 
 3. `workflow create-epics-and-stories` - Epic breakdown
-    - Functional requirements from step-09 become epics and stories
-    - Scope definition from step-03 guides sprint planning
+   - Functional requirements from step-09 become epics and stories
+   - Scope definition from step-03 guides sprint planning
 
 **Strategic Considerations:**
 

@@ -29,48 +29,48 @@ Network-first patterns provide:
 
 ```typescript
 // ✅ CORRECT: Intercept BEFORE navigate
-test("user can view dashboard data", async ({ page }) => {
-	// Step 1: Register interception FIRST
-	const usersPromise = page.waitForResponse((resp) => resp.url().includes("/api/users") && resp.status() === 200)
+test('user can view dashboard data', async ({ page }) => {
+  // Step 1: Register interception FIRST
+  const usersPromise = page.waitForResponse((resp) => resp.url().includes('/api/users') && resp.status() === 200);
 
-	// Step 2: THEN trigger the request
-	await page.goto("/dashboard")
+  // Step 2: THEN trigger the request
+  await page.goto('/dashboard');
 
-	// Step 3: THEN await the response
-	const usersResponse = await usersPromise
-	const users = await usersResponse.json()
+  // Step 3: THEN await the response
+  const usersResponse = await usersPromise;
+  const users = await usersResponse.json();
 
-	// Step 4: Assert on structured data
-	expect(users).toHaveLength(10)
-	await expect(page.getByText(users[0].name)).toBeVisible()
-})
+  // Step 4: Assert on structured data
+  expect(users).toHaveLength(10);
+  await expect(page.getByText(users[0].name)).toBeVisible();
+});
 
 // Cypress equivalent
-describe("Dashboard", () => {
-	it("should display users", () => {
-		// Step 1: Register interception FIRST
-		cy.intercept("GET", "**/api/users").as("getUsers")
+describe('Dashboard', () => {
+  it('should display users', () => {
+    // Step 1: Register interception FIRST
+    cy.intercept('GET', '**/api/users').as('getUsers');
 
-		// Step 2: THEN trigger
-		cy.visit("/dashboard")
+    // Step 2: THEN trigger
+    cy.visit('/dashboard');
 
-		// Step 3: THEN await
-		cy.wait("@getUsers").then((interception) => {
-			// Step 4: Assert on structured data
-			expect(interception.response.statusCode).to.equal(200)
-			expect(interception.response.body).to.have.length(10)
-			cy.contains(interception.response.body[0].name).should("be.visible")
-		})
-	})
-})
+    // Step 3: THEN await
+    cy.wait('@getUsers').then((interception) => {
+      // Step 4: Assert on structured data
+      expect(interception.response.statusCode).to.equal(200);
+      expect(interception.response.body).to.have.length(10);
+      cy.contains(interception.response.body[0].name).should('be.visible');
+    });
+  });
+});
 
 // ❌ WRONG: Navigate BEFORE intercept (race condition!)
-test("flaky test example", async ({ page }) => {
-	await page.goto("/dashboard") // Request fires immediately
+test('flaky test example', async ({ page }) => {
+  await page.goto('/dashboard'); // Request fires immediately
 
-	const usersPromise = page.waitForResponse("/api/users") // TOO LATE - might miss it
-	const response = await usersPromise // May timeout randomly
-})
+  const usersPromise = page.waitForResponse('/api/users'); // TOO LATE - might miss it
+  const response = await usersPromise; // May timeout randomly
+});
 ```
 
 **Key Points**:
@@ -89,64 +89,64 @@ test("flaky test example", async ({ page }) => {
 ```typescript
 // playwright.config.ts - Enable HAR recording
 export default defineConfig({
-	use: {
-		// Record HAR on first run
-		recordHar: { path: "./hars/", mode: "minimal" },
-		// Or replay HAR in tests
-		// serviceWorkers: 'block',
-	},
-})
+  use: {
+    // Record HAR on first run
+    recordHar: { path: './hars/', mode: 'minimal' },
+    // Or replay HAR in tests
+    // serviceWorkers: 'block',
+  },
+});
 
 // Capture HAR for specific test
-test("capture network for order flow", async ({ page, context }) => {
-	// Start recording
-	await context.routeFromHAR("./hars/order-flow.har", {
-		url: "**/api/**",
-		update: true, // Update HAR with new requests
-	})
+test('capture network for order flow', async ({ page, context }) => {
+  // Start recording
+  await context.routeFromHAR('./hars/order-flow.har', {
+    url: '**/api/**',
+    update: true, // Update HAR with new requests
+  });
 
-	await page.goto("/checkout")
-	await page.fill('[data-testid="credit-card"]', "4111111111111111")
-	await page.click('[data-testid="submit-order"]')
-	await expect(page.getByText("Order Confirmed")).toBeVisible()
+  await page.goto('/checkout');
+  await page.fill('[data-testid="credit-card"]', '4111111111111111');
+  await page.click('[data-testid="submit-order"]');
+  await expect(page.getByText('Order Confirmed')).toBeVisible();
 
-	// HAR saved to ./hars/order-flow.har
-})
+  // HAR saved to ./hars/order-flow.har
+});
 
 // Replay HAR for deterministic tests (no real API needed)
-test("replay order flow from HAR", async ({ page, context }) => {
-	// Replay captured HAR
-	await context.routeFromHAR("./hars/order-flow.har", {
-		url: "**/api/**",
-		update: false, // Read-only mode
-	})
+test('replay order flow from HAR', async ({ page, context }) => {
+  // Replay captured HAR
+  await context.routeFromHAR('./hars/order-flow.har', {
+    url: '**/api/**',
+    update: false, // Read-only mode
+  });
 
-	// Test runs with exact recorded responses - fully deterministic
-	await page.goto("/checkout")
-	await page.fill('[data-testid="credit-card"]', "4111111111111111")
-	await page.click('[data-testid="submit-order"]')
-	await expect(page.getByText("Order Confirmed")).toBeVisible()
-})
+  // Test runs with exact recorded responses - fully deterministic
+  await page.goto('/checkout');
+  await page.fill('[data-testid="credit-card"]', '4111111111111111');
+  await page.click('[data-testid="submit-order"]');
+  await expect(page.getByText('Order Confirmed')).toBeVisible();
+});
 
 // Custom mock based on HAR insights
-test("mock order response based on HAR", async ({ page }) => {
-	// After analyzing HAR, create focused mock
-	await page.route("**/api/orders", (route) =>
-		route.fulfill({
-			status: 200,
-			contentType: "application/json",
-			body: JSON.stringify({
-				orderId: "12345",
-				status: "confirmed",
-				total: 99.99,
-			}),
-		}),
-	)
+test('mock order response based on HAR', async ({ page }) => {
+  // After analyzing HAR, create focused mock
+  await page.route('**/api/orders', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        orderId: '12345',
+        status: 'confirmed',
+        total: 99.99,
+      }),
+    }),
+  );
 
-	await page.goto("/checkout")
-	await page.click('[data-testid="submit-order"]')
-	await expect(page.getByText("Order #12345")).toBeVisible()
-})
+  await page.goto('/checkout');
+  await page.click('[data-testid="submit-order"]');
+  await expect(page.getByText('Order #12345')).toBeVisible();
+});
 ```
 
 **Key Points**:
@@ -164,106 +164,106 @@ test("mock order response based on HAR", async ({ page }) => {
 
 ```typescript
 // Test happy path
-test("order succeeds with valid data", async ({ page }) => {
-	await page.route("**/api/orders", (route) =>
-		route.fulfill({
-			status: 200,
-			contentType: "application/json",
-			body: JSON.stringify({ orderId: "123", status: "confirmed" }),
-		}),
-	)
+test('order succeeds with valid data', async ({ page }) => {
+  await page.route('**/api/orders', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ orderId: '123', status: 'confirmed' }),
+    }),
+  );
 
-	await page.goto("/checkout")
-	await page.click('[data-testid="submit-order"]')
-	await expect(page.getByText("Order Confirmed")).toBeVisible()
-})
+  await page.goto('/checkout');
+  await page.click('[data-testid="submit-order"]');
+  await expect(page.getByText('Order Confirmed')).toBeVisible();
+});
 
 // Test 500 error
-test("order fails with server error", async ({ page }) => {
-	// Listen for console errors (app should log gracefully)
-	const consoleErrors: string[] = []
-	page.on("console", (msg) => {
-		if (msg.type() === "error") consoleErrors.push(msg.text())
-	})
+test('order fails with server error', async ({ page }) => {
+  // Listen for console errors (app should log gracefully)
+  const consoleErrors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text());
+  });
 
-	// Stub 500 error
-	await page.route("**/api/orders", (route) =>
-		route.fulfill({
-			status: 500,
-			contentType: "application/json",
-			body: JSON.stringify({ error: "Internal Server Error" }),
-		}),
-	)
+  // Stub 500 error
+  await page.route('**/api/orders', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Internal Server Error' }),
+    }),
+  );
 
-	await page.goto("/checkout")
-	await page.click('[data-testid="submit-order"]')
+  await page.goto('/checkout');
+  await page.click('[data-testid="submit-order"]');
 
-	// Assert UI shows error gracefully
-	await expect(page.getByText("Something went wrong")).toBeVisible()
-	await expect(page.getByText("Please try again")).toBeVisible()
+  // Assert UI shows error gracefully
+  await expect(page.getByText('Something went wrong')).toBeVisible();
+  await expect(page.getByText('Please try again')).toBeVisible();
 
-	// Verify error logged (not thrown)
-	expect(consoleErrors.some((e) => e.includes("Order failed"))).toBeTruthy()
-})
+  // Verify error logged (not thrown)
+  expect(consoleErrors.some((e) => e.includes('Order failed'))).toBeTruthy();
+});
 
 // Test network timeout
-test("order times out after 10 seconds", async ({ page }) => {
-	// Stub delayed response (never resolves within timeout)
-	await page.route(
-		"**/api/orders",
-		(route) => new Promise(() => {}), // Never resolves - simulates timeout
-	)
+test('order times out after 10 seconds', async ({ page }) => {
+  // Stub delayed response (never resolves within timeout)
+  await page.route(
+    '**/api/orders',
+    (route) => new Promise(() => {}), // Never resolves - simulates timeout
+  );
 
-	await page.goto("/checkout")
-	await page.click('[data-testid="submit-order"]')
+  await page.goto('/checkout');
+  await page.click('[data-testid="submit-order"]');
 
-	// App should show timeout message after configured timeout
-	await expect(page.getByText("Request timed out")).toBeVisible({ timeout: 15000 })
-})
+  // App should show timeout message after configured timeout
+  await expect(page.getByText('Request timed out')).toBeVisible({ timeout: 15000 });
+});
 
 // Test partial data response
-test("order handles missing optional fields", async ({ page }) => {
-	await page.route("**/api/orders", (route) =>
-		route.fulfill({
-			status: 200,
-			contentType: "application/json",
-			// Missing optional fields like 'trackingNumber', 'estimatedDelivery'
-			body: JSON.stringify({ orderId: "123", status: "confirmed" }),
-		}),
-	)
+test('order handles missing optional fields', async ({ page }) => {
+  await page.route('**/api/orders', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // Missing optional fields like 'trackingNumber', 'estimatedDelivery'
+      body: JSON.stringify({ orderId: '123', status: 'confirmed' }),
+    }),
+  );
 
-	await page.goto("/checkout")
-	await page.click('[data-testid="submit-order"]')
+  await page.goto('/checkout');
+  await page.click('[data-testid="submit-order"]');
 
-	// App should handle gracefully - no crash, shows what's available
-	await expect(page.getByText("Order Confirmed")).toBeVisible()
-	await expect(page.getByText("Tracking information pending")).toBeVisible()
-})
+  // App should handle gracefully - no crash, shows what's available
+  await expect(page.getByText('Order Confirmed')).toBeVisible();
+  await expect(page.getByText('Tracking information pending')).toBeVisible();
+});
 
 // Cypress equivalents
-describe("Order Edge Cases", () => {
-	it("should handle 500 error", () => {
-		cy.intercept("POST", "**/api/orders", {
-			statusCode: 500,
-			body: { error: "Internal Server Error" },
-		}).as("orderFailed")
+describe('Order Edge Cases', () => {
+  it('should handle 500 error', () => {
+    cy.intercept('POST', '**/api/orders', {
+      statusCode: 500,
+      body: { error: 'Internal Server Error' },
+    }).as('orderFailed');
 
-		cy.visit("/checkout")
-		cy.get('[data-testid="submit-order"]').click()
-		cy.wait("@orderFailed")
-		cy.contains("Something went wrong").should("be.visible")
-	})
+    cy.visit('/checkout');
+    cy.get('[data-testid="submit-order"]').click();
+    cy.wait('@orderFailed');
+    cy.contains('Something went wrong').should('be.visible');
+  });
 
-	it("should handle timeout", () => {
-		cy.intercept("POST", "**/api/orders", (req) => {
-			req.reply({ delay: 20000 }) // Delay beyond app timeout
-		}).as("orderTimeout")
+  it('should handle timeout', () => {
+    cy.intercept('POST', '**/api/orders', (req) => {
+      req.reply({ delay: 20000 }); // Delay beyond app timeout
+    }).as('orderTimeout');
 
-		cy.visit("/checkout")
-		cy.get('[data-testid="submit-order"]').click()
-		cy.contains("Request timed out", { timeout: 15000 }).should("be.visible")
-	})
-})
+    cy.visit('/checkout');
+    cy.get('[data-testid="submit-order"]').click();
+    cy.contains('Request timed out', { timeout: 15000 }).should('be.visible');
+  });
+});
 ```
 
 **Key Points**:
@@ -281,85 +281,85 @@ describe("Order Edge Cases", () => {
 
 ```typescript
 // ✅ GOOD: Wait for response with predicate
-test("wait for specific response", async ({ page }) => {
-	const responsePromise = page.waitForResponse((resp) => resp.url().includes("/api/users") && resp.status() === 200)
+test('wait for specific response', async ({ page }) => {
+  const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/users') && resp.status() === 200);
 
-	await page.goto("/dashboard")
-	const response = await responsePromise
+  await page.goto('/dashboard');
+  const response = await responsePromise;
 
-	expect(response.status()).toBe(200)
-	await expect(page.getByText("Dashboard")).toBeVisible()
-})
+  expect(response.status()).toBe(200);
+  await expect(page.getByText('Dashboard')).toBeVisible();
+});
 
 // ✅ GOOD: Wait for multiple responses
-test("wait for all required data", async ({ page }) => {
-	const usersPromise = page.waitForResponse("**/api/users")
-	const productsPromise = page.waitForResponse("**/api/products")
-	const ordersPromise = page.waitForResponse("**/api/orders")
+test('wait for all required data', async ({ page }) => {
+  const usersPromise = page.waitForResponse('**/api/users');
+  const productsPromise = page.waitForResponse('**/api/products');
+  const ordersPromise = page.waitForResponse('**/api/orders');
 
-	await page.goto("/dashboard")
+  await page.goto('/dashboard');
 
-	// Wait for all in parallel
-	const [users, products, orders] = await Promise.all([usersPromise, productsPromise, ordersPromise])
+  // Wait for all in parallel
+  const [users, products, orders] = await Promise.all([usersPromise, productsPromise, ordersPromise]);
 
-	expect(users.status()).toBe(200)
-	expect(products.status()).toBe(200)
-	expect(orders.status()).toBe(200)
-})
+  expect(users.status()).toBe(200);
+  expect(products.status()).toBe(200);
+  expect(orders.status()).toBe(200);
+});
 
 // ✅ GOOD: Wait for spinner to disappear
-test("wait for loading indicator", async ({ page }) => {
-	await page.goto("/dashboard")
+test('wait for loading indicator', async ({ page }) => {
+  await page.goto('/dashboard');
 
-	// Wait for spinner to disappear (signals data loaded)
-	await expect(page.getByTestId("loading-spinner")).not.toBeVisible()
-	await expect(page.getByText("Dashboard")).toBeVisible()
-})
+  // Wait for spinner to disappear (signals data loaded)
+  await expect(page.getByTestId('loading-spinner')).not.toBeVisible();
+  await expect(page.getByText('Dashboard')).toBeVisible();
+});
 
 // ✅ GOOD: Wait for custom event (advanced)
-test("wait for custom ready event", async ({ page }) => {
-	let appReady = false
-	page.on("console", (msg) => {
-		if (msg.text() === "App ready") appReady = true
-	})
+test('wait for custom ready event', async ({ page }) => {
+  let appReady = false;
+  page.on('console', (msg) => {
+    if (msg.text() === 'App ready') appReady = true;
+  });
 
-	await page.goto("/dashboard")
+  await page.goto('/dashboard');
 
-	// Poll until custom condition met
-	await page.waitForFunction(() => appReady, { timeout: 10000 })
+  // Poll until custom condition met
+  await page.waitForFunction(() => appReady, { timeout: 10000 });
 
-	await expect(page.getByText("Dashboard")).toBeVisible()
-})
+  await expect(page.getByText('Dashboard')).toBeVisible();
+});
 
 // ❌ BAD: Hard wait (arbitrary timeout)
-test("flaky hard wait example", async ({ page }) => {
-	await page.goto("/dashboard")
-	await page.waitForTimeout(3000) // WHY 3 seconds? What if slower? What if faster?
-	await expect(page.getByText("Dashboard")).toBeVisible() // May fail if >3s
-})
+test('flaky hard wait example', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.waitForTimeout(3000); // WHY 3 seconds? What if slower? What if faster?
+  await expect(page.getByText('Dashboard')).toBeVisible(); // May fail if >3s
+});
 
 // Cypress equivalents
-describe("Deterministic Waiting", () => {
-	it("should wait for response", () => {
-		cy.intercept("GET", "**/api/users").as("getUsers")
-		cy.visit("/dashboard")
-		cy.wait("@getUsers").its("response.statusCode").should("eq", 200)
-		cy.contains("Dashboard").should("be.visible")
-	})
+describe('Deterministic Waiting', () => {
+  it('should wait for response', () => {
+    cy.intercept('GET', '**/api/users').as('getUsers');
+    cy.visit('/dashboard');
+    cy.wait('@getUsers').its('response.statusCode').should('eq', 200);
+    cy.contains('Dashboard').should('be.visible');
+  });
 
-	it("should wait for spinner to disappear", () => {
-		cy.visit("/dashboard")
-		cy.get('[data-testid="loading-spinner"]').should("not.exist")
-		cy.contains("Dashboard").should("be.visible")
-	})
+  it('should wait for spinner to disappear', () => {
+    cy.visit('/dashboard');
+    cy.get('[data-testid="loading-spinner"]').should('not.exist');
+    cy.contains('Dashboard').should('be.visible');
+  });
 
-	// ❌ BAD: Hard wait
-	it("flaky hard wait", () => {
-		cy.visit("/dashboard")
-		cy.wait(3000) // NEVER DO THIS
-		cy.contains("Dashboard").should("be.visible")
-	})
-})
+  // ❌ BAD: Hard wait
+  it('flaky hard wait', () => {
+    cy.visit('/dashboard');
+    cy.wait(3000); // NEVER DO THIS
+    cy.contains('Dashboard').should('be.visible');
+  });
+});
 ```
 
 **Key Points**:
@@ -375,39 +375,39 @@ describe("Deterministic Waiting", () => {
 
 ```typescript
 // ❌ BAD: Race condition - mock registered AFTER navigation starts
-test("flaky test - navigate then mock", async ({ page }) => {
-	// Navigation starts immediately
-	await page.goto("/dashboard") // Request to /api/users fires NOW
+test('flaky test - navigate then mock', async ({ page }) => {
+  // Navigation starts immediately
+  await page.goto('/dashboard'); // Request to /api/users fires NOW
 
-	// Mock registered too late - request already sent
-	await page.route("**/api/users", (route) =>
-		route.fulfill({
-			status: 200,
-			body: JSON.stringify([{ id: 1, name: "Test User" }]),
-		}),
-	)
+  // Mock registered too late - request already sent
+  await page.route('**/api/users', (route) =>
+    route.fulfill({
+      status: 200,
+      body: JSON.stringify([{ id: 1, name: 'Test User' }]),
+    }),
+  );
 
-	// Test randomly passes/fails depending on timing
-	await expect(page.getByText("Test User")).toBeVisible() // Flaky!
-})
+  // Test randomly passes/fails depending on timing
+  await expect(page.getByText('Test User')).toBeVisible(); // Flaky!
+});
 
 // ❌ BAD: No wait for response
-test("flaky test - no explicit wait", async ({ page }) => {
-	await page.route("**/api/users", (route) => route.fulfill({ status: 200, body: JSON.stringify([]) }))
+test('flaky test - no explicit wait', async ({ page }) => {
+  await page.route('**/api/users', (route) => route.fulfill({ status: 200, body: JSON.stringify([]) }));
 
-	await page.goto("/dashboard")
+  await page.goto('/dashboard');
 
-	// Assertion runs immediately - may fail if response slow
-	await expect(page.getByText("No users found")).toBeVisible() // Flaky!
-})
+  // Assertion runs immediately - may fail if response slow
+  await expect(page.getByText('No users found')).toBeVisible(); // Flaky!
+});
 
 // ❌ BAD: Generic timeout
-test("flaky test - hard wait", async ({ page }) => {
-	await page.goto("/dashboard")
-	await page.waitForTimeout(2000) // Arbitrary wait - brittle
+test('flaky test - hard wait', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.waitForTimeout(2000); // Arbitrary wait - brittle
 
-	await expect(page.getByText("Dashboard")).toBeVisible()
-})
+  await expect(page.getByText('Dashboard')).toBeVisible();
+});
 ```
 
 **Why It Fails**:
@@ -421,28 +421,28 @@ test("flaky test - hard wait", async ({ page }) => {
 
 ```typescript
 // ✅ GOOD: Intercept BEFORE navigate
-test("deterministic test", async ({ page }) => {
-	// Step 1: Register mock FIRST
-	await page.route("**/api/users", (route) =>
-		route.fulfill({
-			status: 200,
-			contentType: "application/json",
-			body: JSON.stringify([{ id: 1, name: "Test User" }]),
-		}),
-	)
+test('deterministic test', async ({ page }) => {
+  // Step 1: Register mock FIRST
+  await page.route('**/api/users', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ id: 1, name: 'Test User' }]),
+    }),
+  );
 
-	// Step 2: Store response promise BEFORE trigger
-	const responsePromise = page.waitForResponse("**/api/users")
+  // Step 2: Store response promise BEFORE trigger
+  const responsePromise = page.waitForResponse('**/api/users');
 
-	// Step 3: THEN trigger
-	await page.goto("/dashboard")
+  // Step 3: THEN trigger
+  await page.goto('/dashboard');
 
-	// Step 4: THEN await response
-	await responsePromise
+  // Step 4: THEN await response
+  await responsePromise;
 
-	// Step 5: THEN assert (data is guaranteed loaded)
-	await expect(page.getByText("Test User")).toBeVisible()
-})
+  // Step 5: THEN assert (data is guaranteed loaded)
+  await expect(page.getByText('Test User')).toBeVisible();
+});
 ```
 
 **Key Points**:
@@ -456,9 +456,9 @@ test("deterministic test", async ({ page }) => {
 
 - **Used in workflows**: `*atdd` (test generation), `*automate` (test expansion), `*framework` (network setup)
 - **Related fragments**:
-    - `fixture-architecture.md` - Network fixture patterns
-    - `data-factories.md` - API-first setup with network
-    - `test-quality.md` - Deterministic test principles
+  - `fixture-architecture.md` - Network fixture patterns
+  - `data-factories.md` - API-first setup with network
+  - `test-quality.md` - Deterministic test principles
 
 ## Debugging Network Issues
 
@@ -472,15 +472,15 @@ When network tests fail, check:
 
 ```typescript
 // Debug network issues with logging
-test("debug network", async ({ page }) => {
-	// Log all requests
-	page.on("request", (req) => console.log("→", req.method(), req.url()))
+test('debug network', async ({ page }) => {
+  // Log all requests
+  page.on('request', (req) => console.log('→', req.method(), req.url()));
 
-	// Log all responses
-	page.on("response", (resp) => console.log("←", resp.status(), resp.url()))
+  // Log all responses
+  page.on('response', (resp) => console.log('←', resp.status(), resp.url()));
 
-	await page.goto("/dashboard")
-})
+  await page.goto('/dashboard');
+});
 ```
 
 _Source: Murat Testing Philosophy (lines 94-137), Playwright network patterns, Cypress intercept best practices._

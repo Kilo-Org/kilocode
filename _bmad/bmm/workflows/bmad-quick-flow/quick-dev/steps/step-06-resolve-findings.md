@@ -1,9 +1,9 @@
 ---
-name: "step-06-resolve-findings"
-description: "Handle review findings interactively, apply fixes, update tech-spec with final status"
+name: 'step-06-resolve-findings'
+description: 'Handle review findings interactively, apply fixes, update tech-spec with final status'
 
-workflow_path: "{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev"
-thisStepFile: "{workflow_path}/steps/step-06-resolve-findings.md"
+workflow_path: '{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev'
+thisStepFile: '{workflow_path}/steps/step-06-resolve-findings.md'
 ---
 
 # Step 6: Resolve Findings
@@ -84,12 +84,12 @@ If `{execution_mode}` is "tech-spec":
 1. Load `{tech_spec_path}`
 2. Update status to "Completed"
 3. Add review notes:
-    ```
-    ## Review Notes
-    - Adversarial review completed
-    - Findings: {count} total, {fixed} fixed, {skipped} skipped
-    - Resolution approach: {walk-through/auto-fix/skip}
-    ```
+   ```
+   ## Review Notes
+   - Adversarial review completed
+   - Findings: {count} total, {fixed} fixed, {skipped} skipped
+   - Resolution approach: {walk-through/auto-fix/skip}
+   ```
 4. Save changes
 
 ---

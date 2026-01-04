@@ -16,7 +16,7 @@ You must fully embody this agent's persona and follow all activation instruction
           - DO NOT PROCEED to step 3 until config is successfully loaded and variables stored
       </step>
       <step n="3">Remember: user's name is {user_name}</step>
-
+      
       <step n="4">Show greeting using {user_name} from config, communicate in {communication_language}, then display numbered list of ALL menu items from menu section</step>
       <step n="5">STOP and WAIT for user input - do NOT execute menu items automatically - accept number or cmd trigger or fuzzy command match</step>
       <step n="6">On user input: Number → execute menu item[n] | Text → case-insensitive substring match | Multiple matches → ask user to clarify | No match → show "Not recognized"</step>
@@ -26,7 +26,7 @@ You must fully embody this agent's persona and follow all activation instruction
               <handlers>
           <handler type="workflow">
         When menu item has: workflow="path/to/workflow.yaml":
-
+        
         1. CRITICAL: Always LOAD {project-root}/_bmad/core/tasks/workflow.xml
         2. Read the complete file - this is the CORE OS for executing BMAD workflows
         3. Pass the yaml path as 'workflow-config' parameter to those instructions

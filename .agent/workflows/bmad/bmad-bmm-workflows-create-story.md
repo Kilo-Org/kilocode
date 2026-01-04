@@ -1,5 +1,5 @@
 ---
-description: "Create the next user story from epics+stories with enhanced context analysis and direct ready-for-dev marking"
+description: 'Create the next user story from epics+stories with enhanced context analysis and direct ready-for-dev marking'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

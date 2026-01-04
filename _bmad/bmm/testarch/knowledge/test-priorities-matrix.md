@@ -182,96 +182,91 @@ Review and adjust priorities based on:
 ```typescript
 // src/testing/priority-calculator.ts
 
-export type Priority = "P0" | "P1" | "P2" | "P3"
+export type Priority = 'P0' | 'P1' | 'P2' | 'P3';
 
 export type PriorityFactors = {
-	revenueImpact: "critical" | "high" | "medium" | "low" | "none"
-	userImpact: "all" | "majority" | "some" | "few" | "minimal"
-	securityRisk: boolean
-	complianceRequired: boolean
-	previousFailure: boolean
-	complexity: "high" | "medium" | "low"
-	usage: "frequent" | "regular" | "occasional" | "rare"
-}
+  revenueImpact: 'critical' | 'high' | 'medium' | 'low' | 'none';
+  userImpact: 'all' | 'majority' | 'some' | 'few' | 'minimal';
+  securityRisk: boolean;
+  complianceRequired: boolean;
+  previousFailure: boolean;
+  complexity: 'high' | 'medium' | 'low';
+  usage: 'frequent' | 'regular' | 'occasional' | 'rare';
+};
 
 /**
  * Calculate test priority based on multiple factors
  * Mirrors the priority decision tree with objective criteria
  */
 export function calculatePriority(factors: PriorityFactors): Priority {
-	const { revenueImpact, userImpact, securityRisk, complianceRequired, previousFailure, complexity, usage } = factors
+  const { revenueImpact, userImpact, securityRisk, complianceRequired, previousFailure, complexity, usage } = factors;
 
-	// P0: Revenue-critical, security, or compliance
-	if (
-		revenueImpact === "critical" ||
-		securityRisk ||
-		complianceRequired ||
-		(previousFailure && revenueImpact === "high")
-	) {
-		return "P0"
-	}
+  // P0: Revenue-critical, security, or compliance
+  if (revenueImpact === 'critical' || securityRisk || complianceRequired || (previousFailure && revenueImpact === 'high')) {
+    return 'P0';
+  }
 
-	// P0: High revenue + high complexity + frequent usage
-	if (revenueImpact === "high" && complexity === "high" && usage === "frequent") {
-		return "P0"
-	}
+  // P0: High revenue + high complexity + frequent usage
+  if (revenueImpact === 'high' && complexity === 'high' && usage === 'frequent') {
+    return 'P0';
+  }
 
-	// P1: Core user journey (majority impacted + frequent usage)
-	if (userImpact === "all" || userImpact === "majority") {
-		if (usage === "frequent" || complexity === "high") {
-			return "P1"
-		}
-	}
+  // P1: Core user journey (majority impacted + frequent usage)
+  if (userImpact === 'all' || userImpact === 'majority') {
+    if (usage === 'frequent' || complexity === 'high') {
+      return 'P1';
+    }
+  }
 
-	// P1: High revenue OR high complexity with regular usage
-	if ((revenueImpact === "high" && usage === "regular") || (complexity === "high" && usage === "frequent")) {
-		return "P1"
-	}
+  // P1: High revenue OR high complexity with regular usage
+  if ((revenueImpact === 'high' && usage === 'regular') || (complexity === 'high' && usage === 'frequent')) {
+    return 'P1';
+  }
 
-	// P2: Secondary features (some impact, occasional usage)
-	if (userImpact === "some" || usage === "occasional") {
-		return "P2"
-	}
+  // P2: Secondary features (some impact, occasional usage)
+  if (userImpact === 'some' || usage === 'occasional') {
+    return 'P2';
+  }
 
-	// P3: Rarely used, low impact
-	return "P3"
+  // P3: Rarely used, low impact
+  return 'P3';
 }
 
 /**
  * Generate priority justification (for audit trail)
  */
 export function justifyPriority(factors: PriorityFactors): string {
-	const priority = calculatePriority(factors)
-	const reasons: string[] = []
+  const priority = calculatePriority(factors);
+  const reasons: string[] = [];
 
-	if (factors.revenueImpact === "critical") reasons.push("critical revenue impact")
-	if (factors.securityRisk) reasons.push("security-critical")
-	if (factors.complianceRequired) reasons.push("compliance requirement")
-	if (factors.previousFailure) reasons.push("regression prevention")
-	if (factors.userImpact === "all" || factors.userImpact === "majority") {
-		reasons.push(`impacts ${factors.userImpact} users`)
-	}
-	if (factors.complexity === "high") reasons.push("high complexity")
-	if (factors.usage === "frequent") reasons.push("frequently used")
+  if (factors.revenueImpact === 'critical') reasons.push('critical revenue impact');
+  if (factors.securityRisk) reasons.push('security-critical');
+  if (factors.complianceRequired) reasons.push('compliance requirement');
+  if (factors.previousFailure) reasons.push('regression prevention');
+  if (factors.userImpact === 'all' || factors.userImpact === 'majority') {
+    reasons.push(`impacts ${factors.userImpact} users`);
+  }
+  if (factors.complexity === 'high') reasons.push('high complexity');
+  if (factors.usage === 'frequent') reasons.push('frequently used');
 
-	return `${priority}: ${reasons.join(", ")}`
+  return `${priority}: ${reasons.join(', ')}`;
 }
 
 /**
  * Example: Payment scenario priority calculation
  */
 const paymentScenario: PriorityFactors = {
-	revenueImpact: "critical",
-	userImpact: "all",
-	securityRisk: true,
-	complianceRequired: true,
-	previousFailure: false,
-	complexity: "high",
-	usage: "frequent",
-}
+  revenueImpact: 'critical',
+  userImpact: 'all',
+  securityRisk: true,
+  complianceRequired: true,
+  previousFailure: false,
+  complexity: 'high',
+  usage: 'frequent',
+};
 
-console.log(calculatePriority(paymentScenario)) // 'P0'
-console.log(justifyPriority(paymentScenario))
+console.log(calculatePriority(paymentScenario)); // 'P0'
+console.log(justifyPriority(paymentScenario));
 // 'P0: critical revenue impact, security-critical, compliance requirement, impacts all users, high complexity, frequently used'
 ```
 
@@ -279,49 +274,49 @@ console.log(justifyPriority(paymentScenario))
 
 ```typescript
 // tests/e2e/checkout.spec.ts
-import { test, expect } from "@playwright/test"
+import { test, expect } from '@playwright/test';
 
 // Tag tests with priority for selective execution
-test.describe("Checkout Flow", () => {
-	test("valid payment completes successfully @p0 @smoke @revenue", async ({ page }) => {
-		// P0: Revenue-critical happy path
-		await page.goto("/checkout")
-		await page.getByTestId("payment-method").selectOption("credit-card")
-		await page.getByTestId("card-number").fill("4242424242424242")
-		await page.getByRole("button", { name: "Place Order" }).click()
+test.describe('Checkout Flow', () => {
+  test('valid payment completes successfully @p0 @smoke @revenue', async ({ page }) => {
+    // P0: Revenue-critical happy path
+    await page.goto('/checkout');
+    await page.getByTestId('payment-method').selectOption('credit-card');
+    await page.getByTestId('card-number').fill('4242424242424242');
+    await page.getByRole('button', { name: 'Place Order' }).click();
 
-		await expect(page.getByText("Order confirmed")).toBeVisible()
-	})
+    await expect(page.getByText('Order confirmed')).toBeVisible();
+  });
 
-	test("expired card shows user-friendly error @p1 @error-handling", async ({ page }) => {
-		// P1: Core error scenario (frequent user impact)
-		await page.goto("/checkout")
-		await page.getByTestId("payment-method").selectOption("credit-card")
-		await page.getByTestId("card-number").fill("4000000000000069") // Test card: expired
-		await page.getByRole("button", { name: "Place Order" }).click()
+  test('expired card shows user-friendly error @p1 @error-handling', async ({ page }) => {
+    // P1: Core error scenario (frequent user impact)
+    await page.goto('/checkout');
+    await page.getByTestId('payment-method').selectOption('credit-card');
+    await page.getByTestId('card-number').fill('4000000000000069'); // Test card: expired
+    await page.getByRole('button', { name: 'Place Order' }).click();
 
-		await expect(page.getByText("Card expired. Please use a different card.")).toBeVisible()
-	})
+    await expect(page.getByText('Card expired. Please use a different card.')).toBeVisible();
+  });
 
-	test("coupon code applies discount correctly @p2", async ({ page }) => {
-		// P2: Secondary feature (nice-to-have)
-		await page.goto("/checkout")
-		await page.getByTestId("coupon-code").fill("SAVE10")
-		await page.getByRole("button", { name: "Apply" }).click()
+  test('coupon code applies discount correctly @p2', async ({ page }) => {
+    // P2: Secondary feature (nice-to-have)
+    await page.goto('/checkout');
+    await page.getByTestId('coupon-code').fill('SAVE10');
+    await page.getByRole('button', { name: 'Apply' }).click();
 
-		await expect(page.getByText("10% discount applied")).toBeVisible()
-	})
+    await expect(page.getByText('10% discount applied')).toBeVisible();
+  });
 
-	test("gift message formatting preserved @p3", async ({ page }) => {
-		// P3: Cosmetic feature (rarely used)
-		await page.goto("/checkout")
-		await page.getByTestId("gift-message").fill("Happy Birthday!\n\nWith love.")
-		await page.getByRole("button", { name: "Place Order" }).click()
+  test('gift message formatting preserved @p3', async ({ page }) => {
+    // P3: Cosmetic feature (rarely used)
+    await page.goto('/checkout');
+    await page.getByTestId('gift-message').fill('Happy Birthday!\n\nWith love.');
+    await page.getByRole('button', { name: 'Place Order' }).click();
 
-		// Message formatting preserved (linebreaks intact)
-		await expect(page.getByTestId("order-summary")).toContainText("Happy Birthday!")
-	})
-})
+    // Message formatting preserved (linebreaks intact)
+    await expect(page.getByTestId('order-summary')).toContainText('Happy Birthday!');
+  });
+});
 ```
 
 **Run tests by priority:**

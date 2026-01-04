@@ -18,7 +18,7 @@ Running the entire test suite on every commit wastes time and resources. Smart t
 
 ```typescript
 // tests/e2e/checkout.spec.ts
-import { test, expect } from "@playwright/test"
+import { test, expect } from '@playwright/test';
 
 /**
  * Tag-based test organization
@@ -30,64 +30,64 @@ import { test, expect } from "@playwright/test"
  * - @p3: Nice-to-have (cosmetic, non-critical)
  */
 
-test.describe("Checkout Flow", () => {
-	// P0 + Smoke: Must run on every commit
-	test("@smoke @p0 should complete purchase with valid payment", async ({ page }) => {
-		await page.goto("/checkout")
-		await page.getByTestId("card-number").fill("4242424242424242")
-		await page.getByTestId("submit-payment").click()
+test.describe('Checkout Flow', () => {
+  // P0 + Smoke: Must run on every commit
+  test('@smoke @p0 should complete purchase with valid payment', async ({ page }) => {
+    await page.goto('/checkout');
+    await page.getByTestId('card-number').fill('4242424242424242');
+    await page.getByTestId('submit-payment').click();
 
-		await expect(page.getByTestId("order-confirmation")).toBeVisible()
-	})
+    await expect(page.getByTestId('order-confirmation')).toBeVisible();
+  });
 
-	// P0 but not smoke: Run pre-merge
-	test("@regression @p0 should handle payment decline gracefully", async ({ page }) => {
-		await page.goto("/checkout")
-		await page.getByTestId("card-number").fill("4000000000000002") // Decline card
-		await page.getByTestId("submit-payment").click()
+  // P0 but not smoke: Run pre-merge
+  test('@regression @p0 should handle payment decline gracefully', async ({ page }) => {
+    await page.goto('/checkout');
+    await page.getByTestId('card-number').fill('4000000000000002'); // Decline card
+    await page.getByTestId('submit-payment').click();
 
-		await expect(page.getByTestId("payment-error")).toBeVisible()
-		await expect(page.getByTestId("payment-error")).toContainText("declined")
-	})
+    await expect(page.getByTestId('payment-error')).toBeVisible();
+    await expect(page.getByTestId('payment-error')).toContainText('declined');
+  });
 
-	// P1 + Smoke: Important but not critical
-	test("@smoke @p1 should apply discount code", async ({ page }) => {
-		await page.goto("/checkout")
-		await page.getByTestId("promo-code").fill("SAVE10")
-		await page.getByTestId("apply-promo").click()
+  // P1 + Smoke: Important but not critical
+  test('@smoke @p1 should apply discount code', async ({ page }) => {
+    await page.goto('/checkout');
+    await page.getByTestId('promo-code').fill('SAVE10');
+    await page.getByTestId('apply-promo').click();
 
-		await expect(page.getByTestId("discount-applied")).toBeVisible()
-	})
+    await expect(page.getByTestId('discount-applied')).toBeVisible();
+  });
 
-	// P2: Run in full regression only
-	test("@regression @p2 should remember saved payment methods", async ({ page }) => {
-		await page.goto("/checkout")
-		await expect(page.getByTestId("saved-cards")).toBeVisible()
-	})
+  // P2: Run in full regression only
+  test('@regression @p2 should remember saved payment methods', async ({ page }) => {
+    await page.goto('/checkout');
+    await expect(page.getByTestId('saved-cards')).toBeVisible();
+  });
 
-	// P3: Low priority, run nightly or weekly
-	test("@nightly @p3 should display checkout page analytics", async ({ page }) => {
-		await page.goto("/checkout")
-		const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS__)
-		expect(analyticsEvents).toBeDefined()
-	})
-})
+  // P3: Low priority, run nightly or weekly
+  test('@nightly @p3 should display checkout page analytics', async ({ page }) => {
+    await page.goto('/checkout');
+    const analyticsEvents = await page.evaluate(() => (window as any).__ANALYTICS__);
+    expect(analyticsEvents).toBeDefined();
+  });
+});
 ```
 
 **package.json scripts**:
 
 ```json
 {
-	"scripts": {
-		"test": "playwright test",
-		"test:smoke": "playwright test --grep '@smoke'",
-		"test:p0": "playwright test --grep '@p0'",
-		"test:p0-p1": "playwright test --grep '@p0|@p1'",
-		"test:regression": "playwright test --grep '@regression'",
-		"test:nightly": "playwright test --grep '@nightly'",
-		"test:not-slow": "playwright test --grep-invert '@slow'",
-		"test:critical-smoke": "playwright test --grep '@smoke.*@p0'"
-	}
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep '@smoke'",
+    "test:p0": "playwright test --grep '@p0'",
+    "test:p0-p1": "playwright test --grep '@p0|@p1'",
+    "test:regression": "playwright test --grep '@regression'",
+    "test:nightly": "playwright test --grep '@nightly'",
+    "test:not-slow": "playwright test --grep-invert '@slow'",
+    "test:critical-smoke": "playwright test --grep '@smoke.*@p0'"
+  }
 }
 ```
 
@@ -95,35 +95,35 @@ test.describe("Checkout Flow", () => {
 
 ```javascript
 // cypress/e2e/checkout.cy.ts
-describe("Checkout Flow", { tags: ["@checkout"] }, () => {
-	it("should complete purchase", { tags: ["@smoke", "@p0"] }, () => {
-		cy.visit("/checkout")
-		cy.get('[data-cy="card-number"]').type("4242424242424242")
-		cy.get('[data-cy="submit-payment"]').click()
-		cy.get('[data-cy="order-confirmation"]').should("be.visible")
-	})
+describe('Checkout Flow', { tags: ['@checkout'] }, () => {
+  it('should complete purchase', { tags: ['@smoke', '@p0'] }, () => {
+    cy.visit('/checkout');
+    cy.get('[data-cy="card-number"]').type('4242424242424242');
+    cy.get('[data-cy="submit-payment"]').click();
+    cy.get('[data-cy="order-confirmation"]').should('be.visible');
+  });
 
-	it("should handle decline", { tags: ["@regression", "@p0"] }, () => {
-		cy.visit("/checkout")
-		cy.get('[data-cy="card-number"]').type("4000000000000002")
-		cy.get('[data-cy="submit-payment"]').click()
-		cy.get('[data-cy="payment-error"]').should("be.visible")
-	})
-})
+  it('should handle decline', { tags: ['@regression', '@p0'] }, () => {
+    cy.visit('/checkout');
+    cy.get('[data-cy="card-number"]').type('4000000000000002');
+    cy.get('[data-cy="submit-payment"]').click();
+    cy.get('[data-cy="payment-error"]').should('be.visible');
+  });
+});
 
 // cypress.config.ts
 export default defineConfig({
-	e2e: {
-		env: {
-			grepTags: process.env.GREP_TAGS || "",
-			grepFilterSpecs: true,
-		},
-		setupNodeEvents(on, config) {
-			require("@cypress/grep/src/plugin")(config)
-			return config
-		},
-	},
-})
+  e2e: {
+    env: {
+      grepTags: process.env.GREP_TAGS || '',
+      grepFilterSpecs: true,
+    },
+    setupNodeEvents(on, config) {
+      require('@cypress/grep/src/plugin')(config);
+      return config;
+    },
+  },
+});
 ```
 
 **Usage**:
@@ -205,35 +205,35 @@ esac
 
 ```typescript
 // playwright.config.ts
-import { defineConfig, devices } from "@playwright/test"
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	// ... other config
+  // ... other config
 
-	// Project-based organization
-	projects: [
-		{
-			name: "smoke",
-			testMatch: /.*smoke.*\.spec\.ts/,
-			retries: 0,
-		},
-		{
-			name: "e2e",
-			testMatch: /tests\/e2e\/.*\.spec\.ts/,
-			retries: 2,
-		},
-		{
-			name: "integration",
-			testMatch: /tests\/integration\/.*\.spec\.ts/,
-			retries: 1,
-		},
-		{
-			name: "component",
-			testMatch: /tests\/component\/.*\.spec\.ts/,
-			use: { ...devices["Desktop Chrome"] },
-		},
-	],
-})
+  // Project-based organization
+  projects: [
+    {
+      name: 'smoke',
+      testMatch: /.*smoke.*\.spec\.ts/,
+      retries: 0,
+    },
+    {
+      name: 'e2e',
+      testMatch: /tests\/e2e\/.*\.spec\.ts/,
+      retries: 2,
+    },
+    {
+      name: 'integration',
+      testMatch: /tests\/integration\/.*\.spec\.ts/,
+      retries: 1,
+    },
+    {
+      name: 'component',
+      testMatch: /tests\/component\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
 ```
 
 **Advanced pattern matching**:
@@ -245,29 +245,29 @@ export default defineConfig({
  * Usage: npm run test:component UserProfile,Settings
  */
 
-import { execSync } from "child_process"
+import { execSync } from 'child_process';
 
-const components = process.argv[2]?.split(",") || []
+const components = process.argv[2]?.split(',') || [];
 
 if (components.length === 0) {
-	console.error("❌ No components specified")
-	console.log("Usage: npm run test:component UserProfile,Settings")
-	process.exit(1)
+  console.error('❌ No components specified');
+  console.log('Usage: npm run test:component UserProfile,Settings');
+  process.exit(1);
 }
 
 // Convert component names to glob patterns
-const patterns = components.map((comp) => `**/*${comp}*.spec.ts`).join(" ")
+const patterns = components.map((comp) => `**/*${comp}*.spec.ts`).join(' ');
 
-console.log(`🧩 Running tests for components: ${components.join(", ")}`)
-console.log(`Patterns: ${patterns}`)
+console.log(`🧩 Running tests for components: ${components.join(', ')}`);
+console.log(`Patterns: ${patterns}`);
 
 try {
-	execSync(`npx playwright test ${patterns}`, {
-		stdio: "inherit",
-		env: { ...process.env, CI: "false" },
-	})
+  execSync(`npx playwright test ${patterns}`, {
+    stdio: 'inherit',
+    env: { ...process.env, CI: 'false' },
+  });
 } catch (error) {
-	process.exit(1)
+  process.exit(1);
 }
 ```
 
@@ -275,15 +275,15 @@ try {
 
 ```json
 {
-	"scripts": {
-		"test:checkout": "playwright test **/checkout*.spec.ts",
-		"test:auth": "playwright test **/auth*.spec.ts **/login*.spec.ts",
-		"test:e2e": "playwright test tests/e2e/",
-		"test:integration": "playwright test tests/integration/",
-		"test:component": "ts-node scripts/run-by-component.ts",
-		"test:project": "playwright test --project",
-		"test:smoke-project": "playwright test --project smoke"
-	}
+  "scripts": {
+    "test:checkout": "playwright test **/checkout*.spec.ts",
+    "test:auth": "playwright test **/auth*.spec.ts **/login*.spec.ts",
+    "test:e2e": "playwright test tests/e2e/",
+    "test:integration": "playwright test tests/integration/",
+    "test:component": "ts-node scripts/run-by-component.ts",
+    "test:project": "playwright test --project",
+    "test:smoke-project": "playwright test --project smoke"
+  }
 }
 ```
 
@@ -436,37 +436,37 @@ npm run test -- "${UNIQUE_TEST_FILES[@]}"
 # .github/workflows/test-changed.yml
 name: Test Changed Files
 on:
-    pull_request:
-        types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
-    detect-and-test:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0 # Full history for accurate diff
+  detect-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for accurate diff
 
-            - name: Get changed files
-              id: changed-files
-              uses: tj-actions/changed-files@v40
-              with:
-                  files: |
-                      src/**
-                      tests/**
-                      *.config.ts
-                  files_ignore: |
-                      **/*.md
-                      docs/**
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            src/**
+            tests/**
+            *.config.ts
+          files_ignore: |
+            **/*.md
+            docs/**
 
-            - name: Run tests for changed files
-              if: steps.changed-files.outputs.any_changed == 'true'
-              run: |
-                  echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
-                  bash scripts/test-changed-files.sh
-              env:
-                  BASE_BRANCH: ${{ github.base_ref }}
-                  TEST_ENV: staging
+      - name: Run tests for changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+          bash scripts/test-changed-files.sh
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          TEST_ENV: staging
 ```
 
 **Key Points**:
@@ -492,78 +492,78 @@ jobs:
  * Defines which tests run at each stage of the development lifecycle
  */
 
-export type TestStage = "pre-commit" | "ci-pr" | "ci-merge" | "staging" | "production"
+export type TestStage = 'pre-commit' | 'ci-pr' | 'ci-merge' | 'staging' | 'production';
 
 export type TestPromotion = {
-	stage: TestStage
-	description: string
-	testCommand: string
-	timebudget: string // minutes
-	required: boolean
-	failureAction: "block" | "warn" | "alert"
-}
+  stage: TestStage;
+  description: string;
+  testCommand: string;
+  timebudget: string; // minutes
+  required: boolean;
+  failureAction: 'block' | 'warn' | 'alert';
+};
 
 export const TEST_PROMOTION_RULES: Record<TestStage, TestPromotion> = {
-	"pre-commit": {
-		stage: "pre-commit",
-		description: "Local developer checks before git commit",
-		testCommand: "npm run test:smoke",
-		timebudget: "2",
-		required: true,
-		failureAction: "block",
-	},
-	"ci-pr": {
-		stage: "ci-pr",
-		description: "CI checks on pull request creation/update",
-		testCommand: "npm run test:changed && npm run test:p0-p1",
-		timebudget: "10",
-		required: true,
-		failureAction: "block",
-	},
-	"ci-merge": {
-		stage: "ci-merge",
-		description: "Full regression before merge to main",
-		testCommand: "npm run test:regression",
-		timebudget: "30",
-		required: true,
-		failureAction: "block",
-	},
-	staging: {
-		stage: "staging",
-		description: "Post-deployment validation in staging environment",
-		testCommand: 'npm run test:e2e -- --grep "@smoke"',
-		timebudget: "15",
-		required: true,
-		failureAction: "block",
-	},
-	production: {
-		stage: "production",
-		description: "Production smoke tests post-deployment",
-		testCommand: 'npm run test:e2e:prod -- --grep "@smoke.*@p0"',
-		timebudget: "5",
-		required: false,
-		failureAction: "alert",
-	},
-}
+  'pre-commit': {
+    stage: 'pre-commit',
+    description: 'Local developer checks before git commit',
+    testCommand: 'npm run test:smoke',
+    timebudget: '2',
+    required: true,
+    failureAction: 'block',
+  },
+  'ci-pr': {
+    stage: 'ci-pr',
+    description: 'CI checks on pull request creation/update',
+    testCommand: 'npm run test:changed && npm run test:p0-p1',
+    timebudget: '10',
+    required: true,
+    failureAction: 'block',
+  },
+  'ci-merge': {
+    stage: 'ci-merge',
+    description: 'Full regression before merge to main',
+    testCommand: 'npm run test:regression',
+    timebudget: '30',
+    required: true,
+    failureAction: 'block',
+  },
+  staging: {
+    stage: 'staging',
+    description: 'Post-deployment validation in staging environment',
+    testCommand: 'npm run test:e2e -- --grep "@smoke"',
+    timebudget: '15',
+    required: true,
+    failureAction: 'block',
+  },
+  production: {
+    stage: 'production',
+    description: 'Production smoke tests post-deployment',
+    testCommand: 'npm run test:e2e:prod -- --grep "@smoke.*@p0"',
+    timebudget: '5',
+    required: false,
+    failureAction: 'alert',
+  },
+};
 
 /**
  * Get tests to run for a specific stage
  */
 export function getTestsForStage(stage: TestStage): TestPromotion {
-	return TEST_PROMOTION_RULES[stage]
+  return TEST_PROMOTION_RULES[stage];
 }
 
 /**
  * Validate if tests can be promoted to next stage
  */
 export function canPromote(currentStage: TestStage, testsPassed: boolean): boolean {
-	const promotion = TEST_PROMOTION_RULES[currentStage]
+  const promotion = TEST_PROMOTION_RULES[currentStage];
 
-	if (!promotion.required) {
-		return true // Non-required tests don't block promotion
-	}
+  if (!promotion.required) {
+    return true; // Non-required tests don't block promotion
+  }
 
-	return testsPassed
+  return testsPassed;
 }
 ```
 
@@ -596,66 +596,66 @@ echo "✅ Pre-commit tests passed"
 # .github/workflows/test-promotion.yml
 name: Test Promotion Strategy
 on:
-    pull_request:
-    push:
-        branches: [main]
-    workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-    # Stage 1: PR tests (changed + P0-P1)
-    pr-tests:
-        if: github.event_name == 'pull_request'
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        steps:
-            - uses: actions/checkout@v4
-            - name: Run PR-level tests
-              run: |
-                  npm run test:changed
-                  npm run test:p0-p1
+  # Stage 1: PR tests (changed + P0-P1)
+  pr-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run PR-level tests
+        run: |
+          npm run test:changed
+          npm run test:p0-p1
 
-    # Stage 2: Full regression (pre-merge)
-    regression-tests:
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v4
-            - name: Run full regression
-              run: npm run test:regression
+  # Stage 2: Full regression (pre-merge)
+  regression-tests:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run full regression
+        run: npm run test:regression
 
-    # Stage 3: Staging validation (post-deploy)
-    staging-smoke:
-        if: github.event_name == 'workflow_dispatch'
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
-        steps:
-            - uses: actions/checkout@v4
-            - name: Run staging smoke tests
-              run: npm run test:e2e -- --grep "@smoke"
-              env:
-                  TEST_ENV: staging
+  # Stage 3: Staging validation (post-deploy)
+  staging-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run staging smoke tests
+        run: npm run test:e2e -- --grep "@smoke"
+        env:
+          TEST_ENV: staging
 
-    # Stage 4: Production smoke (post-deploy, non-blocking)
-    production-smoke:
-        if: github.event_name == 'workflow_dispatch'
-        runs-on: ubuntu-latest
-        timeout-minutes: 5
-        continue-on-error: true # Don't fail deployment if smoke tests fail
-        steps:
-            - uses: actions/checkout@v4
-            - name: Run production smoke tests
-              run: npm run test:e2e:prod -- --grep "@smoke.*@p0"
-              env:
-                  TEST_ENV: production
+  # Stage 4: Production smoke (post-deploy, non-blocking)
+  production-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true # Don't fail deployment if smoke tests fail
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run production smoke tests
+        run: npm run test:e2e:prod -- --grep "@smoke.*@p0"
+        env:
+          TEST_ENV: production
 
-            - name: Alert on failure
-              if: failure()
-              uses: 8398a7/action-slack@v3
-              with:
-                  status: ${{ job.status }}
-                  text: "🚨 Production smoke tests failed!"
-                  webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      - name: Alert on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: '🚨 Production smoke tests failed!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
 **Selection strategy documentation**:

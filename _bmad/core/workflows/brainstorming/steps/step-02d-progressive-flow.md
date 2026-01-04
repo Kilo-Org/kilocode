@@ -205,8 +205,8 @@ If user confirms progressive flow:
 
 ```yaml
 ---
-selected_approach: "progressive-flow"
-techniques_used: ["technique1", "technique2", "technique3", "technique4"]
+selected_approach: 'progressive-flow'
+techniques_used: ['technique1', 'technique2', 'technique3', 'technique4']
 stepsCompleted: [1, 2]
 ---
 ```

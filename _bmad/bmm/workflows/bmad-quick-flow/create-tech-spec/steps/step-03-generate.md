@@ -1,10 +1,10 @@
 ---
-name: "step-03-generate"
-description: "Build the implementation plan based on the technical mapping of constraints"
+name: 'step-03-generate'
+description: 'Build the implementation plan based on the technical mapping of constraints'
 
-workflow_path: "{project-root}/_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec"
-nextStepFile: "{workflow_path}/steps/step-04-review.md"
-wipFile: "{implementation_artifacts}/tech-spec-wip.md"
+workflow_path: '{project-root}/_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec'
+nextStepFile: '{workflow_path}/steps/step-04-review.md'
+wipFile: '{implementation_artifacts}/tech-spec-wip.md'
 ---
 
 # Step 3: Generate Implementation Plan
@@ -51,9 +51,9 @@ b) **Task Format**
 
 ```markdown
 - [ ] Task N: Clear action description
-    - File: `path/to/file.ext`
-    - Action: Specific change to make
-    - Notes: Any implementation details
+  - File: `path/to/file.ext`
+  - Action: Specific change to make
+  - Notes: Any implementation details
 ```
 
 ### 3. Generate Acceptance Criteria
@@ -109,7 +109,7 @@ b) **Update frontmatter:**
 ```yaml
 ---
 # ... existing values ...
-status: "review"
+status: 'review'
 stepsCompleted: [1, 2, 3]
 ---
 ```

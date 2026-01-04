@@ -32,44 +32,40 @@ Note: This is typically a one-time setup per repo; run it any time after the tes
 ### Actions
 
 1. **Verify Git Repository**
-
-    - Check for `.git/` directory
-    - Confirm remote repository configured (`git remote -v`)
-    - If not initialized, HALT with message: "Git repository required for CI/CD setup"
+   - Check for `.git/` directory
+   - Confirm remote repository configured (`git remote -v`)
+   - If not initialized, HALT with message: "Git repository required for CI/CD setup"
 
 2. **Validate Test Framework**
-
-    - Look for `playwright.config.*` or `cypress.config.*`
-    - Read framework configuration to extract:
-        - Test directory location
-        - Test command
-        - Reporter configuration
-        - Timeout settings
-    - If not found, HALT with message: "Run `framework` workflow first to set up test infrastructure"
+   - Look for `playwright.config.*` or `cypress.config.*`
+   - Read framework configuration to extract:
+     - Test directory location
+     - Test command
+     - Reporter configuration
+     - Timeout settings
+   - If not found, HALT with message: "Run `framework` workflow first to set up test infrastructure"
 
 3. **Run Local Tests**
-
-    - Execute `npm run test:e2e` (or equivalent from package.json)
-    - Ensure tests pass before CI setup
-    - If tests fail, HALT with message: "Fix failing tests before setting up CI/CD"
+   - Execute `npm run test:e2e` (or equivalent from package.json)
+   - Ensure tests pass before CI setup
+   - If tests fail, HALT with message: "Fix failing tests before setting up CI/CD"
 
 4. **Detect CI Platform**
-
-    - Check for existing CI configuration:
-        - `.github/workflows/*.yml` (GitHub Actions)
-        - `.gitlab-ci.yml` (GitLab CI)
-        - `.circleci/config.yml` (Circle CI)
-        - `Jenkinsfile` (Jenkins)
-    - If found, ask user: "Update existing CI configuration or create new?"
-    - If not found, detect platform from git remote:
-        - `github.com` → GitHub Actions (default)
-        - `gitlab.com` → GitLab CI
-        - Ask user if unable to auto-detect
+   - Check for existing CI configuration:
+     - `.github/workflows/*.yml` (GitHub Actions)
+     - `.gitlab-ci.yml` (GitLab CI)
+     - `.circleci/config.yml` (Circle CI)
+     - `Jenkinsfile` (Jenkins)
+   - If found, ask user: "Update existing CI configuration or create new?"
+   - If not found, detect platform from git remote:
+     - `github.com` → GitHub Actions (default)
+     - `gitlab.com` → GitLab CI
+     - Ask user if unable to auto-detect
 
 5. **Read Environment Configuration**
-    - Use `.nvmrc` for Node version if present
-    - If missing, default to a current LTS (Node 24) or newer instead of a fixed old version
-    - Read `package.json` to identify dependencies (affects caching strategy)
+   - Use `.nvmrc` for Node version if present
+   - If missing, default to a current LTS (Node 24) or newer instead of a fixed old version
+   - Read `package.json` to identify dependencies (affects caching strategy)
 
 **Halt Condition:** If preflight checks fail, stop immediately and report which requirement failed.
 
@@ -81,232 +77,224 @@ Note: This is typically a one-time setup per repo; run it any time after the tes
 
 1. **Select CI Platform Template**
 
-    Based on detection or user preference, use the appropriate template:
+   Based on detection or user preference, use the appropriate template:
 
-    **GitHub Actions** (`.github/workflows/test.yml`):
+   **GitHub Actions** (`.github/workflows/test.yml`):
+   - Most common platform
+   - Excellent caching and matrix support
+   - Free for public repos, generous free tier for private
 
-    - Most common platform
-    - Excellent caching and matrix support
-    - Free for public repos, generous free tier for private
+   **GitLab CI** (`.gitlab-ci.yml`):
+   - Integrated with GitLab
+   - Built-in registry and runners
+   - Powerful pipeline features
 
-    **GitLab CI** (`.gitlab-ci.yml`):
+   **Circle CI** (`.circleci/config.yml`):
+   - Fast execution with parallelism
+   - Docker-first approach
+   - Enterprise features
 
-    - Integrated with GitLab
-    - Built-in registry and runners
-    - Powerful pipeline features
-
-    **Circle CI** (`.circleci/config.yml`):
-
-    - Fast execution with parallelism
-    - Docker-first approach
-    - Enterprise features
-
-    **Jenkins** (`Jenkinsfile`):
-
-    - Self-hosted option
-    - Maximum customization
-    - Requires infrastructure management
+   **Jenkins** (`Jenkinsfile`):
+   - Self-hosted option
+   - Maximum customization
+   - Requires infrastructure management
 
 2. **Generate Pipeline Configuration**
 
-    Use templates from `{installed_path}/` directory:
+   Use templates from `{installed_path}/` directory:
+   - `github-actions-template.yml`
+   - `gitlab-ci-template.yml`
 
-    - `github-actions-template.yml`
-    - `gitlab-ci-template.yml`
+   **Key pipeline stages:**
 
-    **Key pipeline stages:**
-
-    ```yaml
-    stages:
-        - lint # Code quality checks
-        - test # Test execution (parallel shards)
-        - burn-in # Flaky test detection
-        - report # Aggregate results and publish
-    ```
+   ```yaml
+   stages:
+     - lint # Code quality checks
+     - test # Test execution (parallel shards)
+     - burn-in # Flaky test detection
+     - report # Aggregate results and publish
+   ```
 
 3. **Configure Test Execution**
 
-    **Parallel Sharding:**
+   **Parallel Sharding:**
 
-    ```yaml
-    strategy:
-        fail-fast: false
-        matrix:
-            shard: [1, 2, 3, 4]
+   ```yaml
+   strategy:
+     fail-fast: false
+     matrix:
+       shard: [1, 2, 3, 4]
 
-    steps:
-        - name: Run tests
-          run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
-    ```
+   steps:
+     - name: Run tests
+       run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+   ```
 
-    **Purpose:** Splits tests into N parallel jobs for faster execution (target: <10 min per shard)
+   **Purpose:** Splits tests into N parallel jobs for faster execution (target: <10 min per shard)
 
 4. **Add Burn-In Loop**
 
-    **Critical pattern from production systems:**
+   **Critical pattern from production systems:**
 
-    ```yaml
-    burn-in:
-        name: Flaky Test Detection
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+   ```yaml
+   burn-in:
+     name: Flaky Test Detection
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
 
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version-file: ".nvmrc"
+       - name: Setup Node
+         uses: actions/setup-node@v4
+         with:
+           node-version-file: '.nvmrc'
 
-            - name: Install dependencies
-              run: npm ci
+       - name: Install dependencies
+         run: npm ci
 
-            - name: Run burn-in loop (10 iterations)
-              run: |
-                  for i in {1..10}; do
-                    echo "🔥 Burn-in iteration $i/10"
-                    npm run test:e2e || exit 1
-                  done
+       - name: Run burn-in loop (10 iterations)
+         run: |
+           for i in {1..10}; do
+             echo "🔥 Burn-in iteration $i/10"
+             npm run test:e2e || exit 1
+           done
 
-            - name: Upload failure artifacts
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: burn-in-failures
-                  path: test-results/
-                  retention-days: 30
-    ```
+       - name: Upload failure artifacts
+         if: failure()
+         uses: actions/upload-artifact@v4
+         with:
+           name: burn-in-failures
+           path: test-results/
+           retention-days: 30
+   ```
 
-    **Purpose:** Runs tests multiple times to catch non-deterministic failures before they reach main branch.
+   **Purpose:** Runs tests multiple times to catch non-deterministic failures before they reach main branch.
 
-    **When to run:**
-
-    - On pull requests to main/develop
-    - Weekly on cron schedule
-    - After significant test infrastructure changes
+   **When to run:**
+   - On pull requests to main/develop
+   - Weekly on cron schedule
+   - After significant test infrastructure changes
 
 5. **Configure Caching**
 
-    **Node modules cache:**
+   **Node modules cache:**
 
-    ```yaml
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-              ${{ runner.os }}-node-
-    ```
+   ```yaml
+   - name: Cache dependencies
+     uses: actions/cache@v4
+     with:
+       path: ~/.npm
+       key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+       restore-keys: |
+         ${{ runner.os }}-node-
+   ```
 
-    **Browser binaries cache (Playwright):**
+   **Browser binaries cache (Playwright):**
 
-    ```yaml
-    - name: Cache Playwright browsers
-      uses: actions/cache@v4
-      with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
-    ```
+   ```yaml
+   - name: Cache Playwright browsers
+     uses: actions/cache@v4
+     with:
+       path: ~/.cache/ms-playwright
+       key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+   ```
 
-    **Purpose:** Reduces CI execution time by 2-5 minutes per run.
+   **Purpose:** Reduces CI execution time by 2-5 minutes per run.
 
 6. **Configure Artifact Collection**
 
-    **Failure artifacts only:**
+   **Failure artifacts only:**
 
-    ```yaml
-    - name: Upload test results
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-          name: test-results-${{ matrix.shard }}
-          path: |
-              test-results/
-              playwright-report/
-          retention-days: 30
-    ```
+   ```yaml
+   - name: Upload test results
+     if: failure()
+     uses: actions/upload-artifact@v4
+     with:
+       name: test-results-${{ matrix.shard }}
+       path: |
+         test-results/
+         playwright-report/
+       retention-days: 30
+   ```
 
-    **Artifacts to collect:**
-
-    - Traces (Playwright) - full debugging context
-    - Screenshots - visual evidence of failures
-    - Videos - interaction playback
-    - HTML reports - detailed test results
-    - Console logs - error messages and warnings
+   **Artifacts to collect:**
+   - Traces (Playwright) - full debugging context
+   - Screenshots - visual evidence of failures
+   - Videos - interaction playback
+   - HTML reports - detailed test results
+   - Console logs - error messages and warnings
 
 7. **Add Retry Logic**
 
-    ```yaml
-    - name: Run tests with retries
-      uses: nick-invision/retry@v2
-      with:
-          timeout_minutes: 30
-          max_attempts: 3
-          retry_on: error
-          command: npm run test:e2e
-    ```
+   ```yaml
+   - name: Run tests with retries
+     uses: nick-invision/retry@v2
+     with:
+       timeout_minutes: 30
+       max_attempts: 3
+       retry_on: error
+       command: npm run test:e2e
+   ```
 
-    **Purpose:** Handles transient failures (network issues, race conditions)
+   **Purpose:** Handles transient failures (network issues, race conditions)
 
 8. **Configure Notifications** (Optional)
 
-    If `notify_on_failure` is enabled:
+   If `notify_on_failure` is enabled:
 
-    ```yaml
-    - name: Notify on failure
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-          status: ${{ job.status }}
-          text: "Test failures detected in PR #${{ github.event.pull_request.number }}"
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-    ```
+   ```yaml
+   - name: Notify on failure
+     if: failure()
+     uses: 8398a7/action-slack@v3
+     with:
+       status: ${{ job.status }}
+       text: 'Test failures detected in PR #${{ github.event.pull_request.number }}'
+       webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+   ```
 
 9. **Generate Helper Scripts**
 
-    **Selective testing script** (`scripts/test-changed.sh`):
+   **Selective testing script** (`scripts/test-changed.sh`):
 
-    ```bash
-    #!/bin/bash
-    # Run only tests for changed files
+   ```bash
+   #!/bin/bash
+   # Run only tests for changed files
 
-    CHANGED_FILES=$(git diff --name-only HEAD~1)
+   CHANGED_FILES=$(git diff --name-only HEAD~1)
 
-    if echo "$CHANGED_FILES" | grep -q "src/.*\.ts$"; then
-      echo "Running affected tests..."
-      npm run test:e2e -- --grep="$(echo $CHANGED_FILES | sed 's/src\///g' | sed 's/\.ts//g')"
-    else
-      echo "No test-affecting changes detected"
-    fi
-    ```
+   if echo "$CHANGED_FILES" | grep -q "src/.*\.ts$"; then
+     echo "Running affected tests..."
+     npm run test:e2e -- --grep="$(echo $CHANGED_FILES | sed 's/src\///g' | sed 's/\.ts//g')"
+   else
+     echo "No test-affecting changes detected"
+   fi
+   ```
 
-    **Local mirror script** (`scripts/ci-local.sh`):
+   **Local mirror script** (`scripts/ci-local.sh`):
 
-    ```bash
-    #!/bin/bash
-    # Mirror CI execution locally for debugging
+   ```bash
+   #!/bin/bash
+   # Mirror CI execution locally for debugging
 
-    echo "🔍 Running CI pipeline locally..."
+   echo "🔍 Running CI pipeline locally..."
 
-    # Lint
-    npm run lint || exit 1
+   # Lint
+   npm run lint || exit 1
 
-    # Tests
-    npm run test:e2e || exit 1
+   # Tests
+   npm run test:e2e || exit 1
 
-    # Burn-in (reduced iterations)
-    for i in {1..3}; do
-      echo "🔥 Burn-in $i/3"
-      npm run test:e2e || exit 1
-    done
+   # Burn-in (reduced iterations)
+   for i in {1..3}; do
+     echo "🔥 Burn-in $i/3"
+     npm run test:e2e || exit 1
+   done
 
-    echo "✅ Local CI pipeline passed"
-    ```
+   echo "✅ Local CI pipeline passed"
+   ```
 
 10. **Generate Documentation**
 
     **CI README** (`docs/ci.md`):
-
     - Pipeline stages and purpose
     - How to run locally
     - Debugging failed CI runs
@@ -315,7 +303,6 @@ Note: This is typically a one-time setup per repo; run it any time after the tes
     - Badge URLs for README
 
     **Secrets checklist** (`docs/ci-secrets-checklist.md`):
-
     - Required secrets list (SLACK_WEBHOOK, etc.)
     - Where to configure in CI platform
     - Security best practices
@@ -327,35 +314,31 @@ Note: This is typically a one-time setup per repo; run it any time after the tes
 ### Primary Artifacts Created
 
 1. **CI Configuration File**
-
-    - `.github/workflows/test.yml` (GitHub Actions)
-    - `.gitlab-ci.yml` (GitLab CI)
-    - `.circleci/config.yml` (Circle CI)
+   - `.github/workflows/test.yml` (GitHub Actions)
+   - `.gitlab-ci.yml` (GitLab CI)
+   - `.circleci/config.yml` (Circle CI)
 
 2. **Pipeline Stages**
-
-    - **Lint**: Code quality checks (ESLint, Prettier)
-    - **Test**: Parallel test execution (4 shards)
-    - **Burn-in**: Flaky test detection (10 iterations)
-    - **Report**: Result aggregation and publishing
+   - **Lint**: Code quality checks (ESLint, Prettier)
+   - **Test**: Parallel test execution (4 shards)
+   - **Burn-in**: Flaky test detection (10 iterations)
+   - **Report**: Result aggregation and publishing
 
 3. **Helper Scripts**
-
-    - `scripts/test-changed.sh` - Selective testing
-    - `scripts/ci-local.sh` - Local CI mirror
-    - `scripts/burn-in.sh` - Standalone burn-in execution
+   - `scripts/test-changed.sh` - Selective testing
+   - `scripts/ci-local.sh` - Local CI mirror
+   - `scripts/burn-in.sh` - Standalone burn-in execution
 
 4. **Documentation**
-
-    - `docs/ci.md` - CI pipeline guide
-    - `docs/ci-secrets-checklist.md` - Required secrets
-    - Inline comments in CI configuration
+   - `docs/ci.md` - CI pipeline guide
+   - `docs/ci-secrets-checklist.md` - Required secrets
+   - Inline comments in CI configuration
 
 5. **Optimization Features**
-    - Dependency caching (npm, browser binaries)
-    - Parallel sharding (4 jobs default)
-    - Retry logic (2 retries on failure)
-    - Failure-only artifact upload
+   - Dependency caching (npm, browser binaries)
+   - Parallel sharding (4 jobs default)
+   - Retry logic (2 retries on failure)
+   - Failure-only artifact upload
 
 ### Performance Targets
 

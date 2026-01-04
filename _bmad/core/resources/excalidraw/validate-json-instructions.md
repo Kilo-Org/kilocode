@@ -68,10 +68,10 @@ After saving an Excalidraw file, run validation:
 1. Save the file
 2. Run: `node -e "JSON.parse(require('fs').readFileSync('{{save_location}}', 'utf8')); console.log('✓ Valid JSON')"`
 3. If validation fails:
-    - Read the error message for line/position
-    - Open the file at that location
-    - Fix the syntax error
-    - Save and re-validate
+   - Read the error message for line/position
+   - Open the file at that location
+   - Fix the syntax error
+   - Save and re-validate
 4. Repeat until validation passes
 
 ## Critical Rule

@@ -1,5 +1,5 @@
 ---
-description: "Review test quality using comprehensive knowledge base and best practices validation"
+description: 'Review test quality using comprehensive knowledge base and best practices validation'
 ---
 
 IT IS CRITICAL THAT YOU FOLLOW THESE STEPS - while staying in character as the current agent persona you may have loaded:

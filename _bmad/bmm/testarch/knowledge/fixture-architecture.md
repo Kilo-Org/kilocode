@@ -92,16 +92,16 @@ export const test = base.extend<{ apiRequest: typeof apiRequest }>({
 
 ```typescript
 // playwright/support/fixtures/merged-fixtures.ts
-import { test as base, mergeTests } from "@playwright/test"
-import { test as apiRequestFixture } from "./api-request-fixture"
-import { test as networkFixture } from "./network-fixture"
-import { test as authFixture } from "./auth-fixture"
-import { test as logFixture } from "./log-fixture"
+import { test as base, mergeTests } from '@playwright/test';
+import { test as apiRequestFixture } from './api-request-fixture';
+import { test as networkFixture } from './network-fixture';
+import { test as authFixture } from './auth-fixture';
+import { test as logFixture } from './log-fixture';
 
 // Compose all fixtures for comprehensive capabilities
-export const test = mergeTests(base, apiRequestFixture, networkFixture, authFixture, logFixture)
+export const test = mergeTests(base, apiRequestFixture, networkFixture, authFixture, logFixture);
 
-export { expect } from "@playwright/test"
+export { expect } from '@playwright/test';
 
 // Example usage in tests:
 // import { test, expect } from './support/fixtures/merged-fixtures';
@@ -120,44 +120,44 @@ export { expect } from "@playwright/test"
 ```typescript
 // network-fixture.ts
 export const test = base.extend({
-	network: async ({ page }, use) => {
-		const interceptedRoutes = new Map()
+  network: async ({ page }, use) => {
+    const interceptedRoutes = new Map();
 
-		const interceptRoute = async (method: string, url: string, response: unknown) => {
-			await page.route(url, (route) => {
-				if (route.request().method() === method) {
-					route.fulfill({ body: JSON.stringify(response) })
-				}
-			})
-			interceptedRoutes.set(`${method}:${url}`, response)
-		}
+    const interceptRoute = async (method: string, url: string, response: unknown) => {
+      await page.route(url, (route) => {
+        if (route.request().method() === method) {
+          route.fulfill({ body: JSON.stringify(response) });
+        }
+      });
+      interceptedRoutes.set(`${method}:${url}`, response);
+    };
 
-		await use({ interceptRoute })
+    await use({ interceptRoute });
 
-		// Cleanup
-		interceptedRoutes.clear()
-	},
-})
+    // Cleanup
+    interceptedRoutes.clear();
+  },
+});
 
 // auth-fixture.ts
 export const test = base.extend({
-	auth: async ({ page, context }, use) => {
-		const loginAs = async (email: string) => {
-			// Use API to setup auth (fast!)
-			const token = await getAuthToken(email)
-			await context.addCookies([
-				{
-					name: "auth_token",
-					value: token,
-					domain: "localhost",
-					path: "/",
-				},
-			])
-		}
+  auth: async ({ page, context }, use) => {
+    const loginAs = async (email: string) => {
+      // Use API to setup auth (fast!)
+      const token = await getAuthToken(email);
+      await context.addCookies([
+        {
+          name: 'auth_token',
+          value: token,
+          domain: 'localhost',
+          path: '/',
+        },
+      ]);
+    };
 
-		await use({ loginAs })
-	},
-})
+    await use({ loginAs });
+  },
+});
 ```
 
 **Key Points**:
@@ -177,64 +177,57 @@ export const test = base.extend({
 // shared/helpers/http-helper.ts
 // Pure, framework-agnostic function
 type HttpHelperParams = {
-	baseUrl: string
-	endpoint: string
-	method: "GET" | "POST" | "PUT" | "DELETE"
-	body?: unknown
-	headers?: Record<string, string>
-	token?: string
-}
+  baseUrl: string;
+  endpoint: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  body?: unknown;
+  headers?: Record<string, string>;
+  token?: string;
+};
 
-export async function makeHttpRequest({
-	baseUrl,
-	endpoint,
-	method,
-	body,
-	headers = {},
-	token,
-}: HttpHelperParams): Promise<unknown> {
-	const url = `${baseUrl}${endpoint}`
-	const requestHeaders = {
-		"Content-Type": "application/json",
-		...(token && { Authorization: `Bearer ${token}` }),
-		...headers,
-	}
+export async function makeHttpRequest({ baseUrl, endpoint, method, body, headers = {}, token }: HttpHelperParams): Promise<unknown> {
+  const url = `${baseUrl}${endpoint}`;
+  const requestHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...headers,
+  };
 
-	const response = await fetch(url, {
-		method,
-		headers: requestHeaders,
-		body: body ? JSON.stringify(body) : undefined,
-	})
+  const response = await fetch(url, {
+    method,
+    headers: requestHeaders,
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-	if (!response.ok) {
-		const errorText = await response.text()
-		throw new Error(`HTTP ${method} ${url} failed: ${response.status} ${errorText}`)
-	}
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${method} ${url} failed: ${response.status} ${errorText}`);
+  }
 
-	return response.json()
+  return response.json();
 }
 
 // Playwright fixture wrapper
 // playwright/support/fixtures/http-fixture.ts
-import { test as base } from "@playwright/test"
-import { makeHttpRequest } from "../../shared/helpers/http-helper"
+import { test as base } from '@playwright/test';
+import { makeHttpRequest } from '../../shared/helpers/http-helper';
 
 export const test = base.extend({
-	httpHelper: async ({}, use) => {
-		const baseUrl = process.env.API_BASE_URL || "http://localhost:3000"
+  httpHelper: async ({}, use) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
 
-		await use((params) => makeHttpRequest({ baseUrl, ...params }))
-	},
-})
+    await use((params) => makeHttpRequest({ baseUrl, ...params }));
+  },
+});
 
 // Cypress command wrapper
 // cypress/support/commands.ts
-import { makeHttpRequest } from "../../shared/helpers/http-helper"
+import { makeHttpRequest } from '../../shared/helpers/http-helper';
 
-Cypress.Commands.add("apiRequest", (params) => {
-	const baseUrl = Cypress.env("API_BASE_URL") || "http://localhost:3000"
-	return cy.wrap(makeHttpRequest({ baseUrl, ...params }))
-})
+Cypress.Commands.add('apiRequest', (params) => {
+  const baseUrl = Cypress.env('API_BASE_URL') || 'http://localhost:3000';
+  return cy.wrap(makeHttpRequest({ baseUrl, ...params }));
+});
 ```
 
 **Key Points**:
@@ -252,51 +245,51 @@ Cypress.Commands.add("apiRequest", (params) => {
 
 ```typescript
 // playwright/support/fixtures/database-fixture.ts
-import { test as base } from "@playwright/test"
-import { seedDatabase, deleteRecord } from "../helpers/db-helpers"
+import { test as base } from '@playwright/test';
+import { seedDatabase, deleteRecord } from '../helpers/db-helpers';
 
 type DatabaseFixture = {
-	seedUser: (userData: Partial<User>) => Promise<User>
-	seedOrder: (orderData: Partial<Order>) => Promise<Order>
-}
+  seedUser: (userData: Partial<User>) => Promise<User>;
+  seedOrder: (orderData: Partial<Order>) => Promise<Order>;
+};
 
 export const test = base.extend<DatabaseFixture>({
-	seedUser: async ({}, use) => {
-		const createdUsers: string[] = []
+  seedUser: async ({}, use) => {
+    const createdUsers: string[] = [];
 
-		const seedUser = async (userData: Partial<User>) => {
-			const user = await seedDatabase("users", userData)
-			createdUsers.push(user.id)
-			return user
-		}
+    const seedUser = async (userData: Partial<User>) => {
+      const user = await seedDatabase('users', userData);
+      createdUsers.push(user.id);
+      return user;
+    };
 
-		await use(seedUser)
+    await use(seedUser);
 
-		// Auto-cleanup: Delete all users created during test
-		for (const userId of createdUsers) {
-			await deleteRecord("users", userId)
-		}
-		createdUsers.length = 0
-	},
+    // Auto-cleanup: Delete all users created during test
+    for (const userId of createdUsers) {
+      await deleteRecord('users', userId);
+    }
+    createdUsers.length = 0;
+  },
 
-	seedOrder: async ({}, use) => {
-		const createdOrders: string[] = []
+  seedOrder: async ({}, use) => {
+    const createdOrders: string[] = [];
 
-		const seedOrder = async (orderData: Partial<Order>) => {
-			const order = await seedDatabase("orders", orderData)
-			createdOrders.push(order.id)
-			return order
-		}
+    const seedOrder = async (orderData: Partial<Order>) => {
+      const order = await seedDatabase('orders', orderData);
+      createdOrders.push(order.id);
+      return order;
+    };
 
-		await use(seedOrder)
+    await use(seedOrder);
 
-		// Auto-cleanup: Delete all orders
-		for (const orderId of createdOrders) {
-			await deleteRecord("orders", orderId)
-		}
-		createdOrders.length = 0
-	},
-})
+    // Auto-cleanup: Delete all orders
+    for (const orderId of createdOrders) {
+      await deleteRecord('orders', orderId);
+    }
+    createdOrders.length = 0;
+  },
+});
 
 // Example usage:
 // test('user can place order', async ({ seedUser, seedOrder, page }) => {
@@ -324,31 +317,31 @@ export const test = base.extend<DatabaseFixture>({
 ```typescript
 // ❌ BAD: Page Object Model with inheritance
 class BasePage {
-	constructor(public page: Page) {}
+  constructor(public page: Page) {}
 
-	async navigate(url: string) {
-		await this.page.goto(url)
-	}
+  async navigate(url: string) {
+    await this.page.goto(url);
+  }
 
-	async clickButton(selector: string) {
-		await this.page.click(selector)
-	}
+  async clickButton(selector: string) {
+    await this.page.click(selector);
+  }
 }
 
 class LoginPage extends BasePage {
-	async login(email: string, password: string) {
-		await this.navigate("/login")
-		await this.page.fill("#email", email)
-		await this.page.fill("#password", password)
-		await this.clickButton("#submit")
-	}
+  async login(email: string, password: string) {
+    await this.navigate('/login');
+    await this.page.fill('#email', email);
+    await this.page.fill('#password', password);
+    await this.clickButton('#submit');
+  }
 }
 
 class AdminPage extends LoginPage {
-	async accessAdminPanel() {
-		await this.login("admin@example.com", "admin123")
-		await this.navigate("/admin")
-	}
+  async accessAdminPanel() {
+    await this.login('admin@example.com', 'admin123');
+    await this.navigate('/admin');
+  }
 }
 ```
 
@@ -366,24 +359,24 @@ class AdminPage extends LoginPage {
 // ✅ GOOD: Pure functions with fixture composition
 // helpers/navigation.ts
 export async function navigate(page: Page, url: string) {
-	await page.goto(url)
+  await page.goto(url);
 }
 
 // helpers/auth.ts
 export async function login(page: Page, email: string, password: string) {
-	await page.fill('[data-testid="email"]', email)
-	await page.fill('[data-testid="password"]', password)
-	await page.click('[data-testid="submit"]')
+  await page.fill('[data-testid="email"]', email);
+  await page.fill('[data-testid="password"]', password);
+  await page.click('[data-testid="submit"]');
 }
 
 // fixtures/admin-fixture.ts
 export const test = base.extend({
-	adminPage: async ({ page }, use) => {
-		await login(page, "admin@example.com", "admin123")
-		await navigate(page, "/admin")
-		await use(page)
-	},
-})
+  adminPage: async ({ page }, use) => {
+    await login(page, 'admin@example.com', 'admin123');
+    await navigate(page, '/admin');
+    await use(page);
+  },
+});
 
 // Tests import exactly what they need—no inheritance
 ```
@@ -392,9 +385,9 @@ export const test = base.extend({
 
 - **Used in workflows**: `*atdd` (test generation), `*automate` (test expansion), `*framework` (initial setup)
 - **Related fragments**:
-    - `data-factories.md` - Factory functions for test data
-    - `network-first.md` - Network interception patterns
-    - `test-quality.md` - Deterministic test design principles
+  - `data-factories.md` - Factory functions for test data
+  - `network-first.md` - Network interception patterns
+  - `test-quality.md` - Deterministic test design principles
 
 ## Helper Function Reuse Guidelines
 

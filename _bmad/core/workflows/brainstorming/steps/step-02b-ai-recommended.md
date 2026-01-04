@@ -179,8 +179,8 @@ If user confirms recommendations:
 
 ```yaml
 ---
-selected_approach: "ai-recommended"
-techniques_used: ["technique1", "technique2", "technique3"]
+selected_approach: 'ai-recommended'
+techniques_used: ['technique1', 'technique2', 'technique3']
 stepsCompleted: [1, 2]
 ---
 ```

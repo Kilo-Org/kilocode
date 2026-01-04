@@ -196,22 +196,22 @@ Note: `test-review` is optional and only audits existing tests; it does not gene
 - [ ] Medium violations deducted (-2 each)
 - [ ] Low violations deducted (-1 each)
 - [ ] Bonus points added (max +30):
-    - [ ] Excellent BDD structure (+5 if applicable)
-    - [ ] Comprehensive fixtures (+5 if applicable)
-    - [ ] Comprehensive data factories (+5 if applicable)
-    - [ ] Network-first pattern (+5 if applicable)
-    - [ ] Perfect isolation (+5 if applicable)
-    - [ ] All test IDs present (+5 if applicable)
+  - [ ] Excellent BDD structure (+5 if applicable)
+  - [ ] Comprehensive fixtures (+5 if applicable)
+  - [ ] Comprehensive data factories (+5 if applicable)
+  - [ ] Network-first pattern (+5 if applicable)
+  - [ ] Perfect isolation (+5 if applicable)
+  - [ ] All test IDs present (+5 if applicable)
 - [ ] Final score calculated: max(0, min(100, Starting - Violations + Bonus))
 
 **Quality Grade:**
 
 - [ ] Grade assigned based on score:
-    - 90-100: A+ (Excellent)
-    - 80-89: A (Good)
-    - 70-79: B (Acceptable)
-    - 60-69: C (Needs Improvement)
-    - <60: F (Critical Issues)
+  - 90-100: A+ (Excellent)
+  - 80-89: A (Good)
+  - 70-79: B (Acceptable)
+  - 60-69: C (Needs Improvement)
+  - <60: F (Critical Issues)
 
 ---
 
@@ -220,50 +220,44 @@ Note: `test-review` is optional and only audits existing tests; it does not gene
 **Report Sections Created:**
 
 - [ ] **Header Section**:
-
-    - [ ] Test file(s) reviewed listed
-    - [ ] Review date recorded
-    - [ ] Review scope noted (single/directory/suite)
-    - [ ] Quality score and grade displayed
+  - [ ] Test file(s) reviewed listed
+  - [ ] Review date recorded
+  - [ ] Review scope noted (single/directory/suite)
+  - [ ] Quality score and grade displayed
 
 - [ ] **Executive Summary**:
-
-    - [ ] Overall assessment (Excellent/Good/Needs Improvement/Critical)
-    - [ ] Key strengths listed (3-5 bullet points)
-    - [ ] Key weaknesses listed (3-5 bullet points)
-    - [ ] Recommendation stated (Approve/Approve with comments/Request changes/Block)
+  - [ ] Overall assessment (Excellent/Good/Needs Improvement/Critical)
+  - [ ] Key strengths listed (3-5 bullet points)
+  - [ ] Key weaknesses listed (3-5 bullet points)
+  - [ ] Recommendation stated (Approve/Approve with comments/Request changes/Block)
 
 - [ ] **Quality Criteria Assessment**:
-
-    - [ ] Table with all criteria evaluated
-    - [ ] Status for each criterion (PASS/WARN/FAIL)
-    - [ ] Violation count per criterion
+  - [ ] Table with all criteria evaluated
+  - [ ] Status for each criterion (PASS/WARN/FAIL)
+  - [ ] Violation count per criterion
 
 - [ ] **Critical Issues (Must Fix)**:
-
-    - [ ] P0/P1 violations listed
-    - [ ] Code location provided for each (file:line)
-    - [ ] Issue explanation clear
-    - [ ] Recommended fix provided with code example
-    - [ ] Knowledge base reference provided
+  - [ ] P0/P1 violations listed
+  - [ ] Code location provided for each (file:line)
+  - [ ] Issue explanation clear
+  - [ ] Recommended fix provided with code example
+  - [ ] Knowledge base reference provided
 
 - [ ] **Recommendations (Should Fix)**:
-
-    - [ ] P2/P3 violations listed
-    - [ ] Code location provided for each (file:line)
-    - [ ] Issue explanation clear
-    - [ ] Recommended improvement provided with code example
-    - [ ] Knowledge base reference provided
+  - [ ] P2/P3 violations listed
+  - [ ] Code location provided for each (file:line)
+  - [ ] Issue explanation clear
+  - [ ] Recommended improvement provided with code example
+  - [ ] Knowledge base reference provided
 
 - [ ] **Best Practices Examples** (if good patterns found):
-
-    - [ ] Good patterns highlighted from tests
-    - [ ] Knowledge base fragments referenced
-    - [ ] Examples provided for others to follow
+  - [ ] Good patterns highlighted from tests
+  - [ ] Knowledge base fragments referenced
+  - [ ] Examples provided for others to follow
 
 - [ ] **Knowledge Base References**:
-    - [ ] All fragments consulted listed
-    - [ ] Links to detailed guidance provided
+  - [ ] All fragments consulted listed
+  - [ ] Links to detailed guidance provided
 
 ---
 

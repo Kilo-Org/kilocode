@@ -1,21 +1,21 @@
 ---
-title: "Enhanced Dev Story Definition of Done Checklist"
-validation-target: "Story markdown ({{story_path}})"
-validation-criticality: "HIGHEST"
+title: 'Enhanced Dev Story Definition of Done Checklist'
+validation-target: 'Story markdown ({{story_path}})'
+validation-criticality: 'HIGHEST'
 required-inputs:
-    - "Story markdown file with enhanced Dev Notes containing comprehensive implementation context"
-    - "Completed Tasks/Subtasks section with all items marked [x]"
-    - "Updated File List section with all changed files"
-    - "Updated Dev Agent Record with implementation notes"
+  - 'Story markdown file with enhanced Dev Notes containing comprehensive implementation context'
+  - 'Completed Tasks/Subtasks section with all items marked [x]'
+  - 'Updated File List section with all changed files'
+  - 'Updated Dev Agent Record with implementation notes'
 optional-inputs:
-    - "Test results output"
-    - "CI logs"
-    - "Linting reports"
+  - 'Test results output'
+  - 'CI logs'
+  - 'Linting reports'
 validation-rules:
-    - "Only permitted story sections modified: Tasks/Subtasks checkboxes, Dev Agent Record, File List, Change Log, Status"
-    - "All implementation requirements from story Dev Notes must be satisfied"
-    - "Definition of Done checklist must pass completely"
-    - "Enhanced story context must contain sufficient technical guidance"
+  - 'Only permitted story sections modified: Tasks/Subtasks checkboxes, Dev Agent Record, File List, Change Log, Status'
+  - 'All implementation requirements from story Dev Notes must be satisfied'
+  - 'Definition of Done checklist must pass completely'
+  - 'Enhanced story context must contain sufficient technical guidance'
 ---
 
 # 🎯 Enhanced Definition of Done Checklist
