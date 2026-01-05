@@ -376,6 +376,32 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	// kilocode_change end
 
+	// kilocode_change start: Show Skills.md feature notification
+	const skillsNotificationShown = context.globalState.get<boolean>("skillsFeatureNotificationShown")
+	if (!skillsNotificationShown) {
+		try {
+			const learnMoreButton = "Learn More"
+			const gotItButton = "Got it"
+			const selection = await vscode.window.showInformationMessage(
+				"🎉 New Feature: Skills.md support! Define reusable skills and workflows for your AI agent.",
+				learnMoreButton,
+				gotItButton,
+			)
+			
+			if (selection === learnMoreButton) {
+				await vscode.env.openExternal(vscode.Uri.parse("https://kilo.ai/docs/features/skills"))
+			}
+			
+			// Mark notification as shown regardless of user action
+			await context.globalState.update("skillsFeatureNotificationShown", true)
+		} catch (error) {
+			outputChannel.appendLine(
+				`[SkillsNotification] Error showing Skills.md notification: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+	// kilocode_change end
+
 	// Auto-import configuration if specified in settings
 	try {
 		await autoImportSettings(outputChannel, {
