@@ -26,9 +26,11 @@ const getDisplayedFrame = (frameText: string | undefined) =>
 
 const advanceUntilFrame = async (
 	lastFrame: () => string | undefined,
-	expectedFrame: string,
+	expectedFrame: string | undefined,
 	maxSteps: number = ANIMATION_FRAMES.length + 2
 ) => {
+	if (!expectedFrame) throw new Error("Expected frame is undefined")
+
 	for (let i = 0; i < maxSteps; i++) {
 		await vi.advanceTimersByTimeAsync(TIMER_STEP)
 		if (lastFrame()?.includes(expectedFrame)) return
