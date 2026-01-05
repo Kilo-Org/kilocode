@@ -42,7 +42,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	const setIsCancelling = useSetAtom(isCancellingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const exitPromptVisible = useAtomValue(exitPromptVisibleAtom)
-	const exitModifierKey = process.platform === "darwin" ? "Cmd" : "Ctrl"
+	const exitModifierKey = "Ctrl" // Ctrl+C is the universal terminal interrupt signal on all platforms
 
 	// Reset cancelling state when streaming stops
 	useEffect(() => {

@@ -8,6 +8,74 @@ For mode-specific guidance, see the following files:
 
 - **Translate mode**: `.roo/rules-translate/AGENTS.md` - Translation and localization guidelines
 
+## Changesets
+
+Each PR requires a changeset unless it's documentation-only or internal tooling. Create one with:
+
+```bash
+pnpm changeset
+```
+
+Format (in `.changeset/<random-name>.md`):
+
+```md
+---
+"kilo-code": patch
+---
+
+Brief description of the change
+```
+
+- Use `patch` for fixes, `minor` for features, `major` for breaking changes
+- For CLI changes, use `"@kilocode/cli": patch` instead
+
+Keep changesets concise but well-written as they become part of release notes.
+
+## Fork Merge Process
+
+Kilo Code is a fork of [Roo Code](https://github.com/RooVetGit/Roo-Code). We periodically merge upstream changes using scripts in `scripts/kilocode/`.
+
+## kilocode_change Markers
+
+To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
+
+**Single line:**
+```typescript
+const value = 42 // kilocode_change
+```
+
+**Multi-line:**
+```typescript
+// kilocode_change start
+const foo = 1
+const bar = 2
+// kilocode_change end
+```
+
+**New files:**
+```typescript
+// kilocode_change - new file
+```
+
+### When markers are NOT needed
+
+Code in these directories is Kilo Code-specific and doesn't need markers:
+
+- `cli/` - CLI package
+- `jetbrains/` - JetBrains plugin
+- Any path containing `kilocode` in filename or directory name
+- `src/services/ghost/` - Ghost service
+
+### When markers ARE needed
+
+All modifications to core extension code (files that exist in upstream Roo Code) require markers:
+
+- `src/` (except Kilo-specific subdirectories listed above)
+- `webview-ui/`
+- `packages/` (shared packages)
+
+Keep changes to core extension code minimal to reduce merge conflicts during upstream syncs.
+
 ## Code Quality Rules
 
 1. Test Coverage:
