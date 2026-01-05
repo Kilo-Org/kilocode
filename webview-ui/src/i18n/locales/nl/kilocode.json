@@ -233,10 +233,6 @@
 				"label": "Automatische Activeringsvertraging",
 				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Snelle Taak ({{keybinding}})",
-				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Sneltoets bewerken</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
 				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"

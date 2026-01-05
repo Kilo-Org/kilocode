@@ -226,10 +226,6 @@
 				"label": "Độ Trễ Kích Hoạt Tự Động",
 				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Autocomplete sau khi bạn ngừng gõ. Độ trễ ngắn hơn có nghĩa là gợi ý nhanh hơn, nhưng có thể tốn nhiều tài nguyên hơn."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tác vụ nhanh ({{keybinding}})",
-				"description": "Chỉ cần một thay đổi nhanh? Chọn một số mã (hoặc không!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng tiếng Việt đơn giản (\"tạo component React với những props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong editor của bạn. <DocsLink>Xem phím tắt</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Tự động hoàn thành thủ công ({{keybinding}})",
 				"description": "Cần sửa chữa nhanh, hoàn thành, hoặc tái cấu trúc? Kilo sẽ sử dụng ngữ cảnh xung quanh để cung cấp cải tiến ngay lập tức, giữ bạn trong luồng làm việc. <DocsLink>Xem phím tắt</DocsLink>"

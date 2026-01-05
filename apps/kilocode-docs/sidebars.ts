@@ -194,6 +194,7 @@ const sidebars: SidebarsConfig = {
 					items: [
 						"features/mcp/overview",
 						"features/mcp/using-mcp-in-kilo-code",
+						"features/mcp/using-mcp-in-cli",
 						"features/mcp/what-is-mcp",
 						"features/mcp/server-transports",
 						"features/mcp/mcp-vs-api",

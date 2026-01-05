@@ -19,6 +19,7 @@ import {
 	inputModeAtom,
 	type InputMode,
 	isStreamingAtom,
+	isCancellingAtom,
 } from "./ui.js"
 import {
 	textBufferStringAtom,
@@ -929,20 +930,19 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 			if (key.ctrl) {
 				const isStreaming = get(isStreamingAtom)
 				if (isStreaming) {
+					set(isCancellingAtom, true)
 					set(cancelTaskAtom)
 					return true
 				}
-				// If not streaming, don't consume the key
 			}
 			break
 		case "escape": {
-			// ESC cancels the task when streaming (same as Ctrl+X)
 			const isStreaming = get(isStreamingAtom)
 			if (isStreaming) {
+				set(isCancellingAtom, true)
 				set(cancelTaskAtom)
 				return true
 			}
-			// If not streaming, don't consume the key - let mode-specific handlers deal with it
 			break
 		}
 		case "r":

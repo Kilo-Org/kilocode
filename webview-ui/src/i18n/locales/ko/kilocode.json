@@ -233,10 +233,6 @@
 				"label": "자동 트리거 지연",
 				"description": "타이핑을 멈춘 후 Kilo Code가 Autocomplete를 트리거하기까지의 초 단위 지연. 지연이 짧을수록 제안이 빨라지지만 리소스를 더 많이 사용할 수 있습니다."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "빠른 작업 ({{keybinding}})",
-				"description": "빠른 변경만 필요하신가요? 코드를 선택하고(또는 하지 않고!) Cmd+I를 누르세요. 목표를 한국어로 설명하면(\"이 props로 React 컴포넌트 만들기\", \"이 함수에 에러 처리 추가\"), 에디터에서 바로 사용할 수 있는 여러 제안을 받을 수 있습니다. <DocsLink>단축키 보기</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "수동 자동완성({{keybinding}})",
 				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 플로우를 유지합니다. <DocsLink>단축키 보기</DocsLink>"

@@ -233,10 +233,6 @@
 				"label": "自動トリガー遅延",
 				"description": "タイピングを停止してからKilo CodeがAutocompleteをトリガーするまでの秒数。遅延が短いほど提案が早くなりますが、リソースを多く消費する可能性があります。"
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "クイックタスク ({{keybinding}})",
-				"description": "ちょっとした変更だけが必要？コードを選択して（しなくても大丈夫！）Cmd+Iを押してください。目標を日本語で説明し（「これらのpropsでReactコンポーネントを作成」、「この関数にエラーハンドリングを追加」）、エディター内で複数のすぐに使える提案を取得できます。<DocsLink>ショートカットを見る</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手動オートコンプリート ({{keybinding}})",
 				"description": "素早い修正、補完、またはリファクタリングが必要？Kiloは周囲のコンテキストを使用して即座の改善を提供し、フローを維持します。<DocsLink>ショートカットを見る</DocsLink>"

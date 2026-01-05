@@ -204,11 +204,6 @@
 				"category": "%configuration.title%"
 			},
 			{
-				"command": "kilo-code.addToContextAndFocus",
-				"title": "Add to Context and Focus",
-				"category": "%configuration.title%"
-			},
-			{
 				"command": "kilo-code.newTask",
 				"title": "%command.newTask.title%",
 				"category": "%configuration.title%"
@@ -476,20 +471,6 @@
 				"when": "editorTextFocus && editorHasSelection"
 			},
 			{
-				"command": "kilo-code.addToContextAndFocus",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"win": "ctrl+i",
-				"linux": "ctrl+i",
-				"when": "editorTextFocus && !github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
-			},
-			{
-				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"when": "editorTextFocus && github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
-			},
-			{
 				"command": "kilo-code.toggleAutoApprove",
 				"key": "cmd+alt+a",
 				"mac": "cmd+alt+a",
@@ -678,7 +659,7 @@
 		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
-		"@modelcontextprotocol/sdk": "1.13.3",
+		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
 		"@roo-code/ipc": "workspace:^",

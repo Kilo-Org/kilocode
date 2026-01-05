@@ -226,10 +226,6 @@
 				"label": "Retraso de Activación Automática",
 				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarea rápida ({{keybinding}})",
-				"description": "¿Solo necesitas un cambio rápido? Selecciona algo de código (¡o no!) y presiona Cmd+I. Describe tu objetivo en español simple (\"crear un componente React con estas props\", \"agregar manejo de errores a esta función\"), y obtén múltiples sugerencias listas para usar directamente en tu editor. <DocsLink>Editar atajo</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Autocompletado Manual ({{keybinding}})",
 				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"

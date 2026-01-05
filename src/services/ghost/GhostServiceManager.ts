@@ -73,7 +73,6 @@ export class GhostServiceManager {
 		await this.model.reload(this.cline.providerSettingsManager)
 
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
-			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
 		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
@@ -122,7 +121,6 @@ export class GhostServiceManager {
 				...settings,
 				enableAutoTrigger: false,
 				enableSmartInlineTaskKeybinding: false,
-				enableQuickInlineTaskKeybinding: false,
 			},
 		})
 
@@ -282,11 +280,6 @@ export class GhostServiceManager {
 	}
 
 	private async updateGlobalContext() {
-		await vscode.commands.executeCommand(
-			"setContext",
-			"kilocode.ghost.enableQuickInlineTaskKeybinding",
-			this.settings?.enableQuickInlineTaskKeybinding || false,
-		)
 		await vscode.commands.executeCommand(
 			"setContext",
 			"kilocode.ghost.enableSmartInlineTaskKeybinding",
