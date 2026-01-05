@@ -17,20 +17,20 @@ vi.mock("../../../state/hooks/useTheme.js", () => ({
 }))
 
 // Animation frames used by the component
-const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const
 const FRAME_INTERVAL = 80
 const TIMER_STEP = FRAME_INTERVAL + 1
 
-const getDisplayedFrame = (frameText: string | undefined) =>
+type AnimationFrame = (typeof ANIMATION_FRAMES)[number]
+
+const getDisplayedFrame = (frameText: string | undefined): AnimationFrame | undefined =>
 	ANIMATION_FRAMES.find((frame) => frameText?.includes(frame))
 
 const advanceUntilFrame = async (
 	lastFrame: () => string | undefined,
-	expectedFrame: string | undefined,
+	expectedFrame: AnimationFrame,
 	maxSteps: number = ANIMATION_FRAMES.length + 2
 ) => {
-	if (!expectedFrame) throw new Error("Expected frame is undefined")
-
 	for (let i = 0; i < maxSteps; i++) {
 		await vi.advanceTimersByTimeAsync(TIMER_STEP)
 		if (lastFrame()?.includes(expectedFrame)) return
