@@ -122,6 +122,7 @@ export interface ArgumentProviderCommandContext {
 	refreshRouterModels: () => Promise<void>
 	taskHistoryData: TaskHistoryData | null
 	chatMessages: ExtensionMessage[]
+	customModes: ModeConfig[]
 }
 
 /**

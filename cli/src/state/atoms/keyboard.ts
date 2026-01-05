@@ -910,6 +910,7 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 		case "c":
 			if (key.ctrl) {
 				set(triggerExitConfirmationAtom)
+				set(clearTextBufferAtom)
 				return true
 			}
 			break

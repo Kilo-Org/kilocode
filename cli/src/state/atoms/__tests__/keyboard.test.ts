@@ -1114,5 +1114,41 @@ describe("keypress atoms", () => {
 			expect(store.get(exitPromptVisibleAtom)).toBe(false)
 			expect(store.get(exitRequestCounterAtom)).toBe(1)
 		})
+
+		it("should clear text buffer when Ctrl+C is pressed", async () => {
+			// Type some text first
+			const chars = ["t", "e", "s", "t"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify we have text in the buffer
+			expect(store.get(textBufferStringAtom)).toBe("test")
+
+			// Press Ctrl+C
+			const ctrlCKey: Key = {
+				name: "c",
+				sequence: "\u0003",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, ctrlCKey)
+
+			// Text buffer should be cleared
+			expect(store.get(textBufferStringAtom)).toBe("")
+
+			// Exit prompt should be visible
+			expect(store.get(exitPromptVisibleAtom)).toBe(true)
+		})
 	})
 })
