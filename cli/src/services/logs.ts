@@ -1,6 +1,7 @@
-import { appendFileSync } from "fs"
+import { appendFileSync, openSync, readSync, closeSync } from "fs"
 import * as fs from "fs-extra"
 import * as path from "path"
+import * as os from "os"
 import { KiloCodePaths } from "../utils/paths.js"
 import { safeStringify } from "../utils/safe-stringify.js"
 
@@ -196,34 +197,68 @@ export class LogsService {
 	 * Rotate log file if it exceeds maximum size.
 	 * Keeps the most recent entries by truncating from the beginning.
 	 * This is called at startup to prevent unbounded log file growth.
+	 *
+	 * Uses byte-wise reading to avoid loading the entire file into memory,
+	 * and atomic write (temp file + rename) to prevent corruption on crash.
 	 */
 	private async rotateLogFileIfNeeded(): Promise<void> {
+		let fd: number | null = null
 		try {
 			const stats = await fs.stat(this.logFilePath)
 
-			if (stats.size > LogsService.MAX_LOG_FILE_SIZE) {
-				// Read the file content
-				const content = await fs.readFile(this.logFilePath, "utf8")
+			if (stats.size <= LogsService.MAX_LOG_FILE_SIZE) {
+				return // File is within size limit, no rotation needed
+			}
 
-				// Keep only the last TRUNCATE_TO_SIZE bytes worth of content
-				const truncatedContent = content.slice(-LogsService.TRUNCATE_TO_SIZE)
+			// Calculate the start position to read from (keep only the last TRUNCATE_TO_SIZE bytes)
+			const startPosition = Math.max(0, stats.size - LogsService.TRUNCATE_TO_SIZE)
+			const bytesToRead = stats.size - startPosition
 
-				// Find the first complete line (after truncation point) to avoid partial log entries
-				const firstNewline = truncatedContent.indexOf("\n")
-				const cleanContent = firstNewline > 0 ? truncatedContent.slice(firstNewline + 1) : truncatedContent
+			// Read only the bytes we need (byte-wise, no full file load)
+			fd = openSync(this.logFilePath, "r")
+			const buffer = Buffer.alloc(bytesToRead)
+			readSync(fd, buffer, 0, bytesToRead, startPosition)
+			closeSync(fd)
+			fd = null
 
-				// Write the truncated content back to the file
-				await fs.writeFile(this.logFilePath, cleanContent, "utf8")
+			// Convert to string and find the first complete line
+			let content = buffer.toString("utf8")
+			const firstNewline = content.indexOf("\n")
+			if (firstNewline > 0) {
+				content = content.slice(firstNewline + 1)
+			}
 
-				if (this.originalConsole) {
-					this.originalConsole.log(
-						`[LogsService] Rotated log file from ${(stats.size / 1024 / 1024).toFixed(2)} MB to ${(cleanContent.length / 1024 / 1024).toFixed(2)} MB`,
-					)
+			// Write to a temp file first, then rename (atomic operation to prevent corruption)
+			const tempFilePath = path.join(os.tmpdir(), `kilocode-log-rotate-${Date.now()}.tmp`)
+			await fs.writeFile(tempFilePath, content, "utf8")
+
+			// Atomic rename (or move with overwrite on Windows)
+			await fs.move(tempFilePath, this.logFilePath, { overwrite: true })
+
+			if (this.originalConsole) {
+				this.originalConsole.log(
+					`[LogsService] Rotated log file from ${(stats.size / 1024 / 1024).toFixed(2)} MB to ${(content.length / 1024 / 1024).toFixed(2)} MB`,
+				)
+			}
+		} catch (error: unknown) {
+			// Ensure fd is closed if an error occurred after opening
+			if (fd !== null) {
+				try {
+					closeSync(fd)
+				} catch {
+					// Ignore close errors
 				}
 			}
-		} catch {
-			// File doesn't exist yet or other error - this is expected on first run
-			// Silently ignore as the file will be created on first log write
+
+			// Handle ENOENT (file doesn't exist) silently - expected on first run
+			if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+				return
+			}
+
+			// Warn about other errors (disk, permission, etc.) instead of silently ignoring
+			if (this.originalConsole) {
+				this.originalConsole.warn("[LogsService] Failed to rotate log file:", error)
+			}
 		}
 	}
 
