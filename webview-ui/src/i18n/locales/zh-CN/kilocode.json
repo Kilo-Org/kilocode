@@ -233,10 +233,6 @@
 				"label": "自动触发延迟",
 				"description": "你停止输入后 Kilo Code 触发自动补全前的秒数延迟。延迟越短建议获取速度越快，但可能更消耗资源。"
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速任务 ({{keybinding}})",
-				"description": "只需要快速更改？选择一些代码（或不选！）然后按 Cmd+I。用简单的中文描述你的目标（\"用这些 props 创建 React 组件\"，\"给这个函数添加错误处理\"），在编辑器中直接获得多个即用建议。<DocsLink>查看快捷键</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手动自动补全（{{keybinding}}）",
 				"description": "需要快速修复、补全或重构？Kilo 将使用周围上下文提供即时改进，保持你的工作流。<DocsLink>查看快捷键</DocsLink>"

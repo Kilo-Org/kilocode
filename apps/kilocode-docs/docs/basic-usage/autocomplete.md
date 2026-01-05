@@ -26,24 +26,6 @@ When enabled, Kilo Code automatically triggers autocomplete when you pause typin
 - Default is 3 seconds, but this can be adjusted up or down
 - Shorter delays mean quicker suggestions but may be more resource-intensive
 
-### Quick Task (Cmd+I)
-
-Need to make a quick change? The Quick Task feature allows you to:
-
-1. Select code in your editor (or place your cursor where you want changes)
-2. Press `Cmd+I` (Mac) or `Ctrl+I` (Windows/Linux)
-3. Describe your goal in plain English
-4. Receive a code suggestion without going to the chat
-
-**Examples:**
-
-- "create a React component with these props"
-- "add error handling to this function"
-- "convert this to TypeScript"
-- "optimize this loop for performance"
-
-You can customize the keyboard shortcut in VS Code's keyboard shortcuts settings.
-
 ### Manual Autocomplete (Cmd+L)
 
 For more control over when suggestions appear:
@@ -79,7 +61,6 @@ Kilo Code automatically selects a provider for autocomplete in the following pri
 - **LiteLLM** (using `codestral/codestral-latest`)
 - **LM Studio** (using `mistralai/codestral-22b-v0.1`)
 - **Ollama** (using `codestral:latest`)
-
 
 :::note
 **Model Selection is Currently Fixed**: At this time, you cannot freely choose a different model for autocomplete. The feature is designed to work specifically with Codestral, which is optimized for Fill-in-the-Middle (FIM) completions. Support for additional models may be added in future releases.

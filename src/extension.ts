@@ -366,7 +366,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			await contextProxy.setValue("ghostServiceSettings", {
 				...currentGhostSettings,
 				enableAutoTrigger: !kiloCodeWrapperJetbrains,
-				enableQuickInlineTaskKeybinding: true,
 				enableSmartInlineTaskKeybinding: true,
 			})
 		} catch (error) {
