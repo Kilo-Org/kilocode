@@ -15,7 +15,7 @@ export function getSymbolsForSnippet(snippet: string): Set<string> {
 /**
  * Calculate similarity as number of shared symbols divided by total number of unique symbols between both.
  */
-function jaccardSimilarity(a: string, b: string): number {
+export function jaccardSimilarity(a: string, b: string): number {
 	const aSet = getSymbolsForSnippet(a)
 	const bSet = getSymbolsForSnippet(b)
 	const union = new Set([...aSet, ...bSet]).size
