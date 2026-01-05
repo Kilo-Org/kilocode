@@ -329,13 +329,22 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 	const currentVersion = versionMap.get(existingMessage.ts) || 0
 	const newVersion = getMessageContentLength(updatedMessage)
 
+	// Detect content changes that may not affect length (e.g. numeric JSON fields like costs)
+	const contentChanged =
+		existingMessage.text !== updatedMessage.text ||
+		existingMessage.say !== updatedMessage.say ||
+		existingMessage.ask !== updatedMessage.ask ||
+		existingMessage.isAnswered !== updatedMessage.isAnswered ||
+		existingMessage.metadata !== updatedMessage.metadata
+
 	// Always update if:
 	// 1. Message is partial (streaming update)
 	// 2. New version has more content
 	// 3. Partial flag changed (partial=true -> partial=false transition)
 	const partialFlagChanged = existingMessage.partial !== updatedMessage.partial
 
-	if (updatedMessage.partial || newVersion > currentVersion || partialFlagChanged) {
+	// 4. Content changed but length stayed the same (e.g. cost updated from 0.0010 -> 0.0020)
+	if (updatedMessage.partial || newVersion > currentVersion || partialFlagChanged || (contentChanged && newVersion === currentVersion)) {
 		const newMessages = [...messages]
 		newMessages[messageIndex] = updatedMessage
 		set(updateChatMessagesAtom, newMessages)
