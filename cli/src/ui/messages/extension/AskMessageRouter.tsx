@@ -1,7 +1,7 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { MessageComponentProps } from "./types.js"
-import { parseToolData } from "./utils.js"
+import { parseToolData, formatUnknownMessageContent } from "./utils.js"
 import { ToolRouter } from "./tools/ToolRouter.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
 import {
@@ -27,21 +27,8 @@ import {
  */
 export const DefaultAskMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
-	
-	// Try to parse JSON content for better display
-	let displayContent = message.text || `Unknown ask type: ${message.ask}`
-	
-	// If text looks like JSON, try to format it nicely
-	if (message.text && (message.text.trim().startsWith("{") || message.text.trim().startsWith("["))) {
-		try {
-			const parsed = JSON.parse(message.text)
-			displayContent = JSON.stringify(parsed, null, 2)
-		} catch {
-			// Not valid JSON, use as-is
-			displayContent = message.text
-		}
-	}
-	
+	const displayContent = formatUnknownMessageContent(message.text, `Unknown ask type: ${message.ask}`)
+
 	return (
 		<Box marginY={1}>
 			<Text color={theme.semantic.warning}>{displayContent}</Text>
