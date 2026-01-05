@@ -250,12 +250,6 @@ export class LogsService {
 			// Atomic rename (works on same filesystem)
 			renameSync(tempFilePath, this.logFilePath)
 			tempFilePath = null // Successfully renamed, no cleanup needed
-
-			if (this.originalConsole) {
-				this.originalConsole.log(
-					`[LogsService] Rotated log file from ${(stats.size / 1024 / 1024).toFixed(2)} MB to ${(content.length / 1024 / 1024).toFixed(2)} MB`,
-				)
-			}
 		} catch (error: unknown) {
 			// Ensure fd is closed if an error occurred after opening
 			if (fd !== null) {
