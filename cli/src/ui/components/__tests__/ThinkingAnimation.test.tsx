@@ -16,6 +16,10 @@ vi.mock("../../../state/hooks/useTheme.js", () => ({
 	}),
 }))
 
+// Animation frames used by the component
+const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+const FRAME_INTERVAL = 80
+
 describe("ThinkingAnimation", () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
@@ -30,14 +34,14 @@ describe("ThinkingAnimation", () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
 		// Should show first frame character (⠋) and default text
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 		expect(lastFrame()).toContain("Thinking...")
 	})
 
 	it("should render with custom text", () => {
 		const { lastFrame } = render(<ThinkingAnimation text="Processing..." />)
 
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 		expect(lastFrame()).toContain("Processing...")
 	})
 
@@ -45,29 +49,32 @@ describe("ThinkingAnimation", () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
 		// Initial frame
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 
-		// Advance to next frame (80ms) and wait for React to update
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠙")
+		// Advance to next frame - use slightly more than interval to ensure timer fires
+		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[1])
 
 		// Advance to third frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠹")
+		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[2])
 
 		// Advance to fourth frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠸")
+		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[3])
 	})
 
 	it("should loop back to first frame after completing cycle", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Advance through all 10 frames (10 * 80ms = 800ms)
-		await vi.advanceTimersByTimeAsync(800)
+		// Advance through all 10 frames plus a small buffer
+		// Using runOnlyPendingTimers in a loop is more deterministic than advancing by exact time
+		for (let i = 0; i < ANIMATION_FRAMES.length; i++) {
+			await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		}
 
 		// Should be back at first frame
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 	})
 
 	it("should clean up interval on unmount", () => {
@@ -82,14 +89,17 @@ describe("ThinkingAnimation", () => {
 	it("should continue animating after multiple cycles", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Complete two full cycles (2 * 800ms = 1600ms)
-		await vi.advanceTimersByTimeAsync(1600)
+		// Complete two full cycles using deterministic timer advancement
+		const totalFrames = ANIMATION_FRAMES.length * 2
+		for (let i = 0; i < totalFrames; i++) {
+			await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		}
 
-		// Should still be at first frame
-		expect(lastFrame()).toContain("⠋")
+		// Should be back at first frame after completing full cycles
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 
 		// Advance one more frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠙")
+		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[1])
 	})
 })
