@@ -42,9 +42,6 @@ export class ChatTextAreaAutocomplete {
 			provider: this.model.getProviderDisplayName(),
 		}
 
-		// Capture suggestion requested
-		this.telemetry.captureSuggestionRequested(context)
-
 		if (!this.model.loaded) {
 			const loaded = await this.initialize()
 			if (!loaded) {
@@ -56,6 +53,9 @@ export class ChatTextAreaAutocomplete {
 		if (!this.model.hasValidCredentials()) {
 			return { suggestion: "" }
 		}
+
+		// Capture suggestion requested
+		this.telemetry.captureSuggestionRequested(context)
 
 		const prefix = await this.buildPrefix(userText, visibleCodeContext)
 		const suffix = ""
