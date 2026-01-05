@@ -32,7 +32,6 @@ import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
 import { generateUpdateAvailableMessage, getAutoUpdateStatus } from "../utils/auto-update.js"
-import { isEphemeralMode } from "../config/env-config.js"
 import { generateNotificationMessage } from "../utils/notifications.js"
 import { notificationsAtom } from "../state/atoms/notifications.js"
 import { workspacePathAtom } from "../state/atoms/shell.js"
@@ -256,7 +255,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			setVersionStatus(await getAutoUpdateStatus())
 		}
 
-		if (!autoUpdatedCheckedRef.current && !options.ci && !isEphemeralMode()) {
+		if (!autoUpdatedCheckedRef.current && !options.ci && process.env.KILO_EPHEMERAL_MODE !== "true") {
 			autoUpdatedCheckedRef.current = true
 			checkVersion()
 		}
