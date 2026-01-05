@@ -233,10 +233,6 @@
 				"label": "Délai de Déclenchement Automatique",
 				"description": "Le délai en secondes avant que Kilo Code déclenche Autocomplete après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus intensif en ressources."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tâche rapide ({{keybinding}})",
-				"description": "Tu n'as besoin que d'un changement rapide ? Sélectionne du code (ou pas !) et appuie sur Cmd+I. Décris ton objectif en français simple (\"créer un composant React avec ces props\", \"ajouter la gestion d'erreurs à cette fonction\"), et obtiens plusieurs suggestions prêtes à l'emploi directement dans ton éditeur. <DocsLink>Modifier le raccourci</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Saisie automatique manuelle ({{keybinding}})",
 				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Modifier le raccourci</DocsLink>"

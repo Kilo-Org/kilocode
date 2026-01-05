@@ -45,7 +45,6 @@ vi.mock("@/utils/vscode", () => ({
 // Mock useKeybindings hook
 vi.mock("@/hooks/useKeybindings", () => ({
 	useKeybindings: () => ({
-		"kilo-code.addToContextAndFocus": "Cmd+K",
 		"kilo-code.ghost.generateSuggestions": "Cmd+Shift+G",
 	}),
 }))
@@ -105,7 +104,6 @@ vi.mock("../../settings/Section", () => ({
 
 const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
-	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
 	enableChatAutocomplete: false,
 	provider: "openrouter",
@@ -165,20 +163,6 @@ describe("GhostServiceSettingsView", () => {
 		fireEvent.click(checkbox)
 
 		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableAutoTrigger", true)
-	})
-
-	it("toggles quick inline task keybinding checkbox correctly", () => {
-		const onGhostServiceSettingsChange = vi.fn()
-		renderComponent({ onGhostServiceSettingsChange })
-
-		const checkboxLabel = screen
-			.getByText(/kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label/)
-			.closest("label")
-		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
-
-		fireEvent.click(checkbox)
-
-		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableQuickInlineTaskKeybinding", true)
 	})
 
 	it("toggles smart inline task keybinding checkbox correctly", () => {

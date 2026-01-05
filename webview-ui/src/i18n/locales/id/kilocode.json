@@ -219,10 +219,6 @@
 				"label": "Penundaan Pemicu Otomatis",
 				"description": "Penundaan dalam detik sebelum Kilo Code memicu Autocomplete setelah Anda berhenti mengetik. Penundaan yang lebih pendek berarti saran yang lebih cepat, tetapi mungkin lebih intensif sumber daya."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tugas Cepat ({{keybinding}})",
-				"description": "Hanya perlu perubahan cepat? Pilih beberapa kode (atau tidak!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa Indonesia sederhana (\"buat komponen React dengan props ini\", \"tambahkan penanganan error ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Pelengkapan Otomatis Manual ({{keybinding}})",
 				"description": "Perlu perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan langsung, menjaga Anda tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
