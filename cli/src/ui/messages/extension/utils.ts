@@ -247,6 +247,35 @@ export function formatJson(jsonString: string, indent: number = 2): string | nul
 }
 
 /**
+ * Format content for unknown message types
+ * If the text looks like JSON (starts with { or [), try to parse and pretty-print it.
+ * Otherwise, return the text as-is.
+ *
+ * @param text - The message text to format
+ * @param fallback - Fallback text if text is empty/undefined
+ * @returns Formatted display content
+ */
+export function formatUnknownMessageContent(text: string | undefined, fallback: string): string {
+	if (!text) {
+		return fallback
+	}
+
+	const trimmed = text.trim()
+	// Only attempt JSON parsing if it looks like JSON
+	if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+		try {
+			const parsed = JSON.parse(text)
+			return JSON.stringify(parsed, null, 2)
+		} catch {
+			// Not valid JSON, return as-is
+			return text
+		}
+	}
+
+	return text
+}
+
+/**
  * Approximate byte size of string for display purposes
  * Uses 3x multiplier as conservative estimate (handles ASCII, UTF-8, emoji)
  *

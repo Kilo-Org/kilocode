@@ -468,7 +468,12 @@ describe("messageCompletion", () => {
 			const messages: UnifiedMessage[] = [
 				{
 					source: "extension",
-					message: { ts: 1, type: "say", say: "api_req_started", text: JSON.stringify({ apiProtocol: "openai" }) },
+					message: {
+						ts: 1,
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({ apiProtocol: "openai" }),
+					},
 				},
 				{
 					source: "extension",

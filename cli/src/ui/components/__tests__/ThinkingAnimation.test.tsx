@@ -29,7 +29,7 @@ const getDisplayedFrame = (frameText: string | undefined): AnimationFrame | unde
 const advanceUntilFrame = async (
 	lastFrame: () => string | undefined,
 	expectedFrame: AnimationFrame,
-	maxSteps: number = ANIMATION_FRAMES.length + 2
+	maxSteps: number = ANIMATION_FRAMES.length + 2,
 ) => {
 	for (let i = 0; i < maxSteps; i++) {
 		await vi.advanceTimersByTimeAsync(TIMER_STEP)

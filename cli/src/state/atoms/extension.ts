@@ -344,7 +344,12 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 	const partialFlagChanged = existingMessage.partial !== updatedMessage.partial
 
 	// 4. Content changed but length stayed the same (e.g. cost updated from 0.0010 -> 0.0020)
-	if (updatedMessage.partial || newVersion > currentVersion || partialFlagChanged || (contentChanged && newVersion === currentVersion)) {
+	if (
+		updatedMessage.partial ||
+		newVersion > currentVersion ||
+		partialFlagChanged ||
+		(contentChanged && newVersion === currentVersion)
+	) {
 		const newMessages = [...messages]
 		newMessages[messageIndex] = updatedMessage
 		set(updateChatMessagesAtom, newMessages)

@@ -14,7 +14,10 @@ export const SayApiReqStartedMessage: React.FC<MessageComponentProps> = ({ messa
 	// In-progress state
 	// NOTE: api_req_started is often sent as a non-partial placeholder before cost/usage is known.
 	// In the CLI we treat "no completion indicators" as still in progress.
-	if (message.partial || (!apiInfo?.streamingFailedMessage && !apiInfo?.cancelReason && apiInfo?.cost === undefined)) {
+	if (
+		message.partial ||
+		(!apiInfo?.streamingFailedMessage && !apiInfo?.cancelReason && apiInfo?.cost === undefined)
+	) {
 		return (
 			<Box marginY={1}>
 				<Text color={theme.semantic.info}>⟳ API Request in progress...</Text>
