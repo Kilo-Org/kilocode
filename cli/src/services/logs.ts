@@ -1,4 +1,4 @@
-import { appendFileSync, openSync, readSync, closeSync } from "fs"
+import { appendFileSync, openSync, readSync, closeSync, statSync } from "fs"
 import * as fs from "fs-extra"
 import * as path from "path"
 import * as os from "os"
@@ -204,7 +204,8 @@ export class LogsService {
 	private async rotateLogFileIfNeeded(): Promise<void> {
 		let fd: number | null = null
 		try {
-			const stats = await fs.stat(this.logFilePath)
+			// Use statSync from native fs (fs-extra doesn't reliably export stat)
+			const stats = statSync(this.logFilePath)
 
 			if (stats.size <= LogsService.MAX_LOG_FILE_SIZE) {
 				return // File is within size limit, no rotation needed
