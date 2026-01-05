@@ -283,6 +283,7 @@ export function useCommandInput(): UseCommandInputReturn {
 			})
 		} else if (state.type === "argument") {
 			// Create command context for argument providers
+			const customModes = extensionState?.customModes || []
 			const commandContext = {
 				config,
 				routerModels,
@@ -292,6 +293,7 @@ export function useCommandInput(): UseCommandInputReturn {
 				profileLoading,
 				taskHistoryData,
 				chatMessages: [] as ExtensionMessage[],
+				customModes,
 				updateProviderModel: async (modelId: string) => {
 					if (!currentProvider) {
 						throw new Error("No provider configured")
@@ -305,7 +307,7 @@ export function useCommandInput(): UseCommandInputReturn {
 					await refreshRouterModels()
 				},
 			}
-
+	
 			// Get argument suggestions with command context
 			const suggestions = await getArgumentSuggestions(inputValue, commandContext)
 			updateAllSuggestionsAction({

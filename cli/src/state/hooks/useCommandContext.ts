@@ -25,7 +25,13 @@ import {
 	selectProviderAtom,
 	configAtom,
 } from "../atoms/config.js"
-import { routerModelsAtom, extensionStateAtom, isParallelModeAtom, chatMessagesAtom } from "../atoms/extension.js"
+import {
+	routerModelsAtom,
+	extensionStateAtom,
+	isParallelModeAtom,
+	chatMessagesAtom,
+	currentTaskAtom,
+} from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import {
@@ -107,6 +113,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const config = useAtomValue(configAtom)
 	const chatMessages = useAtomValue(chatMessagesAtom)
+	const currentTask = useAtomValue(currentTaskAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -230,6 +237,8 @@ export function useCommandContext(): UseCommandContextReturn {
 				previousTaskHistoryPage,
 				sendWebviewMessage: sendMessage,
 				chatMessages: chatMessages as unknown as ExtensionMessage[],
+				// Current task context
+				currentTask,
 				// Model list context
 				modelListPageIndex,
 				modelListFilters,
@@ -272,6 +281,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			nextTaskHistoryPage,
 			previousTaskHistoryPage,
 			chatMessages,
+			currentTask,
 			modelListPageIndex,
 			modelListFilters,
 			updateModelListFilters,
