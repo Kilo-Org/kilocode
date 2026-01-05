@@ -2755,6 +2755,7 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
+				openAiApiKey: "openai-key", // kilocode_change: openai
 				nanoGptApiKey: "nano-gpt-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				inceptionLabsApiKey: "inception-key",
@@ -2823,6 +2824,7 @@ describe("ClineProvider - Router Models", () => {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
+				openai: mockModels, // kilocode_change: openai
 				requesty: mockModels,
 				glama: mockModels, // kilocode_change
 				synthetic: mockModels, // kilocode_change
@@ -2861,6 +2863,7 @@ describe("ClineProvider - Router Models", () => {
 				chutesApiKey: "chutes-key",
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
+				openAiApiKey: "openai-key", // kilocode_change: openai
 				nanoGptApiKey: "nano-gpt-key", // kilocode_change
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				inceptionLabsApiKey: "inception-key",
@@ -2879,6 +2882,7 @@ describe("ClineProvider - Router Models", () => {
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
 			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini success
+			.mockRejectedValueOnce(new Error("OpenAI API error")) // kilocode_change: openai fail
 			.mockRejectedValueOnce(new Error("Requesty API error")) //
 			.mockResolvedValueOnce(mockModels) // kilocode_change glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
@@ -2903,6 +2907,7 @@ describe("ClineProvider - Router Models", () => {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
+				openai: {}, // kilocode_change: openai
 				requesty: {},
 				glama: mockModels, // kilocode_change
 				unbound: {},
@@ -2925,6 +2930,13 @@ describe("ClineProvider - Router Models", () => {
 		})
 
 		// Verify error messages were sent for failed providers
+		expect(mockPostMessage).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "OpenAI API error",
+			values: { provider: "openai" },
+		}) // kilocode_change: openai
+
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -3029,6 +3041,7 @@ describe("ClineProvider - Router Models", () => {
 				glamaApiKey: "glama-key", // kilocode_change
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
+				openAiApiKey: "openai-key", // kilocode_change: openai
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
 				nanoGptApiKey: "nano-gpt-key",
@@ -3059,6 +3072,7 @@ describe("ClineProvider - Router Models", () => {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
+				openai: mockModels, // kilocode_change: openai
 				requesty: mockModels,
 				glama: mockModels, // kilocode_change
 				unbound: mockModels,
