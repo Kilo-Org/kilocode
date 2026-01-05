@@ -34,7 +34,7 @@
 import React from "react"
 import { Box, Static } from "ink"
 import { useAtomValue } from "jotai"
-import { type UnifiedMessage, staticMessagesAtom } from "../../state/atoms/ui.js"
+import { type UnifiedMessage, dynamicMessagesAtom, staticMessagesAtom } from "../../state/atoms/ui.js"
 import { MessageRow } from "./MessageRow.js"
 
 /**
@@ -68,20 +68,33 @@ function getMessageKey(msg: UnifiedMessage, index: number): string {
 
 export const MessageDisplay: React.FC = () => {
 	const staticMessages = useAtomValue(staticMessagesAtom)
+	const dynamicMessages = useAtomValue(dynamicMessagesAtom)
 
-	if (staticMessages.length === 0) {
+	if (staticMessages.length === 0 && dynamicMessages.length === 0) {
 		return null
 	}
 
 	return (
 		<Box flexDirection="column">
-			<Static items={staticMessages}>
-				{(message, index) => (
-					<Box key={getMessageKey(message, index)} paddingX={1}>
-						<MessageRow unifiedMessage={message} />
-					</Box>
-				)}
-			</Static>
+			{staticMessages.length > 0 && (
+				<Static items={staticMessages}>
+					{(message, index) => (
+						<Box key={getMessageKey(message, index)} paddingX={1}>
+							<MessageRow unifiedMessage={message} />
+						</Box>
+					)}
+				</Static>
+			)}
+
+			{dynamicMessages.length > 0 && (
+				<Box flexDirection="column">
+					{dynamicMessages.map((message, index) => (
+						<Box key={`dyn-${getMessageKey(message, index)}`} paddingX={1}>
+							<MessageRow unifiedMessage={message} />
+						</Box>
+					))}
+				</Box>
+			)}
 		</Box>
 	)
 }

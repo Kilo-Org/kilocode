@@ -82,6 +82,13 @@ export class GhostServiceManager {
 			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
 		}
 
+		// Auto-enable chat autocomplete by default, but disable for JetBrains IDEs
+		// JetBrains users can manually enable it if they want to test the feature
+		if (this.settings.enableChatAutocomplete == undefined) {
+			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
+			this.settings.enableChatAutocomplete = !kiloCodeWrapperJetbrains
+		}
+
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
