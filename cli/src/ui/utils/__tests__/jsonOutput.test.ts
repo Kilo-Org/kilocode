@@ -11,6 +11,17 @@ import type { UnifiedMessage } from "../../../state/atoms/ui.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { CliMessage } from "../../../types/cli.js"
 
+// Helper to create extension messages with unknown types for testing
+// We need to cast to unknown first to bypass TypeScript's type checking
+// since we're intentionally testing invalid/unknown message types
+function createExtensionMessage(overrides: Record<string, unknown>): ExtensionChatMessage {
+	return {
+		ts: 1234567890,
+		type: "say",
+		...overrides,
+	} as unknown as ExtensionChatMessage
+}
+
 describe("jsonOutput", () => {
 	let consoleLogSpy: ReturnType<typeof vi.spyOn>
 
@@ -386,7 +397,7 @@ describe("jsonOutput", () => {
 				ts: 1234567890,
 				type: "say",
 				say: "text",
-				text: "Here's the config:\n```json\n{\"tool\": \"readFile\"}\n```",
+				text: 'Here\'s the config:\n```json\n{"tool": "readFile"}\n```',
 			}
 
 			const unifiedMessage: UnifiedMessage = {
@@ -402,7 +413,7 @@ describe("jsonOutput", () => {
 				source: "extension",
 				type: "say",
 				say: "text",
-				content: "Here's the config:\n```json\n{\"tool\": \"readFile\"}\n```",
+				content: 'Here\'s the config:\n```json\n{"tool": "readFile"}\n```',
 			})
 		})
 	})
@@ -484,11 +495,10 @@ describe("jsonOutput", () => {
 
 	describe("formatMessageAsJson - Unknown message types", () => {
 		it("should handle unknown message type gracefully", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "unknown" as any,
+			const message = createExtensionMessage({
+				type: "unknown",
 				text: "Unknown message",
-			}
+			})
 
 			const unifiedMessage: UnifiedMessage = {
 				source: "extension",
@@ -506,12 +516,11 @@ describe("jsonOutput", () => {
 		})
 
 		it("should handle unknown ask type with JSON content", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
+			const message = createExtensionMessage({
 				type: "ask",
-				ask: "unknown_ask_type" as any,
+				ask: "unknown_ask_type",
 				text: JSON.stringify({ data: "test" }),
-			}
+			})
 
 			const unifiedMessage: UnifiedMessage = {
 				source: "extension",
@@ -530,12 +539,11 @@ describe("jsonOutput", () => {
 		})
 
 		it("should handle unknown say type with plain text", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
+			const message = createExtensionMessage({
 				type: "say",
-				say: "unknown_say_type" as any,
+				say: "unknown_say_type",
 				text: "Some text content",
-			}
+			})
 
 			const unifiedMessage: UnifiedMessage = {
 				source: "extension",

@@ -37,7 +37,7 @@ export const DefaultSayMessage: React.FC<MessageComponentProps> = ({ message }) 
 	let displayContent = message.text || `Unknown say type: ${message.say}`
 	
 	// If text looks like JSON, try to format it nicely
-	if (message.text && message.text.trim().startsWith("{") || message.text?.trim().startsWith("[")) {
+	if (message.text && (message.text.trim().startsWith("{") || message.text.trim().startsWith("["))) {
 		try {
 			const parsed = JSON.parse(message.text)
 			displayContent = JSON.stringify(parsed, null, 2)
