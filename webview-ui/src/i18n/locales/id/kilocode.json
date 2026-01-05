@@ -323,10 +323,16 @@
 		"initiating": "Memulai autentikasi..."
 	},
 	"speechToText": {
-		"startRecording": "Mulai masukan suara",
+		"startRecording": "Mulai input suara",
 		"stopRecording": "Hentikan input suara",
-		"unavailableOpenAiKeyMissing": "Ucapan-ke-teks tidak tersedia. Ini memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
-		"unavailableFfmpegNotInstalled": "Ucapan-ke-teks tidak tersedia. Pasang FFmpeg untuk menggunakan transkripsi suara.",
-		"unavailableBoth": "Ucapan-ke-teks tidak tersedia. Fitur ini memerlukan penyedia OpenAI yang valid dan FFmpeg harus terpasang."
+		"setupPopover": {
+			"title": "Ucapan-ke-Teks",
+			"description": "Speech-to-text tidak tersedia. Speech-to-text memerlukan FFmpeg dan penyedia OpenAI yang valid untuk dikonfigurasi. <moreInfoLink>Klik di sini untuk informasi lebih lanjut</moreInfoLink>.",
+			"openAiReason": "Anda memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
+			"ffmpegReason": "Anda perlu menginstal FFmpeg. <ffmpegLink>Klik di sini</ffmpegLink> agar Kilo membantu Anda menginstal FFmpeg.",
+			"ffmpegMessage": "Bantu saya menginstal FFmpeg"
+		},
+		"misconfiguredState": "Tidak tersedia karena konfigurasi",
+		"errorState": "Tidak tersedia karena terjadi kesalahan"
 	}
 }

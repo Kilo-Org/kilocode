@@ -324,9 +324,15 @@
 	},
 	"speechToText": {
 		"startRecording": "Start spraakinvoer",
-		"stopRecording": "Stop spraakinvoer",
-		"unavailableOpenAiKeyMissing": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI provider met een API-sleutel om spraaktranscriptie te gebruiken.",
-		"unavailableBoth": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI-provider en FFmpeg moet geïnstalleerd zijn.",
-		"unavailableFfmpegNotInstalled": "Spraak-naar-tekst is niet beschikbaar. Installeer FFmpeg om spraaktranscriptie te gebruiken."
+		"stopRecording": "Stop spraakherkenning",
+		"setupPopover": {
+			"title": "Spraak-naar-Tekst",
+			"description": "Spraak-naar-tekst is niet beschikbaar. Spraak-naar-tekst vereist zowel FFmpeg als een geldige OpenAI-provider die is geconfigureerd. <moreInfoLink>Klik hier voor meer informatie</moreInfoLink>.",
+			"openAiReason": "Je hebt een geldige OpenAI-provider met een API-sleutel nodig om spraaktranscriptie te gebruiken.",
+			"ffmpegMessage": "Help me FFmpeg te installeren",
+			"ffmpegReason": "Je hebt FFmpeg nodig. <ffmpegLink>Klik hier</ffmpegLink> om Kilo te laten helpen met het installeren van FFmpeg."
+		},
+		"misconfiguredState": "Niet beschikbaar vanwege configuratie",
+		"errorState": "Niet beschikbaar vanwege een fout"
 	}
 }

@@ -323,10 +323,16 @@
 		"initiating": "Avvio autenticazione..."
 	},
 	"speechToText": {
-		"startRecording": "Inizia l'input vocale",
+		"startRecording": "Avvia input vocale",
 		"stopRecording": "Interrompi input vocale",
-		"unavailableOpenAiKeyMissing": "La conversione da voce a testo non è disponibile. Richiede un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
-		"unavailableFfmpegNotInstalled": "La conversione vocale in testo non è disponibile. Installa FFmpeg per utilizzare la trascrizione vocale.",
-		"unavailableBoth": "Il riconoscimento vocale non è disponibile. Richiede un provider OpenAI valido e FFmpeg deve essere installato."
+		"setupPopover": {
+			"title": "Sintesi vocale",
+			"description": "La sintesi vocale non è disponibile. La sintesi vocale richiede sia FFmpeg che un provider OpenAI valido configurato. <moreInfoLink>Clicca qui per maggiori informazioni</moreInfoLink>.",
+			"openAiReason": "È necessario un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
+			"ffmpegReason": "È necessario avere FFmpeg installato. <ffmpegLink>Clicca qui</ffmpegLink> per far sì che Kilo ti aiuti a installare FFmpeg.",
+			"ffmpegMessage": "Aiutami a installare FFmpeg"
+		},
+		"misconfiguredState": "Non disponibile a causa della configurazione",
+		"errorState": "Non disponibile a causa di un errore"
 	}
 }

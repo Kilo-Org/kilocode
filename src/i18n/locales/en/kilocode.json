@@ -197,5 +197,11 @@
 			"okButton": "I Understand",
 			"cancelButton": "Cancel"
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Your OpenAI API key is invalid or does not have access to the Realtime API. Please check your API key and try again.",
+			"unknown": "Connection failed. Please check your configuration and try again."
+		}
 	}
 }

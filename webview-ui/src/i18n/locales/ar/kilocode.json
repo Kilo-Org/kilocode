@@ -322,10 +322,18 @@
 		"initiating": "جاري بدء المصادقة..."
 	},
 	"speechToText": {
-		"stopRecording": "إيقاف إدخال الصوت",
-		"startRecording": "بدء الإدخال الصوتي",
-		"unavailableFfmpegNotInstalled": "التحويل من الكلام إلى نص غير متاح. قم بتثبيت FFmpeg لاستخدام النسخ الصوتي.",
-		"unavailableBoth": "تحويل الصوت إلى نص غير متاح. يتطلب ذلك مزود OpenAI صالح ويجب تثبيت FFmpeg.",
-		"unavailableOpenAiKeyMissing": "تحويل الكلام إلى نص غير متاح. يتطلب استخدام مزود OpenAI صالح مع مفتاح API لاستخدام خاصية نسخ الصوت."
+		"stopRecording": "إيقاف الإدخال الصوتي",
+		"startRecording": "ابدأ الإدخال الصوتي",
+		"setupPopover": {
+			"title": "تحويل الكلام إلى نص",
+			"ffmpegHelp": "تحتاج إلى FFmpeg. <ffmpegLink>انقر هنا</ffmpegLink> للحصول على مساعدة Kilo في تثبيت FFmpeg.",
+			"openAiHelp": "انقر هنا لمزيد من المعلومات",
+			"ffmpegMessage": "ساعدني في تثبيت FFmpeg",
+			"openAiReason": "تحتاج إلى مزود OpenAI صالح مع مفتاح API لاستخدام نسخ الصوت.",
+			"description": "تحويل الكلام إلى نص غير متاح. يتطلب تحويل الكلام إلى نص كلاً من FFmpeg وموفر OpenAI صالح تم تكوينه. <moreInfoLink>انقر هنا لمزيد من المعلومات</moreInfoLink>.",
+			"ffmpegReason": "تحتاج إلى تثبيت FFmpeg. <ffmpegLink>انقر هنا</ffmpegLink> لمساعدتك من Kilo في تثبيت FFmpeg."
+		},
+		"misconfiguredState": "غير متاح بسبب الإعدادات",
+		"errorState": "غير متاح بسبب خطأ"
 	}
 }

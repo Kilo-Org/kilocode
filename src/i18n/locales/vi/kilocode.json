@@ -197,5 +197,11 @@
 			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Khóa API OpenAI của bạn không hợp lệ hoặc không có quyền truy cập vào Realtime API. Vui lòng kiểm tra khóa API và thử lại.",
+			"unknown": "Kết nối thất bại. Vui lòng kiểm tra cấu hình của bạn và thử lại."
+		}
 	}
 }

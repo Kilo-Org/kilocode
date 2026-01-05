@@ -324,8 +324,14 @@
 	"speechToText": {
 		"startRecording": "Spracheingabe starten",
 		"stopRecording": "Spracheingabe beenden",
-		"unavailableBoth": "Spracherkennung ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter und FFmpeg muss installiert sein.",
-		"unavailableFfmpegNotInstalled": "Sprache-zu-Text ist nicht verfügbar. Installieren Sie FFmpeg, um Sprachtranskription zu nutzen.",
-		"unavailableOpenAiKeyMissing": "Sprache-zu-Text ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um Sprachtranskription zu nutzen."
+		"setupPopover": {
+			"title": "Sprache-zu-Text",
+			"description": "Sprache-zu-Text ist nicht verfügbar. Sprache-zu-Text erfordert sowohl FFmpeg als auch einen konfigurierten, gültigen OpenAI-Anbieter. <moreInfoLink>Klicken Sie hier für weitere Informationen</moreInfoLink>.",
+			"openAiReason": "Sie benötigen einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um die Sprachtranskription zu verwenden.",
+			"ffmpegReason": "Sie benötigen FFmpeg. <ffmpegLink>Klicken Sie hier</ffmpegLink>, damit Kilo Ihnen bei der Installation von FFmpeg hilft.",
+			"ffmpegMessage": "Hilf mir, FFmpeg zu installieren"
+		},
+		"misconfiguredState": "Nicht verfügbar aufgrund der Konfiguration",
+		"errorState": "Nicht verfügbar aufgrund eines Fehlers"
 	}
 }

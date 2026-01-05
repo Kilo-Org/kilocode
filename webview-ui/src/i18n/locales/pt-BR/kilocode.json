@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
 		"stopRecording": "Parar entrada de voz",
-		"unavailableOpenAiKeyMissing": "Conversão de voz para texto indisponível. É necessário um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
-		"unavailableBoth": "O reconhecimento de voz não está disponível. Ele requer um provedor OpenAI válido e o FFmpeg deve estar instalado.",
-		"unavailableFfmpegNotInstalled": "Transcrição de voz não está disponível. Instale o FFmpeg para usar a transcrição de voz."
+		"setupPopover": {
+			"title": "Conversão de Fala em Texto",
+			"openAiReason": "Você precisa de um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
+			"description": "A conversão de fala para texto está indisponível. A conversão de fala para texto requer o FFmpeg e um provedor OpenAI válido configurados. <moreInfoLink>Clique aqui para mais informações</moreInfoLink>.",
+			"ffmpegReason": "Você precisa ter o FFmpeg instalado. <ffmpegLink>Clique aqui</ffmpegLink> para que o Kilo ajude você a instalar o FFmpeg.",
+			"ffmpegMessage": "Ajude-me a instalar o FFmpeg"
+		},
+		"misconfiguredState": "Indisponível devido à configuração",
+		"errorState": "Indisponível devido a erro"
 	}
 }

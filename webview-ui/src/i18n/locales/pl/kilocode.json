@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "Rozpocznij wprowadzanie głosowe",
 		"stopRecording": "Zatrzymaj wprowadzanie głosowe",
-		"unavailableFfmpegNotInstalled": "Transkrypcja mowy na tekst jest niedostępna. Zainstaluj FFmpeg, aby korzystać z transkrypcji głosowej.",
-		"unavailableOpenAiKeyMissing": "Zamiana mowy na tekst jest niedostępna. Wymaga poprawnego dostawcy OpenAI z kluczem API, aby korzystać z transkrypcji głosowej.",
-		"unavailableBoth": "Funkcja zamiany mowy na tekst jest niedostępna. Wymaga ona prawidłowego dostawcy OpenAI oraz zainstalowanego FFmpeg."
+		"setupPopover": {
+			"title": "Zamiana mowy na tekst",
+			"description": "Zamiana mowy na tekst jest niedostępna. Zamiana mowy na tekst wymaga zarówno FFmpeg, jak i skonfigurowanego prawidłowego dostawcy OpenAI. <moreInfoLink>Kliknij tutaj, aby uzyskać więcej informacji</moreInfoLink>.",
+			"openAiReason": "Aby korzystać z transkrypcji głosowej, potrzebujesz ważnego dostawcy OpenAI z kluczem API.",
+			"ffmpegReason": "Musisz mieć zainstalowany FFmpeg. <ffmpegLink>Kliknij tutaj</ffmpegLink>, aby Kilo pomógł Ci zainstalować FFmpeg.",
+			"ffmpegMessage": "Pomóż mi zainstalować FFmpeg"
+		},
+		"misconfiguredState": "Niedostępne z powodu konfiguracji",
+		"errorState": "Niedostępne z powodu błędu"
 	}
 }

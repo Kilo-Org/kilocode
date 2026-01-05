@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
 		"stopRecording": "Detener entrada de voz",
-		"unavailableOpenAiKeyMissing": "La conversión de voz a texto no está disponible. Requiere un proveedor OpenAI válido con una clave API para utilizar la transcripción de voz.",
-		"unavailableFfmpegNotInstalled": "La conversión de voz a texto no está disponible. Instale FFmpeg para usar la transcripción de voz.",
-		"unavailableBoth": "El reconocimiento de voz a texto no está disponible. Requiere un proveedor válido de OpenAI y FFmpeg debe estar instalado."
+		"setupPopover": {
+			"title": "Voz a Texto",
+			"description": "La conversión de voz a texto no está disponible. La conversión de voz a texto requiere tanto FFmpeg como un proveedor de OpenAI válido configurado. <moreInfoLink>Haga clic aquí para más información</moreInfoLink>.",
+			"openAiReason": "Necesitas un proveedor válido de OpenAI con una clave API para usar la transcripción de voz.",
+			"ffmpegReason": "Necesitas tener FFmpeg instalado. <ffmpegLink>Haz clic aquí</ffmpegLink> para que Kilo te ayude a instalar FFmpeg.",
+			"ffmpegMessage": "Ayúdame a instalar FFmpeg"
+		},
+		"misconfiguredState": "No disponible debido a la configuración",
+		"errorState": "No disponible debido a un error"
 	}
 }

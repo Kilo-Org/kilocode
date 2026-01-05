@@ -197,5 +197,11 @@
 			"cancelButton": "रद्द करें"
 		},
 		"tipMessage": "Kilo: टर्मिनल कमांड उत्पन्न करने के लिए {{shortcut}} दबाएँ"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "आपकी OpenAI API key अमान्य है या इसमें Realtime API तक पहुंच नहीं है। कृपया अपनी API key जांचें और पुनः प्रयास करें।",
+			"unknown": "कनेक्शन असफल हुआ। कृपया अपनी कॉन्फ़िगरेशन जांचें और पुनः प्रयास करें।"
+		}
 	}
 }

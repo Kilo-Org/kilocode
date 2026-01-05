@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "Spustit hlasový vstup",
 		"stopRecording": "Zastavit hlasový vstup",
-		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
-		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
-		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
+		"setupPopover": {
+			"title": "Převod řeči na text",
+			"openAiReason": "Pro použití hlasové transkripce potřebujete platného poskytovatele OpenAI s API klíčem.",
+			"description": "Převod řeči na text není k dispozici. Převod řeči na text vyžaduje jak FFmpeg, tak platně nakonfigurovaného poskytovatele OpenAI. <moreInfoLink>Klikněte sem pro více informací</moreInfoLink>.",
+			"ffmpegReason": "Potřebujete nainstalovaný FFmpeg. <ffmpegLink>Klikněte zde</ffmpegLink>, aby vám Kilo pomohlo s instalací FFmpeg.",
+			"ffmpegMessage": "Pomozte mi nainstalovat FFmpeg"
+		},
+		"misconfiguredState": "Nedostupné kvůli konfiguraci",
+		"errorState": "Nedostupné kvůli chybě"
 	}
 }

@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "开始语音输入",
 		"stopRecording": "停止语音输入",
-		"unavailableOpenAiKeyMissing": "语音转文字功能不可用。使用语音转录需要有效的OpenAI提供商及其API密钥。",
-		"unavailableFfmpegNotInstalled": "语音转文字功能不可用。请安装FFmpeg以使用语音转录功能。",
-		"unavailableBoth": "语音转文字功能不可用。它需要有效的OpenAI提供商，且必须安装FFmpeg。"
+		"setupPopover": {
+			"title": "语音转文字",
+			"openAiReason": "您需要一个有效的 OpenAI 提供商和 API 密钥才能使用语音转录功能。",
+			"description": "语音转文字功能不可用。语音转文字需要同时配置 FFmpeg 和有效的 OpenAI 提供商。<moreInfoLink>点击此处了解更多信息</moreInfoLink>。",
+			"ffmpegReason": "您需要安装 FFmpeg。<ffmpegLink>点击这里</ffmpegLink>让 Kilo 帮助您安装 FFmpeg。",
+			"ffmpegMessage": "帮我安装 FFmpeg"
+		},
+		"misconfiguredState": "因配置问题而不可用",
+		"errorState": "因错误而不可用"
 	}
 }

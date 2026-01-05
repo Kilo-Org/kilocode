@@ -323,8 +323,14 @@
 	"speechToText": {
 		"startRecording": "Start voice input",
 		"stopRecording": "Stop voice input",
-		"unavailableOpenAiKeyMissing": "Speech-to-text is unavailable. It requires a valid OpenAI provider with an API key to use voice transcription.",
-		"unavailableFfmpegNotInstalled": "Speech-to-text is unavailable. Install FFmpeg to use voice transcription.",
-		"unavailableBoth": "Speech-to-text is unavailable. It requires a valid OpenAI provider and FFmpeg must be installed."
+		"errorState": "Unavailable because of error",
+		"misconfiguredState": "Unavailable because of config",
+		"setupPopover": {
+			"title": "Speech-to-Text",
+			"description": "Speech-to-text is unavailable. Speech-to-text requires both FFmpeg and a valid OpenAI provider configured. <moreInfoLink>Click here for more information</moreInfoLink>.",
+			"openAiReason": "You need a valid OpenAI provider with an API key to use voice transcription.",
+			"ffmpegReason": "You need FFmpeg installed. <ffmpegLink>Click here</ffmpegLink> to have Kilo help you install FFmpeg.",
+			"ffmpegMessage": "Help me install FFmpeg"
+		}
 	}
 }

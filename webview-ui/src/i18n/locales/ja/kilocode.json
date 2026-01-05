@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "音声入力を開始",
 		"stopRecording": "音声入力を停止",
-		"unavailableOpenAiKeyMissing": "音声認識は利用できません。音声文字変換を使用するには、APIキーを持つ有効なOpenAIプロバイダーが必要です。",
-		"unavailableFfmpegNotInstalled": "音声からテキストへの変換は利用できません。音声の文字起こしを使用するにはFFmpegをインストールしてください。",
-		"unavailableBoth": "音声からテキストへの変換は利用できません。有効なOpenAIプロバイダーが必要で、FFmpegがインストールされている必要があります。"
+		"setupPopover": {
+			"title": "音声テキスト変換",
+			"description": "音声テキスト変換は利用できません。音声テキスト変換にはFFmpegと有効なOpenAIプロバイダーの両方が設定されている必要があります。<moreInfoLink>詳細はこちらをクリック</moreInfoLink>。",
+			"openAiReason": "音声文字起こしを使用するには、APIキーを持つ有効なOpenAIプロバイダーが必要です。",
+			"ffmpegReason": "FFmpegがインストールされている必要があります。<ffmpegLink>こちらをクリック</ffmpegLink>すると、KiloがFFmpegのインストールをサポートします。",
+			"ffmpegMessage": "FFmpegのインストールを手伝ってください"
+		},
+		"misconfiguredState": "設定により利用不可",
+		"errorState": "エラーのため利用できません"
 	}
 }

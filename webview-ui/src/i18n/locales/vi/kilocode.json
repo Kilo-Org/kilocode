@@ -324,9 +324,15 @@
 	},
 	"speechToText": {
 		"stopRecording": "Dừng nhập giọng nói",
-		"startRecording": "Bắt đầu nhập giọng nói",
-		"unavailableBoth": "Chuyển đổi giọng nói thành văn bản không khả dụng. Nó yêu cầu nhà cung cấp OpenAI hợp lệ và FFmpeg phải được cài đặt.",
-		"unavailableFfmpegNotInstalled": "Chuyển giọng nói thành văn bản hiện không khả dụng. Hãy cài đặt FFmpeg để sử dụng tính năng chuyển giọng nói.",
-		"unavailableOpenAiKeyMissing": "Chuyển giọng nói thành văn bản không khả dụng. Tính năng này yêu cầu một nhà cung cấp OpenAI hợp lệ với khóa API để sử dụng chức năng chuyển giọng nói thành văn bản."
+		"startRecording": "Bắt đầu nhập liệu bằng giọng nói",
+		"setupPopover": {
+			"title": "Chuyển giọng nói thành văn bản",
+			"description": "Chuyển giọng nói thành văn bản không khả dụng. Chuyển giọng nói thành văn bản yêu cầu cả FFmpeg và nhà cung cấp OpenAI hợp lệ được cấu hình. <moreInfoLink>Nhấp vào đây để biết thêm thông tin</moreInfoLink>.",
+			"openAiReason": "Bạn cần một nhà cung cấp OpenAI hợp lệ với API key để sử dụng chức năng phiên âm giọng nói.",
+			"ffmpegMessage": "Giúp tôi cài đặt FFmpeg",
+			"ffmpegReason": "Bạn cần cài đặt FFmpeg. <ffmpegLink>Nhấp vào đây</ffmpegLink> để Kilo giúp bạn cài đặt FFmpeg."
+		},
+		"misconfiguredState": "Không khả dụng do cấu hình",
+		"errorState": "Không khả dụng do lỗi"
 	}
 }

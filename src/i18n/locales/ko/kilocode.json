@@ -197,5 +197,11 @@
 			"installMessage": "Kilocode CLI를 설치하기 위해 npm install을 실행합니다. 완료되면 이 터미널을 닫고 Agent Manager를 다시 시작해 보세요.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "OpenAI API 키가 유효하지 않거나 Realtime API에 대한 액세스 권한이 없습니다. API 키를 확인하고 다시 시도해 주세요.",
+			"unknown": "연결에 실패했습니다. 설정을 확인한 후 다시 시도해 주세요."
+		}
 	}
 }

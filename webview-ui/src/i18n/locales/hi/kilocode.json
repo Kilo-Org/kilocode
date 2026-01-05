@@ -323,10 +323,16 @@
 		"initiating": "प्रमाणीकरण शुरू हो रहा है..."
 	},
 	"speechToText": {
-		"stopRecording": "आवाज़ इनपुट बंद करें",
-		"startRecording": "आवाज से इनपुट शुरू करें",
-		"unavailableFfmpegNotInstalled": "स्पीच-टू-टेक्स्ट अनुपलब्ध है। वॉयस ट्रांसक्रिप्शन का उपयोग करने के लिए FFmpeg इंस्टॉल करें।",
-		"unavailableOpenAiKeyMissing": "स्पीच-से-टेक्स्ट उपलब्ध नहीं है। इसके लिए आवाज़ ट्रांसक्रिप्शन का उपयोग करने के लिए एक वैध OpenAI प्रदाता और API कुंजी की आवश्यकता है।",
-		"unavailableBoth": "स्पीच-टू-टेक्स्ट उपलब्ध नहीं है। इसके लिए एक मान्य OpenAI प्रदाता की आवश्यकता है और FFmpeg इंस्टॉल होना चाहिए।"
+		"stopRecording": "वॉयस इनपुट बंद करें",
+		"startRecording": "वॉयस इनपुट शुरू करें",
+		"setupPopover": {
+			"title": "वाक्-से-पाठ",
+			"description": "स्पीच-टू-टेक्स्ट उपलब्ध नहीं है। स्पीच-टू-टेक्स्ट के लिए FFmpeg और एक वैध OpenAI प्रोवाइडर दोनों कॉन्फ़िगर होने आवश्यक हैं। <moreInfoLink>अधिक जानकारी के लिए यहाँ क्लिक करें</moreInfoLink>।",
+			"openAiReason": "वॉयस ट्रांसक्रिप्शन का उपयोग करने के लिए आपको API key के साथ एक वैध OpenAI प्रदाता की आवश्यकता है।",
+			"ffmpegReason": "आपको FFmpeg इंस्टॉल करना होगा। FFmpeg इंस्टॉल करने में Kilo की मदद के लिए <ffmpegLink>यहाँ क्लिक करें</ffmpegLink>।",
+			"ffmpegMessage": "मुझे FFmpeg इंस्टॉल करने में मदद करें"
+		},
+		"misconfiguredState": "कॉन्फ़िग की वजह से अनुपलब्ध",
+		"errorState": "त्रुटि के कारण अनुपलब्ध"
 	}
 }

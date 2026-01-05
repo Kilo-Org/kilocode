@@ -325,8 +325,14 @@
 	"speechToText": {
 		"stopRecording": "Atura l'entrada de veu",
 		"startRecording": "Inicia l'entrada de veu",
-		"unavailableFfmpegNotInstalled": "La transcripció de veu a text no està disponible. Instal·leu FFmpeg per utilitzar la transcripció de veu.",
-		"unavailableOpenAiKeyMissing": "La transcripció de veu a text no està disponible. Requereix un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
-		"unavailableBoth": "La conversió de veu a text no està disponible. Requereix un proveïdor vàlid d'OpenAI i FFmpeg ha d'estar instal·lat."
+		"setupPopover": {
+			"title": "Veu a text",
+			"description": "La conversió de veu a text no està disponible. La conversió de veu a text requereix tant FFmpeg com un proveïdor d'OpenAI vàlid configurat. <moreInfoLink>Feu clic aquí per a més informació</moreInfoLink>.",
+			"openAiReason": "Necessiteu un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+			"ffmpegReason": "Necessites tenir instal·lat FFmpeg. <ffmpegLink>Fes clic aquí</ffmpegLink> perquè Kilo t'ajudi a instal·lar FFmpeg.",
+			"ffmpegMessage": "Ajuda'm a instal·lar FFmpeg"
+		},
+		"misconfiguredState": "No disponible per la configuració",
+		"errorState": "No disponible a causa d'un error"
 	}
 }

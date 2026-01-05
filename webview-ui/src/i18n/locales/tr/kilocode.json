@@ -325,8 +325,14 @@
 	"speechToText": {
 		"startRecording": "Sesli girişi başlat",
 		"stopRecording": "Sesli girişi durdur",
-		"unavailableOpenAiKeyMissing": "Konuşmadan metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanabilmek için API anahtarına sahip geçerli bir OpenAI sağlayıcısı gerekiyor.",
-		"unavailableFfmpegNotInstalled": "Konuşmayı metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanmak için FFmpeg'i yükleyin.",
-		"unavailableBoth": "Konuşmadan metne dönüştürme özelliği kullanılamıyor. Geçerli bir OpenAI sağlayıcısı gerektirir ve FFmpeg yüklü olmalıdır."
+		"setupPopover": {
+			"title": "Konuşmadan Metne",
+			"openAiReason": "Ses transkripsiyonu kullanmak için API anahtarına sahip geçerli bir OpenAI sağlayıcısına ihtiyacınız var.",
+			"description": "Konuşmadan metne özelliği kullanılamıyor. Konuşmadan metne özelliği için hem FFmpeg hem de geçerli bir OpenAI sağlayıcısı yapılandırılması gerekir. <moreInfoLink>Daha fazla bilgi için buraya tıklayın</moreInfoLink>.",
+			"ffmpegMessage": "FFmpeg'i kurmama yardım et",
+			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
+		},
+		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
+		"errorState": "Hata nedeniyle kullanılamıyor"
 	}
 }
