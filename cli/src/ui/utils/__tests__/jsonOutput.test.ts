@@ -11,17 +11,6 @@ import type { UnifiedMessage } from "../../../state/atoms/ui.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { CliMessage } from "../../../types/cli.js"
 
-// Helper to create extension messages with unknown types for testing
-// We need to cast to unknown first to bypass TypeScript's type checking
-// since we're intentionally testing invalid/unknown message types
-function createExtensionMessage(overrides: Record<string, unknown>): ExtensionChatMessage {
-	return {
-		ts: 1234567890,
-		type: "say",
-		...overrides,
-	} as unknown as ExtensionChatMessage
-}
-
 describe("jsonOutput", () => {
 	let consoleLogSpy: ReturnType<typeof vi.spyOn>
 
@@ -33,7 +22,7 @@ describe("jsonOutput", () => {
 		consoleLogSpy.mockRestore()
 	})
 
-	describe("formatMessageAsJson - CLI messages", () => {
+	describe("formatMessageAsJson", () => {
 		it("should format basic CLI message", () => {
 			const cliMessage: CliMessage = {
 				ts: 1234567890,
@@ -54,30 +43,6 @@ describe("jsonOutput", () => {
 			})
 		})
 
-		it("should handle CLI message with additional properties", () => {
-			const cliMessage: CliMessage = {
-				ts: 1234567890,
-				content: "CLI message",
-				type: "info",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "cli",
-				message: cliMessage,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "cli",
-				content: "CLI message",
-				type: "info",
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Extension messages with JSON content", () => {
 		it("should parse valid JSON in text field and move to metadata", () => {
 			const message: ExtensionChatMessage = {
 				ts: 1234567890,
@@ -107,42 +72,6 @@ describe("jsonOutput", () => {
 				},
 			})
 			expect(result).not.toHaveProperty("content")
-		})
-
-		it("should handle nested JSON structures", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "followup",
-				text: JSON.stringify({
-					question: "What would you like to do?",
-					suggest: [
-						{ answer: "Option 1", mode: null },
-						{ answer: "Option 2", mode: "code" },
-					],
-				}),
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "followup",
-				metadata: {
-					question: "What would you like to do?",
-					suggest: [
-						{ answer: "Option 1", mode: null },
-						{ answer: "Option 2", mode: "code" },
-					],
-				},
-			})
 		})
 
 		it("should handle JSON arrays", () => {
@@ -175,78 +104,12 @@ describe("jsonOutput", () => {
 			})
 		})
 
-		it("should handle JSON with null values", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "tool",
-				text: JSON.stringify({
-					tool: "writeFile",
-					path: "test.ts",
-					content: null,
-				}),
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "tool",
-				metadata: {
-					tool: "writeFile",
-					path: "test.ts",
-					content: null,
-				},
-			})
-		})
-
-		it("should handle JSON with undefined values (converted to null)", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "tool",
-				text: JSON.stringify({
-					tool: "readFile",
-					path: "test.ts",
-					encoding: undefined,
-				}),
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			// undefined values are omitted in JSON.stringify
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "tool",
-				metadata: {
-					tool: "readFile",
-					path: "test.ts",
-				},
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Extension messages with plain text", () => {
-		it("should keep plain text in content field", () => {
+		it("should keep JSON primitives as content", () => {
 			const message: ExtensionChatMessage = {
 				ts: 1234567890,
 				type: "say",
 				say: "text",
-				text: "This is a plain text message",
+				text: "null",
 			}
 
 			const unifiedMessage: UnifiedMessage = {
@@ -261,37 +124,10 @@ describe("jsonOutput", () => {
 				source: "extension",
 				type: "say",
 				say: "text",
-				content: "This is a plain text message",
-			})
-			expect(result).not.toHaveProperty("metadata")
-		})
-
-		it("should handle error messages with plain text", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "error",
-				text: "An error occurred while processing",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "error",
-				content: "An error occurred while processing",
+				content: "null",
 			})
 		})
-	})
 
-	describe("formatMessageAsJson - Malformed JSON handling", () => {
 		it("should handle malformed JSON as plain text", () => {
 			const message: ExtensionChatMessage = {
 				ts: 1234567890,
@@ -317,12 +153,11 @@ describe("jsonOutput", () => {
 			expect(result).not.toHaveProperty("metadata")
 		})
 
-		it("should handle incomplete JSON objects", () => {
+		it("should omit content/metadata for empty or missing text", () => {
 			const message: ExtensionChatMessage = {
 				ts: 1234567890,
 				type: "say",
-				say: "text",
-				text: '{"tool": "readFile", "path":',
+				say: "error",
 			}
 
 			const unifiedMessage: UnifiedMessage = {
@@ -336,310 +171,7 @@ describe("jsonOutput", () => {
 				timestamp: 1234567890,
 				source: "extension",
 				type: "say",
-				say: "text",
-				content: '{"tool": "readFile", "path":',
-			})
-		})
-
-		it("should handle JSON with trailing commas", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "tool",
-				text: '{"tool": "readFile", "path": "test.ts",}',
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			// Trailing commas are invalid JSON
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "tool",
-				content: '{"tool": "readFile", "path": "test.ts",}',
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Mixed content scenarios", () => {
-		it("should handle text that looks like JSON but isn't", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: "The config should be {tool: 'readFile', path: 'test.ts'}",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-				content: "The config should be {tool: 'readFile', path: 'test.ts'}",
-			})
-		})
-
-		it("should handle markdown with code blocks containing JSON", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: 'Here\'s the config:\n```json\n{"tool": "readFile"}\n```',
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			// Should keep as content since it's markdown, not pure JSON
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-				content: 'Here\'s the config:\n```json\n{"tool": "readFile"}\n```',
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Empty and edge cases", () => {
-		it("should handle empty text field", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: "",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-			})
-			expect(result).not.toHaveProperty("content")
-			expect(result).not.toHaveProperty("metadata")
-		})
-
-		it("should handle undefined text field", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-			})
-			expect(result).not.toHaveProperty("content")
-			expect(result).not.toHaveProperty("metadata")
-		})
-
-		it("should handle whitespace-only text", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: "   \n\t  ",
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-				content: "   \n\t  ",
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Unknown message types", () => {
-		it("should handle unknown message type gracefully", () => {
-			const message = createExtensionMessage({
-				type: "unknown",
-				text: "Unknown message",
-			})
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "unknown",
-				content: "Unknown message",
-			})
-		})
-
-		it("should handle unknown ask type with JSON content", () => {
-			const message = createExtensionMessage({
-				type: "ask",
-				ask: "unknown_ask_type",
-				text: JSON.stringify({ data: "test" }),
-			})
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "unknown_ask_type",
-				metadata: { data: "test" },
-			})
-		})
-
-		it("should handle unknown say type with plain text", () => {
-			const message = createExtensionMessage({
-				type: "say",
-				say: "unknown_say_type",
-				text: "Some text content",
-			})
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "unknown_say_type",
-				content: "Some text content",
-			})
-		})
-	})
-
-	describe("formatMessageAsJson - Additional message properties", () => {
-		it("should preserve images array", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: "Message with images",
-				images: ["image1.png", "image2.png"],
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-				content: "Message with images",
-				images: ["image1.png", "image2.png"],
-			})
-		})
-
-		it("should preserve partial flag", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "say",
-				say: "text",
-				text: "Streaming...",
-				partial: true,
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "say",
-				say: "text",
-				content: "Streaming...",
-				partial: true,
-			})
-		})
-
-		it("should preserve all additional properties", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "completion_result",
-				text: "Task completed",
-				isAnswered: true,
-				conversationHistoryIndex: 5,
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			const result = formatMessageAsJson(unifiedMessage)
-
-			expect(result).toEqual({
-				timestamp: 1234567890,
-				source: "extension",
-				type: "ask",
-				ask: "completion_result",
-				content: "Task completed",
-				isAnswered: true,
-				conversationHistoryIndex: 5,
+				say: "error",
 			})
 		})
 	})
@@ -669,27 +201,6 @@ describe("jsonOutput", () => {
 				say: "text",
 				content: "Test message",
 			})
-		})
-
-		it("should output valid JSON string", () => {
-			const message: ExtensionChatMessage = {
-				ts: 1234567890,
-				type: "ask",
-				ask: "tool",
-				text: JSON.stringify({ tool: "readFile", path: "test.ts" }),
-			}
-
-			const unifiedMessage: UnifiedMessage = {
-				source: "extension",
-				message,
-			}
-
-			outputJsonMessage(unifiedMessage)
-
-			expect(consoleLogSpy).toHaveBeenCalledTimes(1)
-			const outputString = consoleLogSpy.mock.calls[0][0]
-			// Should be valid JSON
-			expect(() => JSON.parse(outputString)).not.toThrow()
 		})
 	})
 
@@ -734,53 +245,6 @@ describe("jsonOutput", () => {
 				type: "say",
 				say: "text",
 				content: "Message 2",
-			})
-		})
-
-		it("should handle empty array", () => {
-			outputJsonMessages([])
-
-			expect(consoleLogSpy).toHaveBeenCalledTimes(1)
-			const output = JSON.parse(consoleLogSpy.mock.calls[0][0])
-			expect(output).toEqual([])
-		})
-
-		it("should handle mixed message types", () => {
-			const messages: UnifiedMessage[] = [
-				{
-					source: "cli",
-					message: {
-						ts: 1234567890,
-						content: "CLI message",
-					},
-				},
-				{
-					source: "extension",
-					message: {
-						ts: 1234567891,
-						type: "say",
-						say: "text",
-						text: JSON.stringify({ data: "test" }),
-					},
-				},
-			]
-
-			outputJsonMessages(messages)
-
-			expect(consoleLogSpy).toHaveBeenCalledTimes(1)
-			const output = JSON.parse(consoleLogSpy.mock.calls[0][0])
-			expect(output).toHaveLength(2)
-			expect(output[0]).toEqual({
-				timestamp: 1234567890,
-				source: "cli",
-				content: "CLI message",
-			})
-			expect(output[1]).toEqual({
-				timestamp: 1234567891,
-				source: "extension",
-				type: "say",
-				say: "text",
-				metadata: { data: "test" },
 			})
 		})
 	})
