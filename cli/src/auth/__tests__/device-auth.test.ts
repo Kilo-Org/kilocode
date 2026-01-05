@@ -103,23 +103,19 @@ describe("Device Auth Flow", () => {
 	})
 
 	it("should handle initiation failure", async () => {
-		vi.spyOn(globalThis, "fetch").mockImplementation((() =>
-			Promise.resolve({
-				ok: false,
-				status: 500,
-			} as Response),
-		) as unknown as typeof fetch)
+		vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			ok: false,
+			status: 500,
+		} as Response)
 
 		await expect(authenticateWithDeviceAuth()).rejects.toThrow("Failed to start authentication")
 	})
 
 	it("should handle rate limiting", async () => {
-		vi.spyOn(globalThis, "fetch").mockImplementation((() =>
-			Promise.resolve({
-				ok: false,
-				status: 429,
-			} as Response),
-		) as unknown as typeof fetch)
+		vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			ok: false,
+			status: 429,
+		} as Response)
 
 		await expect(authenticateWithDeviceAuth()).rejects.toThrow(
 			"Too many pending authorization requests. Please try again later.",
