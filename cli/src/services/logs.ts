@@ -26,6 +26,11 @@ export interface LogFilter {
  */
 export class LogsService {
 	private static instance: LogsService | null = null
+
+	// Log rotation constants
+	private static readonly MAX_LOG_FILE_SIZE = 10 * 1024 * 1024 // 10 MB - rotate when file exceeds this size
+	private static readonly TRUNCATE_TO_SIZE = 5 * 1024 * 1024 // 5 MB - keep this much of the most recent logs
+
 	private logs: LogEntry[] = []
 	private maxEntries: number = 1000
 	private listeners: Array<(entry: LogEntry) => void> = []
@@ -174,6 +179,9 @@ export class LogsService {
 		try {
 			const logDir = path.dirname(this.logFilePath)
 			await fs.ensureDir(logDir)
+
+			// Rotate log file if needed (check size and truncate if too large)
+			await this.rotateLogFileIfNeeded()
 		} catch (error) {
 			// Disable file logging if initialization fails
 			this.fileLoggingEnabled = false
@@ -181,6 +189,41 @@ export class LogsService {
 			if (this.originalConsole) {
 				this.originalConsole.error("Failed to initialize file logging:", error)
 			}
+		}
+	}
+
+	/**
+	 * Rotate log file if it exceeds maximum size.
+	 * Keeps the most recent entries by truncating from the beginning.
+	 * This is called at startup to prevent unbounded log file growth.
+	 */
+	private async rotateLogFileIfNeeded(): Promise<void> {
+		try {
+			const stats = await fs.stat(this.logFilePath)
+
+			if (stats.size > LogsService.MAX_LOG_FILE_SIZE) {
+				// Read the file content
+				const content = await fs.readFile(this.logFilePath, "utf8")
+
+				// Keep only the last TRUNCATE_TO_SIZE bytes worth of content
+				const truncatedContent = content.slice(-LogsService.TRUNCATE_TO_SIZE)
+
+				// Find the first complete line (after truncation point) to avoid partial log entries
+				const firstNewline = truncatedContent.indexOf("\n")
+				const cleanContent = firstNewline > 0 ? truncatedContent.slice(firstNewline + 1) : truncatedContent
+
+				// Write the truncated content back to the file
+				await fs.writeFile(this.logFilePath, cleanContent, "utf8")
+
+				if (this.originalConsole) {
+					this.originalConsole.log(
+						`[LogsService] Rotated log file from ${(stats.size / 1024 / 1024).toFixed(2)} MB to ${(cleanContent.length / 1024 / 1024).toFixed(2)} MB`,
+					)
+				}
+			}
+		} catch {
+			// File doesn't exist yet or other error - this is expected on first run
+			// Silently ignore as the file will be created on first log write
 		}
 	}
 
