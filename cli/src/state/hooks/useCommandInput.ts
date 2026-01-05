@@ -32,10 +32,6 @@ import {
 	commandQueryAtom,
 	updateTextBufferAtom,
 	clearTextBufferAtom,
-	setSuggestionsAtom,
-	setArgumentSuggestionsAtom,
-	setFileMentionSuggestionsAtom,
-	setFileMentionContextAtom,
 	clearFileMentionAtom,
 	updateAllSuggestionsAtom,
 	selectNextSuggestionAtom,
@@ -178,10 +174,6 @@ export function useCommandInput(): UseCommandInputReturn {
 	// Write atoms
 	const setInputAction = useSetAtom(updateTextBufferAtom)
 	const clearInputAction = useSetAtom(clearTextBufferAtom)
-	const setSuggestionsAction = useSetAtom(setSuggestionsAtom)
-	const setArgumentSuggestionsAction = useSetAtom(setArgumentSuggestionsAtom)
-	const setFileMentionSuggestionsAction = useSetAtom(setFileMentionSuggestionsAtom)
-	const setFileMentionContextAction = useSetAtom(setFileMentionContextAtom)
 	const clearFileMentionAction = useSetAtom(clearFileMentionAtom)
 	const updateAllSuggestionsAction = useSetAtom(updateAllSuggestionsAtom)
 	const selectNextAction = useSetAtom(selectNextSuggestionAtom)
@@ -329,11 +321,8 @@ export function useCommandInput(): UseCommandInputReturn {
 		cursor,
 		cwd,
 		isShellMode,
-		setSuggestionsAction,
-		setArgumentSuggestionsAction,
-		setFileMentionSuggestionsAction,
-		setFileMentionContextAction,
 		clearFileMentionAction,
+		updateAllSuggestionsAction,
 		config,
 		routerModels,
 		currentProvider,
@@ -343,6 +332,7 @@ export function useCommandInput(): UseCommandInputReturn {
 		taskHistoryData,
 		updateProvider,
 		refreshRouterModels,
+		extensionState?.customModes,
 	])
 
 	const getInputState = useCallback(() => {
