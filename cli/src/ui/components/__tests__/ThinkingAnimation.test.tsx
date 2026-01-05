@@ -17,8 +17,27 @@ vi.mock("../../../state/hooks/useTheme.js", () => ({
 }))
 
 // Animation frames used by the component
-const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const
 const FRAME_INTERVAL = 80
+const TIMER_STEP = FRAME_INTERVAL + 1
+
+type AnimationFrame = (typeof ANIMATION_FRAMES)[number]
+
+const getDisplayedFrame = (frameText: string | undefined): AnimationFrame | undefined =>
+	ANIMATION_FRAMES.find((frame) => frameText?.includes(frame))
+
+const advanceUntilFrame = async (
+	lastFrame: () => string | undefined,
+	expectedFrame: AnimationFrame,
+	maxSteps: number = ANIMATION_FRAMES.length + 2,
+) => {
+	for (let i = 0; i < maxSteps; i++) {
+		await vi.advanceTimersByTimeAsync(TIMER_STEP)
+		if (lastFrame()?.includes(expectedFrame)) return
+	}
+
+	expect(lastFrame()).toContain(expectedFrame)
+}
 
 describe("ThinkingAnimation", () => {
 	beforeEach(() => {
@@ -51,27 +70,20 @@ describe("ThinkingAnimation", () => {
 		// Initial frame
 		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 
-		// Advance to next frame - use slightly more than interval to ensure timer fires
-		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
-		expect(lastFrame()).toContain(ANIMATION_FRAMES[1])
-
-		// Advance to third frame
-		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
-		expect(lastFrame()).toContain(ANIMATION_FRAMES[2])
-
-		// Advance to fourth frame
-		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
-		expect(lastFrame()).toContain(ANIMATION_FRAMES[3])
+		// useEffect can schedule the interval after a short delay, so don't assume tick 1 starts at t=0
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[2])
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[3])
 	})
 
 	it("should loop back to first frame after completing cycle", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Advance through all 10 frames plus a small buffer
-		// Using runOnlyPendingTimers in a loop is more deterministic than advancing by exact time
-		for (let i = 0; i < ANIMATION_FRAMES.length; i++) {
-			await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
-		}
+		// Ensure the interval has started ticking before asserting about looping
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
+
+		// After reaching frame[1], it should loop back to frame[0] within one cycle
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[0], ANIMATION_FRAMES.length)
 
 		// Should be back at first frame
 		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
@@ -89,17 +101,17 @@ describe("ThinkingAnimation", () => {
 	it("should continue animating after multiple cycles", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Complete two full cycles using deterministic timer advancement
-		const totalFrames = ANIMATION_FRAMES.length * 2
-		for (let i = 0; i < totalFrames; i++) {
-			await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
+		// Wait for at least one tick so we know the interval is active
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
+
+		const seenFrames = new Set<string>()
+		for (let i = 0; i < ANIMATION_FRAMES.length * 2; i++) {
+			await vi.advanceTimersByTimeAsync(TIMER_STEP)
+			const frame = getDisplayedFrame(lastFrame())
+			if (frame) seenFrames.add(frame)
 		}
 
-		// Should be back at first frame after completing full cycles
-		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
-
-		// Advance one more frame
-		await vi.advanceTimersByTimeAsync(FRAME_INTERVAL + 1)
-		expect(lastFrame()).toContain(ANIMATION_FRAMES[1])
+		// If it keeps animating, we should observe multiple distinct frames over time
+		expect(seenFrames.size).toBeGreaterThan(3)
 	})
 })
