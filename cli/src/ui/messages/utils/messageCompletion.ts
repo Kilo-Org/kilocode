@@ -136,10 +136,11 @@ export function splitMessages(
 		const filteredMessages = deduplicatedMessages.filter(
 			(msg) => (msg.message as { partial?: boolean }).partial !== true,
 		)
-		return {
-			staticMessages: filteredMessages,
-			dynamicMessages: [],
-		}
+
+		// After filtering out streaming messages, fall back to the normal split logic.
+		// This keeps ordering stable: incomplete messages (e.g. api_req_started without cost)
+		// stay in the dynamic section until they receive completion indicators.
+		return splitMessages(filteredMessages)
 	}
 
 	let lastCompleteIndex = -1
