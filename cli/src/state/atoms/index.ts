@@ -214,6 +214,7 @@ export {
 	// Followup suggestions state atoms
 	followupSuggestionsAtom,
 	showFollowupSuggestionsAtom,
+	followupSuggestionsMenuVisibleAtom,
 	selectedFollowupIndexAtom,
 
 	// Derived UI atoms

@@ -14,7 +14,7 @@ import {
 	fileMentionContextAtom,
 	selectedIndexAtom,
 	followupSuggestionsAtom,
-	showFollowupSuggestionsAtom,
+	followupSuggestionsMenuVisibleAtom,
 	clearFollowupSuggestionsAtom,
 	inputModeAtom,
 	type InputMode,
@@ -408,14 +408,30 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 
 	// Convert Buffer to string if needed
 	const textStr = typeof text === "string" ? text : text.toString()
+	const trimmedText = textStr.trim()
+	const hasFollowupSuggestions = get(followupSuggestionsAtom).length > 0
+	const isSlashCommand = trimmedText.startsWith("/")
+	const slashCommandName = isSlashCommand ? (trimmedText.match(/^\/([^\s]+)/)?.[1]?.toLowerCase() ?? "") : ""
+	const shouldDismissFollowupOnSlashCommand = new Set(["clear", "c", "cls", "new", "n", "start", "exit", "q", "quit"])
 
-	if (callback && typeof callback === "function" && textStr && textStr.trim()) {
+	if (callback && typeof callback === "function" && trimmedText) {
 		// Call the submission callback
 		callback(textStr)
 
 		// Clear input and related state
 		set(clearTextBufferAtom)
-		set(clearFollowupSuggestionsAtom)
+		// If the user runs a slash command while a followup question is active,
+		// keep the followup question/suggestions so they can answer after the command runs.
+		if (hasFollowupSuggestions && isSlashCommand) {
+			if (slashCommandName && shouldDismissFollowupOnSlashCommand.has(slashCommandName)) {
+				set(clearFollowupSuggestionsAtom)
+			} else {
+				// Ensure followup stays in "no selection" mode after executing a slash command.
+				set(selectedIndexAtom, -1)
+			}
+		} else {
+			set(clearFollowupSuggestionsAtom)
+		}
 	}
 })
 
@@ -1047,7 +1063,7 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 
 	// Priority 2: Determine current mode and route to mode-specific handler
 	const isApprovalPending = get(isApprovalPendingAtom)
-	const isFollowupVisible = get(showFollowupSuggestionsAtom)
+	const isFollowupVisible = get(followupSuggestionsMenuVisibleAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
 	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)

@@ -4,7 +4,7 @@
 
 import { useAtomValue } from "jotai"
 import { useMemo } from "react"
-import { isStreamingAtom, showFollowupSuggestionsAtom } from "../atoms/ui.js"
+import { isStreamingAtom, followupSuggestionsMenuVisibleAtom } from "../atoms/ui.js"
 import { useApprovalHandler } from "./useApprovalHandler.js"
 import { hasResumeTaskAtom } from "../atoms/extension.js"
 import { shellModeActiveAtom } from "../atoms/keyboard.js"
@@ -46,7 +46,7 @@ function getModifierKey(): string {
  */
 export function useHotkeys(): UseHotkeysReturn {
 	const isStreaming = useAtomValue(isStreamingAtom)
-	const isFollowupVisible = useAtomValue(showFollowupSuggestionsAtom)
+	const isFollowupVisible = useAtomValue(followupSuggestionsMenuVisibleAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const isShellModeActive = useAtomValue(shellModeActiveAtom)
 	const { isApprovalPending } = useApprovalHandler()
