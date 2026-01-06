@@ -156,6 +156,12 @@ ${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", 
 	settings,
 })}`
 
+	// kilocode_change: Append custom system prompt from CLI if provided
+	const appendSystemPrompt = clineProviderState?.appendSystemPrompt
+	if (appendSystemPrompt) {
+		return `${basePrompt}\n\n${appendSystemPrompt}`
+	}
+
 	return basePrompt
 }
 

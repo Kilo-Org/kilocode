@@ -543,6 +543,7 @@ export type ExtensionState = Pick<
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
+	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
 }
 
 export interface ClineSayTool {

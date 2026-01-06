@@ -11,6 +11,7 @@ export interface ExtensionHostOptions {
 	extensionRootPath: string // Root path for extension assets
 	identity?: IdentityInfo // Identity information for VSCode environment
 	customModes?: ModeConfig[] // Custom modes configuration
+	appendSystemPrompt?: string // Custom text to append to system prompt
 }
 
 // Extension module interface
@@ -786,6 +787,8 @@ export class ExtensionHost extends EventEmitter {
 				imageGeneration: false,
 				runSlashCommand: false,
 			},
+			// kilocode_change: Add appendSystemPrompt from CLI options
+			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),
 		}
 
 		// The CLI will inject the actual configuration through updateState

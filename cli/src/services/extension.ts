@@ -22,6 +22,8 @@ export interface ExtensionServiceOptions {
 	extensionRootPath?: string
 	/** Identity information for VSCode environment */
 	identity?: IdentityInfo
+	/** Custom text to append to system prompt */
+	appendSystemPrompt?: string
 }
 
 /**
@@ -108,6 +110,9 @@ export class ExtensionService extends EventEmitter {
 		}
 		if (this.options.customModes) {
 			hostOptions.customModes = this.options.customModes
+		}
+		if (this.options.appendSystemPrompt) {
+			hostOptions.appendSystemPrompt = this.options.appendSystemPrompt
 		}
 		this.extensionHost = createExtensionHost(hostOptions)
 
