@@ -76,7 +76,7 @@ export const SayBrowserActionResultMessage: React.FC<MessageComponentProps> = ({
 				{hasUrl && (
 					<Box>
 						<Text color={theme.ui.text.dimmed}>
-							URL: <Text color={theme.semantic.link}>{result.currentUrl}</Text>
+							URL: <Text color={theme.markdown.link}>{result.currentUrl}</Text>
 						</Text>
 					</Box>
 				)}
