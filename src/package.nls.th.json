@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: เอเจนต์เขียนโค้ด AI, Copilot และการเติมข้อความอัตโนมัติ",
 	"extension.description": "ผู้ช่วยเขียนโค้ด AI แบบ Open Source สำหรับการวางแผน สร้าง และแก้ไขโค้ด",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

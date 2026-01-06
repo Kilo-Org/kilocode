@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code KI-Agent",
+	"extension.displayName": "Kilo Code: KI-Codierungs-Agent, Copilot und Autovervollständigung",
 	"extension.description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code.",
 	"command.newTask.title": "Neue Aufgabe",
 	"command.explainCode.title": "Code Erklären",

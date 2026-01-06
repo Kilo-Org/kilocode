@@ -251,27 +251,18 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	])
 
 	useEffect(() => {
-		if (!options.noSplash) {
-			return
-		}
-
 		const checkVersion = async () => {
 			setVersionStatus(await getAutoUpdateStatus())
 		}
 
-		if (!autoUpdatedCheckedRef.current && !options.ci) {
+		if (!autoUpdatedCheckedRef.current && !options.ci && process.env.KILO_EPHEMERAL_MODE !== "true") {
 			autoUpdatedCheckedRef.current = true
 			checkVersion()
 		}
-	}, [])
+	}, [options.ci])
 
 	// Show update or notification messages
 	useEffect(() => {
-		// Skip if noSplash option is enabled
-		if (options.noSplash) {
-			return
-		}
-
 		if (!versionStatus) return
 
 		if (versionStatus.isOutdated) {
@@ -280,7 +271,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Only show notification if there's no pending update
 			addMessage(generateNotificationMessage(notifications[0]))
 		}
-	}, [notifications, versionStatus, options.noSplash])
+	}, [notifications, versionStatus, addMessage])
 
 	// Fetch task history on mount if not in CI mode
 	const taskHistoryFetchedRef = useRef(false)

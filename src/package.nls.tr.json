@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: AI Kodlama Ajanı, Copilot ve Otomatik Tamamlama",
 	"extension.description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı.",
 	"command.newTask.title": "Yeni Görev",
 	"command.explainCode.title": "Kodu Açıkla",

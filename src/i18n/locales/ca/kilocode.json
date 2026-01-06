@@ -197,5 +197,11 @@
 			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "La vostra clau de l'API d'OpenAI no és vàlida o no té accés a l'API en temps real. Si us plau, comproveu la vostra clau de l'API i torneu-ho a provar.",
+			"unknown": "Ha fallat la connexió. Comproveu la configuració i torneu-ho a provar."
+		}
 	}
 }

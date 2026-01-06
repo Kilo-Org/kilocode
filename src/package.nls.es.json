@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: Agente de Codificación IA, Copilot y Autocompletado",
 	"extension.description": "Asistente de codificación de IA de código abierto para planificar, crear y corregir código.",
 	"command.newTask.title": "Nueva Tarea",
 	"command.explainCode.title": "Explicar Código",

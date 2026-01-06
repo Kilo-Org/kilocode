@@ -32,11 +32,8 @@ import {
 	commandQueryAtom,
 	updateTextBufferAtom,
 	clearTextBufferAtom,
-	setSuggestionsAtom,
-	setArgumentSuggestionsAtom,
-	setFileMentionSuggestionsAtom,
-	setFileMentionContextAtom,
 	clearFileMentionAtom,
+	updateAllSuggestionsAtom,
 	selectNextSuggestionAtom,
 	selectPreviousSuggestionAtom,
 	hideAutocompleteAtom,
@@ -177,11 +174,8 @@ export function useCommandInput(): UseCommandInputReturn {
 	// Write atoms
 	const setInputAction = useSetAtom(updateTextBufferAtom)
 	const clearInputAction = useSetAtom(clearTextBufferAtom)
-	const setSuggestionsAction = useSetAtom(setSuggestionsAtom)
-	const setArgumentSuggestionsAction = useSetAtom(setArgumentSuggestionsAtom)
-	const setFileMentionSuggestionsAction = useSetAtom(setFileMentionSuggestionsAtom)
-	const setFileMentionContextAction = useSetAtom(setFileMentionContextAtom)
 	const clearFileMentionAction = useSetAtom(clearFileMentionAtom)
+	const updateAllSuggestionsAction = useSetAtom(updateAllSuggestionsAtom)
 	const selectNextAction = useSetAtom(selectNextSuggestionAtom)
 	const selectPreviousAction = useSetAtom(selectPreviousSuggestionAtom)
 	const hideAutocompleteAction = useSetAtom(hideAutocompleteAtom)
@@ -224,8 +218,12 @@ export function useCommandInput(): UseCommandInputReturn {
 		if (isShellMode) {
 			// Clear all suggestion state
 			clearFileMentionAction()
-			setSuggestionsAction([])
-			setArgumentSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: [],
+				argumentSuggestions: [],
+				fileMentionSuggestions: [],
+				fileMentionContext: null,
+			})
 			return
 		}
 
@@ -242,10 +240,12 @@ export function useCommandInput(): UseCommandInputReturn {
 		if (fileMentionCtx?.isInMention) {
 			// Get file suggestions
 			const suggestions = await getFileMentionSuggestions(fileMentionCtx.query, cwd)
-			setFileMentionSuggestionsAction(suggestions)
-			setFileMentionContextAction(fileMentionCtx)
-			setSuggestionsAction([])
-			setArgumentSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: [],
+				argumentSuggestions: [],
+				fileMentionSuggestions: suggestions,
+				fileMentionContext: fileMentionCtx,
+			})
 			return
 		}
 
@@ -253,8 +253,12 @@ export function useCommandInput(): UseCommandInputReturn {
 
 		// Fall back to command/argument detection
 		if (!checkIsCommandInput(inputValue)) {
-			setSuggestionsAction([])
-			setArgumentSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: [],
+				argumentSuggestions: [],
+				fileMentionSuggestions: [],
+				fileMentionContext: null,
+			})
 			return
 		}
 
@@ -263,8 +267,12 @@ export function useCommandInput(): UseCommandInputReturn {
 		if (state.type === "command") {
 			// Get command suggestions
 			const suggestions = getSuggestions(inputValue)
-			setSuggestionsAction(suggestions)
-			setArgumentSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: suggestions,
+				argumentSuggestions: [],
+				fileMentionSuggestions: [],
+				fileMentionContext: null,
+			})
 		} else if (state.type === "argument") {
 			// Create command context for argument providers
 			const customModes = extensionState?.customModes || []
@@ -291,25 +299,30 @@ export function useCommandInput(): UseCommandInputReturn {
 					await refreshRouterModels()
 				},
 			}
-	
+
 			// Get argument suggestions with command context
 			const suggestions = await getArgumentSuggestions(inputValue, commandContext)
-			setArgumentSuggestionsAction(suggestions)
-			setSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: [],
+				argumentSuggestions: suggestions,
+				fileMentionSuggestions: [],
+				fileMentionContext: null,
+			})
 		} else {
-			setSuggestionsAction([])
-			setArgumentSuggestionsAction([])
+			updateAllSuggestionsAction({
+				commandSuggestions: [],
+				argumentSuggestions: [],
+				fileMentionSuggestions: [],
+				fileMentionContext: null,
+			})
 		}
 	}, [
 		inputValue,
 		cursor,
 		cwd,
 		isShellMode,
-		setSuggestionsAction,
-		setArgumentSuggestionsAction,
-		setFileMentionSuggestionsAction,
-		setFileMentionContextAction,
 		clearFileMentionAction,
+		updateAllSuggestionsAction,
 		config,
 		routerModels,
 		currentProvider,
@@ -319,6 +332,7 @@ export function useCommandInput(): UseCommandInputReturn {
 		taskHistoryData,
 		updateProvider,
 		refreshRouterModels,
+		extensionState?.customModes,
 	])
 
 	const getInputState = useCallback(() => {

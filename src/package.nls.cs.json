@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: AI Kódovací Agent, Copilot a Automatické Dokončování",
 	"extension.description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

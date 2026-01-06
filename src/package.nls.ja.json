@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AIエージェント",
+	"extension.displayName": "Kilo Code: AIコーディングエージェント、Copilot、および自動補完",
 	"extension.description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

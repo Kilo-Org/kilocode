@@ -7,7 +7,7 @@
 自定义指令定义了扩展的特定行为、偏好和约束，超出了 Kilo 的基本角色定义。示例包括编码风格、文档标准、测试要求和工作流指南。
 
 :::info 自定义指令 vs 规则
-自定义指令是 IDE 范围的，适用于所有工作区，无论你在处理哪个项目，都会保持你的偏好。与指令不同，[自定义规则](/advanced-usage/custom-rules.md) 是项目特定的，允许你设置基于工作区的规则集。
+自定义指令是 IDE 范围的，适用于所有工作区，无论你在处理哪个项目，都会保持你的偏好。与指令不同，[自定义规则](/agent-behavior/custom-rules) 是项目特定的，允许你设置基于工作区的规则集。
 :::
 
 ## 设置自定义指令
@@ -36,7 +36,7 @@
 
 ## 相关功能
 
-- [自定义模式](/features/custom-modes)
-- [自定义规则](/advanced-usage/custom-rules)
-- [设置管理](/features/settings-management)
+- [自定义模式](/agent-behavior/custom-modes)
+- [自定义规则](/agent-behavior/custom-rules)
+- [设置管理](/basic-usage/settings-management)
 - [自动批准设置](/features/auto-approving-actions)

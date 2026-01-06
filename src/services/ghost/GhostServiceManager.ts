@@ -97,6 +97,7 @@ export class GhostServiceManager {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
 			model: this.getCurrentModelName(),
+			hasKilocodeProfileWithNoBalance: this.model.hasKilocodeProfileWithNoBalance,
 		}
 		await ContextProxy.instance.setValues({ ghostServiceSettings: settingsWithModelInfo })
 		await this.cline.postStateToWebview()

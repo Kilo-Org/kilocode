@@ -48,7 +48,7 @@ This happens seamlessly in the background, requiring no manual intervention.
     - `"ask"` - Questions and explanations
     - `"debug"` - Problem diagnosis and troubleshooting
     - `"test"` - Testing-focused workflows
-    - Custom mode slugs (if you have [custom modes](/features/custom-modes))
+    - Custom mode slugs (if you have [custom modes](/agent-behavior/custom-modes))
 
 ## Example Configurations
 
