@@ -3,16 +3,6 @@ import { createStore } from "jotai"
 import { loadConfigAtom, configAtom, configValidationAtom } from "../config.js"
 import * as persistence from "../../../config/persistence.js"
 
-// Mock the persistence module
-vi.mock("../../../config/persistence.js", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../../../config/persistence.js")>()
-	return {
-		...actual,
-		loadConfig: vi.fn(),
-		saveConfig: vi.fn(),
-	}
-})
-
 describe("loadConfigAtom", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -27,7 +17,7 @@ describe("loadConfigAtom", () => {
 			telemetry: true,
 		}
 
-		vi.mocked(persistence.loadConfig).mockResolvedValue({
+		vi.spyOn(persistence, "loadConfig").mockResolvedValue({
 			config: mockConfig,
 			validation: { valid: true },
 		})
@@ -51,7 +41,7 @@ describe("loadConfigAtom", () => {
 			telemetry: true,
 		}
 
-		vi.mocked(persistence.loadConfig).mockResolvedValue({
+		vi.spyOn(persistence, "loadConfig").mockResolvedValue({
 			config: mockConfig,
 			validation: { valid: true },
 		})
@@ -75,7 +65,7 @@ describe("loadConfigAtom", () => {
 			telemetry: true,
 		}
 
-		vi.mocked(persistence.loadConfig).mockResolvedValue({
+		vi.spyOn(persistence, "loadConfig").mockResolvedValue({
 			config: mockConfig,
 			validation: { valid: true },
 		})
@@ -99,7 +89,7 @@ describe("loadConfigAtom", () => {
 			telemetry: true,
 		}
 
-		vi.mocked(persistence.loadConfig).mockResolvedValue({
+		vi.spyOn(persistence, "loadConfig").mockResolvedValue({
 			config: mockConfig,
 			validation: {
 				valid: false,

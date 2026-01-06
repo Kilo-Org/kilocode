@@ -8,6 +8,7 @@ import { validateModelOnRouterModelsUpdateAtom } from "../modelValidation.js"
 import { extensionStateAtom, routerModelsAtom } from "../extension.js"
 import { configAtom } from "../config.js"
 import type { CLIConfig } from "../../../config/types.js"
+import * as persistence from "../../../config/persistence.js"
 import type { ModelRecord, RouterModels } from "../../../constants/providers/models.js"
 import type { ExtensionState } from "../../../types/messages.js"
 
@@ -20,14 +21,6 @@ vi.mock("../../../services/logs.js", () => ({
 		debug: vi.fn(),
 	},
 }))
-
-vi.mock("../../../config/persistence.js", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../../../config/persistence.js")>()
-	return {
-		...actual,
-		saveConfig: vi.fn().mockResolvedValue(undefined),
-	}
-})
 
 vi.mock("../../../ui/utils/messages.js", () => ({
 	generateModelFallbackMessage: vi.fn().mockReturnValue({
@@ -50,6 +43,7 @@ describe("modelValidation atom", () => {
 	beforeEach(() => {
 		store = createStore()
 		vi.clearAllMocks()
+		vi.spyOn(persistence, "saveConfig").mockResolvedValue(undefined)
 	})
 
 	const createConfig = (model: string, token?: string, orgId?: string): CLIConfig => ({

@@ -121,51 +121,62 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				)
 
 				// Build message payload
-					const payload = {
+				const payload = {
+					text: processed.text,
+					...(processed.hasImages && { images: processed.images }),
+				}
+
+				const enqueueOutgoing = () => {
+					outgoingQueue.enqueue({
 						text: processed.text,
 						...(processed.hasImages && { images: processed.images }),
-					}
+					})
+				}
 
-					const enqueueOutgoing = () => {
-						outgoingQueue.enqueue({
-							text: processed.text,
-							...(processed.hasImages && { images: processed.images }),
-						})
-					}
-
-					// Clear image references after processing (even if we queue)
-					if (imageReferences.size > 0) {
-						clearImageReferences()
-					}
-
-					const shouldQueueForCurrentState = !isServiceReady || isStreaming || isApprovalPending
-					if (shouldQueueForCurrentState) {
-						enqueueOutgoing()
-						return
-					}
-
-					// Send to extension - either as response to active task or as new task
-					try {
-						if (hasActiveTask) {
+				const sendToExtension = async (): Promise<void> => {
+					if (hasActiveTask) {
 						logs.debug("Sending message as response to active task", "useMessageHandler", {
 							hasImages: processed.hasImages,
 						})
 						await sendAskResponse({ response: "messageResponse", ...payload })
-					} else {
-						logs.debug("Starting new task", "useMessageHandler", {
-							hasImages: processed.hasImages,
-						})
-							await sendMessage({ type: "newTask", ...payload })
-						}
+						return
+					}
+
+					logs.debug("Starting new task", "useMessageHandler", {
+						hasImages: processed.hasImages,
+					})
+					await sendMessage({ type: "newTask", ...payload })
+				}
+
+				const trySendOrQueue = async (): Promise<boolean> => {
+					try {
+						await sendToExtension()
+						return false
 					} catch (error) {
-						// If readiness raced (we looked ready but weren't), enqueue instead of failing.
 						if (shouldQueueOnNotReadyError(error)) {
 							enqueueOutgoing()
-							return
+							return true
 						}
 						throw error
 					}
-				} catch (error) {
+				}
+
+				// Clear image references after processing (even if we queue)
+				if (imageReferences.size > 0) {
+					clearImageReferences()
+				}
+
+				const shouldQueueForCurrentState = !isServiceReady || isStreaming || isApprovalPending
+				if (shouldQueueForCurrentState) {
+					enqueueOutgoing()
+					return
+				}
+
+				const wasQueued = await trySendOrQueue()
+				if (wasQueued) {
+					return
+				}
+			} catch (error) {
 				const errorMessage: CliMessage = {
 					id: Date.now().toString(),
 					type: "error",

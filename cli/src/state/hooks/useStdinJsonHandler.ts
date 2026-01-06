@@ -13,29 +13,8 @@ import { isApprovalPendingAtom } from "../atoms/approval.js"
 import { clearStdinQueueSignalAtom } from "../atoms/queuedMessages.js"
 import wait from "../../utils/wait.js"
 import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
+import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
 import { logs } from "../../services/logs.js"
-
-interface StateChangeWaiter {
-	waitForChange: () => Promise<void>
-	notifyChanged: () => void
-}
-
-function createStateChangeWaiter(): StateChangeWaiter {
-	let resolve: (() => void) | undefined
-	let promise = new Promise<void>((r) => {
-		resolve = r
-	})
-
-	return {
-		waitForChange: () => promise,
-		notifyChanged: () => {
-			resolve?.()
-			promise = new Promise<void>((r) => {
-				resolve = r
-			})
-		},
-	}
-}
 
 export interface StdinMessage {
 	type: string
@@ -193,12 +172,12 @@ export function createQueuedStdinMessageProcessor(params: {
 				return true
 			}
 
-			if (!state.isServiceReady) {
-				return false
-			}
-
 			if (value.type === "cancelTask") {
 				return true
+			}
+
+			if (!state.isServiceReady) {
+				return false
 			}
 
 			if (value.type === "respondToApproval") {
@@ -230,7 +209,7 @@ export function createQueuedStdinMessageProcessor(params: {
 					pollIntervalMs,
 					reactionStartTimeoutMs,
 					reactionDoneTimeoutMs,
-					waitForStateChange,
+					...(waitForStateChange ? { waitForStateChange } : {}),
 				})
 			}
 		},
@@ -248,7 +227,12 @@ export function createQueuedStdinMessageProcessor(params: {
 	})
 
 	return {
-		enqueue: (message) => queue.enqueue(message),
+		enqueue: (message) => {
+			if (message.type === "cancelTask") {
+				queue.clear()
+			}
+			queue.enqueue(message)
+		},
 		notify: () => queue.notify(),
 		clear: () => queue.clear(),
 		dispose: () => queue.dispose(),

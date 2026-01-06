@@ -5,32 +5,11 @@ import { isStreamingAtom } from "../atoms/ui.js"
 import { isApprovalPendingAtom } from "../atoms/approval.js"
 import wait from "../../utils/wait.js"
 import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
+import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
 import { useTaskState } from "./useTaskState.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { logs } from "../../services/logs.js"
 import { clearOutgoingQueueSignalAtom, queuedUserMessagesAtom } from "../atoms/queuedMessages.js"
-
-interface StateChangeWaiter {
-	waitForChange: () => Promise<void>
-	notifyChanged: () => void
-}
-
-function createStateChangeWaiter(): StateChangeWaiter {
-	let resolve: (() => void) | undefined
-	let promise = new Promise<void>((r) => {
-		resolve = r
-	})
-
-	return {
-		waitForChange: () => promise,
-		notifyChanged: () => {
-			resolve?.()
-			promise = new Promise<void>((r) => {
-				resolve = r
-			})
-		},
-	}
-}
 
 export interface OutgoingUserMessage {
 	id: string
@@ -66,10 +45,6 @@ export interface QueuedOutgoingMessageProcessorOptions {
 	reactionStartTimeoutMs?: number
 	reactionDoneTimeoutMs?: number
 	maxAttempts?: number
-	/**
-	 * Optional event-based wakeup used by the interactive hook.
-	 * When provided, waiting yields on state changes (and uses polling only as a fallback timeout).
-	 */
 	waitForStateChange?: () => Promise<void>
 }
 
@@ -156,17 +131,17 @@ export function createQueuedOutgoingMessageProcessor(params: {
 
 			params.callbacks?.onDelivered?.(value.id)
 
-				await waitForAgentReaction({
-					getState: params.getState,
-					pollIntervalMs,
-					reactionStartTimeoutMs,
-					reactionDoneTimeoutMs,
-					waitForStateChange,
-				})
-			},
-			shouldRetry: ({ item, error }) => {
-				if (item.attempts >= maxAttempts) return false
-				return isRetryableOutgoingError(error)
+			await waitForAgentReaction({
+				getState: params.getState,
+				pollIntervalMs,
+				reactionStartTimeoutMs,
+				reactionDoneTimeoutMs,
+				...(waitForStateChange ? { waitForStateChange } : {}),
+			})
+		},
+		shouldRetry: ({ item, error }) => {
+			if (item.attempts >= maxAttempts) return false
+			return isRetryableOutgoingError(error)
 		},
 		onDrop: ({ item, error }) => {
 			logs.error("Dropping queued outgoing message after retries", "QueuedOutgoingMessageProcessor", {
@@ -195,6 +170,20 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const setQueuedUserMessages = useSetAtom(queuedUserMessagesAtom)
 
+	const sendMessageRef = useRef(sendMessage)
+	const sendAskResponseRef = useRef(sendAskResponse)
+	const setQueuedUserMessagesRef = useRef(setQueuedUserMessages)
+
+	useEffect(() => {
+		sendMessageRef.current = sendMessage
+	}, [sendMessage])
+	useEffect(() => {
+		sendAskResponseRef.current = sendAskResponse
+	}, [sendAskResponse])
+	useEffect(() => {
+		setQueuedUserMessagesRef.current = setQueuedUserMessages
+	}, [setQueuedUserMessages])
+
 	const stateRef = useRef<OutgoingMessageQueueState>({
 		isServiceReady,
 		isStreaming,
@@ -202,7 +191,36 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 		hasActiveTask,
 	})
 	const stateChangeWaiterRef = useRef<StateChangeWaiter>(createStateChangeWaiter())
-	const processorRef = useRef<QueuedOutgoingMessageProcessor | null>(null)
+	const processorRef = useRef<QueuedOutgoingMessageProcessor>(
+		createQueuedOutgoingMessageProcessor({
+			getState: () => stateRef.current,
+			handlers: {
+				sendNewTask: async (params) => {
+					await sendMessageRef.current({ type: "newTask", ...params })
+				},
+				sendAskResponse: async (params) => {
+					await sendAskResponseRef.current(params)
+				},
+			},
+			callbacks: {
+				onDelivered: (messageId) => {
+					setQueuedUserMessagesRef.current((prev) => prev.filter((m) => m.id !== messageId))
+				},
+				onDropped: (messageId) => {
+					setQueuedUserMessagesRef.current((prev) => prev.filter((m) => m.id !== messageId))
+				},
+			},
+			options: {
+				waitForStateChange: () => stateChangeWaiterRef.current.waitForChange(),
+			},
+		}),
+	)
+
+	useEffect(() => {
+		return () => {
+			processorRef.current.dispose()
+		}
+	}, [])
 
 	useEffect(() => {
 		stateRef.current = {
@@ -212,43 +230,11 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 			hasActiveTask,
 		}
 		stateChangeWaiterRef.current.notifyChanged()
-		processorRef.current?.notify()
+		processorRef.current.notify()
 	}, [isServiceReady, isStreaming, isApprovalPending, hasActiveTask])
 
 	useEffect(() => {
-		const processor = createQueuedOutgoingMessageProcessor({
-			getState: () => stateRef.current,
-			handlers: {
-				sendNewTask: async (params) => {
-					await sendMessage({ type: "newTask", ...params })
-				},
-				sendAskResponse: async (params) => {
-					await sendAskResponse(params)
-				},
-			},
-				callbacks: {
-					onDelivered: (messageId) => {
-						setQueuedUserMessages((prev) => prev.filter((m) => m.id !== messageId))
-					},
-					onDropped: (messageId) => {
-						setQueuedUserMessages((prev) => prev.filter((m) => m.id !== messageId))
-					},
-				},
-				options: {
-					waitForStateChange: () => stateChangeWaiterRef.current.waitForChange(),
-				},
-			})
-
-		processorRef.current = processor
-
-		return () => {
-			processor.dispose()
-			processorRef.current = null
-		}
-	}, [sendAskResponse, sendMessage, setQueuedUserMessages])
-
-	useEffect(() => {
-		processorRef.current?.clear()
+		processorRef.current.clear()
 		// Keep atom in sync even if the signal is triggered from outside this hook.
 		setQueuedUserMessages([])
 		stateChangeWaiterRef.current.notifyChanged()
@@ -263,7 +249,7 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 				enqueuedAt: Date.now(),
 			}
 			setQueuedUserMessages((prev) => [...prev, queued])
-			processorRef.current?.enqueue(queued)
+			processorRef.current.enqueue(queued)
 		},
 		[setQueuedUserMessages],
 	)

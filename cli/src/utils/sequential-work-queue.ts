@@ -25,7 +25,7 @@ export class SequentialWorkQueue<T> {
 	private readonly canProcess: SequentialWorkQueueCanProcess<T>
 	private readonly processItem: SequentialWorkQueueProcess<T>
 	private readonly shouldRetry: SequentialWorkQueueShouldRetry<T>
-	private readonly onDrop?: SequentialWorkQueueOnDrop<T>
+	private readonly onDrop: SequentialWorkQueueOnDrop<T> | undefined
 	private readonly retryDelayMs: number
 	private draining = false
 	private disposed = false
