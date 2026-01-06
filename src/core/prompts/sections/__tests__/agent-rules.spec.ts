@@ -35,10 +35,11 @@ describe("loadAgentRulesContent", () => {
 
 	it("includes nested AGENTS.md rules from cwd to active path", async () => {
 		const readFile = vi.fn(async (filePath: string) => {
-			if (filePath === "/repo/AGENTS.md") {
+			const normalized = filePath.replace(/\\/g, "/")
+			if (normalized.endsWith("/repo/AGENTS.md")) {
 				return "Root rules"
 			}
-			if (filePath === "/repo/services/AGENTS.md") {
+			if (normalized.endsWith("/repo/services/AGENTS.md")) {
 				return "Service rules"
 			}
 			return ""
@@ -57,10 +58,11 @@ describe("loadAgentRulesContent", () => {
 
 	it("includes global AGENTS.md before local rules", async () => {
 		const readFile = vi.fn(async (filePath: string) => {
-			if (filePath === "/home/user/.kilocode/AGENTS.md") {
+			const normalized = filePath.replace(/\\/g, "/")
+			if (normalized.endsWith("/home/user/.kilocode/AGENTS.md")) {
 				return "Global rules"
 			}
-			if (filePath === "/repo/AGENTS.md") {
+			if (normalized.endsWith("/repo/AGENTS.md")) {
 				return "Local rules"
 			}
 			return ""
@@ -80,7 +82,8 @@ describe("loadAgentRulesContent", () => {
 	it("truncates rules when content exceeds the size limit", async () => {
 		const longContent = "a".repeat(20000)
 		const readFile = vi.fn(async (filePath: string) => {
-			if (filePath === "/repo/AGENTS.md") {
+			const normalized = filePath.replace(/\\/g, "/")
+			if (normalized.endsWith("/repo/AGENTS.md")) {
 				return longContent
 			}
 			return ""
@@ -103,8 +106,8 @@ describe("loadAgentRulesContent", () => {
 		}
 
 		const readFile = vi.fn(async (filePath: string) => {
-			const parentDir = path.dirname(filePath)
-			const index = dirs.indexOf(parentDir)
+			const normalizedParentDir = path.dirname(filePath).replace(/\\/g, "/")
+			const index = dirs.indexOf(normalizedParentDir)
 			if (index === -1) {
 				return ""
 			}
@@ -129,10 +132,11 @@ describe("loadAgentRulesContent", () => {
 
 	it("falls back to cwd when active path is outside cwd", async () => {
 		const readFile = vi.fn(async (filePath: string) => {
-			if (filePath === "/repo/AGENTS.md") {
+			const normalized = filePath.replace(/\\/g, "/")
+			if (normalized.endsWith("/repo/AGENTS.md")) {
 				return "Root rules"
 			}
-			if (filePath === "/other/AGENTS.md") {
+			if (normalized.endsWith("/other/AGENTS.md")) {
 				return "Other rules"
 			}
 			return ""
