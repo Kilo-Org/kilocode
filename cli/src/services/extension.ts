@@ -75,9 +75,10 @@ export interface ExtensionServiceEvents {
 export class ExtensionService extends EventEmitter {
 	private extensionHost: ExtensionHost
 	private messageBridge: MessageBridge
-	private options: Required<Omit<ExtensionServiceOptions, "identity" | "customModes">> & {
+	private options: Required<Omit<ExtensionServiceOptions, "identity" | "customModes" | "appendSystemPrompt">> & {
 		identity?: IdentityInfo
 		customModes?: ModeConfig[]
+		appendSystemPrompt?: string
 	}
 	private isInitialized = false
 	private isDisposed = false
@@ -97,6 +98,7 @@ export class ExtensionService extends EventEmitter {
 			extensionRootPath: options.extensionRootPath || extensionPaths.extensionRootPath,
 			...(options.identity && { identity: options.identity }),
 			...(options.customModes && { customModes: options.customModes }),
+			...(options.appendSystemPrompt && { appendSystemPrompt: options.appendSystemPrompt }),
 		}
 
 		// Create extension host
