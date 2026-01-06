@@ -13,24 +13,50 @@ import Image from "@site/src/components/Image"
 
 # Kilo Code Documentation
 
-Kilo Code **accelerates** development with AI-driven code generation and task automation. This open source extension plugs directly into VS Code.
+Kilo Code **accelerates software development** with AI-driven code generation, intelligent automation, and deep codebase awareness — all inside VS Code.
+
+It’s an open-source extension designed to help developers **move faster**, **reduce errors**, and **focus on real engineering problems**.
+
+---
+
+## Who Is Kilo Code For?
+
+Kilo Code is built for developers and teams who want practical AI assistance, not generic chatbots.
+
+- 💻 **Backend & Frontend Developers**
+- 🏗️ **Tech Leads & Architects**
+- 🧪 **QA & Automation Engineers**
+- 📄 **Documentation & Platform Engineers**
+- 🚀 **Startup Teams & Solo Builders**
+- 🏢 **Enterprise Engineering Teams**
+
+Whether you’re maintaining legacy systems or building from scratch, Kilo Code adapts to your workflow.
+
+---
 
 ## What Can Kilo Code Do?
 
 - 🚀 **Generate Code** from natural language descriptions
-- 🔧 **Refactor & Debug** existing code
-- 📝 **Write & Update** documentation
-- 🤔 **Answer Questions** about your codebase
-- 🔄 **Automate** repetitive tasks
-- 🏗️ **Create** new files and projects
+- 🔧 **Refactor & Debug** existing codebases
+- 📝 **Write & Update** technical documentation
+- 🤔 **Answer Questions** about your repository
+- 🔄 **Automate** repetitive engineering tasks
+- 🏗️ **Create** new files, modules, and projects
+- 🔍 **Analyze** large codebases with context awareness
+
+---
 
 ## Quick Start
+
+Get productive in minutes:
 
 1. [Install Kilo Code](/getting-started/installing)
 2. [Set up Kilo Code](/getting-started/setting-up)
 3. [Try Your First Task](/getting-started/your-first-task)
 
-## Features
+---
+
+## See Kilo Code in Action
 
 <Image
   src="/docs/img/kilogif.gif"
@@ -38,68 +64,142 @@ Kilo Code **accelerates** development with AI-driven code generation and task au
   width="600"
 />
 
-### Basics
+---
 
-Use [the chat interface](/basic-usage/the-chat-interface) to tell Kilo Code what you need. It relies on coding‑optimized AI models to complete each request.
+## How Kilo Code Works
 
-- Switch [modes](/basic-usage/using-modes) to fit the task
-- Control allowed [actions](/features/auto-approving-actions)
-- Run direct [code actions](/features/code-actions)
+Use [the chat interface](/basic-usage/the-chat-interface) to tell Kilo Code what you need.  
+Behind the scenes, it uses **coding-optimized AI models**, project context, and controlled tools to execute tasks safely and effectively.
 
-### Using Kilo Code
+### Core Capabilities
 
-#### Multiple Modes
+- Understands your **entire project structure**
+- Reads, writes, and modifies files with permission
+- Executes real commands in your VS Code terminal
+- Applies project-specific rules and instructions
 
-Kilo Code adapts to your needs with specialized [modes](/basic-usage/using-modes):
+---
 
-- [**Code Mode:**](/basic-usage/using-modes#code-mode-default) For general-purpose coding tasks
-- [**Architect Mode:**](/basic-usage/using-modes#architect-mode) For planning and technical leadership
-- [**Ask Mode:**](/basic-usage/using-modes#ask-mode) For answering questions and providing information
-- [**Debug Mode:**](/basic-usage/using-modes#debug-mode) For systematic problem diagnosis
-- **[Custom Modes](/agent-behavior/custom-modes):** Create unlimited specialized personas for security auditing, performance optimization, documentation, or any other task
+## Example Prompt
 
-#### Core Tools
+Here’s what a real interaction looks like:
 
-Kilo Code comes with powerful [tools](/features/tools/tool-use-overview) that can:
+> **“Scan this repository and identify unused database indexes, then suggest PostgreSQL optimizations.”**
 
-- [Read](/features/tools/read-file), [write](/features/tools/write-to-file), and [delete](/features/tools/delete-file) files in your project
-- [Execute commands](/features/tools/execute-command) in your VS Code terminal
-- [Control a web browser](/features/tools/browser-action)
-- [Ask follow-up questions](/features/tools/ask-followup-question)
-- [Search your codebase](/features/tools/search-files)
+Kilo Code will:
+- Search relevant files
+- Analyze queries and indexes
+- Propose optimizations
+- Explain the reasoning step-by-step
 
-See the complete [Tools Reference](/features/tools/tool-use-overview) for all available tools.
+---
 
-### Extending Kilo Code
+## Using Kilo Code
 
-- **[MCP (Model Context Protocol)](/features/mcp/overview):** Add unlimited custom tools, integrate with external APIs, connect to databases, or create specialized development tools
-- **[Local Models](/advanced-usage/local-models):** Run Kilo Code with local AI models for offline use or enhanced privacy
+### Multiple Modes
 
-### Customizing Kilo Code
+Kilo Code adapts to different tasks using specialized [modes](/basic-usage/using-modes):
 
-Make Kilo Code work your way with:
+- [**Code Mode (Default):**](/basic-usage/using-modes#code-mode-default)  
+  General-purpose coding and implementation
 
-- [Settings Management](/basic-usage/settings-management) for configuring your experience
-- [Custom Modes](/agent-behavior/custom-modes) for specialized tasks
-- [Custom Rules](/agent-behavior/custom-rules) for project-specific rules
-- [Custom Instructions](/agent-behavior/custom-instructions) for global plugin-wide instructions
-- [API Configuration Profiles](/features/api-configuration-profiles) for different model providers
-- [Auto-Approval Settings](/features/auto-approving-actions) for faster workflows
+- [**Architect Mode:**](/basic-usage/using-modes#architect-mode)  
+  Planning, design decisions, and technical leadership
+
+- [**Ask Mode:**](/basic-usage/using-modes#ask-mode)  
+  Questions, explanations, and learning
+
+- [**Debug Mode:**](/basic-usage/using-modes#debug-mode)  
+  Systematic problem diagnosis and root-cause analysis
+
+- **[Custom Modes](/agent-behavior/custom-modes):**  
+  Create unlimited personas for security reviews, performance tuning, documentation, or any specialized workflow
+
+---
+
+### Core Tools
+
+Kilo Code includes powerful [tools](/features/tools/tool-use-overview) that can:
+
+- 📂 [Read](/features/tools/read-file), [write](/features/tools/write-to-file), and [delete](/features/tools/delete-file) files
+- 🖥️ [Execute commands](/features/tools/execute-command) in your VS Code terminal
+- 🌐 [Control a browser](/features/tools/browser-action)
+- ❓ [Ask follow-up questions](/features/tools/ask-followup-question)
+- 🔍 [Search your codebase](/features/tools/search-files)
+
+See the full [Tools Reference](/features/tools/tool-use-overview) for details.
+
+---
+
+## Common Use Cases
+
+- Generate APIs, services, and UI components
+- Refactor legacy code safely
+- Debug production issues step-by-step
+- Write batch jobs, scripts, and cron tasks
+- Analyze large monorepos efficiently
+- Enforce coding standards with custom rules
+
+---
+
+## Extending Kilo Code
+
+### Model Context Protocol (MCP)
+
+- **[MCP Overview](/features/mcp/overview)**  
+  Add unlimited custom tools, integrate external APIs, connect databases, or build domain-specific development tooling.
+
+### Local Models
+
+- **[Local Models](/advanced-usage/local-models)**  
+  Run Kilo Code with local AI models for offline usage or enhanced privacy.
+
+---
+
+## Customizing Kilo Code
+
+Make Kilo Code fit your workflow:
+
+- [Settings Management](/basic-usage/settings-management)
+- [Custom Modes](/agent-behavior/custom-modes)
+- [Custom Rules](/agent-behavior/custom-rules)
+- [Custom Instructions](/agent-behavior/custom-instructions)
+- [API Configuration Profiles](/features/api-configuration-profiles)
+- [Auto-Approval Settings](/features/auto-approving-actions)
+
+---
+
+## Security & Privacy
+
+Kilo Code is designed with developer trust in mind:
+
+- 🔒 No hidden data collection
+- 🧠 Support for local and self-hosted models
+- ⚙️ Full control over tools and permissions
+- 🛡️ Explicit approval for file system and command access
+
+You decide what Kilo Code can and cannot do.
+
+---
 
 ## Resources
 
 ### Documentation
 
-- [Using Kilo Code](/basic-usage/the-chat-interface) - Learn the basics
-- [Core Concepts](/features/auto-approving-actions) - Master key features
-- [Advanced Usage](/agent-behavior/prompt-engineering) - Take your skills further
-- [Frequently Asked Questions](/faq) - Get answers to common questions
+- [Using Kilo Code](/basic-usage/the-chat-interface)
+- [Core Concepts](/features/auto-approving-actions)
+- [Advanced Usage](/agent-behavior/prompt-engineering)
+- [Frequently Asked Questions](/faq)
 
-### Community
+### Community & Support
 
-- **Discord:** <a href={DISCORD_URL} target="_blank">Join our Discord server</a> for real-time help and discussions
-- **Reddit:** <a href={REDDIT_URL} target="_blank">Visit our subreddit</a> to share experiences and tips
-- **YouTube:** <a href={YOUTUBE_URL} target="_blank">Check out our YouTube</a> to learn hands on skills when using Kilo Code
+- **Discord:** <a href={DISCORD_URL} target="_blank">Join our Discord</a> for real-time help
+- **Reddit:** <a href={REDDIT_URL} target="_blank">Visit our subreddit</a> to share tips
+- **YouTube:** <a href={YOUTUBE_URL} target="_blank">Watch tutorials and demos</a>
 - **GitHub:** Report <a href={GITHUB_ISSUES_MAIN_URL} target="_blank">issues</a> or request <a href={GITHUB_FEATURES_URL} target="_blank">features</a>
 
-Ready to get started? Click the **Next** button below to begin your journey with Kilo Code!
+---
+
+## Ready to Build Faster?
+
+Click the **Next** button below and start your journey with **Kilo Code** 🚀
