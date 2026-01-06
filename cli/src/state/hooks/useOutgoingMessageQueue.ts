@@ -3,9 +3,9 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { isServiceReadyAtom } from "../atoms/service.js"
 import { isStreamingAtom } from "../atoms/ui.js"
 import { isApprovalPendingAtom } from "../atoms/approval.js"
-import wait from "../../utils/wait.js"
 import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
 import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
+import { waitForAgentReaction } from "../../utils/wait-for-agent-reaction.js"
 import { useTaskState } from "./useTaskState.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { logs } from "../../services/logs.js"
@@ -59,42 +59,6 @@ function isRetryableOutgoingError(error: unknown): boolean {
 	if (!(error instanceof Error)) return true
 	const msg = error.message.toLowerCase()
 	return msg.includes("extensionservice not ready") || msg.includes("not available") || msg.includes("disposed")
-}
-
-async function waitForAgentReaction(params: {
-	getState: () => OutgoingMessageQueueState
-	pollIntervalMs: number
-	reactionStartTimeoutMs: number
-	reactionDoneTimeoutMs: number
-	waitForStateChange?: () => Promise<void>
-}): Promise<void> {
-	const { getState, pollIntervalMs, reactionStartTimeoutMs, reactionDoneTimeoutMs, waitForStateChange } = params
-
-	const waitTick = async () => {
-		// Deadlock safety: we always race state-change wakeups with a bounded timeout.
-		// If no state changes occur, the timeout ensures progress until the deadline is reached.
-		if (waitForStateChange) {
-			await Promise.race([waitForStateChange(), wait(pollIntervalMs)])
-			return
-		}
-		await wait(pollIntervalMs)
-	}
-
-	const startDeadline = Date.now() + reactionStartTimeoutMs
-	while (Date.now() < startDeadline) {
-		const state = getState()
-		if (state.isApprovalPending) return
-		if (state.isStreaming) break
-		await waitTick()
-	}
-
-	const doneDeadline = Date.now() + reactionDoneTimeoutMs
-	while (Date.now() < doneDeadline) {
-		const state = getState()
-		if (state.isApprovalPending) return
-		if (!state.isStreaming) return
-		await waitTick()
-	}
 }
 
 export function createQueuedOutgoingMessageProcessor(params: {

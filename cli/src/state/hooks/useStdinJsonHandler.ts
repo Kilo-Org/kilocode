@@ -11,9 +11,9 @@ import { isServiceReadyAtom } from "../atoms/service.js"
 import { isStreamingAtom } from "../atoms/ui.js"
 import { isApprovalPendingAtom } from "../atoms/approval.js"
 import { clearStdinQueueSignalAtom } from "../atoms/queuedMessages.js"
-import wait from "../../utils/wait.js"
 import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
 import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
+import { waitForAgentReaction } from "../../utils/wait-for-agent-reaction.js"
 import { logs } from "../../services/logs.js"
 
 export interface StdinMessage {
@@ -116,40 +116,6 @@ function isAgentAffectingStdinMessage(message: StdinMessage): boolean {
 	if (message.type === "askResponse") return true
 	if (message.type === "respondToApproval") return true
 	return false
-}
-
-async function waitForAgentReaction(params: {
-	getState: () => StdinMessageQueueState
-	pollIntervalMs: number
-	reactionStartTimeoutMs: number
-	reactionDoneTimeoutMs: number
-	waitForStateChange?: () => Promise<void>
-}): Promise<void> {
-	const { getState, pollIntervalMs, reactionStartTimeoutMs, reactionDoneTimeoutMs, waitForStateChange } = params
-
-	const waitTick = async () => {
-		if (waitForStateChange) {
-			await Promise.race([waitForStateChange(), wait(pollIntervalMs)])
-			return
-		}
-		await wait(pollIntervalMs)
-	}
-
-	const startDeadline = Date.now() + reactionStartTimeoutMs
-	while (Date.now() < startDeadline) {
-		const state = getState()
-		if (state.isApprovalPending) return
-		if (state.isStreaming) break
-		await waitTick()
-	}
-
-	const doneDeadline = Date.now() + reactionDoneTimeoutMs
-	while (Date.now() < doneDeadline) {
-		const state = getState()
-		if (state.isApprovalPending) return
-		if (!state.isStreaming) return
-		await waitTick()
-	}
 }
 
 export function createQueuedStdinMessageProcessor(params: {
