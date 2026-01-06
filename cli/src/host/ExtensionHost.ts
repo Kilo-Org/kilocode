@@ -787,7 +787,7 @@ export class ExtensionHost extends EventEmitter {
 				imageGeneration: false,
 				runSlashCommand: false,
 			},
-			// kilocode_change: Add appendSystemPrompt from CLI options
+			// Add appendSystemPrompt from CLI options
 			...(this.options.appendSystemPrompt && { appendSystemPrompt: this.options.appendSystemPrompt }),
 		}
 
@@ -1041,7 +1041,7 @@ export class ExtensionHost extends EventEmitter {
 			})
 		}
 
-		// kilocode_change start: Sync appendSystemPrompt to extension
+		// Sync appendSystemPrompt to extension
 		// This setting is passed from CLI options and needs to be stored in the extension's
 		// contextProxy so it's available when generating the system prompt
 		const appendSystemPrompt = configState.appendSystemPrompt || this.options.appendSystemPrompt
@@ -1054,7 +1054,6 @@ export class ExtensionHost extends EventEmitter {
 				length: appendSystemPrompt.length,
 			})
 		}
-		// kilocode_change end
 	}
 
 	/**
