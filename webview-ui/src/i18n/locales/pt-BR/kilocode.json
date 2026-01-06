@@ -226,16 +226,11 @@
 				"label": "Atraso da Ativação Automática",
 				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarefa Rápida ({{keybinding}})",
-				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em português simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\"), e obtenha múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Preenchimento Automático Manual ({{keybinding}})",
 				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
 			},
 			"keybindingNotFound": "não encontrado",
-			"noModelConfigured": "Nenhum modelo de autocompletar adequado encontrado. Configure um provedor nas configurações da API.",
 			"configureAutocompleteProfile": "Use qualquer modelo indo para perfis e configurando um Perfil do Tipo de Perfil Autocompletar.",
 			"model": "Modelo",
 			"provider": "Provedor",
@@ -256,6 +251,16 @@
 					"30min": "30 minutos",
 					"1hour": "1 hora"
 				}
+			},
+			"noModelConfigured": {
+				"title": "Nenhum modelo de autocomplete configurado",
+				"description": "Para habilitar o autocomplete, adicione um perfil com um destes provedores suportados:",
+				"learnMore": "Saiba mais sobre a configuração do autocomplete →"
+			},
+			"noCredits": {
+				"title": "Sem créditos na sua conta",
+				"description": "Sua conta Kilo Code não tem créditos. Para usar o autocomplete, adicione créditos à sua conta.",
+				"buyCredits": "Comprar créditos →"
 			}
 		}
 	},
@@ -329,8 +334,14 @@
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
 		"stopRecording": "Parar entrada de voz",
-		"unavailableOpenAiKeyMissing": "Conversão de voz para texto indisponível. É necessário um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
-		"unavailableBoth": "O reconhecimento de voz não está disponível. Ele requer um provedor OpenAI válido e o FFmpeg deve estar instalado.",
-		"unavailableFfmpegNotInstalled": "Transcrição de voz não está disponível. Instale o FFmpeg para usar a transcrição de voz."
+		"setupPopover": {
+			"title": "Conversão de Fala em Texto",
+			"openAiReason": "Você precisa de um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
+			"description": "A conversão de fala para texto está indisponível. A conversão de fala para texto requer o FFmpeg e um provedor OpenAI válido configurados. <moreInfoLink>Clique aqui para mais informações</moreInfoLink>.",
+			"ffmpegReason": "Você precisa ter o FFmpeg instalado. <ffmpegLink>Clique aqui</ffmpegLink> para que o Kilo ajude você a instalar o FFmpeg.",
+			"ffmpegMessage": "Ajude-me a instalar o FFmpeg"
+		},
+		"misconfiguredState": "Indisponível devido à configuração",
+		"errorState": "Indisponível devido a erro"
 	}
 }

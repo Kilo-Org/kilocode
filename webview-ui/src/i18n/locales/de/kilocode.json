@@ -227,16 +227,11 @@
 				"label": "Auto-Auslöseverzögerung",
 				"description": "Die Verzögerung in Sekunden, bevor Kilo Code Autocomplete auslöst, nachdem du aufgehört hast zu tippen. Eine kürzere Verzögerung bedeutet schnellere Vorschläge, kann aber ressourcenintensiver sein."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Schnellaufgabe ({{keybinding}})",
-				"description": "Brauchst du nur eine schnelle Änderung? Wähle etwas Code aus (oder auch nicht!) und drücke Cmd+I. Beschreibe dein Ziel in einfachem Deutsch (\"erstelle eine React-Komponente mit diesen Props\", \"füge Fehlerbehandlung zu dieser Funktion hinzu\"), und erhalte mehrere, sofort verwendbare Vorschläge direkt in deinem Editor. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manuelle Autovervollständigung ({{keybinding}})",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
 			},
 			"keybindingNotFound": "nicht gefunden",
-			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen.",
 			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst.",
 			"enableChatAutocomplete": {
 				"label": "Chat-Eingabe-Autovervollständigung",
@@ -255,6 +250,16 @@
 					"30min": "30 Minuten",
 					"1hour": "1 Stunde"
 				}
+			},
+			"noModelConfigured": {
+				"title": "Kein Autocomplete-Modell konfiguriert",
+				"description": "Um Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu:",
+				"learnMore": "Mehr über die Autocomplete-Einrichtung erfahren →"
+			},
+			"noCredits": {
+				"title": "Kein Guthaben auf deinem Konto",
+				"description": "Dein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.",
+				"buyCredits": "Guthaben kaufen →"
 			}
 		}
 	},
@@ -328,8 +333,14 @@
 	"speechToText": {
 		"startRecording": "Spracheingabe starten",
 		"stopRecording": "Spracheingabe beenden",
-		"unavailableBoth": "Spracherkennung ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter und FFmpeg muss installiert sein.",
-		"unavailableFfmpegNotInstalled": "Sprache-zu-Text ist nicht verfügbar. Installieren Sie FFmpeg, um Sprachtranskription zu nutzen.",
-		"unavailableOpenAiKeyMissing": "Sprache-zu-Text ist nicht verfügbar. Es erfordert einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um Sprachtranskription zu nutzen."
+		"setupPopover": {
+			"title": "Sprache-zu-Text",
+			"description": "Sprache-zu-Text ist nicht verfügbar. Sprache-zu-Text erfordert sowohl FFmpeg als auch einen konfigurierten, gültigen OpenAI-Anbieter. <moreInfoLink>Klicken Sie hier für weitere Informationen</moreInfoLink>.",
+			"openAiReason": "Sie benötigen einen gültigen OpenAI-Anbieter mit einem API-Schlüssel, um die Sprachtranskription zu verwenden.",
+			"ffmpegReason": "Sie benötigen FFmpeg. <ffmpegLink>Klicken Sie hier</ffmpegLink>, damit Kilo Ihnen bei der Installation von FFmpeg hilft.",
+			"ffmpegMessage": "Hilf mir, FFmpeg zu installieren"
+		},
+		"misconfiguredState": "Nicht verfügbar aufgrund der Konfiguration",
+		"errorState": "Nicht verfügbar aufgrund eines Fehlers"
 	}
 }

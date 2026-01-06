@@ -463,5 +463,32 @@ describe("messageCompletion", () => {
 			expect((result.staticMessages[0]?.message as CliMessage).id).toBe("1")
 			expect((result.staticMessages[1]?.message as CliMessage).id).toBe("3")
 		})
+
+		it("should hide api_req_started placeholders until cost/cancel/failure is present", () => {
+			const messages: UnifiedMessage[] = [
+				{
+					source: "extension",
+					message: {
+						ts: 1,
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({ apiProtocol: "openai" }),
+					},
+				},
+				{
+					source: "extension",
+					message: { ts: 2, type: "say", say: "api_req_started", text: JSON.stringify({ cost: 0.001 }) },
+				},
+			]
+
+			const result = splitMessages(messages, { hidePartialMessages: true })
+
+			// Since the first api_req_started lacks completion indicators, it blocks sequential completion.
+			// In the CLI we render only the dynamic tail in-place until it completes.
+			expect(result.staticMessages).toHaveLength(0)
+			expect(result.dynamicMessages).toHaveLength(2)
+			expect(result.dynamicMessages[0]?.source).toBe("extension")
+			expect(result.dynamicMessages[1]?.source).toBe("extension")
+		})
 	})
 })

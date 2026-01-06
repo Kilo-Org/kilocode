@@ -82,7 +82,7 @@ git checkout -b your-branch-name
 
 Custom modes are a powerful way to extend Kilo Code's capabilities. To create and share a custom mode:
 
-1. Follow the [Custom Modes documentation](/features/custom-modes) to create your mode
+1. Follow the [Custom Modes documentation](/agent-behavior/custom-modes) to create your mode
 
 2. Test your mode thoroughly
 

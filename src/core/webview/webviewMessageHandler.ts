@@ -3676,6 +3676,7 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change end: Type-safe global state handler
 		// kilocode_change start: STT (Speech-to-Text) handlers
 		case "stt:start":
 		case "stt:stop":
@@ -3684,7 +3685,15 @@ export const webviewMessageHandler = async (
 			await handleSTTCommand(provider, message as any)
 			break
 		}
-		// kilocode_change end: Type-safe global state handler
+		case "stt:checkAvailability": {
+			const { checkSpeechToTextAvailable } = await import("./speechToTextCheck")
+			provider.postMessageToWebview({
+				type: "stt:statusResponse",
+				speechToTextStatus: await checkSpeechToTextAvailable(provider.providerSettingsManager),
+			})
+			break
+		}
+		// kilocode_change end: STT (Speech-to-Text) handlers
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break

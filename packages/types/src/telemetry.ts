@@ -22,7 +22,6 @@ export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
 
-	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
 	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
 
 	AUTOCOMPLETE_SUGGESTION_REQUESTED = "Autocomplete Suggestion Requested",
@@ -32,6 +31,7 @@ export enum TelemetryEventName {
 	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
 	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
 	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+	AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN = "Autocomplete Unique Suggestion Shown",
 
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
@@ -220,7 +220,6 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 		type: z.enum([
 			// kilocode_change start
 			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED, // kilocode_change
@@ -229,6 +228,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change

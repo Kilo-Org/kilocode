@@ -226,16 +226,11 @@
 				"label": "Otomatik Tetikleme Gecikmesi",
 				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Görev ({{keybinding}})",
-				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"keybindingNotFound": "bulunamadı",
-			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
 			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
 			"model": "Model",
 			"provider": "Sağlayıcı",
@@ -256,6 +251,16 @@
 					"30min": "30 dakika",
 					"1hour": "1 saat"
 				}
+			},
+			"noModelConfigured": {
+				"title": "Otomatik tamamlama modeli yapılandırılmadı",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekleyin:",
+				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
+			},
+			"noCredits": {
+				"title": "Hesabınızda kredi yok",
+				"description": "Kilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.",
+				"buyCredits": "Kredi satın al →"
 			}
 		}
 	},
@@ -329,8 +334,14 @@
 	"speechToText": {
 		"startRecording": "Sesli girişi başlat",
 		"stopRecording": "Sesli girişi durdur",
-		"unavailableOpenAiKeyMissing": "Konuşmadan metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanabilmek için API anahtarına sahip geçerli bir OpenAI sağlayıcısı gerekiyor.",
-		"unavailableFfmpegNotInstalled": "Konuşmayı metne dönüştürme kullanılamıyor. Ses transkripsiyonunu kullanmak için FFmpeg'i yükleyin.",
-		"unavailableBoth": "Konuşmadan metne dönüştürme özelliği kullanılamıyor. Geçerli bir OpenAI sağlayıcısı gerektirir ve FFmpeg yüklü olmalıdır."
+		"setupPopover": {
+			"title": "Konuşmadan Metne",
+			"openAiReason": "Ses transkripsiyonu kullanmak için API anahtarına sahip geçerli bir OpenAI sağlayıcısına ihtiyacınız var.",
+			"description": "Konuşmadan metne özelliği kullanılamıyor. Konuşmadan metne özelliği için hem FFmpeg hem de geçerli bir OpenAI sağlayıcısı yapılandırılması gerekir. <moreInfoLink>Daha fazla bilgi için buraya tıklayın</moreInfoLink>.",
+			"ffmpegMessage": "FFmpeg'i kurmama yardım et",
+			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
+		},
+		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
+		"errorState": "Hata nedeniyle kullanılamıyor"
 	}
 }

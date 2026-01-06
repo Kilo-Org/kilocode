@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
-import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
+import { showFollowupSuggestionsAtom, isCancellingAtom } from "../../../state/atoms/ui.js"
 import { chatMessagesAtom } from "../../../state/atoms/extension.js"
 import { exitPromptVisibleAtom } from "../../../state/atoms/keyboard.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
@@ -166,5 +166,54 @@ describe("StatusIndicator", () => {
 
 		const output = lastFrame()
 		expect(output).toContain("Task ready to resume")
+	})
+
+	it("should show Cancelling status when isCancellingAtom is true", () => {
+		// Set up streaming state with a partial message
+		const partialMessage: ExtensionChatMessage = {
+			type: "say",
+			say: "text",
+			ts: Date.now(),
+			text: "Processing...",
+			partial: true,
+		}
+		store.set(chatMessagesAtom, [partialMessage])
+		// Set cancelling state
+		store.set(isCancellingAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		expect(output).toContain("Cancelling...")
+		// Should NOT show "Thinking..." when cancelling
+		expect(output).not.toContain("Thinking...")
+	})
+
+	it("should show Cancelling instead of Thinking when both streaming and cancelling", () => {
+		// Set up streaming state
+		const partialMessage: ExtensionChatMessage = {
+			type: "say",
+			say: "text",
+			ts: Date.now(),
+			text: "Processing...",
+			partial: true,
+		}
+		store.set(chatMessagesAtom, [partialMessage])
+		store.set(isCancellingAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		// Should show Cancelling, not Thinking
+		expect(output).toContain("Cancelling...")
+		expect(output).not.toContain("Thinking...")
 	})
 })

@@ -308,6 +308,162 @@ describe("GhostModel", () => {
 			expect(result).toBe(true)
 			expect(model.loaded).toBe(true)
 		})
+
+		it("should set hasKilocodeProfileWithNoBalance when kilocode profile exists but has no balance", async () => {
+			const profiles = [{ id: "1", name: "kilocode-profile", apiProvider: "kilocode" }] as any
+
+			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+
+			// Mock profile with token
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "kilocode-profile",
+				apiProvider: "kilocode",
+				kilocodeToken: "test-token",
+			} as any)
+
+			// Mock fetch to return zero balance for kilocode
+			;(global.fetch as any).mockImplementation(async (url: string) => {
+				if (url.includes("/api/profile/balance")) {
+					return {
+						ok: true,
+						json: async () => ({ balance: 0 }),
+					} as any
+				}
+				return {
+					ok: true,
+					json: async () => ({}),
+				} as any
+			})
+
+			const model = new GhostModel()
+			const result = await model.reload(mockProviderSettingsManager)
+
+			// Should not find a usable provider
+			expect(result).toBe(false)
+			expect(model.loaded).toBe(true)
+			// Should have set the flag indicating kilocode profile exists but has no balance
+			expect(model.hasKilocodeProfileWithNoBalance).toBe(true)
+		})
+
+		it("should not set hasKilocodeProfileWithNoBalance when kilocode profile has balance", async () => {
+			const profiles = [{ id: "1", name: "kilocode-profile", apiProvider: "kilocode" }] as any
+
+			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+
+			// Mock profile with token
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "kilocode-profile",
+				apiProvider: "kilocode",
+				kilocodeToken: "test-token",
+			} as any)
+
+			// Mock fetch to return positive balance for kilocode and valid models response
+			;(global.fetch as any).mockImplementation(async (url: string) => {
+				if (url.includes("/api/profile/balance")) {
+					return {
+						ok: true,
+						json: async () => ({ balance: 10.5 }),
+					} as any
+				}
+				// For OpenRouter/Kilocode models endpoint
+				if (url.includes("/models")) {
+					return {
+						ok: true,
+						json: async () => ({
+							data: [
+								{
+									id: "mistralai/codestral-2508",
+									name: "Codestral",
+									context_length: 32000,
+									pricing: { prompt: "0.0001", completion: "0.0003" },
+								},
+							],
+						}),
+					} as any
+				}
+				return {
+					ok: true,
+					json: async () => ({}),
+				} as any
+			})
+
+			const model = new GhostModel()
+			const result = await model.reload(mockProviderSettingsManager)
+
+			// Should find a usable provider
+			expect(result).toBe(true)
+			expect(model.loaded).toBe(true)
+			// Should not have set the flag
+			expect(model.hasKilocodeProfileWithNoBalance).toBe(false)
+		})
+
+		it("should clear hasKilocodeProfileWithNoBalance on reload", async () => {
+			const profiles = [{ id: "1", name: "kilocode-profile", apiProvider: "kilocode" }] as any
+
+			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+
+			// Mock profile with token
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "kilocode-profile",
+				apiProvider: "kilocode",
+				kilocodeToken: "test-token",
+			} as any)
+
+			// First reload: zero balance
+			;(global.fetch as any).mockImplementation(async (url: string) => {
+				if (url.includes("/api/profile/balance")) {
+					return {
+						ok: true,
+						json: async () => ({ balance: 0 }),
+					} as any
+				}
+				return {
+					ok: true,
+					json: async () => ({}),
+				} as any
+			})
+
+			const model = new GhostModel()
+			await model.reload(mockProviderSettingsManager)
+			expect(model.hasKilocodeProfileWithNoBalance).toBe(true)
+
+			// Second reload: positive balance with valid models response
+			;(global.fetch as any).mockImplementation(async (url: string) => {
+				if (url.includes("/api/profile/balance")) {
+					return {
+						ok: true,
+						json: async () => ({ balance: 10.5 }),
+					} as any
+				}
+				// For OpenRouter/Kilocode models endpoint
+				if (url.includes("/models")) {
+					return {
+						ok: true,
+						json: async () => ({
+							data: [
+								{
+									id: "mistralai/codestral-2508",
+									name: "Codestral",
+									context_length: 32000,
+									pricing: { prompt: "0.0001", completion: "0.0003" },
+								},
+							],
+						}),
+					} as any
+				}
+				return {
+					ok: true,
+					json: async () => ({}),
+				} as any
+			})
+
+			await model.reload(mockProviderSettingsManager)
+			// Flag should be cleared after reload with positive balance
+			expect(model.hasKilocodeProfileWithNoBalance).toBe(false)
+		})
 	})
 
 	describe("getProviderDisplayName", () => {
