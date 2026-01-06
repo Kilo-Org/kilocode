@@ -226,10 +226,6 @@
 				"label": "Otomatik Tetikleme Gecikmesi",
 				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Görev ({{keybinding}})",
-				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"

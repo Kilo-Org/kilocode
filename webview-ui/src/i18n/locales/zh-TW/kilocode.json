@@ -228,10 +228,6 @@
 				"label": "自動觸發延遲",
 				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速任務 ({{keybinding}})",
-				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手動自動補全 ({{keybinding}})",
 				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"

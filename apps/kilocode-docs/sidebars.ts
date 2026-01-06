@@ -108,6 +108,16 @@ const sidebars: SidebarsConfig = {
 				"plans/getting-started",
 				"plans/dashboard",
 				"plans/analytics",
+				{
+					type: "category",
+					label: "AI Adoption Dashboard",
+					items: [
+						"plans/adoption-dashboard/overview",
+						"plans/adoption-dashboard/understanding-your-score",
+						"plans/adoption-dashboard/improving-your-score",
+						"plans/adoption-dashboard/for-team-leads",
+					],
+				},
 				"plans/team-management",
 				"plans/custom-modes",
 				"plans/billing",
@@ -184,6 +194,7 @@ const sidebars: SidebarsConfig = {
 					items: [
 						"features/mcp/overview",
 						"features/mcp/using-mcp-in-kilo-code",
+						"features/mcp/using-mcp-in-cli",
 						"features/mcp/what-is-mcp",
 						"features/mcp/server-transports",
 						"features/mcp/mcp-vs-api",

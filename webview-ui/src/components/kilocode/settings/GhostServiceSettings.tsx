@@ -28,15 +28,9 @@ export const GhostServiceSettingsView = ({
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
 	const { kiloCodeWrapperProperties } = useExtensionState()
-	const {
-		enableAutoTrigger,
-		enableQuickInlineTaskKeybinding,
-		enableSmartInlineTaskKeybinding,
-		enableChatAutocomplete,
-		provider,
-		model,
-	} = ghostServiceSettings || {}
-	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
+	const { enableAutoTrigger, enableSmartInlineTaskKeybinding, enableChatAutocomplete, provider, model } =
+		ghostServiceSettings || {}
+	const keybindings = useKeybindings(["kilo-code.ghost.generateSuggestions"])
 	const [snoozeDuration, setSnoozeDuration] = useState<number>(300)
 	const [currentTime, setCurrentTime] = useState<number>(Date.now())
 
@@ -54,13 +48,6 @@ export const GhostServiceSettingsView = ({
 	const onEnableAutoTriggerChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableAutoTrigger", e.target.checked)
-		},
-		[onGhostServiceSettingsChange],
-	)
-
-	const onEnableQuickInlineTaskKeybindingChange = useCallback(
-		(e: any) => {
-			onGhostServiceSettingsChange("enableQuickInlineTaskKeybinding", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -168,61 +155,33 @@ export const GhostServiceSettingsView = ({
 					</div>
 
 					{!kiloCodeWrapperProperties?.kiloCodeWrapped && (
-						<>
-							<div className="flex flex-col gap-1">
-								<VSCodeCheckbox
-									checked={enableQuickInlineTaskKeybinding || false}
-									onChange={onEnableQuickInlineTaskKeybindingChange}>
-									<span className="font-medium">
-										{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
-											keybinding: keybindings["kilo-code.addToContextAndFocus"],
-										})}
-									</span>
-								</VSCodeCheckbox>
-								<div className="text-vscode-descriptionForeground text-sm mt-1">
-									<Trans
-										i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
-										components={{
-											DocsLink: (
-												<a
-													href="#"
-													onClick={() =>
-														openGlobalKeybindings("kilo-code.addToContextAndFocus")
-													}
-													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-											),
-										}}
-									/>
-								</div>
+						<div className="flex flex-col gap-1">
+							<VSCodeCheckbox
+								checked={enableSmartInlineTaskKeybinding || false}
+								onChange={onEnableSmartInlineTaskKeybindingChange}>
+								<span className="font-medium">
+									{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
+										keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
+									})}
+								</span>
+							</VSCodeCheckbox>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								<Trans
+									i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
+									values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
+									components={{
+										DocsLink: (
+											<a
+												href="#"
+												onClick={() =>
+													openGlobalKeybindings("kilo-code.ghost.generateSuggestions")
+												}
+												className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
+										),
+									}}
+								/>
 							</div>
-							<div className="flex flex-col gap-1">
-								<VSCodeCheckbox
-									checked={enableSmartInlineTaskKeybinding || false}
-									onChange={onEnableSmartInlineTaskKeybindingChange}>
-									<span className="font-medium">
-										{t("kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label", {
-											keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
-										})}
-									</span>
-								</VSCodeCheckbox>
-								<div className="text-vscode-descriptionForeground text-sm mt-1">
-									<Trans
-										i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"
-										values={{ keybinding: keybindings["kilo-code.ghost.generateSuggestions"] }}
-										components={{
-											DocsLink: (
-												<a
-													href="#"
-													onClick={() =>
-														openGlobalKeybindings("kilo-code.ghost.generateSuggestions")
-													}
-													className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
-											),
-										}}
-									/>
-								</div>
-							</div>
-						</>
+						</div>
 					)}
 
 					<div className="flex flex-col gap-1">

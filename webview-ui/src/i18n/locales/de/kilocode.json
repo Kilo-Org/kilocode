@@ -227,10 +227,6 @@
 				"label": "Auto-Auslöseverzögerung",
 				"description": "Die Verzögerung in Sekunden, bevor Kilo Code Autocomplete auslöst, nachdem du aufgehört hast zu tippen. Eine kürzere Verzögerung bedeutet schnellere Vorschläge, kann aber ressourcenintensiver sein."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Schnellaufgabe ({{keybinding}})",
-				"description": "Brauchst du nur eine schnelle Änderung? Wähle etwas Code aus (oder auch nicht!) und drücke Cmd+I. Beschreibe dein Ziel in einfachem Deutsch (\"erstelle eine React-Komponente mit diesen Props\", \"füge Fehlerbehandlung zu dieser Funktion hinzu\"), und erhalte mehrere, sofort verwendbare Vorschläge direkt in deinem Editor. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manuelle Autovervollständigung ({{keybinding}})",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"

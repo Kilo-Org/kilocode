@@ -1,5 +1,15 @@
-import { appendFileSync } from "fs"
-import * as fs from "fs-extra"
+import {
+	appendFileSync,
+	openSync,
+	readSync,
+	closeSync,
+	statSync,
+	writeFileSync,
+	renameSync,
+	unlinkSync,
+	mkdirSync,
+	existsSync,
+} from "fs"
 import * as path from "path"
 import { KiloCodePaths } from "../utils/paths.js"
 import { safeStringify } from "../utils/safe-stringify.js"
@@ -26,6 +36,11 @@ export interface LogFilter {
  */
 export class LogsService {
 	private static instance: LogsService | null = null
+
+	// Log rotation constants
+	private static readonly MAX_LOG_FILE_SIZE = 10 * 1024 * 1024 // 10 MB - rotate when file exceeds this size
+	private static readonly TRUNCATE_TO_SIZE = 5 * 1024 * 1024 // 5 MB - keep this much of the most recent logs
+
 	private logs: LogEntry[] = []
 	private maxEntries: number = 1000
 	private listeners: Array<(entry: LogEntry) => void> = []
@@ -173,13 +188,95 @@ export class LogsService {
 	private async initializeFileLogging(): Promise<void> {
 		try {
 			const logDir = path.dirname(this.logFilePath)
-			await fs.ensureDir(logDir)
+			// Create log directory if it doesn't exist (recursive)
+			if (!existsSync(logDir)) {
+				mkdirSync(logDir, { recursive: true })
+			}
+
+			// Rotate log file if needed (check size and truncate if too large)
+			this.rotateLogFileIfNeeded()
 		} catch (error) {
 			// Disable file logging if initialization fails
 			this.fileLoggingEnabled = false
 			// Use original console to avoid circular dependency
 			if (this.originalConsole) {
 				this.originalConsole.error("Failed to initialize file logging:", error)
+			}
+		}
+	}
+
+	/**
+	 * Rotate log file if it exceeds maximum size.
+	 * Keeps the most recent entries by truncating from the beginning.
+	 * This is called at startup to prevent unbounded log file growth.
+	 *
+	 * Uses byte-wise reading to avoid loading the entire file into memory,
+	 * and atomic write (temp file + rename) to prevent corruption on crash.
+	 * Uses only native fs module to avoid bundling issues with fs-extra.
+	 */
+	private rotateLogFileIfNeeded(): void {
+		let fd: number | null = null
+		let tempFilePath: string | null = null
+		try {
+			const stats = statSync(this.logFilePath)
+
+			if (stats.size <= LogsService.MAX_LOG_FILE_SIZE) {
+				return // File is within size limit, no rotation needed
+			}
+
+			// Calculate the start position to read from (keep only the last TRUNCATE_TO_SIZE bytes)
+			const startPosition = Math.max(0, stats.size - LogsService.TRUNCATE_TO_SIZE)
+			const bytesToRead = stats.size - startPosition
+
+			// Read only the bytes we need (byte-wise, no full file load)
+			fd = openSync(this.logFilePath, "r")
+			const buffer = Buffer.alloc(bytesToRead)
+			readSync(fd, buffer, 0, bytesToRead, startPosition)
+			closeSync(fd)
+			fd = null
+
+			// Convert to string and find the first complete line
+			let content = buffer.toString("utf8")
+			const firstNewline = content.indexOf("\n")
+			if (firstNewline > 0) {
+				content = content.slice(firstNewline + 1)
+			}
+
+			// Write to a temp file in the SAME directory (ensures same filesystem for atomic rename)
+			const logDir = path.dirname(this.logFilePath)
+			tempFilePath = path.join(logDir, `.cli.txt.rotate-${Date.now()}.tmp`)
+			writeFileSync(tempFilePath, content, "utf8")
+
+			// Atomic rename (works on same filesystem)
+			renameSync(tempFilePath, this.logFilePath)
+			tempFilePath = null // Successfully renamed, no cleanup needed
+		} catch (error: unknown) {
+			// Ensure fd is closed if an error occurred after opening
+			if (fd !== null) {
+				try {
+					closeSync(fd)
+				} catch {
+					// Ignore close errors
+				}
+			}
+
+			// Clean up temp file if it was created but rename failed
+			if (tempFilePath !== null) {
+				try {
+					unlinkSync(tempFilePath)
+				} catch {
+					// Ignore cleanup errors
+				}
+			}
+
+			// Handle ENOENT (file doesn't exist) silently - expected on first run
+			if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+				return
+			}
+
+			// Warn about other errors (disk, permission, etc.) instead of silently ignoring
+			if (this.originalConsole) {
+				this.originalConsole.warn("[LogsService] Failed to rotate log file:", error)
 			}
 		}
 	}
@@ -228,7 +325,9 @@ export class LogsService {
 		try {
 			// Ensure directory exists before writing (synchronous to avoid race conditions)
 			const logDir = path.dirname(this.logFilePath)
-			fs.ensureDirSync(logDir)
+			if (!existsSync(logDir)) {
+				mkdirSync(logDir, { recursive: true })
+			}
 
 			const logLine = this.formatLogEntryForFile(entry) + "\n"
 			appendFileSync(this.logFilePath, logLine, "utf8")

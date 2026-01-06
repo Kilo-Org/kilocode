@@ -1,5 +1,25 @@
 # kilo-code
 
+## 4.141.2
+
+### Patch Changes
+
+- [#4747](https://github.com/Kilo-Org/kilocode/pull/4747) [`e4f9e65`](https://github.com/Kilo-Org/kilocode/commit/e4f9e65e130d0ef34cbf110b64b44f2156d0a425) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed no checkpoint being created before a file is edited
+
+- [#4754](https://github.com/Kilo-Org/kilocode/pull/4754) [`d936b50`](https://github.com/Kilo-Org/kilocode/commit/d936b50f6c28592a910c83c52433eb59aa019cf5) Thanks [@keeganwitt](https://github.com/keeganwitt)! - Added ability to use Codestral for autocomplete from HuggingFace, LiteLLM, LM Studio and Ollama
+
+## 4.141.1
+
+### Patch Changes
+
+- [#4736](https://github.com/Kilo-Org/kilocode/pull/4736) [`c7bd7b7`](https://github.com/Kilo-Org/kilocode/commit/c7bd7b7ad385d32e114f75dfffa6d5d4168ca073) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Skip VSCode-specific diagnostic operations in CLI mode for improved performance
+
+- [#4725](https://github.com/Kilo-Org/kilocode/pull/4725) [`2dcce20`](https://github.com/Kilo-Org/kilocode/commit/2dcce2020b645b8c839a763d4ec97a03f8811aef) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Prevent empty checkpoints from being created on every tool use
+
+- [#4723](https://github.com/Kilo-Org/kilocode/pull/4723) [`b9d0d16`](https://github.com/Kilo-Org/kilocode/commit/b9d0d164bd5a3feaab000a040fb9a04f4cd65f77) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Enable chat autocomplete by default
+
+- [#4681](https://github.com/Kilo-Org/kilocode/pull/4681) [`2be56b8`](https://github.com/Kilo-Org/kilocode/commit/2be56b8b09a0cab177adf18c8dd8998f6362cc2d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains IDEs - Improve intialization process
+
 ## 4.141.0
 
 ### Minor Changes

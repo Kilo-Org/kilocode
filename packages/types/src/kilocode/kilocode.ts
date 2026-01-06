@@ -9,7 +9,6 @@ declare global {
 export const ghostServiceSettingsSchema = z
 	.object({
 		enableAutoTrigger: z.boolean().optional(),
-		enableQuickInlineTaskKeybinding: z.boolean().optional(),
 		enableSmartInlineTaskKeybinding: z.boolean().optional(),
 		enableChatAutocomplete: z.boolean().optional(),
 		provider: z.string().optional(),
