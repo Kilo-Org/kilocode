@@ -7,6 +7,7 @@ import { atom } from "jotai"
 import type { WebviewMessage, ProviderSettings, ClineAskResponse } from "../../types/messages.js"
 import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from "./service.js"
 import { resetMessageCutoffAtom, yoloModeAtom, isCancellingAtom } from "./ui.js"
+import { requestClearAllMessageQueuesAtom } from "./queuedMessages.js"
 import { logs } from "../../services/logs.js"
 
 /**
@@ -125,6 +126,9 @@ export const clearTaskAtom = atom(null, async (get, set) => {
 export const cancelTaskAtom = atom(null, async (get, set) => {
 	// Set cancelling state immediately for instant UI feedback
 	set(isCancellingAtom, true)
+
+	// Clear any locally queued messages (user pressed ESC to stop).
+	set(requestClearAllMessageQueuesAtom)
 
 	const message: WebviewMessage = {
 		type: "cancelTask",

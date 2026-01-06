@@ -5,8 +5,14 @@
  * from stdin in jsonInteractive mode.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { handleStdinMessage, type StdinMessage, type StdinMessageHandlers } from "../useStdinJsonHandler.js"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import {
+	handleStdinMessage,
+	createQueuedStdinMessageProcessor,
+	type StdinMessage,
+	type StdinMessageHandlers,
+	type StdinMessageQueueState,
+} from "../useStdinJsonHandler.js"
 
 describe("handleStdinMessage", () => {
 	let handlers: StdinMessageHandlers
@@ -244,5 +250,158 @@ describe("handleStdinMessage", () => {
 			const call = sendAskResponse.mock.calls[0][0]
 			expect("images" in call).toBe(false)
 		})
+	})
+})
+
+describe("createQueuedStdinMessageProcessor", () => {
+	let state: StdinMessageQueueState
+	let handlers: StdinMessageHandlers
+	let sendAskResponse: ReturnType<typeof vi.fn>
+	let cancelTask: ReturnType<typeof vi.fn>
+	let respondToTool: ReturnType<typeof vi.fn>
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+
+		state = {
+			isServiceReady: false,
+			isStreaming: false,
+			isApprovalPending: false,
+		}
+
+		sendAskResponse = vi.fn().mockResolvedValue(undefined)
+		cancelTask = vi.fn().mockResolvedValue(undefined)
+		respondToTool = vi.fn().mockResolvedValue(undefined)
+
+		handlers = {
+			sendAskResponse,
+			cancelTask,
+			respondToTool,
+		}
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	it("should not deliver messageResponse until service is ready", async () => {
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "hello" })
+		await vi.runAllTimersAsync()
+		expect(sendAskResponse).not.toHaveBeenCalled()
+
+		state.isServiceReady = true
+		processor.notify()
+		await vi.runAllTimersAsync()
+
+		expect(sendAskResponse).toHaveBeenCalledWith({ response: "messageResponse", text: "hello" })
+		processor.dispose()
+	})
+
+	it("should not deliver messageResponse while streaming", async () => {
+		state.isServiceReady = true
+		state.isStreaming = true
+
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "hello" })
+		await vi.runAllTimersAsync()
+		expect(sendAskResponse).not.toHaveBeenCalled()
+
+		state.isStreaming = false
+		processor.notify()
+		await vi.runAllTimersAsync()
+
+		expect(sendAskResponse).toHaveBeenCalledWith({ response: "messageResponse", text: "hello" })
+		processor.dispose()
+	})
+
+	it("should wait for pending approval before responding", async () => {
+		state.isServiceReady = true
+
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		processor.enqueue({ type: "respondToApproval", approved: true })
+		await vi.runAllTimersAsync()
+		expect(respondToTool).not.toHaveBeenCalled()
+
+		state.isApprovalPending = true
+		processor.notify()
+		await vi.runAllTimersAsync()
+
+		expect(respondToTool).toHaveBeenCalledWith({ response: "yesButtonClicked" })
+		processor.dispose()
+	})
+
+	it("should apply backpressure and deliver queued messages one at a time", async () => {
+		state.isServiceReady = true
+
+		sendAskResponse.mockImplementation(async () => {
+			setTimeout(() => {
+				state.isStreaming = true
+			}, 5)
+			setTimeout(() => {
+				state.isStreaming = false
+			}, 10)
+		})
+
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 100, reactionDoneTimeoutMs: 100 },
+		})
+
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "first" })
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "second" })
+
+		// Allow microtask-scheduled drain to start.
+		await Promise.resolve()
+
+		// Allow the first send to happen.
+		await vi.advanceTimersByTimeAsync(1)
+		expect(sendAskResponse).toHaveBeenCalledTimes(1)
+		expect(sendAskResponse).toHaveBeenCalledWith({ response: "messageResponse", text: "first" })
+
+		// Still waiting for the streaming cycle to complete.
+		await vi.advanceTimersByTimeAsync(8)
+		expect(sendAskResponse).toHaveBeenCalledTimes(1)
+
+		// After the cycle completes, the second message can be delivered.
+		await vi.advanceTimersByTimeAsync(100)
+		expect(sendAskResponse).toHaveBeenCalledTimes(2)
+		expect(sendAskResponse).toHaveBeenNthCalledWith(2, { response: "messageResponse", text: "second" })
+
+		processor.dispose()
+	})
+
+	it("should clear queued messages and not deliver them later", async () => {
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "hello" })
+		processor.clear()
+
+		state.isServiceReady = true
+		processor.notify()
+		await vi.runAllTimersAsync()
+
+		expect(sendAskResponse).not.toHaveBeenCalled()
+		processor.dispose()
 	})
 })

@@ -21,9 +21,13 @@ vi.mock("../../../services/logs.js", () => ({
 	},
 }))
 
-vi.mock("../../../config/persistence.js", () => ({
-	saveConfig: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock("../../../config/persistence.js", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../../config/persistence.js")>()
+	return {
+		...actual,
+		saveConfig: vi.fn().mockResolvedValue(undefined),
+	}
+})
 
 vi.mock("../../../ui/utils/messages.js", () => ({
 	generateModelFallbackMessage: vi.fn().mockReturnValue({

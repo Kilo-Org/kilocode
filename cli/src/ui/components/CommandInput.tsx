@@ -23,6 +23,7 @@ import { AutocompleteMenu } from "./AutocompleteMenu.js"
 import { ApprovalMenu } from "./ApprovalMenu.js"
 import { FollowupSuggestionsMenu } from "./FollowupSuggestionsMenu.js"
 import { useResetAtom } from "jotai/utils"
+import { queuedUserMessagesAtom } from "../../state/atoms/queuedMessages.js"
 
 interface CommandInputProps {
 	onSubmit: (value: string) => void
@@ -52,6 +53,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 
 	// Use the followup suggestions hook
 	const { suggestions: followupSuggestions, isVisible: isFollowupVisible } = useFollowupSuggestions()
+	const queuedMessages = useAtomValue(queuedUserMessagesAtom)
 
 	// Setup centralized keyboard handler
 	const setSubmissionCallback = useSetAtom(submissionCallbackAtom)
@@ -139,8 +141,32 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 				? "Actions available:"
 				: placeholder
 
+	const queuedPreview = (() => {
+		const next = queuedMessages[0]
+		if (!next) return ""
+		const collapsed = next.text.replace(/\s+/g, " ").trim()
+		const max = 90
+		return collapsed.length > max ? `${collapsed.slice(0, max - 1)}…` : collapsed
+	})()
+
 	return (
 		<Box flexDirection="column">
+			{queuedMessages.length > 0 && (
+				<Box
+					borderStyle="round"
+					borderColor={theme.ui.border.active}
+					paddingX={1}
+					marginBottom={1}
+					flexDirection="row"
+				>
+					<Text color={theme.ui.text.dimmed} dimColor>
+						Queued ({queuedMessages.length}) next:
+					</Text>
+					<Text> </Text>
+					<Text>{queuedPreview}</Text>
+				</Box>
+			)}
+
 			{/* Input field */}
 			<Box borderStyle="round" borderColor={borderColor} paddingX={1}>
 				<Box flexDirection="row" alignItems="center">

@@ -9,10 +9,24 @@ import { addMessageAtom } from "../atoms/ui.js"
 import { imageReferencesAtom, clearImageReferencesAtom } from "../atoms/keyboard.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
+import { isServiceReadyAtom } from "../atoms/service.js"
+import { isStreamingAtom } from "../atoms/ui.js"
+import { isApprovalPendingAtom } from "../atoms/approval.js"
 import type { CliMessage } from "../../types/cli.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
 import { processMessageImages } from "../../media/processMessageImages.js"
+import { useOutgoingMessageQueue } from "./useOutgoingMessageQueue.js"
+
+function shouldQueueOnNotReadyError(error: unknown): boolean {
+	if (!(error instanceof Error)) return false
+	const message = error.message.toLowerCase()
+	return (
+		message.includes("extensionservice not ready") ||
+		message.includes("extensionservice not available") ||
+		message.includes("not ready")
+	)
+}
 
 /**
  * Options for useMessageHandler hook
@@ -64,6 +78,10 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const clearImageReferences = useSetAtom(clearImageReferencesAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
+	const isServiceReady = useAtomValue(isServiceReadyAtom)
+	const isStreaming = useAtomValue(isStreamingAtom)
+	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const outgoingQueue = useOutgoingMessageQueue()
 
 	const sendUserMessage = useCallback(
 		async (text: string): Promise<void> => {
@@ -103,29 +121,51 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				)
 
 				// Build message payload
-				const payload = {
-					text: processed.text,
-					...(processed.hasImages && { images: processed.images }),
-				}
+					const payload = {
+						text: processed.text,
+						...(processed.hasImages && { images: processed.images }),
+					}
 
-				// Clear image references after processing
-				if (imageReferences.size > 0) {
-					clearImageReferences()
-				}
+					const enqueueOutgoing = () => {
+						outgoingQueue.enqueue({
+							text: processed.text,
+							...(processed.hasImages && { images: processed.images }),
+						})
+					}
 
-				// Send to extension - either as response to active task or as new task
-				if (hasActiveTask) {
-					logs.debug("Sending message as response to active task", "useMessageHandler", {
-						hasImages: processed.hasImages,
-					})
-					await sendAskResponse({ response: "messageResponse", ...payload })
-				} else {
-					logs.debug("Starting new task", "useMessageHandler", {
-						hasImages: processed.hasImages,
-					})
-					await sendMessage({ type: "newTask", ...payload })
-				}
-			} catch (error) {
+					// Clear image references after processing (even if we queue)
+					if (imageReferences.size > 0) {
+						clearImageReferences()
+					}
+
+					const shouldQueueForCurrentState = !isServiceReady || isStreaming || isApprovalPending
+					if (shouldQueueForCurrentState) {
+						enqueueOutgoing()
+						return
+					}
+
+					// Send to extension - either as response to active task or as new task
+					try {
+						if (hasActiveTask) {
+						logs.debug("Sending message as response to active task", "useMessageHandler", {
+							hasImages: processed.hasImages,
+						})
+						await sendAskResponse({ response: "messageResponse", ...payload })
+					} else {
+						logs.debug("Starting new task", "useMessageHandler", {
+							hasImages: processed.hasImages,
+						})
+							await sendMessage({ type: "newTask", ...payload })
+						}
+					} catch (error) {
+						// If readiness raced (we looked ready but weren't), enqueue instead of failing.
+						if (shouldQueueOnNotReadyError(error)) {
+							enqueueOutgoing()
+							return
+						}
+						throw error
+					}
+				} catch (error) {
 				const errorMessage: CliMessage = {
 					id: Date.now().toString(),
 					type: "error",
@@ -137,7 +177,19 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				setIsSending(false)
 			}
 		},
-		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask, imageReferences, clearImageReferences],
+		[
+			addMessage,
+			ciMode,
+			sendMessage,
+			sendAskResponse,
+			hasActiveTask,
+			imageReferences,
+			clearImageReferences,
+			isServiceReady,
+			isStreaming,
+			isApprovalPending,
+			outgoingQueue,
+		],
 	)
 
 	return {
