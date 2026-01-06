@@ -1,4 +1,4 @@
-//kilocode_change - new file
+// kilocode_change - new file
 
 /**
  * Drop-in replacement for Fzf library that uses word boundary matching
