@@ -106,7 +106,10 @@ describe("loadAgentRulesContent", () => {
 		}
 
 		const readFile = vi.fn(async (filePath: string) => {
-			const normalizedParentDir = path.dirname(filePath).replace(/\\/g, "/")
+			const normalizedParentDir = path
+				.dirname(filePath)
+				.replace(/\\/g, "/")
+				.replace(/^[a-zA-Z]:/, "")
 			const index = dirs.indexOf(normalizedParentDir)
 			if (index === -1) {
 				return ""
