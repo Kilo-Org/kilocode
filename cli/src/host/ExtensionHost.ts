@@ -1040,6 +1040,21 @@ export class ExtensionHost extends EventEmitter {
 				settings: Object.keys(autoApprovalSettings),
 			})
 		}
+
+		// kilocode_change start: Sync appendSystemPrompt to extension
+		// This setting is passed from CLI options and needs to be stored in the extension's
+		// contextProxy so it's available when generating the system prompt
+		const appendSystemPrompt = configState.appendSystemPrompt || this.options.appendSystemPrompt
+		if (appendSystemPrompt) {
+			await this.sendWebviewMessage({
+				type: "updateSettings",
+				updatedSettings: { appendSystemPrompt },
+			})
+			logs.debug("appendSystemPrompt synchronized to extension", "ExtensionHost", {
+				length: appendSystemPrompt.length,
+			})
+		}
+		// kilocode_change end
 	}
 
 	/**
