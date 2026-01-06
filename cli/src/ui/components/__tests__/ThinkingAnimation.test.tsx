@@ -16,6 +16,29 @@ vi.mock("../../../state/hooks/useTheme.js", () => ({
 	}),
 }))
 
+// Animation frames used by the component
+const ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const
+const FRAME_INTERVAL = 80
+const TIMER_STEP = FRAME_INTERVAL + 1
+
+type AnimationFrame = (typeof ANIMATION_FRAMES)[number]
+
+const getDisplayedFrame = (frameText: string | undefined): AnimationFrame | undefined =>
+	ANIMATION_FRAMES.find((frame) => frameText?.includes(frame))
+
+const advanceUntilFrame = async (
+	lastFrame: () => string | undefined,
+	expectedFrame: AnimationFrame,
+	maxSteps: number = ANIMATION_FRAMES.length + 2,
+) => {
+	for (let i = 0; i < maxSteps; i++) {
+		await vi.advanceTimersByTimeAsync(TIMER_STEP)
+		if (lastFrame()?.includes(expectedFrame)) return
+	}
+
+	expect(lastFrame()).toContain(expectedFrame)
+}
+
 describe("ThinkingAnimation", () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
@@ -30,14 +53,14 @@ describe("ThinkingAnimation", () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
 		// Should show first frame character (⠋) and default text
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 		expect(lastFrame()).toContain("Thinking...")
 	})
 
 	it("should render with custom text", () => {
 		const { lastFrame } = render(<ThinkingAnimation text="Processing..." />)
 
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 		expect(lastFrame()).toContain("Processing...")
 	})
 
@@ -45,29 +68,25 @@ describe("ThinkingAnimation", () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
 		// Initial frame
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 
-		// Advance to next frame (80ms) and wait for React to update
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠙")
-
-		// Advance to third frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠹")
-
-		// Advance to fourth frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠸")
+		// useEffect can schedule the interval after a short delay, so don't assume tick 1 starts at t=0
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[2])
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[3])
 	})
 
 	it("should loop back to first frame after completing cycle", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Advance through all 10 frames (10 * 80ms = 800ms)
-		await vi.advanceTimersByTimeAsync(800)
+		// Ensure the interval has started ticking before asserting about looping
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
+
+		// After reaching frame[1], it should loop back to frame[0] within one cycle
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[0], ANIMATION_FRAMES.length)
 
 		// Should be back at first frame
-		expect(lastFrame()).toContain("⠋")
+		expect(lastFrame()).toContain(ANIMATION_FRAMES[0])
 	})
 
 	it("should clean up interval on unmount", () => {
@@ -82,14 +101,17 @@ describe("ThinkingAnimation", () => {
 	it("should continue animating after multiple cycles", async () => {
 		const { lastFrame } = render(<ThinkingAnimation />)
 
-		// Complete two full cycles (2 * 800ms = 1600ms)
-		await vi.advanceTimersByTimeAsync(1600)
+		// Wait for at least one tick so we know the interval is active
+		await advanceUntilFrame(lastFrame, ANIMATION_FRAMES[1])
 
-		// Should still be at first frame
-		expect(lastFrame()).toContain("⠋")
+		const seenFrames = new Set<string>()
+		for (let i = 0; i < ANIMATION_FRAMES.length * 2; i++) {
+			await vi.advanceTimersByTimeAsync(TIMER_STEP)
+			const frame = getDisplayedFrame(lastFrame())
+			if (frame) seenFrames.add(frame)
+		}
 
-		// Advance one more frame
-		await vi.advanceTimersByTimeAsync(80)
-		expect(lastFrame()).toContain("⠙")
+		// If it keeps animating, we should observe multiple distinct frames over time
+		expect(seenFrames.size).toBeGreaterThan(3)
 	})
 })

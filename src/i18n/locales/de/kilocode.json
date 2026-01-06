@@ -197,5 +197,11 @@
 			"installMessage": "Führe npm install aus, um die Kilocode CLI zu installieren. Sobald die Installation abgeschlossen ist, kannst du dieses Terminal schließen und versuchen, den Agent Manager erneut zu starten.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Ihr OpenAI API-Schlüssel ist ungültig oder hat keinen Zugriff auf die Realtime API. Bitte überprüfen Sie Ihren API-Schlüssel und versuchen Sie es erneut.",
+			"unknown": "Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Konfiguration und versuchen Sie es erneut."
+		}
 	}
 }

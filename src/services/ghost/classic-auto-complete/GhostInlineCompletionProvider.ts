@@ -11,6 +11,7 @@ import {
 	LLMRetrievalResult,
 	PendingRequest,
 	AutocompleteContext,
+	LastSuggestionInfo,
 } from "../types"
 import { HoleFiller } from "./HoleFiller"
 import { FimPromptBuilder } from "./FillInTheMiddle"
@@ -241,6 +242,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
 	private latencyHistory: number[] = []
 	private telemetry: AutocompleteTelemetry | null
+	/** Information about the last suggestion shown to the user */
+	private lastSuggestion: LastSuggestionInfo | null = null
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -277,7 +280,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
 
 		this.acceptedCommand = vscode.commands.registerCommand(INLINE_COMPLETION_ACCEPTED_COMMAND, () =>
-			this.telemetry?.captureAcceptSuggestion(),
+			this.telemetry?.captureAcceptSuggestion(this.lastSuggestion?.length),
 		)
 	}
 
@@ -482,6 +485,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			)
 
 			if (matchingResult !== null) {
+				this.lastSuggestion = {
+					...telemetryContext,
+					length: matchingResult.text.length,
+				}
 				this.telemetry?.captureCacheHit(matchingResult.matchType, telemetryContext, matchingResult.text.length)
 				return stringToInlineCompletions(matchingResult.text, position)
 			}
@@ -504,6 +511,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				prefix,
 			)
 			if (cachedResult) {
+				this.lastSuggestion = {
+					...telemetryContext,
+					length: cachedResult.text.length,
+				}
 				this.telemetry?.captureLlmSuggestionReturned(telemetryContext, cachedResult.text.length)
 			}
 

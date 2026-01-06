@@ -7,7 +7,7 @@ Custom Instructions allow you to personalize how Kilo Code behaves, providing sp
 Custom Instructions define specific Extension behaviors, preferences, and constraints beyond Kilo's basic role definition. Examples include coding style, documentation standards, testing requirements, and workflow guidelines.
 
 :::info Custom Instructions vs Rules
-Custom Instructions are IDE-wide and are applied across all workspaces and maintain your preferences regardless of which project you're working on. Unlike Instructions, [Custom Rules](/advanced-usage/custom-rules.md) are project specific and allow you to setup workspace-based ruleset.
+Custom Instructions are IDE-wide and are applied across all workspaces and maintain your preferences regardless of which project you're working on. Unlike Instructions, [Custom Rules](/agent-behavior/custom-rules) are project specific and allow you to setup workspace-based ruleset.
 :::
 
 ## Setting Custom Instructions
@@ -36,7 +36,7 @@ Mode-specific instructions can be set using the Modes Tab
 
 ## Related Features
 
-- [Custom Modes](/docs/features/custom-modes)
-- [Custom Rules](/advanced-usage/custom-rules)
-- [Settings Management](/docs/features/settings-management)
-- [Auto-Approval Settings](/docs/features/auto-approving-actions)
+- [Custom Modes](/agent-behavior/custom-modes)
+- [Custom Rules](/agent-behavior/custom-rules)
+- [Settings Management](/basic-usage/settings-management)
+- [Auto-Approval Settings](/features/auto-approving-actions)

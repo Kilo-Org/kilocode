@@ -197,5 +197,11 @@
 			"cancelButton": "Zrušit"
 		},
 		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Váš OpenAI API klíč je neplatný nebo nemá přístup k Realtime API. Zkontrolujte prosím svůj API klíč a zkuste to znovu.",
+			"unknown": "Připojení se nezdařilo. Zkontrolujte prosím svou konfiguraci a zkuste to znovu."
+		}
 	}
 }

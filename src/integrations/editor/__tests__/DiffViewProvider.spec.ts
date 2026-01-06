@@ -358,10 +358,23 @@ describe("DiffViewProvider", () => {
 	})
 
 	describe("saveDirectly method", () => {
+		const originalCliMode = process.env.KILO_CLI_MODE
+
 		beforeEach(() => {
+			// Ensure tests run in non-CLI mode by default
+			delete process.env.KILO_CLI_MODE
 			// Mock vscode functions
 			vi.mocked(vscode.window.showTextDocument).mockResolvedValue({} as any)
 			vi.mocked(vscode.languages.getDiagnostics).mockReturnValue([])
+		})
+
+		afterEach(() => {
+			// Restore original environment
+			if (originalCliMode === undefined) {
+				delete process.env.KILO_CLI_MODE
+			} else {
+				process.env.KILO_CLI_MODE = originalCliMode
+			}
 		})
 
 		it("should write content directly to file without opening diff view", async () => {
@@ -515,6 +528,61 @@ describe("DiffViewProvider", () => {
 			// Verify custom delay was used
 			expect(mockDelay).toHaveBeenCalledWith(5000)
 			expect(vscode.languages.getDiagnostics).toHaveBeenCalled()
+		})
+	})
+
+	describe("CLI mode optimization", () => {
+		const originalEnv = process.env.KILO_CLI_MODE
+
+		afterEach(() => {
+			// Restore original environment
+			if (originalEnv === undefined) {
+				delete process.env.KILO_CLI_MODE
+			} else {
+				process.env.KILO_CLI_MODE = originalEnv
+			}
+		})
+
+		describe("saveDirectly in CLI mode", () => {
+			beforeEach(() => {
+				vi.mocked(vscode.window.showTextDocument).mockResolvedValue({} as any)
+				vi.mocked(vscode.languages.getDiagnostics).mockReturnValue([])
+			})
+
+			it("should skip diagnostic delay when KILO_CLI_MODE is true", async () => {
+				process.env.KILO_CLI_MODE = "true"
+				const mockDelay = vi.mocked(delay)
+				mockDelay.mockClear()
+				vi.mocked(vscode.languages.getDiagnostics).mockClear()
+
+				await diffViewProvider.saveDirectly("test.ts", "new content", true, true, 2000)
+
+				// In CLI mode, delay should NOT be called even when diagnosticsEnabled is true
+				expect(mockDelay).not.toHaveBeenCalled()
+				// getDiagnostics should only be called once for pre-diagnostics, not for post-diagnostics
+				expect(vscode.languages.getDiagnostics).toHaveBeenCalledTimes(1)
+			})
+
+			it("should apply diagnostic delay when KILO_CLI_MODE is not set", async () => {
+				delete process.env.KILO_CLI_MODE
+				const mockDelay = vi.mocked(delay)
+				mockDelay.mockClear()
+
+				await diffViewProvider.saveDirectly("test.ts", "new content", true, true, 2000)
+
+				// Without CLI mode, delay should be called
+				expect(mockDelay).toHaveBeenCalledWith(2000)
+			})
+
+			it("should skip document opening in CLI mode when openFile is false", async () => {
+				process.env.KILO_CLI_MODE = "true"
+				vi.mocked(vscode.workspace.openTextDocument).mockClear()
+
+				await diffViewProvider.saveDirectly("test.ts", "new content", false, true, 1000)
+
+				// In CLI mode with openFile=false, should not open document at all
+				expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled()
+			})
 		})
 	})
 })

@@ -2,21 +2,15 @@
  * MessageDisplay component - displays chat messages from both CLI and extension state
  * Uses Ink Static component to optimize rendering of completed messages
  *
- * Performance Optimization:
- * ------------------------
- * Messages are split into two sections:
- * 1. Static section: Completed messages that won't change (rendered once with Ink Static)
- * 2. Dynamic section: Incomplete/updating messages (re-rendered as needed)
- *
- * This prevents unnecessary re-renders of completed messages, improving performance
- * especially in long conversations.
+ * Pure Static Mode:
+ * -----------------
+ * Partial/streaming messages are filtered out at the atom level (see splitMessagesAtom),
+ * so this component only ever renders completed messages using Ink Static.
  *
  * Message Completion Logic:
  * -------------------------
- * A message is considered complete when:
- * - CLI messages: partial !== true
- * - Extension messages: depends on type (see messageCompletion.ts)
- * - Sequential rule: A message can only be static if all previous messages are complete
+ * In pure static mode, any message with `partial === true` is hidden and everything else is
+ * treated as complete for display purposes.
  *
  * Key Generation Strategy:
  * -----------------------
@@ -40,15 +34,8 @@
 import React from "react"
 import { Box, Static } from "ink"
 import { useAtomValue } from "jotai"
-import { type UnifiedMessage, staticMessagesAtom, dynamicMessagesAtom } from "../../state/atoms/ui.js"
+import { type UnifiedMessage, dynamicMessagesAtom, staticMessagesAtom } from "../../state/atoms/ui.js"
 import { MessageRow } from "./MessageRow.js"
-
-interface MessageDisplayProps {
-	/** Optional filter to show only specific message types */
-	filterType?: "ask" | "say"
-	/** Maximum number of messages to display (default: all) */
-	maxMessages?: number
-}
 
 /**
  * Generate a unique key for a unified message
@@ -79,7 +66,7 @@ function getMessageKey(msg: UnifiedMessage, index: number): string {
 	return `${subtypeKey}-${index}`
 }
 
-export const MessageDisplay: React.FC<MessageDisplayProps> = () => {
+export const MessageDisplay: React.FC = () => {
 	const staticMessages = useAtomValue(staticMessagesAtom)
 	const dynamicMessages = useAtomValue(dynamicMessagesAtom)
 
@@ -89,8 +76,6 @@ export const MessageDisplay: React.FC<MessageDisplayProps> = () => {
 
 	return (
 		<Box flexDirection="column">
-			{/* Static section for completed messages - won't re-render */}
-			{/* Key includes resetCounter to force re-mount when messages are replaced */}
 			{staticMessages.length > 0 && (
 				<Static items={staticMessages}>
 					{(message, index) => (
@@ -101,12 +86,15 @@ export const MessageDisplay: React.FC<MessageDisplayProps> = () => {
 				</Static>
 			)}
 
-			{/* Dynamic section for incomplete/updating messages - will re-render */}
-			{dynamicMessages.map((unifiedMsg, index) => (
-				<Box paddingX={1} key={getMessageKey(unifiedMsg, staticMessages.length + index)}>
-					<MessageRow unifiedMessage={unifiedMsg} />
+			{dynamicMessages.length > 0 && (
+				<Box flexDirection="column">
+					{dynamicMessages.map((message, index) => (
+						<Box key={`dyn-${getMessageKey(message, index)}`} paddingX={1}>
+							<MessageRow unifiedMessage={message} />
+						</Box>
+					))}
 				</Box>
-			))}
+			)}
 		</Box>
 	)
 }

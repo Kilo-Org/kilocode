@@ -100,13 +100,3 @@ export interface ImageData {
 	imageUri: string
 	imagePath: string
 }
-
-/**
- * Codebase search result structure
- */
-export interface CodebaseSearchResult {
-	file: string
-	line: number
-	content: string
-	score: number
-}

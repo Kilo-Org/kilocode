@@ -275,6 +275,10 @@ program
 
 // Handle process termination signals
 process.on("SIGINT", async () => {
+	if (cli?.requestExitConfirmation()) {
+		return
+	}
+
 	if (cli) {
 		await cli.dispose("SIGINT")
 	} else {

@@ -197,5 +197,11 @@
 			"cancelButton": "Anuluj"
 		},
 		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Twój klucz API OpenAI jest nieprawidłowy lub nie ma dostępu do API Realtime. Sprawdź swój klucz API i spróbuj ponownie.",
+			"unknown": "Połączenie nie powiodło się. Sprawdź konfigurację i spróbuj ponownie."
+		}
 	}
 }

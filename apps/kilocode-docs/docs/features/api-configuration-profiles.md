@@ -98,7 +98,7 @@ API keys are stored securely in VSCode's Secret Storage and are never exposed in
 
 ## Related Features
 
-- Works with [custom modes](/features/custom-modes) you create
+- Works with [custom modes](/agent-behavior/custom-modes) you create
 - Integrates with [local models](/advanced-usage/local-models) for offline work
 - Supports [temperature settings](/features/model-temperature) per mode
 - Enhances cost management with [rate limits and usage tracking](/advanced-usage/rate-limits-costs)

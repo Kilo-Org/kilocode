@@ -21,6 +21,7 @@ export class GhostModel {
 	public profileType: string | null = null
 	private currentProvider: ProviderName | null = null
 	public loaded = false
+	public hasKilocodeProfileWithNoBalance = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
 		if (apiHandler) {
@@ -34,6 +35,7 @@ export class GhostModel {
 		this.profileType = null
 		this.currentProvider = null
 		this.loaded = false
+		this.hasKilocodeProfileWithNoBalance = false
 	}
 
 	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
@@ -60,7 +62,12 @@ export class GhostModel {
 			if (provider === "kilocode") {
 				// For all other providers, assume they are usable
 				if (!profile.kilocodeToken) continue
-				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
+				const hasBalance = await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId)
+				if (!hasBalance) {
+					// Track that we found a kilocode profile but it has no balance
+					this.hasKilocodeProfileWithNoBalance = true
+					continue
+				}
 			}
 			await useProfile(this, { ...profile, [modelIdKeysByProvider[provider]]: model }, provider)
 			return true

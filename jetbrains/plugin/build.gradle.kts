@@ -66,6 +66,21 @@ version = properties("pluginVersion").get()
 
 repositories {
     mavenCentral()
+    // Fallback mirrors for when Maven Central returns 403 (common in CI environments)
+    maven {
+        url = uri("https://repo1.maven.org/maven2/")
+        content {
+            includeGroupByRegex("com\\.squareup.*")
+            includeGroupByRegex("com\\.google.*")
+        }
+    }
+    maven {
+        url = uri("https://maven-central.storage.googleapis.com/maven2/")
+        content {
+            includeGroupByRegex("com\\.squareup.*")
+            includeGroupByRegex("com\\.google.*")
+        }
+    }
 
     intellijPlatform {
         defaultRepositories()

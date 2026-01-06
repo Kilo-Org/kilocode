@@ -36,6 +36,7 @@ import { generateNotificationMessage } from "../utils/notifications.js"
 import { notificationsAtom } from "../state/atoms/notifications.js"
 import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
+import { exitRequestCounterAtom } from "../state/atoms/keyboard.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -65,6 +66,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
 	const taskResumedViaSession = useAtomValue(taskResumedViaContinueOrSessionAtom)
 	const { hasActiveTask } = useTaskState()
+	const exitRequestCounter = useAtomValue(exitRequestCounterAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -93,6 +95,17 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		...(options.timeout !== undefined && { timeout: options.timeout }),
 		onExit: onExit,
 	})
+
+	const handledExitRequestRef = useRef(exitRequestCounter)
+
+	useEffect(() => {
+		if (exitRequestCounter === handledExitRequestRef.current) {
+			return
+		}
+
+		handledExitRequestRef.current = exitRequestCounter
+		void executeCommand("/exit", onExit)
+	}, [exitRequestCounter, executeCommand, onExit])
 
 	// Track if prompt has been executed and welcome message shown
 	const promptExecutedRef = useRef(false)
@@ -238,27 +251,18 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	])
 
 	useEffect(() => {
-		if (!options.noSplash) {
-			return
-		}
-
 		const checkVersion = async () => {
 			setVersionStatus(await getAutoUpdateStatus())
 		}
 
-		if (!autoUpdatedCheckedRef.current && !options.ci) {
+		if (!autoUpdatedCheckedRef.current && !options.ci && process.env.KILO_EPHEMERAL_MODE !== "true") {
 			autoUpdatedCheckedRef.current = true
 			checkVersion()
 		}
-	}, [])
+	}, [options.ci])
 
 	// Show update or notification messages
 	useEffect(() => {
-		// Skip if noSplash option is enabled
-		if (options.noSplash) {
-			return
-		}
-
 		if (!versionStatus) return
 
 		if (versionStatus.isOutdated) {
@@ -267,7 +271,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Only show notification if there's no pending update
 			addMessage(generateNotificationMessage(notifications[0]))
 		}
-	}, [notifications, versionStatus, options.noSplash])
+	}, [notifications, versionStatus, addMessage])
 
 	// Fetch task history on mount if not in CI mode
 	const taskHistoryFetchedRef = useRef(false)

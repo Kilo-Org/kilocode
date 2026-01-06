@@ -1,5 +1,17 @@
 # @kilocode/cli
 
+## 0.18.1
+
+### Patch Changes
+
+- [#4728](https://github.com/Kilo-Org/kilocode/pull/4728) [`8ecb081`](https://github.com/Kilo-Org/kilocode/commit/8ecb081d10ee273613f138e651abae5e1b28ab1e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Clear input field when Ctrl+C is pressed
+
+- [#4244](https://github.com/Kilo-Org/kilocode/pull/4244) [`f32adee`](https://github.com/Kilo-Org/kilocode/commit/f32adee47a681aa82ed65b412f9ddaeb46c051a5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add image paste support to CLI
+
+    - Allow Ctrl+V in the CLI to paste clipboard images, attach them as [Image #N], and send them with messages (macOS only, with status feedback and cleanup)
+    - Add image mention parsing (@path and [Image #N]) so pasted or referenced images are included when sending messages
+    - Split media code into a dedicated module with platform-specific clipboard handlers and image utilities
+
 ## 0.18.0
 
 ### Minor Changes

@@ -177,6 +177,34 @@ describe("updateChatMessageByTsAtom", () => {
 		expect(messages[0]?.text).toBe("This is a long message")
 	})
 
+	it("should update non-partial messages when content changes but length stays the same", () => {
+		// Setup: Add initial message and initialize version tracking
+		const initialMessage: ExtensionChatMessage = {
+			ts: 1000,
+			type: "say",
+			say: "api_req_started",
+			text: '{"cost":0.0010}',
+			partial: false,
+		}
+		store.set(updateChatMessagesAtom, [initialMessage])
+		store.set(updateChatMessageByTsAtom, initialMessage)
+
+		// Update with different content but identical length (cost changed, same number of digits)
+		const updatedMessage: ExtensionChatMessage = {
+			ts: 1000,
+			type: "say",
+			say: "api_req_started",
+			text: '{"cost":0.0020}',
+			partial: false,
+		}
+		expect(updatedMessage.text?.length).toBe(initialMessage.text?.length)
+		store.set(updateChatMessageByTsAtom, updatedMessage)
+
+		const messages = store.get(chatMessagesAtom)
+		expect(messages).toHaveLength(1)
+		expect(messages[0]?.text).toBe('{"cost":0.0020}')
+	})
+
 	it("should handle ask messages correctly", () => {
 		// Setup: Add partial ask message
 		const partialAsk: ExtensionChatMessage = {
