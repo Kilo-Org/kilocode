@@ -31,6 +31,7 @@ export enum TelemetryEventName {
 	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
 	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
 	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+	AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN = "Autocomplete Unique Suggestion Shown",
 
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
@@ -227,6 +228,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
