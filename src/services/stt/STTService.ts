@@ -91,6 +91,13 @@ export class STTService {
 
 			this.emitter.onStarted(this.sessionId)
 		} catch (error) {
+			console.log("🎙️ [STTService] ❌ Error during start:", {
+				errorType: error instanceof Error ? error.constructor.name : typeof error,
+				errorMessage: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+			})
+
+			this.isActive = false
 			const errorMessage = error instanceof Error ? error.message : "Failed to start"
 			this.emitter.onStopped("error", undefined, errorMessage)
 			await this.cleanupOnError()
@@ -348,14 +355,28 @@ export class STTService {
 	 * Handle recoverable errors by emitting to UI and cleaning up
 	 */
 	private async handleRecoverableError(error: Error): Promise<void> {
+		console.warn("🎙️ [STTService] ⚠️ handleRecoverableError called:", {
+			errorMessage: error.message,
+			isActive: this.isActive,
+			sessionId: this.sessionId,
+		})
+
+		// Immediately stop processing to prevent any new audio/data from being processed
+		this.isActive = false
+
+		// Send error to frontend immediately
+		console.warn("🎙️ [STTService] 📤 Calling emitter.onStopped with error:", {
+			reason: "error",
+			text: undefined,
+			errorMessage: error.message,
+		})
 		this.emitter.onStopped("error", undefined, error.message)
 
-		if (this.isActive) {
-			try {
-				await this.cleanupOnError()
-			} catch (cleanupError) {
-				console.error("Failed to cleanup after error:", cleanupError)
-			}
+		// Cleanup resources asynchronously
+		try {
+			await this.cleanupOnError()
+		} catch (cleanupError) {
+			console.error("🎙️ [STTService] Failed to cleanup after error:", cleanupError)
 		}
 	}
 
@@ -394,21 +415,11 @@ export class STTService {
 	private async cleanupOnError(): Promise<void> {
 		this.isActive = false
 
-		// Force kill FFmpeg and disconnect - use Promise.allSettled to ensure both run
-		const cleanupResults = await Promise.allSettled([
-			this.audioCapture.stop(),
-			this.transcriptionClient?.disconnect() ?? Promise.resolve(),
-		])
-
-		// Log cleanup results for debugging
-		cleanupResults.forEach((result, index) => {
-			const name = index === 0 ? "audioCapture" : "transcriptionClient"
-			if (result.status === "rejected") {
-				console.error(`🎙️ [STTService] Failed to cleanup ${name}:`, result.reason)
-			} else {
-				console.log(`🎙️ [STTService] ${name} cleaned up successfully`)
-			}
-		})
+		await Promise.allSettled(
+			[this.audioCapture?.stop().catch(() => {}), this.transcriptionClient?.disconnect().catch(() => {})].filter(
+				Boolean,
+			),
+		)
 
 		this.resetSession()
 	}

@@ -113,7 +113,7 @@ Open the Kilo Code panel (<img src="/docs/img/kilo-v1.svg" width="12" />) and ty
 - **Architect:** For planning and technical leadership.
 - **Ask:** For answering questions and providing information.
 - **Debug:** For systematic problem diagnosis.
-  You can also create [Custom Modes](/features/custom-modes).
+  You can also create [Custom Modes](/agent-behavior/custom-modes).
 
 ### How do I switch between modes?
 

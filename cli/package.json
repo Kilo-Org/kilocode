@@ -40,7 +40,7 @@
 		"@google/genai": "^1.0.0",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
-		"@modelcontextprotocol/sdk": "^1.20.1",
+		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",

@@ -285,6 +285,6 @@ Skills are simple Markdown files with frontmatter. Start with your existing prom
 
 ## Related
 
-- [Custom Modes](custom-modes) - Create custom modes that can use specific skills
-- [Custom Instructions](../advanced-usage/custom-instructions) - Global instructions vs. skill-based instructions
-- [Custom Rules](../advanced-usage/custom-rules) - Project-level rules complementing skills
+- [Custom Modes](/agent-behavior/custom-modes) - Create custom modes that can use specific skills
+- [Custom Instructions](/agent-behavior/custom-instructions) - Global instructions vs. skill-based instructions
+- [Custom Rules](/agent-behavior/custom-rules) - Project-level rules complementing skills

@@ -86,6 +86,7 @@ const sidebars: SidebarsConfig = {
 					],
 				},
 				"basic-usage/adding-credits",
+				"basic-usage/settings-management",
 			],
 		},
 		{
@@ -131,19 +132,21 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
+			label: "Agent Behavior",
+			items: [
+				"agent-behavior/prompt-engineering",
+				"agent-behavior/custom-modes",
+				"agent-behavior/custom-rules",
+				"agent-behavior/custom-instructions",
+				"agent-behavior/workflows",
+				"agent-behavior/skills",
+			],
+		},
+		{
+			type: "category",
 			label: "Advanced Usage",
 			items: [
-				"advanced-usage/prompt-engineering",
-				{
-					type: "category",
-					label: "Customizing Kilo Code",
-					items: [
-						"advanced-usage/custom-rules",
-						"advanced-usage/custom-instructions",
-						"advanced-usage/migrating-from-cursor-windsurf",
-						"features/slash-commands/workflows",
-					],
-				},
+				"advanced-usage/migrating-from-cursor-windsurf",
 				{
 					type: "category",
 					label: "Advanced Context Features",
@@ -180,11 +183,6 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Customization",
-			items: ["features/settings-management", "features/custom-modes", "features/skills"],
-		},
-		{
-			type: "category",
 			label: "Extending Kilo Code",
 			items: [
 				"advanced-usage/local-models",
@@ -194,6 +192,7 @@ const sidebars: SidebarsConfig = {
 					items: [
 						"features/mcp/overview",
 						"features/mcp/using-mcp-in-kilo-code",
+						"features/mcp/using-mcp-in-cli",
 						"features/mcp/what-is-mcp",
 						"features/mcp/server-transports",
 						"features/mcp/mcp-vs-api",

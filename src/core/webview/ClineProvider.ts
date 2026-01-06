@@ -97,7 +97,6 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import { checkSpeechToTextAvailable } from "./speechToTextCheck" // kilocode_change
 import type { ClineMessage, TodoItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
@@ -773,42 +772,6 @@ export class ClineProvider
 			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
-
-		//kilocode_change start
-		if (command === "addToContextAndFocus") {
-			// Capture telemetry for inline assist quick task
-			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK)
-
-			let messageText = prompt
-
-			const editor = vscode.window.activeTextEditor
-			if (editor) {
-				const fullContent = editor.document.getText()
-				const filePath = params.filePath as string
-
-				messageText = `
-For context, we are working within this file:
-
-'${filePath}' (see below for file content)
-<file_content path="${filePath}">
-${fullContent}
-</file_content>
-
-Heed this prompt:
-
-${prompt}
-`
-			}
-
-			await visibleProvider.postMessageToWebview({
-				type: "invoke",
-				invoke: "setChatBoxMessage",
-				text: messageText,
-			})
-			await vscode.commands.executeCommand("kilo-code.focusChatInput")
-			return
-		}
-		// kilocode_change end
 
 		await visibleProvider.createTask(prompt)
 	}
@@ -2225,14 +2188,6 @@ ${prompt}
 				: undefined
 		// kilocode_change end
 
-		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
-		let speechToTextStatus: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } | undefined =
-			undefined
-		if (experiments?.speechToText) {
-			speechToTextStatus = await checkSpeechToTextAvailable(this.providerSettingsManager)
-		}
-		// kilocode_change end - checkSpeechToTextAvailable
-
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
 		try {
@@ -2457,7 +2412,6 @@ ${prompt}
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
-			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		}
 	}
 

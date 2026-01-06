@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: AI Kodlama Ajanı, Copilot ve Otomatik Tamamlama",
 	"extension.description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı.",
 	"command.newTask.title": "Yeni Görev",
 	"command.explainCode.title": "Kodu Açıkla",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "VS Code Ayarlar Senkronizasyonu aracılığıyla Kilo Code ayarlarının cihazlar arasında senkronizasyonunu etkinleştir. Etkinleştirildiğinde, API yapılandırmalarınız, özel modlarınız ve tercihleriniz VS Code Ayarlar Senkronizasyonu'na oturum açtığınızda otomatik olarak senkronize edilecektir.",
 	"settings.autoImportSettingsPath.description": "Uzantı başlangıcında otomatik olarak içe aktarılacak bir Kilo Code yapılandırma dosyasının yolu. Mutlak yolları ve ana dizine göreli yolları destekler (ör. '~/Documents/kilo-code-settings.json'). Otomatik içe aktarmayı devre dışı bırakmak için boş bırakın.",
 	"settings.maximumIndexedFilesForFileSearch.description": "@ dosya arama özelliği için dizinlenecek maksimum dosya sayısı. Daha yüksek değerler büyük projelerde daha iyi arama sonuçları sağlar ancak daha fazla bellek kullanabilir. Varsayılan: 10.000.",
-	"settings.useAgentRules.description": "Aracıya özgü kurallar için AGENTS.md dosyalarının yüklenmesini etkinleştirin (bkz. https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Aracıya özgü kurallar için AGENTS.md dosyalarının yüklenmesini etkinleştirin (bkz. https://agents.md/)",
 	"settings.apiRequestTimeout.description": "API yanıtları için beklenecek maksimum süre (saniye cinsinden) (0 = zaman aşımı yok, 1-86400s, varsayılan: 600s). LM Studio ve Ollama gibi daha fazla işlem süresi gerektirebilecek yerel sağlayıcılar için daha yüksek değerler önerilir.",
 	"settings.codeIndex.embeddingBatchSize.description": "Kod indeksleme sırasında gömme işlemleri için toplu iş boyutu. Bunu API sağlayıcınızın sınırlarına göre ayarlayın. Varsayılan 60'tır.",
 	"settings.newTaskRequireTodos.description": "new_task aracıyla yeni görevler oluştururken todos parametresini gerekli kıl",

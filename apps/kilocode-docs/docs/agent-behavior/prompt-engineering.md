@@ -44,7 +44,7 @@ Custom instructions are added to the system prompt, providing persistent guidanc
 - Define project-specific conventions.
 - Adjust Kilo Code's tone or personality.
 
-See the [Custom Instructions](/advanced-usage/custom-instructions) section for more details.
+See the [Custom Instructions](/agent-behavior/custom-instructions) section for more details.
 
 ## Handling Ambiguity
 

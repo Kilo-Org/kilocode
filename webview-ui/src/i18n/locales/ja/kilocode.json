@@ -233,16 +233,11 @@
 				"label": "自動トリガー遅延",
 				"description": "タイピングを停止してからKilo CodeがAutocompleteをトリガーするまでの秒数。遅延が短いほど提案が早くなりますが、リソースを多く消費する可能性があります。"
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "クイックタスク ({{keybinding}})",
-				"description": "ちょっとした変更だけが必要？コードを選択して（しなくても大丈夫！）Cmd+Iを押してください。目標を日本語で説明し（「これらのpropsでReactコンポーネントを作成」、「この関数にエラーハンドリングを追加」）、エディター内で複数のすぐに使える提案を取得できます。<DocsLink>ショートカットを見る</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手動オートコンプリート ({{keybinding}})",
 				"description": "素早い修正、補完、またはリファクタリングが必要？Kiloは周囲のコンテキストを使用して即座の改善を提供し、フローを維持します。<DocsLink>ショートカットを見る</DocsLink>"
 			},
 			"keybindingNotFound": "見つかりません",
-			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
 			"configureAutocompleteProfile": "プロファイルに移動し、プロファイルタイプがオートコンプリートのプロファイルを設定することで、任意のモデルを使用できます。",
 			"model": "モデル",
 			"provider": "プロバイダー",
@@ -263,6 +258,16 @@
 					"30min": "30分",
 					"1hour": "1時間"
 				}
+			},
+			"noModelConfigured": {
+				"title": "オートコンプリートモデルが設定されていません",
+				"description": "オートコンプリートを有効にするには、以下のサポートされているプロバイダーのいずれかでプロファイルを追加してください：",
+				"learnMore": "オートコンプリートの設定について詳しく →"
+			},
+			"noCredits": {
+				"title": "アカウントにクレジットがありません",
+				"description": "Kilo Codeアカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。",
+				"buyCredits": "クレジットを購入 →"
 			}
 		}
 	},
@@ -329,8 +334,14 @@
 	"speechToText": {
 		"startRecording": "音声入力を開始",
 		"stopRecording": "音声入力を停止",
-		"unavailableOpenAiKeyMissing": "音声認識は利用できません。音声文字変換を使用するには、APIキーを持つ有効なOpenAIプロバイダーが必要です。",
-		"unavailableFfmpegNotInstalled": "音声からテキストへの変換は利用できません。音声の文字起こしを使用するにはFFmpegをインストールしてください。",
-		"unavailableBoth": "音声からテキストへの変換は利用できません。有効なOpenAIプロバイダーが必要で、FFmpegがインストールされている必要があります。"
+		"setupPopover": {
+			"title": "音声テキスト変換",
+			"description": "音声テキスト変換は利用できません。音声テキスト変換にはFFmpegと有効なOpenAIプロバイダーの両方が設定されている必要があります。<moreInfoLink>詳細はこちらをクリック</moreInfoLink>。",
+			"openAiReason": "音声文字起こしを使用するには、APIキーを持つ有効なOpenAIプロバイダーが必要です。",
+			"ffmpegReason": "FFmpegがインストールされている必要があります。<ffmpegLink>こちらをクリック</ffmpegLink>すると、KiloがFFmpegのインストールをサポートします。",
+			"ffmpegMessage": "FFmpegのインストールを手伝ってください"
+		},
+		"misconfiguredState": "設定により利用不可",
+		"errorState": "エラーのため利用できません"
 	}
 }

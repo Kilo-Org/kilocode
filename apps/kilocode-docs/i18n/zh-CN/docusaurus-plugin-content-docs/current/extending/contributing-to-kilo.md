@@ -73,7 +73,7 @@ git checkout -b your-branch-name
 
 自定义模式是扩展 Kilo Code 功能的强大方式。要创建并分享自定义模式：
 
-1. 按照 [自定义模式文档](/features/custom-modes) 创建你的模式
+1. 按照 [自定义模式文档](/agent-behavior/custom-modes) 创建你的模式
 
 2. 彻底测试你的模式
 

@@ -89,5 +89,5 @@ Kilo Code 在实现温度处理时考虑了以下因素：
 ## 相关功能
 
 - 适用于 Kilo Code 支持的所有 [API 提供商](/providers/openai)
-- 补充[自定义指令](/advanced-usage/custom-instructions)以微调响应
-- 与您创建的[自定义模式](/features/custom-modes)一起使用
+- 补充[自定义指令](/agent-behavior/custom-instructions)以微调响应
+- 与您创建的[自定义模式](/agent-behavior/custom-modes)一起使用

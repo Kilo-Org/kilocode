@@ -154,4 +154,4 @@ git add .
 ## 相关功能
 
 - [API 配置配置文件](/features/api-configuration-profiles) - 使用不同的模型进行提交信息生成
-- [设置管理](/features/settings-management) - 管理您的所有 Kilo Code 首选项
+- [设置管理](/basic-usage/settings-management) - 管理您的所有 Kilo Code 首选项

@@ -197,5 +197,11 @@
 			"installMessage": "執行 npm install 以安裝 Kilocode CLI。完成後，您可以關閉此終端機並嘗試再次啟動 Agent Manager。",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "您的 OpenAI API 密钥无效或没有访问 Realtime API 的权限。请检查您的 API 密钥并重试。",
+			"unknown": "连接失败。请检查您的配置并重试。"
+		}
 	}
 }

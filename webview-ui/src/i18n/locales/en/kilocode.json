@@ -241,10 +241,6 @@
 				"label": "Auto Trigger Delay",
 				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Quick Task ({{keybinding}})",
-				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>Edit shortcut</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
@@ -268,7 +264,16 @@
 				}
 			},
 			"keybindingNotFound": "not found",
-			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings.",
+			"noModelConfigured": {
+				"title": "No autocomplete model configured",
+				"description": "To enable autocomplete, add a profile with one of these supported providers:",
+				"learnMore": "Learn more about autocomplete setup →"
+			},
+			"noCredits": {
+				"title": "No credits in your account",
+				"description": "Your Kilo Code account has no credits. To use autocomplete, please add credits to your account.",
+				"buyCredits": "Buy credits →"
+			},
 			"configureAutocompleteProfile": "Use any model by going to profiles and configuring a Profile of the Profile Type Autocomplete."
 		}
 	},
@@ -327,8 +332,14 @@
 	"speechToText": {
 		"startRecording": "Start voice input",
 		"stopRecording": "Stop voice input",
-		"unavailableOpenAiKeyMissing": "Speech-to-text is unavailable. It requires a valid OpenAI provider with an API key to use voice transcription.",
-		"unavailableFfmpegNotInstalled": "Speech-to-text is unavailable. Install FFmpeg to use voice transcription.",
-		"unavailableBoth": "Speech-to-text is unavailable. It requires a valid OpenAI provider and FFmpeg must be installed."
+		"errorState": "Unavailable because of error",
+		"misconfiguredState": "Unavailable because of config",
+		"setupPopover": {
+			"title": "Speech-to-Text",
+			"description": "Speech-to-text is unavailable. Speech-to-text requires both FFmpeg and a valid OpenAI provider configured. <moreInfoLink>Click here for more information</moreInfoLink>.",
+			"openAiReason": "You need a valid OpenAI provider with an API key to use voice transcription.",
+			"ffmpegReason": "You need FFmpeg installed. <ffmpegLink>Click here</ffmpegLink> to have Kilo help you install FFmpeg.",
+			"ffmpegMessage": "Help me install FFmpeg"
+		}
 	}
 }

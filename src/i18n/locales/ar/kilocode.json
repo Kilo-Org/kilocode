@@ -201,5 +201,11 @@
 			"installMessage": "تشغيل npm install لتثبيت Kilocode CLI. بمجرد الانتهاء، يمكنك إغلاق هذه الطرفية ومحاولة بدء Agent Manager مرة أخرى.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "مفتاح API الخاص بـ OpenAI غير صالح أو لا يملك صلاحية الوصول إلى Realtime API. يرجى التحقق من مفتاح API الخاص بك والمحاولة مرة أخرى.",
+			"unknown": "فشل الاتصال. يرجى التحقق من الإعدادات والمحاولة مرة أخرى."
+		}
 	}
 }
