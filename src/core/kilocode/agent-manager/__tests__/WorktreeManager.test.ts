@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import * as path from "path"
 import * as fs from "fs"
 
+// Helper to check paths cross-platform (handles both / and \ separators)
+const containsPathSegments = (fullPath: string, ...segments: string[]): boolean => {
+	const normalized = fullPath.replace(/\\/g, "/")
+	return segments.every((seg) => normalized.includes(seg))
+}
+
 // Mock simple-git
 const mockGit = {
 	checkIsRepo: vi.fn(),
@@ -88,7 +94,7 @@ describe("WorktreeManager", () => {
 			const result = await manager.createWorktree({ prompt: "Add authentication" })
 
 			expect(result.branch).toMatch(/^add-authentication-\d+$/)
-			expect(result.path).toContain(".kilocode/worktrees")
+			expect(containsPathSegments(result.path, ".kilocode", "worktrees")).toBe(true)
 			expect(result.parentBranch).toBe("main")
 		})
 
@@ -105,12 +111,10 @@ describe("WorktreeManager", () => {
 			const result = await manager.createWorktree({ existingBranch: "feature/existing-branch" })
 
 			expect(result.branch).toBe("feature/existing-branch")
-			expect(mockGit.raw).toHaveBeenCalledWith([
-				"worktree",
-				"add",
-				expect.stringContaining("feature/existing-branch"),
-				"feature/existing-branch",
-			])
+			// Check the git raw call - path may use / or \ depending on OS
+			expect(mockGit.raw).toHaveBeenCalledWith(
+				expect.arrayContaining(["worktree", "add", "feature/existing-branch"]),
+			)
 		})
 
 		it("throws if existing branch does not exist", async () => {
@@ -130,8 +134,9 @@ describe("WorktreeManager", () => {
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.raw.mockResolvedValue("")
 			vi.mocked(fs.existsSync).mockImplementation((p) => {
-				// Return true for worktree path check, false for gitignore
-				return String(p).includes(".kilocode/worktrees")
+				// Return true for worktree path check, false for gitignore (cross-platform)
+				const normalized = String(p).replace(/\\/g, "/")
+				return normalized.includes(".kilocode/worktrees")
 			})
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.rm).mockResolvedValue(undefined)
@@ -140,10 +145,14 @@ describe("WorktreeManager", () => {
 
 			await manager.createWorktree({ prompt: "test" })
 
-			expect(fs.promises.rm).toHaveBeenCalledWith(expect.stringContaining(".kilocode/worktrees"), {
-				recursive: true,
-				force: true,
-			})
+			// Verify rm was called - path separators vary by OS
+			expect(fs.promises.rm).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({ recursive: true, force: true }),
+			)
+			// Verify the path contains the expected segments
+			const rmCall = vi.mocked(fs.promises.rm).mock.calls[0]
+			expect(containsPathSegments(String(rmCall[0]), ".kilocode", "worktrees")).toBe(true)
 		})
 	})
 
@@ -287,7 +296,6 @@ describe("WorktreeManager", () => {
 			expect(fs.promises.appendFile).not.toHaveBeenCalled()
 		})
 	})
-
 })
 
 describe("generateBranchName", () => {
