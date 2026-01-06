@@ -5,11 +5,11 @@ import type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion } fr
 export type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion }
 
 /**
- * Generate a unique key for a suggestion based on its content and context.
+ * Get the unique key for a suggestion.
  * This key is used to track whether the same suggestion is still being displayed.
  */
 export function getSuggestionKey(suggestion: FillInAtCursorSuggestion): string {
-	return `${suggestion.prefix}|${suggestion.suffix}|${suggestion.text}`
+	return suggestion.id
 }
 
 /**

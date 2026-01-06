@@ -12,10 +12,11 @@ describe("AutocompleteTelemetry", () => {
 	})
 
 	/**
-	 * Helper to create a FillInAtCursorSuggestion with a unique key
+	 * Helper to create a FillInAtCursorSuggestion with a unique id
 	 */
 	function createSuggestion(index: number): FillInAtCursorSuggestion {
 		return {
+			id: `suggestion-${index}`,
 			text: `text-${index}`,
 			prefix: `prefix-${index}`,
 			suffix: `suffix-${index}`,

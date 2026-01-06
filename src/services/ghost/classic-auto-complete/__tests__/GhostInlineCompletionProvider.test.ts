@@ -69,16 +69,22 @@ vi.mock("vscode", async () => {
 	}
 })
 
+/**
+ * Helper to create a FillInAtCursorSuggestion with a unique id
+ */
+function createSuggestion(
+	text: string,
+	prefix: string,
+	suffix: string,
+	id: string = crypto.randomUUID(),
+): FillInAtCursorSuggestion {
+	return { id, text, prefix, suffix }
+}
+
 describe("findMatchingSuggestion", () => {
 	describe("failed lookups", () => {
 		it("should return empty string when matching a failed lookup (text is empty string)", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("", "const x = 1", "\nconst y = 2")]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
 			expect(result).not.toBeNull()
@@ -89,16 +95,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should skip failed lookups and find successful suggestions", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "",
-					prefix: "const a = 1",
-					suffix: "\nconst b = 2",
-				},
-				{
-					text: "console.log('success');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("", "const a = 1", "\nconst b = 2"),
+				createSuggestion("console.log('success');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -109,16 +107,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return empty string for failed lookup even when other suggestions exist", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('other');",
-					prefix: "const a = 1",
-					suffix: "\nconst b = 2",
-				},
-				{
-					text: "",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('other');", "const a = 1", "\nconst b = 2"),
+				createSuggestion("", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -131,11 +121,7 @@ describe("findMatchingSuggestion", () => {
 	describe("exact matching", () => {
 		it("should return suggestion text when prefix and suffix match exactly", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('Hello, World!');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('Hello, World!');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -146,11 +132,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return null when prefix does not match", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("different prefix", "\nconst y = 2", suggestions)
@@ -159,11 +141,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return null when suffix does not match", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "different suffix", suggestions)
@@ -178,13 +156,7 @@ describe("findMatchingSuggestion", () => {
 
 	describe("backward deletion support", () => {
 		it("should return deleted prefix portion plus suggestion when user backspaces", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "henk",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("henk", "foo", "bar")]
 
 			// User backspaced from "foo" to "f"
 			const result = findMatchingSuggestion("f", "bar", suggestions)
@@ -194,13 +166,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should return full prefix plus suggestion when user deletes entire prefix", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "world",
-					prefix: "hello",
-					suffix: "!",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("world", "hello", "!")]
 
 			// User deleted entire prefix
 			const result = findMatchingSuggestion("", "!", suggestions)
@@ -210,13 +176,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should return null when suffix does not match during backward deletion", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "henk",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("henk", "foo", "bar")]
 
 			// User backspaced but suffix changed
 			const result = findMatchingSuggestion("f", "baz", suggestions)
@@ -224,13 +184,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should return null when current prefix is not a prefix of stored prefix", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "henk",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("henk", "foo", "bar")]
 
 			// Current prefix "x" is not a prefix of "foo"
 			const result = findMatchingSuggestion("x", "bar", suggestions)
@@ -238,13 +192,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should not use backward deletion when suggestion text is empty", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("", "foo", "bar")]
 
 			// User backspaced - should return null because the original suggestion was empty
 			const result = findMatchingSuggestion("f", "bar", suggestions)
@@ -253,16 +201,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should prefer exact match over backward deletion match", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "henk",
-					prefix: "foo",
-					suffix: "bar",
-				},
-				{
-					text: "exact",
-					prefix: "f",
-					suffix: "bar",
-				},
+				createSuggestion("henk", "foo", "bar"),
+				createSuggestion("exact", "f", "bar"),
 			]
 
 			// Should match the exact prefix "f" first (most recent)
@@ -273,13 +213,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should handle multi-character backward deletion", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "test()",
-					prefix: "function myFunc",
-					suffix: " { }",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("test()", "function myFunc", " { }")]
 
 			// User deleted "unc" from "function myFunc"
 			const result = findMatchingSuggestion("function myF", " { }", suggestions)
@@ -292,11 +226,7 @@ describe("findMatchingSuggestion", () => {
 	describe("partial typing support", () => {
 		it("should return remaining suggestion when user has partially typed", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('Hello, World!');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('Hello, World!');", "const x = 1", "\nconst y = 2"),
 			]
 
 			// User typed "cons" after the prefix
@@ -308,11 +238,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return full suggestion when no partial typing", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -323,11 +249,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return null when partially typed content does not match suggestion", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			// User typed "xyz" which doesn't match the suggestion
@@ -337,11 +259,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return empty string when user has typed entire suggestion", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1console.log('test');", "\nconst y = 2", suggestions)
@@ -352,11 +270,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return null when suffix has changed during partial typing", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			// User typed partial content but suffix changed
@@ -366,11 +280,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should handle multi-character partial typing", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "function test() { return 42; }",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("function test() { return 42; }", "const x = 1", "\nconst y = 2"),
 			]
 
 			// User typed "function te"
@@ -382,11 +292,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should be case-sensitive in partial matching", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "Console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("Console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			// User typed "cons" (lowercase) but suggestion starts with "Console" (uppercase)
@@ -398,16 +304,8 @@ describe("findMatchingSuggestion", () => {
 	describe("multiple suggestions", () => {
 		it("should prefer most recent matching suggestion", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first suggestion",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-				{
-					text: "second suggestion",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"),
+				createSuggestion("second suggestion", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -418,16 +316,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should match different suggestions based on context", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first suggestion",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-				{
-					text: "second suggestion",
-					prefix: "const a = 1",
-					suffix: "\nconst b = 2",
-				},
+				createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"),
+				createSuggestion("second suggestion", "const a = 1", "\nconst b = 2"),
 			]
 
 			const result1 = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -443,16 +333,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should prefer exact match over partial match", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('partial');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-				{
-					text: "exact match",
-					prefix: "const x = 1cons",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('partial');", "const x = 1", "\nconst y = 2"),
+				createSuggestion("exact match", "const x = 1cons", "\nconst y = 2"),
 			]
 
 			// User is at position that matches exact prefix of second suggestion
@@ -465,13 +347,7 @@ describe("findMatchingSuggestion", () => {
 
 	describe("match type tracking", () => {
 		it("should return exact matchType for exact prefix/suffix match", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "test",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("test", "foo", "bar")]
 
 			const result = findMatchingSuggestion("foo", "bar", suggestions)
 			expect(result?.matchType).toBe("exact")
@@ -479,11 +355,7 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return partial_typing matchType when user has typed part of suggestion", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
@@ -491,13 +363,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should return backward_deletion matchType when user has backspaced", () => {
-			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "test",
-					prefix: "foo",
-					suffix: "bar",
-				},
-			]
+			const suggestions: FillInAtCursorSuggestion[] = [createSuggestion("test", "foo", "bar")]
 
 			const result = findMatchingSuggestion("f", "bar", suggestions)
 			expect(result?.matchType).toBe("backward_deletion")
@@ -507,11 +373,7 @@ describe("findMatchingSuggestion", () => {
 	describe("fillInAtCursor tracking", () => {
 		it("should return a fillInAtCursor for tracking visibility", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
+				createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"),
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -524,11 +386,7 @@ describe("findMatchingSuggestion", () => {
 		})
 
 		it("should return the same fillInAtCursor for the same suggestion", () => {
-			const suggestion: FillInAtCursorSuggestion = {
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			}
+			const suggestion = createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2")
 			const suggestions: FillInAtCursorSuggestion[] = [suggestion]
 
 			const result1 = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -540,16 +398,8 @@ describe("findMatchingSuggestion", () => {
 
 		it("should return different fillInAtCursor for different suggestions", () => {
 			const suggestions: FillInAtCursorSuggestion[] = [
-				{
-					text: "first suggestion",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				},
-				{
-					text: "second suggestion",
-					prefix: "const a = 1",
-					suffix: "\nconst b = 2",
-				},
+				createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"),
+				createSuggestion("second suggestion", "const a = 1", "\nconst b = 2"),
 			]
 
 			const result1 = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
@@ -618,11 +468,7 @@ describe("applyFirstLineOnly", () => {
 	})
 
 	it("returns result unchanged when text is empty", () => {
-		const fillInAtCursor: FillInAtCursorSuggestion = {
-			text: "",
-			prefix: "const x = ",
-			suffix: ";",
-		}
+		const fillInAtCursor = createSuggestion("", "const x = ", ";")
 		const input = { text: "", matchType: "exact" as const, fillInAtCursor }
 		const result = applyFirstLineOnly(input, "const x = foo")
 		expect(result).not.toBeNull()
@@ -631,11 +477,7 @@ describe("applyFirstLineOnly", () => {
 	})
 
 	it("truncates to first line and preserves matchType when enabled", () => {
-		const fillInAtCursor: FillInAtCursorSuggestion = {
-			text: "line1\nline2\nline3",
-			prefix: "const x = ",
-			suffix: ";",
-		}
+		const fillInAtCursor = createSuggestion("line1\nline2\nline3", "const x = ", ";")
 		const result = applyFirstLineOnly(
 			{
 				text: "line1\nline2\nline3",
@@ -650,11 +492,7 @@ describe("applyFirstLineOnly", () => {
 	})
 
 	it("preserves original fillInAtCursor when truncating (for consistent telemetry keys)", () => {
-		const fillInAtCursor: FillInAtCursorSuggestion = {
-			text: "line1\nline2\nline3",
-			prefix: "const x = ",
-			suffix: ";",
-		}
+		const fillInAtCursor = createSuggestion("line1\nline2\nline3", "const x = ", ";")
 		const result = applyFirstLineOnly(
 			{
 				text: "line1\nline2\nline3",
@@ -674,11 +512,7 @@ describe("applyFirstLineOnly", () => {
 	})
 
 	it("preserves fillInAtCursor when no truncation occurs", () => {
-		const fillInAtCursor: FillInAtCursorSuggestion = {
-			text: "singleLine",
-			prefix: "prefix",
-			suffix: "suffix",
-		}
+		const fillInAtCursor = createSuggestion("singleLine", "prefix", "suffix")
 		const result = applyFirstLineOnly(
 			{
 				text: "singleLine",
@@ -694,11 +528,7 @@ describe("applyFirstLineOnly", () => {
 	})
 
 	it("does not truncate when suggestion starts with newline", () => {
-		const fillInAtCursor: FillInAtCursorSuggestion = {
-			text: "\nline1\nline2",
-			prefix: "const x = ",
-			suffix: ";",
-		}
+		const fillInAtCursor = createSuggestion("\nline1\nline2", "const x = ", ";")
 		const result = applyFirstLineOnly(
 			{ text: "\nline1\nline2", matchType: "exact", fillInAtCursor },
 			"const x = foo",
@@ -874,11 +704,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should return empty array when suggestions have no FIM content", async () => {
-			provider.updateSuggestions({
-				text: "",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -891,11 +717,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should return inline completion item when FIM content is available and prefix/suffix match", async () => {
-			const fimContent = {
-				text: "console.log('Hello, World!');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			}
+			const fimContent = createSuggestion("console.log('Hello, World!');", "const x = 1", "\nconst y = 2")
 			provider.updateSuggestions(fimContent)
 
 			const result = (await provideWithDebounce(
@@ -916,11 +738,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should truncate cached multi-line suggestions to first line when cursor is mid-line", async () => {
-			provider.updateSuggestions({
-				text: "line1\nline2\nline3",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("line1\nline2\nline3", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -934,11 +752,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should return empty array when prefix does not match", async () => {
-			const fimContent = {
-				text: "console.log('Hello, World!');",
-				prefix: "different prefix",
-				suffix: "\nconst y = 2",
-			}
+			const fimContent = createSuggestion("console.log('Hello, World!');", "different prefix", "\nconst y = 2")
 			provider.updateSuggestions(fimContent)
 
 			const result = (await provideWithDebounce(
@@ -952,11 +766,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should return empty array when suffix does not match", async () => {
-			const fimContent = {
-				text: "console.log('Hello, World!');",
-				prefix: "const x = 1",
-				suffix: "different suffix",
-			}
+			const fimContent = createSuggestion("console.log('Hello, World!');", "const x = 1", "different suffix")
 			provider.updateSuggestions(fimContent)
 
 			const result = (await provideWithDebounce(
@@ -970,11 +780,7 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should update suggestions when called multiple times", async () => {
-			provider.updateSuggestions({
-				text: "first suggestion",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"))
 
 			let result = (await provideWithDebounce(
 				mockDocument,
@@ -984,11 +790,7 @@ describe("GhostInlineCompletionProvider", () => {
 			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("first suggestion")
 
-			provider.updateSuggestions({
-				text: "second suggestion",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("second suggestion", "const x = 1", "\nconst y = 2"))
 
 			result = (await provideWithDebounce(
 				mockDocument,
@@ -1000,18 +802,10 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 		it("should maintain a rolling window of suggestions and match from most recent", async () => {
 			// Add first suggestion
-			provider.updateSuggestions({
-				text: "first suggestion",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"))
 
 			// Add second suggestion with different context
-			provider.updateSuggestions({
-				text: "second suggestion",
-				prefix: "const a = 1",
-				suffix: "\nconst b = 2",
-			})
+			provider.updateSuggestions(createSuggestion("second suggestion", "const a = 1", "\nconst b = 2"))
 
 			// Should match the first suggestion when context matches
 			let result = (await provideWithDebounce(
@@ -1036,18 +830,10 @@ describe("GhostInlineCompletionProvider", () => {
 
 		it("should prefer most recent matching suggestion when multiple match", async () => {
 			// Add first suggestion
-			provider.updateSuggestions({
-				text: "first suggestion",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("first suggestion", "const x = 1", "\nconst y = 2"))
 
 			// Add second suggestion with same context
-			provider.updateSuggestions({
-				text: "second suggestion",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("second suggestion", "const x = 1", "\nconst y = 2"))
 
 			// Should return the most recent (second) suggestion
 			const result = (await provideWithDebounce(
@@ -1062,11 +848,7 @@ describe("GhostInlineCompletionProvider", () => {
 		it("should maintain only the last 20 suggestions (FIFO)", async () => {
 			// Add 25 suggestions
 			for (let i = 0; i < 25; i++) {
-				provider.updateSuggestions({
-					text: `suggestion ${i}`,
-					prefix: `const x${i} = 1`,
-					suffix: `\nconst y${i} = 2`,
-				})
+				provider.updateSuggestions(createSuggestion(`suggestion ${i}`, `const x${i} = 1`, `\nconst y${i} = 2`))
 			}
 
 			// The first 5 suggestions should be removed (0-4)
@@ -1106,25 +888,13 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result[0].insertText).toBe("suggestion 24")
 		})
 		it("should not add duplicate suggestions", async () => {
-			provider.updateSuggestions({
-				text: "console.log('test')",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test')", "const x = 1", "\nconst y = 2"))
 
 			// Try to add the same suggestion again
-			provider.updateSuggestions({
-				text: "console.log('test')",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test')", "const x = 1", "\nconst y = 2"))
 
 			// Add a different suggestion
-			provider.updateSuggestions({
-				text: "console.log('different')",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('different')", "const x = 1", "\nconst y = 2"))
 
 			// Should return the most recent non-duplicate suggestion
 			const result = (await provideWithDebounce(
@@ -1139,18 +909,10 @@ describe("GhostInlineCompletionProvider", () => {
 		})
 
 		it("should allow same text with different prefix/suffix", async () => {
-			provider.updateSuggestions({
-				text: "console.log('test')",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test')", "const x = 1", "\nconst y = 2"))
 
 			// Same text but different context - should be added
-			provider.updateSuggestions({
-				text: "console.log('test')",
-				prefix: "const a = 1",
-				suffix: "\nconst b = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test')", "const a = 1", "\nconst b = 2"))
 
 			// Should match the second suggestion when context matches
 			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
@@ -1168,11 +930,9 @@ describe("GhostInlineCompletionProvider", () => {
 		describe("partial typing support", () => {
 			it("should return remaining suggestion when user has partially typed the suggestion", async () => {
 				// Set up a suggestion
-				provider.updateSuggestions({
-					text: "console.log('Hello, World!');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(
+					createSuggestion("console.log('Hello, World!');", "const x = 1", "\nconst y = 2"),
+				)
 
 				// Simulate user typing "cons" after the prefix
 				const partialDocument = new MockTextDocument(
@@ -1194,11 +954,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should return full suggestion when user has typed nothing after prefix", async () => {
-				provider.updateSuggestions({
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 				// User is at exact prefix position (no partial typing)
 				const result = (await provideWithDebounce(
@@ -1213,11 +969,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should return empty when partially typed content does not match suggestion", async () => {
-				provider.updateSuggestions({
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 				// User typed "xyz" which doesn't match the suggestion
 				const mismatchDocument = new MockTextDocument(
@@ -1237,11 +989,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should return empty string when user has typed entire suggestion", async () => {
-				provider.updateSuggestions({
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 				// User has typed the entire suggestion - cursor is at the end of typed text
 				// Position 31 is right after the semicolon, before the newline
@@ -1263,11 +1011,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should not match when suffix has changed", async () => {
-				provider.updateSuggestions({
-					text: "console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 				// User typed partial content but suffix changed
 				const changedSuffixDocument = new MockTextDocument(
@@ -1288,18 +1032,10 @@ describe("GhostInlineCompletionProvider", () => {
 
 			it("should prefer exact match over partial match", async () => {
 				// Add a suggestion that would match partially
-				provider.updateSuggestions({
-					text: "console.log('partial');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("console.log('partial');", "const x = 1", "\nconst y = 2"))
 
 				// Add a suggestion with exact match (more recent)
-				provider.updateSuggestions({
-					text: "exact match",
-					prefix: "const x = 1cons",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("exact match", "const x = 1cons", "\nconst y = 2"))
 
 				// User is at position that matches exact prefix of second suggestion
 				const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1cons\nconst y = 2")
@@ -1318,11 +1054,9 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should handle multi-character partial typing", async () => {
-				provider.updateSuggestions({
-					text: "function test() { return 42; }",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(
+					createSuggestion("function test() { return 42; }", "const x = 1", "\nconst y = 2"),
+				)
 
 				// User typed "function te"
 				const partialDocument = new MockTextDocument(
@@ -1343,11 +1077,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			it("should handle case-sensitive partial matching", async () => {
-				provider.updateSuggestions({
-					text: "Console.log('test');",
-					prefix: "const x = 1",
-					suffix: "\nconst y = 2",
-				})
+				provider.updateSuggestions(createSuggestion("Console.log('test');", "const x = 1", "\nconst y = 2"))
 
 				// User typed "cons" (lowercase) but suggestion starts with "Console" (uppercase)
 				const partialDocument = new MockTextDocument(
@@ -1392,11 +1122,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 	describe("updateSuggestions", () => {
 		it("should accept new suggestions state", async () => {
-			provider.updateSuggestions({
-				text: "new content",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("new content", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1849,11 +1575,7 @@ describe("GhostInlineCompletionProvider", () => {
 			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(false)
 
 			// Set up a suggestion that would normally be returned
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1891,11 +1613,7 @@ describe("GhostInlineCompletionProvider", () => {
 			vi.mocked(mockModel.hasValidCredentials).mockReturnValue(true)
 
 			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				mockDocument,
@@ -1924,11 +1642,7 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 
 			// Set up a suggestion
-			provider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			provider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 			const result = (await provideWithDebounce(
 				untitledDocument,
@@ -2429,11 +2143,7 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(acceptCallback).toBeDefined()
 
 			// Set up and show a suggestion
-			testProvider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			testProvider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 			// Call provideInlineCompletionItems to trigger trackSuggestionShown
 			const promise = testProvider.provideInlineCompletionItems(
@@ -2469,11 +2179,7 @@ describe("GhostInlineCompletionProvider", () => {
 			)
 
 			// Set up a suggestion
-			testProvider.updateSuggestions({
-				text: "console.log('test');",
-				prefix: "const x = 1",
-				suffix: "\nconst y = 2",
-			})
+			testProvider.updateSuggestions(createSuggestion("console.log('test');", "const x = 1", "\nconst y = 2"))
 
 			// Should work without errors
 			const promise = testProvider.provideInlineCompletionItems(

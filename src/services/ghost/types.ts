@@ -93,6 +93,8 @@ export interface PromptResult {
 // ============================================================================
 
 export interface FillInAtCursorSuggestion {
+	/** Unique identifier for this suggestion, used for telemetry tracking */
+	id: string
 	text: string
 	prefix: string
 	suffix: string

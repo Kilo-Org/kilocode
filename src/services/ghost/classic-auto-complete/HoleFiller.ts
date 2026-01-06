@@ -31,6 +31,7 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 
 	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
 	return {
+		id: crypto.randomUUID(),
 		text: fimText,
 		prefix,
 		suffix,
