@@ -125,7 +125,7 @@ describe("AgentTasks", () => {
 			expect(task.name).toBe("commit-changes")
 			expect(task.instruction).toContain("conventional commit message")
 			expect(task.instruction).toContain("git diff --staged")
-			expect(task.timeoutMs).toBe(40_000)
+			expect(task.timeoutMs).toBe(60_000)
 		})
 
 		it("checkComplete returns true when no staged changes", async () => {

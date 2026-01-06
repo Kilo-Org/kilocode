@@ -72,10 +72,7 @@ export class AgentTaskRunner {
 		}
 	}
 
-	private async pollForCompletion(
-		checkComplete: () => Promise<boolean>,
-		timeoutMs: number,
-	): Promise<boolean> {
+	private async pollForCompletion(checkComplete: () => Promise<boolean>, timeoutMs: number): Promise<boolean> {
 		const startTime = Date.now()
 
 		while (Date.now() - startTime < timeoutMs) {
@@ -111,7 +108,7 @@ export const AgentTasks = {
 		return {
 			name: "commit-changes",
 			instruction: `Inspect the git diff and commit all staged changes with a proper conventional commit message (e.g., 'feat:', 'fix:', 'chore:', etc.). Use execute_command to run 'git diff --staged', then commit with an appropriate message using 'git commit -m "your-message"'.`,
-			timeoutMs: 40_000,
+			timeoutMs: 60_000,
 			checkComplete: async () => {
 				try {
 					const stagedDiff = await git.diff(["--staged"])
