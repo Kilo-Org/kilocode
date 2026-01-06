@@ -414,9 +414,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Clear timers
 			clearBackslashTimer()
 
-			// Flush any pending buffers
-			completePaste()
-			clearBuffers()
+			// DON'T flush paste buffers here - React StrictMode causes re-mounts
+			// that would interrupt an in-progress paste operation.
+			// The paste buffer refs persist across re-mounts and will be
+			// properly flushed when the paste end marker is received.
 		}
 	}, [
 		stdin,
