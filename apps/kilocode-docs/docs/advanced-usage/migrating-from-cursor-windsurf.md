@@ -245,9 +245,9 @@ ls -la AGENTS.md
 # That's it - Kilo Code loads it automatically (enabled by default)
 ```
 
-**Important:** Use uppercase `AGENTS.md` (not `agents.md`). Kilo Code also accepts `AGENT.md` (singular) as a fallback.
+**Important:** Use uppercase `AGENTS.md` (not `agents.md`).
 
-**Note:** Both `AGENTS.md` and `AGENT.md` are write-protected files in Kilo Code and require user approval to modify.
+**Note:** `AGENTS.md` is a write-protected file in Kilo Code and requires user approval to modify.
 
 ## Understanding Mode-Specific Rules
 
@@ -358,8 +358,8 @@ Cursor's nested directories don't map to Kilo Code. Flatten with descriptive nam
 
 ### AGENTS.md Not Loading
 
-- **Verify filename:** Must be `AGENTS.md` or `AGENT.md` (uppercase)
-- **Check location:** Must be at project root
+- **Verify filename:** Must be `AGENTS.md` (uppercase)
+- **Check location:** Must be at project root (or inside the subproject directory you’re working in)
 - **Check setting:** Verify "Use Agent Rules" is enabled in Kilo Code settings (enabled by default)
 - **Reload:** Restart VS Code if needed
 
