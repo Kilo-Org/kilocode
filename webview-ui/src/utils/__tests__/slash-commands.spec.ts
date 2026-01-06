@@ -70,4 +70,26 @@ describe("Slash Command Matching", () => {
 			expect(result.commandIndex).toBe(0)
 		})
 	})
+
+	describe("getMatchingSlashCommands - underscore and camelCase", () => {
+		it("should match underscore delimited commands with acronym query", () => {
+			const results = getMatchingSlashCommands("nf", [], { new_file_creation: true }, {})
+			expect(results.some((r) => r.name === "new_file_creation")).toBe(true)
+		})
+
+		it("should match camelCase commands with acronym query", () => {
+			const results = getMatchingSlashCommands("gr", [], { gitRebase: true }, {})
+			expect(results.some((r) => r.name === "gitRebase")).toBe(true)
+		})
+
+		it("should match camelCase commands with mixed case query", () => {
+			const results = getMatchingSlashCommands("GitR", [], { gitRebase: true }, {})
+			expect(results.some((r) => r.name === "gitRebase")).toBe(true)
+		})
+
+		it("should match PascalCase commands with acronym query", () => {
+			const results = getMatchingSlashCommands("NFC", [], { NewFileCreation: true }, {})
+			expect(results.some((r) => r.name === "NewFileCreation")).toBe(true)
+		})
+	})
 })

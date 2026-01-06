@@ -1,4 +1,4 @@
-//kilocode_change new file
+// kilocode_change - new file
 
 /**
  * Drop-in replacement for Fzf library that uses word boundary matching
@@ -18,7 +18,9 @@ interface FzfResult<T> {
 }
 
 // Single source of truth for word boundary characters
-const WORD_BOUNDARY_REGEX = /[\s\-_./\\:]+/
+// - Split at positions before uppercase letters (camelCase/PascalCase: gitRebase → git, Rebase)
+// - Split at existing delimiters: hyphen, underscore, dot, colon, whitespace, forward/back slash
+const WORD_BOUNDARY_REGEX = /(?=[A-Z])|[-_.:\s/\\]+/
 
 export class Fzf<T> {
 	private items: T[]
@@ -62,7 +64,7 @@ export class Fzf<T> {
 		}
 
 		for (const item of this.items) {
-			const text = this.selector(item).toLowerCase()
+			const text = this.selector(item)
 
 			// For multi-word queries, all words must match
 			if (queryWords.length > 1) {
@@ -89,16 +91,12 @@ export class Fzf<T> {
 	 * Each character in the query should match the start of a word in the text.
 	 */
 	private matchAcronym(text: string, query: string): boolean {
-		const words = text.split(WORD_BOUNDARY_REGEX).filter((w) => w.length > 0)
-
-		// Build word start positions in the original text
-		const wordStartPositions: number[] = []
-		let searchPos = 0
-		for (const word of words) {
-			const wordPos = text.indexOf(word, searchPos)
-			wordStartPositions.push(wordPos)
-			searchPos = wordPos + word.length
-		}
+		// Split original text to find word boundaries (including camelCase transitions)
+		// Then lowercase the words for case-insensitive matching
+		const words = text
+			.split(WORD_BOUNDARY_REGEX)
+			.filter((w) => w.length > 0)
+			.map((w) => w.toLowerCase())
 
 		// Recursive helper function to try matching from a given word index
 		const tryMatch = (wordIdx: number, queryIdx: number): boolean => {

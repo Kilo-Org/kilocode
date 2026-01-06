@@ -2711,6 +2711,7 @@ export class ClineProvider
 					return false
 				}
 			})(),
+			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
 		}
 	}
 

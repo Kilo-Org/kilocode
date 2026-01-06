@@ -135,6 +135,7 @@ const sidebars: SidebarsConfig = {
 			label: "Agent Behavior",
 			items: [
 				"agent-behavior/prompt-engineering",
+				"agent-behavior/agents-md",
 				"agent-behavior/custom-modes",
 				"agent-behavior/custom-rules",
 				"agent-behavior/custom-instructions",

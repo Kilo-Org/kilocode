@@ -87,6 +87,7 @@ export interface ExtensionState {
 	cwd?: string
 	organizationAllowList?: OrganizationAllowList
 	routerModels?: RouterModels
+	appendSystemPrompt?: string // Custom text to append to system prompt (CLI only)
 	[key: string]: unknown
 }
 
