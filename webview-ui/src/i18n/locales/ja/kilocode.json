@@ -223,7 +223,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "トリガー",
+			"codeEditorSuggestions": "コードエディタの提案",
+			"chatSuggestions": "チャットの提案",
 			"keybindingDescription": "Autocomplete機能はコマンドでトリガーできます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。",
 			"enableAutoTrigger": {
 				"label": "Autocompleteを有効にする",

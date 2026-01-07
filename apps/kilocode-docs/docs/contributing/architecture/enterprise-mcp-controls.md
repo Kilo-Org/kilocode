@@ -1,9 +1,9 @@
 ---
 sidebar_position: 4
-title: "Spec: Enterprise MCP Controls"
+title: "Enterprise MCP Controls"
 ---
 
-# Spec: Enterprise MCP Controls
+# Enterprise MCP Controls
 
 ### Overview
 

@@ -223,7 +223,8 @@
 	"ghost": {
 		"title": "自动补全",
 		"settings": {
-			"triggers": "触发器",
+			"codeEditorSuggestions": "代码编辑器建议",
+			"chatSuggestions": "聊天建议",
 			"keybindingDescription": "自动补全功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
 			"enableAutoTrigger": {
 				"label": "启用自动补全",

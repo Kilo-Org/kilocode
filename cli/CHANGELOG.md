@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.19.1
+
+### Patch Changes
+
+- [#4810](https://github.com/Kilo-Org/kilocode/pull/4810) [`2d8f5b4`](https://github.com/Kilo-Org/kilocode/commit/2d8f5b4f823750d22701d962ba27885b01f78acb) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add `--append-system-prompt` CLI option to append custom instructions to the system prompt
+
 ## 0.19.0
 
 ### Minor Changes

@@ -216,33 +216,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Auslöser",
 			"model": "Modell",
 			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Pausieren zum Vervollständigen",
-				"description": "Wenn aktiviert, löst Kilo Code automatisch Autocomplete aus, wenn du aufhörst zu tippen. Dies kann für schnelle Korrekturen und Vorschläge nützlich sein."
+				"label": "Auto-trigger Suggestions",
+				"description": "Zeigt automatisch Inline-Code-Vorschläge an, wenn Sie beim Tippen pausieren."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto-Auslöseverzögerung",
-				"description": "Die Verzögerung in Sekunden, bevor Kilo Code Autocomplete auslöst, nachdem du aufgehört hast zu tippen. Eine kürzere Verzögerung bedeutet schnellere Vorschläge, kann aber ressourcenintensiver sein."
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manuelle Autovervollständigung ({{keybinding}})",
-				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "nicht gefunden",
 			"configureAutocompleteProfile": "Verwende ein beliebiges Modell, indem du zu Profilen gehst und ein Profil vom Profiltyp Autocomplete konfigurierst.",
 			"enableChatAutocomplete": {
-				"label": "Chat-Eingabe-Autovervollständigung",
-				"description": "Wenn aktiviert, wird Kilo Code Vervollständigungen vorschlagen, während Sie im Chat-Eingabefeld tippen. Drücken Sie Tab, um Vorschläge zu akzeptieren."
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "Autocomplete pausieren",
-				"description": "Autocomplete-Vorschläge vorübergehend für eine bestimmte Dauer pausieren.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "Pausieren",
 				"unsnooze": "Fortsetzen",
-				"currentlySnoozed": "Autocomplete ist derzeit pausiert.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 Minute",
 					"5min": "5 Minuten",
@@ -260,7 +259,9 @@
 				"title": "Kein Guthaben auf deinem Konto",
 				"description": "Dein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.",
 				"buyCredits": "Guthaben kaufen →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {

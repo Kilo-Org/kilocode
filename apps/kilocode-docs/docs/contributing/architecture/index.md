@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
 title: "Architecture Overview"
 ---
 
@@ -13,85 +13,51 @@ Kilo Code is a VS Code extension built with TypeScript that connects to various 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                           VS Code Extension                          │
+│                           VS Code Extension                         │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
+│                                                                     │
 │  ┌──────────────────┐     ┌──────────────────┐                      │
 │  │   Extension Host │     │    Webview UI    │                      │
 │  │      (src/)      │◀───▶│  (webview-ui/)   │                      │
 │  └────────┬─────────┘     └──────────────────┘                      │
-│           │                                                          │
-│           │ Messages                                                 │
-│           ▼                                                          │
+│           │                                                         │
+│           │ Messages                                                │
+│           ▼                                                         │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                      Core Services                            │   │
+│  │                      Core Services                           │   │
 │  ├────────────┬────────────┬────────────┬───────────────────────┤   │
 │  │   Tools    │   Browser  │    MCP     │    Code Index         │   │
 │  │  Service   │   Session  │  Servers   │     Service           │   │
 │  └────────────┴────────────┴────────────┴───────────────────────┘   │
-│           │                                                          │
-│           │ API Calls                                                │
-│           ▼                                                          │
+│           │                                                         │
+│           │ API Calls                                               │
+│           ▼                                                         │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                   API Provider Layer                          │   │
+│  │                   API Provider Layer                         │   │
 │  ├────────────┬────────────┬────────────┬───────────────────────┤   │
 │  │  Anthropic │   OpenAI   │   Kilo     │     OpenRouter        │   │
 │  │    API     │    API     │ Provider   │        API            │   │
 │  └────────────┴────────────┴────────────┴───────────────────────┘   │
-│                                                                      │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Key Components
+### Features
 
-### Extension Host (`src/`)
+These pages document the architecture and design of a current or planned feature, as well as any unique development patterns.
 
-The extension host runs in Node.js within VS Code and contains:
+| Feature                                                            | Description                                |
+| ------------------------------------------------------------------ | ------------------------------------------ |
+| [Annual Billing](./annual-billing.md)                              | Annual subscription billing                |
+| [Enterprise MCP Controls](./enterprise-mcp-controls.md)            | Admin controls for MCP server allowlists   |
+| [Onboarding Improvements](./onboarding-engagement-improvements.md) | User onboarding and engagement features    |
+| [Organization Modes Library](./organization-modes-library.md)      | Shared modes for teams and enterprise      |
+| [Agentic Security Reviews](./security-reviews.md)                  | AI-powered security vulnerability analysis |
+| [Track Repo URL](./track-repo-url.md)                              | Usage tracking by repository/project       |
+| [Vercel AI Gateway](./vercel-ai-gateway.md)                        | Vercel AI Gateway integration              |
+| [Voice Transcription](./voice-transcription.md)                    | Live voice input for chat                  |
 
-- **`src/core/`** - The agent loop and core logic
-    - `Kilo.ts` - Main agent class that orchestrates interactions
-    - `prompts/` - System prompts and prompt construction
-    - `tools/` - Tool implementations (file operations, search, etc.)
-- **`src/services/`** - Service implementations
-
-    - `browser/` - Puppeteer-based browser automation
-    - `checkpoints/` - Git-based state checkpoints
-    - `code-index/` - Codebase indexing and semantic search
-    - `mcp/` - Model Context Protocol server integration
-    - `commit-message/` - Git commit message generation
-
-- **`src/api/`** - API provider implementations
-
-    - Handles communication with AI providers
-    - Manages streaming responses
-    - Implements provider-specific features
-
-- **`src/activate/`** - Extension activation and command registration
-
-### Webview UI (`webview-ui/`)
-
-A React-based frontend that provides the chat interface:
-
-- Built with React and TypeScript
-- Uses VS Code's webview API
-- Communicates with extension host via message passing
-- Styled with Tailwind CSS
-
-### Shared Packages (`packages/`)
-
-Shared code used across the monorepo:
-
-- `@kilocode/types` - Shared TypeScript types
-- `@kilocode/telemetry` - Telemetry utilities
-
-### Applications (`apps/`)
-
-- `kilocode-docs` - This documentation site (Docusaurus)
-- `kilocode-website` - Marketing website
-
-### Command-Line Interface (`cli/`)
-
-A standalone CLI for running Kilo Code outside of VS Code.
+To propose a new feature design, consider using the [feature template](./feature-template.md).
 
 ## Key Concepts
 
@@ -191,5 +157,4 @@ The project uses:
 ## Further Reading
 
 - [Development Environment](/contributing/development-environment) - Setup guide
-- [Engineering Specs](/contributing/specs) - Technical specifications
 - [Tools Reference](/features/tools/tool-use-overview) - Available tools
