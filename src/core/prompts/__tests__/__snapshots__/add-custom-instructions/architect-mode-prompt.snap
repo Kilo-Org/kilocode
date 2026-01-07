@@ -229,6 +229,57 @@ Delete a directory (requires approval with statistics):
 </delete_file>
 ```
 
+## create_draft
+Description: Create a temporary planning document for structuring your analysis, architectural decisions, implementation plans, or other working documents. These documents are ideal for drafting content that you want the user to review before committing to the codebase.
+
+Use create_draft when:
+- Creating planning documents, implementation plans, or architectural diagrams
+- Drafting content for user review and feedback
+- Organizing your analysis and reasoning process
+- The user wants to review and refine plans before implementation
+
+The created document will:
+- Appear as a normal editor tab that can be edited by both you and the user
+- Be accessible via read_file and write_to_file tools
+- Be saved to disk (outside the repository) and persist across sessions
+
+When to use create_draft vs write_to_file:
+- Use create_draft for planning documents, drafts, and temporary working documents
+- Use write_to_file when the user wants content saved directly to the workspace (e.g., explicit file creation requests, writing docs that should be committed to the repo)
+
+Parameters:
+- title: (required) The title/name of the draft document. Will be used as the filename (automatically adds .md extension if not present)
+- content: (required) The initial content of the draft document
+
+Usage:
+<create_draft>
+<title>document-title</title>
+<content>
+Your document content here
+</content>
+</create_draft>
+
+Example: Creating a planning document
+<create_draft>
+<title>implementation-plan</title>
+<content>
+# Implementation Plan
+
+...more
+</content>
+</create_draft>
+
+Example: Creating a quick note
+<create_draft>
+<title>quick-notes</title>
+<content>
+Remember to:
+1. Check API documentation
+2. Test edge cases
+3. Update tests
+</content>
+</create_draft>
+
 ## ask_followup_question
 Description: Ask the user a question to gather additional information needed to complete the task. Use when you need clarification or more details to proceed effectively.
 

@@ -25,6 +25,7 @@ import {
 	processImageFile,
 	ImageMemoryTracker,
 } from "./helpers/imageHelpers"
+import { isDraftPath, readDraftDocument } from "./helpers/draftDocumentHelpers" // kilocode_change
 import { validateFileTokenBudget, truncateFileContent } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
@@ -176,6 +177,14 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 				}
 
 				if (fileResult.status === "pending") {
+					// kilocode_change start: Skip approval for draft documents
+					// Skip approval for draft documents (auto-approved)
+					if (isDraftPath(relPath)) {
+						updateFileResult(relPath, { status: "approved" })
+						continue
+					}
+					// kilocode_change end
+
 					const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 					if (!accessAllowed) {
 						await task.say("rooignore_error", relPath)
@@ -334,6 +343,30 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 				if (fileResult.status !== "approved") continue
 
 				const relPath = fileResult.path
+
+				// kilocode_change start: Handle draft document reading
+				if (isDraftPath(relPath)) {
+					const result = await readDraftDocument(relPath, task)
+					if (result.status === "error") {
+						updateFileResult(relPath, {
+							status: "error",
+							error: result.error,
+							xmlContent: result.xmlContent,
+							nativeContent: result.nativeContent,
+						})
+						if (result.error) {
+							await handleError(`reading draft document ${relPath}`, new Error(result.error))
+						}
+					} else {
+						updateFileResult(relPath, {
+							xmlContent: result.xmlContent,
+							nativeContent: result.nativeContent,
+						})
+					}
+					continue
+				}
+				// kilocode_change end
+
 				const fullPath = path.resolve(task.cwd, relPath)
 
 				try {
@@ -726,6 +759,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 		return `[${blockName} with missing path/args/files]`
 	}
+	// kilocode_change end
 
 	override async handlePartial(task: Task, block: ToolUse<"read_file">): Promise<void> {
 		const argsXmlTag = block.params.args

@@ -1,5 +1,6 @@
 import path from "path"
 import fs from "fs/promises"
+import * as vscode from "vscode"
 
 import { TelemetryService } from "@roo-code/telemetry"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
@@ -16,6 +17,7 @@ import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
+import { isDraftPath, normalizeDraftPath, draftPathToFilename, DRAFT_SCHEME_NAME } from "../../services/planning" // kilocode_change
 
 interface ApplyDiffParams {
 	path: string
@@ -55,6 +57,13 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
+			// kilocode_change start: Handle draft documents
+			const isDraft = isDraftPath(relPath)
+			const canonicalPath = isDraft ? normalizeDraftPath(relPath) : relPath
+			const filename = isDraft ? draftPathToFilename(relPath) : undefined
+
+			// kilocode_change end
+
 			const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 
 			if (!accessAllowed) {
@@ -63,20 +72,50 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
-			const absolutePath = path.resolve(task.cwd, relPath)
-			const fileExists = await fileExistsAtPath(absolutePath)
+			// kilocode_change start: Handle draft documents
+			let originalContent: string
+			let absolutePath: string
+			let fileExists = false // kilocode_change
 
-			if (!fileExists) {
-				task.consecutiveMistakeCount++
-				task.recordToolError("apply_diff")
-				const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
-				await task.say("error", formattedError)
-				task.didToolFailInCurrentTurn = true
-				pushToolResult(formattedError)
-				return
+			if (isDraft) {
+				// For draft documents, read using the draft file system
+				const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+				console.log("📝 [ApplyDiffTool] reading draft document:", uri.toString())
+				try {
+					const contentBytes = await vscode.workspace.fs.readFile(uri)
+					originalContent = new TextDecoder().decode(contentBytes)
+					console.log("📝 [ApplyDiffTool] draft read successful, size:", originalContent.length)
+					fileExists = true // kilocode_change: draft exists since we just read it
+				} catch (error) {
+					const errorMsg = error instanceof Error ? error.message : "Unknown error"
+					console.error("📝 [ApplyDiffTool] ERROR reading draft:", errorMsg)
+					task.consecutiveMistakeCount++
+					task.recordToolError("apply_diff")
+					const formattedError = `Draft document does not exist at path: ${canonicalPath}\n\n<error_details>\nThe draft document could not be found. Please verify the draft exists and try again.\n</error_details>`
+					await task.say("error", formattedError)
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(formattedError)
+					return
+				}
+				absolutePath = canonicalPath
+			} else {
+				// For regular files, use the existing logic
+				absolutePath = path.resolve(task.cwd, relPath)
+				fileExists = await fileExistsAtPath(absolutePath)
+
+				if (!fileExists) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("apply_diff")
+					const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
+					await task.say("error", formattedError)
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(formattedError)
+					return
+				}
+
+				originalContent = await fs.readFile(absolutePath, "utf-8")
 			}
-
-			const originalContent: string = await fs.readFile(absolutePath, "utf-8")
+			// kilocode_change end
 
 			// Apply the diff to the original content
 			const diffResult = (await task.diffStrategy?.applyDiff(
@@ -151,6 +190,50 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				path: getReadablePath(task.cwd, relPath),
 				diff: diffContent,
 			}
+
+			// kilocode_change start: Handle draft documents separately
+			if (isDraft) {
+				// For draft documents, apply the diff and write directly using vscode.workspace.fs
+				const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+				console.log("📝 [ApplyDiffTool] applying diff to draft document:", uri.toString())
+
+				// Apply the diff to the original content
+				const diffResult = (await task.diffStrategy?.applyDiff(
+					originalContent,
+					diffContent,
+					parseInt(params.diff.match(/:start_line:(\d+)/)?.[1] ?? ""),
+				)) ?? {
+					success: false,
+					error: "No diff strategy available",
+				}
+
+				if (!diffResult.success) {
+					task.consecutiveMistakeCount++
+					let formattedError = `Unable to apply diff to draft document: ${canonicalPath}\n\n<error_details>\n${diffResult.error || "Unknown error"}\n</error_details>`
+					await task.say("error", formattedError)
+					task.recordToolError("apply_diff", formattedError)
+					pushToolResult(formattedError)
+					return
+				}
+
+				task.consecutiveMistakeCount = 0
+
+				// Write the updated content back to the draft
+				const contentBytes = new TextEncoder().encode(diffResult.content)
+				await vscode.workspace.fs.writeFile(uri, contentBytes)
+				console.log("📝 [ApplyDiffTool] draft updated successfully")
+
+				// Track file edit operation
+				await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
+				task.didEditFile = true
+
+				// Generate a simple message for the tool result
+				const message = `Applied diff to draft document: ${canonicalPath}`
+				pushToolResult(message)
+				task.processQueuedMessages()
+				return
+			}
+			// kilocode_change end
 
 			if (isPreventFocusDisruptionEnabled) {
 				// Direct file write without diff view

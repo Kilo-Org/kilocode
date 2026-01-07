@@ -1,6 +1,5 @@
 import path from "path"
 import delay from "delay"
-import * as vscode from "vscode"
 import fs from "fs/promises"
 
 import { Task } from "../task/Task"
@@ -17,6 +16,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { convertNewFileToUnifiedDiff, computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { isDraftPath, writeDraftDocument } from "./helpers/draftDocumentHelpers" // kilocode_change
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 interface WriteToFileParams {
@@ -52,6 +52,20 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			task.recordToolError("write_to_file")
 			pushToolResult(await task.sayAndCreateMissingParamError("write_to_file", "content"))
 			await task.diffViewProvider.reset()
+			return
+		}
+
+		// Check if this is a draft document
+		if (isDraftPath(relPath)) {
+			const result = await writeDraftDocument(relPath, newContent, task)
+			if ("error" in result) {
+				pushToolResult(formatResponse.toolError(result.error))
+				await handleError("writing draft document", new Error(result.error))
+				return
+			}
+
+			task.didEditFile = true
+			pushToolResult(formatResponse.toolResult(`Updated draft document "${result.canonicalPath}"`))
 			return
 		}
 
@@ -236,6 +250,12 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 		let newContent: string | undefined = block.params.content
 
 		if (!relPath || newContent === undefined) {
+			return
+		}
+
+		// Skip partial handling for draft documents - they don't use the diff view provider
+		// and we don't want to create filesystem directories for draft:// paths
+		if (isDraftPath(relPath)) {
 			return
 		}
 

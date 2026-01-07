@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
+import * as vscode from "vscode"
 
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
@@ -14,6 +15,7 @@ import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
+import { isDraftPath, normalizeDraftPath, draftPathToFilename, DRAFT_SCHEME_NAME } from "./helpers/draftDocumentHelpers" // kilocode_change
 
 interface SearchReplaceOperation {
 	search: string
@@ -85,6 +87,102 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 					return
 				}
 			}
+
+			// kilocode_change start: Handle draft documents
+			if (isDraftPath(relPath)) {
+				const canonicalPath = normalizeDraftPath(relPath)
+				const filename = draftPathToFilename(relPath)
+
+				// Read draft document
+				let fileContent: string
+				try {
+					const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+					const contentBytes = await vscode.workspace.fs.readFile(uri)
+					fileContent = new TextDecoder().decode(contentBytes)
+				} catch (error) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("search_and_replace")
+					const errorMsg = error instanceof Error ? error.message : "Unknown error"
+					const errorMessage = `Failed to read draft document '${relPath}': ${errorMsg}`
+					await task.say("error", errorMessage)
+					pushToolResult(formatResponse.toolError(errorMessage))
+					return
+				}
+
+				const useCrLf_kilocode = fileContent.includes("\r\n")
+
+				// Apply all operations sequentially
+				let newContent = fileContent
+				const errors: string[] = []
+
+				for (let i = 0; i < operations.length; i++) {
+					const { search, replace } = operations[i]
+					const searchPattern = new RegExp(
+						escapeRegExp(normalizeLineEndings_kilocode(search, useCrLf_kilocode)),
+						"g",
+					)
+
+					const matchCount = newContent.match(searchPattern)?.length ?? 0
+					if (matchCount === 0) {
+						errors.push(`Operation ${i + 1}: No match found for search text.`)
+						continue
+					}
+
+					if (matchCount > 1) {
+						errors.push(
+							`Operation ${i + 1}: Found ${matchCount} matches. Please provide more context to make a unique match.`,
+						)
+						continue
+					}
+
+					// Apply the replacement
+					newContent = newContent.replace(
+						searchPattern,
+						normalizeLineEndings_kilocode(replace, useCrLf_kilocode),
+					)
+				}
+
+				// If all operations failed, return error
+				if (errors.length === operations.length) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("search_and_replace", "no_match")
+					pushToolResult(formatResponse.toolError(`All operations failed:\n${errors.join("\n")}`))
+					return
+				}
+
+				// Check if any changes were made
+				if (newContent === fileContent) {
+					pushToolResult(`No changes needed for '${relPath}'`)
+					return
+				}
+
+				// Write draft document
+				try {
+					const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+					const contentBytes = new TextEncoder().encode(newContent)
+					await vscode.workspace.fs.writeFile(uri, contentBytes)
+
+					await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
+					task.didEditFile = true
+
+					// Add error info if some operations failed
+					let resultMessage = ""
+					if (errors.length > 0) {
+						resultMessage = `Some operations failed:\n${errors.join("\n")}\n\n`
+					}
+					resultMessage += `Updated draft document "${canonicalPath}"`
+
+					pushToolResult(formatResponse.toolResult(resultMessage))
+					task.recordToolUsage("search_and_replace")
+					return
+				} catch (error) {
+					const errorMsg = error instanceof Error ? error.message : "Unknown error"
+					await handleError("writing draft document", new Error(errorMsg))
+					pushToolResult(formatResponse.toolError(`Failed to write draft document: ${errorMsg}`))
+					return
+				}
+			}
+			// kilocode_change end
 
 			const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 

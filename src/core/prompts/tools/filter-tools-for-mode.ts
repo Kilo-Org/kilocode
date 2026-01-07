@@ -10,6 +10,7 @@ import type { McpHub } from "../../../services/mcp/McpHub"
 import { ClineProviderState } from "../../webview/ClineProvider"
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
+import { getKiloCodeWrapperProperties } from "../../../core/kilocode/wrapper"
 // kilocode_change end
 
 /**
@@ -340,6 +341,15 @@ export function filterNativeToolsForMode(
 	if (!mcpHub || !hasAnyMcpResources(mcpHub)) {
 		allowedToolNames.delete("access_mcp_resource")
 	}
+
+	// kilocode_change start - create_draft tool exclusion
+	// Conditionally exclude create_draft if running in CLI or JetBrains mode
+	// (drafts require VS Code editor UI which CLI and JetBrains don't have)
+	const { kiloCodeWrapperCode, kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
+	if (kiloCodeWrapperJetbrains || kiloCodeWrapperCode === "cli") {
+		allowedToolNames.delete("create_draft")
+	}
+	// kilocode_change end - create_draft tool exclusion
 
 	// Filter native tools based on allowed tool names and apply alias renames
 	const filteredTools: OpenAI.Chat.ChatCompletionTool[] = []

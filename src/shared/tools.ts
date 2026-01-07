@@ -121,6 +121,7 @@ export type NativeToolArgs = {
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
 	write_to_file: { path: string; content: string }
+	create_draft: { title: string; content: string }
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -262,6 +263,11 @@ export interface GenerateImageToolUse extends ToolUse<"generate_image"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
 }
 
+export interface CreateDraftToolUse extends ToolUse<"create_draft"> {
+	name: "create_draft"
+	params: Partial<Pick<Record<ToolParamName, string>, "title" | "content">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -298,6 +304,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
+	create_draft: "create draft documents",
 } as const
 
 // Define available tool groups.
@@ -313,6 +320,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"delete_file", // kilocode_change
 			"new_rule", // kilocode_change
 			"generate_image",
+			"create_draft",
 		],
 		customTools: ["search_and_replace", "search_replace", "apply_patch"],
 	},
@@ -338,7 +346,8 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"switch_mode",
 	"new_task",
 	"report_bug",
-	"condense", // kilocode_Change
+	"condense", // kilocode_change
+	"create_draft", // kilocode_change
 	"update_todo_list",
 	"run_slash_command",
 ] as const
