@@ -331,6 +331,31 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 })
 
 /**
+ * Derived atom to get the timestamp of the most recent unanswered followup question.
+ * Used to prevent delivering queued messages that were enqueued before the question was asked.
+ */
+export const pendingFollowupAskTsAtom = atom<number | null>((get) => {
+	const messages = get(chatMessagesAtom)
+
+	for (let i = messages.length - 1; i >= 0; i -= 1) {
+		const message = messages[i]
+		if (!message) continue
+
+		if (
+			message.type === "ask" &&
+			message.ask === "followup" &&
+			!message.isAnswered &&
+			!message.partial &&
+			message.text
+		) {
+			return message.ts
+		}
+	}
+
+	return null
+})
+
+/**
  * Derived atom to check if there's an active error
  */
 export const hasErrorAtom = atom<boolean>((get) => {

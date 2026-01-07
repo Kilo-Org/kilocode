@@ -10,6 +10,7 @@ import { useTaskState } from "./useTaskState.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { logs } from "../../services/logs.js"
 import { clearOutgoingQueueSignalAtom, queuedUserMessagesAtom } from "../atoms/queuedMessages.js"
+import { pendingFollowupAskTsAtom } from "../atoms/ui.js"
 
 export interface OutgoingUserMessage {
 	id: string
@@ -28,6 +29,7 @@ export interface OutgoingMessageQueueState {
 	isStreaming: boolean
 	isApprovalPending: boolean
 	hasActiveTask: boolean
+	followupAskTs: number | null
 }
 
 export interface OutgoingMessageHandlers {
@@ -76,10 +78,26 @@ export function createQueuedOutgoingMessageProcessor(params: {
 	const queue = new SequentialWorkQueue<OutgoingUserMessage>({
 		canProcess: () => {
 			const state = params.getState()
-			return state.isServiceReady && !state.isStreaming && !state.isApprovalPending
+			if (!state.isServiceReady) return false
+			if (state.isStreaming) return false
+			if (state.isApprovalPending) return false
+
+			return true
 		},
 		process: async ({ value }) => {
 			const state = params.getState()
+			if (state.followupAskTs !== null && value.enqueuedAt < state.followupAskTs) {
+				logs.debug(
+					"Dropping queued message due to pending followup question",
+					"QueuedOutgoingMessageProcessor",
+					{
+						messageId: value.id,
+					},
+				)
+				params.callbacks?.onDropped?.(value.id)
+				return
+			}
+
 			if (state.hasActiveTask) {
 				await params.handlers.sendAskResponse({
 					response: "messageResponse",
@@ -129,6 +147,7 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 	const isServiceReady = useAtomValue(isServiceReadyAtom)
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const followupAskTs = useAtomValue(pendingFollowupAskTsAtom)
 	const clearSignal = useAtomValue(clearOutgoingQueueSignalAtom)
 	const { hasActiveTask } = useTaskState()
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
@@ -153,6 +172,7 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 		isStreaming,
 		isApprovalPending,
 		hasActiveTask,
+		followupAskTs,
 	})
 	const stateChangeWaiterRef = useRef<StateChangeWaiter>(createStateChangeWaiter())
 	const processorRef = useRef<QueuedOutgoingMessageProcessor>(
@@ -192,10 +212,11 @@ export function useOutgoingMessageQueue(): { enqueue: (message: EnqueueOutgoingU
 			isStreaming,
 			isApprovalPending,
 			hasActiveTask,
+			followupAskTs,
 		}
 		stateChangeWaiterRef.current.notifyChanged()
 		processorRef.current.notify()
-	}, [isServiceReady, isStreaming, isApprovalPending, hasActiveTask])
+	}, [isServiceReady, isStreaming, isApprovalPending, hasActiveTask, followupAskTs])
 
 	useEffect(() => {
 		processorRef.current.clear()

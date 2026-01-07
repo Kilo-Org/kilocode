@@ -267,6 +267,7 @@ describe("createQueuedStdinMessageProcessor", () => {
 			isServiceReady: false,
 			isStreaming: false,
 			isApprovalPending: false,
+			followupAskTs: null,
 		}
 
 		sendAskResponse = vi.fn().mockResolvedValue(undefined)
@@ -402,6 +403,49 @@ describe("createQueuedStdinMessageProcessor", () => {
 		await vi.runAllTimersAsync()
 
 		expect(sendAskResponse).not.toHaveBeenCalled()
+		processor.dispose()
+	})
+
+	it("should drop messageResponse enqueued before a followup question and not block later answers", async () => {
+		state.isServiceReady = true
+
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		vi.setSystemTime(1)
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "queued-before-followup" })
+		state.followupAskTs = 10_000
+		processor.notify()
+
+		vi.setSystemTime(20_000)
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "answer" })
+		processor.notify()
+		await vi.runAllTimersAsync()
+
+		expect(sendAskResponse).toHaveBeenCalledTimes(1)
+		expect(sendAskResponse).toHaveBeenCalledWith({ response: "messageResponse", text: "answer" })
+
+		processor.dispose()
+	})
+
+	it("should allow answering a followup question with a message enqueued after it was asked", async () => {
+		state.isServiceReady = true
+		state.followupAskTs = 10_000
+
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => state,
+			handlers,
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		vi.setSystemTime(20_000)
+		processor.enqueue({ type: "askResponse", askResponse: "messageResponse", text: "answer" })
+		await vi.runAllTimersAsync()
+
+		expect(sendAskResponse).toHaveBeenCalledWith({ response: "messageResponse", text: "answer" })
 		processor.dispose()
 	})
 })

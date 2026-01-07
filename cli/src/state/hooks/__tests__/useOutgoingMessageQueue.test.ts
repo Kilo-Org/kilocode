@@ -20,6 +20,7 @@ describe("createQueuedOutgoingMessageProcessor", () => {
 			isStreaming: false,
 			isApprovalPending: false,
 			hasActiveTask: false,
+			followupAskTs: null,
 		}
 
 		sendNewTask = vi.fn().mockResolvedValue(undefined)
@@ -161,6 +162,27 @@ describe("createQueuedOutgoingMessageProcessor", () => {
 		await vi.runAllTimersAsync()
 
 		expect(sendNewTask).not.toHaveBeenCalled()
+		processor.dispose()
+	})
+
+	it("should not deliver messages enqueued before a pending followup question", async () => {
+		state.isServiceReady = true
+		const onDropped = vi.fn()
+
+		const processor = createQueuedOutgoingMessageProcessor({
+			getState: () => state,
+			handlers,
+			callbacks: { onDropped },
+			options: { pollIntervalMs: 1, reactionStartTimeoutMs: 1, reactionDoneTimeoutMs: 1 },
+		})
+
+		processor.enqueue({ id: "m-old", text: "old", enqueuedAt: 1 })
+		state.followupAskTs = 10_000
+		processor.notify()
+		await vi.runAllTimersAsync()
+		expect(sendNewTask).not.toHaveBeenCalled()
+		expect(onDropped).toHaveBeenCalledWith("m-old")
+
 		processor.dispose()
 	})
 })

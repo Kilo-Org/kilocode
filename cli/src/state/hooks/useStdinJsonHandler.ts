@@ -14,6 +14,7 @@ import { clearStdinQueueSignalAtom } from "../atoms/queuedMessages.js"
 import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
 import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
 import { waitForAgentReaction } from "../../utils/wait-for-agent-reaction.js"
+import { pendingFollowupAskTsAtom } from "../atoms/ui.js"
 import { logs } from "../../services/logs.js"
 
 export interface StdinMessage {
@@ -89,6 +90,7 @@ export interface StdinMessageQueueState {
 	isServiceReady: boolean
 	isStreaming: boolean
 	isApprovalPending: boolean
+	followupAskTs: number | null
 }
 
 export interface QueuedStdinMessageProcessorOptions {
@@ -130,7 +132,8 @@ export function createQueuedStdinMessageProcessor(params: {
 	const waitForStateChange = params.options?.waitForStateChange
 
 	const queue = new SequentialWorkQueue<StdinMessage>({
-		canProcess: ({ value }) => {
+		canProcess: (item) => {
+			const { value } = item
 			const state = params.getState()
 
 			// Unknown message types can be dropped immediately (no dependency on agent state).
@@ -162,7 +165,23 @@ export function createQueuedStdinMessageProcessor(params: {
 
 			return true
 		},
-		process: async ({ value }) => {
+		process: async ({ value, enqueuedAt }) => {
+			const followupAskTs = params.getState().followupAskTs
+			if (value.type === "askResponse") {
+				const askResponse = value.askResponse
+				const isToolApprovalResponse = askResponse === "yesButtonClicked" || askResponse === "noButtonClicked"
+				if (!isToolApprovalResponse && followupAskTs !== null && enqueuedAt < followupAskTs) {
+					logs.debug(
+						"Dropping stdin message due to pending followup question",
+						"QueuedStdinMessageProcessor",
+						{
+							type: value.type,
+						},
+					)
+					return
+				}
+			}
+
 			const result = await handleStdinMessage(value, params.handlers)
 			if (!result.handled) {
 				logs.warn("Unknown stdin message type", "QueuedStdinMessageProcessor", { type: value.type })
@@ -212,11 +231,13 @@ export function useStdinJsonHandler(enabled: boolean) {
 	const isServiceReady = useAtomValue(isServiceReadyAtom)
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const followupAskTs = useAtomValue(pendingFollowupAskTsAtom)
 	const clearSignal = useAtomValue(clearStdinQueueSignalAtom)
 	const stateRef = useRef<StdinMessageQueueState>({
 		isServiceReady,
 		isStreaming,
 		isApprovalPending,
+		followupAskTs,
 	})
 	const stateChangeWaiterRef = useRef<StateChangeWaiter>(createStateChangeWaiter())
 	const processorRef = useRef<QueuedStdinMessageProcessor | null>(null)
@@ -226,10 +247,11 @@ export function useStdinJsonHandler(enabled: boolean) {
 			isServiceReady,
 			isStreaming,
 			isApprovalPending,
+			followupAskTs,
 		}
 		stateChangeWaiterRef.current.notifyChanged()
 		processorRef.current?.notify()
-	}, [isServiceReady, isStreaming, isApprovalPending])
+	}, [isServiceReady, isStreaming, isApprovalPending, followupAskTs])
 
 	useEffect(() => {
 		processorRef.current?.clear()
@@ -302,10 +324,5 @@ export function useStdinJsonHandler(enabled: boolean) {
 			processorRef.current = null
 			rl.close()
 		}
-	}, [
-		enabled,
-		sendAskResponse,
-		cancelTask,
-		respondToTool,
-	])
+	}, [enabled, sendAskResponse, cancelTask, respondToTool])
 }
