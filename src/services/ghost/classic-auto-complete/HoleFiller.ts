@@ -13,44 +13,24 @@ import { ApiStreamChunk } from "../../../api/transform/stream"
 export type { HoleFillerGhostPrompt, FillInAtCursorSuggestion, ChatCompletionResult }
 
 /**
- * Parse the response - only handles responses with <COMPLETION> tags
- * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
+ * Extract text from <COMPLETION> tags in a response.
+ * Returns the extracted text, or the original response if no tags found (fallback).
  */
-export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
-	let fimText: string = ""
-
-	// Match content strictly between <COMPLETION> and </COMPLETION> tags
-	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
-
+export function parseCompletionTags(response: string): string {
+	const completionMatch = response.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
 	if (completionMatch) {
-		// Extract the captured group (content between tags)
-		fimText = completionMatch[1] || ""
+		return (completionMatch[1] || "").replace(/<\/?COMPLETION>/gi, "")
 	}
-	// Remove any accidentally captured tag remnants
-	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
-
-	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
-	return {
-		text: fimText,
-		prefix,
-		suffix,
-	}
+	// Fallback: return raw response if no tags found
+	return response
 }
 
-export class HoleFiller {
-	constructor(private contextProvider: GhostContextProvider) {}
-
-	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
-		return {
-			strategy: "hole_filler",
-			systemPrompt: this.getSystemInstructions(),
-			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
-			autocompleteInput,
-		}
-	}
-
-	getSystemInstructions(): string {
-		return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
+/**
+ * Get the base system prompt for hole-filling completions.
+ * Used by both code completion (HoleFiller) and chat completion (ChatTextAreaAutocomplete).
+ */
+export function getHoleFillerSystemPrompt(): string {
+	return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
 
 ## CRITICAL RULES
 - NEVER repeat or duplicate content that appears immediately before {{FILL_HERE}}
@@ -148,6 +128,53 @@ Task: Auto-Completion
 Provide a subtle, non-intrusive completion after a typing pause.
 
 `
+}
+
+/**
+ * Build a user prompt for hole-filling with the given prefix and suffix.
+ * Used by both code completion (HoleFiller) and chat completion (ChatTextAreaAutocomplete).
+ */
+export function buildHoleFillerUserPrompt(prefix: string, suffix: string = "", languageId: string = "text"): string {
+	return (
+		`<LANGUAGE>${languageId}</LANGUAGE>\n\n` +
+		`<QUERY>
+${prefix}{{FILL_HERE}}${suffix}
+</QUERY>
+
+TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.
+Return the COMPLETION tags`
+	)
+}
+
+/**
+ * Parse the response - only handles responses with <COMPLETION> tags
+ * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
+ */
+export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+	const fimText = parseCompletionTags(fullResponse)
+
+	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
+	return {
+		text: fimText === fullResponse ? "" : fimText, // Return empty if no tags were found
+		prefix,
+		suffix,
+	}
+}
+
+export class HoleFiller {
+	constructor(private contextProvider: GhostContextProvider) {}
+
+	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
+		return {
+			strategy: "hole_filler",
+			systemPrompt: this.getSystemInstructions(),
+			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
+			autocompleteInput,
+		}
+	}
+
+	getSystemInstructions(): string {
+		return getHoleFillerSystemPrompt()
 	}
 
 	/**
@@ -198,9 +225,10 @@ Return the COMPLETION tags`
 
 		console.log("response", response)
 
-		// Extract just the text from the response - prefix/suffix are handled by the caller
-		const completionMatch = response.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
-		const suggestionText = completionMatch ? (completionMatch[1] || "").replace(/<\/?COMPLETION>/gi, "") : ""
+		// Extract just the text from the response using shared parser
+		const parsedResponse = parseCompletionTags(response)
+		// If no tags found, parsedResponse equals response - treat as empty
+		const suggestionText = parsedResponse === response ? "" : parsedResponse
 
 		const fillInAtCursorSuggestion = processSuggestion(suggestionText)
 

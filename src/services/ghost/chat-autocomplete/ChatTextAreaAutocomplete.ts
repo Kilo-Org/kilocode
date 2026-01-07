@@ -5,6 +5,11 @@ import { AutocompleteContext, VisibleCodeContext } from "../types"
 import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessGhostSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
+import {
+	parseCompletionTags,
+	getHoleFillerSystemPrompt,
+	buildHoleFillerUserPrompt,
+} from "../classic-auto-complete/HoleFiller"
 
 export class ChatTextAreaAutocomplete {
 	private model: GhostModel
@@ -62,8 +67,8 @@ export class ChatTextAreaAutocomplete {
 			} else {
 				// Fall back to chat-based completion for models without FIM support
 				usedChatCompletion = true
-				const systemPrompt = this.getChatSystemPrompt()
-				const userPrompt = this.getChatUserPrompt(prefix)
+				const systemPrompt = getHoleFillerSystemPrompt()
+				const userPrompt = buildHoleFillerUserPrompt(prefix, "", "chat")
 
 				await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
 					if (chunk.type === "text") {
@@ -83,9 +88,9 @@ export class ChatTextAreaAutocomplete {
 				context,
 			)
 
-			// Parse COMPLETION tags if we used chat-based completion
+			// Parse COMPLETION tags if we used chat-based completion (using shared parser from HoleFiller)
 			if (usedChatCompletion) {
-				response = this.parseCompletionResponse(response)
+				response = parseCompletionTags(response)
 			}
 
 			const cleanedSuggestion = this.cleanSuggestion(response, userText)
@@ -113,49 +118,6 @@ export class ChatTextAreaAutocomplete {
 			)
 			return { suggestion: "" }
 		}
-	}
-
-	/**
-	 * Get system prompt for chat-based completion using COMPLETION tags (shared format with HoleFiller)
-	 */
-	private getChatSystemPrompt(): string {
-		return `You are an intelligent chat completion assistant. Your task is to complete the user's message naturally based on the provided context.
-
-## RULES
-- Provide a natural, conversational completion inside <COMPLETION></COMPLETION> tags
-- Be concise - typically 1-15 words
-- Match the user's tone and style
-- Use context from visible code if relevant
-- NEVER repeat what the user already typed
-- NEVER start with comments (//, /*, #)
-- If the user is in the middle of typing a word (e.g., "hel"), include the COMPLETE word in your response (e.g., "hello world" not just "lo world")
-- This allows proper prefix matching to remove the overlap correctly
-
-## EXAMPLE
-User types: "Can you help me refact"
-Your response: <COMPLETION>or this function to use async/await?</COMPLETION>`
-	}
-
-	/**
-	 * Get user prompt for chat-based completion
-	 */
-	private getChatUserPrompt(prefix: string): string {
-		return `${prefix}
-
-TASK: Complete the user's message naturally inside <COMPLETION></COMPLETION> tags.
-- If the user is mid-word (e.g., typed "hel"), return the COMPLETE word (e.g., "hello world") so prefix matching can work correctly`
-	}
-
-	/**
-	 * Parse completion response - extracts text from <COMPLETION> tags (shared format with HoleFiller)
-	 */
-	private parseCompletionResponse(response: string): string {
-		const completionMatch = response.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
-		if (completionMatch) {
-			return (completionMatch[1] || "").replace(/<\/?COMPLETION>/gi, "")
-		}
-		// Fallback: return raw response if no tags found (for backwards compatibility)
-		return response
 	}
 
 	private async buildPrefix(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {
