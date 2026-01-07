@@ -19,6 +19,7 @@ describe("AutocompleteTelemetry", () => {
 			text: `text-${index}`,
 			prefix: `prefix-${index}`,
 			suffix: `suffix-${index}`,
+			id: `suggestion-${index}`,
 		}
 	}
 

@@ -322,8 +322,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return
 		}
 
+		// Ensure the suggestion has an id for telemetry tracking
+		const suggestionWithId = fillInAtCursor.id
+			? fillInAtCursor
+			: { ...fillInAtCursor, id: crypto.randomUUID() }
+
 		// Add to the end of the array (most recent)
-		this.suggestionsHistory.push(fillInAtCursor)
+		this.suggestionsHistory.push(suggestionWithId)
 
 		// Remove oldest if we exceed the limit
 		if (this.suggestionsHistory.length > MAX_SUGGESTIONS_HISTORY) {
@@ -368,7 +373,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	): FillInAtCursorSuggestion {
 		if (!suggestionText) {
 			this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
-			return { text: "", prefix, suffix }
+			return { text: "", prefix, suffix, id: crypto.randomUUID() }
 		}
 
 		const processedText = postprocessGhostSuggestion({
@@ -379,11 +384,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		})
 
 		if (processedText) {
-			return { text: processedText, prefix, suffix }
+			return { text: processedText, prefix, suffix, id: crypto.randomUUID() }
 		}
 
 		this.telemetry?.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
-		return { text: "", prefix, suffix }
+		return { text: "", prefix, suffix, id: crypto.randomUUID() }
 	}
 
 	private async disposeIgnoreController(): Promise<void> {

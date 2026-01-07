@@ -96,6 +96,8 @@ export interface FillInAtCursorSuggestion {
 	text: string
 	prefix: string
 	suffix: string
+	/** Unique identifier for this suggestion, used for telemetry tracking */
+	id: string
 }
 
 export interface MatchingSuggestionResult {
