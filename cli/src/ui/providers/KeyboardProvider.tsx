@@ -25,6 +25,7 @@ import {
 	setDebugLoggingAtom,
 	clearBuffersAtom,
 	setupKeyboardAtom,
+	triggerClipboardImagePasteAtom,
 } from "../../state/atoms/keyboard.js"
 import {
 	parseKittySequence,
@@ -32,7 +33,6 @@ import {
 	isFocusEvent,
 	mapAltKeyCharacter,
 	parseReadlineKey,
-	createPasteKey,
 	createSpecialKey,
 } from "../utils/keyParsing.js"
 import { autoEnableKittyProtocol } from "../utils/terminalCapabilities.js"
@@ -68,6 +68,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const setDebugLogging = useSetAtom(setDebugLoggingAtom)
 	const clearBuffers = useSetAtom(clearBuffersAtom)
 	const setupKeyboard = useSetAtom(setupKeyboardAtom)
+	const triggerClipboardImagePaste = useSetAtom(triggerClipboardImagePasteAtom)
 
 	// Jotai getters (for reading current state)
 	const pasteBuffer = useAtomValue(pasteBufferAtom)
@@ -97,17 +98,23 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Handle paste completion
 	const completePaste = useCallback(() => {
 		const currentBuffer = pasteBufferRef.current
-		if (isPasteRef.current && currentBuffer) {
+		const wasPasting = isPasteRef.current
+
+		// Reset paste state
+		setPasteMode(false)
+		isPasteRef.current = false
+		pasteBufferRef.current = ""
+
+		if (wasPasting) {
 			// Normalize line endings: convert \r\n and \r to \n
 			// This handles different line ending formats from various terminals/platforms
-			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-
-			broadcastKey(createPasteKey(normalizedBuffer))
-			setPasteMode(false)
-			isPasteRef.current = false
-			pasteBufferRef.current = ""
+			const normalizedBuffer = currentBuffer ? currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n") : ""
+			// Always check clipboard for image first (prioritize image over text)
+			// If no image found, the fallback text will be used
+			// This handles: Cmd+V with image file copied from Finder (terminal sends filename as text)
+			triggerClipboardImagePaste(normalizedBuffer || undefined)
 		}
-	}, [broadcastKey, setPasteMode])
+	}, [setPasteMode, triggerClipboardImagePaste])
 
 	useEffect(() => {
 		// Save original raw mode state
@@ -432,6 +439,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		setKittyProtocol,
 		pasteBuffer,
 		kittyBuffer,
+		triggerClipboardImagePaste,
 		isKittyEnabled,
 		isDebugEnabled,
 		completePaste,
