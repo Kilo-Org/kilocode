@@ -341,6 +341,14 @@
 			"openAiReason": "You need a valid OpenAI provider with an API key to use voice transcription.",
 			"ffmpegReason": "You need FFmpeg installed. <ffmpegLink>Click here</ffmpegLink> to have Kilo help you install FFmpeg.",
 			"ffmpegMessage": "Help me install FFmpeg"
+		},
+		"microphone": {
+			"label": "Microphone",
+			"description": "Select the microphone device for speech-to-text",
+			"defaultOption": "System Default",
+			"loading": "Loading microphone devices...",
+			"noDevices": "No microphone devices found",
+			"refresh": "Refresh"
 		}
 	}
 }

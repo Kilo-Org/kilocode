@@ -343,6 +343,14 @@
 			"ffmpegMessage": "帮我安装 FFmpeg"
 		},
 		"misconfiguredState": "因配置问题而不可用",
-		"errorState": "因错误而不可用"
+		"errorState": "因错误而不可用",
+		"microphone": {
+			"label": "麦克风",
+			"defaultOption": "系统默认",
+			"description": "选择用于语音转文字的麦克风设备",
+			"loading": "正在加载麦克风设备...",
+			"noDevices": "未找到麦克风设备",
+			"refresh": "刷新"
+		}
 	}
 }

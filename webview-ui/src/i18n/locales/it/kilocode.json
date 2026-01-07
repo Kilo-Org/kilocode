@@ -343,6 +343,14 @@
 			"ffmpegMessage": "Aiutami a installare FFmpeg"
 		},
 		"misconfiguredState": "Non disponibile a causa della configurazione",
-		"errorState": "Non disponibile a causa di un errore"
+		"errorState": "Non disponibile a causa di un errore",
+		"microphone": {
+			"label": "Microfono",
+			"noDevices": "Nessun dispositivo microfono trovato",
+			"loading": "Caricamento dei dispositivi microfono...",
+			"refresh": "Aggiorna",
+			"defaultOption": "Impostazione predefinita del sistema",
+			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
+		}
 	}
 }

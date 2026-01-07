@@ -342,6 +342,14 @@
 			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
 		},
 		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
-		"errorState": "Hata nedeniyle kullanılamıyor"
+		"errorState": "Hata nedeniyle kullanılamıyor",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Sistem Varsayılanı",
+			"description": "Konuşma-yazma için mikrofon cihazını seçin",
+			"noDevices": "Mikrofon cihazı bulunamadı",
+			"loading": "Mikrofon cihazları yükleniyor...",
+			"refresh": "Yenile"
+		}
 	}
 }

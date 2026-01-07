@@ -342,6 +342,14 @@
 			"ffmpegMessage": "Bantu saya menginstal FFmpeg"
 		},
 		"misconfiguredState": "Tidak tersedia karena konfigurasi",
-		"errorState": "Tidak tersedia karena terjadi kesalahan"
+		"errorState": "Tidak tersedia karena terjadi kesalahan",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Default Sistem",
+			"description": "Pilih perangkat mikrofon untuk pengenalan suara-ke-teks",
+			"noDevices": "Tidak ada perangkat mikrofon yang ditemukan",
+			"loading": "Memuat perangkat mikrofon...",
+			"refresh": "Segarkan"
+		}
 	}
 }

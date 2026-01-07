@@ -33,7 +33,7 @@ import {
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
-import { STTSegment } from "./sttContract" // kilocode_change: STT segment type
+import { STTSegment, MicrophoneDevice } from "./sttContract" // kilocode_change: STT segment type and microphone device
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -139,6 +139,8 @@ export interface ExtensionMessage {
 		| "stt:volume" // kilocode_change: STT volume level
 		| "stt:stopped" // kilocode_change: STT session stopped
 		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
+		| "stt:devices" // kilocode_change: Microphone devices list
+		| "stt:deviceSelected" // kilocode_change: Device selection confirmation
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -277,6 +279,8 @@ export interface ExtensionMessage {
 	level?: number // kilocode_change: STT volume level (0-1)
 	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
+	devices?: MicrophoneDevice[] // kilocode_change: Microphone devices list
+	device?: MicrophoneDevice | null // kilocode_change: Selected microphone device
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
@@ -460,6 +464,7 @@ export type ExtensionState = Pick<
 	| "includeCurrentTime"
 	| "includeCurrentCost"
 	| "maxGitStatusFiles"
+	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
 > & {
 	version: string
 	clineMessages: ClineMessage[]

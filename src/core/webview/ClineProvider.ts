@@ -2178,6 +2178,7 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			isBrowserSessionActive,
 		} = await this.getState()
 
@@ -2405,6 +2406,7 @@ export class ClineProvider
 				(s) => s.autoPurgeIncompleteTaskRetentionDays,
 			),
 			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
@@ -2603,6 +2605,7 @@ export class ClineProvider
 			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
 			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
 			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
+			selectedMicrophoneDevice: stateValues.selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,

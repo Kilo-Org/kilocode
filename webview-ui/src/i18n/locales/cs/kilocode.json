@@ -342,6 +342,14 @@
 			"ffmpegMessage": "Pomozte mi nainstalovat FFmpeg"
 		},
 		"misconfiguredState": "Nedostupné kvůli konfiguraci",
-		"errorState": "Nedostupné kvůli chybě"
+		"errorState": "Nedostupné kvůli chybě",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Vyberte mikrofonní zařízení pro převod řeči na text",
+			"defaultOption": "Výchozí nastavení systému",
+			"loading": "Načítání mikrofonních zařízení...",
+			"refresh": "Obnovit",
+			"noDevices": "Nebyla nalezena žádná zařízení mikrofonu"
+		}
 	}
 }

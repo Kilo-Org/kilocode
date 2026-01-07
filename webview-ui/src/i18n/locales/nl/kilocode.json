@@ -341,6 +341,14 @@
 			"ffmpegReason": "Je hebt FFmpeg nodig. <ffmpegLink>Klik hier</ffmpegLink> om Kilo te laten helpen met het installeren van FFmpeg."
 		},
 		"misconfiguredState": "Niet beschikbaar vanwege configuratie",
-		"errorState": "Niet beschikbaar vanwege een fout"
+		"errorState": "Niet beschikbaar vanwege een fout",
+		"microphone": {
+			"label": "Microfoon",
+			"defaultOption": "Systeemstandaard",
+			"description": "Selecteer het microfoonapparaat voor spraak-naar-tekst",
+			"loading": "Microfoonapparaten laden...",
+			"noDevices": "Geen microfoonapparaten gevonden",
+			"refresh": "Vernieuwen"
+		}
 	}
 }

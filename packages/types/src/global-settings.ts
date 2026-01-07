@@ -166,6 +166,14 @@ export const globalSettingsSchema = z.object({
 	soundEnabled: z.boolean().optional(),
 	soundVolume: z.number().optional(),
 	systemNotificationsEnabled: z.boolean().optional(), // kilocode_change
+	selectedMicrophoneDevice: z
+		.object({
+			id: z.string(),
+			name: z.string(),
+			platform: z.string(),
+		})
+		.nullable()
+		.optional(), // kilocode_change: Selected microphone device for STT (matches MicrophoneDevice from sttContract.ts)
 
 	maxOpenTabsContext: z.number().optional(),
 	maxWorkspaceFiles: z.number().optional(),

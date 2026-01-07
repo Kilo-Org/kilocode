@@ -342,6 +342,14 @@
 			"ffmpegMessage": "Ajude-me a instalar o FFmpeg"
 		},
 		"misconfiguredState": "Indisponível devido à configuração",
-		"errorState": "Indisponível devido a erro"
+		"errorState": "Indisponível devido a erro",
+		"microphone": {
+			"label": "Microfone",
+			"loading": "Carregando dispositivos de microfone...",
+			"defaultOption": "Padrão do Sistema",
+			"description": "Selecione o dispositivo de microfone para conversão de fala em texto",
+			"noDevices": "Nenhum dispositivo de microfone encontrado",
+			"refresh": "Atualizar"
+		}
 	}
 }

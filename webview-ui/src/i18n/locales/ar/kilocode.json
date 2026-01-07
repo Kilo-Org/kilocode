@@ -343,6 +343,14 @@
 			"ffmpegReason": "تحتاج إلى تثبيت FFmpeg. <ffmpegLink>انقر هنا</ffmpegLink> لمساعدتك من Kilo في تثبيت FFmpeg."
 		},
 		"misconfiguredState": "غير متاح بسبب الإعدادات",
-		"errorState": "غير متاح بسبب خطأ"
+		"errorState": "غير متاح بسبب خطأ",
+		"microphone": {
+			"label": "ميكروفون",
+			"noDevices": "لم يتم العثور على أجهزة ميكروفون",
+			"defaultOption": "النظام الافتراضي",
+			"loading": "جارٍ تحميل أجهزة الميكروفون...",
+			"description": "حدد جهاز الميكروفون لتحويل الكلام إلى نص",
+			"refresh": "تحديث"
+		}
 	}
 }

@@ -343,6 +343,14 @@
 			"ffmpegMessage": "Pomóż mi zainstalować FFmpeg"
 		},
 		"misconfiguredState": "Niedostępne z powodu konfiguracji",
-		"errorState": "Niedostępne z powodu błędu"
+		"errorState": "Niedostępne z powodu błędu",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Wybierz urządzenie mikrofonu do przetwarzania mowy na tekst",
+			"defaultOption": "Domyślny system",
+			"loading": "Ładowanie urządzeń mikrofonowych...",
+			"refresh": "Odśwież",
+			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
+		}
 	}
 }
