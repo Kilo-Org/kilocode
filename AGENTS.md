@@ -4,7 +4,11 @@ Kilo Code is an open source AI coding agent for VS Code that generates code from
 
 ## Skills
 
-- **Translation**: `.kilocode/skills/translation.md` - Translation and localization guidelines
+- **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
+
+## Workflows
+
+- **Add Missing Translations**: `.kilocode/workflows/add-missing-translations.md` - Run `/add-missing-translations` to find and fix missing translations
 
 ## Changesets
 

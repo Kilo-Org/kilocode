@@ -1,17 +1,13 @@
-# AGENTS.md
+---
+name: translation
+description: Guidelines for translating and localizing the Kilo Code extension, including language-specific rules for German, Simplified Chinese, and Traditional Chinese.
+---
 
-This file provides guidance to agents when working with code in this repository in Translate mode.
+# Translation Guidelines
 
-## Workflow
+This file provides guidance to agents when working with translations in this repository.
 
-This workflow requires Orchestrator mode.
-
-Execute `node scripts/find-missing-translations.js` in Code mode to find all missing translations.
-
-For each language that is missing translations:
-
-- For each JSON file that is missing translations:
-    - Start a separate subtask in Translate mode for this language and JSON file to add the missing translations. Do not try to process mutliple languages or JSON files in one subtask.
+For the translation workflow, use the `/add-missing-translations` command or see `.kilocode/workflows/add-missing-translations.md`.
 
 ---
 
@@ -316,36 +312,31 @@ For each language that is missing translations:
 "dragFiles": "按住shift拖动文件"
 =======
 "dragFiles": "Shift+拖拽文件"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "description": "启用后，Kilo Code 将能够与 MCP 服务器交互以获取高级功能。"
 =======
 "description": "启用后 Kilo Code 可与 MCP 服务交互获取高级功能。"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "cannotUndo": "此操作无法撤消。"
 =======
 "cannotUndo": "此操作不可逆。"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "hold shift to drag in files" → "按住shift拖动文件"
 =======
 "hold shift to drag in files" → "Shift+拖拽文件"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 
 <<<<<<< BEFORE
 "Double click to edit" → "双击进行编辑"
 =======
 "Double click to edit" → "双击编辑"
-
-> > > > > > > AFTER
+>>>>>>> AFTER
 ```
 
 ### Common Pitfalls
