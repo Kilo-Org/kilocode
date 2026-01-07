@@ -1,6 +1,6 @@
 // kilocode_change: STT Microphone Settings
 import React, { useEffect, useMemo } from "react"
-import { VSCodeDropdown, VSCodeOption, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { useSTT } from "@/hooks/useSTT"
 import { useExtensionState } from "@/context/ExtensionStateContext"
