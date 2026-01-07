@@ -50,6 +50,7 @@ import { SettingsSyncService } from "./services/settings-sync/SettingsSyncServic
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
+import { initializeKiloCodeServices, resetKiloCodeServices } from "./core/task/kilocode/services-integration" // kilocode_change
 
 // kilocode_change start
 async function findKilocodeTokenFromAnyProfile(provider: ClineProvider): Promise<string | undefined> {
@@ -188,6 +189,23 @@ export async function activate(context: vscode.ExtensionContext) {
 	// kilocode_change start: Initialize ManagedIndexer
 	const managedIndexer = new ManagedIndexer(contextProxy)
 	context.subscriptions.push(managedIndexer)
+	// kilocode_change end
+
+	// kilocode_change start: Initialize KiloCode Memory, Index, and Context services
+	if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+		const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath
+		const storageDir = context.globalStorageUri.fsPath
+
+		void initializeKiloCodeServices(context, workspacePath, storageDir)
+			.then(() => {
+				outputChannel.appendLine("[KiloCodeServices] Memory, Index, and Context services initialized")
+			})
+			.catch((error) => {
+				outputChannel.appendLine(
+					`[KiloCodeServices] Failed to initialize services: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			})
+	}
 	// kilocode_change end
 
 	// Initialize Roo Code Cloud service.
@@ -582,6 +600,7 @@ export async function deactivate() {
 	}
 
 	await McpServerManager.cleanup(extensionContext)
+	await resetKiloCodeServices() // kilocode_change: cleanup Memory, Index, Context services
 	TelemetryService.instance.shutdown()
 	TerminalRegistry.cleanup()
 }

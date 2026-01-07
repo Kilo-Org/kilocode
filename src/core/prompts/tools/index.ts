@@ -21,6 +21,9 @@ import { getAccessMcpResourceDescription } from "./access-mcp-resource"
 import { getSwitchModeDescription } from "./switch-mode"
 import { getNewTaskDescription } from "./new-task"
 import { getCodebaseSearchDescription } from "./codebase-search"
+import { getSemanticSearchDescription } from "./semantic-search" // kilocode_change
+import { getFindReferencesDescription } from "./find-references" // kilocode_change
+import { getGetModuleStructureDescription } from "./get-module-structure" // kilocode_change
 import { getUpdateTodoListDescription } from "./update-todo-list"
 import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
@@ -55,6 +58,11 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	use_mcp_tool: (args) => getUseMcpToolDescription(args),
 	access_mcp_resource: (args) => getAccessMcpResourceDescription(args),
 	codebase_search: (args) => getCodebaseSearchDescription(args),
+	// kilocode_change start
+	semantic_search: (args) => getSemanticSearchDescription(args),
+	find_references: (args) => getFindReferencesDescription(args),
+	get_module_structure: (args) => getGetModuleStructureDescription(args),
+	// kilocode_change end
 	switch_mode: () => getSwitchModeDescription(),
 	new_task: (args) => getNewTaskDescription(args),
 	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
@@ -135,6 +143,9 @@ export function getToolDescriptionsForMode(
 			codeIndexManager.isInitialized)
 	if (!isCodebaseSearchAvailable) {
 		tools.delete("codebase_search")
+		// kilocode_change start
+		tools.delete("semantic_search")
+		// kilocode_change end
 	}
 	// kilocode_change end
 
@@ -198,6 +209,11 @@ export {
 	getSwitchModeDescription,
 	getEditFileDescription, // kilocode_change: Morph fast apply
 	getCodebaseSearchDescription,
+	// kilocode_change start
+	getSemanticSearchDescription,
+	getFindReferencesDescription,
+	getGetModuleStructureDescription,
+	// kilocode_change end
 	getRunSlashCommandDescription,
 	getGenerateImageDescription,
 }

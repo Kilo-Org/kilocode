@@ -33,6 +33,27 @@ import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 // kilocode_change start
+// Performance optimization: Model cache to avoid repeated API calls
+class ModelCache {
+	private cache = new Map<string, { data: any; timestamp: number }>()
+	private readonly TTL = 5 * 60 * 1000 // 5 minutes
+
+	async get(key: string, fetcher: () => Promise<any>): Promise<any> {
+		const cached = this.cache.get(key)
+		if (cached && Date.now() - cached.timestamp < this.TTL) {
+			return cached.data
+		}
+
+		const data = await fetcher()
+		this.cache.set(key, { data, timestamp: Date.now() })
+		return data
+	}
+
+	invalidate(): void {
+		this.cache.clear()
+	}
+}
+
 type OpenRouterProviderParams = {
 	order?: string[]
 	only?: string[]
@@ -44,6 +65,8 @@ type OpenRouterProviderParams = {
 
 import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+// Performance optimization: Import performance monitor
+import { performanceMonitor } from "../../performance/performance-monitor"
 // kilocode_change end
 
 import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
@@ -94,6 +117,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	protected models: ModelRecord = {}
 	protected endpoints: ModelRecord = {}
 
+	// Performance optimization: Model cache instance
+	private modelCache = new ModelCache()
+
 	// kilocode_change start property
 	protected get providerName(): "OpenRouter" | "KiloCode" {
 		return "OpenRouter" as const
@@ -118,14 +144,19 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 	private async loadDynamicModels(): Promise<void> {
 		try {
-			const [models, endpoints] = await Promise.all([
-				getModels({ provider: "openrouter" }),
-				getModelEndpoints({
-					router: "openrouter",
-					modelId: this.options.openRouterModelId,
-					endpoint: this.options.openRouterSpecificProvider,
-				}),
-			])
+			// Performance optimization: Use cache to avoid repeated API calls
+			const cacheKey = `models_${this.options.openRouterModelId}_${this.options.openRouterSpecificProvider}`
+
+			const [models, endpoints] = await this.modelCache.get(cacheKey, async () => {
+				return await Promise.all([
+					getModels({ provider: "openrouter" }),
+					getModelEndpoints({
+						router: "openrouter",
+						modelId: this.options.openRouterModelId,
+						endpoint: this.options.openRouterSpecificProvider,
+					}),
+				])
+			})
 
 			this.models = models
 			this.endpoints = endpoints
@@ -505,14 +536,19 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	public async fetchModel() {
-		const [models, endpoints] = await Promise.all([
-			getModels({ provider: "openrouter" }),
-			getModelEndpoints({
-				router: "openrouter",
-				modelId: this.options.openRouterModelId,
-				endpoint: this.options.openRouterSpecificProvider,
-			}),
-		])
+		// Performance optimization: Use cache to avoid repeated API calls
+		const cacheKey = `models_${this.options.openRouterModelId}_${this.options.openRouterSpecificProvider}`
+
+		const [models, endpoints] = await this.modelCache.get(cacheKey, async () => {
+			return await Promise.all([
+				getModels({ provider: "openrouter" }),
+				getModelEndpoints({
+					router: "openrouter",
+					modelId: this.options.openRouterModelId,
+					endpoint: this.options.openRouterSpecificProvider,
+				}),
+			])
+		})
 
 		this.models = models
 		this.endpoints = endpoints

@@ -5,7 +5,7 @@ import deepEqual from "fast-deep-equal"
 import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
-import { Mode } from "@roo/modes"
+import { Mode } from "@roo/modes-shared"
 
 import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
@@ -28,7 +28,6 @@ import ErrorRow from "./ErrorRow"
 
 import McpResourceRow from "../mcp/McpResourceRow"
 
-import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
 import { BatchFilePermission } from "./BatchFilePermission"
@@ -66,6 +65,9 @@ import {
 import { cn } from "@/lib/utils"
 import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
 import { PathTooltip } from "../ui/PathTooltip"
+
+// RTL Support
+import RTLMessage from "./RTLMessage"
 
 // kilocode_change start
 import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning"
@@ -1340,7 +1342,7 @@ export const ChatRowContent = ({
 												}
 											}}
 											title={t("chat:queuedMessages.clickToEdit")}>
-											<Mention text={message.text} withShadow />
+											<RTLMessage text={message.text || ""} withShadow />
 										</div>
 										<div className="flex gap-2 pr-1">
 											<div

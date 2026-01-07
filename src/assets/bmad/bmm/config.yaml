@@ -1,0 +1,43 @@
+name: "BMM"
+version: "1.0.0"
+description: "BMAD Method Manager - Core management module for BMAD workflows"
+type: "core"
+author: "BMAD Team"
+license: "MIT"
+
+# Module metadata
+metadata:
+  category: "management"
+  priority: 10
+  required: true
+
+# Supported modes
+modes:
+  - "bmad-bmm-master"
+  - "bmad-bmm-analyst"
+  - "bmad-bmm-architect"
+  - "bmad-bmm-dev"
+  - "bmad-bmm-pm"
+  - "bmad-bmm-sm"
+  - "bmad-bmm-tea"
+  - "bmad-bmm-tech-writer"
+  - "bmad-bmm-ux-designer"
+  - "bmad-bmm-quick-flow-solo-dev"
+
+# Dependencies
+dependencies:
+  - "bmb"
+  - "cis"
+
+# Module capabilities
+capabilities:
+  - "workflow_management"
+  - "agent_orchestration"
+  - "template_rendering"
+  - "knowledge_base_access"
+
+# Configuration
+config:
+  default_workflow: "bmad-quick-flow"
+  max_concurrent_agents: 5
+  timeout_seconds: 300

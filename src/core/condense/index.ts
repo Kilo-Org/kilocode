@@ -7,6 +7,7 @@ import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { compressContext } from "../task/kilocode/services-integration" // kilocode_change
 
 /**
  * Checks if a message contains tool_result blocks.
@@ -250,6 +251,33 @@ export async function summarizeConversation(
 			return { ...response, error }
 		}
 	}
+
+	// kilocode_change start: Use Semantic Compressor for additional context reduction if configured
+
+	// If context is very large (> 80% window), try semantic compression first
+	// Note: This is an optimization to reduce input tokens before summarization
+	const currentTokens = await apiHandler.countTokens(
+		requestMessages.flatMap((m) =>
+			typeof m.content === "string"
+				? ([{ type: "text", text: m.content }] as Anthropic.Messages.ContentBlockParam[])
+				: (m.content as Anthropic.Messages.ContentBlockParam[]),
+		),
+	)
+	if (currentTokens > 30000) {
+		// arbitrary significant threshold
+		try {
+			// Compress only user text messages
+			for (const msg of requestMessages) {
+				if (msg.role === "user" && typeof msg.content === "string") {
+					const { compressed } = compressContext(msg.content, Math.floor(msg.content.length / 2))
+					msg.content = compressed
+				}
+			}
+		} catch (e) {
+			console.warn("[summarizeConversation] Semantic compression failed:", e)
+		}
+	}
+	// kilocode_change end
 
 	const stream = handlerToUse.createMessage(promptToUse, requestMessages)
 

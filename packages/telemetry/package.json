@@ -3,12 +3,23 @@
 	"description": "Roo Code telemetry service and clients.",
 	"version": "0.0.0",
 	"type": "module",
-	"exports": "./src/index.ts",
+	"main": "./dist/index.cjs",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
 	"scripts": {
 		"lint": "eslint src --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
 		"test": "vitest run",
-		"clean": "rimraf .turbo"
+		"build": "tsup",
+		"clean": "rimraf dist .turbo"
 	},
 	"dependencies": {
 		"@roo-code/types": "workspace:^",
@@ -20,6 +31,7 @@
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/node": "20.x",
 		"@types/vscode": "^1.84.0",
+		"tsup": "^8.3.5",
 		"vitest": "^3.2.3"
 	}
 }
