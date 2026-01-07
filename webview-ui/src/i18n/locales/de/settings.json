@@ -971,7 +971,7 @@
 			"warningMissingKey": "⚠️ Ein API-Schlüssel ist für die Bildgenerierung erforderlich, bitte konfiguriere ihn oben.",
 			"successConfigured": "✓ Bildgenerierung ist konfiguriert und einsatzbereit"
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Modellinitierte Slash-Befehle aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code deine Slash-Befehle ausführen, um Workflows zu starten."
 		},

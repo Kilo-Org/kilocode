@@ -976,7 +976,7 @@
 			"name": "Autocomplete",
 			"description": "Włącz funkcje Autocomplete dla szybkich sugestii kodu i ulepszeń bezpośrednio w twoim edytorze. Zawiera Szybkie Zadanie (Cmd+I) dla ukierunkowanych zmian i Autocomplete dla kontekstowych ulepszeń."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Włącz polecenia slash inicjowane przez model",
 			"description": "Gdy włączone, Kilo Code może uruchamiać twoje polecenia slash w celu wykonywania przepływów pracy."
 		},

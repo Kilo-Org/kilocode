@@ -997,7 +997,7 @@
 			"name": "Autocomplete",
 			"description": "Aktifkan fitur Autocomplete untuk saran kode cepat dan perbaikan langsung di editor Anda. Termasuk Tugas Cepat (Cmd+I) untuk perubahan yang ditargetkan dan Autocomplete untuk perbaikan kontekstual."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Aktifkan perintah slash yang dimulai model",
 			"description": "Ketika diaktifkan, Kilo Code dapat menjalankan perintah slash Anda untuk mengeksekusi alur kerja."
 		},
