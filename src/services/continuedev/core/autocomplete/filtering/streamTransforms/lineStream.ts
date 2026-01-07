@@ -1,5 +1,5 @@
 import { LineStream } from "../../../diff/util"
-import { lineIsRepeated } from "../../util/textSimilarity"
+import { lineIsRepeated } from "../../../../../ghost/utils/text-utils"
 
 export { lineIsRepeated }
 

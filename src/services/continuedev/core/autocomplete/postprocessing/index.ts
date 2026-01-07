@@ -1,90 +1,11 @@
-import { longestCommonSubsequence } from "../../util/lcs.js"
-import { lineIsRepeated } from "../util/textSimilarity.js"
-import { removePrefixOverlap } from "./removePrefixOverlap.js"
-
-function rewritesLineAbove(completion: string, prefix: string): boolean {
-	const lineAbove = prefix
-		.split("\n")
-		.filter((line) => line.trim().length > 0)
-		.slice(-1)[0]
-	if (!lineAbove) {
-		return false
-	}
-
-	const firstLineOfCompletion = completion.split("\n").find((line) => line.trim().length > 0)
-	if (!firstLineOfCompletion) {
-		return false
-	}
-	return lineIsRepeated(lineAbove, firstLineOfCompletion)
-}
-
-const MAX_REPETITION_FREQ_TO_CHECK = 3
-function isExtremeRepetition(completion: string): boolean {
-	const lines = completion.split("\n")
-	if (lines.length < 6) {
-		return false
-	}
-	for (let freq = 1; freq < MAX_REPETITION_FREQ_TO_CHECK; freq++) {
-		const lcs = longestCommonSubsequence(lines[0], lines[freq])
-		if (lcs.length > 5 || lcs.length > lines[0].length * 0.5) {
-			let matchCount = 0
-			for (let i = 0; i < lines.length; i += freq) {
-				if (lines[i].includes(lcs)) {
-					matchCount++
-				}
-			}
-			if (matchCount * freq > 8 || (matchCount * freq) / lines.length > 0.8) {
-				return true
-			}
-		}
-	}
-	return false
-}
-function isOnlyWhitespace(completion: string): boolean {
-	const whitespaceRegex = /^[\s]+$/
-	return whitespaceRegex.test(completion)
-}
-
-function isBlank(completion: string): boolean {
-	return completion.trim().length === 0
-}
-
-/**
- * Removes markdown code block delimiters from completion.
- * Removes the first line if it starts with backticks (with optional language name).
- * Removes the last line if it contains only backticks.
- */
-function removeBackticks(completion: string): string {
-	const lines = completion.split("\n")
-
-	if (lines.length === 0) {
-		return completion
-	}
-
-	let startIdx = 0
-	let endIdx = lines.length
-
-	// Remove first line if it starts with backticks (``` or ```language)
-	const firstLineTrimmed = lines[0].trim()
-	if (firstLineTrimmed.startsWith("```")) {
-		startIdx = 1
-	}
-
-	// Remove last line if it contains only backticks (one or more)
-	if (lines.length > startIdx) {
-		const lastLineTrimmed = lines[lines.length - 1].trim()
-		if (lastLineTrimmed.length > 0 && /^`+$/.test(lastLineTrimmed)) {
-			endIdx = lines.length - 1
-		}
-	}
-
-	// If we removed lines, return the modified completion
-	if (startIdx > 0 || endIdx < lines.length) {
-		return lines.slice(startIdx, endIdx).join("\n")
-	}
-
-	return completion
-}
+import {
+	isBlank,
+	isExtremeRepetition,
+	isOnlyWhitespace,
+	removeBackticks,
+	removePrefixOverlap,
+	rewritesLineAbove,
+} from "../../../../ghost/utils/text-utils.js"
 
 export function postprocessCompletion({
 	completion,

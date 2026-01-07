@@ -1,17 +1,5 @@
-export function removePrefixOverlap(completion: string, prefix: string): string {
-	const prefixEnd = prefix.split("\n").pop()
-	if (prefixEnd) {
-		if (completion.startsWith(prefixEnd)) {
-			completion = completion.slice(prefixEnd.length)
-		} else {
-			const trimmedPrefix = prefixEnd.trim()
-			const lastWord = trimmedPrefix.split(/\s+/).pop()
-			if (lastWord && completion.startsWith(lastWord)) {
-				completion = completion.slice(lastWord.length)
-			} else if (completion.startsWith(trimmedPrefix)) {
-				completion = completion.slice(trimmedPrefix.length)
-			}
-		}
-	}
-	return completion
-}
+/**
+ * Re-export from consolidated text-utils for backward compatibility.
+ * @deprecated Import directly from "../../../../ghost/utils/text-utils" instead.
+ */
+export { removePrefixOverlap } from "../../../../ghost/utils/text-utils"
