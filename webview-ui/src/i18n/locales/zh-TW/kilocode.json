@@ -344,7 +344,7 @@
 		"misconfiguredState": "因配置问题而不可用",
 		"errorState": "因错误而不可用",
 		"microphone": {
-			"label": "麦克风",
+			"label": "麥克風",
 			"description": "选择麦克风设备进行语音转文字",
 			"loading": "正在加载麦克风设备...",
 			"refresh": "刷新",
