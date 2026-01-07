@@ -367,22 +367,78 @@ export const OpenAICompatible = ({
 					</div>
 				</div>
 
-				<div>
+				{/* Model Capabilities - Compact Grid */}
+				<div className="grid grid-cols-2 gap-2">
+					<div className="flex items-center gap-1">
+						<Checkbox
+							checked={
+								apiConfiguration?.openAiCustomModelInfo?.supportsReasoningBinary ??
+								openAiModelInfoSaneDefaults.supportsReasoningBinary ??
+								false
+							}
+							onChange={handleInputChange("openAiCustomModelInfo", (checked) => ({
+								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								supportsReasoningBinary: checked,
+							}))}>
+							{t("settings:providers.customModel.supportsReasoning.label")}
+						</Checkbox>
+						<StandardTooltip content={t("settings:providers.customModel.supportsReasoning.description")}>
+							<i
+								className="codicon codicon-info text-vscode-descriptionForeground"
+								style={{ fontSize: "12px" }}
+							/>
+						</StandardTooltip>
+					</div>
+					<div className="flex items-center gap-1">
+						<Checkbox
+							checked={
+								apiConfiguration?.openAiCustomModelInfo?.supportsNativeTools ??
+								openAiModelInfoSaneDefaults.supportsNativeTools
+							}
+							onChange={handleInputChange("openAiCustomModelInfo", (checked) => ({
+								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								supportsNativeTools: checked,
+							}))}>
+							{t("settings:providers.customModel.supportsNativeTools.label")}
+						</Checkbox>
+						<StandardTooltip content={t("settings:providers.customModel.supportsNativeTools.description")}>
+							<i
+								className="codicon codicon-info text-vscode-descriptionForeground"
+								style={{ fontSize: "12px" }}
+							/>
+						</StandardTooltip>
+					</div>
+					<div className="flex items-center gap-1">
+						<Checkbox
+							checked={
+								apiConfiguration?.openAiCustomModelInfo?.supportsComputerUse ??
+								openAiModelInfoSaneDefaults.supportsComputerUse ??
+								false
+							}
+							onChange={handleInputChange("openAiCustomModelInfo", (checked) => ({
+								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								supportsComputerUse: checked,
+							}))}>
+							{t("settings:providers.customModel.computerUse.label")}
+						</Checkbox>
+						<StandardTooltip content={t("settings:providers.customModel.computerUse.description")}>
+							<i
+								className="codicon codicon-info text-vscode-descriptionForeground"
+								style={{ fontSize: "12px" }}
+							/>
+						</StandardTooltip>
+					</div>
 					<div className="flex items-center gap-1">
 						<Checkbox
 							checked={
 								apiConfiguration?.openAiCustomModelInfo?.supportsImages ??
 								openAiModelInfoSaneDefaults.supportsImages
 							}
-							onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
-								return {
-									...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
-									supportsImages: checked,
-								}
-							})}>
-							<span className="font-medium">
-								{t("settings:providers.customModel.imageSupport.label")}
-							</span>
+							onChange={handleInputChange("openAiCustomModelInfo", (checked) => ({
+								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								supportsImages: checked,
+							}))}>
+							{t("settings:providers.customModel.imageSupport.label")}
 						</Checkbox>
 						<StandardTooltip content={t("settings:providers.customModel.imageSupport.description")}>
 							<i
@@ -391,22 +447,14 @@ export const OpenAICompatible = ({
 							/>
 						</StandardTooltip>
 					</div>
-					<div className="text-sm text-vscode-descriptionForeground pt-1">
-						{t("settings:providers.customModel.imageSupport.description")}
-					</div>
-				</div>
-
-				<div>
 					<div className="flex items-center gap-1">
 						<Checkbox
 							checked={apiConfiguration?.openAiCustomModelInfo?.supportsPromptCache ?? false}
-							onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
-								return {
-									...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
-									supportsPromptCache: checked,
-								}
-							})}>
-							<span className="font-medium">{t("settings:providers.customModel.promptCache.label")}</span>
+							onChange={handleInputChange("openAiCustomModelInfo", (checked) => ({
+								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								supportsPromptCache: checked,
+							}))}>
+							{t("settings:providers.customModel.promptCache.label")}
 						</Checkbox>
 						<StandardTooltip content={t("settings:providers.customModel.promptCache.description")}>
 							<i
@@ -414,9 +462,6 @@ export const OpenAICompatible = ({
 								style={{ fontSize: "12px" }}
 							/>
 						</StandardTooltip>
-					</div>
-					<div className="text-sm text-vscode-descriptionForeground pt-1">
-						{t("settings:providers.customModel.promptCache.description")}
 					</div>
 				</div>
 
