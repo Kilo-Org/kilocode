@@ -345,11 +345,11 @@
 		"errorState": "因错误而不可用",
 		"microphone": {
 			"label": "麥克風",
-			"description": "选择麦克风设备进行语音转文字",
-			"loading": "正在加载麦克风设备...",
-			"refresh": "刷新",
-			"defaultOption": "系统默认",
-			"noDevices": "找不到麦克风设备"
+			"description": "選擇麥克風設備進行語音轉文字",
+			"loading": "正在載入麥克風設備...",
+			"refresh": "重新整理",
+			"defaultOption": "系統預設",
+			"noDevices": "找不到麥克風設備"
 		}
 	}
 }
