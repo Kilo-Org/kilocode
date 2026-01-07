@@ -93,6 +93,7 @@ export interface PromptResult {
 // ============================================================================
 
 export interface FillInAtCursorSuggestion {
+	id: string
 	text: string
 	prefix: string
 	suffix: string

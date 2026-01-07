@@ -368,7 +368,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	): FillInAtCursorSuggestion {
 		if (!suggestionText) {
 			this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
-			return { text: "", prefix, suffix }
+			return { id: crypto.randomUUID(), text: "", prefix, suffix }
 		}
 
 		const processedText = postprocessGhostSuggestion({
@@ -379,11 +379,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		})
 
 		if (processedText) {
-			return { text: processedText, prefix, suffix }
+			return { id: crypto.randomUUID(), text: processedText, prefix, suffix }
 		}
 
 		this.telemetry?.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
-		return { text: "", prefix, suffix }
+		return { id: crypto.randomUUID(), text: "", prefix, suffix }
 	}
 
 	private async disposeIgnoreController(): Promise<void> {

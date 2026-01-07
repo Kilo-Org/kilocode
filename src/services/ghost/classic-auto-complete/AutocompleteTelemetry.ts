@@ -9,7 +9,7 @@ export type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion }
  * This key is used to track whether the same suggestion is still being displayed.
  */
 export function getSuggestionKey(suggestion: FillInAtCursorSuggestion): string {
-	return `${suggestion.prefix}|${suggestion.suffix}|${suggestion.text}`
+	return suggestion.id
 }
 
 /**
