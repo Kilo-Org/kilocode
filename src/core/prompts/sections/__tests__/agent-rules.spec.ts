@@ -102,15 +102,13 @@ describe("loadAgentRulesContent", () => {
 		const segments = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
 		const dirs: string[] = ["/repo"]
 		for (const segment of segments) {
-			dirs.push(path.join(dirs[dirs.length - 1]!, segment))
+			dirs.push(path.posix.join(dirs[dirs.length - 1]!, segment))
 		}
 
 		const readFile = vi.fn(async (filePath: string) => {
-			const normalizedParentDir = path
-				.dirname(filePath)
-				.replace(/\\/g, "/")
-				.replace(/^[a-zA-Z]:/, "")
-			const index = dirs.indexOf(normalizedParentDir)
+			const normalized = filePath.replace(/\\/g, "/").replace(/^[a-zA-Z]:/, "")
+			const parentDir = path.posix.dirname(normalized)
+			const index = dirs.indexOf(parentDir)
 			if (index === -1) {
 				return ""
 			}
@@ -120,7 +118,7 @@ describe("loadAgentRulesContent", () => {
 
 		const result = await loadAgentRulesContent({
 			cwd: "/repo",
-			activePath: path.join(dirs[dirs.length - 1]!, "file.ts"),
+			activePath: path.posix.join(dirs[dirs.length - 1]!, "file.ts"),
 			readFile,
 		})
 
