@@ -13,7 +13,7 @@ describe("ChatTextAreaAutocomplete", () => {
 	})
 
 	describe("getCompletion", () => {
-		it("should work with non-FIM models using chat-based completion", async () => {
+		it("should work with non-FIM models using chat-based completion with COMPLETION tags", async () => {
 			// Setup: Model without FIM support (like Mistral)
 			const mockModel = new GhostModel()
 			mockModel.loaded = true
@@ -21,7 +21,38 @@ describe("ChatTextAreaAutocomplete", () => {
 			vi.spyOn(mockModel, "hasValidCredentials").mockReturnValue(true)
 			vi.spyOn(mockModel, "supportsFim").mockReturnValue(false)
 			vi.spyOn(mockModel, "generateResponse").mockImplementation(async (systemPrompt, userPrompt, onChunk) => {
-				// Simulate streaming chat response
+				// Simulate streaming chat response with COMPLETION tags (shared format with HoleFiller)
+				const chunks: ApiStreamChunk[] = [{ type: "text", text: "<COMPLETION>write a function</COMPLETION>" }]
+				for (const chunk of chunks) {
+					onChunk(chunk)
+				}
+				return {
+					cost: 0,
+					inputTokens: 15,
+					outputTokens: 8,
+					cacheWriteTokens: 0,
+					cacheReadTokens: 0,
+				}
+			})
+
+			// @ts-expect-error - accessing private property for test
+			autocomplete.model = mockModel
+
+			const result = await autocomplete.getCompletion("How to ")
+
+			expect(mockModel.generateResponse).toHaveBeenCalled()
+			expect(result.suggestion).toBe("write a function")
+		})
+
+		it("should handle chat response without COMPLETION tags (fallback)", async () => {
+			// Setup: Model without FIM support that doesn't use tags
+			const mockModel = new GhostModel()
+			mockModel.loaded = true
+
+			vi.spyOn(mockModel, "hasValidCredentials").mockReturnValue(true)
+			vi.spyOn(mockModel, "supportsFim").mockReturnValue(false)
+			vi.spyOn(mockModel, "generateResponse").mockImplementation(async (systemPrompt, userPrompt, onChunk) => {
+				// Simulate streaming chat response without tags (fallback behavior)
 				const chunks: ApiStreamChunk[] = [{ type: "text", text: "write a function" }]
 				for (const chunk of chunks) {
 					onChunk(chunk)
