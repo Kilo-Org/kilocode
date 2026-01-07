@@ -1,5 +1,5 @@
 // kilocode_change: STT Microphone Settings
-import React, { useEffect, useMemo } from "react"
+import { useEffect } from "react"
 import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { useSTT } from "@/hooks/useSTT"
@@ -14,9 +14,7 @@ export const STTSettings = () => {
 	const extensionState = useExtensionState()
 	const selectedMicrophoneDevice = extensionState?.selectedMicrophoneDevice
 
-	const savedDevice = useMemo(() => {
-		return selectedMicrophoneDevice
-	}, [selectedMicrophoneDevice])
+	const savedDevice = selectedMicrophoneDevice
 
 	const handleDeviceChange = (value: string) => {
 		if (value === "default") {
@@ -32,9 +30,12 @@ export const STTSettings = () => {
 	const getCurrentDeviceValue = () => {
 		// Prefer saved device from extension state, fallback to hook state
 		const currentDevice = savedDevice !== undefined ? savedDevice : selectedDevice
-		if (!currentDevice) {
+
+		// If the current device is no longer available (e.g., device unplugged), fallback to default
+		if (!currentDevice || !devices.some((device: MicrophoneDevice) => device.id === currentDevice.id)) {
 			return "default"
 		}
+
 		return currentDevice.id
 	}
 
@@ -62,7 +63,7 @@ export const STTSettings = () => {
 						))}
 					</VSCodeDropdown>
 					<Button onClick={loadDevices} disabled={isLoadingDevices} className="flex items-center gap-2">
-						<RefreshCw className={`w-1 h-1 ${isLoadingDevices ? "animate-spin" : ""}`} />
+						<RefreshCw className={`w-4 h-4 ${isLoadingDevices ? "animate-spin" : ""}`} />
 						{t("kilocode:speechToText.microphone.refresh")}
 					</Button>
 				</div>
