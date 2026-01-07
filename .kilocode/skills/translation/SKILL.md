@@ -307,37 +307,13 @@ For the translation workflow, use the `/add-missing-translations` command or see
 
 ### Common Patterns
 
-```markdown
-<<<<<<< BEFORE
-"dragFiles": "按住shift拖动文件"
-=======
-"dragFiles": "Shift+拖拽文件"
->>>>>>> AFTER
-
-<<<<<<< BEFORE
-"description": "启用后，Kilo Code 将能够与 MCP 服务器交互以获取高级功能。"
-=======
-"description": "启用后 Kilo Code 可与 MCP 服务交互获取高级功能。"
->>>>>>> AFTER
-
-<<<<<<< BEFORE
-"cannotUndo": "此操作无法撤消。"
-=======
-"cannotUndo": "此操作不可逆。"
->>>>>>> AFTER
-
-<<<<<<< BEFORE
-"hold shift to drag in files" → "按住shift拖动文件"
-=======
-"hold shift to drag in files" → "Shift+拖拽文件"
->>>>>>> AFTER
-
-<<<<<<< BEFORE
-"Double click to edit" → "双击进行编辑"
-=======
-"Double click to edit" → "双击编辑"
->>>>>>> AFTER
-```
+| Original                        | Avoid                                                         | Preferred                                            |
+| ------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| `"dragFiles"`                   | `"按住shift拖动文件"`                                         | `"Shift+拖拽文件"`                                   |
+| `"description"`                 | `"启用后，Kilo Code 将能够与 MCP 服务器交互以获取高级功能。"` | `"启用后 Kilo Code 可与 MCP 服务交互获取高级功能。"` |
+| `"cannotUndo"`                  | `"此操作无法撤消。"`                                          | `"此操作不可逆。"`                                   |
+| `"hold shift to drag in files"` | `"按住shift拖动文件"`                                         | `"Shift+拖拽文件"`                                   |
+| `"Double click to edit"`        | `"双击进行编辑"`                                              | `"双击编辑"`                                         |
 
 ### Common Pitfalls
 
