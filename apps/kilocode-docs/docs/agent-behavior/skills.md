@@ -66,6 +66,48 @@ your-project/
             └── SKILL.md
 ```
 
+## Mode-Specific Skills
+
+To create a skill that only appears in a specific mode:
+
+```bash
+# For Code mode only
+mkdir -p ~/.kilocode/skills-code/typescript-patterns
+
+# For Architect mode only
+mkdir -p ~/.kilocode/skills-architect/microservices
+```
+
+The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
+
+## Priority and Overrides
+
+When multiple skills share the same name, Kilo Code uses these priority rules:
+
+1. **Project skills override global skills** - A project skill with the same name takes precedence
+2. **Mode-specific skills override generic skills** - A skill in `skills-code/` overrides the same skill in `skills/` when in Code mode
+
+This allows you to:
+
+- Define global skills for personal use
+- Override them per-project when needed
+- Customize behavior for specific modes
+
+## When Skills Are Loaded
+
+Skills are discovered when Kilo Code initializes:
+
+- When VSCode starts
+- When you reload the VSCode window (`Cmd+Shift+P` → "Developer: Reload Window")
+
+Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the Kilo Code extension.
+
+**Adding or modifying skills requires reloading VSCode for changes to take effect.**
+
+## Using Symlinks
+
+You can symlink skills directories to share skills across machines or from a central repository. When using symlinks, the skill's `name` field must match the **symlink name**, not the target directory name.
+
 ## SKILL.md Format
 
 The `SKILL.md` file uses YAML frontmatter followed by Markdown content containing the instructions:
@@ -153,30 +195,6 @@ my-skill/
 
 These additional files can be referenced from your skill's instructions, allowing the agent to read documentation, execute scripts, or use templates as needed.
 
-## Priority and Overrides
-
-When multiple skills share the same name, Kilo Code uses these priority rules:
-
-1. **Project skills override global skills** - A project skill with the same name takes precedence
-2. **Mode-specific skills override generic skills** - A skill in `skills-code/` overrides the same skill in `skills/` when in Code mode
-
-This allows you to:
-
-- Define global skills for personal use
-- Override them per-project when needed
-- Customize behavior for specific modes
-
-## When Skills Are Loaded
-
-Skills are discovered when Kilo Code initializes:
-
-- When VSCode starts
-- When you reload the VSCode window (`Cmd+Shift+P` → "Developer: Reload Window")
-
-Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the Kilo Code extension.
-
-**Adding or modifying skills requires reloading VSCode for changes to take effect.**
-
 ## Example: Creating a Skill
 
 1. Create the skill directory:
@@ -224,44 +242,12 @@ Skills directories are monitored for changes to `SKILL.md` files. However, the m
 
 4. The skill will now be available in all modes
 
-## Mode-Specific Skills
-
-To create a skill that only appears in a specific mode:
-
-```bash
-# For Code mode only
-mkdir -p ~/.kilocode/skills-code/typescript-patterns
-
-# For Architect mode only
-mkdir -p ~/.kilocode/skills-architect/microservices
-```
-
-The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
-
-## Using Symlinks
-
-You can symlink skills directories to share skills across machines or from a central repository:
-
-```bash
-# Symlink entire skills directory
-ln -s /path/to/shared/skills ~/.kilocode/skills
-
-# Or symlink individual skills
-ln -s /path/to/shared/api-design ~/.kilocode/skills/api-design
-```
-
-When using symlinks, the skill's `name` field must match the **symlink name**, not the target directory name.
-
 ## Finding Skills
 
 There are community efforts to build and share agent skills. Some resources include:
 
 - [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
 - [Skill Specification](https://agentskills.io/home) - Agent Skills specification
-
-### Creating Your Own
-
-Skills are simple Markdown files with frontmatter. Start with your existing prompt templates or instructions and convert them to the skill format.
 
 ## Troubleshooting
 

@@ -117,6 +117,10 @@ export class CLI {
 				serviceOptions.customModes = this.options.customModes
 			}
 
+			if (this.options.appendSystemPrompt) {
+				serviceOptions.appendSystemPrompt = this.options.appendSystemPrompt
+			}
+
 			this.service = createExtensionService(serviceOptions)
 			logs.debug("ExtensionService created with identity", "CLI", {
 				hasIdentity: !!identity,

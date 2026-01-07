@@ -42,19 +42,43 @@ You can continue a session later (local or remote):
 
 Parallel Mode runs the agent in an isolated Git worktree branch, keeping your main branch clean.
 
-- Enable the “Parallel Mode” toggle before starting
+- Enable the "Parallel Mode" toggle before starting
 - The extension prevents using Parallel Mode inside an existing worktree
     - Open the main repository (where .git is a directory) to use this feature
-- While running, the Agent Manager parses and surfaces:
-    - Branch name created/used
-    - Worktree path
-    - A completion/merge instruction message when the agent finishes
-- After completion
-    - Review the branch in your VCS UI
-    - Merge or cherry-pick the changes as desired
-    - Clean up the worktree when finished
 
-If you need to resume with Parallel Mode later, the extension re-attaches to the same session with the same branch context.
+### Worktree Location
+
+Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically added to `.gitignore` to prevent accidental commits.
+
+```
+your-project/
+├── .kilocode/
+│   └── worktrees/
+│       └── feature-branch-1234567890/   # isolated working directory
+├── .gitignore                           # auto-updated with .kilocode/worktrees/
+└── ...
+```
+
+### While Running
+
+The Agent Manager surfaces:
+
+- Branch name created/used
+- Worktree path
+- A completion/merge instruction message when the agent finishes
+
+### After Completion
+
+- The worktree is cleaned up automatically, but the branch is preserved
+- Review the branch in your VCS UI
+- Merge or cherry-pick the changes as desired
+
+### Resuming Sessions
+
+If you resume a Parallel Mode session later, the extension will:
+
+1. Reuse the existing worktree if it still exists
+2. Or recreate it from the session's branch
 
 ## Remote sessions (Cloud)
 

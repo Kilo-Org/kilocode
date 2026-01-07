@@ -209,34 +209,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "ट्रिगर्स",
-			"keybindingDescription": "Autocomplete सुविधाओं को कमांड द्वारा ट्रिगर किया जा सकता है। आप <DocsLink>कीबोर्ड शॉर्टकट यहाँ</DocsLink> कॉन्फ़िगर कर सकते हैं।",
 			"enableAutoTrigger": {
-				"label": "Autocomplete सक्षम करें",
-				"description": "जब सक्षम हो, तो Kilo Code आपके टाइपिंग बंद करने पर स्वचालित रूप से Autocomplete ट्रिगर करेगा। यह त्वरित सुधार और सुझावों के लिए उपयोगी हो सकता है।"
+				"label": "Auto-trigger Suggestions",
+				"description": "टाइपिंग रोकने पर स्वचालित रूप से इनलाइन कोड सुझाव दिखाएं।"
 			},
 			"autoTriggerDelay": {
 				"label": "ऑटो ट्रिगर देरी",
-				"description": "आपके टाइपिंग बंद करने के बाद Kilo Code के Autocomplete ट्रिगर करने से पहले सेकंड में देरी। कम देरी का मतलब तेज़ सुझाव है, लेकिन अधिक संसाधन-गहन हो सकता है।"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "मैनुअल ऑटोकंप्लीट ({{keybinding}})",
-				"description": "त्वरित सुधार, पूर्णता, या रिफैक्टरिंग चाहिए? Kilo आसपास के संदर्भ का उपयोग करके तत्काल सुधार प्रदान करेगा, आपको प्रवाह में रखते हुए। <DocsLink>शॉर्टकट देखें</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "नहीं मिला",
 			"configureAutocompleteProfile": "प्रोफाइल में जाकर और ऑटोकम्पलीट प्रोफाइल टाइप की एक प्रोफाइल कॉन्फ़िगर करके किसी भी मॉडल का उपयोग करें।",
 			"model": "मॉडल",
 			"provider": "प्रदाता",
 			"enableChatAutocomplete": {
-				"label": "चैट इनपुट स्वतःपूर्ण",
-				"description": "जब सक्षम होता है, Kilo Code चैट इनपुट में टाइप करते समय पूर्णताएं सुझाएगा। सुझावों को स्वीकार करने के लिए Tab दबाएं।"
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "Autocomplete स्नूज़ करें",
-				"description": "निर्दिष्ट अवधि के लिए Autocomplete सुझावों को अस्थायी रूप से रोकें।",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "स्नूज़",
 				"unsnooze": "अनस्नूज़",
-				"currentlySnoozed": "Autocomplete वर्तमान में स्नूज़ है।",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 मिनट",
 					"5min": "5 मिनट",
@@ -254,7 +252,9 @@
 				"title": "आपके खाते में कोई क्रेडिट नहीं है",
 				"description": "आपके Kilo Code खाते में कोई क्रेडिट नहीं है। ऑटोकम्पलीट का उपयोग करने के लिए, कृपया अपने खाते में क्रेडिट जोड़ें।",
 				"buyCredits": "क्रेडिट खरीदें →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {

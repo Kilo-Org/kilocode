@@ -223,34 +223,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "트리거",
-			"keybindingDescription": "Autocomplete 기능은 명령으로 트리거할 수 있습니다. <DocsLink>키보드 단축키를 여기서</DocsLink> 구성할 수 있습니다.",
 			"enableAutoTrigger": {
-				"label": "Autocomplete 활성화",
-				"description": "활성화되면 타이핑을 멈췄을 때 Kilo Code가 자동으로 Autocomplete를 트리거합니다. 빠른 수정과 제안에 유용할 수 있습니다."
+				"label": "Auto-trigger Suggestions",
+				"description": "입력을 멈추면 자동으로 인라인 코드 제안을 표시합니다."
 			},
 			"autoTriggerDelay": {
 				"label": "자동 트리거 지연",
-				"description": "타이핑을 멈춘 후 Kilo Code가 Autocomplete를 트리거하기까지의 초 단위 지연. 지연이 짧을수록 제안이 빨라지지만 리소스를 더 많이 사용할 수 있습니다."
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "수동 자동완성({{keybinding}})",
-				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 플로우를 유지합니다. <DocsLink>단축키 보기</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "찾을 수 없음",
 			"configureAutocompleteProfile": "프로필로 이동하여 프로필 유형이 자동완성인 프로필을 구성하면 모든 모델을 사용할 수 있습니다.",
 			"model": "모델",
 			"provider": "제공자",
 			"enableChatAutocomplete": {
-				"label": "채팅 입력 자동완성",
-				"description": "활성화되면, Kilo Code는 채팅 입력 시 입력하는 대로 완성 제안을 제공합니다. Tab 키를 눌러 제안을 수락하세요."
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "자동완성 일시 중지",
-				"description": "지정된 시간 동안 자동완성 제안을 일시적으로 중지합니다.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "일시 중지",
 				"unsnooze": "일시 중지 해제",
-				"currentlySnoozed": "자동완성이 현재 일시 중지되어 있습니다.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1분",
 					"5min": "5분",
@@ -268,7 +266,9 @@
 				"title": "계정에 크레딧이 없습니다",
 				"description": "Kilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가하세요.",
 				"buyCredits": "크레딧 구매 →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {

@@ -223,34 +223,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "ตัวเรียกใช้",
-			"keybindingDescription": "ฟีเจอร์ Autocomplete สามารถเรียกใช้ได้ด้วยคำสั่ง คุณสามารถกำหนดค่า <DocsLink>แป้นพิมพ์ลัดได้ที่นี่</DocsLink>",
 			"enableAutoTrigger": {
-				"label": "เปิดใช้งาน Autocomplete",
-				"description": "เมื่อเปิดใช้งาน Kilo Code จะเรียกใช้ Autocomplete โดยอัตโนมัติเมื่อคุณหยุดพิมพ์ สิ่งนี้อาจมีประโยชน์สำหรับการแก้ไขด่วนและคำแนะนำ"
+				"label": "Auto-trigger Suggestions",
+				"description": "แสดงคำแนะนำโค้ดแบบอินไลน์โดยอัตโนมัติเมื่อคุณหยุดพิมพ์"
 			},
 			"autoTriggerDelay": {
 				"label": "ความล่าช้าของการเรียกใช้อัตโนมัติ",
-				"description": "ความล่าช้าเป็นวินาทีก่อนที่ Kilo Code จะเรียกใช้ Autocomplete หลังจากที่คุณหยุดพิมพ์ ความล่าช้าที่สั้นกว่าหมายถึงคำแนะนำที่เร็วกว่า แต่อาจใช้ทรัพยากรมากกว่า"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "การเติมอัตโนมัติด้วยตัวเอง ({{keybinding}})",
-				"description": "ต้องการการแก้ไขด่วน การเติมเต็ม หรือการปรับโครงสร้างใหม่? Kilo จะใช้บริบทโดยรอบเพื่อเสนอการปรับปรุงทันที ทำให้คุณอยู่ในขั้นตอนการทำงาน <DocsLink>ดูทางลัด</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "ไม่พบ",
 			"configureAutocompleteProfile": "ใช้โมเดลใดก็ได้โดยไปที่โปรไฟล์และตั้งค่าโปรไฟล์ประเภทเติมข้อความอัตโนมัติ",
 			"model": "โมเดล",
 			"provider": "ผู้ให้บริการ",
 			"enableChatAutocomplete": {
-				"label": "การเติมข้อความอัตโนมัติในการแชท",
-				"description": "เมื่อเปิดใช้งาน Kilo Code จะแนะนำข้อความเพื่อให้คุณพิมพ์ต่อในช่องแชท กดแท็บเพื่อยอมรับคำแนะนำ"
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "หยุดการเติมข้อความอัตโนมัติชั่วคราว",
-				"description": "หยุดคำแนะนำการเติมข้อความอัตโนมัติชั่วคราวตามระยะเวลาที่กำหนด",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "หยุดชั่วคราว",
 				"unsnooze": "เปิดใช้งานอีกครั้ง",
-				"currentlySnoozed": "การเติมข้อความอัตโนมัติถูกหยุดชั่วคราวอยู่",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 นาที",
 					"5min": "5 นาที",
@@ -268,7 +266,9 @@
 				"title": "ไม่มีเครดิตในบัญชีของคุณ",
 				"description": "บัญชี Kilo Code ของคุณไม่มีเครดิต หากต้องการใช้ Autocomplete กรุณาเติมเครดิตในบัญชีของคุณ",
 				"buyCredits": "ซื้อเครดิต →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {

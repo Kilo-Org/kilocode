@@ -1,9 +1,9 @@
 ---
 sidebar_position: 7
-title: "Spec: Agentic Security Reviews"
+title: "Agentic Security Reviews"
 ---
 
-# SPEC: Agentic Security Reviews
+# Agentic Security Reviews
 
 ## Overview
 

@@ -48,6 +48,7 @@ program
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
+	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate that --existing-branch requires --parallel
@@ -228,6 +229,7 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
+			appendSystemPrompt: options.appendSystemPrompt,
 		})
 		await cli.start()
 		await cli.dispose()

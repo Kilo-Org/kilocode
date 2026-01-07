@@ -209,7 +209,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Activadors",
+			"codeEditorSuggestions": "Suggeriments de l'Editor de Codi",
+			"chatSuggestions": "Suggeriments del Xat",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Habilitar Autocomplete",

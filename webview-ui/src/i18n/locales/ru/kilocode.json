@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Триггеры",
+			"codeEditorSuggestions": "Предложения редактора кода",
+			"chatSuggestions": "Предложения чата",
 			"keybindingDescription": "Функции Autocomplete могут быть запущены командами. Ты можешь настроить <DocsLink>Горячие Клавиши здесь</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Включить Autocomplete",
