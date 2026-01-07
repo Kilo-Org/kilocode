@@ -1,5 +1,17 @@
 # kilo-code
 
+## 4.143.2
+
+### Patch Changes
+
+- [#4833](https://github.com/Kilo-Org/kilocode/pull/4833) [`2c7cd08`](https://github.com/Kilo-Org/kilocode/commit/2c7cd084bf4707eedda61fed554cf15fcc8b065b) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - Add `zai-glm-4.7` to Cerebras models
+
+- [#4853](https://github.com/Kilo-Org/kilocode/pull/4853) [`435c879`](https://github.com/Kilo-Org/kilocode/commit/435c879a29d55b75f5f6ffe7bf14854630e085cb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved prompt caching when using Anthropic models on OpenRouter with native tool calling
+
+- [#4859](https://github.com/Kilo-Org/kilocode/pull/4859) [`35fb2ad`](https://github.com/Kilo-Org/kilocode/commit/35fb2adc65dfb1e71e28f7368f96765062c43579) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Architect mode unnecessarily switching to Code mode to edit markdown files
+
+- [#4829](https://github.com/Kilo-Org/kilocode/pull/4829) [`4e09e36`](https://github.com/Kilo-Org/kilocode/commit/4e09e36bba165a2ab6f5e07f71a420faa49ea3ec) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix browser action results displaying raw base64 screenshot data as hexadecimal garbage
+
 ## 4.143.1
 
 ### Patch Changes

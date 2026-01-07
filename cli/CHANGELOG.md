@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.19.2
+
+### Patch Changes
+
+- [#4829](https://github.com/Kilo-Org/kilocode/pull/4829) [`4e09e36`](https://github.com/Kilo-Org/kilocode/commit/4e09e36bba165a2ab6f5e07f71a420faa49ea3ec) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix browser action results displaying raw base64 screenshot data as hexadecimal garbage
+
 ## 0.19.1
 
 ### Patch Changes
