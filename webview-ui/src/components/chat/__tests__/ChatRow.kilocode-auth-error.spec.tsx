@@ -1,6 +1,5 @@
 import React from "react"
-import { render, screen, fireEvent } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { render, screen, fireEvent } from "@src/utils/test-utils"
 import { ChatRowContent } from "../ChatRow"
 import { vscode } from "@src/utils/vscode"
 
@@ -44,8 +43,6 @@ vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
 	useSelectedModel: () => ({ info: undefined }),
 }))
 
-const queryClient = new QueryClient()
-
 function renderChatRow(message: any, apiConfiguration: any = {}) {
 	// Update the mock state before rendering
 	mockExtensionState = {
@@ -60,19 +57,17 @@ function renderChatRow(message: any, apiConfiguration: any = {}) {
 	}
 
 	return render(
-		<QueryClientProvider client={queryClient}>
-			<ChatRowContent
-				message={message}
-				isExpanded={false}
-				isLast={false}
-				isStreaming={false}
-				onToggleExpand={() => {}}
-				onSuggestionClick={() => {}}
-				onBatchFileResponse={() => {}}
-				onFollowUpUnmount={() => {}}
-				isFollowUpAnswered={false}
-			/>
-		</QueryClientProvider>,
+		<ChatRowContent
+			message={message}
+			isExpanded={false}
+			isLast={false}
+			isStreaming={false}
+			onToggleExpand={() => {}}
+			onSuggestionClick={() => {}}
+			onBatchFileResponse={() => {}}
+			onFollowUpUnmount={() => {}}
+			isFollowUpAnswered={false}
+		/>,
 	)
 }
 

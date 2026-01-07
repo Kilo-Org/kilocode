@@ -7,6 +7,10 @@ export function getBrowserActionDescription(args: ToolArgs): string | undefined 
 	return `## browser_action
 Description: Request to interact with a Puppeteer-controlled browser. Every action, except \`close\`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.
 
+This tool is particularly useful for web development tasks as it allows you to launch a browser, navigate to pages, interact with elements through clicks and keyboard input, and capture the results through screenshots and console logs. Use it at key stages of web development tasks - such as after implementing new features, making substantial changes, when troubleshooting issues, or to verify the result of your work. Analyze the provided screenshots to ensure correct rendering or identify errors, and review console logs for runtime issues.
+
+The user may ask generic non-development tasks (such as "what's the latest news" or "look up the weather"), in which case you might use this tool to complete the task if it makes sense to do so, rather than trying to create a website or using curl to answer the question. However, if an available MCP server tool or resource can be used instead, you should prefer to use it over browser_action.
+
 **Browser Session Lifecycle:**
 - Browser sessions **start** with \`launch\` and **end** with \`close\`
 - The session remains active across multiple messages and tool uses
@@ -35,6 +39,10 @@ Parameters:
         - Use with the \`size\` parameter to specify the new size.
     * scroll_down: Scroll down the page by one page height.
     * scroll_up: Scroll up the page by one page height.
+    * screenshot: Take a screenshot and save it to a file.
+        - Use with the \`path\` parameter to specify the destination file path.
+        - Supported formats: .png, .jpeg, .webp
+        - Example: \`<action>screenshot</action>\` with \`<path>screenshots/result.png</path>\`
     * close: Close the Puppeteer-controlled browser instance. This **must always be the final browser action**.
         - Example: \`<action>close</action>\`
 - url: (optional) Use this for providing the URL for the \`launch\` action.
@@ -52,6 +60,9 @@ Parameters:
     * Example: <size>1280,720</size>
 - text: (optional) Use this for providing the text for the \`type\` action.
     * Example: <text>Hello, world!</text>
+- path: (optional) File path for the \`screenshot\` action. Path is relative to the workspace.
+    * Supported formats: .png, .jpeg, .webp
+    * Example: <path>screenshots/my-screenshot.png</path>
 Usage:
 <browser_action>
 <action>Action to perform (e.g., launch, click, type, press, scroll_down, scroll_up, close)</action>
@@ -70,5 +81,11 @@ Example: Requesting to click on the element at coordinates 450,300 on a 1024x768
 <browser_action>
 <action>click</action>
 <coordinate>450,300@1024x768</coordinate>
+</browser_action>
+
+Example: Taking a screenshot and saving it to a file
+<browser_action>
+<action>screenshot</action>
+<path>screenshots/result.png</path>
 </browser_action>`
 }

@@ -130,10 +130,12 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		const effort = (customReasoningEffort ?? model.reasoningEffort) as
-			| ReasoningEffortExtended
-			| "disable"
-			| undefined
+		// Only fallback to model default if user hasn't explicitly set a value.
+		// If customReasoningEffort is "disable", don't fallback to model default.
+		const effort =
+			customReasoningEffort !== undefined
+				? customReasoningEffort
+				: (model.reasoningEffort as ReasoningEffortExtended | "disable" | undefined)
 		// Capability and settings checks are handled by shouldUseReasoningEffort.
 		// Here we simply propagate the resolved effort into the params, while
 		// still treating "disable" as an omission.

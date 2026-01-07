@@ -2,14 +2,27 @@
 // npx vitest run src/api/providers/__tests__/kilocode-openrouter.spec.ts
 
 // Mock vscode first to avoid import errors
-vitest.mock("vscode", () => ({}))
+vitest.mock("vscode", () => ({
+	env: {
+		uriScheme: "vscode",
+		language: "en",
+		uiKind: 1,
+		appName: "Visual Studio Code",
+	},
+	version: "1.85.0",
+}))
 
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
 import { KilocodeOpenrouterHandler } from "../kilocode-openrouter"
 import { ApiHandlerOptions } from "../../../shared/api"
-import { X_KILOCODE_TASKID, X_KILOCODE_ORGANIZATIONID, X_KILOCODE_PROJECTID } from "../../../shared/kilocode/headers"
+import {
+	X_KILOCODE_TASKID,
+	X_KILOCODE_ORGANIZATIONID,
+	X_KILOCODE_PROJECTID,
+	X_KILOCODE_EDITORNAME,
+} from "../../../shared/kilocode/headers"
 import { streamSse } from "../../../services/continuedev/core/fetch/stream"
 
 // Mock the stream module
@@ -69,6 +82,7 @@ describe("KilocodeOpenrouterHandler", () => {
 			expect(result).toEqual({
 				headers: {
 					[X_KILOCODE_TASKID]: "test-task-id",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 		})
@@ -84,6 +98,7 @@ describe("KilocodeOpenrouterHandler", () => {
 				headers: {
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 		})
@@ -104,6 +119,7 @@ describe("KilocodeOpenrouterHandler", () => {
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
 					[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 		})
@@ -124,6 +140,7 @@ describe("KilocodeOpenrouterHandler", () => {
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 		})
@@ -139,6 +156,7 @@ describe("KilocodeOpenrouterHandler", () => {
 				headers: {
 					[X_KILOCODE_TASKID]: "test-task-id",
 					[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 			expect(result?.headers).not.toHaveProperty(X_KILOCODE_PROJECTID)
@@ -155,16 +173,21 @@ describe("KilocodeOpenrouterHandler", () => {
 			expect(result).toEqual({
 				headers: {
 					[X_KILOCODE_TASKID]: "test-task-id",
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
 				},
 			})
 			expect(result?.headers).not.toHaveProperty(X_KILOCODE_PROJECTID)
 		})
 
-		it("returns undefined when no headers are needed", () => {
+		it("returns only editorName header when no other headers are needed", () => {
 			const handler = new KilocodeOpenrouterHandler(mockOptions)
 			const result = handler.customRequestOptions()
 
-			expect(result).toBeUndefined()
+			expect(result).toEqual({
+				headers: {
+					[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
+				},
+			})
 		})
 	})
 
@@ -203,13 +226,16 @@ describe("KilocodeOpenrouterHandler", () => {
 			// Verify the second argument (options) contains our custom headers
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.any(Object),
+				// kilocode_change start
 				expect.objectContaining({
-					headers: {
+					headers: expect.objectContaining({
 						[X_KILOCODE_TASKID]: "test-task-id",
 						[X_KILOCODE_PROJECTID]: "https://github.com/user/repo.git",
 						[X_KILOCODE_ORGANIZATIONID]: "test-org-id",
-					},
+						[X_KILOCODE_EDITORNAME]: "Visual Studio Code 1.85.0",
+					}),
 				}),
+				// kilocode_change end
 			)
 		})
 	})

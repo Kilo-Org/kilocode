@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { useAtom, useAtomValue, useSetAtom } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
 	selectedSessionAtom,
-	selectedSessionIdAtom,
 	startSessionFailedCounterAtom,
 	pendingSessionAtom,
 	preferredRunModeAtom,
@@ -22,7 +21,6 @@ import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils
 import {
 	Loader2,
 	SendHorizontal,
-	RefreshCw,
 	GitBranch,
 	Folder,
 	ChevronDown,
@@ -30,7 +28,7 @@ import {
 	Zap,
 	Layers,
 	X,
-	Plus,
+	Terminal,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -43,7 +41,6 @@ export function SessionDetail() {
 	const pendingSession = useAtomValue(pendingSessionAtom)
 	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 	const selectedSessionState = useAtomValue(selectedSessionMachineStateAtom)
-	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
 	const prevSessionStateRef = useRef<{ id: string; status: string } | undefined>(undefined)
 
 	// Hooks must be called unconditionally before any early returns
@@ -79,20 +76,13 @@ export function SessionDetail() {
 		return <NewAgentForm />
 	}
 
-	const handleRefresh = () => {
-		vscode.postMessage({ type: "agentManager.refreshSessionMessages", sessionId: selectedSession.sessionId })
-	}
-
-	const handleNew = () => {
-		setSelectedSessionId(null)
-	}
-
 	// Use state machine UI state as the single source of truth for activity/spinner
 	const sessionUiState = machineUiState[selectedSession.sessionId]
 	const isActive = sessionUiState?.isActive ?? false
 	const showSpinner = sessionUiState?.showSpinner ?? false
 	const isWorktree = selectedSession.parallelMode?.enabled
 	const branchName = selectedSession.parallelMode?.branch
+	const isProvisionalSession = selectedSession.sessionId.startsWith("provisional-")
 
 	// Determine if "Finish to Branch" button should be shown
 	// Simplified logic: show when session is a worktree session and running
@@ -136,24 +126,19 @@ export function SessionDetail() {
 						)}
 					</div>
 				</div>
-
 				<div className="am-header-actions">
-					{!showSpinner && (
+					{!isProvisionalSession && (
 						<button
 							className="am-icon-btn"
-							onClick={handleNew}
-							aria-label={t("sessionDetail.newButtonTitle")}
-							title={t("sessionDetail.newButtonTitle")}>
-							<Plus size={14} />
-						</button>
-					)}
-					{!isActive && (
-						<button
-							className="am-icon-btn"
-							onClick={handleRefresh}
-							aria-label={t("sessionDetail.refreshButtonTitle")}
-							title={t("sessionDetail.refreshButtonTitle")}>
-							<RefreshCw size={14} />
+							onClick={() => {
+								vscode.postMessage({
+									type: "agentManager.showTerminal",
+									sessionId: selectedSession.sessionId,
+								})
+							}}
+							aria-label={t("sessionDetail.openTerminal")}
+							title={t("sessionDetail.openTerminal")}>
+							<Terminal size={14} />
 						</button>
 					)}
 				</div>

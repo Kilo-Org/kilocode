@@ -95,6 +95,7 @@ export interface WebviewMessage {
 		| "openFile"
 		| "openMention"
 		| "cancelTask"
+		| "cancelAutoApproval"
 		| "updateVSCodeSetting"
 		| "getVSCodeSetting"
 		| "vsCodeSetting"
@@ -144,6 +145,7 @@ export interface WebviewMessage {
 		| "stt:start" // kilocode_change: Start STT recording
 		| "stt:stop" // kilocode_change: Stop STT recording
 		| "stt:cancel" // kilocode_change: Cancel STT recording
+		| "stt:checkAvailability" // kilocode_change: Check STT availability on demand
 		| "includeTaskHistoryInEnhance" // kilocode_change
 		| "snoozeAutocomplete" // kilocode_change
 		| "autoApprovalEnabled"
@@ -286,7 +288,9 @@ export interface WebviewMessage {
 		| "cancelDeviceAuth" // kilocode_change: Cancel device auth flow
 		| "deviceAuthCompleteWithProfile" // kilocode_change: Device auth complete with specific profile
 		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
+		| "chatCompletionAccepted" // kilocode_change: User accepted a chat completion suggestion
 	text?: string
+	suggestionLength?: number // kilocode_change: Length of accepted suggestion for telemetry
 	completionRequestId?: string // kilocode_change
 	shareId?: string // kilocode_change - for sessionFork
 	sessionId?: string // kilocode_change - for sessionSelect

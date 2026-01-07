@@ -22,7 +22,6 @@ export enum TelemetryEventName {
 	// kilocode_change start
 	COMMIT_MSG_GENERATED = "Commit Message Generated",
 
-	INLINE_ASSIST_QUICK_TASK = "Inline Assist Quick Task",
 	INLINE_ASSIST_AUTO_TASK = "Inline Assist Auto Task",
 
 	AUTOCOMPLETE_SUGGESTION_REQUESTED = "Autocomplete Suggestion Requested",
@@ -32,6 +31,7 @@ export enum TelemetryEventName {
 	AUTOCOMPLETE_SUGGESTION_CACHE_HIT = "Autocomplete Suggestion Cache Hit",
 	AUTOCOMPLETE_ACCEPT_SUGGESTION = "Autocomplete Accept Suggestion",
 	AUTOCOMPLETE_SUGGESTION_FILTERED = "Autocomplete Suggestion Filtered",
+	AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN = "Autocomplete Unique Suggestion Shown",
 
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
 	TOOL_ERROR = "Tool Error",
@@ -56,6 +56,7 @@ export enum TelemetryEventName {
 	AGENT_MANAGER_SESSION_COMPLETED = "Agent Manager Session Completed",
 	AGENT_MANAGER_SESSION_STOPPED = "Agent Manager Session Stopped",
 	AGENT_MANAGER_SESSION_ERROR = "Agent Manager Session Error",
+	AGENT_MANAGER_LOGIN_ISSUE = "Agent Manager Login Issue",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -125,11 +126,15 @@ export const staticAppPropertiesSchema = z.object({
 	vscodeVersion: z.string(),
 	platform: z.string(),
 	editorName: z.string(),
-	wrapped: z.boolean(), // kilocode_change
-	wrapper: z.string().nullable(), // kilocode_change
-	wrapperTitle: z.string().nullable(), // kilocode_change
-	wrapperCode: z.string().nullable(), // kilocode_change
-	wrapperVersion: z.string().nullable(), // kilocode_change
+	// kilocode_change start
+	wrapped: z.boolean(),
+	wrapper: z.string().nullable(),
+	wrapperTitle: z.string().nullable(),
+	wrapperCode: z.string().nullable(),
+	wrapperVersion: z.string().nullable(),
+	machineId: z.string().nullable(),
+	vscodeIsTelemetryEnabled: z.boolean().nullable(),
+	// kilocode_change end
 	hostname: z.string().optional(),
 })
 
@@ -215,7 +220,6 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 		type: z.enum([
 			// kilocode_change start
 			TelemetryEventName.COMMIT_MSG_GENERATED, // kilocode_change
-			TelemetryEventName.INLINE_ASSIST_QUICK_TASK, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_AUTO_TASK, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED, // kilocode_change
@@ -224,6 +228,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED, // kilocode_change
+			TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
@@ -235,6 +240,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AGENT_MANAGER_SESSION_COMPLETED, // kilocode_change
 			TelemetryEventName.AGENT_MANAGER_SESSION_STOPPED, // kilocode_change
 			TelemetryEventName.AGENT_MANAGER_SESSION_ERROR, // kilocode_change
+			TelemetryEventName.AGENT_MANAGER_LOGIN_ISSUE, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,
@@ -343,4 +349,155 @@ export interface TelemetryClient {
 	updateTelemetryState(isOptedIn: boolean): void
 	isTelemetryEnabled(): boolean
 	shutdown(): Promise<void>
+}
+
+/**
+ * Expected API error codes that should not be reported to telemetry.
+ * These are normal/expected errors that users can't do much about.
+ */
+export const EXPECTED_API_ERROR_CODES = new Set([
+	402, // Payment required - billing issues
+	429, // Rate limit - expected when hitting API limits
+])
+
+/**
+ * Patterns in error messages that indicate expected errors (rate limits, etc.)
+ * These are checked when no numeric error code is available.
+ */
+const EXPECTED_ERROR_MESSAGE_PATTERNS = [
+	/^429\b/, // Message starts with "429"
+	/rate limit/i, // Contains "rate limit" (case insensitive)
+]
+
+/**
+ * Interface representing the error structure from OpenAI SDK.
+ * OpenAI SDK errors (APIError, AuthenticationError, RateLimitError, etc.)
+ * have a numeric `status` property and may contain nested error metadata.
+ *
+ * @see https://github.com/openai/openai-node/blob/master/src/error.ts
+ */
+interface OpenAISdkError {
+	/** HTTP status code of the error response */
+	status: number
+	/** Optional error code (may be numeric or string) */
+	code?: number | string
+	/** Primary error message */
+	message: string
+	/** Nested error object containing additional details from the API response */
+	error?: {
+		message?: string
+		metadata?: {
+			/** Raw error message from upstream provider (e.g., OpenRouter upstream errors) */
+			raw?: string
+		}
+	}
+}
+
+/**
+ * Type guard to check if an error object is an OpenAI SDK error.
+ * OpenAI SDK errors (APIError and subclasses) have: status, code, message properties.
+ */
+function isOpenAISdkError(error: unknown): error is OpenAISdkError {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"status" in error &&
+		typeof (error as OpenAISdkError).status === "number"
+	)
+}
+
+/**
+ * Extracts the HTTP status code from an error object.
+ * Supports OpenAI SDK errors that have a status property.
+ * @param error - The error to extract status from
+ * @returns The status code if available, undefined otherwise
+ */
+export function getErrorStatusCode(error: unknown): number | undefined {
+	if (isOpenAISdkError(error)) {
+		return error.status
+	}
+	return undefined
+}
+
+/**
+ * Extracts the most descriptive error message from an OpenAI SDK error.
+ * Prioritizes nested metadata (upstream provider errors) over the standard message.
+ * @param error - The error to extract message from
+ * @returns The best available error message, or undefined if not an OpenAI SDK error
+ */
+export function getErrorMessage(error: unknown): string | undefined {
+	if (isOpenAISdkError(error)) {
+		// Prioritize nested metadata which may contain upstream provider details
+		return error.error?.metadata?.raw || error.error?.message || error.message
+	}
+	return undefined
+}
+
+/**
+ * Helper to check if an API error should be reported to telemetry.
+ * Filters out expected errors like rate limits by checking both error codes and messages.
+ * @param errorCode - The HTTP error code (if available)
+ * @param errorMessage - The error message (if available)
+ * @returns true if the error should be reported, false if it should be filtered out
+ */
+export function shouldReportApiErrorToTelemetry(errorCode?: number, errorMessage?: string): boolean {
+	// Check numeric error code
+	if (errorCode !== undefined && EXPECTED_API_ERROR_CODES.has(errorCode)) {
+		return false
+	}
+
+	// Check error message for expected patterns (e.g., "429 Rate limit exceeded")
+	if (errorMessage) {
+		for (const pattern of EXPECTED_ERROR_MESSAGE_PATTERNS) {
+			if (pattern.test(errorMessage)) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+/**
+ * Generic API provider error class for structured error tracking via PostHog.
+ * Can be reused by any API provider.
+ */
+export class ApiProviderError extends Error {
+	constructor(
+		message: string,
+		public readonly provider: string,
+		public readonly modelId: string,
+		public readonly operation: string,
+		public readonly errorCode?: number,
+	) {
+		super(message)
+		this.name = "ApiProviderError"
+	}
+}
+
+/**
+ * Type guard to check if an error is an ApiProviderError.
+ * Used by telemetry to automatically extract structured properties.
+ */
+export function isApiProviderError(error: unknown): error is ApiProviderError {
+	return (
+		error instanceof Error &&
+		error.name === "ApiProviderError" &&
+		"provider" in error &&
+		"modelId" in error &&
+		"operation" in error
+	)
+}
+
+/**
+ * Extracts properties from an ApiProviderError for telemetry.
+ * Returns the structured properties that can be merged with additionalProperties.
+ */
+export function extractApiProviderErrorProperties(error: ApiProviderError): Record<string, unknown> {
+	return {
+		provider: error.provider,
+		modelId: error.modelId,
+		operation: error.operation,
+		...(error.errorCode !== undefined && { errorCode: error.errorCode }),
+	}
 }

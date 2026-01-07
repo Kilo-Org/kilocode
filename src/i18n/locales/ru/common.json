@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Ошибка потока контекста генерации Gemini: {{error}}",
 			"generate_complete_prompt": "Ошибка завершения Gemini: {{error}}",
-			"sources": "Источники:"
+			"sources": "Источники:",
+			"thinking_complete_no_output": "(Размышление завершено, но вывод не сгенерирован.)",
+			"thinking_complete_truncated": "(Размышление завершено, но вывод урезан из-за лимита токенов.)",
+			"thinking_complete_safety": "(Размышление завершено, но вывод заблокирован настройками безопасности.)",
+			"thinking_complete_recitation": "(Размышление завершено, но вывод заблокирован проверкой цитирования.)"
 		},
 		"qwenCode": {
 			"oauthLoadFailed": "Не удалось загрузить учетные данные OAuth. Сначала выполните аутентификацию: {{error}}"

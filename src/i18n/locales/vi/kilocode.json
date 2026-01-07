@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "Phiên bản Kilocode CLI của bạn đã cũ và không hỗ trợ Agent Manager. Vui lòng cập nhật lên phiên bản mới nhất.",
 			"cliNotFound": "Không tìm thấy Kilocode CLI. Vui lòng cài đặt để sử dụng Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI chưa được cấu hình. Chạy 'kilocode auth' để đăng nhập hoặc 'kilocode config' để cấu hình.",
 			"sessionFailed": "Không thể khởi động phiên agent",
 			"sessionFailedWithMessage": "Không thể khởi động phiên agent: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Nhận Trợ Giúp",
 			"runInTerminal": "Chạy trong Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Cập Nhật Toàn Cục",
 			"updateLocal": "Cập Nhật Cục Bộ",
 			"installGlobal": "Cài Đặt Toàn Cục",
@@ -194,6 +196,12 @@
 		"terminal": {
 			"installMessage": "Đang chạy npm install để cài đặt Kilocode CLI. Sau khi hoàn tất, bạn có thể đóng terminal này và thử khởi động lại Agent Manager.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Khóa API OpenAI của bạn không hợp lệ hoặc không có quyền truy cập vào Realtime API. Vui lòng kiểm tra khóa API và thử lại.",
+			"unknown": "Kết nối thất bại. Vui lòng kiểm tra cấu hình của bạn và thử lại."
 		}
 	}
 }

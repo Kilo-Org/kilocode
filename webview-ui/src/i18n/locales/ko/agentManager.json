@@ -54,7 +54,8 @@
 		"otherBranches": "다른 브랜치",
 		"branchPickerTooltip": "기본 브랜치 변경",
 		"noBranches": "브랜치를 찾을 수 없습니다",
-		"noMatchingBranches": "검색과 일치하는 브랜치가 없습니다"
+		"noMatchingBranches": "검색과 일치하는 브랜치가 없습니다",
+		"openTerminal": "터미널 열기"
 	},
 	"messages": {
 		"waiting": "에이전트 응답 대기 중...",

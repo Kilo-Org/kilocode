@@ -54,6 +54,17 @@ export const atomOneDarkTheme: Theme = {
 		lineNumber: "#5c6370",
 	},
 
+	markdown: {
+		text: "#abb2bf",
+		heading: "#61aeee",
+		strong: "#ffffff",
+		em: "#abb2bf",
+		code: "#98c379",
+		blockquote: "#5c6370",
+		link: "#61aeee",
+		list: "#abb2bf",
+	},
+
 	ui: {
 		border: {
 			default: "#5c6370",

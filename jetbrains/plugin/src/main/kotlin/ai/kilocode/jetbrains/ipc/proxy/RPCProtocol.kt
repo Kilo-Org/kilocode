@@ -85,8 +85,24 @@ class RPCProtocol(
 
         /**
          * Unresponsive time threshold (milliseconds)
+         * Increased from 3s to 10s to accommodate slower machines and initialization delays
          */
-        private const val UNRESPONSIVE_TIME = 3 * 1000 // 3s, same as TS implementation
+        private const val UNRESPONSIVE_TIME = 10 * 1000 // 10s
+        
+        /**
+         * Maximum pending replies before warning
+         */
+        private const val PENDING_REPLY_WARNING_THRESHOLD = 500
+        
+        /**
+         * Maximum pending replies before cleanup
+         */
+        private const val MAX_PENDING_REPLIES = 1000
+        
+        /**
+         * Stale reply timeout (5 minutes)
+         */
+        private const val STALE_REPLY_TIMEOUT = 300000L
 
         /**
          * RPC protocol symbol (used to identify objects implementing this interface)
@@ -459,6 +475,9 @@ class RPCProtocol(
 
         pendingRPCReplies[callId] = PendingRPCReply(result, disposable)
         onWillSendRequest(req)
+        
+        // Monitor pending reply count
+        checkPendingReplies()
 
         val usesCancellationToken = cancellationToken != null
         val msg = MessageIO.serializeRequest(req, rpcId, methodName, serializedRequestArguments, usesCancellationToken)
@@ -475,6 +494,48 @@ class RPCProtocol(
 
         // Directly return Promise, do not block current thread
         return result
+    }
+    
+    /**
+     * Check pending reply count and cleanup stale replies
+     */
+    private fun checkPendingReplies() {
+        val pendingCount = pendingRPCReplies.size
+        
+        if (pendingCount > MAX_PENDING_REPLIES) {
+            LOG.error("Too many pending RPC replies ($pendingCount), possible leak or deadlock - cleaning up stale replies")
+            cleanupStalePendingReplies()
+        } else if (pendingCount > PENDING_REPLY_WARNING_THRESHOLD) {
+            LOG.warn("High number of pending RPC replies: $pendingCount")
+        }
+    }
+    
+    /**
+     * Cleanup stale pending replies that have been waiting too long
+     */
+    private fun cleanupStalePendingReplies() {
+        val now = System.currentTimeMillis()
+        var cleanedCount = 0
+        
+        pendingRPCReplies.entries.removeIf { (msgId, reply) ->
+            val age = now - reply.creationTime
+            if (age > STALE_REPLY_TIMEOUT) {
+                LOG.warn("Removing stale pending reply: msgId=$msgId, age=${age}ms")
+                try {
+                    reply.resolveErr(java.util.concurrent.TimeoutException("Reply timeout after ${age}ms"))
+                } catch (e: Exception) {
+                    LOG.error("Error resolving stale reply", e)
+                }
+                cleanedCount++
+                true
+            } else {
+                false
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            LOG.info("Cleaned up $cleanedCount stale pending replies")
+        }
     }
 
     /**

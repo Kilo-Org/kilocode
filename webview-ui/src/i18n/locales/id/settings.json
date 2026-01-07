@@ -302,9 +302,9 @@
 		"getOpenRouterApiKey": "Dapatkan OpenRouter API Key",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API Key",
 		"getVercelAiGatewayApiKey": "Dapatkan Vercel AI Gateway API Key",
-		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Dapatkan Glama API Key",
+		"apiKeyStorageNotice": "API key disimpan dengan aman di Secret Storage VSCode",
 		"useCustomBaseUrl": "Gunakan base URL kustom",
 		"useReasoning": "Aktifkan reasoning",
 		"useHostHeader": "Gunakan Host header kustom",
@@ -573,6 +573,7 @@
 			"none": "Tidak Ada",
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
+			"xhigh": "Sangat tinggi",
 			"medium": "Sedang",
 			"low": "Rendah",
 			"xhigh": "Ekstra Tinggi"
@@ -1167,6 +1168,10 @@
 		"collapseThinking": {
 			"label": "Ciutkan pesan Berpikir secara default",
 			"description": "Jika diaktifkan, blok berpikir akan diciutkan secara default sampai Anda berinteraksi dengannya"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Memerlukan {{primaryMod}}+Enter untuk mengirim pesan",
+			"description": "Ketika diaktifkan, kamu harus menekan {{primaryMod}}+Enter untuk mengirim pesan alih-alih hanya Enter"
 		}
 	}
 }

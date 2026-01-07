@@ -223,39 +223,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Spouštěče",
-			"keybindingDescription": "Funkce Autocomplete lze spustit pomocí příkazů. Můžeš nakonfigurovat <DocsLink>Klávesové Zkratky zde</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Povolit Autocomplete",
-				"description": "Když je povoleno, Kilo Code automaticky spustí Autocomplete, když přestaneš psát. To může být užitečné pro rychlé opravy a návrhy."
+				"label": "Auto-trigger Suggestions",
+				"description": "Automaticky zobrazovat návrhy kódu při pozastavení psaní."
 			},
 			"autoTriggerDelay": {
 				"label": "Zpoždění Automatického Spuštění",
-				"description": "Zpoždění v sekundách před tím, než Kilo Code spustí Autocomplete poté, co přestaneš psát. Kratší zpoždění znamená rychlejší návrhy, ale může být náročnější na zdroje."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Rychlý úkol ({{keybinding}})",
-				"description": "Potřebuješ jen rychlou změnu? Vyber nějaký kód (nebo ne!) a stiskni Cmd+I. Popiš svůj cíl v jednoduché češtině (\"vytvoř React komponentu s těmito props\", \"přidej zpracování chyb do této funkce\"), a získej několik připravených návrhů přímo ve svém editoru. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Ruční dokončování ({{keybinding}})",
-				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "nenalezeno",
-			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
 			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel",
 			"enableChatAutocomplete": {
-				"label": "Automatické doplňování při psaní zpráv",
-				"description": "Když je tato funkce povolena, Kilo Code bude navrhovat dokončování textu během psaní ve vstupním poli chatu. Stisknutím klávesy Tab přijmete návrhy."
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "Pozastavit Autocomplete",
-				"description": "Dočasně pozastaví návrhy automatického dokončování na zadanou dobu.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "Pozastavit",
 				"unsnooze": "Obnovit",
-				"currentlySnoozed": "Autocomplete je momentálně pozastaveno.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 minuta",
 					"5min": "5 minut",
@@ -263,7 +256,19 @@
 					"30min": "30 minut",
 					"1hour": "1 hodina"
 				}
-			}
+			},
+			"noModelConfigured": {
+				"title": "Není nakonfigurován žádný model pro automatické dokončování",
+				"description": "Pro povolení automatického dokončování přidejte profil s jedním z těchto podporovaných poskytovatelů:",
+				"learnMore": "Zjistěte více o nastavení automatického dokončování →"
+			},
+			"noCredits": {
+				"title": "Na vašem účtu nejsou žádné kredity",
+				"description": "Váš účet Kilo Code nemá žádné kredity. Pro použití automatického dokončování prosím přidejte kredity na svůj účet.",
+				"buyCredits": "Koupit kredity →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -329,8 +334,14 @@
 	"speechToText": {
 		"startRecording": "Spustit hlasový vstup",
 		"stopRecording": "Zastavit hlasový vstup",
-		"unavailableBoth": "Převod řeči na text není k dispozici. Vyžaduje platného poskytovatele OpenAI a musí být nainstalován FFmpeg.",
-		"unavailableFfmpegNotInstalled": "Převod řeči na text není k dispozici. Nainstalujte FFmpeg pro využití transkripce hlasu.",
-		"unavailableOpenAiKeyMissing": "Převod řeči na text není k dispozici. Pro použití hlasového přepisu vyžaduje platného poskytovatele OpenAI s API klíčem."
+		"setupPopover": {
+			"title": "Převod řeči na text",
+			"openAiReason": "Pro použití hlasové transkripce potřebujete platného poskytovatele OpenAI s API klíčem.",
+			"description": "Převod řeči na text není k dispozici. Převod řeči na text vyžaduje jak FFmpeg, tak platně nakonfigurovaného poskytovatele OpenAI. <moreInfoLink>Klikněte sem pro více informací</moreInfoLink>.",
+			"ffmpegReason": "Potřebujete nainstalovaný FFmpeg. <ffmpegLink>Klikněte zde</ffmpegLink>, aby vám Kilo pomohlo s instalací FFmpeg.",
+			"ffmpegMessage": "Pomozte mi nainstalovat FFmpeg"
+		},
+		"misconfiguredState": "Nedostupné kvůli konfiguraci",
+		"errorState": "Nedostupné kvůli chybě"
 	}
 }

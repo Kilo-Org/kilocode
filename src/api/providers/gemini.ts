@@ -7,7 +7,6 @@ import {
 	type GroundingMetadata,
 	FinishReason, // kilocode_change
 	FunctionCallingConfigMode,
-	Content,
 } from "@google/genai"
 import type { JWTInput } from "google-auth-library"
 
@@ -24,7 +23,7 @@ import type {
 } from "../../shared/api"
 import { safeJsonParse } from "../../shared/safeJsonParse"
 
-import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import { t } from "i18next"
 import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
@@ -253,13 +252,17 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			let lastUsageMetadata: GenerateContentResponseUsageMetadata | undefined
 			let pendingGroundingMetadata: GroundingMetadata | undefined
 			let finalResponse: { responseId?: string } | undefined
+			let finishReason: string | undefined
 
 			let toolCallCounter = 0
+			let hasContent = false
+			let hasReasoning = false
 
 			for await (const chunk of result) {
 				// Track the final structured response (per SDK pattern: candidate.finishReason)
 				if (chunk.candidates && chunk.candidates[0]?.finishReason) {
 					finalResponse = chunk as { responseId?: string }
+					finishReason = chunk.candidates[0].finishReason
 				}
 				// Process candidates and their parts to separate thoughts from content
 				if (chunk.candidates && chunk.candidates.length > 0) {
@@ -293,9 +296,11 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 							if (part.thought) {
 								// This is a thinking/reasoning part
 								if (part.text) {
+									hasReasoning = true
 									yield { type: "reasoning", text: part.text }
 								}
 							} else if (part.functionCall) {
+								hasContent = true
 								// Gemini sends complete function calls in a single chunk
 								// Emit as partial chunks for consistent handling with NativeToolCallParser
 								const callId = `${part.functionCall.name}-${toolCallCounter}`
@@ -323,6 +328,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 							} else {
 								// This is regular content
 								if (part.text) {
+									hasContent = true
 									yield { type: "text", text: part.text }
 								}
 							}
@@ -332,12 +338,28 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 				// Fallback to the original text property if no candidates structure
 				else if (chunk.text) {
+					hasContent = true
 					yield { type: "text", text: chunk.text }
 				}
 
 				if (chunk.usageMetadata) {
 					lastUsageMetadata = chunk.usageMetadata
 				}
+			}
+
+			// If we had reasoning but no content, emit a placeholder text to prevent "Empty assistant response" errors.
+			// This typically happens when the model hits max output tokens while reasoning.
+			if (hasReasoning && !hasContent) {
+				let message = t("common:errors.gemini.thinking_complete_no_output")
+				if (finishReason === "MAX_TOKENS") {
+					message = t("common:errors.gemini.thinking_complete_truncated")
+				} else if (finishReason === "SAFETY") {
+					message = t("common:errors.gemini.thinking_complete_safety")
+				} else if (finishReason === "RECITATION") {
+					message = t("common:errors.gemini.thinking_complete_recitation")
+				}
+
+				yield { type: "text", text: message }
 			}
 
 			if (finalResponse?.responseId) {
@@ -496,31 +518,6 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			throw error
-		}
-	}
-
-	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		try {
-			await this.ensureModelsLoaded() // kilocode_change
-			const { id: model } = this.getModel()
-
-			const countTokensRequest = {
-				model,
-				// Token counting does not need encrypted continuation; always drop thoughtSignature.
-				contents: convertAnthropicContentToGemini(content, { includeThoughtSignatures: false }),
-			}
-
-			const response = await this.client.models.countTokens(countTokensRequest)
-
-			if (response.totalTokens === undefined) {
-				console.warn("Gemini token counting returned undefined, using fallback")
-				return super.countTokens(content)
-			}
-
-			return response.totalTokens
-		} catch (error) {
-			console.warn("Gemini token counting failed, using fallback", error)
-			return super.countTokens(content)
 		}
 	}
 

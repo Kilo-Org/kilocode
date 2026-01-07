@@ -56,7 +56,8 @@
 		"otherBranches": "Інші гілки",
 		"branchPickerTooltip": "Змінити базову гілку",
 		"noBranches": "Гілки не знайдено",
-		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку"
+		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку",
+		"openTerminal": "Відкрити термінал"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",

@@ -216,39 +216,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Gatilhos",
-			"keybindingDescription": "As funcionalidades do Autocomplete podem ser ativadas por comandos. Você pode configurar os <DocsLink>Atalhos de Teclado aqui</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Habilitar Autocomplete",
-				"description": "Quando habilitado, o Kilo Code ativará automaticamente o Autocomplete quando você parar de digitar. Isso pode ser útil para correções rápidas e sugestões."
+				"label": "Auto-trigger Suggestions",
+				"description": "Mostrar automaticamente sugestões de código inline quando você pausa de digitar."
 			},
 			"autoTriggerDelay": {
 				"label": "Atraso da Ativação Automática",
-				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tarefa Rápida ({{keybinding}})",
-				"description": "Precisa apenas de uma mudança rápida? Selecione algum código (ou não!) e pressione Cmd+I. Descreva seu objetivo em português simples (\"criar um componente React com essas props\", \"adicionar tratamento de erro a esta função\"), e obtenha múltiplas sugestões prontas para uso diretamente no seu editor. <DocsLink>Ver atalho</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Preenchimento Automático Manual ({{keybinding}})",
-				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "não encontrado",
-			"noModelConfigured": "Nenhum modelo de autocompletar adequado encontrado. Configure um provedor nas configurações da API.",
 			"configureAutocompleteProfile": "Use qualquer modelo indo para perfis e configurando um Perfil do Tipo de Perfil Autocompletar.",
 			"model": "Modelo",
 			"provider": "Provedor",
 			"enableChatAutocomplete": {
-				"label": "Preenchimento Automático do Chat",
-				"description": "Quando ativado, o Kilo Code irá sugerir conclusões enquanto você digita no campo de chat. Pressione Tab para aceitar as sugestões."
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "Adiar Autocomplete",
-				"description": "Pausar temporariamente as sugestões de autocomplete por um período especificado.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "Adiar",
 				"unsnooze": "Reativar",
-				"currentlySnoozed": "O autocomplete está adiado no momento.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 minuto",
 					"5min": "5 minutos",
@@ -256,7 +249,19 @@
 					"30min": "30 minutos",
 					"1hour": "1 hora"
 				}
-			}
+			},
+			"noModelConfigured": {
+				"title": "Nenhum modelo de autocomplete configurado",
+				"description": "Para habilitar o autocomplete, adicione um perfil com um destes provedores suportados:",
+				"learnMore": "Saiba mais sobre a configuração do autocomplete →"
+			},
+			"noCredits": {
+				"title": "Sem créditos na sua conta",
+				"description": "Sua conta Kilo Code não tem créditos. Para usar o autocomplete, adicione créditos à sua conta.",
+				"buyCredits": "Comprar créditos →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -329,8 +334,14 @@
 	"speechToText": {
 		"startRecording": "Iniciar entrada de voz",
 		"stopRecording": "Parar entrada de voz",
-		"unavailableOpenAiKeyMissing": "Conversão de voz para texto indisponível. É necessário um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
-		"unavailableBoth": "O reconhecimento de voz não está disponível. Ele requer um provedor OpenAI válido e o FFmpeg deve estar instalado.",
-		"unavailableFfmpegNotInstalled": "Transcrição de voz não está disponível. Instale o FFmpeg para usar a transcrição de voz."
+		"setupPopover": {
+			"title": "Conversão de Fala em Texto",
+			"openAiReason": "Você precisa de um provedor OpenAI válido com uma chave de API para usar a transcrição de voz.",
+			"description": "A conversão de fala para texto está indisponível. A conversão de fala para texto requer o FFmpeg e um provedor OpenAI válido configurados. <moreInfoLink>Clique aqui para mais informações</moreInfoLink>.",
+			"ffmpegReason": "Você precisa ter o FFmpeg instalado. <ffmpegLink>Clique aqui</ffmpegLink> para que o Kilo ajude você a instalar o FFmpeg.",
+			"ffmpegMessage": "Ajude-me a instalar o FFmpeg"
+		},
+		"misconfiguredState": "Indisponível devido à configuração",
+		"errorState": "Indisponível devido a erro"
 	}
 }

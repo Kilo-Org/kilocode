@@ -1,11 +1,12 @@
 import crypto from "crypto"
 import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
-import { CompletionUsage, OpenRouterHandler } from "./openrouter"
+import { OpenRouterHandler } from "./openrouter"
+import type { CompletionUsage } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
 import { getKiloUrlFromToken } from "@roo-code/types"
-import { ApiHandlerCreateMessageMetadata } from ".."
+import type { ApiHandlerCreateMessageMetadata } from ".."
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
 import {
@@ -13,10 +14,12 @@ import {
 	X_KILOCODE_TASKID,
 	X_KILOCODE_PROJECTID,
 	X_KILOCODE_TESTER,
+	X_KILOCODE_EDITORNAME,
 } from "../../shared/kilocode/headers"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "../../shared/kilocode/errorUtils"
 import { DEFAULT_HEADERS } from "./constants"
 import { streamSse } from "../../services/continuedev/core/fetch/stream"
+import { getEditorNameHeader } from "../../core/kilocode/wrapper"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -51,7 +54,9 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
-		const headers: Record<string, string> = {}
+		const headers: Record<string, string> = {
+			[X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
+		}
 
 		if (metadata?.taskId) {
 			headers[X_KILOCODE_TASKID] = metadata.taskId

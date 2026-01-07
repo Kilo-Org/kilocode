@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
 				destination: "https://roo-code.notion.site/238fd1401b0a8087b858e1ad431507cf?pvs=105",
 				permanent: false,
 			},
+			{
+				source: "/provider/pricing",
+				destination: "/provider",
+				permanent: true,
+			},
 		]
 	},
 }

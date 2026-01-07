@@ -14,7 +14,14 @@ vi.mock("fs/promises")
 vi.mock("../../../utils/pathUtils")
 vi.mock("../../../utils/fs")
 vi.mock("../../../utils/safeWriteJson")
-vi.mock("../../../api/providers/openrouter")
+// IMPORTANT: Provide a manual mock so other modules (e.g. `kilocode-openrouter.ts`) can
+// safely `extends OpenRouterHandler` during module evaluation.
+vi.mock("../../../api/providers/openrouter", () => {
+	const OpenRouterHandler = vi.fn()
+	return {
+		OpenRouterHandler,
+	}
+})
 
 describe("generateImageTool", () => {
 	let mockCline: any

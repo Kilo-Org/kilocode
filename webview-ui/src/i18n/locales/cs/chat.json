@@ -140,6 +140,7 @@
 	"enhancePromptDescription": "Tlačítko 'Vylepšit prompt' pomáhá zlepšit tvůj prompt poskytnutím dodatečného kontextu, vyjasnění nebo přeformulování. Zkus sem napsat prompt a znovu kliknout na tlačítko, abys viděl, jak to funguje.",
 	"addImages": "Přidat obrázky do zprávy",
 	"sendMessage": "Odeslat zprávu",
+	"pressToSend": "Stiskni {{keyCombination}} pro odeslání",
 	"stopTts": "Zastavit převod textu na řeč",
 	"typeMessage": "Napiš zprávu...",
 	"typeTask": "Vytvoř, najdi, zeptej se na něco",
@@ -167,7 +168,8 @@
 			"403": "Neautorizováno. Tvůj API klíč je platný, ale poskytovatel odmítl dokončit tento požadavek.",
 			"429": "Příliš mnoho požadavků. Poskytovatel tě omezuje rychlostí. Počkej chvíli před dalším API voláním.",
 			"500": "Chyba serveru poskytovatele. Něco je špatně na straně poskytovatele, s tvým požadavkem není nic v nepořádku.",
-			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Roo Code."
+			"connection": "Chyba připojení. Ujisti se, že máš funkční připojení k internetu.",
+			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Kilo."
 		}
 	},
 	"checkpoint": {
@@ -190,11 +192,20 @@
 		},
 		"current": "Aktuální"
 	},
-	"contextCondense": {
-		"title": "Kontext zhušťěn",
-		"condensing": "Zhušťování kontextu...",
-		"errorHeader": "Nepodařilo se zhuštit kontext",
-		"tokens": "tokeny"
+	"contextManagement": {
+		"tokens": "tokeny",
+		"condensation": {
+			"title": "Kontext zhušťěn",
+			"inProgress": "Zhušťování kontextu...",
+			"errorHeader": "Nepodařilo se zhuštit kontext"
+		},
+		"truncation": {
+			"title": "Kontext zkrácen",
+			"inProgress": "Zkracování kontextu...",
+			"messagesRemoved": "{{count}} zpráva odstraněna",
+			"messagesRemoved_other": "{{count}} zprávy odstraněny",
+			"description": "Starší zprávy byly odstraněny z konverzace, aby zůstala v rámci limitu kontextového okna. Toto je rychlý, ale méně kontextově zachovávající přístup ve srovnání se zhušťováním."
+		}
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code chce načíst podrobné instrukce pro pomoc s aktuálním úkolem"
@@ -298,6 +309,11 @@
 	},
 	"taskCompleted": "Úkol dokončen",
 	"error": "Chyba",
+	"errorDetails": {
+		"title": "Detaily chyby",
+		"copyToClipboard": "Kopírovat do schránky",
+		"copied": "Zkopírováno!"
+	},
 	"diffError": {
 		"title": "Úprava neúspěšná"
 	},
@@ -334,6 +350,7 @@
 	},
 	"announcement": {
 		"title": "🎉 Vydán Roo Code {{version}}",
+		"support": "Prosím podpoř Roo Code tím, že nám dáš hvězdičku na <githubLink>GitHubu</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Code Supernova: Nyní vylepšen s <bold>kontextovým oknem 1M tokenů</bold>! Všestranný agentní model pro kódování, který podporuje obrazové vstupy, dostupný prostřednictvím Roo Code Cloud.",
 			"note": "(Poznámka: prompty a dokončení jsou zaznamenávány tvůrcem modelu a používány k vylepšení modelu)",
@@ -369,6 +386,7 @@
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopírovat do vstupu (stejné jako shift + klik)",
+		"timerPrefix": "Automatické schvalování povoleno. Výběr za {{seconds}}s…",
 		"autoSelectCountdown": "Automatický výběr za {{count}}s",
 		"countdownDisplay": "{{count}}s"
 	},
@@ -387,13 +405,25 @@
 		"sessionStarted": "Relace prohlížeče zahájena",
 		"actions": {
 			"title": "Akce procházení: ",
+			"launched": "Prohlížeč spuštěn",
 			"launch": "Spustit prohlížeč na {{url}}",
+			"clicked": "Kliknuto na: {{coordinate}}",
 			"click": "Kliknout ({{coordinate}})",
+			"typed": "Napsáno: {{text}}",
 			"type": "Napsat \"{{text}}\"",
+			"pressed": "Stisknuta klávesa: {{key}}",
 			"press": "Stisknout {{key}}",
+			"scrolledDown": "Posunuto dolů",
 			"scrollDown": "Posunout dolů",
+			"scrolledUp": "Posunuto nahoru",
 			"scrollUp": "Posunout nahoru",
+			"hovered": "Přejetí kurzorem na: {{coordinate}}",
 			"hover": "Přejet kurzorem ({{coordinate}})",
+			"resized": "Změněna velikost na: {{size}}",
+			"resize": "Změnit velikost na {{size}}",
+			"screenshotSaved": "Snímek obrazovky uložen",
+			"screenshot": "Uložit snímek obrazovky do {{path}}",
+			"closed": "Prohlížeč zavřen",
 			"close": "Zavřít prohlížeč"
 		}
 	},

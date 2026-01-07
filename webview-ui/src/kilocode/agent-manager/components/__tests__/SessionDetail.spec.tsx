@@ -323,4 +323,34 @@ describe("SessionDetail", () => {
 			expect(screen.getByText("sessionDetail.runModeLocal")).toBeInTheDocument()
 		})
 	})
+
+	describe("terminal button visibility", () => {
+		it("hides terminal button for provisional sessions", () => {
+			const session = createSession({
+				sessionId: "provisional-123",
+				status: "running",
+				parallelMode: { enabled: true, branch: "feature/test" },
+			})
+
+			renderWithStore(session, {
+				[session.sessionId]: createUiState({ isActive: true, showSpinner: false }),
+			})
+
+			expect(screen.queryByLabelText("sessionDetail.openTerminal")).not.toBeInTheDocument()
+		})
+
+		it("shows terminal button for non-provisional sessions", () => {
+			const session = createSession({
+				sessionId: "real-session-123",
+				status: "running",
+				parallelMode: { enabled: true, branch: "feature/test" },
+			})
+
+			renderWithStore(session, {
+				[session.sessionId]: createUiState({ isActive: true, showSpinner: false }),
+			})
+
+			expect(screen.getByLabelText("sessionDetail.openTerminal")).toBeInTheDocument()
+		})
+	})
 })

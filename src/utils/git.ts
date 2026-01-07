@@ -407,7 +407,6 @@ export async function getGitStatus(cwd: string, maxFiles: number = 20): Promise<
 	}
 }
 
-
 /**
  * Gets the current branch name
  * @param cwd The working directory to check the current branch in

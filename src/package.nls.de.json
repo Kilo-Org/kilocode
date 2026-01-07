@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code KI-Agent",
+	"extension.displayName": "Kilo Code: KI-Codierungs-Agent, Copilot und Autovervollständigung",
 	"extension.description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code.",
 	"command.newTask.title": "Neue Aufgabe",
 	"command.explainCode.title": "Code Erklären",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Aktiviert die Synchronisation der Kilo Code-Einstellungen über Geräte hinweg via VS Code Settings Sync. Wenn aktiviert, werden deine API-Konfigurationen, benutzerdefinierten Modi und Einstellungen automatisch synchronisiert, wenn du dich bei VS Code Settings Sync anmeldest.",
 	"settings.autoImportSettingsPath.description": "Pfad zu einer Kilo Code-Konfigurationsdatei, die beim Start der Erweiterung automatisch importiert wird. Unterstützt absolute Pfade und Pfade relativ zum Home-Verzeichnis (z.B. '~/Documents/kilo-code-settings.json'). Leer lassen, um den automatischen Import zu deaktivieren.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Maximale Anzahl der zu indizierenden Dateien für die @-Dateisuchfunktion. Höhere Werte bieten bessere Suchergebnisse in großen Projekten, können aber mehr Speicher verbrauchen. Standard: 10.000.",
-	"settings.useAgentRules.description": "Aktiviert das Laden von AGENTS.md-Dateien für agentenspezifische Regeln (siehe https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Aktiviert das Laden von AGENTS.md-Dateien für agentenspezifische Regeln (siehe https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Maximale Wartezeit in Sekunden auf API-Antworten (0 = kein Timeout, 1-86400s, Standard: 600s). Höhere Werte werden für lokale Anbieter wie LM Studio und Ollama empfohlen, die möglicherweise mehr Verarbeitungszeit benötigen.",
 	"settings.newTaskRequireTodos.description": "Todos-Parameter beim Erstellen neuer Aufgaben mit dem new_task-Tool erfordern",
 	"settings.codeIndex.embeddingBatchSize.description": "Die Batch-Größe für Embedding-Operationen während der Code-Indexierung. Passe dies an die Limits deines API-Anbieters an. Standard ist 60.",

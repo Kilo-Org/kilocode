@@ -2,6 +2,7 @@ export * from "./api.js"
 export * from "./auto-purge.js" // kilocode_change
 export * from "./cloud.js"
 export * from "./codebase-index.js"
+export * from "./context-management.js"
 export * from "./cookie-consent.js"
 export * from "./events.js"
 export * from "./experiment.js"

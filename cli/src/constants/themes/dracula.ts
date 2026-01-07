@@ -54,6 +54,17 @@ export const draculaTheme: Theme = {
 		lineNumber: "#6272a4",
 	},
 
+	markdown: {
+		text: "#a3afb7",
+		heading: "#ff79c6",
+		strong: "#ffffff",
+		em: "#a3afb7",
+		code: "#50fa7b",
+		blockquote: "#6272a4",
+		link: "#8be9fd",
+		list: "#a3afb7",
+	},
+
 	ui: {
 		border: {
 			default: "#6272a4",

@@ -58,7 +58,8 @@
 		"otherBranches": "فروع أخرى",
 		"branchPickerTooltip": "تبديل الفرع الأساسي",
 		"noBranches": "لم يتم العثور على فروع",
-		"noMatchingBranches": "لا توجد فروع تطابق بحثك"
+		"noMatchingBranches": "لا توجد فروع تطابق بحثك",
+		"openTerminal": "فتح الطرفية"
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",

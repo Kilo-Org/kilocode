@@ -1,6 +1,5 @@
 import * as fs from "fs/promises"
 import * as path from "path"
-import { listFiles } from "../glob/list-files"
 import { LanguageParser, loadRequiredLanguageParsers } from "./languageParser"
 import { fileExistsAtPath } from "../../utils/fs"
 import { parseMarkdown } from "./markdownParser"
@@ -159,89 +158,6 @@ export async function parseSourceCodeDefinitionsForFile(
 	}
 
 	return undefined
-}
-
-// TODO: implement caching behavior to avoid having to keep analyzing project for new tasks.
-export async function parseSourceCodeForDefinitionsTopLevel(
-	dirPath: string,
-	rooIgnoreController?: RooIgnoreController,
-): Promise<string> {
-	// check if the path exists
-	const dirExists = await fileExistsAtPath(path.resolve(dirPath))
-	if (!dirExists) {
-		return "This directory does not exist or you do not have permission to access it."
-	}
-
-	// Get all files at top level (not gitignored)
-	const [allFiles, _] = await listFiles(dirPath, false, 200)
-
-	let result = ""
-
-	// Separate files to parse and remaining files
-	const { filesToParse } = separateFiles(allFiles)
-
-	// Filter filepaths for access if controller is provided
-	const allowedFilesToParse = rooIgnoreController ? rooIgnoreController.filterPaths(filesToParse) : filesToParse
-
-	// Separate markdown files from other files
-	const markdownFiles: string[] = []
-	const otherFiles: string[] = []
-
-	for (const file of allowedFilesToParse) {
-		const ext = path.extname(file).toLowerCase()
-		if (ext === ".md" || ext === ".markdown") {
-			markdownFiles.push(file)
-		} else {
-			otherFiles.push(file)
-		}
-	}
-
-	// Load language parsers only for non-markdown files
-	const languageParsers = await loadRequiredLanguageParsers(otherFiles)
-
-	// Process markdown files
-	for (const file of markdownFiles) {
-		// Check if we have permission to access this file
-		if (rooIgnoreController && !rooIgnoreController.validateAccess(file)) {
-			continue
-		}
-
-		try {
-			// Read file content
-			const fileContent = await fs.readFile(file, "utf8")
-
-			// Split the file content into individual lines
-			const lines = fileContent.split("\n")
-
-			// Parse markdown content to get captures
-			const markdownCaptures = parseMarkdown(fileContent)
-
-			// Process the captures
-			const markdownDefinitions = processCaptures(markdownCaptures, lines, "markdown")
-
-			if (markdownDefinitions) {
-				result += `# ${path.relative(dirPath, file).toPosix()}\n${markdownDefinitions}\n`
-			}
-		} catch (error) {
-			console.log(`Error parsing markdown file: ${error}\n`)
-		}
-	}
-
-	// Process other files using tree-sitter
-	for (const file of otherFiles) {
-		const definitions = await parseFile(file, languageParsers, rooIgnoreController)
-		if (definitions) {
-			result += `# ${path.relative(dirPath, file).toPosix()}\n${definitions}\n`
-		}
-	}
-
-	return result ? result : "No source code definitions found."
-}
-
-function separateFiles(allFiles: string[]): { filesToParse: string[]; remainingFiles: string[] } {
-	const filesToParse = allFiles.filter((file) => extensions.includes(path.extname(file))).slice(0, 50) // 50 files max
-	const remainingFiles = allFiles.filter((file) => !filesToParse.includes(file))
-	return { filesToParse, remainingFiles }
 }
 
 /*

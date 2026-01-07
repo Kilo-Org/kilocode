@@ -54,6 +54,17 @@ export const xcodeTheme: Theme = {
 		lineNumber: "#c0c0c0",
 	},
 
+	markdown: {
+		text: "#444",
+		heading: "#0E0EFF",
+		strong: "#000",
+		em: "#444",
+		code: "#007400",
+		blockquote: "#c0c0c0",
+		link: "#0E0EFF",
+		list: "#444",
+	},
+
 	ui: {
 		border: {
 			default: "#e1e4e8",

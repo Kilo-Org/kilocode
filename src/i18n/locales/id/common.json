@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Kesalahan aliran konteks pembuatan Gemini: {{error}}",
 			"generate_complete_prompt": "Kesalahan penyelesaian Gemini: {{error}}",
-			"sources": "Sumber:"
+			"sources": "Sumber:",
+			"thinking_complete_no_output": "(Berpikir selesai, tetapi tidak ada output yang dihasilkan.)",
+			"thinking_complete_truncated": "(Berpikir selesai, tetapi output terpotong karena batas token.)",
+			"thinking_complete_safety": "(Berpikir selesai, tetapi output diblokir karena pengaturan keamanan.)",
+			"thinking_complete_recitation": "(Berpikir selesai, tetapi output diblokir karena pemeriksaan resitasi.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Autentikasi API Cerebras gagal. Silakan periksa apakah kunci API Anda valid dan belum kedaluwarsa.",

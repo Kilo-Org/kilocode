@@ -582,6 +582,7 @@
 			"none": "Keine",
 			"minimal": "Minimal (schnellste)",
 			"high": "Hoch",
+			"xhigh": "Sehr hoch",
 			"medium": "Mittel",
 			"low": "Niedrig",
 			"xhigh": "Sehr hoch"
@@ -1141,6 +1142,10 @@
 		"collapseThinking": {
 			"label": "Gedankenblöcke standardmäßig ausblenden",
 			"description": "Wenn aktiviert, werden Gedankenblöcke standardmäßig ausgeblendet, bis du mit ihnen interagierst"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "{{primaryMod}}+Enter zum Senden erfordern",
+			"description": "Wenn aktiviert, musst du {{primaryMod}}+Enter drücken, um Nachrichten zu senden, anstatt nur Enter"
 		}
 	}
 }

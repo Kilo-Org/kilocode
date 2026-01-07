@@ -19,7 +19,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-import { ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -194,12 +194,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
-			const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices?.[0]?.delta ?? {}
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta.content) {
 					for (const chunk of matcher.update(delta.content)) {

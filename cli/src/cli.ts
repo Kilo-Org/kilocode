@@ -1,5 +1,5 @@
 import { basename } from "node:path"
-import { render, Instance } from "ink"
+import { render, Instance, type RenderOptions } from "ink"
 import React from "react"
 import { createStore } from "jotai"
 import { createExtensionService, ExtensionService } from "./services/extension.js"
@@ -33,6 +33,7 @@ import { getSelectedModelId } from "./utils/providers.js"
 import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/session-adapters.js"
 import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
+import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -116,6 +117,10 @@ export class CLI {
 				serviceOptions.customModes = this.options.customModes
 			}
 
+			if (this.options.appendSystemPrompt) {
+				serviceOptions.appendSystemPrompt = this.options.appendSystemPrompt
+			}
+
 			this.service = createExtensionService(serviceOptions)
 			logs.debug("ExtensionService created with identity", "CLI", {
 				hasIdentity: !!identity,
@@ -165,6 +170,11 @@ export class CLI {
 						}
 					},
 					onSessionSynced: (message) => {
+						if (this.options.json) {
+							console.log(JSON.stringify(message))
+						}
+					},
+					onSessionTitleGenerated: (message) => {
 						if (this.options.json) {
 							console.log(JSON.stringify(message))
 						}
@@ -325,6 +335,13 @@ export class CLI {
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.jsonInteractive || this.options.ci || !process.stdin.isTTY
+		const renderOptions: RenderOptions = {
+			// Enable Ink's incremental renderer to avoid redrawing the entire screen on every update.
+			// This reduces flickering for frequently updating UIs.
+			incrementalRendering: true,
+			exitOnCtrlC: false,
+			...(shouldDisableStdin ? { stdout: process.stdout, stderr: process.stderr } : {}),
+		}
 
 		this.ui = render(
 			React.createElement(App, {
@@ -344,12 +361,7 @@ export class CLI {
 				},
 				onExit: () => this.dispose(),
 			}),
-			shouldDisableStdin
-				? {
-						stdout: process.stdout,
-						stderr: process.stderr,
-					}
-				: undefined,
+			renderOptions,
 		)
 
 		// Wait for UI to exit
@@ -664,6 +676,31 @@ export class CLI {
 	 */
 	getStore(): ReturnType<typeof createStore> | null {
 		return this.store
+	}
+
+	/**
+	 * Returns true if the CLI should show an exit confirmation prompt for SIGINT.
+	 */
+	shouldConfirmExitOnSigint(): boolean {
+		return (
+			!!this.store &&
+			!this.options.ci &&
+			!this.options.json &&
+			!this.options.jsonInteractive &&
+			process.stdin.isTTY
+		)
+	}
+
+	/**
+	 * Trigger the exit confirmation prompt. Returns true if handled.
+	 */
+	requestExitConfirmation(): boolean {
+		if (!this.shouldConfirmExitOnSigint()) {
+			return false
+		}
+
+		this.store?.set(triggerExitConfirmationAtom)
+		return true
 	}
 
 	/**

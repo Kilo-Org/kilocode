@@ -100,7 +100,7 @@ API 密钥安全地存储在 VSCode 的 Secret Storage 中，绝不会以纯文�
 
 ## 相关功能
 
-- 适用于您创建的[自定义模式](/features/custom-modes)
+- 适用于您创建的[自定义模式](/agent-behavior/custom-modes)
 - 与[本地模型](/advanced-usage/local-models)集成以进行离线工作
 - 支持每个模式的[温度设置](/features/model-temperature)
 - 通过[速率限制和使用跟踪](/advanced-usage/rate-limits-costs)增强成本管理

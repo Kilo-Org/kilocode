@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "La tua versione di Kilocode CLI è obsoleta e non supporta l'Agent Manager. Aggiorna all'ultima versione.",
 			"cliNotFound": "Kilocode CLI non trovato. Installalo per utilizzare l'Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI non è configurato. Esegui 'kilocode auth' per accedere o 'kilocode config' per configurare.",
 			"sessionFailed": "Impossibile avviare la sessione dell'agente",
 			"sessionFailedWithMessage": "Impossibile avviare la sessione dell'agente: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Ottieni Aiuto",
 			"runInTerminal": "Esegui nel Terminale",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Aggiorna Globale",
 			"updateLocal": "Aggiorna Locale",
 			"installGlobal": "Installa Globale",
@@ -194,6 +196,12 @@
 		"terminal": {
 			"installMessage": "Esecuzione di npm install per installare Kilocode CLI. Una volta completato, puoi chiudere questo terminale e provare ad avviare nuovamente l'Agent Manager.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "La tua chiave API OpenAI non è valida o non ha accesso alla Realtime API. Controlla la tua chiave API e riprova.",
+			"unknown": "Connessione fallita. Controlla la tua configurazione e riprova."
 		}
 	}
 }

@@ -177,6 +177,7 @@
 		"errors": {
 			"cliOutdated": "La teva versió de Kilocode CLI està desactualitzada i no és compatible amb el Gestor d'Agents. Si us plau, actualitza a la versió més recent.",
 			"cliNotFound": "No s'ha trobat Kilocode CLI. Si us plau, instal·la'l per utilitzar el Gestor d'Agents.",
+			"cliMisconfigured": "Kilocode CLI no està configurat. Executa 'kilocode auth' per iniciar sessió o 'kilocode config' per configurar.",
 			"sessionFailed": "Error en iniciar la sessió de l'agent",
 			"sessionFailedWithMessage": "Error en iniciar la sessió de l'agent: {{message}}"
 		},
@@ -186,6 +187,7 @@
 			"getHelp": "Obtenir Ajuda",
 			"runInTerminal": "Executar al Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Actualitzar Global",
 			"updateLocal": "Actualitzar Local",
 			"installGlobal": "Instal·lar Global",
@@ -194,6 +196,12 @@
 		"terminal": {
 			"installMessage": "Executant npm install per instal·lar Kilocode CLI. Un cop completat, pots tancar aquest terminal i intentar iniciar el Gestor d'Agents de nou.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "La vostra clau de l'API d'OpenAI no és vàlida o no té accés a l'API en temps real. Si us plau, comproveu la vostra clau de l'API i torneu-ho a provar.",
+			"unknown": "Ha fallat la connexió. Comproveu la configuració i torneu-ho a provar."
 		}
 	}
 }

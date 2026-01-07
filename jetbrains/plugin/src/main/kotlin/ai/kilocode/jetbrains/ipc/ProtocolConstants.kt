@@ -16,14 +16,16 @@ object ProtocolConstants {
 
     /**
      * Maximum delay time for sending acknowledgment messages (milliseconds)
+     * Increased from 2s to 5s to accommodate slower machines
      */
-    const val ACKNOWLEDGE_TIME = 2000 // 2 seconds
+    const val ACKNOWLEDGE_TIME = 5000 // 5 seconds
 
     /**
      * If a sent message has not been acknowledged beyond this time, and no server data has been received during this period,
      * the connection is considered timed out
+     * Increased from 20s to 60s to accommodate slower machines and initialization delays
      */
-    const val TIMEOUT_TIME = 20000 // 20 seconds
+    const val TIMEOUT_TIME = 60000 // 60 seconds
 
     /**
      * If no reconnection occurs within this time range, the connection is considered permanently closed

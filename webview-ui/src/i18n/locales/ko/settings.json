@@ -302,9 +302,9 @@
 		"getOpenRouterApiKey": "OpenRouter API 키 받기",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API 키",
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API 키 받기",
-		"apiKeyStorageNotice": "API 키는 VSCode의 보안 저장소에 안전하게 저장됩니다",
 		"glamaApiKey": "Glama API 키",
 		"getGlamaApiKey": "Glama API 키 받기",
+		"apiKeyStorageNotice": "API 키는 VSCode의 보안 저장소에 안전하게 저장됩니다",
 		"useCustomBaseUrl": "사용자 정의 기본 URL 사용",
 		"useReasoning": "추론 활성화",
 		"useHostHeader": "사용자 정의 Host 헤더 사용",
@@ -573,6 +573,7 @@
 			"none": "없음",
 			"minimal": "최소 (가장 빠름)",
 			"high": "높음",
+			"xhigh": "매우 높음",
 			"medium": "중간",
 			"low": "낮음",
 			"xhigh": "매우 높음"
@@ -1146,6 +1147,10 @@
 		"collapseThinking": {
 			"label": "기본적으로 생각 메시지 접기",
 			"description": "활성화하면 상호 작용할 때까지 생각 블록이 기본적으로 접힙니다"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "메시지를 보내려면 {{primaryMod}}+Enter가 필요",
+			"description": "활성화하면 Enter만으로는 안 되고 {{primaryMod}}+Enter를 눌러야 메시지를 보낼 수 있습니다"
 		}
 	}
 }

@@ -9,7 +9,13 @@ import { BaseProvider } from "../../../api/providers/base-provider"
 import { ApiMessage } from "../../task-persistence/apiMessages"
 import * as condenseModule from "../../condense"
 
-import { TOKEN_BUFFER_PERCENTAGE, estimateTokenCount, truncateConversation, manageContext } from "../index"
+import {
+	TOKEN_BUFFER_PERCENTAGE,
+	estimateTokenCount,
+	truncateConversation,
+	manageContext,
+	willManageContext,
+} from "../index"
 
 // Create a mock ApiHandler for testing
 class MockApiHandler extends BaseProvider {
@@ -1278,6 +1284,127 @@ describe("Context Management", () => {
 			// Should have all original messages + truncation marker (non-destructive)
 			expect(result2.messages.length).toBe(6) // 5 original + 1 marker
 			expect(result2.truncationId).toBeDefined()
+		})
+	})
+
+	/**
+	 * Tests for the willManageContext helper function
+	 */
+	describe("willManageContext", () => {
+		it("should return true when context percent exceeds threshold", () => {
+			const result = willManageContext({
+				totalTokens: 60000,
+				contextWindow: 100000, // 60% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(true)
+		})
+
+		it("should return false when context percent is below threshold", () => {
+			const result = willManageContext({
+				totalTokens: 40000,
+				contextWindow: 100000, // 40% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(false)
+		})
+
+		it("should return true when tokens exceed allowedTokens even if autoCondenseContext is false", () => {
+			// allowedTokens = contextWindow * (1 - 0.1) - reservedTokens = 100000 * 0.9 - 30000 = 60000
+			const result = willManageContext({
+				totalTokens: 60001, // Exceeds allowedTokens
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: false, // Even with auto-condense disabled
+				autoCondenseContextPercent: 50,
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(true)
+		})
+
+		it("should return false when autoCondenseContext is false and tokens are below allowedTokens", () => {
+			// allowedTokens = contextWindow * (1 - 0.1) - reservedTokens = 100000 * 0.9 - 30000 = 60000
+			const result = willManageContext({
+				totalTokens: 59999, // Below allowedTokens
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 50, // This shouldn't matter since autoCondenseContext is false
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(false)
+		})
+
+		it("should use profile-specific threshold when available", () => {
+			const result = willManageContext({
+				totalTokens: 55000,
+				contextWindow: 100000, // 55% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 80, // Global threshold 80%
+				profileThresholds: { "test-profile": 50 }, // Profile threshold 50%
+				currentProfileId: "test-profile",
+				lastMessageTokens: 0,
+			})
+			// Should trigger because 55% > 50% (profile threshold)
+			expect(result).toBe(true)
+		})
+
+		it("should fall back to global threshold when profile threshold is -1", () => {
+			const result = willManageContext({
+				totalTokens: 55000,
+				contextWindow: 100000, // 55% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 80, // Global threshold 80%
+				profileThresholds: { "test-profile": -1 }, // Profile uses global
+				currentProfileId: "test-profile",
+				lastMessageTokens: 0,
+			})
+			// Should NOT trigger because 55% < 80% (global threshold)
+			expect(result).toBe(false)
+		})
+
+		it("should include lastMessageTokens in the calculation", () => {
+			// Without lastMessageTokens: 49000 tokens = 49%
+			// With lastMessageTokens: 49000 + 2000 = 51000 tokens = 51%
+			const resultWithoutLastMessage = willManageContext({
+				totalTokens: 49000,
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(resultWithoutLastMessage).toBe(false)
+
+			const resultWithLastMessage = willManageContext({
+				totalTokens: 49000,
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 2000, // Pushes total to 51%
+			})
+			expect(resultWithLastMessage).toBe(true)
 		})
 	})
 })

@@ -224,10 +224,18 @@ export const globalSettingsSchema = z.object({
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
 	reasoningBlockCollapsed: z.boolean().optional(),
+	/**
+	 * Controls the keyboard behavior for sending messages in the chat input.
+	 * - "send": Enter sends message, Shift+Enter creates newline (default)
+	 * - "newline": Enter creates newline, Shift+Enter/Ctrl+Enter sends message
+	 * @default "send"
+	 */
+	enterBehavior: z.enum(["send", "newline"]).optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
+	appendSystemPrompt: z.string().optional(), // kilocode_change: Custom text to append to system prompt (CLI only)
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>
@@ -247,7 +255,7 @@ export type RooCodeSettings = GlobalSettings & ProviderSettings
  */
 export const SECRET_STATE_KEYS = [
 	"apiKey",
-	"glamaApiKey",
+	"glamaApiKey", // kilocode_change
 	"openRouterApiKey",
 	"awsAccessKey",
 	"awsApiKey",

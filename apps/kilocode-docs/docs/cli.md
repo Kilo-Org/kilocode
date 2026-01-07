@@ -38,6 +38,7 @@ Upgrade the Kilo CLI package:
 - **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
 - **Choose the right mode for the task in your workflow.** Select between Architect, Ask, Debug, Orchestrator, or custom agent modes.
 - **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
+- **Extend capabilities with skills.** Add domain expertise and repeatable workflows through [Agent Skills](#skills).
 
 ## CLI reference
 
@@ -67,6 +68,65 @@ Upgrade the Kilo CLI package:
 | `/new`                | Start a new task with the agent with a clean slate               |                                |
 | `/help`               | List available commands and how to use them                      |                                |
 | `/exit`               | Exit the CLI                                                     |                                |
+
+## Skills
+
+The CLI supports [Agent Skills](https://agentskills.io/), a lightweight format for extending AI capabilities with specialized knowledge and workflows.
+
+Skills are discovered from:
+
+- **Global skills**: `~/.kilocode/skills/` (available in all projects)
+- **Project skills**: `.kilocode/skills/` (project-specific)
+
+Skills can be:
+
+- **Generic** - Available in all modes
+- **Mode-specific** - Only loaded when using a particular mode (e.g., `code`, `architect`)
+
+For example:
+
+```
+your-project/
+└── .kilocode/
+    ├── skills/               # Generic skills for this project
+    │   └── project-conventions/
+    │       └── SKILL.md
+    └── skills-code/          # Code mode skills for this project
+        └── linting-rules/
+            └── SKILL.md
+```
+
+### Adding a Skill
+
+1. Create the skill directory:
+
+    ```bash
+    mkdir -p ~/.kilocode/skills/api-design
+    ```
+
+2. Create a `SKILL.md` file with YAML frontmatter:
+
+    ```markdown
+    ---
+    name: api-design
+    description: REST API design best practices and conventions
+    ---
+
+    # API Design Guidelines
+
+    When designing REST APIs, follow these conventions...
+    ```
+
+    The `name` field must match the directory name exactly.
+
+3. Start a new CLI session to load the skill
+
+#### Finding skills
+
+There are community efforts to build and share agent skills. Some resources include:
+
+- [Skills Marketplace](https://skillsmp.com/) - Community marketplace of skills
+- [Skill Specification](https://agentskills.io/home) - Agent Skills specification
 
 ## Checkpoint Management
 
@@ -218,57 +278,11 @@ kilocode --parallel --auto "improve xyz"
 kilocode --parallel --auto "improve abc"
 ```
 
-## Autonomous mode (Non-Interactive)
+## Auto-approval settings
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Auto-approval allows the Kilo Code CLI to perform operations without first requiring user confirmation. These settings can either be built up over time in interactive mode, or by editing your config file using `kilocode config` or editing the file directly at `~/.kilocode/config.json`.
 
-```bash
-# Run in autonomous mode with a prompt
-kilocode --auto "Implement feature X"
-
-# Run in autonomous mode with piped input
-echo "Fix the bug in app.ts" | kilocode --auto
-
-# Run in autonomous mode with timeout (in seconds)
-kilocode --auto "Run tests" --timeout 300
-
-# Run in autonomous mode with JSON output for structured parsing
-kilocode --auto --json "Implement feature X"
-```
-
-### Autonomous Mode Behavior
-
-When running in Autonomous mode (`--auto` flag):
-
-1. **No User Interaction**: All approval requests are handled automatically based on configuration
-2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
-3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
-4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
-
-### JSON Output Mode
-
-Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
-
-```bash
-# Standard autonomous mode with terminal UI
-kilocode --auto "Fix the bug"
-
-# Autonomous mode with JSON output
-kilocode --auto --json "Fix the bug"
-
-# With piped input
-echo "Implement feature X" | kilocode --auto --json
-```
-
-**Requirements:**
-
-- The `--json` flag requires `--auto` mode to be enabled
-- Output is sent to stdout as structured JSON for easy parsing
-- Ideal for CI/CD pipelines and automated workflows
-
-### Auto-Approval Configuration
-
-Autonomous mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
+### Default auto-approval settings
 
 ```json
 {
@@ -276,7 +290,7 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 		"enabled": true,
 		"read": {
 			"enabled": true,
-			"outside": true
+			"outside": false
 		},
 		"write": {
 			"enabled": true,
@@ -359,6 +373,12 @@ The `execute.allowed` and `execute.denied` lists support hierarchical pattern ma
 }
 ```
 
+## Interactive Mode
+
+Interactive mode is the default mode when running Kilo Code without the `--auto` flag, designed to work interactively with a user through the console.
+
+In interactive mode Kilo Code will request approval for operations which have not been auto-approved, allowing the user to review and approve operations before they are executed, and optionally add them to the auto-approval list.
+
 ### Interactive Command Approval
 
 When running in interactive mode, command approval requests now show hierarchical options:
@@ -379,6 +399,58 @@ Selecting an "Always run" option will:
 3. Auto-approve matching commands in the future
 
 This allows you to progressively build your auto-approval rules without manually editing the config file.
+
+## Autonomous mode (Non-Interactive)
+
+Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+
+```bash
+# Run in autonomous mode with a prompt
+kilocode --auto "Implement feature X"
+
+# Run in autonomous mode with piped input
+echo "Fix the bug in app.ts" | kilocode --auto
+
+# Run in autonomous mode with timeout (in seconds)
+kilocode --auto "Run tests" --timeout 300
+
+# Run in autonomous mode with JSON output for structured parsing
+kilocode --auto --json "Implement feature X"
+```
+
+### Autonomous Mode Behavior
+
+When running in Autonomous mode (`--auto` flag):
+
+1. **No User Interaction**: All approval requests are handled automatically based on configuration
+2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
+3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
+4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
+
+### JSON Output Mode
+
+Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
+
+```bash
+# Standard autonomous mode with terminal UI
+kilocode --auto "Fix the bug"
+
+# Autonomous mode with JSON output
+kilocode --auto --json "Fix the bug"
+
+# With piped input
+echo "Implement feature X" | kilocode --auto --json
+```
+
+**Requirements:**
+
+- The `--json` flag requires `--auto` mode to be enabled
+- Output is sent to stdout as structured JSON for easy parsing
+- Ideal for CI/CD pipelines and automated workflows
+
+### Auto-Approval in Autonomous Mode
+
+Autonomous mode respects your [auto-approval configuration](#auto-approval-settings). Operations which are not auto-approved will not be allowed.
 
 ### Autonomous Mode Follow-up Questions
 

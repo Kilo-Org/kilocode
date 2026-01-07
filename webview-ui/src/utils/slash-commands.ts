@@ -3,6 +3,7 @@
 
 import { getAllModes } from "@roo/modes"
 import { getBasename } from "./kilocode/path-webview"
+import { Fzf } from "@/lib/word-boundary-fzf" // kilocode_change
 import { ClineRulesToggles } from "@roo/cline-rules"
 
 export interface SlashCommand {
@@ -111,8 +112,12 @@ export function getMatchingSlashCommands(
 		return [...commands]
 	}
 
-	// filter commands that start with the query (case sensitive)
-	return commands.filter((cmd) => cmd.name.startsWith(query))
+	// kilocode_change start: Use Fzf for case-insensitive word-boundary fuzzy matching
+	const fzf = new Fzf(commands, {
+		selector: (cmd: SlashCommand) => cmd.name,
+	})
+	return fzf.find(query).map((result) => result.item)
+	// kilocode_change end: Use Fzf for case-insensitive word-boundary fuzzy matching
 }
 
 /**
@@ -133,7 +138,7 @@ export function insertSlashCommand(text: string, commandName: string): { newValu
 
 /**
  * Determines the validation state of a slash command
- * Returns partial if we have a partial match against valid commands, or full for full match
+ * Returns partial if we have a fuzzy match against valid commands, or full for exact match
  */
 export function validateSlashCommand(
 	command: string,
@@ -145,20 +150,24 @@ export function validateSlashCommand(
 		return null
 	}
 
-	// case sensitive matching
 	const commands = getSupportedSlashCommands(customModes, localWorkflowToggles, globalWorkflowToggles)
 
-	const exactMatch = commands.some((cmd) => cmd.name === command)
-
+	// Check for exact match (command name equals query, case-insensitive via FZF)
+	const lowerCommand = command.toLowerCase()
+	const exactMatch = commands.some((cmd) => cmd.name.toLowerCase() === lowerCommand)
 	if (exactMatch) {
 		return "full"
 	}
 
-	const partialMatch = commands.some((cmd) => cmd.name.startsWith(command))
-
-	if (partialMatch) {
+	// kilocode_change start: Use FZF for consistent fuzzy matching with getMatchingSlashCommands
+	const fzf = new Fzf(commands, {
+		selector: (cmd: SlashCommand) => cmd.name,
+	})
+	const results = fzf.find(command)
+	if (results.length > 0) {
 		return "partial"
 	}
+	// kilocode_change end: Use FZF for consistent fuzzy matching with getMatchingSlashCommands
 
 	return null // no match
 }

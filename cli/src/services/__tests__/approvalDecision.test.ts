@@ -611,7 +611,10 @@ describe("approvalDecision", () => {
 			})
 
 			it("should not auto-approve partial messages in YOLO mode", () => {
-				const message = { ...createMessage("tool", JSON.stringify({ tool: "editedExistingFile" })), partial: true }
+				const message = {
+					...createMessage("tool", JSON.stringify({ tool: "editedExistingFile" })),
+					partial: true,
+				}
 				const config = createBaseConfig()
 				const decision = getApprovalDecision(message, config, false, true)
 				expect(decision.action).toBe("manual")

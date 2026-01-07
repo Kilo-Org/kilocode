@@ -138,6 +138,7 @@ export interface ExtensionMessage {
 		| "stt:transcript" // kilocode_change: STT transcript update
 		| "stt:volume" // kilocode_change: STT volume level
 		| "stt:stopped" // kilocode_change: STT session stopped
+		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -147,6 +148,7 @@ export interface ExtensionMessage {
 		| "updateProfileData" // kilocode_change
 		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
 		| "authenticatedUser"
+		| "condenseTaskContextStarted"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
 		| "rooCreditBalance"
@@ -274,6 +276,7 @@ export interface ExtensionMessage {
 	isFinal?: boolean // kilocode_change: STT transcript is final
 	level?: number // kilocode_change: STT volume level (0-1)
 	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
@@ -453,6 +456,7 @@ export type ExtensionState = Pick<
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
+	| "enterBehavior"
 	| "includeCurrentTime"
 	| "includeCurrentCost"
 	| "maxGitStatusFiles"
@@ -539,6 +543,7 @@ export type ExtensionState = Pick<
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 	debug?: boolean
 	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
+	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
 }
 
 export interface ClineSayTool {
@@ -551,7 +556,6 @@ export interface ClineSayTool {
 		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
-		| "listCodeDefinitionNames"
 		| "searchFiles"
 		| "switchMode"
 		| "newTask"
@@ -630,6 +634,7 @@ export const browserActions = [
 	"scroll_up",
 	"resize",
 	"close",
+	"screenshot",
 ] as const
 
 export type BrowserAction = (typeof browserActions)[number]

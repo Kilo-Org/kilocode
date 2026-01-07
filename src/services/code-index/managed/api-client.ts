@@ -21,6 +21,7 @@ export async function isEnabled(kilocodeToken: string, organizationId: string | 
 		const response = await fetchWithRetries({
 			url,
 			method: "GET",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -60,6 +61,7 @@ export async function searchCode(
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/search`,
 			method: "POST",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -144,6 +146,7 @@ export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal)
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/upsert-by-file`,
 			method: "PUT",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 			},
@@ -197,6 +200,7 @@ export async function getServerManifest(
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/manifest?${params.toString()}`,
 			method: "GET",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -266,6 +270,7 @@ export async function deleteFiles(params: DeleteFilesParams, signal?: AbortSigna
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/delete`,
 			method: "POST",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",

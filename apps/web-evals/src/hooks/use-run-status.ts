@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
-import { type TokenUsage, RooCodeEventName, taskEventSchema } from "@roo-code/types"
+import { type TokenUsage, type ToolUsage, RooCodeEventName, taskEventSchema } from "@roo-code/types"
 import type { Run, Task, TaskMetrics } from "@roo-code/evals"
 
 import { getHeartbeat } from "@/actions/heartbeat"
@@ -15,6 +15,7 @@ export type RunStatus = {
 	runners: string[] | undefined
 	tasks: (Task & { taskMetrics: TaskMetrics | null })[] | undefined
 	tokenUsage: Map<number, TokenUsage & { duration?: number }>
+	toolUsage: Map<number, ToolUsage>
 	usageUpdatedAt: number | undefined
 }
 
@@ -23,6 +24,7 @@ export const useRunStatus = (run: Run): RunStatus => {
 	const [usageUpdatedAt, setUsageUpdatedAt] = useState<number>()
 
 	const tokenUsage = useRef<Map<number, TokenUsage & { duration?: number }>>(new Map())
+	const toolUsage = useRef<Map<number, ToolUsage>>(new Map())
 	const startTimes = useRef<Map<number, number>>(new Map())
 
 	const { data: heartbeat } = useQuery({
@@ -78,6 +80,12 @@ export const useRunStatus = (run: Run): RunStatus => {
 				const startTime = startTimes.current.get(taskId)
 				const duration = startTime ? Date.now() - startTime : undefined
 				tokenUsage.current.set(taskId, { ...payload[1], duration })
+
+				// Track tool usage from streaming updates
+				if (payload[2]) {
+					toolUsage.current.set(taskId, payload[2])
+				}
+
 				setUsageUpdatedAt(Date.now())
 				break
 			}
@@ -96,6 +104,7 @@ export const useRunStatus = (run: Run): RunStatus => {
 		runners,
 		tasks,
 		tokenUsage: tokenUsage.current,
+		toolUsage: toolUsage.current,
 		usageUpdatedAt,
 	}
 }

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.138.0",
+	"version": "4.143.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -201,11 +201,6 @@
 			{
 				"command": "kilo-code.addToContext",
 				"title": "%command.addToContext.title%",
-				"category": "%configuration.title%"
-			},
-			{
-				"command": "kilo-code.addToContextAndFocus",
-				"title": "Add to Context and Focus",
 				"category": "%configuration.title%"
 			},
 			{
@@ -476,20 +471,6 @@
 				"when": "editorTextFocus && editorHasSelection"
 			},
 			{
-				"command": "kilo-code.addToContextAndFocus",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"win": "ctrl+i",
-				"linux": "ctrl+i",
-				"when": "editorTextFocus && !github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
-			},
-			{
-				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"when": "editorTextFocus && github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
-			},
-			{
 				"command": "kilo-code.toggleAutoApprove",
 				"key": "cmd+alt+a",
 				"mac": "cmd+alt+a",
@@ -678,7 +659,7 @@
 		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
-		"@modelcontextprotocol/sdk": "1.13.3",
+		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
@@ -719,6 +700,7 @@
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
+		"node-machine-id": "^1.1.12",
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",
@@ -739,6 +721,7 @@
 		"safe-stable-stringify": "^2.5.0",
 		"sanitize-filename": "^1.6.3",
 		"say": "^0.16.0",
+		"semver-compare": "^1.0.0",
 		"serialize-error": "^12.0.0",
 		"shell-quote": "^1.8.2",
 		"shiki": "^3.6.0",
@@ -782,6 +765,7 @@
 		"@types/node-ipc": "^9.2.3",
 		"@types/proper-lockfile": "^4.1.4",
 		"@types/ps-tree": "^1.1.6",
+		"@types/semver-compare": "^1.0.3",
 		"@types/shell-quote": "^1.7.5",
 		"@types/stream-json": "^1.7.8",
 		"@types/string-similarity": "^4.0.2",

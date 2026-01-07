@@ -91,7 +91,20 @@ export async function handleSTTStart(clineProvider: ClineProvider, language?: st
 		// Service generates its own prompt from the code glossary
 		await service.start({ apiKey }, language)
 	} catch (error) {
-		console.error("Failed to start STT service:", error)
+		console.error("🎙️ [sttHandlers] ❌ Failed to start STT service:", error)
+
+		// The service.start() catch block should have already called onStopped,
+		// but as a defensive measure, ensure frontend is notified if sessionId is still available
+		const sessionId = service.getSessionId()
+		if (sessionId) {
+			const errorMessage = error instanceof Error ? error.message : "Failed to start STT service"
+			clineProvider.postMessageToWebview({
+				type: "stt:stopped",
+				sessionId,
+				reason: "error",
+				error: errorMessage,
+			})
+		}
 	}
 }
 

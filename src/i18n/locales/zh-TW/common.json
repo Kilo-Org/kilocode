@@ -126,7 +126,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 產生內容串流錯誤：{{error}}",
 			"generate_complete_prompt": "Gemini 完成錯誤：{{error}}",
-			"sources": "來源："
+			"sources": "來源：",
+			"thinking_complete_no_output": "（思考完成，但未產生輸出。）",
+			"thinking_complete_truncated": "（思考完成，但由於 Token 限制輸出被截斷。）",
+			"thinking_complete_safety": "（思考完成，但由於安全設定輸出被阻止。）",
+			"thinking_complete_recitation": "（思考完成，但由於引用檢查輸出被阻止。）"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API 驗證失敗。請檢查您的 API 金鑰是否有效且未過期。",

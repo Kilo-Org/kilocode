@@ -310,9 +310,9 @@
 		},
 		"vercelAiGatewayApiKey": "Khóa API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
-		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
+		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
@@ -573,6 +573,7 @@
 			"none": "Không",
 			"minimal": "Tối thiểu (nhanh nhất)",
 			"high": "Cao",
+			"xhigh": "Rất cao",
 			"medium": "Trung bình",
 			"low": "Thấp",
 			"xhigh": "Rất cao"
@@ -1146,6 +1147,10 @@
 		"collapseThinking": {
 			"label": "Thu gọn tin nhắn Suy nghĩ theo mặc định",
 			"description": "Khi được bật, các khối suy nghĩ sẽ được thu gọn theo mặc định cho đến khi bạn tương tác với chúng"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Yêu cầu {{primaryMod}}+Enter để gửi tin nhắn",
+			"description": "Khi được bật, bạn phải nhấn {{primaryMod}}+Enter để gửi tin nhắn thay vì chỉ nhấn Enter"
 		}
 	}
 }

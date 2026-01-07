@@ -40,7 +40,10 @@ export interface UseSTTReturn {
 export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 	const { onComplete, onError } = options
 
-	const [isRecording, setIsRecording] = useState(false)
+	// Optimistic state for immediate UI updates
+	const [optimisticIsRecording, setOptimisticIsRecording] = useState(false)
+	// Real state from backend (used to correct optimistic state if needed)
+	const [realIsRecording, setRealIsRecording] = useState(false)
 	const [segments, setSegments] = useState<STTSegment[]>([])
 	const [volume, setVolume] = useState(0)
 
@@ -53,6 +56,11 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 		segmentsRef.current = segments
 	}, [segments])
 
+	// Sync optimistic state with real state when backend responds
+	useEffect(() => {
+		setOptimisticIsRecording(realIsRecording)
+	}, [realIsRecording])
+
 	useEffect(() => {
 		const handler = (event: MessageEvent) => {
 			const msg = event.data
@@ -63,7 +71,7 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 			switch (msg.type) {
 				case "stt:started":
 					sessionIdRef.current = msg.sessionId
-					setIsRecording(true)
+					setRealIsRecording(true)
 					setSegments([])
 					break
 
@@ -81,9 +89,8 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 					break
 
 				case "stt:stopped":
-					if (msg.sessionId !== sessionIdRef.current) return
-
-					setIsRecording(false)
+					setRealIsRecording(false)
+					setOptimisticIsRecording(false) // Immediately sync optimistic state on stop
 					setVolume(0)
 
 					if (msg.reason === "completed") {
@@ -111,19 +118,22 @@ export function useSTT(options: UseSTTOptions = {}): UseSTTReturn {
 	}, [onComplete, onError])
 
 	const start = useCallback((language?: string) => {
+		setOptimisticIsRecording(true)
 		vscode.postMessage({ type: "stt:start", language })
 	}, [])
 
 	const stop = useCallback(() => {
+		setOptimisticIsRecording(false)
 		vscode.postMessage({ type: "stt:stop" })
 	}, [])
 
 	const cancel = useCallback(() => {
+		setOptimisticIsRecording(false)
 		vscode.postMessage({ type: "stt:cancel" })
 	}, [])
 
 	return {
-		isRecording,
+		isRecording: optimisticIsRecording,
 		segments,
 		volume,
 		start,

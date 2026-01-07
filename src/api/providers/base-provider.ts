@@ -70,10 +70,14 @@ export abstract class BaseProvider implements ApiHandler {
 				const prop = newProps[key]
 
 				// Handle nullable types by removing null
+				// kilocode_change start: this is wrong https://platform.openai.com/docs/guides/function-calling?api-mode=chat#strict-mode
+				/*
 				if (prop && Array.isArray(prop.type) && prop.type.includes("null")) {
 					const nonNullTypes = prop.type.filter((t: string) => t !== "null")
 					prop.type = nonNullTypes.length === 1 ? nonNullTypes[0] : nonNullTypes
 				}
+				*/
+				// kilocode_change end
 
 				// Recursively process nested objects
 				if (prop && prop.type === "object") {

@@ -120,7 +120,11 @@
 		"gemini": {
 			"generate_stream": "ข้อผิดพลาดในการสร้างสตรีมบริบท Gemini: {{error}}",
 			"generate_complete_prompt": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini: {{error}}",
-			"sources": "แหล่งที่มา:"
+			"sources": "แหล่งที่มา:",
+			"thinking_complete_no_output": "(การคิดเสร็จสิ้นแล้ว แต่ไม่มีผลลัพธ์ถูกสร้างขึ้น)",
+			"thinking_complete_truncated": "(การคิดเสร็จสิ้นแล้ว แต่ผลลัพธ์ถูกตัดทิ้งเนื่องจากขีดจำกัด token)",
+			"thinking_complete_safety": "(การคิดเสร็จสิ้นแล้ว แต่ผลลัพธ์ถูกบล็อกเนื่องจากการตั้งค่าความปลอดภัย)",
+			"thinking_complete_recitation": "(การคิดเสร็จสิ้นแล้ว แต่ผลลัพธ์ถูกบล็อกเนื่องจากการตรวจสอบการท่องจำ)"
 		},
 		"cerebras": {
 			"authenticationFailed": "การยืนยันตัวตน Cerebras API ล้มเหลว กรุณาตรวจสอบว่า API key ของคุณถูกต้องและยังไม่หมดอายุ",

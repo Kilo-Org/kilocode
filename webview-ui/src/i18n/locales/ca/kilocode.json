@@ -209,7 +209,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Activadors",
+			"codeEditorSuggestions": "Suggeriments de l'Editor de Codi",
+			"chatSuggestions": "Suggeriments del Xat",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Habilitar Autocomplete",
@@ -219,16 +220,11 @@
 				"label": "Retard d'Activació Automàtica",
 				"description": "El retard en segons abans que Kilo Code activi Autocomplete després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot ser més intensiu en recursos."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tasca ràpida ({{keybinding}})",
-				"description": "Només necessites un canvi ràpid? Selecciona codi (o no!) i prem Cmd+I. Descriu el teu objectiu en català simple (\"crear un component React amb aquestes props\", \"afegir gestió d'errors a aquesta funció\"), i obtén múltiples suggeriments llestos per usar directament al teu editor. <DocsLink>Veure drecera</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"keybindingNotFound": "no trobat",
-			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
 			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
 			"provider": "Proveïdor",
@@ -249,6 +245,16 @@
 					"30min": "30 minuts",
 					"1hour": "1 hora"
 				}
+			},
+			"noModelConfigured": {
+				"title": "No s'ha configurat cap model d'autocompletat",
+				"description": "Per habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles:",
+				"learnMore": "Més informació sobre la configuració de l'autocompletat →"
+			},
+			"noCredits": {
+				"title": "No hi ha crèdits al teu compte",
+				"description": "El teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.",
+				"buyCredits": "Comprar crèdits →"
 			}
 		}
 	},
@@ -329,8 +335,14 @@
 	"speechToText": {
 		"stopRecording": "Atura l'entrada de veu",
 		"startRecording": "Inicia l'entrada de veu",
-		"unavailableFfmpegNotInstalled": "La transcripció de veu a text no està disponible. Instal·leu FFmpeg per utilitzar la transcripció de veu.",
-		"unavailableOpenAiKeyMissing": "La transcripció de veu a text no està disponible. Requereix un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
-		"unavailableBoth": "La conversió de veu a text no està disponible. Requereix un proveïdor vàlid d'OpenAI i FFmpeg ha d'estar instal·lat."
+		"setupPopover": {
+			"title": "Veu a text",
+			"description": "La conversió de veu a text no està disponible. La conversió de veu a text requereix tant FFmpeg com un proveïdor d'OpenAI vàlid configurat. <moreInfoLink>Feu clic aquí per a més informació</moreInfoLink>.",
+			"openAiReason": "Necessiteu un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+			"ffmpegReason": "Necessites tenir instal·lat FFmpeg. <ffmpegLink>Fes clic aquí</ffmpegLink> perquè Kilo t'ajudi a instal·lar FFmpeg.",
+			"ffmpegMessage": "Ajuda'm a instal·lar FFmpeg"
+		},
+		"misconfiguredState": "No disponible per la configuració",
+		"errorState": "No disponible a causa d'un error"
 	}
 }
