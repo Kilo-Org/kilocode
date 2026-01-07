@@ -194,3 +194,32 @@ ${userInput}
 
 </explicit_instructions>\n
 `
+
+export const reviewToolResponse = (userInput: string) =>
+	`<explicit_instructions type="code_review_fallback">
+The user requested a code review. Since the git diff context could not be collected automatically, please help them perform a code review manually.
+
+## Steps to Review:
+1. First, run \`git status\` to see what files have changed
+2. Then run \`git diff HEAD\` to see the actual uncommitted changes
+3. If on a feature branch with no uncommitted changes, run \`git diff main...HEAD\` (or the appropriate base branch)
+4. Review the changes following the guidelines below
+
+## Review Guidelines:
+Focus on these areas (in priority order):
+1. **Security**: Authentication, authorization, injection vulnerabilities, data exposure
+2. **Bugs**: Logic errors, null/undefined handling, race conditions, edge cases
+3. **Performance**: Inefficient algorithms, unnecessary operations, memory leaks
+4. **Error Handling**: Missing try-catch, unhandled promises, error propagation
+5. **Code Quality**: Readability, DRY violations, unclear logic
+
+## Confidence Levels:
+- **CRITICAL** (95%+ confidence): Security vulnerabilities, crashes, data loss
+- **WARNING** (85%+ confidence): Bugs, performance issues, unhandled errors
+- **SUGGESTION** (75%+ confidence): Code quality, best practices
+
+## Output Format:
+Provide a summary, issues table (if any), detailed findings, and a recommendation (APPROVE, APPROVE WITH SUGGESTIONS, NEEDS CHANGES, or NEEDS DISCUSSION).
+
+${userInput ? `User instructions: ${userInput}` : ""}
+</explicit_instructions>\n`

@@ -8,7 +8,9 @@ import {
 	newRuleToolResponse,
 	reportBugToolResponse,
 	condenseToolResponse,
+	reviewToolResponse,
 } from "../prompts/commands"
+import { ReviewService, buildReviewPrompt } from "../../services/review"
 
 function enabledWorkflowToggles(workflowToggles: ClineRulesToggles) {
 	return Object.entries(workflowToggles)
@@ -27,6 +29,7 @@ export async function parseKiloSlashCommands(
 	text: string,
 	localWorkflowToggles: ClineRulesToggles,
 	globalWorkflowToggles: ClineRulesToggles,
+	cwd?: string,
 ): Promise<{ processedText: string; needsRulesFileCheck: boolean }> {
 	const commandReplacements: Record<string, ((userInput: string) => string) | undefined> = {
 		newtask: newTaskToolResponse,
@@ -50,6 +53,45 @@ export async function parseKiloSlashCommands(
 		if (command) {
 			const processedText = command(textWithoutSlashCommand)
 			return { processedText, needsRulesFileCheck: commandName === "newrule" }
+		}
+
+		// Handle /review command - requires cwd for git operations
+		if (commandName === "review") {
+			if (!cwd) {
+				// Fallback when cwd is not available
+				const processedText = reviewToolResponse(textWithoutSlashCommand)
+				return { processedText, needsRulesFileCheck: false }
+			}
+
+			try {
+				const reviewService = new ReviewService(cwd)
+				const reviewContext = await reviewService.getReviewContext()
+
+				if (reviewContext.scope === "none") {
+					// No changes to review - return informative message
+					const errorMessage = reviewContext.error || "No changes to review."
+					const processedText = `<explicit_instructions type="review_info">
+${errorMessage}
+
+To use the /review command:
+- Make some changes to your code (uncommitted changes will be reviewed)
+- Or switch to a feature branch that has commits different from the base branch
+
+If you want to review specific files, you can ask me to read and review them directly.
+</explicit_instructions>
+` + textWithoutSlashCommand
+					return { processedText, needsRulesFileCheck: false }
+				}
+
+				const userInput = textWithoutSlashCommand.replace(/<[^>]+>/g, "").trim()
+				const processedText = buildReviewPrompt(reviewContext, userInput)
+				return { processedText, needsRulesFileCheck: false }
+			} catch (error) {
+				// Fallback to manual review prompt on error
+				console.error(`Error in /review command: ${error}`)
+				const processedText = reviewToolResponse(textWithoutSlashCommand)
+				return { processedText, needsRulesFileCheck: false }
+			}
 		}
 
 		const matchingWorkflow = [
