@@ -48,7 +48,7 @@ import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kiloco
 import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
-import { registerDraftFileSystem } from "./services/planning" // kilocode_change
+import { registerPlanFileSystem } from "./services/planning" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
 
@@ -467,7 +467,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		// Only foward logs in Jetbrains
 		registerMainThreadForwardingLogger(context)
 	} else {
-		registerDraftFileSystem(context)
+		registerPlanFileSystem(context)
 	}
 	// Don't register the ghost provider for the CLI
 	if (kiloCodeWrapperCode !== "cli") {
@@ -512,7 +512,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 			reloadTimeout = setTimeout(() => {
 				console.log(`♻️ Reloading host after debounce delay...`)
-				vscode.commands.executeCommand("workbench.action.reloadWindow")
+				// vscode.commands.executeCommand("workbench.action.reloadWindow")
 			}, DEBOUNCE_DELAY)
 		}
 

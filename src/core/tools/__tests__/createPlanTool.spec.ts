@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { createDraftTool } from "../CreateDraftTool"
+import { createPlanTool } from "../CreatePlanTool"
 import { Task } from "../../task/Task"
 import { formatResponse } from "../../prompts/responses"
-import { getDraftFileSystem } from "../../../services/planning"
+import { getPlanFileSystem } from "../../../services/planning"
 
 // Mock the planning service
 vi.mock("../../../services/planning", () => ({
-	getDraftFileSystem: vi.fn(() => ({
+	getPlanFileSystem: vi.fn(() => ({
 		createAndOpen: vi.fn(),
 	})),
 }))
@@ -14,7 +14,7 @@ vi.mock("../../../services/planning", () => ({
 // Mock vscode for integration tests - using vi.doMock to avoid hoisting issues
 vi.doMock("vscode", () => ({
 	Uri: {
-		parse: vi.fn((str) => ({ scheme: "draft", path: str.replace("draft://", "/") })),
+		parse: vi.fn((str) => ({ scheme: "plan", path: str.replace("plan://", "/") })),
 	},
 	workspace: {
 		fs: {
@@ -59,7 +59,7 @@ vi.doMock("vscode", () => ({
 	})),
 }))
 
-describe("createDraftTool", () => {
+describe("createPlanTool", () => {
 	let mockTask: Task
 	let mockPushToolResult: any
 	let mockHandleError: any
@@ -85,29 +85,29 @@ describe("createDraftTool", () => {
 
 	describe("parameter validation", () => {
 		it("should error when title is missing", async () => {
-			await createDraftTool.execute({ title: "", content: "test content" }, mockTask, {
+			await createPlanTool.execute({ title: "", content: "test content" }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
-			expect(mockTask.recordToolError).toHaveBeenCalledWith("create_draft")
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("create_plan")
 			expect(mockPushToolResult).toHaveBeenCalled()
 		})
 
 		it("should error when content is missing (undefined)", async () => {
-			await createDraftTool.execute({ title: "test-title", content: undefined as any }, mockTask, {
+			await createPlanTool.execute({ title: "test-title", content: undefined as any }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
-			expect(mockTask.recordToolError).toHaveBeenCalledWith("create_draft")
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("create_plan")
 			expect(mockPushToolResult).toHaveBeenCalled()
 		})
 
 		it("should error when content is null", async () => {
-			await createDraftTool.execute({ title: "test-title", content: null as any }, mockTask, {
+			await createPlanTool.execute({ title: "test-title", content: null as any }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
@@ -119,7 +119,7 @@ describe("createDraftTool", () => {
 		it("should error when title exceeds 255 characters", async () => {
 			const longTitle = "a".repeat(256)
 
-			await createDraftTool.execute({ title: longTitle, content: "test content" }, mockTask, {
+			await createPlanTool.execute({ title: longTitle, content: "test content" }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
@@ -133,7 +133,7 @@ describe("createDraftTool", () => {
 		it("should error when content exceeds 1MB", async () => {
 			const largeContent = "a".repeat(1000001)
 
-			await createDraftTool.execute({ title: "test-title", content: largeContent }, mockTask, {
+			await createPlanTool.execute({ title: "test-title", content: largeContent }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
@@ -145,7 +145,7 @@ describe("createDraftTool", () => {
 
 	describe("parseLegacy", () => {
 		it("should parse legacy XML parameters", () => {
-			const result = createDraftTool.parseLegacy({
+			const result = createPlanTool.parseLegacy({
 				title: "legacy-title",
 				content: "legacy content",
 			})
@@ -157,7 +157,7 @@ describe("createDraftTool", () => {
 		})
 
 		it("should return empty strings for missing parameters", () => {
-			const result = createDraftTool.parseLegacy({})
+			const result = createPlanTool.parseLegacy({})
 
 			expect(result).toEqual({
 				title: "",
@@ -168,18 +168,18 @@ describe("createDraftTool", () => {
 
 	describe("tool name", () => {
 		it("should have correct name", () => {
-			expect(createDraftTool.name).toBe("create_draft")
+			expect(createPlanTool.name).toBe("create_plan")
 		})
 	})
 
-	describe("draft workflow integration", () => {
-		it("should create draft with unique content", async () => {
+	describe("plan workflow integration", () => {
+		it("should create plan with unique content", async () => {
 			const mockFs = {
-				createAndOpen: vi.fn().mockResolvedValue("draft://my-test.md"),
+				createAndOpen: vi.fn().mockResolvedValue("plan://my-test.md"),
 			}
-			vi.mocked(getDraftFileSystem).mockReturnValue(mockFs as any)
+			vi.mocked(getPlanFileSystem).mockReturnValue(mockFs as any)
 
-			await createDraftTool.execute(
+			await createPlanTool.execute(
 				{ title: "my-test", content: "# My Test Document\n\nTest content." },
 				mockTask,
 				{ pushToolResult: mockPushToolResult, handleError: mockHandleError } as any,
@@ -189,31 +189,31 @@ describe("createDraftTool", () => {
 			expect(mockPushToolResult).toHaveBeenCalled()
 		})
 
-		it("should handle multiple draft creations with different content", async () => {
+		it("should handle multiple plan creations with different content", async () => {
 			const mockFs = {
 				createAndOpen: vi
 					.fn()
-					.mockResolvedValueOnce("draft://first.md")
-					.mockResolvedValueOnce("draft://second.md"),
+					.mockResolvedValueOnce("plan://first.md")
+					.mockResolvedValueOnce("plan://second.md"),
 			}
-			vi.mocked(getDraftFileSystem).mockReturnValue(mockFs as any)
+			vi.mocked(getPlanFileSystem).mockReturnValue(mockFs as any)
 
-			// Create first draft
-			await createDraftTool.execute({ title: "first", content: "# First Draft\n\nContent one." }, mockTask, {
+			// Create first plan
+			await createPlanTool.execute({ title: "first", content: "# First Plan\n\nContent one." }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
 
-			// Create second draft
-			await createDraftTool.execute({ title: "second", content: "# Second Draft\n\nContent two." }, mockTask, {
+			// Create second plan
+			await createPlanTool.execute({ title: "second", content: "# Second Plan\n\nContent two." }, mockTask, {
 				pushToolResult: mockPushToolResult,
 				handleError: mockHandleError,
 			} as any)
 
-			// Verify both drafts were created with their respective content
+			// Verify both plans were created with their respective content
 			expect(mockFs.createAndOpen).toHaveBeenCalledTimes(2)
-			expect(mockFs.createAndOpen).toHaveBeenCalledWith("first", "# First Draft\n\nContent one.")
-			expect(mockFs.createAndOpen).toHaveBeenCalledWith("second", "# Second Draft\n\nContent two.")
+			expect(mockFs.createAndOpen).toHaveBeenCalledWith("first", "# First Plan\n\nContent one.")
+			expect(mockFs.createAndOpen).toHaveBeenCalledWith("second", "# Second Plan\n\nContent two.")
 		})
 	})
 })

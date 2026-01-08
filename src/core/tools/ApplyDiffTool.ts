@@ -17,7 +17,7 @@ import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
-import { isDraftPath, normalizeDraftPath, draftPathToFilename, DRAFT_SCHEME_NAME } from "../../services/planning" // kilocode_change
+import { isPlanPath, normalizePlanPath, planPathToFilename, PLAN_SCHEME_NAME } from "../../services/planning" // kilocode_change
 
 interface ApplyDiffParams {
 	path: string
@@ -57,10 +57,10 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
-			// kilocode_change start: Handle draft documents
-			const isDraft = isDraftPath(relPath)
-			const canonicalPath = isDraft ? normalizeDraftPath(relPath) : relPath
-			const filename = isDraft ? draftPathToFilename(relPath) : undefined
+			// kilocode_change start: Handle plan documents
+			const isPlan = isPlanPath(relPath)
+			const canonicalPath = isPlan ? normalizePlanPath(relPath) : relPath
+			const filename = isPlan ? planPathToFilename(relPath) : undefined
 
 			// kilocode_change end
 
@@ -72,26 +72,26 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
-			// kilocode_change start: Handle draft documents
+			// kilocode_change start: Handle plan documents
 			let originalContent: string
 			let absolutePath: string
 			let fileExists = false // kilocode_change
 
-			if (isDraft) {
-				// For draft documents, read using the draft file system
-				const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
-				console.log("📝 [ApplyDiffTool] reading draft document:", uri.toString())
+			if (isPlan) {
+				// For plan documents, read using the plan file system
+				const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
+				console.log("📝 [ApplyDiffTool] reading plan document:", uri.toString())
 				try {
 					const contentBytes = await vscode.workspace.fs.readFile(uri)
 					originalContent = new TextDecoder().decode(contentBytes)
-					console.log("📝 [ApplyDiffTool] draft read successful, size:", originalContent.length)
-					fileExists = true // kilocode_change: draft exists since we just read it
+					console.log("📝 [ApplyDiffTool] plan read successful, size:", originalContent.length)
+					fileExists = true // kilocode_change: plan exists since we just read it
 				} catch (error) {
 					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					console.error("📝 [ApplyDiffTool] ERROR reading draft:", errorMsg)
+					console.error("📝 [ApplyDiffTool] ERROR reading plan:", errorMsg)
 					task.consecutiveMistakeCount++
 					task.recordToolError("apply_diff")
-					const formattedError = `Draft document does not exist at path: ${canonicalPath}\n\n<error_details>\nThe draft document could not be found. Please verify the draft exists and try again.\n</error_details>`
+					const formattedError = `Plan document does not exist at path: ${canonicalPath}\n\n<error_details>\nThe plan document could not be found. Please verify the plan exists and try again.\n</error_details>`
 					await task.say("error", formattedError)
 					task.didToolFailInCurrentTurn = true
 					pushToolResult(formattedError)
@@ -191,11 +191,11 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				diff: diffContent,
 			}
 
-			// kilocode_change start: Handle draft documents separately
-			if (isDraft) {
-				// For draft documents, apply the diff and write directly using vscode.workspace.fs
-				const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
-				console.log("📝 [ApplyDiffTool] applying diff to draft document:", uri.toString())
+			// kilocode_change start: Handle plan documents separately
+			if (isPlan) {
+				// For plan documents, apply the diff and write directly using vscode.workspace.fs
+				const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
+				console.log("📝 [ApplyDiffTool] applying diff to plan document:", uri.toString())
 
 				// Apply the diff to the original content
 				const diffResult = (await task.diffStrategy?.applyDiff(
@@ -209,7 +209,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 				if (!diffResult.success) {
 					task.consecutiveMistakeCount++
-					let formattedError = `Unable to apply diff to draft document: ${canonicalPath}\n\n<error_details>\n${diffResult.error || "Unknown error"}\n</error_details>`
+					let formattedError = `Unable to apply diff to plan document: ${canonicalPath}\n\n<error_details>\n${diffResult.error || "Unknown error"}\n</error_details>`
 					await task.say("error", formattedError)
 					task.recordToolError("apply_diff", formattedError)
 					pushToolResult(formattedError)
@@ -218,17 +218,17 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 				task.consecutiveMistakeCount = 0
 
-				// Write the updated content back to the draft
+				// Write the updated content back to the plan
 				const contentBytes = new TextEncoder().encode(diffResult.content)
 				await vscode.workspace.fs.writeFile(uri, contentBytes)
-				console.log("📝 [ApplyDiffTool] draft updated successfully")
+				console.log("📝 [ApplyDiffTool] plan updated successfully")
 
 				// Track file edit operation
 				await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
 				task.didEditFile = true
 
 				// Generate a simple message for the tool result
-				const message = `Applied diff to draft document: ${canonicalPath}`
+				const message = `Applied diff to plan document: ${canonicalPath}`
 				pushToolResult(message)
 				task.processQueuedMessages()
 				return

@@ -27,13 +27,13 @@ import { getGenerateImageDescription } from "./generate-image"
 import { getDeleteFileDescription } from "./delete-file" // kilocode_change
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
-// kilocode_change start: Morph fast apply + create_draft import
+// kilocode_change start: Morph fast apply + create_plan import
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
-import { getCreateDraftDescription } from "./create-draft"
-// kilocode_change end: Morph fast apply + create_draft import
+import { getCreatePlanDescription } from "./create-plan"
+// kilocode_change end: Morph fast apply + create_plan import
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
@@ -60,7 +60,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	new_task: (args) => getNewTaskDescription(args),
 	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
 	delete_file: (args) => getDeleteFileDescription(args), // kilocode_change
-	create_draft: (args) => getCreateDraftDescription(args), // kilocode_change
+	create_plan: (args) => getCreatePlanDescription(args), // kilocode_change
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
 	update_todo_list: (args) => getUpdateTodoListDescription(args),

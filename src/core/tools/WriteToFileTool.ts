@@ -16,7 +16,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { convertNewFileToUnifiedDiff, computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
-import { isDraftPath, writeDraftDocument } from "./helpers/draftDocumentHelpers" // kilocode_change
+import { isPlanPath, writePlanDocument, convertToPlanPathIfNeeded } from "./helpers/planDocumentHelpers" // kilocode_change
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 interface WriteToFileParams {
@@ -55,17 +55,41 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			return
 		}
 
-		// Check if this is a draft document
-		if (isDraftPath(relPath)) {
-			const result = await writeDraftDocument(relPath, newContent, task)
+		// kilocode_change start: Auto-redirect /plans/ paths to plan:// schema
+		// Check if this path should be converted to a plan document (e.g., /plans/...)
+		const convertedPlanPath = convertToPlanPathIfNeeded(relPath)
+		if (convertedPlanPath) {
+			console.log(
+				`📝 [WriteToFileTool] Redirecting /plans/ path "${relPath}" to plan document "${convertedPlanPath}"`,
+			)
+			const result = await writePlanDocument(convertedPlanPath, newContent, task)
 			if ("error" in result) {
 				pushToolResult(formatResponse.toolError(result.error))
-				await handleError("writing draft document", new Error(result.error))
+				await handleError("writing plan document", new Error(result.error))
 				return
 			}
 
 			task.didEditFile = true
-			pushToolResult(formatResponse.toolResult(`Updated draft document "${result.canonicalPath}"`))
+			pushToolResult(
+				formatResponse.toolResult(
+					`Redirected /plans/ path to ephemeral plan document "${result.canonicalPath}". The document will be discarded when the editor session ends.`,
+				),
+			)
+			return
+		}
+		// kilocode_change end
+
+		// Check if this is a plan document (already using plan:// schema)
+		if (isPlanPath(relPath)) {
+			const result = await writePlanDocument(relPath, newContent, task)
+			if ("error" in result) {
+				pushToolResult(formatResponse.toolError(result.error))
+				await handleError("writing plan document", new Error(result.error))
+				return
+			}
+
+			task.didEditFile = true
+			pushToolResult(formatResponse.toolResult(`Updated plan document "${result.canonicalPath}"`))
 			return
 		}
 
@@ -253,9 +277,10 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			return
 		}
 
-		// Skip partial handling for draft documents - they don't use the diff view provider
-		// and we don't want to create filesystem directories for draft:// paths
-		if (isDraftPath(relPath)) {
+		// Skip partial handling for plan documents - they don't use the diff view provider
+		// and we don't want to create filesystem directories for plan:// paths or /plans/ paths
+		// (isPlanPath now includes both plan:// URIs and absolute /plans/ paths)
+		if (isPlanPath(relPath)) {
 			return
 		}
 

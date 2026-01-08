@@ -229,48 +229,75 @@ Delete a directory (requires approval with statistics):
 </delete_file>
 ```
 
-## create_draft
-Description: Create a temporary planning document for structuring your analysis, architectural decisions, implementation plans, or other working documents. These documents are ideal for drafting content that you want the user to review before committing to the codebase.
+## create_plan
+Description: Create an ephemeral planning document for brainstorming, strategy, and structured thinking. The document appears as an editor tab and is fully accessible during this session, but will be automatically discarded when the editor session ends (not saved to disk).
 
-Use create_draft when:
-- Creating planning documents, implementation plans, or architectural diagrams
-- Drafting content for user review and feedback
-- Organizing your analysis and reasoning process
-- The user wants to review and refine plans before implementation
+DEFAULT RULE: Use create_plan for ANY planning task unless the user EXPLICITLY requests disk persistence. The word "plan", "planning", "plan document", or any planning-related request should default to create_plan.
+
+WHEN TO USE create_plan (DEFAULT for planning):
+- ANY request involving "plan", "planning", "plan document", "create a plan", "plan something"
+- Outlining strategies, organizing thoughts, brainstorming
+- Requests to "plan it first" or "create a planning document"
+- Iterating on ideas before committing to implementation
+- Collaborative planning sessions
+- When user asks about planning documents or wants to check for them
+- IMPORTANT: Even if you think the user "might want persistence" - use create_plan unless they explicitly say so
+
+WHEN NOT TO USE create_plan (use write_to_file instead):
+- User EXPLICITLY says "save to disk", "persist", "save permanently", or "write to file"
+- User EXPLICITLY provides a specific file path like "/plans/my-plan.md" or "save it to plans/"
+- User EXPLICITLY mentions they want the document to "survive sessions" or "persist across sessions"
+- User uses the word "write" or "save" instead of "plan" or "create"
+- DO NOT infer persistence from context - only use write_to_file if user explicitly requests it
+
+COMMON MISTAKES TO AVOID:
+- ❌ DON'T use write_to_file just because you think "planning documents should persist" - that's an inference, not an explicit request
+- ❌ DON'T use write_to_file because "real-world projects need persistent files" - use create_plan unless explicitly told otherwise
+- ❌ DON'T use write_to_file because the user "might want to revisit it later" - use create_plan unless they explicitly say so
+- ✅ DO use create_plan for any planning task unless the user explicitly requests persistence
+
+KEY POINTS:
+- Ephemeral plans are FULLY FUNCTIONAL during the session - they're not "temporary" in the sense of being less useful
+- Ephemeral plans appear as editor tabs and are FULLY EDITABLE during this session
+- Can be read and modified using read_file and write_to_file with the returned plan:// path
+- Even ephemeral plans can be referenced by Code mode during this session - they don't need to be saved to disk to be useful
+- The key distinction is EXPLICIT REQUEST for persistence vs DEFAULT ephemeral behavior
+- "Ephemeral" means session-only, NOT "unusable" or "temporary" - it's a fully functional document during the session
 
 The created document will:
-- Appear as a normal editor tab that can be edited by both you and the user
-- Be accessible via read_file and write_to_file tools
-- Be saved to disk (outside the repository) and persist across sessions
-
-When to use create_draft vs write_to_file:
-- Use create_draft for planning documents, drafts, and temporary working documents
-- Use write_to_file when the user wants content saved directly to the workspace (e.g., explicit file creation requests, writing docs that should be committed to the repo)
+- Appear as a normal editor tab that can be edited by the user
+- Be accessible via read_file and write_to_file tools using the returned plan:// path
+- Be automatically discarded when the editor session ends (not saved to disk)
 
 Parameters:
-- title: (required) The title/name of the draft document. Will be used as the filename (automatically adds .md extension if not present)
-- content: (required) The initial content of the draft document
+- title: (required) The title/name of the plan document. Will be used as the filename (automatically adds .plan.md extension if not present)
+- content: (required) The initial content of the plan document
 
 Usage:
-<create_draft>
+<create_plan>
 <title>document-title</title>
 <content>
 Your document content here
 </content>
-</create_draft>
+</create_plan>
 
 Example: Creating a planning document
-<create_draft>
+<create_plan>
 <title>implementation-plan</title>
 <content>
 # Implementation Plan
 
-...more
+## Step 1
+- Task A
+- Task B
+
+## Step 2
+- Task C
 </content>
-</create_draft>
+</create_plan>
 
 Example: Creating a quick note
-<create_draft>
+<create_plan>
 <title>quick-notes</title>
 <content>
 Remember to:
@@ -278,7 +305,7 @@ Remember to:
 2. Test edge cases
 3. Update tests
 </content>
-</create_draft>
+</create_plan>
 
 ## ask_followup_question
 Description: Ask the user a question to gather additional information needed to complete the task. Use when you need clarification or more details to proceed effectively.

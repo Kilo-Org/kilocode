@@ -25,7 +25,7 @@ import {
 	processImageFile,
 	ImageMemoryTracker,
 } from "./helpers/imageHelpers"
-import { isDraftPath, readDraftDocument } from "./helpers/draftDocumentHelpers" // kilocode_change
+import { isPlanPath, readPlanDocument } from "./helpers/planDocumentHelpers" // kilocode_change
 import { validateFileTokenBudget, truncateFileContent } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
@@ -177,9 +177,9 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 				}
 
 				if (fileResult.status === "pending") {
-					// kilocode_change start: Skip approval for draft documents
-					// Skip approval for draft documents (auto-approved)
-					if (isDraftPath(relPath)) {
+					// kilocode_change start: Skip approval for plan documents
+					// Skip approval for plan documents (auto-approved)
+					if (isPlanPath(relPath)) {
 						updateFileResult(relPath, { status: "approved" })
 						continue
 					}
@@ -344,9 +344,9 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 				const relPath = fileResult.path
 
-				// kilocode_change start: Handle draft document reading
-				if (isDraftPath(relPath)) {
-					const result = await readDraftDocument(relPath, task)
+				// kilocode_change start: Handle plan document reading
+				if (isPlanPath(relPath)) {
+					const result = await readPlanDocument(relPath, task)
 					if (result.status === "error") {
 						updateFileResult(relPath, {
 							status: "error",
@@ -355,7 +355,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 							nativeContent: result.nativeContent,
 						})
 						if (result.error) {
-							await handleError(`reading draft document ${relPath}`, new Error(result.error))
+							await handleError(`reading plan document ${relPath}`, new Error(result.error))
 						}
 					} else {
 						updateFileResult(relPath, {

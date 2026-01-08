@@ -342,14 +342,14 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("access_mcp_resource")
 	}
 
-	// kilocode_change start - create_draft tool exclusion
-	// Conditionally exclude create_draft if running in CLI or JetBrains mode
-	// (drafts require VS Code editor UI which CLI and JetBrains don't have)
+	// kilocode_change start - create_plan tool exclusion
+	// Conditionally exclude create_plan if running in CLI or JetBrains mode
+	// (plans require VS Code editor UI which CLI and JetBrains don't have)
 	const { kiloCodeWrapperCode, kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 	if (kiloCodeWrapperJetbrains || kiloCodeWrapperCode === "cli") {
-		allowedToolNames.delete("create_draft")
+		allowedToolNames.delete("create_plan")
 	}
-	// kilocode_change end - create_draft tool exclusion
+	// kilocode_change end - create_plan tool exclusion
 
 	// Filter native tools based on allowed tool names and apply alias renames
 	const filteredTools: OpenAI.Chat.ChatCompletionTool[] = []

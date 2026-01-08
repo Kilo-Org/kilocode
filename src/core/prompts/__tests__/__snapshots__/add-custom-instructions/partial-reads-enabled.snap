@@ -234,28 +234,60 @@ Delete a directory (requires approval with statistics):
 </delete_file>
 ```
 
-## create_draft
-Description: Create a temporary, in-memory planning document that appears as an editor tab but is not saved to disk. These documents use a special draft:// URI scheme and are discarded when the editor session ends. This enables creating planning documents, implementation plans, and other ephemeral working documents for structured thinking.
+## create_plan
+Description: Create an ephemeral planning document for brainstorming, strategy, and structured thinking. The document appears as an editor tab and is fully accessible during this session, but will be automatically discarded when the editor session ends (not saved to disk).
+
+DEFAULT RULE: Use create_plan for ANY planning task unless the user EXPLICITLY requests disk persistence. The word "plan", "planning", "plan document", or any planning-related request should default to create_plan.
+
+WHEN TO USE create_plan (DEFAULT for planning):
+- ANY request involving "plan", "planning", "plan document", "create a plan", "plan something"
+- Outlining strategies, organizing thoughts, brainstorming
+- Requests to "plan it first" or "create a planning document"
+- Iterating on ideas before committing to implementation
+- Collaborative planning sessions
+- When user asks about planning documents or wants to check for them
+- IMPORTANT: Even if you think the user "might want persistence" - use create_plan unless they explicitly say so
+
+WHEN NOT TO USE create_plan (use write_to_file instead):
+- User EXPLICITLY says "save to disk", "persist", "save permanently", or "write to file"
+- User EXPLICITLY provides a specific file path like "/plans/my-plan.md" or "save it to plans/"
+- User EXPLICITLY mentions they want the document to "survive sessions" or "persist across sessions"
+- User uses the word "write" or "save" instead of "plan" or "create"
+- DO NOT infer persistence from context - only use write_to_file if user explicitly requests it
+
+COMMON MISTAKES TO AVOID:
+- ❌ DON'T use write_to_file just because you think "planning documents should persist" - that's an inference, not an explicit request
+- ❌ DON'T use write_to_file because "real-world projects need persistent files" - use create_plan unless explicitly told otherwise
+- ❌ DON'T use write_to_file because the user "might want to revisit it later" - use create_plan unless they explicitly say so
+- ✅ DO use create_plan for any planning task unless the user explicitly requests persistence
+
+KEY POINTS:
+- Ephemeral plans are FULLY FUNCTIONAL during the session - they're not "temporary" in the sense of being less useful
+- Ephemeral plans appear as editor tabs and are FULLY EDITABLE during this session
+- Can be read and modified using read_file and write_to_file with the returned plan:// path
+- Even ephemeral plans can be referenced by Code mode during this session - they don't need to be saved to disk to be useful
+- The key distinction is EXPLICIT REQUEST for persistence vs DEFAULT ephemeral behavior
+- "Ephemeral" means session-only, NOT "unusable" or "temporary" - it's a fully functional document during the session
 
 The created document will:
 - Appear as a normal editor tab that can be edited by the user
-- Be accessible via read_file and write_to_file tools using the returned draft:// path
+- Be accessible via read_file and write_to_file tools using the returned plan:// path
 - Be automatically discarded when the editor session ends (not saved to disk)
 
 Parameters:
-- title: (required) The title/name of the draft document. Will be used as the filename (automatically adds .md extension if not present)
-- content: (required) The initial content of the draft document
+- title: (required) The title/name of the plan document. Will be used as the filename (automatically adds .plan.md extension if not present)
+- content: (required) The initial content of the plan document
 
 Usage:
-<create_draft>
+<create_plan>
 <title>document-title</title>
 <content>
 Your document content here
 </content>
-</create_draft>
+</create_plan>
 
 Example: Creating a planning document
-<create_draft>
+<create_plan>
 <title>implementation-plan</title>
 <content>
 # Implementation Plan
@@ -267,10 +299,10 @@ Example: Creating a planning document
 ## Step 2
 - Task C
 </content>
-</create_draft>
+</create_plan>
 
 Example: Creating a quick note
-<create_draft>
+<create_plan>
 <title>quick-notes</title>
 <content>
 Remember to:
@@ -278,7 +310,7 @@ Remember to:
 2. Test edge cases
 3. Update tests
 </content>
-</create_draft>
+</create_plan>
 
 ## execute_command
 Description: Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. For command chaining, use the appropriate chaining syntax for the user's shell. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Prefer relative commands and paths that avoid location sensitivity for terminal consistency, e.g: `touch ./testdata/example.file`, `dir ./examples/model1/data/yaml`, or `go test ./cmd/front --config ./cmd/front/config.yml`. If directed by the user, you may open a terminal in a different directory by using the `cwd` parameter.

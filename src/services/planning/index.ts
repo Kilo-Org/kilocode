@@ -1,10 +1,10 @@
 // kilocode_change - new file
-export { getDraftFileSystem, registerDraftFileSystem, DraftFileSystemProvider } from "./DraftFileSystemProvider"
+export { getPlanFileSystem, registerPlanFileSystem, PlanFileSystemProvider } from "./PlanFileSystemProvider"
 export {
-	DRAFT_SCHEME_NAME,
-	DRAFT_PROTOCOL,
-	isDraftPath,
-	draftPathToFilename,
-	filenameToDraftPath,
-	normalizeDraftPath,
-} from "./draftPaths"
+	PLAN_SCHEME_NAME,
+	PLAN_PROTOCOL,
+	isPlanPath,
+	planPathToFilename,
+	filenameToPlanPath,
+	normalizePlanPath,
+} from "./planPaths"

@@ -15,7 +15,7 @@ import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
-import { isDraftPath, normalizeDraftPath, draftPathToFilename, DRAFT_SCHEME_NAME } from "./helpers/draftDocumentHelpers" // kilocode_change
+import { isPlanPath, normalizePlanPath, planPathToFilename, PLAN_SCHEME_NAME } from "./helpers/planDocumentHelpers" // kilocode_change
 
 interface SearchReplaceOperation {
 	search: string
@@ -88,22 +88,22 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				}
 			}
 
-			// kilocode_change start: Handle draft documents
-			if (isDraftPath(relPath)) {
-				const canonicalPath = normalizeDraftPath(relPath)
-				const filename = draftPathToFilename(relPath)
+			// kilocode_change start: Handle plan documents
+			if (isPlanPath(relPath)) {
+				const canonicalPath = normalizePlanPath(relPath)
+				const filename = planPathToFilename(relPath)
 
-				// Read draft document
+				// Read plan document
 				let fileContent: string
 				try {
-					const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+					const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
 					const contentBytes = await vscode.workspace.fs.readFile(uri)
 					fileContent = new TextDecoder().decode(contentBytes)
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("search_and_replace")
 					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					const errorMessage = `Failed to read draft document '${relPath}': ${errorMsg}`
+					const errorMessage = `Failed to read plan document '${relPath}': ${errorMsg}`
 					await task.say("error", errorMessage)
 					pushToolResult(formatResponse.toolError(errorMessage))
 					return
@@ -156,9 +156,9 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 					return
 				}
 
-				// Write draft document
+				// Write plan document
 				try {
-					const uri = vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+					const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
 					const contentBytes = new TextEncoder().encode(newContent)
 					await vscode.workspace.fs.writeFile(uri, contentBytes)
 
@@ -170,15 +170,15 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 					if (errors.length > 0) {
 						resultMessage = `Some operations failed:\n${errors.join("\n")}\n\n`
 					}
-					resultMessage += `Updated draft document "${canonicalPath}"`
+					resultMessage += `Updated plan document "${canonicalPath}"`
 
 					pushToolResult(formatResponse.toolResult(resultMessage))
 					task.recordToolUsage("search_and_replace")
 					return
 				} catch (error) {
 					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					await handleError("writing draft document", new Error(errorMsg))
-					pushToolResult(formatResponse.toolError(`Failed to write draft document: ${errorMsg}`))
+					await handleError("writing plan document", new Error(errorMsg))
+					pushToolResult(formatResponse.toolError(`Failed to write plan document: ${errorMsg}`))
 					return
 				}
 			}

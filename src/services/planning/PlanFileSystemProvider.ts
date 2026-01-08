@@ -3,13 +3,13 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as os from "os"
 import * as fs from "fs/promises"
-import { DRAFT_SCHEME_NAME, filenameToDraftPath, draftPathToFilename } from "./draftPaths"
+import { PLAN_SCHEME_NAME, filenameToPlanPath, planPathToFilename } from "./planPaths"
 
 /**
- * Generate a unique draft ID similar to Cursor's plan IDs.
+ * Generate a unique plan ID similar to Cursor's plan IDs.
  * Uses 7 random hex characters for collision avoidance.
  */
-function generateDraftId(): string {
+function generatePlanId(): string {
 	const hexChars = "0123456789abcdef"
 	let result = ""
 	for (let i = 0; i < 7; i++) {
@@ -19,10 +19,10 @@ function generateDraftId(): string {
 }
 
 /**
- * File system provider for draft:// documents.
+ * File system provider for plan:// documents.
  * Stores documents on disk at ~/.kilocode/plans/ and makes them available as editor tabs.
  */
-export class DraftFileSystemProvider implements vscode.FileSystemProvider {
+export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 	private readonly _emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>()
 	private readonly _plansDir: string
 
@@ -30,18 +30,18 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 
 	constructor() {
 		this._plansDir = path.join(os.homedir(), ".kilocode", "plans")
-		console.log("📝 [DraftFSP] constructor - plansDir:", this._plansDir)
+		console.log("📝 [PlanFSP] constructor - plansDir:", this._plansDir)
 		fs.mkdir(this._plansDir, { recursive: true })
 			.then(() => {
-				console.log("📝 [DraftFSP] constructor - plans directory created/verified")
+				console.log("📝 [PlanFSP] constructor - plans directory created/verified")
 			})
 			.catch((error) => {
-				console.error("📝 [DraftFSP] constructor - Failed to create plans directory:", error)
+				console.error("📝 [PlanFSP] constructor - Failed to create plans directory:", error)
 			})
 	}
 
 	/**
-	 * Get the real filesystem path for a draft filename.
+	 * Get the real filesystem path for a plan filename.
 	 * @param filename - The filename (e.g., "my-document.md")
 	 * @returns The absolute path to the file on disk
 	 */
@@ -50,7 +50,7 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	/**
-	 * Convert a draft URI path to filename (internal storage key).
+	 * Convert a plan URI path to filename (internal storage key).
 	 * Handles all URI variants consistently by stripping scheme and leading slashes.
 	 * @param uri - The VS Code URI
 	 * @returns The filename without leading slash
@@ -62,29 +62,29 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	/**
-	 * Convert a filename to VS Code URI for the draft scheme.
-	 * Always produces the canonical form: draft:/filename (single slash).
+	 * Convert a filename to VS Code URI for the plan scheme.
+	 * Always produces the canonical form: plan:/filename (single slash).
 	 * @param filename - The filename (without leading slash)
-	 * @returns The VS Code URI with draft:// scheme
+	 * @returns The VS Code URI with plan:// scheme
 	 */
 	private filenameToUri(filename: string): vscode.Uri {
-		// Always use / prefix for the URI path - produces canonical draft:/filename
-		return vscode.Uri.parse(`${DRAFT_SCHEME_NAME}:/${filename}`)
+		// Always use / prefix for the URI path - produces canonical plan:/filename
+		return vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
 	}
 
 	watch(_uri: vscode.Uri, _options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-		// No-op: we don't support watching draft documents
+		// No-op: we don't support watching plan documents
 		return new vscode.Disposable(() => {})
 	}
 
 	async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [DraftFSP] stat - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
+		console.log("📝 [PlanFSP] stat - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
 
 		try {
 			const stats = await fs.stat(realPath)
-			console.log("📝 [DraftFSP] stat - SUCCESS, size:", stats.size)
+			console.log("📝 [PlanFSP] stat - SUCCESS, size:", stats.size)
 			return {
 				type: vscode.FileType.File,
 				ctime: stats.birthtimeMs,
@@ -93,7 +93,7 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 			}
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.log("📝 [DraftFSP] stat - ERROR:", err.code, err.message)
+			console.log("📝 [PlanFSP] stat - ERROR:", err.code, err.message)
 			if (err.code === "ENOENT") {
 				throw vscode.FileSystemError.FileNotFound(uri)
 			}
@@ -102,27 +102,27 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	readDirectory(_uri: vscode.Uri): [string, vscode.FileType][] {
-		// Draft documents don't support directories
+		// Plan documents don't support directories
 		throw vscode.FileSystemError.FileNotFound()
 	}
 
 	createDirectory(_uri: vscode.Uri): void {
-		// Draft documents don't support directories
+		// Plan documents don't support directories
 		throw vscode.FileSystemError.NoPermissions()
 	}
 
 	async readFile(uri: vscode.Uri): Promise<Uint8Array> {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [DraftFSP] readFile - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
+		console.log("📝 [PlanFSP] readFile - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
 
 		try {
 			const content = await fs.readFile(realPath)
-			console.log("📝 [DraftFSP] readFile - SUCCESS, size:", content.length)
+			console.log("📝 [PlanFSP] readFile - SUCCESS, size:", content.length)
 			return content
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.log("📝 [DraftFSP] readFile - ERROR:", err.code, err.message)
+			console.log("📝 [PlanFSP] readFile - ERROR:", err.code, err.message)
 			if (err.code === "ENOENT") {
 				throw vscode.FileSystemError.FileNotFound(uri)
 			}
@@ -138,7 +138,7 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
 		console.log(
-			"📝 [DraftFSP] writeFile - START - uri:",
+			"📝 [PlanFSP] writeFile - START - uri:",
 			uri.toString(),
 			"filename:",
 			filename,
@@ -152,28 +152,28 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 		let wasNew = false
 		try {
 			await fs.stat(realPath)
-			console.log("📝 [DraftFSP] writeFile - file exists, will update")
+			console.log("📝 [PlanFSP] writeFile - file exists, will update")
 		} catch {
 			wasNew = true
-			console.log("📝 [DraftFSP] writeFile - file does not exist, will create")
+			console.log("📝 [PlanFSP] writeFile - file does not exist, will create")
 		}
 
 		// Ensure plans directory exists before writing
 		try {
 			await fs.mkdir(this._plansDir, { recursive: true })
-			console.log("📝 [DraftFSP] writeFile - plans directory verified")
+			console.log("📝 [PlanFSP] writeFile - plans directory verified")
 		} catch (error) {
-			console.error("📝 [DraftFSP] writeFile - ERROR creating plans directory:", error)
+			console.error("📝 [PlanFSP] writeFile - ERROR creating plans directory:", error)
 			throw error
 		}
 
 		// Write to disk
 		try {
 			await fs.writeFile(realPath, content)
-			console.log("📝 [DraftFSP] writeFile - SUCCESS writing to disk")
+			console.log("📝 [PlanFSP] writeFile - SUCCESS writing to disk")
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.error("📝 [DraftFSP] writeFile - ERROR writing file:", err.code, err.message, err.stack)
+			console.error("📝 [PlanFSP] writeFile - ERROR writing file:", err.code, err.message, err.stack)
 			throw error
 		}
 
@@ -184,7 +184,7 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 			uri: canonicalUri,
 		}
 		this._emitter.fire([event])
-		console.log("📝 [DraftFSP] writeFile - fired event, type:", wasNew ? "Created" : "Changed")
+		console.log("📝 [PlanFSP] writeFile - fired event, type:", wasNew ? "Created" : "Changed")
 	}
 
 	async delete(uri: vscode.Uri): Promise<void> {
@@ -210,29 +210,29 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	rename(_oldUri: vscode.Uri, _newUri: vscode.Uri, _options: { overwrite: boolean }): void {
-		// Draft documents don't support rename
+		// Plan documents don't support rename
 		throw vscode.FileSystemError.NoPermissions()
 	}
 
 	/**
-	 * Create a new draft document and open it in the editor.
+	 * Create a new plan document and open it in the editor.
 	 * @param name - The name/title of the document (will be used as filename with unique ID suffix)
 	 * @param content - Initial content of the document
-	 * @returns The draft:// URI path (e.g., "draft://filename_7313f09d.plan.md")
+	 * @returns The plan:// URI path (e.g., "plan://filename_7313f09d.plan.md")
 	 */
 	async createAndOpen(name: string, content: string): Promise<string> {
-		// Generate unique draft ID and ensure name has .plan.md extension
-		const draftId = generateDraftId()
+		// Generate unique plan ID and ensure name has .plan.md extension
+		const planId = generatePlanId()
 		let baseName = name
 		if (name.endsWith(".plan.md")) {
 			baseName = name.slice(0, -8) // Remove ".plan.md"
 		}
-		const filename = `${baseName}_${draftId}.plan.md`
+		const filename = `${baseName}_${planId}.plan.md`
 		console.log(
-			"📝 [DraftFSP] createAndOpen - START - name:",
+			"📝 [PlanFSP] createAndOpen - START - name:",
 			name,
-			"draftId:",
-			draftId,
+			"planId:",
+			planId,
 			"filename:",
 			filename,
 			"contentLength:",
@@ -242,28 +242,28 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 		// Ensure plans directory exists
 		try {
 			await fs.mkdir(this._plansDir, { recursive: true })
-			console.log("📝 [DraftFSP] createAndOpen - plans directory verified")
+			console.log("📝 [PlanFSP] createAndOpen - plans directory verified")
 		} catch (error) {
-			console.error("📝 [DraftFSP] createAndOpen - ERROR creating plans directory:", error)
+			console.error("📝 [PlanFSP] createAndOpen - ERROR creating plans directory:", error)
 			throw error
 		}
 
 		// Store the document on disk
 		const contentBytes = new TextEncoder().encode(content)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [DraftFSP] createAndOpen - writing to realPath:", realPath)
+		console.log("📝 [PlanFSP] createAndOpen - writing to realPath:", realPath)
 		try {
 			await fs.writeFile(realPath, contentBytes)
-			console.log("📝 [DraftFSP] createAndOpen - SUCCESS writing to disk")
+			console.log("📝 [PlanFSP] createAndOpen - SUCCESS writing to disk")
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.error("📝 [DraftFSP] createAndOpen - ERROR writing file:", err.code, err.message, err.stack)
+			console.error("📝 [PlanFSP] createAndOpen - ERROR writing file:", err.code, err.message, err.stack)
 			throw error
 		}
 
 		// Create URI using consistent formatting
 		const uri = this.filenameToUri(filename)
-		console.log("📝 [DraftFSP] createAndOpen - created URI:", uri.toString())
+		console.log("📝 [PlanFSP] createAndOpen - created URI:", uri.toString())
 
 		// Emit file change event
 		const event: vscode.FileChangeEvent = {
@@ -271,25 +271,25 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 			uri,
 		}
 		this._emitter.fire([event])
-		console.log("📝 [DraftFSP] createAndOpen - fired Created event")
+		console.log("📝 [PlanFSP] createAndOpen - fired Created event")
 
 		// Open document in VS Code editor
 		await vscode.window.showTextDocument(uri, { preview: false })
-		console.log("📝 [DraftFSP] createAndOpen - opened document in editor")
+		console.log("📝 [PlanFSP] createAndOpen - opened document in editor")
 
-		// Return the draft:// path for use in tools
-		const result = filenameToDraftPath(filename)
-		console.log("📝 [DraftFSP] createAndOpen - returning draftPath:", result)
+		// Return the plan:// path for use in tools
+		const result = filenameToPlanPath(filename)
+		console.log("📝 [PlanFSP] createAndOpen - returning planPath:", result)
 		return result
 	}
 
 	/**
-	 * Get draft content for RPC access.
-	 * @param draftPath - The draft path (e.g., "draft://filename.md")
+	 * Get plan content for RPC access.
+	 * @param planPath - The plan path (e.g., "plan://filename.md")
 	 * @returns Content as Uint8Array, or undefined if not found
 	 */
-	async getDraftContent(draftPath: string): Promise<Uint8Array | undefined> {
-		const filename = draftPathToFilename(draftPath)
+	async getPlanContent(planPath: string): Promise<Uint8Array | undefined> {
+		const filename = planPathToFilename(planPath)
 		const realPath = this.getRealPath(filename)
 
 		try {
@@ -301,12 +301,12 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	/**
-	 * Set draft content from RPC (user edits from JetBrains).
-	 * @param draftPath - The draft path
+	 * Set plan content from RPC (user edits from JetBrains).
+	 * @param planPath - The plan path
 	 * @param content - New content
 	 */
-	async setDraftContent(draftPath: string, content: Uint8Array): Promise<void> {
-		const filename = draftPathToFilename(draftPath)
+	async setPlanContent(planPath: string, content: Uint8Array): Promise<void> {
+		const filename = planPathToFilename(planPath)
 		const realPath = this.getRealPath(filename)
 
 		// Check if file exists to determine if this is a create or update
@@ -333,32 +333,32 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	/**
-	 * Check if a draft exists.
-	 * @param draftPath - The draft path
+	 * Check if a plan exists.
+	 * @param planPath - The plan path
 	 * @returns true if exists
 	 */
-	async draftExists(draftPath: string): Promise<boolean> {
-		const filename = draftPathToFilename(draftPath)
+	async planExists(planPath: string): Promise<boolean> {
+		const filename = planPathToFilename(planPath)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [DraftFSP] draftExists - draftPath:", draftPath, "filename:", filename, "realPath:", realPath)
+		console.log("📝 [PlanFSP] planExists - planPath:", planPath, "filename:", filename, "realPath:", realPath)
 
 		try {
 			await fs.stat(realPath)
-			console.log("📝 [DraftFSP] draftExists - file exists")
+			console.log("📝 [PlanFSP] planExists - file exists")
 			return true
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.log("📝 [DraftFSP] draftExists - file does not exist, error:", err.code)
+			console.log("📝 [PlanFSP] planExists - file does not exist, error:", err.code)
 			return false
 		}
 	}
 
 	/**
-	 * Delete a draft.
-	 * @param draftPath - The draft path
+	 * Delete a plan.
+	 * @param planPath - The plan path
 	 */
-	async deleteDraft(draftPath: string): Promise<void> {
-		const filename = draftPathToFilename(draftPath)
+	async deletePlan(planPath: string): Promise<void> {
+		const filename = planPathToFilename(planPath)
 		const realPath = this.getRealPath(filename)
 
 		try {
@@ -371,14 +371,14 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	/**
-	 * List all draft paths.
-	 * @returns Array of draft:// paths
+	 * List all plan paths.
+	 * @returns Array of plan:// paths
 	 */
-	async listDrafts(): Promise<string[]> {
+	async listPlans(): Promise<string[]> {
 		try {
 			await fs.mkdir(this._plansDir, { recursive: true })
 			const files = await fs.readdir(this._plansDir)
-			return files.filter((file) => file.endsWith(".plan.md")).map((filename) => filenameToDraftPath(filename))
+			return files.filter((file) => file.endsWith(".plan.md")).map((filename) => filenameToPlanPath(filename))
 		} catch {
 			return []
 		}
@@ -386,30 +386,30 @@ export class DraftFileSystemProvider implements vscode.FileSystemProvider {
 }
 
 // Singleton instance
-let draftFileSystemProvider: DraftFileSystemProvider | undefined
+let planFileSystemProvider: PlanFileSystemProvider | undefined
 
 /**
- * Get the singleton draft file system provider instance.
+ * Get the singleton plan file system provider instance.
  */
-export function getDraftFileSystem(): DraftFileSystemProvider {
-	if (!draftFileSystemProvider) {
-		draftFileSystemProvider = new DraftFileSystemProvider()
+export function getPlanFileSystem(): PlanFileSystemProvider {
+	if (!planFileSystemProvider) {
+		planFileSystemProvider = new PlanFileSystemProvider()
 	}
-	return draftFileSystemProvider
+	return planFileSystemProvider
 }
 
 /**
- * Register the draft file system provider with VS Code.
+ * Register the plan file system provider with VS Code.
  * @param context - VS Code extension context
  */
-export function registerDraftFileSystem(context: vscode.ExtensionContext): void {
-	const provider = getDraftFileSystem()
+export function registerPlanFileSystem(context: vscode.ExtensionContext): void {
+	const provider = getPlanFileSystem()
 	context.subscriptions.push(
-		vscode.workspace.registerFileSystemProvider(DRAFT_SCHEME_NAME, provider, {
+		vscode.workspace.registerFileSystemProvider(PLAN_SCHEME_NAME, provider, {
 			isCaseSensitive: true,
 		}),
 	)
 
-	// Note: We no longer delete drafts when tabs close - they persist on disk
+	// Note: We no longer delete plans when tabs close - they persist on disk
 	// Users can manually delete them if needed
 }

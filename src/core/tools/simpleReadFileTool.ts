@@ -14,7 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { ToolProtocol, isNativeProtocol, TOOL_PROTOCOL } from "@roo-code/types"
-import { isDraftPath, readDraftDocument } from "./helpers/draftDocumentHelpers"
+import { isPlanPath, readPlanDocument } from "./helpers/planDocumentHelpers"
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -77,9 +77,9 @@ export async function simpleReadFileTool(
 	const fullPath = path.resolve(cline.cwd, relPath)
 
 	try {
-		// Check if this is a draft document
-		if (isDraftPath(relPath)) {
-			const result = await readDraftDocument(relPath, cline)
+		// Check if this is a plan document
+		if (isPlanPath(relPath)) {
+			const result = await readPlanDocument(relPath, cline)
 			const effectiveProtocol: ToolProtocol = toolProtocol || TOOL_PROTOCOL.XML
 			if (result.status === "error") {
 				// Return error based on protocol
