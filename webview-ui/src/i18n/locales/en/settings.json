@@ -1019,6 +1019,10 @@
 		"MULTIPLE_NATIVE_TOOL_CALLS": {
 			"name": "Parallel tool calls",
 			"description": "When enabled, the native protocol can execute multiple tools in a single assistant message turn."
+		},
+		"EPHEMERAL_PLANNING": {
+			"name": "Ephemeral planning tool",
+			"description": "When enabled, Kilo Code can create temporary plan documents to organize complex tasks. Plans are stored in memory and discarded when the session ends."
 		}
 	},
 	"promptCaching": {
