@@ -1,3 +1,6 @@
+import * as os from "os"
+import * as path from "path"
+
 import { SkillsManager, SkillMetadata } from "../../../services/skills/SkillsManager"
 
 /**
@@ -5,12 +8,12 @@ import { SkillsManager, SkillMetadata } from "../../../services/skills/SkillsMan
  * Converts absolute paths to relative paths to avoid leaking sensitive filesystem info.
  *
  * @param skill - The skill metadata
- * @returns A relative path like ".kilocode/skills/name/SKILL.md" or "~/.kilocode/skills/name/SKILL.md"
+ * @returns A relative path like ".kilocode/skills/name/SKILL.md" or absolute path like "/Users/username/.kilocode/skills/name/SKILL.md"
  */
 function getDisplayPath(skill: SkillMetadata): string {
-	const basePath = skill.source === "project" ? ".kilocode" : "~/.kilocode"
+	const basePath = skill.source === "project" ? ".kilocode" : path.join(os.homedir(), ".kilocode")
 	const skillsDir = skill.mode ? `skills-${skill.mode}` : "skills"
-	return `${basePath}/${skillsDir}/${skill.name}/SKILL.md`
+	return path.join(basePath, skillsDir, skill.name, "SKILL.md")
 }
 
 /**
