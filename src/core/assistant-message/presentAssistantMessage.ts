@@ -468,7 +468,7 @@ export async function presentAssistantMessage(cline: Task) {
 					case "condense":
 						return `[${block.name}]`
 					case "create_plan":
-						return `[${block.name} for '${block.params.title}']`
+						return `[${block.name} for '${block.params.title}']` // kilocode_change
 					// kilocode_change end
 					case "run_slash_command":
 						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
@@ -1109,7 +1109,7 @@ export async function presentAssistantMessage(cline: Task) {
 						pushToolResult,
 						removeClosingTag,
 						toolProtocol,
-					})
+					}) // kilocode_change
 					break
 				// kilocode_change end
 

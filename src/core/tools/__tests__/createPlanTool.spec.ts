@@ -1,3 +1,4 @@
+// kilocode_change - new file: Tests for create_plan tool
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { createPlanTool } from "../CreatePlanTool"
 import { Task } from "../../task/Task"

@@ -1,3 +1,4 @@
+// kilocode_change - new file: Tests for PlanFileSystemProvider
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { PlanFileSystemProvider } from "../PlanFileSystemProvider"
 import { PLAN_SCHEME_NAME } from "../planPaths"

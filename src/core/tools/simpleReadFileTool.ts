@@ -14,7 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { ToolProtocol, isNativeProtocol, TOOL_PROTOCOL } from "@roo-code/types"
-import { isPlanPath, readPlanDocument } from "./helpers/planDocumentHelpers"
+import { isPlanPath, readPlanDocument } from "./helpers/planDocumentHelpers" // kilocode_change
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -78,6 +78,7 @@ export async function simpleReadFileTool(
 
 	try {
 		// Check if this is a plan document
+		// kilocode_change start
 		if (isPlanPath(relPath)) {
 			const result = await readPlanDocument(relPath, cline)
 			const effectiveProtocol: ToolProtocol = toolProtocol || TOOL_PROTOCOL.XML
@@ -98,6 +99,7 @@ export async function simpleReadFileTool(
 			}
 			return
 		}
+		// kilocode_change end
 
 		// Check RooIgnore validation
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
