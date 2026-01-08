@@ -103,7 +103,6 @@ export function planPathToFilename(planPath: string): string {
 	const afterScheme = planPath.slice(`${PLAN_SCHEME_NAME}:`.length)
 	// Remove any leading slashes (handles //, ///, or /)
 	const result = afterScheme.replace(/^\/+/, "")
-	console.log(`📝 [planPaths] planPathToFilename: "${planPath}" -> "${result}"`)
 	return result
 }
 

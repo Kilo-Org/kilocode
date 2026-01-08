@@ -1,6 +1,5 @@
 import fs from "fs/promises"
 import path from "path"
-import * as vscode from "vscode"
 
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
@@ -15,7 +14,7 @@ import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
-import { isPlanPath, normalizePlanPath, planPathToFilename, PLAN_SCHEME_NAME } from "./helpers/planDocumentHelpers" // kilocode_change
+import { isPlanPath, readPlanDocumentContent, writePlanDocumentContent } from "./helpers/planDocumentHelpers" // kilocode_change
 
 interface SearchReplaceOperation {
 	search: string
@@ -90,25 +89,16 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 
 			// kilocode_change start: Handle plan documents
 			if (isPlanPath(relPath)) {
-				const canonicalPath = normalizePlanPath(relPath)
-				const filename = planPathToFilename(relPath)
-
-				// Read plan document
-				let fileContent: string
-				try {
-					const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-					const contentBytes = await vscode.workspace.fs.readFile(uri)
-					fileContent = new TextDecoder().decode(contentBytes)
-				} catch (error) {
+				const readResult = await readPlanDocumentContent(relPath)
+				if ("error" in readResult) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("search_and_replace")
-					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					const errorMessage = `Failed to read plan document '${relPath}': ${errorMsg}`
-					await task.say("error", errorMessage)
-					pushToolResult(formatResponse.toolError(errorMessage))
+					await task.say("error", readResult.error)
+					pushToolResult(formatResponse.toolError(readResult.error))
 					return
 				}
 
+				const fileContent = readResult.content
 				const useCrLf_kilocode = fileContent.includes("\r\n")
 
 				// Apply all operations sequentially
@@ -157,30 +147,23 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				}
 
 				// Write plan document
-				try {
-					const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-					const contentBytes = new TextEncoder().encode(newContent)
-					await vscode.workspace.fs.writeFile(uri, contentBytes)
-
-					await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
-					task.didEditFile = true
-
-					// Add error info if some operations failed
-					let resultMessage = ""
-					if (errors.length > 0) {
-						resultMessage = `Some operations failed:\n${errors.join("\n")}\n\n`
-					}
-					resultMessage += `Updated plan document "${canonicalPath}"`
-
-					pushToolResult(formatResponse.toolResult(resultMessage))
-					task.recordToolUsage("search_and_replace")
-					return
-				} catch (error) {
-					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					await handleError("writing plan document", new Error(errorMsg))
-					pushToolResult(formatResponse.toolError(`Failed to write plan document: ${errorMsg}`))
+				const writeResult = await writePlanDocumentContent(relPath, newContent, task)
+				if ("error" in writeResult) {
+					await handleError("writing plan document", new Error(writeResult.error))
+					pushToolResult(formatResponse.toolError(writeResult.error))
 					return
 				}
+
+				// Add error info if some operations failed
+				let resultMessage = ""
+				if (errors.length > 0) {
+					resultMessage = `Some operations failed:\n${errors.join("\n")}\n\n`
+				}
+				resultMessage += `Updated plan document "${writeResult.canonicalPath}"`
+
+				pushToolResult(formatResponse.toolResult(resultMessage))
+				task.recordToolUsage("search_and_replace")
+				return
 			}
 			// kilocode_change end
 

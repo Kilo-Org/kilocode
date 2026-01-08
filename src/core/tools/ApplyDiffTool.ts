@@ -1,6 +1,5 @@
 import path from "path"
 import fs from "fs/promises"
-import * as vscode from "vscode"
 
 import { TelemetryService } from "@roo-code/telemetry"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
@@ -17,7 +16,12 @@ import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
-import { isPlanPath, normalizePlanPath, planPathToFilename, PLAN_SCHEME_NAME } from "../../services/planning" // kilocode_change
+import {
+	isPlanPath,
+	normalizePlanPath,
+	readPlanDocumentContent,
+	writePlanDocumentContent,
+} from "./helpers/planDocumentHelpers" // kilocode_change
 
 interface ApplyDiffParams {
 	path: string
@@ -60,8 +64,6 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			// kilocode_change start: Handle plan documents
 			const isPlan = isPlanPath(relPath)
 			const canonicalPath = isPlan ? normalizePlanPath(relPath) : relPath
-			const filename = isPlan ? planPathToFilename(relPath) : undefined
-
 			// kilocode_change end
 
 			const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
@@ -75,20 +77,11 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			// kilocode_change start: Handle plan documents
 			let originalContent: string
 			let absolutePath: string
-			let fileExists = false // kilocode_change
+			let fileExists = false
 
 			if (isPlan) {
-				// For plan documents, read using the plan file system
-				const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-				console.log("📝 [ApplyDiffTool] reading plan document:", uri.toString())
-				try {
-					const contentBytes = await vscode.workspace.fs.readFile(uri)
-					originalContent = new TextDecoder().decode(contentBytes)
-					console.log("📝 [ApplyDiffTool] plan read successful, size:", originalContent.length)
-					fileExists = true // kilocode_change: plan exists since we just read it
-				} catch (error) {
-					const errorMsg = error instanceof Error ? error.message : "Unknown error"
-					console.error("📝 [ApplyDiffTool] ERROR reading plan:", errorMsg)
+				const readResult = await readPlanDocumentContent(relPath)
+				if ("error" in readResult) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("apply_diff")
 					const formattedError = `Plan document does not exist at path: ${canonicalPath}\n\n<error_details>\nThe plan document could not be found. Please verify the plan exists and try again.\n</error_details>`
@@ -97,7 +90,9 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 					pushToolResult(formattedError)
 					return
 				}
+				originalContent = readResult.content
 				absolutePath = canonicalPath
+				fileExists = true
 			} else {
 				// For regular files, use the existing logic
 				absolutePath = path.resolve(task.cwd, relPath)
@@ -193,42 +188,20 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 			// kilocode_change start: Handle plan documents separately
 			if (isPlan) {
-				// For plan documents, apply the diff and write directly using vscode.workspace.fs
-				const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-				console.log("📝 [ApplyDiffTool] applying diff to plan document:", uri.toString())
-
-				// Apply the diff to the original content
-				const diffResult = (await task.diffStrategy?.applyDiff(
-					originalContent,
-					diffContent,
-					parseInt(params.diff.match(/:start_line:(\d+)/)?.[1] ?? ""),
-				)) ?? {
-					success: false,
-					error: "No diff strategy available",
-				}
-
-				if (!diffResult.success) {
+				// For plan documents, write directly without diff view
+				// Write the updated content back to the plan
+				const writeResult = await writePlanDocumentContent(relPath, diffResult.content, task)
+				if ("error" in writeResult) {
 					task.consecutiveMistakeCount++
-					let formattedError = `Unable to apply diff to plan document: ${canonicalPath}\n\n<error_details>\n${diffResult.error || "Unknown error"}\n</error_details>`
+					const formattedError = `Unable to write plan document: ${canonicalPath}\n\n<error_details>\n${writeResult.error}\n</error_details>`
 					await task.say("error", formattedError)
 					task.recordToolError("apply_diff", formattedError)
 					pushToolResult(formattedError)
 					return
 				}
 
-				task.consecutiveMistakeCount = 0
-
-				// Write the updated content back to the plan
-				const contentBytes = new TextEncoder().encode(diffResult.content)
-				await vscode.workspace.fs.writeFile(uri, contentBytes)
-				console.log("📝 [ApplyDiffTool] plan updated successfully")
-
-				// Track file edit operation
-				await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
-				task.didEditFile = true
-
 				// Generate a simple message for the tool result
-				const message = `Applied diff to plan document: ${canonicalPath}`
+				const message = `Applied diff to plan document: ${writeResult.canonicalPath}`
 				pushToolResult(message)
 				task.processQueuedMessages()
 				return

@@ -39,8 +39,6 @@ export class CreatePlanTool extends BaseTool<"create_plan"> {
 			return
 		}
 
-		console.log("📝 [CreatePlanTool] execute title=", title, "contentLength=", content.length)
-
 		// Validate title length
 		if (title.length > 255) {
 			task.consecutiveMistakeCount++
@@ -61,9 +59,7 @@ export class CreatePlanTool extends BaseTool<"create_plan"> {
 
 		try {
 			const fs = getPlanFileSystem()
-			console.log("📝 [CreatePlanTool] calling fs.createAndOpen")
 			const planPath = await fs.createAndOpen(title, content)
-			console.log("📝 [CreatePlanTool] fs.createAndOpen returned planPath=", planPath)
 
 			// Return success message with instructions
 			const message = `Created plan document "${title}". The document has been opened in an editor tab.\n\nYou can now:\n- Read it using: read_file with path "${planPath}"\n- Update it using: write_to_file with path "${planPath}"\n\nThe document will be discarded when the editor session ends.`
@@ -72,7 +68,6 @@ export class CreatePlanTool extends BaseTool<"create_plan"> {
 			task.recordToolUsage("create_plan")
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
-			console.log("📝 [CreatePlanTool] error=", errorMessage)
 			pushToolResult(formatResponse.toolError(`Failed to create plan document: ${errorMessage}`))
 			await handleError("creating plan document", error as Error)
 		}

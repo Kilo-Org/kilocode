@@ -30,14 +30,9 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 
 	constructor() {
 		this._plansDir = path.join(os.homedir(), ".kilocode", "plans")
-		console.log("📝 [PlanFSP] constructor - plansDir:", this._plansDir)
-		fs.mkdir(this._plansDir, { recursive: true })
-			.then(() => {
-				console.log("📝 [PlanFSP] constructor - plans directory created/verified")
-			})
-			.catch((error) => {
-				console.error("📝 [PlanFSP] constructor - Failed to create plans directory:", error)
-			})
+		fs.mkdir(this._plansDir, { recursive: true }).catch(() => {
+			// Silently fail - directory creation will be retried on write
+		})
 	}
 
 	/**
@@ -80,11 +75,9 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 	async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [PlanFSP] stat - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
 
 		try {
 			const stats = await fs.stat(realPath)
-			console.log("📝 [PlanFSP] stat - SUCCESS, size:", stats.size)
 			return {
 				type: vscode.FileType.File,
 				ctime: stats.birthtimeMs,
@@ -93,7 +86,6 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 			}
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.log("📝 [PlanFSP] stat - ERROR:", err.code, err.message)
 			if (err.code === "ENOENT") {
 				throw vscode.FileSystemError.FileNotFound(uri)
 			}
@@ -114,15 +106,12 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 	async readFile(uri: vscode.Uri): Promise<Uint8Array> {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [PlanFSP] readFile - uri:", uri.toString(), "filename:", filename, "realPath:", realPath)
 
 		try {
 			const content = await fs.readFile(realPath)
-			console.log("📝 [PlanFSP] readFile - SUCCESS, size:", content.length)
 			return content
 		} catch (error) {
 			const err = error as NodeJS.ErrnoException
-			console.log("📝 [PlanFSP] readFile - ERROR:", err.code, err.message)
 			if (err.code === "ENOENT") {
 				throw vscode.FileSystemError.FileNotFound(uri)
 			}
@@ -137,45 +126,20 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 	): Promise<void> {
 		const filename = this.uriToFilename(uri)
 		const realPath = this.getRealPath(filename)
-		console.log(
-			"📝 [PlanFSP] writeFile - START - uri:",
-			uri.toString(),
-			"filename:",
-			filename,
-			"realPath:",
-			realPath,
-			"contentSize:",
-			content.length,
-		)
 
 		// Check if file exists to determine if this is a create or update
 		let wasNew = false
 		try {
 			await fs.stat(realPath)
-			console.log("📝 [PlanFSP] writeFile - file exists, will update")
 		} catch {
 			wasNew = true
-			console.log("📝 [PlanFSP] writeFile - file does not exist, will create")
 		}
 
 		// Ensure plans directory exists before writing
-		try {
-			await fs.mkdir(this._plansDir, { recursive: true })
-			console.log("📝 [PlanFSP] writeFile - plans directory verified")
-		} catch (error) {
-			console.error("📝 [PlanFSP] writeFile - ERROR creating plans directory:", error)
-			throw error
-		}
+		await fs.mkdir(this._plansDir, { recursive: true })
 
 		// Write to disk
-		try {
-			await fs.writeFile(realPath, content)
-			console.log("📝 [PlanFSP] writeFile - SUCCESS writing to disk")
-		} catch (error) {
-			const err = error as NodeJS.ErrnoException
-			console.error("📝 [PlanFSP] writeFile - ERROR writing file:", err.code, err.message, err.stack)
-			throw error
-		}
+		await fs.writeFile(realPath, content)
 
 		// Emit file change event with canonical URI
 		const canonicalUri = this.filenameToUri(filename)
@@ -184,7 +148,6 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 			uri: canonicalUri,
 		}
 		this._emitter.fire([event])
-		console.log("📝 [PlanFSP] writeFile - fired event, type:", wasNew ? "Created" : "Changed")
 	}
 
 	async delete(uri: vscode.Uri): Promise<void> {
@@ -228,42 +191,17 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 			baseName = name.slice(0, -8) // Remove ".plan.md"
 		}
 		const filename = `${baseName}_${planId}.plan.md`
-		console.log(
-			"📝 [PlanFSP] createAndOpen - START - name:",
-			name,
-			"planId:",
-			planId,
-			"filename:",
-			filename,
-			"contentLength:",
-			content.length,
-		)
 
 		// Ensure plans directory exists
-		try {
-			await fs.mkdir(this._plansDir, { recursive: true })
-			console.log("📝 [PlanFSP] createAndOpen - plans directory verified")
-		} catch (error) {
-			console.error("📝 [PlanFSP] createAndOpen - ERROR creating plans directory:", error)
-			throw error
-		}
+		await fs.mkdir(this._plansDir, { recursive: true })
 
 		// Store the document on disk
 		const contentBytes = new TextEncoder().encode(content)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [PlanFSP] createAndOpen - writing to realPath:", realPath)
-		try {
-			await fs.writeFile(realPath, contentBytes)
-			console.log("📝 [PlanFSP] createAndOpen - SUCCESS writing to disk")
-		} catch (error) {
-			const err = error as NodeJS.ErrnoException
-			console.error("📝 [PlanFSP] createAndOpen - ERROR writing file:", err.code, err.message, err.stack)
-			throw error
-		}
+		await fs.writeFile(realPath, contentBytes)
 
 		// Create URI using consistent formatting
 		const uri = this.filenameToUri(filename)
-		console.log("📝 [PlanFSP] createAndOpen - created URI:", uri.toString())
 
 		// Emit file change event
 		const event: vscode.FileChangeEvent = {
@@ -271,15 +209,12 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 			uri,
 		}
 		this._emitter.fire([event])
-		console.log("📝 [PlanFSP] createAndOpen - fired Created event")
 
 		// Open document in VS Code editor
 		await vscode.window.showTextDocument(uri, { preview: false })
-		console.log("📝 [PlanFSP] createAndOpen - opened document in editor")
 
 		// Return the plan:// path for use in tools
 		const result = filenameToPlanPath(filename)
-		console.log("📝 [PlanFSP] createAndOpen - returning planPath:", result)
 		return result
 	}
 
@@ -340,15 +275,11 @@ export class PlanFileSystemProvider implements vscode.FileSystemProvider {
 	async planExists(planPath: string): Promise<boolean> {
 		const filename = planPathToFilename(planPath)
 		const realPath = this.getRealPath(filename)
-		console.log("📝 [PlanFSP] planExists - planPath:", planPath, "filename:", filename, "realPath:", realPath)
 
 		try {
 			await fs.stat(realPath)
-			console.log("📝 [PlanFSP] planExists - file exists")
 			return true
-		} catch (error) {
-			const err = error as NodeJS.ErrnoException
-			console.log("📝 [PlanFSP] planExists - file does not exist, error:", err.code)
+		} catch {
 			return false
 		}
 	}

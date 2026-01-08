@@ -27,21 +27,15 @@ export async function readPlanDocument(
 	nativeContent?: string
 	error?: string
 }> {
-	console.log("📝 [readPlanDocument] START - relPath:", relPath)
 	const canonicalPath = normalizePlanPath(relPath)
 	const filename = planPathToFilename(relPath)
-	console.log("📝 [readPlanDocument] normalized - canonicalPath:", canonicalPath, "filename:", filename)
 
 	try {
 		const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-		console.log("📝 [readPlanDocument] constructed URI:", uri.toString())
-		console.log("📝 [readPlanDocument] calling vscode.workspace.fs.readFile...")
 		const contentBytes = await vscode.workspace.fs.readFile(uri)
-		console.log("📝 [readPlanDocument] vscode.workspace.fs.readFile SUCCESS, size:", contentBytes.length)
 		const content = new TextDecoder().decode(contentBytes)
 		const numberedContent = addLineNumbers(content)
 		const totalLines = content.split("\n").length
-		console.log("📝 [readPlanDocument] decoded content, totalLines:", totalLines)
 
 		await task.fileContextTracker.trackFileContext(canonicalPath, "read_tool" as RecordSource)
 
@@ -52,7 +46,6 @@ export async function readPlanDocument(
 				? `File: ${canonicalPath}\nLines: 1-${totalLines}\n\n${numberedContent}`
 				: `File: ${canonicalPath}\n(empty file)`
 
-		console.log("📝 [readPlanDocument] SUCCESS - returning content")
 		return {
 			status: "approved",
 			xmlContent: `<file><path>${canonicalPath}</path>\n${xmlInfo}</file>`,
@@ -61,14 +54,9 @@ export async function readPlanDocument(
 	} catch (error) {
 		const isNotFoundError = error instanceof Error && error.message.includes("FileNotFound")
 		const errorMsg = error instanceof Error ? error.message : "Unknown error"
-		console.error("📝 [readPlanDocument] ERROR:", errorMsg)
-		if (error instanceof Error) {
-			console.error("📝 [readPlanDocument] ERROR stack:", error.stack)
-		}
 
 		if (isNotFoundError) {
 			const planName = filename.replace(/\.plan\.md$/, "").replace(/\.md$/, "")
-			console.log("📝 [readPlanDocument] returning FileNotFound error for plan:", planName)
 			return {
 				status: "error",
 				error: `Plan document "${planName}" does not exist. Use the create_plan tool to create it.`,
@@ -77,7 +65,6 @@ export async function readPlanDocument(
 			}
 		}
 
-		console.log("📝 [readPlanDocument] returning generic error")
 		return {
 			status: "error",
 			error: `Error reading plan document: ${errorMsg}`,
@@ -96,40 +83,27 @@ export async function writePlanDocument(
 	content: string,
 	task: Task,
 ): Promise<{ canonicalPath: string } | { error: string }> {
-	console.log("📝 [writePlanDocument] START - relPath:", relPath, "contentLength:", content.length)
 	const canonicalPath = normalizePlanPath(relPath)
 	const filename = planPathToFilename(relPath)
-	console.log("📝 [writePlanDocument] normalized - canonicalPath:", canonicalPath, "filename:", filename)
 
 	try {
 		// Check if plan exists before writing
 		const planFs = getPlanFileSystem()
-		console.log("📝 [writePlanDocument] checking if plan exists...")
 		const wasNew = !(await planFs.planExists(canonicalPath))
-		console.log("📝 [writePlanDocument] plan exists check - wasNew:", wasNew)
 
 		const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
-		console.log("📝 [writePlanDocument] constructed URI:", uri.toString())
 		const contentBytes = new TextEncoder().encode(content)
-		console.log("📝 [writePlanDocument] calling vscode.workspace.fs.writeFile...")
 		await vscode.workspace.fs.writeFile(uri, contentBytes)
-		console.log("📝 [writePlanDocument] vscode.workspace.fs.writeFile SUCCESS")
 
 		// If this is a new plan document, open it in VS Code
 		if (wasNew) {
-			console.log("📝 [writePlanDocument] opening new plan document in editor")
 			await vscode.window.showTextDocument(uri, { preview: false })
 		}
 
 		await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
-		console.log("📝 [writePlanDocument] SUCCESS - returning canonicalPath:", canonicalPath)
 		return { canonicalPath }
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : "Unknown error"
-		console.error("📝 [writePlanDocument] ERROR:", errorMsg)
-		if (error instanceof Error) {
-			console.error("📝 [writePlanDocument] ERROR stack:", error.stack)
-		}
 		return { error: `Error writing plan document: ${errorMsg}` }
 	}
 }
@@ -158,4 +132,57 @@ export function convertToPlanPathIfNeeded(filePath: string): string | undefined 
 		return filenameToPlanPath(filename)
 	}
 	return undefined
+}
+
+/**
+ * Read a plan document and return raw content.
+ * Simple helper for tools that need to process the content themselves.
+ *
+ * @param relPath - The plan document path (any variant)
+ * @returns The content or an error
+ */
+export async function readPlanDocumentContent(relPath: string): Promise<{ content: string } | { error: string }> {
+	const filename = planPathToFilename(relPath)
+
+	try {
+		const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
+		const contentBytes = await vscode.workspace.fs.readFile(uri)
+		const content = new TextDecoder().decode(contentBytes)
+		return { content }
+	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : "Unknown error"
+		return { error: `Failed to read plan document: ${errorMsg}` }
+	}
+}
+
+/**
+ * Write content to a plan document.
+ * Simple helper that handles URI construction and file tracking.
+ *
+ * @param relPath - The plan document path (any variant)
+ * @param content - The content to write
+ * @param task - The task instance for file tracking
+ * @returns The canonical path or an error
+ */
+export async function writePlanDocumentContent(
+	relPath: string,
+	content: string,
+	task: Task,
+): Promise<{ canonicalPath: string } | { error: string }> {
+	const canonicalPath = normalizePlanPath(relPath)
+	const filename = planPathToFilename(relPath)
+
+	try {
+		const uri = vscode.Uri.parse(`${PLAN_SCHEME_NAME}:/${filename}`)
+		const contentBytes = new TextEncoder().encode(content)
+		await vscode.workspace.fs.writeFile(uri, contentBytes)
+
+		await task.fileContextTracker.trackFileContext(canonicalPath, "roo_edited" as RecordSource)
+		task.didEditFile = true
+
+		return { canonicalPath }
+	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : "Unknown error"
+		return { error: `Failed to write plan document: ${errorMsg}` }
+	}
 }
