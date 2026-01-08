@@ -14,6 +14,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
+// Helper to safely check if item has content that is an array
+function hasArrayContent(item: MarketplaceItem): boolean {
+	return "content" in item && Array.isArray(item.content)
+}
+
+// Helper to safely get content as array (for MCP items with multiple methods)
+function getContentAsArray(item: MarketplaceItem): McpInstallationMethod[] | null {
+	if (hasArrayContent(item)) {
+		return item.content as McpInstallationMethod[]
+	}
+	return null
+}
+
 interface MarketplaceInstallModalProps {
 	item: MarketplaceItem | null
 	isOpen: boolean
@@ -44,18 +57,17 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 		}
 	}, [item])
 
-	// Check if item has multiple installation methods
+	// Check if item has multiple installation methods (only MCP items can have arrays)
+	const contentArray = useMemo(() => getContentAsArray(item!), [item])
 	const hasMultipleMethods = useMemo(() => {
-		return item && Array.isArray(item.content) && item.content.length > 1
-	}, [item])
+		return item && contentArray && contentArray.length > 1
+	}, [item, contentArray])
 
 	// Get installation method names (for display in dropdown)
 	const methodNames = useMemo(() => {
-		if (!item || !Array.isArray(item.content)) return []
-
-		// Content is an array of McpInstallationMethod objects
-		return (item.content as Array<{ name: string; content: string }>).map((method) => method.name)
-	}, [item])
+		if (!contentArray) return []
+		return contentArray.map((method) => method.name)
+	}, [contentArray])
 
 	// Get effective parameters for the selected method (global + method-specific)
 	const effectiveParameters = useMemo(() => {
@@ -65,8 +77,8 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 		let methodParams: McpParameter[] = []
 
 		// Get method-specific parameters if content is an array
-		if (Array.isArray(item.content)) {
-			const selectedMethod = item.content[selectedMethodIndex] as McpInstallationMethod
+		if (contentArray) {
+			const selectedMethod = contentArray[selectedMethodIndex]
 			methodParams = selectedMethod?.parameters || []
 		}
 
@@ -76,7 +88,7 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 		methodParams.forEach((p) => paramMap.set(p.key, p))
 
 		return Array.from(paramMap.values())
-	}, [item, selectedMethodIndex])
+	}, [item, contentArray, selectedMethodIndex])
 
 	// Get effective prerequisites for the selected method (global + method-specific)
 	const effectivePrerequisites = useMemo(() => {
@@ -86,15 +98,15 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 		let methodPrereqs: string[] = []
 
 		// Get method-specific prerequisites if content is an array
-		if (Array.isArray(item.content)) {
-			const selectedMethod = item.content[selectedMethodIndex] as McpInstallationMethod
+		if (contentArray) {
+			const selectedMethod = contentArray[selectedMethodIndex]
 			methodPrereqs = selectedMethod?.prerequisites || []
 		}
 
 		// Combine and deduplicate prerequisites
 		const allPrereqs = [...globalPrereqs, ...methodPrereqs]
 		return Array.from(new Set(allPrereqs))
-	}, [item, selectedMethodIndex])
+	}, [item, contentArray, selectedMethodIndex])
 
 	// Update parameter values when method changes
 	React.useEffect(() => {
@@ -103,8 +115,8 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 			const globalParams = item.type === "mcp" ? item.parameters || [] : []
 			let methodParams: McpParameter[] = []
 
-			if (Array.isArray(item.content)) {
-				const selectedMethod = item.content[selectedMethodIndex] as McpInstallationMethod
+			if (contentArray) {
+				const selectedMethod = contentArray[selectedMethodIndex]
 				methodParams = selectedMethod?.parameters || []
 			}
 
@@ -125,7 +137,7 @@ export const MarketplaceInstallModal: React.FC<MarketplaceInstallModalProps> = (
 				return newValues
 			})
 		}
-	}, [item, selectedMethodIndex])
+	}, [item, contentArray, selectedMethodIndex])
 
 	// Listen for installation result messages
 	useEffect(() => {

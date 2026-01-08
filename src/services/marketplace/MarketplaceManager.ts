@@ -12,9 +12,12 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
+import type { SkillMetadata } from "../../shared/skills"
+import type { SkillsManager } from "../skills/SkillsManager"
 
 import { RemoteConfigLoader } from "./RemoteConfigLoader"
 import { SimpleInstaller } from "./SimpleInstaller"
+import { SkillsMarketplaceLoader } from "./SkillsMarketplaceLoader"
 
 export interface MarketplaceItemsResponse {
 	organizationMcps: MarketplaceItem[]
@@ -24,13 +27,16 @@ export interface MarketplaceItemsResponse {
 
 export class MarketplaceManager {
 	private configLoader: RemoteConfigLoader
+	private skillsLoader: SkillsMarketplaceLoader
 	private installer: SimpleInstaller
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly customModesManager?: CustomModesManager,
+		private readonly skillsManager?: SkillsManager,
 	) {
 		this.configLoader = new RemoteConfigLoader()
+		this.skillsLoader = new SkillsMarketplaceLoader()
 		this.installer = new SimpleInstaller(context, customModesManager)
 	}
 
@@ -51,8 +57,9 @@ export class MarketplaceManager {
 			}
 
 			const allMarketplaceItems = await this.configLoader.loadAllItems(orgSettings?.hideMarketplaceMcps)
+			const skills = await this.skillsLoader.fetchAllSkills()
 			let organizationMcps: MarketplaceItem[] = []
-			let marketplaceItems = allMarketplaceItems
+			let marketplaceItems: MarketplaceItem[] = [...allMarketplaceItems, ...skills]
 
 			if (orgSettings) {
 				if (orgSettings.mcps && orgSettings.mcps.length > 0) {
@@ -66,7 +73,7 @@ export class MarketplaceManager {
 
 				if (orgSettings.hiddenMcps && orgSettings.hiddenMcps.length > 0) {
 					const hiddenMcpIds = new Set(orgSettings.hiddenMcps)
-					marketplaceItems = allMarketplaceItems.filter(
+					marketplaceItems = marketplaceItems.filter(
 						(item) => item.type !== "mcp" || !hiddenMcpIds.has(item.id),
 					)
 				}
@@ -328,6 +335,16 @@ export class MarketplaceManager {
 				}
 			} catch (error) {
 				// File doesn't exist or can't be read, skip
+			}
+
+			// Check skills from SkillsManager
+			if (this.skillsManager) {
+				const allSkills: SkillMetadata[] = this.skillsManager.getAllSkills()
+				for (const skill of allSkills) {
+					metadata[skill.name] = {
+						type: "skill",
+					}
+				}
 			}
 		} catch (error) {
 			console.error("Error checking global installations:", error)

@@ -3,7 +3,8 @@
 	"tabs": {
 		"installed": "Installed",
 		"settings": "Settings",
-		"browse": "Browse"
+		"browse": "Browse",
+		"skill": "Skills"
 	},
 	"done": "Done",
 	"refresh": "Refresh",
@@ -11,7 +12,8 @@
 		"search": {
 			"placeholder": "Search marketplace items...",
 			"placeholderMcp": "Search MCPs...",
-			"placeholderMode": "Search Modes..."
+			"placeholderMode": "Search Modes...",
+			"placeholderSkill": "Search skills..."
 		},
 		"installed": {
 			"label": "Filter by status",
@@ -23,7 +25,8 @@
 			"label": "Filter by type:",
 			"all": "All types",
 			"mode": "Mode",
-			"mcpServer": "MCP Server"
+			"mcpServer": "MCP Server",
+			"skill": "Skill"
 		},
 		"sort": {
 			"label": "Sort by:",
@@ -47,7 +50,19 @@
 	},
 	"type-group": {
 		"modes": "Modes",
-		"mcps": "MCP Servers"
+		"mcps": "MCP Servers",
+		"skills": "Skills"
+	},
+	"skill": {
+		"stars": "stars",
+		"forks": "forks",
+		"category": "Category",
+		"viewOnGithub": "View on GitHub",
+		"repository": "Repository",
+		"removeSkillTitle": "Remove Skill",
+		"removeSkillMessage": "Are you sure you want to remove {skillName}? This will delete the skill from your {location} skills directory.",
+		"installed": "Installed",
+		"install": "Install Skill"
 	},
 	"items": {
 		"empty": {
@@ -146,6 +161,10 @@
 		"mcp": {
 			"title": "Remove MCP Server",
 			"message": "Are you sure you want to remove the MCP server \"{{mcpName}}\"?"
+		},
+		"skill": {
+			"title": "Remove Skill",
+			"message": "Are you sure you want to remove the skill \"{{skillName}}\"?"
 		},
 		"cancel": "Cancel",
 		"confirm": "Remove"

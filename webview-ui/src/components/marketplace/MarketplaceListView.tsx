@@ -17,7 +17,7 @@ export interface MarketplaceListViewProps {
 	stateManager: MarketplaceViewStateManager
 	allTags: string[]
 	filteredTags: string[]
-	filterByType?: "mcp" | "mode"
+	filterByType?: "mcp" | "mode" | "skill"
 	// kilocode_change start
 	headerMessage?: {
 		translationKey: string
@@ -50,6 +50,20 @@ export function MarketplaceListView({
 
 	const isEmpty = items.length === 0 && orgMcps.length === 0
 
+	// Get search placeholder based on filter type
+	const getSearchPlaceholder = () => {
+		switch (filterByType) {
+			case "mcp":
+				return t("marketplace:filters.search.placeholderMcp")
+			case "mode":
+				return t("marketplace:filters.search.placeholderMode")
+			case "skill":
+				return t("marketplace:filters.search.placeholderSkill")
+			default:
+				return t("marketplace:filters.search.placeholder")
+		}
+	}
+
 	return (
 		<>
 			{/* kilocode_change start - headerMessage */}
@@ -76,13 +90,7 @@ export function MarketplaceListView({
 				<div className="relative">
 					<Input
 						type="text"
-						placeholder={
-							filterByType === "mcp"
-								? t("marketplace:filters.search.placeholderMcp")
-								: filterByType === "mode"
-									? t("marketplace:filters.search.placeholderMode")
-									: t("marketplace:filters.search.placeholder")
-						}
+						placeholder={getSearchPlaceholder()}
 						value={state.filters.search}
 						onChange={(e) =>
 							manager.transition({

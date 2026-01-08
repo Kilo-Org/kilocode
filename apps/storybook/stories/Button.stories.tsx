@@ -3,7 +3,7 @@ import { fn } from "storybook/test"
 import { Button } from "@/components/ui/button"
 import { createTableStory } from "../src/utils/createTableStory"
 
-const BUTTON_VARIANTS = ["default", "destructive", "outline", "secondary", "ghost", "link"] as const
+const BUTTON_VARIANTS = ["primary", "secondary", "destructive", "outline", "ghost", "link", "combobox"] as const
 const BUTTON_SIZES = ["default", "sm", "lg", "icon"] as const
 const STORY_TABLE_SIZES = ["default", "sm", "lg"] as const
 

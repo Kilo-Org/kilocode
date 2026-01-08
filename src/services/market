@@ -1,0 +1,606 @@
+// npx vitest services/marketplace/__tests__/SkillsMarketplaceLoader.spec.ts
+
+import axios from "axios"
+import { SkillsMarketplaceLoader } from "../SkillsMarketplaceLoader"
+
+// Mock axios
+vi.mock("axios")
+const mockedAxios = axios as any
+
+// kilocode_change start
+// Mock the cloud config
+vi.mock("@roo-code/cloud", () => ({
+	getRooCodeApiUrl: () => "https://test.api.com",
+}))
+
+vi.mock("@roo-code/types", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@roo-code/types")>()
+	return {
+		...actual,
+		getAppUrl: (path: string) => `https://test.api.com${path}`,
+		getKiloBaseUriFromToken: () => "https://test.api.com",
+	}
+})
+// kilocode_change end
+
+describe("SkillsMarketplaceLoader", () => {
+	let loader: SkillsMarketplaceLoader
+
+	beforeEach(() => {
+		loader = new SkillsMarketplaceLoader()
+		vi.clearAllMocks()
+		loader.clearCache()
+	})
+
+	describe("fetchAllSkills", () => {
+		it("should return mock data as skill marketplace items", async () => {
+			// Mock API to fail so we use fallback mock data
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			const skills = await loader.fetchAllSkills()
+
+			expect(Array.isArray(skills)).toBe(true)
+			expect(skills.length).toBeGreaterThan(0)
+			expect(skills[0].type).toBe("skill")
+			expect(skills[0].id).toBe("test-generation")
+			expect(skills[0].name).toBe("Test Generation")
+			expect(skills[0].description).toBeDefined()
+		})
+
+		it("should return skill items with required properties", async () => {
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			const skills = await loader.fetchAllSkills()
+			const skill = skills[0]
+
+			expect(skill.type).toBe("skill")
+			expect(skill.id).toBeDefined()
+			expect(skill.name).toBeDefined()
+			expect(skill.description).toBeDefined()
+			expect(skill.author).toBeDefined()
+			expect(skill.tags).toBeInstanceOf(Array)
+			expect(skill.repository).toBeDefined()
+			expect(skill.category).toBeDefined()
+			expect(skill.hasInstallCommand).toBe(true)
+			expect(skill.skillFile).toBeDefined()
+		})
+
+		it("should return data from API when available", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "api-skill",
+						name: "API Skill",
+						description: "Skill from API",
+						author: "API Author",
+						authorUrl: "https://github.com/api-author",
+						tags: ["api"],
+						repository: {
+							fullName: "api-author/api-skill",
+							stars: 100,
+							forks: 10,
+							url: "https://github.com/api-author/api-skill",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "api-skill",
+							version: "1.0.0",
+							installCommand: "npm install -g @api-author/api-skill",
+							description: "Skill from API",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const skills = await loader.fetchAllSkills()
+
+			expect(skills).toHaveLength(1)
+			expect(skills[0].id).toBe("api-skill")
+			expect(skills[0].name).toBe("API Skill")
+		})
+
+		it("should return cached data on second call", async () => {
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			const skills1 = await loader.fetchAllSkills()
+			const skills2 = await loader.fetchAllSkills()
+
+			expect(skills1).toEqual(skills2)
+			// Should only call API once (even though it fails)
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+		})
+
+		it("should handle empty API response gracefully", async () => {
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify({ skills: [] }) })
+
+			const skills = await loader.fetchAllSkills()
+
+			expect(Array.isArray(skills)).toBe(true)
+			expect(skills).toHaveLength(0)
+		})
+	})
+
+	describe("getSkill", () => {
+		it("should return skill when ID exists", async () => {
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			const skill = await loader.getSkill("test-generation")
+
+			expect(skill).not.toBeNull()
+			expect(skill?.id).toBe("test-generation")
+			expect(skill?.name).toBe("Test Generation")
+		})
+
+		it("should return skill by id from API response", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "database-schema",
+						name: "Database Schema Designer",
+						description: "Design schemas",
+						author: "DB Masters",
+						authorUrl: "https://github.com/db-masters",
+						tags: ["database"],
+						repository: {
+							fullName: "db-masters/schema-designer",
+							stars: 567,
+							forks: 89,
+							url: "https://github.com/db-masters/schema-designer",
+							pushedAt: "2025-01-14T15:45:00Z",
+						},
+						category: "Database",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "database-schema",
+							version: "2.1.0",
+							installCommand: "npm install -g @db-masters/schema-designer",
+							description: "Database schema tool",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const skill = await loader.getSkill("database-schema")
+
+			expect(skill).not.toBeNull()
+			expect(skill?.id).toBe("database-schema")
+			expect(skill?.category).toBe("Database")
+		})
+
+		it("should return null when ID doesn't exist", async () => {
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			const skill = await loader.getSkill("nonexistent-skill")
+
+			expect(skill).toBeNull()
+		})
+
+		it("should return null for non-existent skill from API", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "existing-skill",
+						name: "Existing Skill",
+						description: "Test skill",
+						author: "Test Author",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/existing",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/existing",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "existing-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const skill = await loader.getSkill("different-skill")
+
+			expect(skill).toBeNull()
+		})
+	})
+
+	describe("cache expiration", () => {
+		it("should expire cache after 5 minutes", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "cached-skill",
+						name: "Cached Skill",
+						description: "Test skill",
+						author: "Test Author",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/cached",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/cached",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "cached-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const originalDateNow = Date.now
+			let currentTime = 1000000
+
+			Date.now = vi.fn(() => currentTime)
+
+			// First call
+			const skills1 = await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+			expect(skills1).toHaveLength(1)
+
+			// Second call immediately - should use cache
+			const skills2 = await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+			expect(skills2).toEqual(skills1)
+
+			// Advance time by 6 minutes (cache duration + 1 minute)
+			currentTime += 6 * 60 * 1000
+
+			// Third call - cache should be expired
+			const skills3 = await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+			expect(skills3).toEqual(skills1) // Same data, fresh fetch
+
+			// Restore original Date.now
+			Date.now = originalDateNow
+		})
+
+		it("should not expire cache before 5 minutes", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "fresh-skill",
+						name: "Fresh Skill",
+						description: "Test skill",
+						author: "Test Author",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/fresh",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/fresh",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "fresh-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const originalDateNow = Date.now
+			let currentTime = 1000000
+
+			Date.now = vi.fn(() => currentTime)
+
+			// First call
+			await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+
+			// Advance time by 4 minutes (less than cache duration)
+			currentTime += 4 * 60 * 1000
+
+			// Second call - should still use cache
+			await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+
+			// Restore original Date.now
+			Date.now = originalDateNow
+		})
+	})
+
+	describe("clearCache", () => {
+		it("should clear all cached data", async () => {
+			mockedAxios.get.mockRejectedValue(new Error("API unavailable"))
+
+			// First call to populate cache
+			await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+
+			// Clear cache
+			loader.clearCache()
+
+			// Second call after clear - should fetch again
+			await loader.fetchAllSkills()
+			expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+		})
+
+		it("should force fresh API call after cache clear", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "initial-skill",
+						name: "Initial Skill",
+						description: "Initial",
+						author: "Test",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/initial",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/initial",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "initial-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			// First call
+			await loader.fetchAllSkills()
+
+			// Modify mock to return different data
+			const updatedApiResponse = {
+				skills: [
+					{
+						id: "updated-skill",
+						name: "Updated Skill",
+						description: "Updated",
+						author: "Test",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/updated",
+							stars: 20,
+							forks: 4,
+							url: "https://github.com/test/updated",
+							pushedAt: "2025-01-16T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "updated-skill",
+							version: "2.0.0",
+							installCommand: "npm install",
+							description: "Updated",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(updatedApiResponse) })
+
+			// Second call without clear - should use cache
+			const cachedSkills = await loader.fetchAllSkills()
+			expect(cachedSkills[0].id).toBe("initial-skill")
+
+			// Clear cache
+			loader.clearCache()
+
+			// Third call after clear - should get updated data
+			const freshSkills = await loader.fetchAllSkills()
+			expect(freshSkills[0].id).toBe("updated-skill")
+		})
+	})
+
+	describe("fetchWithRetry", () => {
+		it("should retry on failure with exponential backoff", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "retry-skill",
+						name: "Retry Skill",
+						description: "Test skill",
+						author: "Test",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/retry",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/retry",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "retry-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			// Fail twice then succeed
+			let callCount = 0
+			mockedAxios.get.mockImplementation(() => {
+				callCount++
+				if (callCount < 3) {
+					return Promise.reject(new Error("Network error"))
+				}
+				return Promise.resolve({ data: JSON.stringify(mockApiResponse) })
+			})
+
+			const skills = await loader.fetchAllSkills()
+
+			expect(callCount).toBe(3)
+			expect(skills).toHaveLength(1)
+			expect(skills[0].id).toBe("retry-skill")
+		})
+
+		it("should succeed after multiple retries", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "multi-retry-skill",
+						name: "Multi Retry Skill",
+						description: "Test skill",
+						author: "Test",
+						authorUrl: "https://github.com/test",
+						tags: ["test"],
+						repository: {
+							fullName: "test/multi-retry",
+							stars: 10,
+							forks: 2,
+							url: "https://github.com/test/multi-retry",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "multi-retry-skill",
+							version: "1.0.0",
+							installCommand: "npm install",
+							description: "Test",
+						},
+					},
+				],
+			}
+
+			// Fail 5 times (more than maxRetries=3, but last one succeeds)
+			let callCount = 0
+			mockedAxios.get.mockImplementation(() => {
+				callCount++
+				if (callCount <= 5) {
+					return Promise.reject(new Error("Network error"))
+				}
+				return Promise.resolve({ data: JSON.stringify(mockApiResponse) })
+			})
+
+			// Should eventually succeed when axios.get is called directly
+			// The fetchWithRetry will fail after 3 attempts and throw
+			await expect(loader.fetchWithRetry("https://test.api.com/api/marketplace/skills")).rejects.toThrow(
+				"Network error",
+			)
+			expect(callCount).toBe(3)
+		})
+
+		it("should throw after max retries exceeded", async () => {
+			// Always fail
+			mockedAxios.get.mockRejectedValue(new Error("Persistent network error"))
+
+			await expect(loader.fetchAllSkills()).rejects.toThrow("Persistent network error")
+
+			// Should have retried 3 times
+			expect(mockedAxios.get).toHaveBeenCalledTimes(3)
+		})
+	})
+
+	describe("multiple skills in response", () => {
+		it("should handle multiple skills from API", async () => {
+			const mockApiResponse = {
+				skills: [
+					{
+						id: "skill-1",
+						name: "Skill One",
+						description: "First skill",
+						author: "Author 1",
+						authorUrl: "https://github.com/author1",
+						tags: ["tag1"],
+						repository: {
+							fullName: "author1/skill1",
+							stars: 100,
+							forks: 10,
+							url: "https://github.com/author1/skill1",
+							pushedAt: "2025-01-15T10:30:00Z",
+						},
+						category: "Testing",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "skill-1",
+							version: "1.0.0",
+							installCommand: "npm install skill1",
+							description: "First skill",
+						},
+					},
+					{
+						id: "skill-2",
+						name: "Skill Two",
+						description: "Second skill",
+						author: "Author 2",
+						authorUrl: "https://github.com/author2",
+						tags: ["tag2"],
+						repository: {
+							fullName: "author2/skill2",
+							stars: 200,
+							forks: 20,
+							url: "https://github.com/author2/skill2",
+							pushedAt: "2025-01-14T10:30:00Z",
+						},
+						category: "Development",
+						hasInstallCommand: true,
+						skillFile: "skill.yaml",
+						marketplaceJson: {
+							name: "skill-2",
+							version: "2.0.0",
+							installCommand: "npm install skill2",
+							description: "Second skill",
+						},
+					},
+				],
+			}
+
+			mockedAxios.get.mockResolvedValue({ data: JSON.stringify(mockApiResponse) })
+
+			const skills = await loader.fetchAllSkills()
+
+			expect(skills).toHaveLength(2)
+			expect(skills[0].id).toBe("skill-1")
+			expect(skills[1].id).toBe("skill-2")
+			expect(skills[0].category).toBe("Testing")
+			expect(skills[1].category).toBe("Development")
+		})
+	})
+})

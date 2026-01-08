@@ -1,0 +1,467 @@
+{
+	"skills": [
+		{
+			"id": "artifacts-builder",
+			"name": "artifacts-builder",
+			"description": "Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui). Use for complex artifacts requiring state management, routing, or shadcn/ui components - not for simple single-file HTML/JSX artifacts.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.281Z"
+			},
+			"category": "Frontend",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "brand-guidelines",
+			"name": "brand-guidelines",
+			"description": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Use it when brand colors or style guidelines, visual formatting, or company design standards apply.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.307Z"
+			},
+			"category": "Frontend",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "canvas-design",
+			"name": "canvas-design",
+			"description": "Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a poster, piece of art, design, or other static piece. Create original visual designs, never copying existing artists' work to avoid copyright violations.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.310Z"
+			},
+			"category": "Frontend",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "changelog-generator",
+			"name": "changelog-generator",
+			"description": "Automatically creates user-facing changelogs from git commits by analyzing commit history, categorizing changes, and transforming technical commits into clear, customer-friendly release notes. Turns hours of manual changelog writing into minutes of automated generation.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.313Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "competitive-ads-extractor",
+			"name": "competitive-ads-extractor",
+			"description": "Extracts and analyzes competitors' ads from ad libraries (Facebook, LinkedIn, etc.) to understand what messaging, problems, and creative approaches are working. Helps inspire and improve your own ad campaigns.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.316Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "content-research-writer",
+			"name": "content-research-writer",
+			"description": "Assists in writing high-quality content by conducting research, adding citations, improving hooks, iterating on outlines, and providing real-time feedback on each section. Transforms your writing process from solo effort to collaborative partnership.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.317Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "developer-growth-analysis",
+			"name": "developer-growth-analysis",
+			"description": "Analyzes your recent Claude Code chat history to identify coding patterns, development gaps, and areas for improvement, curates relevant learning resources from HackerNews, and automatically sends a personalized growth report to your Slack DMs.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.318Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "domain-name-brainstormer",
+			"name": "domain-name-brainstormer",
+			"description": "Generates creative domain name ideas for your project and checks availability across multiple TLDs (.com, .io, .dev, .ai, etc.). Saves hours of brainstorming and manual checking.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.319Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "file-organizer",
+			"name": "file-organizer",
+			"description": "Intelligently organizes your files and folders across your computer by understanding context, finding duplicates, suggesting better structures, and automating cleanup tasks. Reduces cognitive load and keeps your digital workspace tidy without manual effort.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.320Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "image-enhancer",
+			"name": "image-enhancer",
+			"description": "Improves the quality of images, especially screenshots, by enhancing resolution, sharpness, and clarity. Perfect for preparing images for presentations, documentation, or social media posts.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.320Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "internal-comms",
+			"name": "internal-comms",
+			"description": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.321Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "invoice-organizer",
+			"name": "invoice-organizer",
+			"description": "Automatically organizes invoices and receipts for tax preparation by reading messy files, extracting key information, renaming them consistently, and sorting them into logical folders. Turns hours of manual bookkeeping into minutes of automated organization.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.322Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "lead-research-assistant",
+			"name": "lead-research-assistant",
+			"description": "Identifies high-quality leads for your product or service by analyzing your business, searching for target companies, and providing actionable contact strategies. Perfect for sales, business development, and marketing professionals.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.322Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "mcp-builder",
+			"name": "mcp-builder",
+			"description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.323Z"
+			},
+			"category": "Frontend",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "meeting-insights-analyzer",
+			"name": "meeting-insights-analyzer",
+			"description": "Analyzes meeting transcripts and recordings to uncover behavioral patterns, communication insights, and actionable feedback. Identifies when you avoid conflict, use filler words, dominate conversations, or miss opportunities to listen. Perfect for professionals seeking to improve their communication and leadership skills.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.323Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "raffle-winner-picker",
+			"name": "raffle-winner-picker",
+			"description": "Picks random winners from lists, spreadsheets, or Google Sheets for giveaways, raffles, and contests. Ensures fair, unbiased selection with transparency.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.323Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "skill-creator",
+			"name": "skill-creator",
+			"description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.324Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "skill-share",
+			"name": "skill-share",
+			"description": "A skill that creates new Claude skills and automatically shares them on Slack using Rube for seamless team collaboration and skill discovery.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.325Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "slack-gif-creator",
+			"name": "slack-gif-creator",
+			"description": "Toolkit for creating animated GIFs optimized for Slack, with validators for size constraints and composable animation primitives. This skill applies when users request animated GIFs or emoji animations for Slack from descriptions like \"make me a GIF for Slack of X doing Y\".",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.325Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "template-skill",
+			"name": "template-skill",
+			"description": "Replace with description of the skill and when Claude should use it.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.326Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "theme-factory",
+			"name": "theme-factory",
+			"description": "Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set themes with colors/fonts that you can apply to any artifact that has been creating, or can generate a new theme on-the-fly.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.326Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "webapp-testing",
+			"name": "webapp-testing",
+			"description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.327Z"
+			},
+			"category": "Testing",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		},
+		{
+			"id": "video-downloader",
+			"name": "youtube-downloader",
+			"description": "Download YouTube videos with customizable quality and format options. Use this skill when the user asks to download, save, or grab YouTube videos. Supports various quality settings (best, 1080p, 720p, 480p, 360p), multiple formats (mp4, webm, mkv), and audio-only downloads as MP3.",
+			"author": null,
+			"authorUrl": null,
+			"tags": [],
+			"prerequisites": [],
+			"repository": {
+				"fullName": "ComposioHQ/awesome-claude-skills",
+				"stars": 0,
+				"forks": 0,
+				"url": "https://github.com/ComposioHQ/awesome-claude-skills",
+				"pushedAt": "2026-01-08T21:20:22.327Z"
+			},
+			"category": "General",
+			"hasInstallCommand": false,
+			"skillFile": "SKILL.md",
+			"marketplaceJson": null
+		}
+	],
+	"generatedAt": "2026-01-08T21:20:22.333Z",
+	"sourceRepo": "https://github.com/ComposioHQ/awesome-claude-skills",
+	"version": "1.0.0"
+}
