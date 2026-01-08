@@ -111,9 +111,8 @@ const pricingTiers: PricingTier[] = [
 	{
 		name: "Cloud Team",
 		icon: Users,
-		price: "$99",
-		priceSuffix: "credits",
-		period: "/mo",
+		price: "$15",
+		priceSuffix: "per user / month",
 		creditPrice: `$${PRICE_CREDITS}`,
 		trial: "Free for 14 days, then",
 		description: "For AI-forward teams",
@@ -122,6 +121,18 @@ const pricingTiers: PricingTier[] = [
 		cta: {
 			text: "Sign up",
 			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP + "?redirect_url=/billing",
+		},
+	},
+	{
+		name: "Enterprise",
+		icon: Users,
+		price: "Contact Sales",
+		description: "For large organizations",
+		featuresIntro: "Everything in Team +",
+		features: ["Custom integrations", "SAML/SCIM", "Dedicated support", "Custom terms"],
+		cta: {
+			text: "Contact Sales",
+			href: "/enterprise#contact",
 		},
 	},
 ]
@@ -180,28 +191,36 @@ export default function PricingPage() {
 
 									<p className="text-base font-light">{tier.trial}</p>
 
-									<p className="text-xl mb-1 tracking-tight font-light">
-										<strong className="font-bold">{tier.price}</strong>
-										{tier.period} + {tier.priceSuffix}
-										<CornerRightDown className="inline size-4 ml-1 relative top-0.5" />
-									</p>
+									{tier.price === "Contact Sales" ? (
+										<p className="text-xl mb-1 tracking-tight font-light">
+											<strong className="font-bold">{tier.price}</strong>
+										</p>
+									) : (
+										<>
+											<p className="text-xl mb-1 tracking-tight font-light">
+												<strong className="font-bold">{tier.price}</strong>
+												{tier.period} + {tier.priceSuffix}
+												<CornerRightDown className="inline size-4 ml-1 relative top-0.5" />
+											</p>
 
-									<p className="text-sm text-muted-foreground mb-5">
-										{tier.creditPrice && (
-											<>
-												Cloud Agents: {tier.creditPrice}/hour in credits
-												<br />
-											</>
-										)}
-										Inference:{" "}
-										<Link href="/provider" className="underline hover:no-underline">
-											Roo Provider pricing
-										</Link>{" "}
-										credits or{" "}
-										<abbr title="Bring Your Own Model" className="cursor-help">
-											BYOM
-										</abbr>
-									</p>
+											<p className="text-sm text-muted-foreground mb-5">
+												{tier.creditPrice && (
+													<>
+														Cloud Agents: {tier.creditPrice}/hour in credits
+														<br />
+													</>
+												)}
+												Inference:{" "}
+												<Link href="/provider" className="underline hover:no-underline">
+													Roo Provider pricing
+												</Link>{" "}
+												credits or{" "}
+												<abbr title="Bring Your Own Model" className="cursor-help">
+													BYOM
+												</abbr>
+											</p>
+										</>
+									)}
 
 									<Button size="lg" className="w-full transition-all duration-300" asChild>
 										<Link href={tier.cta.href!} className="flex items-center justify-center">
