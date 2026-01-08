@@ -1,20 +1,26 @@
 import * as vscode from "vscode"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
-import { AutocompleteContext, VisibleCodeContext } from "../types"
+import {
+	AutocompleteContext,
+	VisibleCodeContext,
+	AutocompleteInput,
+	GhostContextProvider,
+	FillInAtCursorSuggestion,
+} from "../types"
 import { removePrefixOverlap } from "../../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessGhostSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
-import {
-	parseCompletionTags,
-	getHoleFillerSystemPrompt,
-	buildHoleFillerUserPrompt,
-} from "../classic-auto-complete/HoleFiller"
+import { HoleFiller } from "../classic-auto-complete/HoleFiller"
+import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
+import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
 
 export class ChatTextAreaAutocomplete {
 	private model: GhostModel
 	private providerSettingsManager: ProviderSettingsManager
 	private telemetry: AutocompleteTelemetry
+	private holeFiller: HoleFiller | null = null
+	private ide: VsCodeIde | null = null
 
 	constructor(providerSettingsManager: ProviderSettingsManager) {
 		this.model = new GhostModel()
@@ -26,7 +32,30 @@ export class ChatTextAreaAutocomplete {
 		return this.model.reload(this.providerSettingsManager)
 	}
 
-	async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
+	/**
+	 * Initialize the HoleFiller with context provider (lazy initialization)
+	 */
+	private initializeHoleFiller(context: vscode.ExtensionContext): void {
+		if (this.holeFiller) {
+			return
+		}
+
+		this.ide = new VsCodeIde(context)
+		const contextService = new ContextRetrievalService(this.ide)
+		const contextProvider: GhostContextProvider = {
+			ide: this.ide,
+			contextService,
+			model: this.model,
+			// No ignoreController for chat - we don't need file filtering
+		}
+		this.holeFiller = new HoleFiller(contextProvider)
+	}
+
+	async getCompletion(
+		userText: string,
+		visibleCodeContext?: VisibleCodeContext,
+		extensionContext?: vscode.ExtensionContext,
+	): Promise<{ suggestion: string }> {
 		const startTime = Date.now()
 
 		// Build context for telemetry
@@ -56,57 +85,63 @@ export class ChatTextAreaAutocomplete {
 
 		let response = ""
 
-		let usedChatCompletion = false
-
 		try {
-			// Use FIM if supported, otherwise fall back to chat-based completion
+			// Use FIM if supported, otherwise fall back to chat-based completion via HoleFiller
 			if (this.model.supportsFim()) {
 				await this.model.generateFimResponse(prefix, suffix, (chunk) => {
 					response += chunk
 				})
-			} else {
-				// Fall back to chat-based completion for models without FIM support
-				usedChatCompletion = true
-				const systemPrompt = getHoleFillerSystemPrompt()
-				const userPrompt = buildHoleFillerUserPrompt(prefix, "", "chat")
 
-				await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
-					if (chunk.type === "text") {
-						response += chunk.text
+				const latencyMs = Date.now() - startTime
+				this.telemetry.captureLlmRequestCompleted({ latencyMs }, context)
+
+				const cleanedSuggestion = this.cleanSuggestion(response, userText)
+				this.trackSuggestionResult(cleanedSuggestion, response, context)
+				return { suggestion: cleanedSuggestion }
+			} else {
+				// Fall back to chat-based completion using HoleFiller
+				// Initialize HoleFiller if not already set (tests may inject it directly)
+				if (!this.holeFiller) {
+					if (!extensionContext) {
+						// Can't initialize HoleFiller without extension context
+						return { suggestion: "" }
 					}
-				})
-			}
-
-			const latencyMs = Date.now() - startTime
-
-			// Capture successful LLM request
-			this.telemetry.captureLlmRequestCompleted(
-				{
-					latencyMs,
-					// Token counts not available from current API
-				},
-				context,
-			)
-
-			// Parse COMPLETION tags if we used chat-based completion (using shared parser from HoleFiller)
-			if (usedChatCompletion) {
-				response = parseCompletionTags(response)
-			}
-
-			const cleanedSuggestion = this.cleanSuggestion(response, userText)
-
-			// Track if suggestion was filtered or returned
-			if (!cleanedSuggestion) {
-				if (!response.trim()) {
-					this.telemetry.captureSuggestionFiltered("empty_response", context)
-				} else {
-					this.telemetry.captureSuggestionFiltered("filtered_by_postprocessing", context)
+					this.initializeHoleFiller(extensionContext)
 				}
-			} else {
-				this.telemetry.captureLlmSuggestionReturned(context, cleanedSuggestion.length)
-			}
 
-			return { suggestion: cleanedSuggestion }
+				if (!this.holeFiller) {
+					return { suggestion: "" }
+				}
+
+				// Create AutocompleteInput for HoleFiller
+				const autocompleteInput = this.createAutocompleteInput(prefix)
+
+				// Get prompts from HoleFiller
+				const prompt = await this.holeFiller.getPrompts(autocompleteInput, "chat")
+
+				// Process suggestion callback
+				const processSuggestion = (text: string): FillInAtCursorSuggestion => {
+					return { text, prefix, suffix }
+				}
+
+				// Get completion from HoleFiller
+				const result = await this.holeFiller.getFromChat(this.model, prompt, processSuggestion)
+
+				const latencyMs = Date.now() - startTime
+				this.telemetry.captureLlmRequestCompleted(
+					{
+						latencyMs,
+						cost: result.cost,
+						inputTokens: result.inputTokens,
+						outputTokens: result.outputTokens,
+					},
+					context,
+				)
+
+				const cleanedSuggestion = this.cleanSuggestion(result.suggestion.text, userText)
+				this.trackSuggestionResult(cleanedSuggestion, result.suggestion.text, context)
+				return { suggestion: cleanedSuggestion }
+			}
 		} catch (error) {
 			const latencyMs = Date.now() - startTime
 			this.telemetry.captureLlmRequestFailed(
@@ -117,6 +152,37 @@ export class ChatTextAreaAutocomplete {
 				context,
 			)
 			return { suggestion: "" }
+		}
+	}
+
+	/**
+	 * Create an AutocompleteInput for HoleFiller from the chat prefix
+	 */
+	private createAutocompleteInput(prefix: string): AutocompleteInput {
+		return {
+			isUntitledFile: true, // Chat is not a file
+			completionId: crypto.randomUUID(),
+			filepath: "chat-textarea", // Virtual path for chat
+			pos: { line: 0, character: prefix.length },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
+			manuallyPassFileContents: prefix,
+			manuallyPassPrefix: prefix,
+		}
+	}
+
+	/**
+	 * Track suggestion result for telemetry
+	 */
+	private trackSuggestionResult(cleanedSuggestion: string, rawResponse: string, context: AutocompleteContext): void {
+		if (!cleanedSuggestion) {
+			if (!rawResponse.trim()) {
+				this.telemetry.captureSuggestionFiltered("empty_response", context)
+			} else {
+				this.telemetry.captureSuggestionFiltered("filtered_by_postprocessing", context)
+			}
+		} else {
+			this.telemetry.captureLlmSuggestionReturned(context, cleanedSuggestion.length)
 		}
 	}
 
