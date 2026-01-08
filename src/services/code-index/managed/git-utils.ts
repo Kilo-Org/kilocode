@@ -11,13 +11,24 @@ import { GitDiff, GitDiffFile } from "./types"
 
 /**
  * Helper function to collect all lines from execGetLines into a single string
+ * @param cmd The command to execute
+ * @param cwd The working directory
+ * @param context Description of what we're doing (for error messages)
+ * @param trim Whether to trim the output (default: true)
+ * @returns The collected output as a string
  */
-async function collectOutput(cmd: string, cwd: string, context: string): Promise<string> {
+export async function collectOutput(
+	cmd: string,
+	cwd: string,
+	context: string,
+	trim: boolean = true,
+): Promise<string> {
 	const lines: string[] = []
 	for await (const line of execGetLines({ cmd, cwd, context })) {
 		lines.push(line)
 	}
-	return lines.join("\n").trim()
+	const output = lines.join("\n")
+	return trim ? output.trim() : output
 }
 
 /**

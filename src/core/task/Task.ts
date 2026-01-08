@@ -3642,6 +3642,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								parsedText,
 								localWorkflowToggles,
 								globalWorkflowToggles,
+								this.cwd,
 							)
 
 							if (needsCheck) {
