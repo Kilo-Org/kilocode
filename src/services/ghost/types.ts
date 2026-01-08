@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/snippets/types"
+import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/types"
 import type {
 	Position,
 	Range,
