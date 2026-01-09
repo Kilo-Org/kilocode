@@ -32,6 +32,7 @@ export interface AgentSession {
 	source: SessionSource
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
+	yoloMode?: boolean // True if session was started with --yolo flag (auto-approve operations)
 }
 
 /**
@@ -43,6 +44,7 @@ export interface PendingSession {
 	startTime: number
 	parallelMode?: boolean
 	gitUrl?: string
+	yoloMode?: boolean // True if session will be started with --yolo flag
 }
 
 // Re-export remote session shape from shared session client for consistency
@@ -58,11 +60,21 @@ export interface AgentManagerState {
  */
 export type AgentManagerMessage =
 	| { type: "agentManager.webviewReady" }
-	| { type: "agentManager.startSession"; prompt: string; parallelMode?: boolean; existingBranch?: string }
+	| {
+			type: "agentManager.startSession"
+			prompt: string
+			parallelMode?: boolean
+			yoloMode?: boolean
+			existingBranch?: string
+			versions?: number
+			labels?: string[]
+	  }
 	| { type: "agentManager.stopSession"; sessionId: string }
 	| { type: "agentManager.selectSession"; sessionId: string }
 	| { type: "agentManager.refreshRemoteSessions" }
 	| { type: "agentManager.listBranches" }
+	| { type: "agentManager.respondToApproval"; sessionId: string; approved: boolean; text?: string; messageTs: number }
+	| { type: "agentManager.renameSession"; sessionId: string; label: string }
 
 /**
  * Messages from Extension to Webview

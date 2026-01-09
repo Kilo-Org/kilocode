@@ -14,7 +14,8 @@
 		"shareSession": "Chia sẻ phiên",
 		"shareConfirmMessage": "Bạn có muốn chia sẻ công khai một ảnh chụp của phiên này không?",
 		"shareConfirmYes": "Có",
-		"shareConfirmNo": "Không"
+		"shareConfirmNo": "Không",
+		"yoloMode": "Chế độ YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Khởi động agent mới",
@@ -55,7 +56,13 @@
 		"branchPickerTooltip": "Chuyển nhánh cơ sở",
 		"noBranches": "Không tìm thấy nhánh nào",
 		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn",
-		"openTerminal": "Mở terminal"
+		"openTerminal": "Mở terminal",
+		"yoloModeOn": "Chế độ YOLO bật - tự động phê duyệt tất cả các thao tác",
+		"yoloModeOff": "Chế độ YOLO tắt - cần phê duyệt cho các thao tác",
+		"toggleYoloMode": "Bật/tắt chế độ YOLO",
+		"renameSession": "Đổi tên phiên",
+		"clickToRename": "Nhấp để đổi tên",
+		"confirmRename": "Xác nhận đổi tên"
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",
@@ -70,7 +77,9 @@
 		"usingTool": "Đang sử dụng công cụ: **{{tool}}** {{details}}",
 		"expandOutput": "Mở rộng đầu ra",
 		"collapseOutput": "Thu gọn đầu ra",
-		"copyCommand": "Sao chép lệnh"
+		"copyCommand": "Sao chép lệnh",
+		"approve": "Phê duyệt",
+		"deny": "Từ chối"
 	},
 	"chatInput": {
 		"autoMode": "Agent đang chạy ở chế độ tự động hoàn toàn - không cho phép nhập",

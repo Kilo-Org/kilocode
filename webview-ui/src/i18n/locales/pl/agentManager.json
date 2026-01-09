@@ -14,7 +14,8 @@
 		"shareSession": "Udostępnij sesję",
 		"shareConfirmMessage": "Czy chcesz publicznie udostępnić migawkę tej sesji?",
 		"shareConfirmYes": "Tak",
-		"shareConfirmNo": "Nie"
+		"shareConfirmNo": "Nie",
+		"yoloMode": "Tryb YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Uruchom nowego agenta",
@@ -57,7 +58,13 @@
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
 		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
-		"openTerminal": "Otwórz terminal"
+		"openTerminal": "Otwórz terminal",
+		"yoloModeOn": "Tryb YOLO włączony - wszystkie operacje są automatycznie zatwierdzane",
+		"yoloModeOff": "Tryb YOLO wyłączony - wymagana zgoda na operacje",
+		"toggleYoloMode": "Przełącz tryb YOLO",
+		"renameSession": "Zmień nazwę sesji",
+		"clickToRename": "Kliknij, aby zmienić nazwę",
+		"confirmRename": "Potwierdź zmianę nazwy"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",
@@ -72,7 +79,9 @@
 		"usingTool": "Używanie narzędzia: **{{tool}}** {{details}}",
 		"expandOutput": "Rozwiń wyjście",
 		"collapseOutput": "Zwiń wyjście",
-		"copyCommand": "Kopiuj polecenie"
+		"copyCommand": "Kopiuj polecenie",
+		"approve": "Zatwierdź",
+		"deny": "Odrzuć"
 	},
 	"chatInput": {
 		"autoMode": "Agent działa w trybie w pełni automatycznym - wprowadzanie danych niemożliwe",

@@ -25,6 +25,7 @@ export interface AgentSession {
 	parallelMode?: ParallelModeInfo
 	gitUrl?: string
 	autoMode?: boolean // True if session was started with --auto flag (non-interactive)
+	yoloMode?: boolean // True if session was started with --yolo flag (auto-approve operations)
 }
 
 /**
@@ -37,6 +38,7 @@ export interface PendingSession {
 	parallelMode?: boolean
 	gitUrl?: string
 	autoMode?: boolean // True if session will be started with --auto flag
+	yoloMode?: boolean // True if session will be started with --yolo flag
 }
 
 export interface RemoteSession {
@@ -64,6 +66,10 @@ export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""
 export type RunMode = "local" | "worktree"
 // Default to local until worktree mode is ready to ship
 export const preferredRunModeAtom = atom<RunMode>("local")
+
+// YOLO mode preference - when ON, auto-approve all operations; when OFF, require manual approval
+// Default to true for backward compatibility with existing behavior
+export const yoloModeAtom = atom<boolean>(true)
 
 // Version count for multi-version mode (1 = single, 2-4 = multi-version with worktrees)
 export type VersionCount = 1 | 2 | 3 | 4
@@ -145,8 +151,13 @@ export const upsertSessionAtom = atom(null, (get, set, session: AgentSession) =>
 	const current = get(sessionsMapAtom)
 	const order = get(sessionOrderAtom)
 	const isNewSession = !order.includes(session.sessionId)
+	const existingSession = current[session.sessionId]
 
-	set(sessionsMapAtom, { ...current, [session.sessionId]: session })
+	// Preserve locally-modified label if session already exists
+	// This prevents the extension from overwriting user's rename
+	const mergedSession = existingSession ? { ...session, label: existingSession.label } : session
+
+	set(sessionsMapAtom, { ...current, [session.sessionId]: mergedSession })
 	if (isNewSession) {
 		set(sessionOrderAtom, [session.sessionId, ...order])
 		if (get(selectedSessionIdAtom) === null) {
@@ -201,4 +212,18 @@ export const updateSessionStatusAtom = atom(
 export const setRemoteSessionsAtom = atom(null, (_get, set, sessions: RemoteSession[]) => {
 	set(remoteSessionsAtom, sessions)
 	set(isRefreshingRemoteSessionsAtom, false)
+})
+
+export const renameSessionAtom = atom(null, (get, set, payload: { sessionId: string; label: string }) => {
+	const current = get(sessionsMapAtom)
+	const session = current[payload.sessionId]
+	if (!session) return
+
+	set(sessionsMapAtom, {
+		...current,
+		[payload.sessionId]: {
+			...session,
+			label: payload.label,
+		},
+	})
 })

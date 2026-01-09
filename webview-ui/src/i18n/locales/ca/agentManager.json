@@ -14,7 +14,8 @@
 		"shareSession": "Compartir sessió",
 		"shareConfirmMessage": "Vols compartir públicament una instantània d'aquesta sessió?",
 		"shareConfirmYes": "Sí",
-		"shareConfirmNo": "No"
+		"shareConfirmNo": "No",
+		"yoloMode": "Mode YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Iniciar un agent nou",
@@ -55,7 +56,13 @@
 		"branchPickerTooltip": "Canvia la branca base",
 		"noBranches": "No s'han trobat branques",
 		"noMatchingBranches": "No hi ha branques que coincideixin amb la teva cerca",
-		"openTerminal": "Obrir terminal"
+		"openTerminal": "Obrir terminal",
+		"yoloModeOn": "Mode YOLO activat - totes les operacions s'aproven automàticament",
+		"yoloModeOff": "Mode YOLO desactivat - es requereix aprovació per a les operacions",
+		"toggleYoloMode": "Alternar mode YOLO",
+		"renameSession": "Canviar el nom de la sessió",
+		"clickToRename": "Fes clic per canviar el nom",
+		"confirmRename": "Confirmar canvi de nom"
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",
@@ -70,7 +77,9 @@
 		"usingTool": "Utilitzant eina: **{{tool}}** {{details}}",
 		"expandOutput": "Expandir sortida",
 		"collapseOutput": "Replegar sortida",
-		"copyCommand": "Copiar comanda"
+		"copyCommand": "Copiar comanda",
+		"approve": "Aprovar",
+		"deny": "Rebutjar"
 	},
 	"chatInput": {
 		"autoMode": "Agent en mode automàtic complet - no es permet entrada",

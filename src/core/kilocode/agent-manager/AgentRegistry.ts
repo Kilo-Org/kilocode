@@ -27,7 +27,10 @@ export class AgentRegistry {
 	/**
 	 * Set a pending session while waiting for CLI's session_created event
 	 */
-	public setPendingSession(prompt: string, options?: CreateSessionOptions & { gitUrl?: string }): PendingSession {
+	public setPendingSession(
+		prompt: string,
+		options?: CreateSessionOptions & { gitUrl?: string; yoloMode?: boolean },
+	): PendingSession {
 		const label = this.truncatePrompt(prompt)
 		this._pendingSession = {
 			prompt,
@@ -35,6 +38,7 @@ export class AgentRegistry {
 			startTime: Date.now(),
 			parallelMode: options?.parallelMode,
 			gitUrl: options?.gitUrl,
+			yoloMode: options?.yoloMode,
 		}
 		return this._pendingSession
 	}
@@ -53,7 +57,7 @@ export class AgentRegistry {
 		sessionId: string,
 		prompt: string,
 		startTime?: number,
-		options?: CreateSessionOptions & { labelOverride?: string; gitUrl?: string },
+		options?: CreateSessionOptions & { labelOverride?: string; gitUrl?: string; yoloMode?: boolean },
 	): AgentSession {
 		const label = options?.labelOverride ?? this.truncatePrompt(prompt)
 
@@ -67,6 +71,7 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
+			yoloMode: options?.yoloMode,
 		}
 
 		this.sessions.set(sessionId, session)
@@ -210,6 +215,18 @@ export class AgentRegistry {
 			this._selectedId = null
 		}
 		return this.sessions.delete(sessionId)
+	}
+
+	/**
+	 * Update a session's display label
+	 */
+	public updateSessionLabel(sessionId: string, label: string): boolean {
+		const session = this.sessions.get(sessionId)
+		if (!session) {
+			return false
+		}
+		session.label = label
+		return true
 	}
 
 	/**

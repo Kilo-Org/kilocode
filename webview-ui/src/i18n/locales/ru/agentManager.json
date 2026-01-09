@@ -14,7 +14,8 @@
 		"shareSession": "Поделиться сессией",
 		"shareConfirmMessage": "Хотите опубликовать снимок этой сессии?",
 		"shareConfirmYes": "Да",
-		"shareConfirmNo": "Нет"
+		"shareConfirmNo": "Нет",
+		"yoloMode": "Режим YOLO"
 	},
 	"sessionDetail": {
 		"startNewAgent": "Запустить нового агента",
@@ -57,7 +58,13 @@
 		"branchPickerTooltip": "Сменить базовую ветку",
 		"noBranches": "Ветки не найдены",
 		"noMatchingBranches": "Нет веток, соответствующих твоему поиску",
-		"openTerminal": "Открыть терминал"
+		"openTerminal": "Открыть терминал",
+		"yoloModeOn": "Режим YOLO включён - все операции одобряются автоматически",
+		"yoloModeOff": "Режим YOLO выключен - требуется одобрение операций",
+		"toggleYoloMode": "Переключить режим YOLO",
+		"renameSession": "Переименовать сессию",
+		"clickToRename": "Нажмите для переименования",
+		"confirmRename": "Подтвердить переименование"
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
@@ -72,7 +79,9 @@
 		"usingTool": "Использование инструмента: **{{tool}}** {{details}}",
 		"expandOutput": "Развернуть вывод",
 		"collapseOutput": "Свернуть вывод",
-		"copyCommand": "Копировать команду"
+		"copyCommand": "Копировать команду",
+		"approve": "Одобрить",
+		"deny": "Отклонить"
 	},
 	"chatInput": {
 		"autoMode": "Агент работает в полностью автоматическом режиме - ввод запрещён",
