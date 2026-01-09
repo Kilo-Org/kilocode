@@ -6,13 +6,48 @@ We use `pnpm` for package management. Please make sure `pnpm` is installed.
 
 The CLI is currently built by bundling the extension core and replacing the vscode rendering parts with a cli rendering engine. To _develop_ on the CLI you need to follow a few steps:
 
-1. Build the extension core from the root workspace folder by running `pnpm cli:bundle`
+1. Install dependencies and build the CLI bundle from the root workspace folder:
 
-2. Change into the cli folder `cd ./cli`
+   ```bash
+   pnpm install
+   pnpm cli:bundle
+   ```
 
-3. Build & run the extension by running `pnpm start:dev`. If you want to use the CLI to work on its own code, you can run `pnpm start:dev -w ../` which will start it within the root workspace folder.
+2. Set up your environment file. Copy the sample env file to the CLI dist folder:
 
-4. While not required, it's pretty helpful to view log output of the cli in a separate terminal while you're developing. To do this, open a new terminal window and run `pnpm logs`. You can also run `pnpm logs:clear` to truncate any on-disk logs during development.
+   ```bash
+   cp .env.sample cli/dist/.env
+   ```
+
+   Then edit `cli/dist/.env` to add your API keys (e.g., for OpenRouter, Anthropic, etc.).
+
+3. Change into the cli folder:
+
+   ```bash
+   cd ./cli
+   ```
+
+4. Build & run the CLI by running `pnpm start:dev`. If you want to use the CLI to work on its own code, you can run `pnpm start:dev -w ../` which will start it within the root workspace folder.
+
+   Alternatively, you can run the CLI directly with:
+
+   ```bash
+   node dist/index.js
+   ```
+
+5. While not required, it's pretty helpful to view log output of the cli in a separate terminal while you're developing. To do this, open a new terminal window and run `pnpm logs`. You can also run `pnpm logs:clear` to truncate any on-disk logs during development.
+
+### Quick Start (TL;DR)
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm cli:bundle
+cp .env.sample cli/dist/.env
+# Edit cli/dist/.env with your API keys
+node cli/dist/index.js
+```
 
 ## Code Hygiene
 
