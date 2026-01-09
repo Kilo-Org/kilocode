@@ -1026,7 +1026,9 @@
 		"searchPlaceholder": "검색",
 		"noMatchFound": "일치하는 항목 없음",
 		"useCustomModel": "사용자 정의 사용: {{modelId}}",
-		"simplifiedExplanation": "나중에 자세한 모델 설정을 조정할 수 있습니다."
+		"simplifiedExplanation": "나중에 자세한 모델 설정을 조정할 수 있습니다.",
+		"recommendedModels": "추천 모델",
+		"allModels": "모든 모델"
 	},
 	"footer": {
 		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilo.ai/discord</discordLink>에 가입하세요",

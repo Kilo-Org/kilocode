@@ -125,6 +125,14 @@ export function getToolDescriptionsForMode(
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
+	// kilocode_change start
+	// Conditionally exclude ask_followup_question in yolo mode
+	// This prevents the agent from asking itself questions and auto-answering them
+	if (clineProviderState?.yoloMode) {
+		tools.delete("ask_followup_question")
+	}
+	// kilocode_change end
+
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	// kilocode_change start
 	const isCodebaseSearchAvailable =

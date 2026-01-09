@@ -1027,7 +1027,9 @@
 		"searchPlaceholder": "Ara",
 		"noMatchFound": "Eşleşme bulunamadı",
 		"useCustomModel": "Özel kullan: {{modelId}}",
-		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz."
+		"simplifiedExplanation": "Ayrıntılı model ayarlarını daha sonra ayarlayabilirsiniz.",
+		"recommendedModels": "Önerilen modeller",
+		"allModels": "Tüm modeller"
 	},
 	"footer": {
 		"feedback": "Herhangi bir sorunuz veya geri bildiriminiz varsa, <githubLink>github.com/Kilo-Org/kilocode</githubLink> adresinde bir konu açmaktan veya <redditLink>reddit.com/r/kilocode</redditLink> ya da <discordLink>kilo.ai/discord</discordLink>'a katılmaktan çekinmeyin",

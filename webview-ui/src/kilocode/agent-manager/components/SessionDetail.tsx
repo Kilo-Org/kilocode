@@ -136,6 +136,11 @@ export function SessionDetail() {
 	const isSessionRunning = selectedSession.status === "running"
 	const canFinishWorktree = !!isWorktree && isSessionRunning
 
+	// Determine if "Create PR" button should be shown
+	// Show for worktree sessions with a branch, whether running or completed (can resume)
+	const canCreatePR = !!isWorktree && !!branchName
+	const parentBranch = selectedSession.parallelMode?.parentBranch
+
 	return (
 		<div className="am-session-detail">
 			<div className="am-detail-header">
@@ -262,7 +267,9 @@ export function SessionDetail() {
 				isActive={isActive}
 				showCancel={isActive}
 				showFinishToBranch={canFinishWorktree}
+				showCreatePR={canCreatePR}
 				worktreeBranchName={branchName}
+				parentBranch={parentBranch}
 				sessionStatus={selectedSession.status}
 			/>
 		</div>

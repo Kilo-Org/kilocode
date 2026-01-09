@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import type OpenAI from "openai"
 import type { ModeConfig, ModelInfo } from "@roo-code/types"
 import { filterNativeToolsForMode, filterMcpToolsForMode, applyModelToolCustomization } from "../filter-tools-for-mode"
+import { getToolDescriptionsForMode } from "../index"
 import * as toolsModule from "../../../../shared/tools"
 
 // kilocode_change start
@@ -424,6 +425,52 @@ describe("filterNativeToolsForMode", () => {
 		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
 		expect(toolNames).not.toContain("run_slash_command")
 	})
+
+	// kilocode_change start
+	it("should exclude ask_followup_question when yoloMode is enabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			{ yoloMode: true } as any, // state with yoloMode enabled
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).not.toContain("ask_followup_question")
+		// Other always-available tools should still be present
+		expect(toolNames).toContain("attempt_completion")
+	})
+
+	it("should include ask_followup_question when yoloMode is disabled", () => {
+		const codeMode: ModeConfig = {
+			slug: "code",
+			name: "Code",
+			roleDefinition: "Test",
+			groups: ["read", "edit", "browser", "command", "mcp"] as const,
+		}
+
+		const filtered = filterNativeToolsForMode(
+			mockNativeTools,
+			"code",
+			[codeMode],
+			{},
+			undefined,
+			{},
+			{ yoloMode: false } as any, // state with yoloMode disabled
+		)
+		const toolNames = filtered.map((t) => ("function" in t ? t.function.name : ""))
+		expect(toolNames).toContain("ask_followup_question")
+	})
+	// kilocode_change end
 })
 
 describe("filterMcpToolsForMode", () => {
@@ -862,3 +909,47 @@ describe("filterMcpToolsForMode", () => {
 		})
 	})
 })
+
+// kilocode_change start
+describe("getToolDescriptionsForMode", () => {
+	it("should exclude ask_followup_question when yoloMode is enabled", () => {
+		const result = getToolDescriptionsForMode(
+			"code",
+			"/test",
+			false,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ yoloMode: true } as any, // clineProviderState with yoloMode enabled
+		)
+		expect(result).not.toContain("ask_followup_question")
+	})
+
+	it("should include ask_followup_question when yoloMode is disabled", () => {
+		const result = getToolDescriptionsForMode(
+			"code",
+			"/test",
+			false,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ yoloMode: false } as any, // clineProviderState with yoloMode disabled
+		)
+		expect(result).toContain("ask_followup_question")
+	})
+})
+// kilocode_change end

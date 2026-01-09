@@ -1110,7 +1110,9 @@
 		"searchPlaceholder": "Hledat",
 		"noMatchFound": "Nebyla nalezena žádná shoda",
 		"useCustomModel": "Použít vlastní: {{modelId}}",
-		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později."
+		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později.",
+		"recommendedModels": "Doporučené modely",
+		"allModels": "Všechny modely"
 	},
 	"footer": {
 		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>.",

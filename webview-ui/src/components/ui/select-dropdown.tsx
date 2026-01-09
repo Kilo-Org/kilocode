@@ -15,6 +15,7 @@ export enum DropdownOptionType {
 	SEPARATOR = "separator",
 	SHORTCUT = "shortcut",
 	ACTION = "action",
+	LABEL = "label", // kilocode_change: Section header for grouped options
 }
 
 export interface DropdownOption {
@@ -114,7 +115,9 @@ export const SelectDropdown = React.memo(
 				return options
 					.filter(
 						(option) =>
-							option.type !== DropdownOptionType.SEPARATOR && option.type !== DropdownOptionType.SHORTCUT,
+							option.type !== DropdownOptionType.SEPARATOR &&
+							option.type !== DropdownOptionType.SHORTCUT &&
+							option.type !== DropdownOptionType.LABEL, // kilocode_change: exclude LABEL from search
 					)
 					.map((option) => ({
 						original: option,
@@ -137,9 +140,13 @@ export const SelectDropdown = React.memo(
 				// Get fuzzy matching items - only perform search if we have a search value
 				const matchingItems = fzfInstance.find(searchValue).map((result) => result.item.original)
 
-				// Always include separators and shortcuts
+				// Always include separators, shortcuts, and labels
 				return options.filter((option) => {
-					if (option.type === DropdownOptionType.SEPARATOR || option.type === DropdownOptionType.SHORTCUT) {
+					if (
+						option.type === DropdownOptionType.SEPARATOR ||
+						option.type === DropdownOptionType.SHORTCUT ||
+						option.type === DropdownOptionType.LABEL // kilocode_change: include LABEL in filtered results
+					) {
 						return true
 					}
 
@@ -148,31 +155,61 @@ export const SelectDropdown = React.memo(
 				})
 			}, [options, searchValue, fzfInstance, disableSearch])
 
-			// Group options by type and handle separators
+			// Group options by type and handle separators and labels
+			// kilocode_change start: improved handling for section labels
 			const groupedOptions = React.useMemo(() => {
 				const result: DropdownOption[] = []
-				let lastWasSeparator = false
+				let lastWasSeparatorOrLabel = false
 
 				filteredOptions.forEach((option) => {
 					if (option.type === DropdownOptionType.SEPARATOR) {
 						// Only add separator if we have items before and after it
-						if (result.length > 0 && !lastWasSeparator) {
+						if (result.length > 0 && !lastWasSeparatorOrLabel) {
 							result.push(option)
-							lastWasSeparator = true
+							lastWasSeparatorOrLabel = true
 						}
+					} else if (option.type === DropdownOptionType.LABEL) {
+						// Track label position - we'll only keep it if it has items after it
+						result.push(option)
+						lastWasSeparatorOrLabel = true
 					} else {
 						result.push(option)
-						lastWasSeparator = false
+						lastWasSeparatorOrLabel = false
 					}
 				})
 
-				// Remove trailing separator if present
-				if (result.length > 0 && result[result.length - 1].type === DropdownOptionType.SEPARATOR) {
+				// Remove trailing separator or label if present
+				while (
+					result.length > 0 &&
+					(result[result.length - 1].type === DropdownOptionType.SEPARATOR ||
+						result[result.length - 1].type === DropdownOptionType.LABEL)
+				) {
 					result.pop()
 				}
 
-				return result
+				// Also remove any labels that ended up with no items after them
+				// (can happen when filtering removes all items in a section)
+				const finalResult: DropdownOption[] = []
+				for (let i = 0; i < result.length; i++) {
+					const option = result[i]
+					if (option.type === DropdownOptionType.LABEL) {
+						// Check if next item is also a label or separator (meaning this label has no items)
+						const nextItem = result[i + 1]
+						if (
+							nextItem &&
+							nextItem.type !== DropdownOptionType.LABEL &&
+							nextItem.type !== DropdownOptionType.SEPARATOR
+						) {
+							finalResult.push(option)
+						}
+					} else {
+						finalResult.push(option)
+					}
+				}
+
+				return finalResult
 			}, [filteredOptions])
+			// kilocode_change end
 
 			const handleSelect = React.useCallback(
 				(optionValue: string) => {
@@ -278,13 +315,26 @@ export const SelectDropdown = React.memo(
 												)
 											}
 
+											// kilocode_change start: render LABEL type as section header
+											if (option.type === DropdownOptionType.LABEL) {
+												return (
+													<div
+														key={`label-${index}`}
+														className="px-3 py-1.5 text-xs font-medium text-vscode-descriptionForeground uppercase tracking-wide"
+														data-testid="dropdown-label">
+														{option.label}
+													</div>
+												)
+											}
+											// kilocode_change end
+
 											if (
 												option.type === DropdownOptionType.SHORTCUT ||
 												(option.disabled && shortcutText && option.label.includes(shortcutText))
 											) {
 												return (
 													<div
-														key={`label-${index}`}
+														key={`shortcut-${index}`}
 														className="px-3 py-1.5 text-sm opacity-50">
 														{option.label}
 													</div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, Fragment } from "react" // kilocode_change Fragment
+import { useState, useCallback, useEffect, useRef, useMemo, Fragment } from "react" // kilocode_change Fragment, useMemo
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
 import { ChevronsUpDown, Check, X, Info } from "lucide-react"
@@ -7,7 +7,7 @@ import type { ProviderSettings, ModelInfo, OrganizationAllowList } from "@roo-co
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
-import { usePreferredModels } from "@/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
+import { useGroupedModelIds } from "@/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
 // import { filterModels } from "./utils/organizationFilters" // kilocode_change: not doing this
 import { cn } from "@src/lib/utils"
 import {
@@ -21,7 +21,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	Button,
-	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 
@@ -88,8 +87,9 @@ export const ModelPicker = ({
 	const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-	// kilocode_change start
-	const modelIds = usePreferredModels(models)
+	// kilocode_change start: Use grouped model IDs for section headers
+	const { preferredModelIds, restModelIds } = useGroupedModelIds(models)
+	const modelIds = useMemo(() => [...preferredModelIds, ...restModelIds], [preferredModelIds, restModelIds])
 	const [isPricingExpanded, setIsPricingExpanded] = useState(false)
 	// kilocode_change end
 
@@ -205,36 +205,51 @@ export const ModelPicker = ({
 										</div>
 									)}
 								</CommandEmpty>
-								<CommandGroup>
-									{/* kilocode_change start */}
-									{modelIds.map((model, i) => {
-										const isPreferred = Number.isInteger(models?.[model]?.preferredIndex)
-										const previousModelWasPreferred = Number.isInteger(
-											models?.[modelIds[i - 1]]?.preferredIndex,
-										)
-										return (
-											<Fragment key={model}>
-												{!isPreferred && previousModelWasPreferred ? <SelectSeparator /> : null}
-												<CommandItem
-													value={model}
-													onSelect={onSelect}
-													data-testid={`model-option-${model}`}
-													className={cn(isPreferred ? "font-semibold" : "")}>
-													<span className="truncate" title={model}>
-														{model}
-													</span>
-													<Check
-														className={cn(
-															"size-4 p-0.5 ml-auto",
-															model === selectedModelId ? "opacity-100" : "opacity-0",
-														)}
-													/>
-												</CommandItem>
-											</Fragment>
-										)
-									})}
-									{/* kilocode_change end */}
-								</CommandGroup>
+								{/* kilocode_change start: Section headers for recommended and all models */}
+								{preferredModelIds.length > 0 && (
+									<CommandGroup heading={t("settings:modelPicker.recommendedModels")}>
+										{preferredModelIds.map((model) => (
+											<CommandItem
+												key={model}
+												value={model}
+												onSelect={onSelect}
+												data-testid={`model-option-${model}`}
+												className="font-semibold">
+												<span className="truncate" title={model}>
+													{model}
+												</span>
+												<Check
+													className={cn(
+														"size-4 p-0.5 ml-auto",
+														model === selectedModelId ? "opacity-100" : "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								)}
+								{restModelIds.length > 0 && (
+									<CommandGroup heading={t("settings:modelPicker.allModels")}>
+										{restModelIds.map((model) => (
+											<CommandItem
+												key={model}
+												value={model}
+												onSelect={onSelect}
+												data-testid={`model-option-${model}`}>
+												<span className="truncate" title={model}>
+													{model}
+												</span>
+												<Check
+													className={cn(
+														"size-4 p-0.5 ml-auto",
+														model === selectedModelId ? "opacity-100" : "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								)}
+								{/* kilocode_change end */}
 							</CommandList>
 							{searchValue && !modelIds.includes(searchValue) && (
 								<div className="p-1 border-t border-vscode-input-border">

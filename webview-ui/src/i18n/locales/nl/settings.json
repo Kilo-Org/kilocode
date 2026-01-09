@@ -1026,7 +1026,9 @@
 		"searchPlaceholder": "Zoeken",
 		"noMatchFound": "Geen overeenkomsten gevonden",
 		"useCustomModel": "Aangepast gebruiken: {{modelId}}",
-		"simplifiedExplanation": "Je kunt later gedetailleerde modelinstellingen aanpassen."
+		"simplifiedExplanation": "Je kunt later gedetailleerde modelinstellingen aanpassen.",
+		"recommendedModels": "Aanbevolen modellen",
+		"allModels": "Alle modellen"
 	},
 	"footer": {
 		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",

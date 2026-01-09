@@ -328,6 +328,14 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("apply_diff")
 	}
 
+	// kilocode_change start
+	// Conditionally exclude ask_followup_question in yolo mode
+	// This prevents the agent from asking itself questions and auto-answering them
+	if (state?.yoloMode) {
+		allowedToolNames.delete("ask_followup_question")
+	}
+	// kilocode_change end
+
 	// Conditionally exclude access_mcp_resource if MCP is not enabled or there are no resources
 	if (!mcpHub || !hasAnyMcpResources(mcpHub)) {
 		allowedToolNames.delete("access_mcp_resource")
