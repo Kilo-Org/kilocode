@@ -5,13 +5,7 @@
  * and backward compatibility with existing code.
  */
 
-import type {
-	ProviderConfig as CoreProviderConfig,
-	CLIConfig as CoreCLIConfig,
-	AutoApprovalConfig,
-	Theme,
-	ThemeId,
-} from "@kilocode/core-schemas"
+import type { ProviderConfig as CoreProviderConfig, CLIConfig as CoreCLIConfig } from "@kilocode/core-schemas"
 
 // ProviderConfig with index signature for dynamic property access (backward compatibility)
 export type ProviderConfig = CoreProviderConfig & { [key: string]: unknown }
