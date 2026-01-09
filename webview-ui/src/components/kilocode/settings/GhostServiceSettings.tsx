@@ -115,7 +115,7 @@ export const GhostServiceSettingsView = ({
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">
 							<Zap className="w-4" />
-							<div>{t("kilocode:ghost.settings.triggers")}</div>
+							<div>{t("kilocode:ghost.settings.codeEditorSuggestions")}</div>
 						</div>
 					</div>
 
@@ -124,7 +124,7 @@ export const GhostServiceSettingsView = ({
 							<span className="font-medium">{t("kilocode:ghost.settings.enableAutoTrigger.label")}</span>
 						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							<Trans i18nKey="kilocode:ghost.settings.enableAutoTrigger.description" />
+							{t("kilocode:ghost.settings.enableAutoTrigger.description")}
 						</div>
 
 						{enableAutoTrigger && (
@@ -206,6 +206,13 @@ export const GhostServiceSettingsView = ({
 							</div>
 						</div>
 					)}
+
+					<div className="flex flex-col gap-1">
+						<div className="flex items-center gap-2 font-bold">
+							<Bot className="w-4" />
+							<div>{t("kilocode:ghost.settings.chatSuggestions")}</div>
+						</div>
+					</div>
 
 					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox

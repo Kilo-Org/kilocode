@@ -209,7 +209,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Activadors",
+			"codeEditorSuggestions": "Suggeriments de l'Editor de Codi",
+			"chatSuggestions": "Suggeriments del Xat",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Habilitar Autocomplete",
@@ -342,6 +343,14 @@
 			"ffmpegMessage": "Ajuda'm a instal·lar FFmpeg"
 		},
 		"misconfiguredState": "No disponible per la configuració",
-		"errorState": "No disponible a causa d'un error"
+		"errorState": "No disponible a causa d'un error",
+		"microphone": {
+			"label": "Micròfon",
+			"description": "Seleccioneu el dispositiu de micròfon per a la conversió de veu a text",
+			"defaultOption": "Configuració predeterminada del sistema",
+			"loading": "Carregant dispositius de micròfon...",
+			"noDevices": "No s'han trobat dispositius de micròfon",
+			"refresh": "Actualitza"
+		}
 	}
 }

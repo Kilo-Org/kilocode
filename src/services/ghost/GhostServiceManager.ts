@@ -9,7 +9,6 @@ import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
@@ -75,18 +74,14 @@ export class GhostServiceManager {
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
 			enableSmartInlineTaskKeybinding: true,
 		}
-		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
-		// JetBrains users can manually enable it if they want to test the feature
+		// Auto-enable autocomplete by default
 		if (this.settings.enableAutoTrigger == undefined) {
-			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
-			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
+			this.settings.enableAutoTrigger = true
 		}
 
-		// Auto-enable chat autocomplete by default, but disable for JetBrains IDEs
-		// JetBrains users can manually enable it if they want to test the feature
+		// Auto-enable chat autocomplete by default
 		if (this.settings.enableChatAutocomplete == undefined) {
-			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
-			this.settings.enableChatAutocomplete = !kiloCodeWrapperJetbrains
+			this.settings.enableChatAutocomplete = true
 		}
 
 		await this.updateGlobalContext()

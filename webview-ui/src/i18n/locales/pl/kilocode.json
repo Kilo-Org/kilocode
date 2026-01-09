@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Wyzwalacze",
+			"codeEditorSuggestions": "Sugestie Edytora Kodu",
+			"chatSuggestions": "Sugestie Czatu",
 			"keybindingDescription": "Funkcje Autocomplete mogą być wyzwalane przez polecenia. Możesz skonfigurować <DocsLink>Skróty Klawiszowe tutaj</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Włącz Autocomplete",
@@ -342,6 +343,14 @@
 			"ffmpegMessage": "Pomóż mi zainstalować FFmpeg"
 		},
 		"misconfiguredState": "Niedostępne z powodu konfiguracji",
-		"errorState": "Niedostępne z powodu błędu"
+		"errorState": "Niedostępne z powodu błędu",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Wybierz urządzenie mikrofonu do przetwarzania mowy na tekst",
+			"defaultOption": "Domyślny system",
+			"loading": "Ładowanie urządzeń mikrofonowych...",
+			"refresh": "Odśwież",
+			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
+		}
 	}
 }

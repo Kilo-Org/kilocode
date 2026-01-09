@@ -1816,8 +1816,13 @@ export class ClineProvider
 
 		// if we tried to get a task that doesn't exist, remove it from state
 		// FIXME: this seems to happen sometimes when the json file doesnt save to disk for some reason
-		// await this.deleteTaskFromState(id) // kilocode_change disable confusing behaviour
-		await this.setTaskFileNotFound(id) // kilocode_change
+		// kilocode_change start
+		// commented out deleting the task, because in the previous version we made this task red
+		// instead of deleting, and people were confused because the task was actually working fine
+		// which leads us to believe that this is triggered to often somehow, or that the task will turn up later
+		// via some sync ( context https://github.com/Kilo-Org/kilocode/pull/4880 )
+		// await this.deleteTaskFromState(id)
+		// kilocode_change end
 		throw new Error("Task not found")
 	}
 
@@ -2178,6 +2183,7 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			isBrowserSessionActive,
 		} = await this.getState()
 
@@ -2405,6 +2411,7 @@ export class ClineProvider
 				(s) => s.autoPurgeIncompleteTaskRetentionDays,
 			),
 			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
@@ -2603,6 +2610,7 @@ export class ClineProvider
 			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
 			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
 			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
+			selectedMicrophoneDevice: stateValues.selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
@@ -2705,6 +2713,7 @@ export class ClineProvider
 					return false
 				}
 			})(),
+			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
 		}
 	}
 
@@ -3661,19 +3670,6 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		for (const id of taskIds) {
 			await this.deleteTaskWithId(id)
 		}
-	}
-
-	async setTaskFileNotFound(id: string) {
-		const history = this.getGlobalState("taskHistory") ?? []
-		const updatedHistory = history.map((item) => {
-			if (item.id === id) {
-				return { ...item, fileNotfound: true }
-			}
-			return item
-		})
-		await this.updateGlobalState("taskHistory", updatedHistory)
-		this.kiloCodeTaskHistoryVersion++
-		await this.postStateToWebview()
 	}
 
 	private kiloCodeTaskHistoryVersion = 0

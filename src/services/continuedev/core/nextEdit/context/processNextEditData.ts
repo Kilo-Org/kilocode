@@ -1,5 +1,5 @@
 import { IDE, Position } from "../.."
-import { AutocompleteCodeSnippet } from "../../autocomplete/snippets/types"
+import { AutocompleteCodeSnippet } from "../../autocomplete/types"
 import { GetLspDefinitionsFunction } from "../../autocomplete/types"
 import { MinimalConfigProvider } from "../../autocomplete/MinimalConfig"
 import { NextEditProvider } from "../NextEditProvider"

@@ -30,7 +30,7 @@ export function getSupportedSlashCommands(
 		},
 		{ name: "reportbug", description: "Create a KiloCode GitHub issue" },
 		{ name: "smol", description: "Condenses your current context window" },
-		{ name: "session", description: "Session management <fork|share>" }, // kilocode_change
+		{ name: "session", description: "Session management <fork|share|show>" }, // kilocode_change
 	]
 
 	// Add mode-switching commands dynamically

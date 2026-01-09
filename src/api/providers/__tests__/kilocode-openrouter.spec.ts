@@ -259,26 +259,6 @@ describe("KilocodeOpenrouterHandler", () => {
 			expect(handler.supportsFim()).toBe(false)
 		})
 
-		it("completeFim handles errors correctly", async () => {
-			const handler = new KilocodeOpenrouterHandler({
-				...mockOptions,
-				kilocodeModel: "mistral/codestral-latest",
-			})
-
-			const mockResponse = {
-				ok: false,
-				status: 500,
-				statusText: "Internal Server Error",
-				text: vitest.fn().mockResolvedValue("Error details"),
-			}
-
-			global.fetch = vitest.fn().mockResolvedValue(mockResponse)
-
-			await expect(handler.completeFim("prefix", "suffix")).rejects.toThrow(
-				"FIM streaming failed: 500 Internal Server Error - Error details",
-			)
-		})
-
 		it("streamFim yields chunks correctly", async () => {
 			const handler = new KilocodeOpenrouterHandler({
 				...mockOptions,

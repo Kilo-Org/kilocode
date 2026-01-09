@@ -34,6 +34,10 @@ vi.mock("child_process", () => ({
 	execSync: vi.fn(() => Buffer.from("ffmpeg version")),
 }))
 
+vi.mock("../FFmpegDeviceEnumerator", () => ({
+	findFFmpeg: vi.fn(() => ({ available: true, path: "ffmpeg" })),
+}))
+
 vi.mock("os", () => ({
 	platform: vi.fn(() => "darwin"),
 }))
@@ -112,6 +116,50 @@ describe("FFmpegCaptureService", () => {
 			expect(args).toContain("pcm_s16le")
 			expect(args).toContain("-ar")
 			expect(args).toContain("24000") // 24kHz required by Realtime API
+		})
+
+		it("should use device ID when provided (macOS format)", async () => {
+			const deviceId = ":1"
+			const captureWithDevice = new FFmpegCaptureService(deviceId)
+			await captureWithDevice.start()
+
+			const spawnCall = vi.mocked(spawn).mock.calls[0]
+			const args = spawnCall[1] as string[]
+			const inputIndex = args.indexOf("-i")
+			expect(inputIndex).toBeGreaterThan(-1)
+			expect(args[inputIndex + 1]).toBe(":1")
+		})
+
+		it("should use device ID when provided (Linux format)", async () => {
+			const os = await import("os")
+			vi.mocked(os.platform).mockReturnValue("linux")
+
+			const deviceId = "1"
+			const captureWithDevice = new FFmpegCaptureService(deviceId)
+			await captureWithDevice.start()
+
+			const spawnCall = vi.mocked(spawn).mock.calls[0]
+			const args = spawnCall[1] as string[]
+			const inputIndex = args.indexOf("-i")
+			expect(inputIndex).toBeGreaterThan(-1)
+			// Device ID should be used as-is (just the number)
+			expect(args[inputIndex + 1]).toBe("1")
+		})
+
+		it("should format device ID correctly for Windows", async () => {
+			const os = await import("os")
+			vi.mocked(os.platform).mockReturnValue("win32")
+
+			const deviceId = "Headset Microphone (USB Audio Device)"
+			const captureWithDevice = new FFmpegCaptureService(deviceId)
+			await captureWithDevice.start()
+
+			const spawnCall = vi.mocked(spawn).mock.calls[0]
+			const args = spawnCall[1] as string[]
+			const inputIndex = args.indexOf("-i")
+			expect(inputIndex).toBeGreaterThan(-1)
+			// Device ID should be formatted as "audio=Device Name"
+			expect(args[inputIndex + 1]).toBe("audio=Headset Microphone (USB Audio Device)")
 		})
 	})
 })

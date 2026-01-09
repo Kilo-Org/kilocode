@@ -1,5 +1,5 @@
 import { IDE } from "../.."
-import { AutocompleteCodeSnippet, AutocompleteSnippetType, AutocompleteStaticSnippet } from "../snippets/types"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType, AutocompleteStaticSnippet } from "../types"
 import { HelperVars } from "../util/HelperVars"
 
 import { ImportDefinitionsService } from "./ImportDefinitionsService"

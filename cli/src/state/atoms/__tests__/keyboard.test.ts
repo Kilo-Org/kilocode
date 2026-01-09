@@ -7,6 +7,8 @@ import {
 	argumentSuggestionsAtom,
 	selectedIndexAtom,
 	fileMentionSuggestionsAtom,
+	setFollowupSuggestionsAtom,
+	followupSuggestionsAtom,
 } from "../ui.js"
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import {
@@ -1149,6 +1151,106 @@ describe("keypress atoms", () => {
 
 			// Exit prompt should be visible
 			expect(store.get(exitPromptVisibleAtom)).toBe(true)
+		})
+	})
+
+	describe("followup suggestions vs slash command input", () => {
+		it("should submit typed /command (not followup suggestion) when input starts with '/'", async () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			// Followup suggestions are active (ask_followup_question), which normally takes priority over autocomplete.
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
+
+			// Type a slash command.
+			for (const char of ["/", "h", "e", "l", "p"]) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Simulate the "auto-select first item" behavior from autocomplete that can set selectedIndex to 0.
+			// In the buggy behavior, followup mode is still active and this causes Enter to submit the followup suggestion instead.
+			store.set(selectedIndexAtom, 0)
+
+			// Press Enter to submit.
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, enterKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			expect(mockCallback).toHaveBeenCalledWith("/help")
+			// Followup should remain active after running a slash command.
+			expect(store.get(followupSuggestionsAtom)).toHaveLength(2)
+			// Followup should not auto-select after command execution.
+			expect(store.get(selectedIndexAtom)).toBe(-1)
+		})
+
+		it("should dismiss followup suggestions for /clear and /new commands", async () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
+
+			// Type /clear
+			for (const char of ["/", "c", "l", "e", "a", "r"]) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, enterKey)
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			expect(mockCallback).toHaveBeenCalledWith("/clear")
+			expect(store.get(followupSuggestionsAtom)).toHaveLength(0)
+
+			// Re-seed followup and type /new
+			store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
+			for (const char of ["/", "n", "e", "w"]) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+			await store.set(keyboardHandlerAtom, enterKey)
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			expect(mockCallback).toHaveBeenCalledWith("/new")
+			expect(store.get(followupSuggestionsAtom)).toHaveLength(0)
 		})
 	})
 })

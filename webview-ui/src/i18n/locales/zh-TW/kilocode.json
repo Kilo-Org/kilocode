@@ -218,34 +218,32 @@
 	"ghost": {
 		"title": "自動補全",
 		"settings": {
-			"triggers": "觸發器",
-			"keybindingDescription": "自動補全功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "啟用自動補全",
-				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發自動補全。這對快速修正和建議很有用。"
+				"label": "Auto-trigger Suggestions",
+				"description": "當您暫停輸入時自動顯示內嵌程式碼建議。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "手動自動補全 ({{keybinding}})",
-				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "未找到",
 			"configureAutocompleteProfile": "前往設定檔並設定自動補全類型的設定檔即可使用任意模型。",
 			"model": "模型",
 			"provider": "供應商",
 			"enableChatAutocomplete": {
-				"label": "聊天輸入自動補全",
-				"description": "啟用後，Kilo Code 將在你於聊天輸入框中輸入時提供補全建議。按 Tab 鍵接受建議。"
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
 			},
 			"snooze": {
-				"label": "暫停自動補全",
-				"description": "暫時停止自動補全建議一段指定時間。",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "暫停",
 				"unsnooze": "取消暫停",
-				"currentlySnoozed": "自動補全目前已暫停。",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 分鐘",
 					"5min": "5 分鐘",
@@ -263,7 +261,9 @@
 				"title": "您的帳戶沒有額度",
 				"description": "您的 Kilo Code 帳戶沒有額度。若要使用自動補全，請為您的帳戶儲值。",
 				"buyCredits": "購買額度 →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -342,6 +342,14 @@
 			"ffmpegMessage": "帮我安装 FFmpeg"
 		},
 		"misconfiguredState": "因配置问题而不可用",
-		"errorState": "因错误而不可用"
+		"errorState": "因错误而不可用",
+		"microphone": {
+			"label": "麥克風",
+			"description": "選擇麥克風設備進行語音轉文字",
+			"loading": "正在載入麥克風設備...",
+			"refresh": "重新整理",
+			"defaultOption": "系統預設",
+			"noDevices": "找不到麥克風設備"
+		}
 	}
 }

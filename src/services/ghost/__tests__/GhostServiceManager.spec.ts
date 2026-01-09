@@ -123,10 +123,6 @@ vi.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
-vi.mock("../../../core/kilocode/wrapper", () => ({
-	getKiloCodeWrapperProperties: () => ({ kiloCodeWrapperJetbrains: false }),
-}))
-
 vi.mock("../../../core/config/ContextProxy", () => {
 	const state: Record<string, any> = {}
 
