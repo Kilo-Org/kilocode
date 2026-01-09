@@ -552,7 +552,19 @@
 					"description": "Koszt za milion tokenów za zapis do bufora. Ta cena jest naliczana przy pierwszym buforowaniu podpowiedzi."
 				}
 			},
-			"resetDefaults": "Przywróć domyślne"
+			"resetDefaults": "Przywróć domyślne",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Limit prędkości na końcu",
@@ -575,8 +587,7 @@
 			"high": "Wysoki",
 			"xhigh": "Bardzo wysoki",
 			"medium": "Średni",
-			"low": "Niski",
-			"xhigh": "Bardzo wysoki"
+			"low": "Niski"
 		},
 		"verbosity": {
 			"label": "Szczegółowość danych wyjściowych",

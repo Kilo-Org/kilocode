@@ -552,7 +552,19 @@
 					"description": "Biaya per juta token untuk menulis ke cache. Ini adalah harga yang dikenakan ketika prompt di-cache untuk pertama kalinya."
 				}
 			},
-			"resetDefaults": "Reset ke Default"
+			"resetDefaults": "Reset ke Default",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Batas laju di akhir",
@@ -573,10 +585,9 @@
 			"none": "Tidak Ada",
 			"minimal": "Minimal (Tercepat)",
 			"high": "Tinggi",
-			"xhigh": "Sangat tinggi",
+			"xhigh": "Ekstra Tinggi",
 			"medium": "Sedang",
-			"low": "Rendah",
-			"xhigh": "Ekstra Tinggi"
+			"low": "Rendah"
 		},
 		"verbosity": {
 			"label": "Verbositas Output",

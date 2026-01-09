@@ -583,7 +583,19 @@
 					"description": "Cena za milion tokenů za zápis do mezipaměti. Toto je cena účtovaná při prvním uložení výzvy do mezipaměti."
 				}
 			},
-			"resetDefaults": "Obnovit výchozí"
+			"resetDefaults": "Obnovit výchozí",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Omezení rychlosti na konci",

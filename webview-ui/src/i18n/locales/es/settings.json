@@ -535,7 +535,19 @@
 					"description": "Costo por millón de tokens para escribir en el caché. Este es el precio que se cobra cuando se almacena un prompt en caché por primera vez."
 				}
 			},
-			"resetDefaults": "Restablecer valores predeterminados"
+			"resetDefaults": "Restablecer valores predeterminados",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Límite de tasa al final",
@@ -556,10 +568,9 @@
 			"none": "Ninguno",
 			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
-			"xhigh": "Muy alto",
+			"xhigh": "Extra Alto",
 			"medium": "Medio",
-			"low": "Bajo",
-			"xhigh": "Extra Alto"
+			"low": "Bajo"
 		},
 		"verbosity": {
 			"label": "Verbosidad de la salida",

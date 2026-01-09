@@ -552,7 +552,19 @@
 					"description": "Cost per milió de tokens per escriure a la caché. Aquest és el preu cobrat quan s'emmagatzema un prompt per primera vegada."
 				}
 			},
-			"resetDefaults": "Restablir als valors per defecte"
+			"resetDefaults": "Restablir als valors per defecte",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Límit de taxa al final",
@@ -573,10 +585,9 @@
 			"none": "Cap",
 			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
-			"xhigh": "Molt alt",
+			"xhigh": "Molt Alt",
 			"medium": "Mitjà",
-			"low": "Baix",
-			"xhigh": "Molt Alt"
+			"low": "Baix"
 		},
 		"verbosity": {
 			"label": "Verbositat de la sortida",

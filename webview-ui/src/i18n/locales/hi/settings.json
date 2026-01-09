@@ -552,7 +552,19 @@
 					"description": "कैश में लिखने के लिए प्रति मिलियन टोकन की लागत। यह वह मूल्य है जो पहली बार प्रॉम्प्ट को कैश करने पर लगाया जाता है।"
 				}
 			},
-			"resetDefaults": "डिफ़ॉल्ट पर रीसेट करें"
+			"resetDefaults": "डिफ़ॉल्ट पर रीसेट करें",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "अंत में दर सीमा",
@@ -573,10 +585,9 @@
 			"none": "कोई नहीं",
 			"minimal": "न्यूनतम (सबसे तेज़)",
 			"high": "उच्च",
-			"xhigh": "बहुत उच्च",
+			"xhigh": "अत्यंत उच्च",
 			"medium": "मध्यम",
-			"low": "निम्न",
-			"xhigh": "अत्यंत उच्च"
+			"low": "निम्न"
 		},
 		"verbosity": {
 			"label": "आउटपुट वर्बोसिटी",

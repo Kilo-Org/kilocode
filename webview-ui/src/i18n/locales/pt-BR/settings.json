@@ -526,7 +526,19 @@
 					"description": "Custo por milhão de tokens para escrita no cache. Este é o preço cobrado quando um prompt é armazenado em cache pela primeira vez."
 				}
 			},
-			"resetDefaults": "Restaurar Padrões"
+			"resetDefaults": "Restaurar Padrões",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Limite de taxa no fim",
@@ -547,10 +559,9 @@
 			"none": "Nenhum",
 			"minimal": "Mínimo (mais rápido)",
 			"high": "Alto",
-			"xhigh": "Muito alto",
+			"xhigh": "Extra Alto",
 			"medium": "Médio",
-			"low": "Baixo",
-			"xhigh": "Extra Alto"
+			"low": "Baixo"
 		},
 		"verbosity": {
 			"label": "Verbosidade da saída",

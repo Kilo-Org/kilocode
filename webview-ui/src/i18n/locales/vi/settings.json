@@ -552,7 +552,19 @@
 					"description": "Chi phí cho mỗi triệu token khi ghi vào bộ nhớ đệm. Đây là giá được tính khi một lời nhắc được lưu vào bộ nhớ đệm lần đầu tiên."
 				}
 			},
-			"resetDefaults": "Đặt lại về mặc định"
+			"resetDefaults": "Đặt lại về mặc định",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Giới hạn tỷ lệ ở cuối",
@@ -575,8 +587,7 @@
 			"high": "Cao",
 			"xhigh": "Rất cao",
 			"medium": "Trung bình",
-			"low": "Thấp",
-			"xhigh": "Rất cao"
+			"low": "Thấp"
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",

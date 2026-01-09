@@ -592,7 +592,19 @@
 					"description": "تكلفة كتابة للكاش أول مرة."
 				}
 			},
-			"resetDefaults": "رجع للإعدادات الافتراضية"
+			"resetDefaults": "رجع للإعدادات الافتراضية",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "تحديد الحدّ الأقصى عند النهاية",

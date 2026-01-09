@@ -552,7 +552,19 @@
 					"description": "向缓存写入每百万Token的成本。这是首次缓存提示时收取的费用。"
 				}
 			},
-			"resetDefaults": "重置为默认值"
+			"resetDefaults": "重置为默认值",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "在结束时速率限制",
@@ -573,10 +585,9 @@
 			"none": "无",
 			"minimal": "最小 (最快)",
 			"high": "高",
-			"xhigh": "超高",
+			"xhigh": "极高",
 			"medium": "中",
-			"low": "低",
-			"xhigh": "极高"
+			"low": "低"
 		},
 		"verbosity": {
 			"label": "输出详细程度",

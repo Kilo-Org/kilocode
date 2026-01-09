@@ -551,7 +551,19 @@
 					"description": "ค่าใช้จ่ายต่อล้านโทเค็นสำหรับการเขียนไปยังแคช นี่คือราคาที่เรียกเก็บเมื่อมีการแคชพรอมต์เป็นครั้งแรก"
 				}
 			},
-			"resetDefaults": "รีเซ็ตเป็นค่าเริ่มต้น"
+			"resetDefaults": "รีเซ็ตเป็นค่าเริ่มต้น",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "จำกัดอัตราที่จุดสิ้นสุด",

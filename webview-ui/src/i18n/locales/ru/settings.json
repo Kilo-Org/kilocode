@@ -552,7 +552,19 @@
 					"description": "Стоимость за миллион токенов при записи в кэш. Взимается при первом кэшировании подсказки."
 				}
 			},
-			"resetDefaults": "Сбросить к значениям по умолчанию"
+			"resetDefaults": "Сбросить к значениям по умолчанию",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Ограничение скорости в конце",
@@ -575,8 +587,7 @@
 			"high": "Высокие",
 			"xhigh": "Очень высокие",
 			"medium": "Средние",
-			"low": "Низкие",
-			"xhigh": "Очень высокие"
+			"low": "Низкие"
 		},
 		"verbosity": {
 			"label": "Подробность вывода",

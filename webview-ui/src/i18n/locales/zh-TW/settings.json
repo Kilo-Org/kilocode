@@ -527,7 +527,19 @@
 					"description": "每百萬 Token 的快取寫入費用。當提示首次被儲存至快取時，會收取此費用。"
 				}
 			},
-			"resetDefaults": "重設為預設值"
+			"resetDefaults": "重設為預設值",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "在結束時速率限制",
@@ -550,8 +562,7 @@
 			"high": "高",
 			"xhigh": "超高",
 			"medium": "中",
-			"low": "低",
-			"xhigh": "超高"
+			"low": "低"
 		},
 		"verbosity": {
 			"label": "輸出詳細程度",

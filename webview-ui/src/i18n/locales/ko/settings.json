@@ -552,7 +552,19 @@
 					"description": "캐시에 쓰기의 백만 토큰당 비용입니다. 이는 프롬프트가 처음 캐시될 때 청구되는 가격입니다."
 				}
 			},
-			"resetDefaults": "기본값으로 재설정"
+			"resetDefaults": "기본값으로 재설정",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "종료 시 속도 제한",
@@ -575,8 +587,7 @@
 			"high": "높음",
 			"xhigh": "매우 높음",
 			"medium": "중간",
-			"low": "낮음",
-			"xhigh": "매우 높음"
+			"low": "낮음"
 		},
 		"verbosity": {
 			"label": "출력 상세도",

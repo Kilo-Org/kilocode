@@ -553,7 +553,19 @@
 					"description": "キャッシュへの書き込みの100万トークンあたりのコスト。これはプロンプトが初めてキャッシュされる際に課金される価格です。"
 				}
 			},
-			"resetDefaults": "デフォルトにリセット"
+			"resetDefaults": "デフォルトにリセット",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "終了時のレート制限",
@@ -574,10 +586,9 @@
 			"none": "なし",
 			"minimal": "最小 (最速)",
 			"high": "高",
-			"xhigh": "非常に高い",
+			"xhigh": "極高",
 			"medium": "中",
-			"low": "低",
-			"xhigh": "極高"
+			"low": "低"
 		},
 		"verbosity": {
 			"label": "出力の冗長性",

@@ -552,7 +552,19 @@
 					"description": "Kosten per miljoen tokens voor het schrijven naar de cache. Dit is de prijs die wordt gerekend wanneer een prompt voor het eerst wordt gecachet."
 				}
 			},
-			"resetDefaults": "Standaardwaarden herstellen"
+			"resetDefaults": "Standaardwaarden herstellen",
+			"supportsReasoning": {
+				"label": "Supports Reasoning (e.g. o1/DeepSeek)",
+				"description": "Enable this if your model supports reasoning capabilities (e.g. 'think' tags)."
+			},
+			"supportsNativeTools": {
+				"label": "Supports Function Calling",
+				"description": "Enable this if your model supports native function calling (tools)."
+			},
+			"supportsComputerUse": {
+				"label": "Supports Computer Use",
+				"description": "Enable this if your model supports computer use/browser interaction."
+			}
 		},
 		"rateLimitAfter": {
 			"label": "Snelheidslimiet aan het eind",
@@ -573,10 +585,9 @@
 			"none": "Geen",
 			"minimal": "Minimaal (Snelst)",
 			"high": "Hoog",
-			"xhigh": "Zeer hoog",
+			"xhigh": "Extra Hoog",
 			"medium": "Middel",
-			"low": "Laag",
-			"xhigh": "Extra Hoog"
+			"low": "Laag"
 		},
 		"verbosity": {
 			"label": "Uitvoerbaarheid",
