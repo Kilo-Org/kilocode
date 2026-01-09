@@ -203,5 +203,9 @@
 			"invalidApiKey": "OpenAI APIキーが無効であるか、Realtime APIへのアクセス権限がありません。APIキーを確認して再度お試しください。",
 			"unknown": "接続に失敗しました。設定を確認してもう一度お試しください。"
 		}
+	},
+	"configDiscovery": {
+		"added": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を追加しました。",
+		"removed": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を削除しました"
 	}
 }

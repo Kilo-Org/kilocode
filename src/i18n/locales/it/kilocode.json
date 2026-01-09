@@ -203,5 +203,9 @@
 			"invalidApiKey": "La tua chiave API OpenAI non è valida o non ha accesso alla Realtime API. Controlla la tua chiave API e riprova.",
 			"unknown": "Connessione fallita. Controlla la tua configurazione e riprova."
 		}
+	},
+	"configDiscovery": {
+		"removed": "Codice Kilo: Rimosso {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Kilo Codice: Aggiunto {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

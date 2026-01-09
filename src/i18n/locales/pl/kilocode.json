@@ -203,5 +203,9 @@
 			"invalidApiKey": "Twój klucz API OpenAI jest nieprawidłowy lub nie ma dostępu do API Realtime. Sprawdź swój klucz API i spróbuj ponownie.",
 			"unknown": "Połączenie nie powiodło się. Sprawdź konfigurację i spróbuj ponownie."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: Dodano {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Kod: Usunięto {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
