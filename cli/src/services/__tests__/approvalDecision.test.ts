@@ -397,6 +397,123 @@ describe("approvalDecision", () => {
 					expect(decision.action).toBe("manual")
 				})
 			})
+
+			describe("command chaining security", () => {
+				it("should NOT auto-approve semicolon-chained commands with only first allowed", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status; rm -rf /tmp" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should auto-approve when ALL chained commands are allowed", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status && git log" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should auto-deny when ANY chained command is denied", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status && rm -rf /tmp" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["*"],
+							denied: ["rm"],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should NOT auto-approve pipe-chained commands with only first allowed", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status | cat" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should NOT auto-approve ampersand-chained commands", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status & echo done" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should NOT auto-approve or-chained commands", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status || echo failed" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should handle newline-separated commands", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status\ngit log" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should preserve multi-line quoted strings as single command", () => {
+					const message = createMessage(
+						"command",
+						JSON.stringify({ command: 'git commit -m "line1\\nline2"' }),
+					)
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+			})
 		})
 
 		describe("followup questions", () => {
