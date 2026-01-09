@@ -473,6 +473,12 @@ export class AgentManagerProvider implements vscode.Disposable {
 		if (workspaceFolder) {
 			try {
 				gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
+				// Update currentGitUrl to ensure consistency between session gitUrl and filter
+				// This fixes a race condition where initializeCurrentGitUrl() hasn't completed yet
+				if (gitUrl && !this.currentGitUrl) {
+					this.currentGitUrl = gitUrl
+					this.outputChannel.appendLine(`[AgentManager] Updated current git URL: ${gitUrl}`)
+				}
 			} catch (error) {
 				this.outputChannel.appendLine(
 					`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,

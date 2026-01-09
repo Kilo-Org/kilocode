@@ -842,6 +842,28 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		expect(state.sessions[0].sessionId).toBe("session-2")
 	})
 
+	it("updates currentGitUrl when starting a session if not already set (race condition fix)", async () => {
+		// Simulate the race condition: currentGitUrl is undefined because initializeCurrentGitUrl hasn't completed
+		;(provider as any).currentGitUrl = undefined
+
+		// Start a session - this should update currentGitUrl
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should now be set from the session's gitUrl
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("does not overwrite currentGitUrl if already set", async () => {
+		// Set a different currentGitUrl
+		;(provider as any).currentGitUrl = "https://github.com/org/other-repo.git"
+
+		// Start a session
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should NOT be overwritten
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/other-repo.git")
+	})
+
 	describe("filterRemoteSessionsByGitUrl", () => {
 		it("returns only sessions with matching git_url when currentGitUrl is set", () => {
 			const remoteSessions = [
