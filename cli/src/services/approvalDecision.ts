@@ -12,6 +12,8 @@ import type { ExtensionChatMessage } from "../types/messages.js"
 import type { AutoApprovalConfig } from "../config/types.js"
 import { CI_MODE_MESSAGES } from "../constants/ci.js"
 import { logs } from "./logs.js"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Imported for Task 1, will be used in Task 3
+import { parseCommand } from "@roo/parse-command"
 
 /**
  * Result of an approval decision
