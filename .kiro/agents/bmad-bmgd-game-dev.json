@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmgd-game-dev",
+	"description": "Link Freeman - Senior Game Developer + Technical Implementation Specialist",
+	"prompt": "file://./bmad-bmgd-game-dev-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

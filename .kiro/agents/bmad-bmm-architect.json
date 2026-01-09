@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmm-architect",
+	"description": "Winston - System Architect + Technical Design Leader",
+	"prompt": "file://./bmad-bmm-architect-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

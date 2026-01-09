@@ -1,0 +1,9 @@
+{
+	"name": "bmad-cis-design-thinking-coach",
+	"description": "Maya - Human-Centered Design Expert + Empathy Architect",
+	"prompt": "file://./bmad-cis-design-thinking-coach-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmgd-game-solo-dev",
+	"description": "Indie - Elite Indie Game Developer + Quick Flow Specialist",
+	"prompt": "file://./bmad-bmgd-game-solo-dev-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmm-sm",
+	"description": "Bob - Technical Scrum Master + Story Preparation Specialist",
+	"prompt": "file://./bmad-bmm-sm-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

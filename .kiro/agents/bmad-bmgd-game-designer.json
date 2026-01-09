@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmgd-game-designer",
+	"description": "Samus Shepard - Lead Game Designer + Creative Vision Architect",
+	"prompt": "file://./bmad-bmgd-game-designer-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

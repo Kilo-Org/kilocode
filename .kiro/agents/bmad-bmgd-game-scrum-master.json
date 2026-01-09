@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmgd-game-scrum-master",
+	"description": "Max - Game Development Scrum Master + Sprint Orchestrator",
+	"prompt": "file://./bmad-bmgd-game-scrum-master-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

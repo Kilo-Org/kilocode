@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmb-module-creation-master",
+	"description": "Morgan - Module Architecture Specialist + Full-Stack Systems Designer",
+	"prompt": "file://./bmad-bmb-module-creation-master-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

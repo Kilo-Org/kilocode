@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmm-quick-flow-solo-dev",
+	"description": "Barry - Elite Full-Stack Developer + Quick Flow Specialist",
+	"prompt": "file://./bmad-bmm-quick-flow-solo-dev-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

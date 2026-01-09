@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmb-workflow-building-master",
+	"description": "Wendy - Workflow Architecture Specialist + Process Design Expert",
+	"prompt": "file://./bmad-bmb-workflow-building-master-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

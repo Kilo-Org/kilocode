@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmgd-game-qa",
+	"description": "GLaDOS - Game QA Architect + Test Automation Specialist",
+	"prompt": "file://./bmad-bmgd-game-qa-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

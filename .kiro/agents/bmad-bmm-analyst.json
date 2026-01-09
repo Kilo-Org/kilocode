@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmm-analyst",
+	"description": "Mary - Strategic Business Analyst + Requirements Expert",
+	"prompt": "file://./bmad-bmm-analyst-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

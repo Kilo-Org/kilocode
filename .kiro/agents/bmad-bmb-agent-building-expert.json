@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmb-agent-building-expert",
+	"description": "Bond - Agent Architecture Specialist + BMAD Compliance Expert",
+	"prompt": "file://./bmad-bmb-agent-building-expert-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}

@@ -1,0 +1,9 @@
+{
+	"name": "bmad-bmm-tea",
+	"description": "Murat - Master Test Architect",
+	"prompt": "file://./bmad-bmm-tea-prompt.md",
+	"tools": ["*"],
+	"mcpServers": {},
+	"useLegacyMcpJson": true,
+	"resources": []
+}
