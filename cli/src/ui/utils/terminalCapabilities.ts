@@ -3,6 +3,64 @@
  * Detects support for Kitty keyboard protocol and other advanced features
  */
 
+// kilocode_change: Track terminal type for specialized handling
+let detectedTerminal: string | null = null
+
+/**
+ * Detect the terminal type from environment variables
+ */
+function detectTerminalType(): string {
+	if (detectedTerminal) {
+		return detectedTerminal
+	}
+
+	// Check common terminal environment variables
+	const termProgram = process.env.TERM_PROGRAM
+	const term = process.env.TERM
+	const ghostty = process.env.GHOSTTY_RESOURCES_DIR
+
+	// Detect Ghostty
+	if (ghostty || termProgram === "ghostty" || term?.includes("ghostty")) {
+		detectedTerminal = "ghostty"
+		return "ghostty"
+	}
+
+	// Detect iTerm2
+	if (termProgram === "iTerm.app") {
+		detectedTerminal = "iterm"
+		return "iterm"
+	}
+
+	// Detect WezTerm
+	if (termProgram === "WezTerm") {
+		detectedTerminal = "wezterm"
+		return "wezterm"
+	}
+
+	// Detect Alacritty
+	if (term?.includes("alacritty")) {
+		detectedTerminal = "alacritty"
+		return "alacritty"
+	}
+
+	detectedTerminal = "unknown"
+	return "unknown"
+}
+
+/**
+ * Check if running in Ghostty terminal
+ */
+export function isGhosttyTerminal(): boolean {
+	return detectTerminalType() === "ghostty"
+}
+
+/**
+ * Get the detected terminal type
+ */
+export function getTerminalType(): string {
+	return detectTerminalType()
+}
+
 /**
  * Check if terminal supports Kitty protocol
  * Partially copied from gemini-cli
@@ -95,6 +153,20 @@ export async function detectKittyProtocolSupport(): Promise<boolean> {
  * Returns true if enabled, false otherwise
  */
 export async function autoEnableKittyProtocol(): Promise<boolean> {
+	// kilocode_change: Always enable Kitty protocol for Ghostty
+	// Ghostty fully supports the Kitty keyboard protocol and it resolves
+	// the "9u" character display issue by providing proper key codes
+	const terminalType = detectTerminalType()
+	if (terminalType === "ghostty") {
+		// Enable Kitty keyboard protocol with flags 1 and 2
+		// Flag 1: Disambiguate escape codes
+		// Flag 2: Report event types (press/repeat/release)
+		process.stdout.write("\x1b[>3u")
+		process.on("exit", disableGhosttyKittyProtocol)
+		process.on("SIGTERM", disableGhosttyKittyProtocol)
+		return true
+	}
+
 	// Query terminal for actual support
 	const isSupported = await detectKittyProtocolSupport()
 
@@ -115,9 +187,18 @@ export async function autoEnableKittyProtocol(): Promise<boolean> {
 
 /**
  * Disable Kitty keyboard protocol
- * Must use the same flag value as enable (flag 1)
+ * Must use the same flag value as enable (flag 1 or 3 for Ghostty)
  */
 export function disableKittyProtocol(): void {
 	// CSI < <flags> u - Disable keyboard protocol with specified flags
 	process.stdout.write("\x1b[<1u")
+}
+
+/**
+ * kilocode_change: Disable Ghostty's Kitty protocol with flag 3
+ * Ghostty uses flags 1+2=3, so we need to disable with the same value
+ */
+export function disableGhosttyKittyProtocol(): void {
+	// CSI < 3 u - Disable keyboard protocol with flags 1+2
+	process.stdout.write("\x1b[<3u")
 }
