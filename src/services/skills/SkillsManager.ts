@@ -8,6 +8,7 @@ import { getGlobalRooDirectory } from "../roo-config"
 import { directoryExists, fileExists } from "../roo-config"
 import { SkillMetadata, SkillContent } from "../../shared/skills"
 import { modes, getAllModes } from "../../shared/modes"
+import { ConfigChangeNotifier } from "../config/ConfigChangeNotifier" // kilocode_change
 
 // Re-export for convenience
 export type { SkillMetadata, SkillContent }
@@ -17,9 +18,11 @@ export class SkillsManager {
 	private providerRef: WeakRef<ClineProvider>
 	private disposables: vscode.Disposable[] = []
 	private isDisposed = false
+	private configChangeNotifier: ConfigChangeNotifier // kilocode_change
 
 	constructor(provider: ClineProvider) {
 		this.providerRef = new WeakRef(provider)
+		this.configChangeNotifier = new ConfigChangeNotifier(provider) // kilocode_change
 	}
 
 	async initialize(): Promise<void> {
@@ -41,6 +44,9 @@ export class SkillsManager {
 		for (const { dir, source, mode } of skillsDirs) {
 			await this.scanSkillsDirectory(dir, source, mode)
 		}
+
+		const currentSkills = Array.from(this.skills.values()) // kilocode_change
+		await this.configChangeNotifier.notifyIfChanged("skill", currentSkills) // kilocode_change
 	}
 
 	/**
@@ -299,7 +305,11 @@ export class SkillsManager {
 			return
 		}
 
-		const pattern = new vscode.RelativePattern(dirPath, "**/SKILL.md")
+		// kilocode_change start
+		// Watch for direct children (skill directories) being added/changed/deleted
+		// When anything changes, we'll rescan and look for SKILL.md files
+		const pattern = new vscode.RelativePattern(dirPath, "*")
+		// kilocode_change end
 		const watcher = vscode.workspace.createFileSystemWatcher(pattern)
 
 		watcher.onDidChange(async (uri) => {

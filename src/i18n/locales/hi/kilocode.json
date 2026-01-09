@@ -203,5 +203,9 @@
 			"invalidApiKey": "आपकी OpenAI API key अमान्य है या इसमें Realtime API तक पहुंच नहीं है। कृपया अपनी API key जांचें और पुनः प्रयास करें।",
 			"unknown": "कनेक्शन असफल हुआ। कृपया अपनी कॉन्फ़िगरेशन जांचें और पुनः प्रयास करें।"
 		}
+	},
+	"configDiscovery": {
+		"added": "किलो कोड: जोड़ा गया {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "किलो कोड: हटाया गया {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
