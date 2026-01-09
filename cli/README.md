@@ -245,7 +245,7 @@ To build and run the CLI locally off your branch:
 cd src
 pnpm bundle
 pnpm vsix
-pnpm vsix:unpackged
+pnpm vsix:unpacked
 cd ..
 ```
 

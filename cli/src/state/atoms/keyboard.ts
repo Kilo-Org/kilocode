@@ -14,7 +14,7 @@ import {
 	fileMentionContextAtom,
 	selectedIndexAtom,
 	followupSuggestionsAtom,
-	showFollowupSuggestionsAtom,
+	followupSuggestionsMenuVisibleAtom,
 	clearFollowupSuggestionsAtom,
 	inputModeAtom,
 	type InputMode,
@@ -408,14 +408,30 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 
 	// Convert Buffer to string if needed
 	const textStr = typeof text === "string" ? text : text.toString()
+	const trimmedText = textStr.trim()
+	const hasFollowupSuggestions = get(followupSuggestionsAtom).length > 0
+	const isSlashCommand = trimmedText.startsWith("/")
+	const slashCommandName = isSlashCommand ? (trimmedText.match(/^\/([^\s]+)/)?.[1]?.toLowerCase() ?? "") : ""
+	const shouldDismissFollowupOnSlashCommand = new Set(["clear", "c", "cls", "new", "n", "start", "exit", "q", "quit"])
 
-	if (callback && typeof callback === "function" && textStr && textStr.trim()) {
+	if (callback && typeof callback === "function" && trimmedText) {
 		// Call the submission callback
 		callback(textStr)
 
 		// Clear input and related state
 		set(clearTextBufferAtom)
-		set(clearFollowupSuggestionsAtom)
+		// If the user runs a slash command while a followup question is active,
+		// keep the followup question/suggestions so they can answer after the command runs.
+		if (hasFollowupSuggestions && isSlashCommand) {
+			if (slashCommandName && shouldDismissFollowupOnSlashCommand.has(slashCommandName)) {
+				set(clearFollowupSuggestionsAtom)
+			} else {
+				// Ensure followup stays in "no selection" mode after executing a slash command.
+				set(selectedIndexAtom, -1)
+			}
+		} else {
+			set(clearFollowupSuggestionsAtom)
+		}
 	}
 })
 
@@ -889,10 +905,10 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 }
 
 function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
-	// Debug logging for key detection
-	if (key.ctrl || key.sequence === "\x16") {
+	// Debug logging for key detection (Ctrl or Meta/Cmd keys)
+	if (key.ctrl || key.meta || key.sequence === "\x16") {
 		logs.debug(
-			`Key detected: name=${key.name}, ctrl=${key.ctrl}, meta=${key.meta}, sequence=${JSON.stringify(key.sequence)}`,
+			`Key detected: name=${key.name}, ctrl=${key.ctrl}, meta=${key.meta}, shift=${key.shift}, paste=${key.paste}, sequence=${JSON.stringify(key.sequence)}`,
 			"clipboard",
 		)
 	}
@@ -916,9 +932,9 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 			}
 			break
 		case "v":
-			// Ctrl+V - check for clipboard image
-			if (key.ctrl) {
-				logs.debug("Detected Ctrl+V via key.name", "clipboard")
+			// Ctrl+V or Cmd+V (macOS) - check for clipboard image
+			if (key.ctrl || key.meta) {
+				logs.debug(`Detected ${key.meta ? "Cmd" : "Ctrl"}+V via key.name`, "clipboard")
 				// Handle clipboard image paste asynchronously
 				handleClipboardImagePaste(get, set).catch((err) =>
 					logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
@@ -977,10 +993,19 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 }
 
 /**
- * Handle clipboard image paste (Ctrl+V)
- * Saves clipboard image to a temp file and inserts @path reference into text buffer
+ * Atom to trigger clipboard image paste from external components (e.g., KeyboardProvider)
+ * This is used when a paste timeout occurs (e.g., Cmd+V with image in clipboard)
  */
-async function handleClipboardImagePaste(get: Getter, set: Setter): Promise<void> {
+export const triggerClipboardImagePasteAtom = atom(null, async (get, set, fallbackText?: string) => {
+	await handleClipboardImagePaste(get, set, fallbackText)
+})
+
+/**
+ * Handle clipboard image paste (Ctrl+V or Cmd+V on macOS)
+ * Saves clipboard image to a temp file and inserts @path reference into text buffer
+ * If fallbackText is provided and no image is found, broadcasts the fallback text as a paste event
+ */
+async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?: string): Promise<void> {
 	logs.debug("handleClipboardImagePaste called", "clipboard")
 	try {
 		// Check if clipboard has an image
@@ -988,8 +1013,19 @@ async function handleClipboardImagePaste(get: Getter, set: Setter): Promise<void
 		const hasImage = await clipboardHasImage()
 		logs.debug(`clipboardHasImage returned: ${hasImage}`, "clipboard")
 		if (!hasImage) {
-			setClipboardStatusWithTimeout(set, "No image in clipboard", 2000)
 			logs.debug("No image in clipboard", "clipboard")
+			// If fallback text provided, broadcast it as paste event
+			if (fallbackText) {
+				logs.debug("Using fallback text for paste", "clipboard")
+				set(broadcastKeyEventAtom, {
+					name: "",
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: true,
+					sequence: fallbackText,
+				})
+			}
 			return
 		}
 
@@ -1047,7 +1083,7 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 
 	// Priority 2: Determine current mode and route to mode-specific handler
 	const isApprovalPending = get(isApprovalPendingAtom)
-	const isFollowupVisible = get(showFollowupSuggestionsAtom)
+	const isFollowupVisible = get(followupSuggestionsMenuVisibleAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
 	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)

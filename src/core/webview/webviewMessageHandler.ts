@@ -3661,17 +3661,12 @@ export const webviewMessageHandler = async (
 		// kilocode_change start: STT (Speech-to-Text) handlers
 		case "stt:start":
 		case "stt:stop":
-		case "stt:cancel": {
+		case "stt:cancel":
+		case "stt:listDevices":
+		case "stt:selectDevice":
+		case "stt:checkAvailability": {
 			const { handleSTTCommand } = await import("./sttHandlers")
 			await handleSTTCommand(provider, message as any)
-			break
-		}
-		case "stt:checkAvailability": {
-			const { checkSpeechToTextAvailable } = await import("./speechToTextCheck")
-			provider.postMessageToWebview({
-				type: "stt:statusResponse",
-				speechToTextStatus: await checkSpeechToTextAvailable(provider.providerSettingsManager),
-			})
 			break
 		}
 		// kilocode_change end: STT (Speech-to-Text) handlers

@@ -1134,7 +1134,9 @@
 		"searchPlaceholder": "بحث",
 		"noMatchFound": "ما فيه تطابق",
 		"useCustomModel": "استخدام مخصص: {{modelId}}",
-		"simplifiedExplanation": "يمكنك ضبط إعدادات النموذج التفصيلية لاحقًا."
+		"simplifiedExplanation": "يمكنك ضبط إعدادات النموذج التفصيلية لاحقًا.",
+		"recommendedModels": "النماذج الموصى بها",
+		"allModels": "جميع النماذج"
 	},
 	"footer": {
 		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>kilo.ai/discord</discordLink>.",

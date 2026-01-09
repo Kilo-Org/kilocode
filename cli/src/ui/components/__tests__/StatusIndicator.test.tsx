@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
-import { showFollowupSuggestionsAtom, isCancellingAtom } from "../../../state/atoms/ui.js"
+import { setFollowupSuggestionsAtom, isCancellingAtom } from "../../../state/atoms/ui.js"
 import { chatMessagesAtom } from "../../../state/atoms/extension.js"
 import { exitPromptVisibleAtom } from "../../../state/atoms/keyboard.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
@@ -63,7 +63,7 @@ describe("StatusIndicator", () => {
 	})
 
 	it("should show followup hotkeys when suggestions are visible", () => {
-		store.set(showFollowupSuggestionsAtom, true)
+		store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
 
 		const { lastFrame } = render(
 			<JotaiProvider store={store}>
@@ -80,7 +80,7 @@ describe("StatusIndicator", () => {
 	it("should show general command hints when idle", () => {
 		// No messages = not streaming
 		store.set(chatMessagesAtom, [])
-		store.set(showFollowupSuggestionsAtom, false)
+		store.set(setFollowupSuggestionsAtom, [])
 
 		const { lastFrame } = render(
 			<JotaiProvider store={store}>

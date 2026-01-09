@@ -649,7 +649,7 @@ describe("applyFirstLineOnly", () => {
 		expect(result!.matchType).toBe("partial_typing")
 	})
 
-	it("updates fillInAtCursor.text to reflect truncated text when truncating", () => {
+	it("preserves original fillInAtCursor when truncating (for consistent telemetry keys)", () => {
 		const fillInAtCursor: FillInAtCursorSuggestion = {
 			text: "line1\nline2\nline3",
 			prefix: "const x = ",
@@ -665,8 +665,9 @@ describe("applyFirstLineOnly", () => {
 		)
 		expect(result).not.toBeNull()
 		expect(result!.text).toBe("line1")
-		// The fillInAtCursor.text should now reflect the truncated text
-		expect(result!.fillInAtCursor.text).toBe("line1")
+		// The fillInAtCursor should remain unchanged for consistent telemetry tracking
+		// (same suggestion should generate same key regardless of truncation)
+		expect(result!.fillInAtCursor.text).toBe("line1\nline2\nline3")
 		// prefix and suffix should be preserved
 		expect(result!.fillInAtCursor.prefix).toBe("const x = ")
 		expect(result!.fillInAtCursor.suffix).toBe(";")

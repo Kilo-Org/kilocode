@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Bộ Kích Hoạt",
+			"codeEditorSuggestions": "Gợi ý Trình soạn thảo Mã",
+			"chatSuggestions": "Gợi ý Trò chuyện",
 			"keybindingDescription": "Các tính năng Autocomplete có thể được kích hoạt bằng lệnh. Bạn có thể cấu hình <DocsLink>Phím Tắt ở đây</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Bật Autocomplete",
@@ -342,6 +343,14 @@
 			"ffmpegReason": "Bạn cần cài đặt FFmpeg. <ffmpegLink>Nhấp vào đây</ffmpegLink> để Kilo giúp bạn cài đặt FFmpeg."
 		},
 		"misconfiguredState": "Không khả dụng do cấu hình",
-		"errorState": "Không khả dụng do lỗi"
+		"errorState": "Không khả dụng do lỗi",
+		"microphone": {
+			"label": "Micro",
+			"defaultOption": "Mặc định hệ thống",
+			"noDevices": "Không tìm thấy thiết bị micro nào",
+			"loading": "Đang tải các thiết bị microphone...",
+			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
+			"refresh": "Làm mới"
+		}
 	}
 }

@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Trigger",
+			"codeEditorSuggestions": "Suggerimenti Editor di Codice",
+			"chatSuggestions": "Suggerimenti Chat",
 			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Pausa per Completare",
@@ -342,6 +343,14 @@
 			"ffmpegMessage": "Aiutami a installare FFmpeg"
 		},
 		"misconfiguredState": "Non disponibile a causa della configurazione",
-		"errorState": "Non disponibile a causa di un errore"
+		"errorState": "Non disponibile a causa di un errore",
+		"microphone": {
+			"label": "Microfono",
+			"noDevices": "Nessun dispositivo microfono trovato",
+			"loading": "Caricamento dei dispositivi microfono...",
+			"refresh": "Aggiorna",
+			"defaultOption": "Impostazione predefinita del sistema",
+			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
+		}
 	}
 }

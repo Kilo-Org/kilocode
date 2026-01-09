@@ -2,11 +2,38 @@
 
 Kilo Code is an open source AI coding agent for VS Code that generates code from natural language, automates tasks, and supports 500+ AI models.
 
-## Mode-Specific Rules
+## Project Structure
 
-For mode-specific guidance, see the following files:
+This is a pnpm monorepo using Turbo for task orchestration:
 
-- **Translate mode**: `.roo/rules-translate/AGENTS.md` - Translation and localization guidelines
+- **`src/`** - VSCode extension (core logic, API providers, tools)
+- **`webview-ui/`** - React frontend (chat UI, settings)
+- **`cli/`** - Standalone CLI package
+- **`packages/`** - Shared packages (`types`, `ipc`, `telemetry`, `cloud`)
+- **`jetbrains/`** - JetBrains plugin (Kotlin + Node.js host)
+- **`apps/`** - E2E tests, Storybook, docs
+
+Key source directories:
+- `src/api/providers/` - AI provider implementations (50+ providers)
+- `src/core/tools/` - Tool implementations (ReadFile, ApplyDiff, ExecuteCommand, etc.)
+- `src/services/` - Services (MCP, browser, checkpoints, code-index)
+
+## Build Commands
+
+```bash
+pnpm install          # Install all dependencies
+pnpm build            # Build extension (.vsix)
+pnpm lint             # Run ESLint
+pnpm check-types      # TypeScript type checking
+```
+
+## Skills
+
+- **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
+
+## Workflows
+
+- **Add Missing Translations**: `.kilocode/workflows/add-missing-translations.md` - Run `/add-missing-translations` to find and fix missing translations
 
 ## Changesets
 

@@ -71,10 +71,6 @@ describe("OpenRouterHandler", () => {
 		openRouterModelId: "anthropic/claude-sonnet-4",
 	}
 
-	// kilocode_change start
-	const anthropicBetaHeaderValue = "fine-grained-tool-streaming-2025-05-14,structured-outputs-2025-11-13"
-	// kilocode_change end
-
 	beforeEach(() => vitest.clearAllMocks())
 
 	it("initializes with correct options", () => {
@@ -208,13 +204,7 @@ describe("OpenRouterHandler", () => {
 					top_p: undefined,
 					transforms: ["middle-out"],
 				}),
-				// kilocode_change start
-				expect.objectContaining({
-					headers: expect.objectContaining({
-						"x-anthropic-beta": anthropicBetaHeaderValue,
-					}),
-				}),
-				// kilocode_change end
+				{ headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } },
 			)
 		})
 
@@ -239,16 +229,9 @@ describe("OpenRouterHandler", () => {
 
 			await handler.createMessage("test", []).next()
 
-			expect(mockCreate).toHaveBeenCalledWith(
-				expect.objectContaining({ transforms: ["middle-out"] }),
-				// kilocode_change start
-				expect.objectContaining({
-					headers: expect.objectContaining({
-						"x-anthropic-beta": anthropicBetaHeaderValue,
-					}),
-				}),
-				// kilocode_change end
-			)
+			expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ transforms: ["middle-out"] }), {
+				headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" },
+			})
 		})
 
 		it("adds cache control for supported models", async () => {
@@ -290,13 +273,7 @@ describe("OpenRouterHandler", () => {
 						}),
 					]),
 				}),
-				// kilocode_change start
-				expect.objectContaining({
-					headers: expect.objectContaining({
-						"x-anthropic-beta": anthropicBetaHeaderValue,
-					}),
-				}),
-				// kilocode_change end
+				{ headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } },
 			)
 		})
 
@@ -537,13 +514,7 @@ describe("OpenRouterHandler", () => {
 					messages: [{ role: "user", content: "test prompt" }],
 					stream: false,
 				},
-				// kilocode_change start
-				expect.objectContaining({
-					headers: expect.objectContaining({
-						"x-anthropic-beta": anthropicBetaHeaderValue,
-					}),
-				}),
-				// kilocode_change end
+				{ headers: { "x-anthropic-beta": "fine-grained-tool-streaming-2025-05-14" } },
 			)
 		})
 

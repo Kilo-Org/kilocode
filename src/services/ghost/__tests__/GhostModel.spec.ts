@@ -119,6 +119,7 @@ describe("GhostModel", () => {
 			// Mock TelemetryService
 			const mockTelemetryService = {
 				captureEvent: vi.fn(),
+				captureException: vi.fn(),
 				isTelemetryEnabled: vi.fn().mockReturnValue(false),
 				shutdown: vi.fn(),
 			}

@@ -223,7 +223,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "トリガー",
+			"codeEditorSuggestions": "コードエディタの提案",
+			"chatSuggestions": "チャットの提案",
 			"keybindingDescription": "Autocomplete機能はコマンドでトリガーできます。<DocsLink>キーボードショートカットはこちら</DocsLink>で設定できます。",
 			"enableAutoTrigger": {
 				"label": "Autocompleteを有効にする",
@@ -342,6 +343,14 @@
 			"ffmpegMessage": "FFmpegのインストールを手伝ってください"
 		},
 		"misconfiguredState": "設定により利用不可",
-		"errorState": "エラーのため利用できません"
+		"errorState": "エラーのため利用できません",
+		"microphone": {
+			"label": "マイクロフォン",
+			"defaultOption": "システムデフォルト",
+			"description": "音声からテキストへの変換用のマイクデバイスを選択してください",
+			"loading": "マイクデバイスを読み込んでいます...",
+			"noDevices": "マイクデバイスが見つかりません",
+			"refresh": "更新"
+		}
 	}
 }

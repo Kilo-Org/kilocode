@@ -216,34 +216,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Activadores",
-			"keybindingDescription": "Las funciones de Autocomplete pueden activarse mediante comandos. Puedes configurar los <DocsLink>Atajos de Teclado aquí</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Pausar para Completar",
-				"description": "Cuando está habilitado, Kilo Code activará automáticamente Autocomplete cuando dejes de escribir. Esto puede ser útil para correcciones rápidas y sugerencias."
+				"label": "Auto-trigger Suggestions",
+				"description": "Mostrar automáticamente sugerencias de código en línea cuando dejas de escribir."
 			},
 			"autoTriggerDelay": {
 				"label": "Retraso de Activación Automática",
-				"description": "El retraso en segundos antes de que Kilo Code active Autocomplete después de que dejes de escribir. Un retraso más corto significa sugerencias más rápidas, pero puede ser más intensivo en recursos."
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Autocompletado Manual ({{keybinding}})",
-				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "no encontrado",
 			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado.",
 			"model": "Modelo",
 			"provider": "Proveedor",
 			"enableChatAutocomplete": {
-				"description": "Cuando está habilitado, Kilo Code sugerirá completaciones mientras escribes en el campo de chat. Presiona Tab para aceptar las sugerencias.",
-				"label": "Autocompletado de Entrada de Chat"
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions.",
+				"label": "Enable Chat Autocomplete"
 			},
 			"snooze": {
-				"label": "Posponer Autocompletado",
-				"description": "Pausar temporalmente las sugerencias de autocompletado durante un tiempo especificado.",
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
 				"button": "Posponer",
 				"unsnooze": "Reactivar",
-				"currentlySnoozed": "El autocompletado está actualmente pospuesto.",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
 				"duration": {
 					"1min": "1 minuto",
 					"5min": "5 minutos",
@@ -261,7 +259,9 @@
 				"title": "No hay créditos en tu cuenta",
 				"description": "Tu cuenta de Kilo Code no tiene créditos. Para usar el autocompletado, por favor añade créditos a tu cuenta.",
 				"buyCredits": "Comprar créditos →"
-			}
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -342,6 +342,14 @@
 			"ffmpegMessage": "Ayúdame a instalar FFmpeg"
 		},
 		"misconfiguredState": "No disponible debido a la configuración",
-		"errorState": "No disponible debido a un error"
+		"errorState": "No disponible debido a un error",
+		"microphone": {
+			"label": "Micrófono",
+			"description": "Seleccione el dispositivo de micrófono para convertir voz a texto",
+			"defaultOption": "Predeterminado del sistema",
+			"loading": "Cargando dispositivos de micrófono...",
+			"refresh": "Actualizar",
+			"noDevices": "No se encontraron dispositivos de micrófono"
+		}
 	}
 }

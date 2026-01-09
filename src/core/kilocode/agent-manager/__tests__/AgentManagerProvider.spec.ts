@@ -82,6 +82,29 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
+		// Mock WorktreeManager for parallel mode tests
+		vi.doMock("../WorktreeManager", () => ({
+			WorktreeManager: vi.fn().mockImplementation(() => ({
+				createWorktree: vi.fn().mockResolvedValue({
+					branch: "test-branch-123",
+					path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+					parentBranch: "main",
+				}),
+				commitChanges: vi.fn().mockResolvedValue({ success: true }),
+				removeWorktree: vi.fn().mockResolvedValue(undefined),
+				discoverWorktrees: vi.fn().mockResolvedValue([]),
+				ensureGitignore: vi.fn().mockResolvedValue(undefined),
+			})),
+			WorktreeError: class WorktreeError extends Error {
+				constructor(
+					public code: string,
+					message: string,
+				) {
+					super(message)
+				}
+			},
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
@@ -817,6 +840,28 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 
 		expect(state.sessions).toHaveLength(1)
 		expect(state.sessions[0].sessionId).toBe("session-2")
+	})
+
+	it("updates currentGitUrl when starting a session if not already set (race condition fix)", async () => {
+		// Simulate the race condition: currentGitUrl is undefined because initializeCurrentGitUrl hasn't completed
+		;(provider as any).currentGitUrl = undefined
+
+		// Start a session - this should update currentGitUrl
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should now be set from the session's gitUrl
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("does not overwrite currentGitUrl if already set", async () => {
+		// Set a different currentGitUrl
+		;(provider as any).currentGitUrl = "https://github.com/org/other-repo.git"
+
+		// Start a session
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should NOT be overwritten
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/other-repo.git")
 	})
 
 	describe("filterRemoteSessionsByGitUrl", () => {

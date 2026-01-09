@@ -1047,7 +1047,9 @@
 		"searchPlaceholder": "Cari",
 		"noMatchFound": "Tidak ada yang cocok ditemukan",
 		"useCustomModel": "Gunakan kustom: {{modelId}}",
-		"simplifiedExplanation": "Anda dapat menyesuaikan pengaturan model terperinci nanti."
+		"simplifiedExplanation": "Anda dapat menyesuaikan pengaturan model terperinci nanti.",
+		"recommendedModels": "Model yang direkomendasikan",
+		"allModels": "Semua model"
 	},
 	"footer": {
 		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>kilo.ai/discord</discordLink>",

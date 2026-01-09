@@ -148,14 +148,6 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		return modelId.includes("codestral")
 	}
 
-	async completeFim(prefix: string, suffix: string, taskId?: string): Promise<string> {
-		let result = ""
-		for await (const chunk of this.streamFim(prefix, suffix, taskId)) {
-			result += chunk
-		}
-		return result
-	}
-
 	async *streamFim(
 		prefix: string,
 		suffix: string,

@@ -97,6 +97,17 @@ const config: Config = {
 		[
 			"@docusaurus/plugin-client-redirects",
 			{
+				createRedirects(existingPath) {
+					// Redirect old /contributing/specs/spec-* paths to /contributing/architecture/*
+					if (existingPath.startsWith("/contributing/architecture/")) {
+						const filename = existingPath.replace("/contributing/architecture/", "")
+						return [
+							`/contributing/specs/spec-${filename}`, // spec- prefix
+							`/contributing/specs/${filename}`, // without prefix
+						]
+					}
+					return undefined
+				},
 				redirects: [
 					// Files moved from advanced-usage to features
 					{

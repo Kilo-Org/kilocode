@@ -159,10 +159,7 @@ export function applyFirstLineOnly(
 		return {
 			text: firstLineText,
 			matchType: result.matchType,
-			fillInAtCursor: {
-				...result.fillInAtCursor,
-				text: firstLineText,
-			},
+			fillInAtCursor: result.fillInAtCursor,
 		}
 	}
 	return result
