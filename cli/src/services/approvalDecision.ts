@@ -12,8 +12,7 @@ import type { ExtensionChatMessage } from "../types/messages.js"
 import type { AutoApprovalConfig } from "../config/types.js"
 import { CI_MODE_MESSAGES } from "../constants/ci.js"
 import { logs } from "./logs.js"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Imported for Task 1, will be used in Task 3
-import { parseCommand } from "@roo/parse-command"
+import { parseCommand } from "../shared/parse-command.js"
 
 /**
  * Result of an approval decision
@@ -208,33 +207,43 @@ function getCommandApprovalDecision(
 		configExecute: config.execute,
 	})
 
-	// Check denied list first (takes precedence)
-	if (matchesCommandPattern(command, deniedCommands)) {
-		logs.debug("Command matches denied pattern", "approvalDecision", { command })
-		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+	// Parse command into sub-commands to handle chaining operators (;, &&, ||, |, &, newlines)
+	const subCommands = parseCommand(command)
+
+	// Check each sub-command independently
+	for (const subCommand of subCommands) {
+		const trimmed = subCommand.trim()
+		if (!trimmed) continue // Skip empty sub-commands
+
+		// Check denied list first (takes precedence)
+		if (matchesCommandPattern(trimmed, deniedCommands)) {
+			logs.debug("Sub-command matches denied pattern", "approvalDecision", { subCommand })
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+		}
+
+		// If allowed list is empty, no sub-command can be auto-approved
+		if (allowedCommands.length === 0) {
+			logs.debug("Allowed commands list is empty", "approvalDecision")
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+		}
+
+		// Check if this sub-command matches allowed patterns
+		if (!matchesCommandPattern(trimmed, allowedCommands)) {
+			logs.info("Sub-command does not match any allowed pattern", "approvalDecision", {
+				subCommand,
+				allowedCommands,
+			})
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+		}
 	}
 
-	// If allowed list is empty, don't allow any commands
-	if (allowedCommands.length === 0) {
-		logs.debug("Allowed commands list is empty", "approvalDecision")
-		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
-	}
-
-	// Check if command matches allowed patterns
-	if (matchesCommandPattern(command, allowedCommands)) {
-		logs.info("Command matches allowed pattern - auto-approving", "approvalDecision", {
-			command,
-			matchedAgainst: allowedCommands,
-		})
-		return { action: "auto-approve" }
-	}
-
-	logs.info("Command does not match any allowed pattern", "approvalDecision", {
+	// All sub-commands passed the checks
+	logs.info("All sub-commands match allowed patterns - auto-approving", "approvalDecision", {
 		command,
-		allowedCommands,
-		deniedCommands,
+		subCommands,
+		matchedAgainst: allowedCommands,
 	})
-	return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+	return { action: "auto-approve" }
 }
 
 /**
