@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from "vitest"
-import { loadCustomModes, getSearchedPaths, type SearchedPath } from "../customModes.js"
+import { loadCustomModes, getSearchedPaths } from "../customModes.js"
 
 // Mock the logs service
 vi.mock("../../services/logs.js", () => ({
