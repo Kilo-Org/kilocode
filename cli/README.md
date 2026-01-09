@@ -235,9 +235,37 @@ This instructs the AI to proceed without user input.
 
 ## Local Development
 
-### Getting Started
+### Quick Start (Recommended)
 
-To build and run the CLI locally off your branch:
+The fastest way to build and test the CLI after making changes:
+
+```bash
+# From the repository root
+pnpm install && pnpm cli:bundle
+```
+
+Then create a `.env` file in `cli/dist/` with your API credentials:
+
+```bash
+# cli/dist/.env
+KILO_PROVIDER_TYPE=kilocode
+KILOCODE_TOKEN=your-kilo-code-token
+KILOCODE_MODEL=anthropic/claude-sonnet-4
+```
+
+> **Tip**: Get your Kilo Code API token from [app.kilo.ai](https://app.kilo.ai) on your profile page.
+
+Run the CLI:
+
+```bash
+node cli/dist/index.js
+```
+
+For detailed development instructions, see [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
+
+### Alternative: Manual Build Steps
+
+If you need more control over the build process:
 
 #### Build the VS Code extension
 
