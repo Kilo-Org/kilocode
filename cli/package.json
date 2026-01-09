@@ -43,6 +43,7 @@
 		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
+		"@kilocode/core-schemas": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
 		"@vscode/codicons": "^0.0.36",
