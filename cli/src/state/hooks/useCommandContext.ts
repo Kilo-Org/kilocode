@@ -50,7 +50,7 @@ import {
 import { openModelCatalogAtom } from "../atoms/modelSelection.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
-import { getModelIdKey, getAllModels, getCurrentModelId } from "../../constants/providers/models.js"
+import { getAllModels, getCurrentModelId, getModelIdKey } from "../../constants/providers/models.js"
 
 const TERMINAL_CLEAR_DELAY_MS = 500
 
@@ -257,6 +257,7 @@ export function useCommandContext(): UseCommandContextReturn {
 								kilocodeDefaultModel,
 							})
 						: ""
+
 					openModelCatalog({
 						allModels,
 						currentProvider: currentProvider?.provider ?? "anthropic",

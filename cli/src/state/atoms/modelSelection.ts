@@ -1,7 +1,9 @@
 import { atom } from "jotai"
 import type { ProviderName } from "../../types/messages.js"
 import type { ModelInfo } from "../../constants/providers/models.js"
-import { filterAndSortModels } from "../../constants/providers/models.js"
+import { filterAndSortModels, getModelIdKey } from "../../constants/providers/models.js"
+import { providerAtom, updateProviderAtom } from "./config.js"
+import { addMessageAtom } from "./ui.js"
 
 export const MODEL_CATALOG_PAGE_SIZE = 10
 
@@ -213,4 +215,46 @@ export const selectPreviousModelCatalogItemAtom = atom(null, (get, set) => {
 	const selectedIndex = get(modelCatalogSelectedIndexAtom)
 	const prevIndex = selectedIndex === 0 ? visibleItems.length - 1 : selectedIndex - 1
 	set(modelCatalogSelectedIndexAtom, prevIndex)
+})
+
+export const selectModelCatalogItemAtom = atom(null, async (get, set) => {
+	const selectedItem = get(modelCatalogSelectedItemAtom)
+	const currentProvider = get(providerAtom)
+
+	if (!selectedItem || !currentProvider) {
+		return
+	}
+
+	set(modelCatalogVisibleAtom, false)
+
+	try {
+		const modelIdKey = getModelIdKey(selectedItem.provider as ProviderName)
+		await set(updateProviderAtom, currentProvider.id, {
+			[modelIdKey]: selectedItem.modelId,
+		})
+
+		let content = `Switched to **${selectedItem.modelId}**\n`
+		if (selectedItem.model.displayName) {
+			content += `Display Name: ${selectedItem.model.displayName}\n`
+		}
+		content += `Provider: ${selectedItem.provider}\n`
+		if (selectedItem.model.contextWindow) {
+			const contextK = Math.floor(selectedItem.model.contextWindow / 1000)
+			content += `Context Window: ${contextK}K tokens\n`
+		}
+
+		set(addMessageAtom, {
+			id: Date.now().toString(),
+			type: "system",
+			content,
+			ts: Date.now(),
+		})
+	} catch (error) {
+		set(addMessageAtom, {
+			id: Date.now().toString(),
+			type: "error",
+			content: `Failed to switch model: ${error instanceof Error ? error.message : String(error)}`,
+			ts: Date.now(),
+		})
+	}
 })

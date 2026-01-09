@@ -71,9 +71,9 @@ import {
 	prevModelCatalogPageAtom,
 	selectNextModelCatalogItemAtom,
 	selectPreviousModelCatalogItemAtom,
-	modelCatalogSelectedItemAtom,
 	modelCatalogSearchAtom,
 	setModelCatalogSearchAtom,
+	selectModelCatalogItemAtom,
 } from "./modelSelection.js"
 
 // Export shell atoms for backward compatibility
@@ -1132,14 +1132,9 @@ function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
 			set(cycleModelCatalogProviderFilterAtom)
 			return
 
-		case "return": {
-			const selectedItem = get(modelCatalogSelectedItemAtom)
-			if (selectedItem) {
-				// TODO: Select model and switch provider
-				// This will be implemented when we update the command context
-			}
+		case "return":
+			set(selectModelCatalogItemAtom)
 			return
-		}
 
 		case "escape":
 			set(closeModelCatalogAtom)
