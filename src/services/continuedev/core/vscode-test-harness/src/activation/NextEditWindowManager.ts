@@ -760,7 +760,7 @@ export class NextEditWindowManager {
 		}
 
 		// Store the decoration and editor.
-		this.currentDecoration = decoration // TODO: This might be redundant.
+		this.currentDecoration = decoration
 		this.disposables.push(decoration)
 
 		// Calculate how far off to the right of the cursor the decoration should be.
