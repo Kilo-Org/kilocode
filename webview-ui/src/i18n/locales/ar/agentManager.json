@@ -84,6 +84,7 @@
 		"cancelTitle": "إلغاء الوكيل",
 		"finishToBranchTitle": "إنهاء worktree والتحضير للـ branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "إنهاء worktree والتحضير للـ branch",
+		"createPRTitle": "إنشاء طلب سحب",
 		"sendTitle": "إرسال الرسالة",
 		"resumeTitle": "استئناف الوكيل",
 		"hint": "اضغط Enter للإرسال، Shift+Enter لسطر جديد"

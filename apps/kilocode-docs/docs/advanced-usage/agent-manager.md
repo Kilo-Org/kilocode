@@ -48,14 +48,16 @@ Parallel Mode runs the agent in an isolated Git worktree branch, keeping your ma
 
 ### Worktree Location
 
-Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically added to `.gitignore` to prevent accidental commits.
+Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically excluded from git via `.git/info/exclude` (a local-only ignore file that doesn't require a commit).
 
 ```
 your-project/
+├── .git/
+│   └── info/
+│       └── exclude   # local ignore rules (includes .kilocode/worktrees/)
 ├── .kilocode/
 │   └── worktrees/
 │       └── feature-branch-1234567890/   # isolated working directory
-├── .gitignore                           # auto-updated with .kilocode/worktrees/
 └── ...
 ```
 

@@ -82,6 +82,7 @@
 		"cancelTitle": "Отменить агента",
 		"finishToBranchTitle": "Завершить worktree и подготовить branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Завершить worktree и подготовить branch",
+		"createPRTitle": "Создать pull request",
 		"sendTitle": "Отправить сообщение",
 		"resumeTitle": "Возобновить агента",
 		"hint": "Enter для отправки, Shift+Enter для новой строки"

@@ -80,6 +80,7 @@
 		"cancelTitle": "Ajanı iptal et",
 		"finishToBranchTitle": "Worktree'yi bitir ve branch hazırla: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree'yi bitir ve branch hazırla",
+		"createPRTitle": "Pull request oluştur",
 		"sendTitle": "Mesaj gönder",
 		"resumeTitle": "Ajanı devam ettir",
 		"hint": "Göndermek için Enter, yeni satır için Shift+Enter"
