@@ -209,6 +209,111 @@ export const kittySequenceBufferAtom = atom<string>("")
 export const backslashBufferAtom = atom<boolean>(false)
 
 // ============================================================================
+// Paste Detection System (for terminals without bracketed paste support)
+// ============================================================================
+
+/**
+ * Configuration for paste detection
+ */
+const PASTE_DETECTION_WINDOW_MS = 50
+
+/**
+ * Timestamp when the last character was received
+ */
+export const lastCharTimestampAtom = atom<number>(0)
+
+/**
+ * Number of characters received in the current window
+ */
+export const charCountInWindowAtom = atom<number>(0)
+
+/**
+ * Whether we've suppressed at least one Enter (indicating active paste)
+ */
+export const hasSuppressedEnterAtom = atom<boolean>(false)
+
+/**
+ * Timer for auto-submitting after paste detection
+ */
+let pasteSubmitTimer: NodeJS.Timeout | null = null
+
+/**
+ * Reset paste detection state
+ */
+export const resetPasteDetectionAtom = atom(null, (get, set) => {
+	set(lastCharTimestampAtom, 0)
+	set(charCountInWindowAtom, 0)
+	set(hasSuppressedEnterAtom, false)
+	if (pasteSubmitTimer) {
+		clearTimeout(pasteSubmitTimer)
+		pasteSubmitTimer = null
+	}
+})
+
+/**
+ * Check if rapid character input indicates a paste operation
+ * Returns true if we should suppress Enter submission
+ * kilocode_change: Only suppress Enter if we've already suppressed at least one Enter
+ * This prevents false positives on fast typing or test loops
+ */
+export const checkPasteDetectionAtom = atom<boolean>((get) => {
+	const hasSuppressed = get(hasSuppressedEnterAtom)
+	const isTimerActive = pasteSubmitTimer !== null
+
+	// Only suppress Enter if we're actively in paste mode
+	// (have already suppressed at least one Enter, or timer is still running)
+	return hasSuppressed || isTimerActive
+})
+
+/**
+ * Update paste detection state when a character is received
+ */
+export const updatePasteDetectionAtom = atom(null, (get, set) => {
+	const now = Date.now()
+	const lastTimestamp = get(lastCharTimestampAtom)
+	const charCount = get(charCountInWindowAtom)
+	const hasSuppressed = get(hasSuppressedEnterAtom)
+
+	const timeSinceLastChar = now - lastTimestamp
+	const isRapidInput = timeSinceLastChar < PASTE_DETECTION_WINDOW_MS
+
+	if (isRapidInput) {
+		// Rapid input - increment count
+		set(charCountInWindowAtom, charCount + 1)
+		set(lastCharTimestampAtom, now)
+	} else {
+		// Slow input - reset paste detection
+		// Only reset if we haven't suppressed any Enter yet (to allow paste to complete)
+		if (!hasSuppressed) {
+			set(lastCharTimestampAtom, now)
+			set(charCountInWindowAtom, 1)
+		}
+	}
+})
+
+/**
+ * Schedule auto-submit after paste detection timeout
+ * kilocode_change: This atom is called to schedule a submit after paste completes
+ * The actual submit is triggered when Enter is pressed after the timeout
+ * We store the setter to clear paste detection when timer expires
+ */
+export const schedulePasteSubmitAtom = atom(null, (get, set) => {
+	// Clear any existing timer
+	if (pasteSubmitTimer) {
+		clearTimeout(pasteSubmitTimer)
+	}
+
+	// Schedule submit after timeout
+	// After this timeout, we clear paste detection so next Enter will submit
+	pasteSubmitTimer = setTimeout(() => {
+		pasteSubmitTimer = null
+		// Clear paste detection state when timer expires
+		// This allows the next Enter press to submit
+		set(hasSuppressedEnterAtom, false)
+	}, PASTE_DETECTION_WINDOW_MS + 10)
+})
+
+// ============================================================================
 // Mode Atoms
 // ============================================================================
 
@@ -321,6 +426,8 @@ export const clearBuffersAtom = atom(null, (get, set) => {
 	set(backslashBufferAtom, false)
 	set(isPasteModeAtom, false)
 	set(waitingForEnterAfterBackslashAtom, false)
+	// kilocode_change: Clear paste detection state on buffer clear
+	set(resetPasteDetectionAtom)
 })
 
 /**
@@ -420,6 +527,8 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 
 		// Clear input and related state
 		set(clearTextBufferAtom)
+		// kilocode_change: Reset paste detection after successful submit
+		set(resetPasteDetectionAtom)
 		// If the user runs a slash command while a followup question is active,
 		// keep the followup question/suggestions so they can answer after the command runs.
 		if (hasFollowupSuggestions && isSlashCommand) {
@@ -832,7 +941,33 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 				set(insertNewlineAtom)
 			} else {
 				// Plain Enter: submit
+				// kilocode_change: Check paste detection to avoid submitting during paste
+				// This fixes issue #4773 where multi-line paste on Windows submits each line separately
+				const isPasteDetected = get(checkPasteDetectionAtom)
+				const lastTimestamp = get(lastCharTimestampAtom)
 				const currentText = get(textBufferStringAtom)
+
+				// kilocode_change: Check if current input has newlines (indicating multi-line paste in progress)
+				// If we already have newlines in the buffer and more rapid input, we're pasting
+				const hasNewlines = currentText.includes("\n")
+				const now = Date.now()
+				const isVeryRecentInput = lastTimestamp > 0 && now - lastTimestamp < 5
+
+				// Enter paste mode if:
+				// 1. Already in paste mode, OR
+				// 2. Have newlines AND recent input (looks like active multi-line paste)
+				const shouldEnterPasteMode = isPasteDetected || (hasNewlines && isVeryRecentInput)
+
+				if (shouldEnterPasteMode) {
+					// Paste is detected - insert newline instead of submitting
+					set(hasSuppressedEnterAtom, true)
+					set(insertNewlineAtom)
+					// Schedule auto-submit after paste timeout
+					set(schedulePasteSubmitAtom)
+					return
+				}
+
+				// Normal Enter - submit
 				set(submitInputAtom, currentText)
 			}
 			return
@@ -888,12 +1023,18 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 
 	// Character input
 	if (!key.ctrl && !key.meta && key.sequence.length === 1) {
+		// kilocode_change: Update paste detection for each character
+		// This helps detect rapid input (paste) vs manual typing
+		set(updatePasteDetectionAtom)
 		set(insertCharAtom, key.sequence)
 		return
 	}
 
 	// Paste
 	if (key.paste) {
+		// kilocode_change: Reset paste detection on bracketed paste
+		// Bracketed paste is properly handled, so we don't need heuristic detection
+		set(resetPasteDetectionAtom)
 		// Convert tabs to 2 spaces to prevent border corruption
 		// Tabs have variable display widths in terminals which breaks layout
 		const normalizedText = key.sequence.replace(/\t/g, "  ")
