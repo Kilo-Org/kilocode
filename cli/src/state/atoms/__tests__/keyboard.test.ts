@@ -17,6 +17,7 @@ import {
 	keyboardHandlerAtom,
 	submissionCallbackAtom,
 	submitInputAtom,
+	pastedTextReferencesAtom,
 } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
@@ -1251,6 +1252,166 @@ describe("keypress atoms", () => {
 
 			expect(mockCallback).toHaveBeenCalledWith("/new")
 			expect(store.get(followupSuggestionsAtom)).toHaveLength(0)
+		})
+	})
+
+	describe("paste abbreviation", () => {
+		it("should insert small pastes directly into buffer", () => {
+			// Small paste (less than threshold)
+			const smallPaste = "line1\nline2\nline3"
+			const pasteKey: Key = {
+				name: "",
+				sequence: smallPaste,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			}
+
+			store.set(keyboardHandlerAtom, pasteKey)
+
+			// Should insert text directly
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe(smallPaste)
+		})
+
+		it("should abbreviate large pastes as references", () => {
+			// Large paste (10+ lines to trigger abbreviation)
+			const lines = Array.from({ length: 15 }, (_, i) => `line ${i + 1}`)
+			const largePaste = lines.join("\n")
+			const pasteKey: Key = {
+				name: "",
+				sequence: largePaste,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			}
+
+			store.set(keyboardHandlerAtom, pasteKey)
+
+			// Should insert abbreviated reference
+			const text = store.get(textBufferStringAtom)
+			expect(text).toContain("[Pasted text #1 +15 lines]")
+			expect(text).not.toContain("line 1")
+		})
+
+		it("should store full text in references map for large pastes", () => {
+			const lines = Array.from({ length: 12 }, (_, i) => `content line ${i + 1}`)
+			const largePaste = lines.join("\n")
+			const pasteKey: Key = {
+				name: "",
+				sequence: largePaste,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			}
+
+			store.set(keyboardHandlerAtom, pasteKey)
+
+			// Full text should be in references map
+			const refs = store.get(pastedTextReferencesAtom)
+			expect(refs.get(1)).toBe(largePaste)
+		})
+
+		it("should increment reference numbers for multiple large pastes", () => {
+			const createLargePaste = (id: number) => {
+				const lines = Array.from({ length: 11 }, (_, i) => `paste${id} line ${i + 1}`)
+				return lines.join("\n")
+			}
+
+			// First large paste
+			store.set(keyboardHandlerAtom, {
+				name: "",
+				sequence: createLargePaste(1),
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			})
+
+			// Add a space
+			store.set(keyboardHandlerAtom, {
+				name: "space",
+				sequence: " ",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			})
+
+			// Second large paste
+			store.set(keyboardHandlerAtom, {
+				name: "",
+				sequence: createLargePaste(2),
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			})
+
+			const text = store.get(textBufferStringAtom)
+			expect(text).toContain("[Pasted text #1 +11 lines]")
+			expect(text).toContain("[Pasted text #2 +11 lines]")
+		})
+
+		it("should handle paste at exactly threshold boundary", () => {
+			// Exactly 10 lines (threshold)
+			const lines = Array.from({ length: 10 }, (_, i) => `line ${i + 1}`)
+			const boundaryPaste = lines.join("\n")
+			const pasteKey: Key = {
+				name: "",
+				sequence: boundaryPaste,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			}
+
+			store.set(keyboardHandlerAtom, pasteKey)
+
+			// Should abbreviate (>= threshold)
+			const text = store.get(textBufferStringAtom)
+			expect(text).toContain("[Pasted text #1 +10 lines]")
+		})
+
+		it("should not abbreviate paste just below threshold", () => {
+			// 9 lines (below threshold)
+			const lines = Array.from({ length: 9 }, (_, i) => `line ${i + 1}`)
+			const smallPaste = lines.join("\n")
+			const pasteKey: Key = {
+				name: "",
+				sequence: smallPaste,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			}
+
+			store.set(keyboardHandlerAtom, pasteKey)
+
+			// Should insert directly
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe(smallPaste)
+			expect(text).not.toContain("[Pasted text")
+		})
+
+		it("should convert tabs to spaces in both direct and abbreviated pastes", () => {
+			// Small paste with tabs
+			const smallWithTabs = "col1\tcol2\ncol3\tcol4"
+			store.set(keyboardHandlerAtom, {
+				name: "",
+				sequence: smallWithTabs,
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+			})
+
+			const text = store.get(textBufferStringAtom)
+			expect(text).not.toContain("\t")
+			expect(text).toContain("col1  col2") // tabs converted to 2 spaces
 		})
 	})
 })

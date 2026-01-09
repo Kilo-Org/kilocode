@@ -131,6 +131,63 @@ function setClipboardStatusWithTimeout(set: Setter, message: string, timeoutMs: 
 }
 
 // ============================================================================
+// Pasted Text Reference Atoms
+// ============================================================================
+
+/**
+ * Threshold for when to abbreviate pasted text (number of lines)
+ * Pastes with this many lines or more will be abbreviated
+ */
+export const PASTE_LINE_THRESHOLD = 10
+
+/**
+ * Map of pasted text reference numbers to full text content for current message
+ * e.g., { 1: "line1\nline2\n...", 2: "another\npaste..." }
+ */
+export const pastedTextReferencesAtom = atom<Map<number, string>>(new Map())
+
+/**
+ * Current pasted text reference counter (increments with each large paste)
+ */
+export const pastedTextReferenceCounterAtom = atom<number>(0)
+
+/**
+ * Format a pasted text reference for display
+ * @param refNumber - The reference number
+ * @param lineCount - Number of lines in the paste
+ * @returns Formatted reference string like "[Pasted text #1 +25 lines]"
+ */
+export function formatPastedTextReference(refNumber: number, lineCount: number): string {
+	return `[Pasted text #${refNumber} +${lineCount} lines]`
+}
+
+export const addPastedTextReferenceAtom = atom(null, (get, set, text: string): number => {
+	const counter = get(pastedTextReferenceCounterAtom) + 1
+	set(pastedTextReferenceCounterAtom, counter)
+
+	const refs = new Map(get(pastedTextReferencesAtom))
+	refs.set(counter, text)
+	set(pastedTextReferencesAtom, refs)
+
+	return counter
+})
+
+/**
+ * Clear pasted text references (after message is sent)
+ */
+export const clearPastedTextReferencesAtom = atom(null, (_get, set) => {
+	set(pastedTextReferencesAtom, new Map())
+	set(pastedTextReferenceCounterAtom, 0)
+})
+
+/**
+ * Get all pasted text references as an object for easier consumption
+ */
+export const getPastedTextReferencesAtom = atom((get) => {
+	return Object.fromEntries(get(pastedTextReferencesAtom))
+})
+
+// ============================================================================
 // Core State Atoms
 // ============================================================================
 
@@ -892,16 +949,34 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 		return
 	}
 
-	// Paste
 	if (key.paste) {
-		// Convert tabs to 2 spaces to prevent border corruption
-		// Tabs have variable display widths in terminals which breaks layout
-		const normalizedText = key.sequence.replace(/\t/g, "  ")
-		set(insertTextAtom, normalizedText)
+		handlePaste(set, key.sequence)
 		return
 	}
 
 	return
+}
+
+function handlePaste(set: Setter, text: string): void {
+	// Quick line count check - avoid processing large text unnecessarily
+	let lineCount = 0
+	for (let i = 0; i < text.length; i++) {
+		if (text[i] === "\n") lineCount++
+		if (lineCount >= PASTE_LINE_THRESHOLD) break
+	}
+	lineCount++ // Account for last line (no trailing newline)
+
+	if (lineCount >= PASTE_LINE_THRESHOLD) {
+		// Store original text - normalize tabs only when expanding
+		const actualLineCount = text.split("\n").length
+		const refNumber = set(addPastedTextReferenceAtom, text)
+		const reference = formatPastedTextReference(refNumber, actualLineCount)
+		set(insertTextAtom, reference + " ")
+	} else {
+		// Small paste - normalize tabs to prevent border corruption
+		const normalizedText = text.replace(/\t/g, "  ")
+		set(insertTextAtom, normalizedText)
+	}
 }
 
 function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
