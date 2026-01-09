@@ -47,9 +47,10 @@ import {
 	changeModelListPageAtom,
 	resetModelListStateAtom,
 } from "../atoms/modelList.js"
+import { openModelCatalogAtom } from "../atoms/modelSelection.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskHistory } from "./useTaskHistory.js"
-import { getModelIdKey } from "../../constants/providers/models.js"
+import { getModelIdKey, getAllModels, getCurrentModelId } from "../../constants/providers/models.js"
 
 const TERMINAL_CLEAR_DELAY_MS = 500
 
@@ -140,6 +141,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const updateModelListFilters = useSetAtom(updateModelListFiltersAtom)
 	const changeModelListPage = useSetAtom(changeModelListPageAtom)
 	const resetModelListState = useSetAtom(resetModelListStateAtom)
+	const openModelCatalog = useSetAtom(openModelCatalogAtom)
 
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
@@ -245,6 +247,22 @@ export function useCommandContext(): UseCommandContextReturn {
 				updateModelListFilters,
 				changeModelListPage,
 				resetModelListState,
+				// Model catalog context
+				openModelCatalog: async () => {
+					const allModels = getAllModels({ routerModels, kilocodeDefaultModel })
+					const currentModelId = currentProvider
+						? getCurrentModelId({
+								providerConfig: currentProvider,
+								routerModels,
+								kilocodeDefaultModel,
+							})
+						: ""
+					openModelCatalog({
+						allModels,
+						currentProvider: currentProvider?.provider ?? "anthropic",
+						currentModelId,
+					})
+				},
 			}
 		},
 		[
@@ -287,6 +305,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			updateModelListFilters,
 			changeModelListPage,
 			resetModelListState,
+			openModelCatalog,
 		],
 	)
 

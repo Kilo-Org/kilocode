@@ -628,3 +628,239 @@ export function prettyModelName(modelId: string): string {
 
 	return name
 }
+
+/**
+ * All providers that have model definitions
+ * Used for iterating through all providers in the model catalog
+ */
+export const ALL_PROVIDERS: readonly ProviderName[] = [
+	// Dynamic providers
+	"openrouter",
+	"vercel-ai-gateway",
+	"huggingface",
+	"litellm",
+	"kilocode",
+	"ovhcloud",
+	"gemini",
+	"inception",
+	"synthetic",
+	"sap-ai-core",
+	"deepinfra",
+	"io-intelligence",
+	"requesty",
+	"unbound",
+	"glama",
+	"roo",
+	"chutes",
+	"nano-gpt",
+	// Local providers
+	"ollama",
+	"lmstudio",
+	// Internal providers
+	"vscode-lm",
+	// Custom providers
+	"openai",
+	// Faux providers
+	"fake-ai",
+	"human-relay",
+	// Static model providers
+	"anthropic",
+	"bedrock",
+	"baseten",
+	"cerebras",
+	"claude-code",
+	"doubao",
+	"deepseek",
+	"featherless",
+	"fireworks",
+	"gemini-cli",
+	"groq",
+	"mistral",
+	"moonshot",
+	"minimax",
+	"openai-native",
+	"qwen-code",
+	"sambanova",
+	"vertex",
+	"xai",
+	"zai",
+] as const
+
+/**
+ * Get all models from all providers
+ * Aggregates models from both static definitions and router-based providers
+ */
+export function getAllModels(params: {
+	routerModels: RouterModels | null
+	kilocodeDefaultModel: string
+}): Partial<Record<ProviderName, ModelRecord>> {
+	const { routerModels, kilocodeDefaultModel } = params
+	const result: Partial<Record<ProviderName, ModelRecord>> = {}
+
+	for (const provider of ALL_PROVIDERS) {
+		const { models } = getModelsByProvider({
+			provider,
+			routerModels,
+			kilocodeDefaultModel,
+		})
+		if (Object.keys(models).length > 0) {
+			result[provider] = models
+		}
+	}
+
+	return result
+}
+
+/**
+ * Filter models by capabilities
+ */
+function filterModelsByCapabilities(
+	models: ModelRecord,
+	capabilities: readonly ("images" | "cache" | "reasoning" | "free")[],
+): string[] {
+	if (capabilities.length === 0) {
+		return Object.keys(models)
+	}
+
+	return Object.keys(models).filter((id) => {
+		const model = models[id]
+		if (!model) return false
+
+		return capabilities.every((cap) => {
+			switch (cap) {
+				case "images":
+					return model.supportsImages === true
+				case "cache":
+					return model.supportsPromptCache === true
+				case "reasoning":
+					return (
+						model.supportsReasoningEffort === true ||
+						model.supportsReasoningBudget === true ||
+						(Array.isArray(model.supportsReasoningEffort) && model.supportsReasoningEffort.length > 0)
+					)
+				case "free":
+					return model.isFree === true || (model.inputPrice === 0 && model.outputPrice === 0)
+				default:
+					return true
+			}
+		})
+	})
+}
+
+/**
+ * Sort model IDs by different criteria
+ */
+function sortModelIds(
+	modelIds: string[],
+	models: ModelRecord,
+	sortBy: "name" | "context" | "price" | "preferred",
+): string[] {
+	switch (sortBy) {
+		case "name":
+			return [...modelIds].sort((a, b) => a.localeCompare(b))
+		case "context":
+			return [...modelIds].sort((a, b) => (models[b]?.contextWindow || 0) - (models[a]?.contextWindow || 0))
+		case "price":
+			return [...modelIds].sort((a, b) => {
+				const priceA = models[a]?.inputPrice ?? Infinity
+				const priceB = models[b]?.inputPrice ?? Infinity
+				return priceA - priceB
+			})
+		case "preferred":
+		default:
+			return sortModelsByPreference(
+				modelIds.reduce((acc, id) => {
+					const model = models[id]
+					if (model) acc[id] = model
+					return acc
+				}, {} as ModelRecord),
+			)
+	}
+}
+
+/**
+ * Filter and sort models for the catalog
+ * Returns a flat array of ModelCatalogItem
+ */
+export function filterAndSortModels(params: {
+	allModels: Partial<Record<ProviderName, ModelRecord>>
+	currentProvider: ProviderName
+	currentModelId: string
+	filters: {
+		search: string
+		sort: "name" | "context" | "price" | "preferred"
+		capabilities: readonly ("images" | "cache" | "reasoning" | "free")[]
+		provider: ProviderName | null
+	}
+}): Array<{ provider: ProviderName; modelId: string; model: ModelInfo; isCurrent: boolean }> {
+	const { allModels, currentProvider, currentModelId, filters } = params
+	const result: Array<{ provider: ProviderName; modelId: string; model: ModelInfo; isCurrent: boolean }> = []
+
+	// Filter to specific provider or all providers
+	const providersToShow = filters.provider !== null ? [filters.provider] : (Object.keys(allModels) as ProviderName[])
+
+	for (const provider of providersToShow) {
+		const models = allModels[provider]
+		if (!models) continue
+
+		// Get all model IDs for this provider
+		let modelIds = Object.keys(models)
+
+		// Apply search filter
+		if (filters.search) {
+			const lowerFilter = filters.search.toLowerCase()
+			modelIds = modelIds.filter((modelId) => {
+				const lowerModelId = modelId.toLowerCase()
+				const model = models[modelId]
+				const displayName = model?.displayName?.toLowerCase() || ""
+				return lowerModelId.includes(lowerFilter) || displayName.includes(lowerFilter)
+			})
+		}
+
+		// Apply capability filters
+		if (filters.capabilities.length > 0) {
+			const filteredByCap = filterModelsByCapabilities(
+				modelIds.reduce((acc, id) => {
+					const model = models[id]
+					if (model) acc[id] = model
+					return acc
+				}, {} as ModelRecord),
+				filters.capabilities,
+			)
+			modelIds = modelIds.filter((id) => filteredByCap.includes(id))
+		}
+
+		// Apply sorting
+		modelIds = sortModelIds(modelIds, models, filters.sort)
+
+		// Build result items
+		for (const modelId of modelIds) {
+			const model = models[modelId]
+			if (model) {
+				result.push({
+					provider,
+					modelId,
+					model,
+					isCurrent: provider === currentProvider && modelId === currentModelId,
+				})
+			}
+		}
+	}
+
+	return result
+}
+
+/**
+ * Find which provider has a specific model
+ */
+export function findProviderForModel(
+	modelId: string,
+	allModels: Partial<Record<ProviderName, ModelRecord>>,
+): ProviderName | null {
+	for (const [provider, models] of Object.entries(allModels)) {
+		if (models && models[modelId]) {
+			return provider as ProviderName
+		}
+	}
+	return null
+}

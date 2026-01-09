@@ -960,9 +960,12 @@ export const modelCommand: Command = {
 	handler: async (context) => {
 		const { args } = context
 
-		// No arguments - show current model
+		// No arguments - open the model catalog
 		if (args.length === 0) {
-			await showCurrentModel(context)
+			// Ensure router models are loaded first
+			const ready = await ensureRouterModels(context)
+			if (!ready) return
+			await context.openModelCatalog()
 			return
 		}
 
@@ -988,6 +991,12 @@ export const modelCommand: Command = {
 				break
 
 			case "select":
+				context.addMessage({
+					id: Date.now().toString(),
+					type: "system",
+					content: "⚠️ /model select is deprecated. Use /model to open the interactive catalog.",
+					ts: Date.now(),
+				})
 				if (args.length < 2 || !args[1]) {
 					context.addMessage({
 						id: Date.now().toString(),
@@ -1001,6 +1010,12 @@ export const modelCommand: Command = {
 				break
 
 			case "list": {
+				context.addMessage({
+					id: Date.now().toString(),
+					type: "system",
+					content: "⚠️ /model list is deprecated. Use /model to open the interactive catalog.",
+					ts: Date.now(),
+				})
 				// Check for list subcommands
 				const listSubcommand = args[1]?.toLowerCase()
 

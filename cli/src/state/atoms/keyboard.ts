@@ -61,6 +61,20 @@ import {
 } from "./shell.js"
 import { saveClipboardImage, clipboardHasImage, cleanupOldClipboardImages } from "../../media/clipboard.js"
 import { logs } from "../../services/logs.js"
+import {
+	modelCatalogVisibleAtom,
+	closeModelCatalogAtom,
+	cycleModelCatalogSortAtom,
+	cycleModelCatalogCapabilityFilterAtom,
+	cycleModelCatalogProviderFilterAtom,
+	nextModelCatalogPageAtom,
+	prevModelCatalogPageAtom,
+	selectNextModelCatalogItemAtom,
+	selectPreviousModelCatalogItemAtom,
+	modelCatalogSelectedItemAtom,
+	modelCatalogSearchAtom,
+	setModelCatalogSearchAtom,
+} from "./modelSelection.js"
 
 // Export shell atoms for backward compatibility
 export {
@@ -1072,6 +1086,72 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
 }
 
 /**
+ * Model catalog keyboard handler
+ */
+function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
+	const _visibleItems = get(modelCatalogVisibleAtom)
+	const _page = get(prevModelCatalogPageAtom)
+	const _pageCount = get(nextModelCatalogPageAtom)
+	const search = get(modelCatalogSearchAtom)
+
+	// Suppress unused variable warnings
+	void _visibleItems
+	void _page
+	void _pageCount
+
+	switch (key.name) {
+		case "down":
+			set(selectNextModelCatalogItemAtom)
+			return
+
+		case "up":
+			set(selectPreviousModelCatalogItemAtom)
+			return
+
+		case "right":
+			set(nextModelCatalogPageAtom)
+			return
+
+		case "left":
+			set(prevModelCatalogPageAtom)
+			return
+
+		case "/":
+			set(closeModelCatalogAtom)
+			return
+
+		case "s":
+			set(cycleModelCatalogSortAtom)
+			return
+
+		case "f":
+			set(cycleModelCatalogCapabilityFilterAtom)
+			return
+
+		case "p":
+			set(cycleModelCatalogProviderFilterAtom)
+			return
+
+		case "return": {
+			const selectedItem = get(modelCatalogSelectedItemAtom)
+			if (selectedItem) {
+				// TODO: Select model and switch provider
+				// This will be implemented when we update the command context
+			}
+			return
+		}
+
+		case "escape":
+			set(closeModelCatalogAtom)
+			return
+	}
+
+	if (!key.ctrl && !key.meta && key.sequence.length === 1 && key.name !== "return") {
+		set(setModelCatalogSearchAtom, search + key.sequence)
+	}
+}
+
+/**
  * Main keyboard handler that routes based on mode
  * This is the central keyboard handling atom that all key events go through
  */
@@ -1088,17 +1168,19 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)
 	const isShellModeActive = get(shellModeActiveAtom)
+	const isModelCatalogVisible = get(modelCatalogVisibleAtom)
 
 	// Check if we have file mention suggestions (this means we're in file mention mode)
 	const hasFileMentions = fileMentionSuggestions.length > 0
 
-	// Mode priority: shell > approval > followup > history > autocomplete (including file mentions) > normal
+	// Mode priority: shell > approval > followup > modelCatalog > history > autocomplete (including file mentions) > normal
 	// History has higher priority than autocomplete because when navigating history,
 	// the text buffer may contain commands that start with "/" which would trigger autocomplete
 	let mode: InputMode = "normal"
 	if (isShellModeActive) mode = "shell"
 	else if (isApprovalPending) mode = "approval"
 	else if (isFollowupVisible) mode = "followup"
+	else if (isModelCatalogVisible) mode = "modelCatalog"
 	else if (isInHistoryMode) mode = "history"
 	else if (hasFileMentions || isAutocompleteVisible) mode = "autocomplete"
 
@@ -1113,6 +1195,8 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 			return handleApprovalKeys(get, set, key)
 		case "followup":
 			return handleFollowupKeys(get, set, key)
+		case "modelCatalog":
+			return handleModelCatalogKeys(get, set, key)
 		case "autocomplete":
 			return handleAutocompleteKeys(get, set, key)
 		case "history":

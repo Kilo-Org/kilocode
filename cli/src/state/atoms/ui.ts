@@ -157,6 +157,7 @@ export type InputMode =
 	| "followup" // Followup suggestions active
 	| "history" // History navigation mode
 	| "shell" // Shell mode for command execution
+	| "modelCatalog" // Model catalog selection active
 
 /**
  * Current input mode
