@@ -1,0 +1,1477 @@
+# Standalone MCP Configuration System for Kilo Code CLI
+
+This document describes the design for a standalone MCP (Model Context Protocol) configuration system that enables the Kilo Code CLI to manage MCP servers without requiring VSCode.
+
+## 1. Overview
+
+### 1.1 Goals
+- Enable MCP server management via CLI commands
+- Support global and project-level MCP configurations
+- Auto-start MCP servers when CLI runs
+- Portable configuration format
+- Integration with existing CLI infrastructure
+
+### 1.2 Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph CLI Layer
+        CLI[CLI Entry Point]
+        CmdReg[Command Registry]
+        MCPcmd[MCP Commands]
+    end
+
+    subgraph MCP Service Layer
+        MCPhub[MCP Hub Service]
+        ServerMgr[Server Manager]
+        TransportMgr[Transport Manager]
+    end
+
+    subgraph Configuration Layer
+        GlobalConfig[~/.kilocode/mcp-servers.json]
+        ProjectConfig[.kilocode/mcp-servers.json]
+    end
+
+    subgraph MCP Runtime
+        MCPserver1[MCP Server - Stdio]
+        MCPserver2[MCP Server - SSE]
+        MCPserver3[MCP Server - HTTP]
+    end
+
+    CLI --> CmdReg
+    CmdReg --> MCPcmd
+    MCPcmd --> MCPhub
+    MCPhub --> ServerMgr
+    ServerMgr --> TransportMgr
+    TransportMgr --> MCPserver1
+    TransportMgr --> MCPserver2
+    TransportMgr --> MCPserver3
+    MCPhub --> GlobalConfig
+    MCPhub --> ProjectConfig
+```
+
+## 2. MCP Server Configuration Format
+
+### 2.1 JSON Schema
+
+```typescript
+// cli/src/config/mcp-types.ts
+
+/**
+ * MCP Server Transport Type
+ */
+export type McpTransportType = "stdio" | "sse" | "streamable-http";
+
+/**
+ * Base configuration for all MCP server types
+ */
+export interface BaseMcpServerConfig {
+    /** Whether the server is disabled */
+    disabled?: boolean;
+    /** Request timeout in seconds (1-3600) */
+    timeout?: number;
+    /** Tools to always allow without prompting */
+    alwaysAllow?: string[];
+    /** Tools to disable */
+    disabledTools?: string[];
+    /** Paths to watch for changes and auto-restart server */
+    watchPaths?: string[];
+}
+
+/**
+ * Stdio transport configuration
+ */
+export interface McpStdioServerConfig extends BaseMcpServerConfig {
+    type?: "stdio";
+    /** The command to execute */
+    command: string;
+    /** Command arguments */
+    args?: string[];
+    /** Working directory */
+    cwd?: string;
+    /** Environment variables */
+    env?: Record<string, string>;
+    /** URL field should be undefined for stdio */
+    url?: undefined;
+    /** Headers should be undefined for stdio */
+    headers?: undefined;
+}
+
+/**
+ * SSE transport configuration
+ */
+export interface McpSseServerConfig extends BaseMcpServerConfig {
+    type: "sse";
+    /** Server URL */
+    url: string;
+    /** HTTP headers to include in requests */
+    headers?: Record<string, string>;
+    /** Command field should be undefined for SSE */
+    command?: undefined;
+    /** Args field should be undefined for SSE */
+    args?: undefined;
+    /** Env field should be undefined for SSE */
+    env?: undefined;
+}
+
+/**
+ * Streamable HTTP transport configuration
+ */
+export interface McpStreamableHttpServerConfig extends BaseMcpServerConfig {
+    type: "streamable-http";
+    /** Server URL */
+    url: string;
+    /** HTTP headers to include in requests */
+    headers?: Record<string, string>;
+    /** Command field should be undefined for HTTP */
+    command?: undefined;
+    /** Args field should be undefined for HTTP */
+    args?: undefined;
+    /** Env field should be undefined for HTTP */
+    env?: undefined;
+}
+
+/**
+ * Union type for all server configurations
+ */
+export type McpServerConfig =
+    | McpStdioServerConfig
+    | McpSseServerConfig
+    | McpStreamableHttpServerConfig;
+
+/**
+ * Root configuration structure
+ */
+export interface McpConfiguration {
+    version: "1.0.0";
+    mcpServers: Record<string, McpServerConfig>;
+}
+
+/**
+ * Server source (global or project)
+ */
+export type McpServerSource = "global" | "project";
+```
+
+### 2.2 Example Configuration
+
+**Global Config (`~/.kilocode/mcp-servers.json`):**
+
+```json
+{
+    "version": "1.0.0",
+    "mcpServers": {
+        "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
+            "timeout": 60,
+            "alwaysAllow": ["read_file", "list_files"],
+            "disabledTools": ["delete_file"]
+        },
+        "github": {
+            "command": "uvx",
+            "args": ["mcp-server-github"],
+            "timeout": 120,
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_TOKEN}"
+            }
+        },
+        "remote-sse": {
+            "type": "sse",
+            "url": "https://example.com/mcp/sse",
+            "headers": {
+                "Authorization": "Bearer ${env:SSE_TOKEN}"
+            },
+            "timeout": 60
+        }
+    }
+}
+```
+
+**Project Config (`.kilocode/mcp-servers.json`):**
+
+```json
+{
+    "version": "1.0.0",
+    "mcpServers": {
+        "project-db": {
+            "command": "node",
+            "args": [".scripts/mcp-db-server.js"],
+            "cwd": "${workspaceFolder}",
+            "watchPaths": [".scripts/**/*.js", "src/db/**/*.ts"],
+            "alwaysAllow": ["query", "schema"]
+        },
+        "project-api": {
+            "type": "streamable-http",
+            "url": "http://localhost:3001/mcp",
+            "timeout": 30
+        }
+    }
+}
+```
+
+### 2.3 Configuration Storage Locations
+
+| Type | Location | Priority |
+|------|----------|----------|
+| Global | `~/.kilocode/mcp-servers.json` | Low |
+| Project | `${workspace}/.kilocode/mcp-servers.json` | High |
+| Fallback | `${workspace}/.mcp.json` | Lowest |
+
+**Merge Strategy:**
+- Project config overrides global config for servers with the same name
+- Project servers are listed first in UI
+- Always allow and disabled tools are merged (union)
+- Disabled status from either config disables the server
+
+## 3. CLI Commands Design
+
+### 3.1 Command Structure
+
+```typescript
+// cli/src/commands/mcp.ts
+
+import { commandRegistry } from "./core/registry.js";
+import type { Command, CommandContext, ArgumentDefinition } from "./core/types.js";
+
+/**
+ * MCP Command definitions
+ */
+export const mcpCommand: Command = {
+    name: "mcp",
+    aliases: ["mcp-server", "mcp-servers"],
+    description: "Manage MCP (Model Context Protocol) servers",
+    usage: "kilocode mcp <subcommand> [options]",
+    examples: [
+        "kilocode mcp list",
+        "kilocode mcp add filesystem npx -y @modelcontextprotocol/server-filesystem /path",
+        "kilocode mcp add github --env GITHUB_TOKEN=xxx",
+        "kilocode mcp remove filesystem",
+        "kilocode mcp start filesystem",
+        "kilocode mcp stop filesystem",
+        "kilocode mcp status",
+        "kilocode mcp edit filesystem --timeout 120",
+        "kilocode mcp enable filesystem",
+        "kilocode mcp disable filesystem",
+    ],
+    category: "settings",
+    arguments: [
+        {
+            name: "subcommand",
+            description: "Subcommand to execute (list, add, remove, start, stop, status, edit, enable, disable)",
+            required: true,
+            values: [
+                { value: "list", description: "List all configured MCP servers" },
+                { value: "add", description: "Add a new MCP server" },
+                { value: "remove", description: "Remove an MCP server" },
+                { value: "start", description: "Start an MCP server" },
+                { value: "stop", description: "Stop an MCP server" },
+                { value: "status", description: "Show status of all MCP servers" },
+                { value: "edit", description: "Edit an existing MCP server" },
+                { value: "enable", description: "Enable an MCP server" },
+                { value: "disable", description: "Disable an MCP server" },
+            ],
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Route to subcommand handler
+    },
+};
+
+export const mcpListCommand: Command = {
+    name: "mcp list",
+    aliases: ["mcp ls"],
+    description: "List all configured MCP servers",
+    usage: "kilocode mcp list [options]",
+    examples: ["kilocode mcp list", "kilocode mcp list --json"],
+    category: "settings",
+    options: [
+        {
+            name: "json",
+            alias: "j",
+            description: "Output as JSON",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+        {
+            name: "source",
+            alias: "s",
+            description: "Filter by source (global, project, all)",
+            required: false,
+            type: "string",
+            default: "all",
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // List all servers
+    },
+};
+
+export const mcpAddCommand: Command = {
+    name: "mcp add",
+    aliases: ["mcp create"],
+    description: "Add a new MCP server",
+    usage: "kilocode mcp add <name> <command> [args...] [options]",
+    examples: [
+        "kilocode mcp add filesystem npx -y @modelcontextprotocol/server-filesystem /data",
+        "kilocode mcp add github uvx mcp-server-github --env GITHUB_TOKEN=xxx",
+        "kilocode mcp add remote-sse --type sse --url https://example.com/mcp",
+    ],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Unique name for the MCP server",
+            required: true,
+            validate: (value: string) => {
+                // Validate server name (alphanumeric, dashes, underscores)
+                const validName = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+                if (!validName.test(value)) {
+                    return {
+                        valid: false,
+                        error: "Server name must start with a letter and contain only alphanumeric characters, dashes, and underscores",
+                    };
+                }
+                return { valid: true };
+            },
+        },
+        {
+            name: "command",
+            description: "Command to run (or --type for non-stdio servers)",
+            required: true,
+        },
+        {
+            name: "args",
+            description: "Command arguments",
+            required: false,
+            multiple: true,
+        },
+    ],
+    options: [
+        {
+            name: "type",
+            description: "Transport type (stdio, sse, streamable-http)",
+            required: false,
+            type: "string",
+            default: "stdio",
+        },
+        {
+            name: "url",
+            description: "Server URL (for sse/streamable-http types)",
+            required: false,
+            type: "string",
+        },
+        {
+            name: "env",
+            description: "Environment variables (KEY=value)",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "cwd",
+            description: "Working directory",
+            required: false,
+            type: "string",
+        },
+        {
+            name: "timeout",
+            description: "Request timeout in seconds",
+            required: false,
+            type: "number",
+            default: 60,
+        },
+        {
+            name: "always-allow",
+            description: "Tools to always allow",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "disabled",
+            description: "Start the server as disabled",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+        {
+            name: "global",
+            alias: "g",
+            description: "Store in global config instead of project",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+        {
+            name: "watch",
+            description: "Paths to watch for auto-restart",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Add new server
+    },
+};
+
+export const mcpRemoveCommand: Command = {
+    name: "mcp remove",
+    aliases: ["mcp rm", "mcp delete"],
+    description: "Remove an MCP server",
+    usage: "kilocode mcp remove <name> [options]",
+    examples: ["kilocode mcp remove filesystem", "kilocode mcp remove github --global"],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to remove",
+            required: true,
+            provider: async (context) => {
+                // Provide list of available servers
+            },
+        },
+    ],
+    options: [
+        {
+            name: "global",
+            alias: "g",
+            description: "Remove from global config instead of project",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+        {
+            name: "force",
+            alias: "f",
+            description: "Force removal without confirmation",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Remove server
+    },
+};
+
+export const mcpStartCommand: Command = {
+    name: "mcp start",
+    aliases: [],
+    description: "Start an MCP server",
+    usage: "kilocode mcp start <name> [options]",
+    examples: ["kilocode mcp start filesystem", "kilocode mcp start github"],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to start",
+            required: true,
+            provider: async (context) => {
+                // Provide list of stopped servers
+            },
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Start server
+    },
+};
+
+export const mcpStopCommand: Command = {
+    name: "mcp stop",
+    aliases: [],
+    description: "Stop an MCP server",
+    usage: "kilocode mcp stop <name> [options]",
+    examples: ["kilocode mcp stop filesystem", "kilocode mcp stop --all"],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to stop (or --all for all servers)",
+            required: false,
+            provider: async (context) => {
+                // Provide list of running servers
+            },
+        },
+    ],
+    options: [
+        {
+            name: "all",
+            alias: "a",
+            description: "Stop all running MCP servers",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Stop server(s)
+    },
+};
+
+export const mcpStatusCommand: Command = {
+    name: "mcp status",
+    aliases: ["mcp state"],
+    description: "Show status of MCP servers",
+    usage: "kilocode mcp status [options]",
+    examples: ["kilocode mcp status", "kilocode mcp status --verbose"],
+    category: "settings",
+    options: [
+        {
+            name: "json",
+            alias: "j",
+            description: "Output as JSON",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+        {
+            name: "verbose",
+            alias: "v",
+            description: "Show detailed information including tools and resources",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Show status
+    },
+};
+
+export const mcpEditCommand: Command = {
+    name: "mcp edit",
+    aliases: ["mcp update", "mcp modify"],
+    description: "Edit an existing MCP server",
+    usage: "kilocode mcp edit <name> [options]",
+    examples: [
+        "kilocode mcp edit filesystem --timeout 120",
+        "kilocode mcp edit github --args 'uvx mcp-server-github --token xxx'",
+    ],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to edit",
+            required: true,
+            provider: async (context) => {
+                // Provide list of configured servers
+            },
+        },
+    ],
+    options: [
+        {
+            name: "command",
+            description: "New command",
+            required: false,
+            type: "string",
+        },
+        {
+            name: "args",
+            description: "New arguments (replaces all)",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "timeout",
+            description: "New timeout in seconds",
+            required: false,
+            type: "number",
+        },
+        {
+            name: "add-env",
+            description: "Add/update environment variable (KEY=value)",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "remove-env",
+            description: "Remove environment variable by key",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "add-always-allow",
+            description: "Add tool to always-allow list",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+        {
+            name: "remove-always-allow",
+            description: "Remove tool from always-allow list",
+            required: false,
+            type: "string",
+            multiple: true,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Edit server
+    },
+};
+
+export const mcpEnableCommand: Command = {
+    name: "mcp enable",
+    aliases: [],
+    description: "Enable an MCP server",
+    usage: "kilocode mcp enable <name> [options]",
+    examples: ["kilocode mcp enable filesystem", "kilocode mcp enable --all"],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to enable",
+            required: false,
+        },
+    ],
+    options: [
+        {
+            name: "all",
+            alias: "a",
+            description: "Enable all disabled servers",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Enable server(s)
+    },
+};
+
+export const mcpDisableCommand: Command = {
+    name: "mcp disable",
+    aliases: [],
+    description: "Disable an MCP server",
+    usage: "kilocode mcp disable <name> [options]",
+    examples: ["kilocode mcp disable filesystem", "kilocode mcp disable --all"],
+    category: "settings",
+    arguments: [
+        {
+            name: "name",
+            description: "Name of the MCP server to disable",
+            required: false,
+        },
+    ],
+    options: [
+        {
+            name: "all",
+            alias: "a",
+            description: "Disable all running servers",
+            required: false,
+            type: "boolean",
+            default: false,
+        },
+    ],
+    handler: async (context: CommandContext) => {
+        // Disable server(s)
+    },
+};
+```
+
+## 4. MCP Service Architecture
+
+### 4.1 Service Components
+
+```typescript
+// cli/src/services/mcp/mcp-hub.ts
+
+import { EventEmitter } from "events";
+import type {
+    McpServerConfig,
+    McpServerSource,
+    McpConfiguration,
+} from "../../config/mcp-types.js";
+
+/**
+ * MCP Server connection state
+ */
+export type McpConnectionState =
+    | { status: "disconnected" }
+    | { status: "connecting" }
+    | { status: "connected"; tools: McpTool[]; resources: McpResource[] };
+
+/**
+ * MCP Tool definition
+ */
+export interface McpTool {
+    name: string;
+    description?: string;
+    inputSchema?: object;
+    alwaysAllow: boolean;
+}
+
+/**
+ * MCP Resource definition
+ */
+export interface McpResource {
+    uri: string;
+    name: string;
+    mimeType?: string;
+    description?: string;
+}
+
+/**
+ * MCP Server connection info
+ */
+export interface McpServerConnection {
+    name: string;
+    config: McpServerConfig;
+    source: McpServerSource;
+    state: McpConnectionState;
+    error?: string;
+    lastError?: string;
+    instructions?: string;
+}
+
+/**
+ * MCP Hub Events
+ */
+export interface McpHubEvents {
+    serverConnected: (server: McpServerConnection) => void;
+    serverDisconnected: (server: McpServerConnection) => void;
+    serverError: (server: McpServerConnection, error: string) => void;
+    toolsUpdated: (serverName: string, tools: McpTool[]) => void;
+    resourcesUpdated: (serverName: string, resources: McpResource[]) => void;
+    configurationChanged: () => void;
+}
+
+/**
+ * MCP Hub - Manages all MCP server connections
+ * 
+ * Responsibilities:
+ * - Load and parse configuration files
+ * - Manage server lifecycle (start/stop/restart)
+ * - Handle transport connections (stdio, SSE, HTTP)
+ * - Cache tool and resource lists
+ * - Notify listeners of state changes
+ */
+export class McpHub extends EventEmitter {
+    private connections: Map<string, McpServerConnection> = new Map();
+    private globalConfigPath: string;
+    private projectConfigPath: string | null = null;
+    private configWatcher?: () => void;
+    private isDisposed: boolean = false;
+
+    constructor(options: {
+        globalConfigPath?: string;
+        projectConfigPath?: string | null;
+    }) {
+        super();
+        this.globalConfigPath =
+            options.globalConfigPath || getDefaultGlobalConfigPath();
+        this.projectConfigPath = options.projectConfigPath || null;
+    }
+
+    /**
+     * Initialize the MCP hub
+ initialize(): Promise<void> {
+        // Load configurations     */
+    async
+        const globalConfig = await this.loadConfig(this.globalConfigPath);
+        const projectConfig = this.projectConfigPath
+            ? await this.loadConfig(this.projectConfigPath)
+            : null;
+
+        // Merge configurations (project takes precedence)
+        const mergedConfig = this.mergeConfigs(globalConfig, projectConfig);
+
+        // Start all enabled servers
+        await this.startServers(mergedConfig);
+
+        // Set up file watchers
+        this.setupConfigWatchers();
+    }
+
+    /**
+     * Start all configured servers
+     */
+    async startServers(config: McpConfiguration): Promise<void> {
+        for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+            if (!serverConfig.disabled) {
+                await this.startServer(name, serverConfig, "global");
+            }
+        }
+    }
+
+    /**
+     * Start a single server
+     */
+    async startServer(
+        name: string,
+        config: McpServerConfig,
+        source: McpServerSource,
+    ): Promise<void> {
+        // Create connection object
+        const connection: McpServerConnection = {
+            name,
+            config,
+            source,
+            state: { status: "connecting" },
+        };
+
+        this.connections.set(name, connection);
+        this.emit("serverConnected", connection);
+
+        try {
+            // Create transport based on type
+            const transport = await this.createTransport(config);
+
+            // Connect to server
+            await transport.connect();
+
+            // Fetch tools and resources
+            const tools = await this.fetchTools(transport);
+            const resources = await this.fetchResources(transport);
+
+            // Update connection state
+            connection.state = {
+                status: "connected",
+                tools,
+                resources,
+            };
+
+            // Store transport for later use
+            (connection as any)._transport = transport;
+
+            this.emit("serverConnected", connection);
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : String(error);
+            connection.state = { status: "disconnected" };
+            connection.error = errorMessage;
+            connection.lastError = errorMessage;
+
+            this.emit("serverError", connection, errorMessage);
+        }
+    }
+
+    /**
+     * Stop a single server
+     */
+    async stopServer(name: string): Promise<void> {
+        const connection = this.connections.get(name);
+        if (!connection) {
+            throw new Error(`Server "${name}" not found`);
+        }
+
+        const transport = (connection as any)._transport;
+        if (transport) {
+            await transport.close();
+        }
+
+        this.connections.delete(name);
+        this.emit("serverDisconnected", connection);
+    }
+
+    /**
+     * Stop all servers
+     */
+    async stopAllServers(): Promise<void> {
+        const names = Array.from(this.connections.keys());
+        await Promise.all(names.map((name) => this.stopServer(name)));
+    }
+
+    /**
+     * Restart a server
+     */
+    async restartServer(name: string): Promise<void> {
+        const connection = this.connections.get(name);
+        if (!connection) {
+            throw new Error(`Server "${name}" not found`);
+        }
+
+        await this.stopServer(name);
+        await this.startServer(name, connection.config, connection.source);
+    }
+
+    /**
+     * Get all server connections
+     */
+    getConnections(): McpServerConnection[] {
+        return Array.from(this.connections.values());
+    }
+
+    /**
+     * Get a specific server connection
+     */
+    getConnection(name: string): McpServerConnection | undefined {
+        return this.connections.get(name);
+    }
+
+    /**
+     * Call a tool on a server
+     */
+    async callTool(
+        serverName: string,
+        toolName: string,
+        arguments?: Record<string, unknown>,
+    ): Promise<unknown> {
+        const connection = this.connections.get(serverName);
+        if (!connection) {
+            throw new Error(`Server "${serverName}" not found`);
+        }
+
+        if (connection.state.status !== "connected") {
+            throw new Error(`Server "${serverName}" is not connected`);
+        }
+
+        const transport = (connection as any)._transport;
+        return await transport.callTool(toolName, arguments);
+    }
+
+    /**
+     * Read a resource from a server
+     */
+    async readResource(serverName: string, uri: string): Promise<unknown> {
+        const connection = this.connections.get(serverName);
+        if (!connection) {
+            throw new Error(`Server "${serverName}" not found`);
+        }
+
+        if (connection.state.status !== "connected") {
+            throw new Error(`Server "${serverName}" is not connected`);
+        }
+
+        const transport = (connection as any)._transport;
+        return await transport.readResource(uri);
+    }
+
+    /**
+     * Add or update a server configuration
+     */
+    async addServer(
+        name: string,
+        config: McpServerConfig,
+        source: McpServerSource,
+    ): Promise<void> {
+        // Save to config file
+        await this.saveServerConfig(name, config, source);
+
+        // If server is running, restart it
+        if (this.connections.has(name)) {
+            await this.restartServer(name);
+        }
+
+        this.emit("configurationChanged");
+    }
+
+    /**
+     * Remove a server configuration
+     */
+    async removeServer(name: string, source: McpServerSource): Promise<void> {
+        // Stop if running
+        if (this.connections.has(name)) {
+            await this.stopServer(name);
+        }
+
+        // Remove from config file
+        await this.deleteServerConfig(name, source);
+
+        this.emit("configurationChanged");
+    }
+
+    /**
+     * Dispose the hub and clean up resources
+     */
+    async dispose(): Promise<void> {
+        this.isDisposed = true;
+        await this.stopAllServers();
+
+        if (this.configWatcher) {
+            this.configWatcher();
+        }
+    }
+
+    // Private helper methods follow...
+}
+```
+
+### 4.2 Transport Manager
+
+```typescript
+// cli/src/services/mcp/transport-manager.ts
+
+import type {
+    McpServerConfig,
+    McpStdioServerConfig,
+    McpSseServerConfig,
+    McpStreamableHttpServerConfig,
+} from "../../config/mcp-types.js";
+
+/**
+ * MCP Transport interface
+ */
+export interface McpTransport {
+    connect(): Promise<void>;
+    close(): Promise<void>;
+    callTool(name: string, args?: Record<string, unknown>): Promise<unknown>;
+    readResource(uri: string): Promise<unknown>;
+    listTools(): Promise<Array<{ name: string; description?: string }>>;
+    listResources(): Promise<Array<{ uri: string; name: string }>>;
+}
+
+/**
+ * Stdio Transport implementation
+ */
+class StdioMcpTransport implements McpTransport {
+    private command: string;
+    private args: string[];
+    private env: Record<string, string>;
+    private cwd: string;
+    private process?: ChildProcess;
+    private messageStream?: MessageStream;
+
+    constructor(config: McpStdioServerConfig) {
+        this.command = config.command;
+        this.args = config.args || [];
+        this.env = {
+            ...process.env,
+            ...config.env,
+        };
+        this.cwd = config.cwd || process.cwd();
+    }
+
+    async connect(): Promise<void> {
+        this.process = spawn(this.command, this.args, {
+            env: this.env,
+            cwd: this.cwd,
+            stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        // Set up message stream with MCP protocol
+        this.messageStream = new MessageStream(this.process.stdout!);
+        await this.messageStream.initialize();
+    }
+
+    async close(): Promise<void> {
+        this.process?.kill();
+        await this.messageStream?.close();
+    }
+
+    async callTool(name: string, args?: Record<string, unknown>): Promise<unknown> {
+        return this.messageStream?.request("tools/call", {
+            name,
+            arguments: args,
+        }) || {};
+    }
+
+    async readResource(uri: string): Promise<unknown> {
+        return this.messageStream?.request("resources/read", { uri }) || {};
+    }
+
+    async listTools(): Promise<Array<{ name: string; description?: string }>> {
+        return this.messageStream?.request("tools/list") || [];
+    }
+
+    async listResources(): Promise<Array<{ uri: string; name: string }>> {
+        return this.messageStream?.request("resources/list") || [];
+    }
+}
+
+/**
+ * SSE Transport implementation
+ */
+class SseMcpTransport implements McpTransport {
+    private url: string;
+    private headers: Record<string, string>;
+    private eventSource?: EventSource;
+    private pendingRequests: Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }> = new Map();
+
+    constructor(config: McpSseServerConfig) {
+        this.url = config.url;
+        this.headers = config.headers || {};
+    }
+
+    async connect(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.eventSource = new EventSource(this.url, {
+                headers: this.headers,
+            });
+
+            this.eventSource.onopen = () => resolve();
+            this.eventSource.onerror = (error) => reject(error);
+            this.eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const pending = this.pendingRequests.get(data.id);
+                if (pending) {
+                    pending.resolve(data.result);
+                    this.pendingRequests.delete(data.id);
+                }
+            };
+        });
+    }
+
+    async close(): Promise<void> {
+        this.eventSource?.close();
+        this.pendingRequests.forEach((p) => p.reject(new Error("Connection closed")));
+        this.pendingRequests.clear();
+    }
+
+    async callTool(name: string, args?: Record<string, unknown>): Promise<unknown> {
+        const id = generateRequestId();
+        await this.sendRequest(id, "tools/call", { name, arguments: args });
+        return this.waitForResponse(id);
+    }
+
+    async readResource(uri: string): Promise<unknown> {
+        const id = generateRequestId();
+        await this.sendRequest(id, "resources/read", { uri });
+        return this.waitForResponse(id);
+    }
+
+    async listTools(): Promise<Array<{ name: string; description?: string }>> {
+        const id = generateRequestId();
+        await this.sendRequest(id, "tools/list", {});
+        return this.waitForResponse(id);
+    }
+
+    async listResources(): Promise<Array<{ uri: string; name: string }>> {
+        const id = generateRequestId();
+        await this.sendRequest(id, "resources/list", {});
+        return this.waitForResponse(id);
+    }
+
+    private async sendRequest(id: string, method: string, params: unknown): Promise<void> {
+        await fetch(this.url, {
+            method: "POST",
+            headers: { ...this.headers, "Content-Type": "application/json" },
+            body: JSON.stringify({ id, method, params }),
+        });
+    }
+
+    private waitForResponse(id: string): Promise<unknown> {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(id);
+                reject(new Error("Request timeout"));
+            }, 30000);
+
+            this.pendingRequests.set(id, {
+                resolve: (v) => {
+                    clearTimeout(timeout);
+                    resolve(v);
+                },
+                reject,
+            });
+        });
+    }
+}
+
+/**
+ * Streamable HTTP Transport implementation
+ */
+class StreamableHttpMcpTransport implements McpTransport {
+    private url: string;
+    private headers: Record<string, string>;
+    private sessionId?: string;
+
+    constructor(config: McpStreamableHttpServerConfig) {
+        this.url = config.url;
+        this.headers = config.headers || {};
+    }
+
+    async connect(): Promise<void> {
+        const response = await fetch(this.url, {
+            method: "POST",
+            headers: this.headers,
+            body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", params: {} }),
+        });
+
+        const data = await response.json();
+        this.sessionId = data.sessionId;
+    }
+
+    async close(): Promise<void> {
+        if (this.sessionId) {
+            await fetch(this.url, {
+                method: "POST",
+                headers: this.headers,
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    method: "notifications/initialized",
+                    params: { sessionId: this.sessionId },
+                }),
+            });
+        }
+    }
+
+    async callTool(name: string, args?: Record<string, unknown>): Promise<unknown> {
+        // Implementation similar to SSE but with session-based requests
+        return {};
+    }
+
+    async readResource(uri: string): Promise<unknown> {
+        return {};
+    }
+
+    async listTools(): Promise<Array<{ name: string; description?: string }>> {
+        return [];
+    }
+
+    async listResources(): Promise<Array<{ uri: string; name: string }>> {
+        return [];
+    }
+}
+
+/**
+ * Transport Factory
+ */
+export function createTransport(config: McpServerConfig): McpTransport {
+    switch (config.type) {
+        case "sse":
+            return new SseMcpTransport(config);
+        case "streamable-http":
+            return new StreamableHttpMcpTransport(config);
+        case "stdio":
+        default:
+            return new StdioMcpTransport(config);
+    }
+}
+```
+
+### 4.3 Auto-Approval Integration
+
+```typescript
+// cli/src/services/mcp/mcp-approval.ts
+
+import type { AutoApprovalMcpConfig } from "../../config/types.js";
+
+/**
+ * MCP Approval Decision
+ */
+export type McpApprovalDecision =
+    | { action: "auto-approve" }
+    | { action: "auto-reject"; reason: string }
+    | { action: "prompt" };
+
+/**
+ * Determines whether an MCP tool call should be auto-approved
+ */
+export function getMcpApprovalDecision(
+    serverName: string,
+    toolName: string,
+    config: AutoApprovalMcpConfig,
+    alwaysAllowList: string[],
+    disabledToolsList: string[],
+): McpApprovalDecision {
+    // Check if MCP auto-approval is enabled
+    if (!config?.enabled) {
+        return { action: "prompt" };
+    }
+
+    // Check if tool is in always-allow list
+    if (alwaysAllowList.includes(toolName)) {
+        return { action: "auto-approve" };
+    }
+
+    // Check if tool is disabled
+    if (disabledToolsList.includes(toolName)) {
+        return { action: "auto-reject", reason: `Tool "${toolName}" is disabled` };
+    }
+
+    // Default to prompting
+    return { action: "prompt" };
+}
+```
+
+## 5. File Structure Changes
+
+### 5.1 New Files to Create
+
+```
+cli/src/
+├── config/
+│   ├── mcp-types.ts          # MCP configuration types and schema
+│   └── mcp-config.ts         # Config file I/O operations
+├── services/
+│   └── mcp/
+│       ├── index.ts          # Service exports
+│       ├── mcp-hub.ts        # Main MCP Hub service
+│       ├── transport-manager.ts  # Transport factory and implementations
+│       ├── mcp-approval.ts   # Auto-approval integration
+│       └── types.ts          # Service-specific types
+├── commands/
+│   ├── mcp.ts                # MCP command definitions
+│   └── mcp-utils.ts          # Command utilities
+└── state/
+    └── mcp-atoms.ts          # State atoms for MCP servers
+```
+
+### 5.2 Modified Files
+
+| File | Changes |
+|------|---------|
+| `cli/src/commands/index.ts` | Register MCP commands |
+| `cli/src/config/types.ts` | Add MCP auto-approval config |
+| `cli/src/types/messages.ts` | Add MCP-related message types |
+| `cli/src/services/extension.ts` | Integrate MCP Hub with ExtensionService |
+| `cli/src/communication/ipc.ts` | Handle MCP-related IPC messages |
+
+## 6. Integration with Existing CLI
+
+### 6.1 ExtensionService Integration
+
+```typescript
+// cli/src/services/extension.ts (modified)
+
+import { McpHub } from "./mcp/index.js";
+
+export class ExtensionService extends EventEmitter {
+    private mcpHub: McpHub | null = null;
+
+    async initialize(): Promise<void> {
+        // ... existing initialization ...
+
+        // Initialize MCP Hub
+        const globalConfigPath = path.join(
+            await this.getSettingsDirectory(),
+            "mcp-servers.json"
+        );
+
+        this.mcpHub = new McpHub({
+            globalConfigPath,
+            projectConfigPath: path.join(this.options.workspace, ".kilocode", "mcp-servers.json"),
+        });
+
+        await this.mcpHub.initialize();
+
+        // Emit MCP server list when ready
+        this.mcpHub.on("configurationChanged", () => {
+            const servers = this.mcpHub!.getConnections().map((conn) => ({
+                name: conn.name,
+                status: conn.state.status,
+                tools: conn.state.status === "connected" ? conn.state.tools : [],
+                resources: conn.state.status === "connected" ? conn.state.resources : [],
+            }));
+            this.emit("message", {
+                type: "state",
+                state: { mcpServers: servers },
+            });
+        });
+    }
+
+    /**
+     * Handle MCP tool calls from the extension
+     */
+    async handleMcpToolCall(
+        serverName: string,
+        toolName: string,
+        arguments?: Record<string, unknown>,
+    ): Promise<unknown> {
+        if (!this.mcpHub) {
+            throw new Error("MCP Hub not initialized");
+        }
+        return this.mcpHub.callTool(serverName, toolName, arguments);
+    }
+
+    /**
+     * Handle MCP resource access from the extension
+     */
+    async handleMcpResourceAccess(
+        serverName: string,
+        uri: string,
+    ): Promise<unknown> {
+        if (!this.mcpHub) {
+            throw new Error("MCP Hub not initialized");
+        }
+        return this.mcpHub.readResource(serverName, uri);
+    }
+
+    async dispose(): Promise<void> {
+        await this.mcpHub?.dispose();
+        // ... existing disposal ...
+    }
+}
+```
+
+### 6.2 State Management
+
+```typescript
+// cli/src/state/atoms/mcp-atoms.ts
+
+import { atom } from "jotai";
+
+/**
+ * MCP Servers State
+ */
+export interface McpServerState {
+    name: string;
+    status: "disconnected" | "connecting" | "connected";
+    source: "global" | "project";
+    disabled: boolean;
+    tools: Array<{
+        name: string;
+        description?: string;
+        alwaysAllow: boolean;
+    }>;
+    resources: Array<{
+        uri: string;
+        name: string;
+        mimeType?: string;
+    }>;
+    error?: string;
+}
+
+export const mcpServersAtom = atom<McpServerState[]>([]);
+
+export const mcpEnabledAtom = atom<boolean>(true);
+
+export const mcpAutoApproveAtom = atom<boolean>(false);
+```
+
+### 6.3 Command Handler Context Extension
+
+```typescript
+// cli/src/commands/core/types.ts (modified)
+
+export interface CommandContext {
+    // ... existing properties ...
+
+    // MCP mcpServers:-related context
+    McpServerState[];
+    mcpEnabled: boolean;
+    callMcpTool: (serverName: string, toolName: string, args?: Record<string, unknown>) => Promise<unknown>;
+    accessMcpResource: (serverName: string, uri: string) => Promise<unknown>;
+}
+```
+
+## 7. Implementation Plan
+
+### Phase 1: Configuration System
+1. Create MCP configuration types and schema
+2. Implement config file I/O operations
+3. Add config validation
+4. Implement merge strategy for global + project configs
+
+### Phase 2: MCP Hub Service
+1. Implement McpHub class with lifecycle management
+2. Create transport implementations (stdio, SSE, HTTP)
+3. Implement tool/resource discovery and caching
+4. Add file watching for auto-restart
+
+### Phase 3: CLI Commands
+1. Implement `mcp list` command
+2. Implement `mcp add` command
+3. Implement `mcp remove` command
+4. Implement `mcp start/stop` commands
+5. Implement `mcp status` command
+6. Implement `mcp edit` command
+7. Implement `mcp enable/disable` commands
+
+### Phase 4: Integration
+1. Integrate McpHub with ExtensionService
+2. Add MCP auto-approval support
+3. Add MCP-related state atoms
+4. Update IPC protocol for MCP messages
+
+### Phase 5: Testing
+1. Unit tests for config parsing and validation
+2. Unit tests for transport implementations
+3. Integration tests for CLI commands
+4. End-to-end tests for server lifecycle
