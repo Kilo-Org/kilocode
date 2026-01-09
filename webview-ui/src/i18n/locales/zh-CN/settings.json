@@ -1030,7 +1030,9 @@
 		"searchPlaceholder": "搜索",
 		"noMatchFound": "未找到匹配项",
 		"useCustomModel": "使用自定义：{{modelId}}",
-		"simplifiedExplanation": "你可以稍后调整详细的模型设置。"
+		"simplifiedExplanation": "你可以稍后调整详细的模型设置。",
+		"recommendedModels": "推荐模型",
+		"allModels": "全部模型"
 	},
 	"footer": {
 		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",

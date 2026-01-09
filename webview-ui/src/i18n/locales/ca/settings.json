@@ -1025,7 +1025,9 @@
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "No s'ha trobat cap coincidència",
 		"useCustomModel": "Utilitzar personalitzat: {{modelId}}",
-		"simplifiedExplanation": "Pots ajustar la configuració detallada del model més tard."
+		"simplifiedExplanation": "Pots ajustar la configuració detallada del model més tard.",
+		"recommendedModels": "Models recomanats",
+		"allModels": "Tots els models"
 	},
 	"footer": {
 		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
