@@ -889,8 +889,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 	 * 1. Stage all changes
 	 * 2. Ask agent to generate commit message and commit
 	 * 3. Fallback to programmatic commit if agent times out
-	 * 4. Terminate CLI process
-	 * 5. Clean up worktree (keep branch)
+	 *
+	 * Note: The session remains interactive after finishing. The CLI process
+	 * and worktree are kept alive so the user can continue working.
 	 */
 	private async finishWorktreeSession(sessionId: string): Promise<void> {
 		const session = this.registry.getSession(sessionId)
@@ -913,7 +914,6 @@ export class AgentManagerProvider implements vscode.Disposable {
 
 		if (!worktreePath) {
 			this.outputChannel.appendLine(`[AgentManager] No worktree path for session: ${sessionId}`)
-			this.processHandler.terminateProcess(sessionId, "SIGTERM")
 			return
 		}
 
@@ -948,20 +948,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 				this.log(sessionId, "No changes to commit")
 			}
 
-			// Terminate CLI process
-			this.processHandler.terminateProcess(sessionId, "SIGTERM")
-
-			// Clean up worktree (keep the branch for later merging)
-			await manager.removeWorktree(worktreePath)
-
 			// Show completion message
 			this.showWorktreeCompletionMessage(branch)
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error)
 			this.outputChannel.appendLine(`[AgentManager] Error finishing worktree session: ${errorMsg}`)
-
-			// Still try to terminate the process
-			this.processHandler.terminateProcess(sessionId, "SIGTERM")
 		}
 
 		this.postStateToWebview()
