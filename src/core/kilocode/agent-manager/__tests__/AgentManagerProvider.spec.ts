@@ -93,7 +93,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 				commitChanges: vi.fn().mockResolvedValue({ success: true }),
 				removeWorktree: vi.fn().mockResolvedValue(undefined),
 				discoverWorktrees: vi.fn().mockResolvedValue([]),
-				ensureGitignore: vi.fn().mockResolvedValue(undefined),
+				ensureGitExclude: vi.fn().mockResolvedValue(undefined),
 			})),
 			WorktreeError: class WorktreeError extends Error {
 				constructor(
