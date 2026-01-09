@@ -26,9 +26,6 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { getApiRequestTimeout } from "./utils/timeout-config"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
-// TODO: Rename this to OpenAICompatibleHandler. Also, I think the
-// `OpenAINativeHandler` can subclass from this, since it's obviously
-// compatible with the OpenAI API. We can also rename it to `OpenAIHandler`.
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
