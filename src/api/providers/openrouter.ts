@@ -44,6 +44,7 @@ type OpenRouterProviderParams = {
 
 import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+import { OpenAIError } from "openai"
 // kilocode_change end
 
 import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
@@ -206,7 +207,28 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		throw new Error(`OpenRouter API Error ${error?.code}: ${rawErrorMessage}`)
 	}
 
+	// kilocode_change start
+	// the comment below seems incorrect, errors in the stream are still thrown as exceptions
 	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): AsyncGenerator<ApiStreamChunk> {
+		try {
+			yield* this.createMessage_implementationRenamedForKilocode(systemPrompt, messages, metadata)
+		} catch (error) {
+			if (
+				error instanceof OpenAIError &&
+				(this.providerName !== "KiloCode" || !isAnyRecognizedKiloCodeError(error))
+			) {
+				throw new Error(makeOpenRouterErrorReadable(error))
+			}
+			throw error
+		}
+	}
+	// kilocode_change end
+
+	private async *createMessage_implementationRenamedForKilocode(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
@@ -641,7 +663,7 @@ function makeOpenRouterErrorReadable(error: any) {
 			rawError?.message ??
 			metadata?.raw ??
 			error?.message
-		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
+		return `${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`
 	}
 
 	try {

@@ -1,7 +1,7 @@
 import { Position } from "../.."
 import { ContextRetrievalService } from "../../autocomplete/context/ContextRetrievalService"
 import { getAllSnippetsWithoutRace } from "../../autocomplete/snippets/getAllSnippets"
-import { AutocompleteCodeSnippet } from "../../autocomplete/snippets/types"
+import { AutocompleteCodeSnippet } from "../../autocomplete/types"
 import { renderPrompt } from "../../autocomplete/templating"
 import { GetLspDefinitionsFunction } from "../../autocomplete/types"
 import { HelperVars } from "../../autocomplete/util/HelperVars"

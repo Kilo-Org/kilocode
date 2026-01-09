@@ -1934,9 +1934,6 @@ importers:
       turndown:
         specifier: ^7.2.0
         version: 7.2.0
-      undici:
-        specifier: '>=5.29.0'
-        version: 7.16.0
       uri-js:
         specifier: ^4.4.1
         version: 4.4.1

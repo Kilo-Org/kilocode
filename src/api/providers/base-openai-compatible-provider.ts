@@ -13,7 +13,6 @@ import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
-import { fetchWithTimeout } from "./kilocode/fetchWithTimeout" // kilocode_change
 import { calculateApiCostOpenAI } from "../../shared/cost"
 import { getApiRequestTimeout } from "./utils/timeout-config"
 
@@ -61,15 +60,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			throw new Error("API key is required")
 		}
 
-		const timeout = getApiRequestTimeout() // kilocode_change
 		this.client = new OpenAI({
 			baseURL,
 			apiKey: this.options.apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
-			// kilocode_change start
-			timeout: timeout,
-			fetch: timeout ? fetchWithTimeout(timeout) : undefined,
-			// kilocode_change end
+			timeout: getApiRequestTimeout(),
 		})
 	}
 

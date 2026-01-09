@@ -1215,10 +1215,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 						<LanguageSettings language={language || "en"} setCachedStateField={setCachedStateField} />
 					)}
 
-					{/* kilocode_change */}
-					{/* MCP Section */}
-					{activeTab === "mcp" && <McpView />}
-
 					{/* About Section */}
 					{activeTab === "about" && (
 						<About telemetrySetting={telemetrySetting} setTelemetrySetting={setTelemetrySetting} />

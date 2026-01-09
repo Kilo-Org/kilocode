@@ -2,7 +2,6 @@ import { openRouterDefaultModelId, type ProviderSettings } from "@roo-code/types
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
-import { fetchWithTimeout } from "./fetchWithTimeout"
 import { DEFAULT_HEADERS } from "../constants"
 
 type KilocodeToken = string
@@ -14,8 +13,6 @@ const cache = new Map<string, Promise<string>>()
 const defaultsSchema = z.object({
 	defaultModel: z.string().nullish(),
 })
-
-const fetcher = fetchWithTimeout(5000)
 
 async function fetchKilocodeDefaultModel(
 	kilocodeToken: KilocodeToken,
@@ -39,7 +36,10 @@ async function fetchKilocodeDefaultModel(
 			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 		}
 
-		const response = await fetcher(url, { headers })
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 5000)
+		const response = await fetch(url, { headers, signal: controller.signal })
+		clearTimeout(timeout)
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
 		}
