@@ -25,6 +25,7 @@ import {
 	PASTE_MODE_SUFFIX,
 	FOCUS_IN,
 	FOCUS_OUT,
+	CHAR_CODE_DELETE,
 } from "../../constants/keyboard/index.js"
 
 /**
@@ -344,6 +345,125 @@ export function mapAltKeyCharacter(char: string): string | null {
 export function parseReadlineKey(key: ReadlineKey): Key {
 	// Handle the key object from readline
 	const keyName = key.name || (key.sequence.length === 1 ? key.sequence : "")
+
+	// kilocode_change: Handle Ghostty terminal special character sequences
+	// Ghostty may send CSI sequences that need special handling
+	// The "9u" issue is caused by CSI sequences being parsed as regular characters
+	if (key.sequence && key.sequence.length > 1) {
+		// Check if this looks like a CSI sequence that wasn't properly parsed
+		// Ghostty sometimes sends CSI sequences that readline doesn't recognize
+		const isCsiSequence = key.sequence.startsWith(CSI)
+		const isUnparsedCsi = isCsiSequence && !key.name
+
+		if (isUnparsedCsi) {
+			// Try to parse as CSI-u format (Kitty protocol)
+			// ESC [ <code> ; <mods> u
+			// Build regex dynamically to avoid no-control-regex lint error
+			const csiuPattern = new RegExp(`^${ESC}\\[(\\d+)(;(\\d+))?u`)
+			const csiuMatch = key.sequence.match(csiuPattern)
+			if (csiuMatch && csiuMatch[1]) {
+				const keyCode = parseInt(csiuMatch[1], 10)
+				const modifiers = csiuMatch[3] ? parseInt(csiuMatch[3], 10) : KITTY_MODIFIER_BASE
+				const modifierBits = modifiers - KITTY_MODIFIER_BASE
+				const shift = (modifierBits & MODIFIER_SHIFT_BIT) === MODIFIER_SHIFT_BIT
+				const alt = (modifierBits & MODIFIER_ALT_BIT) === MODIFIER_ALT_BIT
+				const ctrl = (modifierBits & MODIFIER_CTRL_BIT) === MODIFIER_CTRL_BIT
+
+				// Handle Enter key (keyCode 13)
+				if (keyCode === 13) {
+					return {
+						name: "return",
+						ctrl,
+						meta: alt,
+						shift,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+
+				// Handle Backspace key (keyCode 127)
+				if (keyCode === CHAR_CODE_DELETE || keyCode === KITTY_KEYCODE_BACKSPACE) {
+					return {
+						name: "backspace",
+						ctrl,
+						meta: alt,
+						shift,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+
+				// Handle Tab key (keyCode 9)
+				if (keyCode === KITTY_KEYCODE_TAB) {
+					return {
+						name: "tab",
+						ctrl,
+						meta: alt,
+						shift,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+
+				// Handle Escape key (keyCode 27)
+				if (keyCode === CHAR_CODE_ESC) {
+					return {
+						name: "escape",
+						ctrl,
+						meta: alt,
+						shift,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+			}
+
+			// Try to parse as CSI~ format (tilde-coded keys)
+			// ESC [ <code> ~
+			// Build regex dynamically to avoid no-control-regex lint error
+			const csiPattern = new RegExp(`^${ESC}\\[(\\d+)~`)
+			const csiMatch = key.sequence.match(csiPattern)
+			if (csiMatch && csiMatch[1]) {
+				const keyCode = parseInt(csiMatch[1], 10)
+
+				// Handle Backspace/Delete (keyCode 127 or 3)
+				if (keyCode === CHAR_CODE_DELETE || keyCode === 3) {
+					return {
+						name: "backspace",
+						ctrl: false,
+						meta: false,
+						shift: false,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+
+				// Handle Delete key (keyCode 51)
+				if (keyCode === 51) {
+					return {
+						name: "delete",
+						ctrl: false,
+						meta: false,
+						shift: false,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+
+				// Handle Enter key (keyCode 13)
+				if (keyCode === 13) {
+					return {
+						name: "return",
+						ctrl: false,
+						meta: false,
+						shift: false,
+						paste: false,
+						sequence: key.sequence,
+					}
+				}
+			}
+		}
+	}
 
 	// Detect Shift+1/! - since readline doesn't properly detect shift for these characters,
 	// we assume '!' is always Shift+1, and we'll also check for explicit Shift+1
