@@ -8,11 +8,17 @@ The CLI is currently built by bundling the extension core and replacing the vsco
 
 1. Build the extension core from the root workspace folder by running `pnpm cli:bundle`
 
-2. Change into the cli folder `cd ./cli`
+2. Copy the environment file to the CLI dist folder:
+   ```bash
+   cp .env.sample cli/dist/.env
+   ```
+   Then edit `cli/dist/.env` to add your API keys (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
 
-3. Build & run the extension by running `pnpm start:dev`. If you want to use the CLI to work on its own code, you can run `pnpm start:dev -w ../` which will start it within the root workspace folder.
+3. Change into the cli folder `cd ./cli`
 
-4. While not required, it's pretty helpful to view log output of the cli in a separate terminal while you're developing. To do this, open a new terminal window and run `pnpm logs`. You can also run `pnpm logs:clear` to truncate any on-disk logs during development.
+4. Build & run the extension by running `pnpm start:dev`. If you want to use the CLI to work on its own code, you can run `pnpm start:dev -w ../` which will start it within the root workspace folder.
+
+5. While not required, it's pretty helpful to view log output of the cli in a separate terminal while you're developing. To do this, open a new terminal window and run `pnpm logs`. You can also run `pnpm logs:clear` to truncate any on-disk logs during development.
 
 ## Code Hygiene
 
