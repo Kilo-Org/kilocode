@@ -203,5 +203,9 @@
 			"invalidApiKey": "คีย์ OpenAI API ของคุณไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง Realtime API กรุณาตรวจสอบคีย์ API ของคุณและลองใหม่อีกครั้ง",
 			"unknown": "การเชื่อมต่อล้มเหลว กรุณาตรวจสอบการกำหนดค่าของคุณและลองใหม่อีกครั้ง"
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: เพิ่ม {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Code: ลบ {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

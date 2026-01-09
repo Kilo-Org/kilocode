@@ -203,5 +203,9 @@
 			"invalidApiKey": "Ваш API ключ OpenAI недійсний або не має доступу до Realtime API. Будь ласка, перевірте ваш API ключ і спробуйте знову.",
 			"unknown": "Підключення не вдалося. Будь ласка, перевірте налаштування та спробуйте ще раз."
 		}
+	},
+	"configDiscovery": {
+		"removed": "Код одиниці: Видалено {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Код Кіло: Додано {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
