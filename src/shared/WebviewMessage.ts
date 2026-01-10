@@ -85,6 +85,7 @@ export interface WebviewMessage {
 		| "requestOpenAiModels"
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
+		| "requestLiteLLMModels"
 		| "requestRooModels"
 		| "requestRooCreditBalance"
 		| "requestVsCodeLmModels"

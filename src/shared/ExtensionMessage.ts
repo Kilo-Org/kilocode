@@ -99,6 +99,7 @@ export interface ExtensionMessage {
 		| "openAiModels"
 		| "ollamaModels"
 		| "lmStudioModels"
+		| "litellmModels"
 		| "vsCodeLmModels"
 		| "huggingFaceModels"
 		| "sapAiCoreModels" // kilocode_change
@@ -244,6 +245,7 @@ export interface ExtensionMessage {
 	openAiModels?: string[]
 	ollamaModels?: ModelRecord
 	lmStudioModels?: ModelRecord
+	litellmModels?: ModelRecord
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
 	huggingFaceModels?: Array<{
 		id: string

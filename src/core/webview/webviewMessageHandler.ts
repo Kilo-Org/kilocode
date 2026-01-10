@@ -1086,6 +1086,37 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "requestLiteLLMModels": {
+			// Specific handler for LiteLLM models only.
+			const { apiConfiguration: litellmApiConfig } = await provider.getState()
+			try {
+				// Flush cache and refresh to ensure fresh models.
+				await flushModels("litellm", true)
+
+				// Ensure both apiKey and baseUrl are defined before fetching
+				if (!litellmApiConfig.litellmApiKey || !litellmApiConfig.litellmBaseUrl) {
+					console.debug("LiteLLM models fetch failed: Missing API key or base URL")
+					break
+				}
+
+				const litellmModels = await getModels({
+					provider: "litellm",
+					apiKey: litellmApiConfig.litellmApiKey,
+					baseUrl: litellmApiConfig.litellmBaseUrl,
+				})
+
+				if (Object.keys(litellmModels).length > 0) {
+					provider.postMessageToWebview({
+						type: "litellmModels",
+						litellmModels: litellmModels,
+					})
+				}
+			} catch (error) {
+				// Silently fail - user hasn't configured LiteLLM yet.
+				console.debug("LiteLLM models fetch failed:", error)
+			}
+			break
+		}
 		case "requestRooModels": {
 			// Specific handler for Roo models only - flushes cache to ensure fresh auth token is used
 			try {

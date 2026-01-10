@@ -181,6 +181,63 @@ describe("webviewMessageHandler - requestOllamaModels", () => {
 	})
 })
 
+describe("webviewMessageHandler - requestLiteLLMModels", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			apiConfiguration: {
+				litellmApiKey: "test-key",
+				litellmBaseUrl: "http://localhost:4000",
+			},
+		})
+	})
+
+	it("successfully fetches models from LiteLLM", async () => {
+		const mockModels: ModelRecord = {
+			"model-1": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "Test model 1",
+			},
+			"model-2": {
+				maxTokens: 8192,
+				contextWindow: 16384,
+				supportsPromptCache: false,
+				description: "Test model 2",
+			},
+		}
+
+		mockGetModels.mockResolvedValue(mockModels)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "requestLiteLLMModels",
+		})
+
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "litellm",
+			apiKey: "test-key",
+			baseUrl: "http://localhost:4000",
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "litellmModels",
+			litellmModels: mockModels,
+		})
+	})
+
+	it("silently fails when LiteLLM is not configured", async () => {
+		mockGetModels.mockRejectedValue(new Error("Failed to connect"))
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "requestLiteLLMModels",
+		})
+
+		// Should not call postMessageToWebview on error
+		expect(mockClineProvider.postMessageToWebview).not.toHaveBeenCalled()
+	})
+})
+
 describe("webviewMessageHandler - requestRouterModels", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
