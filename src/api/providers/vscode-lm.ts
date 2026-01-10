@@ -111,6 +111,13 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 	 */
 	async createClient(selector: vscode.LanguageModelChatSelector): Promise<vscode.LanguageModelChat> {
 		try {
+			// Check if vscode.lm API is available
+			if (!vscode.lm) {
+				throw new Error(
+					"VS Code Language Model API is not available. The vscode-lm provider can only be used within VS Code extension, not in CLI.",
+				)
+			}
+
 			const models = await vscode.lm.selectChatModels(selector)
 
 			// Use first available model or create a minimal model object
@@ -565,6 +572,12 @@ const VSCODE_LM_STATIC_BLACKLIST: string[] = ["claude-3.7-sonnet", "claude-3.7-s
 
 export async function getVsCodeLmModels() {
 	try {
+		// Check if vscode.lm API is available
+		if (!vscode.lm) {
+			console.warn("VS Code Language Model API is not available.")
+			return []
+		}
+
 		const models = (await vscode.lm.selectChatModels({})) || []
 		return models.filter((model) => !VSCODE_LM_STATIC_BLACKLIST.includes(model.id))
 	} catch (error) {
