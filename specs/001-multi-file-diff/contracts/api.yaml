@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: Multi-File Diff System API
+  description: Internal API contracts for the Multi-File Diff and Auto-Navigation System
+  version: 1.0.0
+
+paths:
+  /diff/create:
+    post:
+      summary: Create diff overlay from AI response
+      operationId: createDiff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDiffRequest'
+      responses:
+        '200':
+          description: Diff created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDiffResponse'
+
+  /diff/{diffId}/accept:
+    post:
+      summary: Accept a diff change
+      operationId: acceptDiff
+      parameters:
+        - name: diffId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diff accepted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiffActionResponse'
+
+  /diff/{diffId}/reject:
+    post:
+      summary: Reject a diff change
+      operationId: rejectDiff
+      parameters:
+        - name: diffId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diff rejected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiffActionResponse'
+
+  /files/open:
+    post:
+      summary: Open file programmatically
+      operationId: openFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenFileRequest'
+      responses:
+        '200':
+          description: File opened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenFileResponse'
+
+  /session/state:
+    get:
+      summary: Get current session state
+      operationId: getSessionState
+      responses:
+        '200':
+          description: Session state retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionState'
+
+  /session/clear:
+    post:
+      summary: Clear session state
+      operationId: clearSession
+      responses:
+        '200':
+          description: Session cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionActionResponse'
+
+components:
+  schemas:
+    CreateDiffRequest:
+      type: object
+      required:
+        - filePath
+        - diffContent
+        - diffFormat
+      properties:
+        filePath:
+          type: string
+          description: Absolute path to the file
+        diffContent:
+          type: string
+          description: Diff content in unified or partial format
+        diffFormat:
+          type: string
+          enum: [unified, partial, custom]
+          description: Format of the diff content
+        source:
+          type: string
+          description: Source of the diff (e.g., AI agent name)
+
+    CreateDiffResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        shadowBufferId:
+          type: string
+        diffOverlays:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiffOverlay'
+        error:
+          type: string
+          nullable: true
+
+    DiffOverlay:
+      type: object
+      required:
+        - id
+        - startLine
+        - endLine
+        - type
+        - content
+      properties:
+        id:
+          type: string
+        startLine:
+          type: integer
+          minimum: 0
+        endLine:
+          type: integer
+          minimum: 0
+        type:
+          type: string
+          enum: [addition, deletion, modification]
+        content:
+          type: string
+        isAccepted:
+          type: boolean
+          default: false
+        isRejected:
+          type: boolean
+          default: false
+
+    DiffActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        fileBufferUpdated:
+          type: boolean
+          description: Whether the main file buffer was updated
+
+    OpenFileRequest:
+      type: object
+      required:
+        - filePath
+      properties:
+        filePath:
+          type: string
+          description: Absolute path to the file to open
+        action:
+          type: string
+          enum: [open, focus, background]
+          default: open
+          description: How to open the file
+        createIfNotExists:
+          type: boolean
+          default: false
+          description: Create file if it doesn't exist
+
+    OpenFileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        fileBufferId:
+          type: string
+        isNewTab:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+
+    SessionState:
+      type: object
+      properties:
+        id:
+          type: string
+        activeShadowBuffers:
+          type: array
+          items:
+            type: string
+        fileStates:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FileState'
+        globalSettings:
+          $ref: '#/components/schemas/SessionSettings'
+        createdAt:
+          type: string
+          format: date-time
+        lastActivity:
+          type: string
+          format: date-time
+
+    FileState:
+      type: object
+      properties:
+        filePath:
+          type: string
+        hasUnsavedChanges:
+          type: boolean
+        activeDiffCount:
+          type: integer
+          minimum: 0
+        lastSyncVersion:
+          type: integer
+          minimum: 0
+
+    SessionSettings:
+      type: object
+      properties:
+        autoSave:
+          type: boolean
+          default: false
+        diffColorScheme:
+          type: string
+          enum: [vscode, custom, high-contrast]
+          default: vscode
+        maxFileSize:
+          type: integer
+          minimum: 1024
+          default: 10485760
+          description: Maximum file size in bytes
+
+    SessionActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        clearedBuffers:
+          type: integer
+          description: Number of buffers cleared

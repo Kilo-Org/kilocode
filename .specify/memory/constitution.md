@@ -1,73 +1,84 @@
-# [PROJECT_NAME] Constitution
+<!--
+Sync Impact Report
+Version Change: N/A → 1.0.0 (Initial creation)
+Modified Principles: All principles newly defined
+Added Sections: Core Principles, Development Standards, Governance
+Removed Sections: None (template placeholders only)
+Templates Requiring Updates: None (constitution is foundational)
+Follow-up TODOs: None
+-->
 
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Kilo Code Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
+### I. Monorepo Architecture with pnpm & Turbo
 
-<!-- Example: I. Library-First -->
+Every package must be independently buildable, testable, and publishable. The pnpm workspace structure with Turbo orchestration is non-negotiable. Packages must declare explicit dependencies via `workspace:^` protocol. Turbo task pipelines must be defined for lint, test, build, and bundle operations across all packages and apps.
 
-[PRINCIPLE_1_DESCRIPTION]
+**Rationale**: This ensures consistent builds, enables parallel development, and maintains clear boundaries between the extension core, webview UI, CLI, and shared packages.
 
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### II. VSCode Extension as Primary Deliverable
 
-### [PRINCIPLE_2_NAME]
+The VSCode extension in `src/` is the primary product. All features must integrate seamlessly with VSCode's extension API, webview capabilities, and command palette. The webview UI must use React with TypeScript, follow VSCode's theme system, and respect workspace boundaries.
 
-<!-- Example: II. CLI Interface -->
+**Rationale**: Kilo Code is a VSCode extension first and foremost. Other platforms (CLI, JetBrains) are secondary and must not compromise the core VSCode experience.
 
-[PRINCIPLE_2_DESCRIPTION]
+### III. Test Coverage Before Implementation (NON-NEGOTIABLE)
 
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All new features require tests written first using vitest. Tests must be placed alongside source files with `.test.ts` or `.spec.ts` naming. Integration tests must verify tool behaviors (read-file, apply-diff, execute-command). The `cd src && pnpm test` command must pass before any implementation is considered complete.
 
-### [PRINCIPLE_3_NAME]
+**Rationale**: The AGENTS.md explicitly states "Before attempting completion, always make sure that any code changes have test coverage." This is a critical quality gate.
 
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+### IV. Fork Compatibility with kilocode_change Markers
 
-[PRINCIPLE_3_DESCRIPTION]
+All modifications to core extension code (files existing in upstream Roo Code) must be marked with `kilocode_change` comments. New files in Kilo-specific directories (`cli/`, `jetbrains/`, paths containing `kilocode`) do not require markers. Changes must minimize merge conflicts during upstream syncs.
 
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: Kilo Code is a fork of Roo Code. Without these markers, upstream merges become impossible to manage.
 
-### [PRINCIPLE_4_NAME]
+### V. AI Provider Abstraction & Multi-Model Support
 
-<!-- Example: IV. Integration Testing -->
+The system must support 50+ AI providers through a unified interface in `src/api/providers/`. Each provider implements a common contract for authentication, request/response handling, and error management. Provider implementations must be isolated and independently testable.
 
-[PRINCIPLE_4_DESCRIPTION]
+**Rationale**: Multi-model support is a core value proposition. The architecture must accommodate new providers without refactoring existing code.
 
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## Development Standards
 
-### [PRINCIPLE_5_NAME]
+### Technology Stack Requirements
 
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+- **Runtime**: Node.js 20.19.2 (enforced via package.json engines)
+- **Package Manager**: pnpm 10.8.1 with workspace protocol
+- **Language**: TypeScript 5.4.5 with strict mode enabled
+- **Build**: esbuild for bundling, Turbo for orchestration
+- **Testing**: vitest with workspace-specific test commands
+- **Linting**: ESLint with project-specific configs, Prettier for formatting
 
-[PRINCIPLE_5_DESCRIPTION]
+### Code Organization
 
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
-
-## [SECTION_2_NAME]
-
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- `src/` - VSCode extension core (upstream-compatible)
+- `webview-ui/` - React frontend for chat interface
+- `cli/` - Standalone CLI package (Kilo-specific)
+- `packages/` - Shared libraries (types, ipc, telemetry, cloud)
+- `apps/` - Applications (E2E tests, Storybook, docs)
+- `jetbrains/` - JetBrains plugin (Kilo-specific)
 
 ## Governance
 
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### Amendment Procedure
 
-[GOVERNANCE_RULES]
+1. Propose changes via pull request with clear rationale
+2. Update constitution version according to semantic versioning:
+   - MAJOR: Breaking changes to principles or architecture
+   - MINOR: New principles or substantial guidance additions
+   - PATCH: Clarifications, wording improvements, typo fixes
+3. All PRs must verify compliance with existing principles
+4. Changes require approval from project maintainers
 
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Compliance Verification
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+- All PRs must pass `pnpm lint`, `pnpm check-types`, and `pnpm test`
+- Constitution compliance must be verified in PR descriptions
+- Complexity must be justified with reference to specific principles
+- Use `.kilocode/rules/` for runtime development guidance
 
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-01-10 | **Last Amended**: 2026-01-10
