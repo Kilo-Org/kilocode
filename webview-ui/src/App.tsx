@@ -322,7 +322,9 @@ const App = () => {
 	// Do not conditionally load ChatView, it's expensive and there's state we
 	// don't want to lose (user input, disableInput, askResponse promise, etc.)
 	// kilocode_change: no WelcomeViewProvider toggle
-	return showWelcome ? (
+	// When showWelcome is true, allow access to settings for configuration import
+	const showSettingsWithWelcome = showWelcome && tab === "settings"
+	return showWelcome && !showSettingsWithWelcome ? (
 		<WelcomeView />
 	) : (
 		<>
