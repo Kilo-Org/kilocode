@@ -9,7 +9,7 @@ import { formatResponse } from "../prompts/responses"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { fileExistsAtPath, createDirectoriesForFile } from "../../utils/fs"
 import { stripLineNumbers, everyLineHasLineNumbers } from "../../integrations/misc/extract-text"
-import { getReadablePath } from "../../utils/path"
+import { getReadablePath, expandPathVariables } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
@@ -36,8 +36,11 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 	async execute(params: WriteToFileParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { pushToolResult, handleError, askApproval, removeClosingTag } = callbacks
-		const relPath = params.path
+		let relPath = params.path
 		let newContent = params.content
+
+		// Expand environment variables in the path (e.g., $HOME, ~)
+		relPath = expandPathVariables(relPath)
 
 		if (!relPath) {
 			task.consecutiveMistakeCount++
@@ -232,8 +235,13 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"write_to_file">): Promise<void> {
-		const relPath: string | undefined = block.params.path
+		let relPath: string | undefined = block.params.path
 		let newContent: string | undefined = block.params.content
+
+		// Expand environment variables in the path (e.g., $HOME, ~)
+		if (relPath) {
+			relPath = expandPathVariables(relPath)
+		}
 
 		if (!relPath || newContent === undefined) {
 			return

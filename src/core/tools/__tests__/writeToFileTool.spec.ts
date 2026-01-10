@@ -45,6 +45,7 @@ vi.mock("../../../utils/pathUtils", () => ({
 
 vi.mock("../../../utils/path", () => ({
 	getReadablePath: vi.fn().mockReturnValue("test/path.txt"),
+	expandPathVariables: vi.fn().mockImplementation((path: string) => path),
 }))
 
 vi.mock("../../../utils/text-normalization", () => ({
