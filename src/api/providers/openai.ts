@@ -621,7 +621,23 @@ export function getOpenAiModelInfo(modelId: string): ModelInfo | undefined {
 
 	for (const modelMap of models) {
 		if (modelId in modelMap) {
-			return modelMap[modelId]
+			const info = modelMap[modelId]
+			// Sanitize tiers to handle Infinity values (which become null when serialized to JSON)
+			// This prevents validation errors when saving the config
+			if (info.tiers) {
+				return {
+					...info,
+					tiers: info.tiers.map((tier) => ({
+						...tier,
+						// Replace Infinity/null with Number.MAX_SAFE_INTEGER (essentially unlimited)
+						contextWindow:
+							tier.contextWindow === Infinity || tier.contextWindow === null
+								? Number.MAX_SAFE_INTEGER
+								: tier.contextWindow,
+					})),
+				}
+			}
+			return info
 		}
 	}
 

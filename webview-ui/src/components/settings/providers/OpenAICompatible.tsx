@@ -136,11 +136,40 @@ export const OpenAICompatible = ({
 
 	useEvent("message", onMessage)
 
-	const handleAutoFill = useCallback(() => {
+	// Auto-list models when Base URL or API Key changes
+	// Auto-list models when Base URL or API Key changes
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			if (apiConfiguration?.openAiBaseUrl) {
+				vscode.postMessage({
+					type: "requestOpenAiModels",
+					values: {
+						baseUrl: apiConfiguration.openAiBaseUrl,
+						apiKey: apiConfiguration.openAiApiKey,
+						openAiHeaders: apiConfiguration.openAiHeaders,
+					},
+				})
+			}
+		}, 500) // Debounce 500ms
+
+		return () => clearTimeout(timer)
+	}, [apiConfiguration?.openAiBaseUrl, apiConfiguration?.openAiApiKey, apiConfiguration?.openAiHeaders])
+
+	// Auto-fill when model ID changes
+	useEffect(() => {
 		if (apiConfiguration?.openAiModelId) {
 			vscode.postMessage({
 				type: "requestOpenAiModelInfo",
 				values: { openAiModelId: apiConfiguration.openAiModelId },
+			})
+		}
+	}, [apiConfiguration?.openAiModelId])
+
+	const handleAutoFill = useCallback(() => {
+		if (apiConfiguration?.openAiModelId) {
+			vscode.postMessage({
+				type: "requestOpenAiModelInfo",
+				values: { openAiModelId: apiConfiguration.openAiModelId, forceRefresh: true },
 			})
 		}
 	}, [apiConfiguration?.openAiModelId])

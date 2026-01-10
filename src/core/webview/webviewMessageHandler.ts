@@ -893,14 +893,7 @@ export const webviewMessageHandler = async (
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
 				},
-				{
-					key: "gemini",
-					options: {
-						provider: "gemini",
-						apiKey: apiConfiguration.geminiApiKey,
-						baseUrl: apiConfiguration.googleGeminiBaseUrl,
-					},
-				},
+
 				{
 					key: "requesty",
 					options: {
@@ -919,7 +912,7 @@ export const webviewMessageHandler = async (
 						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
 				},
-				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
+
 				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
 				{
 					key: "deepinfra",
@@ -995,6 +988,26 @@ export const webviewMessageHandler = async (
 				candidates.push({
 					key: "litellm",
 					options: { provider: "litellm", apiKey: litellmApiKey, baseUrl: litellmBaseUrl },
+				})
+			}
+
+			// Gemini is conditional - only fetch if user is actually using Gemini provider AND has API key
+			if (apiConfiguration.apiProvider === "gemini" && apiConfiguration.geminiApiKey) {
+				candidates.push({
+					key: "gemini",
+					options: {
+						provider: "gemini",
+						apiKey: apiConfiguration.geminiApiKey,
+						baseUrl: apiConfiguration.googleGeminiBaseUrl,
+					},
+				})
+			}
+
+			// Ollama is conditional - only fetch if user is actually using Ollama provider
+			if (apiConfiguration.apiProvider === "ollama" && apiConfiguration.ollamaBaseUrl) {
+				candidates.push({
+					key: "ollama",
+					options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl },
 				})
 			}
 
@@ -1144,7 +1157,7 @@ export const webviewMessageHandler = async (
 			break
 		}
 		case "requestOpenAiModels":
-			if (message?.values?.baseUrl && message?.values?.apiKey) {
+			if (message?.values?.baseUrl) {
 				const openAiModels = await getOpenAiModels(
 					message?.values?.baseUrl,
 					message?.values?.apiKey,
@@ -1157,7 +1170,76 @@ export const webviewMessageHandler = async (
 			break
 		case "requestOpenAiModelInfo":
 			if (message?.values?.openAiModelId) {
-				const modelInfo = getOpenAiModelInfo(message.values.openAiModelId)
+				let modelInfo = getOpenAiModelInfo(message.values.openAiModelId)
+
+				if (!modelInfo) {
+					try {
+						const { getOpenRouterModels } = await import("../../api/providers/fetchers/openrouter")
+						// If forceRefresh is true (manual Auto-fill click), flush cache first
+						if (message?.values?.forceRefresh) {
+							await flushModels("openrouter", true)
+						}
+						const openRouterModels = await getOpenRouterModels()
+						modelInfo = openRouterModels[message.values.openAiModelId]
+
+						if (!modelInfo) {
+							const searchId = message.values.openAiModelId.toLowerCase()
+							const keys = Object.keys(openRouterModels)
+							const matches = keys.filter((id) => id.toLowerCase().includes(searchId))
+
+							if (matches.length > 0) {
+								// Sort by length to find the most concise match (often the base model)
+								matches.sort((a, b) => a.length - b.length)
+								modelInfo = openRouterModels[matches[0]]
+							}
+						}
+					} catch (error) {
+						console.error("Error fetching OpenRouter models for auto-fill:", error)
+					}
+				}
+
+				// Heuristic: Auto-detect capabilities from model ID
+				const lowerModelId = message.values.openAiModelId.toLowerCase()
+				if (!modelInfo) {
+					modelInfo = {} as any
+				}
+
+				// Only assign if modelInfo is now defined (it is, due to above check)
+				if (modelInfo) {
+					// Clone to avoid mutating shared state if it comes from a const
+					modelInfo = { ...modelInfo }
+
+					if (lowerModelId.includes("computer")) {
+						modelInfo.supportsComputerUse = true
+					}
+					if (
+						lowerModelId.includes("vision") ||
+						lowerModelId.includes("vl") ||
+						lowerModelId.includes("omni") ||
+						lowerModelId.includes("gemini") ||
+						lowerModelId.includes("gpt-4o")
+					) {
+						modelInfo.supportsImages = true
+					}
+					if (
+						lowerModelId.includes("reasoner") ||
+						lowerModelId.includes("thinking") ||
+						lowerModelId.includes("r1") ||
+						lowerModelId.includes("o1") ||
+						lowerModelId.includes("o3")
+					) {
+						modelInfo.supportsReasoningBinary = true
+					}
+				}
+
+				// Sanitize tiers to ensure contextWindow is not null (which breaks validation)
+				if (modelInfo?.tiers) {
+					modelInfo.tiers = modelInfo.tiers.map((tier: any) => ({
+						...tier,
+						contextWindow: tier.contextWindow === null ? undefined : tier.contextWindow,
+					}))
+				}
+
 				// Always send response so UI knows the result (found or not found)
 				provider.postMessageToWebview({ type: "openAiModelInfo", openAiModelInfo: modelInfo })
 			}
