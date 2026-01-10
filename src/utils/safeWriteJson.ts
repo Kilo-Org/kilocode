@@ -6,6 +6,14 @@ import Disassembler from "stream-json/Disassembler"
 import Stringer from "stream-json/Stringer"
 
 /**
+ * Options for safeWriteJson
+ */
+interface SafeWriteJsonOptions {
+	/** Whether to pretty-print the JSON with indentation (default: false) */
+	prettyPrint?: boolean
+}
+
+/**
  * Safely writes JSON data to a file.
  * - Creates parent directories if they don't exist
  * - Uses 'proper-lockfile' for inter-process advisory locking to prevent concurrent writes to the same path.
@@ -15,10 +23,11 @@ import Stringer from "stream-json/Stringer"
  *
  * @param {string} filePath - The absolute path to the target file.
  * @param {any} data - The data to serialize to JSON and write.
+ * @param {SafeWriteJsonOptions} options - Optional settings for the write operation.
  * @returns {Promise<void>}
  */
 
-async function safeWriteJson(filePath: string, data: any): Promise<void> {
+async function safeWriteJson(filePath: string, data: any, options?: SafeWriteJsonOptions): Promise<void> {
 	const absoluteFilePath = path.resolve(filePath)
 	let releaseLock = async () => {} // Initialized to a no-op
 
@@ -75,7 +84,7 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
 			`.${path.basename(absoluteFilePath)}.new_${Date.now()}_${Math.random().toString(36).substring(2)}.tmp`,
 		)
 
-		await _streamDataToFile(actualTempNewFilePath, data)
+		await _streamDataToFile(actualTempNewFilePath, data, options?.prettyPrint)
 
 		// Step 2: Check if the target file exists. If so, rename it to a backup path.
 		try {
@@ -182,9 +191,18 @@ async function safeWriteJson(filePath: string, data: any): Promise<void> {
  * Helper function to stream JSON data to a file.
  * @param targetPath The path to write the stream to.
  * @param data The data to stream.
+ * @param prettyPrint Whether to pretty-print the JSON with indentation.
  * @returns Promise<void>
  */
-async function _streamDataToFile(targetPath: string, data: any): Promise<void> {
+async function _streamDataToFile(targetPath: string, data: any, prettyPrint?: boolean): Promise<void> {
+	// If prettyPrint is enabled, use JSON.stringify with indentation
+	// This is simpler and more readable than trying to make stream-json pretty-print
+	if (prettyPrint) {
+		const jsonString = JSON.stringify(data, null, "\t")
+		await fs.writeFile(targetPath, jsonString, "utf8")
+		return
+	}
+
 	// Stream data to avoid high memory usage for large JSON objects.
 	const fileWriteStream = fsSync.createWriteStream(targetPath, { encoding: "utf8" })
 	const disassembler = Disassembler.disassembler()
