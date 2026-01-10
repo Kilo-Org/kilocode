@@ -298,7 +298,9 @@ Only use a single line of '=======' between search and replacement content, beca
 							? reportInvalidDiffError(SEP, SEARCH)
 							: reportMergeConflictError(SEP, SEARCH)
 					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEARCH)
-					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
+					// Only report merge conflict error if not the exact REPLACE closing marker
+					if (marker.startsWith(REPLACE_PREFIX) && marker !== REPLACE)
+						return reportMergeConflictError(marker, SEARCH)
 					if (SEARCH_PATTERN.test(marker)) state.current = State.AFTER_SEARCH
 					else if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					break
@@ -307,7 +309,9 @@ Only use a single line of '=======' between search and replacement content, beca
 					if (SEARCH_PATTERN.test(marker)) return reportInvalidDiffError(SEARCH_PATTERN.source, SEP)
 					if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEP)
-					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
+					// Only report merge conflict error if not the exact REPLACE closing marker
+					if (marker.startsWith(REPLACE_PREFIX) && marker !== REPLACE)
+						return reportMergeConflictError(marker, SEARCH)
 					if (marker === SEP) state.current = State.AFTER_SEPARATOR
 					break
 
