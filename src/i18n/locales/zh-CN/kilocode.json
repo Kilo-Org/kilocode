@@ -203,5 +203,9 @@
 			"invalidApiKey": "您的 OpenAI API 密钥无效或无权访问实时 API。请检查您的 API 密钥并重试。",
 			"unknown": "连接失败。请检查您的配置并重试。"
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo 代码：添加了{{source}} {{configType}}：{{name}}{{modeStr}}",
+		"removed": "Kilo代码：已移除{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

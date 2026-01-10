@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { GitBranch, SendHorizontal, Square } from "lucide-react"
+import { GitBranch, GitPullRequest, SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
@@ -17,7 +17,9 @@ interface ChatInputProps {
 	isActive?: boolean
 	showCancel?: boolean
 	showFinishToBranch?: boolean
+	showCreatePR?: boolean
 	worktreeBranchName?: string
+	parentBranch?: string
 	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
 }
 
@@ -27,7 +29,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	isActive = false,
 	showCancel = false,
 	showFinishToBranch = false,
+	showCreatePR = false,
 	worktreeBranchName,
+	parentBranch,
 	sessionStatus,
 }) => {
 	const { t } = useTranslation("agentManager")
@@ -94,6 +98,72 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 			type: "agentManager.finishWorktreeSession",
 			sessionId,
 		})
+	}
+
+	const handleCreatePR = () => {
+		const branch = worktreeBranchName || "current-branch"
+		const targetBranch = parentBranch || "main"
+
+		const instructions = `The user wants to create a pull request.
+
+Local branch: ${branch}
+Target branch: origin/${targetBranch}
+
+Follow these steps:
+
+1. First, verify gh CLI is ready by running: gh auth status
+   - If gh is not installed, ask the user to install it: https://cli.github.com/
+   - If not authenticated, ask the user to run: gh auth login
+   - Do not proceed until gh is ready.
+
+2. Run git status to check for uncommitted changes
+
+3. Run git diff to understand what changes exist (both staged and unstaged)
+
+4. Based on the changes, prepare suggestions for the user:
+   - Propose a CLEAN branch name following conventions (e.g., feat/description, fix/description, docs/description)
+     Do NOT suggest the auto-generated local branch name "${branch}" - always propose a better name.
+   - Propose a descriptive commit message (if there are uncommitted changes)
+   - Propose a PR title (under 80 chars)
+   - Propose a PR description (concise summary)
+
+5. STOP and present your suggestions to the user. Ask them to confirm or edit:
+   - Branch name for the PR (your clean suggestion, not the auto-generated one)
+   - Commit message (if applicable)
+   - PR title
+   - PR description
+
+   DO NOT commit, push, or create the PR until the user explicitly confirms.
+
+6. Once the user confirms, execute in this order:
+   a. If there are uncommitted changes, commit with the confirmed message
+   b. Push to origin with the confirmed branch name:
+      git push origin ${branch}:<confirmed-branch-name>
+   c. Create the PR: gh pr create --base ${targetBranch} --head <confirmed-branch-name> --title "<confirmed-title>" --body "<confirmed-description>"
+
+If any step fails, ask the user for help.`
+
+		if (isSessionCompleted) {
+			// Resume session with PR instructions
+			vscode.postMessage({
+				type: "agentManager.resumeSession",
+				sessionId,
+				sessionLabel,
+				content: instructions,
+			})
+		} else {
+			// Queue message for running session
+			const queuedMsg = addToQueue({ sessionId, content: instructions })
+			if (queuedMsg) {
+				vscode.postMessage({
+					type: "agentManager.messageQueued",
+					sessionId,
+					messageId: queuedMsg.id,
+					sessionLabel,
+					content: instructions,
+				})
+			}
+		}
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -200,6 +270,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
+						{showCreatePR && (
+							<StandardTooltip content={t("chatInput.createPRTitle")}>
+								<button
+									aria-label={t("chatInput.createPRTitle")}
+									onClick={handleCreatePR}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<GitPullRequest size={14} />
+								</button>
+							</StandardTooltip>
+						)}
 						{isActive && showCancel && (
 							<StandardTooltip content={t("chatInput.cancelTitle")}>
 								<button
@@ -247,7 +337,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 					{/* Hint Text inside input */}
 					{!messageText && (
 						<div
-							className="absolute left-3 right-[70px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							className="absolute left-3 right-[100px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 							style={{
 								bottom: "0.25rem",
 								color: "var(--vscode-descriptionForeground)",

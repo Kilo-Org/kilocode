@@ -80,6 +80,7 @@
 		"cancelTitle": "エージェントをキャンセル",
 		"finishToBranchTitle": "Worktreeを終了してブランチを準備: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktreeを終了してブランチを準備",
+		"createPRTitle": "プルリクエストを作成",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
 		"hint": "Enterで送信、Shift+Enterで改行"

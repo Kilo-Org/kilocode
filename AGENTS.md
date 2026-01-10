@@ -2,6 +2,32 @@
 
 Kilo Code is an open source AI coding agent for VS Code that generates code from natural language, automates tasks, and supports 500+ AI models.
 
+## Project Structure
+
+This is a pnpm monorepo using Turbo for task orchestration:
+
+- **`src/`** - VSCode extension (core logic, API providers, tools)
+- **`webview-ui/`** - React frontend (chat UI, settings)
+- **`cli/`** - Standalone CLI package
+- **`packages/`** - Shared packages (`types`, `ipc`, `telemetry`, `cloud`)
+- **`jetbrains/`** - JetBrains plugin (Kotlin + Node.js host)
+- **`apps/`** - E2E tests, Storybook, docs
+
+Key source directories:
+
+- `src/api/providers/` - AI provider implementations (50+ providers)
+- `src/core/tools/` - Tool implementations (ReadFile, ApplyDiff, ExecuteCommand, etc.)
+- `src/services/` - Services (MCP, browser, checkpoints, code-index)
+
+## Build Commands
+
+```bash
+pnpm install          # Install all dependencies
+pnpm build            # Build extension (.vsix)
+pnpm lint             # Run ESLint
+pnpm check-types      # TypeScript type checking
+```
+
 ## Skills
 
 - **Translation**: `.kilocode/skills/translation/SKILL.md` - Translation and localization guidelines
@@ -42,11 +68,13 @@ Kilo Code is a fork of [Roo Code](https://github.com/RooVetGit/Roo-Code). We per
 To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
 
 **Single line:**
+
 ```typescript
 const value = 42 // kilocode_change
 ```
 
 **Multi-line:**
+
 ```typescript
 // kilocode_change start
 const foo = 1
@@ -55,6 +83,7 @@ const bar = 2
 ```
 
 **New files:**
+
 ```typescript
 // kilocode_change - new file
 ```

@@ -203,5 +203,9 @@
 			"invalidApiKey": "La vostra clau de l'API d'OpenAI no és vàlida o no té accés a l'API en temps real. Si us plau, comproveu la vostra clau de l'API i torneu-ho a provar.",
 			"unknown": "Ha fallat la connexió. Comproveu la configuració i torneu-ho a provar."
 		}
+	},
+	"configDiscovery": {
+		"removed": "Kilo Codi: Eliminat {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Codi Kilo: Afegit {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
