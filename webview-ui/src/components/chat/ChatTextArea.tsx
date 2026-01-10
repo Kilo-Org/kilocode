@@ -6,6 +6,7 @@ import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-m
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { Mode, getAllModes } from "@roo/modes"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
+import { getTextDirection } from "@src/utils/textDirection" // kilocode_change: RTL support
 import type { ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
 
 import { vscode } from "@/utils/vscode"
@@ -395,6 +396,9 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 			return inputValue
 		}, [isRecording, liveTranscript, inputValue])
+
+		// kilocode_change: Detect RTL text direction for Arabic and other RTL languages
+		const inputTextDirection = useMemo(() => getTextDirection(displayValue), [displayValue])
 
 		// Show cursor at insertion point during recording
 		const recordingCursorPosition =
@@ -1575,13 +1579,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					minRows={3}
 					maxRows={15}
 					autoFocus={true}
-					// kilocode_change start - isRecording active
+					// kilocode_change start - isRecording active + RTL support
 					style={{
 						border: isRecording
 							? "1px solid var(--vscode-editorError-foreground)"
 							: "1px solid transparent",
+						direction: inputTextDirection,
+						textAlign: inputTextDirection === "rtl" ? "right" : "left",
 					}}
-					// kilocode_change end - isRecording active
+					// kilocode_change end - isRecording active + RTL support
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",

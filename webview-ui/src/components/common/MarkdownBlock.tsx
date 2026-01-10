@@ -7,6 +7,7 @@ import remarkMath from "remark-math"
 import remarkGfm from "remark-gfm"
 
 import { vscode } from "@src/utils/vscode"
+import { getTextDirection } from "@src/utils/textDirection" // kilocode_change: RTL support
 
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import MermaidBlock from "./MermaidBlock"
@@ -303,8 +304,11 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 		[],
 	)
 
+	// kilocode_change: Detect RTL text direction for Arabic and other RTL languages
+	const textDirection = useMemo(() => getTextDirection(markdown), [markdown])
+
 	return (
-		<StyledMarkdown>
+		<StyledMarkdown style={{ direction: textDirection, textAlign: textDirection === "rtl" ? "right" : "left" }}>
 			<ReactMarkdown
 				remarkPlugins={[
 					remarkGfm,

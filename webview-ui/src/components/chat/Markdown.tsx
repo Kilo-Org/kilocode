@@ -1,8 +1,9 @@
-import { memo, useState } from "react"
+import { memo, useState, useMemo } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { StandardTooltip } from "@src/components/ui"
+import { getTextDirection } from "@src/utils/textDirection" // kilocode_change: RTL support
 
 import MarkdownBlock from "../common/MarkdownBlock"
 
@@ -12,6 +13,9 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 	// Shorter feedback duration for copy button flash.
 	const { copyWithFeedback } = useCopyToClipboard(200)
 
+	// kilocode_change: Detect RTL text direction for Arabic and other RTL languages
+	const textDirection = useMemo(() => getTextDirection(markdown), [markdown])
+
 	if (!markdown || markdown.length === 0) {
 		return null
 	}
@@ -20,7 +24,11 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 		<div
 			onMouseEnter={() => setIsHovering(true)}
 			onMouseLeave={() => setIsHovering(false)}
-			style={{ position: "relative" }}>
+			style={{
+				position: "relative",
+				direction: textDirection,
+				textAlign: textDirection === "rtl" ? "right" : "left",
+			}}>
 			<div style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
 				<MarkdownBlock markdown={markdown} />
 			</div>
@@ -29,7 +37,8 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 					style={{
 						position: "absolute",
 						bottom: "-4px",
-						right: "8px",
+						right: textDirection === "rtl" ? "auto" : "8px",
+						left: textDirection === "rtl" ? "8px" : "auto",
 						opacity: 0,
 						animation: "fadeIn 0.2s ease-in-out forwards",
 						borderRadius: "4px",
