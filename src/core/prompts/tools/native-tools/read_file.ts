@@ -2,6 +2,8 @@ import type OpenAI from "openai"
 
 const READ_FILE_BASE_DESCRIPTION = `Read one or more files and return their contents with line numbers for diffing or discussion.`
 
+const READ_FILE_IMPORTANT_NOTE = `IMPORTANT: This tool is ONLY for reading FILE contents, NOT for listing directory contents. Use list_files to explore directory structure.`
+
 const READ_FILE_SUPPORTS_NOTE = `Supports text extraction from PDF and DOCX files, but may not handle other binary files properly.`
 
 /**
@@ -30,13 +32,22 @@ export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.
 		: "Example single file: { files: [{ path: 'src/app.ts' }] }. " +
 			"Example multiple files: { files: [{ path: 'file1.ts' }, { path: 'file2.ts' }] }"
 
-	const description = baseDescription + optionalRangesDescription + READ_FILE_SUPPORTS_NOTE + " " + examples
+	const description =
+		baseDescription +
+		" " +
+		READ_FILE_IMPORTANT_NOTE +
+		" " +
+		optionalRangesDescription +
+		READ_FILE_SUPPORTS_NOTE +
+		" " +
+		examples
 
 	// Build the properties object conditionally
 	const fileProperties: Record<string, any> = {
 		path: {
 			type: "string",
-			description: "Path to the file to read, relative to the workspace",
+			description:
+				"Path to the FILE to read (not a directory). Must be a file path relative to the workspace. Use list_files to explore directories.",
 		},
 	}
 
