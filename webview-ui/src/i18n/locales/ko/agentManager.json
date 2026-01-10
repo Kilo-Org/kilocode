@@ -80,6 +80,7 @@
 		"cancelTitle": "에이전트 취소",
 		"finishToBranchTitle": "Worktree 완료 및 브랜치 준비: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree 완료 및 브랜치 준비",
+		"createPRTitle": "Pull request 생성",
 		"sendTitle": "메시지 보내기",
 		"resumeTitle": "에이전트 재개",
 		"hint": "Enter로 전송, Shift+Enter로 줄 바꿈"

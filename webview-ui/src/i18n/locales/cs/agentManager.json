@@ -81,6 +81,7 @@
 		"cancelTitle": "Zrušit agenta",
 		"finishToBranchTitle": "Dokončit worktree a připravit branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Dokončit worktree a připravit branch",
+		"createPRTitle": "Vytvořit pull request",
 		"sendTitle": "Odeslat zprávu",
 		"resumeTitle": "Obnovit agenta",
 		"hint": "Enter pro odeslání, Shift+Enter pro nový řádek"

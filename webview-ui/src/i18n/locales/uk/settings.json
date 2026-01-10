@@ -1135,7 +1135,9 @@
 		"searchPlaceholder": "Пошук",
 		"noMatchFound": "Збігів не знайдено",
 		"useCustomModel": "Використовувати власну: {{modelId}}",
-		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше."
+		"simplifiedExplanation": "Ви можете налаштувати детальні параметри моделі пізніше.",
+		"recommendedModels": "Рекомендовані моделі",
+		"allModels": "Усі моделі"
 	},
 	"footer": {
 		"feedback": "Якщо у тебе є питання або відгуки, не соромся відкрити issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> або приєднатися до <redditLink>reddit.com/r/kilocode</redditLink> або <discordLink>kilo.ai/discord</discordLink>.",

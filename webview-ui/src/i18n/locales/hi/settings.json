@@ -1026,7 +1026,9 @@
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
-		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।",
+		"recommendedModels": "अनुशंसित मॉडल",
+		"allModels": "सभी मॉडल"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",

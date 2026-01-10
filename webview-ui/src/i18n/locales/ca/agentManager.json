@@ -80,6 +80,7 @@
 		"cancelTitle": "Cancel·lar agent",
 		"finishToBranchTitle": "Finalitza worktree i prepara branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finalitza worktree i prepara branch",
+		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar missatge",
 		"resumeTitle": "Reprendre agent",
 		"hint": "Prem Enter per enviar, Shift+Enter per nova línia"

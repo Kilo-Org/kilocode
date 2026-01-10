@@ -203,5 +203,9 @@
 			"invalidApiKey": "Váš OpenAI API klíč je neplatný nebo nemá přístup k Realtime API. Zkontrolujte prosím svůj API klíč a zkuste to znovu.",
 			"unknown": "Připojení se nezdařilo. Zkontrolujte prosím svou konfiguraci a zkuste to znovu."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kód kilo: Přidáno {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kód Kilo: Odstraněno {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
