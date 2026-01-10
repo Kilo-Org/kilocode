@@ -83,12 +83,9 @@ export const getGeminiModels = async ({ apiKey, baseUrl }: GeminiFetcherOptions 
 			hasApiKey: true,
 			baseUrl,
 		})
-		// Pass baseUrl to constructor so proxy endpoints are used for all requests
-		const client = new GoogleGenAI({
-			apiKey,
-			httpOptions: baseUrl ? { baseUrl } : undefined,
-		})
-		const pager = await client.models.list()
+		const client = new GoogleGenAI({ apiKey })
+		const listParams = baseUrl ? { config: { httpOptions: { baseUrl } } } : {}
+		const pager = await client.models.list(listParams)
 
 		const models: Record<string, ModelInfo> = {}
 		const fetchedBaseIds = new Set<string>()
