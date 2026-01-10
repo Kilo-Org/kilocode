@@ -203,5 +203,9 @@
 			"invalidApiKey": "Kunci API OpenAI Anda tidak valid atau tidak memiliki akses ke Realtime API. Silakan periksa kunci API Anda dan coba lagi.",
 			"unknown": "Koneksi gagal. Silakan periksa konfigurasi Anda dan coba lagi."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Kode: Ditambahkan {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Kode: Dihapus {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
