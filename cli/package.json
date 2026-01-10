@@ -105,6 +105,7 @@
 		"puppeteer-chromium-resolver": "^24.0.3",
 		"puppeteer-core": "^24.34.0",
 		"react": "^19.2.3",
+		"react-devtools-core": "^7.0.1",
 		"react-error-boundary": "^6.0.3",
 		"reconnecting-eventsource": "^1.6.4",
 		"sanitize-filename": "^1.6.3",

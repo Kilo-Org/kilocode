@@ -711,10 +711,10 @@ importers:
         version: 7.0.5
       ink:
         specifier: ^6.6.0
-        version: 6.6.0(@types/react@19.2.7)(react@19.2.3)
+        version: 6.6.0(@types/react@19.2.7)(react-devtools-core@7.0.1)(react@19.2.3)
       ink-link:
         specifier: ^5.0.0
-        version: 5.0.0(ink@6.6.0(@types/react@19.2.7)(react@19.2.3))
+        version: 5.0.0(ink@6.6.0(@types/react@19.2.7)(react-devtools-core@7.0.1)(react@19.2.3))
       inquirer:
         specifier: ^13.1.0
         version: 13.1.0(@types/node@25.0.3)
@@ -808,6 +808,9 @@ importers:
       react:
         specifier: ^19.2.3
         version: 19.2.3
+      react-devtools-core:
+        specifier: ^7.0.1
+        version: 7.0.1
       react-error-boundary:
         specifier: ^6.0.3
         version: 6.0.3(react@19.2.3)
@@ -17833,6 +17836,9 @@ packages:
     peerDependencies:
       react: '>= 16.3.0'
 
+  react-devtools-core@7.0.1:
+    resolution: {integrity: sha512-C3yNvRHaizlpiASzy7b9vbnBGLrhvdhl1CbdU6EnZgxPNbai60szdLtl+VL76UNOt5bOoVTOz5rNWZxgGt+Gsw==}
+
   react-docgen-typescript@2.4.0:
     resolution: {integrity: sha512-ZtAp5XTO5HRzQctjPU0ybY0RRCQO19X/8fxn3w7y2VVTUbGHDKULPTL4ky3vB05euSgG5NpALhEhDPvQ56wvXg==}
     peerDependencies:
@@ -26085,7 +26091,7 @@ snapshots:
 
   '@lmstudio/lms-isomorphic@0.4.5':
     dependencies:
-      ws: 8.18.3
+      ws: 8.19.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -36159,16 +36165,16 @@ snapshots:
 
   ini@2.0.0: {}
 
-  ink-link@5.0.0(ink@6.6.0(@types/react@19.2.7)(react@19.2.3)):
+  ink-link@5.0.0(ink@6.6.0(@types/react@19.2.7)(react-devtools-core@7.0.1)(react@19.2.3)):
     dependencies:
-      ink: 6.6.0(@types/react@19.2.7)(react@19.2.3)
+      ink: 6.6.0(@types/react@19.2.7)(react-devtools-core@7.0.1)(react@19.2.3)
       terminal-link: 5.0.0
 
   ink-testing-library@4.0.0(@types/react@19.2.7):
     optionalDependencies:
       '@types/react': 19.2.7
 
-  ink@6.6.0(@types/react@19.2.7)(react@19.2.3):
+  ink@6.6.0(@types/react@19.2.7)(react-devtools-core@7.0.1)(react@19.2.3):
     dependencies:
       '@alcalzone/ansi-tokenize': 0.2.3
       ansi-escapes: 7.2.0
@@ -36196,6 +36202,7 @@ snapshots:
       yoga-layout: 3.2.1
     optionalDependencies:
       '@types/react': 19.2.7
+      react-devtools-core: 7.0.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -41070,6 +41077,14 @@ snapshots:
     dependencies:
       countup.js: 2.9.0
       react: 18.3.1
+
+  react-devtools-core@7.0.1:
+    dependencies:
+      shell-quote: 1.8.3
+      ws: 7.5.10
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   react-docgen-typescript@2.4.0(typescript@5.8.3):
     dependencies:
