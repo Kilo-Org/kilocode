@@ -6,7 +6,8 @@
 		"reset": "रीसेट करें",
 		"select": "चुनें",
 		"add": "हेडर जोड़ें",
-		"remove": "हटाएं"
+		"remove": "हटाएं",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "सेटिंग्स",

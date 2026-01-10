@@ -6,7 +6,8 @@
 		"reset": "Réinitialiser",
 		"select": "Sélectionner",
 		"add": "Ajouter un en-tête",
-		"remove": "Supprimer"
+		"remove": "Supprimer",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Paramètres",

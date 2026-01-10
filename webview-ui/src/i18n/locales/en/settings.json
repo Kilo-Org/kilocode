@@ -6,7 +6,8 @@
 		"reset": "Reset",
 		"select": "Select",
 		"add": "Add Header",
-		"remove": "Remove"
+		"remove": "Remove",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Settings",

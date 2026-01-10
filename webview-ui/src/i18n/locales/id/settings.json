@@ -6,7 +6,8 @@
 		"reset": "Reset",
 		"select": "Pilih",
 		"add": "Tambah Header",
-		"remove": "Hapus"
+		"remove": "Hapus",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Pengaturan",

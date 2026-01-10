@@ -6,7 +6,8 @@
 		"reset": "รีเซ็ต",
 		"select": "เลือก",
 		"add": "เพิ่ม Header",
-		"remove": "ลบ"
+		"remove": "ลบ",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "การตั้งค่า",

@@ -6,7 +6,8 @@
 		"reset": "リセット",
 		"select": "選択",
 		"add": "ヘッダーを追加",
-		"remove": "削除"
+		"remove": "削除",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "設定",

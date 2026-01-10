@@ -70,7 +70,7 @@ import { showSystemNotification } from "../../integrations/notifications" // kil
 import { singleCompletionHandler } from "../../utils/single-completion-handler" // kilocode_change
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettingsWithFeedback } from "../config/importExport"
-import { getOpenAiModels } from "../../api/providers/openai"
+import { getOpenAiModels, getOpenAiModelInfo } from "../../api/providers/openai"
 import { getVsCodeLmModels } from "../../api/providers/vscode-lm"
 import { openMention } from "../mentions"
 import { getWorkspacePath } from "../../utils/path"
@@ -1154,6 +1154,13 @@ export const webviewMessageHandler = async (
 				provider.postMessageToWebview({ type: "openAiModels", openAiModels })
 			}
 
+			break
+		case "requestOpenAiModelInfo":
+			if (message?.values?.openAiModelId) {
+				const modelInfo = getOpenAiModelInfo(message.values.openAiModelId)
+				// Always send response so UI knows the result (found or not found)
+				provider.postMessageToWebview({ type: "openAiModelInfo", openAiModelInfo: modelInfo })
+			}
 			break
 		case "requestVsCodeLmModels":
 			const vsCodeLmModels = await getVsCodeLmModels()

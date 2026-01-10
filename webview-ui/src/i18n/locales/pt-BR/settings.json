@@ -6,7 +6,8 @@
 		"reset": "Redefinir",
 		"select": "Selecionar",
 		"add": "Adicionar cabeçalho",
-		"remove": "Remover"
+		"remove": "Remover",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Configurações",

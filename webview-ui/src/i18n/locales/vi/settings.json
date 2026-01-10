@@ -6,7 +6,8 @@
 		"reset": "Đặt lại",
 		"select": "Chọn",
 		"add": "Thêm tiêu đề",
-		"remove": "Xóa"
+		"remove": "Xóa",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Cài đặt",

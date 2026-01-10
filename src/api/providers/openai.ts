@@ -8,6 +8,14 @@ import {
 	openAiModelInfoSaneDefaults,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
+	openAiNativeModels,
+	anthropicModels,
+	geminiModels,
+	mistralModels,
+	deepSeekModels,
+	qwenCodeModels,
+	vertexModels,
+	bedrockModels,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -597,4 +605,25 @@ export async function getOpenAiModels(baseUrl?: string, apiKey?: string, openAiH
 	} catch (error) {
 		return []
 	}
+}
+
+export function getOpenAiModelInfo(modelId: string): ModelInfo | undefined {
+	const models: Record<string, ModelInfo>[] = [
+		openAiNativeModels,
+		anthropicModels,
+		geminiModels,
+		mistralModels,
+		deepSeekModels,
+		qwenCodeModels,
+		vertexModels,
+		bedrockModels,
+	]
+
+	for (const modelMap of models) {
+		if (modelId in modelMap) {
+			return modelMap[modelId]
+		}
+	}
+
+	return undefined
 }

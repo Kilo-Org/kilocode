@@ -6,7 +6,8 @@
 		"reset": "Restablecer",
 		"select": "Seleccionar",
 		"add": "Añadir encabezado",
-		"remove": "Eliminar"
+		"remove": "Eliminar",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Configuración",

@@ -6,7 +6,8 @@
 		"reset": "恢复默认设置",
 		"select": "选择",
 		"add": "添加标头",
-		"remove": "移除"
+		"remove": "移除",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "设置",

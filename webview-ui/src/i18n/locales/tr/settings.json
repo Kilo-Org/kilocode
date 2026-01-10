@@ -6,7 +6,8 @@
 		"reset": "Sıfırla",
 		"select": "Seç",
 		"add": "Başlık Ekle",
-		"remove": "Kaldır"
+		"remove": "Kaldır",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Ayarlar",

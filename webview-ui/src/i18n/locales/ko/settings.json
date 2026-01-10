@@ -6,7 +6,8 @@
 		"reset": "초기화",
 		"select": "선택",
 		"add": "헤더 추가",
-		"remove": "삭제"
+		"remove": "삭제",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "설정",

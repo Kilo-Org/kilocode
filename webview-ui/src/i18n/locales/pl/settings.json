@@ -6,7 +6,8 @@
 		"reset": "Resetuj",
 		"select": "Wybierz",
 		"add": "Dodaj nagłówek",
-		"remove": "Usuń"
+		"remove": "Usuń",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Ustawienia",

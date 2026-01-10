@@ -6,7 +6,8 @@
 		"reset": "Ripristina",
 		"select": "Seleziona",
 		"add": "Aggiungi intestazione",
-		"remove": "Rimuovi"
+		"remove": "Rimuovi",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Impostazioni",

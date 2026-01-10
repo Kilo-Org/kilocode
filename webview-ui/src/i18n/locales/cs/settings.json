@@ -6,7 +6,8 @@
 		"reset": "Resetovat",
 		"select": "Vybrat",
 		"add": "Přidat záhlaví",
-		"remove": "Odstranit"
+		"remove": "Odstranit",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Nastavení",

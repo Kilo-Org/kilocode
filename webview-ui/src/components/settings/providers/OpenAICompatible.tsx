@@ -22,6 +22,7 @@ import { inputEventTransform, noTransform } from "../transforms"
 import { ModelPicker } from "../ModelPicker"
 import { R1FormatSetting } from "../R1FormatSetting"
 import { ThinkingBudget } from "../ThinkingBudget"
+import { vscode } from "../../../utils/vscode"
 
 type OpenAICompatibleProps = {
 	apiConfiguration: ProviderSettings
@@ -107,19 +108,42 @@ export const OpenAICompatible = ({
 		[setApiConfigurationField],
 	)
 
-	const onMessage = useCallback((event: MessageEvent) => {
-		const message: ExtensionMessage = event.data
+	const onMessage = useCallback(
+		(event: MessageEvent) => {
+			const message: ExtensionMessage = event.data
 
-		switch (message.type) {
-			case "openAiModels": {
-				const updatedModels = message.openAiModels ?? []
-				setOpenAiModels(Object.fromEntries(updatedModels.map((item) => [item, openAiModelInfoSaneDefaults])))
-				break
+			switch (message.type) {
+				case "openAiModels": {
+					const updatedModels = message.openAiModels ?? []
+					setOpenAiModels(
+						Object.fromEntries(updatedModels.map((item) => [item, openAiModelInfoSaneDefaults])),
+					)
+					break
+				}
+				case "openAiModelInfo": {
+					if (message.openAiModelInfo) {
+						setApiConfigurationField("openAiCustomModelInfo", {
+							...(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+							...message.openAiModelInfo,
+						})
+					}
+					break
+				}
 			}
-		}
-	}, [])
+		},
+		[apiConfiguration, setApiConfigurationField],
+	)
 
 	useEvent("message", onMessage)
+
+	const handleAutoFill = useCallback(() => {
+		if (apiConfiguration?.openAiModelId) {
+			vscode.postMessage({
+				type: "requestOpenAiModelInfo",
+				values: { openAiModelId: apiConfiguration.openAiModelId },
+			})
+		}
+	}, [apiConfiguration?.openAiModelId])
 
 	return (
 		<>
@@ -286,8 +310,17 @@ export const OpenAICompatible = ({
 				)}
 			</div>
 			<div className="flex flex-col gap-3">
-				<div className="text-sm text-vscode-descriptionForeground whitespace-pre-line">
-					{t("settings:providers.customModel.capabilities")}
+				<div className="flex justify-between items-end">
+					<div className="text-sm text-vscode-descriptionForeground whitespace-pre-line">
+						{t("settings:providers.customModel.capabilities")}
+					</div>
+					<Button
+						onClick={handleAutoFill}
+						variant="secondary"
+						className="h-6 px-2 text-xs"
+						disabled={!apiConfiguration?.openAiModelId}>
+						{t("settings:common.autoFill")}
+					</Button>
 				</div>
 
 				<div>

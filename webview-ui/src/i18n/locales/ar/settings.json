@@ -6,7 +6,8 @@
 		"reset": "إعادة ضبط",
 		"select": "اختيار",
 		"add": "إضافة رأس",
-		"remove": "إزالة"
+		"remove": "إزالة",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "الإعدادات",

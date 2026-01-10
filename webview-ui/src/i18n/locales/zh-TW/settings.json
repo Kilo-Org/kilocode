@@ -6,7 +6,8 @@
 		"reset": "重設",
 		"select": "選擇",
 		"add": "新增標頭",
-		"remove": "移除"
+		"remove": "移除",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "設定",

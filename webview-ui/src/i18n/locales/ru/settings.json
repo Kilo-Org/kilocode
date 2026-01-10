@@ -6,7 +6,8 @@
 		"reset": "Сбросить",
 		"select": "Выбрать",
 		"add": "Добавить заголовок",
-		"remove": "Удалить"
+		"remove": "Удалить",
+		"autoFill": "Auto-fill"
 	},
 	"header": {
 		"title": "Настройки",

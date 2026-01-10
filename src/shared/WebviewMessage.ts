@@ -83,6 +83,7 @@ export interface WebviewMessage {
 		| "flushRouterModels"
 		| "requestRouterModels"
 		| "requestOpenAiModels"
+		| "requestOpenAiModelInfo" // kilocode_change: Auto-fill model info from known databases
 		| "requestOllamaModels"
 		| "requestLmStudioModels"
 		| "requestRooModels"
