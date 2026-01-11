@@ -129,7 +129,7 @@ export const ModelCatalogMenu: React.FC = () => {
 
 			<Box marginTop={1}>
 				<Text color={theme.ui.text.dimmed} dimColor>
-					↑↓ Navigate • / Search • s Sort • f Filter • p Provider • Enter Select • Esc Exit
+					↑↓ Navigate • Type to search • s Sort • f Filter • p Provider • Enter Select • Esc Exit
 				</Text>
 			</Box>
 		</Box>

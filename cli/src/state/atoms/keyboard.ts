@@ -1116,8 +1116,11 @@ function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
 			set(prevModelCatalogPageAtom)
 			return
 
-		case "/":
-			set(closeModelCatalogAtom)
+		case "backspace":
+			// Handle backspace for search - remove last character
+			if (search.length > 0) {
+				set(setModelCatalogSearchAtom, search.slice(0, -1))
+			}
 			return
 
 		case "s":
