@@ -113,17 +113,12 @@ export const closeModelCatalogAtom = atom(null, (get, set) => {
 	set(modelCatalogSearchAtom, "")
 	set(modelCatalogSelectedIndexAtom, 0)
 	set(modelCatalogPageAtom, 0)
-	// Trigger terminal refresh to clear any rendering artifacts
-	set(refreshTerminalAtom)
 })
 
 export const setModelCatalogSearchAtom = atom(null, (get, set, search: string) => {
 	set(modelCatalogSearchAtom, search)
 	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)
-	// Refresh terminal to avoid rendering artifacts when the search string
-	// becomes shorter than previous values (clears leftover characters).
-	set(refreshTerminalAtom)
 })
 
 export const cycleModelCatalogSortAtom = atom(null, (get, set) => {
