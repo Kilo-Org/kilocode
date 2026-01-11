@@ -2,7 +2,7 @@
 
 ## 4.143.21
 
-- Fix JetBrains plugin build by handling missing gradle.properties in CI check script. Thanks @janpaul123, @kevinvandijk, @chrarnoldus, @hassoncs, @markijbema, @catrielmuller!
+- Fix JetBrains plugin build by handling missing gradle.properties in CI check script. Thanks @janpaul123, @kevinvandijk, @chrarnoldus, @hassoncs, @markijbema, @catrielmuller! - Fixes #3271
 
 ## 4.143.2
 
