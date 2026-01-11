@@ -22,17 +22,17 @@ import { prettyModelName } from "../../constants/providers/models.js"
 import type { ModelCatalogItem } from "../../types/modelCatalog.js"
 
 const SORT_LABELS: Record<string, string> = {
-	preferred: "⭐",
+	preferred: "Preferred",
 	name: "Name",
 	context: "Ctx",
-	price: "💰",
+	price: "Price",
 }
 
 const FILTER_LABELS: Record<string, string> = {
-	images: "🖼️",
-	cache: "💾",
-	reasoning: "🧠",
-	free: "🆓",
+	images: "Images",
+	cache: "Cache",
+	reasoning: "Reasoning",
+	free: "Free",
 }
 
 export const ModelCatalogMenu: React.FC = () => {
@@ -190,17 +190,17 @@ const ModelList: React.FC<ModelListProps> = ({ items, selectedIndex }) => {
 							{displayName}
 						</Text>
 
-						{item.isCurrent && <Text color={theme.semantic.info}> ⭐</Text>}
+						{item.isCurrent && <Text color={theme.semantic.info}> (current)</Text>}
 
 						<Text color={theme.ui.text.dimmed}>
 							{" "}
 							({Math.floor((item.model.contextWindow || 0) / 1000)}K ctx)
 						</Text>
 
-						{item.model.supportsImages && <Text color={theme.ui.text.dimmed}> 🖼️</Text>}
-						{item.model.supportsPromptCache && <Text color={theme.ui.text.dimmed}> 💾</Text>}
-						{item.model.supportsReasoningEffort && <Text color={theme.ui.text.dimmed}> 🧠</Text>}
-						{item.model.isFree && <Text color={theme.semantic.success}> 🆓</Text>}
+						{item.model.supportsImages && <Text color={theme.ui.text.dimmed}> [Images]</Text>}
+						{item.model.supportsPromptCache && <Text color={theme.ui.text.dimmed}> [Cache]</Text>}
+						{item.model.supportsReasoningEffort && <Text color={theme.ui.text.dimmed}> [Reasoning]</Text>}
+						{item.model.isFree && <Text color={theme.semantic.success}> [Free]</Text>}
 					</Box>
 				)
 			})}
