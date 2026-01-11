@@ -3,7 +3,7 @@ import type { ProviderName } from "../../types/messages.js"
 import type { ModelInfo } from "../../constants/providers/models.js"
 import { filterAndSortModels, getModelIdKey } from "../../constants/providers/models.js"
 import { providerAtom, updateProviderAtom } from "./config.js"
-import { addMessageAtom } from "./ui.js"
+import { addMessageAtom, refreshTerminalAtom } from "./ui.js"
 
 export const MODEL_CATALOG_PAGE_SIZE = 10
 
@@ -109,6 +109,12 @@ export const openModelCatalogAtom = atom(
 
 export const closeModelCatalogAtom = atom(null, (get, set) => {
 	set(modelCatalogVisibleAtom, false)
+	// Reset search and selection state to ensure clean state for next open
+	set(modelCatalogSearchAtom, "")
+	set(modelCatalogSelectedIndexAtom, 0)
+	set(modelCatalogPageAtom, 0)
+	// Trigger terminal refresh to clear any rendering artifacts
+	set(refreshTerminalAtom)
 })
 
 export const setModelCatalogSearchAtom = atom(null, (get, set, search: string) => {
