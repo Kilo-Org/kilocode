@@ -962,6 +962,16 @@ export const modelCommand: Command = {
 
 		// No arguments - open the model catalog
 		if (args.length === 0) {
+			// If no provider, show error
+			if (!context.currentProvider) {
+				context.addMessage({
+					id: Date.now().toString(),
+					type: "error",
+					content: "No provider configured. Please configure a provider first.",
+					ts: Date.now(),
+				})
+				return
+			}
 			// Ensure router models are loaded first
 			const ready = await ensureRouterModels(context)
 			if (!ready) return

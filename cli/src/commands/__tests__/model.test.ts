@@ -130,15 +130,10 @@ describe("/model command", () => {
 	})
 
 	describe("Show current model (no args)", () => {
-		it("should display current model information", async () => {
+		it("should open the model catalog", async () => {
 			await modelCommand.handler(mockContext)
 
-			expect(addMessageMock).toHaveBeenCalledTimes(1)
-			const message = addMessageMock.mock.calls[0][0]
-			expect(message.type).toBe("system")
-			expect(message.content).toContain("Current Configuration")
-			expect(message.content).toContain("gpt-4")
-			expect(message.content).toContain("Openrouter")
+			expect(mockContext.openModelCatalog).toHaveBeenCalledTimes(1)
 		})
 
 		it("should show error when no provider configured", async () => {
@@ -150,23 +145,6 @@ describe("/model command", () => {
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("No provider configured")
-		})
-
-		it("should display model capabilities", async () => {
-			await modelCommand.handler(mockContext)
-
-			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("Context Window")
-			expect(message.content).toContain("8K tokens")
-		})
-
-		it("should show available commands", async () => {
-			await modelCommand.handler(mockContext)
-
-			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("/model info")
-			expect(message.content).toContain("/model select")
-			expect(message.content).toContain("/model list")
 		})
 	})
 
@@ -242,8 +220,8 @@ describe("/model command", () => {
 		it("should display success message", async () => {
 			await modelCommand.handler(mockContext)
 
-			expect(addMessageMock).toHaveBeenCalledTimes(1)
-			const message = addMessageMock.mock.calls[0][0]
+			expect(addMessageMock).toHaveBeenCalledTimes(2)
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("Switched to")
 			expect(message.content).toContain("gpt-3.5-turbo")
@@ -254,7 +232,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("not found")
 			expect(updateProviderModelMock).not.toHaveBeenCalled()
@@ -265,7 +244,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Usage: /model select")
 		})
@@ -275,7 +255,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the success message, third is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Failed to switch model")
 			expect(message.content).toContain("Update failed")
@@ -286,7 +267,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("No provider configured")
 		})
@@ -300,8 +282,8 @@ describe("/model command", () => {
 		it("should list all available models", async () => {
 			await modelCommand.handler(mockContext)
 
-			expect(addMessageMock).toHaveBeenCalledTimes(1)
-			const message = addMessageMock.mock.calls[0][0]
+			expect(addMessageMock).toHaveBeenCalledTimes(2)
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("Available Models")
 			expect(message.content).toContain("gpt-4")
@@ -311,7 +293,7 @@ describe("/model command", () => {
 		it("should mark current model", async () => {
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain("gpt-4")
 			expect(message.content).toContain("(current)")
 		})
@@ -319,7 +301,7 @@ describe("/model command", () => {
 		it("should mark preferred models with star", async () => {
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain("⭐")
 		})
 
@@ -336,7 +318,7 @@ describe("/model command", () => {
 			// Verify the filter was persisted
 			expect(updateFiltersMock).toHaveBeenCalledWith({ search: "gpt-4" })
 
-			const message = addMessageMock.mock.calls[0][0]
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain('Search: "gpt-4"')
 			expect(message.content).toContain("gpt-4")
 			expect(message.content).not.toContain("gpt-3.5-turbo")
@@ -355,7 +337,9 @@ describe("/model command", () => {
 			// Verify the filter was persisted
 			expect(updateFiltersMock).toHaveBeenCalledWith({ search: "nonexistent" })
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the actual response
+			expect(addMessageMock).toHaveBeenCalledTimes(2)
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("No models found")
 		})
@@ -363,7 +347,9 @@ describe("/model command", () => {
 		it("should display model count with pagination", async () => {
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the actual response
+			expect(addMessageMock).toHaveBeenCalledTimes(2)
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain("Showing 1-2 of 2")
 		})
 
@@ -372,7 +358,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("No provider configured")
 		})
@@ -413,9 +400,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			expect(addMessageMock).toHaveBeenCalledTimes(1)
-			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("Anthropic")
+			// No args opens the catalog
+			expect(mockContext.openModelCatalog).toHaveBeenCalledTimes(1)
 		})
 
 		it("should handle empty router models", async () => {
@@ -437,7 +423,9 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the actual response
+			expect(addMessageMock).toHaveBeenCalledTimes(2)
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain("No models available")
 		})
 
@@ -451,7 +439,8 @@ describe("/model command", () => {
 
 				await modelCommand.handler(mockContext)
 
-				expect(addMessageMock).toHaveBeenCalledTimes(1)
+				// No args opens the catalog
+				expect(mockContext.openModelCatalog).toHaveBeenCalled()
 			}
 		})
 	})
@@ -468,7 +457,8 @@ describe("/model command", () => {
 		it("should paginate results with 10 items per page", async () => {
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the actual response
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.content).toContain("Showing 1-10 of 25")
 			expect(message.content).toContain("Page 1/3")
 		})
@@ -505,7 +495,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("Already on the first page")
 		})
@@ -516,7 +507,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("system")
 			expect(message.content).toContain("Already on the last page")
 		})
@@ -526,7 +518,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Invalid page number")
 		})
@@ -536,7 +529,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Must be between 1 and")
 		})
@@ -576,7 +570,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Invalid sort option")
 		})
@@ -586,7 +581,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Usage: /model list sort")
 		})
@@ -650,7 +646,8 @@ describe("/model command", () => {
 
 			await modelCommand.handler(mockContext)
 
-			const message = addMessageMock.mock.calls[0][0]
+			// First message is deprecation warning, second is the error
+			const message = addMessageMock.mock.calls[1][0]
 			expect(message.type).toBe("error")
 			expect(message.content).toContain("Invalid filter option")
 		})
