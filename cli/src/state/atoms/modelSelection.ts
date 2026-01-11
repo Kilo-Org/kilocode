@@ -3,7 +3,7 @@ import type { ProviderName } from "../../types/messages.js"
 import type { ModelInfo } from "../../constants/providers/models.js"
 import { filterAndSortModels, getModelIdKey } from "../../constants/providers/models.js"
 import { providerAtom, updateProviderAtom } from "./config.js"
-import { addMessageAtom, refreshTerminalAtom } from "./ui.js"
+import { addMessageAtom } from "./ui.js"
 
 export const MODEL_CATALOG_PAGE_SIZE = 10
 
