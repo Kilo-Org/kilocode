@@ -263,9 +263,12 @@ export class FileOpenerService {
 	private findExistingTab(filePath: string): { uri: vscode.Uri; document: vscode.TextDocument } | undefined {
 		for (const tab of vscode.window.tabGroups.all.flatMap((group) => group.tabs)) {
 			if (tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === filePath) {
-				return {
-					uri: tab.input.uri,
-					document: vscode.window.visibleTextEditors.find((editor) => editor.document === tab.input.uri),
+				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === filePath)
+				if (editor) {
+					return {
+						uri: tab.input.uri,
+						document: editor.document,
+					}
 				}
 			}
 		}
@@ -340,14 +343,14 @@ export class FileOpenerService {
 	/**
 	 * Handle active editor changed
 	 */
-	private onActiveEditorChanged(event: vscode.TextEditorChangeEvent): void {
+	private onActiveEditorChanged(editor: vscode.TextEditor | undefined): void {
 		Logger.debug("FileOpenerService.onActiveEditorChanged", "Active editor changed")
 	}
 
 	/**
 	 * Handle visible editors changed
 	 */
-	private onVisibleEditorsChanged(event: vscode.TextEditor[]): void {
-		Logger.debug("FileOpenerService.onVisibleEditorsChanged", `Visible editors changed: ${event.length} editors`)
+	private onVisibleEditorsChanged(editors: readonly vscode.TextEditor[]): void {
+		Logger.debug("FileOpenerService.onVisibleEditorsChanged", `Visible editors changed: ${editors.length} editors`)
 	}
 }

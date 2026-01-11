@@ -1,115 +1,189 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: Multi-File Diff and Auto-Navigation System
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
-**Input**: User description: "$ARGUMENTS"
+**Feature Branch**: `001-indexing-memory-features`  
+**Created**: January 2026  
+**Status**: Implemented  
+**Input**: AI-driven multi-file diff visualization and management system
 
-## User Scenarios & Testing _(mandatory)_
+## Overview
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+This specification documents the Multi-File Diff and Auto-Navigation System, which provides AI-driven diff visualization, file management, and session state coordination for the Kilo Code extension.
 
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+## Architecture
 
-### User Story 1 - [Brief Title] (Priority: P1)
+### Core Services
 
-[Describe this user journey in plain language]
+1. **FileOpenerService** (`src/services/file-management/file-opener.ts`)
 
-**Why this priority**: [Explain the value and why it has this priority level]
+    - Handles AI-driven file opening with tab management
+    - Coordinates workspace file operations
+    - Tracks active tabs and file buffers
 
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+2. **TabManagerService** (`src/services/file-management/tab-manager.ts`)
+
+    - Manages multi-file tab coordination
+    - Supports tab groups for organized workflows
+    - Provides grid layout arrangement for multi-file viewing
+
+3. **SessionStateManager** (`src/services/session/session-state.ts`)
+
+    - Manages AI modification state across files
+    - Uses VSCode's Memento API for persistence
+    - Tracks file states and shadow buffers
+
+4. **MultiFileStateCoordinator** (`src/services/session/multi-file-coordinator.ts`)
+    - Coordinates state across multiple files
+    - Handles file synchronization events
+
+### Performance Services
+
+5. **MemoryManagementService** (`src/services/performance/memory-management.ts`)
+
+    - Manages memory usage for large file operations
+    - Provides memory thresholds and monitoring
+    - Supports operation tracking and garbage collection
+
+6. **BackgroundProcessingService** (`src/services/performance/background-processing.ts`)
+
+    - Handles non-blocking operations
+    - Priority-based task queue
+    - Supports diff processing, file operations, and memory cleanup
+
+7. **PerformanceMonitoringService** (`src/services/performance/performance-monitoring.ts`)
+    - Collects and analyzes performance metrics
+    - Provides performance reports and statistics
+    - Monitors processing time and memory usage
+
+### Diff Services
+
+8. **DiffEngine** (`src/services/diff/diff-engine.ts`)
+
+    - Core diff functionality using the 'diff' library
+    - Supports unified diff, streaming diff, and large file processing
+    - Creates and applies diff overlays
+
+9. **DiffOverlayManager** (`src/services/diff/diff-overlay.ts`)
+
+    - Manages diff overlay visualization
+    - Handles decoration rendering in VSCode
+
+10. **StreamingDiffProcessor** (`src/services/diff/streaming-diff.ts`)
+    - Processes diffs in streaming mode
+    - Optimized for large files
+
+### UI Components
+
+11. **DiffRenderer** (`src/ui/diff-renderer.ts`)
+
+    - Renders diff overlays in the editor
+    - Manages decoration types and colors
+
+12. **InteractionLayer** (`src/ui/interaction-layer.ts`)
+    - Handles user interactions with diff overlays
+    - Supports accept/reject operations
+    - Provides navigation between overlays
+
+### Infrastructure
+
+13. **Logger & ErrorHandler** (`src/services/error-handler.ts`)
+
+    - Centralized error handling and logging
+    - VSCode output channel integration
+    - Safe execution utilities with retry support
+
+14. **DiffEventManager** (`src/services/event-system.ts`)
+    - Event system for component communication
+    - Supports diff, file, session, and UI events
+
+## User Stories
+
+### User Story 1 - Inline Diff Visualization (Priority: P1)
+
+Users can view AI-generated code changes as inline diff overlays directly in the editor.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** an AI generates code changes, **When** the diff is created, **Then** overlays appear inline showing additions/deletions
+2. **Given** overlays are displayed, **When** user hovers over an overlay, **Then** detailed change information is shown
 
----
+### User Story 2 - Accept/Reject Changes (Priority: P1)
 
-### User Story 2 - [Brief Title] (Priority: P2)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
+Users can accept or reject individual diff overlays or all changes at once.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a diff overlay is displayed, **When** user clicks accept, **Then** the change is applied to the file
+2. **Given** multiple overlays exist, **When** user clicks "Accept All", **Then** all pending changes are applied
 
----
+### User Story 3 - Multi-File Navigation (Priority: P2)
 
-### User Story 3 - [Brief Title] (Priority: P3)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
+Users can navigate between files with pending changes and between overlays within a file.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** multiple files have changes, **When** user uses navigation commands, **Then** cursor moves to next/previous overlay
+2. **Given** overlays exist, **When** user opens quick pick, **Then** all overlays are listed for selection
 
----
+### User Story 4 - Session Persistence (Priority: P2)
 
-[Add more user stories as needed, each with an assigned priority]
+Session state is persisted across VSCode restarts.
 
-### Edge Cases
+**Acceptance Scenarios**:
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
+1. **Given** user has pending changes, **When** VSCode restarts, **Then** session state is restored
+2. **Given** session is restored, **When** user views files, **Then** previous overlays are displayed
 
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
-
-## Requirements _(mandatory)_
-
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
+## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: System MUST display diff overlays inline in the editor
+- **FR-002**: System MUST support accept/reject operations on individual overlays
+- **FR-003**: System MUST support batch accept/reject operations
+- **FR-004**: System MUST persist session state using VSCode Memento API
+- **FR-005**: System MUST manage memory usage for large file operations
+- **FR-006**: System MUST process diffs in background to maintain UI responsiveness
+- **FR-007**: System MUST provide navigation between overlays
+- **FR-008**: System MUST integrate with CodeIndexOrchestrator for memory management
 
-_Example of marking unclear requirements:_
+### Key Entities
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+- **FileBuffer**: Represents editor content buffer for each open file
+- **ShadowBuffer**: Stores original and modified content for diff comparison
+- **DiffOverlay**: Represents a single diff change with accept/reject state
+- **SessionState**: Tracks active buffers, file states, and settings
 
-### Key Entities _(include if feature involves data)_
+## Integration Points
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+### Extension Activation
 
-## Success Criteria _(mandatory)_
+The Multi-File Diff System is initialized during extension activation in `src/extension.ts`:
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
+```typescript
+import { initializeMultiFileDiffSystem } from "./multi-file-diff-system"
 
-### Measurable Outcomes
+// During activation
+await initializeMultiFileDiffSystem(context)
+```
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+### CodeIndexOrchestrator Integration
+
+Memory management is integrated with the CodeIndexOrchestrator in `src/services/code-index/orchestrator.ts`:
+
+```typescript
+import { MemoryManagementService } from "../performance/memory-management"
+
+// Check memory before indexing
+const memoryManager = MemoryManagementService.getInstance()
+if (!memoryManager.startOperation(operationId)) {
+	// Handle memory constraint
+}
+```
+
+## Success Criteria
+
+- **SC-001**: All TypeScript type checks pass (0 errors)
+- **SC-002**: Extension activates successfully with Multi-File Diff System
+- **SC-003**: Memory usage stays within configured thresholds during large file operations
+- **SC-004**: Diff overlays render correctly in the editor
+- **SC-005**: Session state persists across VSCode restarts

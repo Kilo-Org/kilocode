@@ -48,6 +48,7 @@ import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kiloco
 import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
+import { initializeMultiFileDiffSystem } from "./multi-file-diff-system" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
 
@@ -541,6 +542,19 @@ export async function activate(context: vscode.ExtensionContext) {
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+
+	// kilocode_change start: Initialize Multi-File Diff System
+	try {
+		await initializeMultiFileDiffSystem(context)
+		outputChannel.appendLine("[MultiFileDiff] System initialized successfully")
+	} catch (error) {
+		outputChannel.appendLine(
+			`[MultiFileDiff] Failed to initialize: ${error instanceof Error ? error.message : String(error)}`,
+		)
+		// Continue with other services - non-critical
+	}
+	// kilocode_change end
+
 	await checkAndRunAutoLaunchingTask(context)
 	// kilocode_change end
 	// Initialize background model cache refresh
