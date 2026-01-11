@@ -1,5 +1,9 @@
 # kilo-code
 
+## 4.143.21
+
+- Fix JetBrains plugin build by handling missing gradle.properties in CI check script
+
 ## 4.143.2
 
 ### Patch Changes
