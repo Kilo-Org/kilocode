@@ -1099,6 +1099,12 @@ function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
 	void _page
 	void _pageCount
 
+	// Ignore paste events in model catalog mode — pasted text should not
+	// be injected into other buffers or cause unexpected copying.
+	if (key.paste) {
+		return
+	}
+
 	switch (key.name) {
 		case "down":
 			set(selectNextModelCatalogItemAtom)
