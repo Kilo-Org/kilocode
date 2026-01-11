@@ -97,6 +97,7 @@ export interface ExtensionMessage {
 		| "listApiConfig"
 		| "routerModels"
 		| "openAiModels"
+		| "openAiModelInfo" // kilocode_change: Auto-filled model info from known databases
 		| "ollamaModels"
 		| "lmStudioModels"
 		| "vsCodeLmModels"
@@ -242,6 +243,7 @@ export interface ExtensionMessage {
 	clineMessage?: ClineMessage
 	routerModels?: RouterModels
 	openAiModels?: string[]
+	openAiModelInfo?: ModelInfo // kilocode_change: Auto-filled model info
 	ollamaModels?: ModelRecord
 	lmStudioModels?: ModelRecord
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]

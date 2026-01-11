@@ -8,6 +8,14 @@ import {
 	openAiModelInfoSaneDefaults,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
+	openAiNativeModels,
+	anthropicModels,
+	geminiModels,
+	mistralModels,
+	deepSeekModels,
+	qwenCodeModels,
+	vertexModels,
+	bedrockModels,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -164,11 +172,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				...(reasoning && reasoning),
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
 			}
 
 			// Add max_tokens if needed
@@ -251,11 +265,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					: enabledLegacyFormat
 						? [systemMessage, ...convertToSimpleMessages(messages)]
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// Add max_tokens if needed
@@ -387,11 +407,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -422,11 +448,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
-				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
-				...(metadata?.toolProtocol === "native" && {
-					parallel_tool_calls: metadata.parallelToolCalls ?? false,
-				}),
+				...(metadata?.tools &&
+					modelInfo.supportsNativeTools !== false && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice &&
+					modelInfo.supportsNativeTools !== false && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" &&
+					modelInfo.supportsNativeTools !== false && {
+						parallel_tool_calls: metadata.parallelToolCalls ?? false,
+					}),
+				...((this.options.enableReasoningEffort && modelInfo.supportsReasoningBinary
+					? { thinking: { type: "enabled" } }
+					: {}) as any),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -573,4 +605,41 @@ export async function getOpenAiModels(baseUrl?: string, apiKey?: string, openAiH
 	} catch (error) {
 		return []
 	}
+}
+
+export function getOpenAiModelInfo(modelId: string): ModelInfo | undefined {
+	const models: Record<string, ModelInfo>[] = [
+		openAiNativeModels,
+		anthropicModels,
+		geminiModels,
+		mistralModels,
+		deepSeekModels,
+		qwenCodeModels,
+		vertexModels,
+		bedrockModels,
+	]
+
+	for (const modelMap of models) {
+		if (modelId in modelMap) {
+			const info = modelMap[modelId]
+			// Sanitize tiers to handle Infinity values (which become null when serialized to JSON)
+			// This prevents validation errors when saving the config
+			if (info.tiers) {
+				return {
+					...info,
+					tiers: info.tiers.map((tier) => ({
+						...tier,
+						// Replace Infinity/null with Number.MAX_SAFE_INTEGER (essentially unlimited)
+						contextWindow:
+							tier.contextWindow === Infinity || tier.contextWindow === null
+								? Number.MAX_SAFE_INTEGER
+								: tier.contextWindow,
+					})),
+				}
+			}
+			return info
+		}
+	}
+
+	return undefined
 }

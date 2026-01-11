@@ -4,7 +4,7 @@ sidebar_label: AWS Bedrock
 
 # Using AWS Bedrock With Kilo Code
 
-Kilo Code supports accessing models through Amazon Bedrock, a fully managed service that makes a selection of high-performing foundation models (FMs) from leading AI companies available via a single API. This provider connects directly to AWS Bedrock and authenticates with the provided credentials. 
+Kilo Code supports accessing models through Amazon Bedrock, a fully managed service that makes a selection of high-performing foundation models (FMs) from leading AI companies available via a single API. This provider connects directly to AWS Bedrock and authenticates with the provided credentials.
 
 **Website:** [https://aws.amazon.com/bedrock/](https://aws.amazon.com/bedrock/)
 

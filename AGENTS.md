@@ -14,6 +14,7 @@ This is a pnpm monorepo using Turbo for task orchestration:
 - **`apps/`** - E2E tests, Storybook, docs
 
 Key source directories:
+
 - `src/api/providers/` - AI provider implementations (50+ providers)
 - `src/core/tools/` - Tool implementations (ReadFile, ApplyDiff, ExecuteCommand, etc.)
 - `src/services/` - Services (MCP, browser, checkpoints, code-index)
@@ -67,11 +68,13 @@ Kilo Code is a fork of [Roo Code](https://github.com/RooVetGit/Roo-Code). We per
 To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
 
 **Single line:**
+
 ```typescript
 const value = 42 // kilocode_change
 ```
 
 **Multi-line:**
+
 ```typescript
 // kilocode_change start
 const foo = 1
@@ -80,6 +83,7 @@ const bar = 2
 ```
 
 **New files:**
+
 ```typescript
 // kilocode_change - new file
 ```

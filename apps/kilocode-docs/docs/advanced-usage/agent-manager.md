@@ -90,20 +90,22 @@ The Agent Manager requires proper authentication for full functionality, includi
 ### Supported Authentication Methods
 
 1. **Kilo Code Extension (Recommended)**
-   - Sign in through the extension settings
-   - Provides seamless authentication for the Agent Manager
-   - Enables session syncing and cloud features
+
+    - Sign in through the extension settings
+    - Provides seamless authentication for the Agent Manager
+    - Enables session syncing and cloud features
 
 2. **CLI with Kilo Code Provider**
-   - Use the CLI configured with `kilocode` as the provider
-   - Run `kilocode config` to set up authentication
-   - See [CLI setup](/cli) for details
+    - Use the CLI configured with `kilocode` as the provider
+    - Run `kilocode config` to set up authentication
+    - See [CLI setup](/cli) for details
 
 ### BYOK Limitations
 
 **Important:** Bring Your Own Key (BYOK) is not yet supported with the Agent Manager.
 
 If you're using BYOK with providers like Anthropic, OpenAI, or OpenRouter:
+
 - The Agent Manager will not have access to cloud-synced sessions
 - Session syncing features will be unavailable
 - You must use one of the supported authentication methods above for full functionality
