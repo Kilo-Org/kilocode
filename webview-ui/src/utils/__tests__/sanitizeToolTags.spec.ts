@@ -1,4 +1,5 @@
 // kilocode_change - new file
+import { describe, it, expect } from "vitest"
 import { sanitizeToolTags, containsToolTags } from "../sanitizeToolTags"
 
 describe("sanitizeToolTags", () => {
@@ -23,6 +24,18 @@ describe("sanitizeToolTags", () => {
 			expect(result).not.toContain("<|tool_call_begin|>")
 			expect(result).not.toContain("<|tool_call_end|>")
 			expect(result).not.toContain("<|tool_calls_section_end|>")
+		})
+
+		it("should remove bracket-style tool markers", () => {
+			const text = `Looking at the file:
+
+[read_file]
+
+Let me check this.`
+			const result = sanitizeToolTags(text)
+			expect(result).not.toContain("[read_file]")
+			expect(result).toContain("Looking at the file:")
+			expect(result).toContain("Let me check this.")
 		})
 
 		it("should remove XML-style read_file tags", () => {
@@ -117,6 +130,11 @@ Let me analyze the code.`
 		it("should return true for text with OpenAI-style markers", () => {
 			expect(containsToolTags("<|tool_calls_section_begin|>")).toBe(true)
 			expect(containsToolTags("<|tool_call_begin|>")).toBe(true)
+		})
+
+		it("should return true for text with bracket-style markers", () => {
+			expect(containsToolTags("[read_file]")).toBe(true)
+			expect(containsToolTags("[write_file]")).toBe(true)
 		})
 
 		it("should return true for text with XML-style tool tags", () => {

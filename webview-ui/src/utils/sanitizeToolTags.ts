@@ -18,6 +18,26 @@ const TOOL_TAG_PATTERNS = [
 	/<\|tool_call_argument_begin\|>/gi,
 	/<\|tool_call_argument_end\|>/gi,
 
+	// Bracket-style tool markers (some models use this format)
+	/\[read_file\]/gi,
+	/\[write_file\]/gi,
+	/\[execute_command\]/gi,
+	/\[search_files\]/gi,
+	/\[list_files\]/gi,
+	/\[browser_action\]/gi,
+	/\[ask_followup_question\]/gi,
+	/\[attempt_completion\]/gi,
+	/\[use_mcp_tool\]/gi,
+	/\[access_mcp_resource\]/gi,
+	/\[apply_diff\]/gi,
+	/\[insert_content\]/gi,
+	/\[search_and_replace\]/gi,
+	/\[\/read_file\]/gi,
+	/\[\/write_file\]/gi,
+	/\[\/execute_command\]/gi,
+	/\[\/search_files\]/gi,
+	/\[\/list_files\]/gi,
+
 	// XML-style tool tags (common in various models)
 	/<read_file>[\s\S]*?<\/read_file>/gi,
 	/<write_file>[\s\S]*?<\/write_file>/gi,
