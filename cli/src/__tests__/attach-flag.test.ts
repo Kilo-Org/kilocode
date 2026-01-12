@@ -5,6 +5,7 @@ import {
 	validateAttachmentExists,
 	validateAttachmentFormat,
 	validateAttachments,
+	validateAttachRequiresAuto,
 } from "../validation/attachments.js"
 import { SUPPORTED_IMAGE_EXTENSIONS } from "../media/images.js"
 
@@ -65,26 +66,6 @@ describe("CLI --attach flag", () => {
 	})
 
 	describe("Mode validation", () => {
-		/**
-		 * Validates that --attach requires --auto flag.
-		 * This mirrors the validation logic from cli/src/index.ts
-		 */
-		function validateAttachRequiresAuto(options: { attach?: string[]; auto?: boolean }): {
-			valid: boolean
-			error?: string
-		} {
-			const attachments = options.attach || []
-			if (attachments.length > 0) {
-				if (!options.auto) {
-					return {
-						valid: false,
-						error: "Error: --attach option requires --auto flag",
-					}
-				}
-			}
-			return { valid: true }
-		}
-
 		it("should reject --attach without --auto", () => {
 			const result = validateAttachRequiresAuto({
 				attach: ["./screenshot.png"],

@@ -18,7 +18,7 @@ import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
-import { validateAttachments, accumulateAttachments } from "./validation/attachments.js"
+import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -160,12 +160,13 @@ program
 
 		// Validate attachments if specified
 		const attachments: string[] = options.attach || []
-		if (attachments.length > 0) {
-			if (!options.auto) {
-				console.error("Error: --attach option requires --auto flag")
-				process.exit(1)
-			}
+		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		if (!attachRequiresAutoResult.valid) {
+			console.error(attachRequiresAutoResult.error)
+			process.exit(1)
+		}
 
+		if (attachments.length > 0) {
 			const validationResult = validateAttachments(attachments)
 			if (!validationResult.valid) {
 				for (const error of validationResult.errors) {

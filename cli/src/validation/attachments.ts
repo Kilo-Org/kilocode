@@ -8,6 +8,23 @@ export interface AttachmentValidationResult {
 }
 
 /**
+ * Validates that --attach requires --auto flag.
+ * Attachments can only be used in autonomous mode.
+ */
+export function validateAttachRequiresAuto(options: { attach?: string[]; auto?: boolean }): AttachmentValidationResult {
+	const attachments = options.attach || []
+	if (attachments.length > 0) {
+		if (!options.auto) {
+			return {
+				valid: false,
+				error: "Error: --attach option requires --auto flag",
+			}
+		}
+	}
+	return { valid: true }
+}
+
+/**
  * Commander.js accumulator function for --attach flag.
  * Allows multiple --attach flags to accumulate into an array.
  */
