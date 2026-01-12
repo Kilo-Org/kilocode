@@ -194,11 +194,12 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 									.map((e) => `Failed to load attachment "${e.path}": ${e.error}`)
 									.join("\n")
 								logs.error("Attachment loading failed, aborting task", "UI", { error: errorMsg })
+								const now = Date.now()
 								addMessage({
-									id: `attach-err-${Date.now()}-${Math.random()}`,
+									id: `attach-err-${now}-${Math.random()}`,
 									type: "error",
 									content: errorMsg,
-									ts: Date.now(),
+									ts: now,
 								})
 								// Exit in CI mode since we cannot proceed
 								if (options.ci) {

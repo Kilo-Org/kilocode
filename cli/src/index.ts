@@ -6,7 +6,6 @@ loadEnvFile()
 
 import { Command } from "commander"
 import { existsSync } from "fs"
-import { extname } from "node:path"
 import { CLI } from "./cli.js"
 import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
@@ -19,6 +18,7 @@ import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
+import { validateAttachments } from "./validation/attachments.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -161,29 +161,17 @@ program
 		// Validate attachments if specified
 		const attachments: string[] = options.attach || []
 		if (attachments.length > 0) {
-			// Validate that --attach requires --auto or --json-io flag
-			if (!options.auto && !options.jsonIo) {
-				console.error("Error: --attach option requires --auto or --json-io flag")
+			if (!options.auto) {
+				console.error("Error: --attach option requires --auto flag")
 				process.exit(1)
 			}
 
-			// Validate each attachment
-			const supportedExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".tiff"]
-			for (const attachPath of attachments) {
-				// Check that file exists
-				if (!existsSync(attachPath)) {
-					console.error(`Error: Attachment file not found: ${attachPath}`)
-					process.exit(1)
+			const validationResult = validateAttachments(attachments)
+			if (!validationResult.valid) {
+				for (const error of validationResult.errors) {
+					console.error(error)
 				}
-
-				// Validate file extension
-				const ext = extname(attachPath).toLowerCase()
-				if (!supportedExtensions.includes(ext)) {
-					console.error(
-						`Error: Unsupported attachment format "${ext}". Currently supported: .png, .jpg, .jpeg, .webp, .gif, .tiff. Other file types can be read using @path mentions or the read_file tool.`,
-					)
-					process.exit(1)
-				}
+				process.exit(1)
 			}
 		}
 
