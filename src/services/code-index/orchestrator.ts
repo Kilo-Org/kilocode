@@ -8,6 +8,7 @@ import { CacheManager } from "./cache-manager"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { t } from "../../i18n"
+import { MemoryManagementService } from "../performance/memory-management" // kilocode_change
 
 /**
  * Manages the code indexing workflow, coordinating between different services and managers.
@@ -131,6 +132,19 @@ export class CodeIndexOrchestrator {
 			)
 			return
 		}
+
+		// kilocode_change start: Check memory availability before starting
+		const memoryManager = MemoryManagementService.getInstance()
+		const canStart = memoryManager.startOperation("indexing")
+		if (!canStart) {
+			this.stateManager.setSystemState(
+				"Error",
+				"Insufficient memory for indexing. Please close some applications and try again.",
+			)
+			console.warn("[CodeIndexOrchestrator] Start rejected: Insufficient memory.")
+			return
+		}
+		// kilocode_change end
 
 		this._cancelRequested = false // kilocode_change
 		this._isProcessing = true
@@ -357,6 +371,10 @@ export class CodeIndexOrchestrator {
 			this.stopWatcher()
 		} finally {
 			this._isProcessing = false
+			// kilocode_change start: End memory tracking
+			const memoryManager = MemoryManagementService.getInstance()
+			memoryManager.endOperation("indexing")
+			// kilocode_change end
 		}
 	}
 

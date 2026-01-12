@@ -94,3 +94,85 @@
 	display: inline-block;
 	animation: shimmer 2.5s linear infinite;
 }
+
+/* ============================================
+   Message Bubble Styles
+   ============================================ */
+
+/* Streaming indicator animation for bubbles */
+@keyframes bubble-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
+	}
+}
+
+.bubble-streaming {
+	animation: bubble-pulse 1.5s ease-in-out infinite;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+	.bubble-streaming {
+		animation: none;
+	}
+
+	.animate-message-highlight {
+		animation: none;
+		background-color: color-mix(in srgb, var(--vscode-focusBorder) 15%, transparent);
+	}
+}
+
+/* Bubble entrance animation */
+@keyframes bubble-enter {
+	0% {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.bubble-enter {
+	animation: bubble-enter 0.2s ease-out forwards;
+}
+
+/* User bubble specific styles */
+.bubble-user {
+	background-color: color-mix(in srgb, var(--vscode-button-background) 20%, transparent);
+}
+
+.bubble-user:hover {
+	background-color: color-mix(in srgb, var(--vscode-button-background) 30%, transparent);
+}
+
+/* AI bubble specific styles */
+.bubble-ai {
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-editorGroup-border);
+}
+
+.bubble-ai:hover {
+	background-color: color-mix(in srgb, var(--vscode-list-hoverBackground) 50%, transparent);
+}
+
+/* System bubble specific styles */
+.bubble-system {
+	background-color: color-mix(in srgb, var(--vscode-editorGroup-border) 30%, transparent);
+}
+
+/* Error bubble variant */
+.bubble-error {
+	background-color: color-mix(in srgb, var(--vscode-errorForeground) 10%, transparent);
+	border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 30%, transparent);
+}
+
+/* Bubble edit mode indicator */
+.bubble-editing {
+	box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+}

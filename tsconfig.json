@@ -1,8 +1,17 @@
 {
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
-		"types": ["node"]
+		"types": ["node"],
+		"typeRoots": ["./types", "./node_modules/@types"]
 	},
 	"exclude": ["node_modules"],
-	"include": ["scripts/*.ts"]
+	"include": [
+		"scripts/**/*.ts",
+		"scripts/**/*.js",
+		"scripts/**/*.mjs",
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"types/**/*.d.ts"
+	],
+	"files": ["src/extension.ts"]
 }

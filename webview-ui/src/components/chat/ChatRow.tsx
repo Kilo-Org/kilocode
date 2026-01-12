@@ -78,6 +78,7 @@ import { formatFileSize } from "@/lib/formatting-utils"
 import ChatTimestamps from "./ChatTimestamps"
 import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
 import { KILOCODE_TOKEN_REQUIRED_ERROR } from "@roo/kilocode/errorUtils"
+import { BubbleContainer } from "./MessageBubble"
 // kilocode_change end
 
 // Helper function to get previous todos before a specific message
@@ -1277,98 +1278,103 @@ export const ChatRowContent = ({
 					return null // we should never see this message type
 				case "text":
 					return (
-						<div>
-							<div style={headerStyle}>
-								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
-								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
+						// kilocode_change start: Add bubble styling for AI messages
+						<BubbleContainer variant="ai" isStreaming={isStreaming && isLast}>
+							<div className="w-full">
+								<div className="flex items-center gap-2 mb-2">
+									<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
+									<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
+								</div>
+								<div>
+									<Markdown markdown={message.text} partial={message.partial} />
+									{message.images && message.images.length > 0 && (
+										<div style={{ marginTop: "10px" }}>
+											{message.images.map((image, index) => (
+												<ImageBlock key={index} imageData={image} />
+											))}
+										</div>
+									)}
+								</div>
 							</div>
-							<div className="pl-6">
-								<Markdown markdown={message.text} partial={message.partial} />
-								{message.images && message.images.length > 0 && (
-									<div style={{ marginTop: "10px" }}>
-										{message.images.map((image, index) => (
-											<ImageBlock key={index} imageData={image} />
-										))}
-									</div>
-								)}
-							</div>
-						</div>
+						</BubbleContainer>
+						// kilocode_change end
 					)
 				case "user_feedback":
 					return (
-						<div className="group">
-							<div style={headerStyle}>
-								<User className="w-4 shrink-0" aria-label="User icon" />
-								<span style={{ fontWeight: "bold" }}>{t("chat:feedback.youSaid")}</span>
-							</div>
-							<div
-								className={cn(
-									"ml-6 border rounded-sm whitespace-pre-wrap",
-									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
-									isEditing
-										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
-								)}>
-								{isEditing ? (
-									<div className="flex flex-col gap-2">
-										<ChatTextArea
-											inputValue={editedContent}
-											setInputValue={setEditedContent}
-											sendingDisabled={false}
-											selectApiConfigDisabled={true}
-											placeholderText={t("chat:editMessage.placeholder")}
-											selectedImages={editImages}
-											setSelectedImages={setEditImages}
-											onSend={handleSaveEdit}
-											onSelectImages={handleSelectImages}
-											shouldDisableImages={!model?.supportsImages}
-											mode={editMode}
-											setMode={setEditMode}
-											modeShortcutText=""
-											isEditMode={true}
-											onCancel={handleCancelEdit}
-										/>
-									</div>
-								) : (
-									<div className="flex justify-between">
-										<div
-											className="flex-grow px-2 py-1 wrap-anywhere rounded-lg transition-colors"
-											onClick={(e) => {
-												e.stopPropagation()
-												if (!isStreaming) {
-													handleEditClick()
-												}
-											}}
-											title={t("chat:queuedMessages.clickToEdit")}>
-											<Mention text={message.text} withShadow />
+						// kilocode_change start: Add bubble styling for user messages
+						<BubbleContainer variant="user" isEditing={isEditing}>
+							<div className="group w-full">
+								<div className="flex items-center gap-2 mb-2">
+									<User className="w-4 shrink-0" aria-label="User icon" />
+									<span style={{ fontWeight: "bold" }}>{t("chat:feedback.youSaid")}</span>
+								</div>
+								<div
+									className={cn(
+										"whitespace-pre-wrap",
+										isEditing ? "overflow-visible" : "overflow-hidden",
+									)}>
+									{isEditing ? (
+										<div className="flex flex-col gap-2">
+											<ChatTextArea
+												inputValue={editedContent}
+												setInputValue={setEditedContent}
+												sendingDisabled={false}
+												selectApiConfigDisabled={true}
+												placeholderText={t("chat:editMessage.placeholder")}
+												selectedImages={editImages}
+												setSelectedImages={setEditImages}
+												onSend={handleSaveEdit}
+												onSelectImages={handleSelectImages}
+												shouldDisableImages={!model?.supportsImages}
+												mode={editMode}
+												setMode={setEditMode}
+												modeShortcutText=""
+												isEditMode={true}
+												onCancel={handleCancelEdit}
+											/>
 										</div>
-										<div className="flex gap-2 pr-1">
+									) : (
+										<div className="flex justify-between">
 											<div
-												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-												style={{ visibility: isStreaming ? "hidden" : "visible" }}
+												className="flex-grow wrap-anywhere transition-colors"
 												onClick={(e) => {
 													e.stopPropagation()
-													handleEditClick()
-												}}>
-												<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
+													if (!isStreaming) {
+														handleEditClick()
+													}
+												}}
+												title={t("chat:queuedMessages.clickToEdit")}>
+												<Mention text={message.text} withShadow />
 											</div>
-											<div
-												className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-												style={{ visibility: isStreaming ? "hidden" : "visible" }}
-												onClick={(e) => {
-													e.stopPropagation()
-													vscode.postMessage({ type: "deleteMessage", value: message.ts })
-												}}>
-												<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
+											<div className="flex gap-2 ml-2">
+												<div
+													className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+													style={{ visibility: isStreaming ? "hidden" : "visible" }}
+													onClick={(e) => {
+														e.stopPropagation()
+														handleEditClick()
+													}}>
+													<Edit className="w-4 shrink-0" aria-label="Edit message icon" />
+												</div>
+												<div
+													className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+													style={{ visibility: isStreaming ? "hidden" : "visible" }}
+													onClick={(e) => {
+														e.stopPropagation()
+														vscode.postMessage({ type: "deleteMessage", value: message.ts })
+													}}>
+													<Trash2 className="w-4 shrink-0" aria-label="Delete message icon" />
+												</div>
 											</div>
 										</div>
-									</div>
-								)}
-								{!isEditing && message.images && message.images.length > 0 && (
-									<Thumbnails images={message.images} style={{ marginTop: "8px" }} />
-								)}
+									)}
+									{!isEditing && message.images && message.images.length > 0 && (
+										<Thumbnails images={message.images} style={{ marginTop: "8px" }} />
+									)}
+								</div>
 							</div>
-						</div>
+						</BubbleContainer>
+						// kilocode_change end
 					)
 				case "user_feedback_diff":
 					const tool = safeJsonParse<ClineSayTool>(message.text)

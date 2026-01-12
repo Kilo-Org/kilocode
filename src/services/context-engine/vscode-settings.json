@@ -1,0 +1,36 @@
+{
+	"// kilocode_change - new file": "Performance settings for Context Engine",
+	"kiloCode.contextEngine.performance": {
+		"maxFileSize": 524288,
+		"debounceDelay": 1000,
+		"maxMemoryUsage": 0.5,
+		"enableIncrementalParsing": true,
+		"enableBackgroundProcessing": false,
+		"maxConcurrentParsers": 2,
+		"enableCaching": true,
+		"cacheSize": 100
+	},
+	"kiloCode.contextEngine.excludedPaths": [
+		"node_modules/**",
+		".git/**",
+		"dist/**",
+		"build/**",
+		".next/**",
+		"coverage/**",
+		".turbo/**",
+		".cache/**",
+		"__pycache__/**",
+		".pytest_cache/**",
+		".vscode/**",
+		".idea/**",
+		"*.min.js",
+		"*.bundle.js",
+		"*.map"
+	],
+	"kiloCode.contextEngine.parsing": {
+		"includeDocstrings": false,
+		"includePrivate": false,
+		"enableTypeInference": false,
+		"enableCrossFileAnalysis": false
+	}
+}

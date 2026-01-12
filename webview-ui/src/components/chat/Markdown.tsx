@@ -1,8 +1,10 @@
-import { memo, useState } from "react"
+import { memo, useState, useMemo } from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { StandardTooltip } from "@src/components/ui"
+import { getTextDirection } from "@src/utils/textDirection" // kilocode_change: RTL support
+import { sanitizeToolTags } from "@src/utils/sanitizeToolTags" // kilocode_change: sanitize raw tool tags
 
 import MarkdownBlock from "../common/MarkdownBlock"
 
@@ -12,7 +14,14 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 	// Shorter feedback duration for copy button flash.
 	const { copyWithFeedback } = useCopyToClipboard(200)
 
-	if (!markdown || markdown.length === 0) {
+	// kilocode_change start: Sanitize raw tool tags from AI responses
+	const sanitizedMarkdown = useMemo(() => sanitizeToolTags(markdown), [markdown])
+	// kilocode_change end
+
+	// kilocode_change: Detect RTL text direction for Arabic and other RTL languages
+	const textDirection = useMemo(() => getTextDirection(sanitizedMarkdown), [sanitizedMarkdown])
+
+	if (!sanitizedMarkdown || sanitizedMarkdown.length === 0) {
 		return null
 	}
 
@@ -20,16 +29,21 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 		<div
 			onMouseEnter={() => setIsHovering(true)}
 			onMouseLeave={() => setIsHovering(false)}
-			style={{ position: "relative" }}>
+			style={{
+				position: "relative",
+				direction: textDirection,
+				textAlign: textDirection === "rtl" ? "right" : "left",
+			}}>
 			<div style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
-				<MarkdownBlock markdown={markdown} />
+				<MarkdownBlock markdown={sanitizedMarkdown} />
 			</div>
-			{markdown && !partial && isHovering && (
+			{sanitizedMarkdown && !partial && isHovering && (
 				<div
 					style={{
 						position: "absolute",
 						bottom: "-4px",
-						right: "8px",
+						right: textDirection === "rtl" ? "auto" : "8px",
+						left: textDirection === "rtl" ? "8px" : "auto",
 						opacity: 0,
 						animation: "fadeIn 0.2s ease-in-out forwards",
 						borderRadius: "4px",
@@ -46,7 +60,7 @@ export const Markdown = memo(({ markdown, partial }: { markdown?: string; partia
 								transition: "background 0.2s ease-in-out",
 							}}
 							onClick={async () => {
-								const success = await copyWithFeedback(markdown)
+								const success = await copyWithFeedback(sanitizedMarkdown)
 								if (success) {
 									const button = document.activeElement as HTMLElement
 									if (button) {
