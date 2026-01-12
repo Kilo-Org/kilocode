@@ -80,9 +80,32 @@ export class GitStateService {
 			const git = simpleGit(cwd)
 
 			const remotes = await git.getRemotes(true)
-			// Prefer 'origin' remote if it exists, otherwise use the first remote
-			const originRemote = remotes.find((remote) => remote.name === "origin")
-			const selectedRemote = originRemote || remotes[0]
+			
+			// Determine which remote to use based on branch tracking configuration
+			let selectedRemote = remotes[0]
+			
+			try {
+				// Get the current branch name
+				const symbolicRef = await git.raw(["symbolic-ref", "-q", "HEAD"])
+				const currentBranch = symbolicRef.trim().replace(/^refs\/heads\//, "")
+				
+				// Get the tracking remote for the current branch
+				const trackingRemote = await git.raw(["config", `branch.${currentBranch}.remote`])
+				const trackingRemoteName = trackingRemote.trim()
+				
+				if (trackingRemoteName) {
+					// Use the branch's tracking remote if it exists
+					const branchRemote = remotes.find((remote) => remote.name === trackingRemoteName)
+					if (branchRemote) {
+						selectedRemote = branchRemote
+					}
+				}
+			} catch {
+				// If we can't determine the tracking remote, fall back to 'origin' or first remote
+				const originRemote = remotes.find((remote) => remote.name === "origin")
+				selectedRemote = originRemote || remotes[0]
+			}
+			
 			const repoUrl = selectedRemote?.refs?.fetch || selectedRemote?.refs?.push
 
 			const head = await git.revparse(["HEAD"])

@@ -110,7 +110,3 @@ Thanks to all the contributors who help make Kilo better!
     </td>
   </tr>
 </table>
-
-## Math Facts
-
-2 + 2 = 4
