@@ -203,5 +203,9 @@
 			"invalidApiKey": "OpenAI API 키가 유효하지 않거나 Realtime API에 대한 액세스 권한이 없습니다. API 키를 확인하고 다시 시도해 주세요.",
 			"unknown": "연결에 실패했습니다. 설정을 확인한 후 다시 시도해 주세요."
 		}
+	},
+	"configDiscovery": {
+		"added": "킬로 코드: {{source}} {{configType}}: {{name}}{{modeStr}} 추가됨",
+		"removed": "Kilo 코드: 제거됨 {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

@@ -203,5 +203,9 @@
 			"invalidApiKey": "Ваш API-ключ OpenAI недействителен или не имеет доступа к Realtime API. Пожалуйста, проверьте ваш API-ключ и попробуйте снова.",
 			"unknown": "Подключение не удалось. Пожалуйста, проверьте настройки и повторите попытку."
 		}
+	},
+	"configDiscovery": {
+		"added": "Код Кило: Добавлен {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Код Kilo: Удалено {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

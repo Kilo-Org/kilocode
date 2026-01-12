@@ -203,5 +203,9 @@
 			"invalidApiKey": "Uw OpenAI API-sleutel is ongeldig of heeft geen toegang tot de Realtime API. Controleer uw API-sleutel en probeer het opnieuw.",
 			"unknown": "Verbinding mislukt. Controleer uw configuratie en probeer het opnieuw."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: Toegevoegd {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo code: Verwijderd {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

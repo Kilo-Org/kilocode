@@ -203,5 +203,9 @@
 			"invalidApiKey": "Tu clave de API de OpenAI es inválida o no tiene acceso a la API de Realtime. Por favor verifica tu clave de API e inténtalo de nuevo.",
 			"unknown": "Error de conexión. Por favor, verifica tu configuración e inténtalo de nuevo."
 		}
+	},
+	"configDiscovery": {
+		"added": "Código Kilo: Se ha añadido {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Código Kilo: Removido {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

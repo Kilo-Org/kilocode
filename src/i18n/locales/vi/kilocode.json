@@ -203,5 +203,9 @@
 			"invalidApiKey": "Khóa API OpenAI của bạn không hợp lệ hoặc không có quyền truy cập vào Realtime API. Vui lòng kiểm tra khóa API và thử lại.",
 			"unknown": "Kết nối thất bại. Vui lòng kiểm tra cấu hình của bạn và thử lại."
 		}
+	},
+	"configDiscovery": {
+		"added": "Mã Kilo: Đã thêm {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Mã Kilo: Đã xóa {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

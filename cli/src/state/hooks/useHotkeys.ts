@@ -95,7 +95,7 @@ export function useHotkeys(): UseHotkeysReturn {
 		// Default: General command hints
 		return [
 			{ keys: "/help", description: "for commands" },
-			{ keys: "/mode", description: "to switch mode" },
+			{ keys: "Shift+Tab", description: "to cycle mode" },
 			{ keys: "!", description: "for shell mode", primary: true },
 		]
 	}, [hasResumeTask, isApprovalPending, isStreaming, isFollowupVisible, isShellModeActive, modifierKey])
