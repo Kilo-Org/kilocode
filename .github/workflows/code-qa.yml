@@ -186,6 +186,7 @@ jobs:
                     libxkbfile-dev \
                     pkg-config \
                     build-essential \
+                    libkrb5-dev \
                     python3
             - name: Turbo cache setup
               uses: actions/cache@v4
