@@ -21,6 +21,9 @@ function formatCliMessage(message: CliMessage) {
 
 /**
  * Convert an extension message to JSON output format
+ *
+ * If text is valid JSON (object/array), it's placed in 'metadata' field.
+ * If text is plain text or malformed JSON, it's placed in 'content' field.
  */
 function formatExtensionMessage(message: ExtensionChatMessage) {
 	const { ts, text, ...restOfMessage } = message
@@ -31,10 +34,16 @@ function formatExtensionMessage(message: ExtensionChatMessage) {
 		...restOfMessage,
 	}
 
-	try {
-		output.metadata = JSON.parse(text || "")
-	} catch {
-		if (text) {
+	if (text) {
+		try {
+			const parsed = JSON.parse(text)
+			// Only use metadata for objects/arrays, not primitives
+			if (typeof parsed === "object" && parsed !== null) {
+				output.metadata = parsed
+			} else {
+				output.content = text
+			}
+		} catch {
 			output.content = text
 		}
 	}

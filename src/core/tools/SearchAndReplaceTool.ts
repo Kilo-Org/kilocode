@@ -13,6 +13,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
 
 interface SearchReplaceOperation {
 	search: string
@@ -120,13 +121,18 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				return
 			}
 
+			const useCrLf_kilocode = fileContent.includes("\r\n")
+
 			// Apply all operations sequentially
 			let newContent = fileContent
 			const errors: string[] = []
 
 			for (let i = 0; i < operations.length; i++) {
 				const { search, replace } = operations[i]
-				const searchPattern = new RegExp(escapeRegExp(search), "g")
+				const searchPattern = new RegExp(
+					escapeRegExp(normalizeLineEndings_kilocode(search, useCrLf_kilocode)),
+					"g",
+				)
 
 				const matchCount = newContent.match(searchPattern)?.length ?? 0
 				if (matchCount === 0) {
@@ -142,7 +148,7 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 				}
 
 				// Apply the replacement
-				newContent = newContent.replace(searchPattern, replace)
+				newContent = newContent.replace(searchPattern, normalizeLineEndings_kilocode(replace, useCrLf_kilocode))
 			}
 
 			// If all operations failed, return error

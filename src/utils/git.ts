@@ -406,3 +406,29 @@ export async function getGitStatus(cwd: string, maxFiles: number = 20): Promise<
 		return null
 	}
 }
+
+/**
+ * Gets the current branch name
+ * @param cwd The working directory to check the current branch in
+ * @returns The current branch name, or undefined if not a git repository or in detached HEAD state
+ */
+export async function getCurrentBranch(cwd: string): Promise<string | undefined> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) {
+			return undefined
+		}
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) {
+			return undefined
+		}
+
+		const { stdout } = await execAsync("git branch --show-current", { cwd })
+		const branch = stdout.trim()
+		return branch.length > 0 ? branch : undefined
+	} catch (error) {
+		console.error("Error getting current branch:", error)
+		return undefined
+	}
+}

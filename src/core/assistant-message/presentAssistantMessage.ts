@@ -9,6 +9,7 @@ import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse, ToolUse, McpToolUse } from "../../shared/tools"
 import { Package } from "../../shared/package"
 import { t } from "../../i18n"
+import { AskIgnoredError } from "../task/AskIgnoredError"
 
 import { fetchInstructionsTool } from "../tools/FetchInstructionsTool"
 import { listFilesTool } from "../tools/ListFilesTool"
@@ -18,8 +19,8 @@ import { shouldUseSingleFileRead, TOOL_PROTOCOL } from "@roo-code/types"
 import { writeToFileTool } from "../tools/WriteToFileTool"
 import { applyDiffTool } from "../tools/MultiApplyDiffTool"
 import { searchAndReplaceTool } from "../tools/SearchAndReplaceTool"
+import { searchReplaceTool } from "../tools/SearchReplaceTool"
 import { applyPatchTool } from "../tools/ApplyPatchTool"
-import { listCodeDefinitionNamesTool } from "../tools/ListCodeDefinitionNamesTool"
 import { searchFilesTool } from "../tools/SearchFilesTool"
 import { browserActionTool } from "../tools/BrowserActionTool"
 import { executeCommandTool } from "../tools/ExecuteCommandTool"
@@ -40,12 +41,10 @@ import { Task } from "../task/Task"
 import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffTool as applyDiffToolClass } from "../tools/ApplyDiffTool"
-import { isNativeProtocol } from "@roo-code/types"
-import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 import { yieldPromise } from "../kilocode"
 import { evaluateGatekeeperApproval } from "./kilocode/gatekeeper"
-import { editFileTool } from "../tools/kilocode/editFileTool"
+import { editFileTool, isFastApplyAvailable } from "../tools/kilocode/editFileTool"
 import { deleteFileTool } from "../tools/kilocode/deleteFileTool"
 import { newRuleTool } from "../tools/kilocode/newRuleTool"
 import { reportBugTool } from "../tools/kilocode/reportBugTool"
@@ -233,6 +232,11 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			const handleError = async (action: string, error: Error) => {
+				// Silently ignore AskIgnoredError - this is an internal control flow
+				// signal, not an actual error. It occurs when a newer ask supersedes an older one.
+				if (error instanceof AskIgnoredError) {
+					return
+				}
 				const errorString = `Error ${action}: ${JSON.stringify(serializeError(error))}`
 				await cline.say(
 					"error",
@@ -246,6 +250,18 @@ export async function presentAssistantMessage(cline: Task) {
 				TelemetryService.instance.captureToolUsage(cline.taskId, "use_mcp_tool", toolProtocol)
 			}
 
+			// Resolve sanitized server name back to original server name
+			// The serverName from parsing is sanitized (e.g., "my_server" from "my server")
+			// We need the original name to find the actual MCP connection
+			const mcpHub = cline.providerRef.deref()?.getMcpHub()
+			let resolvedServerName = mcpBlock.serverName
+			if (mcpHub) {
+				const originalName = mcpHub.findServerNameBySanitizedName(mcpBlock.serverName)
+				if (originalName) {
+					resolvedServerName = originalName
+				}
+			}
+
 			// Execute the MCP tool using the same handler as use_mcp_tool
 			// Create a synthetic ToolUse block that the useMcpToolTool can handle
 			const syntheticToolUse: ToolUse<"use_mcp_tool"> = {
@@ -253,13 +269,13 @@ export async function presentAssistantMessage(cline: Task) {
 				id: mcpBlock.id,
 				name: "use_mcp_tool",
 				params: {
-					server_name: mcpBlock.serverName,
+					server_name: resolvedServerName,
 					tool_name: mcpBlock.toolName,
 					arguments: JSON.stringify(mcpBlock.arguments),
 				},
 				partial: mcpBlock.partial,
 				nativeArgs: {
-					server_name: mcpBlock.serverName,
+					server_name: resolvedServerName,
 					tool_name: mcpBlock.toolName,
 					arguments: mcpBlock.arguments,
 				},
@@ -348,6 +364,21 @@ export async function presentAssistantMessage(cline: Task) {
 			const state = await cline.providerRef.deref()?.getState()
 			const { mode, customModes, experiments: stateExperiments, apiConfiguration } = state ?? {}
 
+			// kilocode_change start
+			// Fast Apply + native tool aliases compatibility:
+			// In native protocol parsing, `edit_file` may be treated as an alias for `apply_diff`.
+			// When Fast Apply is actually enabled, we need to undo that aliasing so that the
+			// real `edit_file` tool handler runs.
+			if (
+				isFastApplyAvailable(state as any) &&
+				block.originalName === "edit_file" &&
+				block.name === "apply_diff"
+			) {
+				block.name = "edit_file"
+				block.originalName = undefined
+			}
+			// kilocode_change end
+
 			const toolDescription = (): string => {
 				switch (block.name) {
 					case "execute_command":
@@ -400,11 +431,11 @@ export async function presentAssistantMessage(cline: Task) {
 					case "delete_file":
 						return `[${block.name} for '${block.params.path}']`
 					// kilocode_change end
+					case "search_replace":
+						return `[${block.name} for '${block.params.file_path}']`
 					case "apply_patch":
 						return `[${block.name}]`
 					case "list_files":
-						return `[${block.name} for '${block.params.path}']`
-					case "list_code_definition_names":
 						return `[${block.name} for '${block.params.path}']`
 					case "browser_action":
 						return `[${block.name} for '${block.params.action}']`
@@ -652,6 +683,11 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			const handleError = async (action: string, error: Error) => {
+				// Silently ignore AskIgnoredError - this is an internal control flow
+				// signal, not an actual error. It occurs when a newer ask supersedes an older one.
+				if (error instanceof AskIgnoredError) {
+					return
+				}
 				const errorString = `Error ${action}: ${JSON.stringify(serializeError(error))}`
 
 				await cline.say(
@@ -728,7 +764,11 @@ export async function presentAssistantMessage(cline: Task) {
 			// potentially causing the stream to appear frozen.
 			if (!block.partial) {
 				const modelInfo = cline.api.getModel()
-				const includedTools = modelInfo?.info?.includedTools
+				// Resolve aliases in includedTools before validation
+				// e.g., "edit_file" should resolve to "apply_diff"
+				const rawIncludedTools = modelInfo?.info?.includedTools
+				const { resolveToolAlias } = await import("../prompts/tools/filter-tools-for-mode")
+				const includedTools = rawIncludedTools?.map((tool) => resolveToolAlias(tool))
 
 				try {
 					validateToolUse(
@@ -878,6 +918,16 @@ export async function presentAssistantMessage(cline: Task) {
 						toolProtocol,
 					})
 					break
+				case "search_replace":
+					await checkpointSaveAndMark(cline)
+					await searchReplaceTool.handle(cline, block as ToolUse<"search_replace">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					})
+					break
 				case "apply_patch":
 					await checkpointSaveAndMark(cline)
 					await applyPatchTool.handle(cline, block as ToolUse<"apply_patch">, {
@@ -941,15 +991,6 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "codebase_search":
 					await codebaseSearchTool.handle(cline, block as ToolUse<"codebase_search">, {
-						askApproval,
-						handleError,
-						pushToolResult,
-						removeClosingTag,
-						toolProtocol,
-					})
-					break
-				case "list_code_definition_names":
-					await listCodeDefinitionNamesTool.handle(cline, block as ToolUse<"list_code_definition_names">, {
 						askApproval,
 						handleError,
 						pushToolResult,

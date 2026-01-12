@@ -1,33 +1,45 @@
 import React, { useState, useRef, useEffect } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import { vscode } from "../utils/vscode"
-import { SendHorizontal, Square } from "lucide-react"
+import { GitBranch, GitPullRequest, SendHorizontal, Square } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
 import { StandardTooltip } from "../../../components/ui"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import { sessionTodoStatsAtomFamily } from "../state/atoms/todos"
 import { AgentTodoList } from "./AgentTodoList"
+import { addToQueueAtom } from "../state/atoms/messageQueue"
 
 interface ChatInputProps {
 	sessionId: string
 	sessionLabel?: string
 	isActive?: boolean
-	autoMode?: boolean // True if session is running in auto mode (non-interactive)
+	showCancel?: boolean
+	showFinishToBranch?: boolean
+	showCreatePR?: boolean
+	worktreeBranchName?: string
+	parentBranch?: string
+	sessionStatus?: "creating" | "running" | "done" | "error" | "stopped"
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
 	sessionId,
 	sessionLabel,
 	isActive = false,
-	autoMode = false,
+	showCancel = false,
+	showFinishToBranch = false,
+	showCreatePR = false,
+	worktreeBranchName,
+	parentBranch,
+	sessionStatus,
 }) => {
 	const { t } = useTranslation("agentManager")
 	const [messageText, setMessageText] = useAtom(sessionInputAtomFamily(sessionId))
 	const todoStats = useAtomValue(sessionTodoStatsAtomFamily(sessionId))
 	const [isFocused, setIsFocused] = useState(false)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const addToQueue = useSetAtom(addToQueueAtom)
 
 	// Auto-focus the textarea when the session changes (user selects a different session)
 	useEffect(() => {
@@ -36,23 +48,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 	const trimmedMessage = messageText.trim()
 	const isEmpty = trimmedMessage.length === 0
+	const isSessionCompleted = sessionStatus === "done" || sessionStatus === "error" || sessionStatus === "stopped"
 
-	// In auto mode, input and sending are always disabled (non-interactive)
-	const inputDisabled = autoMode
-	const sendDisabled = isEmpty || autoMode
+	// Send is disabled when empty
+	// Note: Users CAN queue multiple messages while one is sending (for running sessions)
+	// Note: Users CAN send messages to completed sessions (to resume them)
+	const sendDisabled = isEmpty
 
 	const handleSend = () => {
-		if (isEmpty || autoMode) return
+		if (isEmpty) return
 
-		// For running sessions, send as follow-up message
-		vscode.postMessage({
-			type: "agentManager.sendMessage",
-			sessionId,
-			sessionLabel,
-			content: trimmedMessage,
-		})
+		if (isSessionCompleted) {
+			// Resume a completed session with a new message (sent directly, not queued)
+			vscode.postMessage({
+				type: "agentManager.resumeSession",
+				sessionId,
+				sessionLabel,
+				content: trimmedMessage,
+			})
+			setMessageText("")
+		} else {
+			// For running sessions, queue the message instead of sending directly
+			const queuedMsg = addToQueue({ sessionId, content: trimmedMessage })
 
-		setMessageText("")
+			if (queuedMsg) {
+				// Notify the extension that a message has been queued
+				vscode.postMessage({
+					type: "agentManager.messageQueued",
+					sessionId,
+					messageId: queuedMsg.id,
+					sessionLabel,
+					content: trimmedMessage,
+				})
+
+				setMessageText("")
+			}
+		}
 	}
 
 	const handleCancel = () => {
@@ -60,6 +91,79 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 			type: "agentManager.cancelSession",
 			sessionId,
 		})
+	}
+
+	const handleFinishToBranch = () => {
+		vscode.postMessage({
+			type: "agentManager.finishWorktreeSession",
+			sessionId,
+		})
+	}
+
+	const handleCreatePR = () => {
+		const branch = worktreeBranchName || "current-branch"
+		const targetBranch = parentBranch || "main"
+
+		const instructions = `The user wants to create a pull request.
+
+Local branch: ${branch}
+Target branch: origin/${targetBranch}
+
+Follow these steps:
+
+1. First, verify gh CLI is ready by running: gh auth status
+   - If gh is not installed, ask the user to install it: https://cli.github.com/
+   - If not authenticated, ask the user to run: gh auth login
+   - Do not proceed until gh is ready.
+
+2. Run git status to check for uncommitted changes
+
+3. Run git diff to understand what changes exist (both staged and unstaged)
+
+4. Based on the changes, prepare suggestions for the user:
+   - Propose a CLEAN branch name following conventions (e.g., feat/description, fix/description, docs/description)
+     Do NOT suggest the auto-generated local branch name "${branch}" - always propose a better name.
+   - Propose a descriptive commit message (if there are uncommitted changes)
+   - Propose a PR title (under 80 chars)
+   - Propose a PR description (concise summary)
+
+5. STOP and present your suggestions to the user. Ask them to confirm or edit:
+   - Branch name for the PR (your clean suggestion, not the auto-generated one)
+   - Commit message (if applicable)
+   - PR title
+   - PR description
+
+   DO NOT commit, push, or create the PR until the user explicitly confirms.
+
+6. Once the user confirms, execute in this order:
+   a. If there are uncommitted changes, commit with the confirmed message
+   b. Push to origin with the confirmed branch name:
+      git push origin ${branch}:<confirmed-branch-name>
+   c. Create the PR: gh pr create --base ${targetBranch} --head <confirmed-branch-name> --title "<confirmed-title>" --body "<confirmed-description>"
+
+If any step fails, ask the user for help.`
+
+		if (isSessionCompleted) {
+			// Resume session with PR instructions
+			vscode.postMessage({
+				type: "agentManager.resumeSession",
+				sessionId,
+				sessionLabel,
+				content: instructions,
+			})
+		} else {
+			// Queue message for running session
+			const queuedMsg = addToQueue({ sessionId, content: instructions })
+			if (queuedMsg) {
+				vscode.postMessage({
+					type: "agentManager.messageQueued",
+					sessionId,
+					messageId: queuedMsg.id,
+					sessionLabel,
+					content: instructions,
+				})
+			}
+		}
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -95,8 +199,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						onFocus={() => setIsFocused(true)}
 						onBlur={() => setIsFocused(false)}
 						aria-label={t("chatInput.ariaLabel")}
-						placeholder={inputDisabled ? t("chatInput.autonomous") : t("chatInput.placeholderTypeTask")}
-						disabled={inputDisabled}
+						placeholder={t("chatInput.placeholderTypeTask")}
 						minRows={3}
 						maxRows={15}
 						className={cn(
@@ -138,7 +241,56 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 					{/* Floating Actions */}
 					<div className="absolute bottom-2 right-2 z-30 flex gap-1">
-						{isActive && (
+						{showFinishToBranch && (
+							<StandardTooltip
+								content={
+									worktreeBranchName
+										? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+										: t("chatInput.finishToBranchTitleNoBranch")
+								}>
+								<button
+									aria-label={
+										worktreeBranchName
+											? t("chatInput.finishToBranchTitle", { branch: worktreeBranchName })
+											: t("chatInput.finishToBranchTitleNoBranch")
+									}
+									onClick={handleFinishToBranch}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<GitBranch size={14} />
+								</button>
+							</StandardTooltip>
+						)}
+						{showCreatePR && (
+							<StandardTooltip content={t("chatInput.createPRTitle")}>
+								<button
+									aria-label={t("chatInput.createPRTitle")}
+									onClick={handleCreatePR}
+									className={cn(
+										"relative inline-flex items-center justify-center",
+										"bg-transparent border-none p-1.5",
+										"rounded-md min-w-[28px] min-h-[28px]",
+										"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+										"transition-all duration-150",
+										"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										"active:bg-[rgba(255,255,255,0.1)]",
+										"cursor-pointer",
+									)}>
+									<GitPullRequest size={14} />
+								</button>
+							</StandardTooltip>
+						)}
+						{isActive && showCancel && (
 							<StandardTooltip content={t("chatInput.cancelTitle")}>
 								<button
 									aria-label={t("chatInput.cancelTitle")}
@@ -158,9 +310,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 								</button>
 							</StandardTooltip>
 						)}
-						<StandardTooltip content={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}>
+						<StandardTooltip content={t("chatInput.sendTitle")}>
 							<button
-								aria-label={inputDisabled ? t("chatInput.autonomous") : t("chatInput.sendTitle")}
+								aria-label={t("chatInput.sendTitle")}
 								disabled={sendDisabled}
 								onClick={handleSend}
 								className={cn(
@@ -185,7 +337,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 					{/* Hint Text inside input */}
 					{!messageText && (
 						<div
-							className="absolute left-3 right-[70px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
+							className="absolute left-3 right-[100px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
 							style={{
 								bottom: "0.25rem",
 								color: "var(--vscode-descriptionForeground)",

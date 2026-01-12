@@ -6,7 +6,7 @@ import type { ProviderSettings, ModelInfo, ToolProtocol } from "@roo-code/types"
 import { ApiStream } from "./transform/stream"
 
 import {
-	GlamaHandler,
+	GlamaHandler, // kilocode_change
 	AnthropicHandler,
 	AwsBedrockHandler,
 	CerebrasHandler,
@@ -55,6 +55,8 @@ import {
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
+import type { FimHandler } from "./providers/kilocode/FimHandler" // kilocode_change
+export type { FimHandler } from "./providers/kilocode/FimHandler"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -137,6 +139,14 @@ export interface ApiHandler {
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
 
+	// kilocode_change start
+	/**
+	 * Returns a FimHandler if the provider supports FIM (Fill-In-the-Middle) completions,
+	 * or undefined if FIM is not supported.
+	 */
+	fimSupport?: () => FimHandler | undefined
+	// kilocode_change end
+
 	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }
 
@@ -156,8 +166,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new AnthropicHandler(options)
 		case "claude-code":
 			return new ClaudeCodeHandler(options)
+		// kilocode_change start
 		case "glama":
 			return new GlamaHandler(options)
+		// kilocode_change end
 		case "openrouter":
 			return new OpenRouterHandler(options)
 		case "bedrock":

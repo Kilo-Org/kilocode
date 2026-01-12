@@ -69,3 +69,5 @@ qdrant_storage/
 
 # Act Secret Files
 .secrets
+# Architect plans
+./plans/

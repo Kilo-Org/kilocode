@@ -428,4 +428,79 @@ describe("ContextProxy", () => {
 			expect(initializeSpy).toHaveBeenCalledTimes(1)
 		})
 	})
+
+	describe("invalid apiProvider migration", () => {
+		it("should clear invalid apiProvider from storage during initialization", async () => {
+			// Reset and create a new proxy with invalid provider in state
+			vi.clearAllMocks()
+			mockGlobalState.get.mockImplementation((key: string) => {
+				if (key === "apiProvider") {
+					return "invalid-removed-provider" // Invalid/removed provider
+				}
+				return undefined
+			})
+
+			const proxyWithInvalidProvider = new ContextProxy(mockContext)
+			await proxyWithInvalidProvider.initialize()
+
+			// Should have cleared the invalid apiProvider
+			expect(mockGlobalState.update).toHaveBeenCalledWith("apiProvider", undefined)
+		})
+
+		it("should not modify valid apiProvider during initialization", async () => {
+			// Reset and create a new proxy with valid provider in state
+			vi.clearAllMocks()
+			mockGlobalState.get.mockImplementation((key: string) => {
+				if (key === "apiProvider") {
+					return "anthropic" // Valid provider
+				}
+				return undefined
+			})
+
+			const proxyWithValidProvider = new ContextProxy(mockContext)
+			await proxyWithValidProvider.initialize()
+
+			// Should NOT have called update for apiProvider (it's valid)
+			const updateCalls = mockGlobalState.update.mock.calls
+			const apiProviderUpdateCalls = updateCalls.filter((call: any[]) => call[0] === "apiProvider")
+			expect(apiProviderUpdateCalls.length).toBe(0)
+		})
+	})
+
+	describe("getProviderSettings", () => {
+		it("should sanitize invalid apiProvider before parsing", async () => {
+			// Set an invalid provider in state
+			await proxy.updateGlobalState("apiProvider", "invalid-removed-provider" as any)
+			await proxy.updateGlobalState("apiModelId", "some-model")
+
+			const settings = proxy.getProviderSettings()
+
+			// The invalid apiProvider should be sanitized (removed)
+			expect(settings.apiProvider).toBeUndefined()
+			// Other settings should still be present
+			expect(settings.apiModelId).toBe("some-model")
+		})
+
+		it("should pass through valid apiProvider", async () => {
+			// Set a valid provider in state
+			await proxy.updateGlobalState("apiProvider", "anthropic")
+			await proxy.updateGlobalState("apiModelId", "claude-3-opus-20240229")
+
+			const settings = proxy.getProviderSettings()
+
+			// Valid provider should be returned
+			expect(settings.apiProvider).toBe("anthropic")
+			expect(settings.apiModelId).toBe("claude-3-opus-20240229")
+		})
+
+		it("should handle undefined apiProvider gracefully", async () => {
+			// Ensure no provider is set
+			await proxy.updateGlobalState("apiProvider", undefined)
+
+			const settings = proxy.getProviderSettings()
+
+			// Should not throw and should return undefined
+			expect(settings.apiProvider).toBeUndefined()
+		})
+	})
 })

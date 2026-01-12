@@ -187,13 +187,15 @@ const dynamicProviderExtras = {
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	litellm: {} as { apiKey: string; baseUrl: string },
+	litellm: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change: parameters optional
 	kilocode: {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
 	deepinfra: {} as { apiKey?: string; baseUrl?: string },
-	"io-intelligence": {} as { apiKey: string },
+	"io-intelligence": {} as { apiKey?: string }, // kilocode_change: parameters optional
 	requesty: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
+	// kilocode_change start
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	// kilocode_change end
 	"nano-gpt": {} as { nanoGptModelList?: "all" | "personalized" | "subscription" }, // kilocode_change
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type

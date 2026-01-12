@@ -9,16 +9,18 @@ import { extractSessionConfigs, type SessionConfig } from "../multiVersionUtils"
  *
  * 1. Single version (count=1) should spawn once with the original prompt
  * 2. Multiple versions (count>1) should:
- *    - Always use parallelMode=true and autoMode=true
+ *    - Always use parallelMode=true for isolated worktrees
  *    - Generate labels with (v1), (v2), etc. suffixes
  *    - Spawn sessions sequentially
+ *
+ * All sessions run with --auto flag since Agent Manager has no approval UI.
  */
 
 describe("Multi-version session spawning", () => {
 	describe("extractSessionConfigs", () => {
 		const prompt = "Build a todo app with React"
 
-		it("returns single config for version=1 without auto mode", () => {
+		it("returns single config for version=1", () => {
 			const configs = extractSessionConfigs({
 				prompt,
 				versions: 1,
@@ -29,7 +31,6 @@ describe("Multi-version session spawning", () => {
 				prompt,
 				label: prompt.slice(0, 50),
 				parallelMode: false,
-				autoMode: false,
 			})
 		})
 
@@ -42,7 +43,6 @@ describe("Multi-version session spawning", () => {
 
 			expect(configs).toHaveLength(1)
 			expect(configs[0].parallelMode).toBe(true)
-			expect(configs[0].autoMode).toBe(false)
 		})
 
 		it("returns multiple configs for version>1", () => {
@@ -64,17 +64,6 @@ describe("Multi-version session spawning", () => {
 			expect(configs).toHaveLength(2)
 			expect(configs[0].parallelMode).toBe(true)
 			expect(configs[1].parallelMode).toBe(true)
-		})
-
-		it("forces autoMode=true for multi-version", () => {
-			const configs = extractSessionConfigs({
-				prompt,
-				versions: 2,
-			})
-
-			expect(configs).toHaveLength(2)
-			expect(configs[0].autoMode).toBe(true)
-			expect(configs[1].autoMode).toBe(true)
 		})
 
 		it("uses provided labels for multi-version", () => {
@@ -123,7 +112,6 @@ describe("Multi-version session spawning", () => {
 			expect(configs).toHaveLength(4)
 			configs.forEach((config) => {
 				expect(config.parallelMode).toBe(true)
-				expect(config.autoMode).toBe(true)
 			})
 		})
 
@@ -133,7 +121,7 @@ describe("Multi-version session spawning", () => {
 			})
 
 			expect(configs).toHaveLength(1)
-			expect(configs[0].autoMode).toBe(false)
+			expect(configs[0].parallelMode).toBe(false)
 		})
 
 		it("truncates label to 50 characters", () => {
@@ -145,6 +133,32 @@ describe("Multi-version session spawning", () => {
 
 			expect(configs[0].label).toHaveLength(50)
 			expect(configs[0].label).toBe(longPrompt.slice(0, 50))
+		})
+
+		describe("existingBranch", () => {
+			it("passes existingBranch through for single version", () => {
+				const configs = extractSessionConfigs({
+					prompt,
+					versions: 1,
+					parallelMode: true,
+					existingBranch: "feature/my-branch",
+				})
+
+				expect(configs).toHaveLength(1)
+				expect(configs[0].existingBranch).toBe("feature/my-branch")
+			})
+
+			it("excludes existingBranch in multi-version mode", () => {
+				const configs = extractSessionConfigs({
+					prompt,
+					versions: 2,
+					existingBranch: "feature/my-branch",
+				})
+
+				expect(configs).toHaveLength(2)
+				expect(configs[0].existingBranch).toBeUndefined()
+				expect(configs[1].existingBranch).toBeUndefined()
+			})
 		})
 	})
 })

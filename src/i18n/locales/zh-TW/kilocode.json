@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "已暫停",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已停用）",
-				"tokenError": "必須設定有效 Token 才能使用 Autocomplete",
+				"noCredits": "**帳戶餘額不足**\n\n你的 Kilo Code 帳戶沒有餘額。要使用自動完成功能，請為帳戶儲值。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**未設定自動完成模型**\n\n要啟用自動完成，請新增一個使用以下支援的供應商的設定檔：{{providers}}。\n\n[開啟設定](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "工作階段總費用:",
 				"provider": "提供者:",
 				"model": "模型:",
@@ -176,6 +178,7 @@
 		"errors": {
 			"cliOutdated": "你的 Kilocode CLI 版本已過時且不支援 Agent Manager。請更新至最新版本。",
 			"cliNotFound": "找不到 Kilocode CLI。請安裝以使用 Agent Manager。",
+			"cliMisconfigured": "Kilocode CLI 未設定。請執行 'kilocode auth' 登入或 'kilocode config' 進行設定。",
 			"sessionFailed": "啟動代理工作階段失敗",
 			"sessionFailedWithMessage": "啟動代理工作階段失敗: {{message}}"
 		},
@@ -185,6 +188,7 @@
 			"getHelp": "取得協助",
 			"runInTerminal": "在終端機執行",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "更新全域",
 			"updateLocal": "更新本地",
 			"installGlobal": "安裝全域",
@@ -194,5 +198,15 @@
 			"installMessage": "執行 npm install 以安裝 Kilocode CLI。完成後，您可以關閉此終端機並嘗試再次啟動 Agent Manager。",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "您的 OpenAI API 密钥无效或没有访问 Realtime API 的权限。请检查您的 API 密钥并重试。",
+			"unknown": "连接失败。请检查您的配置并重试。"
+		}
+	},
+	"configDiscovery": {
+		"removed": "Kilo代码：已删除{{source}}{{configType}}：{{name}}{{modeStr}}",
+		"added": "Kilo代码：已添加{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

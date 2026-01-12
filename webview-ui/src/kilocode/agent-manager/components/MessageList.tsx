@@ -1,12 +1,22 @@
-import React, { useEffect, useRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback, useMemo } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
+import {
+	sessionMessageQueueAtomFamily,
+	sessionSendingMessageIdAtomFamily,
+	removeFromQueueAtom,
+	retryFailedMessageAtom,
+} from "../state/atoms/messageQueue"
+import type { QueuedMessage } from "../state/atoms/messageQueue"
 import type { ClineMessage, SuggestionItem, FollowUpData } from "@roo-code/types"
 import { safeJsonParse } from "@roo/safeJsonParse"
+import { combineCommandSequences } from "@roo/combineCommandSequences"
 import { SimpleMarkdown } from "./SimpleMarkdown"
 import { FollowUpSuggestions } from "./FollowUpSuggestions"
+import { CommandExecutionBlock } from "./CommandExecutionBlock"
 import { vscode } from "../utils/vscode"
 import {
 	MessageCircle,
@@ -16,10 +26,32 @@ import {
 	CheckCircle2,
 	AlertCircle,
 	User,
+	Clock,
+	Loader,
 } from "lucide-react"
+import { cn } from "../../../lib/utils"
 
 interface MessageListProps {
 	sessionId: string
+}
+
+// Parse exit code from various formats (number, string, etc.)
+function parseExitCode(raw: unknown): number | undefined {
+	if (typeof raw === "number") return raw
+	if (typeof raw === "string" && raw.trim() && !Number.isNaN(Number(raw))) return Number(raw)
+	return undefined
+}
+
+// Extract execution metadata from command output message
+function extractCommandMetadata(msg: ClineMessage): { exitCode?: number; status?: string; isRunning?: boolean } | null {
+	const metadata = msg.metadata as Record<string, unknown> | undefined
+	if (!metadata) return null
+
+	return {
+		exitCode: parseExitCode(metadata.exitCode),
+		status: typeof metadata.status === "string" ? metadata.status : undefined,
+		isRunning: msg.partial ?? false,
+	}
 }
 
 /**
@@ -28,20 +60,49 @@ interface MessageListProps {
 export function MessageList({ sessionId }: MessageListProps) {
 	const { t } = useTranslation("agentManager")
 	const messages = useAtomValue(sessionMessagesAtomFamily(sessionId))
+	const queue = useAtomValue(sessionMessageQueueAtomFamily(sessionId))
+	const sendingMessageId = useAtomValue(sessionSendingMessageIdAtomFamily(sessionId))
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
-	const containerRef = useRef<HTMLDivElement>(null)
+	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
+	const removeFromQueue = useSetAtom(removeFromQueueAtom)
+	const virtuosoRef = useRef<VirtuosoHandle>(null)
 
-	// Auto-scroll to bottom when new messages arrive
+	// Combine command and command_output messages into single entries
+	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
+
+	const commandExecutionByTs = useMemo(() => {
+		const info = new Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>()
+
+		for (let i = 0; i < messages.length; i++) {
+			const msg = messages[i]
+			if (msg.type !== "ask" || msg.ask !== "command") continue
+
+			let data: ReturnType<typeof extractCommandMetadata> = null
+
+			// Find output messages following this command
+			for (let j = i + 1; j < messages.length; j++) {
+				const next = messages[j]
+				if (next.type === "ask" && next.ask === "command") break
+				if (next.ask !== "command_output" && next.say !== "command_output") continue
+
+				data = extractCommandMetadata(next)
+			}
+
+			if (data) info.set(msg.ts, data)
+		}
+
+		return info
+	}, [messages])
+
+	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (containerRef.current) {
-			// Use requestAnimationFrame to ensure the DOM has updated
-			requestAnimationFrame(() => {
-				if (containerRef.current) {
-					containerRef.current.scrollTop = containerRef.current.scrollHeight
-				}
+		if (combinedMessages.length > 0) {
+			virtuosoRef.current?.scrollToIndex({
+				index: combinedMessages.length - 1,
+				behavior: "smooth",
 			})
 		}
-	}, [messages])
+	}, [combinedMessages.length])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -61,7 +122,69 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[setInputValue],
 	)
 
-	if (messages.length === 0) {
+	const handleRetryMessage = useCallback(
+		(sessionId: string, messageId: string) => {
+			retryFailedMessage({ sessionId, messageId })
+		},
+		[retryFailedMessage],
+	)
+
+	const handleDiscardMessage = useCallback(
+		(sessionId: string, messageId: string) => {
+			removeFromQueue({ sessionId, messageId })
+		},
+		[removeFromQueue],
+	)
+
+	// Combine messages and queued messages for virtualization
+	const allItems = useMemo(() => {
+		return [...combinedMessages, ...queue.map((q) => ({ type: "queued" as const, data: q }))]
+	}, [combinedMessages, queue])
+
+	// Item content renderer for Virtuoso
+	const itemContent = useCallback(
+		(index: number, item: ClineMessage | { type: "queued"; data: QueuedMessage }) => {
+			// Check if this is a queued message
+			if ("type" in item && item.type === "queued") {
+				const queuedMsg = item.data
+				return (
+					<QueuedMessageItem
+						key={`queued-${queuedMsg.id}`}
+						queuedMessage={queuedMsg}
+						isSending={sendingMessageId === queuedMsg.id}
+						onRetry={handleRetryMessage}
+						onDiscard={handleDiscardMessage}
+					/>
+				)
+			}
+
+			// Regular message
+			const msg = item as ClineMessage
+			// isLastCombinedMessage: true for the last regular message, excluding queued user messages
+			const isLastCombinedMessage = index === combinedMessages.length - 1
+			return (
+				<MessageItem
+					key={msg.ts || index}
+					message={msg}
+					isLast={isLastCombinedMessage}
+					commandExecutionByTs={commandExecutionByTs}
+					onSuggestionClick={handleSuggestionClick}
+					onCopyToInput={handleCopyToInput}
+				/>
+			)
+		},
+		[
+			combinedMessages.length,
+			commandExecutionByTs,
+			handleSuggestionClick,
+			handleCopyToInput,
+			sendingMessageId,
+			handleRetryMessage,
+			handleDiscardMessage,
+		],
+	)
+
+	if (messages.length === 0 && queue.length === 0) {
 		return (
 			<div className="am-messages-empty">
 				<MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -71,17 +194,15 @@ export function MessageList({ sessionId }: MessageListProps) {
 	}
 
 	return (
-		<div className="am-messages-container" ref={containerRef}>
-			<div className="am-messages-list">
-				{messages.map((msg, idx) => (
-					<MessageItem
-						key={msg.ts || idx}
-						message={msg}
-						onSuggestionClick={handleSuggestionClick}
-						onCopyToInput={handleCopyToInput}
-					/>
-				))}
-			</div>
+		<div className="am-messages-container">
+			<Virtuoso
+				ref={virtuosoRef}
+				data={allItems}
+				itemContent={itemContent}
+				followOutput="smooth"
+				increaseViewportBy={{ top: 400, bottom: 400 }}
+				className="am-messages-list"
+			/>
 		</div>
 	)
 }
@@ -105,11 +226,13 @@ function extractFollowUpData(message: ClineMessage): { question: string; suggest
 
 interface MessageItemProps {
 	message: ClineMessage
+	isLast: boolean
+	commandExecutionByTs: Map<number, { exitCode?: number; status?: string; isRunning?: boolean }>
 	onSuggestionClick?: (suggestion: SuggestionItem) => void
 	onCopyToInput?: (suggestion: SuggestionItem) => void
 }
 
-function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemProps) {
+function MessageItem({ message, isLast, commandExecutionByTs, onSuggestionClick, onCopyToInput }: MessageItemProps) {
 	const { t } = useTranslation("agentManager")
 
 	// --- 1. Determine Message Style & Content ---
@@ -162,7 +285,8 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			}
 			case "api_req_finished":
 			case "checkpoint_saved":
-				return null // Skip internal messages
+			case "command_output":
+				return null // Skip internal messages (command_output is combined with command)
 			default:
 				content = <SimpleMarkdown content={messageText} />
 		}
@@ -186,8 +310,21 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 			case "command": {
 				icon = <TerminalSquare size={16} />
 				title = t("messages.command")
-				content = <SimpleMarkdown content={`\`${messageText}\``} />
+				const execInfo = commandExecutionByTs.get(message.ts)
+				content = (
+					<CommandExecutionBlock
+						text={messageText}
+						isRunning={execInfo?.isRunning ?? message.partial}
+						isLast={isLast}
+						exitCode={execInfo?.exitCode}
+						terminalStatus={execInfo?.status}
+					/>
+				)
 				break
+			}
+			case "command_output": {
+				// Skip standalone command_output - combined with command message
+				return null
 			}
 			case "tool": {
 				// Tool info can be in metadata (from CLI) or parsed from text
@@ -234,6 +371,86 @@ function MessageItem({ message, onSuggestionClick, onCopyToInput }: MessageItemP
 						onSuggestionClick={onSuggestionClick}
 						onCopyToInput={onCopyToInput}
 					/>
+				)}
+			</div>
+		</div>
+	)
+}
+
+interface QueuedMessageItemProps {
+	queuedMessage: QueuedMessage
+	isSending: boolean
+	onRetry: (sessionId: string, messageId: string) => void
+	onDiscard: (sessionId: string, messageId: string) => void
+}
+
+function QueuedMessageItem({ queuedMessage, isSending: _isSending, onRetry, onDiscard }: QueuedMessageItemProps) {
+	const { t } = useTranslation("agentManager")
+
+	let icon = <Clock size={16} className="opacity-70" />
+	let statusText = t("chatInput.messageSending")
+	let statusColor = "text-vscode-descriptionForeground"
+
+	if (queuedMessage.status === "sending") {
+		icon = <Loader size={16} className="animate-spin opacity-70" />
+		statusText = t("chatInput.messageSending")
+		statusColor = "text-vscode-descriptionForeground"
+	} else if (queuedMessage.status === "failed") {
+		icon = <AlertCircle size={16} className="text-vscode-errorForeground" />
+		statusText = queuedMessage.error || "Failed to send message"
+		statusColor = "text-vscode-errorForeground"
+	} else {
+		icon = <Clock size={16} className="opacity-70" />
+		statusText = t("chatInput.messageSending")
+		statusColor = "text-vscode-descriptionForeground"
+	}
+
+	const handleRetry = () => {
+		onRetry(queuedMessage.sessionId, queuedMessage.id)
+	}
+
+	const handleDiscard = () => {
+		onDiscard(queuedMessage.sessionId, queuedMessage.id)
+	}
+
+	const canRetry = queuedMessage.retryCount < queuedMessage.maxRetries
+
+	return (
+		<div className={cn("am-message-item", queuedMessage.status === "failed" && "opacity-75")}>
+			<div className="am-message-icon">{icon}</div>
+			<div className="am-message-content-wrapper">
+				<div className="am-message-header">
+					<span className="am-message-author text-vscode-descriptionForeground">{t("messages.youSaid")}</span>
+					<span className={cn("am-message-ts text-xs", statusColor)}>{statusText}</span>
+				</div>
+				<div className="am-message-body">
+					<SimpleMarkdown content={queuedMessage.content} />
+				</div>
+				{queuedMessage.status === "failed" && (
+					<div className="mt-2 space-y-2">
+						{queuedMessage.error && (
+							<p className="text-xs text-vscode-errorForeground">Error: {queuedMessage.error}</p>
+						)}
+						{queuedMessage.retryCount > 0 && (
+							<p className="text-xs text-vscode-descriptionForeground">
+								Retry attempt {queuedMessage.retryCount} of {queuedMessage.maxRetries}
+							</p>
+						)}
+						<div className="flex gap-2">
+							{canRetry && (
+								<button
+									onClick={handleRetry}
+									className="text-xs px-2 py-1 rounded bg-vscode-button-background hover:bg-vscode-button-hoverBackground text-vscode-button-foreground">
+									Retry
+								</button>
+							)}
+							<button
+								onClick={handleDiscard}
+								className="text-xs px-2 py-1 rounded bg-vscode-errorBackground hover:opacity-80 text-vscode-errorForeground">
+								Discard
+							</button>
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

@@ -302,9 +302,9 @@
 		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API 密钥",
 		"getVercelAiGatewayApiKey": "获取 Vercel AI Gateway API 密钥",
-		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
+		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useReasoning": "启用推理",
 		"useHostHeader": "使用自定义 Host 标头",
@@ -573,6 +573,7 @@
 			"none": "无",
 			"minimal": "最小 (最快)",
 			"high": "高",
+			"xhigh": "超高",
 			"medium": "中",
 			"low": "低",
 			"xhigh": "极高"
@@ -1029,7 +1030,9 @@
 		"searchPlaceholder": "搜索",
 		"noMatchFound": "未找到匹配项",
 		"useCustomModel": "使用自定义：{{modelId}}",
-		"simplifiedExplanation": "你可以稍后调整详细的模型设置。"
+		"simplifiedExplanation": "你可以稍后调整详细的模型设置。",
+		"recommendedModels": "推荐模型",
+		"allModels": "全部模型"
 	},
 	"footer": {
 		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
@@ -1148,8 +1151,12 @@
 	},
 	"ui": {
 		"collapseThinking": {
-			"label": "默认折叠“思考”消息",
-			"description": "启用后，“思考”块将默认折叠，直到您与其交互"
+			"label": "默认折叠「思考」消息",
+			"description": "启用后，「思考」块将默认折叠，直到您与其交互"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "需要 {{primaryMod}}+Enter 发送消息",
+			"description": "启用后，必须按 {{primaryMod}}+Enter 发送消息，而不仅仅是 Enter"
 		}
 	}
 }

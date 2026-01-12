@@ -8,6 +8,7 @@ export interface ParallelModeInfo {
 	enabled: boolean
 	branch?: string
 	worktreePath?: string
+	parentBranch?: string
 	completionMessage?: string
 }
 

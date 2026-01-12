@@ -15,6 +15,7 @@
 - ✅ Checks its own work
 - 🧪 Run terminal commands
 - 🌐 Automate the browser
+- ⚡ Inline autocomplete suggestions
 - 🤖 Latest AI models
 - 🎁 API keys optional
 - 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5
@@ -29,6 +30,7 @@
 ## Key Features
 
 - **Code Generation:** Kilo can generate code using natural language.
+- **Inline Autocomplete:** Get intelligent code completions as you type, powered by AI.
 - **Task Automation:** Kilo can automate repetitive coding tasks.
 - **Automated Refactoring:** Kilo can refactor and improve existing code.
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.

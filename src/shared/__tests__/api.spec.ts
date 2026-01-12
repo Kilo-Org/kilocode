@@ -379,7 +379,6 @@ describe("shouldUseReasoningEffort", () => {
 			reasoningEffort: "medium",
 		}
 
-		// Should return true regardless of settings (unless explicitly disabled)
 		expect(shouldUseReasoningEffort({ model })).toBe(true)
 		expect(shouldUseReasoningEffort({ model, settings: {} })).toBe(true)
 		expect(shouldUseReasoningEffort({ model, settings: { reasoningEffort: undefined } })).toBe(true)
@@ -444,7 +443,7 @@ describe("shouldUseReasoningEffort", () => {
 		expect(shouldUseReasoningEffort({ model })).toBe(false)
 	})
 
-	test("should return false when model doesn't support reasoning effort", () => {
+	test("should return false when model doesn't support reasoning effort and has no default", () => {
 		const model: ModelInfo = {
 			contextWindow: 200_000,
 			supportsPromptCache: true,

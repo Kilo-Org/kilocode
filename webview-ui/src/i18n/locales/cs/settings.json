@@ -70,6 +70,10 @@
 		"collapseThinking": {
 			"label": "Sbalit zprávy Přemýšlení ve výchozím nastavení",
 			"description": "Když je povoleno, bloky přemýšlení budou ve výchozím nastavení sbalené, dokud s nimi neinteragujete"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Vyžadovat {{primaryMod}}+Enter pro odeslání zpráv",
+			"description": "Když je povoleno, musíš stisknout {{primaryMod}}+Enter pro odeslání zpráv místo pouhého Enter"
 		}
 	},
 	"prompts": {
@@ -1106,7 +1110,9 @@
 		"searchPlaceholder": "Hledat",
 		"noMatchFound": "Nebyla nalezena žádná shoda",
 		"useCustomModel": "Použít vlastní: {{modelId}}",
-		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později."
+		"simplifiedExplanation": "Podrobná nastavení modelu můžete upravit později.",
+		"recommendedModels": "Doporučené modely",
+		"allModels": "Všechny modely"
 	},
 	"footer": {
 		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilo.ai/discord</discordLink>.",

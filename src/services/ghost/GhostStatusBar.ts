@@ -1,6 +1,22 @@
 import * as vscode from "vscode"
+import { AUTOCOMPLETE_PROVIDER_MODELS, ProviderName } from "@roo-code/types"
 import { t } from "../../i18n"
+import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
 import type { GhostStatusBarStateProps } from "./types"
+
+// Convert PROVIDERS array to a lookup map for display names
+const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label }) => [value, label])) as Record<
+	ProviderName,
+	string
+>
+
+/**
+ * Get the display names of all supported autocomplete providers
+ */
+function getSupportedProviderDisplayNames(): string[] {
+	const providerKeys = Array.from(AUTOCOMPLETE_PROVIDER_MODELS.keys())
+	return providerKeys.map((key) => PROVIDER_DISPLAY_NAMES[key as ProviderName] || key)
+}
 
 export class GhostStatusBar {
 	statusBar: vscode.StatusBarItem
@@ -15,8 +31,14 @@ export class GhostStatusBar {
 
 	private init() {
 		this.statusBar.text = t("kilocode:ghost.statusBar.enabled")
-		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.basic")
+		this.statusBar.tooltip = this.createMarkdownTooltip(t("kilocode:ghost.statusBar.tooltip.basic"))
 		this.statusBar.show()
+	}
+
+	private createMarkdownTooltip(text: string): vscode.MarkdownString {
+		const markdown = new vscode.MarkdownString(text)
+		markdown.isTrusted = true
+		return markdown
 	}
 
 	private updateVisible() {
@@ -45,11 +67,6 @@ export class GhostStatusBar {
 		if (this.props.enabled) this.render()
 	}
 
-	private renderTokenError() {
-		this.statusBar.text = t("kilocode:ghost.statusBar.warning")
-		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.tokenError")
-	}
-
 	private formatTime(timestamp: number): string {
 		const date = new Date(timestamp)
 		return date.toLocaleTimeString()
@@ -59,30 +76,50 @@ export class GhostStatusBar {
 		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})`
+		const snoozedSuffix = this.props.snoozed ? ` (${t("kilocode:ghost.statusBar.snoozed")})` : ""
+		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})${snoozedSuffix}`
 
-		this.statusBar.tooltip = [
-			t("kilocode:ghost.statusBar.tooltip.completionSummary", {
-				count: this.props.completionCount,
-				startTime: sessionStartTime,
-				endTime: now,
-				cost: this.humanFormatSessionCost(),
-			}),
-			this.props.model && this.props.provider
-				? t("kilocode:ghost.statusBar.tooltip.providerInfo", {
-						model: this.props.model,
-						provider: this.props.provider,
-					})
-				: undefined,
-		]
-			.filter(Boolean)
-			.join("\n\n")
+		this.statusBar.tooltip = this.createMarkdownTooltip(
+			[
+				t("kilocode:ghost.statusBar.tooltip.completionSummary", {
+					count: this.props.completionCount,
+					startTime: sessionStartTime,
+					endTime: now,
+					cost: this.humanFormatSessionCost(),
+				}),
+				this.props.model && this.props.provider
+					? t("kilocode:ghost.statusBar.tooltip.providerInfo", {
+							model: this.props.model,
+							provider: this.props.provider,
+						})
+					: undefined,
+			]
+				.filter(Boolean)
+				.join("\n\n"),
+		)
 	}
 
 	public render() {
-		if (!this.props.hasValidToken) {
-			return this.renderTokenError()
+		if (this.props.hasKilocodeProfileWithNoBalance) {
+			return this.renderNoCreditsError()
+		}
+		if (this.props.hasNoUsableProvider) {
+			return this.renderNoUsableProviderError()
 		}
 		return this.renderDefault()
+	}
+
+	private renderNoCreditsError() {
+		this.statusBar.text = t("kilocode:ghost.statusBar.warning")
+		this.statusBar.tooltip = this.createMarkdownTooltip(t("kilocode:ghost.statusBar.tooltip.noCredits"))
+	}
+
+	private renderNoUsableProviderError() {
+		this.statusBar.text = t("kilocode:ghost.statusBar.warning")
+		const providers = getSupportedProviderDisplayNames()
+		const providerList = providers.join(", ")
+		this.statusBar.tooltip = this.createMarkdownTooltip(
+			t("kilocode:ghost.statusBar.tooltip.noUsableProvider", { providers: providerList }),
+		)
 	}
 }

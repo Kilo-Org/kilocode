@@ -31,7 +31,7 @@ Memory Bank 是一个结构化文档系统，使 Kilo Code 能够**更好地理�
 
 ## Memory Bank 的工作原理
 
-Memory Bank 基于 Kilo Code 的 [自定义规则](/advanced-usage/custom-rules) 功能构建，为项目文档提供了一个专门的框架。Memory Bank 文件是存储在项目仓库 `.kilocode/rules/memory-bank` 文件夹中的标准 Markdown 文件。它们不是隐藏或专有的——它们是你和 Kilo Code 都可以访问的常规文档文件。
+Memory Bank 基于 Kilo Code 的 [自定义规则](/agent-behavior/custom-rules) 功能构建，为项目文档提供了一个专门的框架。Memory Bank 文件是存储在项目仓库 `.kilocode/rules/memory-bank` 文件夹中的标准 Markdown 文件。它们不是隐藏或专有的——它们是你和 Kilo Code 都可以访问的常规文档文件。
 
 在每个任务开始时，Kilo Code 会读取所有 Memory Bank 文件，以构建对项目的全面理解。这是自动进行的，不需要你采取任何操作。Kilo Code 然后会在其响应的开头显示 `[Memory Bank: Active]`，表示 Memory Bank 已成功激活，并简要总结其对项目的理解。
 

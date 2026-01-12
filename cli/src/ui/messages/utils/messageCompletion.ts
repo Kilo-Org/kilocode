@@ -110,14 +110,38 @@ function deduplicateCheckpointMessages(messages: UnifiedMessage[]): UnifiedMessa
  * - Visual jumping when messages complete out of order
  *
  * @param messages - Array of unified messages in chronological order
+ * @param options - Optional behavior flags
  * @returns Object with staticMessages (complete) and dynamicMessages (incomplete)
  */
-export function splitMessages(messages: UnifiedMessage[]): {
+export interface SplitMessagesOptions {
+	/**
+	 * When true, hides all partial messages and treats everything else as static.
+	 * This enables a "pure static" mode where nothing streams to the terminal.
+	 */
+	hidePartialMessages?: boolean
+}
+
+export function splitMessages(
+	messages: UnifiedMessage[],
+	options?: SplitMessagesOptions,
+): {
 	staticMessages: UnifiedMessage[]
 	dynamicMessages: UnifiedMessage[]
 } {
 	// First, deduplicate checkpoint messages
 	const deduplicatedMessages = deduplicateCheckpointMessages(messages)
+
+	// hide any partial messages and treat everything else as static.
+	if (options?.hidePartialMessages) {
+		const filteredMessages = deduplicatedMessages.filter(
+			(msg) => (msg.message as { partial?: boolean }).partial !== true,
+		)
+
+		// After filtering out streaming messages, fall back to the normal split logic.
+		// This keeps ordering stable: incomplete messages (e.g. api_req_started without cost)
+		// stay in the dynamic section until they receive completion indicators.
+		return splitMessages(filteredMessages)
+	}
 
 	let lastCompleteIndex = -1
 	const incompleteReasons: Array<{ index: number; reason: string; message: unknown }> = []

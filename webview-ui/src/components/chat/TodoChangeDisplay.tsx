@@ -14,13 +14,6 @@ interface TodoChangeDisplayProps {
 	newTodos: TodoItem[]
 }
 
-interface TodoGroup {
-	todos: TodoItem[]
-	status: TodoStatus | null
-	keyPrefix: string
-	className?: string
-}
-
 function getTodoIcon(status: TodoStatus | null) {
 	switch (status) {
 		case "completed":
@@ -32,83 +25,32 @@ function getTodoIcon(status: TodoStatus | null) {
 	}
 }
 
-function TodoList({ todos, status, keyPrefix, className }: TodoGroup) {
-	if (todos.length === 0) return null
-
-	return (
-		<ul className="list-none space-y-1 my-1">
-			{todos.map((todo) => {
-				const icon = getTodoIcon(status)
-				return (
-					<li
-						key={`${keyPrefix}-${todo.id || todo.content}`}
-						className={`flex flex-row gap-2 items-start ${className || ""}`}>
-						{icon}
-						<span>{todo.content}</span>
-					</li>
-				)
-			})}
-		</ul>
-	)
-}
-
 export function TodoChangeDisplay({ previousTodos, newTodos }: TodoChangeDisplayProps) {
 	const isInitialState = previousTodos.length === 0
 
 	// Determine which todos to display
-	let todoGroups: TodoGroup[]
+	let todosToDisplay: TodoItem[]
 
 	if (isInitialState && newTodos.length > 0) {
-		// For initial state, show all todos grouped by status
-		todoGroups = [
-			{
-				todos: newTodos.filter((todo) => !todo.status || todo.status === "pending"),
-				status: null,
-				keyPrefix: "pending",
-			},
-			{
-				todos: newTodos.filter((todo) => todo.status === "in_progress"),
-				status: "in_progress",
-				keyPrefix: "in-progress",
-				className: "text-vscode-charts-yellow",
-			},
-			{
-				todos: newTodos.filter((todo) => todo.status === "completed"),
-				status: "completed",
-				keyPrefix: "completed",
-			},
-		]
+		// For initial state, show all todos in their original order
+		todosToDisplay = newTodos
 	} else {
-		// For updates, only show changes
-		const completedTodos = newTodos.filter((newTodo) => {
-			if (newTodo.status !== "completed") return false
-			const previousTodo = previousTodos.find((p) => p.id === newTodo.id || p.content === newTodo.content)
-			return !previousTodo || previousTodo.status !== "completed"
+		// For updates, only show changes (completed or started) in their original order
+		todosToDisplay = newTodos.filter((newTodo) => {
+			if (newTodo.status === "completed") {
+				const previousTodo = previousTodos.find((p) => p.id === newTodo.id || p.content === newTodo.content)
+				return !previousTodo || previousTodo.status !== "completed"
+			}
+			if (newTodo.status === "in_progress") {
+				const previousTodo = previousTodos.find((p) => p.id === newTodo.id || p.content === newTodo.content)
+				return !previousTodo || previousTodo.status !== "in_progress"
+			}
+			return false
 		})
-
-		const startedTodos = newTodos.filter((newTodo) => {
-			if (newTodo.status !== "in_progress") return false
-			const previousTodo = previousTodos.find((p) => p.id === newTodo.id || p.content === newTodo.content)
-			return !previousTodo || previousTodo.status !== "in_progress"
-		})
-
-		todoGroups = [
-			{
-				todos: completedTodos,
-				status: "completed",
-				keyPrefix: "completed",
-			},
-			{
-				todos: startedTodos,
-				status: "in_progress",
-				keyPrefix: "started",
-				className: "text-vscode-charts-yellow",
-			},
-		]
 	}
 
 	// If no todos to display, don't render anything
-	if (todoGroups.every((group) => group.todos.length === 0)) {
+	if (todosToDisplay.length === 0) {
 		return null
 	}
 
@@ -122,9 +64,22 @@ export function TodoChangeDisplay({ previousTodos, newTodos }: TodoChangeDisplay
 			</div>
 
 			<div className="pl-1 pr-1 pt-1 font-light leading-normal">
-				{todoGroups.map((group, index) => (
-					<TodoList key={index} {...group} />
-				))}
+				<ul className="list-none space-y-1 my-1">
+					{todosToDisplay.map((todo) => {
+						const status = (todo.status || "pending") as TodoStatus
+						const icon = getTodoIcon(status)
+						return (
+							<li
+								key={todo.id || todo.content}
+								className={`flex flex-row gap-2 items-start ${
+									status === "in_progress" ? "text-vscode-charts-yellow" : ""
+								}`}>
+								{icon}
+								<span>{todo.content}</span>
+							</li>
+						)
+					})}
+				</ul>
 			</div>
 		</div>
 	)

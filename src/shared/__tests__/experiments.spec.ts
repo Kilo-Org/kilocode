@@ -27,7 +27,7 @@ describe("experiments", () => {
 		it("is configured correctly", () => {
 			expect(EXPERIMENT_IDS.SPEECH_TO_TEXT).toBe("speechToText")
 			expect(experimentConfigsMap.SPEECH_TO_TEXT).toMatchObject({
-				enabled: false,
+				enabled: true,
 			})
 		})
 	})

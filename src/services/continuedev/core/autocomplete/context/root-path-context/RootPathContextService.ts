@@ -5,8 +5,8 @@ import { Node as SyntaxNode, Query, Point } from "web-tree-sitter"
 
 import { IDE } from "../../.."
 import { getFullLanguageName, getQueryForFile, IGNORE_PATH_PATTERNS, LanguageName } from "../../../util/treeSitter"
-import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../snippets/types"
-import { AutocompleteSnippetDeprecated } from "../../types"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../types"
+import { RankedSnippet } from "../../types"
 import { AstPath } from "../../util/ast"
 import { ImportDefinitionsService } from "../ImportDefinitionsService"
 
@@ -26,7 +26,7 @@ import { ImportDefinitionsService } from "../ImportDefinitionsService"
 // }
 
 export class RootPathContextService {
-	private cache = new LRUCache<string, AutocompleteSnippetDeprecated[]>({
+	private cache = new LRUCache<string, RankedSnippet[]>({
 		max: 100,
 	})
 
@@ -62,8 +62,8 @@ export class RootPathContextService {
 			.digest("hex")
 	}
 
-	private async getSnippetsForNode(filepath: string, node: SyntaxNode): Promise<AutocompleteSnippetDeprecated[]> {
-		const snippets: AutocompleteSnippetDeprecated[] = []
+	private async getSnippetsForNode(filepath: string, node: SyntaxNode): Promise<RankedSnippet[]> {
+		const snippets: RankedSnippet[] = []
 		const language = getFullLanguageName(filepath)
 
 		let query: Query | undefined
@@ -96,11 +96,7 @@ export class RootPathContextService {
 		return snippets
 	}
 
-	private async getSnippets(
-		filepath: string,
-		endPosition: Point,
-		language: LanguageName,
-	): Promise<AutocompleteSnippetDeprecated[]> {
+	private async getSnippets(filepath: string, endPosition: Point, language: LanguageName): Promise<RankedSnippet[]> {
 		const definitions = await this.ide.gotoDefinition({
 			filepath,
 			position: {

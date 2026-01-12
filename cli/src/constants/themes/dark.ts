@@ -54,6 +54,17 @@ export const darkTheme: Theme = {
 		lineNumber: "#858585",
 	},
 
+	markdown: {
+		text: "#cccccc",
+		heading: "#faf74f",
+		strong: "#ffffff",
+		em: "#d4d4d4",
+		code: "#89d185",
+		blockquote: "#858585",
+		link: "#3794ff",
+		list: "#cccccc",
+	},
+
 	ui: {
 		border: {
 			default: "#3c3c3c",

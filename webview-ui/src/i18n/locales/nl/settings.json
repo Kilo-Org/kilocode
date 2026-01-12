@@ -302,9 +302,9 @@
 		"getOpenRouterApiKey": "OpenRouter API-sleutel ophalen",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API-sleutel",
 		"getVercelAiGatewayApiKey": "Vercel AI Gateway API-sleutel ophalen",
-		"apiKeyStorageNotice": "API-sleutels worden veilig opgeslagen in de geheime opslag van VSCode",
 		"glamaApiKey": "Glama API-sleutel",
 		"getGlamaApiKey": "Glama API-sleutel ophalen",
+		"apiKeyStorageNotice": "API-sleutels worden veilig opgeslagen in de geheime opslag van VSCode",
 		"useCustomBaseUrl": "Aangepaste basis-URL gebruiken",
 		"useReasoning": "Redenering inschakelen",
 		"useHostHeader": "Aangepaste Host-header gebruiken",
@@ -573,6 +573,7 @@
 			"none": "Geen",
 			"minimal": "Minimaal (Snelst)",
 			"high": "Hoog",
+			"xhigh": "Zeer hoog",
 			"medium": "Middel",
 			"low": "Laag",
 			"xhigh": "Extra Hoog"
@@ -1025,7 +1026,9 @@
 		"searchPlaceholder": "Zoeken",
 		"noMatchFound": "Geen overeenkomsten gevonden",
 		"useCustomModel": "Aangepast gebruiken: {{modelId}}",
-		"simplifiedExplanation": "Je kunt later gedetailleerde modelinstellingen aanpassen."
+		"simplifiedExplanation": "Je kunt later gedetailleerde modelinstellingen aanpassen.",
+		"recommendedModels": "Aanbevolen modellen",
+		"allModels": "Alle modellen"
 	},
 	"footer": {
 		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>kilo.ai/discord</discordLink>",
@@ -1146,6 +1149,10 @@
 		"collapseThinking": {
 			"label": "Denkberichten standaard samenvouwen",
 			"description": "Indien ingeschakeld, worden denkblokken standaard samengevouwen totdat je ermee interageert"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Vereist {{primaryMod}}+Enter om berichten te versturen",
+			"description": "Wanneer ingeschakeld, moet je {{primaryMod}}+Enter indrukken om berichten te versturen in plaats van alleen Enter"
 		}
 	}
 }

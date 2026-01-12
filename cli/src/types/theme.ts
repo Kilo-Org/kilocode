@@ -69,6 +69,18 @@ export interface Theme {
 		lineNumber: string
 	}
 
+	/** Markdown rendering colors */
+	markdown: {
+		text: string
+		heading: string
+		strong: string
+		em: string
+		code: string
+		blockquote: string
+		link: string
+		list: string
+	}
+
 	/** UI structure colors */
 	ui: {
 		border: {

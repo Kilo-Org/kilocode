@@ -29,6 +29,12 @@ export function mapConfigToExtensionState(
 			modelId: getModelIdForProvider(p),
 		}))
 
+		// Map auto-approval settings from CLI config to extension state
+		// These settings control whether the extension auto-approves operations
+		// or asks the CLI for approval (which then prompts the user)
+		const autoApproval = config.autoApproval
+		const autoApprovalEnabled = autoApproval?.enabled ?? false
+
 		return {
 			...currentState,
 			apiConfiguration,
@@ -36,6 +42,33 @@ export function mapConfigToExtensionState(
 			listApiConfigMeta,
 			telemetrySetting: config.telemetry ? "enabled" : "disabled",
 			mode: config.mode,
+			// Auto-approval settings - these control whether the extension auto-approves
+			// or defers to the CLI's approval flow
+			autoApprovalEnabled,
+			alwaysAllowReadOnly: autoApprovalEnabled && (autoApproval?.read?.enabled ?? false),
+			alwaysAllowReadOnlyOutsideWorkspace:
+				autoApprovalEnabled && (autoApproval?.read?.enabled ?? false) && (autoApproval?.read?.outside ?? false),
+			alwaysAllowWrite: autoApprovalEnabled && (autoApproval?.write?.enabled ?? false),
+			alwaysAllowWriteOutsideWorkspace:
+				autoApprovalEnabled &&
+				(autoApproval?.write?.enabled ?? false) &&
+				(autoApproval?.write?.outside ?? false),
+			alwaysAllowWriteProtected:
+				autoApprovalEnabled &&
+				(autoApproval?.write?.enabled ?? false) &&
+				(autoApproval?.write?.protected ?? false),
+			alwaysAllowBrowser: autoApprovalEnabled && (autoApproval?.browser?.enabled ?? false),
+			alwaysApproveResubmit: autoApprovalEnabled && (autoApproval?.retry?.enabled ?? false),
+			requestDelaySeconds: autoApproval?.retry?.delay ?? 10,
+			alwaysAllowMcp: autoApprovalEnabled && (autoApproval?.mcp?.enabled ?? false),
+			alwaysAllowModeSwitch: autoApprovalEnabled && (autoApproval?.mode?.enabled ?? false),
+			alwaysAllowSubtasks: autoApprovalEnabled && (autoApproval?.subtasks?.enabled ?? false),
+			alwaysAllowExecute: autoApprovalEnabled && (autoApproval?.execute?.enabled ?? false),
+			allowedCommands: autoApproval?.execute?.allowed ?? [],
+			deniedCommands: autoApproval?.execute?.denied ?? [],
+			alwaysAllowFollowupQuestions: autoApprovalEnabled && (autoApproval?.question?.enabled ?? false),
+			followupAutoApproveTimeoutMs: (autoApproval?.question?.timeout ?? 60) * 1000,
+			alwaysAllowUpdateTodoList: autoApprovalEnabled && (autoApproval?.todo?.enabled ?? false),
 		}
 	} catch (error) {
 		logs.error("Failed to map config to extension state", "ConfigMapper", { error })

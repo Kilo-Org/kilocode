@@ -2,7 +2,6 @@ import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelM
 
 export interface CreateSessionOptions {
 	parallelMode?: boolean
-	autoMode?: boolean
 }
 
 const MAX_SESSIONS = 10
@@ -36,7 +35,6 @@ export class AgentRegistry {
 			startTime: Date.now(),
 			parallelMode: options?.parallelMode,
 			gitUrl: options?.gitUrl,
-			autoMode: options?.autoMode,
 		}
 		return this._pendingSession
 	}
@@ -69,7 +67,6 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
-			...(options?.autoMode && { autoMode: true }),
 		}
 
 		this.sessions.set(sessionId, session)
@@ -148,20 +145,23 @@ export class AgentRegistry {
 	}
 
 	/**
-	 * Update the autoMode flag on a session.
+	 * Update parallel mode info on a session.
 	 */
 	public updateParallelModeInfo(
 		id: string,
 		info: Partial<Omit<ParallelModeInfo, "enabled">>,
 	): AgentSession | undefined {
 		const session = this.sessions.get(id)
-		if (!session || !session.parallelMode?.enabled) {
+		if (!session) {
 			return undefined
 		}
 
+		const currentParallelMode = session.parallelMode ?? { enabled: true }
+
 		session.parallelMode = {
-			...session.parallelMode,
+			...currentParallelMode,
 			...info,
+			enabled: true,
 		}
 
 		return session
@@ -210,6 +210,38 @@ export class AgentRegistry {
 			this._selectedId = null
 		}
 		return this.sessions.delete(sessionId)
+	}
+
+	/**
+	 * Rename a session from one ID to another.
+	 * Used when upgrading a provisional session to a real session ID.
+	 */
+	public renameSession(oldId: string, newId: string): boolean {
+		if (oldId === newId) {
+			return this.sessions.has(oldId)
+		}
+
+		const oldSession = this.sessions.get(oldId)
+		if (!oldSession) {
+			return false
+		}
+
+		const targetSession = this.sessions.get(newId)
+		if (targetSession) {
+			// Prefer keeping the target session object (e.g. resuming an existing session),
+			// but merge in any provisional logs so early streaming isn't lost.
+			targetSession.logs = [...oldSession.logs, ...targetSession.logs]
+			this.sessions.delete(oldId)
+		} else {
+			this.sessions.delete(oldId)
+			oldSession.sessionId = newId
+			this.sessions.set(newId, oldSession)
+		}
+		if (this._selectedId === oldId) {
+			this._selectedId = newId
+		}
+
+		return true
 	}
 
 	private pruneOldSessions(): void {

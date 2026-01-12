@@ -8,6 +8,7 @@ import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
 import type { ModelListFilters } from "../../state/atoms/modelList.js"
+import type { HistoryItem } from "@roo-code/types"
 
 export interface Command {
 	name: string
@@ -77,6 +78,8 @@ export interface CommandContext {
 	sendWebviewMessage: (message: WebviewMessage) => Promise<void>
 	refreshTerminal: () => Promise<void>
 	chatMessages: ExtensionMessage[]
+	// Current task context
+	currentTask: HistoryItem | null
 	// Model list context
 	modelListPageIndex: number
 	modelListFilters: ModelListFilters
@@ -119,6 +122,7 @@ export interface ArgumentProviderCommandContext {
 	refreshRouterModels: () => Promise<void>
 	taskHistoryData: TaskHistoryData | null
 	chatMessages: ExtensionMessage[]
+	customModes: ModeConfig[]
 }
 
 /**

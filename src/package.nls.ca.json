@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code Agent d'IA",
+	"extension.displayName": "Kilo Code: Agent de Codificació IA, Copilot i Autocompletat",
 	"extension.description": "Assistent de codificació de IA de codi obert per planificar, crear i corregir codi.",
 	"command.newTask.title": "Nova Tasca",
 	"command.explainCode.title": "Explicar Codi",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Habilitar la sincronització de la configuració de Kilo Code entre dispositius mitjançant la Sincronització de Configuració de VS Code. Quan estigui habilitat, les vostres configuracions d'API, modes personalitzats i preferències es sincronitzaran automàticament quan inicieu sessió a la Sincronització de Configuració de VS Code.",
 	"settings.autoImportSettingsPath.description": "Ruta a un fitxer de configuració de Kilo Code per importar automàticament en iniciar l'extensió. Admet rutes absolutes i rutes relatives al directori d'inici (per exemple, '~/Documents/kilo-code-settings.json'). Deixeu-ho en blanc per desactivar la importació automàtica.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Nombre màxim de fitxers per indexar per a la funció de cerca de fitxers @. Valors més alts proporcionen millors resultats de cerca en projectes grans però poden utilitzar més memòria. Per defecte: 10.000.",
-	"settings.useAgentRules.description": "Activa la càrrega de fitxers AGENTS.md per a regles específiques de l'agent (vegeu https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Activa la càrrega de fitxers AGENTS.md per a regles específiques de l'agent (vegeu https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Temps màxim en segons per esperar les respostes de l'API (0 = sense temps d'espera, 1-86400s, per defecte: 600s). Es recomanen valors més alts per a proveïdors locals com LM Studio i Ollama que poden necessitar més temps de processament.",
 	"settings.newTaskRequireTodos.description": "Requerir el paràmetre de tasques pendents quan es creïn noves tasques amb l'eina new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La mida del lot per a operacions d'incrustació durant la indexació de codi. Ajusta això segons els límits del teu proveïdor d'API. Per defecte és 60.",

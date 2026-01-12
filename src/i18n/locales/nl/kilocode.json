@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "gepauzeerd",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (uitgeschakeld)",
-				"tokenError": "Een geldig token moet worden ingesteld om Autocomplete te gebruiken",
+				"noCredits": "**Geen tegoed op je account**\n\nJe Kilo Code account heeft geen tegoed. Om autocomplete te gebruiken, voeg tegoed toe aan je account.\n\n[Instellingen openen](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Geen autocomplete model geconfigureerd**\n\nOm autocomplete in te schakelen, voeg een profiel toe met een van deze ondersteunde providers: {{providers}}.\n\n[Instellingen openen](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Totale sessiekosten:",
 				"provider": "Provider:",
 				"model": "Model:",
@@ -176,6 +178,7 @@
 		"errors": {
 			"cliOutdated": "Je Kilocode CLI-versie is verouderd en ondersteunt de Agent Manager niet. Update naar de nieuwste versie.",
 			"cliNotFound": "Kilocode CLI niet gevonden. Installeer het om de Agent Manager te gebruiken.",
+			"cliMisconfigured": "Kilocode CLI is niet geconfigureerd. Voer 'kilocode auth' uit om in te loggen of 'kilocode config' om te configureren.",
 			"sessionFailed": "Kon agentsessie niet starten",
 			"sessionFailedWithMessage": "Kon agentsessie niet starten: {{message}}"
 		},
@@ -185,6 +188,7 @@
 			"getHelp": "Hulp krijgen",
 			"runInTerminal": "Uitvoeren in Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Globaal Bijwerken",
 			"updateLocal": "Lokaal Bijwerken",
 			"installGlobal": "Globaal Installeren",
@@ -194,5 +198,15 @@
 			"installMessage": "npm install uitvoeren om Kilocode CLI te installeren. Zodra voltooid, kun je dit terminal sluiten en proberen de Agent Manager opnieuw te starten.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Uw OpenAI API-sleutel is ongeldig of heeft geen toegang tot de Realtime API. Controleer uw API-sleutel en probeer het opnieuw.",
+			"unknown": "Verbinding mislukt. Controleer uw configuratie en probeer het opnieuw."
+		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: Toegevoegd {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo code: Verwijderd {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

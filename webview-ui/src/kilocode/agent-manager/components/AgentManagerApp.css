@@ -267,6 +267,9 @@
 	color: var(--vscode-descriptionForeground);
 	display: flex;
 	gap: 12px;
+	flex-wrap: wrap;
+	align-items: center;
+	min-width: 0;
 }
 
 .am-header-actions {
@@ -328,7 +331,7 @@
 /* Messages Area */
 .am-messages-container {
 	flex: 1;
-	overflow-y: auto;
+	overflow: hidden;
 	padding: 0;
 	display: flex;
 	flex-direction: column;
@@ -336,8 +339,8 @@
 
 .am-messages-list {
 	flex: 1;
-	display: flex;
-	flex-direction: column;
+	height: 100%;
+	overflow-y: auto !important;
 }
 
 .am-message-item {
@@ -603,6 +606,18 @@
 	font-size: 11px;
 	background: var(--vscode-badge-background);
 	color: var(--vscode-badge-foreground);
+	white-space: nowrap;
+	min-width: 0;
+	flex-shrink: 1;
+	max-width: 200px;
+}
+
+.am-worktree-badge span,
+.am-local-badge span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
 }
 
 /* Inline Run Mode Dropdown (next to send button) */

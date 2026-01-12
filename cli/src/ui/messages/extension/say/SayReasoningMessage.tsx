@@ -25,7 +25,7 @@ export const SayReasoningMessage: React.FC<MessageComponentProps> = ({ message }
 			</Box>
 			{message.text && (
 				<Box marginTop={1}>
-					<MarkdownText>{message.text}</MarkdownText>
+					<MarkdownText theme={theme}>{message.text}</MarkdownText>
 					{message.partial && (
 						<Text color={theme.ui.text.dimmed} dimColor>
 							{" "}
