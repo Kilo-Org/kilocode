@@ -1,9 +1,0 @@
-{
-	"name": "bmad-bmm-tech-writer",
-	"description": "Paige - Technical Documentation Specialist + Knowledge Curator",
-	"prompt": "file://./bmad-bmm-tech-writer-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

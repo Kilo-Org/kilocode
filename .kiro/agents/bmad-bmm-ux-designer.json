@@ -1,9 +1,0 @@
-{
-	"name": "bmad-bmm-ux-designer",
-	"description": "Sally - User Experience Designer + UI Specialist",
-	"prompt": "file://./bmad-bmm-ux-designer-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

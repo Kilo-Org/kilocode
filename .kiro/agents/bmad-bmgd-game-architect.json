@@ -1,9 +1,0 @@
-{
-	"name": "bmad-bmgd-game-architect",
-	"description": "Cloud Dragonborn - Principal Game Systems Architect + Technical Director",
-	"prompt": "file://./bmad-bmgd-game-architect-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

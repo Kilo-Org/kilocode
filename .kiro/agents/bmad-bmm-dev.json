@@ -1,9 +1,0 @@
-{
-	"name": "bmad-bmm-dev",
-	"description": "Amelia - Senior Software Engineer",
-	"prompt": "file://./bmad-bmm-dev-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

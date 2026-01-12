@@ -65,6 +65,13 @@ export const commandIds = [
 	"handleExternalUri", // kilocode_change - for JetBrains plugin URL forwarding
 	"focusPanel",
 	"toggleAutoApprove",
+
+	// kilocode_change start - Context-aware completions commands
+	"completions.triggerContextAwareCompletions",
+	"completions.clearCache",
+	"completions.toggleNaturalLanguageTranslation",
+	"completions.showSettings",
+	// kilocode_change end
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

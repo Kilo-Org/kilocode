@@ -1,9 +1,0 @@
-{
-	"name": "bmad-core-bmad-master",
-	"description": "BMad Master - Master Task Executor + BMad Expert + Guiding Facilitator Orchestrator",
-	"prompt": "file://./bmad-core-bmad-master-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}
