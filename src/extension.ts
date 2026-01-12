@@ -49,6 +49,7 @@ import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" //
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { initializeMultiFileDiffSystem } from "./multi-file-diff-system" // kilocode_change
+import { getContextEngine, resetContextEngine } from "./services/context-engine" // kilocode_change
 import { flushModels, getModels, initializeModelCacheRefresh } from "./api/providers/fetchers/modelCache"
 import { kilo_initializeSessionManager } from "./shared/kilocode/cli-sessions/extension/session-manager-utils" // kilocode_change
 
@@ -189,6 +190,44 @@ export async function activate(context: vscode.ExtensionContext) {
 	// kilocode_change start: Initialize ManagedIndexer
 	const managedIndexer = new ManagedIndexer(contextProxy)
 	context.subscriptions.push(managedIndexer)
+	// kilocode_change end
+
+	// kilocode_change start: Initialize Context Engine
+	const contextEngine = getContextEngine({
+		enabled: true,
+		enableGitHistory: true,
+		enablePatternDetection: true,
+	})
+
+	// Initialize Context Engine with workspace folders
+	if (vscode.workspace.workspaceFolders) {
+		const workspacePaths = vscode.workspace.workspaceFolders.map((f) => f.uri.fsPath)
+		void contextEngine.initialize(workspacePaths).catch((error) => {
+			outputChannel.appendLine(
+				`[ContextEngine] Error during initialization: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		})
+	}
+
+	// Add file change listeners for real-time updates
+	const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{ts,tsx,js,jsx,py,java,go,rs}")
+	fileWatcher.onDidChange((uri) => {
+		void contextEngine.onFileSaved(uri.fsPath).catch(() => {})
+	})
+	fileWatcher.onDidCreate((uri) => {
+		void contextEngine.onFileSaved(uri.fsPath).catch(() => {})
+	})
+	fileWatcher.onDidDelete((uri) => {
+		void contextEngine.onFileDeleted(uri.fsPath).catch(() => {})
+	})
+	context.subscriptions.push(fileWatcher)
+
+	// Add Context Engine to subscriptions for cleanup
+	context.subscriptions.push({
+		dispose: () => {
+			resetContextEngine()
+		},
+	})
 	// kilocode_change end
 
 	// Initialize Roo Code Cloud service.

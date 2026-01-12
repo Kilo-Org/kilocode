@@ -790,6 +790,7 @@
 		"dotenv": "^16.4.7",
 		"esbuild": "^0.25.0",
 		"execa": "^9.5.2",
+		"fast-check": "^4.5.3",
 		"glob": "^11.1.0",
 		"mkdirp": "^3.0.1",
 		"myers-diff": "^2.1.0",
