@@ -19,6 +19,9 @@ import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
 
+// Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
+logs.info(`CLI started from: ${import.meta.url}`)
+
 const program = new Command()
 let cli: CLI | null = null
 
