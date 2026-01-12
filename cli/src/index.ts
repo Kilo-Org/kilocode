@@ -6,6 +6,7 @@ loadEnvFile()
 
 import { Command } from "commander"
 import { existsSync } from "fs"
+import { extname } from "node:path"
 import { CLI } from "./cli.js"
 import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
@@ -52,6 +53,12 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option(
+		"--attach <path>",
+		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
+		(value: string, previous: string[]) => previous.concat([value]),
+		[] as string[],
+	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate that --existing-branch requires --parallel
@@ -151,6 +158,35 @@ program
 			}
 		}
 
+		// Validate attachments if specified
+		const attachments: string[] = options.attach || []
+		if (attachments.length > 0) {
+			// Validate that --attach requires --auto or --json-io flag
+			if (!options.auto && !options.jsonIo) {
+				console.error("Error: --attach option requires --auto or --json-io flag")
+				process.exit(1)
+			}
+
+			// Validate each attachment
+			const supportedExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".tiff"]
+			for (const attachPath of attachments) {
+				// Check that file exists
+				if (!existsSync(attachPath)) {
+					console.error(`Error: Attachment file not found: ${attachPath}`)
+					process.exit(1)
+				}
+
+				// Validate file extension
+				const ext = extname(attachPath).toLowerCase()
+				if (!supportedExtensions.includes(ext)) {
+					console.error(
+						`Error: Unsupported attachment format "${ext}". Currently supported: .png, .jpg, .jpeg, .webp, .gif, .tiff. Other file types can be read using @path mentions or the read_file tool.`,
+					)
+					process.exit(1)
+				}
+			}
+		}
+
 		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
@@ -233,6 +269,7 @@ program
 			fork: options.fork,
 			noSplash: options.nosplash,
 			appendSystemPrompt: options.appendSystemPrompt,
+			attachments: attachments.length > 0 ? attachments : undefined,
 		})
 		await cli.start()
 		await cli.dispose()

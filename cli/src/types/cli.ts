@@ -34,4 +34,5 @@ export interface CLIOptions {
 	fork?: string
 	noSplash?: boolean
 	appendSystemPrompt?: string
+	attachments?: string[] | undefined
 }
