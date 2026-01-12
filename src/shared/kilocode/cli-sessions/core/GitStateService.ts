@@ -80,7 +80,10 @@ export class GitStateService {
 			const git = simpleGit(cwd)
 
 			const remotes = await git.getRemotes(true)
-			const repoUrl = remotes[0]?.refs?.fetch || remotes[0]?.refs?.push
+			// Prefer 'origin' remote if it exists, otherwise use the first remote
+			const originRemote = remotes.find((remote) => remote.name === "origin")
+			const selectedRemote = originRemote || remotes[0]
+			const repoUrl = selectedRemote?.refs?.fetch || selectedRemote?.refs?.push
 
 			const head = await git.revparse(["HEAD"])
 

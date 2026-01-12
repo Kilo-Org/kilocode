@@ -153,6 +153,70 @@ describe("GitStateService", () => {
 			})
 		})
 
+		it("prefers origin remote when multiple remotes exist", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "origin",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
+		})
+
+		it("uses first remote when origin does not exist", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "fork",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/upstream/repo.git")
+		})
+
 		it("handles missing remote URL", async () => {
 			const mockGit = {
 				getRemotes: vi.fn().mockResolvedValue([]),
