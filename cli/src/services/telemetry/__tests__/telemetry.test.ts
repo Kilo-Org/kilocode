@@ -12,14 +12,14 @@ vi.mock("../../constants/telemetry.js", async () => {
 	}
 })
 
-// Mock PostHog
+// Mock PostHog - use a class to satisfy Vitest 4.x requirements
 vi.mock("posthog-node", () => ({
-	PostHog: vi.fn().mockImplementation(() => ({
-		capture: vi.fn(),
-		shutdown: vi.fn().mockResolvedValue(undefined),
-		optIn: vi.fn(),
-		optOut: vi.fn(),
-	})),
+	PostHog: class MockPostHog {
+		capture = vi.fn()
+		shutdown = vi.fn().mockResolvedValue(undefined)
+		optIn = vi.fn()
+		optOut = vi.fn()
+	},
 }))
 
 // Mock fs-extra
