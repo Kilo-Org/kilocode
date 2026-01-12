@@ -3,7 +3,7 @@ import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../shared/kiloc
 
 export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 	const appName = vscode.env.appName
-	const kiloCodeWrapped = appName.includes("wrapper")
+	const kiloCodeWrapped = appName?.includes("wrapper") ?? false // kilocode_change
 	let kiloCodeWrapper = null
 	let kiloCodeWrapperTitle = null
 	let kiloCodeWrapperCode = null
@@ -37,8 +37,8 @@ export const getEditorNameHeader = () => {
 	return (
 		props.kiloCodeWrapped
 			? [props.kiloCodeWrapperTitle, props.kiloCodeWrapperVersion]
-			: [vscode.env.appName, vscode.version]
-	)
+			: [vscode.env.appName || "VS Code", vscode.version]
+	) // kilocode_change
 		.filter(Boolean)
 		.join(" ")
 }

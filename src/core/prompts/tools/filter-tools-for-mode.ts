@@ -10,6 +10,7 @@ import type { McpHub } from "../../../services/mcp/McpHub"
 import { ClineProviderState } from "../../webview/ClineProvider"
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
+import { getKiloCodeWrapperProperties } from "../../../core/kilocode/wrapper"
 // kilocode_change end
 
 /**
@@ -341,6 +342,20 @@ export function filterNativeToolsForMode(
 		allowedToolNames.delete("access_mcp_resource")
 	}
 
+	// kilocode_change start - create_plan tool exclusion
+	// Conditionally exclude create_plan if running in CLI or JetBrains mode
+	// (plans require VS Code editor UI which CLI and JetBrains don't have)
+	const { kiloCodeWrapperCode, kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
+	if (kiloCodeWrapperJetbrains || kiloCodeWrapperCode === "cli") {
+		allowedToolNames.delete("create_plan")
+	}
+
+	// Conditionally exclude create_plan if ephemeralPlanning experiment is not enabled
+	if (!experiments?.ephemeralPlanning) {
+		allowedToolNames.delete("create_plan")
+	}
+	// kilocode_change end - create_plan tool exclusion
+
 	// Filter native tools based on allowed tool names and apply alias renames
 	const filteredTools: OpenAI.Chat.ChatCompletionTool[] = []
 
@@ -413,6 +428,11 @@ export function isToolAllowedInMode(
 		}
 		if (toolName === "run_slash_command") {
 			return experiments?.runSlashCommand === true
+		}
+		if (toolName === "create_plan") {
+			// kilocode_change start - check ephemeralPlanning experiment
+			return experiments?.ephemeralPlanning === true
+			// kilocode_change end
 		}
 		return true
 	}

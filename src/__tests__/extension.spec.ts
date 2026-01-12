@@ -28,6 +28,10 @@ vi.mock("vscode", () => ({
 	},
 	workspace: {
 		registerTextDocumentContentProvider: vi.fn(),
+		// kilocode_change start
+		registerFileSystemProvider: vi.fn().mockReturnValue({
+			dispose: vi.fn(),
+		}),
 		getConfiguration: vi.fn().mockReturnValue({
 			get: vi.fn().mockReturnValue([]),
 		}),
@@ -50,6 +54,13 @@ vi.mock("vscode", () => ({
 		onDidCloseTextDocument: vi.fn().mockReturnValue({
 			dispose: vi.fn(),
 		}),
+		// kilocode_change start
+		fs: {
+			readFile: vi.fn(),
+			writeFile: vi.fn(),
+			stat: vi.fn(),
+		},
+		// kilocode_change end
 	},
 	languages: {
 		registerCodeActionsProvider: vi.fn(),
@@ -63,6 +74,7 @@ vi.mock("vscode", () => ({
 	env: {
 		language: "en",
 		appName: "Visual Studio Code",
+		version: "1.0.0", // kilocode_change
 	},
 	ExtensionMode: {
 		Production: 1,

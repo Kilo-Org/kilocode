@@ -13,7 +13,8 @@ import { countFileLines } from "../../integrations/misc/line-counter"
 import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
-import { ToolProtocol, isNativeProtocol } from "@roo-code/types"
+import { ToolProtocol, isNativeProtocol, TOOL_PROTOCOL } from "@roo-code/types"
+import { isPlanPath, readPlanDocument } from "./helpers/planDocumentHelpers" // kilocode_change
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -76,6 +77,30 @@ export async function simpleReadFileTool(
 	const fullPath = path.resolve(cline.cwd, relPath)
 
 	try {
+		// Check if this is a plan document
+		// kilocode_change start
+		if (isPlanPath(relPath)) {
+			const result = await readPlanDocument(relPath, cline)
+			const effectiveProtocol: ToolProtocol = toolProtocol || TOOL_PROTOCOL.XML
+			if (result.status === "error") {
+				// Return error based on protocol
+				if (isNativeProtocol(effectiveProtocol)) {
+					pushToolResult(result.nativeContent || result.error || "Error reading draft document")
+				} else {
+					pushToolResult(result.xmlContent || `<file><error>${result.error}</error></file>`)
+				}
+			} else {
+				// Return result based on protocol
+				if (isNativeProtocol(effectiveProtocol)) {
+					pushToolResult(result.nativeContent || "")
+				} else {
+					pushToolResult(result.xmlContent || "")
+				}
+			}
+			return
+		}
+		// kilocode_change end
+
 		// Check RooIgnore validation
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
 		if (!accessAllowed) {

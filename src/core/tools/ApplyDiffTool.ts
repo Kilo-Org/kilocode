@@ -16,6 +16,12 @@ import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
+import {
+	isPlanPath,
+	normalizePlanPath,
+	readPlanDocumentContent,
+	writePlanDocumentContent,
+} from "./helpers/planDocumentHelpers" // kilocode_change
 
 interface ApplyDiffParams {
 	path: string
@@ -55,6 +61,11 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
+			// kilocode_change start: Handle plan documents
+			const isPlan = isPlanPath(relPath)
+			const canonicalPath = isPlan ? normalizePlanPath(relPath) : relPath
+			// kilocode_change end
+
 			const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 
 			if (!accessAllowed) {
@@ -63,20 +74,43 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				return
 			}
 
-			const absolutePath = path.resolve(task.cwd, relPath)
-			const fileExists = await fileExistsAtPath(absolutePath)
+			// kilocode_change start: Handle plan documents
+			let originalContent: string
+			let absolutePath: string
+			let fileExists = false
 
-			if (!fileExists) {
-				task.consecutiveMistakeCount++
-				task.recordToolError("apply_diff")
-				const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
-				await task.say("error", formattedError)
-				task.didToolFailInCurrentTurn = true
-				pushToolResult(formattedError)
-				return
+			if (isPlan) {
+				const readResult = await readPlanDocumentContent(relPath)
+				if ("error" in readResult) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("apply_diff")
+					const formattedError = `Plan document does not exist at path: ${canonicalPath}\n\n<error_details>\nThe plan document could not be found. Please verify the plan exists and try again.\n</error_details>`
+					await task.say("error", formattedError)
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(formattedError)
+					return
+				}
+				originalContent = readResult.content
+				absolutePath = canonicalPath
+				fileExists = true
+			} else {
+				// For regular files, use the existing logic
+				absolutePath = path.resolve(task.cwd, relPath)
+				fileExists = await fileExistsAtPath(absolutePath)
+
+				if (!fileExists) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("apply_diff")
+					const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
+					await task.say("error", formattedError)
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(formattedError)
+					return
+				}
+
+				originalContent = await fs.readFile(absolutePath, "utf-8")
 			}
-
-			const originalContent: string = await fs.readFile(absolutePath, "utf-8")
+			// kilocode_change end
 
 			// Apply the diff to the original content
 			const diffResult = (await task.diffStrategy?.applyDiff(
@@ -151,6 +185,28 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				path: getReadablePath(task.cwd, relPath),
 				diff: diffContent,
 			}
+
+			// kilocode_change start: Handle plan documents separately
+			if (isPlan) {
+				// For plan documents, write directly without diff view
+				// Write the updated content back to the plan
+				const writeResult = await writePlanDocumentContent(relPath, diffResult.content, task)
+				if ("error" in writeResult) {
+					task.consecutiveMistakeCount++
+					const formattedError = `Unable to write plan document: ${canonicalPath}\n\n<error_details>\n${writeResult.error}\n</error_details>`
+					await task.say("error", formattedError)
+					task.recordToolError("apply_diff", formattedError)
+					pushToolResult(formattedError)
+					return
+				}
+
+				// Generate a simple message for the tool result
+				const message = `Applied diff to plan document: ${writeResult.canonicalPath}`
+				pushToolResult(message)
+				task.processQueuedMessages()
+				return
+			}
+			// kilocode_change end
 
 			if (isPreventFocusDisruptionEnabled) {
 				// Direct file write without diff view

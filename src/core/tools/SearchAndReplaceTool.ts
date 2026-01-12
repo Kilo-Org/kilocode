@@ -14,6 +14,7 @@ import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
 import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
+import { isPlanPath, readPlanDocumentContent, writePlanDocumentContent } from "./helpers/planDocumentHelpers" // kilocode_change
 
 interface SearchReplaceOperation {
 	search: string
@@ -85,6 +86,86 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
 					return
 				}
 			}
+
+			// kilocode_change start: Handle plan documents
+			if (isPlanPath(relPath)) {
+				const readResult = await readPlanDocumentContent(relPath)
+				if ("error" in readResult) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("search_and_replace")
+					await task.say("error", readResult.error)
+					pushToolResult(formatResponse.toolError(readResult.error))
+					return
+				}
+
+				const fileContent = readResult.content
+				const useCrLf_kilocode = fileContent.includes("\r\n")
+
+				// Apply all operations sequentially
+				let newContent = fileContent
+				const errors: string[] = []
+
+				for (let i = 0; i < operations.length; i++) {
+					const { search, replace } = operations[i]
+					const searchPattern = new RegExp(
+						escapeRegExp(normalizeLineEndings_kilocode(search, useCrLf_kilocode)),
+						"g",
+					)
+
+					const matchCount = newContent.match(searchPattern)?.length ?? 0
+					if (matchCount === 0) {
+						errors.push(`Operation ${i + 1}: No match found for search text.`)
+						continue
+					}
+
+					if (matchCount > 1) {
+						errors.push(
+							`Operation ${i + 1}: Found ${matchCount} matches. Please provide more context to make a unique match.`,
+						)
+						continue
+					}
+
+					// Apply the replacement
+					newContent = newContent.replace(
+						searchPattern,
+						normalizeLineEndings_kilocode(replace, useCrLf_kilocode),
+					)
+				}
+
+				// If all operations failed, return error
+				if (errors.length === operations.length) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("search_and_replace", "no_match")
+					pushToolResult(formatResponse.toolError(`All operations failed:\n${errors.join("\n")}`))
+					return
+				}
+
+				// Check if any changes were made
+				if (newContent === fileContent) {
+					pushToolResult(`No changes needed for '${relPath}'`)
+					return
+				}
+
+				// Write plan document
+				const writeResult = await writePlanDocumentContent(relPath, newContent, task)
+				if ("error" in writeResult) {
+					await handleError("writing plan document", new Error(writeResult.error))
+					pushToolResult(formatResponse.toolError(writeResult.error))
+					return
+				}
+
+				// Add error info if some operations failed
+				let resultMessage = ""
+				if (errors.length > 0) {
+					resultMessage = `Some operations failed:\n${errors.join("\n")}\n\n`
+				}
+				resultMessage += `Updated plan document "${writeResult.canonicalPath}"`
+
+				pushToolResult(formatResponse.toolResult(resultMessage))
+				task.recordToolUsage("search_and_replace")
+				return
+			}
+			// kilocode_change end
 
 			const accessAllowed = task.rooIgnoreController?.validateAccess(relPath)
 

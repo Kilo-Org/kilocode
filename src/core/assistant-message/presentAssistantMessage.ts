@@ -31,6 +31,7 @@ import { switchModeTool } from "../tools/SwitchModeTool"
 import { attemptCompletionTool, AttemptCompletionCallbacks } from "../tools/AttemptCompletionTool"
 import { newTaskTool } from "../tools/NewTaskTool"
 
+import { createPlanTool } from "../tools/CreatePlanTool" // kilocode_change
 import { updateTodoListTool } from "../tools/UpdateTodoListTool"
 import { runSlashCommandTool } from "../tools/RunSlashCommandTool"
 import { generateImageTool } from "../tools/GenerateImageTool"
@@ -466,6 +467,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
+					case "create_plan":
+						return `[${block.name} for '${block.params.title}']` // kilocode_change
 					// kilocode_change end
 					case "run_slash_command":
 						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
@@ -1098,6 +1101,15 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "create_plan":
+					await createPlanTool.handle(cline, block as ToolUse<"create_plan">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+						toolProtocol,
+					}) // kilocode_change
 					break
 				// kilocode_change end
 
