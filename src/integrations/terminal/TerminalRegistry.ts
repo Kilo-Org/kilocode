@@ -325,4 +325,94 @@ export class TerminalRegistry {
 		ShellIntegrationManager.zshCleanupTmpDir(id)
 		this.terminals = this.terminals.filter((t) => t.id !== id)
 	}
+
+	// kilocode_change start - add killTerminal & helper methods
+	/**
+	 * Kills a process running in a specific terminal by sending Ctrl+C or aborting
+	 * @param terminalId The terminal ID containing the process to kill
+	 * @returns Promise<string> Result message
+	 */
+	public static async killTerminal(terminalId: number): Promise<string> {
+		const targetTerminal = this.findTerminal(terminalId)
+		if (!targetTerminal) {
+			return this.getTerminalNotFoundMessage(terminalId)
+		}
+		if (!targetTerminal.busy && !targetTerminal.process) {
+			return `Terminal ${terminalId} is not running any process.`
+		}
+
+		try {
+			targetTerminal.killRequested = true
+
+			if (targetTerminal instanceof Terminal) {
+				// For VSCode terminals, send Ctrl+C and wait for confirmation
+				targetTerminal.terminal.sendText("\x03")
+
+				// Wait up to 3 seconds for the process to terminate
+				const startTime = Date.now()
+				const timeout = 3000
+
+				while (targetTerminal.busy && Date.now() - startTime < timeout) {
+					await new Promise((resolve) => setTimeout(resolve, 100))
+				}
+
+				if (targetTerminal.busy) {
+					// Process didn't terminate, send another Ctrl+C
+					targetTerminal.terminal.sendText("\x03")
+					return `Sent Ctrl+C to terminal ${terminalId}. Process may take time to terminate.`
+				}
+
+				return `Successfully terminated process in terminal ${terminalId}.`
+			} else {
+				// For ExecaTerminal, use the abort method
+				if (targetTerminal.process) {
+					targetTerminal.process.abort()
+
+					// Wait briefly to verify termination
+					await new Promise((resolve) => setTimeout(resolve, 500))
+
+					if (targetTerminal.busy) {
+						return `Sent termination signal to terminal ${terminalId}. Process may take time to terminate.`
+					}
+
+					return `Successfully terminated process in terminal ${terminalId}.`
+				} else {
+					return `No active process found in terminal ${terminalId}.`
+				}
+			}
+		} catch (error) {
+			targetTerminal.killRequested = false
+			throw new Error(
+				`Failed to kill process in terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		} finally {
+			// Clear kill requested flag after a delay to allow cleanup
+			setTimeout(() => {
+				if (targetTerminal) {
+					targetTerminal.killRequested = false
+				}
+			}, 1000)
+		}
+	}
+	/**
+	 * Helper function to find a terminal by ID
+	 */
+	public static findTerminal(terminalId: number) {
+		const busyTerminals = this.getTerminals(true)
+		const allTerminals = this.getTerminals(false)
+		const allTerminalsList = [...busyTerminals, ...allTerminals]
+
+		return allTerminalsList.find((t) => t.id === terminalId)
+	}
+	/**
+	 * Helper function to get terminal not found message
+	 */
+	private static getTerminalNotFoundMessage(terminalId: number): string {
+		const busyTerminals = this.getTerminals(true)
+		const allTerminals = this.getTerminals(false)
+		const allTerminalsList = [...busyTerminals, ...allTerminals]
+
+		return `Terminal ${terminalId} not found. Available terminals: ${allTerminalsList.map((t) => t.id).join(", ")}`
+	}
+	// kilocode_change end - add killTerminal & helper methods
 }

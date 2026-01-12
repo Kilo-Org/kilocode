@@ -568,6 +568,7 @@ export interface ClineSayTool {
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
+		| "terminal_kill" // kilocode_change
 		| "updateTodoList"
 		| "deleteFile" // kilocode_change: Handles both files and directories
 	path?: string

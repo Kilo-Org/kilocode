@@ -638,6 +638,8 @@ export class NativeToolCallParser {
 				case "delete_file":
 				case "new_rule":
 				case "report_bug":
+				case "terminal_kill":
+					nativeArgs = args as NativeArgsFor<TName>
 					break
 				// kilocode_change end
 

@@ -35,7 +35,15 @@ describe("approvals", () => {
 			const input = "test input"
 			const output = "test output"
 
-			await checkApproval(TEST_CATEGORY, TEST_NAME, input, output, "completion", TEST_FILENAME, TEST_CONTEXT_FILES)
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				input,
+				output,
+				"completion",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
 
 			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
 			expect(fs.existsSync(categoryDir)).toBe(true)
@@ -55,9 +63,33 @@ describe("approvals", () => {
 				close: () => {},
 			} as any)
 
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input1", "output1", "completion1", TEST_FILENAME, TEST_CONTEXT_FILES)
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input2", "output2", "completion2", TEST_FILENAME, TEST_CONTEXT_FILES)
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input3", "output3", "completion3", TEST_FILENAME, TEST_CONTEXT_FILES)
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input1",
+				"output1",
+				"completion1",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input2",
+				"output2",
+				"completion2",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input3",
+				"output3",
+				"completion3",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
 
 			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
 			const files = fs.readdirSync(categoryDir)
@@ -75,7 +107,15 @@ describe("approvals", () => {
 				close: () => {},
 			} as any)
 
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input", "output", "completion", TEST_FILENAME, TEST_CONTEXT_FILES)
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input",
+				"output",
+				"completion",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
 
 			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
 			const files = fs.readdirSync(categoryDir)
@@ -94,9 +134,33 @@ describe("approvals", () => {
 				close: () => {},
 			} as any)
 
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input1", "output1", "completion1", TEST_FILENAME, TEST_CONTEXT_FILES) // approved.1
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input2", "output2", "completion2", TEST_FILENAME, TEST_CONTEXT_FILES) // rejected.2
-			await checkApproval(TEST_CATEGORY, TEST_NAME, "input3", "output3", "completion3", TEST_FILENAME, TEST_CONTEXT_FILES) // approved.3
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input1",
+				"output1",
+				"completion1",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			) // approved.1
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input2",
+				"output2",
+				"completion2",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			) // rejected.2
+			await checkApproval(
+				TEST_CATEGORY,
+				TEST_NAME,
+				"input3",
+				"output3",
+				"completion3",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			) // approved.3
 
 			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
 			const files = fs.readdirSync(categoryDir)
@@ -182,8 +246,24 @@ describe("approvals", () => {
 				close: () => {},
 			} as any)
 
-			await checkApproval(TEST_CATEGORY, "test-case-1", "input1", "output1", "completion1", TEST_FILENAME, TEST_CONTEXT_FILES)
-			await checkApproval(TEST_CATEGORY, "test-case-2", "input2", "output2", "completion2", TEST_FILENAME, TEST_CONTEXT_FILES)
+			await checkApproval(
+				TEST_CATEGORY,
+				"test-case-1",
+				"input1",
+				"output1",
+				"completion1",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
+			await checkApproval(
+				TEST_CATEGORY,
+				"test-case-2",
+				"input2",
+				"output2",
+				"completion2",
+				TEST_FILENAME,
+				TEST_CONTEXT_FILES,
+			)
 
 			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
 			const files = fs.readdirSync(categoryDir)

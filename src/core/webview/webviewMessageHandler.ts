@@ -682,7 +682,7 @@ export const webviewMessageHandler = async (
 
 		case "terminalOperation":
 			if (message.terminalOperation) {
-				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation)
+				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation, message.terminalId) // kilocode_change - add terminalId
 			}
 			break
 		case "clearTask":

@@ -52,13 +52,16 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 
 		try {
 			this.isHot = true
+			this.terminal.busy = true // kilocode_change
 
 			this.subprocess = execa({
 				shell: true,
 				cwd: this.terminal.getCurrentWorkingDirectory(),
 				all: true,
 				// Ignore stdin to ensure non-interactive mode and prevent hanging
-				stdin: "ignore",
+				stdin: "ignore", // kilocode_change: ignore stdin to prevent blocking
+				detached: true, // kilocode_change: Process runs independently in background
+				cleanup: true, // kilocode_change: Automatically clean up on process exit
 				env: {
 					...process.env,
 					// Ensure UTF-8 encoding for Ruby, CocoaPods, etc.
@@ -68,6 +71,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			})`${command}`
 
 			this.pid = this.subprocess.pid
+			this.emit("shell_execution_started", this.pid) // kilocode_change
 
 			// When using shell: true, the PID is for the shell, not the actual command
 			// Find the actual command PID after a small delay
@@ -101,75 +105,16 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 
 			this.terminal.setActiveStream(stream, this.pid)
 
-			for await (const line of stream) {
-				if (this.aborted) {
-					break
-				}
-
-				this.fullOutput += line
-
-				const now = Date.now()
-
-				if (this.isListening && (now - this.lastEmitTime_ms > 500 || this.lastEmitTime_ms === 0)) {
-					this.emitRemainingBufferIfListening()
-					this.lastEmitTime_ms = now
-				}
-
-				this.startHotTimer(line)
-			}
-
-			if (this.aborted) {
-				let timeoutId: NodeJS.Timeout | undefined
-
-				const kill = new Promise<void>((resolve) => {
-					console.log(`[ExecaTerminalProcess#run] SIGKILL -> ${this.pid}`)
-
-					timeoutId = setTimeout(() => {
-						try {
-							this.subprocess?.kill("SIGKILL")
-						} catch (e) {}
-
-						resolve()
-					}, 5_000)
-				})
-
-				try {
-					await Promise.race([this.subprocess, kill])
-				} catch (error) {
-					console.log(
-						`[ExecaTerminalProcess#run] subprocess termination error: ${error instanceof Error ? error.message : String(error)}`,
-					)
-				}
-
-				if (timeoutId) {
-					clearTimeout(timeoutId)
-				}
-			}
-
-			this.emit("shell_execution_complete", { exitCode: 0 })
+			// kilocode_change - Start immediate stream processing in background (don't await to avoid blocking)
+			this.startBackgroundStreamMonitoring(stream)
+			this.emit("continue") // Signal run() completion for background execution
 		} catch (error) {
-			if (error instanceof ExecaError) {
-				console.error(`[ExecaTerminalProcess#run] shell execution error: ${error.message}`)
-				this.emit("shell_execution_complete", { exitCode: error.exitCode ?? 0, signalName: error.signal })
-			} else {
-				console.error(
-					`[ExecaTerminalProcess#run] shell execution error: ${error instanceof Error ? error.message : String(error)}`,
-				)
-
-				this.emit("shell_execution_complete", { exitCode: 1 })
-			}
-			this.subprocess = undefined
+			this.emit("shell_execution_complete", { exitCode: 1 })
 		}
-
-		this.terminal.setActiveStream(undefined)
-		this.emitRemainingBufferIfListening()
-		this.stopHotTimer()
-		this.emit("completed", this.fullOutput)
-		this.emit("continue")
-		this.subprocess = undefined
 	}
 
 	public override continue() {
+		this.emitRemainingBufferIfListening() // kilocode_change
 		this.isListening = false
 		this.removeAllListeners("line")
 		this.emit("continue")
@@ -177,6 +122,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 
 	public override abort() {
 		this.aborted = true
+		this.removeAllListeners("line") // kilocode_change
 
 		// Function to perform the kill operations
 		const performKill = () => {
@@ -238,6 +184,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			})()
 			// kilocode_change end
 		}
+		this.performCleanup() // kilocode_change
 	}
 
 	public override hasUnretrievedOutput() {
@@ -274,4 +221,109 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			this.emit("line", output)
 		}
 	}
+
+	// kilocode_change start - startBackgroundStreamMonitoring
+	private async startBackgroundStreamMonitoring(stream: AsyncIterable<string>) {
+		this.terminal.setActiveStream(stream, this.pid)
+
+		try {
+			for await (const line of stream) {
+				if (this.aborted) {
+					break
+				}
+
+				// Continue collecting output
+				this.fullOutput += line
+
+				// Always emit line events for listeners during testing/monitoring
+				this.emit("line", line)
+
+				// Emit output if UI is listening (for real-time display)
+				if (this.isListening) {
+					const now = Date.now()
+					if (now - this.lastEmitTime_ms > 500 || this.lastEmitTime_ms === 0) {
+						this.emitRemainingBufferIfListening()
+						this.lastEmitTime_ms = now
+					}
+				}
+
+				this.startHotTimer(line)
+			}
+
+			if (!this.aborted && this.subprocess) {
+				try {
+					const result = await this.subprocess
+					this.emit("shell_execution_complete", { exitCode: result.exitCode ?? 0 })
+				} catch (error) {
+					if (error instanceof ExecaError) {
+						this.emit("shell_execution_complete", {
+							exitCode: error.exitCode ?? 1,
+							signalName: error.signal,
+						})
+					} else {
+						this.emit("shell_execution_complete", { exitCode: 1 })
+					}
+				}
+			} else if (this.aborted && this.subprocess) {
+				let timeoutId: NodeJS.Timeout | undefined
+
+				const kill = new Promise<void>((resolve) => {
+					timeoutId = setTimeout(() => {
+						try {
+							this.subprocess?.kill("SIGKILL")
+						} catch (e) {}
+
+						resolve()
+					}, 5_000)
+				})
+
+				try {
+					await Promise.race([this.subprocess, kill])
+				} catch (_error) {}
+
+				if (timeoutId) {
+					clearTimeout(timeoutId)
+				}
+			}
+		} catch (error) {
+			// Unexpected error in monitoring logic
+			console.error("[ExecaTerminalProcess] Unexpected error in background monitoring:", error)
+			if (error instanceof ExecaError) {
+				this.emit("shell_execution_complete", {
+					exitCode: error.exitCode ?? 1,
+					signalName: error.signal,
+				})
+			} else {
+				this.emit("shell_execution_complete", { exitCode: 1 })
+			}
+		} finally {
+			this.performFinalCleanup()
+		}
+	}
+	private performCleanup() {
+		this.terminal.setActiveStream(undefined)
+		this.stopHotTimer()
+		this.removeAllListeners("line")
+		this.subprocess = undefined
+	}
+	private performFinalCleanup() {
+		this.terminal.setActiveStream(undefined)
+		this.stopHotTimer()
+
+		// Clear subprocess reference (process may still be running detached)
+		this.subprocess = undefined
+
+		// Mark terminal as not busy - atomic check to prevent race conditions
+		// Only clear busy flag if this process is still the active process
+		if (this.terminal.process === this && this.terminal.busy) {
+			this.terminal.busy = false
+		}
+
+		// IMPORTANT: Emit completed event BEFORE removing listeners
+		this.emit("completed", this.fullOutput)
+
+		// Remove all listeners AFTER emitting completed event
+		this.removeAllListeners()
+	}
+	// kilocode_change end - startBackgroundStreamMonitoring
 }

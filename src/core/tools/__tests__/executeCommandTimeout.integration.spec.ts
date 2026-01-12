@@ -21,6 +21,7 @@ vitest.mock("../../prompts/responses", () => ({
 	formatResponse: {
 		toolError: vitest.fn((msg) => `Tool Error: ${msg}`),
 		rooIgnoreError: vitest.fn((msg) => `RooIgnore Error: ${msg}`),
+		toolResult: vitest.fn((content, images) => `Tool Result: ${content}`), // kilocode_change
 	},
 }))
 vitest.mock("../../../utils/text-normalization", () => ({
@@ -52,6 +53,7 @@ describe("Command Execution Timeout Integration", () => {
 					postMessageToWebview: vitest.fn(),
 				}),
 			},
+			ask: vitest.fn(), // kilocode_change
 			say: vitest.fn().mockResolvedValue(undefined),
 		}
 
