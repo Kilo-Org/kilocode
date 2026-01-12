@@ -82,7 +82,7 @@ export class GitStateService {
 			const remotes = await git.getRemotes(true)
 			
 			// Determine which remote to use based on branch tracking configuration
-			let selectedRemote = remotes[0]
+			let selectedRemote: typeof remotes[0] | undefined
 			
 			try {
 				// Get the current branch name
@@ -93,15 +93,16 @@ export class GitStateService {
 				const trackingRemote = await git.raw(["config", `branch.${currentBranch}.remote`])
 				const trackingRemoteName = trackingRemote.trim()
 				
+				// Use the branch's tracking remote if it exists in the remotes list
 				if (trackingRemoteName) {
-					// Use the branch's tracking remote if it exists
-					const branchRemote = remotes.find((remote) => remote.name === trackingRemoteName)
-					if (branchRemote) {
-						selectedRemote = branchRemote
-					}
+					selectedRemote = remotes.find((remote) => remote.name === trackingRemoteName)
 				}
 			} catch {
-				// If we can't determine the tracking remote, fall back to 'origin' or first remote
+				// Ignore errors - will fall through to fallback logic
+			}
+			
+			// Fallback logic: prefer origin, then first remote
+			if (!selectedRemote) {
 				const originRemote = remotes.find((remote) => remote.name === "origin")
 				selectedRemote = originRemote || remotes[0]
 			}

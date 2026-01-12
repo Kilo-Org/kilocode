@@ -155,6 +155,40 @@ describe("GitStateService", () => {
 			})
 		})
 
+		it("falls back to origin when tracking remote points to non-existent remote", async () => {
+			const mockGit = {
+				getRemotes: vi.fn().mockResolvedValue([
+					{
+						name: "upstream",
+						refs: {
+							fetch: "https://github.com/upstream/repo.git",
+							push: "https://github.com/upstream/repo.git",
+						},
+					},
+					{
+						name: "origin",
+						refs: {
+							fetch: "https://github.com/user/repo.git",
+							push: "https://github.com/user/repo.git",
+						},
+					},
+				]),
+				revparse: vi.fn().mockResolvedValue("abc123def"),
+				raw: vi
+					.fn()
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for tracking
+					.mockResolvedValueOnce("nonexistent") // config branch.feature-branch.remote (doesn't exist)
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch name
+					.mockResolvedValueOnce(""), // ls-files
+				diff: vi.fn().mockResolvedValue("diff content"),
+			}
+			mockSimpleGit.mockReturnValue(mockGit as any)
+
+			const result = await service.getGitState()
+
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
+		})
+
 		it("uses branch tracking remote when configured", async () => {
 			const mockGit = {
 				getRemotes: vi.fn().mockResolvedValue([
@@ -288,15 +322,17 @@ describe("GitStateService", () => {
 				raw: vi
 					.fn()
 					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails for tracking
-					.mockResolvedValueOnce("") // ls-files
-					.mockRejectedValueOnce(new Error("not a symbolic ref")), // symbolic-ref fails for branch name
+					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails for branch name
+					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
 			mockSimpleGit.mockReturnValue(mockGit as any)
 
 			const result = await service.getGitState()
 
+			expect(result).not.toBeNull()
 			expect(result?.branch).toBeUndefined()
+			expect(result?.repoUrl).toBe("https://github.com/user/repo.git")
 		})
 
 		it("includes untracked files in patch", async () => {
