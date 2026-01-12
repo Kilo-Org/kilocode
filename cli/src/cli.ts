@@ -358,6 +358,7 @@ export class CLI {
 					parallel: this.options.parallel || false,
 					worktreeBranch: this.options.worktreeBranch || undefined,
 					noSplash: this.options.noSplash || false,
+					attachments: this.options.attachments,
 				},
 				onExit: () => this.dispose(),
 			}),
