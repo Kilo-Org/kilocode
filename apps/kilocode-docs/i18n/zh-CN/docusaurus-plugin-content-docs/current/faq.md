@@ -103,7 +103,7 @@ Kilo Code支持多种API提供商，包括：
 - **Architect模式：** 用于规划和技术领导
 - **Ask模式：** 用于回答问题并提供信息
 - **Debug模式：** 用于系统化问题诊断
-  你还可以创建[自定义模式](/features/custom-modes)。
+  你还可以创建[自定义模式](/agent-behavior/custom-modes)。
 
 ### 如何在模式之间切换？
 

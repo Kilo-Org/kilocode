@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "pausado",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (deshabilitado)",
-				"tokenError": "Se debe establecer un token válido para usar Autocomplete",
+				"noCredits": "**No hay créditos en tu cuenta**\n\nTu cuenta de Kilo Code no tiene créditos. Para usar el autocompletado, por favor añade créditos a tu cuenta.\n\n[Abrir Configuración](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**No hay modelo de autocompletado configurado**\n\nPara habilitar el autocompletado, añade un perfil con uno de estos proveedores compatibles: {{providers}}.\n\n[Abrir Configuración](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Costo total de la sesión:",
 				"provider": "Proveedor:",
 				"model": "Modelo:",
@@ -176,6 +178,7 @@
 		"errors": {
 			"cliOutdated": "Tu versión de Kilocode CLI está desactualizada y no es compatible con el Gestor de Agentes. Por favor, actualiza a la última versión.",
 			"cliNotFound": "No se encontró Kilocode CLI. Por favor, instálalo para usar el Gestor de Agentes.",
+			"cliMisconfigured": "Kilocode CLI no está configurado. Ejecuta 'kilocode auth' para iniciar sesión o 'kilocode config' para configurar.",
 			"sessionFailed": "Error al iniciar la sesión del agente",
 			"sessionFailedWithMessage": "Error al iniciar la sesión del agente: {{message}}"
 		},
@@ -185,6 +188,7 @@
 			"getHelp": "Obtener Ayuda",
 			"runInTerminal": "Ejecutar en Terminal",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Actualizar Global",
 			"updateLocal": "Actualizar Local",
 			"installGlobal": "Instalar Global",
@@ -194,5 +198,15 @@
 			"installMessage": "Ejecutando npm install para instalar Kilocode CLI. Una vez completado, puedes cerrar este terminal e intentar iniciar el Gestor de Agentes nuevamente.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Tu clave de API de OpenAI es inválida o no tiene acceso a la API de Realtime. Por favor verifica tu clave de API e inténtalo de nuevo.",
+			"unknown": "Error de conexión. Por favor, verifica tu configuración e inténtalo de nuevo."
+		}
+	},
+	"configDiscovery": {
+		"added": "Código Kilo: Se ha añadido {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Código Kilo: Removido {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

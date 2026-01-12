@@ -24,7 +24,7 @@ describe("checkExistKey", () => {
 	it("should return true when multiple keys are defined", () => {
 		const config: ProviderSettings = {
 			apiKey: "test-key",
-			glamaApiKey: "glama-key",
+			glamaApiKey: "glama-key", // kilocode_change
 			openRouterApiKey: "openrouter-key",
 		}
 		expect(checkExistKey(config)).toBe(true)
@@ -43,8 +43,8 @@ describe("checkExistKey", () => {
 	it("should return false when all key fields are undefined", () => {
 		const config: ProviderSettings = {
 			apiKey: undefined,
-			glamaApiKey: undefined,
 			openRouterApiKey: undefined,
+			glamaApiKey: undefined, // kilocode_change
 			awsRegion: undefined,
 			vertexProjectId: undefined,
 			openAiApiKey: undefined,

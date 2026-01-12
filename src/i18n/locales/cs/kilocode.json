@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "Tvoje verze Kilocode CLI je zastaralá a nepodporuje Agent Manager. Prosím aktualizuj na nejnovější verzi.",
 			"cliNotFound": "Kilocode CLI nenalezeno. Prosím nainstaluj ho pro použití Agent Manageru.",
+			"cliMisconfigured": "Kilocode CLI není nakonfigurováno. Spusť 'kilocode auth' pro přihlášení nebo 'kilocode config' pro konfiguraci.",
 			"sessionFailed": "Nepodařilo se spustit relaci agenta",
 			"sessionFailedWithMessage": "Nepodařilo se spustit relaci agenta: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "Získat Pomoc",
 			"runInTerminal": "Spustit v Terminálu",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Aktualizovat Globálně",
 			"updateLocal": "Aktualizovat Lokálně",
 			"installGlobal": "Instalovat Globálně",
@@ -128,11 +130,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "pozastaveno",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (zakázáno)",
-				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
+				"noCredits": "**Na tvém účtu nejsou žádné kredity**\n\nTvůj účet Kilo Code nemá žádné kredity. Pro použití automatického doplňování prosím přidej kredity na svůj účet.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Není nakonfigurován žádný model automatického doplňování**\n\nPro povolení automatického doplňování přidej profil s jedním z těchto podporovaných poskytovatelů: {{providers}}.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Celkové náklady relace:",
 				"provider": "Poskytovatel:",
 				"model": "Model:",
@@ -194,5 +198,15 @@
 			"cancelButton": "Zrušit"
 		},
 		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Váš OpenAI API klíč je neplatný nebo nemá přístup k Realtime API. Zkontrolujte prosím svůj API klíč a zkuste to znovu.",
+			"unknown": "Připojení se nezdařilo. Zkontrolujte prosím svou konfiguraci a zkuste to znovu."
+		}
+	},
+	"configDiscovery": {
+		"added": "Kód kilo: Přidáno {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kód Kilo: Odstraněno {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

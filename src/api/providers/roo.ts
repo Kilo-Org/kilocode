@@ -2,6 +2,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
 import { rooDefaultModelId, getApiProtocol, type ImageGenerationApiMethod } from "@roo-code/types"
+import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser"
 import { CloudService } from "@roo-code/cloud"
 
 import { Package } from "../../shared/package"
@@ -58,7 +59,6 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 			apiKey: sessionToken,
 			defaultProviderModelId: rooDefaultModelId,
 			providerModels: {},
-			defaultTemperature: 0.7,
 		})
 
 		// Load dynamic models asynchronously - strip /v1 from baseURL for fetcher
@@ -157,6 +157,7 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
+				const finishReason = chunk.choices[0]?.finish_reason
 
 				if (delta) {
 					// Handle reasoning_details array format (used by Gemini 3, Claude, OpenAI o-series, etc.)
@@ -258,6 +259,13 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 					}
 				}
 
+				if (finishReason) {
+					const endEvents = NativeToolCallParser.processFinishReason(finishReason)
+					for (const event of endEvents) {
+						yield event
+					}
+				}
+
 				if (chunk.usage) {
 					lastUsage = chunk.usage as RooUsage
 				}
@@ -296,13 +304,15 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 				}
 			}
 		} catch (error) {
-			// Log streaming errors with context
-			console.error("[RooHandler] Error during message streaming:", {
+			const errorContext = {
 				error: error instanceof Error ? error.message : String(error),
 				stack: error instanceof Error ? error.stack : undefined,
 				modelId: this.options.apiModelId,
 				hasTaskId: Boolean(metadata?.taskId),
-			})
+			}
+
+			console.error(`[RooHandler] Error during message streaming: ${JSON.stringify(errorContext)}`)
+
 			throw error
 		}
 	}

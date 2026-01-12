@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Le chemin de stockage personnalisé \"{{path}}\" est inutilisable, le chemin par défaut sera utilisé",
 		"cannot_access_path": "Impossible d'accéder au chemin {{path}} : {{error}}",
 		"settings_import_failed": "Échec de l'importation des paramètres : {{error}}",
-		"mistake_limit_guidance": "Cela peut indiquer un échec dans le processus de réflexion du modèle ou une incapacité à utiliser un outil correctement, ce qui peut être atténué avec des conseils de l'utilisateur (par ex. \"Essaie de diviser la tâche en étapes plus petites\").",
+		"mistake_limit_guidance": "Cela peut indiquer un échec dans le raisonnement du modèle ou une incapacité à utiliser un outil correctement. Essaie l'une des solutions suivantes :\n\n• Utilise un modèle plus intelligent, ou simplement un modèle différent (chaque modèle a ses propres faiblesses)\n• Réduis la quantité de contexte (simplifie le prompt pour le LLM)\n• Fournis des instructions supplémentaires pour aider le LLM (par ex. \"Essaie de diviser la tâche en étapes plus petites\")",
 		"violated_organization_allowlist": "Échec de l'exécution de la tâche : le profil actuel n'est pas compatible avec les paramètres de votre organisation",
 		"condense_failed": "Échec de la condensation du contexte",
 		"condense_not_enough_messages": "Pas assez de messages pour condenser le contexte de {{prevContextTokens}} tokens. Au moins {{minimumMessageCount}} messages sont requis, mais seulement {{messageCount}} sont disponibles.",
@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
 			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",
-			"sources": "Sources :"
+			"sources": "Sources :",
+			"thinking_complete_no_output": "(Réflexion terminée, mais aucune sortie générée.)",
+			"thinking_complete_truncated": "(Réflexion terminée, mais la sortie a été tronquée en raison de la limite de jetons.)",
+			"thinking_complete_safety": "(Réflexion terminée, mais la sortie a été bloquée en raison des paramètres de sécurité.)",
+			"thinking_complete_recitation": "(Réflexion terminée, mais la sortie a été bloquée en raison de la vérification de récitation.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Échec de l'authentification de l'API Cerebras. Vérifiez que votre clé API est valide et n'a pas expiré.",

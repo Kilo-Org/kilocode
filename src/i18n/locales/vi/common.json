@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Đường dẫn lưu trữ tùy chỉnh \"{{path}}\" không thể sử dụng được, sẽ sử dụng đường dẫn mặc định",
 		"cannot_access_path": "Không thể truy cập đường dẫn {{path}}: {{error}}",
 		"settings_import_failed": "Nhập cài đặt thất bại: {{error}}.",
-		"mistake_limit_guidance": "Điều này có thể cho thấy sự thất bại trong quá trình suy nghĩ của mô hình hoặc không thể sử dụng công cụ đúng cách, có thể được giảm thiểu bằng hướng dẫn của người dùng (ví dụ: \"Hãy thử chia nhỏ nhiệm vụ thành các bước nhỏ hơn\").",
+		"mistake_limit_guidance": "Điều này có thể cho thấy sự thất bại trong suy luận của mô hình hoặc không thể sử dụng công cụ đúng cách. Hãy thử một trong những cách sau:\n\n• Sử dụng mô hình thông minh hơn, hoặc đơn giản là một mô hình khác (mỗi mô hình có điểm yếu riêng)\n• Giảm lượng ngữ cảnh (đơn giản hóa lời nhắc cho LLM)\n• Cung cấp thêm hướng dẫn giúp ích cho LLM (ví dụ: \"Hãy thử chia nhỏ nhiệm vụ thành các bước nhỏ hơn\")",
 		"violated_organization_allowlist": "Không thể chạy tác vụ: hồ sơ hiện tại không tương thích với cài đặt của tổ chức của bạn",
 		"condense_failed": "Không thể nén ngữ cảnh",
 		"condense_not_enough_messages": "Không đủ tin nhắn để nén ngữ cảnh của {{prevContextTokens}} token. Cần ít nhất {{minimumMessageCount}} tin nhắn, nhưng chỉ có {{messageCount}} tin nhắn khả dụng.",
@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Lỗi luồng ngữ cảnh tạo Gemini: {{error}}",
 			"generate_complete_prompt": "Lỗi hoàn thành Gemini: {{error}}",
-			"sources": "Nguồn:"
+			"sources": "Nguồn:",
+			"thinking_complete_no_output": "(Đã suy nghĩ xong nhưng không có kết quả đầu ra.)",
+			"thinking_complete_truncated": "(Đã suy nghĩ xong nhưng kết quả bị cắt ngắn do giới hạn token.)",
+			"thinking_complete_safety": "(Đã suy nghĩ xong nhưng kết quả bị chặn do cài đặt an toàn.)",
+			"thinking_complete_recitation": "(Đã suy nghĩ xong nhưng kết quả bị chặn do kiểm tra trích dẫn.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Xác thực API Cerebras thất bại. Vui lòng kiểm tra khóa API của bạn có hợp lệ và chưa hết hạn.",

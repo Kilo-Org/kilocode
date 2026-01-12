@@ -9,7 +9,7 @@ export interface SessionConfig {
 	prompt: string
 	label: string
 	parallelMode: boolean
-	autoMode: boolean
+	existingBranch?: string
 }
 
 export interface StartSessionMessage {
@@ -17,22 +17,24 @@ export interface StartSessionMessage {
 	versions?: number
 	labels?: string[]
 	parallelMode?: boolean
+	existingBranch?: string
 }
 
 /**
  * Extract session configurations from a start session message.
+ * Sessions are always interactive (no --auto flag) - approvals handled via JSON-IO protocol.
  *
  * For single version (versions=1 or undefined):
  * - Returns one config with the user's chosen parallelMode
- * - autoMode is false (interactive)
  *
  * For multi-version (versions>1):
  * - Returns multiple configs, one per version
- * - Forces parallelMode=true and autoMode=true
+ * - Forces parallelMode=true for isolated worktrees
+ * - Users can click "Finish to Branch" on each session to commit their changes
  * - Uses provided labels or generates (v1), (v2) suffixes
  */
 export function extractSessionConfigs(message: StartSessionMessage): SessionConfig[] {
-	const { prompt, versions = 1, labels, parallelMode = false } = message
+	const { prompt, versions = 1, labels, parallelMode = false, existingBranch } = message
 
 	// Single version case
 	if (versions === 1) {
@@ -41,18 +43,20 @@ export function extractSessionConfigs(message: StartSessionMessage): SessionConf
 				prompt,
 				label: prompt.slice(0, 50),
 				parallelMode,
-				autoMode: false,
+				existingBranch,
 			},
 		]
 	}
 
-	// Multi-version case: always use parallelMode and autoMode
+	// Multi-version case: always use parallelMode for isolated worktrees
+	// Users can click the "Finish to Branch" button on individual sessions to commit their changes
+	// Note: existingBranch is not supported in multi-version mode as each version needs isolated branches
 	const effectiveLabels = labels ?? Array.from({ length: versions }, (_, i) => `${prompt.slice(0, 50)} (v${i + 1})`)
 
 	return effectiveLabels.map((label) => ({
 		prompt,
 		label,
 		parallelMode: true,
-		autoMode: true,
+		// existingBranch is deliberately excluded in multi-version mode
 	}))
 }

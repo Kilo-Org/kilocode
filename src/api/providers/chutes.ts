@@ -11,7 +11,6 @@ import { ApiStream } from "../transform/stream"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 import { RouterProvider } from "./router-provider"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 export class ChutesHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -57,8 +56,6 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 			params.temperature = this.options.modelTemperature ?? info.temperature
 		}
 
-		addNativeToolCallsToParams(params, this.options, metadata) // kilocode_change
-
 		return params
 	}
 
@@ -68,8 +65,6 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const model = await this.fetchModel()
-
-		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 
 		if (model.id.includes("DeepSeek-R1")) {
 			const stream = await this.client.chat.completions.create({
@@ -88,8 +83,6 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					for (const processedChunk of matcher.update(delta.content)) {
@@ -131,8 +124,6 @@ export class ChutesHandler extends RouterProvider implements SingleCompletionHan
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta?.content) {
 					yield { type: "text", text: delta.content }

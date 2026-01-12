@@ -1,6 +1,8 @@
 import React from "react"
-import { Provider } from "jotai"
+import { Provider, useAtomValue } from "jotai"
 import { useAgentManagerMessages } from "../state/hooks"
+import { useMessageQueueProcessor } from "../state/hooks/useMessageQueueProcessor"
+import { selectedSessionIdAtom } from "../state/atoms/sessions"
 import { SessionSidebar } from "./SessionSidebar"
 import { SessionDetail } from "./SessionDetail"
 import { TooltipProvider } from "../../../components/ui/tooltip"
@@ -24,6 +26,13 @@ export function AgentManagerApp() {
 function AgentManagerContent() {
 	// Bridge VS Code IPC messages to Jotai state
 	useAgentManagerMessages()
+
+	// Get the currently selected session
+	const selectedSessionId = useAtomValue(selectedSessionIdAtom)
+
+	// Process the message queue for the selected session
+	// Hook must always be called, but will skip processing if no session selected
+	useMessageQueueProcessor(selectedSessionId)
 
 	return (
 		<div className="agent-manager-container">

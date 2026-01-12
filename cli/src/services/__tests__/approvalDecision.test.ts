@@ -481,5 +481,154 @@ describe("approvalDecision", () => {
 				expect(decision.action).toBe("auto-reject")
 			})
 		})
+
+		describe("YOLO mode", () => {
+			it("should auto-approve file write operations in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "editedExistingFile" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve command execution in YOLO mode", () => {
+				const message = createMessage("command", JSON.stringify({ command: "npm install" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve browser actions in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "browser_action" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve MCP operations in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "use_mcp_tool" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve mode switching in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "switchMode" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve subtasks in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "newTask" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve todo updates in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "updateTodoList" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve API retry in YOLO mode", () => {
+				const message = createMessage("api_req_failed")
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve use_mcp_server ask type in YOLO mode", () => {
+				const message = createMessage("use_mcp_server")
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should NOT auto-respond to followup questions in YOLO mode", () => {
+				const message = createMessage("followup")
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				// In YOLO mode without CI mode, followup should require manual approval
+				// because question.enabled is false in base config
+				expect(decision.action).toBe("manual")
+			})
+
+			it("should auto-approve followup questions in YOLO mode when question.enabled is true", () => {
+				const message = createMessage("followup")
+				const config = { ...createBaseConfig(), question: { enabled: true, timeout: 30 } }
+				const decision = getApprovalDecision(message, config, false, true)
+				// Followup questions are handled by the normal config path, not YOLO mode
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve unknown ask types in YOLO mode", () => {
+				const message = createMessage("unknown_type")
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve protected file writes in YOLO mode", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "editedExistingFile", isProtected: true }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve outside workspace writes in YOLO mode", () => {
+				const message = createMessage(
+					"tool",
+					JSON.stringify({ tool: "newFileCreated", isOutsideWorkspace: true }),
+				)
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should auto-approve denied commands in YOLO mode", () => {
+				const message = createMessage("command", JSON.stringify({ command: "rm -rf /" }))
+				const config = {
+					...createBaseConfig(),
+					execute: {
+						enabled: true,
+						allowed: ["*"],
+						denied: ["rm"],
+					},
+				}
+				const decision = getApprovalDecision(message, config, false, true)
+				// YOLO mode overrides denied list
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should work with both YOLO mode and CI mode enabled", () => {
+				const message = createMessage("tool", JSON.stringify({ tool: "editedExistingFile" }))
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, true, true)
+				// YOLO mode takes precedence
+				expect(decision.action).toBe("auto-approve")
+			})
+
+			it("should not auto-approve partial messages in YOLO mode", () => {
+				const message = {
+					...createMessage("tool", JSON.stringify({ tool: "editedExistingFile" })),
+					partial: true,
+				}
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("manual")
+			})
+
+			it("should not auto-approve answered messages in YOLO mode", () => {
+				const message = {
+					...createMessage("tool", JSON.stringify({ tool: "editedExistingFile" })),
+					isAnswered: true,
+				}
+				const config = createBaseConfig()
+				const decision = getApprovalDecision(message, config, false, true)
+				expect(decision.action).toBe("manual")
+			})
+		})
 	})
 })

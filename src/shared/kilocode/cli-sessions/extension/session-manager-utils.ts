@@ -55,18 +55,28 @@ export function kilo_initializeSessionManager({
 				onSessionRestored: () => {
 					log("Session restored")
 				},
+				onSessionSynced: (message) => {
+					log(`Session synced: ${message.sessionId}`)
+				},
+				onSessionTitleGenerated: (message) => {
+					log(`Session title generated: ${message.sessionId} - ${message.title}`)
+				},
 				platform: vscode.env.appName,
 				getOrganizationId: async (taskId: string) => {
 					const result = await (async () => {
-						const currentTask = provider.getCurrentTask()
+						try {
+							const currentTask = provider.getCurrentTask()
 
-						if (currentTask?.taskId === taskId) {
-							return currentTask.apiConfiguration.kilocodeOrganizationId
+							if (currentTask?.taskId === taskId) {
+								return currentTask.apiConfiguration.kilocodeOrganizationId
+							}
+
+							const state = await provider.getState()
+
+							return state.apiConfiguration.kilocodeOrganizationId
+						} catch {
+							return undefined
 						}
-
-						const state = await provider.getState()
-
-						return state.apiConfiguration.kilocodeOrganizationId
 					})()
 
 					logger.debug(`Resolved organization ID for task ${taskId}: "${result}"`, "SessionManager")
@@ -75,16 +85,20 @@ export function kilo_initializeSessionManager({
 				},
 				getMode: async (taskId: string) => {
 					const result = await (async () => {
-						const currentTask = provider.getCurrentTask()
+						try {
+							const currentTask = provider.getCurrentTask()
 
-						if (currentTask?.taskId === taskId) {
-							return await currentTask.getTaskMode()
+							if (currentTask?.taskId === taskId) {
+								return await currentTask.getTaskMode()
+							}
+
+							const task = await provider.getTaskWithId(taskId, false)
+							const globalMode = await provider.getMode()
+
+							return task?.historyItem?.mode || globalMode
+						} catch {
+							return undefined
 						}
-
-						const task = await provider.getTaskWithId(taskId)
-						const globalMode = await provider.getMode()
-
-						return task?.historyItem?.mode || globalMode
 					})()
 
 					logger.debug(`Resolved mode for task ${taskId}: "${result}"`, "SessionManager")
@@ -93,19 +107,44 @@ export function kilo_initializeSessionManager({
 				},
 				getModel: async (taskId: string) => {
 					const result = await (async () => {
-						const currentTask = provider.getCurrentTask()
+						try {
+							const currentTask = provider.getCurrentTask()
 
-						if (currentTask?.taskId === taskId) {
-							return currentTask.api?.getModel().id
+							if (currentTask?.taskId === taskId) {
+								return currentTask.api?.getModel().id
+							}
+
+							const state = await provider.getState()
+							const apiHandler = buildApiHandler(state.apiConfiguration)
+
+							return apiHandler.getModel().id
+						} catch {
+							return undefined
 						}
-
-						const state = await provider.getState()
-						const apiHandler = buildApiHandler(state.apiConfiguration)
-
-						return apiHandler.getModel().id
 					})()
 
 					logger.debug(`Resolved model for task ${taskId}: "${result}"`, "SessionManager")
+
+					return result || undefined
+				},
+				getParentTaskId: async (taskId: string) => {
+					const result = await (async () => {
+						try {
+							const currentTask = provider.getCurrentTask()
+
+							if (currentTask?.taskId === taskId) {
+								return currentTask.parentTaskId
+							}
+
+							const task = await provider.getTaskWithId(taskId, false)
+
+							return task?.historyItem?.parentTaskId
+						} catch {
+							return undefined
+						}
+					})()
+
+					logger.debug(`Resolved parent task ID for task ${taskId}: "${result}"`, "SessionManager")
 
 					return result || undefined
 				},
@@ -113,7 +152,7 @@ export function kilo_initializeSessionManager({
 
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
 			if (workspaceFolder) {
-				sessionManager.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
+				sessionManager?.setWorkspaceDirectory(workspaceFolder.uri.fsPath)
 			}
 
 			log("SessionManager initialized successfully")

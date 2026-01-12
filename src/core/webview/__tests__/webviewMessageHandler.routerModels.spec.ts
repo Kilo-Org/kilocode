@@ -81,8 +81,10 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 					return { "requesty/model": { contextWindow: 8192, supportsPromptCache: false } }
 				case "deepinfra":
 					return { "deepinfra/model": { contextWindow: 8192, supportsPromptCache: false } }
+				// kilocode_change start
 				case "glama":
 					return { "glama/model": { contextWindow: 8192, supportsPromptCache: false } }
+				// kilocode_change end
 				case "unbound":
 					return { "unbound/model": { contextWindow: 8192, supportsPromptCache: false } }
 				case "vercel-ai-gateway":

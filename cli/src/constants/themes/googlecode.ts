@@ -54,6 +54,17 @@ export const googleCodeTheme: Theme = {
 		lineNumber: "#5f6368",
 	},
 
+	markdown: {
+		text: "#444",
+		heading: "#066",
+		strong: "#000",
+		em: "#444",
+		code: "#080",
+		blockquote: "#5f6368",
+		link: "#066",
+		list: "#444",
+	},
+
 	ui: {
 		border: {
 			default: "#e1e4e8",

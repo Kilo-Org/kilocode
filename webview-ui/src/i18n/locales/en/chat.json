@@ -133,6 +133,7 @@
 	"enhancePromptDescription": "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 	"addImages": "Add images to message",
 	"sendMessage": "Send message",
+	"pressToSend": "Press {{keyCombination}} to send",
 	"stopTts": "Stop text-to-speech",
 	"typeMessage": "Type a message...",
 	"typeTask": "Type your task here...",
@@ -160,7 +161,8 @@
 			"403": "Unauthorized. Your API key is valid, but the provider refused to complete this request.",
 			"429": "Too many requests. You're being rate-limited by the provider. Please wait a bit before your next API call.",
 			"500": "Provider server error. Something is wrong on the provider side, there's nothing wrong with your request.",
-			"unknown": "Unknown API error. Please contact Roo Code support."
+			"connection": "Connection error. Make sure you have a working internet connection.",
+			"unknown": "Unknown API error. Please contact Kilo support."
 		}
 	},
 	"checkpoint": {
@@ -182,11 +184,20 @@
 		},
 		"current": "Current"
 	},
-	"contextCondense": {
-		"title": "Context Condensed",
-		"condensing": "Condensing context...",
-		"errorHeader": "Failed to condense context",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context Condensed",
+			"inProgress": "Condensing context...",
+			"errorHeader": "Failed to condense context"
+		},
+		"truncation": {
+			"title": "Context Truncated",
+			"inProgress": "Truncating context...",
+			"messagesRemoved": "{{count}} message removed",
+			"messagesRemoved_other": "{{count}} messages removed",
+			"description": "Older messages were removed from the conversation to stay within the context window limit. This is a fast but less context-preserving approach compared to condensation."
+		}
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code wants to fetch detailed instructions to assist with the current task"
@@ -286,6 +297,11 @@
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
+	"errorDetails": {
+		"title": "Error Details",
+		"copyToClipboard": "Copy to Clipboard",
+		"copied": "Copied!"
+	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
 	},
@@ -311,7 +327,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Released",
+		"title": "Roo Code {{version}} Released",
+		"support": "Please support Roo Code by starring us on <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Limited-time FREE stealth model</bold> - Code Supernova: Now upgraded with a <bold>1M token context window</bold>! A versatile agentic coding model that supports image inputs, accessible through Roo Code Cloud.",
 			"note": "(Note: prompts and completions are logged by the model creator and used to improve the model)",
@@ -339,8 +356,7 @@
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copy to input (same as shift + click)",
-		"autoSelectCountdown": "Auto-selecting in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Auto-approve enabled. Selecting in {{seconds}}s…"
 	},
 	"browser": {
 		"session": "Browser Session",
@@ -357,13 +373,25 @@
 		"sessionStarted": "Browser Session Started",
 		"actions": {
 			"title": "Browser Action: ",
+			"launched": "Launched browser",
 			"launch": "Launch browser at {{url}}",
+			"clicked": "Clicked at: {{coordinate}}",
 			"click": "Click ({{coordinate}})",
+			"typed": "Typed: {{text}}",
 			"type": "Type \"{{text}}\"",
+			"pressed": "Pressed key: {{key}}",
 			"press": "Press {{key}}",
+			"scrolledDown": "Scrolled down",
 			"scrollDown": "Scroll down",
+			"scrolledUp": "Scrolled up",
 			"scrollUp": "Scroll up",
+			"hovered": "Hovered at: {{coordinate}}",
 			"hover": "Hover ({{coordinate}})",
+			"resized": "Resized to: {{size}}",
+			"resize": "Resize to {{size}}",
+			"screenshotSaved": "Screenshot saved",
+			"screenshot": "Save screenshot to {{path}}",
+			"closed": "Closed browser",
 			"close": "Close browser"
 		}
 	},

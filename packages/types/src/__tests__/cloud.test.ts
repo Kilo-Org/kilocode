@@ -1,10 +1,13 @@
 // npx vitest run src/__tests__/cloud.test.ts
 
 import {
+	organizationCloudSettingsSchema,
 	organizationFeaturesSchema,
 	organizationSettingsSchema,
+	type OrganizationCloudSettings,
 	type OrganizationFeatures,
 	type OrganizationSettings,
+	type WorkspaceTaskVisibility,
 } from "../cloud.js"
 
 describe("organizationFeaturesSchema", () => {
@@ -169,5 +172,86 @@ describe("organizationSettingsSchema with features", () => {
 		const result = organizationSettingsSchema.safeParse(input)
 		expect(result.success).toBe(true)
 		expect(result.data).toEqual(input)
+	})
+})
+
+describe("organizationCloudSettingsSchema with workspaceTaskVisibility", () => {
+	it("should validate without workspaceTaskVisibility property", () => {
+		const input = {
+			recordTaskMessages: true,
+			enableTaskSharing: true,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.workspaceTaskVisibility).toBeUndefined()
+	})
+
+	it("should validate with workspaceTaskVisibility as 'all'", () => {
+		const input = {
+			recordTaskMessages: true,
+			workspaceTaskVisibility: "all" as WorkspaceTaskVisibility,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.workspaceTaskVisibility).toBe("all")
+	})
+
+	it("should validate with workspaceTaskVisibility as 'list-only'", () => {
+		const input = {
+			workspaceTaskVisibility: "list-only" as WorkspaceTaskVisibility,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.workspaceTaskVisibility).toBe("list-only")
+	})
+
+	it("should validate with workspaceTaskVisibility as 'full-lockdown'", () => {
+		const input = {
+			workspaceTaskVisibility: "full-lockdown" as WorkspaceTaskVisibility,
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.workspaceTaskVisibility).toBe("full-lockdown")
+	})
+
+	it("should reject invalid workspaceTaskVisibility value", () => {
+		const input = {
+			workspaceTaskVisibility: "invalid-value",
+		}
+		const result = organizationCloudSettingsSchema.safeParse(input)
+		expect(result.success).toBe(false)
+	})
+
+	it("should have correct TypeScript type", () => {
+		// Type-only test to ensure TypeScript compilation
+		const settings: OrganizationCloudSettings = {
+			recordTaskMessages: true,
+			workspaceTaskVisibility: "all",
+		}
+		expect(settings.workspaceTaskVisibility).toBe("all")
+
+		const settingsWithoutVisibility: OrganizationCloudSettings = {
+			recordTaskMessages: false,
+		}
+		expect(settingsWithoutVisibility.workspaceTaskVisibility).toBeUndefined()
+	})
+
+	it("should validate in organizationSettingsSchema with workspaceTaskVisibility", () => {
+		const input = {
+			version: 1,
+			cloudSettings: {
+				recordTaskMessages: true,
+				enableTaskSharing: true,
+				workspaceTaskVisibility: "list-only" as WorkspaceTaskVisibility,
+			},
+			defaultSettings: {},
+			allowList: {
+				allowAll: true,
+				providers: {},
+			},
+		}
+		const result = organizationSettingsSchema.safeParse(input)
+		expect(result.success).toBe(true)
+		expect(result.data?.cloudSettings?.workspaceTaskVisibility).toBe("list-only")
 	})
 })

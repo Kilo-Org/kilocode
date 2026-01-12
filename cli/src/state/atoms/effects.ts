@@ -180,17 +180,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 		if (message.type === "apiMessagesSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "apiConversationHistoryPath", filePath)
 		} else if (message.type === "taskMessagesSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "uiMessagesPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "uiMessagesPath", filePath)
 		} else if (message.type === "taskMetadataSaved" && message.payload) {
 			const [taskId, filePath] = message.payload as [string, string]
 
-			SessionManager.init().handleFileUpdate(taskId, "taskMetadataPath", filePath)
+			SessionManager.init()?.handleFileUpdate(taskId, "taskMetadataPath", filePath)
 		} else if (message.type === "currentCheckpointUpdated") {
-			SessionManager.init().doSync()
+			SessionManager.init()?.doSync()
 		}
 
 		// Handle different message types
@@ -394,6 +394,12 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 			}
 
+			case "condenseTaskContextResponse": {
+				const taskId = message.text
+				logs.info(`Context condensation completed for task: ${taskId || "current task"}`, "effects")
+				break
+			}
+
 			case "commandExecutionStatus": {
 				// Handle command execution status messages
 				// Store output updates and apply them when the ask appears
@@ -560,12 +566,17 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 						if (messageIndex !== -1) {
 							const pendingUpdate = newPendingUpdates.get(statusData.executionId)
+							const exitCode =
+								statusData.status === "exited" && "exitCode" in statusData
+									? statusData.exitCode
+									: undefined
 							const updatedAsk: ExtensionChatMessage = {
 								...currentMessages[messageIndex]!,
 								text: JSON.stringify({
 									executionId: statusData.executionId,
 									command: pendingUpdate?.command || "",
 									output: pendingUpdate?.output || "",
+									...(exitCode !== undefined && { exitCode }),
 								}),
 								partial: false, // Command completed
 								isAnswered: false, // Still needs user response
@@ -604,7 +615,7 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 
 				set(ciCompletionDetectedAtom, true)
 
-				SessionManager.init().doSync(true)
+				SessionManager.init()?.doSync(true)
 			}
 		}
 	} catch (error) {

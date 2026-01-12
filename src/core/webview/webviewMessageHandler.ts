@@ -87,6 +87,9 @@ import {
 	fetchKilocodeNotificationsHandler,
 	deviceAuthMessageHandler,
 } from "../kilocode/webview/webviewMessageHandlerUtils"
+import { GhostServiceManager } from "../../services/ghost/GhostServiceManager"
+import { handleChatCompletionRequest } from "../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
+import { handleChatCompletionAccepted } from "../../services/ghost/chat-autocomplete/handleChatCompletionAccepted"
 // kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
@@ -857,7 +860,7 @@ export const webviewMessageHandler = async (
 						"io-intelligence": {},
 						requesty: {},
 						unbound: {},
-						glama: {},
+						glama: {}, // kilocode_change
 						ollama: {},
 						lmstudio: {},
 						roo: {},
@@ -906,7 +909,7 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.requestyBaseUrl,
 					},
 				},
-				{ key: "glama", options: { provider: "glama" } },
+				{ key: "glama", options: { provider: "glama" } }, // kilocode_change
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
 				{
 					key: "kilocode",
@@ -1326,6 +1329,10 @@ export const webviewMessageHandler = async (
 		}
 		case "cancelTask":
 			await provider.cancelTask()
+			break
+		case "cancelAutoApproval":
+			// Cancel any pending auto-approval timeout for the current task
+			provider.getCurrentTask()?.cancelAutoApprovalTimeout()
 			break
 		case "killBrowserSession":
 			{
@@ -1886,6 +1893,13 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("ghostServiceSettings", ghostServiceSettings)
 			await provider.postStateToWebview()
 			vscode.commands.executeCommand("kilo-code.ghost.reload")
+			break
+		case "snoozeAutocomplete":
+			if (typeof message.value === "number" && message.value > 0) {
+				await GhostServiceManager.getInstance()?.snooze(message.value)
+			} else {
+				await GhostServiceManager.getInstance()?.unsnooze()
+			}
 			break
 		// kilocode_change end
 		// kilocode_change start: AI gatekeeper for YOLO mode
@@ -3643,15 +3657,19 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change end: Type-safe global state handler
 		// kilocode_change start: STT (Speech-to-Text) handlers
 		case "stt:start":
 		case "stt:stop":
-		case "stt:cancel": {
+		case "stt:cancel":
+		case "stt:listDevices":
+		case "stt:selectDevice":
+		case "stt:checkAvailability": {
 			const { handleSTTCommand } = await import("./sttHandlers")
 			await handleSTTCommand(provider, message as any)
 			break
 		}
-		// kilocode_change end: Type-safe global state handler
+		// kilocode_change end: STT (Speech-to-Text) handlers
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break
@@ -3695,14 +3713,15 @@ export const webviewMessageHandler = async (
 			break
 		} // kilocode_change start: Chat text area FIM autocomplete
 		case "requestChatCompletion": {
-			const { handleChatCompletionRequest } = await import(
-				"../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
-			)
 			await handleChatCompletionRequest(
 				message as WebviewMessage & { type: "requestChatCompletion" },
 				provider,
 				getCurrentCwd,
 			)
+			break
+		}
+		case "chatCompletionAccepted": {
+			handleChatCompletionAccepted(message as WebviewMessage & { type: "chatCompletionAccepted" })
 			break
 		}
 		// kilocode_change end: Chat text area FIM autocomplete
@@ -4013,7 +4032,7 @@ export const webviewMessageHandler = async (
 			try {
 				const sessionService = SessionManager.init()
 
-				if (!sessionService.sessionId) {
+				if (!sessionService?.sessionId) {
 					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
 					break
 				}
@@ -4029,14 +4048,18 @@ export const webviewMessageHandler = async (
 			try {
 				const sessionService = SessionManager.init()
 
-				const sessionId = message.sessionId || sessionService.sessionId
+				const sessionId = message.sessionId || sessionService?.sessionId
 
 				if (!sessionId) {
 					vscode.window.showErrorMessage("No active session. Start a new task to create a session.")
 					break
 				}
 
-				const result = await sessionService.shareSession(sessionId)
+				const result = await sessionService?.shareSession(sessionId)
+
+				if (!result) {
+					throw new Error("SessionManager not initialized")
+				}
 
 				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
 
@@ -4061,9 +4084,13 @@ export const webviewMessageHandler = async (
 				const taskId = message.text
 				const sessionService = SessionManager.init()
 
-				const sessionId = await sessionService.getSessionFromTask(taskId, provider)
+				const sessionId = await sessionService?.getSessionFromTask(taskId, provider)
 
-				const result = await sessionService.shareSession(sessionId)
+				const result = await sessionService?.shareSession(sessionId)
+
+				if (!result) {
+					throw new Error("SessionManager not initialized")
+				}
 
 				const shareUrl = `https://app.kilo.ai/share/${result.share_id}`
 
@@ -4088,7 +4115,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService.forkSession(message.shareId, true)
+				await sessionService?.forkSession(message.shareId, true)
 
 				await provider.postStateToWebview()
 
@@ -4110,7 +4137,7 @@ export const webviewMessageHandler = async (
 
 				await provider.clearTask()
 
-				await sessionService.restoreSession(message.sessionId, true)
+				await sessionService?.restoreSession(message.sessionId, true)
 
 				await provider.postStateToWebview()
 			} catch (error) {

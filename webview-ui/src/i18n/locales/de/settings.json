@@ -582,6 +582,7 @@
 			"none": "Keine",
 			"minimal": "Minimal (schnellste)",
 			"high": "Hoch",
+			"xhigh": "Sehr hoch",
 			"medium": "Mittel",
 			"low": "Niedrig",
 			"xhigh": "Sehr hoch"
@@ -1020,7 +1021,9 @@
 		"searchPlaceholder": "Suchen",
 		"noMatchFound": "Keine Übereinstimmung gefunden",
 		"useCustomModel": "Benutzerdefiniert verwenden: {{modelId}}",
-		"simplifiedExplanation": "Du kannst detaillierte Modelleinstellungen später anpassen."
+		"simplifiedExplanation": "Du kannst detaillierte Modelleinstellungen später anpassen.",
+		"recommendedModels": "Empfohlene Modelle",
+		"allModels": "Alle Modelle"
 	},
 	"footer": {
 		"feedback": "Wenn du Fragen oder Feedback hast, kannst du gerne ein Issue auf <githubLink>github.com/Kilo-Org/kilocode</githubLink> öffnen oder <redditLink>reddit.com/r/kilocode</redditLink> oder <discordLink>kilo.ai/discord</discordLink> beitreten",
@@ -1141,6 +1144,10 @@
 		"collapseThinking": {
 			"label": "Gedankenblöcke standardmäßig ausblenden",
 			"description": "Wenn aktiviert, werden Gedankenblöcke standardmäßig ausgeblendet, bis du mit ihnen interagierst"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "{{primaryMod}}+Enter zum Senden erfordern",
+			"description": "Wenn aktiviert, musst du {{primaryMod}}+Enter drücken, um Nachrichten zu senden, anstatt nur Enter"
 		}
 	}
 }

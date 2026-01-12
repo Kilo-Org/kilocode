@@ -106,6 +106,7 @@
 		"errors": {
 			"cliOutdated": "Twoja wersja Kilocode CLI jest przestarzała i nie obsługuje Agent Managera. Zaktualizuj do najnowszej wersji.",
 			"cliNotFound": "Nie znaleziono Kilocode CLI. Zainstaluj go, aby korzystać z Agent Managera.",
+			"cliMisconfigured": "Kilocode CLI nie jest skonfigurowany. Uruchom 'kilocode auth', aby się zalogować lub 'kilocode config', aby skonfigurować.",
 			"sessionFailed": "Nie udało się uruchomić sesji agenta",
 			"sessionFailedWithMessage": "Nie udało się uruchomić sesji agenta: {{message}}"
 		},
@@ -115,6 +116,7 @@
 			"getHelp": "Uzyskaj Pomoc",
 			"runInTerminal": "Uruchom w Terminalu",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "Aktualizuj Globalnie",
 			"updateLocal": "Aktualizuj Lokalnie",
 			"installGlobal": "Zainstaluj Globalnie",
@@ -128,11 +130,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "wstrzymane",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (wyłączone)",
-				"tokenError": "Aby używać Autocomplete, musi być ustawiony ważny token",
+				"noCredits": "**Brak środków na koncie**\n\nTwoje konto Kilo Code nie ma środków. Aby korzystać z autouzupełniania, dodaj środki do swojego konta.\n\n[Otwórz Ustawienia](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Nie skonfigurowano modelu autouzupełniania**\n\nAby włączyć autouzupełnianie, dodaj profil z jednym z tych obsługiwanych dostawców: {{providers}}.\n\n[Otwórz Ustawienia](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Całkowity koszt sesji:",
 				"provider": "Dostawca:",
 				"model": "Model:",
@@ -194,5 +198,15 @@
 			"cancelButton": "Anuluj"
 		},
 		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Twój klucz API OpenAI jest nieprawidłowy lub nie ma dostępu do API Realtime. Sprawdź swój klucz API i spróbuj ponownie.",
+			"unknown": "Połączenie nie powiodło się. Sprawdź konfigurację i spróbuj ponownie."
+		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: Dodano {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Kod: Usunięto {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

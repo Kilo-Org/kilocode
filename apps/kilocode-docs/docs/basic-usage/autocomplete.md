@@ -16,8 +16,6 @@ Autocomplete analyzes your code context and provides:
 - **Contextual suggestions** based on your surrounding code
 - **Multi-line completions** for complex code structures
 
-The feature uses your selected AI provider to generate intelligent suggestions that match your coding style and project context.
-
 ## Triggering Options
 
 ### Pause to Complete
@@ -27,24 +25,6 @@ When enabled, Kilo Code automatically triggers autocomplete when you pause typin
 - **Auto Trigger Delay**: Configure the delay (in seconds) before autocomplete triggers after you stop typing
 - Default is 3 seconds, but this can be adjusted up or down
 - Shorter delays mean quicker suggestions but may be more resource-intensive
-
-### Quick Task (Cmd+I)
-
-Need to make a quick change? The Quick Task feature allows you to:
-
-1. Select code in your editor (or place your cursor where you want changes)
-2. Press `Cmd+I` (Mac) or `Ctrl+I` (Windows/Linux)
-3. Describe your goal in plain English
-4. Receive a code suggestion without going to the chat
-
-**Examples:**
-
-- "create a React component with these props"
-- "add error handling to this function"
-- "convert this to TypeScript"
-- "optimize this loop for performance"
-
-You can customize the keyboard shortcut in VS Code's keyboard shortcuts settings.
 
 ### Manual Autocomplete (Cmd+L)
 
@@ -63,6 +43,28 @@ This is ideal for:
 - Keeping you in the flow without interruptions
 
 You can customize this keyboard shortcut as well in your VS Code settings.
+
+## Provider and Model Selection
+
+Autocomplete currently uses **Codestral** (by Mistral AI) as the underlying model. This model is specifically optimized for code completion tasks and provides fast, high-quality suggestions.
+
+### How the Provider is Chosen
+
+Kilo Code automatically selects a provider for autocomplete in the following priority order:
+
+- **Mistral** (using `codestral-latest`)
+- **Kilo Code** (using `mistralai/codestral-2508`)
+- **OpenRouter** (using `mistralai/codestral-2508`)
+- **Requesty** (using `mistral/codestral-latest`)
+- **Bedrock** (using `mistral.codestral-2508-v1:0`)
+- **Hugging Face** (using `mistralai/Codestral-22B-v0.1`)
+- **LiteLLM** (using `codestral/codestral-latest`)
+- **LM Studio** (using `mistralai/codestral-22b-v0.1`)
+- **Ollama** (using `codestral:latest`)
+
+:::note
+**Model Selection is Currently Fixed**: At this time, you cannot freely choose a different model for autocomplete. The feature is designed to work specifically with Codestral, which is optimized for Fill-in-the-Middle (FIM) completions. Support for additional models may be added in future releases.
+:::
 
 ## Disable Rival Autocomplete
 

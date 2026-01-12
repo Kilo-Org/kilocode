@@ -54,6 +54,17 @@ export const githubDarkTheme: Theme = {
 		lineNumber: "#8b949e",
 	},
 
+	markdown: {
+		text: "#c9d1d9",
+		heading: "#58a6ff",
+		strong: "#ffffff",
+		em: "#c9d1d9",
+		code: "#3fb950",
+		blockquote: "#8b949e",
+		link: "#58a6ff",
+		list: "#c9d1d9",
+	},
+
 	ui: {
 		border: {
 			default: "#30363d",

@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "一時停止中",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（無効）",
-				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
+				"noCredits": "**アカウントにクレジットがありません**\n\nKilo Code アカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "セッション合計コスト:",
 				"provider": "プロバイダー:",
 				"model": "モデル:",
@@ -176,6 +178,7 @@
 		"errors": {
 			"cliOutdated": "Kilocode CLIのバージョンが古く、Agent Managerをサポートしていません。最新バージョンに更新してください。",
 			"cliNotFound": "Kilocode CLIが見つかりません。Agent Managerを使用するにはインストールしてください。",
+			"cliMisconfigured": "Kilocode CLIが設定されていません。'kilocode auth'でサインインするか、'kilocode config'で設定してください。",
 			"sessionFailed": "エージェントセッションの開始に失敗しました",
 			"sessionFailedWithMessage": "エージェントセッションの開始に失敗しました: {{message}}"
 		},
@@ -185,6 +188,7 @@
 			"getHelp": "ヘルプを表示",
 			"runInTerminal": "ターミナルで実行",
 			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
 			"updateGlobal": "グローバル更新",
 			"updateLocal": "ローカル更新",
 			"installGlobal": "グローバルインストール",
@@ -194,5 +198,15 @@
 			"installMessage": "Kilocode CLIをインストールするためにnpm installを実行しています。完了したら、このターミナルを閉じてAgent Managerを再度起動してみてください。",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "OpenAI APIキーが無効であるか、Realtime APIへのアクセス権限がありません。APIキーを確認して再度お試しください。",
+			"unknown": "接続に失敗しました。設定を確認してもう一度お試しください。"
+		}
+	},
+	"configDiscovery": {
+		"added": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を追加しました。",
+		"removed": "Kiloコード: {{source}} {{configType}}: {{name}}{{modeStr}} を削除しました"
 	}
 }

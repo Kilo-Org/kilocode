@@ -289,10 +289,13 @@ describe("AgentRegistry", () => {
 			expect(result).toBeUndefined()
 		})
 
-		it("returns undefined when updating session without parallelMode enabled", () => {
+		it("enables parallelMode when updating a session without parallelMode", () => {
 			const session = registry.createSession("session-1", "no parallel mode")
 			const result = registry.updateParallelModeInfo(session.sessionId, { branch: "test" })
-			expect(result).toBeUndefined()
+			expect(result?.parallelMode).toEqual({
+				enabled: true,
+				branch: "test",
+			})
 		})
 
 		it("preserves parallelMode info in getState", () => {
@@ -437,49 +440,6 @@ describe("AgentRegistry", () => {
 				const sessions = registry.getSessionsForGitUrl("https://github.com/org/other-repo.git")
 
 				expect(sessions).toHaveLength(0)
-			})
-		})
-
-		describe("autoMode", () => {
-			it("creates session without autoMode by default", () => {
-				const session = registry.createSession("session-1", "no auto mode")
-				expect(session.autoMode).toBeUndefined()
-			})
-
-			it("creates session with autoMode enabled when option is provided", () => {
-				const session = registry.createSession("session-1", "with auto mode", undefined, { autoMode: true })
-				expect(session.autoMode).toBe(true)
-			})
-
-			it("creates session without autoMode when option is false", () => {
-				const session = registry.createSession("session-1", "without auto mode", undefined, { autoMode: false })
-				expect(session.autoMode).toBeUndefined()
-			})
-
-			it("stores autoMode in pending session when provided", () => {
-				const pending = registry.setPendingSession("test prompt", { autoMode: true })
-				expect(pending.autoMode).toBe(true)
-				expect(registry.pendingSession?.autoMode).toBe(true)
-			})
-
-			it("creates pending session without autoMode when not provided", () => {
-				const pending = registry.setPendingSession("test prompt")
-				expect(pending.autoMode).toBeUndefined()
-			})
-
-			it("preserves autoMode in getState", () => {
-				registry.createSession("session-1", "auto mode session", undefined, { autoMode: true })
-				const state = registry.getState()
-				expect(state.sessions[0].autoMode).toBe(true)
-			})
-
-			it("combines autoMode with parallelMode", () => {
-				const session = registry.createSession("session-1", "combined", undefined, {
-					parallelMode: true,
-					autoMode: true,
-				})
-				expect(session.autoMode).toBe(true)
-				expect(session.parallelMode).toEqual({ enabled: true })
 			})
 		})
 

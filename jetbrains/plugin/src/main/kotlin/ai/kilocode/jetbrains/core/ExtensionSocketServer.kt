@@ -156,6 +156,9 @@ class ExtensionSocketServer() : ISocketServer {
                 // Create extension host manager
                 val manager = ExtensionHostManager(clientSocket, projectPath, project)
                 clientManagers[clientSocket] = manager
+                
+                // Register with PluginContext for access from UI
+                project.getService(PluginContext::class.java).setExtensionHostManager(manager)
 
                 handleClient(clientSocket, manager)
             } catch (e: IOException) {
@@ -317,6 +320,9 @@ class ExtensionSocketServer() : ISocketServer {
             // Create extension host manager
             val manager = ExtensionHostManager(clientSocket, projectPath, project)
             clientManagers[clientSocket] = manager
+            
+            // Register with PluginContext for access from UI
+            project.getService(PluginContext::class.java).setExtensionHostManager(manager)
 
             // Start connection handling in background thread
             thread(start = true, name = "DebugHostHandler") {

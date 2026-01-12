@@ -9,8 +9,6 @@ import { parseSourceCodeDefinitionsForFile } from "../../../services/tree-sitter
 import { isBinaryFile } from "isbinaryfile"
 import { ReadFileToolUse, ToolParamName, ToolResponse } from "../../../shared/tools"
 import { readFileTool } from "../ReadFileTool"
-import { formatResponse } from "../../prompts/responses"
-import { DEFAULT_MAX_IMAGE_FILE_SIZE_MB, DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB } from "../helpers/imageHelpers"
 
 vi.mock("path", async () => {
 	const originalPath = await vi.importActual("path")

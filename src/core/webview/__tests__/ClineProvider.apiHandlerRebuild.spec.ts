@@ -588,7 +588,7 @@ describe("ClineProvider - API Handler Rebuild Guard", () => {
 				"claude-3-5-sonnet-20241022",
 			)
 			expect(getModelId({ apiProvider: "openai", openAiModelId: "gpt-4-turbo" })).toBe("gpt-4-turbo")
-			expect(getModelId({ apiProvider: "glama", glamaModelId: "some-model" })).toBe("some-model")
+			expect(getModelId({ apiProvider: "glama", glamaModelId: "some-model" })).toBe("some-model") // kilocode_change
 			expect(getModelId({ apiProvider: "bedrock", apiModelId: "anthropic.claude-v2" })).toBe(
 				"anthropic.claude-v2",
 			)

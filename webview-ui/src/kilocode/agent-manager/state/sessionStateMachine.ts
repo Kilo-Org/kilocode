@@ -278,9 +278,8 @@ function transitionFromStreaming(event: SessionEvent): TransitionResult {
 
 		// Input-required asks (only on complete)
 		case "ask_followup":
-			if (event.partial) {
-				return { nextState: SessionState.streaming }
-			}
+			// In practice, followup questions may only arrive as partial chunks and never emit a final
+			// non-partial event. Treat any followup as "waiting for user input".
 			return { nextState: SessionState.waiting_input }
 
 		// Completion

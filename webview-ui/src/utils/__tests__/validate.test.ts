@@ -42,6 +42,8 @@ describe("Model Validation Functions", () => {
 				outputPrice: 5.0,
 			},
 		},
+		"nano-gpt": {}, //kilocode_change
+		// kilocode_change start
 		glama: {
 			"valid-model": {
 				maxTokens: 8192,
@@ -52,7 +54,7 @@ describe("Model Validation Functions", () => {
 				outputPrice: 15.0,
 			},
 		},
-		"nano-gpt": {}, //kilocode_change
+		// kilocode_change end
 		requesty: {},
 		unbound: {},
 		litellm: {},
@@ -119,6 +121,7 @@ describe("Model Validation Functions", () => {
 			expect(result).toContain("model")
 		})
 
+		// kilocode_change start
 		it("returns undefined for valid Glama model", () => {
 			const config: ProviderSettings = {
 				apiProvider: "glama",
@@ -138,6 +141,7 @@ describe("Model Validation Functions", () => {
 			const result = getModelValidationError(config, mockRouterModels, allowAllOrganization)
 			expect(result).toBeUndefined()
 		})
+		// kilocode_change end
 
 		it("returns undefined for OpenAI models when no router models provided", () => {
 			const config: ProviderSettings = {
@@ -219,6 +223,7 @@ describe("Model Validation Functions", () => {
 			expect(result).toBeUndefined() // Should exclude model-specific org errors
 		})
 
+		// kilocode_change start
 		it("returns undefined for valid IO Intelligence model", () => {
 			const config: ProviderSettings = {
 				apiProvider: "io-intelligence",
@@ -238,5 +243,6 @@ describe("Model Validation Functions", () => {
 			const result = getModelValidationError(config, mockRouterModels, allowAllOrganization)
 			expect(result).toBeUndefined()
 		})
+		// kilocode_change end
 	})
 })

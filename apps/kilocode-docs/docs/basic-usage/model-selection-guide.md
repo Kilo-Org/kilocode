@@ -35,7 +35,7 @@ One thing that doesn't change: context window size matters for your workflow.
 - **Large codebases**: 256K+ tokens helps with cross-system understanding
 - **Massive systems**: 1M+ token models exist but effectiveness degrades at the extremes
 
-Check [our provider docs](/docs/providers/openrouter) for specific context limits on each model.
+Check [our provider docs](/basic-usage/connecting-providers) for specific context limits on each model.
 
 ## Stay Current
 

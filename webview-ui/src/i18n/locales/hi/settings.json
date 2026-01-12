@@ -573,6 +573,7 @@
 			"none": "कोई नहीं",
 			"minimal": "न्यूनतम (सबसे तेज़)",
 			"high": "उच्च",
+			"xhigh": "बहुत उच्च",
 			"medium": "मध्यम",
 			"low": "निम्न",
 			"xhigh": "अत्यंत उच्च"
@@ -1025,7 +1026,9 @@
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
-		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।",
+		"recommendedModels": "अनुशंसित मॉडल",
+		"allModels": "सभी मॉडल"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",
@@ -1146,6 +1149,10 @@
 		"collapseThinking": {
 			"label": "सोच संदेशों को डिफ़ॉल्ट रूप से संक्षिप्त करें",
 			"description": "सक्षम होने पर, सोच ब्लॉक आपके द्वारा उनके साथ इंटरैक्ट करने तक डिफ़ॉल्ट रूप से संक्षिप्त रहेंगे"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "संदेश भेजने के लिए {{primaryMod}}+Enter की आवश्यकता है",
+			"description": "जब सक्षम हो, तो आपको केवल Enter के बजाय संदेश भेजने के लिए {{primaryMod}}+Enter दबाना होगा"
 		}
 	}
 }

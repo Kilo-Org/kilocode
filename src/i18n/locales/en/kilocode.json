@@ -2,6 +2,10 @@
 	"info": {
 		"settings_imported": "Settings imported successfully."
 	},
+	"configDiscovery": {
+		"added": "Kilo Code: Added {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Code: Removed {{source}} {{configType}}: {{name}}{{modeStr}}"
+	},
 	"userFeedback": {
 		"message_update_failed": "Failed to update message",
 		"no_checkpoint_found": "No checkpoint found before this message",
@@ -99,11 +103,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "snoozed",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (disabled)",
-				"tokenError": "A valid token must be set to use Autocomplete",
+				"noCredits": "**No credits in your account**\n\nYour Kilo Code account has no credits. To use autocomplete, please add credits to your account.\n\n[Open Settings](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**No autocomplete model configured**\n\nTo enable autocomplete, add a profile with one of these supported providers: {{providers}}.\n\n[Open Settings](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Session total cost:",
 				"provider": "Provider:",
 				"model": "Model:",
@@ -161,6 +167,7 @@
 		"errors": {
 			"cliOutdated": "Your Kilocode CLI version is outdated and doesn't support the Agent Manager. Please update to the latest version.",
 			"cliNotFound": "Kilocode CLI not found. Please install it to use the Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI is not configured. Please run 'kilocode auth' to sign in or 'kilocode config' to configure.",
 			"sessionFailed": "Failed to start agent session",
 			"sessionFailedWithMessage": "Failed to start agent session: {{message}}"
 		},
@@ -173,7 +180,8 @@
 			"updateLocal": "Update Local",
 			"installGlobal": "Install Global",
 			"installLocal": "Install Local",
-			"loginCli": "Run kilocode auth"
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config"
 		},
 		"terminal": {
 			"installMessage": "Running npm install to install the Kilocode CLI. Once complete, you can close this terminal and try starting the Agent Manager again.",
@@ -193,6 +201,12 @@
 			"message": "Double-check all generated commands before running them. Terminal actions cannot always be undone— running unverified commands can result in irreversible data loss or system damage. Review and understand the command completely before proceeding!",
 			"okButton": "I Understand",
 			"cancelButton": "Cancel"
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Your OpenAI API key is invalid or does not have access to the Realtime API. Please check your API key and try again.",
+			"unknown": "Connection failed. Please check your configuration and try again."
 		}
 	}
 }

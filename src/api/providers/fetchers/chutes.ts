@@ -40,7 +40,6 @@ export async function getChutesModels(apiKey?: string): Promise<Record<string, M
 				const contextWindow = m.context_length
 
 				if (!contextWindow) {
-					console.error(`Context length is required for Chutes model: ${m.id}`)
 					continue
 				}
 

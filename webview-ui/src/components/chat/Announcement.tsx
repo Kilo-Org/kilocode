@@ -1,5 +1,6 @@
-import { useState, memo } from "react"
+import { memo, type ReactNode, useState } from "react"
 import { Trans } from "react-i18next"
+import { SiDiscord, SiReddit, SiX } from "react-icons/si"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { Package } from "@roo/package"
@@ -48,15 +49,28 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 						</ul>
 					</div>
 
-					<div className="mt-4 text-sm text-center">
-						<Trans
-							i18nKey="chat:announcement.socialLinks"
-							components={{
-								xLink: <XLink />,
-								discordLink: <DiscordLink />,
-								redditLink: <RedditLink />,
-							}}
-						/>
+					<div className="mt-4 text-sm text-center text-vscode-descriptionForeground">
+						<div className="flex items-center justify-center gap-4">
+							<SocialLink
+								icon={<SiX className="w-4 h-4" aria-hidden />}
+								label="X"
+								href="https://x.com/roocode"
+							/>
+							<SocialLink
+								icon={<SiDiscord className="w-4 h-4" aria-hidden />}
+								label="Discord"
+								href="https://discord.gg/rCQcvT7Fnt"
+							/>
+							<SocialLink
+								icon={<SiReddit className="w-4 h-4" aria-hidden />}
+								label="Reddit"
+								href="https://www.reddit.com/r/RooCode/"
+							/>
+						</div>
+					</div>
+
+					<div className="mt-3 text-sm text-center text-vscode-descriptionForeground">
+						<Trans i18nKey="chat:announcement.support" components={{ githubLink: <GitHubLink /> }} />
 					</div>
 
 					{/* Careers Section */}
@@ -74,40 +88,31 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 	)
 }
 
-const XLink = () => (
+const SocialLink = ({ icon, label, href }: { icon: ReactNode; label: string; href: string }) => (
 	<VSCodeLink
-		href="https://x.com/roocode"
+		href={href}
+		className="inline-flex items-center gap-1"
 		onClick={(e) => {
 			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://x.com/roocode" })
+			vscode.postMessage({ type: "openExternal", url: href })
 		}}>
-		X
+		{icon}
+		<span className="sr-only">{label}</span>
 	</VSCodeLink>
 )
 
-const DiscordLink = () => (
+const GitHubLink = ({ children }: { children?: ReactNode }) => (
 	<VSCodeLink
-		href="https://discord.gg/rCQcvT7Fnt"
+		href="https://github.com/RooCodeInc/Roo-Code"
 		onClick={(e) => {
 			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://discord.gg/rCQcvT7Fnt" })
+			vscode.postMessage({ type: "openExternal", url: "https://github.com/RooCodeInc/Roo-Code" })
 		}}>
-		Discord
+		{children}
 	</VSCodeLink>
 )
 
-const RedditLink = () => (
-	<VSCodeLink
-		href="https://www.reddit.com/r/RooCode/"
-		onClick={(e) => {
-			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://www.reddit.com/r/RooCode/" })
-		}}>
-		r/RooCode
-	</VSCodeLink>
-)
-
-const CareersLink = ({ children }: { children?: React.ReactNode }) => (
+const CareersLink = ({ children }: { children?: ReactNode }) => (
 	<VSCodeLink
 		href="https://careers.roocode.com"
 		onClick={(e) => {

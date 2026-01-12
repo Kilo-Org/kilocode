@@ -112,6 +112,7 @@
 	"enhancePrompt": "Aprimorar prompt com contexto adicional",
 	"addImages": "Adicionar imagens à mensagem",
 	"sendMessage": "Enviar mensagem",
+	"pressToSend": "Pressione {{keyCombination}} para enviar",
 	"stopTts": "Parar conversão de texto em fala",
 	"typeMessage": "Digite uma mensagem...",
 	"typeTask": "Digite sua tarefa aqui...",
@@ -154,7 +155,8 @@
 			"403": "Não autorizado. Sua chave API é válida, mas o provedor se recusou a concluir esta solicitação.",
 			"429": "Muitas solicitações. Você está sendo limitado pelo provedor. Por favor, aguarde um pouco antes de sua próxima chamada de API.",
 			"500": "Erro do servidor do provedor. Algo está errado do lado do provedor, não há nada de errado com sua solicitação.",
-			"unknown": "Erro de API desconhecido. Por favor, entre em contato com o suporte do Roo Code."
+			"unknown": "Erro de API desconhecido. Por favor, entre em contato com o suporte do Kilo.",
+			"connection": "Erro de conexão. Certifique-se de que você tem uma conexão de internet funcionando."
 		}
 	},
 	"checkpoint": {
@@ -268,6 +270,11 @@
 		"hasQuestion": "Kilo Code tem uma pergunta"
 	},
 	"taskCompleted": "Tarefa concluída",
+	"errorDetails": {
+		"title": "Detalhes do erro",
+		"copyToClipboard": "Copiar para área de transferência",
+		"copied": "Copiado!"
+	},
 	"powershell": {
 		"issues": "Parece que você está tendo problemas com o Windows PowerShell, por favor veja este"
 	},
@@ -293,19 +300,28 @@
 		"thinking": "Pensando",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Contexto condensado",
-		"condensing": "Condensando contexto...",
-		"errorHeader": "Falha ao condensar contexto",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Contexto condensado",
+			"inProgress": "Condensando contexto...",
+			"errorHeader": "Falha ao condensar contexto"
+		},
+		"truncation": {
+			"title": "Contexto truncado",
+			"inProgress": "Truncando contexto...",
+			"messagesRemoved": "{{count}} mensagem removida",
+			"messagesRemoved_other": "{{count}} mensagens removidas",
+			"description": "Mensagens mais antigas foram removidas da conversa para permanecer dentro do limite da janela de contexto. Esta é uma abordagem rápida, mas menos preservadora de contexto em comparação com a condensação."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copiar para entrada (ou Shift + clique)",
-		"autoSelectCountdown": "Seleção automática em {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Aprovação automática ativada. Selecionando em {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Lançado",
+		"title": "Roo Code {{version}} Lançado",
+		"support": "Apoie o Roo Code nos dando uma estrela no <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Modelo stealth GRATUITO por tempo limitado</bold> - Code Supernova: Agora atualizado com uma <bold>janela de contexto de 1M tokens</bold>! Um modelo de codificação agêntica versátil que suporta entradas de imagem, acessível através do Roo Code Cloud.",
 			"note": "(Nota: prompts e completações são registrados pelo criador do modelo e usados para melhorá-lo)",
@@ -342,13 +358,25 @@
 		"sessionStarted": "Sessão do navegador iniciada",
 		"actions": {
 			"title": "Ação do navegador: ",
+			"launched": "Navegador iniciado",
 			"launch": "Iniciar navegador em {{url}}",
+			"clicked": "Clicado em: {{coordinate}}",
 			"click": "Clique ({{coordinate}})",
+			"typed": "Digitado: {{text}}",
 			"type": "Digitar \"{{text}}\"",
+			"pressed": "Pressionado: {{key}}",
 			"press": "Pressione {{key}}",
+			"scrolledDown": "Rolado para baixo",
 			"scrollDown": "Rolar para baixo",
+			"scrolledUp": "Rolado para cima",
 			"scrollUp": "Rolar para cima",
+			"hovered": "Pairado em: {{coordinate}}",
 			"hover": "Pairar ({{coordinate}})",
+			"resized": "Redimensionado para: {{size}}",
+			"resize": "Redimensionar para {{size}}",
+			"screenshotSaved": "Captura de tela salva",
+			"screenshot": "Salvar captura de tela em {{path}}",
+			"closed": "Navegador fechado",
 			"close": "Fechar navegador"
 		}
 	},
