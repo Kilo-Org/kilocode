@@ -80,44 +80,35 @@ export class GitStateService {
 			const git = simpleGit(cwd)
 
 			const remotes = await git.getRemotes(true)
-			
-			// Determine which remote to use based on branch tracking configuration
-			let selectedRemote: typeof remotes[0] | undefined
-			
-			try {
-				// Get the current branch name
-				const symbolicRef = await git.raw(["symbolic-ref", "-q", "HEAD"])
-				const currentBranch = symbolicRef.trim().replace(/^refs\/heads\//, "")
-				
-				// Get the tracking remote for the current branch
-				const trackingRemote = await git.raw(["config", `branch.${currentBranch}.remote`])
-				const trackingRemoteName = trackingRemote.trim()
-				
-				// Use the branch's tracking remote if it exists in the remotes list
-				if (trackingRemoteName) {
-					selectedRemote = remotes.find((remote) => remote.name === trackingRemoteName)
-				}
-			} catch {
-				// Ignore errors - will fall through to fallback logic
-			}
-			
-			// Fallback logic: prefer origin, then first remote
-			if (!selectedRemote) {
-				const originRemote = remotes.find((remote) => remote.name === "origin")
-				selectedRemote = originRemote || remotes[0]
-			}
-			
-			const repoUrl = selectedRemote?.refs?.fetch || selectedRemote?.refs?.push
 
-			const head = await git.revparse(["HEAD"])
-
+			// Get branch name (undefined if detached HEAD)
 			let branch: string | undefined
 			try {
 				const symbolicRef = await git.raw(["symbolic-ref", "-q", "HEAD"])
 				branch = symbolicRef.trim().replace(/^refs\/heads\//, "")
 			} catch {
-				branch = undefined
+				// Detached HEAD - branch remains undefined
 			}
+
+			// Determine which remote to use based on branch tracking configuration
+			let selectedRemote: (typeof remotes)[0] | undefined
+			if (branch) {
+				try {
+					const trackingRemote = await git.raw(["config", `branch.${branch}.remote`])
+					const trackingRemoteName = trackingRemote.trim()
+					if (trackingRemoteName) {
+						selectedRemote = remotes.find((remote) => remote.name === trackingRemoteName)
+					}
+				} catch {
+					// No tracking remote configured - fall through to fallback
+				}
+			}
+
+			// Fallback: prefer origin, then first remote
+			selectedRemote ??= remotes.find((remote) => remote.name === "origin") ?? remotes[0]
+
+			const repoUrl = selectedRemote?.refs?.fetch ?? selectedRemote?.refs?.push
+			const head = await git.revparse(["HEAD"])
 
 			const untrackedOutput = await git.raw(["ls-files", "--others", "--exclude-standard"])
 			const untrackedFiles = untrackedOutput.trim().split("\n").filter(Boolean)

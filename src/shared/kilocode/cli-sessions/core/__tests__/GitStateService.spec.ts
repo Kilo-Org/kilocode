@@ -137,9 +137,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -176,9 +175,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for tracking
-					.mockResolvedValueOnce("nonexistent") // config branch.feature-branch.remote (doesn't exist)
-					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch name
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch
+					.mockResolvedValueOnce("nonexistent") // config (remote doesn't exist in list)
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -210,9 +208,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch
 					.mockResolvedValueOnce("upstream") // config branch.feature-branch.remote
-					.mockResolvedValueOnce("refs/heads/feature-branch") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -244,9 +241,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -278,9 +274,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -297,9 +292,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -321,8 +315,7 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails for tracking
-					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails for branch name
+					.mockRejectedValueOnce(new Error("not a symbolic ref")) // symbolic-ref fails (detached HEAD)
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff content"),
 			}
@@ -346,9 +339,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce("file1.txt\nfile2.txt") // ls-files
 					.mockResolvedValueOnce(undefined) // add
 					.mockResolvedValueOnce(undefined), // reset
@@ -372,9 +364,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce("file1.txt") // ls-files
 					.mockResolvedValueOnce(undefined) // add
 					.mockResolvedValueOnce(undefined), // reset
@@ -398,9 +389,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce("") // ls-files
 					.mockResolvedValueOnce("abc123def ") // rev-list --parents (first commit)
 					.mockResolvedValueOnce("4b825dc642cb6eb9a060e54bf8d69288fbee4904"), // hash-object empty tree
@@ -429,9 +419,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue(largePatch),
 			}
@@ -463,9 +452,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123def"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockResolvedValueOnce("origin") // config branch.main.remote
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue(largePatch),
 			}
@@ -505,9 +493,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff"),
 			}
@@ -526,9 +513,8 @@ describe("GitStateService", () => {
 				revparse: vi.fn().mockResolvedValue("abc123"),
 				raw: vi
 					.fn()
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for tracking
+					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch
 					.mockRejectedValueOnce(new Error("no tracking remote")) // config fails
-					.mockResolvedValueOnce("refs/heads/main") // symbolic-ref for branch name
 					.mockResolvedValueOnce(""), // ls-files
 				diff: vi.fn().mockResolvedValue("diff"),
 			}
