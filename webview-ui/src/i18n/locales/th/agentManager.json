@@ -54,7 +54,8 @@
 		"otherBranches": "สาขาอื่นๆ",
 		"branchPickerTooltip": "เปลี่ยนสาขาหลัก",
 		"noBranches": "ไม่พบสาขา",
-		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ"
+		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
+		"openTerminal": "เปิดเทอร์มินัล"
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",
@@ -79,6 +80,7 @@
 		"cancelTitle": "ยกเลิกเอเจนต์",
 		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
+		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"

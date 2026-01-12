@@ -18,6 +18,7 @@ import { applyDiffTool as applyDiffToolClass } from "./ApplyDiffTool"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { isNativeProtocol } from "@roo-code/types"
 import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 export interface DiffOperation {
 	path: string
@@ -638,6 +639,19 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
 					didApprove = await askApproval("tool", operationMessage, toolProgressStatus, isWriteProtected)
 
+					// kilocode_change start
+					// Track contribution for single file operation (fire-and-forget)
+					trackContribution({
+						cwd: cline.cwd,
+						filePath: relPath,
+						unifiedDiff: unifiedPatch,
+						status: didApprove ? "accepted" : "rejected",
+						taskId: cline.taskId,
+						organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+						kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+					})
+					// kilocode_change end
+
 					if (!didApprove) {
 						// Revert changes if diff view was shown
 						if (!isPreventFocusDisruptionEnabled) {
@@ -663,6 +677,21 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					}
 				} else {
 					// Batch operations - already approved above
+					// kilocode_change start
+					// Track contribution for batch file operation (fire-and-forget)
+					const unifiedPatchRaw = formatResponse.createPrettyPatch(relPath, beforeContent!, originalContent!)
+					const unifiedPatch = sanitizeUnifiedDiff(unifiedPatchRaw)
+					trackContribution({
+						cwd: cline.cwd,
+						filePath: relPath,
+						unifiedDiff: unifiedPatch,
+						status: "accepted", // Batch operations are already approved at this point
+						taskId: cline.taskId,
+						organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+						kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+					})
+					// kilocode_change end
+
 					if (isPreventFocusDisruptionEnabled) {
 						// Direct file write without diff view or opening the file
 						cline.diffViewProvider.editType = "modify"

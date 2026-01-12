@@ -35,6 +35,8 @@ describe("TaskChannel", () => {
 		wrapperTitle: null,
 		wrapperCode: null,
 		wrapperVersion: null,
+		machineId: null,
+		vscodeIsTelemetryEnabled: null,
 		// kilocode_change end
 		hostname: "test-host",
 	}

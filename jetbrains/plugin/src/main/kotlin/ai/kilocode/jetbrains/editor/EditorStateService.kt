@@ -4,6 +4,7 @@
 
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.core.ExtensionHostManager
 import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
 import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostDocumentsAndEditorsProxy
@@ -17,35 +18,45 @@ class EditorStateService(val project: Project) {
     var extHostDocumentsAndEditorsProxy: ExtHostDocumentsAndEditorsProxy? = null
     var extHostEditorsProxy: ExtHostEditorsProxy? = null
     var extHostDocumentsProxy: ExtHostDocumentsProxy? = null
+    
+    private fun getExtensionHostManager(): ExtensionHostManager? {
+        return PluginContext.getInstance(project).getExtensionHostManager()
+    }
 
     fun acceptDocumentsAndEditorsDelta(detail: DocumentsAndEditorsDelta) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostDocumentsAndEditorsProxy == null) {
-            extHostDocumentsAndEditorsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostDocumentsAndEditors)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostDocumentsAndEditorsProxy == null) {
+                extHostDocumentsAndEditorsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostDocumentsAndEditors)
+            }
+            extHostDocumentsAndEditorsProxy?.acceptDocumentsAndEditorsDelta(detail)
         }
-        extHostDocumentsAndEditorsProxy?.acceptDocumentsAndEditorsDelta(detail)
     }
 
     fun acceptEditorPropertiesChanged(detail: Map<String, EditorPropertiesChangeData>) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostEditorsProxy == null) {
-            extHostEditorsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditors)
-        }
-        extHostEditorsProxy?.let {
-            for ((id, data) in detail) {
-                it.acceptEditorPropertiesChanged(id, data)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostEditorsProxy == null) {
+                extHostEditorsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditors)
+            }
+            extHostEditorsProxy?.let {
+                for ((id, data) in detail) {
+                    it.acceptEditorPropertiesChanged(id, data)
+                }
             }
         }
     }
 
     fun acceptModelChanged(detail: Map<URI, ModelChangedEvent>) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostDocumentsProxy == null) {
-            extHostDocumentsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostDocuments)
-        }
-        extHostDocumentsProxy?.let {
-            for ((uri, data) in detail) {
-                it.acceptModelChanged(uri, data, data.isDirty)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostDocumentsProxy == null) {
+                extHostDocumentsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostDocuments)
+            }
+            extHostDocumentsProxy?.let {
+                for ((uri, data) in detail) {
+                    it.acceptModelChanged(uri, data, data.isDirty)
+                }
             }
         }
     }
@@ -53,28 +64,38 @@ class EditorStateService(val project: Project) {
 
 class TabStateService(val project: Project) {
     var extHostEditorTabsProxy: ExtHostEditorTabsProxy? = null
+    
+    private fun getExtensionHostManager(): ExtensionHostManager? {
+        return PluginContext.getInstance(project).getExtensionHostManager()
+    }
 
     fun acceptEditorTabModel(detail: List<EditorTabGroupDto>) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostEditorTabsProxy == null) {
-            extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostEditorTabsProxy == null) {
+                extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+            }
+            extHostEditorTabsProxy?.acceptEditorTabModel(detail)
         }
-        extHostEditorTabsProxy?.acceptEditorTabModel(detail)
     }
 
     fun acceptTabOperation(detail: TabOperation) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostEditorTabsProxy == null) {
-            extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostEditorTabsProxy == null) {
+                extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+            }
+            extHostEditorTabsProxy?.acceptTabOperation(detail)
         }
-        extHostEditorTabsProxy?.acceptTabOperation(detail)
     }
 
     fun acceptTabGroupUpdate(detail: EditorTabGroupDto) {
-        val protocol = PluginContext.getInstance(project).getRPCProtocol()
-        if (extHostEditorTabsProxy == null) {
-            extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+        getExtensionHostManager()?.queueMessage {
+            val protocol = PluginContext.getInstance(project).getRPCProtocol()
+            if (extHostEditorTabsProxy == null) {
+                extHostEditorTabsProxy = protocol?.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostEditorTabs)
+            }
+            extHostEditorTabsProxy?.acceptTabGroupUpdate(detail)
         }
-        extHostEditorTabsProxy?.acceptTabGroupUpdate(detail)
     }
 }

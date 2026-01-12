@@ -154,4 +154,4 @@ The feature integrates with VS Code's built-in git functionality. If you encount
 ## Related Features
 
 - [API Configuration Profiles](/features/api-configuration-profiles) - Use different models for commit generation
-- [Settings Management](/features/settings-management) - Manage all your Kilo Code preferences
+- [Settings Management](/basic-usage/settings-management) - Manage all your Kilo Code preferences

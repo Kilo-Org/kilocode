@@ -13,7 +13,6 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { RouterProvider } from "./router-provider"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 export class DeepInfraHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -94,11 +93,8 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 		const { data: stream } = await this.client.chat.completions.create(requestOptions).withResponse()
 
 		let lastUsage: OpenAI.CompletionUsage | undefined
-		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
-
-			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 			if (delta?.content) {
 				yield { type: "text", text: delta.content }

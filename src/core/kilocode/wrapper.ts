@@ -31,3 +31,14 @@ export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 		kiloCodeWrapperJetbrains,
 	}
 }
+
+export const getEditorNameHeader = () => {
+	const props = getKiloCodeWrapperProperties()
+	return (
+		props.kiloCodeWrapped
+			? [props.kiloCodeWrapperTitle, props.kiloCodeWrapperVersion]
+			: [vscode.env.appName, vscode.version]
+	)
+		.filter(Boolean)
+		.join(" ")
+}

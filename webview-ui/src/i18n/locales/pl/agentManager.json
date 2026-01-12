@@ -56,7 +56,8 @@
 		"otherBranches": "Inne gałęzie",
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
-		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania"
+		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
+		"openTerminal": "Otwórz terminal"
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",
@@ -81,6 +82,7 @@
 		"cancelTitle": "Anuluj agenta",
 		"finishToBranchTitle": "Zakończ worktree i przygotuj branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Zakończ worktree i przygotuj branch",
+		"createPRTitle": "Utwórz pull request",
 		"sendTitle": "Wyślij wiadomość",
 		"resumeTitle": "Wznów agenta",
 		"hint": "Enter aby wysłać, Shift+Enter dla nowej linii"

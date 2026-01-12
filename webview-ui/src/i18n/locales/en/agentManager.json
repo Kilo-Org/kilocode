@@ -54,7 +54,8 @@
 		"otherBranches": "Other branches",
 		"branchPickerTooltip": "Switch base branch",
 		"noBranches": "No branches found",
-		"noMatchingBranches": "No branches match your search"
+		"noMatchingBranches": "No branches match your search",
+		"openTerminal": "Open terminal"
 	},
 	"messages": {
 		"waiting": "Waiting for agent response...",
@@ -79,6 +80,7 @@
 		"cancelTitle": "Cancel agent",
 		"finishToBranchTitle": "Finish worktree and prepare branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finish worktree and prepare branch",
+		"createPRTitle": "Create pull request",
 		"sendTitle": "Send message",
 		"resumeTitle": "Resume agent",
 		"hint": "Press Enter to send, Shift+Enter for new line"

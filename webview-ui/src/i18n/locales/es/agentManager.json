@@ -54,7 +54,8 @@
 		"otherBranches": "Otras ramas",
 		"branchPickerTooltip": "Cambiar rama base",
 		"noBranches": "No se encontraron ramas",
-		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda"
+		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda",
+		"openTerminal": "Abrir terminal"
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",
@@ -79,6 +80,7 @@
 		"cancelTitle": "Cancelar agente",
 		"finishToBranchTitle": "Finalizar worktree y preparar branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Finalizar worktree y preparar branch",
+		"createPRTitle": "Crear pull request",
 		"sendTitle": "Enviar mensaje",
 		"resumeTitle": "Reanudar agente",
 		"hint": "Pulsa Enter para enviar, Shift+Enter para nueva línea"

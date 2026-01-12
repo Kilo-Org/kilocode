@@ -119,7 +119,7 @@ export const KilocodeNotifications: React.FC = () => {
 					<h3 className="font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
 					<button
 						onClick={() => dismissNotificationId(currentNotification.id)}
-						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 cursor-pointer"
 						title="Dismiss notification">
 						<span className="codicon codicon-close"></span>
 					</button>
@@ -146,7 +146,7 @@ export const KilocodeNotifications: React.FC = () => {
 				<div className="flex items-center justify-end pt-2">
 					<button
 						onClick={goToPrevious}
-						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center"
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center cursor-pointer"
 						title="Previous notification">
 						<span className="codicon codicon-chevron-left"></span>
 					</button>
@@ -155,7 +155,7 @@ export const KilocodeNotifications: React.FC = () => {
 					</span>
 					<button
 						onClick={goToNext}
-						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center"
+						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1 inline-flex items-center cursor-pointer"
 						title="Next notification">
 						<span className="codicon codicon-chevron-right"></span>
 					</button>

@@ -54,6 +54,17 @@ export const githubLightTheme: Theme = {
 		lineNumber: "#999",
 	},
 
+	markdown: {
+		text: "#24292e",
+		heading: "#0086b3",
+		strong: "#000000",
+		em: "#24292e",
+		code: "#008080",
+		blockquote: "#998",
+		link: "#0086b3",
+		list: "#24292e",
+	},
+
 	ui: {
 		border: {
 			default: "#e1e4e8",

@@ -17,6 +17,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { convertNewFileToUnifiedDiff, computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 interface WriteToFileParams {
 	path: string
@@ -142,6 +143,19 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 
 				const didApprove = await askApproval("tool", completeMessage, undefined, isWriteProtected)
 
+				// kilocode_change start
+				// Track contribution (fire-and-forget, never blocks user workflow)
+				trackContribution({
+					cwd: task.cwd,
+					filePath: relPath,
+					unifiedDiff: unified,
+					status: didApprove ? "accepted" : "rejected",
+					taskId: task.taskId,
+					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+					kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+				})
+				// kilocode_change end
+
 				if (!didApprove) {
 					return
 				}
@@ -173,6 +187,19 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 				} satisfies ClineSayTool)
 
 				const didApprove = await askApproval("tool", completeMessage, undefined, isWriteProtected)
+
+				// kilocode_change start
+				// Track contribution (fire-and-forget, never blocks user workflow)
+				trackContribution({
+					cwd: task.cwd,
+					filePath: relPath,
+					unifiedDiff: unified,
+					status: didApprove ? "accepted" : "rejected",
+					taskId: task.taskId,
+					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+					kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+				})
+				// kilocode_change end
 
 				if (!didApprove) {
 					await task.diffViewProvider.revertChanges()

@@ -61,12 +61,26 @@ project.afterEvaluate {
     tasks.findByName(":prepareSandbox")?.inputs?.properties?.put("build_mode", ext.get("debugMode"))
 }
 
-
 group = properties("pluginGroup").get()
 version = properties("pluginVersion").get()
 
 repositories {
     mavenCentral()
+    // Fallback mirrors for when Maven Central returns 403 (common in CI environments)
+    maven {
+        url = uri("https://repo1.maven.org/maven2/")
+        content {
+            includeGroupByRegex("com\\.squareup.*")
+            includeGroupByRegex("com\\.google.*")
+        }
+    }
+    maven {
+        url = uri("https://maven-central.storage.googleapis.com/maven2/")
+        content {
+            includeGroupByRegex("com\\.squareup.*")
+            includeGroupByRegex("com\\.google.*")
+        }
+    }
 
     intellijPlatform {
         defaultRepositories()
@@ -152,60 +166,62 @@ tasks {
             println("Configuration file generated: ${configFile.absolutePath}")
         }
     }
-    
 
     buildPlugin {
         dependsOn(prepareSandbox)
-        
+
         // Include the jetbrains directory contents from sandbox in the distribution root
         doLast {
             if (ext.get("debugMode") != "idea" && ext.get("debugMode") != "none") {
                 val distributionFile = archiveFile.get().asFile
                 val sandboxPluginsDir = layout.buildDirectory.get().asFile.resolve("idea-sandbox/IC-2024.3/plugins")
                 val jetbrainsDir = sandboxPluginsDir.resolve("jetbrains")
-                
+
                 if (jetbrainsDir.exists() && distributionFile.exists()) {
                     logger.lifecycle("Adding sandbox resources to distribution ZIP...")
                     logger.lifecycle("Sandbox jetbrains dir: ${jetbrainsDir.absolutePath}")
                     logger.lifecycle("Distribution file: ${distributionFile.absolutePath}")
-                    
+
                     // Extract the existing ZIP
                     val tempDir = layout.buildDirectory.get().asFile.resolve("temp-dist")
                     tempDir.deleteRecursively()
                     tempDir.mkdirs()
-                    
+
                     copy {
                         from(zipTree(distributionFile))
                         into(tempDir)
                     }
-                    
+
                     // Copy jetbrains directory CONTENTS directly to plugin root (not the jetbrains folder itself)
                     val pluginDir = tempDir.resolve(rootProject.name)
                     copy {
                         from(jetbrainsDir) // Copy contents of jetbrains dir
-                        into(pluginDir)     // Directly into plugin root
+                        into(pluginDir) // Directly into plugin root
                     }
-                    
+
                     // Re-create the ZIP with resources included
                     distributionFile.delete()
-                    ant.invokeMethod("zip", mapOf(
-                        "destfile" to distributionFile.absolutePath,
-                        "basedir" to tempDir.absolutePath
-                    ))
-                    
+                    ant.invokeMethod(
+                        "zip",
+                        mapOf(
+                            "destfile" to distributionFile.absolutePath,
+                            "basedir" to tempDir.absolutePath,
+                        ),
+                    )
+
                     // Clean up temp directory
                     tempDir.deleteRecursively()
-                    
+
                     logger.lifecycle("Distribution ZIP updated with sandbox resources at root level")
                 }
             }
         }
     }
-    
+
     prepareSandbox {
         dependsOn("generateConfigProperties")
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
-        
+
         if (ext.get("debugMode") == "idea") {
             from("${project.projectDir.absolutePath}/src/main/resources/themes/") {
                 into("${ext.get("debugResource")}/${ext.get("vscodePlugin")}/integrations/theme/default-themes/")
@@ -226,14 +242,14 @@ tasks {
                 if (!depfile.exists()) {
                     throw IllegalStateException("missing prodDep.txt")
                 }
-                
+
                 // Handle platform.zip for release mode
                 if (ext.get("debugMode") == "release") {
                     val platformZip = File("platform.zip")
                     if (!platformZip.exists() || platformZip.length() < 1024 * 1024) {
                         throw IllegalStateException("platform.zip file does not exist or is smaller than 1MB. This file is supported through git lfs and needs to be obtained through git lfs")
                     }
-                    
+
                     // Extract platform.zip to the platform subdirectory under the project build directory
                     val platformDir = File("${layout.buildDirectory.get().asFile}/platform")
                     platformDir.mkdirs()
@@ -243,11 +259,11 @@ tasks {
                     }
                 }
             }
-            
+
             val vscodePluginDir = File("./plugins/${ext.get("vscodePlugin")}")
             val depfile = File("prodDep.txt")
             val list = mutableListOf<String>()
-            
+
             // Read dependencies during execution
             doFirst {
                 depfile.readLines().forEach { line ->
@@ -273,7 +289,7 @@ tasks {
 
             // Copy VSCode plugin extension
             from("${vscodePluginDir.path}/extension") { into("$pluginName/${ext.get("vscodePlugin")}") }
-            
+
             // Copy themes
             from("src/main/resources/themes/") { into("$pluginName/${ext.get("vscodePlugin")}/integrations/theme/default-themes/") }
 

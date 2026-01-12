@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Bộ Kích Hoạt",
+			"codeEditorSuggestions": "Gợi ý Trình soạn thảo Mã",
+			"chatSuggestions": "Gợi ý Trò chuyện",
 			"keybindingDescription": "Các tính năng Autocomplete có thể được kích hoạt bằng lệnh. Bạn có thể cấu hình <DocsLink>Phím Tắt ở đây</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Bật Autocomplete",
@@ -226,16 +227,11 @@
 				"label": "Độ Trễ Kích Hoạt Tự Động",
 				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Autocomplete sau khi bạn ngừng gõ. Độ trễ ngắn hơn có nghĩa là gợi ý nhanh hơn, nhưng có thể tốn nhiều tài nguyên hơn."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tác vụ nhanh ({{keybinding}})",
-				"description": "Chỉ cần một thay đổi nhanh? Chọn một số mã (hoặc không!) và nhấn Cmd+I. Mô tả mục tiêu của bạn bằng tiếng Việt đơn giản (\"tạo component React với những props này\", \"thêm xử lý lỗi vào hàm này\"), và nhận nhiều gợi ý sẵn sàng sử dụng ngay trong editor của bạn. <DocsLink>Xem phím tắt</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Tự động hoàn thành thủ công ({{keybinding}})",
 				"description": "Cần sửa chữa nhanh, hoàn thành, hoặc tái cấu trúc? Kilo sẽ sử dụng ngữ cảnh xung quanh để cung cấp cải tiến ngay lập tức, giữ bạn trong luồng làm việc. <DocsLink>Xem phím tắt</DocsLink>"
 			},
 			"keybindingNotFound": "không tìm thấy",
-			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
 			"configureAutocompleteProfile": "Sử dụng bất kỳ mô hình nào bằng cách vào hồ sơ và cấu hình Hồ sơ có Loại Hồ sơ là Tự động hoàn thành.",
 			"model": "Mô hình",
 			"provider": "Nhà cung cấp",
@@ -256,6 +252,16 @@
 					"30min": "30 phút",
 					"1hour": "1 giờ"
 				}
+			},
+			"noModelConfigured": {
+				"title": "Chưa cấu hình mô hình tự động hoàn thành",
+				"description": "Để bật tự động hoàn thành, hãy thêm hồ sơ với một trong các nhà cung cấp được hỗ trợ sau:",
+				"learnMore": "Tìm hiểu thêm về cách thiết lập tự động hoàn thành →"
+			},
+			"noCredits": {
+				"title": "Tài khoản của bạn không có tín dụng",
+				"description": "Tài khoản Kilo Code của bạn không có tín dụng. Để sử dụng tự động hoàn thành, vui lòng nạp tín dụng vào tài khoản.",
+				"buyCredits": "Mua tín dụng →"
 			}
 		}
 	},
@@ -328,9 +334,23 @@
 	},
 	"speechToText": {
 		"stopRecording": "Dừng nhập giọng nói",
-		"startRecording": "Bắt đầu nhập giọng nói",
-		"unavailableBoth": "Chuyển đổi giọng nói thành văn bản không khả dụng. Nó yêu cầu nhà cung cấp OpenAI hợp lệ và FFmpeg phải được cài đặt.",
-		"unavailableFfmpegNotInstalled": "Chuyển giọng nói thành văn bản hiện không khả dụng. Hãy cài đặt FFmpeg để sử dụng tính năng chuyển giọng nói.",
-		"unavailableOpenAiKeyMissing": "Chuyển giọng nói thành văn bản không khả dụng. Tính năng này yêu cầu một nhà cung cấp OpenAI hợp lệ với khóa API để sử dụng chức năng chuyển giọng nói thành văn bản."
+		"startRecording": "Bắt đầu nhập liệu bằng giọng nói",
+		"setupPopover": {
+			"title": "Chuyển giọng nói thành văn bản",
+			"description": "Chuyển giọng nói thành văn bản không khả dụng. Chuyển giọng nói thành văn bản yêu cầu cả FFmpeg và nhà cung cấp OpenAI hợp lệ được cấu hình. <moreInfoLink>Nhấp vào đây để biết thêm thông tin</moreInfoLink>.",
+			"openAiReason": "Bạn cần một nhà cung cấp OpenAI hợp lệ với API key để sử dụng chức năng phiên âm giọng nói.",
+			"ffmpegMessage": "Giúp tôi cài đặt FFmpeg",
+			"ffmpegReason": "Bạn cần cài đặt FFmpeg. <ffmpegLink>Nhấp vào đây</ffmpegLink> để Kilo giúp bạn cài đặt FFmpeg."
+		},
+		"misconfiguredState": "Không khả dụng do cấu hình",
+		"errorState": "Không khả dụng do lỗi",
+		"microphone": {
+			"label": "Micro",
+			"defaultOption": "Mặc định hệ thống",
+			"noDevices": "Không tìm thấy thiết bị micro nào",
+			"loading": "Đang tải các thiết bị microphone...",
+			"description": "Chọn thiết bị microphone cho chuyển giọng nói thành văn bản",
+			"refresh": "Làm mới"
+		}
 	}
 }

@@ -6,7 +6,7 @@ import {
 	AutocompleteSnippet,
 	AutocompleteSnippetType,
 	AutocompleteStaticSnippet,
-} from "../snippets/types"
+} from "../types"
 import { HelperVars } from "../util/HelperVars"
 
 const getCommentMark = (helper: HelperVars) => {

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.139.0",
+	"version": "4.144.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -204,11 +204,6 @@
 				"category": "%configuration.title%"
 			},
 			{
-				"command": "kilo-code.addToContextAndFocus",
-				"title": "Add to Context and Focus",
-				"category": "%configuration.title%"
-			},
-			{
 				"command": "kilo-code.newTask",
 				"title": "%command.newTask.title%",
 				"category": "%configuration.title%"
@@ -298,6 +293,19 @@
 				"title": "Open Agent Manager",
 				"icon": "$(circuit-board)",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.popoutButtonClicked",
+				"title": "%command.openInEditor.title%",
+				"icon": "$(link-external)"
+			},
+			{
+				"command": "kilo-code.open",
+				"title": "%views.activitybar.title%",
+				"icon": {
+					"light": "assets/icons/kilo-light.svg",
+					"dark": "assets/icons/kilo-dark.svg"
+				}
 			}
 		],
 		"menus": {
@@ -409,11 +417,6 @@
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@4",
-					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
-				},
-				{
 					"command": "kilo-code.settingsButtonClicked",
 					"group": "navigation@5",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
@@ -422,6 +425,11 @@
 					"command": "kilo-code.helpButtonClicked",
 					"group": "navigation@6",
 					"when": "activeWebviewPanelId == kilo-code.TabPanelProvider"
+				},
+				{
+					"command": "kilo-code.open",
+					"group": "navigation",
+					"when": "true"
 				}
 			],
 			"scm/input": [
@@ -474,20 +482,6 @@
 				"win": "ctrl+k ctrl+a",
 				"linux": "ctrl+k ctrl+a",
 				"when": "editorTextFocus && editorHasSelection"
-			},
-			{
-				"command": "kilo-code.addToContextAndFocus",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"win": "ctrl+i",
-				"linux": "ctrl+i",
-				"when": "editorTextFocus && !github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
-			},
-			{
-				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"when": "editorTextFocus && github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
 			},
 			{
 				"command": "kilo-code.toggleAutoApprove",
@@ -678,7 +672,7 @@
 		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
-		"@modelcontextprotocol/sdk": "1.13.3",
+		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
@@ -719,6 +713,7 @@
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "^12.0.0",
+		"node-machine-id": "^1.1.12",
 		"ollama": "^0.5.17",
 		"openai": "^5.12.2",
 		"os-name": "^6.0.0",
@@ -754,7 +749,6 @@
 		"tmp": "^0.2.3",
 		"tree-sitter-wasms": "^0.1.12",
 		"turndown": "^7.2.0",
-		"undici": "^7.13.0",
 		"uri-js": "^4.4.1",
 		"uuid": "^11.1.0",
 		"vscode-material-icons": "^0.1.1",

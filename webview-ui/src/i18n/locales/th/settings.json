@@ -1121,7 +1121,9 @@
 		"searchPlaceholder": "ค้นหา",
 		"noMatchFound": "ไม่พบรายการที่ตรงกัน",
 		"useCustomModel": "ใช้แบบกำหนดเอง: {{modelId}}",
-		"simplifiedExplanation": "คุณสามารถปรับการตั้งค่าโมเดลโดยละเอียดได้ภายหลัง"
+		"simplifiedExplanation": "คุณสามารถปรับการตั้งค่าโมเดลโดยละเอียดได้ภายหลัง",
+		"recommendedModels": "โมเดลที่แนะนำ",
+		"allModels": "โมเดลทั้งหมด"
 	},
 	"footer": {
 		"feedback": "หากคุณมีคำถามหรือข้อเสนอแนะ โปรดเปิด issue ที่ <githubLink>github.com/Kilo-Org/kilocode</githubLink> หรือเข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>kilo.ai/discord</discordLink>",

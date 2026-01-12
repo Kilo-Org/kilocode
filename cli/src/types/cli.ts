@@ -43,4 +43,5 @@ export interface CLIOptions {
 	session?: string
 	fork?: string
 	noSplash?: boolean
+	appendSystemPrompt?: string
 }

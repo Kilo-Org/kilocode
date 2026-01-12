@@ -35,7 +35,7 @@ When Memory Bank is active, Kilo Code begins each task with `[Memory Bank: Activ
 
 ## How Memory Bank Works
 
-Memory Bank is built on Kilo Code's [Custom Rules](/advanced-usage/custom-rules) feature, providing a specialized framework for project documentation. Memory Bank files are standard markdown files stored in `.kilocode/rules/memory-bank` folder within your project repository. They're not hidden or proprietary - they're regular documentation files that both you and Kilo Code can access.
+Memory Bank is built on Kilo Code's [Custom Rules](/agent-behavior/custom-rules) feature, providing a specialized framework for project documentation. Memory Bank files are standard markdown files stored in `.kilocode/rules/memory-bank` folder within your project repository. They're not hidden or proprietary - they're regular documentation files that both you and Kilo Code can access.
 
 At the start of every task, Kilo Code reads all Memory Bank files to build a comprehensive understanding of your project. This happens automatically without requiring any action from you. Kilo Code then indicates successful Memory Bank activation with `[Memory Bank: Active]` at the beginning of its response, followed by a brief summary of its understanding of your project.
 

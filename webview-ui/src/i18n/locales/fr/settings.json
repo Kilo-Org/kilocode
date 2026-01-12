@@ -1025,7 +1025,9 @@
 		"searchPlaceholder": "Rechercher",
 		"noMatchFound": "Aucune correspondance trouvée",
 		"useCustomModel": "Utiliser personnalisé : {{modelId}}",
-		"simplifiedExplanation": "Tu peux ajuster les paramètres détaillés du modèle ultérieurement."
+		"simplifiedExplanation": "Tu peux ajuster les paramètres détaillés du modèle ultérieurement.",
+		"recommendedModels": "Modèles recommandés",
+		"allModels": "Tous les modèles"
 	},
 	"footer": {
 		"feedback": "Si vous avez des questions ou des commentaires, n'hésitez pas à ouvrir un problème sur <githubLink>github.com/Kilo-Org/kilocode</githubLink> ou à rejoindre <redditLink>reddit.com/r/kilocode</redditLink> ou <discordLink>kilo.ai/discord</discordLink>",

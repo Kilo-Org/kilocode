@@ -13,6 +13,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { sanitizeUnifiedDiff, computeDiffStats } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { normalizeLineEndings_kilocode } from "./kilocode/normalizeLineEndings"
 
 interface SearchReplaceOperation {
 	search: string
@@ -306,10 +307,6 @@ export class SearchAndReplaceTool extends BaseTool<"search_and_replace"> {
  */
 function escapeRegExp(input: string): string {
 	return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function normalizeLineEndings_kilocode(input: string, useCrLf: boolean): string {
-	return input.replaceAll(/\r?\n/g, useCrLf ? "\r\n" : "\n")
 }
 
 export const searchAndReplaceTool = new SearchAndReplaceTool()

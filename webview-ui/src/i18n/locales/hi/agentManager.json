@@ -54,7 +54,8 @@
 		"otherBranches": "अन्य ब्रांच",
 		"branchPickerTooltip": "बेस ब्रांच बदलें",
 		"noBranches": "कोई ब्रांच नहीं मिली",
-		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं"
+		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं",
+		"openTerminal": "टर्मिनल खोलें"
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
@@ -79,6 +80,7 @@
 		"cancelTitle": "एजेंट रद्द करें",
 		"finishToBranchTitle": "Worktree समाप्त करें और branch तैयार करें: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktree समाप्त करें और branch तैयार करें",
+		"createPRTitle": "Pull request बनाएं",
 		"sendTitle": "संदेश भेजें",
 		"resumeTitle": "एजेंट फिर से शुरू करें",
 		"hint": "भेजने के लिए Enter दबाएं, नई लाइन के लिए Shift+Enter"

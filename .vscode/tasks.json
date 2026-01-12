@@ -5,7 +5,7 @@
 	"tasks": [
 		{
 			"label": "watch",
-			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc"],
+			"dependsOn": ["watch:pnpm", "watch:webview", "watch:bundle", "watch:tsc", "watch:cli"],
 			"presentation": {
 				"reveal": "never"
 			},
@@ -103,6 +103,29 @@
 			"isBackground": true,
 			"presentation": {
 				"group": "none",
+				"reveal": "always"
+			}
+		},
+		{
+			"label": "watch:cli",
+			"dependsOn": ["watch:pnpm"],
+			"type": "shell",
+			"command": "pnpm --filter @kilocode/cli dev",
+			"group": "build",
+			"problemMatcher": {
+				"owner": "esbuild",
+				"pattern": {
+					"regexp": "^$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "esbuild-problem-matcher#onStart",
+					"endsPattern": "esbuild-problem-matcher#onEnd"
+				}
+			},
+			"isBackground": true,
+			"presentation": {
+				"group": "watch",
 				"reveal": "always"
 			}
 		},

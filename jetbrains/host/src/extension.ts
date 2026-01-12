@@ -56,8 +56,9 @@ if (pipeName) {
 	// Reconnection related variables
 	let isReconnecting = false
 	let reconnectAttempts = 0
-	const MAX_RECONNECT_ATTEMPTS = 5
-	const RECONNECT_DELAY = 1000 // 1 second
+	const MAX_RECONNECT_ATTEMPTS = 10 // Increased from 5 to 10 for slower machines
+	const RECONNECT_DELAY = 2000 // Increased from 1s to 2s for slower machines
+	const RECONNECT_BACKOFF_MULTIPLIER = 1.5 // Exponential backoff
 
 	// Override process.on
 	process.on = function (event: string, listener: (...args: any[]) => void): any {
@@ -264,9 +265,10 @@ if (pipeName) {
 
 		console.log(`Attempting to reconnect (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`)
 
-		// Retry after waiting for a period of time
-		console.log(`Waiting ${RECONNECT_DELAY}ms before reconnecting...`)
-		await new Promise((resolve) => setTimeout(resolve, RECONNECT_DELAY))
+		// Calculate delay with exponential backoff
+		const delay = RECONNECT_DELAY * Math.pow(RECONNECT_BACKOFF_MULTIPLIER, reconnectAttempts - 1)
+		console.log(`Waiting ${delay.toFixed(0)}ms before reconnecting (with exponential backoff)...`)
+		await new Promise((resolve) => setTimeout(resolve, delay))
 		console.log("Reconnection delay finished, attempting to connect...")
 
 		// Reset reconnection state to allow new reconnection attempts

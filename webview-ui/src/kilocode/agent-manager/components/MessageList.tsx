@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useMemo } from "react"
 import { useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 import { sessionMessagesAtomFamily } from "../state/atoms/messages"
 import { sessionInputAtomFamily } from "../state/atoms/sessions"
 import {
@@ -64,7 +65,7 @@ export function MessageList({ sessionId }: MessageListProps) {
 	const setInputValue = useSetAtom(sessionInputAtomFamily(sessionId))
 	const retryFailedMessage = useSetAtom(retryFailedMessageAtom)
 	const removeFromQueue = useSetAtom(removeFromQueueAtom)
-	const containerRef = useRef<HTMLDivElement>(null)
+	const virtuosoRef = useRef<VirtuosoHandle>(null)
 
 	// Combine command and command_output messages into single entries
 	const combinedMessages = useMemo(() => combineCommandSequences(messages), [messages])
@@ -93,17 +94,15 @@ export function MessageList({ sessionId }: MessageListProps) {
 		return info
 	}, [messages])
 
-	// Auto-scroll to bottom when new messages arrive
+	// Auto-scroll to bottom when new messages arrive using Virtuoso API
 	useEffect(() => {
-		if (containerRef.current) {
-			// Use requestAnimationFrame to ensure the DOM has updated
-			requestAnimationFrame(() => {
-				if (containerRef.current) {
-					containerRef.current.scrollTop = containerRef.current.scrollHeight
-				}
+		if (combinedMessages.length > 0) {
+			virtuosoRef.current?.scrollToIndex({
+				index: combinedMessages.length - 1,
+				behavior: "smooth",
 			})
 		}
-	}, [combinedMessages])
+	}, [combinedMessages.length])
 
 	const handleSuggestionClick = useCallback(
 		(suggestion: SuggestionItem) => {
@@ -137,6 +136,54 @@ export function MessageList({ sessionId }: MessageListProps) {
 		[removeFromQueue],
 	)
 
+	// Combine messages and queued messages for virtualization
+	const allItems = useMemo(() => {
+		return [...combinedMessages, ...queue.map((q) => ({ type: "queued" as const, data: q }))]
+	}, [combinedMessages, queue])
+
+	// Item content renderer for Virtuoso
+	const itemContent = useCallback(
+		(index: number, item: ClineMessage | { type: "queued"; data: QueuedMessage }) => {
+			// Check if this is a queued message
+			if ("type" in item && item.type === "queued") {
+				const queuedMsg = item.data
+				return (
+					<QueuedMessageItem
+						key={`queued-${queuedMsg.id}`}
+						queuedMessage={queuedMsg}
+						isSending={sendingMessageId === queuedMsg.id}
+						onRetry={handleRetryMessage}
+						onDiscard={handleDiscardMessage}
+					/>
+				)
+			}
+
+			// Regular message
+			const msg = item as ClineMessage
+			// isLastCombinedMessage: true for the last regular message, excluding queued user messages
+			const isLastCombinedMessage = index === combinedMessages.length - 1
+			return (
+				<MessageItem
+					key={msg.ts || index}
+					message={msg}
+					isLast={isLastCombinedMessage}
+					commandExecutionByTs={commandExecutionByTs}
+					onSuggestionClick={handleSuggestionClick}
+					onCopyToInput={handleCopyToInput}
+				/>
+			)
+		},
+		[
+			combinedMessages.length,
+			commandExecutionByTs,
+			handleSuggestionClick,
+			handleCopyToInput,
+			sendingMessageId,
+			handleRetryMessage,
+			handleDiscardMessage,
+		],
+	)
+
 	if (messages.length === 0 && queue.length === 0) {
 		return (
 			<div className="am-messages-empty">
@@ -147,29 +194,15 @@ export function MessageList({ sessionId }: MessageListProps) {
 	}
 
 	return (
-		<div className="am-messages-container" ref={containerRef}>
-			<div className="am-messages-list">
-				{combinedMessages.map((msg, idx) => (
-					<MessageItem
-						key={msg.ts || idx}
-						message={msg}
-						isLast={idx === combinedMessages.length - 1}
-						commandExecutionByTs={commandExecutionByTs}
-						onSuggestionClick={handleSuggestionClick}
-						onCopyToInput={handleCopyToInput}
-					/>
-				))}
-				{/* Display queued messages */}
-				{queue.map((queuedMsg) => (
-					<QueuedMessageItem
-						key={`queued-${queuedMsg.id}`}
-						queuedMessage={queuedMsg}
-						isSending={sendingMessageId === queuedMsg.id}
-						onRetry={handleRetryMessage}
-						onDiscard={handleDiscardMessage}
-					/>
-				))}
-			</div>
+		<div className="am-messages-container">
+			<Virtuoso
+				ref={virtuosoRef}
+				data={allItems}
+				itemContent={itemContent}
+				followOutput="smooth"
+				increaseViewportBy={{ top: 400, bottom: 400 }}
+				className="am-messages-list"
+			/>
 		</div>
 	)
 }

@@ -88,6 +88,8 @@ import {
 	deviceAuthMessageHandler,
 } from "../kilocode/webview/webviewMessageHandlerUtils"
 import { GhostServiceManager } from "../../services/ghost/GhostServiceManager"
+import { handleChatCompletionRequest } from "../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
+import { handleChatCompletionAccepted } from "../../services/ghost/chat-autocomplete/handleChatCompletionAccepted"
 // kilocode_change end
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
@@ -3655,15 +3657,19 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change end: Type-safe global state handler
 		// kilocode_change start: STT (Speech-to-Text) handlers
 		case "stt:start":
 		case "stt:stop":
-		case "stt:cancel": {
+		case "stt:cancel":
+		case "stt:listDevices":
+		case "stt:selectDevice":
+		case "stt:checkAvailability": {
 			const { handleSTTCommand } = await import("./sttHandlers")
 			await handleSTTCommand(provider, message as any)
 			break
 		}
-		// kilocode_change end: Type-safe global state handler
+		// kilocode_change end: STT (Speech-to-Text) handlers
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break
@@ -3707,14 +3713,15 @@ export const webviewMessageHandler = async (
 			break
 		} // kilocode_change start: Chat text area FIM autocomplete
 		case "requestChatCompletion": {
-			const { handleChatCompletionRequest } = await import(
-				"../../services/ghost/chat-autocomplete/handleChatCompletionRequest"
-			)
 			await handleChatCompletionRequest(
 				message as WebviewMessage & { type: "requestChatCompletion" },
 				provider,
 				getCurrentCwd,
 			)
+			break
+		}
+		case "chatCompletionAccepted": {
+			handleChatCompletionAccepted(message as WebviewMessage & { type: "chatCompletionAccepted" })
 			break
 		}
 		// kilocode_change end: Chat text area FIM autocomplete

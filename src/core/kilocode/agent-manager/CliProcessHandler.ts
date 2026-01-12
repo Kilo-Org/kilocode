@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from "node:child_process"
+import * as path from "node:path"
 import {
 	CliOutputParser,
 	type StreamEvent,
@@ -9,6 +10,7 @@ import {
 } from "./CliOutputParser"
 import { AgentRegistry } from "./AgentRegistry"
 import { buildCliArgs } from "./CliArgsBuilder"
+import { buildParallelModeWorktreePath } from "./parallelModeParser"
 import type { ClineMessage, ProviderSettings } from "@roo-code/types"
 import { extractApiReqFailedMessage, extractPayloadMessage } from "./askErrorParser"
 import { buildProviderEnvOverrides } from "./providerEnvMapper"
@@ -19,6 +21,12 @@ import { captureAgentManagerLoginIssue, getPlatformDiagnostics } from "./telemet
  * the session is considered failed. This prevents the UI from getting stuck in "Creating session..." state.
  */
 const PENDING_SESSION_TIMEOUT_MS = 30_000
+
+/**
+ * Maximum size for stdout buffer (bytes) - prevents memory issues when buffering output
+ * before session_created. We only need enough to detect configuration errors.
+ */
+const MAX_STDOUT_BUFFER_SIZE = 64 * 1024
 
 /**
  * Tracks a pending session while waiting for CLI's session_created event.
@@ -33,10 +41,18 @@ interface PendingProcessInfo {
 	desiredSessionId?: string
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
+	worktreePath?: string // Captured from welcome event before session_created
+	/** Worktree info if created by extension (for parallel mode) - has full details upfront */
+	worktreeInfo?: { branch: string; path: string; parentBranch: string }
+	provisionalSessionId?: string // Used to show streaming content before session_created
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
 	stderrBuffer: string[] // Capture stderr for error detection
+	stdoutBuffer: string[] // Capture raw stdout for configuration error detection when JSON is truncated
 	timeoutId?: NodeJS.Timeout // Timer for auto-failing stuck pending sessions
+	hadShellPath?: boolean // Track if shell PATH was used (for telemetry)
+	cliPath?: string // CLI path for error telemetry
+	configurationError?: string // Captured from welcome event instructions (indicates misconfigured CLI)
 }
 
 interface ActiveProcessInfo {
@@ -52,12 +68,13 @@ export interface CliProcessHandlerCallbacks {
 	onPendingSessionChanged: (pendingSession: { prompt: string; label: string; startTime: number } | null) => void
 	onStartSessionFailed: (
 		error?:
-			| { type: "cli_outdated" | "spawn_error" | "unknown"; message: string }
+			| { type: "cli_outdated" | "spawn_error" | "unknown" | "cli_configuration_error"; message: string }
 			| { type: "api_req_failed"; message: string; payload?: KilocodePayload; authError?: boolean }
 			| { type: "payment_required"; message: string; payload?: KilocodePayload },
 	) => void
 	onChatMessages: (sessionId: string, messages: ClineMessage[]) => void
 	onSessionCreated: (sawApiReqStarted: boolean) => void
+	onSessionRenamed?: (oldId: string, newId: string) => void
 	onPaymentRequiredPrompt?: (payload: KilocodePayload) => void
 	onSessionCompleted?: (sessionId: string, exitCode: number | null) => void // Called when process exits successfully
 }
@@ -76,6 +93,14 @@ export class CliProcessHandler {
 		this.callbacks.onDebugLog?.(message)
 	}
 
+	/** Extract configuration error from welcome event if present */
+	private extractConfigErrorFromWelcome(welcomeEvent: WelcomeStreamEvent): string | undefined {
+		if (welcomeEvent.instructions && welcomeEvent.instructions.length > 0) {
+			return welcomeEvent.instructions.join("\n")
+		}
+		return undefined
+	}
+
 	/** Clear the pending session timeout if it exists */
 	private clearPendingTimeout(): void {
 		if (this.pendingProcess?.timeoutId) {
@@ -83,8 +108,16 @@ export class CliProcessHandler {
 		}
 	}
 
-	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings): NodeJS.ProcessEnv {
+	private buildEnvWithApiConfiguration(apiConfiguration?: ProviderSettings, shellPath?: string): NodeJS.ProcessEnv {
 		const baseEnv = { ...process.env }
+
+		// On macOS/Linux, use the shell PATH to ensure CLI can access tools like git
+		// This is critical when the editor is launched from Finder/Spotlight, as the
+		// extension host doesn't inherit the user's shell environment
+		if (shellPath) {
+			baseEnv.PATH = shellPath
+			this.debugLog(`Using shell PATH for CLI spawn`)
+		}
 
 		const overrides = buildProviderEnvOverrides(
 			apiConfiguration,
@@ -114,6 +147,10 @@ export class CliProcessHandler {
 					gitUrl?: string
 					apiConfiguration?: ProviderSettings
 					existingBranch?: string
+					/** Shell PATH from login shell - ensures CLI can access tools like git on macOS */
+					shellPath?: string
+					/** Worktree info if created by extension (for parallel mode) */
+					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -148,26 +185,28 @@ export class CliProcessHandler {
 		}
 
 		// Build CLI command
+		// Note: Worktree/parallel mode is handled by AgentManagerProvider creating the worktree
+		// and passing the worktree path as the workspace. CLI is unaware of worktrees.
 		const cliArgs = buildCliArgs(workspace, prompt, {
-			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
-			existingBranch: options?.existingBranch,
 		})
-		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
+		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
+
+		// On Windows, batch files must be launched via cmd.exe to handle paths with spaces reliably.
+		const isWindowsBatch =
+			process.platform === "win32" && [".cmd", ".bat"].includes(path.extname(cliPath).toLowerCase())
+		const spawnCommand = isWindowsBatch ? process.env.ComSpec || "cmd.exe" : cliPath
+		const spawnArgs = isWindowsBatch ? ["/d", "/s", "/c", cliPath, ...cliArgs] : cliArgs
+
+		this.debugLog(`Command: ${spawnCommand} ${spawnArgs.join(" ")}`)
 		this.debugLog(`Working dir: ${workspace}`)
 
-		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration)
-
-		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
-		// Without this, spawn() fails silently because .cmd files are batch scripts
-		const needsShell = process.platform === "win32" && cliPath.toLowerCase().endsWith(".cmd")
-
 		// Spawn CLI process
-		const proc = spawn(cliPath, cliArgs, {
+		const proc = spawn(spawnCommand, spawnArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
 			env,
-			shell: needsShell,
+			shell: false,
 		})
 
 		if (proc.pid) {
@@ -207,8 +246,12 @@ export class CliProcessHandler {
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
+				worktreeInfo: options?.worktreeInfo,
 				stderrBuffer: [],
+				stdoutBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
+				hadShellPath: !!options?.shellPath, // Track for telemetry
+				cliPath,
 			}
 		}
 
@@ -216,6 +259,13 @@ export class CliProcessHandler {
 		proc.stdout?.on("data", (chunk) => {
 			const chunkStr = chunk.toString()
 			this.debugLog(`stdout chunk (${chunkStr.length} bytes): ${chunkStr.slice(0, 200)}`)
+
+			// Capture raw stdout for configuration error detection (in case JSON is truncated)
+			// Cap buffer size to prevent memory issues
+			if (this.pendingProcess && this.pendingProcess.process === proc) {
+				this.pendingProcess.stdoutBuffer.push(chunkStr)
+				this.capStdoutBuffer()
+			}
 
 			const { events } = parser.parse(chunkStr)
 
@@ -310,6 +360,10 @@ export class CliProcessHandler {
 		return this.activeSessions.has(sessionId)
 	}
 
+	public hasPendingProcess(): boolean {
+		return this.pendingProcess !== null
+	}
+
 	/**
 	 * Write a JSON message to a session's stdin
 	 */
@@ -356,19 +410,49 @@ export class CliProcessHandler {
 
 		// If this is the pending process, handle specially
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
-			// Capture worktree branch from welcome event (arrives before session_created)
+			// Capture worktree branch and configuration errors from welcome event (arrives before session_created)
 			if (event.streamEventType === "welcome") {
 				const welcomeEvent = event as WelcomeStreamEvent
+				const derivedWorktreePath =
+					!welcomeEvent.worktreePath && welcomeEvent.worktreeBranch
+						? buildParallelModeWorktreePath(welcomeEvent.worktreeBranch)
+						: undefined
+				const resolvedWorktreePath = welcomeEvent.worktreePath ?? derivedWorktreePath
+
 				if (welcomeEvent.worktreeBranch) {
 					this.pendingProcess.worktreeBranch = welcomeEvent.worktreeBranch
 					this.debugLog(`Captured worktree branch from welcome: ${welcomeEvent.worktreeBranch}`)
 				}
+				if (resolvedWorktreePath) {
+					this.pendingProcess.worktreePath = resolvedWorktreePath
+					const logMessage = derivedWorktreePath
+						? `Derived worktree path from branch: ${resolvedWorktreePath}`
+						: `Captured worktree path from welcome: ${resolvedWorktreePath}`
+					this.callbacks.onLog(logMessage)
+					this.debugLog(logMessage)
+				}
+				if (
+					this.pendingProcess.parallelMode &&
+					this.pendingProcess.provisionalSessionId &&
+					(welcomeEvent.worktreeBranch || resolvedWorktreePath)
+				) {
+					this.registry.updateParallelModeInfo(this.pendingProcess.provisionalSessionId, {
+						branch: welcomeEvent.worktreeBranch,
+						worktreePath: resolvedWorktreePath,
+					})
+				}
+				const configError = this.extractConfigErrorFromWelcome(welcomeEvent)
+				if (configError) {
+					this.pendingProcess.configurationError = configError
+					this.debugLog(`Captured CLI configuration error: ${configError}`)
+				}
 				return
 			}
-			// Track api_req_started that arrives before session_created
-			// This is needed so KilocodeEventProcessor knows the user echo has already happened
+
 			if (event.streamEventType === "kilocode") {
 				const payload = (event as KilocodeStreamEvent).payload
+
+				// Handle error cases that should abort session creation
 				if (payload?.ask === "payment_required_prompt") {
 					this.handlePaymentRequiredDuringPending(payload)
 					return
@@ -377,11 +461,34 @@ export class CliProcessHandler {
 					this.handleApiReqFailedDuringPending(payload)
 					return
 				}
+
+				// Track api_req_started that arrives before session_created
+				// This is needed so KilocodeEventProcessor knows the user echo has already happened
 				if (payload?.say === "api_req_started") {
 					this.pendingProcess.sawApiReqStarted = true
 					this.debugLog(`Captured api_req_started before session_created`)
 				}
+
+				// Create provisional session on first content event (prompt echo, api_req_started, streaming text, etc.)
+				if (!this.pendingProcess.provisionalSessionId) {
+					this.createProvisionalSession(proc)
+				}
+
+				// Forward the event to the provisional session
+				if (this.pendingProcess.provisionalSessionId) {
+					onCliEvent(this.pendingProcess.provisionalSessionId, event)
+					this.callbacks.onStateChanged()
+				}
+				return
 			}
+
+			// If we have a provisional session, forward non-kilocode events to it as well
+			if (this.pendingProcess.provisionalSessionId) {
+				onCliEvent(this.pendingProcess.provisionalSessionId, event)
+				this.callbacks.onStateChanged()
+				return
+			}
+
 			// Events before session_created are typically status messages
 			if (event.streamEventType === "status") {
 				this.debugLog(`Pending session status: ${event.message}`)
@@ -397,6 +504,85 @@ export class CliProcessHandler {
 		}
 	}
 
+	/** Create a provisional session to show streaming content before session_created arrives. */
+	private createProvisionalSession(proc: ChildProcess): void {
+		if (!this.pendingProcess || this.pendingProcess.provisionalSessionId) {
+			return
+		}
+
+		const provisionalId = `provisional-${Date.now()}`
+		this.pendingProcess.provisionalSessionId = provisionalId
+
+		const { prompt, startTime, parallelMode, desiredLabel, gitUrl, parser, worktreeBranch, worktreePath } =
+			this.pendingProcess
+
+		this.registry.createSession(provisionalId, prompt, startTime, {
+			parallelMode,
+			labelOverride: desiredLabel,
+			gitUrl,
+		})
+
+		if (parallelMode && (worktreeBranch || worktreePath)) {
+			this.registry.updateParallelModeInfo(provisionalId, {
+				branch: worktreeBranch,
+				worktreePath,
+			})
+		}
+
+		this.activeSessions.set(provisionalId, { process: proc, parser })
+
+		if (proc.pid) {
+			this.registry.setSessionPid(provisionalId, proc.pid)
+		}
+
+		this.registry.clearPendingSession()
+		this.callbacks.onPendingSessionChanged(null)
+		this.callbacks.onSessionCreated(this.pendingProcess?.sawApiReqStarted ?? false)
+
+		this.debugLog(`Created provisional session: ${provisionalId}`)
+		this.callbacks.onStateChanged()
+	}
+
+	/** Upgrade provisional session to real session ID when session_created arrives. */
+	private upgradeProvisionalSession(
+		provisionalSessionId: string,
+		realSessionId: string,
+		worktreeBranch: string | undefined,
+		worktreePath: string | undefined,
+		worktreeInfo: { branch: string; path: string; parentBranch: string } | undefined,
+		parallelMode: boolean | undefined,
+	): void {
+		this.debugLog(`Upgrading provisional session ${provisionalSessionId} -> ${realSessionId}`)
+
+		this.registry.renameSession(provisionalSessionId, realSessionId)
+
+		const activeInfo = this.activeSessions.get(provisionalSessionId)
+		if (activeInfo) {
+			this.activeSessions.delete(provisionalSessionId)
+			this.activeSessions.set(realSessionId, activeInfo)
+		}
+
+		this.callbacks.onSessionRenamed?.(provisionalSessionId, realSessionId)
+
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(realSessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+		} else if (parallelMode && (worktreeBranch || worktreePath)) {
+			// Fallback: use branch/path from CLI welcome event
+			this.registry.updateParallelModeInfo(realSessionId, {
+				branch: worktreeBranch,
+				worktreePath,
+			})
+		}
+
+		this.pendingProcess = null
+		this.callbacks.onStateChanged()
+	}
+
 	private handlePendingTimeout(): void {
 		if (!this.pendingProcess) {
 			return
@@ -407,15 +593,23 @@ export class CliProcessHandler {
 		)
 
 		const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
+		const hadShellPath = this.pendingProcess.hadShellPath
 		this.pendingProcess.process.kill("SIGTERM")
 		this.registry.clearPendingSession()
 		this.pendingProcess = null
 
 		const { platform, shell } = getPlatformDiagnostics()
+
+		// Enhanced telemetry for session_timeout to help diagnose issues like #4579
 		captureAgentManagerLoginIssue({
 			issueType: "session_timeout",
 			platform,
 			shell,
+			hasStderr: !!stderrOutput,
+			// Truncate stderr to first 500 chars to avoid sending too much data
+			stderrPreview: stderrOutput ? stderrOutput.slice(0, 500) : undefined,
+			// Track if our shell PATH fix was applied (helps verify fix effectiveness)
+			hadShellPath,
 		})
 
 		this.callbacks.onPendingSessionChanged(null)
@@ -441,14 +635,37 @@ export class CliProcessHandler {
 			parser,
 			parallelMode,
 			worktreeBranch,
+			worktreePath,
+			worktreeInfo,
 			desiredSessionId,
 			desiredLabel,
 			sawApiReqStarted,
 			gitUrl,
+			provisionalSessionId,
 		} = this.pendingProcess
 
 		// Use desired sessionId when provided (resuming) to keep UI continuity
 		const sessionId = desiredSessionId ?? event.sessionId
+
+		// If we created a provisional session, upgrade it instead of creating a second session entry.
+		// In some edge cases, fall back to the active session mapped to this process.
+		const provisionalIdFromProcess = this.findSessionIdForProcess(proc)
+		const effectiveProvisionalSessionId =
+			provisionalSessionId ??
+			(provisionalIdFromProcess?.startsWith("provisional-") ? provisionalIdFromProcess : undefined)
+
+		if (effectiveProvisionalSessionId && effectiveProvisionalSessionId !== sessionId) {
+			this.upgradeProvisionalSession(
+				effectiveProvisionalSessionId,
+				sessionId,
+				worktreeBranch,
+				worktreePath,
+				worktreeInfo,
+				parallelMode,
+			)
+			return
+		}
+
 		const existing = this.registry.getSession(sessionId)
 
 		let session: ReturnType<typeof this.registry.createSession>
@@ -471,10 +688,31 @@ export class CliProcessHandler {
 
 		this.debugLog(`Session created with CLI sessionId: ${event.sessionId}, mapped to: ${session.sessionId}`)
 
-		// Apply worktree branch if captured from welcome event
-		if (worktreeBranch && parallelMode) {
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(session.sessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+			this.debugLog(`Applied worktree info: ${worktreeInfo.path} (branch: ${worktreeInfo.branch})`)
+		} else if (worktreeBranch && parallelMode) {
+			// Fallback: use branch from CLI welcome event
 			this.registry.updateParallelModeInfo(session.sessionId, { branch: worktreeBranch })
-			this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
+			this.debugLog(`Applied worktree branch from CLI: ${worktreeBranch}`)
+		}
+
+		const resolvedWorktreePath =
+			worktreePath || (parallelMode && worktreeBranch ? buildParallelModeWorktreePath(worktreeBranch) : undefined)
+
+		if (resolvedWorktreePath && parallelMode) {
+			this.registry.updateParallelModeInfo(session.sessionId, { worktreePath: resolvedWorktreePath })
+			const logMessage =
+				worktreePath && worktreePath === resolvedWorktreePath
+					? `Applied worktree path: ${resolvedWorktreePath}`
+					: `Applied derived worktree path: ${resolvedWorktreePath}`
+			this.callbacks.onLog(logMessage)
+			this.debugLog(logMessage)
 		}
 
 		// Clear pending session state
@@ -505,15 +743,57 @@ export class CliProcessHandler {
 	): void {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
 			this.clearPendingTimeout()
+
+			// Start with any config error captured during streaming
+			let configurationError = this.pendingProcess.configurationError
+
+			// Flush any buffered parser output - welcome event JSON might be split across chunks
+			const { events } = this.pendingProcess.parser.flush()
+			for (const event of events) {
+				if (event.streamEventType === "welcome" && !configurationError) {
+					configurationError = this.extractConfigErrorFromWelcome(event as WelcomeStreamEvent)
+					if (configurationError) {
+						this.debugLog(`Captured CLI configuration error from flush: ${configurationError}`)
+					}
+				}
+			}
+
+			// Fallback: Check raw stdout for configuration error patterns if JSON parsing didn't capture it
+			if (!configurationError) {
+				const rawStdout = this.pendingProcess.stdoutBuffer.join("")
+				configurationError = this.detectConfigurationErrorFromRawOutput(rawStdout)
+				if (configurationError) {
+					this.debugLog(`Captured CLI configuration error from raw output: ${configurationError}`)
+				}
+			}
+
 			const stderrOutput = this.pendingProcess.stderrBuffer.join("\n")
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
 
+			// Check for CLI configuration error (e.g., missing kilocodeToken)
+			// CLI may exit with code 0 when showing configuration error instructions
+			if (configurationError) {
+				this.callbacks.onStartSessionFailed({
+					type: "cli_configuration_error",
+					message: configurationError,
+				})
+				this.callbacks.onStateChanged()
+				return
+			}
+
 			if (code !== 0) {
 				// Detect CLI version/compatibility issues from stderr
 				const errorInfo = this.detectCliError(stderrOutput, code)
 				this.callbacks.onStartSessionFailed(errorInfo)
+			} else {
+				// Generic fallback: CLI exited with code 0 before session_created
+				// This ensures the user never gets "nothing happened"
+				this.callbacks.onStartSessionFailed({
+					type: "unknown",
+					message: stderrOutput || "CLI exited before creating a session",
+				})
 			}
 			this.callbacks.onStateChanged()
 			return
@@ -573,10 +853,24 @@ export class CliProcessHandler {
 
 	private handleProcessError(proc: ChildProcess, error: Error): void {
 		if (this.pendingProcess && this.pendingProcess.process === proc) {
+			const cliPath = this.pendingProcess.cliPath
 			this.clearPendingTimeout()
 			this.registry.clearPendingSession()
 			this.callbacks.onPendingSessionChanged(null)
 			this.pendingProcess = null
+
+			// Capture spawn error telemetry with context for debugging.
+			const { platform, shell } = getPlatformDiagnostics()
+			const cliPathExtension = cliPath ? path.extname(cliPath).slice(1).toLowerCase() || undefined : undefined
+			captureAgentManagerLoginIssue({
+				issueType: "cli_spawn_error",
+				platform,
+				shell,
+				errorMessage: error.message,
+				cliPath,
+				cliPathExtension,
+			})
+
 			this.callbacks.onStartSessionFailed({
 				type: "spawn_error",
 				message: error.message,
@@ -683,5 +977,50 @@ export class CliProcessHandler {
 			type: "unknown",
 			message: stderrOutput || "Unknown error",
 		}
+	}
+
+	/**
+	 * Cap the stdout buffer size to prevent memory issues.
+	 * Keeps the most recent data up to MAX_STDOUT_BUFFER_SIZE.
+	 */
+	private capStdoutBuffer(): void {
+		if (!this.pendingProcess) {
+			return
+		}
+
+		const buffer = this.pendingProcess.stdoutBuffer
+		const totalSize = buffer.reduce((sum, chunk) => sum + chunk.length, 0)
+
+		if (totalSize > MAX_STDOUT_BUFFER_SIZE) {
+			// Join, trim from the start, and replace buffer with single trimmed string
+			const joined = buffer.join("")
+			const trimmed = joined.slice(joined.length - MAX_STDOUT_BUFFER_SIZE)
+			this.pendingProcess.stdoutBuffer = [trimmed]
+		}
+	}
+
+	/**
+	 * Detect configuration errors from raw stdout output.
+	 * This is a fallback for when the CLI sends truncated JSON that can't be parsed.
+	 * Looks for patterns like "Configuration Error" or "instructions" containing error text.
+	 */
+	private detectConfigurationErrorFromRawOutput(rawOutput: string): string | undefined {
+		// Look for "Configuration Error" pattern in the raw output
+		// The CLI outputs this when config.json is incomplete or invalid
+		if (rawOutput.includes('"instructions":') && rawOutput.includes("Configuration Error")) {
+			// Return a generic configuration error message since we can't parse the full details
+			return "CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure."
+		}
+
+		// Also check for common configuration error indicators
+		if (
+			rawOutput.includes("kilocodeToken is required") ||
+			rawOutput.includes("config.json is incomplete") ||
+			rawOutput.includes("apiKey is required")
+		) {
+			return "CLI configuration is incomplete or invalid. Please run 'kilocode config' or 'kilocode auth' to configure."
+		}
+
+		return undefined
 	}
 }

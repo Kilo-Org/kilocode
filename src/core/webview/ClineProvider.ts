@@ -74,6 +74,7 @@ import { CodeIndexManager } from "../../services/code-index/manager"
 import type { IndexProgressUpdate } from "../../services/code-index/interfaces/manager"
 import { MdmService } from "../../services/mdm/MdmService"
 import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager"
+import { SkillsManager } from "../../services/skills/SkillsManager"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { setTtsEnabled, setTtsSpeed } from "../../utils/tts"
@@ -96,7 +97,6 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import { checkSpeechToTextAvailable } from "./speechToTextCheck" // kilocode_change
 import type { ClineMessage, TodoItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
@@ -157,6 +157,7 @@ export class ClineProvider
 	private codeIndexManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
 	protected mcpHub?: McpHub // Change from private to protected
+	protected skillsManager?: SkillsManager
 	private marketplaceManager: MarketplaceManager
 	private mdmService?: MdmService
 	private taskCreationCallback: (task: Task) => void
@@ -218,6 +219,12 @@ export class ClineProvider
 			.catch((error) => {
 				this.log(`Failed to initialize MCP Hub: ${error}`)
 			})
+
+		// Initialize Skills Manager for skill discovery
+		this.skillsManager = new SkillsManager(this)
+		this.skillsManager.initialize().catch((error) => {
+			this.log(`Failed to initialize Skills Manager: ${error}`)
+		})
 
 		this.marketplaceManager = new MarketplaceManager(this.context, this.customModesManager)
 
@@ -678,6 +685,8 @@ export class ClineProvider
 		this._workspaceTracker = undefined
 		await this.mcpHub?.unregisterClient()
 		this.mcpHub = undefined
+		await this.skillsManager?.dispose()
+		this.skillsManager = undefined
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
 
@@ -763,42 +772,6 @@ export class ClineProvider
 			await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 			return
 		}
-
-		//kilocode_change start
-		if (command === "addToContextAndFocus") {
-			// Capture telemetry for inline assist quick task
-			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK)
-
-			let messageText = prompt
-
-			const editor = vscode.window.activeTextEditor
-			if (editor) {
-				const fullContent = editor.document.getText()
-				const filePath = params.filePath as string
-
-				messageText = `
-For context, we are working within this file:
-
-'${filePath}' (see below for file content)
-<file_content path="${filePath}">
-${fullContent}
-</file_content>
-
-Heed this prompt:
-
-${prompt}
-`
-			}
-
-			await visibleProvider.postMessageToWebview({
-				type: "invoke",
-				invoke: "setChatBoxMessage",
-				text: messageText,
-			})
-			await vscode.commands.executeCommand("kilo-code.focusChatInput")
-			return
-		}
-		// kilocode_change end
 
 		await visibleProvider.createTask(prompt)
 	}
@@ -1843,8 +1816,13 @@ ${prompt}
 
 		// if we tried to get a task that doesn't exist, remove it from state
 		// FIXME: this seems to happen sometimes when the json file doesnt save to disk for some reason
-		// await this.deleteTaskFromState(id) // kilocode_change disable confusing behaviour
-		await this.setTaskFileNotFound(id) // kilocode_change
+		// kilocode_change start
+		// commented out deleting the task, because in the previous version we made this task red
+		// instead of deleting, and people were confused because the task was actually working fine
+		// which leads us to believe that this is triggered to often somehow, or that the task will turn up later
+		// via some sync ( context https://github.com/Kilo-Org/kilocode/pull/4880 )
+		// await this.deleteTaskFromState(id)
+		// kilocode_change end
 		throw new Error("Task not found")
 	}
 
@@ -2205,6 +2183,7 @@ ${prompt}
 			featureRoomoteControlEnabled,
 			yoloMode, // kilocode_change
 			yoloGatekeeperApiConfigId, // kilocode_change: AI gatekeeper for YOLO mode
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			isBrowserSessionActive,
 		} = await this.getState()
 
@@ -2214,14 +2193,6 @@ ${prompt}
 				? this.getCurrentTask()!.api.getModel()
 				: undefined
 		// kilocode_change end
-
-		// kilocode_change start - checkSpeechToTextAvailable (only when experiment enabled)
-		let speechToTextStatus: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } | undefined =
-			undefined
-		if (experiments?.speechToText) {
-			speechToTextStatus = await checkSpeechToTextAvailable(this.providerSettingsManager)
-		}
-		// kilocode_change end - checkSpeechToTextAvailable
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
@@ -2440,6 +2411,7 @@ ${prompt}
 				(s) => s.autoPurgeIncompleteTaskRetentionDays,
 			),
 			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
@@ -2447,7 +2419,6 @@ ${prompt}
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
-			speechToTextStatus, // kilocode_change: Speech-to-text availability status with failure reason
 		}
 	}
 
@@ -2639,6 +2610,7 @@ ${prompt}
 			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
 			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
 			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
+			selectedMicrophoneDevice: stateValues.selectedMicrophoneDevice, // kilocode_change: Selected microphone device for STT
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
@@ -2741,6 +2713,7 @@ ${prompt}
 					return false
 				}
 			})(),
+			appendSystemPrompt: stateValues.appendSystemPrompt, // kilocode_change: CLI append system prompt
 		}
 	}
 
@@ -2849,6 +2822,10 @@ ${prompt}
 
 	public getMcpHub(): McpHub | undefined {
 		return this.mcpHub
+	}
+
+	public getSkillsManager(): SkillsManager | undefined {
+		return this.skillsManager
 	}
 
 	/**
@@ -3285,12 +3262,16 @@ ${prompt}
 				appVersion: packageJSON?.version ?? Package.version,
 				vscodeVersion: vscode.version,
 				platform: isWsl ? "wsl" /* kilocode_change */ : process.platform,
-				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName, // kilocode_change
-				wrapped: kiloCodeWrapped, // kilocode_change
-				wrapper: kiloCodeWrapper, // kilocode_change
-				wrapperCode: kiloCodeWrapperCode, // kilocode_change
-				wrapperVersion: kiloCodeWrapperVersion, // kilocode_change
-				wrapperTitle: kiloCodeWrapperTitle, // kilocode_change
+				// kilocode_change start
+				editorName: kiloCodeWrapperTitle ? kiloCodeWrapperTitle : vscode.env.appName,
+				wrapped: kiloCodeWrapped,
+				wrapper: kiloCodeWrapper,
+				wrapperCode: kiloCodeWrapperCode,
+				wrapperVersion: kiloCodeWrapperVersion,
+				wrapperTitle: kiloCodeWrapperTitle,
+				machineId: vscode.env.machineId,
+				vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
+				// kilocode_change end
 			}
 		}
 
@@ -3689,19 +3670,6 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		for (const id of taskIds) {
 			await this.deleteTaskWithId(id)
 		}
-	}
-
-	async setTaskFileNotFound(id: string) {
-		const history = this.getGlobalState("taskHistory") ?? []
-		const updatedHistory = history.map((item) => {
-			if (item.id === id) {
-				return { ...item, fileNotfound: true }
-			}
-			return item
-		})
-		await this.updateGlobalState("taskHistory", updatedHistory)
-		this.kiloCodeTaskHistoryVersion++
-		await this.postStateToWebview()
 	}
 
 	private kiloCodeTaskHistoryVersion = 0

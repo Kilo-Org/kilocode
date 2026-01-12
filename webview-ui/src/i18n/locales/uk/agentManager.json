@@ -56,7 +56,8 @@
 		"otherBranches": "Інші гілки",
 		"branchPickerTooltip": "Змінити базову гілку",
 		"noBranches": "Гілки не знайдено",
-		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку"
+		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку",
+		"openTerminal": "Відкрити термінал"
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",
@@ -81,6 +82,7 @@
 		"cancelTitle": "Скасувати агента",
 		"finishToBranchTitle": "Завершити worktree та підготувати branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Завершити worktree та підготувати branch",
+		"createPRTitle": "Створити pull request",
 		"sendTitle": "Надіслати повідомлення",
 		"resumeTitle": "Відновити агента",
 		"hint": "Enter для надсилання, Shift+Enter для нового рядка"

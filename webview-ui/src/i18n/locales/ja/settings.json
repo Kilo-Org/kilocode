@@ -1027,7 +1027,9 @@
 		"searchPlaceholder": "検索",
 		"noMatchFound": "一致するものが見つかりません",
 		"useCustomModel": "カスタムを使用: {{modelId}}",
-		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。"
+		"simplifiedExplanation": "詳細なモデル設定は後で調整できます。",
+		"recommendedModels": "おすすめのモデル",
+		"allModels": "すべてのモデル"
 	},
 	"footer": {
 		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilo.ai/discord</discordLink>に参加してください",

@@ -18,6 +18,11 @@ export function suggestionConsideredDuplication(params: AutocompleteSuggestion):
 		return true
 	}
 
+	// Check if the suggestion contains repetitive phrases that continue from the prefix
+	if (containsRepetitivePhraseFromPrefix(params)) {
+		return true
+	}
+
 	// When the suggestion isn't a full line or set of lines, normalize by including
 	// the rest of the line in the prefix/suffix and check with the completed line(s)
 	const normalized = normalizeToCompleteLine(params)
@@ -56,6 +61,43 @@ function DuplicatesFromEdgeLines(params: AutocompleteSuggestion): boolean {
 	}
 
 	return false
+}
+
+/**
+ * Detects when a suggestion's tail is repeating itself - a common LLM failure mode.
+ * For example: "the beginning. We are going to start from the beginning. We are going to start from the beginning..."
+ * The suggestion gets stuck in a loop repeating the same phrase.
+ */
+function containsRepetitivePhraseFromPrefix(params: AutocompleteSuggestion): boolean {
+	const suggestion = params.suggestion
+	const phraseLength = 30 // Phrase length to check for repetition
+	const minRepetitions = 3 // Minimum number of repetitions to consider it repetitive
+
+	// Only check suggestions that are long enough to contain repetition
+	if (suggestion.length < phraseLength * minRepetitions) {
+		return false
+	}
+
+	// Strip non-word characters from the right before selecting the tail
+	// This handles cases like "...the beginning..." where trailing punctuation would break detection
+	const strippedSuggestion = suggestion.replace(/\W+$/, "")
+
+	if (strippedSuggestion.length < phraseLength) {
+		return false
+	}
+
+	// Extract a phrase from the end of the stripped suggestion
+	const phrase = strippedSuggestion.slice(-phraseLength)
+
+	// Count how many times this phrase appears in the original suggestion
+	let count = 0
+	let pos = 0
+	while ((pos = suggestion.indexOf(phrase, pos)) !== -1) {
+		count++
+		pos += phrase.length
+	}
+
+	return count >= minRepetitions
 }
 
 /**

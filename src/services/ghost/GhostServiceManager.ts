@@ -9,7 +9,6 @@ import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 
 export class GhostServiceManager {
@@ -49,14 +48,13 @@ export class GhostServiceManager {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
-		const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
 			this.context,
 			this.model,
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.cline,
-			!kiloCodeWrapperJetbrains ? new AutocompleteTelemetry() : null,
+			new AutocompleteTelemetry(),
 		)
 
 		void this.load()
@@ -74,14 +72,16 @@ export class GhostServiceManager {
 		await this.model.reload(this.cline.providerSettingsManager)
 
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
-			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
-		// Auto-enable autocomplete by default, but disable for JetBrains IDEs
-		// JetBrains users can manually enable it if they want to test the feature
+		// Auto-enable autocomplete by default
 		if (this.settings.enableAutoTrigger == undefined) {
-			const { kiloCodeWrapperJetbrains } = getKiloCodeWrapperProperties()
-			this.settings.enableAutoTrigger = !kiloCodeWrapperJetbrains
+			this.settings.enableAutoTrigger = true
+		}
+
+		// Auto-enable chat autocomplete by default
+		if (this.settings.enableChatAutocomplete == undefined) {
+			this.settings.enableChatAutocomplete = true
 		}
 
 		await this.updateGlobalContext()
@@ -92,6 +92,7 @@ export class GhostServiceManager {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
 			model: this.getCurrentModelName(),
+			hasKilocodeProfileWithNoBalance: this.model.hasKilocodeProfileWithNoBalance,
 		}
 		await ContextProxy.instance.setValues({ ghostServiceSettings: settingsWithModelInfo })
 		await this.cline.postStateToWebview()
@@ -123,7 +124,6 @@ export class GhostServiceManager {
 				...settings,
 				enableAutoTrigger: false,
 				enableSmartInlineTaskKeybinding: false,
-				enableQuickInlineTaskKeybinding: false,
 			},
 		})
 
@@ -283,11 +283,6 @@ export class GhostServiceManager {
 	}
 
 	private async updateGlobalContext() {
-		await vscode.commands.executeCommand(
-			"setContext",
-			"kilocode.ghost.enableQuickInlineTaskKeybinding",
-			this.settings?.enableQuickInlineTaskKeybinding || false,
-		)
 		await vscode.commands.executeCommand(
 			"setContext",
 			"kilocode.ghost.enableSmartInlineTaskKeybinding",

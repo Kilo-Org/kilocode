@@ -216,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Trigger",
+			"codeEditorSuggestions": "Suggerimenti Editor di Codice",
+			"chatSuggestions": "Suggerimenti Chat",
 			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Pausa per Completare",
@@ -226,16 +227,11 @@
 				"label": "Ritardo Attivazione Automatica",
 				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Attività Rapida ({{keybinding}})",
-				"description": "Hai bisogno solo di una modifica rapida? Seleziona del codice (o no!) e premi Cmd+I. Descrivi il tuo obiettivo in italiano semplice (\"crea un componente React con queste props\", \"aggiungi gestione errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Modifica scorciatoia</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Completamento Automatico Manuale ({{keybinding}})",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
 			"keybindingNotFound": "non trovato",
-			"noModelConfigured": "Nessun modello di autocompletamento adatto trovato. Configura un provider nelle impostazioni API.",
 			"configureAutocompleteProfile": "Usa qualsiasi modello andando nei profili e configurando un Profilo del Tipo di Profilo Autocompletamento.",
 			"model": "Modello",
 			"provider": "Provider",
@@ -256,6 +252,16 @@
 					"30min": "30 minuti",
 					"1hour": "1 ora"
 				}
+			},
+			"noModelConfigured": {
+				"title": "Nessun modello di autocompletamento configurato",
+				"description": "Per abilitare l'autocompletamento, aggiungi un profilo con uno di questi provider supportati:",
+				"learnMore": "Scopri di più sulla configurazione dell'autocompletamento →"
+			},
+			"noCredits": {
+				"title": "Nessun credito nel tuo account",
+				"description": "Il tuo account Kilo Code non ha crediti. Per utilizzare l'autocompletamento, aggiungi crediti al tuo account.",
+				"buyCredits": "Acquista crediti →"
 			}
 		}
 	},
@@ -327,10 +333,24 @@
 		"initiating": "Avvio autenticazione..."
 	},
 	"speechToText": {
-		"startRecording": "Inizia l'input vocale",
+		"startRecording": "Avvia input vocale",
 		"stopRecording": "Interrompi input vocale",
-		"unavailableOpenAiKeyMissing": "La conversione da voce a testo non è disponibile. Richiede un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
-		"unavailableFfmpegNotInstalled": "La conversione vocale in testo non è disponibile. Installa FFmpeg per utilizzare la trascrizione vocale.",
-		"unavailableBoth": "Il riconoscimento vocale non è disponibile. Richiede un provider OpenAI valido e FFmpeg deve essere installato."
+		"setupPopover": {
+			"title": "Sintesi vocale",
+			"description": "La sintesi vocale non è disponibile. La sintesi vocale richiede sia FFmpeg che un provider OpenAI valido configurato. <moreInfoLink>Clicca qui per maggiori informazioni</moreInfoLink>.",
+			"openAiReason": "È necessario un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
+			"ffmpegReason": "È necessario avere FFmpeg installato. <ffmpegLink>Clicca qui</ffmpegLink> per far sì che Kilo ti aiuti a installare FFmpeg.",
+			"ffmpegMessage": "Aiutami a installare FFmpeg"
+		},
+		"misconfiguredState": "Non disponibile a causa della configurazione",
+		"errorState": "Non disponibile a causa di un errore",
+		"microphone": {
+			"label": "Microfono",
+			"noDevices": "Nessun dispositivo microfono trovato",
+			"loading": "Caricamento dei dispositivi microfono...",
+			"refresh": "Aggiorna",
+			"defaultOption": "Impostazione predefinita del sistema",
+			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
+		}
 	}
 }

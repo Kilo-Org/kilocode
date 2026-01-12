@@ -20,7 +20,7 @@ import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 import { TOOL_PROTOCOL } from "@roo-code/types"
 import { ApiStreamChunk } from "../transform/stream"
 import { convertToR1Format } from "../transform/r1-format"
-import { addCacheBreakpoints as addAnthropicCacheBreakpoints } from "../transform/caching/anthropic"
+import { addAnthropicCacheBreakpoints } from "../transform/caching/kilocode" // kilocode_change: own implementation that supports tool results
 import { addCacheBreakpoints as addGeminiCacheBreakpoints } from "../transform/caching/gemini"
 import type { OpenRouterReasoningParams } from "../transform/reasoning"
 import { getModelParams } from "../transform/model-params"
@@ -44,11 +44,13 @@ type OpenRouterProviderParams = {
 
 import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+import { OpenAIError } from "openai"
 // kilocode_change end
 
 import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { generateImageWithProvider, ImageGenerationResult } from "./utils/image-generation"
+import { KiloCodeChunkSchema } from "./kilocode/chunk-schema"
 
 // Add custom interface for OpenRouter params.
 type OpenRouterChatCompletionParams = OpenAI.Chat.ChatCompletionCreateParams & {
@@ -205,7 +207,28 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		throw new Error(`OpenRouter API Error ${error?.code}: ${rawErrorMessage}`)
 	}
 
+	// kilocode_change start
+	// the comment below seems incorrect, errors in the stream are still thrown as exceptions
 	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): AsyncGenerator<ApiStreamChunk> {
+		try {
+			yield* this.createMessage_implementationRenamedForKilocode(systemPrompt, messages, metadata)
+		} catch (error) {
+			if (
+				error instanceof OpenAIError &&
+				(this.providerName !== "KiloCode" || !isAnyRecognizedKiloCodeError(error))
+			) {
+				throw new Error(makeOpenRouterErrorReadable(error))
+			}
+			throw error
+		}
+	}
+	// kilocode_change end
+
+	private async *createMessage_implementationRenamedForKilocode(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
@@ -314,8 +337,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		// kilocode_change start
 		const requestOptions = this.customRequestOptions(metadata) ?? { headers: {} }
 		if (modelId.startsWith("anthropic/")) {
-			requestOptions.headers["x-anthropic-beta"] =
-				"fine-grained-tool-streaming-2025-05-14,structured-outputs-2025-11-13"
+			requestOptions.headers["x-anthropic-beta"] = "fine-grained-tool-streaming-2025-05-14"
 		}
 		// kilocode_change end
 
@@ -341,7 +363,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let lastUsage: CompletionUsage | undefined = undefined
 		let inferenceProvider: string | undefined // kilocode_change
-		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 		// Accumulator for reasoning_details: accumulate text by type-index key
 		const reasoningDetailsAccumulator = new Map<
 			string,
@@ -364,9 +385,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 
 			// kilocode_change start
-			if ("provider" in chunk && typeof chunk.provider === "string") {
-				inferenceProvider = chunk.provider
-			}
+			const kiloCodeChunk = KiloCodeChunkSchema.safeParse(chunk).data
+			inferenceProvider =
+				kiloCodeChunk?.choices?.[0]?.delta?.provider_metadata?.gateway?.routing?.resolvedProvider ??
+				kiloCodeChunk?.provider ??
+				inferenceProvider
 			// kilocode_change end
 
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
@@ -564,8 +587,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		// kilocode_change start
 		const requestOptions = this.customRequestOptions() ?? { headers: {} }
 		if (modelId.startsWith("anthropic/")) {
-			requestOptions.headers["x-anthropic-beta"] =
-				"fine-grained-tool-streaming-2025-05-14,structured-outputs-2025-11-13"
+			requestOptions.headers["x-anthropic-beta"] = "fine-grained-tool-streaming-2025-05-14"
 		}
 		// kilocode_change end
 
@@ -641,7 +663,7 @@ function makeOpenRouterErrorReadable(error: any) {
 			rawError?.message ??
 			metadata?.raw ??
 			error?.message
-		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
+		return `${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`
 	}
 
 	try {

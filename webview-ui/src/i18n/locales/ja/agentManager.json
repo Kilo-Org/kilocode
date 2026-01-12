@@ -54,7 +54,8 @@
 		"otherBranches": "その他のブランチ",
 		"branchPickerTooltip": "ベースブランチを切り替え",
 		"noBranches": "ブランチが見つかりません",
-		"noMatchingBranches": "検索に一致するブランチがありません"
+		"noMatchingBranches": "検索に一致するブランチがありません",
+		"openTerminal": "ターミナルを開く"
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",
@@ -79,6 +80,7 @@
 		"cancelTitle": "エージェントをキャンセル",
 		"finishToBranchTitle": "Worktreeを終了してブランチを準備: {{branch}}",
 		"finishToBranchTitleNoBranch": "Worktreeを終了してブランチを準備",
+		"createPRTitle": "プルリクエストを作成",
 		"sendTitle": "メッセージを送信",
 		"resumeTitle": "エージェントを再開",
 		"hint": "Enterで送信、Shift+Enterで改行"
