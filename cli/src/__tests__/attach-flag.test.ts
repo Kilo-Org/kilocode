@@ -138,50 +138,15 @@ describe("CLI --attach flag", () => {
 			expect(result.error).toContain('Unsupported attachment format ".xyz"')
 		})
 
-		it("should accept .png format", () => {
-			const result = validateAttachmentFormat("./image.png")
+		it.each(SUPPORTED_IMAGE_EXTENSIONS)("should accept %s format", (ext) => {
+			const result = validateAttachmentFormat(`./image${ext}`)
 			expect(result.valid).toBe(true)
 		})
 
-		it("should accept .jpg format", () => {
-			const result = validateAttachmentFormat("./photo.jpg")
+		it.each(SUPPORTED_IMAGE_EXTENSIONS)("should handle case-insensitive %s extension", (ext) => {
+			const upperExt = ext.toUpperCase()
+			const result = validateAttachmentFormat(`./image${upperExt}`)
 			expect(result.valid).toBe(true)
-		})
-
-		it("should accept .jpeg format", () => {
-			const result = validateAttachmentFormat("./photo.jpeg")
-			expect(result.valid).toBe(true)
-		})
-
-		it("should accept .webp format", () => {
-			const result = validateAttachmentFormat("./image.webp")
-			expect(result.valid).toBe(true)
-		})
-
-		it("should accept .gif format", () => {
-			const result = validateAttachmentFormat("./animation.gif")
-			expect(result.valid).toBe(true)
-		})
-
-		it("should accept .tiff format", () => {
-			const result = validateAttachmentFormat("./scan.tiff")
-			expect(result.valid).toBe(true)
-		})
-
-		it("should handle case-insensitive extensions", () => {
-			expect(validateAttachmentFormat("./image.PNG").valid).toBe(true)
-			expect(validateAttachmentFormat("./image.Jpg").valid).toBe(true)
-			expect(validateAttachmentFormat("./image.JPEG").valid).toBe(true)
-			expect(validateAttachmentFormat("./image.WebP").valid).toBe(true)
-			expect(validateAttachmentFormat("./image.GIF").valid).toBe(true)
-			expect(validateAttachmentFormat("./image.TIFF").valid).toBe(true)
-		})
-
-		it("should accept all supported image extensions", () => {
-			for (const ext of SUPPORTED_IMAGE_EXTENSIONS) {
-				const result = validateAttachmentFormat(`./image${ext}`)
-				expect(result.valid).toBe(true)
-			}
 		})
 	})
 
