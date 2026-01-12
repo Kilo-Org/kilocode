@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (deaktiviert)",
-				"tokenError": "Ein gültiger Token muss gesetzt werden, um Autocomplete zu verwenden",
+				"noCredits": "**Kein Guthaben auf deinem Konto**\n\nDein Kilo Code Konto hat kein Guthaben. Um Autocomplete zu nutzen, füge bitte Guthaben zu deinem Konto hinzu.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Kein Autocomplete-Modell konfiguriert**\n\nUm Autocomplete zu aktivieren, füge ein Profil mit einem dieser unterstützten Anbieter hinzu: {{providers}}.\n\n[Einstellungen öffnen](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Sitzungsgesamtkosten:",
 				"provider": "Anbieter:",
 				"model": "Modell:",
