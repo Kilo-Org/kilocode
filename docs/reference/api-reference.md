@@ -251,6 +251,262 @@ export class CodeIndexService implements Service {
 }
 ```
 
+## 🤖 ميزات الذكاء الاصطناعي المتقدمة
+
+### 1. Chat API
+
+```typescript
+// src/services/chat/types.ts
+export interface ChatService {
+	// إنشاء جلسة دردشة
+	createSession: (config: SessionConfig) => Promise<ChatSession>
+
+	// إرسال رسالة
+	sendMessage: (sessionId: string, message: ChatMessageInput) => Promise<ChatResponse>
+
+	// الحصول على تاريخ الدردشة
+	getHistory: (sessionId: string, limit?: number) => Promise<ChatMessage[]>
+
+	// إضافة سياق
+	addContext: (sessionId: string, context: ContextReference) => Promise<void>
+
+	// حذف جلسة
+	deleteSession: (sessionId: string) => Promise<void>
+}
+
+export interface ChatSession {
+	id: string
+	userId: string
+	title: string
+	createdAt: Date
+	updatedAt: Date
+	context: CompletionContext
+	metadata: SessionMetadata
+}
+
+export interface ChatMessageInput {
+	content: string
+	includeCitations?: boolean
+	files?: FileReference[]
+}
+
+export interface ChatResponse {
+	message: string
+	citations: Citation[]
+	context: CompletionContext
+	timestamp: Date
+}
+
+export interface Citation {
+	id: string
+	messageId: string
+	sourceType: "file" | "documentation" | "url"
+	sourcePath: string
+	startLine?: number
+	endLine?: number
+	snippet: string
+	confidence: number
+	metadata: CitationMetadata
+}
+```
+
+### 2. Edit Guidance API
+
+```typescript
+// src/services/edit-guidance/types.ts
+export interface EditGuidanceService {
+	// إنشاء خطة تعديل
+	createPlan: (config: PlanConfig) => Promise<EditPlan>
+
+	// تنفيذ خطوة
+	executeStep: (planId: string, stepId: string) Promise<StepResult>
+
+	// تخطي خطوة
+	skipStep: (planId: string, stepId: string) => Promise<void>
+
+	// الحصول على الخطة
+	getPlan: (planId: string) => Promise<EditPlan>
+
+	// إلغاء الخطة
+	cancelPlan: (planId: string) => Promise<void>
+
+	// تحليل الكود المرتبط
+	analyzeRelatedCode: (filePath: string) => Promise<RelatedCodeAnalysis>
+}
+
+export interface EditPlan {
+	id: string
+	userId: string
+	title: string
+	description: string
+	status: "pending" | "in-progress" | "completed" | "cancelled"
+	steps: EditStep[]
+	createdAt: Date
+	updatedAt: Date
+	metadata: PlanMetadata
+}
+
+export interface EditStep {
+	id: string
+	planId: string
+	order: number
+	title: string
+	type: "create" | "update" | "delete" | "move"
+	files: FileReference[]
+	description: string
+	status: "pending" | "completed" | "skipped" | "failed"
+	dependencies: string[]
+	metadata: StepMetadata
+}
+
+export interface StepResult {
+	success: boolean
+	changes: FileChange[]
+	errors?: string[]
+	warnings?: string[]
+}
+
+export interface RelatedCodeAnalysis {
+	relatedFiles: FileReference[]
+	imports: ImportReference[]
+	functionCalls: FunctionCallReference[]
+	classReferences: ClassReference[]
+}
+```
+
+### 3. Completions API
+
+```typescript
+// src/services/completions/types.ts
+export interface CompletionsService {
+	// الحصول على الإكمالات
+	getCompletions: (context: CompletionRequest) => Promise<Completion[]>
+
+	// الحصول على السياق
+	getContext: (filePath: string, position: number) => Promise<CompletionContext>
+
+	// ترجمة من اللغة الطبيعية إلى الكود
+	translateNLToCode: (comment: string, context: CompletionContext) => Promise<string>
+
+	// تحديث الفهرس
+	updateIndex: (filePath: string) => Promise<void>
+
+	// مسح ذاكرة التخزين المؤقت
+	clearCache: () => Promise<void>
+}
+
+export interface CompletionRequest {
+	filePath: string
+	position: number
+	surroundingCode: string
+	context: {
+		includeSemantic?: boolean
+		maxFiles?: number
+		includeDependencies?: boolean
+		includeTests?: boolean
+	}
+}
+
+export interface Completion {
+	text: string
+	confidence: number
+	source: "semantic" | "pattern" | "nl-translation"
+	metadata: CompletionMetadata
+}
+
+export interface CompletionContext {
+	id: string
+	filePath: string
+	position: number
+	surroundingCode: string
+	projectContext: ProjectContext
+	semanticContext: SemanticContext
+	metadata: ContextMetadata
+}
+
+export interface ProjectContext {
+	projectPath: string
+	language: string
+	framework?: string
+	dependencies: string[]
+	recentFiles: string[]
+	gitBranch?: string
+	metadata: ProjectMetadata
+}
+
+export interface SemanticContext {
+	embeddings: number[][]
+	relevantFiles: FileReference[]
+	concepts: string[]
+	relationships: ConceptRelationship[]
+	metadata: SemanticMetadata
+}
+```
+
+### 4. Slack Integration API
+
+```typescript
+// src/services/slack-integration/types.ts
+export interface SlackIntegrationService {
+	// تكامل التكامل
+	setupIntegration: (config: SlackConfig) => Promise<SlackIntegration>
+
+	// مشاركة رسالة
+	shareMessage: (request: ShareRequest) => Promise<ShareResult>
+
+	// مشاركة مقتطف كود
+	shareCode: (request: CodeShareRequest) => Promise<ShareResult>
+
+	// الحصول على التكاملات
+	getIntegrations: (userId: string) => Promise<SlackIntegration[]>
+
+	// حذف تكامل
+	deleteIntegration: (integrationId: string) => Promise<void>
+
+	// التحقق من الاتصال
+	verifyConnection: (integrationId: string) => Promise<boolean>
+}
+
+export interface SlackIntegration {
+	id: string
+	userId: string
+	workspaceId: string
+	channelId?: string
+	botToken: string // Encrypted
+	userToken: string // Encrypted
+	isActive: boolean
+	createdAt: Date
+	lastUsed?: Date
+	metadata: SlackMetadata
+}
+
+export interface ShareRequest {
+	content: string
+	channelId: string
+	format?: "plain" | "code-block" | "markdown"
+	messageId?: string
+	includeContext?: boolean
+}
+
+export interface CodeShareRequest {
+	code: string
+	filePath: string
+	language: string
+	channelId: string
+	startLine?: number
+	endLine?: number
+	format?: "code-block" | "diff"
+}
+
+export interface ShareResult {
+	success: boolean
+	messageId: string
+	timestamp: Date
+	url?: string
+	error?: string
+}
+```
+
 ## 📡 أنواع الرسائل
 
 ### 1. Extension Messages

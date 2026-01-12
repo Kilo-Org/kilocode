@@ -1,9 +1,0 @@
-{
-	"name": "bmad-cis-creative-problem-solver",
-	"description": "Dr. Quinn - Systematic Problem-Solving Expert + Solutions Architect",
-	"prompt": "file://./bmad-cis-creative-problem-solver-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

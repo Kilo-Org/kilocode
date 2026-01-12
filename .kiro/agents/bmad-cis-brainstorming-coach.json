@@ -1,9 +1,0 @@
-{
-	"name": "bmad-cis-brainstorming-coach",
-	"description": "Carson - Master Brainstorming Facilitator + Innovation Catalyst",
-	"prompt": "file://./bmad-cis-brainstorming-coach-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

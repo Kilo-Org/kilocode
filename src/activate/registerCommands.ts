@@ -312,6 +312,100 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 			action: "toggleAutoApprove",
 		})
 	},
+	// kilocode_change start - Context-aware completions commands
+	"completions.triggerContextAwareCompletions": async () => {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			vscode.window.showWarningMessage("No active text editor")
+			return
+		}
+
+		const position = editor.selection.active
+		const document = editor.document
+		const filePath = document.uri.fsPath
+		const surroundingCode = document.getText()
+
+		try {
+			const { getGhostServiceEnhanced } = await import("../services/ghost/ghost-service-enhanced")
+			const clineProvider = ClineProvider.getVisibleInstance()
+			if (!clineProvider) {
+				vscode.window.showErrorMessage("No active Cline provider")
+				return
+			}
+			const ghostService = getGhostServiceEnhanced(clineProvider, context)
+
+			const result = await ghostService.getContextAwareCompletions({
+				filePath,
+				position: document.offsetAt(position),
+				surroundingCode: document.lineAt(position.line).text,
+				language: document.languageId,
+				includeSemantic: true,
+				includeDependencies: true,
+				maxFiles: 50,
+			})
+
+			if (result.completions.length > 0) {
+				vscode.window.showInformationMessage(`Found ${result.completions.length} context-aware completions`)
+			} else {
+				vscode.window.showInformationMessage("No context-aware completions found")
+			}
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to get completions: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	},
+	"completions.clearCache": async () => {
+		try {
+			const { getGhostServiceEnhanced } = await import("../services/ghost/ghost-service-enhanced")
+			const clineProvider = ClineProvider.getVisibleInstance()
+			if (clineProvider) {
+				const ghostService = getGhostServiceEnhanced(clineProvider, context)
+				ghostService.clearCache()
+			}
+
+			const { getContextEngineEnhanced } = await import("../services/context-engine/context-engine-enhanced")
+			const contextEngine = getContextEngineEnhanced()
+			contextEngine.clearContextCache()
+
+			const { getSemanticSearchService } = await import("../services/completions/semantic-search")
+			const semanticSearch = getSemanticSearchService()
+			semanticSearch.clearCache()
+
+			const { getNLToCodeService } = await import("../services/completions/nl-to-code")
+			const nlToCode = getNLToCodeService()
+			nlToCode.clearCache()
+
+			vscode.window.showInformationMessage("All completion caches cleared")
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to clear cache: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	},
+	"completions.toggleNaturalLanguageTranslation": async () => {
+		const config = vscode.workspace.getConfiguration("kilo-code.completions")
+		const current = config.get<boolean>("enableNaturalLanguageTranslation", true)
+
+		await config.update("enableNaturalLanguageTranslation", !current, vscode.ConfigurationTarget.Global)
+
+		vscode.window.showInformationMessage(
+			`Natural language to code translation ${!current ? "enabled" : "disabled"}`,
+		)
+	},
+	"completions.showSettings": async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "action",
+			action: "settingsButtonClicked",
+			values: { section: "completions" },
+		})
+	},
+	// kilocode_change end
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {

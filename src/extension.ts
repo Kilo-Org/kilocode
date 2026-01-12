@@ -44,6 +44,7 @@ import {
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
+import { createAICommandsRegistry } from "./services/ai-commands" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
@@ -464,6 +465,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	// kilocode_change end
 
 	registerCommands({ context, outputChannel, provider })
+
+	// kilocode_change start: Register AI feature commands
+	const aiCommandsRegistry = createAICommandsRegistry(context)
+	aiCommandsRegistry.registerAllCommands()
+	outputChannel.appendLine("[AICommands] AI feature commands registered successfully")
+	// kilocode_change end
 
 	/**
 	 * We use the text document content provider API to show the left side for diff

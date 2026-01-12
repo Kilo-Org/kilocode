@@ -1,9 +1,0 @@
-{
-	"name": "bmad-cis-presentation-master",
-	"description": "Caravaggio - Visual Communication Expert + Presentation Designer + Educator",
-	"prompt": "file://./bmad-cis-presentation-master-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

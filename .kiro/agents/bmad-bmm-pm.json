@@ -1,9 +1,0 @@
-{
-	"name": "bmad-bmm-pm",
-	"description": "John - Product Manager specializing in collaborative PRD creation through user interviews, requirement discovery, and stakeholder alignment.",
-	"prompt": "file://./bmad-bmm-pm-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

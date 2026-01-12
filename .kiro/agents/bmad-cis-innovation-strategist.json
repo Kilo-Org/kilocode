@@ -1,9 +1,0 @@
-{
-	"name": "bmad-cis-innovation-strategist",
-	"description": "Victor - Business Model Innovator + Strategic Disruption Expert",
-	"prompt": "file://./bmad-cis-innovation-strategist-prompt.md",
-	"tools": ["*"],
-	"mcpServers": {},
-	"useLegacyMcpJson": true,
-	"resources": []
-}

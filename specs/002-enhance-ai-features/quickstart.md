@@ -23,14 +23,20 @@ This guide provides step-by-step instructions for setting up and using the advan
 
 ## Installation & Setup
 
-### 1. Update Kilo Code
+### 1. Install Dependencies
 
 ```bash
-# Install the latest version
-code --install-extension kilocode.kilo-code
+# Navigate to project directory
+cd /Users/emad/Documents/kilocode
 
-# Or update from VSCode marketplace
-# Open VSCode → Extensions → Search "Kilo Code" → Update
+# Install all dependencies
+pnpm install
+
+# Build the extension
+pnpm build
+
+# Install extension in VSCode
+code --install-extension kilocode.kilo-code.vsix
 ```
 
 ### 2. Configure AI Provider
@@ -42,23 +48,48 @@ code --install-extension kilocode.kilo-code
     - **Anthropic**: Set API key in `kilo-code.anthropic.apiKey`
     - **Other**: Configure provider-specific settings
 
+**Validation**: Run command palette (`Cmd/Ctrl + Shift + P`) and type "Kilo Code: Test API Connection" to verify your API key is valid.
+
 ### 3. Enable Advanced Features
+
+Open your VSCode settings.json (`Cmd/Ctrl + Shift + P` → "Preferences: Open User Settings (JSON)") and add:
 
 ```json
 {
-	"kilo-code.enableAdvancedChat": true,
-	"kilo-code.enableEditGuidance": true,
-	"kilo-code.enableContextCompletions": true,
-	"kilo-code.enableSlackIntegration": true
+	"kiloCode.chat.enabled": true,
+	"kiloCode.chat.enableCitations": true,
+	"kiloCode.editGuidance.enabled": true,
+	"kiloCode.completions.enabled": true,
+	"kiloCode.slack.enabled": true,
+	"kiloCode.performance.enableMetrics": true,
+	"kiloCode.performance.enableLogging": true
 }
 ```
 
-### 4. Slack Integration (Optional)
+**Validation**: Reload VSCode window (`Cmd/Ctrl + Shift + P` → "Developer: Reload Window") to apply settings.
+
+### 4. Initialize AI Services
+
+```bash
+# From the project root, run the initialization script
+cd /Users/emad/Documents/kilocode
+pnpm run init-ai-services
+```
+
+**Validation**: Check that the following services are running:
+
+- Open VSCode Output panel (`View → Output`)
+- Select "AI Features" from the dropdown
+- You should see: "AI services initialized successfully"
+
+### 5. Slack Integration (Optional)
 
 1. Install the Kilo Code Slack app: https://slack.com/apps/A0123456789
 2. Click "Add to Slack"
-3. In VSCode, run command: `Kilo Code: Configure Slack Integration`
+3. In VSCode, run command palette: `Kilo Code: Configure Slack Integration`
 4. Follow the OAuth flow to connect your workspace
+
+**Validation**: Run command `Kilo Code: Test Slack Connection` to verify the integration is working.
 
 ## Feature Usage
 
@@ -315,9 +346,12 @@ Answer: The authentication system uses JWT tokens with the AuthService class...
 
 **Solutions**:
 
-1. Check `kilo-code.chat.enableCitations` is true
-2. Ensure codebase is indexed: `Kilo Code: Reindex Codebase`
+1. Check `kiloCode.chat.enableCitations` is true in settings
+2. Ensure codebase is indexed: Run command `Kilo Code: Reindex Codebase`
 3. Verify file permissions for project directory
+4. Check AI Features output panel for errors
+
+**Validation**: Run `Kilo Code: Show Citation Status` to verify citation system is active.
 
 #### Edit Plans Not Generated
 
@@ -325,9 +359,12 @@ Answer: The authentication system uses JWT tokens with the AuthService class...
 
 **Solutions**:
 
-1. Enable `kilo-code.editGuidance.enabled`
+1. Enable `kiloCode.editGuidance.enabled` in settings
 2. Check if file types are supported
-3. Ensure AST parsing is working: `Kilo Code: Check AST Support`
+3. Ensure AST parsing is working: Run command `Kilo Code: Check AST Support`
+4. Verify code-index service is running
+
+**Validation**: Run `Kilo Code: Test Edit Guidance` with a simple code selection.
 
 #### Slow Completions
 
@@ -335,9 +372,12 @@ Answer: The authentication system uses JWT tokens with the AuthService class...
 
 **Solutions**:
 
-1. Reduce `kilo-code.completions.maxFiles`
-2. Increase `kilo-code.completions.debounceMs`
+1. Reduce `kiloCode.completions.maxFiles` in settings
+2. Increase `kiloCode.completions.debounceMs` to 500ms or higher
 3. Disable semantic search if not needed
+4. Clear cache: Run command `Kilo Code: Clear Cache`
+
+**Validation**: Run `Kilo Code: Benchmark Completions` to measure performance.
 
 #### Slack Integration Fails
 
@@ -347,7 +387,10 @@ Answer: The authentication system uses JWT tokens with the AuthService class...
 
 1. Verify Slack app permissions
 2. Check network connectivity
-3. Re-authenticate: `Kilo Code: Reconnect Slack`
+3. Re-authenticate: Run command `Kilo Code: Reconnect Slack`
+4. Check AI Features output panel for error messages
+
+**Validation**: Run `Kilo Code: Test Slack Connection` to verify connectivity.
 
 ### Debug Mode
 
@@ -355,31 +398,55 @@ Enable debug logging:
 
 ```json
 {
-	"kilo-code.debug": true,
-	"kilo-code.logLevel": "verbose"
+	"kiloCode.performance.logLevel": "debug",
+	"kiloCode.performance.enableLogging": true
 }
 ```
 
-View logs in VSCode output panel: `View → Output → Kilo Code`
+View logs in VSCode output panel: `View → Output → AI Features`
+
+**Available Commands**:
+
+- `Kilo Code: Show AI Logs` - Display recent AI feature logs
+- `Kilo Code: Export AI Logs` - Export logs to file for analysis
+- `Kilo Code: Clear AI Logs` - Clear log history
+- `Kilo Code: Show Performance Metrics` - Display performance statistics
 
 ## Performance Tips
 
 ### Large Codebases
 
 1. **Incremental Indexing**: Enable to avoid full reindexing
+    ```json
+    {
+    	"kiloCode.chat.autoSaveContext": true,
+    	"kiloCode.completions.maxFiles": 30
+    }
+    ```
 2. **File Exclusions**: Exclude large directories:
     ```json
     {
-    	"kilo-code.index.exclude": ["node_modules/**", "dist/**", "*.min.js"]
+    	"kiloCode.index.exclude": ["node_modules/**", "dist/**", "*.min.js", "build/**"]
     }
     ```
 3. **Context Limits**: Reduce context window for faster responses
+    ```json
+    {
+    	"kiloCode.chat.maxContextFiles": 50,
+    	"kiloCode.completions.contextWindowSize": 4000
+    }
+    ```
 
 ### Memory Usage
 
-1. **Cache Management**: Clear cache periodically
+1. **Cache Management**: Clear cache periodically with `Kilo Code: Clear Cache`
 2. **Background Processing**: Enable background indexing
-3. **Resource Limits**: Set appropriate limits
+3. **Resource Limits**: Set appropriate limits in settings
+
+**Performance Monitoring**:
+
+- Run `Kilo Code: Show Performance Metrics` to view current performance
+- Run `Kilo Code: Generate Performance Report` for detailed analysis
 
 ## API Reference
 
@@ -441,12 +508,25 @@ const result = await kiloCode.slack.share({
 })
 ```
 
-## Support
+## Support & Resources
 
 - **Documentation**: https://docs.kilo.ai
 - **Issues**: https://github.com/Kilo-Org/kilocode/issues
 - **Community**: https://discord.gg/kilocode
 - **Email**: support@kilo.ai
+
+## Validation Checklist
+
+Before using the advanced AI features, ensure:
+
+- [ ] Extension is installed and activated
+- [ ] AI provider is configured with valid API key
+- [ ] All advanced features are enabled in settings
+- [ ] AI services are initialized (check output panel)
+- [ ] Codebase is indexed for citations
+- [ ] (Optional) Slack integration is configured
+
+Run command `Kilo Code: Validate Setup` to automatically check all requirements.
 
 ## Release Notes
 
