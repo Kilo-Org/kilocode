@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { existsSync } from "fs"
-import { validateAttachmentExists, validateAttachmentFormat, validateAttachments } from "../validation/attachments.js"
+import {
+	accumulateAttachments,
+	validateAttachmentExists,
+	validateAttachmentFormat,
+	validateAttachments,
+} from "../validation/attachments.js"
 import { SUPPORTED_IMAGE_EXTENSIONS } from "../media/images.js"
 
 // Mock fs.existsSync
@@ -25,12 +30,9 @@ describe("CLI --attach flag", () => {
 
 	describe("Flag accumulation", () => {
 		/**
-		 * Test the Commander.js accumulator function for --attach flag
+		 * Tests the real accumulateAttachments function from validation/attachments.ts
+		 * This function is used by Commander.js to accumulate --attach flags
 		 */
-		function accumulateAttachments(value: string, previous: string[]): string[] {
-			return previous.concat([value])
-		}
-
 		it("should accept a single --attach flag", () => {
 			const result = accumulateAttachments("./screenshot.png", [])
 			expect(result).toEqual(["./screenshot.png"])
@@ -49,6 +51,16 @@ describe("CLI --attach flag", () => {
 		it("should start with an empty array by default", () => {
 			const defaultValue: string[] = []
 			expect(defaultValue).toEqual([])
+		})
+
+		it("should not mutate the previous array", () => {
+			const previous = ["./first.png"]
+			const result = accumulateAttachments("./second.png", previous)
+
+			// Result should contain both
+			expect(result).toEqual(["./first.png", "./second.png"])
+			// Original array should be unchanged
+			expect(previous).toEqual(["./first.png"])
 		})
 	})
 

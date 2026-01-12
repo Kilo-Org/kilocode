@@ -7,6 +7,14 @@ export interface AttachmentValidationResult {
 	error?: string
 }
 
+/**
+ * Commander.js accumulator function for --attach flag.
+ * Allows multiple --attach flags to accumulate into an array.
+ */
+export function accumulateAttachments(value: string, previous: string[]): string[] {
+	return previous.concat([value])
+}
+
 export interface AttachmentsValidationResult {
 	valid: boolean
 	errors: string[]

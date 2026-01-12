@@ -18,7 +18,7 @@ import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
-import { validateAttachments } from "./validation/attachments.js"
+import { validateAttachments, accumulateAttachments } from "./validation/attachments.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -56,7 +56,7 @@ program
 	.option(
 		"--attach <path>",
 		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
-		(value: string, previous: string[]) => previous.concat([value]),
+		accumulateAttachments,
 		[] as string[],
 	)
 	.argument("[prompt]", "The prompt or command to execute")
