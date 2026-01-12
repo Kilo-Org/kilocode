@@ -1363,5 +1363,161 @@ describe("keypress atoms", () => {
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5) // End of "hello"
 		})
+
+		it("should move cursor to previous word with Meta+Left arrow", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
+
+			// Press Meta+Left (previous word)
+			const metaLeftKey: Key = {
+				name: "left",
+				sequence: "\x1b[1;3D",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+Left again
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+Left again
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "hello"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of text
+		})
+
+		it("should move cursor to next word with Meta+Right arrow", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to start
+			const homeKey: Key = {
+				name: "a",
+				sequence: "a",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, homeKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0)
+
+			// Press Meta+Right (next word)
+			const metaRightKey: Key = {
+				name: "right",
+				sequence: "\x1b[1;3C",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+Right again
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+Right again
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to end of text
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // End of text
+		})
+
+		it("should move one character with plain Left/Right arrows (no meta)", () => {
+			// Type "hello"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5)
+
+			// Press plain Left (no meta) - should move one character
+			const leftKey: Key = {
+				name: "left",
+				sequence: "\x1b[D",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, leftKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(4) // Moved one character left
+
+			// Press plain Right (no meta) - should move one character
+			const rightKey: Key = {
+				name: "right",
+				sequence: "\x1b[C",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, rightKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5) // Moved one character right
+		})
 	})
 })

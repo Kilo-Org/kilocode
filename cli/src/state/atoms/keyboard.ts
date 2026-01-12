@@ -707,11 +707,19 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 			return
 
 		case "left":
-			set(moveLeftAtom)
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+			} else {
+				set(moveLeftAtom)
+			}
 			return
 
 		case "right":
-			set(moveRightAtom)
+			if (key.meta) {
+				set(moveToNextWordAtom)
+			} else {
+				set(moveRightAtom)
+			}
 			return
 
 		// Enter/Return
