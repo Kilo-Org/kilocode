@@ -5,7 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook } from "@testing-library/react"
 import type { Mock } from "vitest"
 
-import { ProviderSettings, ModelInfo, BEDROCK_1M_CONTEXT_MODEL_IDS, litellmDefaultModelInfo } from "@roo-code/types"
+import {
+	ProviderSettings,
+	ModelInfo,
+	BEDROCK_1M_CONTEXT_MODEL_IDS,
+	litellmDefaultModelInfo,
+	openAiModelInfoSaneDefaults,
+} from "@roo-code/types"
 
 import { useSelectedModel } from "../useSelectedModel"
 import { useRouterModels } from "../useRouterModels"
@@ -419,7 +425,7 @@ describe("useSelectedModel", () => {
 	})
 
 	describe("claude-code provider", () => {
-		it("should return claude-code model with supportsImages disabled", () => {
+		it("should return claude-code model with correct model info", () => {
 			mockUseRouterModels.mockReturnValue({
 				data: {
 					openrouter: {},
@@ -441,19 +447,19 @@ describe("useSelectedModel", () => {
 
 			const apiConfiguration: ProviderSettings = {
 				apiProvider: "claude-code",
-				apiModelId: "claude-sonnet-4-20250514",
+				apiModelId: "claude-sonnet-4-5", // Use valid claude-code model ID
 			}
 
 			const wrapper = createWrapper()
 			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
 
 			expect(result.current.provider).toBe("claude-code")
-			expect(result.current.id).toBe("claude-sonnet-4-20250514")
+			expect(result.current.id).toBe("claude-sonnet-4-5")
 			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(false)
+			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
 			expect(result.current.info?.supportsPromptCache).toBe(true) // Claude Code now supports prompt cache
-			// Verify it inherits other properties from anthropic models
-			expect(result.current.info?.maxTokens).toBe(64_000)
+			// Verify it inherits other properties from claude-code models
+			expect(result.current.info?.maxTokens).toBe(32768)
 			expect(result.current.info?.contextWindow).toBe(200_000)
 		})
 
@@ -487,7 +493,7 @@ describe("useSelectedModel", () => {
 			expect(result.current.provider).toBe("claude-code")
 			expect(result.current.id).toBe("claude-sonnet-4-5") // Default model
 			expect(result.current.info).toBeDefined()
-			expect(result.current.info?.supportsImages).toBe(false)
+			expect(result.current.info?.supportsImages).toBe(true) // Claude Code now supports images
 		})
 	})
 
@@ -534,6 +540,8 @@ describe("useSelectedModel", () => {
 				contextWindow: 8192,
 				supportsImages: false,
 				supportsPromptCache: false,
+				supportsNativeTools: true,
+				defaultToolProtocol: "native",
 			}
 
 			mockUseRouterModels.mockReturnValue({
@@ -705,7 +713,7 @@ describe("useSelectedModel", () => {
 			expect(result.current.info?.supportsNativeTools).toBe(true)
 		})
 
-		it("should use model info from routerModels when model exists", () => {
+		it("should merge only native tool defaults with routerModels when model exists", () => {
 			const customModelInfo: ModelInfo = {
 				maxTokens: 16384,
 				contextWindow: 128000,
@@ -739,9 +747,111 @@ describe("useSelectedModel", () => {
 
 			expect(result.current.provider).toBe("litellm")
 			expect(result.current.id).toBe("custom-model")
-			// Should use the model info from routerModels, not the fallback
-			expect(result.current.info).toEqual(customModelInfo)
+			// Should only merge native tool defaults, not prices or other model-specific info
+			// Router model values override the defaults
+			const nativeToolDefaults = {
+				supportsNativeTools: litellmDefaultModelInfo.supportsNativeTools,
+				defaultToolProtocol: litellmDefaultModelInfo.defaultToolProtocol,
+			}
+			expect(result.current.info).toEqual({ ...nativeToolDefaults, ...customModelInfo })
 			expect(result.current.info?.supportsNativeTools).toBe(true)
+			expect(result.current.info?.defaultToolProtocol).toBe("native")
+		})
+	})
+
+	describe("openai provider", () => {
+		beforeEach(() => {
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					unbound: {},
+					litellm: {},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+		})
+
+		it("should use openAiModelInfoSaneDefaults when no custom model info is provided", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "openai",
+				openAiModelId: "gpt-4o",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.provider).toBe("openai")
+			expect(result.current.id).toBe("gpt-4o")
+			expect(result.current.info).toEqual(openAiModelInfoSaneDefaults)
+			expect(result.current.info?.supportsNativeTools).toBe(true)
+			expect(result.current.info?.defaultToolProtocol).toBe("native")
+		})
+
+		it("should merge native tool defaults with custom model info", () => {
+			const customModelInfo: ModelInfo = {
+				maxTokens: 16384,
+				contextWindow: 128000,
+				supportsImages: true,
+				supportsPromptCache: false,
+				inputPrice: 0.01,
+				outputPrice: 0.03,
+				description: "Custom OpenAI-compatible model",
+			}
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "openai",
+				openAiModelId: "custom-model",
+				openAiCustomModelInfo: customModelInfo,
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.provider).toBe("openai")
+			expect(result.current.id).toBe("custom-model")
+			// Should merge native tool defaults with custom model info
+			const nativeToolDefaults = {
+				supportsNativeTools: openAiModelInfoSaneDefaults.supportsNativeTools,
+				defaultToolProtocol: openAiModelInfoSaneDefaults.defaultToolProtocol,
+			}
+			expect(result.current.info).toEqual({ ...nativeToolDefaults, ...customModelInfo })
+			expect(result.current.info?.supportsNativeTools).toBe(true)
+			expect(result.current.info?.defaultToolProtocol).toBe("native")
+		})
+
+		it("should allow custom model info to override native tool defaults", () => {
+			const customModelInfo: ModelInfo = {
+				maxTokens: 8192,
+				contextWindow: 32000,
+				supportsImages: false,
+				supportsPromptCache: false,
+				supportsNativeTools: false, // Explicitly disable
+				defaultToolProtocol: "xml", // Override default to use XML instead of native
+			}
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "openai",
+				openAiModelId: "custom-model-no-tools",
+				openAiCustomModelInfo: customModelInfo,
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.provider).toBe("openai")
+			expect(result.current.id).toBe("custom-model-no-tools")
+			// Custom model info should override the native tool defaults
+			expect(result.current.info?.supportsNativeTools).toBe(false)
+			expect(result.current.info?.defaultToolProtocol).toBe("xml")
 		})
 	})
 })

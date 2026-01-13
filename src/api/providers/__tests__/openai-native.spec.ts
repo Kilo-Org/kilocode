@@ -1,6 +1,18 @@
 // npx vitest run api/providers/__tests__/openai-native.spec.ts
 
+const mockCaptureException = vitest.fn()
+
+vitest.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: (...args: unknown[]) => mockCaptureException(...args),
+		},
+	},
+}))
+
 import { Anthropic } from "@anthropic-ai/sdk"
+
+import { ApiProviderError } from "@roo-code/types"
 
 import { OpenAiNativeHandler } from "../openai-native"
 import { ApiHandlerOptions } from "../../../shared/api"
@@ -37,6 +49,7 @@ describe("OpenAiNativeHandler", () => {
 		}
 		handler = new OpenAiNativeHandler(mockOptions)
 		mockResponsesCreate.mockClear()
+		mockCaptureException.mockClear()
 		// Clear fetch mock if it exists
 		if ((global as any).fetch) {
 			delete (global as any).fetch
@@ -207,6 +220,45 @@ describe("OpenAiNativeHandler", () => {
 			const modelInfo = handlerWithoutModel.getModel()
 			expect(modelInfo.id).toBe("gpt-5.1-codex-max") // Default model
 			expect(modelInfo.info).toBeDefined()
+		})
+
+		it("should have defaultToolProtocol: native for all OpenAI Native models", () => {
+			// Test that all models have defaultToolProtocol: native
+			const testModels = [
+				"gpt-5.1-codex-max",
+				"gpt-5.2",
+				"gpt-5.1",
+				"gpt-5",
+				"gpt-5-mini",
+				"gpt-5-nano",
+				"gpt-4.1",
+				"gpt-4.1-mini",
+				"gpt-4.1-nano",
+				"o3",
+				"o3-high",
+				"o3-low",
+				"o4-mini",
+				"o4-mini-high",
+				"o4-mini-low",
+				"o3-mini",
+				"o3-mini-high",
+				"o3-mini-low",
+				"o1",
+				"o1-preview",
+				"o1-mini",
+				"gpt-4o",
+				"gpt-4o-mini",
+				"codex-mini-latest",
+			]
+
+			for (const modelId of testModels) {
+				const testHandler = new OpenAiNativeHandler({
+					openAiNativeApiKey: "test-api-key",
+					apiModelId: modelId,
+				})
+				const modelInfo = testHandler.getModel()
+				expect(modelInfo.info.defaultToolProtocol).toBe("native")
+			}
 		})
 	})
 
@@ -895,6 +947,150 @@ describe("OpenAiNativeHandler", () => {
 				// Clean up
 				delete (global as any).fetch
 			}
+		})
+	})
+
+	describe("error telemetry", () => {
+		const errorMessages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "user",
+				content: "Hello",
+			},
+		]
+
+		const errorSystemPrompt = "You are a helpful assistant"
+
+		beforeEach(() => {
+			mockCaptureException.mockClear()
+		})
+
+		it("should capture telemetry on createMessage error", async () => {
+			// Mock fetch to return error
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: false,
+				status: 500,
+				text: async () => "Internal Server Error",
+			})
+			global.fetch = mockFetch as any
+
+			// Mock SDK to fail so it falls back to fetch
+			mockResponsesCreate.mockRejectedValue(new Error("SDK not available"))
+
+			const stream = handler.createMessage(errorSystemPrompt, errorMessages)
+
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should throw before yielding any chunks
+				}
+			}).rejects.toThrow()
+
+			// Verify telemetry was captured
+			expect(mockCaptureException).toHaveBeenCalledTimes(1)
+			expect(mockCaptureException).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: expect.stringContaining("OpenAI service error"),
+					provider: "OpenAI Native",
+					modelId: "gpt-4.1",
+					operation: "createMessage",
+				}),
+			)
+
+			// Verify it's an ApiProviderError
+			const capturedError = mockCaptureException.mock.calls[0][0]
+			expect(capturedError).toBeInstanceOf(ApiProviderError)
+		})
+
+		it("should capture telemetry on stream processing error", async () => {
+			// Mock fetch to return a stream with an error event
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: true,
+				body: new ReadableStream({
+					start(controller) {
+						controller.enqueue(
+							new TextEncoder().encode(
+								'data: {"type":"response.error","error":{"message":"Model overloaded"}}\n\n',
+							),
+						)
+						controller.close()
+					},
+				}),
+			})
+			global.fetch = mockFetch as any
+
+			// Mock SDK to fail so it falls back to fetch
+			mockResponsesCreate.mockRejectedValue(new Error("SDK not available"))
+
+			const stream = handler.createMessage(errorSystemPrompt, errorMessages)
+
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should throw when encountering error event
+				}
+			}).rejects.toThrow()
+
+			// Verify telemetry was captured (may be called multiple times due to error propagation)
+			expect(mockCaptureException).toHaveBeenCalled()
+
+			// Find the call with the stream error message
+			const streamErrorCall = mockCaptureException.mock.calls.find((call: any[]) =>
+				call[0]?.message?.includes("Model overloaded"),
+			)
+			expect(streamErrorCall).toBeDefined()
+			expect(streamErrorCall![0]).toMatchObject({
+				provider: "OpenAI Native",
+				modelId: "gpt-4.1",
+				operation: "createMessage",
+			})
+
+			// Verify it's an ApiProviderError
+			expect(streamErrorCall![0]).toBeInstanceOf(ApiProviderError)
+		})
+
+		it("should capture telemetry on completePrompt error", async () => {
+			// Mock SDK to throw an error
+			mockResponsesCreate.mockRejectedValue(new Error("API Error"))
+
+			await expect(handler.completePrompt("Test prompt")).rejects.toThrow()
+
+			// Verify telemetry was captured
+			expect(mockCaptureException).toHaveBeenCalledTimes(1)
+			expect(mockCaptureException).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: "API Error",
+					provider: "OpenAI Native",
+					modelId: "gpt-4.1",
+					operation: "completePrompt",
+				}),
+			)
+
+			// Verify it's an ApiProviderError
+			const capturedError = mockCaptureException.mock.calls[0][0]
+			expect(capturedError).toBeInstanceOf(ApiProviderError)
+		})
+
+		it("should still throw the error after capturing telemetry", async () => {
+			// Mock fetch to return error
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: false,
+				status: 500,
+				text: async () => "Internal Server Error",
+			})
+			global.fetch = mockFetch as any
+
+			// Mock SDK to fail
+			mockResponsesCreate.mockRejectedValue(new Error("SDK not available"))
+
+			const stream = handler.createMessage(errorSystemPrompt, errorMessages)
+
+			// Verify the error is still thrown
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should throw
+				}
+			}).rejects.toThrow()
+
+			// Telemetry should have been captured before the error was thrown
+			expect(mockCaptureException).toHaveBeenCalled()
 		})
 	})
 })

@@ -181,7 +181,7 @@ export function PillarsSection() {
 								<div className="text-muted-foreground my-4 space-y-1">
 									<p>
 										The Roo Code Extension is{" "}
-										<Link target="_blank" href="https://github.com/Roo-Code-Inc/Roo-Code">
+										<Link target="_blank" href="https://github.com/RooCodeInc/Roo-Code">
 											open source
 										</Link>{" "}
 										so you can see for yourself exactly what it&apos;s doing and we don&apos;t use

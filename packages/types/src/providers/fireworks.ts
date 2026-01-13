@@ -37,6 +37,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.6,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.15,
@@ -49,6 +50,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.6,
 		outputPrice: 2.5,
 		description:
@@ -60,6 +62,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.3,
 		outputPrice: 1.2,
 		description:
@@ -71,6 +74,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.22,
 		outputPrice: 0.88,
 		description: "Latest Qwen3 thinking model, competitive against the best closed source models in Jul 2025.",
@@ -81,6 +85,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.45,
 		outputPrice: 1.8,
 		description: "Qwen3's most agentic code model to date.",
@@ -91,6 +96,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 3,
 		outputPrice: 8,
 		description:
@@ -102,6 +108,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.9,
 		outputPrice: 0.9,
 		description:
@@ -113,6 +120,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.56,
 		outputPrice: 1.68,
 		description:
@@ -124,6 +132,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -135,6 +144,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -146,6 +156,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.55,
 		outputPrice: 2.19,
 		description:
@@ -157,6 +168,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.07,
 		outputPrice: 0.3,
 		description:
@@ -168,6 +180,7 @@ export const fireworksModels = {
 		supportsImages: false,
 		supportsPromptCache: false,
 		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		inputPrice: 0.15,
 		outputPrice: 0.6,
 		description:

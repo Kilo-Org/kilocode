@@ -86,11 +86,13 @@ export const agentManagerMessageSchema = z.discriminatedUnion("type", [
 /**
  * Remote session schema (simplified - full type comes from shared session client)
  */
-export const remoteSessionSchema = z.object({
-	id: z.string(),
-	name: z.string().optional(),
-	status: z.string().optional(),
-}).passthrough() // Allow additional fields from the full RemoteSession type
+export const remoteSessionSchema = z
+	.object({
+		id: z.string(),
+		name: z.string().optional(),
+		status: z.string().optional(),
+	})
+	.passthrough() // Allow additional fields from the full RemoteSession type
 
 /**
  * Messages from Extension to Webview
@@ -101,7 +103,11 @@ export const agentManagerExtensionMessageSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("agentManager.sessionRemoved"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.error"), error: z.string() }),
 	z.object({ type: z.literal("agentManager.remoteSessions"), sessions: z.array(remoteSessionSchema) }),
-	z.object({ type: z.literal("agentManager.branches"), branches: z.array(z.string()), currentBranch: z.string().optional() }),
+	z.object({
+		type: z.literal("agentManager.branches"),
+		branches: z.array(z.string()),
+		currentBranch: z.string().optional(),
+	}),
 ])
 
 // Inferred types

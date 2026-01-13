@@ -8,7 +8,19 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import { ApiStreamChunk } from "../../transform/stream"
 
 import { t } from "i18next"
+import { TelemetryService } from "@roo-code/telemetry" // kilocode_change
 import { VertexHandler } from "../vertex"
+
+// kilocode_change start
+// Mock TelemetryService
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: vi.fn(),
+		},
+	},
+}))
+// kilocode_change end
 
 describe("VertexHandler", () => {
 	let handler: VertexHandler

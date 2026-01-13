@@ -5,38 +5,43 @@
 	"start": "开始吧！",
 	"routers": {
 		"requesty": {
-			"description": "智能调度多个大语言模型",
+			"description": "您优化的 LLM 路由器",
 			"incentive": "$1 免费额度"
 		},
 		"openrouter": {
-			"description": "统一了大语言模型的接口"
+			"description": "LLM 统一接口"
 		},
 		"roo": {
-			"description": "最优秀的免费模型助你开始",
-			"incentive": "免费试用 Roo"
+			"description": "开始使用的最佳免费模型",
+			"incentive": "免费尝试 Roo"
 		}
 	},
 	"chooseProvider": "Kilo Code 需要一个 API 密钥才能发挥魔力。",
 	"providerSignup": {
+		"heading": "选择你的供应商",
+		"chooseProvider": "Roo 需要 LLM 提供商才能工作。选择一个开始使用，你可以稍后添加更多。",
 		"rooCloudProvider": "Roo Code Cloud 提供商",
-		"rooCloudDescription": "使用 Roo 最简单的方式。低成本精选的免费和付费模型组合",
+		"rooCloudDescription": "开始使用最简单的方式是使用 Roo Code Cloud 提供商：精心选择的免费和付费模型组合，价格低廉。",
 		"learnMore": "了解更多",
-		"useAnotherProvider": "使用其他提供商",
-		"useAnotherProviderDescription": "输入 API 密钥即可开始。",
-		"noApiKeys": "不想处理密钥？选择 Roo Code Cloud 提供商吧。",
-		"getStarted": "开始使用"
+		"useAnotherProvider": "第三方供应商",
+		"useAnotherProviderDescription": "输入 API 密钥开始使用。",
+		"noApiKeys": "不想处理 API 密钥和单独的账户？",
+		"backToRoo": "选择 Roo Code Cloud 提供商。",
+		"goBack": "返回",
+		"finish": "完成"
 	},
 	"waitingForCloud": {
-		"heading": "正在跳转到 Roo Code Cloud...",
-		"description": "在浏览器中完成注册，随后你将自动返回此处。",
-		"noPrompt": "如果你未被提示打开 URL，<clickHere>请点击此处</clickHere>。",
-		"havingTrouble": "如果你已完成注册但遇到问题，<clickHere>请点击此处</clickHere>。",
-		"pasteUrl": "从浏览器粘贴回调 URL：",
-		"invalidURL": "这看起来不像是有效的回调 URL。请复制 Roo Code Cloud 在你的浏览器中显示的内容。",
+		"heading": "登录到 Roo Code Cloud...",
+		"description": "我们将带你前往浏览器注册 Roo Code Cloud。然后我们会把你带回这里以完成设置。",
+		"noPrompt": "如果没有提示你打开 URL，<clickHere>点击这里</clickHere>。",
+		"havingTrouble": "如果你已完成注册但遇到问题，<clickHere>点击这里</clickHere>。",
+		"pasteUrl": "粘贴浏览器中显示的回调 URL：",
+		"docsLink": "无法正常工作？<DocsLink>查看文档</DocsLink>。",
+		"invalidURL": "这不像是有效的回调 URL。请复制 Roo Code Cloud 在你的浏览器中显示的内容。",
 		"goBack": "返回"
 	},
-	"startRouter": "我们推荐使用 LLM 路由器：",
-	"startCustom": "或者你可以使用自己的 API 密钥：",
+	"startRouter": "我们建议使用 LLM 路由器：",
+	"startCustom": "或者你可以带上自己的 API 密钥：",
 	"telemetry": {
 		"helpImprove": "帮助改进 Kilo Code",
 		"helpImproveMessage": "Kilo Code 收集错误和使用数据以帮助我们修复错误并改进扩展。此遥测不会收集代码、提示词或个人信息。你可以在<settingsLink>设置</settingsLink>中关闭此功能。"

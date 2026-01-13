@@ -11,21 +11,10 @@ export const formatDuration = (durationMs: number) => {
 	const minutes = Math.floor((seconds % 3600) / 60)
 	const remainingSeconds = seconds % 60
 
-	const parts = []
-
-	if (hours > 0) {
-		parts.push(`${hours}h`)
-	}
-
-	if (minutes > 0) {
-		parts.push(`${minutes}m`)
-	}
-
-	if (remainingSeconds > 0 || parts.length === 0) {
-		parts.push(`${remainingSeconds}s`)
-	}
-
-	return parts.join(" ")
+	// Format as H:MM:SS
+	const mm = minutes.toString().padStart(2, "0")
+	const ss = remainingSeconds.toString().padStart(2, "0")
+	return `${hours}:${mm}:${ss}`
 }
 
 export const formatTokens = (tokens: number) => {
@@ -34,11 +23,23 @@ export const formatTokens = (tokens: number) => {
 	}
 
 	if (tokens < 1000000) {
-		return `${(tokens / 1000).toFixed(1)}k`
+		// No decimal for thousands (e.g., 72k not 72.5k)
+		const rounded = Math.round(tokens / 1000)
+		// If rounding crosses the boundary to 1000k, show as 1.0M instead
+		if (rounded >= 1000) {
+			return "1.0M"
+		}
+		return `${rounded}k`
 	}
 
 	if (tokens < 1000000000) {
-		return `${(tokens / 1000000).toFixed(1)}M`
+		// Keep decimal for millions (e.g., 3.2M)
+		const rounded = Math.round(tokens / 100000) / 10 // Round to 1 decimal
+		// If rounding crosses the boundary to 1000M, show as 1.0B instead
+		if (rounded >= 1000) {
+			return "1.0B"
+		}
+		return `${rounded.toFixed(1)}M`
 	}
 
 	return `${(tokens / 1000000000).toFixed(1)}B`

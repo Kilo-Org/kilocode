@@ -1,19 +1,49 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, memo } from "react"
 import { useRouter } from "next/navigation"
 import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	Box,
+	Boxes,
+	Check,
+	CheckCircle,
+	CircleDot,
+	ClipboardList,
+	Cog,
 	Combine,
 	Ellipsis,
+	File,
+	FileText,
+	Folder,
+	FolderOpen,
+	Hammer,
+	Hexagon,
+	Layers,
+	List,
+	ListChecks,
+	ListTodo,
 	LoaderCircle,
+	Package,
+	Pencil,
+	PencilLine,
+	Plus,
 	Rocket,
-	RotateCcw,
+	Search,
+	Settings2,
+	Shapes,
+	Square,
+	Star,
+	Tag,
+	Terminal,
 	Trash2,
+	Wrench,
 	X,
+	Zap,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import type { Run, TaskMetrics } from "@roo-code/evals"
@@ -30,10 +60,17 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	Button,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	Input,
 	MultiSelect,
 	Select,
 	SelectContent,
@@ -51,6 +88,166 @@ import {
 	TooltipTrigger,
 } from "@/components/ui"
 import { Run as Row } from "@/components/home/run"
+
+// Available icons for tool groups
+const TOOL_GROUP_ICONS: { name: string; icon: LucideIcon }[] = [
+	{ name: "combine", icon: Combine },
+	{ name: "layers", icon: Layers },
+	{ name: "box", icon: Box },
+	{ name: "boxes", icon: Boxes },
+	{ name: "package", icon: Package },
+	{ name: "folder", icon: Folder },
+	{ name: "folder-open", icon: FolderOpen },
+	{ name: "file", icon: File },
+	{ name: "file-text", icon: FileText },
+	{ name: "list", icon: List },
+	{ name: "list-todo", icon: ListTodo },
+	{ name: "list-checks", icon: ListChecks },
+	{ name: "clipboard-list", icon: ClipboardList },
+	{ name: "check", icon: Check },
+	{ name: "check-circle", icon: CheckCircle },
+	{ name: "pencil", icon: PencilLine },
+	{ name: "trash", icon: Trash2 },
+	{ name: "x", icon: X },
+	{ name: "search", icon: Search },
+	{ name: "terminal", icon: Terminal },
+	{ name: "shapes", icon: Shapes },
+	{ name: "hexagon", icon: Hexagon },
+	{ name: "square", icon: Square },
+	{ name: "circle-dot", icon: CircleDot },
+	{ name: "star", icon: Star },
+	{ name: "zap", icon: Zap },
+	{ name: "hammer", icon: Hammer },
+	{ name: "wrench", icon: Wrench },
+	{ name: "cog", icon: Cog },
+	{ name: "settings", icon: Settings2 },
+	{ name: "tag", icon: Tag },
+]
+
+// Tool group type
+export type ToolGroup = {
+	id: string
+	name: string
+	icon: string
+	tools: string[]
+}
+
+// Helper to get icon component by name
+function getIconByName(name: string): LucideIcon {
+	return TOOL_GROUP_ICONS.find((i) => i.name === name)?.icon ?? Combine
+}
+
+// Generate a unique ID for tool groups
+function generateGroupId(): string {
+	return `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+}
+
+// Isolated dialog component to prevent parent re-renders on state changes
+const ToolGroupEditorDialog = memo(function ToolGroupEditorDialog({
+	open,
+	onOpenChange,
+	editingGroup,
+	availableTools,
+	onSave,
+}: {
+	open: boolean
+	onOpenChange: (open: boolean) => void
+	editingGroup: ToolGroup | null
+	availableTools: { label: string; value: string }[]
+	onSave: (group: ToolGroup) => void
+}) {
+	const [groupName, setGroupName] = useState(editingGroup?.name ?? "")
+	const [groupIcon, setGroupIcon] = useState(editingGroup?.icon ?? "combine")
+	const [groupTools, setGroupTools] = useState<string[]>(editingGroup?.tools ?? [])
+
+	// Reset form when dialog opens or editingGroup changes
+	useEffect(() => {
+		if (open) {
+			setGroupName(editingGroup?.name ?? "")
+			setGroupIcon(editingGroup?.icon ?? "combine")
+			setGroupTools(editingGroup?.tools ?? [])
+		}
+	}, [open, editingGroup])
+
+	const canSaveGroup = groupName.trim().length > 0 && groupTools.length > 0
+
+	const handleSave = () => {
+		if (!canSaveGroup) return
+		const group: ToolGroup = {
+			id: editingGroup?.id ?? generateGroupId(),
+			name: groupName.trim(),
+			icon: groupIcon,
+			tools: groupTools,
+		}
+		onSave(group)
+		onOpenChange(false)
+	}
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="max-w-md">
+				<DialogHeader>
+					<DialogTitle>{editingGroup ? "Edit Tool Group" : "Create Tool Group"}</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<label className="text-sm font-medium">
+							Group Name <span className="text-destructive">*</span>
+						</label>
+						<Input
+							placeholder="e.g., File Operations"
+							value={groupName}
+							onChange={(e) => setGroupName(e.target.value)}
+							className={!groupName.trim() ? "border-muted-foreground/30" : ""}
+						/>
+					</div>
+					<div className="space-y-2">
+						<label className="text-sm font-medium">Icon</label>
+						<div className="flex flex-wrap gap-2">
+							{TOOL_GROUP_ICONS.map(({ name, icon: IconComponent }) => (
+								<Button
+									key={name}
+									variant={groupIcon === name ? "default" : "outline"}
+									size="icon"
+									className="h-8 w-8"
+									onClick={() => setGroupIcon(name)}>
+									<IconComponent className="h-4 w-4" />
+								</Button>
+							))}
+						</div>
+					</div>
+					<div className="space-y-2">
+						<label className="text-sm font-medium">
+							Tools <span className="text-destructive">*</span>
+						</label>
+						<MultiSelect
+							options={availableTools}
+							value={groupTools}
+							onValueChange={setGroupTools}
+							placeholder="Select tools..."
+							className="w-full"
+							maxCount={3}
+							modalPopover
+						/>
+						<div className="text-xs text-muted-foreground">
+							{groupTools.length > 0
+								? `${groupTools.length} tool${groupTools.length !== 1 ? "s" : ""} selected`
+								: "Select at least one tool"}
+						</div>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button onClick={handleSave} disabled={!canSaveGroup}>
+						{editingGroup ? "Save Changes" : "Create Group"}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+})
 
 type RunWithTaskMetrics = Run & { taskMetrics: TaskMetrics | null }
 
@@ -72,7 +269,7 @@ const STORAGE_KEYS = {
 	TIMEFRAME: "evals-runs-timeframe",
 	MODEL_FILTER: "evals-runs-model-filter",
 	PROVIDER_FILTER: "evals-runs-provider-filter",
-	CONSOLIDATED_TOOLS: "evals-runs-consolidated-tools",
+	TOOL_GROUPS: "evals-runs-tool-groups",
 }
 
 function getTimeframeStartDate(timeframe: TimeframeOption): Date | null {
@@ -137,12 +334,23 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 		return stored ? JSON.parse(stored) : []
 	})
 
-	// Tool column consolidation state - initialize from localStorage
-	const [consolidatedToolColumns, setConsolidatedToolColumns] = useState<string[]>(() => {
+	// Tool groups state - initialize from localStorage
+	const [toolGroups, setToolGroups] = useState<ToolGroup[]>(() => {
 		if (typeof window === "undefined") return []
-		const stored = localStorage.getItem(STORAGE_KEYS.CONSOLIDATED_TOOLS)
-		return stored ? JSON.parse(stored) : []
+		const stored = localStorage.getItem(STORAGE_KEYS.TOOL_GROUPS)
+		if (stored) {
+			try {
+				return JSON.parse(stored)
+			} catch {
+				return []
+			}
+		}
+		return []
 	})
+
+	// Tool group editor dialog state
+	const [showGroupDialog, setShowGroupDialog] = useState(false)
+	const [editingGroup, setEditingGroup] = useState<ToolGroup | null>(null)
 
 	// Delete runs state
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -163,8 +371,8 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 	}, [providerFilter])
 
 	useEffect(() => {
-		localStorage.setItem(STORAGE_KEYS.CONSOLIDATED_TOOLS, JSON.stringify(consolidatedToolColumns))
-	}, [consolidatedToolColumns])
+		localStorage.setItem(STORAGE_KEYS.TOOL_GROUPS, JSON.stringify(toolGroups))
+	}, [toolGroups])
 
 	// Count incomplete runs (runs without taskMetricsId)
 	const incompleteRunsCount = useMemo(() => {
@@ -300,7 +508,7 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 			.map(([name]): ToolName => name)
 	}, [filteredRuns])
 
-	// Tool column options for the consolidation dropdown
+	// Tool column options for the group editor
 	const toolColumnOptions = useMemo(() => {
 		return allToolColumns.map((tool) => ({
 			label: tool,
@@ -308,13 +516,21 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 		}))
 	}, [allToolColumns])
 
-	// Separate consolidated and individual tool columns
-	const individualToolColumns = useMemo(() => {
-		return allToolColumns.filter((tool) => !consolidatedToolColumns.includes(tool))
-	}, [allToolColumns, consolidatedToolColumns])
+	// Get all tools that are in any group
+	const groupedTools = useMemo(() => {
+		const grouped = new Set<string>()
+		for (const group of toolGroups) {
+			for (const tool of group.tools) {
+				grouped.add(tool)
+			}
+		}
+		return grouped
+	}, [toolGroups])
 
-	// Create a "consolidated" column if any tools are selected for consolidation
-	const hasConsolidatedColumn = consolidatedToolColumns.length > 0
+	// Separate grouped and individual tool columns
+	const individualToolColumns = useMemo(() => {
+		return allToolColumns.filter((tool) => !groupedTools.has(tool))
+	}, [allToolColumns, groupedTools])
 
 	// Use individualToolColumns for rendering
 	const toolColumns = individualToolColumns
@@ -377,13 +593,11 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 		})
 	}, [filteredRuns, sortColumn, sortDirection])
 
-	// Calculate colSpan for empty state (7 base columns + dynamic tools + consolidated column + 3 end columns)
-	const totalColumns = 7 + toolColumns.length + (hasConsolidatedColumn ? 1 : 0) + 3
+	// Calculate colSpan for empty state (7 base columns + tool groups + dynamic tools + 3 end columns)
+	const totalColumns = 7 + toolGroups.length + toolColumns.length + 3
 
-	// Check if any filters or settings are active
+	// Check if any filters are active
 	const hasActiveFilters = timeframeFilter !== "all" || modelFilter.length > 0 || providerFilter.length > 0
-	const hasConsolidatedTools = consolidatedToolColumns.length > 0
-	const hasAnyCustomization = hasActiveFilters || hasConsolidatedTools
 
 	const clearAllFilters = () => {
 		setTimeframeFilter("all")
@@ -391,16 +605,52 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 		setProviderFilter([])
 	}
 
-	const resetAll = () => {
-		setTimeframeFilter("all")
-		setModelFilter([])
-		setProviderFilter([])
-		setConsolidatedToolColumns([])
-		localStorage.removeItem(STORAGE_KEYS.TIMEFRAME)
-		localStorage.removeItem(STORAGE_KEYS.MODEL_FILTER)
-		localStorage.removeItem(STORAGE_KEYS.PROVIDER_FILTER)
-		localStorage.removeItem(STORAGE_KEYS.CONSOLIDATED_TOOLS)
-	}
+	// Tool group management handlers
+	const openNewGroupDialog = useCallback(() => {
+		setEditingGroup(null)
+		setShowGroupDialog(true)
+	}, [])
+
+	const openEditGroupDialog = useCallback((group: ToolGroup) => {
+		setEditingGroup(group)
+		setShowGroupDialog(true)
+	}, [])
+
+	const handleSaveGroup = useCallback(
+		(group: ToolGroup) => {
+			setToolGroups((prev) => {
+				const existingIndex = prev.findIndex((g) => g.id === group.id)
+				if (existingIndex >= 0) {
+					// Update existing group
+					const newGroups = [...prev]
+					newGroups[existingIndex] = group
+					return newGroups
+				} else {
+					// Add new group
+					return [...prev, group]
+				}
+			})
+			toast.success(editingGroup ? "Group updated" : "Group created")
+		},
+		[editingGroup],
+	)
+
+	const handleDeleteGroup = useCallback((groupId: string) => {
+		setToolGroups((prev) => prev.filter((g) => g.id !== groupId))
+		toast.success("Group deleted")
+	}, [])
+
+	// Get available tools for group editor (tools not in other groups)
+	const availableToolsForEditor = useMemo(() => {
+		const usedInOtherGroups = new Set<string>()
+		for (const group of toolGroups) {
+			if (editingGroup && group.id === editingGroup.id) continue
+			for (const tool of group.tools) {
+				usedInOtherGroups.add(tool)
+			}
+		}
+		return toolColumnOptions.filter((opt) => !usedInOtherGroups.has(opt.value))
+	}, [toolColumnOptions, toolGroups, editingGroup])
 
 	return (
 		<>
@@ -448,49 +698,76 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 					/>
 				</div>
 
+				{/* Tool Groups Dropdown */}
 				<div className="flex items-center gap-2">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<div className="flex items-center gap-2">
-								<Combine className="h-4 w-4 text-muted-foreground" />
-								<span className="text-sm font-medium text-muted-foreground">Consolidate:</span>
-							</div>
-						</TooltipTrigger>
-						<TooltipContent>Select tool columns to consolidate into a combined column</TooltipContent>
-					</Tooltip>
-					<div className="relative min-w-[100px] w-fit max-w-[140px]">
-						<div className={consolidatedToolColumns.length > 0 ? "[&>div>div]:invisible" : ""}>
-							<MultiSelect
-								options={toolColumnOptions}
-								value={consolidatedToolColumns}
-								onValueChange={setConsolidatedToolColumns}
-								placeholder="None"
-								className="w-full min-w-[100px]"
-								maxCount={0}
-								popoverAutoWidth
-								footer={
-									hasAnyCustomization && (
-										<Button
-											variant="ghost"
-											size="sm"
-											className="w-full justify-start text-muted-foreground hover:text-foreground"
-											onClick={resetAll}>
-											<RotateCcw className="h-4 w-4 mr-2" />
-											Reset all filters & consolidation
-										</Button>
-									)
-								}
-							/>
-						</div>
-						{consolidatedToolColumns.length > 0 && (
-							<div className="absolute inset-0 flex items-center px-3 pointer-events-none">
-								<span className="text-sm font-medium whitespace-nowrap">
-									{consolidatedToolColumns.length} tool
-									{consolidatedToolColumns.length !== 1 ? "s" : ""}
-								</span>
-							</div>
-						)}
-					</div>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm" className="flex items-center gap-2">
+								<Layers className="h-4 w-4" />
+								<span>Groups</span>
+								{toolGroups.length > 0 && (
+									<span className="bg-primary text-primary-foreground text-xs px-1.5 rounded-full">
+										{toolGroups.length}
+									</span>
+								)}
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" className="w-64">
+							{toolGroups.length > 0 ? (
+								<>
+									{toolGroups.map((group) => {
+										const IconComponent = getIconByName(group.icon)
+										return (
+											<DropdownMenuItem
+												key={group.id}
+												className="flex items-center justify-between"
+												onClick={(e) => {
+													e.preventDefault()
+													openEditGroupDialog(group)
+												}}>
+												<div className="flex items-center gap-2">
+													<IconComponent className="h-4 w-4" />
+													<span>{group.name}</span>
+													<span className="text-xs text-muted-foreground">
+														({group.tools.length})
+													</span>
+												</div>
+												<div className="flex items-center gap-1">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-6 w-6"
+														onClick={(e) => {
+															e.stopPropagation()
+															openEditGroupDialog(group)
+														}}>
+														<Pencil className="h-3 w-3" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-6 w-6 text-destructive hover:text-destructive"
+														onClick={(e) => {
+															e.stopPropagation()
+															handleDeleteGroup(group.id)
+														}}>
+														<Trash2 className="h-3 w-3" />
+													</Button>
+												</div>
+											</DropdownMenuItem>
+										)
+									})}
+									<DropdownMenuSeparator />
+								</>
+							) : (
+								<div className="px-2 py-1.5 text-sm text-muted-foreground">No groups yet</div>
+							)}
+							<DropdownMenuItem onClick={openNewGroupDialog}>
+								<Plus className="h-4 w-4 mr-2" />
+								Add Group
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 
 				{hasActiveFilters && (
@@ -580,23 +857,30 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 							</div>
 						</TableHead>
 						<TableHead>Tokens</TableHead>
-						{hasConsolidatedColumn && (
-							<TableHead className="text-xs text-center">
-								<Tooltip>
-									<TooltipTrigger>
-										<Combine className="h-3 w-3 inline" />
-									</TooltipTrigger>
-									<TooltipContent>
-										<div className="text-xs">
-											<div className="font-semibold mb-1">Consolidated Tools:</div>
-											{consolidatedToolColumns.map((tool) => (
-												<div key={tool}>{tool}</div>
-											))}
-										</div>
-									</TooltipContent>
-								</Tooltip>
-							</TableHead>
-						)}
+						{/* Tool Group Columns */}
+						{toolGroups.map((group) => {
+							const IconComponent = getIconByName(group.icon)
+							return (
+								<TableHead key={group.id} className="text-center">
+									<div className="flex justify-center">
+										<Tooltip>
+											<TooltipTrigger>
+												<IconComponent className="h-4 w-4" />
+											</TooltipTrigger>
+											<TooltipContent>
+												<div className="text-xs">
+													<div className="font-semibold mb-1">{group.name}</div>
+													{group.tools.map((tool) => (
+														<div key={tool}>{tool}</div>
+													))}
+												</div>
+											</TooltipContent>
+										</Tooltip>
+									</div>
+								</TableHead>
+							)
+						})}
+						{/* Individual Tool Columns */}
 						{toolColumns.map((toolName) => (
 							<TableHead key={toolName} className="text-xs text-center">
 								<Tooltip>
@@ -628,7 +912,7 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 								run={run}
 								taskMetrics={taskMetrics}
 								toolColumns={toolColumns}
-								consolidatedToolColumns={consolidatedToolColumns}
+								toolGroups={toolGroups}
 							/>
 						))
 					) : (
@@ -662,6 +946,15 @@ export function Runs({ runs }: { runs: RunWithTaskMetrics[] }) {
 				onClick={() => router.push("/runs/new")}>
 				<Rocket className="size-6" />
 			</Button>
+
+			{/* Tool Group Editor Dialog */}
+			<ToolGroupEditorDialog
+				open={showGroupDialog}
+				onOpenChange={setShowGroupDialog}
+				editingGroup={editingGroup}
+				availableTools={availableToolsForEditor}
+				onSave={handleSaveGroup}
+			/>
 
 			{/* Delete Incomplete Runs Confirmation Dialog */}
 			<AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

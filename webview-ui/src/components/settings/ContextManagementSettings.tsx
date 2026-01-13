@@ -19,6 +19,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxOpenTabsContext: number
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
+	enableSubfolderRules?: boolean
 	maxReadFileLine?: number
 	maxImageFileSize?: number
 	maxTotalImageSize?: number
@@ -37,6 +38,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
+		| "enableSubfolderRules"
 		| "maxReadFileLine"
 		| "maxImageFileSize"
 		| "maxTotalImageSize"
@@ -59,6 +61,7 @@ export const ContextManagementSettings = ({
 	maxOpenTabsContext,
 	maxWorkspaceFiles,
 	showRooIgnoredFiles,
+	enableSubfolderRules,
 	setCachedStateField,
 	maxReadFileLine,
 	maxImageFileSize,
@@ -203,6 +206,20 @@ export const ContextManagementSettings = ({
 					</VSCodeCheckbox>
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.rooignore.description")}
+					</div>
+				</div>
+
+				<div>
+					<VSCodeCheckbox
+						checked={enableSubfolderRules}
+						onChange={(e: any) => setCachedStateField("enableSubfolderRules", e.target.checked)}
+						data-testid="enable-subfolder-rules-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.enableSubfolderRules.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.enableSubfolderRules.description")}
 					</div>
 				</div>
 

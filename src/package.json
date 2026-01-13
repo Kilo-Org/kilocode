@@ -675,6 +675,7 @@
 		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
+		"@roo-code/core": "workspace:^",
 		"@kilocode/core-schemas": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
@@ -758,7 +759,7 @@
 		"ws": "^8.18.0",
 		"xlsx": "^0.18.5",
 		"yaml": "^2.8.0",
-		"zod": "^3.25.61"
+		"zod": "3.25.61"
 	},
 	"devDependencies": {
 		"@roo-code/build": "workspace:^",
@@ -790,6 +791,7 @@
 		"@vscode/vsce": "3.3.2",
 		"dotenv": "^16.4.7",
 		"esbuild": "^0.25.0",
+		"esbuild-wasm": "^0.25.0",
 		"execa": "^9.5.2",
 		"glob": "^11.1.0",
 		"mkdirp": "^3.0.1",

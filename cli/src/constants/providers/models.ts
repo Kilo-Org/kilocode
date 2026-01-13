@@ -147,8 +147,8 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	doubao: null,
 	minimax: null,
 	"qwen-code": null,
-	"human-relay": null,
 	"fake-ai": null,
+	"human-relay": null,
 	xai: null,
 	groq: null,
 	chutes: null,
@@ -199,8 +199,8 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	doubao: null,
 	minimax: null,
 	"qwen-code": null,
-	"human-relay": null,
 	"fake-ai": null,
+	"human-relay": null,
 	xai: null,
 	groq: null,
 	chutes: null,
@@ -420,7 +420,7 @@ export function getModelsByProvider(params: {
 				defaultModel: geminiCliDefaultModelId,
 			}
 		default:
-			// For providers without static models (e.g., vscode-lm, human-relay, fake-ai, virtual-quota-fallback)
+			// For providers without static models (e.g., vscode-lm, fake-ai, virtual-quota-fallback)
 			return {
 				models: {},
 				defaultModel: DEFAULT_MODEL_IDS[provider] || "",

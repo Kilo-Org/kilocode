@@ -1,7 +1,7 @@
 import { PostHog } from "posthog-node"
 import * as vscode from "vscode"
 
-import { getKiloUrlFromToken, TelemetryEventName, type TelemetryEvent } from "@roo-code/types"
+import { getKiloUrlFromToken, type TelemetryEvent, TelemetryEventName } from "@roo-code/types"
 
 import { BaseTelemetryClient } from "./BaseTelemetryClient"
 
@@ -71,10 +71,12 @@ export class PostHogTelemetryClient extends BaseTelemetryClient {
 			console.info(`[PostHogTelemetryClient#capture] ${event.event}`)
 		}
 
+		const properties = await this.getEventProperties(event)
+
 		this.client.capture({
 			distinctId: this.distinctId,
 			event: event.event,
-			properties: await this.getEventProperties(event),
+			properties,
 		})
 	}
 

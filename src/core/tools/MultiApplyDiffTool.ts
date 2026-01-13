@@ -63,7 +63,8 @@ export async function applyDiffTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	// Check if native protocol is enabled - if so, always use single-file class-based tool
-	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info)
+	// Use the task's locked protocol for consistency throughout the task lifetime
+	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info, cline.taskToolProtocol)
 	if (isNativeProtocol(toolProtocol)) {
 		return applyDiffToolClass.handle(cline, block as ToolUse<"apply_diff">, {
 			askApproval,
@@ -765,11 +766,15 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 			}
 		}
 
-		// Check protocol for notice formatting
-		const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info)
+		// Check protocol for notice formatting - reuse the task's locked protocol
+		const noticeProtocol = resolveToolProtocol(
+			cline.apiConfiguration,
+			cline.api.getModel().info,
+			cline.taskToolProtocol,
+		)
 		const singleBlockNotice =
 			totalSearchBlocks === 1
-				? isNativeProtocol(toolProtocol)
+				? isNativeProtocol(noticeProtocol)
 					? "\n" +
 						JSON.stringify({
 							notice: "Making multiple related changes in a single apply_diff is more efficient. If other changes are needed in this file, please include them as additional SEARCH/REPLACE blocks.",

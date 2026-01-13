@@ -30,7 +30,6 @@ export const Requesty = ({
 	apiConfiguration,
 	setApiConfigurationField,
 	routerModels,
-	refetchRouterModels,
 	organizationAllowList,
 	modelValidationError,
 	uriScheme,
@@ -127,8 +126,7 @@ export const Requesty = ({
 			<Button
 				variant="outline"
 				onClick={() => {
-					vscode.postMessage({ type: "flushRouterModels", text: "requesty" })
-					refetchRouterModels()
+					vscode.postMessage({ type: "requestRouterModels", values: { provider: "requesty", refresh: true } })
 				}}>
 				<div className="flex items-center gap-2">
 					<span className="codicon codicon-refresh" />

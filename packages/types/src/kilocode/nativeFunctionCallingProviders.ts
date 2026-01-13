@@ -10,7 +10,6 @@ export const nativeFunctionCallingProviders = [
 	"xai",
 	"zai",
 	"synthetic",
-	"human-relay",
 	"qwen-code",
 	"inception",
 	"litellm",

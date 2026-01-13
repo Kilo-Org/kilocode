@@ -186,8 +186,11 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 			} as any,
 		)
 
-		// flushModels should have been called for litellm with refresh=true
-		expect(flushModelsMock).toHaveBeenCalledWith("litellm", true)
+		// flushModels should have been called for litellm with refresh=true and credentials
+		expect(flushModelsMock).toHaveBeenCalledWith(
+			{ provider: "litellm", apiKey: "test-api-key", baseUrl: "http://localhost:4000" },
+			true,
+		)
 
 		// getModels should have been called with the provided credentials
 		const litellmCalls = getModelsMock.mock.calls.filter((c: any[]) => c[0]?.provider === "litellm")

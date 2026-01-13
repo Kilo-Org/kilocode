@@ -336,17 +336,6 @@ describe("Static Provider Models", () => {
 			expect(result.defaultModel).toBe("gpt-3.5-turbo")
 		})
 
-		it("should handle human-relay provider", () => {
-			const result = getModelsByProvider({
-				provider: "human-relay",
-				routerModels: null,
-				kilocodeDefaultModel: "",
-			})
-
-			expect(result.models).toEqual({})
-			expect(result.defaultModel).toBe("")
-		})
-
 		it("should handle fake-ai provider", () => {
 			const result = getModelsByProvider({
 				provider: "fake-ai",

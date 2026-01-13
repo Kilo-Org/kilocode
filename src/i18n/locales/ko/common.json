@@ -99,8 +99,7 @@
 			"errorOutput": "오류 출력: {{output}}",
 			"processExitedWithError": "Claude Code 프로세스가 코드 {{exitCode}}로 종료되었습니다. 오류 출력: {{output}}",
 			"stoppedWithReason": "Claude Code가 다음 이유로 중지되었습니다: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API 키",
-			"getGroqApiKey": "Groq API 키 받기",
-			"claudeCode": {
-				"pathLabel": "Claude Code 경로",
-				"description": "Claude Code CLI의 선택적 경로입니다. 설정되지 않은 경우 기본값은 'claude'입니다.",
-				"placeholder": "기본값: claude"
-			}
+			"getGroqApiKey": "Groq API 키 받기"
 		}
 	},
 	"customModes": {
