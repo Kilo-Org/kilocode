@@ -80,6 +80,7 @@
 		"cancelTitle": "Annuler l'agent",
 		"finishToBranchTitle": "Terminer le worktree et préparer la branch : {{branch}}",
 		"finishToBranchTitleNoBranch": "Terminer le worktree et préparer la branch",
+		"createPRTitle": "Créer une pull request",
 		"sendTitle": "Envoyer le message",
 		"resumeTitle": "Reprendre l'agent",
 		"hint": "Entrée pour envoyer, Shift+Entrée pour nouvelle ligne"

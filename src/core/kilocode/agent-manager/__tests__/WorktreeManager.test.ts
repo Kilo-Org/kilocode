@@ -86,7 +86,12 @@ describe("WorktreeManager", () => {
 			mockGit.checkIsRepo.mockResolvedValue(true)
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.raw.mockResolvedValue("")
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				// .git directory exists
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
@@ -103,7 +108,11 @@ describe("WorktreeManager", () => {
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.branch.mockResolvedValue({ all: ["feature/existing-branch"] })
 			mockGit.raw.mockResolvedValue("")
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
@@ -121,7 +130,11 @@ describe("WorktreeManager", () => {
 			mockGit.checkIsRepo.mockResolvedValue(true)
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.branch.mockResolvedValue({ all: [] })
-			vi.mocked(fs.existsSync).mockReturnValue(false)
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue("")
 
@@ -134,10 +147,11 @@ describe("WorktreeManager", () => {
 			mockGit.revparse.mockResolvedValue("main")
 			mockGit.raw.mockResolvedValue("")
 			vi.mocked(fs.existsSync).mockImplementation((p) => {
-				// Return true for worktree path check, false for gitignore (cross-platform)
 				const normalized = String(p).replace(/\\/g, "/")
-				return normalized.includes(".kilocode/worktrees")
+				// .git exists, worktree path exists
+				return normalized.endsWith(".git") || normalized.includes(".kilocode/worktrees")
 			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.rm).mockResolvedValue(undefined)
 			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/")
@@ -272,28 +286,71 @@ describe("WorktreeManager", () => {
 		})
 	})
 
-	describe("ensureGitignore", () => {
-		it("adds gitignore entry when not present", async () => {
+	describe("ensureGitExclude", () => {
+		it("adds exclude entry when not present", async () => {
 			vi.mocked(fs.existsSync).mockReturnValue(true)
-			vi.mocked(fs.promises.readFile).mockResolvedValue("node_modules/\n")
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("# existing excludes\n")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
 
-			await manager.ensureGitignore()
+			await manager.ensureGitExclude()
 
 			expect(fs.promises.appendFile).toHaveBeenCalledWith(
-				path.join(projectRoot, ".gitignore"),
+				path.join(projectRoot, ".git", "info", "exclude"),
 				expect.stringContaining(".kilocode/worktrees/"),
 			)
 		})
 
 		it("skips adding entry when already present", async () => {
 			vi.mocked(fs.existsSync).mockReturnValue(true)
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
 			vi.mocked(fs.promises.readFile).mockResolvedValue(".kilocode/worktrees/\n")
 			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
 
-			await manager.ensureGitignore()
+			await manager.ensureGitExclude()
 
 			expect(fs.promises.appendFile).not.toHaveBeenCalled()
+		})
+
+		it("creates info directory if it does not exist", async () => {
+			vi.mocked(fs.existsSync).mockImplementation((p) => {
+				const normalized = String(p).replace(/\\/g, "/")
+				// .git exists, but info directory does not
+				return normalized.endsWith(".git")
+			})
+			vi.mocked(fs.promises.stat).mockResolvedValue({ isDirectory: () => true, isFile: () => false } as any)
+			vi.mocked(fs.promises.mkdir).mockResolvedValue(undefined)
+			vi.mocked(fs.promises.readFile).mockResolvedValue("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitExclude()
+
+			expect(fs.promises.mkdir).toHaveBeenCalledWith(
+				path.join(projectRoot, ".git", "info"),
+				expect.objectContaining({ recursive: true }),
+			)
+		})
+
+		it("resolves main .git directory when in a worktree", async () => {
+			const mainRepoGitDir = "/main/repo/.git"
+			const worktreeGitDir = `${mainRepoGitDir}/worktrees/my-worktree`
+
+			vi.mocked(fs.existsSync).mockReturnValue(true)
+			// .git is a file (worktree marker)
+			vi.mocked(fs.promises.stat).mockResolvedValueOnce({ isDirectory: () => false, isFile: () => true } as any)
+			// Return gitdir content for worktree
+			vi.mocked(fs.promises.readFile).mockResolvedValueOnce(`gitdir: ${worktreeGitDir}\n`)
+			// Return existing exclude content
+			vi.mocked(fs.promises.readFile).mockResolvedValueOnce("")
+			vi.mocked(fs.promises.appendFile).mockResolvedValue(undefined)
+
+			await manager.ensureGitExclude()
+
+			// Should write to main repo's .git/info/exclude, not the worktree's
+			expect(fs.promises.appendFile).toHaveBeenCalledWith(
+				expect.stringContaining(path.join(mainRepoGitDir, "info", "exclude")),
+				expect.stringContaining(".kilocode/worktrees/"),
+			)
 		})
 	})
 })

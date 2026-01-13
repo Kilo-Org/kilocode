@@ -120,7 +120,11 @@ const config: Config = {
 					},
 					{
 						to: "/agent-behavior/custom-instructions",
-						from: ["/advanced-usage/custom-instructions", "/features/custom-instructions", "/customization/custom-instructions"],
+						from: [
+							"/advanced-usage/custom-instructions",
+							"/features/custom-instructions",
+							"/customization/custom-instructions",
+						],
 					},
 					{
 						to: "/agent-behavior/custom-modes",

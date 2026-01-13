@@ -217,6 +217,11 @@ export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boo
 	const lastNewlineIndex = prefix.lastIndexOf("\n")
 	const currentLinePrefix = prefix.slice(lastNewlineIndex + 1)
 
+	// if the first line contains no word characters, show the whole block
+	if (!currentLinePrefix.match(/\w/)) {
+		return false
+	}
+
 	// If the current line prefix contains non-whitespace, only show the first line
 	if (currentLinePrefix.trim().length > 0) {
 		return true

@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desactivat)",
-				"tokenError": "S'ha d'establir un token vàlid per utilitzar Autocomplete",
+				"noCredits": "**No tens crèdits al teu compte**\n\nEl teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**No s'ha configurat cap model d'autocompletat**\n\nPer habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles: {{providers}}.\n\n[Obrir Configuració](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Cost total de la sessió:",
 				"provider": "Proveïdor:",
 				"model": "Model:",
@@ -203,5 +204,9 @@
 			"invalidApiKey": "La vostra clau de l'API d'OpenAI no és vàlida o no té accés a l'API en temps real. Si us plau, comproveu la vostra clau de l'API i torneu-ho a provar.",
 			"unknown": "Ha fallat la connexió. Comproveu la configuració i torneu-ho a provar."
 		}
+	},
+	"configDiscovery": {
+		"removed": "Kilo Codi: Eliminat {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Codi Kilo: Afegit {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

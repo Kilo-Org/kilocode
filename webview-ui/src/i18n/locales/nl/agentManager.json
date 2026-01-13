@@ -80,6 +80,7 @@
 		"cancelTitle": "Agent annuleren",
 		"finishToBranchTitle": "Voltooi worktree en bereid branch voor: {{branch}}",
 		"finishToBranchTitleNoBranch": "Voltooi worktree en bereid branch voor",
+		"createPRTitle": "Pull request maken",
 		"sendTitle": "Bericht verzenden",
 		"resumeTitle": "Agent hervatten",
 		"hint": "Druk Enter om te verzenden, Shift+Enter voor nieuwe regel"
