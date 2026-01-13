@@ -9,10 +9,10 @@ The Kilo Code CLI supports MCP servers, but uses a **different configuration pat
 
 ## Configuration Location
 
-| Environment | MCP Settings Path |
-|-------------|-------------------|
-| **CLI** | `~/.kilocode/cli/global/settings/mcp_settings.json` |
-| **VS Code** | VS Code's global storage directory |
+| Environment | MCP Settings Path                                   |
+| ----------- | --------------------------------------------------- |
+| **CLI**     | `~/.kilocode/cli/global/settings/mcp_settings.json` |
+| **VS Code** | VS Code's global storage directory                  |
 
 MCP servers configured in VS Code are **not** automatically available in the CLI. You must configure them separately.
 
@@ -22,17 +22,17 @@ Edit `~/.kilocode/cli/global/settings/mcp_settings.json`:
 
 ```json
 {
-  "mcpServers": {
-    "server-name": {
-      "command": "node",
-      "args": ["/path/to/server.js"],
-      "env": {
-        "API_KEY": "your_api_key"
-      },
-      "alwaysAllow": ["tool1", "tool2"],
-      "disabled": false
-    }
-  }
+	"mcpServers": {
+		"server-name": {
+			"command": "node",
+			"args": ["/path/to/server.js"],
+			"env": {
+				"API_KEY": "your_api_key"
+			},
+			"alwaysAllow": ["tool1", "tool2"],
+			"disabled": false
+		}
+	}
 }
 ```
 
@@ -42,13 +42,13 @@ Edit `~/.kilocode/cli/global/settings/mcp_settings.json`:
 
 ```json
 {
-  "mcpServers": {
-    "local-server": {
-      "command": "node",
-      "args": ["/path/to/server.js"],
-      "env": {}
-    }
-  }
+	"mcpServers": {
+		"local-server": {
+			"command": "node",
+			"args": ["/path/to/server.js"],
+			"env": {}
+		}
+	}
 }
 ```
 
@@ -56,15 +56,15 @@ Edit `~/.kilocode/cli/global/settings/mcp_settings.json`:
 
 ```json
 {
-  "mcpServers": {
-    "remote-server": {
-      "type": "streamable-http",
-      "url": "https://your-server.com/mcp",
-      "headers": {
-        "Authorization": "Bearer token"
-      }
-    }
-  }
+	"mcpServers": {
+		"remote-server": {
+			"type": "streamable-http",
+			"url": "https://your-server.com/mcp",
+			"headers": {
+				"Authorization": "Bearer token"
+			}
+		}
+	}
 }
 ```
 
@@ -74,17 +74,17 @@ You can define MCP servers per-project by creating `.kilocode/mcp.json` in your 
 
 ## Configuration Options
 
-| Option | Description |
-|--------|-------------|
-| `command` | Executable to run (STDIO) |
-| `args` | Command arguments (STDIO) |
-| `env` | Environment variables |
-| `type` | Transport type: `stdio` (default), `streamable-http`, `sse` |
-| `url` | Server URL (HTTP transports) |
-| `headers` | HTTP headers (HTTP transports) |
-| `alwaysAllow` | Array of tool names to auto-approve |
-| `disabled` | Set `true` to disable without removing |
-| `timeout` | Request timeout in seconds (default: 60) |
+| Option        | Description                                                 |
+| ------------- | ----------------------------------------------------------- |
+| `command`     | Executable to run (STDIO)                                   |
+| `args`        | Command arguments (STDIO)                                   |
+| `env`         | Environment variables                                       |
+| `type`        | Transport type: `stdio` (default), `streamable-http`, `sse` |
+| `url`         | Server URL (HTTP transports)                                |
+| `headers`     | HTTP headers (HTTP transports)                              |
+| `alwaysAllow` | Array of tool names to auto-approve                         |
+| `disabled`    | Set `true` to disable without removing                      |
+| `timeout`     | Request timeout in seconds (default: 60)                    |
 
 ## Auto-Approval
 
@@ -92,11 +92,11 @@ MCP auto-approval is controlled via CLI config (`kilocode config`):
 
 ```json
 {
-  "autoApproval": {
-    "mcp": {
-      "enabled": true
-    }
-  }
+	"autoApproval": {
+		"mcp": {
+			"enabled": true
+		}
+	}
 }
 ```
 

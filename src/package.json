@@ -675,6 +675,7 @@
 		"@modelcontextprotocol/sdk": "^1.24.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
+		"@kilocode/core-schemas": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",

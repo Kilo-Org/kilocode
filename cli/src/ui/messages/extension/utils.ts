@@ -217,8 +217,8 @@ export function truncateText(text: string, maxLength: number = 100): string {
  * Format file path for display
  */
 export function formatFilePath(path: string): string {
-	// Remove leading ./ if present
-	return path.replace(/^\.\//, "")
+	// Trim whitespace and remove leading ./ if present
+	return path.trim().replace(/^\.\//, "")
 }
 
 /**
