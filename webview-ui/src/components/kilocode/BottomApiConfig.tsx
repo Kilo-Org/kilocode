@@ -3,7 +3,8 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 
 export const BottomApiConfig = () => {
-	const { currentApiConfigName, apiConfiguration, virtualQuotaActiveModel } = useExtensionState() // kilocode_change: Get virtual quota active model for UI display
+	const { currentApiConfigName, apiConfiguration, virtualQuotaActiveModel, intelligentActiveModel } =
+		useExtensionState() // kilocode_change: Get virtual quota and intelligent active models for UI display
 	const { id: selectedModelId, provider: selectedProvider } = useSelectedModel(apiConfiguration)
 
 	if (!apiConfiguration) {
@@ -22,6 +23,12 @@ export const BottomApiConfig = () => {
 					virtualQuotaActiveModel={
 						virtualQuotaActiveModel
 							? { id: virtualQuotaActiveModel.id, name: virtualQuotaActiveModel.id }
+							: undefined
+					}
+					//kilocode_change: Pass intelligent active model to ModelSelector
+					intelligentActiveModel={
+						intelligentActiveModel
+							? { id: intelligentActiveModel.id, name: intelligentActiveModel.id }
 							: undefined
 					}
 				/>
