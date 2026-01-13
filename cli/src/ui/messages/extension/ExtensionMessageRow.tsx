@@ -43,5 +43,5 @@ export const ExtensionMessageRow: React.FC<ExtensionMessageRowProps> = ({ messag
 		)
 	}
 
-	return <ErrorBoundary fallbackRender={ErrorFallback}>{content}</ErrorBoundary>
+	return <ErrorBoundary fallbackRender={ErrorFallback}><>{content}</></ErrorBoundary>
 }

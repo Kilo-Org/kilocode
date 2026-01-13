@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (devre dışı)",
-				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
+				"noCredits": "**Hesabınızda kredi yok**\n\nKilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.\n\n[Ayarları Aç](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Otomatik tamamlama modeli yapılandırılmadı**\n\nOtomatik tamamlamayı etkinleştirmek için desteklenen sağlayıcılardan biriyle bir profil ekleyin: {{providers}}.\n\n[Ayarları Aç](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
 				"model": "Model:",

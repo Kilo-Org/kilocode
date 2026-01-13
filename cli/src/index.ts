@@ -18,6 +18,7 @@ import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
+import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -52,6 +53,12 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option(
+		"--attach <path>",
+		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
+		accumulateAttachments,
+		[] as string[],
+	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate that --existing-branch requires --parallel
@@ -151,6 +158,24 @@ program
 			}
 		}
 
+		// Validate attachments if specified
+		const attachments: string[] = options.attach || []
+		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		if (!attachRequiresAutoResult.valid) {
+			console.error(attachRequiresAutoResult.error)
+			process.exit(1)
+		}
+
+		if (attachments.length > 0) {
+			const validationResult = validateAttachments(attachments)
+			if (!validationResult.valid) {
+				for (const error of validationResult.errors) {
+					console.error(error)
+				}
+				process.exit(1)
+			}
+		}
+
 		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
@@ -233,6 +258,7 @@ program
 			fork: options.fork,
 			noSplash: options.nosplash,
 			appendSystemPrompt: options.appendSystemPrompt,
+			attachments: attachments.length > 0 ? attachments : undefined,
 		})
 		await cli.start()
 		await cli.dispose()
