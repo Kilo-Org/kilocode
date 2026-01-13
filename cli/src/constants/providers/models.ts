@@ -66,6 +66,7 @@ export type RouterName =
 	| "deepinfra"
 	| "vercel-ai-gateway"
 	| "ovhcloud"
+	| "nano-gpt"
 
 /**
  * ModelInfo interface - mirrors the one from packages/types/src/model.ts
@@ -125,7 +126,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	lmstudio: "lmstudio",
 	litellm: "litellm",
 	glama: "glama",
-	"nano-gpt": null,
+	"nano-gpt": "nano-gpt",
 	unbound: "unbound",
 	requesty: "requesty",
 	deepinfra: "deepinfra",
@@ -461,6 +462,8 @@ export function getModelIdKey(provider: ProviderName): string {
 			return "vercelAiGatewayModelId"
 		case "ovhcloud":
 			return "ovhCloudAiEndpointsModelId"
+		case "nano-gpt":
+			return "nanoGptModelId"
 		default:
 			return "apiModelId"
 	}

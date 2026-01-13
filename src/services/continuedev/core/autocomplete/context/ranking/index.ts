@@ -38,7 +38,8 @@ function jaccardSimilarity(a: string, b: string): number {
 /**
  * Rank code snippets to be used in tab-autocomplete prompt. Returns a sorted version of the snippet array.
  */
-export function rankAndOrderSnippets(ranges: RankedSnippet[], helper: HelperVars): Required<RankedSnippet>[] { //MINIMAL_REPO - this isn't actually used in continue
+export function rankAndOrderSnippets(ranges: RankedSnippet[], helper: HelperVars): Required<RankedSnippet>[] {
+	//MINIMAL_REPO - this isn't actually used in continue
 	const windowAroundCursor =
 		helper.fullPrefix.slice(-helper.options.slidingWindowSize * helper.options.slidingWindowPrefixPercentage) +
 		helper.fullSuffix.slice(helper.options.slidingWindowSize * (1 - helper.options.slidingWindowPrefixPercentage))

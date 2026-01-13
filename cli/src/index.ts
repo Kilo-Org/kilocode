@@ -13,7 +13,7 @@ import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
-import { loadCustomModes } from "./config/customModes.js"
+import { loadCustomModes, getSearchedPaths } from "./config/customModes.js"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
@@ -80,7 +80,14 @@ program
 
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
-			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
+			const searchedPaths = getSearchedPaths()
+			console.error(`Error: Mode "${options.mode}" not found.\n`)
+			console.error("The CLI searched for custom modes in:")
+			for (const searched of searchedPaths) {
+				const status = searched.found ? `found, ${searched.modesCount} mode(s)` : "not found"
+				console.error(`  • ${searched.type === "global" ? "Global" : "Project"}: ${searched.path} (${status})`)
+			}
+			console.error(`\nAvailable modes: ${allValidModes.join(", ")}`)
 			process.exit(1)
 		}
 
