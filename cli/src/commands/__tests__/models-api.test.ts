@@ -393,9 +393,9 @@ describe("models-api command", () => {
 	})
 
 	describe("timeout handling", () => {
-		it("should have a default timeout of 10 seconds", () => {
-			const ROUTER_MODELS_TIMEOUT = 10000
-			expect(ROUTER_MODELS_TIMEOUT).toBe(10000)
+		it("should have a default timeout of 30 seconds", () => {
+			const ROUTER_MODELS_TIMEOUT = 30000
+			expect(ROUTER_MODELS_TIMEOUT).toBe(30000)
 		})
 	})
 })
