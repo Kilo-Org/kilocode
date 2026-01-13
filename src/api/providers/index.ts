@@ -21,6 +21,7 @@ export { NanoGptHandler } from "./nano-gpt" // kilocode_change
 export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
 export { OpenRouterHandler } from "./openrouter"
+export { ZenMuxHandler } from "./zenmux" // kilocode_change
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"

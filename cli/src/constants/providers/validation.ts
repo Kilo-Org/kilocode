@@ -9,6 +9,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	anthropic: ["apiKey", "apiModelId"],
 	"openai-native": ["openAiNativeApiKey", "apiModelId"],
 	openrouter: ["openRouterApiKey", "openRouterModelId"],
+	zenmux: ["zenmuxApiKey", "zenmuxModelId"], // kilocode_change
 	ollama: ["ollamaBaseUrl", "ollamaModelId"],
 	lmstudio: ["lmStudioBaseUrl", "lmStudioModelId"],
 	bedrock: ["awsAccessKey", "awsSecretKey", "awsRegion", "apiModelId"],
