@@ -150,7 +150,7 @@
 		"cpy-cli": "^6.0.0",
 		"del-cli": "^7.0.0",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-turbo": "^2.7.3",
+		"eslint-plugin-turbo": "^2.7.4",
 		"ink-testing-library": "^4.0.0",
 		"mkdirp": "^3.0.1",
 		"prettier": "^3.7.4",
