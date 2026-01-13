@@ -79,7 +79,7 @@ export class WorktreeManager {
 		}
 
 		await this.ensureWorktreesDir()
-		await this.ensureGitignore()
+		await this.ensureGitExclude()
 
 		const parentBranch = await this.getCurrentBranch()
 
@@ -286,23 +286,64 @@ export class WorktreeManager {
 	}
 
 	/**
-	 * Ensure .kilocode/worktrees/ is in .gitignore
+	 * Ensure .kilocode/worktrees/ is excluded from git using .git/info/exclude.
+	 * This avoids modifying the user's .gitignore file which would require a commit.
 	 */
-	async ensureGitignore(): Promise<void> {
-		const gitignorePath = path.join(this.projectRoot, ".gitignore")
+	async ensureGitExclude(): Promise<void> {
 		const entry = ".kilocode/worktrees/"
 
+		const gitDir = await this.resolveGitDir()
+		const excludePath = path.join(gitDir, "info", "exclude")
+
+		// Ensure the info directory exists
+		const infoDir = path.join(gitDir, "info")
+		if (!fs.existsSync(infoDir)) {
+			await fs.promises.mkdir(infoDir, { recursive: true })
+		}
+
 		let content = ""
-		if (fs.existsSync(gitignorePath)) {
-			content = await fs.promises.readFile(gitignorePath, "utf-8")
+		if (fs.existsSync(excludePath)) {
+			content = await fs.promises.readFile(excludePath, "utf-8")
 			if (content.includes(entry)) return
 		}
 
 		const addition = content.endsWith("\n") || content === "" ? "" : "\n"
-		const gitignoreEntry = `${addition}\n# Kilo Code agent worktrees\n${entry}\n`
+		const excludeEntry = `${addition}\n# Kilo Code agent worktrees\n${entry}\n`
 
-		await fs.promises.appendFile(gitignorePath, gitignoreEntry)
-		this.log("Added .kilocode/worktrees/ to .gitignore")
+		await fs.promises.appendFile(excludePath, excludeEntry)
+		this.log("Added .kilocode/worktrees/ to .git/info/exclude")
+	}
+
+	/**
+	 * Resolve the actual .git directory, handling worktrees.
+	 * In a worktree, .git is a file containing "gitdir: /path/to/main/.git/worktrees/<name>".
+	 * We need to find the main repo's .git directory for the exclude file.
+	 * Note: Assumes caller has already verified this is a git repo (via checkIsRepo).
+	 */
+	private async resolveGitDir(): Promise<string> {
+		const gitPath = path.join(this.projectRoot, ".git")
+		const stat = await fs.promises.stat(gitPath)
+
+		if (stat.isDirectory()) {
+			// Normal repository - .git is a directory
+			return gitPath
+		}
+
+		// Worktree - .git is a file containing gitdir reference
+		const gitFileContent = await fs.promises.readFile(gitPath, "utf-8")
+		const match = gitFileContent.match(/^gitdir:\s*(.+)$/m)
+
+		if (!match) {
+			throw new WorktreeError("INVALID_GIT_FILE", "Invalid .git file format")
+		}
+
+		const worktreeGitDir = match[1].trim()
+
+		// worktreeGitDir is like: /path/to/main/.git/worktrees/<name>
+		// We need: /path/to/main/.git
+		// Navigate up from worktrees/<name> to .git
+		const mainGitDir = path.resolve(path.dirname(gitPath), worktreeGitDir, "..", "..")
+		return mainGitDir
 	}
 
 	/**

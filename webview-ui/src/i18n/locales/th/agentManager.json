@@ -80,6 +80,7 @@
 		"cancelTitle": "ยกเลิกเอเจนต์",
 		"finishToBranchTitle": "เสร็จสิ้น worktree และเตรียม branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "เสร็จสิ้น worktree และเตรียม branch",
+		"createPRTitle": "สร้าง pull request",
 		"sendTitle": "ส่งข้อความ",
 		"resumeTitle": "ดำเนินการต่อ",
 		"hint": "กด Enter เพื่อส่ง, Shift+Enter สำหรับบรรทัดใหม่"

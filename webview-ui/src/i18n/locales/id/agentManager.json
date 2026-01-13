@@ -80,6 +80,7 @@
 		"cancelTitle": "Batalkan agen",
 		"finishToBranchTitle": "Selesaikan worktree dan siapkan branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Selesaikan worktree dan siapkan branch",
+		"createPRTitle": "Buat pull request",
 		"sendTitle": "Kirim pesan",
 		"resumeTitle": "Lanjutkan agen",
 		"hint": "Tekan Enter untuk mengirim, Shift+Enter untuk baris baru"
