@@ -457,8 +457,8 @@
 		}
 	},
 	"slashCommand": {
-		"wantsToRun": "Kilo Code wants to run a slash command",
-		"didRun": "Kilo Code ran a slash command"
+		"wantsToRun": "Kilo Code wants to run a workflow",
+		"didRun": "Kilo Code ran a workflow"
 	},
 	"queuedMessages": {
 		"title": "Queued Messages",

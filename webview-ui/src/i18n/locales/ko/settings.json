@@ -976,7 +976,7 @@
 			"name": "Autocomplete",
 			"description": "에디터에서 직접 빠른 코드 제안과 개선을 위한 Autocomplete 기능을 활성화합니다. 타겟 변경을 위한 빠른 작업(Cmd+I)과 컨텍스트 개선을 위한 Autocomplete가 포함됩니다."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "모델 시작 슬래시 명령 활성화",
 			"description": "활성화되면 Kilo Code가 워크플로를 실행하기 위해 슬래시 명령을 실행할 수 있습니다."
 		},

@@ -975,7 +975,7 @@
 			"name": "Autocomplete",
 			"description": "Habilita las funciones de Autocomplete para sugerencias de código rápidas y mejoras directamente en tu editor. Incluye Tarea Rápida (Cmd+I) para cambios específicos y Autocomplete para mejoras contextuales."
 		},
-		"RUN_SLASH_COMMAND": {
+		"AUTO_EXECUTE_WORKFLOW": {
 			"name": "Habilitar comandos slash iniciados por el modelo",
 			"description": "Cuando está habilitado, Kilo Code puede ejecutar tus comandos slash para ejecutar flujos de trabajo."
 		},
