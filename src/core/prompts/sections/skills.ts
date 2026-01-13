@@ -1,15 +1,29 @@
+import * as os from "os"
+import * as path from "path"
 import { SkillsManager, SkillMetadata } from "../../../services/skills/SkillsManager"
 
 /**
- * Get a display-friendly relative path for a skill.
+ * Get a display-friendly path for a skill.
  * Converts absolute paths to relative paths to avoid leaking sensitive filesystem info.
  *
+ * For global skills, uses the actual home directory path (not ~) to ensure
+ * the path works correctly when the AI model tries to read the file on all platforms.
+ *
  * @param skill - The skill metadata
- * @returns A relative path like ".kilocode/skills/name/SKILL.md" or "~/.kilocode/skills/name/SKILL.md"
+ * @returns A path like ".kilocode/skills/name/SKILL.md" or "C:/Users/john/.kilocode/skills/name/SKILL.md"
  */
 function getDisplayPath(skill: SkillMetadata): string {
-	const basePath = skill.source === "project" ? ".kilocode" : "~/.kilocode"
 	const skillsDir = skill.mode ? `skills-${skill.mode}` : "skills"
+
+	if (skill.source === "project") {
+		return `.kilocode/${skillsDir}/${skill.name}/SKILL.md`
+	}
+
+	// For global skills, use the actual home directory path instead of ~
+	// This ensures the path works correctly when the AI model tries to read the file
+	// on all platforms, especially Windows where ~ is not automatically expanded
+	const homeDir = os.homedir()
+	const basePath = path.join(homeDir, ".kilocode")
 	return `${basePath}/${skillsDir}/${skill.name}/SKILL.md`
 }
 
