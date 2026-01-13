@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (uitgeschakeld)",
-				"tokenError": "Een geldig token moet worden ingesteld om Autocomplete te gebruiken",
+				"noCredits": "**Geen tegoed op je account**\n\nJe Kilo Code account heeft geen tegoed. Om autocomplete te gebruiken, voeg tegoed toe aan je account.\n\n[Instellingen openen](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Geen autocomplete model geconfigureerd**\n\nOm autocomplete in te schakelen, voeg een profiel toe met een van deze ondersteunde providers: {{providers}}.\n\n[Instellingen openen](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Totale sessiekosten:",
 				"provider": "Provider:",
 				"model": "Model:",
@@ -203,5 +204,9 @@
 			"invalidApiKey": "Uw OpenAI API-sleutel is ongeldig of heeft geen toegang tot de Realtime API. Controleer uw API-sleutel en probeer het opnieuw.",
 			"unknown": "Verbinding mislukt. Controleer uw configuratie en probeer het opnieuw."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: Toegevoegd {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo code: Verwijderd {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
