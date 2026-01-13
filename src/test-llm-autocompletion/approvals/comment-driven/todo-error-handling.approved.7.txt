@@ -1,12 +1,25 @@
 function processData(data) {
-  if (!data) {
-    throw new Error('Data is required');
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
   }
 
-  if (typeof data !== 'object') {
-    throw new Error('Data must be an object');
+  // TODO: Implement data processing logic
+  const processedData = {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    // Add more fields as needed
+  };
+
+  // TODO: Implement data validation
+  if (!processedData.id || !processedData.name || !processedData.email) {
+    throw new Error('Missing required fields');
   }
 
-  // TODO: Implement error handling
+  // TODO: Implement data transformation
+  processedData.name = processedData.name.toUpperCase();
+  processedData.email = processedData.email.toLowerCase();
+
   return processedData;
 }

@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "Creazione degli embedding non riuscita dopo {{attempts}} tentativi",
 	"textExceedsTokenLimit": "Il testo all'indice {{index}} supera il limite massimo di token ({{itemTokens}} > {{maxTokens}}). Saltato.",
 	"rateLimitRetry": "Limite di velocità raggiunto, nuovo tentativo tra {{delayMs}}ms (tentativo {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Formato di risposta non valido da Amazon Bedrock",
+		"invalidCredentials": "Credenziali AWS non valide. Si prega di verificare la configurazione AWS.",
+		"accessDenied": "Accesso negato al servizio Amazon Bedrock. Si prega di verificare le autorizzazioni IAM.",
+		"modelNotFound": "Modello {{model}} non trovato in Amazon Bedrock"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Impossibile leggere il corpo dell'errore",
 		"requestFailed": "Richiesta API Ollama fallita con stato {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Configurazione di Mistral mancante per la creazione dell'embedder",
 		"openRouterConfigMissing": "Configurazione di OpenRouter mancante per la creazione dell'embedder",
 		"vercelAiGatewayConfigMissing": "Configurazione di Vercel AI Gateway mancante per la creazione dell'embedder",
+		"bedrockConfigMissing": "Configurazione di Amazon Bedrock mancante per la creazione dell'embedder",
 		"invalidEmbedderType": "Tipo di embedder configurato non valido: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Impossibile determinare la dimensione del vettore per il modello '{{modelId}}' con il provider '{{provider}}'. Assicurati che la 'Dimensione di embedding' sia impostata correttamente nelle impostazioni del provider compatibile con OpenAI.",
 		"vectorDimensionNotDetermined": "Impossibile determinare la dimensione del vettore per il modello '{{modelId}}' con il provider '{{provider}}'. Controlla i profili del modello o la configurazione.",

@@ -1,0 +1,11 @@
+import { UserService } from './services/user-service';
+
+const userService = new UserService();
+const user = userService.getUser();
+
+console.log(user);
+
+const userService2 = new UserService();
+const user2 = userService2.getUser();
+
+console.log(user2);

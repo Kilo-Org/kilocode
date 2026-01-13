@@ -43,11 +43,13 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change start
 		case "glama":
 			if (!apiConfiguration.glamaApiKey) {
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change end
 		case "unbound":
 			if (!apiConfiguration.unboundApiKey) {
 				return i18next.t("settings:validation.apiKey")
@@ -195,6 +197,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 			}
 			break
 		// kilocode_change end
+		case "baseten":
+			if (!apiConfiguration.basetenApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined

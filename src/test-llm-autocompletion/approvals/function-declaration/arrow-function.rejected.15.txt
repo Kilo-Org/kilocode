@@ -1,0 +1,50 @@
+const add = (a, b) => {
+    return a + b;
+}
+
+const subtract = (a, b) => {
+    return a - b;
+}
+
+const multiply = (a, b) => {
+    return a * b;
+}
+
+const divide = (a, b) => {
+    return a / b;
+}
+
+const operate = (operator, a, b) => {
+    switch(operator) {
+        case '+':
+            return add(a, b);
+        case '-':
+            return subtract(a, b);
+        case '*':
+            return multiply(a, b);
+        case '/':
+            return divide(a, b);
+    }
+}
+
+const display = document.querySelector('.display');
+const buttons = document.querySelectorAll('.button');
+const clear = document.querySelector('.clear');
+const equals = document.querySelector('.equals');
+
+let firstNumber = '';
+let secondNumber = '';
+let operator = '';
+let result = '';
+
+buttons.forEach(button => {
+    button.addEventListener('click', () => {
+        if (button.classList.contains('number')) {
+            if (operator === '') {
+                firstNumber += button.textContent;
+                display.textContent = firstNumber;
+            } else {
+                secondNumber += button.textContent;
+                display.textContent = secondNumber;
+            }
+        } else

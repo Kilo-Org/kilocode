@@ -14,6 +14,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 	}
 
 	switch (path) {
+		// kilocode_change start
 		case "/glama": {
 			const code = query.get("code")
 			if (code) {
@@ -21,6 +22,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
+		// kilocode_change end
 		case "/openrouter": {
 			const code = query.get("code")
 			if (code) {
@@ -46,7 +48,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 			})
 			break
 		}
-		case "/kilo/fork": {
+		case "/kilocode/fork": {
 			const id = query.get("id")
 			if (id) {
 				await visibleProvider.postMessageToWebview({
@@ -74,11 +76,13 @@ export const handleUri = async (uri: vscode.Uri) => {
 			const code = query.get("code")
 			const state = query.get("state")
 			const organizationId = query.get("organizationId")
+			const providerModel = query.get("provider_model")
 
 			await CloudService.instance.handleAuthCallback(
 				code,
 				state,
 				organizationId === "null" ? null : organizationId,
+				providerModel,
 			)
 			break
 		}

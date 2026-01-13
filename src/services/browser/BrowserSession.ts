@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import * as fs from "fs/promises"
 import * as path from "path"
-import { Browser, Page, ScreenshotOptions, TimeoutError, launch, connect } from "puppeteer-core"
+import { Browser, Page, ScreenshotOptions, TimeoutError, launch, connect, KeyInput } from "puppeteer-core"
 // @ts-ignore
 import PCR from "puppeteer-chromium-resolver"
 import pWaitFor from "p-wait-for"
@@ -25,9 +25,15 @@ export class BrowserSession {
 	private currentMousePosition?: string
 	private lastConnectionAttempt?: number
 	private isUsingRemoteBrowser: boolean = false
+	private onStateChange?: (isActive: boolean) => void
 
-	constructor(context: vscode.ExtensionContext) {
+	// Track last known viewport to surface in environment details
+	private lastViewportWidth?: number
+	private lastViewportHeight?: number
+
+	constructor(context: vscode.ExtensionContext, onStateChange?: (isActive: boolean) => void) {
 		this.context = context
+		this.onStateChange = onStateChange
 	}
 
 	private async ensureChromiumExists(): Promise<PCRStats> {
@@ -189,21 +195,31 @@ export class BrowserSession {
 				await this.launchLocalBrowser()
 			}
 		}
+
+		// Notify that browser session is now active
+		if (this.browser && this.onStateChange) {
+			this.onStateChange(true)
+		}
 	}
 
 	/**
 	 * Closes the browser and resets browser state
 	 */
 	async closeBrowser(): Promise<BrowserActionResult> {
-		if (this.browser || this.page) {
-			console.log("closing browser...")
+		const wasActive = !!(this.browser || this.page)
 
+		if (wasActive) {
 			if (this.isUsingRemoteBrowser && this.browser) {
 				await this.browser.disconnect().catch(() => {})
 			} else {
 				await this.browser?.close().catch(() => {})
 			}
 			this.resetBrowserState()
+
+			// Notify that browser session is now inactive
+			if (this.onStateChange) {
+				this.onStateChange(false)
+			}
 		}
 		return {}
 	}
@@ -216,12 +232,14 @@ export class BrowserSession {
 		this.page = undefined
 		this.currentMousePosition = undefined
 		this.isUsingRemoteBrowser = false
+		this.lastViewportWidth = undefined
+		this.lastViewportHeight = undefined
 	}
 
 	async doAction(action: (page: Page) => Promise<void>): Promise<BrowserActionResult> {
 		if (!this.page) {
 			throw new Error(
-				"Browser is not launched. This may occur if the browser was automatically closed by a non-`browser_action` tool.",
+				"Cannot perform browser action: no active browser session. The browser must be launched first using the 'launch' action before other browser actions can be performed.",
 			)
 		}
 
@@ -260,6 +278,11 @@ export class BrowserSession {
 			interval: 100,
 		}).catch(() => {})
 
+		// Draw cursor indicator if we have a cursor position
+		if (this.currentMousePosition) {
+			await this.drawCursorIndicator(this.page, this.currentMousePosition)
+		}
+
 		let options: ScreenshotOptions = {
 			encoding: "base64",
 
@@ -291,15 +314,29 @@ export class BrowserSession {
 			throw new Error("Failed to take screenshot.")
 		}
 
+		// Remove cursor indicator after taking screenshot
+		if (this.currentMousePosition) {
+			await this.removeCursorIndicator(this.page)
+		}
+
 		// this.page.removeAllListeners() <- causes the page to crash!
 		this.page.off("console", consoleListener)
 		this.page.off("pageerror", errorListener)
+
+		// Get actual viewport dimensions
+		const viewport = this.page.viewport()
+
+		// Persist last known viewport dimensions
+		this.lastViewportWidth = viewport?.width
+		this.lastViewportHeight = viewport?.height
 
 		return {
 			screenshot,
 			logs: logs.join("\n"),
 			currentUrl: this.page.url(),
 			currentMousePosition: this.currentMousePosition,
+			viewportWidth: viewport?.width,
+			viewportHeight: viewport?.height,
 		}
 	}
 
@@ -454,6 +491,64 @@ export class BrowserSession {
 	}
 
 	/**
+	 * Force links and window.open to navigate in the same tab.
+	 * This makes clicks on anchors with target="_blank" stay in the current page
+	 * and also intercepts window.open so SPA/open-in-new-tab patterns don't spawn popups.
+	 */
+	private async forceLinksToSameTab(page: Page): Promise<void> {
+		try {
+			await page.evaluate(() => {
+				try {
+					// Ensure we only install once per document
+					if ((window as any).__ROO_FORCE_SAME_TAB__) return
+					;(window as any).__ROO_FORCE_SAME_TAB__ = true
+
+					// Override window.open to navigate current tab instead of creating a new one
+					const originalOpen = window.open
+					window.open = function (url: string | URL, target?: string, features?: string) {
+						try {
+							const href = typeof url === "string" ? url : String(url)
+							location.href = href
+						} catch {
+							// fall back to original if something unexpected occurs
+							try {
+								return originalOpen.apply(window, [url as any, "_self", features]) as any
+							} catch {}
+						}
+						return null as any
+					} as any
+
+					// Rewrite anchors that explicitly open new tabs
+					document.querySelectorAll('a[target="_blank"]').forEach((a) => {
+						a.setAttribute("target", "_self")
+					})
+
+					// Defensive capture: if an element still tries to open in a new tab, force same-tab
+					document.addEventListener(
+						"click",
+						(ev) => {
+							const el = (ev.target as HTMLElement | null)?.closest?.(
+								'a[target="_blank"]',
+							) as HTMLAnchorElement | null
+							if (el && el.href) {
+								ev.preventDefault()
+								try {
+									location.href = el.href
+								} catch {}
+							}
+						},
+						{ capture: true, passive: false },
+					)
+				} catch {
+					// no-op; forcing same-tab is best-effort
+				}
+			})
+		} catch {
+			// If evaluate fails (e.g., cross-origin/state), continue without breaking the action
+		}
+	}
+
+	/**
 	 * Handles mouse interaction with network activity monitoring
 	 */
 	private async handleMouseInteraction(
@@ -462,6 +557,9 @@ export class BrowserSession {
 		action: (x: number, y: number) => Promise<void>,
 	): Promise<void> {
 		const [x, y] = coordinate.split(",").map(Number)
+
+		// Force any new-tab behavior (target="_blank", window.open) to stay in the same tab
+		await this.forceLinksToSameTab(page)
 
 		// Set up network request monitoring
 		let hasNetworkActivity = false
@@ -503,6 +601,106 @@ export class BrowserSession {
 	async type(text: string): Promise<BrowserActionResult> {
 		return this.doAction(async (page) => {
 			await page.keyboard.type(text)
+		})
+	}
+
+	async press(key: string): Promise<BrowserActionResult> {
+		return this.doAction(async (page) => {
+			// Parse key combinations (e.g., "Cmd+K", "Shift+Enter")
+			const parts = key.split("+").map((k) => k.trim())
+			const modifiers: string[] = []
+			let mainKey = parts[parts.length - 1]
+
+			// Identify modifiers
+			for (let i = 0; i < parts.length - 1; i++) {
+				const part = parts[i].toLowerCase()
+				if (part === "cmd" || part === "command" || part === "meta") {
+					modifiers.push("Meta")
+				} else if (part === "ctrl" || part === "control") {
+					modifiers.push("Control")
+				} else if (part === "shift") {
+					modifiers.push("Shift")
+				} else if (part === "alt" || part === "option") {
+					modifiers.push("Alt")
+				}
+			}
+
+			// Map common key aliases to Puppeteer KeyInput values
+			const mapping: Record<string, KeyInput | string> = {
+				esc: "Escape",
+				return: "Enter",
+				escape: "Escape",
+				enter: "Enter",
+				tab: "Tab",
+				space: "Space",
+				arrowup: "ArrowUp",
+				arrowdown: "ArrowDown",
+				arrowleft: "ArrowLeft",
+				arrowright: "ArrowRight",
+			}
+			mainKey = (mapping[mainKey.toLowerCase()] ?? mainKey) as string
+
+			// Avoid new-tab behavior from Enter on links/buttons
+			await this.forceLinksToSameTab(page)
+
+			// Track inflight requests so we can detect brief network bursts
+			let inflight = 0
+			const onRequest = () => {
+				inflight++
+			}
+			const onRequestDone = () => {
+				inflight = Math.max(0, inflight - 1)
+			}
+			page.on("request", onRequest)
+			page.on("requestfinished", onRequestDone)
+			page.on("requestfailed", onRequestDone)
+
+			// Start a short navigation wait in parallel; if no nav, it times out harmlessly
+			const HARD_CAP_MS = 3000
+			const navPromise = page
+				.waitForNavigation({
+					// domcontentloaded is enough to confirm a submit navigated
+					waitUntil: ["domcontentloaded"],
+					timeout: HARD_CAP_MS,
+				})
+				.catch(() => undefined)
+
+			// Press key combination
+			if (modifiers.length > 0) {
+				// Hold down modifiers
+				for (const modifier of modifiers) {
+					await page.keyboard.down(modifier as KeyInput)
+				}
+
+				// Press main key
+				await page.keyboard.press(mainKey as KeyInput)
+
+				// Release modifiers
+				for (const modifier of modifiers) {
+					await page.keyboard.up(modifier as KeyInput)
+				}
+			} else {
+				// Single key press
+				await page.keyboard.press(mainKey as KeyInput)
+			}
+
+			// Give time for any requests to kick off
+			await delay(120)
+
+			// Hard-cap the wait to avoid UI hangs
+			await Promise.race([
+				navPromise,
+				pWaitFor(() => inflight === 0, { timeout: HARD_CAP_MS, interval: 100 }).catch(() => {}),
+				delay(HARD_CAP_MS),
+			])
+
+			// Stabilize DOM briefly before capturing screenshot (shorter cap)
+			await this.waitTillHTMLStable(page, 2_000)
+
+			// Cleanup
+			page.off("request", onRequest)
+			page.off("requestfinished", onRequestDone)
+			page.off("requestfailed", onRequestDone)
 		})
 	}
 
@@ -556,5 +754,157 @@ export class BrowserSession {
 				windowId,
 			})
 		})
+	}
+
+	/**
+	 * Determines image type from file extension
+	 */
+	private getImageTypeFromPath(filePath: string): "png" | "jpeg" | "webp" {
+		const ext = path.extname(filePath).toLowerCase()
+		if (ext === ".jpg" || ext === ".jpeg") return "jpeg"
+		if (ext === ".webp") return "webp"
+		return "png"
+	}
+
+	/**
+	 * Takes a screenshot and saves it to the specified file path.
+	 * @param filePath - The destination file path (relative to workspace)
+	 * @param cwd - Current working directory for resolving relative paths
+	 * @returns BrowserActionResult with screenshot data and saved file path
+	 * @throws Error if the resolved path escapes the workspace directory
+	 */
+	async saveScreenshot(filePath: string, cwd: string): Promise<BrowserActionResult> {
+		// Always resolve the path against the workspace root
+		const normalizedCwd = path.resolve(cwd)
+		const fullPath = path.resolve(cwd, filePath)
+
+		// Validate that the resolved path stays within the workspace (before calling doAction)
+		if (!fullPath.startsWith(normalizedCwd + path.sep) && fullPath !== normalizedCwd) {
+			throw new Error(
+				`Screenshot path "${filePath}" resolves to "${fullPath}" which is outside the workspace "${normalizedCwd}". ` +
+					`Paths must be relative to the workspace and cannot escape it.`,
+			)
+		}
+
+		return this.doAction(async (page) => {
+			// Ensure directory exists
+			await fs.mkdir(path.dirname(fullPath), { recursive: true })
+
+			// Determine image type from extension
+			const imageType = this.getImageTypeFromPath(filePath)
+
+			// Take screenshot directly to file (more efficient than base64 for file saving)
+			await page.screenshot({
+				path: fullPath,
+				type: imageType,
+				quality:
+					imageType === "png"
+						? undefined
+						: ((this.context.globalState.get("screenshotQuality") as number | undefined) ?? 75),
+			})
+		})
+	}
+
+	/**
+	 * Draws a cursor indicator on the page at the specified position
+	 */
+	private async drawCursorIndicator(page: Page, coordinate: string): Promise<void> {
+		const [x, y] = coordinate.split(",").map(Number)
+
+		try {
+			await page.evaluate(
+				(cursorX: number, cursorY: number) => {
+					// Create a cursor indicator element
+					const cursor = document.createElement("div")
+					cursor.id = "__roo_cursor_indicator__"
+					cursor.style.cssText = `
+						position: fixed;
+						left: ${cursorX}px;
+						top: ${cursorY}px;
+						width: 35px;
+						height: 35px;
+						pointer-events: none;
+						z-index: 2147483647;
+					`
+
+					// Create SVG cursor pointer
+					const svg = `
+						<svg width="35" height="35" viewBox="0 0 35 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M5 3L5 17L9 13L12 19L14 18L11 12L17 12L5 3Z"
+								  fill="white"
+								  stroke="black"
+								  stroke-width="1.5"/>
+							<path d="M5 3L5 17L9 13L12 19L14 18L11 12L17 12L5 3Z"
+								  fill="black"
+								  stroke="white"
+								  stroke-width=".5"/>
+						</svg>
+					`
+					cursor.innerHTML = svg
+
+					document.body.appendChild(cursor)
+				},
+				x,
+				y,
+			)
+		} catch (error) {
+			console.error("Failed to draw cursor indicator:", error)
+		}
+	}
+
+	/**
+	 * Removes the cursor indicator from the page
+	 */
+	private async removeCursorIndicator(page: Page): Promise<void> {
+		try {
+			await page.evaluate(() => {
+				const cursor = document.getElementById("__roo_cursor_indicator__")
+				if (cursor) {
+					cursor.remove()
+				}
+			})
+		} catch (error) {
+			console.error("Failed to remove cursor indicator:", error)
+		}
+	}
+
+	/**
+	 * Returns whether a browser session is currently active
+	 */
+	isSessionActive(): boolean {
+		return !!(this.browser && this.page)
+	}
+
+	/**
+	 * Returns the last known viewport size (if any)
+	 *
+	 * Prefer the live page viewport when available so we stay accurate after:
+	 * - browser_action resize
+	 * - manual window resizes (especially with remote browsers)
+	 *
+	 * Falls back to the configured default viewport when no prior information exists.
+	 */
+	getViewportSize(): { width?: number; height?: number } {
+		// If we have an active page, ask Puppeteer for the current viewport.
+		// This keeps us in sync with any resizes that happen outside of our own
+		// browser_action lifecycle (e.g. user dragging the window).
+		if (this.page) {
+			const vp = this.page.viewport()
+			if (vp?.width) this.lastViewportWidth = vp.width
+			if (vp?.height) this.lastViewportHeight = vp.height
+		}
+
+		// If we've ever observed a viewport, use that.
+		if (this.lastViewportWidth && this.lastViewportHeight) {
+			return {
+				width: this.lastViewportWidth,
+				height: this.lastViewportHeight,
+			}
+		}
+
+		// Otherwise fall back to the configured default so the tool can still
+		// operate before the first screenshot-based action has run.
+		const { width, height } = this.getViewport()
+		return { width, height }
 	}
 }

@@ -1,4 +1,5 @@
-# Description: Should complete Ruby loop iteration
+#### Description: Should complete Ruby loop iteration
+#### Filename: loop_example.rb
 arr = [1, 2, 3, 4, 5]
 arr.each do |item|
 	<<<AUTOCOMPLETE_HERE>>>

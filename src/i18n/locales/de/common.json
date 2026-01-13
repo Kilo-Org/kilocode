@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Benutzerdefinierter Speicherpfad \"{{path}}\" ist nicht verwendbar, Standardpfad wird verwendet",
 		"cannot_access_path": "Zugriff auf Pfad {{path}} nicht möglich: {{error}}",
 		"settings_import_failed": "Fehler beim Importieren der Einstellungen: {{error}}.",
-		"mistake_limit_guidance": "Dies kann auf einen Fehler im Denkprozess des Modells oder die Unfähigkeit hinweisen, ein Tool richtig zu verwenden, was durch Benutzerführung behoben werden kann (z.B. \"Versuche, die Aufgabe in kleinere Schritte zu unterteilen\").",
+		"mistake_limit_guidance": "Dies kann auf einen Fehler im Denkprozess des Modells oder die Unfähigkeit hinweisen, ein Tool richtig zu verwenden. Versuche Folgendes:\n\n• Verwende ein intelligenteres Modell oder einfach ein anderes Modell (jedes Modell hat seine eigenen Schwächen)\n• Reduziere die Menge an Kontext (vereinfache den Prompt für das LLM)\n• Gib zusätzliche Anweisungen, die dem LLM helfen (z. B. \"Versuche, die Aufgabe in kleinere Schritte zu unterteilen\")",
 		"violated_organization_allowlist": "Aufgabe konnte nicht ausgeführt werden: Das aktuelle Profil ist nicht kompatibel mit den Einstellungen deiner Organisation",
 		"condense_failed": "Fehler beim Verdichten des Kontexts",
 		"condense_not_enough_messages": "Nicht genügend Nachrichten zum Verdichten des Kontexts von {{prevContextTokens}} Token. Mindestens {{minimumMessageCount}} Nachrichten sind erforderlich, aber nur {{messageCount}} sind verfügbar.",
@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Fehler beim Generieren des Kontext-Streams von Gemini: {{error}}",
 			"generate_complete_prompt": "Fehler bei der Vervollständigung durch Gemini: {{error}}",
-			"sources": "Quellen:"
+			"sources": "Quellen:",
+			"thinking_complete_no_output": "(Denken abgeschlossen, aber es wurde keine Ausgabe generiert.)",
+			"thinking_complete_truncated": "(Denken abgeschlossen, aber die Ausgabe wurde aufgrund des Token-Limits gekürzt.)",
+			"thinking_complete_safety": "(Denken abgeschlossen, aber die Ausgabe wurde aufgrund von Sicherheitseinstellungen blockiert.)",
+			"thinking_complete_recitation": "(Denken abgeschlossen, aber die Ausgabe wurde aufgrund der Rezitationsprüfung blockiert.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API-Authentifizierung fehlgeschlagen. Bitte überprüfe, ob dein API-Schlüssel gültig und nicht abgelaufen ist.",
@@ -168,6 +172,7 @@
 		"image_saved": "Bild gespeichert unter {{path}}",
 		"organization_share_link_copied": "Organisations-Freigabelink in die Zwischenablage kopiert!",
 		"public_share_link_copied": "Öffentlicher Freigabelink in die Zwischenablage kopiert!",
+		"session_share_link_copied_with_url": "Sitzung geteilt! Link in die Zwischenablage kopiert: {{url}}",
 		"mode_exported": "Modus '{{mode}}' erfolgreich exportiert",
 		"mode_imported": "Modus erfolgreich importiert"
 	},

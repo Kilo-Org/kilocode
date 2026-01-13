@@ -41,9 +41,10 @@ vi.mock("vscode", () => ({
 
 // Mock modelCache getModels/flushModels used by the handler
 const getModelsMock = vi.fn()
+const flushModelsMock = vi.fn()
 vi.mock("../../../api/providers/fetchers/modelCache", () => ({
 	getModels: (...args: any[]) => getModelsMock(...args),
-	flushModels: vi.fn(),
+	flushModels: (...args: any[]) => flushModelsMock(...args),
 }))
 
 describe("webviewMessageHandler - requestRouterModels provider filter", () => {
@@ -80,8 +81,10 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 					return { "requesty/model": { contextWindow: 8192, supportsPromptCache: false } }
 				case "deepinfra":
 					return { "deepinfra/model": { contextWindow: 8192, supportsPromptCache: false } }
+				// kilocode_change start
 				case "glama":
 					return { "glama/model": { contextWindow: 8192, supportsPromptCache: false } }
+				// kilocode_change end
 				case "unbound":
 					return { "unbound/model": { contextWindow: 8192, supportsPromptCache: false } }
 				case "vercel-ai-gateway":
@@ -168,5 +171,61 @@ describe("webviewMessageHandler - requestRouterModels provider filter", () => {
 
 		const providersCalled = getModelsMock.mock.calls.map((c: any[]) => c[0]?.provider)
 		expect(providersCalled).toEqual(["openrouter"])
+	})
+
+	it("flushes cache when LiteLLM credentials are provided in message values", async () => {
+		// Provide LiteLLM credentials via message.values (simulating Refresh Models button)
+		await webviewMessageHandler(
+			mockProvider as any,
+			{
+				type: "requestRouterModels",
+				values: {
+					litellmApiKey: "test-api-key",
+					litellmBaseUrl: "http://localhost:4000",
+				},
+			} as any,
+		)
+
+		// flushModels should have been called for litellm with refresh=true
+		expect(flushModelsMock).toHaveBeenCalledWith("litellm", true)
+
+		// getModels should have been called with the provided credentials
+		const litellmCalls = getModelsMock.mock.calls.filter((c: any[]) => c[0]?.provider === "litellm")
+		expect(litellmCalls.length).toBe(1)
+		expect(litellmCalls[0][0]).toEqual({
+			provider: "litellm",
+			apiKey: "test-api-key",
+			baseUrl: "http://localhost:4000",
+		})
+	})
+
+	it("does not flush cache when using stored LiteLLM credentials", async () => {
+		// Provide stored credentials via apiConfiguration
+		mockProvider.getState.mockResolvedValue({
+			apiConfiguration: {
+				litellmApiKey: "stored-api-key",
+				litellmBaseUrl: "http://stored:4000",
+			},
+		})
+
+		await webviewMessageHandler(
+			mockProvider as any,
+			{
+				type: "requestRouterModels",
+			} as any,
+		)
+
+		// flushModels should NOT have been called for litellm
+		const litellmFlushCalls = flushModelsMock.mock.calls.filter((c: any[]) => c[0] === "litellm")
+		expect(litellmFlushCalls.length).toBe(0)
+
+		// getModels should still have been called with stored credentials
+		const litellmCalls = getModelsMock.mock.calls.filter((c: any[]) => c[0]?.provider === "litellm")
+		expect(litellmCalls.length).toBe(1)
+		expect(litellmCalls[0][0]).toEqual({
+			provider: "litellm",
+			apiKey: "stored-api-key",
+			baseUrl: "http://stored:4000",
+		})
 	})
 })

@@ -1,7 +1,6 @@
 class Animal {
 	constructor(name) {
 		this.name = name;
-		this.breed = breed;
 	}
 }
 
@@ -9,3 +8,9 @@ class Dog extends Animal {
 	constructor(name, breed) {
 		super(name);
 		this.breed = breed;
+	}
+}
+
+const myDog = new Dog("Buddy", "Golden Retriever");
+console.log(myDog.name); // Output: Buddy
+console.log(myDog.breed); // Output: Golden Retriever

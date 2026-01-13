@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
+	"extension.displayName": "Kilo Code: AI Kódovací Agent, Copilot a Automatické Dokončování",
 	"extension.description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Povolit synchronizaci nastavení Kilo Code mezi zařízeními přes VS Code Settings Sync. Když je povoleno, vaše konfigurace API, vlastní režimy a preference se automaticky synchronizují při přihlášení do VS Code Settings Sync.",
 	"settings.autoImportSettingsPath.description": "Cesta k konfiguračnímu souboru Kilo Code pro automatický import při spuštění rozšíření. Podporuje absolutní cesty a cesty relativní k domovskému adresáři (např. '~/Documents/kilo-code-settings.json'). Ponechte prázdné pro zakázání automatického importu.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Maximální počet souborů k indexování pro funkci vyhledávání souborů @. Vyšší hodnoty poskytují lepší výsledky vyhledávání ve velkých projektech, ale mohou využívat více paměti. Výchozí: 10 000.",
-	"settings.useAgentRules.description": "Povolit načítání souborů AGENTS.md pro pravidla specifická pro agenty (viz https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Povolit načítání souborů AGENTS.md pro pravidla specifická pro agenty (viz https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Maximální doba v sekundách čekání na odpovědi API (0 = bez časového limitu, 1-86400s, výchozí: 600s). Vyšší hodnoty se doporučují pro lokální poskytovatele jako LM Studio a Ollama, kteří mohou potřebovat více času na zpracování.",
 	"settings.newTaskRequireTodos.description": "Vyžadovat parametr todos při vytváření nových úkolů pomocí nástroje new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Velikost dávky pro operace vkládání během indexování kódu. Upravte toto podle limitů vašeho poskytovatele API. Výchozí je 60.",
@@ -57,5 +57,6 @@
 	"ghost.commands.applyCurrentSuggestion": "Použít Aktuální Navrženou Úpravu",
 	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
 	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
-	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh"
+	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh",
+	"settings.debug.description": "Povolit režim ladění pro zobrazení dalších tlačítek pro prohlížení historie konverzace API a zpráv UI jako formátované JSON v dočasných souborech."
 }

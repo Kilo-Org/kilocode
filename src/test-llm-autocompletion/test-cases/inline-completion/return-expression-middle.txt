@@ -1,0 +1,51 @@
+#### Description: Should complete variable name in the middle of a return expression (return one + two + <cursor> + four should complete to three)
+#### Filename: src/calculator.ts
+import { formatResult } from './utils';
+
+interface CalculationResult {
+  value: number;
+  formatted: string;
+}
+
+export function calculateSum(
+  one: number,
+  two: number,
+  three: number,
+  four: number
+): CalculationResult {
+  const value = one + two + <<<AUTOCOMPLETE_HERE>>> + four;
+  return {
+    value,
+    formatted: formatResult(value)
+  };
+}
+
+export function calculateProduct(
+  one: number,
+  two: number,
+  three: number,
+  four: number
+): number {
+  return one * two * three * four;
+}
+#### Filename: src/utils.ts
+export function formatResult(value: number): string {
+  return `Result: ${value.toFixed(2)}`;
+}
+
+export function validateNumber(input: unknown): input is number {
+  return typeof input === 'number' && !isNaN(input);
+}
+#### Filename: src/index.ts
+import { calculateSum, calculateProduct } from './calculator';
+
+const one = 10;
+const two = 20;
+const three = 30;
+const four = 40;
+
+const sumResult = calculateSum(one, two, three, four);
+console.log(sumResult.formatted);
+
+const product = calculateProduct(one, two, three, four);
+console.log(`Product: ${product}`);

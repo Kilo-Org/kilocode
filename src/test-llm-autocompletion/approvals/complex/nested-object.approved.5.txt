@@ -1,5 +1,11 @@
 const config = {
 	server: {
 	  port: 3000,
-	  host: 'localhost',
-		protocol: 'http'
+	  host: 'localhost'
+	},
+	api: {
+	  url: 'https://api.mercadolibre.com/sites/MLA/search?q='
+	}
+  };
+
+  module.exports = config;

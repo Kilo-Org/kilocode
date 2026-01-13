@@ -1,14 +1,26 @@
-import React from "react"
-import { useAtom, useAtomValue } from "jotai"
+import React, { useMemo, useState } from "react"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
-import { sessionsArrayAtom, selectedSessionIdAtom, type AgentSession } from "../state/atoms/sessions"
+import {
+	mergedSessionsAtom,
+	selectedSessionIdAtom,
+	isRefreshingRemoteSessionsAtom,
+	pendingSessionAtom,
+	type AgentSession,
+} from "../state/atoms/sessions"
+import { sessionMachineUiStateAtom } from "../state/atoms/stateMachine"
 import { vscode } from "../utils/vscode"
-import { Plus, Trash2, SquareTerminal, Loader2 } from "lucide-react"
+import { formatRelativeTime, createRelativeTimeLabels } from "../utils/timeUtils"
+import { Plus, Loader2, RefreshCw, GitBranch, Folder, Share2 } from "lucide-react"
 
 export function SessionSidebar() {
 	const { t } = useTranslation("agentManager")
-	const sessions = useAtomValue(sessionsArrayAtom)
+	const sessions = useAtomValue(mergedSessionsAtom)
+	const pendingSession = useAtomValue(pendingSessionAtom)
 	const [selectedId, setSelectedId] = useAtom(selectedSessionIdAtom)
+	const isRefreshing = useAtomValue(isRefreshingRemoteSessionsAtom)
+	const setIsRefreshing = useSetAtom(isRefreshingRemoteSessionsAtom)
+	const machineUiState = useAtomValue(sessionMachineUiStateAtom)
 
 	const handleNewSession = () => {
 		setSelectedId(null)
@@ -19,21 +31,22 @@ export function SessionSidebar() {
 		vscode.postMessage({ type: "agentManager.selectSession", sessionId: id })
 	}
 
-	const handleRemoveSession = (id: string, e: React.MouseEvent) => {
-		e.stopPropagation()
-		vscode.postMessage({ type: "agentManager.removeSession", sessionId: id })
+	const handleRefresh = () => {
+		if (isRefreshing) return // Prevent multiple clicks while loading
+		setIsRefreshing(true)
+		vscode.postMessage({ type: "agentManager.refreshRemoteSessions" })
 	}
 
-	const isNewAgentSelected = selectedId === null
+	const isNewAgentSelected = selectedId === null && !pendingSession
 
 	return (
-		<div className="sidebar">
-			<div className="sidebar-header">
+		<div className="am-sidebar">
+			<div className="am-sidebar-header">
 				<span>{t("sidebar.title")}</span>
 			</div>
 
 			<div
-				className={`new-agent-item ${isNewAgentSelected ? "selected" : ""}`}
+				className={`am-new-agent-item ${isNewAgentSelected ? "am-selected" : ""}`}
 				onClick={handleNewSession}
 				role="button"
 				tabIndex={0}
@@ -42,21 +55,39 @@ export function SessionSidebar() {
 				<span>{t("sidebar.newAgent")}</span>
 			</div>
 
-			<div className="sidebar-section-header">{t("sidebar.sessionsSection")}</div>
+			<div className="am-sidebar-section-header">
+				<span>{t("sidebar.sessionsSection")}</span>
+				<button
+					className="am-icon-btn"
+					onClick={handleRefresh}
+					disabled={isRefreshing}
+					title={t("sidebar.refresh")}>
+					{isRefreshing ? <Loader2 size={14} className="am-spinning" /> : <RefreshCw size={14} />}
+				</button>
+			</div>
 
-			<div className="session-list">
-				{sessions.length === 0 ? (
-					<div className="no-sessions">
+			<div className="am-session-list">
+				{/* Show pending session at the top */}
+				{pendingSession && (
+					<PendingSessionItem
+						pendingSession={pendingSession}
+						isSelected={selectedId === null}
+						onSelect={() => setSelectedId(null)}
+					/>
+				)}
+
+				{sessions.length === 0 && !pendingSession ? (
+					<div className="am-no-sessions">
 						<p>{t("sidebar.emptyState")}</p>
 					</div>
 				) : (
 					sessions.map((session) => (
 						<SessionItem
-							key={session.id}
+							key={session.sessionId}
 							session={session}
-							isSelected={selectedId === session.id}
-							onSelect={() => handleSelectSession(session.id)}
-							onRemove={(e) => handleRemoveSession(session.id, e)}
+							isSelected={selectedId === session.sessionId}
+							uiState={machineUiState[session.sessionId]}
+							onSelect={() => handleSelectSession(session.sessionId)}
 						/>
 					))
 				)}
@@ -65,45 +96,140 @@ export function SessionSidebar() {
 	)
 }
 
-function SessionItem({
-	session,
+function PendingSessionItem({
+	pendingSession,
 	isSelected,
 	onSelect,
-	onRemove,
 }: {
-	session: AgentSession
+	pendingSession: { label: string; startTime: number }
 	isSelected: boolean
 	onSelect: () => void
-	onRemove: (e: React.MouseEvent) => void
 }) {
 	const { t } = useTranslation("agentManager")
 
-	const formatDuration = (start: number, end?: number) => {
-		const duration = (end || Date.now()) - start
-		const seconds = Math.floor(duration / 1000)
-		const minutes = Math.floor(seconds / 60)
-		if (minutes > 0) return `${minutes}m`
-		return `${seconds}s`
+	return (
+		<div className={`am-session-item pending ${isSelected ? "am-selected" : ""}`} onClick={onSelect}>
+			<div className="am-status-icon creating" title={t("status.creating")}>
+				<Loader2 size={14} className="am-spinning" />
+			</div>
+			<div className="am-session-content">
+				<div className="am-session-label">{pendingSession.label}</div>
+				<div className="am-session-meta">{t("status.creating")}</div>
+			</div>
+		</div>
+	)
+}
+
+function SessionItem({
+	session,
+	isSelected,
+	uiState,
+	onSelect,
+}: {
+	session: AgentSession
+	isSelected: boolean
+	uiState: { showSpinner: boolean; isActive: boolean } | undefined
+	onSelect: () => void
+}) {
+	const { t } = useTranslation("agentManager")
+	const timeLabels = useMemo(() => createRelativeTimeLabels(t), [t])
+	const [showShareConfirm, setShowShareConfirm] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
+
+	const showSpinner = uiState?.showSpinner ?? false
+	const isActive = uiState?.isActive ?? false
+	const isWorktree = session.parallelMode?.enabled
+	const branchName = session.parallelMode?.branch
+	const isCompleted = session.status === "done"
+
+	const handleShareClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setShowShareConfirm(true)
+	}
+
+	const handleShareConfirm = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setShowShareConfirm(false)
+		setIsHovered(false)
+		vscode.postMessage({ type: "agentManager.sessionShare", sessionId: session.sessionId })
+	}
+
+	const handleShareCancel = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setShowShareConfirm(false)
+		setIsHovered(false)
 	}
 
 	return (
-		<div className={`session-item ${isSelected ? "selected" : ""}`} onClick={onSelect}>
-			<div className={`status-icon ${session.status}`} title={t(`status.${session.status}`)}>
-				{session.status === "running" ? (
-					<Loader2 size={14} className="spinning" />
-				) : session.status === "done" ? (
-					<span className="codicon codicon-pass" />
-				) : (
-					<SquareTerminal size={14} />
-				)}
+		<div
+			className={`am-session-item ${isSelected ? "am-selected" : ""}`}
+			onClick={onSelect}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => !showShareConfirm && setIsHovered(false)}>
+			{session.status === "creating" && (
+				<div className="am-status-icon creating" title={t("status.creating")}>
+					<Loader2 size={14} className="am-spinning" />
+				</div>
+			)}
+			{showSpinner && (
+				<div className="am-status-icon running" title={t("status.running")}>
+					<Loader2 size={14} className="am-spinning" />
+				</div>
+			)}
+			<div className="am-session-content">
+				<div className="am-session-label">{session.label}</div>
+				<div className="am-session-meta">
+					{session.status === "creating" && isActive
+						? t("status.creating")
+						: formatRelativeTime(session.startTime, timeLabels)}
+					{isWorktree && (
+						<span className="am-worktree-indicator" title={branchName || t("sidebar.worktree")}>
+							<GitBranch size={10} />
+							{branchName ? (
+								<span className="am-branch-name">
+									{branchName.length > 20 ? branchName.slice(0, 20) + "..." : branchName}
+								</span>
+							) : (
+								<span>{t("sidebar.worktree")}</span>
+							)}
+						</span>
+					)}
+					{!isWorktree && (
+						<span className="am-workspace-indicator" title={t("sidebar.local")}>
+							<Folder size={10} />
+						</span>
+					)}
+				</div>
+				{isWorktree && isCompleted && <div className="am-ready-to-merge">{t("sidebar.readyToMerge")}</div>}
 			</div>
-			<div className="session-content">
-				<div className="session-label">{session.label}</div>
-				<div className="session-meta">{formatDuration(session.startTime, session.endTime)}</div>
-			</div>
-			<button className="icon-btn" onClick={onRemove} title={t("sidebar.removeSession")}>
-				<Trash2 size={14} />
-			</button>
+			{(isHovered || showShareConfirm) && (
+				<button
+					className="w-5 h-5 border-none bg-transparent rounded-[3px] cursor-pointer flex items-center justify-center -mt-0.5 hover:bg-vscode-toolbar-hoverBackground"
+					onClick={handleShareClick}
+					title={t("sidebar.shareSession")}
+					aria-label={t("sidebar.shareSession")}>
+					<Share2 size={14} />
+				</button>
+			)}
+			{showShareConfirm && (
+				<div
+					className="absolute top-full left-2 right-2 mt-1 p-3 bg-vscode-dropdown-background border border-vscode-dropdown-border rounded z-[100] shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+					onClick={(e) => e.stopPropagation()}>
+					<div className="text-sm mb-2">{t("sidebar.shareConfirmMessage")}</div>
+					<div className="flex gap-2">
+						<button
+							className="px-3 py-1 rounded-sm text-xs cursor-pointer border border-transparent transition-colors duration-150 bg-vscode-button-background text-vscode-button-foreground hover:bg-vscode-button-hoverBackground"
+							onClick={handleShareConfirm}>
+							{t("sidebar.shareConfirmYes")}
+						</button>
+						<button
+							className="px-3 py-1 rounded-sm text-xs cursor-pointer border border-transparent transition-colors duration-150 bg-vscode-button-secondaryBackground text-vscode-button-secondaryForeground hover:bg-vscode-button-secondaryHoverBackground"
+							onClick={handleShareCancel}>
+							{t("sidebar.shareConfirmNo")}
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

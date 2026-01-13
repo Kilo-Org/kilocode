@@ -1,0 +1,28 @@
+import { formatResult } from './utils';
+
+interface CalculationResult {
+  value: number;
+  formatted: string;
+}
+
+export function calculateSum(
+  one: number,
+  two: number,
+  three: number,
+  four: number
+): CalculationResult {
+  const value = one + two + three + four;
+  return {
+    value,
+    formatted: formatResult(value)
+  };
+}
+
+export function calculateProduct(
+  one: number,
+  two: number,
+  three: number,
+  four: number
+): number {
+  return one * two * three * four;
+}

@@ -22,6 +22,27 @@
 			"when": 1757191027855,
 			"tag": "0002_bouncy_blazing_skull",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1763797232454,
+			"tag": "0003_simple_retro_girl",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1764201678953,
+			"tag": "0004_sloppy_black_knight",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1765167049182,
+			"tag": "0005_strong_skrulls",
+			"breakpoints": true
 		}
 	]
 }

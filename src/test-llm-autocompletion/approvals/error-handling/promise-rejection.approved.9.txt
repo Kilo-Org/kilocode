@@ -2,4 +2,7 @@ fetchUser(userId)
 	.then(user => {
 		return processUser(user);
 	})
-	.catch(error => handleError(error))
+	.catch(err => {
+		return fetchAdmin(userId);
+	})
+	.then(showUser);

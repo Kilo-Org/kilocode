@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "{{attempts}} denemeden sonra gömülmeler oluşturulamadı",
 	"textExceedsTokenLimit": "{{index}} dizinindeki metin maksimum jeton sınırını aşıyor ({{itemTokens}} > {{maxTokens}}). Atlanıyor.",
 	"rateLimitRetry": "Hız sınırına ulaşıldı, {{delayMs}}ms içinde yeniden deneniyor (deneme {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Amazon Bedrock'tan geçersiz yanıt formatı",
+		"invalidCredentials": "Geçersiz AWS kimlik bilgileri. Lütfen AWS yapılandırmanızı kontrol edin.",
+		"accessDenied": "Amazon Bedrock hizmetine erişim reddedildi. Lütfen IAM izinlerinizi kontrol edin.",
+		"modelNotFound": "Model {{model}} Amazon Bedrock'ta bulunamadı"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "Hata gövdesi okunamadı",
 		"requestFailed": "Ollama API isteği {{status}} {{statusText}} durumuyla başarısız oldu: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Gömücü oluşturmak için Mistral yapılandırması eksik",
 		"openRouterConfigMissing": "Gömücü oluşturmak için OpenRouter yapılandırması eksik",
 		"vercelAiGatewayConfigMissing": "Gömücü oluşturmak için Vercel AI Gateway yapılandırması eksik",
+		"bedrockConfigMissing": "Gömücü oluşturmak için Amazon Bedrock yapılandırması eksik",
 		"invalidEmbedderType": "Geçersiz gömücü türü yapılandırıldı: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "'{{provider}}' sağlayıcısı ile '{{modelId}}' modeli için vektör boyutu belirlenemedi. OpenAI uyumlu sağlayıcı ayarlarında 'Gömme Boyutu'nun doğru ayarlandığından emin ol.",
 		"vectorDimensionNotDetermined": "'{{provider}}' sağlayıcısı ile '{{modelId}}' modeli için vektör boyutu belirlenemedi. Model profillerini veya yapılandırmayı kontrol et.",

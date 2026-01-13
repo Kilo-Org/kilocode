@@ -1,0 +1,7 @@
+import { Order, OrderStatus } from '../types/order';
+
+function processOrder(order: Order): void {
+  if (order.status === OrderStatus.PENDING) {
+    // Process pending order
+  }
+}

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react"
+import { memo, useEffect, useRef, useState, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { useCloudUpsell } from "@src/hooks/useCloudUpsell"
 import { CloudUpsellDialog } from "@src/components/cloud/CloudUpsellDialog"
@@ -10,7 +10,8 @@ import {
 	Coins,
 	HardDriveDownload,
 	HardDriveUpload,
-	FoldVerticalIcon,
+	FoldVertical,
+	Globe,
 } from "lucide-react"
 import prettyBytes from "pretty-bytes"
 
@@ -21,9 +22,10 @@ import { findLastIndex } from "@roo/array"
 
 import { formatLargeNumber } from "@src/utils/format"
 import { cn } from "@src/lib/utils"
-import { StandardTooltip } from "@src/components/ui"
+import { StandardTooltip, Button } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { vscode } from "@src/utils/vscode"
 
 import Thumbnails from "../common/Thumbnails"
 
@@ -59,7 +61,7 @@ const TaskHeader = ({
 	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem, clineMessages } = useExtensionState()
+	const { apiConfiguration, currentTaskItem, clineMessages, isBrowserSessionActive } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 	const [showLongRunningTaskMessage, setShowLongRunningTaskMessage] = useState(false)
@@ -95,10 +97,22 @@ const TaskHeader = ({
 	const textRef = useRef<HTMLDivElement>(null)
 	const contextWindow = model?.contextWindow || 1
 
+	// Detect if this task had any browser session activity so we can show a grey globe when inactive
+	const browserSessionStartIndex = useMemo(() => {
+		const msgs = clineMessages || []
+		for (let i = 0; i < msgs.length; i++) {
+			const m = msgs[i] as any
+			if (m?.ask === "browser_action_launch") return i
+		}
+		return -1
+	}, [clineMessages])
+
+	const showBrowserGlobe = browserSessionStartIndex !== -1 || !!isBrowserSessionActive
+
 	const condenseButton = (
 		<LucideIconButton
 			title={t("chat:task.condenseContext")}
-			icon={FoldVerticalIcon}
+			icon={FoldVertical}
 			disabled={buttonsDisabled}
 			onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
 		/>
@@ -182,53 +196,93 @@ const TaskHeader = ({
 				</div>
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div
-						className="flex items-center gap-2 text-sm text-muted-foreground/70"
+						className="flex items-center justify-between text-sm text-muted-foreground/70"
 						onClick={(e) => e.stopPropagation()}>
-						<Coins className="size-3 shrink-0" />
-						<StandardTooltip
-							content={
-								<div className="space-y-1">
-									<div>
-										{t("chat:tokenProgress.tokensUsed", {
-											used: formatLargeNumber(contextTokens || 0),
-											total: formatLargeNumber(contextWindow),
-										})}
-									</div>
-									{(() => {
-										const maxTokens = model
-											? getModelMaxOutputTokens({ modelId, model, settings: apiConfiguration })
-											: 0
-										const reservedForOutput = maxTokens || 0
-										const availableSpace = contextWindow - (contextTokens || 0) - reservedForOutput
+						<div className="flex items-center gap-2">
+							<Coins className="size-3 shrink-0" />
+							<StandardTooltip
+								content={
+									<div className="space-y-1">
+										<div>
+											{t("chat:tokenProgress.tokensUsed", {
+												used: formatLargeNumber(contextTokens || 0),
+												total: formatLargeNumber(contextWindow),
+											})}
+										</div>
+										{(() => {
+											const maxTokens = model
+												? getModelMaxOutputTokens({
+														modelId,
+														model,
+														settings: apiConfiguration,
+													})
+												: 0
+											const reservedForOutput = maxTokens || 0
+											const availableSpace =
+												contextWindow - (contextTokens || 0) - reservedForOutput
 
-										return (
-											<>
-												{reservedForOutput > 0 && (
-													<div>
-														{t("chat:tokenProgress.reservedForResponse", {
-															amount: formatLargeNumber(reservedForOutput),
-														})}
-													</div>
-												)}
-												{availableSpace > 0 && (
-													<div>
-														{t("chat:tokenProgress.availableSpace", {
-															amount: formatLargeNumber(availableSpace),
-														})}
-													</div>
-												)}
-											</>
-										)
-									})()}
-								</div>
-							}
-							side="top"
-							sideOffset={8}>
-							<span className="mr-1">
-								{formatLargeNumber(contextTokens || 0)} / {formatLargeNumber(contextWindow)}
-							</span>
-						</StandardTooltip>
-						{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
+											return (
+												<>
+													{reservedForOutput > 0 && (
+														<div>
+															{t("chat:tokenProgress.reservedForResponse", {
+																amount: formatLargeNumber(reservedForOutput),
+															})}
+														</div>
+													)}
+													{availableSpace > 0 && (
+														<div>
+															{t("chat:tokenProgress.availableSpace", {
+																amount: formatLargeNumber(availableSpace),
+															})}
+														</div>
+													)}
+												</>
+											)
+										})()}
+									</div>
+								}
+								side="top"
+								sideOffset={8}>
+								<span className="mr-1">
+									{formatLargeNumber(contextTokens || 0)} / {formatLargeNumber(contextWindow)}
+								</span>
+							</StandardTooltip>
+							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
+						</div>
+						{showBrowserGlobe && (
+							<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+								<StandardTooltip content={t("chat:browser.session")}>
+									<Button
+										variant="ghost"
+										size="sm"
+										aria-label={t("chat:browser.session")}
+										onClick={() => vscode.postMessage({ type: "openBrowserSessionPanel" } as any)}
+										className={cn(
+											"relative h-5 w-5 p-0",
+											"text-vscode-foreground opacity-85",
+											"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)]",
+											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+										)}>
+										<Globe
+											className="w-4 h-4"
+											style={{
+												color: isBrowserSessionActive
+													? "#4ade80"
+													: "var(--vscode-descriptionForeground)",
+											}}
+										/>
+									</Button>
+								</StandardTooltip>
+								{isBrowserSessionActive && (
+									<span
+										className="text-sm font-medium"
+										style={{ color: "var(--vscode-testing-iconPassed)" }}>
+										Active
+									</span>
+								)}
+							</div>
+						)}
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}

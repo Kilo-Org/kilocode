@@ -179,7 +179,7 @@ describe("AssistantMessageParser (streaming)", () => {
 	// This has XML-like content: </content>
 	return true;
 	}
-	</content><line_count>5</line_count></write_to_file>`
+	</content></write_to_file>`
 
 			const result = streamChunks(parser, message).filter((block) => !isEmptyTextContent(block))
 
@@ -188,7 +188,6 @@ describe("AssistantMessageParser (streaming)", () => {
 			expect(toolUse.type).toBe("tool_use")
 			expect(toolUse.name).toBe("write_to_file")
 			expect(toolUse.params.path).toBe("src/file.ts")
-			expect(toolUse.params.line_count).toBe("5")
 			expect(toolUse.params.content).toContain("function example()")
 			expect(toolUse.params.content).toContain("// This has XML-like content: </content>")
 			expect(toolUse.params.content).toContain("return true;")
@@ -263,7 +262,7 @@ describe("AssistantMessageParser (streaming)", () => {
 	line 1
 	line 2
 	line 3
-	</content><line_count>3</line_count></write_to_file>`
+	</content></write_to_file>`
 			const result = streamChunks(parser, message).filter((block) => !isEmptyTextContent(block))
 
 			expect(result).toHaveLength(1)
@@ -274,7 +273,6 @@ describe("AssistantMessageParser (streaming)", () => {
 			expect(toolUse.params.content).toContain("line 1")
 			expect(toolUse.params.content).toContain("line 2")
 			expect(toolUse.params.content).toContain("line 3")
-			expect(toolUse.params.line_count).toBe("3")
 			expect(toolUse.partial).toBe(false)
 		})
 		it("should handle a complex message with multiple content types", () => {
@@ -287,7 +285,7 @@ describe("AssistantMessageParser (streaming)", () => {
 	<write_to_file><path>src/index.ts</path><content>
 	// Updated content
 	console.log("Hello world");
-	</content><line_count>2</line_count></write_to_file>
+	</content></write_to_file>
 
 	Let's run the code:
 

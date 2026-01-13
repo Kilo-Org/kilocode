@@ -90,9 +90,9 @@ export class UrlContentFetcher {
 			throw new Error("Browser not initialized")
 		}
 		/*
-		- networkidle2 is equivalent to playwright's networkidle where it waits until there are no more than 2 network connections for at least 500 ms.
-		- domcontentloaded is when the basic DOM is loaded
-		this should be sufficient for most doc sites
+		- In Puppeteer, "networkidle2" waits until there are no more than 2 network connections for at least 500 ms (roughly equivalent to Playwright's "networkidle").
+		- "domcontentloaded" is when the basic DOM is loaded.
+		This should be sufficient for most doc sites.
 		*/
 		try {
 			await this.page.goto(url, {

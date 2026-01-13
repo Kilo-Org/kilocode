@@ -1,7 +1,0 @@
-async function fetchWithRetry(url, maxRetries = 3) {
-	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		try {
-			return await fetch(url);
-		} catch (error) {
-			if (attempt === maxRetries - 1) throw error;
-			await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))

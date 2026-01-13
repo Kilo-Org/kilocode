@@ -181,7 +181,14 @@ describe("SyntheticHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toEqual({
+			type: "usage",
+			inputTokens: 10,
+			outputTokens: 20,
+			cacheWriteTokens: undefined,
+			cacheReadTokens: undefined,
+			totalCost: expect.any(Number),
+		})
 	})
 
 	it("createMessage should pass correct parameters to synthetic client", async () => {
@@ -281,7 +288,14 @@ describe("SyntheticHandler", () => {
 		expect(chunks).toEqual([
 			{ type: "text", text: "Hello" },
 			{ type: "text", text: " world" },
-			{ type: "usage", inputTokens: 5, outputTokens: 10 },
+			{
+				type: "usage",
+				inputTokens: 5,
+				outputTokens: 10,
+				cacheWriteTokens: undefined,
+				cacheReadTokens: undefined,
+				totalCost: expect.any(Number),
+			},
 		])
 	})
 })

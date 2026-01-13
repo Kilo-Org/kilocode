@@ -57,6 +57,7 @@ describe("Gemini", () => {
 
 	const mockSetApiConfigurationField = vi.fn()
 
+	// kilocode_change start: Custom render function with required providers
 	const renderGemini_kiloCode = (props: React.ComponentProps<typeof Gemini>) => {
 		const queryClient = new QueryClient()
 		return render(
@@ -67,6 +68,7 @@ describe("Gemini", () => {
 			</QueryClientProvider>,
 		)
 	}
+	// kilocode_change end
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -152,12 +154,13 @@ describe("Gemini", () => {
 		})
 	})
 
-	describe("fromWelcomeView prop", () => {
-		it("should hide URL context and grounding checkboxes when fromWelcomeView is true, but keep custom base URL", () => {
+	// kilocode_change start: Tests changed from render() to renderGemini_kiloCode()
+	describe("simplifySettings prop", () => {
+		it("should hide URL context and grounding checkboxes when simplifySettings is true, but keep custom base URL", () => {
 			renderGemini_kiloCode({
 				apiConfiguration: defaultApiConfiguration,
 				setApiConfigurationField: mockSetApiConfigurationField,
-				fromWelcomeView: true,
+				simplifySettings: true,
 			})
 
 			// Should still render custom base URL checkbox
@@ -167,11 +170,11 @@ describe("Gemini", () => {
 			expect(screen.queryByTestId("checkbox-grounding-search")).not.toBeInTheDocument()
 		})
 
-		it("should show all checkboxes when fromWelcomeView is false", () => {
+		it("should show all checkboxes when simplifySettings is false", () => {
 			renderGemini_kiloCode({
 				apiConfiguration: defaultApiConfiguration,
 				setApiConfigurationField: mockSetApiConfigurationField,
-				fromWelcomeView: false,
+				simplifySettings: false,
 			})
 
 			// Should render all checkboxes
@@ -180,7 +183,7 @@ describe("Gemini", () => {
 			expect(screen.getByTestId("checkbox-grounding-search")).toBeInTheDocument()
 		})
 
-		it("should show all checkboxes when fromWelcomeView is undefined (default behavior)", () => {
+		it("should show all checkboxes when simplifySettings is undefined (default behavior)", () => {
 			renderGemini_kiloCode({
 				apiConfiguration: defaultApiConfiguration,
 				setApiConfigurationField: mockSetApiConfigurationField,
@@ -192,4 +195,5 @@ describe("Gemini", () => {
 			expect(screen.getByTestId("checkbox-grounding-search")).toBeInTheDocument()
 		})
 	})
+	// kilocode_change end
 })

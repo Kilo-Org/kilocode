@@ -114,8 +114,8 @@ export class TelemetryService {
 		this.captureEvent(TelemetryEventName.MODE_SWITCH, { taskId, newMode })
 	}
 
-	public captureToolUsage(taskId: string, tool: string): void {
-		this.captureEvent(TelemetryEventName.TOOL_USED, { taskId, tool })
+	public captureToolUsage(taskId: string, tool: string, toolProtocol: string): void {
+		this.captureEvent(TelemetryEventName.TOOL_USED, { taskId, tool, toolProtocol })
 	}
 
 	public captureCheckpointCreated(taskId: string): void {

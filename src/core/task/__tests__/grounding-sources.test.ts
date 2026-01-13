@@ -1,6 +1,9 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { ClineProvider } from "../../webview/ClineProvider"
 import type { ProviderSettings } from "@roo-code/types"
+
+// All vi.mock() calls are hoisted to the top of the file by Vitest
+// and are applied before any imports are resolved
 
 // Mock vscode module before importing Task
 vi.mock("vscode", () => ({
@@ -72,16 +75,92 @@ vi.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
+// Mock @roo-code/cloud to prevent socket.io-client initialization issues
+vi.mock("@roo-code/cloud", () => ({
+	CloudService: {
+		isEnabled: () => false,
+	},
+	BridgeOrchestrator: {
+		subscribeToTask: vi.fn(),
+	},
+}))
+
+// Mock delay to prevent actual delays
+vi.mock("delay", () => ({
+	__esModule: true,
+	default: vi.fn().mockResolvedValue(undefined),
+}))
+
+// Mock p-wait-for to prevent hanging on async conditions
+vi.mock("p-wait-for", () => ({
+	default: vi.fn().mockResolvedValue(undefined),
+}))
+
+// Mock execa
+vi.mock("execa", () => ({
+	execa: vi.fn(),
+}))
+
+// Mock fs/promises
+vi.mock("fs/promises", () => ({
+	mkdir: vi.fn().mockResolvedValue(undefined),
+	writeFile: vi.fn().mockResolvedValue(undefined),
+	readFile: vi.fn().mockResolvedValue("[]"),
+	unlink: vi.fn().mockResolvedValue(undefined),
+	rmdir: vi.fn().mockResolvedValue(undefined),
+}))
+
+// Mock mentions
+vi.mock("../../mentions", () => ({
+	parseMentions: vi.fn().mockImplementation((text) => Promise.resolve(text)),
+	openMention: vi.fn(),
+	getLatestTerminalOutput: vi.fn(),
+}))
+
+// Mock extract-text
+vi.mock("../../../integrations/misc/extract-text", () => ({
+	extractTextFromFile: vi.fn().mockResolvedValue("Mock file content"),
+}))
+
+// Mock getEnvironmentDetails
+vi.mock("../../environment/getEnvironmentDetails", () => ({
+	getEnvironmentDetails: vi.fn().mockResolvedValue(""),
+}))
+
+// Mock RooIgnoreController
+vi.mock("../../ignore/RooIgnoreController")
+
+// Mock condense
+vi.mock("../../condense", () => ({
+	summarizeConversation: vi.fn().mockResolvedValue({
+		messages: [],
+		summary: "summary",
+		cost: 0,
+		newContextTokens: 1,
+	}),
+}))
+
+// Mock storage utilities
+vi.mock("../../../utils/storage", () => ({
+	getTaskDirectoryPath: vi
+		.fn()
+		.mockImplementation((globalStoragePath, taskId) => Promise.resolve(`${globalStoragePath}/tasks/${taskId}`)),
+	getSettingsDirectoryPath: vi
+		.fn()
+		.mockImplementation((globalStoragePath) => Promise.resolve(`${globalStoragePath}/settings`)),
+}))
+
+// Mock fs utilities
+vi.mock("../../../utils/fs", () => ({
+	fileExistsAtPath: vi.fn().mockReturnValue(false),
+}))
+
+// Import Task AFTER all vi.mock() calls - Vitest hoists mocks so this works
+import { Task } from "../Task"
+
 describe("Task grounding sources handling", () => {
 	let mockProvider: Partial<ClineProvider>
 	let mockApiConfiguration: ProviderSettings
-	let Task: any
-
-	beforeAll(async () => {
-		// Import Task after mocks are set up
-		const taskModule = await import("../Task")
-		Task = taskModule.Task
-	})
 
 	beforeEach(() => {
 		// Mock provider with necessary methods
@@ -110,6 +189,7 @@ describe("Task grounding sources handling", () => {
 	it("should strip grounding sources from assistant message before persisting to API history", async () => {
 		// Create a task instance
 		const task = new Task({
+			context: mockProvider.context as any,
 			provider: mockProvider as ClineProvider,
 			apiConfiguration: mockApiConfiguration,
 			task: "Test task",
@@ -168,6 +248,7 @@ Sources: [1](https://example.com), [2](https://another.com)
 
 	it("should not modify assistant message when no grounding sources are present", async () => {
 		const task = new Task({
+			context: mockProvider.context as any,
 			provider: mockProvider as ClineProvider,
 			apiConfiguration: mockApiConfiguration,
 			task: "Test task",

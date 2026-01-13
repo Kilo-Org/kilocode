@@ -1,109 +1,77 @@
 import { LLMClient } from "./llm-client.js"
-import { HoleFiller, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
-import { FimPromptBuilder } from "../services/ghost/classic-auto-complete/FillInTheMiddle.js"
-import { AutocompleteInput } from "../services/ghost/types.js"
-import * as vscode from "vscode"
-import crypto from "crypto"
+import { extractPrefixSuffix } from "../services/ghost/types.js"
 import { createContext } from "./utils.js"
-
-// Mock context provider for standalone testing
-function createMockContextProvider(prefix: string, suffix: string, filepath: string) {
-	return {
-		getProcessedSnippets: async () => ({
-			filepathUri: `file://${filepath}`,
-			helper: {
-				filepath: `file://${filepath}`,
-				lang: { name: "typescript", singleLineComment: "//" },
-				prunedPrefix: prefix,
-				prunedSuffix: suffix,
-			},
-			snippetsWithUris: [],
-			workspaceDirs: [],
-		}),
-	} as any
-}
-
-/**
- * Check if a model supports FIM (Fill-In-Middle) completions.
- * This mirrors the logic in KilocodeOpenrouterHandler.supportsFim()
- */
-function modelSupportsFim(modelId: string): boolean {
-	return modelId.includes("codestral")
-}
+import {
+	createTestGhostModel,
+	createMockContextProvider,
+	modelSupportsFim,
+	createProviderForTesting,
+} from "./mock-context-provider.js"
+import {
+	GhostInlineCompletionProvider,
+	findMatchingSuggestion,
+} from "../services/ghost/classic-auto-complete/GhostInlineCompletionProvider.js"
+import { GhostModel } from "../services/ghost/GhostModel.js"
+import type { ContextFile } from "./test-cases.js"
 
 export class GhostProviderTester {
 	private llmClient: LLMClient
-	private model: string
+	private modelId: string
+	private ghostModel: GhostModel
 
 	constructor() {
-		this.model = process.env.LLM_MODEL || "mistralai/codestral-2508"
+		this.modelId = process.env.LLM_MODEL || "mistralai/codestral-2508"
 		this.llmClient = new LLMClient()
+		this.ghostModel = createTestGhostModel(this.llmClient, this.modelId)
 	}
 
 	async getCompletion(
 		code: string,
 		testCaseName: string = "test",
+		contextFiles: ContextFile[] = [],
 	): Promise<{ prefix: string; completion: string; suffix: string }> {
 		const context = createContext(code, testCaseName)
-
-		const position = context.range?.start ?? new vscode.Position(0, 0)
-		const offset = context.document.offsetAt(position)
-		const text = context.document.getText()
-		const prefix = text.substring(0, offset)
-		const suffix = text.substring(offset)
+		const position = context.range?.start ?? context.document.positionAt(0)
+		const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 		const languageId = context.document.languageId || "javascript"
-		const filepath = context.document.uri.fsPath
 
-		// Common setup
-		const mockContextProvider = createMockContextProvider(prefix, suffix, filepath)
-		const autocompleteInput: AutocompleteInput = {
-			isUntitledFile: false,
-			completionId: crypto.randomUUID(),
-			filepath,
-			pos: { line: position.line, character: position.character },
-			recentlyVisitedRanges: [],
-			recentlyEditedRanges: [],
-		}
+		// Create context provider with the actual content for prompt building
+		const contextProvider = createMockContextProvider(
+			prefix,
+			suffix,
+			context.document.fileName,
+			this.ghostModel,
+			contextFiles,
+		)
 
-		// Auto-detect strategy based on model capabilities
-		const supportsFim = modelSupportsFim(this.model)
-		const completion = supportsFim
-			? await this.getFimCompletion(mockContextProvider, autocompleteInput)
-			: await this.getHoleFillerCompletion(mockContextProvider, autocompleteInput, languageId, prefix, suffix)
+		// Create a fresh provider instance for this completion
+		const provider = createProviderForTesting(contextProvider)
 
-		return { prefix, completion, suffix }
-	}
+		// Use the provider's getPrompt method to build the prompt
+		const {
+			prompt,
+			prefix: promptPrefix,
+			suffix: promptSuffix,
+		} = await provider.getPrompt(context.document, position)
 
-	private async getFimCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
-		autocompleteInput: AutocompleteInput,
-	): Promise<string> {
-		const fimPromptBuilder = new FimPromptBuilder(contextProvider)
-		const prompt = await fimPromptBuilder.getFimPrompts(autocompleteInput, this.model)
-		const fimResponse = await this.llmClient.sendFimCompletion(prompt.formattedPrefix, prompt.prunedSuffix)
-		return fimResponse.completion
-	}
+		// Use the provider's fetchAndCacheSuggestion method directly
+		await provider.fetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, languageId)
 
-	private async getHoleFillerCompletion(
-		contextProvider: ReturnType<typeof createMockContextProvider>,
-		autocompleteInput: AutocompleteInput,
-		languageId: string,
-		prefix: string,
-		suffix: string,
-	): Promise<string> {
-		const holeFiller = new HoleFiller(contextProvider)
-		const { systemPrompt, userPrompt } = await holeFiller.getPrompts(autocompleteInput, languageId)
-		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
-		const parseResult = parseGhostResponse(response.content, prefix, suffix)
-		return parseResult.text
+		// Retrieve the cached suggestion using findMatchingSuggestion
+		const result = findMatchingSuggestion(promptPrefix, promptSuffix, provider.suggestionsHistory)
+
+		// Clean up
+		provider.dispose()
+
+		return { prefix: promptPrefix, completion: result?.text ?? "", suffix: promptSuffix }
 	}
 
 	getName(): string {
-		const supportsFim = modelSupportsFim(this.model)
+		const supportsFim = modelSupportsFim(this.modelId)
 		return supportsFim ? "ghost-provider-fim" : "ghost-provider-holefiller"
 	}
 
 	dispose(): void {
-		// No resources to dispose
+		// No longer needed since we dispose the provider in getCompletion
 	}
 }

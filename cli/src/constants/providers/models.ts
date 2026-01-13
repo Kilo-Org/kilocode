@@ -93,7 +93,7 @@ export interface ModelInfo {
 	cacheWritesPrice?: number
 	cacheReadsPrice?: number
 	description?: string
-	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high"
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
 	minTokensPerCachePoint?: number
 	maxCachePoints?: number
 	cachableFields?: string[]
@@ -164,6 +164,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	inception: null,
 	synthetic: null,
 	"sap-ai-core": null,
+	baseten: null,
 }
 
 /**
@@ -215,6 +216,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	inception: "inceptionLabsModelId",
 	synthetic: null,
 	"sap-ai-core": "sapAiCoreModelId",
+	baseten: null,
 }
 
 /**

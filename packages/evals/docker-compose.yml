@@ -55,8 +55,11 @@ services:
             - "${EVALS_WEB_PORT:-3446}:3446"
         environment:
             - HOST_EXECUTION_METHOD=docker
+            - PRODUCTION_DATABASE_URL
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+            # Mount log files so web can access task logs
+            - /tmp/evals:/tmp/evals:ro
         depends_on:
             db:
                 condition: service_healthy

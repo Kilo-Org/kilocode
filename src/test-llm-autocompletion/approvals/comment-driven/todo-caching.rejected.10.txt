@@ -1,0 +1,27 @@
+class DataService {
+  // TODO: Implement caching mechanism to reduce API calls
+  // TODO: Implement error handling
+  // TODO: Implement loading state
+  // TODO: Implement retry mechanism
+  // TODO: Implement timeout mechanism
+  // TODO: Implement request cancellation mechanism
+  // TODO: Implement request deduplication mechanism
+  // TODO: Implement request batching mechanism
+  // TODO: Implement request prioritization mechanism
+  // TODO: Implement request retry mechanism
+  // TODO: Implement request retry delay mechanism
+  // TODO: Implement request retry limit mechanism
+  // TODO: Implement request retry backoff mechanism
+  // TODO: Implement request retry exponential backoff mechanism
+  // TODO: Implement request retry jitter mechanism
+  // TODO: Implement request retry jitter exponential backoff mechanism
+  // TODO: Implement request retry jitter exponential backoff with limit mechanism
+  // TODO: Implement request retry jitter exponential backoff with limit and delay mechanism
+  // TODO: Implement request retry jitter exponential backoff with limit, delay and backoff mechanism
+  // TODO: Implement request retry jitter exponential backoff with limit, delay, backoff and jitter mechanism
+  // TODO: Implement request retry jitter exponential backoff with limit, delay, backoff, jitter and exponential backoff mechanism
+
+  async fetchData(id) {
+    return await api.get(`/data/${id}`);
+  }
+}

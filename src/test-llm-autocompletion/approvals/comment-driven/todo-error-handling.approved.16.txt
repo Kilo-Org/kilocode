@@ -1,0 +1,21 @@
+function processData(data) {
+  // TODO: Implement error handling for invalid data
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format');
+  }
+
+  // TODO: Implement data validation
+  if (!data.id || !data.name || !data.email) {
+    throw new Error('Missing required fields');
+  }
+
+  // TODO: Implement data transformation
+  const processedData = {
+    id: data.id,
+    name: data.name.toUpperCase(),
+    email: data.email.toLowerCase(),
+    age: data.age || null,
+  };
+
+  return processedData;
+}

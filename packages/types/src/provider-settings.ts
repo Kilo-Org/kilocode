@@ -5,6 +5,7 @@ import { codebaseIndexProviderSchema } from "./codebase-index.js"
 import { profileTypeSchema } from "./profile-type.js" // kilocode_change
 import {
 	anthropicModels,
+	basetenModels,
 	bedrockModels,
 	cerebrasModels,
 	claudeCodeModels,
@@ -59,7 +60,7 @@ export const dynamicProviders = [
 	"io-intelligence",
 	"requesty",
 	"unbound",
-	"glama",
+	"glama", // kilocode_change
 	"roo",
 	"chutes",
 	"nano-gpt", //kilocode_change
@@ -133,6 +134,7 @@ export const providerNames = [
 	...fauxProviders,
 	"anthropic",
 	"bedrock",
+	"baseten",
 	"cerebras",
 	"claude-code",
 	"doubao",
@@ -207,7 +209,8 @@ const baseProviderSettingsSchema = z.object({
 	// Model verbosity.
 	verbosity: verbosityLevelsSchema.optional(),
 
-	toolStyle: z.enum(["xml", "json"]).optional(), // kilocode_change
+	// Tool protocol override for this profile.
+	toolProtocol: z.enum(["xml", "native"]).optional(),
 })
 
 // Several of the providers share common model config properties.
@@ -228,12 +231,12 @@ const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
 	claudeCodeMaxOutputTokens: z.number().int().min(1).max(200000).optional(),
 })
 
+// kilocode_change start
 const glamaSchema = baseProviderSettingsSchema.extend({
 	glamaModelId: z.string().optional(),
 	glamaApiKey: z.string().optional(),
 })
 
-// kilocode_change start
 export const nanoGptModelListSchema = z.enum(["all", "personalized", "subscription"])
 
 const nanoGptSchema = baseProviderSettingsSchema.extend({
@@ -477,7 +480,7 @@ const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 })
 // kilocode_change end
 
-export const zaiApiLineSchema = z.enum(["international_coding", "china_coding"])
+export const zaiApiLineSchema = z.enum(["international_coding", "china_coding", "international_api", "china_api"])
 
 export type ZaiApiLine = z.infer<typeof zaiApiLineSchema>
 
@@ -529,6 +532,10 @@ const sapAiCoreSchema = baseProviderSettingsSchema.extend({
 })
 // kilocode_change end
 
+const basetenSchema = apiModelIdProviderModelSchema.extend({
+	basetenApiKey: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -536,7 +543,7 @@ const defaultSchema = z.object({
 export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProvider", [
 	anthropicSchema.merge(z.object({ apiProvider: z.literal("anthropic") })),
 	claudeCodeSchema.merge(z.object({ apiProvider: z.literal("claude-code") })),
-	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })),
+	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })), // kilocode_change
 	nanoGptSchema.merge(z.object({ apiProvider: z.literal("nano-gpt") })), // kilocode_change
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
@@ -567,6 +574,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	inceptionSchema.merge(z.object({ apiProvider: z.literal("inception") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
+	basetenSchema.merge(z.object({ apiProvider: z.literal("baseten") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
@@ -587,7 +595,7 @@ export const providerSettingsSchema = z.object({
 	apiProvider: providerNamesSchema.optional(),
 	...anthropicSchema.shape,
 	...claudeCodeSchema.shape,
-	...glamaSchema.shape,
+	...glamaSchema.shape, // kilocode_change
 	...nanoGptSchema.shape, // kilocode_change
 	...openRouterSchema.shape,
 	...bedrockSchema.shape,
@@ -618,6 +626,7 @@ export const providerSettingsSchema = z.object({
 	...fakeAiSchema.shape,
 	...xaiSchema.shape,
 	...groqSchema.shape,
+	...basetenSchema.shape,
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
@@ -652,7 +661,7 @@ export const PROVIDER_SETTINGS_KEYS = providerSettingsSchema.keyof().options
 
 export const modelIdKeys = [
 	"apiModelId",
-	"glamaModelId",
+	"glamaModelId", // kilocode_change
 	"nanoGptModelId", // kilocode_change
 	"openRouterModelId",
 	"openAiModelId",
@@ -691,7 +700,7 @@ export const isTypicalProvider = (key: unknown): key is TypicalProvider =>
 export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	anthropic: "apiModelId",
 	"claude-code": "apiModelId",
-	glama: "glamaModelId",
+	glama: "glamaModelId", // kilocode_change
 	"nano-gpt": "nanoGptModelId", // kilocode_change
 	openrouter: "openRouterModelId",
 	kilocode: "kilocodeModel",
@@ -719,6 +728,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	"sap-ai-core": "sapAiCoreModelId",
 	// kilocode_change end
 	groq: "apiModelId",
+	baseten: "apiModelId",
 	chutes: "apiModelId",
 	litellm: "litellmModelId",
 	huggingface: "huggingFaceModelId",
@@ -738,7 +748,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
  */
 
 // Providers that use Anthropic-style API protocol.
-export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code", "bedrock"]
+export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = ["anthropic", "claude-code", "bedrock", "minimax"]
 
 export const getApiProtocol = (provider: ProviderName | undefined, modelId?: string): "anthropic" | "openai" => {
 	if (provider && ANTHROPIC_STYLE_PROVIDERS.includes(provider)) {
@@ -858,10 +868,11 @@ export const MODELS_BY_PROVIDER: Record<
 		models: Object.keys(vscodeLlmModels),
 	},
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
-	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
+	zai: { id: "zai", label: "Z.ai", models: Object.keys(internationalZAiModels) },
+	baseten: { id: "baseten", label: "Baseten", models: Object.keys(basetenModels) },
 
 	// Dynamic providers; models pulled from remote APIs.
-	glama: { id: "glama", label: "Glama", models: [] },
+	glama: { id: "glama", label: "Glama", models: [] }, // kilocode_change
 	"nano-gpt": { id: "nano-gpt", label: "Nano-GPT", models: [] }, // kilocode_change
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },

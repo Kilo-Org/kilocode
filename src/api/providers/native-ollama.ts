@@ -1,6 +1,12 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import { Message, Ollama } from "ollama"
-import { ModelInfo, openAiModelInfoSaneDefaults, DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import OpenAI from "openai"
+import { Message, Ollama, Tool as OllamaTool, type Config as OllamaOptions } from "ollama"
+import {
+	ModelInfo,
+	openAiModelInfoSaneDefaults,
+	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	ollamaDefaultModelInfo,
+} from "@roo-code/types"
 import { ApiStream } from "../transform/stream"
 import { BaseProvider } from "./base-provider"
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -9,9 +15,6 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 // kilocode_change start
-import { fetchWithTimeout, HeadersTimeoutError } from "./kilocode/fetchWithTimeout"
-import { getApiRequestTimeout } from "./utils/timeout-config"
-
 const TOKEN_ESTIMATION_FACTOR = 4 //Industry standard technique for estimating token counts without actually implementing a parser/tokenizer
 
 function estimateOllamaTokenCount(messages: Message[]): number {
@@ -105,7 +108,7 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 					})
 				}
 			} else if (anthropicMessage.role === "assistant") {
-				const { nonToolMessages } = anthropicMessage.content.reduce<{
+				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
 					nonToolMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
 					toolMessages: Anthropic.ToolUseBlockParam[]
 				}>(
@@ -133,9 +136,21 @@ function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessagePa
 						.join("\n")
 				}
 
+				// Convert tool_use blocks to Ollama tool_calls format
+				const toolCalls =
+					toolMessages.length > 0
+						? toolMessages.map((tool) => ({
+								function: {
+									name: tool.name,
+									arguments: tool.input as Record<string, unknown>,
+								},
+							}))
+						: undefined
+
 				ollamaMessages.push({
 					role: "assistant",
 					content,
+					tool_calls: toolCalls,
 				})
 			}
 		}
@@ -149,11 +164,13 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	private client: Ollama | undefined
 	protected models: Record<string, ModelInfo> = {}
 	private isInitialized = false // kilocode_change
+	private modelFetchError: string | null = null // kilocode_change - track fetch errors for better diagnostics
+	private initializationPromise: Promise<void> | null = null // kilocode_change - prevent race condition
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
-		this.initialize() // kilocode_change
+		this.initializationPromise = this.initialize() // kilocode_change - store the promise
 	}
 
 	// kilocode_change start
@@ -164,29 +181,57 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		await this.fetchModel()
 		this.isInitialized = true
 	}
+
+	private async ensureInitialized(): Promise<void> {
+		if (this.initializationPromise) {
+			await this.initializationPromise
+		}
+	}
 	// kilocode_change end
 
 	private ensureClient(): Ollama {
 		if (!this.client) {
 			try {
-				// kilocode_change start
-				const headers = this.options.ollamaApiKey
-					? { Authorization: `Bearer ${this.options.ollamaApiKey}` }
-					: undefined
-				// kilocode_change end
-
-				this.client = new Ollama({
+				const clientOptions: OllamaOptions = {
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
-					// kilocode_change start
-					fetch: fetchWithTimeout(getApiRequestTimeout(), headers),
-					headers: headers,
-					// kilocode_change end
-				})
+					// Note: The ollama npm package handles timeouts internally
+				}
+
+				// Add API key if provided (for Ollama cloud or authenticated instances)
+				if (this.options.ollamaApiKey) {
+					clientOptions.headers = {
+						Authorization: `Bearer ${this.options.ollamaApiKey}`,
+					}
+				}
+
+				this.client = new Ollama(clientOptions)
 			} catch (error: any) {
 				throw new Error(`Error creating Ollama client: ${error.message}`)
 			}
 		}
 		return this.client
+	}
+
+	/**
+	 * Converts OpenAI-format tools to Ollama's native tool format.
+	 * This allows NativeOllamaHandler to use the same tool definitions
+	 * that are passed to OpenAI-compatible providers.
+	 */
+	private convertToolsToOllama(tools: OpenAI.Chat.ChatCompletionTool[] | undefined): OllamaTool[] | undefined {
+		if (!tools || tools.length === 0) {
+			return undefined
+		}
+
+		return tools
+			.filter((tool): tool is OpenAI.Chat.ChatCompletionTool & { type: "function" } => tool.type === "function")
+			.map((tool) => ({
+				type: tool.type,
+				function: {
+					name: tool.function.name,
+					description: tool.function.description,
+					parameters: tool.function.parameters as OllamaTool["function"]["parameters"],
+				},
+			}))
 	}
 
 	override async *createMessage(
@@ -195,9 +240,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		// kilocode_change start
-		if (!this.isInitialized) {
-			await this.initialize()
-		}
+		await this.ensureInitialized()
 		// kilocode_change end
 
 		const client = this.ensureClient()
@@ -229,6 +272,11 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				}) as const,
 		)
 
+		// Check if we should use native tool calling
+		const supportsNativeTools = modelInfo.supportsNativeTools ?? false
+		const useNativeTools =
+			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
+
 		try {
 			// Build options object conditionally
 			const chatOptions: OllamaChatOptions = {
@@ -246,17 +294,37 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				messages: ollamaMessages,
 				stream: true,
 				options: chatOptions,
+				// Native tool calling support
+				...(useNativeTools && { tools: this.convertToolsToOllama(metadata.tools) }),
 			})
 
 			let totalInputTokens = 0
 			let totalOutputTokens = 0
+			// Track tool calls across chunks (Ollama may send complete tool_calls in final chunk)
+			let toolCallIndex = 0
 
 			try {
 				for await (const chunk of stream) {
-					if (typeof chunk.message.content === "string") {
+					if (typeof chunk.message.content === "string" && chunk.message.content.length > 0) {
 						// Process content through matcher for reasoning detection
 						for (const matcherChunk of matcher.update(chunk.message.content)) {
 							yield matcherChunk
+						}
+					}
+
+					// Handle tool calls - emit partial chunks for NativeToolCallParser compatibility
+					if (chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
+						for (const toolCall of chunk.message.tool_calls) {
+							// Generate a unique ID for this tool call
+							const toolCallId = `ollama-tool-${toolCallIndex}`
+							yield {
+								type: "tool_call_partial",
+								index: toolCallIndex,
+								id: toolCallId,
+								name: toolCall.function.name,
+								arguments: JSON.stringify(toolCall.function.arguments),
+							}
+							toolCallIndex++
 						}
 					}
 
@@ -293,12 +361,6 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			const statusCode = error.status || error.statusCode
 			const errorMessage = error.message || "Unknown error"
 
-			// kilocode_change start
-			if (error.cause instanceof HeadersTimeoutError) {
-				throw new Error("Headers timeout", { cause: error })
-			}
-			// kilocode_change end
-
 			if (error.code === "ECONNREFUSED") {
 				throw new Error(
 					`Ollama service is not running at ${this.options.ollamaBaseUrl || "http://localhost:11434"}. Please start Ollama first.`,
@@ -316,42 +378,76 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 
 	async fetchModel() {
 		// kilocode_change start
-		this.models = await getOllamaModels(
-			this.options.ollamaBaseUrl,
-			this.options.ollamaApiKey,
-			this.options.ollamaNumCtx,
-		)
+		try {
+			this.modelFetchError = null
+			this.models = await getOllamaModels(
+				this.options.ollamaBaseUrl,
+				this.options.ollamaApiKey,
+				this.options.ollamaNumCtx,
+			)
+			if (Object.keys(this.models).length === 0) {
+				this.modelFetchError = "noModelsReturned"
+			}
+		} catch (error: any) {
+			this.modelFetchError = error.message || "unknownError"
+			this.models = {}
+		}
 		return this.models
 		// kilocode_change end
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.ollamaModelId || ""
+		const userContextWindow = this.options.ollamaNumCtx
 
 		// kilocode_change start
+		// If not yet initialized, return default model info to allow getEnvironmentDetails to work
+		// The actual model validation will happen in createMessage() after ensureInitialized()
+		if (!this.isInitialized) {
+			const contextWindow = userContextWindow || ollamaDefaultModelInfo.contextWindow
+			return {
+				id: modelId,
+				info: {
+					...ollamaDefaultModelInfo,
+					contextWindow: contextWindow,
+				},
+			}
+		}
+
 		const modelInfo = this.models[modelId]
 		if (!modelInfo) {
 			const availableModels = Object.keys(this.models)
-			const errorMessage =
-				availableModels.length > 0
-					? `Model ${modelId} not found. Available models: ${availableModels.join(", ")}`
-					: `Model ${modelId} not found. No models available.`
-			throw new Error(errorMessage)
+			if (availableModels.length > 0) {
+				throw new Error(`Model ${modelId} not found. Available models: ${availableModels.join(", ")}`)
+			}
+
+			const baseUrl = this.options.ollamaBaseUrl || "http://localhost:11434"
+			const troubleshooting = [
+				`1. Ensure Ollama is running (try: ollama serve)`,
+				`2. Verify the base URL is correct: ${baseUrl}`,
+				`3. Check that models are installed (try: ollama list)`,
+				`4. Pull the model if needed: ollama pull ${modelId}`,
+			].join("\n")
+
+			throw new Error(
+				`Model ${modelId} not found. Could not retrieve models from Ollama.\n\nTroubleshooting:\n${troubleshooting}`,
+			)
 		}
+
+		// Override contextWindow with user's setting if provided
+		const finalModelInfo = userContextWindow ? { ...modelInfo, contextWindow: userContextWindow } : modelInfo
 		// kilocode_change end
 
 		return {
 			id: modelId,
-			info: modelInfo, // kilocode_change
+			info: finalModelInfo, // kilocode_change
 		}
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
 		try {
 			// kilocode_change start
-			if (!this.isInitialized) {
-				await this.initialize()
-			}
+			await this.ensureInitialized()
 			// kilocode_change end
 
 			const client = this.ensureClient()

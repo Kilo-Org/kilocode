@@ -32,6 +32,8 @@ describe("ExtensionChannel", () => {
 		wrapperTitle: null,
 		wrapperCode: null,
 		wrapperVersion: null,
+		machineId: null,
+		vscodeIsTelemetryEnabled: null,
 		// kilocode_change end
 		hostname: "test-host",
 	}
@@ -127,6 +129,10 @@ describe("ExtensionChannel", () => {
 				RooCodeEventName.TaskPaused,
 				RooCodeEventName.TaskUnpaused,
 				RooCodeEventName.TaskSpawned,
+				RooCodeEventName.TaskDelegated,
+				RooCodeEventName.TaskDelegationCompleted,
+				RooCodeEventName.TaskDelegationResumed,
+
 				RooCodeEventName.TaskUserMessage,
 				RooCodeEventName.TaskTokenUsageUpdated,
 			]
@@ -253,6 +259,116 @@ describe("ExtensionChannel", () => {
 				undefined,
 			)
 		})
+
+		it("should forward delegation events to socket", async () => {
+			await extensionChannel.onConnect(mockSocket)
+			;(mockSocket.emit as any).mockClear()
+
+			const delegatedListeners = eventListeners.get(RooCodeEventName.TaskDelegated)
+			expect(delegatedListeners).toBeDefined()
+			expect(delegatedListeners!.size).toBe(1)
+
+			const listener = Array.from(delegatedListeners!)[0]
+			if (listener) {
+				await (listener as any)("parent-id", "child-id")
+			}
+
+			expect(mockSocket.emit).toHaveBeenCalledWith(
+				ExtensionSocketEvents.EVENT,
+				expect.objectContaining({
+					type: ExtensionBridgeEventName.TaskDelegated,
+					instance: expect.any(Object),
+					timestamp: expect.any(Number),
+				}),
+				undefined,
+			)
+		})
+
+		it("should forward TaskDelegationCompleted with correct payload", async () => {
+			await extensionChannel.onConnect(mockSocket)
+			;(mockSocket.emit as any).mockClear()
+
+			const completedListeners = eventListeners.get(RooCodeEventName.TaskDelegationCompleted)
+			expect(completedListeners).toBeDefined()
+
+			const listener = Array.from(completedListeners!)[0]
+			if (listener) {
+				await (listener as any)("parent-1", "child-1", "Summary text")
+			}
+
+			expect(mockSocket.emit).toHaveBeenCalledWith(
+				ExtensionSocketEvents.EVENT,
+				expect.objectContaining({
+					type: ExtensionBridgeEventName.TaskDelegationCompleted,
+					instance: expect.any(Object),
+					timestamp: expect.any(Number),
+					payload: expect.objectContaining({
+						parentTaskId: "parent-1",
+						childTaskId: "child-1",
+						summary: "Summary text",
+					}),
+				}),
+				undefined,
+			)
+		})
+
+		it("should forward TaskDelegationResumed with correct payload", async () => {
+			await extensionChannel.onConnect(mockSocket)
+			;(mockSocket.emit as any).mockClear()
+
+			const resumedListeners = eventListeners.get(RooCodeEventName.TaskDelegationResumed)
+			expect(resumedListeners).toBeDefined()
+
+			const listener = Array.from(resumedListeners!)[0]
+			if (listener) {
+				await (listener as any)("parent-2", "child-2")
+			}
+
+			expect(mockSocket.emit).toHaveBeenCalledWith(
+				ExtensionSocketEvents.EVENT,
+				expect.objectContaining({
+					type: ExtensionBridgeEventName.TaskDelegationResumed,
+					instance: expect.any(Object),
+					timestamp: expect.any(Number),
+					payload: expect.objectContaining({
+						parentTaskId: "parent-2",
+						childTaskId: "child-2",
+					}),
+				}),
+				undefined,
+			)
+		})
+
+		it("should propagate all three delegation events in order", async () => {
+			await extensionChannel.onConnect(mockSocket)
+			;(mockSocket.emit as any).mockClear()
+
+			// Trigger TaskDelegated
+			const delegatedListener = Array.from(eventListeners.get(RooCodeEventName.TaskDelegated)!)[0]
+			await (delegatedListener as any)("p1", "c1")
+
+			// Trigger TaskDelegationCompleted
+			const completedListener = Array.from(eventListeners.get(RooCodeEventName.TaskDelegationCompleted)!)[0]
+			await (completedListener as any)("p1", "c1", "result")
+
+			// Trigger TaskDelegationResumed
+			const resumedListener = Array.from(eventListeners.get(RooCodeEventName.TaskDelegationResumed)!)[0]
+			await (resumedListener as any)("p1", "c1")
+
+			// Verify all three events were emitted
+			const emittedEvents = (mockSocket.emit as any).mock.calls.map((call: any[]) => call[1]?.type)
+			expect(emittedEvents).toContain(ExtensionBridgeEventName.TaskDelegated)
+			expect(emittedEvents).toContain(ExtensionBridgeEventName.TaskDelegationCompleted)
+			expect(emittedEvents).toContain(ExtensionBridgeEventName.TaskDelegationResumed)
+
+			// Verify correct order: Delegated → Completed → Resumed
+			const delegatedIdx = emittedEvents.indexOf(ExtensionBridgeEventName.TaskDelegated)
+			const completedIdx = emittedEvents.indexOf(ExtensionBridgeEventName.TaskDelegationCompleted)
+			const resumedIdx = emittedEvents.indexOf(ExtensionBridgeEventName.TaskDelegationResumed)
+
+			expect(delegatedIdx).toBeLessThan(completedIdx)
+			expect(completedIdx).toBeLessThan(resumedIdx)
+		})
 	})
 
 	describe("Memory Leak Prevention", () => {
@@ -264,7 +380,7 @@ describe("ExtensionChannel", () => {
 			}
 
 			// Listeners should still be the same count (not accumulated)
-			expect(eventListeners.size).toBe(15)
+			expect(eventListeners.size).toBe(18)
 
 			// Each event should have exactly 1 listener
 			eventListeners.forEach((listeners) => {

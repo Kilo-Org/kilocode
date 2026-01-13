@@ -11,6 +11,36 @@ import { logger } from "../../../utils/logging"
 import { getKiloBaseUriFromToken } from "../../../../packages/types/src/kilocode/kilocode"
 import { fetchWithRetries } from "../../../shared/http"
 
+export async function isEnabled(kilocodeToken: string, organizationId: string | null): Promise<boolean> {
+	try {
+		const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+		let url = `${baseUrl}/api/code-indexing/enabled`
+		if (organizationId) {
+			url += `?${new URLSearchParams({ organizationId }).toString()}`
+		}
+		const response = await fetchWithRetries({
+			url,
+			method: "GET",
+			retries: 2,
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			},
+		})
+
+		if (!response.ok) {
+			console.error(`Failed to check if managed indexing is enabled: ${response.statusText}`)
+			return false
+		}
+
+		const result = await response.json()
+		return result.enabled
+	} catch (error) {
+		console.error(`Failed to check if managed indexing is enabled: ${error}`)
+		return false
+	}
+}
+
 /**
  * Searches code in the managed index with branch preferences
  *
@@ -31,6 +61,7 @@ export async function searchCode(
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/search`,
 			method: "POST",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -115,6 +146,7 @@ export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal)
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/upsert-by-file`,
 			method: "PUT",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 			},
@@ -168,6 +200,7 @@ export async function getServerManifest(
 		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/manifest?${params.toString()}`,
 			method: "GET",
+			retries: 2,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -185,6 +218,75 @@ export async function getServerManifest(
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		logger.error(`Failed to get manifest: ${errorMessage}`)
+		throw error
+	}
+}
+
+/**
+ * Parameters for deleting files from the server
+ */
+export interface DeleteFilesParams {
+	/** Organization ID (must be a valid UUID) */
+	organizationId: string | null
+	/** Project ID */
+	projectId: string
+	/** Git branch name (optional) */
+	gitBranch?: string
+	/** Array of file paths to delete (optional - if not provided, deletes all files for the branch) */
+	filePaths?: string[]
+	/** Authentication token */
+	kilocodeToken: string
+}
+
+/**
+ * Deletes files from the server index
+ *
+ * @param params Parameters for the file deletion
+ * @param signal Optional AbortSignal to cancel the request
+ * @throws Error if the request fails
+ */
+export async function deleteFiles(params: DeleteFilesParams, signal?: AbortSignal): Promise<void> {
+	const { organizationId, projectId, gitBranch, filePaths, kilocodeToken } = params
+
+	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+
+	try {
+		const requestBody: any = {
+			projectId,
+		}
+
+		if (organizationId) {
+			requestBody.organizationId = organizationId
+		}
+
+		if (gitBranch) {
+			requestBody.gitBranch = gitBranch
+		}
+
+		if (filePaths) {
+			requestBody.filePaths = filePaths
+		}
+
+		const response = await fetchWithRetries({
+			url: `${baseUrl}/api/code-indexing/delete`,
+			method: "POST",
+			retries: 2,
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(requestBody),
+			signal,
+		})
+
+		if (!response.ok) {
+			throw new Error(`Failed to delete files: ${response.statusText}`)
+		}
+
+		logger.info(`Successfully deleted ${filePaths?.length || "all"} files from index`)
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		logger.error(`Failed to delete files: ${errorMessage}`)
 		throw error
 	}
 }

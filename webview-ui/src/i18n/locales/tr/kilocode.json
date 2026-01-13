@@ -39,6 +39,12 @@
 				"description": "Etkinleştirildiğinde, Kilo Code bağlam penceresini taşma olasılığı yüksek olsa bile çok büyük dosya veya MCP çıktı okumalarını gerçekleştirir (içerik boyutu bağlam penceresinin %80'inden fazla)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Gömme Toplu İşlem Boyutu",
+			"embeddingBatchSizeDescription": "Gömme üretimi ve vektör deposu güncellemeleri için birlikte toplu işleme alınacak kod segmentlerinin sayısı. Daha yüksek değerler indeksleme hızını artırabilir ancak bellek kullanımını artırabilir. Daha düşük değerler bellek kullanımını azaltır ancak indekslemeyi yavaşlatabilir.",
+			"scannerMaxBatchRetriesLabel": "Tarayıcı Maksimum Toplu İşlem Yeniden Denemeleri",
+			"scannerMaxBatchRetriesDescription": "Dizin taraması sırasında başarısız bir toplu işlemi yeniden deneme sayısının üst sınırı. Daha yüksek değerler geçici hatalara karşı dayanıklılığı artırır ancak hatalar devam ederse indekslemeyi yavaşlatabilir. Daha düşük değerler daha hızlı başarısız olur ancak geçici sorunlarda içeriği atlayabilir."
+		},
 		"provider": {
 			"account": "Kilo Code Hesabı",
 			"apiKey": "Kilo Code API Anahtarı",
@@ -210,29 +216,52 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Tetikleyiciler",
-			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
 			"enableAutoTrigger": {
-				"label": "Autocomplete'i Etkinleştir",
-				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
+				"label": "Auto-trigger Suggestions",
+				"description": "Yazmayı duraklattığınızda otomatik olarak satır içi kod önerileri göster."
 			},
 			"autoTriggerDelay": {
 				"label": "Otomatik Tetikleme Gecikmesi",
-				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Görev ({{keybinding}})",
-				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
-				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "bulunamadı",
-			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
 			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
 			"model": "Model",
-			"provider": "Sağlayıcı"
+			"provider": "Sağlayıcı",
+			"enableChatAutocomplete": {
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "Ertele",
+				"unsnooze": "Ertelemeyi Kaldır",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 dakika",
+					"5min": "5 dakika",
+					"15min": "15 dakika",
+					"30min": "30 dakika",
+					"1hour": "1 saat"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Otomatik tamamlama modeli yapılandırılmadı",
+				"description": "Otomatik tamamlamayı etkinleştirmek için desteklenen bu sağlayıcılardan biriyle bir profil ekleyin:",
+				"learnMore": "Otomatik tamamlama kurulumu hakkında daha fazla bilgi →"
+			},
+			"noCredits": {
+				"title": "Hesabınızda kredi yok",
+				"description": "Kilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.",
+				"buyCredits": "Kredi satın al →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code'a giriş yap",
+		"step1": "Tarayıcında aşağıdaki URL'yi aç",
+		"step2": "Kodu doğrula ve bu cihazı tarayıcında yetkilendir",
+		"scanQr": "Veya bu QR kodunu telefonunla tara",
+		"openBrowser": "Tarayıcıyı Aç",
+		"copyUrl": "URL'yi Kopyala",
+		"waiting": "Yetkilendirme bekleniyor...",
+		"timeRemaining": "Kod {{time}} içinde sona erecek",
+		"success": "Başarıyla giriş yapıldı!",
+		"authenticatedAs": "{{email}} olarak kimlik doğrulandı",
+		"error": "Kimlik Doğrulama Hatası",
+		"unknownError": "Bir hata oluştu. Lütfen tekrar dene.",
+		"cancel": "İptal",
+		"retry": "Tekrar Dene",
+		"tryAgain": "Tekrar Dene",
+		"cancelled": "Kimlik Doğrulama İptal Edildi",
+		"initiating": "Kimlik doğrulama başlatılıyor..."
+	},
+	"speechToText": {
+		"startRecording": "Sesli girişi başlat",
+		"stopRecording": "Sesli girişi durdur",
+		"setupPopover": {
+			"title": "Konuşmadan Metne",
+			"openAiReason": "Ses transkripsiyonu kullanmak için API anahtarına sahip geçerli bir OpenAI sağlayıcısına ihtiyacınız var.",
+			"description": "Konuşmadan metne özelliği kullanılamıyor. Konuşmadan metne özelliği için hem FFmpeg hem de geçerli bir OpenAI sağlayıcısı yapılandırılması gerekir. <moreInfoLink>Daha fazla bilgi için buraya tıklayın</moreInfoLink>.",
+			"ffmpegMessage": "FFmpeg'i kurmama yardım et",
+			"ffmpegReason": "FFmpeg'in yüklü olması gerekiyor. FFmpeg'i yüklemeniz için Kilo'nun size yardımcı olması için <ffmpegLink>buraya tıklayın</ffmpegLink>."
+		},
+		"misconfiguredState": "Yapılandırma nedeniyle kullanılamıyor",
+		"errorState": "Hata nedeniyle kullanılamıyor",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Sistem Varsayılanı",
+			"description": "Konuşma-yazma için mikrofon cihazını seçin",
+			"noDevices": "Mikrofon cihazı bulunamadı",
+			"loading": "Mikrofon cihazları yükleniyor...",
+			"refresh": "Yenile"
+		}
 	}
 }

@@ -1,0 +1,12 @@
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+greet(123); // 'Hello 123'
+greet(true); // 'Hello true'
+greet(); // 'Hello undefined'
+
+function greet(name) {
+    if (name === undefined) {
+        name = 'World';
+    }
+    return 'Hello ' + name;
+}

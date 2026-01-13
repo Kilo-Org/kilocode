@@ -1,0 +1,60 @@
+class User
+	def initialize(username, email, role)
+		@username = username
+		@email = email
+		@role = role
+	end
+
+	def username
+		@username
+	end
+
+	def email
+		@email
+	end
+
+	def role
+		@role
+	end
+
+	def to_s
+		"#{@username} - #{@email} - #{@role}"
+	end
+end
+
+class Admin < User
+	def initialize(username, email)
+		super(username, email, "admin")
+	end
+end
+
+class Guest < User
+	def initialize(username, email)
+		super(username, email, "guest")
+	end
+end
+
+class Moderator < User
+	def initialize(username, email)
+		super(username, email, "moderator")
+	end
+end
+
+class UserFactory
+	def self.create(username, email, role)
+		case role
+		when "admin"
+			Admin.new(username, email)
+		when "guest"
+			Guest.new(username, email)
+		when "moderator"
+			Moderator.new(username, email)
+		else
+			raise "Invalid role"
+		end
+	end
+end
+
+admin = UserFactory.create("admin", "admin@email.com", "admin")
+guest = UserFactory.create("guest", "guest@email.com", "guest")
+moderator =

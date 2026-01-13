@@ -46,6 +46,12 @@
 				"description": "Коли увімкнено, Kilo Code виконуватиме дуже великі читання файлів або виводу MCP, навіть якщо існує висока ймовірність переповнення вікна контексту (розмір вмісту >80% вікна контексту)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Розмір пакету векторизації",
+			"embeddingBatchSizeDescription": "Кількість сегментів коду, які об'єднуються в пакет для генерації векторних представлень та вставки у векторне сховище. Вищі значення можуть покращити швидкість індексації, але збільшити використання пам'яті. Нижчі значення зменшують використання пам'яті, але можуть уповільнити індексацію.",
+			"scannerMaxBatchRetriesLabel": "Максимальна кількість повторних спроб пакета",
+			"scannerMaxBatchRetriesDescription": "Максимальна кількість повторних спроб для невдалого пакета під час сканування каталогів. Вищі значення підвищують стійкість до тимчасових помилок, але можуть уповільнити індексацію при постійних помилках. Нижчі значення швидше завершуються з помилкою, але можуть пропустити вміст при тимчасових проблемах."
+		},
 		"provider": {
 			"account": "Обліковий запис Kilo Code",
 			"apiKey": "Kilo Code API Key",
@@ -217,29 +223,52 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Тригери",
-			"keybindingDescription": "Функції Autocomplete можуть бути запущені командами. Ти можеш налаштувати <DocsLink>Гарячі Клавіші тут</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Увімкнути Autocomplete",
-				"description": "Коли увімкнено, Kilo Code автоматично запустить Autocomplete, коли ти перестанеш друкувати. Це може бути корисно для швидких виправлень та пропозицій."
+				"label": "Auto-trigger Suggestions",
+				"description": "Автоматично показувати вбудовані пропозиції коду, коли ви робите паузу під час введення."
 			},
 			"autoTriggerDelay": {
 				"label": "Затримка Автоматичного Запуску",
-				"description": "Затримка в секундах перед тим, як Kilo Code запустить Autocomplete після того, як ти перестанеш друкувати. Менша затримка означає швидші пропозиції, але може бути більш ресурсомісткою."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Швидке завдання ({{keybinding}})",
-				"description": "Потрібна лише швидка зміна? Виділи код (або не виділяй!) і натисни Cmd+I. Опиши свою мету простою українською (\"створи React компонент з цими пропсами\", \"додай обробку помилок до цієї функції\"), і отримай кілька готових до використання пропозицій прямо у своєму редакторі. <DocsLink>Подивитися гарячу клавішу</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Ручне автозаповнення ({{keybinding}})",
-				"description": "Потрібне швидке виправлення, доповнення або рефакторинг? Kilo використає навколишній контекст для миттєвих покращень, зберігаючи тебе в потоці. <DocsLink>Подивитися гарячу клавішу</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "не знайдено",
-			"noModelConfigured": "Не знайдено відповідної моделі автодоповнення. Налаштуй провайдера в налаштуваннях API.",
 			"configureAutocompleteProfile": "Використовуй будь-яку модель, перейшовши до профілів і налаштувавши Профіль типу Автодоповнення.",
 			"model": "Модель",
-			"provider": "Провайдер"
+			"provider": "Провайдер",
+			"enableChatAutocomplete": {
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "Призупинити",
+				"unsnooze": "Відновити",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 хвилина",
+					"5min": "5 хвилин",
+					"15min": "15 хвилин",
+					"30min": "30 хвилин",
+					"1hour": "1 година"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Модель автодоповнення не налаштована",
+				"description": "Щоб увімкнути автодоповнення, додайте профіль з одним із цих підтримуваних провайдерів:",
+				"learnMore": "Дізнатися більше про налаштування автодоповнення →"
+			},
+			"noCredits": {
+				"title": "На вашому рахунку немає кредитів",
+				"description": "На вашому рахунку Kilo Code немає кредитів. Щоб використовувати автодоповнення, будь ласка, поповніть свій рахунок.",
+				"buyCredits": "Придбати кредити →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Нове: Діліться режимами, створивши організацію"
+	},
+	"deviceAuth": {
+		"title": "Увійти в Kilo Code",
+		"step1": "Відкрий наступний URL у своєму браузері",
+		"step2": "Перевір код і авторизуй цей пристрій у своєму браузері",
+		"scanQr": "Або відскануй цей QR-код своїм телефоном",
+		"openBrowser": "Відкрити браузер",
+		"copyUrl": "Скопіювати URL",
+		"waiting": "Очікування авторизації...",
+		"timeRemaining": "Код закінчується через {{time}}",
+		"success": "Успішний вхід!",
+		"authenticatedAs": "Автентифіковано як {{email}}",
+		"error": "Помилка автентифікації",
+		"unknownError": "Сталася помилка. Спробуй знову.",
+		"cancel": "Скасувати",
+		"retry": "Спробувати знову",
+		"tryAgain": "Спробувати знову",
+		"cancelled": "Автентифікацію скасовано",
+		"initiating": "Запуск автентифікації..."
+	},
+	"speechToText": {
+		"startRecording": "Почати голосове введення",
+		"stopRecording": "Зупинити голосове введення",
+		"setupPopover": {
+			"title": "Розпізнавання мовлення",
+			"openAiReason": "Для використання голосової транскрипції потрібен дійсний провайдер OpenAI з API-ключем.",
+			"description": "Мовлення-в-текст недоступне. Для роботи мовлення-в-текст потрібні як FFmpeg, так і налаштований дійсний постачальник OpenAI. <moreInfoLink>Натисніть тут для отримання додаткової інформації</moreInfoLink>.",
+			"ffmpegReason": "Вам потрібно встановити FFmpeg. <ffmpegLink>Натисніть тут</ffmpegLink>, щоб Kilo допоміг вам встановити FFmpeg.",
+			"ffmpegMessage": "Допоможіть мені встановити FFmpeg"
+		},
+		"misconfiguredState": "Недоступно через конфігурацію",
+		"errorState": "Недоступно через помилку",
+		"microphone": {
+			"label": "Мікрофон",
+			"defaultOption": "Системний стандарт",
+			"loading": "Завантаження мікрофонних пристроїв...",
+			"description": "Виберіть пристрій мікрофона для перетворення мови в текст",
+			"refresh": "Оновити",
+			"noDevices": "Не знайдено пристроїв мікрофона"
+		}
 	}
 }

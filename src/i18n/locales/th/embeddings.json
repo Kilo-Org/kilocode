@@ -17,6 +17,13 @@
 		"modelNotEmbeddingCapable": "โมเดล Ollama ไม่สามารถทำ embedding ได้: {{modelId}}",
 		"hostNotFound": "ไม่พบโฮสต์ Ollama: {{baseUrl}}"
 	},
+	"bedrock": {
+		"invalidResponseFormat": "รูปแบบการตอบสนองไม่ถูกต้องจาก Amazon Bedrock",
+		"invalidCredentials": "ข้อมูลประจำตัว AWS ไม่ถูกต้อง กรุณาตรวจสอบการกำหนดค่า AWS ของคุณ",
+		"accessDenied": "การเข้าถึงบริการ Amazon Bedrock ถูกปฏิเสธ กรุณาตรวจสอบสิทธิ์ IAM ของคุณ",
+		"modelNotFound": "ไม่พบโมเดล {{model}} ใน Amazon Bedrock",
+		"missingConfiguration": "การกำหนดค่า Amazon Bedrock หายไปสำหรับการสร้าง embedder"
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "ข้อผิดพลาดที่ไม่รู้จักในการประมวลผลไฟล์ {{filePath}}",
 		"unknownErrorDeletingPoints": "ข้อผิดพลาดที่ไม่รู้จักในการลบจุดสำหรับ {{filePath}}",
@@ -50,6 +57,7 @@
 		"geminiConfigMissing": "การกำหนดค่า Gemini หายไปสำหรับการสร้าง embedder",
 		"mistralConfigMissing": "การกำหนดค่า Mistral หายไปสำหรับการสร้าง embedder",
 		"vercelAiGatewayConfigMissing": "การกำหนดค่า Vercel AI Gateway หายไปสำหรับการสร้าง embedder",
+		"bedrockConfigMissing": "การกำหนดค่า Amazon Bedrock หายไปสำหรับการสร้าง embedder",
 		"openRouterConfigMissing": "การกำหนดค่า OpenRouter หายไปสำหรับการสร้าง embedder",
 		"invalidEmbedderType": "ประเภท embedder ที่กำหนดค่าไม่ถูกต้อง: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' กรุณาตรวจสอบให้แน่ใจว่า 'Embedding Dimension' ถูกตั้งค่าอย่างถูกต้องในการตั้งค่าผู้ให้บริการ OpenAI-Compatible",

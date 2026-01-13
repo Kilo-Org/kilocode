@@ -69,7 +69,7 @@
 		"custom_storage_path_unusable": "مسار التخزين المخصص \"{{path}}\" غير قابل للاستخدام، بنرجع للمسار الافتراضي.",
 		"cannot_access_path": "ما قدرنا نوصل للمسار {{path}}: {{error}}",
 		"settings_import_failed": "فشل في استيراد الإعدادات: {{error}}.",
-		"mistake_limit_guidance": "هذا ممكن يعني إن النموذج ارتكب خطأ أو ما عرف يستخدم الأداة، ممكن تحلها بإرشاد بسيط (مثلاً: \"قسم المهمة لخطوات أصغر\").",
+		"mistake_limit_guidance": "قد يشير هذا إلى فشل في تفكير النموذج أو عدم القدرة على استخدام أداة بشكل صحيح. جرب أحد الإجراءات التالية:\n\n• استخدم نموذجًا أذكى، أو ببساطة نموذجًا مختلفًا (لكل نموذج نقاط ضعف خاصة به)\n• قلل كمية السياق (بسط الموجه للنموذج اللغوي الكبير)\n• قدم تعليمات إضافية تساعد النموذج (مثلاً \"حاول تقسيم المهمة إلى خطوات أصغر\")",
 		"violated_organization_allowlist": "فشل تنفيذ المهمة: الملف التعريفي هذا ما يتوافق مع إعدادات منظمتك",
 		"condense_failed": "فشل تلخيص السياق",
 		"condense_not_enough_messages": "ما فيه رسائل كافية لتلخيص السياق من {{prevContextTokens}} رمز. لازم {{minimumMessageCount}} رسالة على الأقل، بس متوفر {{messageCount}} رسالة فقط.",
@@ -123,7 +123,11 @@
 		"gemini": {
 			"generate_stream": "خطأ في تدفق السياق من Gemini: {{error}}",
 			"generate_complete_prompt": "خطأ في إكمال Gemini: {{error}}",
-			"sources": "المصادر:"
+			"sources": "المصادر:",
+			"thinking_complete_no_output": "(اكتمل التفكير، لكن لم يتم إنشاء أي مخرجات.)",
+			"thinking_complete_truncated": "(اكتمل التفكير، لكن تم اقتطاع المخرجات بسبب حد الرموز.)",
+			"thinking_complete_safety": "(اكتمل التفكير، لكن تم حظر المخرجات بسبب إعدادات الأمان.)",
+			"thinking_complete_recitation": "(اكتمل التفكير، لكن تم حظر المخرجات بسبب فحص التلاوة.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "فشل تسجيل الدخول في Cerebras API. تأكد من صحة مفتاح API وأنه لم ينته.",
@@ -170,6 +174,7 @@
 		"share_link_copied": "تم نسخ رابط المشاركة",
 		"organization_share_link_copied": "تم نسخ رابط مشاركة المنظمة!",
 		"public_share_link_copied": "تم نسخ رابط المشاركة العام!",
+		"session_share_link_copied_with_url": "تمت مشاركة الجلسة! تم نسخ الرابط إلى الحافظة: {{url}}",
 		"image_copied_to_clipboard": "تم نسخ بيانات الصورة إلى الحافظة",
 		"image_saved": "تم حفظ الصورة في {{path}}",
 		"auto_import_success": "تم استيراد إعدادات Kilo Code تلقائياً من {{filename}}",

@@ -1,7 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk"
 import * as vscode from "vscode"
 
-import { RooCodeEventName } from "@roo-code/types"
+import { RooCodeEventName, type HistoryItem } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Task } from "../task/Task"
@@ -9,6 +8,7 @@ import { formatResponse } from "../prompts/responses"
 import { Package } from "../../shared/package"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { t } from "../../i18n"
 import { getCommitRangeForNewCompletion } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 
 // kilocode_change start
@@ -39,6 +39,18 @@ export interface AttemptCompletionCallbacks extends ToolCallbacks {
 	toolDescription: () => string
 }
 
+/**
+ * Interface for provider methods needed by AttemptCompletionTool for delegation handling.
+ */
+interface DelegationProvider {
+	getTaskWithId(id: string): Promise<{ historyItem: HistoryItem }>
+	reopenParentFromDelegation(params: {
+		parentTaskId: string
+		childTaskId: string
+		completionResultSummary: string
+	}): Promise<void>
+}
+
 export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 	readonly name = "attempt_completion" as const
 
@@ -51,7 +63,16 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 	async execute(params: AttemptCompletionParams, task: Task, callbacks: AttemptCompletionCallbacks): Promise<void> {
 		const { result } = params
-		const { handleError, pushToolResult, askFinishSubTaskApproval, toolDescription } = callbacks
+		const { handleError, pushToolResult, askFinishSubTaskApproval } = callbacks
+
+		// Prevent attempt_completion if any tool failed in the current turn
+		if (task.didToolFailInCurrentTurn) {
+			const errorMsg = t("common:errors.attempt_completion_tool_failed")
+
+			await task.say("error", errorMsg)
+			pushToolResult(formatResponse.toolError(errorMsg))
+			return
+		}
 
 		const preventCompletionWithOpenTodos = vscode.workspace
 			.getConfiguration(Package.name)
@@ -93,29 +114,68 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 				await getClineMessageOptions(task),
 				// kilocode_change end
 			)
+
+			// Force final token usage update before emitting TaskCompleted
+			// This ensures the most recent stats are captured regardless of throttle timer
+			// and properly updates the snapshot to prevent redundant emissions
+			task.emitFinalTokenUsageUpdate()
+
 			TelemetryService.instance.captureTaskCompleted(task.taskId)
 			task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
 
-			if (task.parentTask) {
-				const didApprove = await askFinishSubTaskApproval()
+			// Check for subtask using parentTaskId (metadata-driven delegation)
+			if (task.parentTaskId) {
+				// Check if this subtask has already completed and returned to parent
+				// to prevent duplicate tool_results when user revisits from history
+				const provider = task.providerRef.deref() as DelegationProvider | undefined
+				if (provider) {
+					try {
+						const { historyItem } = await provider.getTaskWithId(task.taskId)
+						const status = historyItem?.status
 
-				if (!didApprove) {
-					pushToolResult(formatResponse.toolDenied())
-					return
+						if (status === "completed") {
+							// Subtask already completed - skip delegation flow entirely
+							// Fall through to normal completion ask flow below (outside this if block)
+							// This shows the user the completion result and waits for acceptance
+							// without injecting another tool_result to the parent
+						} else if (status === "active") {
+							// Normal subtask completion - do delegation
+							const delegated = await this.delegateToParent(
+								task,
+								result,
+								provider,
+								askFinishSubTaskApproval,
+								pushToolResult,
+							)
+							if (delegated) return
+						} else {
+							// Unexpected status (undefined or "delegated") - log error and skip delegation
+							// undefined indicates a bug in status persistence during child creation
+							// "delegated" would mean this child has its own grandchild pending (shouldn't reach attempt_completion)
+							console.error(
+								`[AttemptCompletionTool] Unexpected child task status "${status}" for task ${task.taskId}. ` +
+									`Expected "active" or "completed". Skipping delegation to prevent data corruption.`,
+							)
+							// Fall through to normal completion ask flow
+						}
+					} catch (err) {
+						// If we can't get the history, log error and skip delegation
+						console.error(
+							`[AttemptCompletionTool] Failed to get history for task ${task.taskId}: ${(err as Error)?.message ?? String(err)}. ` +
+								`Skipping delegation.`,
+						)
+						// Fall through to normal completion ask flow
+					}
 				}
-
-				pushToolResult("")
-				await task.providerRef.deref()?.finishSubTask(result)
-				return
 			}
 
 			const { response, text, images } = await task.ask("completion_result", "", false)
 
 			if (response === "yesButtonClicked") {
-				pushToolResult("")
 				return
 			}
 
+			// User provided feedback - push tool result to continue the conversation
 			await task.say("user_feedback", text ?? "", images)
 
 			const feedbackText = `The user has provided feedback on the results. Consider their input to continue the task, and then attempt completion again.\n<feedback>\n${text}\n</feedback>`
@@ -123,6 +183,35 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 		} catch (error) {
 			await handleError("inspecting site", error as Error)
 		}
+	}
+
+	/**
+	 * Handles the common delegation flow when a subtask completes.
+	 * Returns true if delegation was performed and the caller should return early.
+	 */
+	private async delegateToParent(
+		task: Task,
+		result: string,
+		provider: DelegationProvider,
+		askFinishSubTaskApproval: () => Promise<boolean>,
+		pushToolResult: (result: string) => void,
+	): Promise<boolean> {
+		const didApprove = await askFinishSubTaskApproval()
+
+		if (!didApprove) {
+			pushToolResult(formatResponse.toolDenied())
+			return true
+		}
+
+		pushToolResult("")
+
+		await provider.reopenParentFromDelegation({
+			parentTaskId: task.parentTaskId!,
+			childTaskId: task.taskId,
+			completionResultSummary: result,
+		})
+
+		return true
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"attempt_completion">): Promise<void> {
@@ -148,6 +237,9 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 					await getClineMessageOptions(task),
 					// kilocode_change end
 				)
+
+				// Force final token usage update before emitting TaskCompleted for consistency
+				task.emitFinalTokenUsageUpdate()
 
 				TelemetryService.instance.captureTaskCompleted(task.taskId)
 				task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)

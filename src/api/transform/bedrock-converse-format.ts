@@ -24,8 +24,15 @@ interface BedrockMessageContent {
 
 /**
  * Convert Anthropic messages to Bedrock Converse format
+ * @param anthropicMessages Messages in Anthropic format
+ * @param options Optional configuration for conversion
+ * @param options.useNativeTools When true, keeps tool_use input as JSON object instead of XML string
  */
-export function convertToBedrockConverseMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
+export function convertToBedrockConverseMessages(
+	anthropicMessages: Anthropic.Messages.MessageParam[],
+	options?: { useNativeTools?: boolean },
+): Message[] {
+	const useNativeTools = options?.useNativeTools ?? false
 	return anthropicMessages.map((anthropicMessage) => {
 		// Map Anthropic roles to Bedrock roles
 		const role: ConversationRole = anthropicMessage.role === "assistant" ? "assistant" : "user"
@@ -46,7 +53,7 @@ export function convertToBedrockConverseMessages(anthropicMessages: Anthropic.Me
 			const messageBlock = block as BedrockMessageContent & {
 				id?: string
 				tool_use_id?: string
-				content?: Array<{ type: string; text: string }>
+				content?: string | Array<{ type: string; text: string }>
 				output?: string | Array<{ type: string; text: string }>
 			}
 
@@ -86,32 +93,52 @@ export function convertToBedrockConverseMessages(anthropicMessages: Anthropic.Me
 			}
 
 			if (messageBlock.type === "tool_use") {
-				// Convert tool use to XML format
-				const toolParams = Object.entries(messageBlock.input || {})
-					.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
-					.join("\n")
-
-				return {
-					toolUse: {
-						toolUseId: messageBlock.id || "",
-						name: messageBlock.name || "",
-						input: `<${messageBlock.name}>\n${toolParams}\n</${messageBlock.name}>`,
-					},
-				} as ContentBlock
+				if (useNativeTools) {
+					// For native tool calling, keep input as JSON object for Bedrock's toolUse format
+					return {
+						toolUse: {
+							toolUseId: messageBlock.id || "",
+							name: messageBlock.name || "",
+							input: messageBlock.input || {},
+						},
+					} as ContentBlock
+				} else {
+					// Convert tool use to XML text format for XML-based tool calling
+					return {
+						text: `<tool_use>\n<tool_name>${messageBlock.name}</tool_name>\n<tool_input>${JSON.stringify(messageBlock.input)}</tool_input>\n</tool_use>`,
+					} as ContentBlock
+				}
 			}
 
 			if (messageBlock.type === "tool_result") {
-				// First try to use content if available
-				if (messageBlock.content && Array.isArray(messageBlock.content)) {
-					return {
-						toolResult: {
-							toolUseId: messageBlock.tool_use_id || "",
-							content: messageBlock.content.map((item) => ({
-								text: item.text,
-							})),
-							status: "success",
-						},
-					} as ContentBlock
+				// Handle content field - can be string or array
+				if (messageBlock.content) {
+					// Content is a string
+					if (typeof messageBlock.content === "string") {
+						return {
+							toolResult: {
+								toolUseId: messageBlock.tool_use_id || "",
+								content: [
+									{
+										text: messageBlock.content,
+									},
+								],
+								status: "success",
+							},
+						} as ContentBlock
+					}
+					// Content is an array of content blocks
+					if (Array.isArray(messageBlock.content)) {
+						return {
+							toolResult: {
+								toolUseId: messageBlock.tool_use_id || "",
+								content: messageBlock.content.map((item) => ({
+									text: typeof item === "string" ? item : item.text || String(item),
+								})),
+								status: "success",
+							},
+						} as ContentBlock
+					}
 				}
 
 				// Fall back to output handling if content is not available

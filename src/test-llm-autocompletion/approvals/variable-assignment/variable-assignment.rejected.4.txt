@@ -1,0 +1,14 @@
+const userName = "Maksim";
+const userAge = 25;
+
+function showMessage() {
+  console.log(`Hello, ${userName}!`);
+}
+
+showMessage();
+
+if (userAge >= 18) {
+  console.log("You are adult!");
+} else {
+  console.log("You are underage!");
+}

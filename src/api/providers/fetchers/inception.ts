@@ -62,6 +62,8 @@ export async function getInceptionModels(
 			supportsImages: false,
 			cacheReadsPrice: m.pricing.input_cache_reads,
 			cacheWritesPrice: m.pricing.input_cache_writes,
+			supportsNativeTools: true,
+			defaultToolProtocol: "native",
 		}
 		models[m.id] = info
 	}

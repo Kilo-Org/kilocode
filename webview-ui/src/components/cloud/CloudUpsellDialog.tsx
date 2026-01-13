@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 import { Dialog, DialogContent, DialogHeader, Button } from "@/components/ui"
 import RooHero from "../welcome/RooHero"
-import { CircleDollarSign, FileStack, Router, Share } from "lucide-react"
+import { ArrowRight, Brain, Cable, CircleDollarSign, FileStack, Router, Users2 } from "lucide-react"
 import { DialogTitle } from "@radix-ui/react-dialog"
 
 interface CloudUpsellDialogProps {
@@ -19,21 +19,29 @@ export const renderCloudBenefitsContent = (t: any) => {
 			</div>
 			<h1 className="text-xl font-bold text-vscode-foreground">{t("cloud:cloudBenefitsTitle")}</h1>
 			<div className="text-lg">
-				<ul className="text-vscode-descriptionForeground space-y-4 my-8">
+				<ul className="text-vscode-descriptionForeground space-y-2 my-8">
 					<li className="flex items-start gap-2">
-						<Router className="size-4 mt-0.5 shrink-0" />
+						<Brain className="size-4 mt-1 shrink-0" />
+						{t("cloud:cloudBenefitProvider")}
+					</li>
+					<li className="flex items-start gap-2">
+						<Users2 className="size-4 mt-1 shrink-0" />
+						{t("cloud:cloudBenefitCloudAgents")}
+					</li>
+					<li className="flex items-start gap-2">
+						<Cable className="size-4 mt-1 shrink-0" />
+						{t("cloud:cloudBenefitTriggers")}
+					</li>
+					<li className="flex items-start gap-2">
+						<Router className="size-4 mt-1 shrink-0" />
 						{t("cloud:cloudBenefitWalkaway")}
 					</li>
 					<li className="flex items-start gap-2">
-						<Share className="size-4 mt-0.5 shrink-0" />
-						{t("cloud:cloudBenefitSharing")}
-					</li>
-					<li className="flex items-start gap-2">
-						<CircleDollarSign className="size-4 mt-0.5 shrink-0" />
+						<CircleDollarSign className="size-4 mt-1 shrink-0" />
 						{t("cloud:cloudBenefitMetrics")}
 					</li>
 					<li className="flex items-start gap-2">
-						<FileStack className="size-4 mt-0.5 shrink-0" />
+						<FileStack className="size-4 mt-1 shrink-0" />
 						{t("cloud:cloudBenefitHistory")}
 					</li>
 				</ul>
@@ -56,8 +64,9 @@ export const CloudUpsellDialog = ({ open, onOpenChange, onConnect }: CloudUpsell
 					{renderCloudBenefitsContent(t)}
 
 					<div className="flex flex-col gap-4">
-						<Button onClick={onConnect} className="w-full">
+						<Button variant="primary" onClick={onConnect} className="w-full">
 							{t("cloud:connect")}
+							<ArrowRight />
 						</Button>
 					</div>
 				</div>

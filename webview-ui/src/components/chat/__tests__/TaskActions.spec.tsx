@@ -42,6 +42,8 @@ vi.mock("react-i18next", () => ({
 				"chat:task.connectToCloud": "Connect to Cloud",
 				"chat:task.connectToCloudDescription": "Sign in to Roo Code Cloud to share tasks",
 				"chat:task.sharingDisabledByOrganization": "Sharing disabled by organization",
+				"chat:task.openApiHistory": "Open API History",
+				"chat:task.openUiHistory": "Open UI History",
 				"cloud:cloudBenefitsTitle": "Connect to Roo Code Cloud",
 				"cloud:cloudBenefitHistory": "Access your task history from anywhere",
 				"cloud:cloudBenefitSharing": "Share tasks with your team",
@@ -383,6 +385,111 @@ describe("TaskActions", () => {
 			expect(copyButton).not.toBeDisabled()
 			// Delete button is disabled
 			expect(deleteButton).toBeDisabled()
+		})
+	})
+
+	describe("Debug Buttons", () => {
+		it("does not render debug buttons when debug is false", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+				debug: false,
+			} as any)
+
+			render(<TaskActions item={mockItem} buttonsDisabled={false} />)
+
+			const apiHistoryButton = screen.queryByLabelText("Open API History")
+			const uiHistoryButton = screen.queryByLabelText("Open UI History")
+
+			expect(apiHistoryButton).not.toBeInTheDocument()
+			expect(uiHistoryButton).not.toBeInTheDocument()
+		})
+
+		it("does not render debug buttons when debug is undefined", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+			} as any)
+
+			render(<TaskActions item={mockItem} buttonsDisabled={false} />)
+
+			const apiHistoryButton = screen.queryByLabelText("Open API History")
+			const uiHistoryButton = screen.queryByLabelText("Open UI History")
+
+			expect(apiHistoryButton).not.toBeInTheDocument()
+			expect(uiHistoryButton).not.toBeInTheDocument()
+		})
+
+		it("renders debug buttons when debug is true and item has id", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+				debug: true,
+			} as any)
+
+			render(<TaskActions item={mockItem} buttonsDisabled={false} />)
+
+			const apiHistoryButton = screen.getByLabelText("Open API History")
+			const uiHistoryButton = screen.getByLabelText("Open UI History")
+
+			expect(apiHistoryButton).toBeInTheDocument()
+			expect(uiHistoryButton).toBeInTheDocument()
+		})
+
+		it("does not render debug buttons when debug is true but item has no id", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+				debug: true,
+			} as any)
+
+			render(<TaskActions item={undefined} buttonsDisabled={false} />)
+
+			const apiHistoryButton = screen.queryByLabelText("Open API History")
+			const uiHistoryButton = screen.queryByLabelText("Open UI History")
+
+			expect(apiHistoryButton).not.toBeInTheDocument()
+			expect(uiHistoryButton).not.toBeInTheDocument()
+		})
+
+		it("sends openDebugApiHistory message when Open API History button is clicked", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+				debug: true,
+			} as any)
+
+			render(<TaskActions item={mockItem} buttonsDisabled={false} />)
+
+			const apiHistoryButton = screen.getByLabelText("Open API History")
+			fireEvent.click(apiHistoryButton)
+
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "openDebugApiHistory",
+			})
+		})
+
+		it("sends openDebugUiHistory message when Open UI History button is clicked", () => {
+			mockUseExtensionState.mockReturnValue({
+				sharingEnabled: true,
+				cloudIsAuthenticated: true,
+				cloudUserInfo: { organizationName: "Test Organization" },
+				debug: true,
+			} as any)
+
+			render(<TaskActions item={mockItem} buttonsDisabled={false} />)
+
+			const uiHistoryButton = screen.getByLabelText("Open UI History")
+			fireEvent.click(uiHistoryButton)
+
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "openDebugUiHistory",
+			})
 		})
 	})
 })

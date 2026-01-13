@@ -1,1 +1,9 @@
-(no changes parsed)
+function greet(name) { return 'Hello ' + name; }
+greet('World'); // 'Hello World'
+greet('TypeScript'); // 'Hello TypeScript'
+
+// greet(123); // Error: Argument of type 'number' is not assignable to parameter of type 'string'.
+
+function greet2(name: string) {
+  return 'Hello ' + name;
+}

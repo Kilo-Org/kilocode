@@ -23,6 +23,7 @@ type RequestyProps = {
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
 	uriScheme?: string
+	simplifySettings?: boolean
 }
 
 export const Requesty = ({
@@ -33,6 +34,7 @@ export const Requesty = ({
 	organizationAllowList,
 	modelValidationError,
 	uriScheme,
+	simplifySettings,
 }: RequestyProps) => {
 	const { t } = useAppTranslation()
 
@@ -143,6 +145,7 @@ export const Requesty = ({
 				serviceUrl="https://requesty.ai"
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

@@ -1,0 +1,9 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		result["status"] = "OK"
+		return result
+	rescue JSON::ParserError => e
+		return { "status" => "ERROR", "message" => "Invalid JSON data" }
+	end
+end

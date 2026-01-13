@@ -13,4 +13,4 @@ There are lots of ways to contribute to the project
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
-The Kilocode Community is [here on Discord](https://kilo.ai/discord)
+The Kilocode Community is [on Discord](https://kilo.ai/discord)

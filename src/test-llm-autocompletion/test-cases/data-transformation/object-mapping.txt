@@ -1,4 +1,5 @@
-# Description: Should complete object transformation mapping
+#### Description: Should complete object transformation mapping
+#### Filename: user-mapper.js
 const users = [{id: 1, firstName: 'John', lastName: 'Doe'}, {id: 2, firstName: 'Jane', lastName: 'Smith'}];
 const userDTOs = users.map(user => ({
 	id: user.id,

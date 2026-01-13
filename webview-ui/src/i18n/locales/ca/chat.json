@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
 		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls",
 		"openInCloud": "Obrir tasca a Roo Code Cloud",
-		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir."
+		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir.",
+		"openApiHistory": "Obrir historial d'API",
+		"openUiHistory": "Obrir historial d'UI"
 	},
 	"history": {
 		"title": "Historial"
@@ -110,6 +112,7 @@
 	"enhancePrompt": "Millora la sol·licitud amb context addicional",
 	"addImages": "Afegeix imatges al missatge",
 	"sendMessage": "Envia el missatge",
+	"pressToSend": "Prem {{keyCombination}} per enviar",
 	"stopTts": "Atura la síntesi de veu",
 	"typeMessage": "Escriu un missatge...",
 	"typeTask": "Escriu la teva tasca aquí...",
@@ -142,7 +145,19 @@
 		"failed": "Sol·licitud API ha fallat",
 		"streaming": "Sol·licitud API...",
 		"cancelled": "Sol·licitud API cancel·lada",
-		"streamingFailed": "Transmissió API ha fallat"
+		"streamingFailed": "Transmissió API ha fallat",
+		"errorTitle": "Error API {{code}}",
+		"errorMessage": {
+			"docs": "Documentació",
+			"400": "El proveïdor no ha pogut processar la sol·licitud tal com es va fer. Interromp la tasca i prova una abordatge diferent.",
+			"401": "No s'ha pogut autenticar amb el proveïdor. Si us plau, verifica la teva configuració de clau API.",
+			"402": "Sembla que se t'han acabat els fons/crèdits al teu compte. Vés al teu proveïdor i afegeix més per continuar.",
+			"403": "No autoritzat. La teva clau API és vàlida, però el proveïdor ha rebutjat completar aquesta sol·licitud.",
+			"429": "Massa sol·licituds. Estàs sent limitat pel proveïdor. Si us plau espera una mica abans de la teva propera crida API.",
+			"500": "Error del servidor del proveïdor. Quelcom va malament del costat del proveïdor, no hi ha res de malament amb la teva sol·licitud.",
+			"unknown": "Error API desconegut. Si us plau contacta amb el suport de Kilo.",
+			"connection": "Error de connexió. Assegureu-vos que teniu una connexió a Internet funcional."
+		}
 	},
 	"checkpoint": {
 		"regular": "Punt de control",
@@ -255,6 +270,11 @@
 		"hasQuestion": "Kilo Code té una pregunta"
 	},
 	"taskCompleted": "Tasca completada",
+	"errorDetails": {
+		"title": "Detalls de l'error",
+		"copyToClipboard": "Copiar al porta-retalls",
+		"copied": "Copiat!"
+	},
 	"powershell": {
 		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
 	},
@@ -280,19 +300,28 @@
 		"thinking": "Pensant",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Context condensat",
-		"condensing": "Condensant context...",
-		"errorHeader": "Error en condensar el context",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context condensat",
+			"inProgress": "Condensant context...",
+			"errorHeader": "Error en condensar el context"
+		},
+		"truncation": {
+			"title": "Context truncat",
+			"inProgress": "Truncant context...",
+			"messagesRemoved": "{{count}} missatge eliminat",
+			"messagesRemoved_other": "{{count}} missatges eliminats",
+			"description": "S'han eliminat missatges més antics de la conversa per mantenir-se dins del límit de la finestra de context. Aquest és un enfocament ràpid però menys conservador del context en comparació amb la condensació."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copiar a l'entrada (o Shift + clic)",
-		"autoSelectCountdown": "Selecció automàtica en {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Aprovació automàtica habilitada. Seleccionant en {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Llançat",
+		"title": "Roo Code {{version}} Llançat",
+		"support": "Si us plau, dona suport a Roo Code fent una estrella al nostre <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Model stealth GRATUÏT per temps limitat</bold> - Code Supernova: Ara actualitzat amb una <bold>finestra de context d'1M tokens</bold>! Un model de codificació agèntica versàtil que suporta entrades d'imatges, disponible a través de Roo Code Cloud.",
 			"note": "(Nota: els prompts i completacions són registrats pel creador del model i utilitzats per millorar-lo)",
@@ -301,21 +330,21 @@
 			"goToSettingsButton": "Anar a Configuració"
 		},
 		"release": {
-			"heading": "Novetats a l'extensió:",
-			"openRouterEmbeddings": "Suport per a models d'incrustació d'OpenRouter",
-			"chutesDynamic": "Chutes ara carrega els últims models de forma dinàmica",
-			"queuedMessagesFix": "Correccions per a missatges en cua que es perden"
+			"heading": "Novetats:",
+			"contextRewind": "La condensació millorada del context et permet restaurar el context anterior complet quan rebobines a un punt de control",
+			"rooProvider": "El proveïdor de Roo Code Cloud ara conserva el contingut del raonament i utilitza per defecte les eines natives per a un millor rendiment"
 		},
 		"cloudAgents": {
 			"heading": "Novetats al núvol:",
-			"prFixer": "Presentem l'agent al núvol <bold>PR Fixer</bold> per complementar el Revisor de PR.",
-			"prFixerDescription": "El PR Fixer de Roo Code aplica canvis d'alta qualitat a les teves PR directament des de GitHub. Invoca'l mitjançant un comentari a la PR i llegirà tot l'historial de comentaris per entendre el context, els acords i els compromisos, i després implementarà la solució correcta.",
-			"tryPrFixerButton": "Prova el PR Fixer"
+			"specialized": "Presentem <bold>Explainer</bold>, <bold>Planner</bold> i <bold>Coder</bold> - tres agents al núvol especialitzats per millorar els teus fluxos de treball.",
+			"description": "Els agents treballen junts al núvol i es poden activar des del web o mitjançant Slack.",
+			"tryButton": "Prova els Agents al Núvol"
 		},
 		"careers": "A més, <careersLink>estem contractant!</careersLink>",
-		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Sessió del navegador",
 		"rooWantsToUse": "Kilo Code vol utilitzar el navegador",
 		"consoleLogs": "Registres de consola",
 		"noNewLogs": "(Cap registre nou)",
@@ -328,12 +357,26 @@
 		},
 		"sessionStarted": "Sessió de navegador iniciada",
 		"actions": {
-			"title": "Acció de navegació: ",
+			"title": "Acció del navegador: ",
+			"launched": "Navegador iniciat",
 			"launch": "Iniciar navegador a {{url}}",
+			"clicked": "Fet clic ({{coordinate}})",
 			"click": "Clic ({{coordinate}})",
+			"typed": "Escrit: {{text}}",
 			"type": "Escriure \"{{text}}\"",
+			"pressed": "Premut: {{key}}",
+			"press": "Prem {{key}}",
+			"scrolledDown": "Desplaçat avall",
 			"scrollDown": "Desplaçar avall",
+			"scrolledUp": "Desplaçat amunt",
 			"scrollUp": "Desplaçar amunt",
+			"hovered": "Planat sobre ({{coordinate}})",
+			"hover": "Plana sobre ({{coordinate}})",
+			"resized": "Mida canviada a: {{size}}",
+			"resize": "Canvia la mida a {{size}}",
+			"screenshotSaved": "Captura de pantalla guardada",
+			"screenshot": "Guarda la captura de pantalla a {{path}}",
+			"closed": "Navegador tancat",
 			"close": "Tancar navegador"
 		}
 	},

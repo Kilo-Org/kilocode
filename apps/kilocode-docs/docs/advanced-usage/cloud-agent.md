@@ -49,7 +49,7 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 
 ## How Cloud Agents Work
 
-- Each user receives an **isolated Linux container** with common dev tools preinstalled (Python, Node.js, git, etc.).
+- Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, etc.).
 - All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
 - When a session begins:
 
@@ -67,7 +67,7 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 - Containers are **ephemeral**:
     - Spindown occurs after inactivity
     - Expect slightly longer setup after idle periods
-    - Inactive sessions are deleted after **7 days** during the beta
+    - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
 ---
 
@@ -91,6 +91,16 @@ You can customize each Cloud Agent session by defining:
 
 ---
 
+## Skills
+
+Cloud Agents support project-level [skills](../cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
+
+:::note
+Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
+:::
+
+---
+
 ## Perfect For
 
 Cloud Agents are great for:
@@ -105,11 +115,12 @@ Cloud Agents are great for:
 
 ## Limitations and Guidance
 
-- Each message can run for **up to 10 minutes**.  
+- Each message can run for **up to 15 minutes**.
   Break large tasks into smaller steps; use a `plan.md` or `todo.md` file to keep scope clear.
-- **Context is not persistent across messages yet.**  
-  Kilo Code does not remember previous turns; persistent in-repo notes help keep it aligned.
-- **Auto/YOLO mode is always on.**  
+- **Context is persistent across messages.**
+  Kilo Code remembers previous turns within the same session.
+- **Auto/YOLO mode is always on.**
   The agent will modify code without prompting for confirmation.
-- **Saved sessions** in the sidebar are not yet shared between logins or restorable locally.
+- **Sessions are restorable locally** and local sessions can be resumed in Cloud Agent.
+- **Sessions prior to December 9th 2025** may not be accessible in the web UI.
 - **MCP support is coming**, but **Docker-based MCP servers will _not_ be supported**.

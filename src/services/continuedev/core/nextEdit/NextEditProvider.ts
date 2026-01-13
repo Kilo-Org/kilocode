@@ -7,7 +7,7 @@ import { ContextRetrievalService } from "../autocomplete/context/ContextRetrieva
 import { postprocessCompletion } from "../autocomplete/postprocessing/index.js"
 import { shouldPrefilter } from "../autocomplete/prefiltering/index.js"
 import { getAllSnippetsWithoutRace } from "../autocomplete/snippets/index.js"
-import { AutocompleteCodeSnippet } from "../autocomplete/snippets/types.js"
+import { AutocompleteCodeSnippet } from "../autocomplete/types.js"
 import { GetLspDefinitionsFunction } from "../autocomplete/types.js"
 import { getAst } from "../autocomplete/util/ast.js"
 import { AutocompleteDebouncer } from "../autocomplete/util/AutocompleteDebouncer.js"

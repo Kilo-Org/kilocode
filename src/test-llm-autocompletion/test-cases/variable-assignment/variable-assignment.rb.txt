@@ -1,3 +1,0 @@
-# Description: Should complete Ruby variable assignment
-x = 10
-y = <<<AUTOCOMPLETE_HERE>>>

@@ -35,6 +35,7 @@ export type AvailableEmbedders =
 	| "gemini"
 	| "mistral"
 	| "vercel-ai-gateway"
+	| "bedrock"
 	| "openrouter"
 
 export interface EmbedderInfo {

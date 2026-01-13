@@ -65,12 +65,26 @@ export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
 
 	async execute(params: AskFollowupQuestionParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { question, follow_up } = params
-		const { handleError, pushToolResult } = callbacks
+		const { handleError, pushToolResult, toolProtocol } = callbacks
 
 		try {
+			// kilocode_change start
+			// Check if yolo mode is enabled - if so, don't ask questions
+			const state = await task.providerRef.deref()?.getState()
+			if (state?.yoloMode) {
+				pushToolResult(
+					formatResponse.toolResult(
+						"<error>This tool is not available in yolo mode. Do not ask questions - make your best judgment and proceed with the task.</error>",
+					),
+				)
+				return
+			}
+			// kilocode_change end
+
 			if (!question) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("ask_followup_question")
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(await task.sayAndCreateMissingParamError("ask_followup_question", "question"))
 				return
 			}
@@ -91,7 +105,19 @@ export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"ask_followup_question">): Promise<void> {
-		const question: string | undefined = block.params.question
+		// kilocode_change start
+		// Don't show the question in yolo mode - the tool will be rejected in execute()
+		const state = await task.providerRef.deref()?.getState()
+		if (state?.yoloMode) {
+			return
+		}
+		// kilocode_change end
+
+		// Get question from params (for XML protocol) or nativeArgs (for native protocol)
+		const question: string | undefined = block.params.question ?? block.nativeArgs?.question
+
+		// During partial streaming, only show the question to avoid displaying raw JSON
+		// The full JSON with suggestions will be sent when the tool call is complete (!block.partial)
 		await task
 			.ask("followup", this.removeClosingTag("question", question, block.partial), block.partial)
 			.catch(() => {})

@@ -9,7 +9,13 @@ import { BaseProvider } from "../../../api/providers/base-provider"
 import { ApiMessage } from "../../task-persistence/apiMessages"
 import * as condenseModule from "../../condense"
 
-import { TOKEN_BUFFER_PERCENTAGE, estimateTokenCount, truncateConversation, manageContext } from "../index"
+import {
+	TOKEN_BUFFER_PERCENTAGE,
+	estimateTokenCount,
+	truncateConversation,
+	manageContext,
+	willManageContext,
+} from "../index"
 
 // Create a mock ApiHandler for testing
 class MockApiHandler extends BaseProvider {
@@ -65,10 +71,12 @@ describe("Context Management", () => {
 
 			// With 2 messages after the first, 0.5 fraction means remove 1 message
 			// But 1 is odd, so it rounds down to 0 (to make it even)
-			expect(result.length).toBe(3) // First message + 2 remaining messages
-			expect(result[0]).toEqual(messages[0])
-			expect(result[1]).toEqual(messages[1])
-			expect(result[2]).toEqual(messages[2])
+			// No truncation happens, so no marker is inserted
+			expect(result.messages.length).toBe(3) // Original messages unchanged
+			expect(result.messagesRemoved).toBe(0)
+			expect(result.messages[0]).toEqual(messages[0])
+			expect(result.messages[1]).toEqual(messages[1])
+			expect(result.messages[2]).toEqual(messages[2])
 		})
 
 		it("should remove the specified fraction of messages (rounded to even number)", () => {
@@ -84,10 +92,22 @@ describe("Context Management", () => {
 			// 2 is already even, so no rounding needed
 			const result = truncateConversation(messages, 0.5, taskId)
 
-			expect(result.length).toBe(3)
-			expect(result[0]).toEqual(messages[0])
-			expect(result[1]).toEqual(messages[3])
-			expect(result[2]).toEqual(messages[4])
+			// Should have all original messages + truncation marker
+			expect(result.messages.length).toBe(6) // 5 original + 1 marker
+			expect(result.messagesRemoved).toBe(2)
+			expect(result.messages[0]).toEqual(messages[0])
+
+			// Messages at indices 1 and 2 from original should be tagged
+			expect(result.messages[1].truncationParent).toBe(result.truncationId)
+			expect(result.messages[2].truncationParent).toBe(result.truncationId)
+
+			// Marker should be at index 3 (at the boundary, after truncated messages)
+			expect(result.messages[3].isTruncationMarker).toBe(true)
+			expect(result.messages[3].role).toBe("user")
+
+			// Messages at indices 3 and 4 from original should NOT be tagged (now at indices 4 and 5)
+			expect(result.messages[4].truncationParent).toBeUndefined()
+			expect(result.messages[5].truncationParent).toBeUndefined()
 		})
 
 		it("should round to an even number of messages to remove", () => {
@@ -105,8 +125,9 @@ describe("Context Management", () => {
 			// 1.8 rounds down to 1, then to 0 to make it even
 			const result = truncateConversation(messages, 0.3, taskId)
 
-			expect(result.length).toBe(7) // No messages removed
-			expect(result).toEqual(messages)
+			expect(result.messagesRemoved).toBe(0) // No messages removed
+			// When nothing is truncated, no marker is inserted
+			expect(result.messages.length).toBe(7) // Original messages unchanged
 		})
 
 		it("should handle edge case with fracToRemove = 0", () => {
@@ -118,7 +139,9 @@ describe("Context Management", () => {
 
 			const result = truncateConversation(messages, 0, taskId)
 
-			expect(result).toEqual(messages)
+			expect(result.messagesRemoved).toBe(0)
+			// When nothing is truncated, no marker is inserted
+			expect(result.messages.length).toBe(3) // Original messages unchanged
 		})
 
 		it("should handle edge case with fracToRemove = 1", () => {
@@ -133,9 +156,21 @@ describe("Context Management", () => {
 			// But 3 is odd, so it rounds down to 2 to make it even
 			const result = truncateConversation(messages, 1, taskId)
 
-			expect(result.length).toBe(2)
-			expect(result[0]).toEqual(messages[0])
-			expect(result[1]).toEqual(messages[3])
+			expect(result.messagesRemoved).toBe(2)
+			// Should have all original messages + truncation marker
+			expect(result.messages.length).toBe(5) // 4 original + 1 marker
+			expect(result.messages[0]).toEqual(messages[0])
+
+			// Messages at indices 1 and 2 should be tagged
+			expect(result.messages[1].truncationParent).toBe(result.truncationId)
+			expect(result.messages[2].truncationParent).toBe(result.truncationId)
+
+			// Marker should be at index 3 (at the boundary)
+			expect(result.messages[3].isTruncationMarker).toBe(true)
+			expect(result.messages[3].role).toBe("user")
+
+			// Last message should NOT be tagged (now at index 4)
+			expect(result.messages[4].truncationParent).toBeUndefined()
 		})
 	})
 
@@ -289,14 +324,6 @@ describe("Context Management", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			// When truncating, always uses 0.5 fraction
-			// With 4 messages after the first, 0.5 fraction means remove 2 messages
-			const expectedMessages = [
-				messagesWithSmallContent[0],
-				messagesWithSmallContent[3],
-				messagesWithSmallContent[4],
-			]
-
 			const result = await manageContext({
 				messages: messagesWithSmallContent,
 				totalTokens,
@@ -311,12 +338,14 @@ describe("Context Management", () => {
 				currentProfileId: "default",
 			})
 
-			expect(result).toEqual({
-				messages: expectedMessages,
-				summary: "",
-				cost: 0,
-				prevContextTokens: totalTokens,
-			})
+			// Should have truncation
+			expect(result.truncationId).toBeDefined()
+			expect(result.messagesRemoved).toBe(2) // With 4 messages after first, 0.5 fraction = 2 to remove
+			expect(result.summary).toBe("")
+			expect(result.cost).toBe(0)
+			expect(result.prevContextTokens).toBe(totalTokens)
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result.messages.length).toBe(6) // 5 original + 1 marker
 		})
 
 		it("should work with non-prompt caching models the same as prompt caching models", async () => {
@@ -360,10 +389,14 @@ describe("Context Management", () => {
 				currentProfileId: "default",
 			})
 
-			expect(result1.messages).toEqual(result2.messages)
+			// For truncation results, we can't compare messages directly because
+			// truncationId is randomly generated. Compare structure instead.
+			expect(result1.messages.length).toEqual(result2.messages.length)
 			expect(result1.summary).toEqual(result2.summary)
 			expect(result1.cost).toEqual(result2.cost)
 			expect(result1.prevContextTokens).toEqual(result2.prevContextTokens)
+			expect(result1.truncationId).toBeDefined()
+			expect(result2.truncationId).toBeDefined()
 
 			// Test above threshold
 			const aboveThreshold = 70001
@@ -395,10 +428,14 @@ describe("Context Management", () => {
 				currentProfileId: "default",
 			})
 
-			expect(result3.messages).toEqual(result4.messages)
+			// For truncation results, we can't compare messages directly because
+			// truncationId is randomly generated. Compare structure instead.
+			expect(result3.messages.length).toEqual(result4.messages.length)
 			expect(result3.summary).toEqual(result4.summary)
 			expect(result3.cost).toEqual(result4.cost)
 			expect(result3.prevContextTokens).toEqual(result4.prevContextTokens)
+			expect(result3.truncationId).toBeDefined()
+			expect(result4.truncationId).toBeDefined()
 		})
 
 		it("should consider incoming content when deciding to truncate", async () => {
@@ -510,14 +547,6 @@ describe("Context Management", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			// When truncating, always uses 0.5 fraction
-			// With 4 messages after the first, 0.5 fraction means remove 2 messages
-			const expectedResult = [
-				messagesWithSmallContent[0],
-				messagesWithSmallContent[3],
-				messagesWithSmallContent[4],
-			]
-
 			const result = await manageContext({
 				messages: messagesWithSmallContent,
 				totalTokens,
@@ -531,12 +560,15 @@ describe("Context Management", () => {
 				profileThresholds: {},
 				currentProfileId: "default",
 			})
-			expect(result).toEqual({
-				messages: expectedResult,
-				summary: "",
-				cost: 0,
-				prevContextTokens: totalTokens,
-			})
+
+			// Should have truncation
+			expect(result.truncationId).toBeDefined()
+			expect(result.messagesRemoved).toBe(2) // With 4 messages after first, 0.5 fraction = 2 to remove
+			expect(result.summary).toBe("")
+			expect(result.cost).toBe(0)
+			expect(result.prevContextTokens).toBe(totalTokens)
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result.messages.length).toBe(6) // 5 original + 1 marker
 		})
 
 		it("should use summarizeConversation when autoCondenseContext is true and tokens exceed threshold", async () => {
@@ -589,6 +621,7 @@ describe("Context Management", () => {
 				true,
 				undefined, // customCondensingPrompt
 				undefined, // condensingApiHandler
+				undefined, // useNativeTools
 			)
 
 			// Verify the result contains the summary information
@@ -649,10 +682,13 @@ describe("Context Management", () => {
 			// Verify summarizeConversation was called
 			expect(summarizeSpy).toHaveBeenCalled()
 
-			// Verify it fell back to truncation
-			expect(result.messages).toEqual(expectedMessages)
+			// Verify it fell back to truncation (non-destructive)
+			expect(result.truncationId).toBeDefined()
+			expect(result.messagesRemoved).toBe(2)
 			expect(result.summary).toBe("")
 			expect(result.prevContextTokens).toBe(totalTokens)
+			// Should have all original messages + truncation marker
+			expect(result.messages.length).toBe(6) // 5 original + 1 marker
 			// The cost might be different than expected, so we don't check it
 
 			// Clean up
@@ -696,13 +732,14 @@ describe("Context Management", () => {
 			// Verify summarizeConversation was not called
 			expect(summarizeSpy).not.toHaveBeenCalled()
 
-			// Verify it used truncation
-			expect(result).toEqual({
-				messages: expectedMessages,
-				summary: "",
-				cost: 0,
-				prevContextTokens: totalTokens,
-			})
+			// Verify it used truncation (non-destructive)
+			expect(result.truncationId).toBeDefined()
+			expect(result.messagesRemoved).toBe(2)
+			expect(result.summary).toBe("")
+			expect(result.cost).toBe(0)
+			expect(result.prevContextTokens).toBe(totalTokens)
+			// Should have all original messages + truncation marker
+			expect(result.messages.length).toBe(6) // 5 original + 1 marker
 
 			// Clean up
 			summarizeSpy.mockRestore()
@@ -760,6 +797,7 @@ describe("Context Management", () => {
 				true,
 				undefined, // customCondensingPrompt
 				undefined, // condensingApiHandler
+				undefined, // useNativeTools
 			)
 
 			// Verify the result contains the summary information
@@ -1091,7 +1129,10 @@ describe("Context Management", () => {
 				currentProfileId: "default",
 			})
 			expect(result2.messages).not.toEqual(messagesWithSmallContent)
-			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result2.messages.length).toBe(6) // 5 original + 1 marker
+			expect(result2.truncationId).toBeDefined()
+			expect(result2.messagesRemoved).toBe(2)
 			expect(result2.summary).toBe("")
 			expect(result2.cost).toBe(0)
 			expect(result2.prevContextTokens).toBe(50001)
@@ -1144,7 +1185,9 @@ describe("Context Management", () => {
 				currentProfileId: "default",
 			})
 			expect(result2.messages).not.toEqual(messagesWithSmallContent)
-			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result2.messages.length).toBe(6) // 5 original + 1 marker
+			expect(result2.truncationId).toBeDefined()
 			expect(result2.summary).toBe("")
 			expect(result2.cost).toBe(0)
 			expect(result2.prevContextTokens).toBe(81809)
@@ -1190,8 +1233,10 @@ describe("Context Management", () => {
 				profileThresholds: {},
 				currentProfileId: "default",
 			})
-			expect(result2).not.toEqual(messagesWithSmallContent)
-			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
+			expect(result2.messages).not.toEqual(messagesWithSmallContent)
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result2.messages.length).toBe(6) // 5 original + 1 marker
+			expect(result2.truncationId).toBeDefined()
 		})
 
 		it("should handle large context windows appropriately", async () => {
@@ -1235,8 +1280,131 @@ describe("Context Management", () => {
 				profileThresholds: {},
 				currentProfileId: "default",
 			})
-			expect(result2).not.toEqual(messagesWithSmallContent)
-			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
+			expect(result2.messages).not.toEqual(messagesWithSmallContent)
+			// Should have all original messages + truncation marker (non-destructive)
+			expect(result2.messages.length).toBe(6) // 5 original + 1 marker
+			expect(result2.truncationId).toBeDefined()
+		})
+	})
+
+	/**
+	 * Tests for the willManageContext helper function
+	 */
+	describe("willManageContext", () => {
+		it("should return true when context percent exceeds threshold", () => {
+			const result = willManageContext({
+				totalTokens: 60000,
+				contextWindow: 100000, // 60% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(true)
+		})
+
+		it("should return false when context percent is below threshold", () => {
+			const result = willManageContext({
+				totalTokens: 40000,
+				contextWindow: 100000, // 40% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(false)
+		})
+
+		it("should return true when tokens exceed allowedTokens even if autoCondenseContext is false", () => {
+			// allowedTokens = contextWindow * (1 - 0.1) - reservedTokens = 100000 * 0.9 - 30000 = 60000
+			const result = willManageContext({
+				totalTokens: 60001, // Exceeds allowedTokens
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: false, // Even with auto-condense disabled
+				autoCondenseContextPercent: 50,
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(true)
+		})
+
+		it("should return false when autoCondenseContext is false and tokens are below allowedTokens", () => {
+			// allowedTokens = contextWindow * (1 - 0.1) - reservedTokens = 100000 * 0.9 - 30000 = 60000
+			const result = willManageContext({
+				totalTokens: 59999, // Below allowedTokens
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 50, // This shouldn't matter since autoCondenseContext is false
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(result).toBe(false)
+		})
+
+		it("should use profile-specific threshold when available", () => {
+			const result = willManageContext({
+				totalTokens: 55000,
+				contextWindow: 100000, // 55% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 80, // Global threshold 80%
+				profileThresholds: { "test-profile": 50 }, // Profile threshold 50%
+				currentProfileId: "test-profile",
+				lastMessageTokens: 0,
+			})
+			// Should trigger because 55% > 50% (profile threshold)
+			expect(result).toBe(true)
+		})
+
+		it("should fall back to global threshold when profile threshold is -1", () => {
+			const result = willManageContext({
+				totalTokens: 55000,
+				contextWindow: 100000, // 55% of context window
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 80, // Global threshold 80%
+				profileThresholds: { "test-profile": -1 }, // Profile uses global
+				currentProfileId: "test-profile",
+				lastMessageTokens: 0,
+			})
+			// Should NOT trigger because 55% < 80% (global threshold)
+			expect(result).toBe(false)
+		})
+
+		it("should include lastMessageTokens in the calculation", () => {
+			// Without lastMessageTokens: 49000 tokens = 49%
+			// With lastMessageTokens: 49000 + 2000 = 51000 tokens = 51%
+			const resultWithoutLastMessage = willManageContext({
+				totalTokens: 49000,
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 0,
+			})
+			expect(resultWithoutLastMessage).toBe(false)
+
+			const resultWithLastMessage = willManageContext({
+				totalTokens: 49000,
+				contextWindow: 100000,
+				maxTokens: 30000,
+				autoCondenseContext: true,
+				autoCondenseContextPercent: 50, // 50% threshold
+				profileThresholds: {},
+				currentProfileId: "default",
+				lastMessageTokens: 2000, // Pushes total to 51%
+			})
+			expect(resultWithLastMessage).toBe(true)
 		})
 	})
 })

@@ -96,6 +96,12 @@
 				},
 				"provider": "終端機命令產生器供應商"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding 批次大小",
+			"embeddingBatchSizeDescription": "用於 Embedding 生成和向量儲存更新的程式碼片段批次數量。較大的值可以提高索引速度，但可能增加記憶體使用量。較小的值可以減少記憶體使用量，但可能降低索引速度。",
+			"scannerMaxBatchRetriesLabel": "掃描器最大批次重試次數",
+			"scannerMaxBatchRetriesDescription": "目錄掃描期間重試失敗批次的最大次數。較大的值可以提高對暫時性錯誤的容錯能力，但如果錯誤持續存在可能會降低索引速度。較小的值會更快失敗，但可能在暫時性問題時跳過內容。"
 		}
 	},
 	"toolCallStyle": {
@@ -212,29 +218,52 @@
 	"ghost": {
 		"title": "自動補全",
 		"settings": {
-			"triggers": "觸發器",
-			"keybindingDescription": "自動補全功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "啟用自動補全",
-				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發自動補全。這對快速修正和建議很有用。"
+				"label": "Auto-trigger Suggestions",
+				"description": "當您暫停輸入時自動顯示內嵌程式碼建議。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "快速任務 ({{keybinding}})",
-				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "手動自動補全 ({{keybinding}})",
-				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "未找到",
-			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
 			"configureAutocompleteProfile": "前往設定檔並設定自動補全類型的設定檔即可使用任意模型。",
 			"model": "模型",
-			"provider": "供應商"
+			"provider": "供應商",
+			"enableChatAutocomplete": {
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "暫停",
+				"unsnooze": "取消暫停",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 分鐘",
+					"5min": "5 分鐘",
+					"15min": "15 分鐘",
+					"30min": "30 分鐘",
+					"1hour": "1 小時"
+				}
+			},
+			"noModelConfigured": {
+				"title": "未設定自動補全模型",
+				"description": "若要啟用自動補全，請新增一個使用以下支援供應商的設定檔：",
+				"learnMore": "了解更多關於自動補全設定 →"
+			},
+			"noCredits": {
+				"title": "您的帳戶沒有額度",
+				"description": "您的 Kilo Code 帳戶沒有額度。若要使用自動補全，請為您的帳戶儲值。",
+				"buyCredits": "購買額度 →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织共享模式"
+	},
+	"deviceAuth": {
+		"title": "登入 Kilo Code",
+		"step1": "在瀏覽器中開啟以下 URL",
+		"step2": "驗證代碼並在瀏覽器中授權此裝置",
+		"scanQr": "或用手機掃描此 QR 碼",
+		"openBrowser": "開啟瀏覽器",
+		"copyUrl": "複製 URL",
+		"waiting": "等待授權...",
+		"timeRemaining": "代碼將在 {{time}} 後過期",
+		"success": "登入成功！",
+		"authenticatedAs": "已驗證為 {{email}}",
+		"error": "驗證錯誤",
+		"unknownError": "發生錯誤。請重試。",
+		"cancel": "取消",
+		"retry": "重試",
+		"tryAgain": "重試",
+		"cancelled": "驗證已取消",
+		"initiating": "正在啟動驗證..."
+	},
+	"speechToText": {
+		"startRecording": "开始语音输入",
+		"stopRecording": "停止语音输入",
+		"setupPopover": {
+			"title": "语音转文字",
+			"openAiReason": "您需要一个有效的 OpenAI 提供商和 API 密钥才能使用语音转录功能。",
+			"description": "语音转文字功能不可用。语音转文字需要同时配置 FFmpeg 和有效的 OpenAI 提供商。<moreInfoLink>点击此处了解更多信息</moreInfoLink>。",
+			"ffmpegReason": "您需要安装 FFmpeg。<ffmpegLink>点击这里</ffmpegLink>让 Kilo 帮助您安装 FFmpeg。",
+			"ffmpegMessage": "帮我安装 FFmpeg"
+		},
+		"misconfiguredState": "因配置问题而不可用",
+		"errorState": "因错误而不可用",
+		"microphone": {
+			"label": "麥克風",
+			"description": "選擇麥克風設備進行語音轉文字",
+			"loading": "正在載入麥克風設備...",
+			"refresh": "重新整理",
+			"defaultOption": "系統預設",
+			"noDevices": "找不到麥克風設備"
+		}
 	}
 }

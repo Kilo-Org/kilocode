@@ -6,10 +6,9 @@
  * Enable model selection for autocomplete in development mode.
  * This allows developers to test different models for autocomplete functionality.
  */
-export const MODEL_SELECTION_ENABLED = process.env.NODE_ENV === "development";
+export const MODEL_SELECTION_ENABLED = process.env.NODE_ENV === "development"
 
 /**
- * Enable the Agent Manager feature in development mode.
- * This allows developers to test the multi-agent orchestration functionality.
+ * Enable extreme snooze values for autocomplete in development mode.
  */
-export const AGENT_MANAGER_ENABLED = process.env.NODE_ENV === "development";
+export const EXTREME_SNOOZE_VALUES_ENABLED = process.env.NODE_ENV === "development"

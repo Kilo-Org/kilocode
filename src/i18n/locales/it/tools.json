@@ -6,13 +6,26 @@
 		"imageTooLarge": "Il file immagine è troppo grande ({{size}} MB). La dimensione massima consentita è {{max}} MB.",
 		"imageWithSize": "File immagine ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Il modello sembra essere bloccato in un ciclo, tentando ripetutamente la stessa azione ({{toolName}}). Questo potrebbe indicare un problema con la sua strategia attuale. Considera di riformulare l'attività, fornire istruzioni più specifiche o guidarlo verso un approccio diverso.",
+	"toolRepetitionLimitReached": "Kilo sembra essere bloccato in un ciclo, tentando ripetutamente la stessa azione ({{toolName}}). Questo potrebbe indicare un problema con la sua strategia attuale. Considera di riformulare l'attività, fornire istruzioni più specifiche o guidarlo verso un approccio diverso.",
+	"unknownToolError": "Kilo ha provato ad utilizzare uno strumento sconosciuto: \"{{toolName}}\". Nuovo tentativo...",
 	"codebaseSearch": {
 		"approval": "Ricerca di '{{query}}' nella base di codice..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "Impossibile creare una nuova attività a causa di restrizioni di policy."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "La chiave API OpenRouter è richiesta per la generazione di immagini con i modelli OpenRouter. Configurala nelle impostazioni sperimentali di Generazione Immagini.",
+		"failedWithStatus": "Generazione immagine fallita: {{status}} {{statusText}}",
+		"failedWithMessage": "Generazione immagine fallita: {{message}}",
+		"noImageGenerated": "Nessuna immagine è stata generata nella risposta",
+		"invalidImageData": "Dati immagine non validi nella risposta",
+		"invalidImageFormat": "Formato immagine non valido ricevuto",
+		"unknownError": "Si è verificato un errore sconosciuto",
+		"roo": {
+			"authRequired": "L'autenticazione Roo Code Cloud è richiesta per la generazione di immagini. Accedi a Roo Code Cloud."
 		}
 	}
 }

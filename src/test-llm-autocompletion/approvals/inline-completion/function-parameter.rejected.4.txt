@@ -1,3 +1,0 @@
-function greet(name, name: string) {
-  console.log(`Hello ${name}!`);
-}

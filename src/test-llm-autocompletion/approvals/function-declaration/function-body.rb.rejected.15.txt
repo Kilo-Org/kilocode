@@ -1,0 +1,19 @@
+def calculate_sum(a, b)
+	a + b
+end
+
+def calculate_difference(a, b)
+	a - b
+end
+
+def calculate_product(a, b)
+	a * b
+end
+
+def calculate_quotient(a, b)
+	a / b
+end
+
+def calculate_remainder(a, b)
+	a % b
+end

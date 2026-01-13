@@ -1,0 +1,17 @@
+def calculate_total(items)
+	sum = 0
+	items.each { |item| sum += item }
+	return sum
+end
+
+def calculate_discount(items)
+	discount = 0
+	items.each { |item| discount += item * 0.1 }
+	return discount
+end
+
+def calculate_total_with_discount(items)
+	total = calculate_total(items)
+	discount = calculate_discount(items)
+	return total - discount
+end

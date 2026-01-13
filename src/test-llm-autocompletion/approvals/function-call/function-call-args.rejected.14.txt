@@ -1,0 +1,10 @@
+function greet(name) { return 'Hello ' + name; }
+greet('John'); // 'Hello John'
+greet('Jane'); // 'Hello Jane'
+
+function greet(name) {
+    if (name === undefined) {
+        name = 'John';
+    }
+    return 'Hello ' + name;
+}

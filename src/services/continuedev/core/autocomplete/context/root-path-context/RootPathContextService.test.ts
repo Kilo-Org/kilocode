@@ -1,4 +1,5 @@
-import { describe, test } from "vitest"
+import { afterAll, beforeAll, describe, test } from "vitest"
+import { setUpTestDir, tearDownTestDir } from "../../../test/testDir"
 import { PYTHON_TEST_CASES, TYPESCRIPT_TEST_CASES } from "./__test-cases__"
 import { testRootPathContext } from "./testUtils"
 
@@ -41,6 +42,14 @@ const TEST_CASES = [
 ]
 
 describe("RootPathContextService", () => {
+	beforeAll(async () => {
+		setUpTestDir()
+	})
+
+	afterAll(async () => {
+		tearDownTestDir()
+	})
+
 	describe("should look for correct type definitions", () => {
 		test.each(TEST_CASES)("$language: $nodeType", async ({ fileName, cursorPosition, definitionPositions }) => {
 			await testRootPathContext("files", fileName, cursorPosition, definitionPositions)

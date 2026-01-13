@@ -1,15 +1,5 @@
 function handleSearch(query) {
   // TODO: Add debounce to prevent excessive API calls
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        func.apply(this, args);
-      }, delay);
-    };
-  };
-
-  const debouncedSearch = debounce(searchAPI, 500);
-  debouncedSearch(query);
+  // TODO: Add error handling for API calls
+  searchAPI(query);
 }

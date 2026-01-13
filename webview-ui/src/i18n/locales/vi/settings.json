@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Nhà cung cấp",
+		"modes": "Chế độ",
+		"mcp": "Máy chủ MCP",
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
@@ -36,6 +38,26 @@
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
 		"autoPurge": "Tự động dọn dẹp"
+	},
+	"about": {
+		"bugReport": {
+			"label": "Tìm thấy lỗi?",
+			"link": "Báo cáo trên GitHub"
+		},
+		"featureRequest": {
+			"label": "Có ý tưởng?",
+			"link": "Chia sẻ với chúng tôi"
+		},
+		"securityIssue": {
+			"label": "Phát hiện lỗ hổng bảo mật?",
+			"link": "Làm theo quy trình công bố của chúng tôi"
+		},
+		"contact": {
+			"label": "Cần nói chuyện với chúng tôi? Viết"
+		},
+		"community": "Muốn nhận mẹo hoặc chỉ muốn giao lưu với những người dùng Kilo Code khác? Tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Liên Hệ & Cộng Đồng",
+		"manageSettings": "Quản Lý Cài Đặt"
 	},
 	"slashCommands": {
 		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
@@ -60,9 +82,17 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Khóa API",
 		"vercelAiGatewayApiKeyPlaceholder": "Nhập khóa API Vercel AI Gateway của bạn",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Vùng AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Hồ sơ AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Tên hồ sơ AWS từ ~/.aws/credentials (bắt buộc).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Khóa API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
+		"openRouterProviderRoutingLabel": "Định tuyến nhà cung cấp OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter chuyển hướng yêu cầu đến các nhà cung cấp tốt nhất hiện có cho mô hình nhúng của bạn. Theo mặc định, các yêu cầu được cân bằng giữa các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -131,11 +161,14 @@
 			"geminiApiKeyRequired": "Yêu cầu khóa API Gemini",
 			"mistralApiKeyRequired": "Cần có khóa API của Mistral",
 			"vercelAiGatewayApiKeyRequired": "Cần có khóa API Vercel AI Gateway",
+			"bedrockRegionRequired": "Vùng AWS là bắt buộc",
+			"bedrockProfileRequired": "Hồ sơ AWS là bắt buộc",
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0",
 			"openRouterApiKeyRequired": "Yêu cầu khóa API OpenRouter"
 		},
+		"optional": "tùy chọn",
 		"advancedConfigLabel": "Cấu hình nâng cao",
 		"searchMinScoreLabel": "Ngưỡng điểm tìm kiếm",
 		"searchMinScoreDescription": "Điểm tương đồng tối thiểu (0.0-1.0) cần thiết cho kết quả tìm kiếm. Giá trị thấp hơn trả về nhiều kết quả hơn nhưng có thể kém liên quan hơn. Giá trị cao hơn trả về ít kết quả hơn nhưng có liên quan hơn.",
@@ -277,9 +310,9 @@
 		},
 		"vercelAiGatewayApiKey": "Khóa API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
-		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
+		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"useReasoning": "Bật lý luận",
 		"useHostHeader": "Sử dụng tiêu đề Host tùy chỉnh",
@@ -309,6 +342,8 @@
 		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
+		"basetenApiKey": "Khóa API Baseten",
+		"getBasetenApiKey": "Lấy khóa API Baseten",
 		"cerebrasApiKey": "Khóa API Cerebras",
 		"getCerebrasApiKey": "Lấy khóa API Cerebras",
 		"chutesApiKey": "Khóa API Chutes",
@@ -538,8 +573,10 @@
 			"none": "Không",
 			"minimal": "Tối thiểu (nhanh nhất)",
 			"high": "Cao",
+			"xhigh": "Rất cao",
 			"medium": "Trung bình",
-			"low": "Thấp"
+			"low": "Thấp",
+			"xhigh": "Rất cao"
 		},
 		"verbosity": {
 			"label": "Mức độ chi tiết đầu ra",
@@ -757,6 +794,10 @@
 		"includeCurrentCost": {
 			"label": "Bao gồm chi phí hiện tại trong ngữ cảnh",
 			"description": "Khi được bật, chi phí sử dụng API hiện tại sẽ được bao gồm trong lời nhắc hệ thống. Tắt nếu các mô hình ngừng hoạt động do lo ngại về chi phí."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status tệp tối đa",
+			"description": "Số lượng mục tệp tối đa để bao gồm trong ngữ cảnh trạng thái git. Đặt thành 0 để tắt. Thông tin nhánh và các commit luôn được hiển thị khi > 0."
 		}
 	},
 	"terminal": {
@@ -819,6 +860,14 @@
 	},
 	"advancedSettings": {
 		"title": "Cài đặt nâng cao"
+	},
+	"toolProtocol": {
+		"label": "Giao thức gọi công cụ",
+		"description": "Chọn cách Kilo Code giao tiếp với API. Native sử dụng API gọi hàm của nhà cung cấp, trong khi XML sử dụng định nghĩa công cụ định dạng XML.",
+		"default": "Mặc định",
+		"xml": "XML",
+		"native": "Native",
+		"currentDefault": "Mặc định: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -889,6 +938,8 @@
 			"description": "Khi được bật, công cụ new_task sẽ yêu cầu cung cấp tham số todos. Điều này đảm bảo tất cả các nhiệm vụ mới bắt đầu với một danh sách mục tiêu rõ ràng. Khi bị tắt (mặc định), tham số todos vẫn là tùy chọn để tương thích ngược."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Nhà cung cấp",
+			"providerDescription": "Chọn nhà cung cấp để tạo hình ảnh.",
 			"name": "Bật tạo hình ảnh AI",
 			"description": "Khi được bật, Kilo Code có thể tạo hình ảnh từ lời nhắc văn bản. Yêu cầu khóa API Kilo Code hoặc OpenRouter được cấu hình.",
 			"apiProvider": "Nhà cung cấp API",
@@ -928,6 +979,14 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Bật lệnh slash do mô hình khởi tạo",
 			"description": "Khi được bật, Kilo Code có thể chạy các lệnh slash của bạn để thực hiện các quy trình làm việc."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Lệnh gọi công cụ song song",
+			"description": "Khi được bật, giao thức native có thể thực thi nhiều công cụ trong một lượt tin nhắn của trợ lý."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Chuyển Giọng nói thành Văn bản (STT)",
+			"description": "Khi được bật, Kilo Code có thể chuyển đổi giọng nói của bạn thành văn bản bằng mô hình Whisper của OpenAI. Nhấp vào nút microphone trong chat để bắt đầu ghi âm. Yêu cầu cài đặt FFmpeg và cấu hình nhà cung cấp API OpenAI."
 		}
 	},
 	"promptCaching": {
@@ -966,7 +1025,10 @@
 		"label": "Mô hình",
 		"searchPlaceholder": "Tìm kiếm",
 		"noMatchFound": "Không tìm thấy kết quả",
-		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}"
+		"useCustomModel": "Sử dụng tùy chỉnh: {{modelId}}",
+		"simplifiedExplanation": "Bạn có thể điều chỉnh cài đặt mô hình chi tiết sau.",
+		"recommendedModels": "Mô hình được đề xuất",
+		"allModels": "Tất cả mô hình"
 	},
 	"footer": {
 		"feedback": "Nếu bạn có bất kỳ câu hỏi hoặc phản hồi nào, vui lòng mở một vấn đề tại <githubLink>github.com/Kilo-Org/kilocode</githubLink> hoặc tham gia <redditLink>reddit.com/r/kilocode</redditLink> hoặc <discordLink>kilo.ai/discord</discordLink>",
@@ -1087,6 +1149,10 @@
 		"collapseThinking": {
 			"label": "Thu gọn tin nhắn Suy nghĩ theo mặc định",
 			"description": "Khi được bật, các khối suy nghĩ sẽ được thu gọn theo mặc định cho đến khi bạn tương tác với chúng"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Yêu cầu {{primaryMod}}+Enter để gửi tin nhắn",
+			"description": "Khi được bật, bạn phải nhấn {{primaryMod}}+Enter để gửi tin nhắn thay vì chỉ nhấn Enter"
 		}
 	}
 }

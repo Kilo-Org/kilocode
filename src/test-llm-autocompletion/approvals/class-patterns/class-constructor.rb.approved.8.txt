@@ -1,0 +1,23 @@
+class User
+	def initialize(username, email, role)
+		@username = username
+		@email = email
+		@role = role
+	end
+
+	def username
+		@username
+	end
+
+	def email
+		@email
+	end
+
+	def role
+		@role
+	end
+
+	def to_s
+		"#{@username} (#{@email}) - #{@role}"
+	end
+end

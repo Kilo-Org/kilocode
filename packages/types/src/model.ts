@@ -4,7 +4,7 @@ import { z } from "zod"
  * ReasoningEffort
  */
 
-export const reasoningEfforts = ["low", "medium", "high"] as const
+export const reasoningEfforts = ["low", "medium", "high", "xhigh"] as const
 
 export const reasoningEffortsSchema = z.enum(reasoningEfforts)
 
@@ -22,7 +22,7 @@ export type ReasoningEffortWithMinimal = z.infer<typeof reasoningEffortWithMinim
  * Extended Reasoning Effort (includes "none" and "minimal")
  * Note: "disable" is a UI/control value, not a value sent as effort
  */
-export const reasoningEffortsExtended = ["none", "minimal", "low", "medium", "high"] as const
+export const reasoningEffortsExtended = ["none", "minimal", "low", "medium", "high", "xhigh"] as const
 
 export const reasoningEffortExtendedSchema = z.enum(reasoningEffortsExtended)
 
@@ -31,7 +31,7 @@ export type ReasoningEffortExtended = z.infer<typeof reasoningEffortExtendedSche
 /**
  * Reasoning Effort user setting (includes "disable")
  */
-export const reasoningEffortSettingValues = ["disable", "none", "minimal", "low", "medium", "high"] as const
+export const reasoningEffortSettingValues = ["disable", "none", "minimal", "low", "medium", "high", "xhigh"] as const
 export const reasoningEffortSettingSchema = z.enum(reasoningEffortSettingValues)
 
 /**
@@ -89,7 +89,7 @@ export const modelInfoSchema = z.object({
 	defaultTemperature: z.number().optional(),
 	requiredReasoningBudget: z.boolean().optional(),
 	supportsReasoningEffort: z
-		.union([z.boolean(), z.array(z.enum(["disable", "none", "minimal", "low", "medium", "high"]))])
+		.union([z.boolean(), z.array(z.enum(["disable", "none", "minimal", "low", "medium", "high", "xhigh"]))])
 		.optional(),
 	requiredReasoningEffort: z.boolean().optional(),
 	preserveReasoning: z.boolean().optional(),
@@ -110,10 +110,21 @@ export const modelInfoSchema = z.object({
 	// kilocode_change end
 	// Flag to indicate if the model is deprecated and should not be used
 	deprecated: z.boolean().optional(),
+	// Flag to indicate if the model should hide vendor/company identity in responses
+	isStealthModel: z.boolean().optional(),
 	// Flag to indicate if the model is free (no cost)
 	isFree: z.boolean().optional(),
 	// Flag to indicate if the model supports native tool calling (OpenAI-style function calling)
 	supportsNativeTools: z.boolean().optional(),
+	// Default tool protocol preferred by this model (if not specified, falls back to capability/provider defaults)
+	defaultToolProtocol: z.enum(["xml", "native"]).optional(),
+	// Exclude specific native tools from being available (only applies to native protocol)
+	// These tools will be removed from the set of tools available to the model
+	excludedTools: z.array(z.string()).optional(),
+	// Include specific native tools (only applies to native protocol)
+	// These tools will be added if they belong to an allowed group in the current mode
+	// Cannot force-add tools from groups the mode doesn't allow
+	includedTools: z.array(z.string()).optional(),
 	/**
 	 * Service tiers with pricing information.
 	 * Each tier can have a name (for OpenAI service tiers) and pricing overrides.

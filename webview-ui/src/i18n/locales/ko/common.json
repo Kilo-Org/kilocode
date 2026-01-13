@@ -117,6 +117,13 @@
 	},
 	"errors": {
 		"wait_checkpoint_long_time": "{{timeout}}초 동안 체크포인트 초기화를 기다렸어. 체크포인트 기능이 필요 없다면 <settingsLink>체크포인트 설정</settingsLink>에서 꺼 줘.",
-		"init_checkpoint_fail_long_time": "체크포인트 초기화가 {{timeout}}초 이상 걸려서 이 작업에 대해 체크포인트가 꺼졌어. 체크포인트를 끄거나 <settingsLink>체크포인트 설정</settingsLink>에서 대기 시간을 늘릴 수 있어."
+		"init_checkpoint_fail_long_time": "체크포인트 초기화가 {{timeout}}초 이상 걸려서 이 작업에 대해 체크포인트가 꺼졌어. 체크포인트를 끄거나 <settingsLink>체크포인트 설정</settingsLink>에서 대기 시간을 늘릴 수 있어.",
+		"attempt_completion_tool_failed": "이전 도구 호출이 이 턴에서 실패했기 때문에 attempt_completion을 실행할 수 없습니다. 완료를 시도하기 전에 도구 실패를 해결하세요."
+	},
+	"tasks": {
+		"delegated": "하위 작업에 위임됨",
+		"delegated_to": "작업 {{childId}}에 위임됨",
+		"delegation_completed": "하위 작업 완료, 상위 작업 재개",
+		"awaiting_child": "하위 작업 {{childId}} 대기 중"
 	}
 }

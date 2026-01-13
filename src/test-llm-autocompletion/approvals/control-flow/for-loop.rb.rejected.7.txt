@@ -1,0 +1,12 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |item|
+	puts item
+end
+
+arr.each_with_index do |item, index|
+	puts "#{index}: #{item}"
+end
+
+arr.each_with_index do |item, index|
+	puts "#{index}: #{item}" if index.even?
+end

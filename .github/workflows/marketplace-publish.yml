@@ -189,6 +189,10 @@ jobs:
                   java-version: "21"
                   check-latest: false
                   token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v4
+              with:
+                  cache-read-only: false
             - name: Install system dependencies
               run: |
                   sudo apt-get update

@@ -21,7 +21,6 @@ export type IconName =
  * serialization from Server Components to Client Components.
  */
 export interface AgentPageContent {
-	/** The agent name used for the carousel display */
 	agentName: string
 	hero: {
 		/** Optional icon name to display in the hero section */
@@ -45,6 +44,7 @@ export interface AgentPageContent {
 		cta: {
 			buttonText: string
 			disclaimer: string
+			tracking: string
 		}
 	}
 	howItWorks: {

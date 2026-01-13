@@ -19,6 +19,7 @@ type GlamaProps = {
 	uriScheme?: string
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 export const Glama = ({
@@ -28,6 +29,7 @@ export const Glama = ({
 	uriScheme,
 	organizationAllowList,
 	modelValidationError,
+	simplifySettings,
 }: GlamaProps) => {
 	const { t } = useAppTranslation()
 
@@ -70,6 +72,7 @@ export const Glama = ({
 				serviceUrl="https://glama.ai/models"
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

@@ -296,12 +296,22 @@ describe("CloudService", () => {
 
 		it("should delegate handleAuthCallback to AuthService", async () => {
 			await cloudService.handleAuthCallback("code", "state")
-			expect(mockAuthService.handleCallback).toHaveBeenCalledWith("code", "state", undefined)
+			expect(mockAuthService.handleCallback).toHaveBeenCalledWith("code", "state", undefined, undefined)
 		})
 
 		it("should delegate handleAuthCallback with organizationId to AuthService", async () => {
 			await cloudService.handleAuthCallback("code", "state", "org_123")
-			expect(mockAuthService.handleCallback).toHaveBeenCalledWith("code", "state", "org_123")
+			expect(mockAuthService.handleCallback).toHaveBeenCalledWith("code", "state", "org_123", undefined)
+		})
+
+		it("should delegate handleAuthCallback with providerModel to AuthService", async () => {
+			await cloudService.handleAuthCallback("code", "state", "org_123", "xai/grok-code-fast-1")
+			expect(mockAuthService.handleCallback).toHaveBeenCalledWith(
+				"code",
+				"state",
+				"org_123",
+				"xai/grok-code-fast-1",
+			)
 		})
 
 		it("should return stored organization ID from AuthService", () => {

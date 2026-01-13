@@ -384,7 +384,7 @@ describe("FireworksHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
 	it("createMessage should pass correct parameters to Fireworks client", async () => {
@@ -494,10 +494,8 @@ describe("FireworksHandler", () => {
 			chunks.push(chunk)
 		}
 
-		expect(chunks).toEqual([
-			{ type: "text", text: "Hello" },
-			{ type: "text", text: " world" },
-			{ type: "usage", inputTokens: 5, outputTokens: 10 },
-		])
+		expect(chunks[0]).toEqual({ type: "text", text: "Hello" })
+		expect(chunks[1]).toEqual({ type: "text", text: " world" })
+		expect(chunks[2]).toMatchObject({ type: "usage", inputTokens: 5, outputTokens: 10 })
 	})
 })

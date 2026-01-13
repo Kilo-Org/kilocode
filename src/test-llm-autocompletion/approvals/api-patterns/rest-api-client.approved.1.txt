@@ -5,4 +5,8 @@ class ApiClient {
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			<<<AUTOCOMPLETE_HERE>>>
+			body: JSON.stringify(data),
+		});
+		return response.json();
+	}
+}

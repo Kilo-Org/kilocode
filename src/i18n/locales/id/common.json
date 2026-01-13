@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Path penyimpanan kustom \"{{path}}\" tidak dapat digunakan, akan menggunakan path default",
 		"cannot_access_path": "Tidak dapat mengakses path {{path}}: {{error}}",
 		"settings_import_failed": "Impor pengaturan gagal: {{error}}.",
-		"mistake_limit_guidance": "Ini mungkin menunjukkan kegagalan dalam proses pemikiran model atau ketidakmampuan untuk menggunakan tool dengan benar, yang dapat diatasi dengan beberapa panduan pengguna (misalnya \"Coba bagi tugas menjadi langkah-langkah yang lebih kecil\").",
+		"mistake_limit_guidance": "Ini mungkin menunjukkan kegagalan dalam penalaran model atau ketidakmampuan untuk menggunakan alat dengan benar. Coba salah satu dari berikut ini:\n\n• Gunakan model yang lebih pintar, atau sekadar model yang berbeda (setiap model memiliki kelemahannya sendiri)\n• Kurangi jumlah konteks (sederhanakan prompt untuk LLM)\n• Berikan instruksi tambahan yang membantu LLM (misalnya \"Coba bagi tugas menjadi langkah-langkah yang lebih kecil\")",
 		"violated_organization_allowlist": "Gagal menjalankan tugas: profil saat ini tidak kompatibel dengan pengaturan organisasi kamu",
 		"condense_failed": "Gagal mengompres konteks",
 		"condense_not_enough_messages": "Tidak cukup pesan untuk mengompres konteks {{prevContextTokens}} token. Setidaknya {{minimumMessageCount}} pesan diperlukan, tetapi hanya {{messageCount}} yang tersedia.",
@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Kesalahan aliran konteks pembuatan Gemini: {{error}}",
 			"generate_complete_prompt": "Kesalahan penyelesaian Gemini: {{error}}",
-			"sources": "Sumber:"
+			"sources": "Sumber:",
+			"thinking_complete_no_output": "(Berpikir selesai, tetapi tidak ada output yang dihasilkan.)",
+			"thinking_complete_truncated": "(Berpikir selesai, tetapi output terpotong karena batas token.)",
+			"thinking_complete_safety": "(Berpikir selesai, tetapi output diblokir karena pengaturan keamanan.)",
+			"thinking_complete_recitation": "(Berpikir selesai, tetapi output diblokir karena pemeriksaan resitasi.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Autentikasi API Cerebras gagal. Silakan periksa apakah kunci API Anda valid dan belum kedaluwarsa.",
@@ -168,6 +172,7 @@
 		"image_saved": "Gambar disimpan ke {{path}}",
 		"organization_share_link_copied": "Tautan berbagi organisasi disalin ke clipboard!",
 		"public_share_link_copied": "Tautan berbagi publik disalin ke clipboard!",
+		"session_share_link_copied_with_url": "Sesi dibagikan! Tautan disalin ke clipboard: {{url}}",
 		"mode_exported": "Mode '{{mode}}' berhasil diekspor",
 		"mode_imported": "Mode berhasil diimpor"
 	},

@@ -278,6 +278,7 @@ describe("Command Execution Timeout Integration", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should complete successfully without timeout because "npm" is in allowlist
@@ -309,6 +310,7 @@ describe("Command Execution Timeout Integration", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should timeout because "sleep" is not in allowlist
@@ -340,6 +342,7 @@ describe("Command Execution Timeout Integration", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			// Should timeout because allowlist is empty
@@ -374,6 +377,7 @@ describe("Command Execution Timeout Integration", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalled()
@@ -392,6 +396,7 @@ describe("Command Execution Timeout Integration", () => {
 				handleError: mockHandleError,
 				pushToolResult: mockPushToolResult,
 				removeClosingTag: mockRemoveClosingTag,
+				toolProtocol: "xml",
 			})
 
 			expect(mockPushToolResult).toHaveBeenCalled()

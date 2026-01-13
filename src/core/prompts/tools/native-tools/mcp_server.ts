@@ -1,5 +1,6 @@
 import type OpenAI from "openai"
 import { McpHub } from "../../../../services/mcp/McpHub"
+import { buildMcpToolName } from "../../../../utils/mcp-name"
 
 /**
  * Dynamically generates native tool definitions for all enabled tools across connected MCP servers.
@@ -29,8 +30,10 @@ export function getMcpServerTools(mcpHub?: McpHub): OpenAI.Chat.ChatCompletionTo
 			const toolInputProps = originalSchema?.properties ?? {}
 			const toolInputRequired = (originalSchema?.required ?? []) as string[]
 
-			// Create a proper JSON Schema object for toolInputProps
-			const toolInputPropsSchema: Record<string, any> = {
+			// Build parameters directly from the tool's input schema.
+			// The server_name and tool_name are encoded in the function name itself
+			// (e.g., mcp_serverName_toolName), so they don't need to be in the arguments.
+			const parameters: OpenAI.FunctionParameters = {
 				type: "object",
 				properties: toolInputProps,
 				additionalProperties: false,
@@ -38,32 +41,17 @@ export function getMcpServerTools(mcpHub?: McpHub): OpenAI.Chat.ChatCompletionTo
 
 			// Only add required if there are required fields
 			if (toolInputRequired.length > 0) {
-				toolInputPropsSchema.required = toolInputRequired
+				parameters.required = toolInputRequired
 			}
 
-			// Build parameters with all properties defined before adding required array
-			const parameters = {
-				type: "object",
-				properties: {
-					toolInputProps: toolInputPropsSchema,
-					server_name: {
-						type: "string",
-						const: server.name,
-					},
-					tool_name: {
-						type: "string",
-						const: tool.name,
-					},
-				},
-				required: ["server_name", "tool_name", "toolInputProps"],
-				additionalProperties: false,
-			} as OpenAI.FunctionParameters
+			// Build sanitized tool name for API compliance
+			// The name is sanitized to conform to API requirements (e.g., Gemini's function name restrictions)
+			const toolName = buildMcpToolName(server.name, tool.name)
 
-			// Use triple underscores as separator to allow underscores in tool and server names
 			const toolDefinition: OpenAI.Chat.ChatCompletionTool = {
 				type: "function",
 				function: {
-					name: `mcp_${server.name}_${tool.name}`,
+					name: toolName,
 					description: tool.description,
 					parameters: parameters,
 				},

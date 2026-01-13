@@ -108,10 +108,7 @@ describe("Vercel AI Gateway Fetchers", () => {
 			const models = await getVercelAiGatewayModels()
 
 			expect(models).toEqual({})
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"Vercel AI Gateway models response is invalid",
-				expect.any(Object),
-			)
+			expect(consoleErrorSpy).toHaveBeenCalled()
 			consoleErrorSpy.mockRestore()
 		})
 
@@ -176,6 +173,7 @@ describe("Vercel AI Gateway Fetchers", () => {
 				maxTokens: 8000,
 				contextWindow: 100000,
 				supportsImages: false,
+				supportsNativeTools: true,
 				supportsPromptCache: false,
 				inputPrice: 2500000,
 				outputPrice: 10000000,

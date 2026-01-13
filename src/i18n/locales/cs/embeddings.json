@@ -17,6 +17,13 @@
 		"modelNotEmbeddingCapable": "Ollama model nepodporuje embeddings: {{modelId}}",
 		"hostNotFound": "Ollama host nebyl nalezen: {{baseUrl}}"
 	},
+	"bedrock": {
+		"invalidResponseFormat": "Neplatný formát odpovědi z Amazon Bedrock",
+		"invalidCredentials": "Neplatné AWS přihlašovací údaje. Zkontroluj prosím svou konfiguraci AWS.",
+		"accessDenied": "Přístup k službě Amazon Bedrock byl odepřen. Zkontroluj prosím svá IAM oprávnění.",
+		"modelNotFound": "Model {{model}} nebyl nalezen v Amazon Bedrock",
+		"missingConfiguration": "Chybí konfigurace Amazon Bedrock pro vytvoření embedderu"
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Neznámá chyba při zpracování souboru {{filePath}}",
 		"unknownErrorDeletingPoints": "Neznámá chyba při mazání bodů pro {{filePath}}",
@@ -51,6 +58,7 @@
 		"mistralConfigMissing": "Chybí konfigurace Mistral pro vytvoření embedderu",
 		"openRouterConfigMissing": "Chybí konfigurace OpenRouter pro vytvoření embedderu",
 		"vercelAiGatewayConfigMissing": "Chybí konfigurace Vercel AI Gateway pro vytvoření embedderu",
+		"bedrockConfigMissing": "Chybí konfigurace Amazon Bedrock pro vytvoření embedderu",
 		"invalidEmbedderType": "Nakonfigurován neplatný typ embedderu: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Ujisti se prosím, že 'Rozměr Embeddingu' je správně nastaven v nastavení OpenAI-Compatible poskytovatele.",
 		"vectorDimensionNotDetermined": "Nelze určit rozměr vektoru pro model '{{modelId}}' s poskytovatelem '{{provider}}'. Zkontroluj profily modelů nebo konfiguraci.",

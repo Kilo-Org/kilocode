@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Özel depolama yolu \"{{path}}\" kullanılamıyor, varsayılan yol kullanılacak",
 		"cannot_access_path": "{{path}} yoluna erişilemiyor: {{error}}",
 		"settings_import_failed": "Ayarlar içe aktarılamadı: {{error}}.",
-		"mistake_limit_guidance": "Bu, modelin düşünce sürecindeki bir başarısızlığı veya bir aracı düzgün kullanamama durumunu gösterebilir, bu da kullanıcı rehberliği ile hafifletilebilir (örn. \"Görevi daha küçük adımlara bölmeyi deneyin\").",
+		"mistake_limit_guidance": "Bu, modelin akıl yürütmesinde bir başarısızlığı veya bir aracı düzgün kullanamama durumunu gösterebilir. Aşağıdakilerden birini deneyin:\n\n• Daha akıllı bir model veya sadece farklı bir model kullanın (her modelin kendi zayıf yönleri vardır)\n• Bağlam miktarını azaltın (LLM için istemi basitleştirin)\n• LLM'ye yardımcı olacak ek talimatlar sağlayın (örn. \"Görevi daha küçük adımlara bölmeyi deneyin\")",
 		"violated_organization_allowlist": "Görev yürütülemedi: Geçerli profil kuruluşunuzun ayarlarıyla uyumlu değil",
 		"condense_failed": "Bağlam sıkıştırılamadı",
 		"condense_not_enough_messages": "{{prevContextTokens}} token'lık bağlamı sıkıştırmak için yeterli mesaj yok. En az {{minimumMessageCount}} mesaj gerekli, ancak sadece {{messageCount}} mesaj mevcut.",
@@ -127,7 +127,11 @@
 		"gemini": {
 			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
 			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
-			"sources": "Kaynaklar:"
+			"sources": "Kaynaklar:",
+			"thinking_complete_no_output": "(Düşünme tamamlandı, ancak çıktı oluşturulmadı.)",
+			"thinking_complete_truncated": "(Düşünme tamamlandı, ancak çıktı jeton sınırı nedeniyle kesildi.)",
+			"thinking_complete_safety": "(Düşünme tamamlandı, ancak çıktı güvenlik ayarları nedeniyle engellendi.)",
+			"thinking_complete_recitation": "(Düşünme tamamlandı, ancak çıktı okuma kontrolü nedeniyle engellendi.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API kimlik doğrulama başarısız oldu. API anahtarınızın geçerli olduğunu ve süresi dolmadığını kontrol edin.",
@@ -168,6 +172,7 @@
 		"image_saved": "Resim {{path}} konumuna kaydedildi",
 		"organization_share_link_copied": "Kuruluş paylaşım bağlantısı panoya kopyalandı!",
 		"public_share_link_copied": "Herkese açık paylaşım bağlantısı panoya kopyalandı!",
+		"session_share_link_copied_with_url": "Oturum paylaşıldı! Bağlantı panoya kopyalandı: {{url}}",
 		"mode_exported": "'{{mode}}' modu başarıyla dışa aktarıldı",
 		"mode_imported": "Mod başarıyla içe aktarıldı"
 	},

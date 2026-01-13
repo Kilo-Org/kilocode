@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
 		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました",
 		"openInCloud": "Roo Code Cloudでタスクを開く",
-		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。"
+		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。",
+		"openApiHistory": "API履歴を開く",
+		"openUiHistory": "UI履歴を開く"
 	},
 	"history": {
 		"title": "履歴"
@@ -110,6 +112,7 @@
 	"enhancePrompt": "追加コンテキストでプロンプトを強化",
 	"addImages": "メッセージに画像を追加",
 	"sendMessage": "メッセージを送信",
+	"pressToSend": "{{keyCombination}}を押して送信",
 	"stopTts": "テキスト読み上げを停止",
 	"typeMessage": "メッセージを入力...",
 	"typeTask": "ここにタスクを入力...",
@@ -142,7 +145,19 @@
 		"failed": "APIリクエスト失敗",
 		"streaming": "APIリクエスト...",
 		"cancelled": "APIリクエストキャンセル",
-		"streamingFailed": "APIストリーミング失敗"
+		"streamingFailed": "APIストリーミング失敗",
+		"errorTitle": "APIエラー {{code}}",
+		"errorMessage": {
+			"docs": "ドキュメント",
+			"400": "プロバイダーはリクエストをそのまま処理できませんでした。タスクを停止して別のアプローチを試してください。",
+			"401": "プロバイダーで認証できませんでした。API キーの設定を確認してください。",
+			"402": "アカウントの資金/クレジットが不足しているようです。プロバイダーに移動してさらに追加してください。",
+			"403": "認可されていません。API キーは有効ですが、プロバイダーがこのリクエストの完了を拒否しました。",
+			"429": "リクエストが多すぎます。プロバイダーによってレート制限されています。次の API 呼び出しの前にお待ちください。",
+			"500": "プロバイダー サーバー エラー。プロバイダー側に問題があり、リクエスト自体に問題はありません。",
+			"unknown": "不明な API エラー。Kilo のサポートにお問い合わせください。",
+			"connection": "接続エラー。インターネット接続が機能していることを確認してください。"
+		}
 	},
 	"checkpoint": {
 		"regular": "チェックポイント",
@@ -255,6 +270,11 @@
 		"hasQuestion": "Kilo Codeは質問があります"
 	},
 	"taskCompleted": "タスク完了",
+	"errorDetails": {
+		"title": "エラー詳細",
+		"copyToClipboard": "クリップボードにコピー",
+		"copied": "コピーしました！"
+	},
 	"powershell": {
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
 	},
@@ -280,19 +300,28 @@
 		"thinking": "考え中",
 		"seconds": "{{count}}秒"
 	},
-	"contextCondense": {
-		"title": "コンテキスト要約",
-		"condensing": "コンテキストを圧縮中...",
-		"errorHeader": "コンテキストの圧縮に失敗しました",
-		"tokens": "トークン"
+	"contextManagement": {
+		"tokens": "トークン",
+		"condensation": {
+			"title": "コンテキスト要約",
+			"inProgress": "コンテキストを圧縮中...",
+			"errorHeader": "コンテキストの圧縮に失敗しました"
+		},
+		"truncation": {
+			"title": "コンテキスト切り詰め",
+			"inProgress": "コンテキストを切り詰め中...",
+			"messagesRemoved": "{{count}}件のメッセージを削除",
+			"messagesRemoved_other": "{{count}}件のメッセージを削除",
+			"description": "コンテキストウィンドウの制限内に収めるため、古いメッセージが会話から削除されました。これは圧縮と比較して高速ですが、コンテキストの保持性が低いアプローチです。"
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "入力欄にコピー（またはShift + クリック）",
-		"autoSelectCountdown": "{{count}}秒後に自動選択します",
-		"countdownDisplay": "{{count}}秒"
+		"timerPrefix": "自動承認が有効です。{{seconds}}秒後に選択中…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} リリース",
+		"title": "Roo Code {{version}} リリース",
+		"support": "<githubLink>GitHub</githubLink>でスターを付けてRoo Codeを応援してください。",
 		"stealthModel": {
 			"feature": "<bold>期間限定無料ステルスモデル</bold> - Code Supernova：<bold>1Mトークンコンテキストウィンドウ</bold>にアップグレード！画像入力をサポートする多目的エージェントコーディングモデル、Roo Code Cloud 経由で利用可能。",
 			"note": "(注意：プロンプトと補完はモデル作成者によってログに記録され、モデルの改善に使用されます)",
@@ -301,21 +330,21 @@
 			"goToSettingsButton": "設定に移動"
 		},
 		"release": {
-			"heading": "拡張機能の新機能:",
-			"openRouterEmbeddings": "OpenRouter埋め込みモデルのサポート",
-			"chutesDynamic": "Chutesが最新モデルを動的にロード",
-			"queuedMessagesFix": "キューメッセージが失われる問題の修正"
+			"heading": "このバージョンの新機能:",
+			"contextRewind": "改善されたコンテキスト圧縮により、チェックポイントに巻き戻すときに以前の完全なコンテキストを復元できるようになりました",
+			"rooProvider": "Roo Code Cloud プロバイダーはレジーニングコンテンツを保持し、デフォルトでネイティブ ツールを使用してパフォーマンスを向上させます"
 		},
 		"cloudAgents": {
 			"heading": "クラウドの新機能:",
-			"prFixer": "PRレビューアを補完するクラウドエージェント<bold>PR Fixer</bold>を導入します。",
-			"prFixerDescription": "Roo CodeのPR FixerはGitHubから直接、高品質な変更をPRに適用します。PRコメントから呼び出すと、コメント履歴全体を読んでコンテキスト、合意、トレードオフを理解し、適切な修正を実装します。",
-			"tryPrFixerButton": "PR Fixerを試す"
+			"specialized": "<bold>Explainer</bold>、<bold>Planner</bold>、<bold>Coder</bold> の 3 つの専門クラウドエージェントを紹介します。ワークフローを強化します。",
+			"description": "エージェントはクラウドで連携して動作し、Web または Slack からトリガーできます。",
+			"tryButton": "クラウドエージェントを試す"
 		},
 		"careers": "また、<careersLink>採用中です！</careersLink>",
-		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/KiloCode</redditLink>でフォローしてください 🚀"
 	},
 	"browser": {
+		"session": "ブラウザセッション",
 		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
 		"consoleLogs": "コンソールログ",
 		"noNewLogs": "(新しいログはありません)",
@@ -328,12 +357,26 @@
 		},
 		"sessionStarted": "ブラウザセッション開始",
 		"actions": {
-			"title": "ブラウザアクション: ",
+			"title": "ブラウザ操作: ",
+			"launched": "ブラウザを起動しました",
 			"launch": "{{url}} でブラウザを起動",
+			"clicked": "クリック: {{coordinate}}",
 			"click": "クリック ({{coordinate}})",
+			"typed": "入力: {{text}}",
 			"type": "入力 \"{{text}}\"",
+			"pressed": "{{key}}を押しました",
+			"press": "{{key}}を押す",
+			"scrolledDown": "下にスクロールしました",
 			"scrollDown": "下にスクロール",
+			"scrolledUp": "上にスクロールしました",
 			"scrollUp": "上にスクロール",
+			"hovered": "ホバー: {{coordinate}}",
+			"hover": "ホバー ({{coordinate}})",
+			"resized": "サイズを変更しました: {{size}}",
+			"resize": "サイズを {{size}} に変更",
+			"screenshotSaved": "スクリーンショットを保存しました",
+			"screenshot": "スクリーンショットを {{path}} に保存",
+			"closed": "ブラウザを閉じました",
 			"close": "ブラウザを閉じる"
 		}
 	},

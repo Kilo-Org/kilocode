@@ -1,7 +1,5 @@
-import type { BrowserActionParams, Coordinate, Size } from "@roo-code/types"
 import { Task } from "../task/Task"
-import { BaseTool, ToolCallbacks } from "./BaseTool"
-import type { ToolUse } from "../../shared/tools"
+import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import {
 	BrowserAction,
 	BrowserActionResult,
@@ -9,171 +7,207 @@ import {
 	ClineSayBrowserAction,
 } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
+import { Anthropic } from "@anthropic-ai/sdk"
+import { scaleCoordinate } from "../../shared/browserUtils"
 
-export class BrowserActionTool extends BaseTool<"browser_action"> {
-	readonly name = "browser_action" as const
+export async function browserActionTool(
+	cline: Task,
+	block: ToolUse,
+	askApproval: AskApproval,
+	handleError: HandleError,
+	pushToolResult: PushToolResult,
+	removeClosingTag: RemoveClosingTag,
+) {
+	const action: BrowserAction | undefined = block.params.action as BrowserAction
+	const url: string | undefined = block.params.url
+	const coordinate: string | undefined = block.params.coordinate
+	const text: string | undefined = block.params.text
+	const size: string | undefined = block.params.size
+	const filePath: string | undefined = block.params.path
 
-	parseLegacy(params: Partial<Record<string, string>>): BrowserActionParams {
-		const action = params.action as BrowserAction | undefined
-
-		// Parse coordinate if present - XML protocol sends "x,y" format
-		let coordinate: Coordinate | undefined
-		if (params.coordinate) {
-			// Try parsing as "x,y" string first (XML protocol)
-			const parts = params.coordinate.split(",")
-			if (parts.length === 2) {
-				const x = parseInt(parts[0], 10)
-				const y = parseInt(parts[1], 10)
-				if (!isNaN(x) && !isNaN(y)) {
-					coordinate = { x, y }
-				}
-			} else {
-				// Try parsing as JSON object (fallback)
-				try {
-					const parsed = JSON.parse(params.coordinate)
-					if (parsed && typeof parsed.x === "number" && typeof parsed.y === "number") {
-						coordinate = { x: parsed.x, y: parsed.y }
-					}
-				} catch (error) {
-					// Invalid coordinate format, leave undefined
-				}
-			}
+	if (!action || !browserActions.includes(action)) {
+		// checking for action to ensure it is complete and valid
+		if (!block.partial) {
+			// if the block is complete and we don't have a valid action cline is a mistake
+			cline.consecutiveMistakeCount++
+			cline.recordToolError("browser_action")
+			cline.didToolFailInCurrentTurn = true
+			pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "action"))
+			// Do not close the browser on parameter validation errors
 		}
 
-		// Parse size if present - XML protocol sends "width,height" format
-		let size: Size | undefined
-		if (params.size) {
-			// Try parsing as "width,height" string first (XML protocol)
-			const parts = params.size.split(",")
-			if (parts.length === 2) {
-				const width = parseInt(parts[0], 10)
-				const height = parseInt(parts[1], 10)
-				if (!isNaN(width) && !isNaN(height)) {
-					size = { width, height }
-				}
-			} else {
-				// Try parsing as JSON object (fallback)
-				try {
-					const parsed = JSON.parse(params.size)
-					if (parsed && typeof parsed.width === "number" && typeof parsed.height === "number") {
-						size = { width: parsed.width, height: parsed.height }
-					}
-				} catch (error) {
-					// Invalid size format, leave undefined
-				}
-			}
-		}
-
-		return {
-			action: action!,
-			url: params.url,
-			coordinate,
-			size,
-			text: params.text,
-		}
+		return
 	}
 
-	async execute(params: BrowserActionParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { action, url, coordinate, text, size } = params
-		const { handleError, pushToolResult } = callbacks
-
-		// Validate action
-		if (!action || !browserActions.includes(action)) {
-			task.consecutiveMistakeCount++
-			task.recordToolError("browser_action")
-			pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "action"))
-			await task.browserSession.closeBrowser()
+	try {
+		if (block.partial) {
+			if (action === "launch") {
+				await cline.ask("browser_action_launch", removeClosingTag("url", url), block.partial).catch(() => {})
+			} else {
+				await cline.say(
+					"browser_action",
+					JSON.stringify({
+						action: action as BrowserAction,
+						coordinate: removeClosingTag("coordinate", coordinate),
+						text: removeClosingTag("text", text),
+						size: removeClosingTag("size", size),
+					} satisfies ClineSayBrowserAction),
+					undefined,
+					block.partial,
+				)
+			}
 			return
-		}
-
-		try {
+		} else {
+			// Initialize with empty object to avoid "used before assigned" errors
 			let browserActionResult: BrowserActionResult = {}
 
 			if (action === "launch") {
 				if (!url) {
-					task.consecutiveMistakeCount++
-					task.recordToolError("browser_action")
-					pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "url"))
-					await task.browserSession.closeBrowser()
+					cline.consecutiveMistakeCount++
+					cline.recordToolError("browser_action")
+					cline.didToolFailInCurrentTurn = true
+					pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "url"))
+					// Do not close the browser on parameter validation errors
 					return
 				}
 
-				task.consecutiveMistakeCount = 0
-				const didApprove = await callbacks.askApproval("browser_action_launch", url)
+				cline.consecutiveMistakeCount = 0
+				const didApprove = await askApproval("browser_action_launch", url)
 
 				if (!didApprove) {
 					return
 				}
 
-				await task.say("browser_action_result", "")
-				await task.browserSession.launchBrowser()
-				browserActionResult = await task.browserSession.navigateToUrl(url)
+				// NOTE: It's okay that we call cline message since the partial inspect_site is finished streaming.
+				// The only scenario we have to avoid is sending messages WHILE a partial message exists at the end of the messages array.
+				// For example the api_req_finished message would interfere with the partial message, so we needed to remove that.
+
+				// Launch browser first (this triggers "Browser session opened" status message)
+				await cline.browserSession.launchBrowser()
+
+				// Create browser_action say message AFTER launching so status appears first
+				await cline.say(
+					"browser_action",
+					JSON.stringify({
+						action: "launch" as BrowserAction,
+						text: url,
+					} satisfies ClineSayBrowserAction),
+					undefined,
+					false,
+				)
+
+				browserActionResult = await cline.browserSession.navigateToUrl(url)
 			} else {
-				// Validate parameters for specific actions
+				// Variables to hold validated and processed parameters
+				let processedCoordinate = coordinate
+
 				if (action === "click" || action === "hover") {
 					if (!coordinate) {
-						task.consecutiveMistakeCount++
-						task.recordToolError("browser_action")
-						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "coordinate"))
-						await task.browserSession.closeBrowser()
+						cline.consecutiveMistakeCount++
+						cline.recordToolError("browser_action")
+						cline.didToolFailInCurrentTurn = true
+						pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "coordinate"))
+						// Do not close the browser on parameter validation errors
+						return // can't be within an inner switch
+					}
+
+					// Get viewport dimensions from the browser session
+					const viewportSize = cline.browserSession.getViewportSize()
+					const viewportWidth = viewportSize.width || 900 // default to 900 if not available
+					const viewportHeight = viewportSize.height || 600 // default to 600 if not available
+
+					// Scale coordinate from image dimensions to viewport dimensions
+					try {
+						processedCoordinate = scaleCoordinate(coordinate, viewportWidth, viewportHeight)
+					} catch (error) {
+						cline.consecutiveMistakeCount++
+						cline.recordToolError("browser_action")
+						cline.didToolFailInCurrentTurn = true
+						pushToolResult(
+							await cline.sayAndCreateMissingParamError(
+								"browser_action",
+								"coordinate",
+								error instanceof Error ? error.message : String(error),
+							),
+						)
 						return
 					}
 				}
 
-				if (action === "type") {
+				if (action === "type" || action === "press") {
 					if (!text) {
-						task.consecutiveMistakeCount++
-						task.recordToolError("browser_action")
-						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "text"))
-						await task.browserSession.closeBrowser()
+						cline.consecutiveMistakeCount++
+						cline.recordToolError("browser_action")
+						cline.didToolFailInCurrentTurn = true
+						pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "text"))
+						// Do not close the browser on parameter validation errors
 						return
 					}
 				}
 
 				if (action === "resize") {
 					if (!size) {
-						task.consecutiveMistakeCount++
-						task.recordToolError("browser_action")
-						pushToolResult(await task.sayAndCreateMissingParamError("browser_action", "size"))
-						await task.browserSession.closeBrowser()
+						cline.consecutiveMistakeCount++
+						cline.recordToolError("browser_action")
+						cline.didToolFailInCurrentTurn = true
+						pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "size"))
+						// Do not close the browser on parameter validation errors
 						return
 					}
 				}
 
-				task.consecutiveMistakeCount = 0
+				if (action === "screenshot") {
+					if (!filePath) {
+						cline.consecutiveMistakeCount++
+						cline.recordToolError("browser_action")
+						cline.didToolFailInCurrentTurn = true
+						pushToolResult(await cline.sayAndCreateMissingParamError("browser_action", "path"))
+						// Do not close the browser on parameter validation errors
+						return
+					}
+				}
 
-				await task.say(
-					"browser_action",
-					JSON.stringify({
-						action: action as BrowserAction,
-						coordinate: coordinate ? `${coordinate.x},${coordinate.y}` : undefined,
-						text,
-					} satisfies ClineSayBrowserAction),
-					undefined,
-					false,
-				)
+				cline.consecutiveMistakeCount = 0
+
+				// Prepare say payload; include executedCoordinate for pointer actions
+				const sayPayload: ClineSayBrowserAction & { executedCoordinate?: string } = {
+					action: action as BrowserAction,
+					coordinate,
+					text,
+					size,
+				}
+				if ((action === "click" || action === "hover") && processedCoordinate) {
+					sayPayload.executedCoordinate = processedCoordinate
+				}
+				await cline.say("browser_action", JSON.stringify(sayPayload), undefined, false)
 
 				switch (action) {
 					case "click":
-						browserActionResult = await task.browserSession.click(`${coordinate!.x},${coordinate!.y}`)
+						browserActionResult = await cline.browserSession.click(processedCoordinate!)
 						break
 					case "hover":
-						browserActionResult = await task.browserSession.hover(`${coordinate!.x},${coordinate!.y}`)
+						browserActionResult = await cline.browserSession.hover(processedCoordinate!)
 						break
 					case "type":
-						browserActionResult = await task.browserSession.type(text!)
+						browserActionResult = await cline.browserSession.type(text!)
+						break
+					case "press":
+						browserActionResult = await cline.browserSession.press(text!)
 						break
 					case "scroll_down":
-						browserActionResult = await task.browserSession.scrollDown()
+						browserActionResult = await cline.browserSession.scrollDown()
 						break
 					case "scroll_up":
-						browserActionResult = await task.browserSession.scrollUp()
+						browserActionResult = await cline.browserSession.scrollUp()
 						break
 					case "resize":
-						browserActionResult = await task.browserSession.resize(`${size!.width},${size!.height}`)
+						browserActionResult = await cline.browserSession.resize(size!)
+						break
+					case "screenshot":
+						browserActionResult = await cline.browserSession.saveScreenshot(filePath!, cline.cwd)
 						break
 					case "close":
-						browserActionResult = await task.browserSession.closeBrowser()
+						browserActionResult = await cline.browserSession.closeBrowser()
 						break
 				}
 			}
@@ -183,62 +217,67 @@ export class BrowserActionTool extends BaseTool<"browser_action"> {
 				case "click":
 				case "hover":
 				case "type":
+				case "press":
 				case "scroll_down":
 				case "scroll_up":
 				case "resize":
-					await task.say("browser_action_result", JSON.stringify(browserActionResult))
+				case "screenshot": {
+					await cline.say("browser_action_result", JSON.stringify(browserActionResult))
 
-					pushToolResult(
-						formatResponse.toolResult(
-							`The browser action has been executed. The console logs and screenshot have been captured for your analysis.\n\nConsole logs:\n${
-								browserActionResult?.logs || "(No new logs)"
-							}\n\n(REMEMBER: if you need to proceed to using non-\`browser_action\` tools or launch a new browser, you MUST first close cline browser. For example, if after analyzing the logs and screenshot you need to edit a file, you must first close the browser before you can use the write_to_file tool.)`,
-							browserActionResult?.screenshot ? [browserActionResult.screenshot] : [],
-						),
-					)
+					const images = browserActionResult?.screenshot ? [browserActionResult.screenshot] : []
+
+					let messageText =
+						action === "screenshot"
+							? `Screenshot saved to: ${filePath}`
+							: `The browser action has been executed.`
+
+					messageText += `\n\n**CRITICAL**: When providing click/hover coordinates:`
+					messageText += `\n1. Screenshot dimensions != Browser viewport dimensions`
+					messageText += `\n2. Measure x,y on the screenshot image you see below`
+					messageText += `\n3. Use format: <coordinate>x,y@WIDTHxHEIGHT</coordinate> where WIDTHxHEIGHT is the EXACT pixel size of the screenshot image`
+					messageText += `\n4. Never use the browser viewport size for WIDTHxHEIGHT - it is only for reference and is often larger than the screenshot`
+					messageText += `\n5. Screenshots are often downscaled - always use the dimensions you see in the image`
+					messageText += `\nExample: Viewport 1280x800, screenshot 1000x625, click (500,300) -> <coordinate>500,300@1000x625</coordinate>`
+
+					// Include browser viewport dimensions (for reference only)
+					if (browserActionResult?.viewportWidth && browserActionResult?.viewportHeight) {
+						messageText += `\n\nBrowser viewport: ${browserActionResult.viewportWidth}x${browserActionResult.viewportHeight}`
+					}
+
+					// Include cursor position if available
+					if (browserActionResult?.currentMousePosition) {
+						messageText += `\nCursor position: ${browserActionResult.currentMousePosition}`
+					}
+
+					messageText += `\n\nConsole logs:\n${browserActionResult?.logs || "(No new logs)"}\n`
+
+					if (images.length > 0) {
+						const blocks = [
+							...formatResponse.imageBlocks(images),
+							{ type: "text", text: messageText } as Anthropic.TextBlockParam,
+						]
+						pushToolResult(blocks)
+					} else {
+						pushToolResult(messageText)
+					}
+
 					break
-
+				}
 				case "close":
 					pushToolResult(
 						formatResponse.toolResult(
 							`The browser has been closed. You may now proceed to using other tools.`,
 						),
 					)
+
 					break
 			}
-		} catch (error) {
-			await task.browserSession.closeBrowser()
-			await handleError("executing browser action", error as Error)
-		}
-	}
 
-	override async handlePartial(task: Task, block: ToolUse<"browser_action">): Promise<void> {
-		const action: BrowserAction | undefined = block.params.action as BrowserAction
-		const url: string | undefined = block.params.url
-		const coordinate: string | undefined = block.params.coordinate
-		const text: string | undefined = block.params.text
-
-		if (!action || !browserActions.includes(action)) {
 			return
 		}
-
-		if (action === "launch") {
-			await task
-				.ask("browser_action_launch", this.removeClosingTag("url", url, block.partial), block.partial)
-				.catch(() => {})
-		} else {
-			await task.say(
-				"browser_action",
-				JSON.stringify({
-					action: action as BrowserAction,
-					coordinate: this.removeClosingTag("coordinate", coordinate, block.partial),
-					text: this.removeClosingTag("text", text, block.partial),
-				} satisfies ClineSayBrowserAction),
-				undefined,
-				block.partial,
-			)
-		}
+	} catch (error) {
+		// Keep the browser session alive on errors; report the error without terminating the session
+		await handleError("executing browser action", error)
+		return
 	}
 }
-
-export const browserActionTool = new BrowserActionTool()

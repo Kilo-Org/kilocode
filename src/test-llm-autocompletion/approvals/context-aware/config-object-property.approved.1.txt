@@ -1,0 +1,16 @@
+import { ServerConfig, createServer } from './config/server-config';
+
+const config: ServerConfig = {
+  port: 3000,
+  host: 'localhost',
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+  logging: {
+    level: 'info',
+  },
+};
+
+const server = createServer(config);
+server.start();

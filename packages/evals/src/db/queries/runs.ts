@@ -134,3 +134,67 @@ export const deleteRun = async (runId: number) => {
 
 	await db.delete(schema.taskMetrics).where(inArray(schema.taskMetrics.id, taskMetricsIds))
 }
+
+/**
+ * Get all runs without a taskMetricsId (incomplete runs)
+ */
+export const getIncompleteRuns = async () => {
+	return db.query.runs.findMany({
+		where: sql`${schema.runs.taskMetricsId} IS NULL`,
+		columns: { id: true },
+	})
+}
+
+/**
+ * Delete multiple runs by their IDs
+ */
+export const deleteRunsByIds = async (runIds: number[]) => {
+	if (runIds.length === 0) return
+
+	// Get all tasks for these runs
+	const tasks = await db.query.tasks.findMany({
+		where: inArray(schema.tasks.runId, runIds),
+		columns: { id: true, taskMetricsId: true },
+	})
+
+	const taskIds = tasks.map(({ id }) => id)
+
+	// Get run taskMetricsIds
+	const runs = await db.query.runs.findMany({
+		where: inArray(schema.runs.id, runIds),
+		columns: { taskMetricsId: true },
+	})
+
+	// Delete tool errors for tasks
+	if (taskIds.length > 0) {
+		await db.delete(schema.toolErrors).where(inArray(schema.toolErrors.taskId, taskIds))
+	}
+
+	// Delete tasks
+	await db.delete(schema.tasks).where(inArray(schema.tasks.runId, runIds))
+
+	// Delete tool errors for runs
+	await db.delete(schema.toolErrors).where(inArray(schema.toolErrors.runId, runIds))
+
+	// Delete from tables that exist in DB but not in drizzle schema
+	// Using individual deletes since drizzle's sql template doesn't support custom table schemas
+	for (const runId of runIds) {
+		await db.execute(sql`DELETE FROM "cpuMetrics" WHERE run_id = ${runId}`)
+		await db.execute(sql`DELETE FROM "notes" WHERE run_id = ${runId}`)
+	}
+
+	// Delete runs
+	await db.delete(schema.runs).where(inArray(schema.runs.id, runIds))
+
+	// Delete task metrics
+	const taskMetricsIds = [
+		...tasks
+			.map(({ taskMetricsId }) => taskMetricsId)
+			.filter((id): id is number => id !== null && id !== undefined),
+		...runs.map(({ taskMetricsId }) => taskMetricsId).filter((id): id is number => id !== null && id !== undefined),
+	]
+
+	if (taskMetricsIds.length > 0) {
+		await db.delete(schema.taskMetrics).where(inArray(schema.taskMetrics.id, taskMetricsIds))
+	}
+}

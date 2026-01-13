@@ -4,7 +4,7 @@
 
 import { useAtomValue } from "jotai"
 import { useMemo } from "react"
-import { isStreamingAtom, showFollowupSuggestionsAtom } from "../atoms/ui.js"
+import { isStreamingAtom, followupSuggestionsMenuVisibleAtom } from "../atoms/ui.js"
 import { useApprovalHandler } from "./useApprovalHandler.js"
 import { hasResumeTaskAtom } from "../atoms/extension.js"
 import { shellModeActiveAtom } from "../atoms/keyboard.js"
@@ -46,7 +46,7 @@ function getModifierKey(): string {
  */
 export function useHotkeys(): UseHotkeysReturn {
 	const isStreaming = useAtomValue(isStreamingAtom)
-	const isFollowupVisible = useAtomValue(showFollowupSuggestionsAtom)
+	const isFollowupVisible = useAtomValue(followupSuggestionsMenuVisibleAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 	const isShellModeActive = useAtomValue(shellModeActiveAtom)
 	const { isApprovalPending } = useApprovalHandler()
@@ -70,7 +70,7 @@ export function useHotkeys(): UseHotkeysReturn {
 
 		// Priority 3: Streaming state - show cancel
 		if (isStreaming) {
-			return [{ keys: `${modifierKey}+X`, description: "to cancel" }]
+			return [{ keys: `Esc/${modifierKey}+X`, description: "to cancel" }]
 		}
 
 		// Priority 4: Followup suggestions visible
@@ -95,7 +95,7 @@ export function useHotkeys(): UseHotkeysReturn {
 		// Default: General command hints
 		return [
 			{ keys: "/help", description: "for commands" },
-			{ keys: "/mode", description: "to switch mode" },
+			{ keys: "Shift+Tab", description: "to cycle mode" },
 			{ keys: "!", description: "for shell mode", primary: true },
 		]
 	}, [hasResumeTask, isApprovalPending, isStreaming, isFollowupVisible, isShellModeActive, modifierKey])

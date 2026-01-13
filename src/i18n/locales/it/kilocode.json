@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "in pausa",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (disabilitato)",
-				"tokenError": "Deve essere impostato un token valido per usare Autocomplete",
+				"noCredits": "**Nessun credito nel tuo account**\n\nIl tuo account Kilo Code non ha crediti. Per usare l'autocompletamento, aggiungi crediti al tuo account.\n\n[Apri Impostazioni](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Nessun modello di autocompletamento configurato**\n\nPer abilitare l'autocompletamento, aggiungi un profilo con uno di questi provider supportati: {{providers}}.\n\n[Apri Impostazioni](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Costo totale della sessione:",
 				"provider": "Provider:",
 				"model": "Modello:",
@@ -171,5 +173,40 @@
 		"checkpointsUnavailable": "Impossibile mostrare le nuove modifiche, i checkpoint non sono disponibili.",
 		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
 		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "La tua versione di Kilocode CLI è obsoleta e non supporta l'Agent Manager. Aggiorna all'ultima versione.",
+			"cliNotFound": "Kilocode CLI non trovato. Installalo per utilizzare l'Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI non è configurato. Esegui 'kilocode auth' per accedere o 'kilocode config' per configurare.",
+			"sessionFailed": "Impossibile avviare la sessione dell'agente",
+			"sessionFailedWithMessage": "Impossibile avviare la sessione dell'agente: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Istruzioni di Aggiornamento",
+			"installInstructions": "Istruzioni di Installazione",
+			"getHelp": "Ottieni Aiuto",
+			"runInTerminal": "Esegui nel Terminale",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "Aggiorna Globale",
+			"updateLocal": "Aggiorna Locale",
+			"installGlobal": "Installa Globale",
+			"installLocal": "Installa Locale"
+		},
+		"terminal": {
+			"installMessage": "Esecuzione di npm install per installare Kilocode CLI. Una volta completato, puoi chiudere questo terminale e provare ad avviare nuovamente l'Agent Manager.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "La tua chiave API OpenAI non è valida o non ha accesso alla Realtime API. Controlla la tua chiave API e riprova.",
+			"unknown": "Connessione fallita. Controlla la tua configurazione e riprova."
+		}
+	},
+	"configDiscovery": {
+		"removed": "Codice Kilo: Rimosso {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"added": "Kilo Codice: Aggiunto {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

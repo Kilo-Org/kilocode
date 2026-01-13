@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Провайдеры",
+		"modes": "Режимы",
+		"mcp": "Серверы MCP",
 		"autoApprove": "Автоодобрение",
 		"browser": "Доступ к компьютеру",
 		"checkpoints": "Контрольные точки",
@@ -36,6 +38,26 @@
 		"language": "Язык",
 		"about": "О Kilo Code",
 		"autoPurge": "Авто-очистка"
+	},
+	"about": {
+		"bugReport": {
+			"label": "Нашли ошибку?",
+			"link": "Сообщить на GitHub"
+		},
+		"featureRequest": {
+			"label": "Есть идея?",
+			"link": "Поделитесь с нами"
+		},
+		"securityIssue": {
+			"label": "Обнаружили уязвимость?",
+			"link": "Следуйте нашему процессу раскрытия"
+		},
+		"contact": {
+			"label": "Нужно с нами связаться? Напишите"
+		},
+		"community": "Хотите получить советы или просто пообщаться с другими пользователями Kilo Code? Присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Контакты и Сообщество",
+		"manageSettings": "Управление Настройками"
 	},
 	"slashCommands": {
 		"description": "Управляйте своими слэш-командами для быстрого выполнения пользовательских рабочих процессов и действий. <DocsLink>Узнать больше</DocsLink>"
@@ -57,9 +79,17 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введите свой API-ключ Vercel AI Gateway",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Регион AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Профиль AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Имя профиля AWS из ~/.aws/credentials (обязательно).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Ключ API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Введите свой ключ API OpenRouter",
+		"openRouterProviderRoutingLabel": "Маршрутизация провайдера OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter направляет запросы к лучшим доступным провайдерам для вашей модели эмбеддинга. По умолчанию запросы балансируются между топовыми провайдерами для максимальной доступности. Однако вы можете выбрать конкретного провайдера для этой модели.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Ключ API:",
 		"mistralApiKeyPlaceholder": "Введите свой API-ключ Mistral",
@@ -131,11 +161,14 @@
 			"geminiApiKeyRequired": "Требуется ключ API Gemini",
 			"mistralApiKeyRequired": "Требуется API-ключ Mistral",
 			"vercelAiGatewayApiKeyRequired": "Требуется API-ключ Vercel AI Gateway",
+			"bedrockRegionRequired": "Требуется регион AWS",
+			"bedrockProfileRequired": "Требуется профиль AWS",
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",
 			"baseUrlRequired": "Требуется базовый URL",
 			"modelDimensionMinValue": "Размерность модели должна быть больше 0",
 			"openRouterApiKeyRequired": "Требуется ключ API OpenRouter"
 		},
+		"optional": "необязательно",
 		"advancedConfigLabel": "Расширенная конфигурация",
 		"searchMinScoreLabel": "Порог оценки поиска",
 		"searchMinScoreDescription": "Минимальный балл сходства (0.0-1.0), необходимый для результатов поиска. Более низкие значения возвращают больше результатов, но они могут быть менее релевантными. Более высокие значения возвращают меньше результатов, но более релевантных.",
@@ -269,9 +302,9 @@
 		"getOpenRouterApiKey": "Получить OpenRouter API-ключ",
 		"vercelAiGatewayApiKey": "Ключ API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Получить ключ API Vercel AI Gateway",
+		"glamaApiKey": "API-ключ Glama",
+		"getGlamaApiKey": "Получить API-ключ Glama",
 		"apiKeyStorageNotice": "API-ключи хранятся безопасно в Secret Storage VSCode",
-		"glamaApiKey": "Glama API-ключ",
-		"getGlamaApiKey": "Получить Glama API-ключ",
 		"useCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"useReasoning": "Включить рассуждения",
 		"useHostHeader": "Использовать пользовательский Host-заголовок",
@@ -301,6 +334,8 @@
 		"anthropic1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
 		"awsBedrock1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
+		"basetenApiKey": "Baseten API-ключ",
+		"getBasetenApiKey": "Получить Baseten API-ключ",
 		"cerebrasApiKey": "Cerebras API-ключ",
 		"getCerebrasApiKey": "Получить Cerebras API-ключ",
 		"chutesApiKey": "Chutes API-ключ",
@@ -538,8 +573,10 @@
 			"none": "Нет",
 			"minimal": "Минимальный (самый быстрый)",
 			"high": "Высокие",
+			"xhigh": "Очень высокие",
 			"medium": "Средние",
-			"low": "Низкие"
+			"low": "Низкие",
+			"xhigh": "Очень высокие"
 		},
 		"verbosity": {
 			"label": "Подробность вывода",
@@ -757,6 +794,10 @@
 		"includeCurrentCost": {
 			"label": "Включить текущую стоимость в контекст",
 			"description": "Если включено, текущая стоимость использования API будет включена в системную подсказку. Отключите, если модели прекращают работу из-за проблем со стоимостью."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git статус макс. файлов",
+			"description": "Максимальное количество записей файлов для включения в контекст статуса git. Установите значение 0, чтобы отключить. Информация о ветке и коммитах всегда отображается, если значение > 0."
 		}
 	},
 	"terminal": {
@@ -819,6 +860,14 @@
 	},
 	"advancedSettings": {
 		"title": "Дополнительные настройки"
+	},
+	"toolProtocol": {
+		"label": "Протокол вызова инструментов",
+		"description": "Выберите, как Kilo Code будет взаимодействовать с API. Нативный использует API вызова функций провайдера, а XML — определения инструментов в формате XML.",
+		"default": "По умолчанию",
+		"xml": "XML",
+		"native": "Нативный",
+		"currentDefault": "По умолчанию: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -907,6 +956,8 @@
 			"description": "Если включено, инструмент new_task будет требовать предоставления параметра todos. Это гарантирует, что все новые задачи начинаются с четкого списка целей. Когда отключено (по умолчанию), параметр todos остается необязательным для обратной совместимости."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Провайдер",
+			"providerDescription": "Выберите провайдера для генерации изображений.",
 			"name": "Включить генерацию изображений ИИ",
 			"description": "Когда включено, Kilo Code может генерировать изображения из текстовых запросов. Требует настроенный API-ключ Kilo Code или OpenRouter.",
 			"apiProvider": "Провайдер API",
@@ -928,6 +979,14 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Включить слэш-команды, инициированные моделью",
 			"description": "Когда включено, Kilo Code может выполнять ваши слэш-команды для выполнения рабочих процессов."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Параллельные вызовы инструментов",
+			"description": "При включении нативный протокол может выполнять несколько инструментов в одном ходе сообщения ассистента."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Речь-в-текст (STT)",
+			"description": "При включении Kilo Code может преобразовывать вашу речь в текст с помощью модели Whisper от OpenAI. Нажмите кнопку микрофона в чате, чтобы начать запись. Требуется установленный FFmpeg и настроенный API-провайдер OpenAI."
 		}
 	},
 	"promptCaching": {
@@ -966,7 +1025,10 @@
 		"label": "Модель",
 		"searchPlaceholder": "Поиск",
 		"noMatchFound": "Совпадений не найдено",
-		"useCustomModel": "Использовать пользовательскую: {{modelId}}"
+		"useCustomModel": "Использовать пользовательскую: {{modelId}}",
+		"simplifiedExplanation": "Ты сможешь настроить подробные параметры модели позже.",
+		"recommendedModels": "Рекомендуемые модели",
+		"allModels": "Все модели"
 	},
 	"footer": {
 		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>kilo.ai/discord</discordLink>",
@@ -1087,6 +1149,10 @@
 		"collapseThinking": {
 			"label": "Сворачивать сообщения о размышлениях по умолчанию",
 			"description": "Если включено, блоки с размышлениями будут свернуты по умолчанию, пока вы не начнете с ними взаимодействовать"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Требовать {{primaryMod}}+Enter для отправки сообщений",
+			"description": "Если включено, необходимо нажать {{primaryMod}}+Enter для отправки сообщений вместо простого Enter"
 		}
 	}
 }

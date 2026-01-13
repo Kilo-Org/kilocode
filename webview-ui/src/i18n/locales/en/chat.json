@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Organization link copied to clipboard",
 		"shareSuccessPublic": "Public link copied to clipboard",
 		"openInCloud": "Open task in Roo Code Cloud",
-		"openInCloudIntro": "Keep monitoring or interacting with Roo from anywhere. Scan, click or copy to open."
+		"openInCloudIntro": "Keep monitoring or interacting with Roo from anywhere. Scan, click or copy to open.",
+		"openApiHistory": "Open API History",
+		"openUiHistory": "Open UI History"
 	},
 	"history": {
 		"title": "History"
@@ -131,6 +133,7 @@
 	"enhancePromptDescription": "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 	"addImages": "Add images to message",
 	"sendMessage": "Send message",
+	"pressToSend": "Press {{keyCombination}} to send",
 	"stopTts": "Stop text-to-speech",
 	"typeMessage": "Type a message...",
 	"typeTask": "Type your task here...",
@@ -148,7 +151,19 @@
 		"failed": "API Request Failed",
 		"streaming": "API Request...",
 		"cancelled": "API Request Cancelled",
-		"streamingFailed": "API Streaming Failed"
+		"streamingFailed": "API Streaming Failed",
+		"errorTitle": "API Error {{code}}",
+		"errorMessage": {
+			"docs": "Docs",
+			"400": "The provider couldn't process the request as made. Stop the task and try a different approach.",
+			"401": "Couldn't authenticate with provider. Please check your API key configuration.",
+			"402": "You seem to have run out of funds/credits in your account. Go to your provider and add more to continue.",
+			"403": "Unauthorized. Your API key is valid, but the provider refused to complete this request.",
+			"429": "Too many requests. You're being rate-limited by the provider. Please wait a bit before your next API call.",
+			"500": "Provider server error. Something is wrong on the provider side, there's nothing wrong with your request.",
+			"connection": "Connection error. Make sure you have a working internet connection.",
+			"unknown": "Unknown API error. Please contact Kilo support."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -169,11 +184,20 @@
 		},
 		"current": "Current"
 	},
-	"contextCondense": {
-		"title": "Context Condensed",
-		"condensing": "Condensing context...",
-		"errorHeader": "Failed to condense context",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context Condensed",
+			"inProgress": "Condensing context...",
+			"errorHeader": "Failed to condense context"
+		},
+		"truncation": {
+			"title": "Context Truncated",
+			"inProgress": "Truncating context...",
+			"messagesRemoved": "{{count}} message removed",
+			"messagesRemoved_other": "{{count}} messages removed",
+			"description": "Older messages were removed from the conversation to stay within the context window limit. This is a fast but less context-preserving approach compared to condensation."
+		}
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code wants to fetch detailed instructions to assist with the current task"
@@ -273,6 +297,11 @@
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
+	"errorDetails": {
+		"title": "Error Details",
+		"copyToClipboard": "Copy to Clipboard",
+		"copied": "Copied!"
+	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
 	},
@@ -298,7 +327,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Released",
+		"title": "Roo Code {{version}} Released",
+		"support": "Please support Roo Code by starring us on <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Limited-time FREE stealth model</bold> - Code Supernova: Now upgraded with a <bold>1M token context window</bold>! A versatile agentic coding model that supports image inputs, accessible through Roo Code Cloud.",
 			"note": "(Note: prompts and completions are logged by the model creator and used to improve the model)",
@@ -307,19 +337,18 @@
 			"goToSettingsButton": "Go to Settings"
 		},
 		"release": {
-			"heading": "New in the Extension:",
-			"openRouterEmbeddings": "Support for OpenRouter embedding models",
-			"chutesDynamic": "Chutes now loads the latest models dynamically",
-			"queuedMessagesFix": "Fixes for queued messages getting lost"
+			"heading": "What's New:",
+			"contextRewind": "Improved context condensing now lets you restore the full previous context when rewinding to a checkpoint",
+			"rooProvider": "Roo Code Cloud provider now preserves reasoning content and defaults to native tools for better performance"
 		},
 		"cloudAgents": {
 			"heading": "New in the Cloud:",
-			"prFixer": "Introducing the <bold>PR Fixer</bold> cloud agent to complement the PR Reviewer.",
-			"prFixerDescription": "The PR Fixer applies high-quality changes to your PRs, right from GitHub. Invoke via a PR comment and it will read the entire comment history to understand context, agreements, and tradeoffs - then implement the right fix.",
-			"tryPrFixerButton": "Try PR Fixer"
+			"specialized": "Introducing <bold>Explainer</bold>, <bold>Planner</bold>, and <bold>Coder</bold> - three specialized cloud agents to enhance your workflows.",
+			"description": "The agents work together in the cloud and can be triggered from the web or through Slack.",
+			"tryButton": "Try Cloud Agents"
 		},
 		"careers": "Also, <careersLink>we're hiring!</careersLink>",
-		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Thinking",
@@ -327,10 +356,10 @@
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copy to input (same as shift + click)",
-		"autoSelectCountdown": "Auto-selecting in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Auto-approve enabled. Selecting in {{seconds}}s…"
 	},
 	"browser": {
+		"session": "Browser Session",
 		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",
@@ -343,12 +372,26 @@
 		},
 		"sessionStarted": "Browser Session Started",
 		"actions": {
-			"title": "Browse Action: ",
+			"title": "Browser Action: ",
+			"launched": "Launched browser",
 			"launch": "Launch browser at {{url}}",
+			"clicked": "Clicked at: {{coordinate}}",
 			"click": "Click ({{coordinate}})",
+			"typed": "Typed: {{text}}",
 			"type": "Type \"{{text}}\"",
+			"pressed": "Pressed key: {{key}}",
+			"press": "Press {{key}}",
+			"scrolledDown": "Scrolled down",
 			"scrollDown": "Scroll down",
+			"scrolledUp": "Scrolled up",
 			"scrollUp": "Scroll up",
+			"hovered": "Hovered at: {{coordinate}}",
+			"hover": "Hover ({{coordinate}})",
+			"resized": "Resized to: {{size}}",
+			"resize": "Resize to {{size}}",
+			"screenshotSaved": "Screenshot saved",
+			"screenshot": "Save screenshot to {{path}}",
+			"closed": "Closed browser",
 			"close": "Close browser"
 		}
 	},

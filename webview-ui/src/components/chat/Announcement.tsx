@@ -1,12 +1,12 @@
-import { useState, memo } from "react"
+import { memo, type ReactNode, useState } from "react"
 import { Trans } from "react-i18next"
+import { SiDiscord, SiReddit, SiX } from "react-icons/si"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { Package } from "@roo/package"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { vscode } from "@src/utils/vscode"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@src/components/ui"
-import { Button } from "@src/components/ui"
 
 interface AnnouncementProps {
 	hideAnnouncement: () => void
@@ -43,58 +43,34 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					{/* Regular Release Highlights */}
 					<div className="mb-4">
 						<p className="mb-3">{t("chat:announcement.release.heading")}</p>
-						<ul className="list-disc list-inside text-sm space-y-1">
-							<li>{t("chat:announcement.release.openRouterEmbeddings")}</li>
-							<li>{t("chat:announcement.release.chutesDynamic")}</li>
-							<li>{t("chat:announcement.release.queuedMessagesFix")}</li>
+						<ul className="list-disc list-inside text-sm space-y-1.5">
+							<li>{t("chat:announcement.release.contextRewind")}</li>
+							<li>{t("chat:announcement.release.rooProvider")}</li>
 						</ul>
 					</div>
 
-					{/* Horizontal Rule */}
-					<hr className="my-4 border-vscode-widget-border" />
-
-					{/* Cloud Agents Section */}
-					<div>
-						<p className="mb-3">{t("chat:announcement.cloudAgents.heading")}</p>
-
-						<div className="mb-3">
-							<Trans
-								i18nKey="chat:announcement.cloudAgents.prFixer"
-								components={{
-									bold: <b />,
-								}}
+					<div className="mt-4 text-sm text-center text-vscode-descriptionForeground">
+						<div className="flex items-center justify-center gap-4">
+							<SocialLink
+								icon={<SiX className="w-4 h-4" aria-hidden />}
+								label="X"
+								href="https://x.com/roocode"
 							/>
-						</div>
-
-						<p className="mb-3 text-sm text-vscode-descriptionForeground">
-							{t("chat:announcement.cloudAgents.prFixerDescription")}
-						</p>
-
-						<div className="mt-4">
-							<Button
-								onClick={() => {
-									vscode.postMessage({
-										type: "openExternal",
-										url: "https://roocode.com/pr-fixer?utm_source=roocode&utm_medium=extension&utm_campaign=announcement",
-									})
-									setOpen(false)
-									hideAnnouncement()
-								}}
-								className="w-full">
-								{t("chat:announcement.cloudAgents.tryPrFixerButton")}
-							</Button>
+							<SocialLink
+								icon={<SiDiscord className="w-4 h-4" aria-hidden />}
+								label="Discord"
+								href="https://discord.gg/rCQcvT7Fnt"
+							/>
+							<SocialLink
+								icon={<SiReddit className="w-4 h-4" aria-hidden />}
+								label="Reddit"
+								href="https://www.reddit.com/r/RooCode/"
+							/>
 						</div>
 					</div>
 
-					<div className="mt-4 text-sm text-center">
-						<Trans
-							i18nKey="chat:announcement.socialLinks"
-							components={{
-								xLink: <XLink />,
-								discordLink: <DiscordLink />,
-								redditLink: <RedditLink />,
-							}}
-						/>
+					<div className="mt-3 text-sm text-center text-vscode-descriptionForeground">
+						<Trans i18nKey="chat:announcement.support" components={{ githubLink: <GitHubLink /> }} />
 					</div>
 
 					{/* Careers Section */}
@@ -112,40 +88,31 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 	)
 }
 
-const XLink = () => (
+const SocialLink = ({ icon, label, href }: { icon: ReactNode; label: string; href: string }) => (
 	<VSCodeLink
-		href="https://x.com/roocode"
+		href={href}
+		className="inline-flex items-center gap-1"
 		onClick={(e) => {
 			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://x.com/roocode" })
+			vscode.postMessage({ type: "openExternal", url: href })
 		}}>
-		X
+		{icon}
+		<span className="sr-only">{label}</span>
 	</VSCodeLink>
 )
 
-const DiscordLink = () => (
+const GitHubLink = ({ children }: { children?: ReactNode }) => (
 	<VSCodeLink
-		href="https://discord.gg/rCQcvT7Fnt"
+		href="https://github.com/RooCodeInc/Roo-Code"
 		onClick={(e) => {
 			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://discord.gg/rCQcvT7Fnt" })
+			vscode.postMessage({ type: "openExternal", url: "https://github.com/RooCodeInc/Roo-Code" })
 		}}>
-		Discord
+		{children}
 	</VSCodeLink>
 )
 
-const RedditLink = () => (
-	<VSCodeLink
-		href="https://www.reddit.com/r/RooCode/"
-		onClick={(e) => {
-			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://www.reddit.com/r/RooCode/" })
-		}}>
-		r/RooCode
-	</VSCodeLink>
-)
-
-const CareersLink = ({ children }: { children?: React.ReactNode }) => (
+const CareersLink = ({ children }: { children?: ReactNode }) => (
 	<VSCodeLink
 		href="https://careers.roocode.com"
 		onClick={(e) => {

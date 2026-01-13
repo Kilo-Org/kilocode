@@ -6,7 +6,8 @@
 		"imageTooLarge": "File gambar terlalu besar ({{size}} MB). Ukuran maksimum yang diizinkan adalah {{max}} MB.",
 		"imageWithSize": "File gambar ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Model tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"toolRepetitionLimitReached": "Kilo tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"unknownToolError": "Kilo mencoba menggunakan alat yang tidak dikenal: \"{{toolName}}\". Mencoba lagi...",
 	"codebaseSearch": {
 		"approval": "Mencari '{{query}}' di codebase..."
 	},
@@ -16,6 +17,18 @@
 	"newTask": {
 		"errors": {
 			"policy_restriction": "Gagal membuat tugas baru karena pembatasan kebijakan."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Kunci API OpenRouter diperlukan untuk menghasilkan gambar dengan model OpenRouter. Silakan konfigurasikan di pengaturan eksperimental Pembuatan Gambar.",
+		"failedWithStatus": "Gagal menghasilkan gambar: {{status}} {{statusText}}",
+		"failedWithMessage": "Gagal menghasilkan gambar: {{message}}",
+		"noImageGenerated": "Tidak ada gambar yang dihasilkan dalam respons",
+		"invalidImageData": "Data gambar tidak valid dalam respons",
+		"invalidImageFormat": "Format gambar tidak valid diterima",
+		"unknownError": "Terjadi kesalahan yang tidak diketahui",
+		"roo": {
+			"authRequired": "Autentikasi Roo Code Cloud diperlukan untuk menghasilkan gambar. Silakan masuk ke Roo Code Cloud."
 		}
 	}
 }

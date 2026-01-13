@@ -18,6 +18,7 @@ describe("codebaseSearchTool", () => {
 	let handleError: ReturnType<typeof vi.fn>
 	let pushToolResult: ReturnType<typeof vi.fn>
 	let removeClosingTag: (tag: string, text?: string) => string
+	let toolProtocol: "xml" | "native"
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -37,6 +38,7 @@ describe("codebaseSearchTool", () => {
 		handleError = vi.fn()
 		pushToolResult = vi.fn()
 		removeClosingTag = vi.fn((_, text) => text || "")
+		toolProtocol = "xml"
 	})
 
 	it("returns a friendly message when indexing is still in progress", async () => {
@@ -67,6 +69,7 @@ describe("codebaseSearchTool", () => {
 			handleError,
 			pushToolResult,
 			removeClosingTag,
+			toolProtocol,
 		})
 
 		expect(managerMock.searchIndex).not.toHaveBeenCalled()

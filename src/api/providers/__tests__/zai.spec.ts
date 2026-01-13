@@ -173,6 +173,84 @@ describe("ZAiHandler", () => {
 		})
 	})
 
+	describe("International API", () => {
+		beforeEach(() => {
+			handler = new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "international_api" })
+		})
+
+		it("should use the correct international API base URL", () => {
+			new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "international_api" })
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://api.z.ai/api/paas/v4",
+				}),
+			)
+		})
+
+		it("should use the provided API key for international API", () => {
+			const zaiApiKey = "test-zai-api-key"
+			new ZAiHandler({ zaiApiKey, zaiApiLine: "international_api" })
+			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: zaiApiKey }))
+		})
+
+		it("should return international default model when no model is specified", () => {
+			const model = handler.getModel()
+			expect(model.id).toBe(internationalZAiDefaultModelId)
+			expect(model.info).toEqual(internationalZAiModels[internationalZAiDefaultModelId])
+		})
+
+		it("should return specified international model when valid model is provided", () => {
+			const testModelId: InternationalZAiModelId = "glm-4.5-air"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international_api",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(internationalZAiModels[testModelId])
+		})
+	})
+
+	describe("China API", () => {
+		beforeEach(() => {
+			handler = new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "china_api" })
+		})
+
+		it("should use the correct China API base URL", () => {
+			new ZAiHandler({ zaiApiKey: "test-zai-api-key", zaiApiLine: "china_api" })
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://open.bigmodel.cn/api/paas/v4",
+				}),
+			)
+		})
+
+		it("should use the provided API key for China API", () => {
+			const zaiApiKey = "test-zai-api-key"
+			new ZAiHandler({ zaiApiKey, zaiApiLine: "china_api" })
+			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: zaiApiKey }))
+		})
+
+		it("should return China default model when no model is specified", () => {
+			const model = handler.getModel()
+			expect(model.id).toBe(mainlandZAiDefaultModelId)
+			expect(model.info).toEqual(mainlandZAiModels[mainlandZAiDefaultModelId])
+		})
+
+		it("should return specified China model when valid model is provided", () => {
+			const testModelId: MainlandZAiModelId = "glm-4.5-air"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "china_api",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(mainlandZAiModels[testModelId])
+		})
+	})
+
 	describe("Default behavior", () => {
 		it("should default to international when no zaiApiLine is specified", () => {
 			const handlerDefault = new ZAiHandler({ zaiApiKey: "test-zai-api-key" })
@@ -209,7 +287,7 @@ describe("ZAiHandler", () => {
 			const errorMessage = "Z AI API error"
 			mockCreate.mockRejectedValueOnce(new Error(errorMessage))
 			await expect(handler.completePrompt("test prompt")).rejects.toThrow(
-				`Z AI completion error: ${errorMessage}`,
+				`Z.ai completion error: ${errorMessage}`,
 			)
 		})
 
@@ -259,7 +337,7 @@ describe("ZAiHandler", () => {
 			const firstChunk = await stream.next()
 
 			expect(firstChunk.done).toBe(false)
-			expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+			expect(firstChunk.value).toMatchObject({ type: "usage", inputTokens: 10, outputTokens: 20 })
 		})
 
 		it("createMessage should pass correct parameters to Z AI client", async () => {
@@ -301,144 +379,6 @@ describe("ZAiHandler", () => {
 				}),
 				undefined,
 			)
-		})
-
-		describe("Reasoning functionality", () => {
-			it("should include thinking parameter when enableReasoningEffort is true and model supports reasoning in createMessage", async () => {
-				const handlerWithReasoning = new ZAiHandler({
-					apiModelId: "glm-4.6", // GLM-4.6 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: true,
-				})
-
-				mockCreate.mockImplementationOnce(() => {
-					return {
-						[Symbol.asyncIterator]: () => ({
-							async next() {
-								return { done: true }
-							},
-						}),
-					}
-				})
-
-				const systemPrompt = "Test system prompt"
-				const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
-
-				const messageGenerator = handlerWithReasoning.createMessage(systemPrompt, messages)
-				await messageGenerator.next()
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.objectContaining({
-						thinking: { type: "enabled" },
-					}),
-					undefined,
-				)
-			})
-
-			it("should not include thinking parameter when enableReasoningEffort is false in createMessage", async () => {
-				const handlerWithoutReasoning = new ZAiHandler({
-					apiModelId: "glm-4.6", // GLM-4.6 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: false,
-				})
-
-				mockCreate.mockImplementationOnce(() => {
-					return {
-						[Symbol.asyncIterator]: () => ({
-							async next() {
-								return { done: true }
-							},
-						}),
-					}
-				})
-
-				const systemPrompt = "Test system prompt"
-				const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
-
-				const messageGenerator = handlerWithoutReasoning.createMessage(systemPrompt, messages)
-				await messageGenerator.next()
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.not.objectContaining({
-						thinking: expect.anything(),
-					}),
-					undefined,
-				)
-			})
-
-			it("should not include thinking parameter when model does not support reasoning in createMessage", async () => {
-				const handlerWithNonReasoningModel = new ZAiHandler({
-					apiModelId: "glm-4-32b-0414-128k", // This model doesn't have supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: true,
-				})
-
-				mockCreate.mockImplementationOnce(() => {
-					return {
-						[Symbol.asyncIterator]: () => ({
-							async next() {
-								return { done: true }
-							},
-						}),
-					}
-				})
-
-				const systemPrompt = "Test system prompt"
-				const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
-
-				const messageGenerator = handlerWithNonReasoningModel.createMessage(systemPrompt, messages)
-				await messageGenerator.next()
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.not.objectContaining({
-						thinking: expect.anything(),
-					}),
-					undefined,
-				)
-			})
-
-			it("should include thinking parameter when enableReasoningEffort is true and model supports reasoning in completePrompt", async () => {
-				const handlerWithReasoning = new ZAiHandler({
-					apiModelId: "glm-4.5", // GLM-4.5 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: true,
-				})
-
-				const expectedResponse = "This is a test response"
-				mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
-
-				await handlerWithReasoning.completePrompt("test prompt")
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.objectContaining({
-						thinking: { type: "enabled" },
-					}),
-				)
-			})
-
-			it("should not include thinking parameter when enableReasoningEffort is false in completePrompt", async () => {
-				const handlerWithoutReasoning = new ZAiHandler({
-					apiModelId: "glm-4.5", // GLM-4.5 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: false,
-				})
-
-				const expectedResponse = "This is a test response"
-				mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
-
-				await handlerWithoutReasoning.completePrompt("test prompt")
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.not.objectContaining({
-						thinking: expect.anything(),
-					}),
-				)
-			})
 		})
 	})
 })

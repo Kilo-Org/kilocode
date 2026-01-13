@@ -8,8 +8,6 @@ function multiplyBy5(a) {
 }
 
 // Implement function to combine above functions
-
-function combineFunctions(a, b) {
-    const sum = addNumbers(a, b);
-    return multiplyBy5(sum);
+function combineFunctions(a, b, callback) {
+    return callback(a, b)
 }

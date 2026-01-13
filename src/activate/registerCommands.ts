@@ -16,7 +16,7 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
-import { getAppUrl, AGENT_MANAGER_ENABLED } from "@roo-code/types" // kilocode_change
+import { getAppUrl } from "@roo-code/types" // kilocode_change
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
 import { AgentManagerProvider } from "../core/kilocode/agent-manager/AgentManagerProvider" // kilocode_change
 
@@ -70,14 +70,10 @@ export type RegisterCommandOptions = {
 let agentManagerProvider: AgentManagerProvider | undefined
 
 const registerAgentManager = (options: RegisterCommandOptions) => {
-	const { context, outputChannel } = options
+	const { context, outputChannel, provider } = options
 
-	vscode.commands.executeCommand("setContext", "kilo-code.agentManagerEnabled", AGENT_MANAGER_ENABLED)
-
-	if (AGENT_MANAGER_ENABLED) {
-		agentManagerProvider = new AgentManagerProvider(context, outputChannel)
-		context.subscriptions.push(agentManagerProvider)
-	}
+	agentManagerProvider = new AgentManagerProvider(context, outputChannel, provider)
+	context.subscriptions.push(agentManagerProvider)
 }
 // kilocode_change end
 
@@ -128,33 +124,12 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		// This ensures the focus happens after the view has switched
 		await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 	},
-	mcpButtonClicked: () => {
-		const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-		if (!visibleProvider) {
-			return
-		}
-
-		TelemetryService.instance.captureTitleButtonClicked("mcp")
-
-		visibleProvider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
-	},
-	promptsButtonClicked: () => {
-		const visibleProvider = getVisibleProviderOrLog(outputChannel)
-
-		if (!visibleProvider) {
-			return
-		}
-
-		TelemetryService.instance.captureTitleButtonClicked("prompts")
-
-		visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
-	},
 	popoutButtonClicked: () => {
 		TelemetryService.instance.captureTitleButtonClicked("popout")
 
 		return openClineInNewTab({ context, outputChannel })
 	},
+	open: () => openClineInNewTab({ context, outputChannel }), // kilocode_change
 	openInNewTab: () => openClineInNewTab({ context, outputChannel }),
 	settingsButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
@@ -181,6 +156,28 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		visibleProvider.postMessageToWebview({ type: "action", action: "historyButtonClicked" })
 	},
 	// kilocode_change begin
+	mcpButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		TelemetryService.instance.captureTitleButtonClicked("mcp")
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "mcpButtonClicked" })
+	},
+	promptsButtonClicked: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		TelemetryService.instance.captureTitleButtonClicked("prompts")
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "promptsButtonClicked" })
+	},
 	profileButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 

@@ -1,24 +1,15 @@
-import { AutocompleteInput, GhostContextProvider } from "../types"
+import {
+	AutocompleteInput,
+	GhostContextProvider,
+	FimGhostPrompt,
+	FimCompletionResult,
+	FillInAtCursorSuggestion,
+} from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
-import { FillInAtCursorSuggestion } from "./HoleFiller"
 
-export interface FimGhostPrompt {
-	strategy: "fim"
-	autocompleteInput: AutocompleteInput
-	formattedPrefix: string
-	prunedSuffix: string
-}
-
-export interface FimCompletionResult {
-	suggestion: FillInAtCursorSuggestion
-	cost: number
-	inputTokens: number
-	outputTokens: number
-	cacheWriteTokens: number
-	cacheReadTokens: number
-}
+export type { FimGhostPrompt, FimCompletionResult }
 
 export class FimPromptBuilder {
 	constructor(private contextProvider: GhostContextProvider) {}

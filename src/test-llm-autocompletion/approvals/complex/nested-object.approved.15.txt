@@ -1,0 +1,15 @@
+const config = {
+	server: {
+	  port: 3000,
+	  host: 'localhost',
+	},
+	db: {
+	  host: 'localhost',
+	  port: 5432,
+	  database: 'postgres',
+	  user: 'postgres',
+	  password: 'postgres',
+	},
+  };
+
+  module.exports = config;

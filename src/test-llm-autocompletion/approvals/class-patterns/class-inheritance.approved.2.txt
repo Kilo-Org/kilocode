@@ -8,3 +8,9 @@ class Dog extends Animal {
 	constructor(name, breed) {
 		super(name);
 		this.breed = breed;
+	}
+}
+
+const dog = new Dog('Rex', 'German Shepherd');
+console.log(dog.name); // Rex
+console.log(dog.breed); // German Shepherd

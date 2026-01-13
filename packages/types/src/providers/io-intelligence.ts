@@ -18,6 +18,7 @@ export const ioIntelligenceModels = {
 		contextWindow: 128000,
 		supportsImages: false,
 		supportsPromptCache: false,
+		supportsNativeTools: true,
 		description: "DeepSeek R1 reasoning model",
 	},
 	"meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
@@ -25,6 +26,7 @@ export const ioIntelligenceModels = {
 		contextWindow: 430000,
 		supportsImages: true,
 		supportsPromptCache: false,
+		supportsNativeTools: true,
 		description: "Llama 4 Maverick 17B model",
 	},
 	"Intel/Qwen3-Coder-480B-A35B-Instruct-int4-mixed-ar": {
@@ -32,6 +34,7 @@ export const ioIntelligenceModels = {
 		contextWindow: 106000,
 		supportsImages: false,
 		supportsPromptCache: false,
+		supportsNativeTools: true,
 		description: "Qwen3 Coder 480B specialized for coding",
 	},
 	"openai/gpt-oss-120b": {
@@ -39,6 +42,7 @@ export const ioIntelligenceModels = {
 		contextWindow: 131072,
 		supportsImages: false,
 		supportsPromptCache: false,
+		supportsNativeTools: true,
 		description: "OpenAI GPT-OSS 120B model",
 	},
 } as const satisfies Record<string, ModelInfo>

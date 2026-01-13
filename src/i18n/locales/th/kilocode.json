@@ -102,14 +102,41 @@
 		"noChanges": "ไม่สามารถแสดงการเปลี่ยนแปลงใหม่ได้ ไม่พบการเปลี่ยนแปลงใดๆ",
 		"error": "ไม่สามารถแสดงการเปลี่ยนแปลงใหม่ได้ เกิดข้อผิดพลาด"
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "เวอร์ชัน Kilocode CLI ของคุณล้าสมัยและไม่รองรับ Agent Manager โปรดอัปเดตเป็นเวอร์ชันล่าสุด",
+			"cliNotFound": "ไม่พบ Kilocode CLI โปรดติดตั้งเพื่อใช้งาน Agent Manager",
+			"cliMisconfigured": "Kilocode CLI ยังไม่ได้ตั้งค่า เรียกใช้ 'kilocode auth' เพื่อลงชื่อเข้าใช้ หรือ 'kilocode config' เพื่อตั้งค่า",
+			"sessionFailed": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ",
+			"sessionFailedWithMessage": "เริ่มเซสชันเอเจนต์ไม่สำเร็จ: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "คำแนะนำการอัปเดต",
+			"installInstructions": "คำแนะนำการติดตั้ง",
+			"getHelp": "รับความช่วยเหลือ",
+			"runInTerminal": "เรียกใช้ในเทอร์มินัล",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "อัปเดตแบบ Global",
+			"updateLocal": "อัปเดตแบบ Local",
+			"installGlobal": "ติดตั้งแบบ Global",
+			"installLocal": "ติดตั้งแบบ Local"
+		},
+		"terminal": {
+			"installMessage": "กำลังรัน npm install เพื่อติดตั้ง Kilocode CLI เมื่อเสร็จแล้ว คุณสามารถปิดเทอร์มินัลนี้และลองเริ่ม Agent Manager อีกครั้ง",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "หยุดชั่วคราว",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
-				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
+				"noCredits": "**ไม่มีเครดิตในบัญชีของคุณ**\n\nบัญชี Kilo Code ของคุณไม่มีเครดิต หากต้องการใช้การเติมข้อความอัตโนมัติ กรุณาเพิ่มเครดิตในบัญชีของคุณ\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**ไม่ได้กำหนดค่าโมเดลการเติมข้อความอัตโนมัติ**\n\nหากต้องการเปิดใช้งานการเติมข้อความอัตโนมัติ ให้เพิ่มโปรไฟล์กับผู้ให้บริการที่รองรับเหล่านี้: {{providers}}\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:",
@@ -171,5 +198,15 @@
 			"cancelButton": "ยกเลิก"
 		},
 		"tipMessage": "Kilo: กด {{shortcut}} เพื่อสร้างคำสั่งเทอร์มินัล"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "คีย์ OpenAI API ของคุณไม่ถูกต้องหรือไม่มีสิทธิ์เข้าถึง Realtime API กรุณาตรวจสอบคีย์ API ของคุณและลองใหม่อีกครั้ง",
+			"unknown": "การเชื่อมต่อล้มเหลว กรุณาตรวจสอบการกำหนดค่าของคุณและลองใหม่อีกครั้ง"
+		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Code: เพิ่ม {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Kilo Code: ลบ {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

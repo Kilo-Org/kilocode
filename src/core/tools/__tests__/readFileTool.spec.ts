@@ -9,8 +9,6 @@ import { parseSourceCodeDefinitionsForFile } from "../../../services/tree-sitter
 import { isBinaryFile } from "isbinaryfile"
 import { ReadFileToolUse, ToolParamName, ToolResponse } from "../../../shared/tools"
 import { readFileTool } from "../ReadFileTool"
-import { formatResponse } from "../../prompts/responses"
-import { DEFAULT_MAX_IMAGE_FILE_SIZE_MB, DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB } from "../helpers/imageHelpers"
 
 vi.mock("path", async () => {
 	const originalPath = await vi.importActual("path")
@@ -204,10 +202,20 @@ function createMockCline(): any {
 		getTokenUsage: vi.fn().mockReturnValue({
 			contextTokens: 10000,
 		}),
+		apiConfiguration: {
+			apiProvider: "anthropic",
+		},
 		// CRITICAL: Always ensure image support is enabled
 		api: {
 			getModel: vi.fn().mockReturnValue({
-				info: { supportsImages: true, contextWindow: 200000 },
+				id: "test-model",
+				info: {
+					supportsImages: true,
+					contextWindow: 200000,
+					maxTokens: 4096,
+					supportsPromptCache: false,
+					supportsNativeTools: false,
+				},
 			}),
 			countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 		},
@@ -220,10 +228,8 @@ function createMockCline(): any {
 function setImageSupport(mockCline: any, supportsImages: boolean | undefined): void {
 	mockCline.api = {
 		getModel: vi.fn().mockReturnValue({
-			info: {
-				supportsImages,
-				contextWindow: 100000, // Add context window for token limit calculations
-			},
+			id: "test-model",
+			info: { supportsImages },
 		}),
 		countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 	}
@@ -332,6 +338,7 @@ describe("read_file tool with maxReadFileLine setting", () => {
 				toolResult = result
 			},
 			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		return toolResult
@@ -641,6 +648,7 @@ describe("read_file tool XML output structure", () => {
 				toolResult = result
 			},
 			removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		return toolResult
@@ -745,6 +753,7 @@ describe("read_file tool XML output structure", () => {
 						localResult = result
 					},
 					removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+					toolProtocol: "xml",
 				})
 				// In multi-image scenarios, the result is pushed to pushToolResult, not returned directly.
 				// We need to check the mock's calls to get the result.
@@ -1365,6 +1374,7 @@ describe("read_file tool XML output structure", () => {
 					toolResult = result
 				},
 				removeClosingTag: (param: ToolParamName, content?: string) => content ?? "",
+				toolProtocol: "xml",
 			})
 
 			// Verify
@@ -1452,6 +1462,7 @@ describe("read_file tool with image support", () => {
 				toolResult = result
 			},
 			removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+			toolProtocol: "xml",
 		})
 
 		console.log("Result type:", Array.isArray(toolResult) ? "array" : typeof toolResult)
@@ -1623,6 +1634,7 @@ describe("read_file tool with image support", () => {
 					toolResult = result
 				},
 				removeClosingTag: (_: ToolParamName, content?: string) => content ?? "",
+				toolProtocol: "xml",
 			})
 
 			// Verify error handling

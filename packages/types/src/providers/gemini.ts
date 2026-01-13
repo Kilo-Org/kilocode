@@ -3,18 +3,19 @@ import type { ModelInfo } from "../model.js"
 // https://ai.google.dev/gemini-api/docs/models/gemini
 export type GeminiModelId = keyof typeof geminiModels
 
-export const geminiDefaultModelId: GeminiModelId = "gemini-3-pro-preview" // kilocode_change
+export const geminiDefaultModelId: GeminiModelId = "gemini-3-pro-preview"
 
 export const geminiModels = {
-	// Latest models (pointing to the most recent stable versions)
 	"gemini-3-pro-preview": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
-		supportsReasoningEffort: true,
+		supportsReasoningEffort: ["low", "high"],
 		reasoningEffort: "low",
 		supportsTemperature: true,
+		defaultTemperature: 1,
 		inputPrice: 4.0,
 		outputPrice: 18.0,
 		tiers: [
@@ -30,136 +31,56 @@ export const geminiModels = {
 			},
 		],
 	},
-	"gemini-flash-latest": {
+	"gemini-3-flash-preview": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 		supportsPromptCache: true,
+		supportsReasoningEffort: ["minimal", "low", "medium", "high"],
+		reasoningEffort: "medium",
+		supportsTemperature: true,
+		defaultTemperature: 1,
 		inputPrice: 0.3,
 		outputPrice: 2.5,
 		cacheReadsPrice: 0.075,
 		cacheWritesPrice: 1.0,
-		maxThinkingTokens: 24_576,
-		supportsReasoningBudget: true,
 	},
-	"gemini-flash-lite-latest": {
-		maxTokens: 65_536,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.1,
-		outputPrice: 0.4,
-		cacheReadsPrice: 0.025,
-		cacheWritesPrice: 1.0,
-		supportsReasoningBudget: true,
-		maxThinkingTokens: 24_576,
-	},
-
-	// 2.5 Flash models (09-2025 versions - most recent)
-	"gemini-2.5-flash-preview-09-2025": {
-		maxTokens: 65_536,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.3,
-		outputPrice: 2.5,
-		cacheReadsPrice: 0.075,
-		cacheWritesPrice: 1.0,
-		maxThinkingTokens: 24_576,
-		supportsReasoningBudget: true,
-	},
-	"gemini-2.5-flash-lite-preview-09-2025": {
-		maxTokens: 65_536,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.1,
-		outputPrice: 0.4,
-		cacheReadsPrice: 0.025,
-		cacheWritesPrice: 1.0,
-		supportsReasoningBudget: true,
-		maxThinkingTokens: 24_576,
-	},
-
-	// 2.5 Flash models (06-17 version)
-	"gemini-2.5-flash-lite-preview-06-17": {
-		maxTokens: 64_000,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.1,
-		outputPrice: 0.4,
-		cacheReadsPrice: 0.025,
-		cacheWritesPrice: 1.0,
-		supportsReasoningBudget: true,
-		maxThinkingTokens: 24_576,
-	},
-
-	// 2.5 Flash models (05-20 versions)
-	"gemini-2.5-flash-preview-05-20:thinking": {
-		maxTokens: 65_535,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.15,
-		outputPrice: 3.5,
-		cacheReadsPrice: 0.0375,
-		cacheWritesPrice: 1.0,
-		maxThinkingTokens: 24_576,
-		supportsReasoningBudget: true,
-		requiredReasoningBudget: true,
-	},
-	"gemini-2.5-flash-preview-05-20": {
-		maxTokens: 65_535,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.15,
-		outputPrice: 0.6,
-		cacheReadsPrice: 0.0375,
-		cacheWritesPrice: 1.0,
-	},
-
-	// 2.5 Flash models (04-17 versions)
-	"gemini-2.5-flash-preview-04-17:thinking": {
-		maxTokens: 65_535,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0.15,
-		outputPrice: 3.5,
-		maxThinkingTokens: 24_576,
-		supportsReasoningBudget: true,
-		requiredReasoningBudget: true,
-	},
-	"gemini-2.5-flash-preview-04-17": {
-		maxTokens: 65_535,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0.15,
-		outputPrice: 0.6,
-	},
-
-	// 2.5 Flash stable
-	"gemini-2.5-flash": {
-		maxTokens: 64_000,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.3,
-		outputPrice: 2.5,
-		cacheReadsPrice: 0.075,
-		cacheWritesPrice: 1.0,
-		maxThinkingTokens: 24_576,
-		supportsReasoningBudget: true,
-	},
-
 	// 2.5 Pro models
+	"gemini-2.5-pro": {
+		maxTokens: 64_000,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true,
+		supportsPromptCache: true,
+		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
+		outputPrice: 15,
+		cacheReadsPrice: 0.625,
+		cacheWritesPrice: 4.5,
+		maxThinkingTokens: 32_768,
+		supportsReasoningBudget: true,
+		requiredReasoningBudget: true,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 1.25,
+				outputPrice: 10,
+				cacheReadsPrice: 0.31,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 2.5,
+				outputPrice: 15,
+				cacheReadsPrice: 0.625,
+			},
+		],
+	},
 	"gemini-2.5-pro-preview-06-05": {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -186,6 +107,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -210,6 +132,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -217,41 +140,6 @@ export const geminiModels = {
 		cacheWritesPrice: 4.5,
 		maxThinkingTokens: 32_768,
 		supportsReasoningBudget: true,
-		tiers: [
-			{
-				contextWindow: 200_000,
-				inputPrice: 1.25,
-				outputPrice: 10,
-				cacheReadsPrice: 0.31,
-			},
-			{
-				contextWindow: Infinity,
-				inputPrice: 2.5,
-				outputPrice: 15,
-				cacheReadsPrice: 0.625,
-			},
-		],
-	},
-	"gemini-2.5-pro-exp-03-25": {
-		maxTokens: 65_535,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-	"gemini-2.5-pro": {
-		maxTokens: 64_000,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
-		outputPrice: 15,
-		cacheReadsPrice: 0.625,
-		cacheWritesPrice: 4.5,
-		maxThinkingTokens: 32_768,
-		supportsReasoningBudget: true,
-		requiredReasoningBudget: true,
 		tiers: [
 			{
 				contextWindow: 200_000,
@@ -268,127 +156,72 @@ export const geminiModels = {
 		],
 	},
 
-	// 2.0 Flash models
-	"gemini-2.0-flash-lite-preview-02-05": {
-		maxTokens: 8192,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-	"gemini-2.0-flash-thinking-exp-01-21": {
+	// 2.5 Flash models
+	"gemini-flash-latest": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,
 		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
+		supportsNativeTools: true,
+		supportsPromptCache: true,
+		inputPrice: 0.3,
+		outputPrice: 2.5,
+		cacheReadsPrice: 0.075,
+		cacheWritesPrice: 1.0,
+		maxThinkingTokens: 24_576,
+		supportsReasoningBudget: true,
 	},
-	"gemini-2.0-flash-thinking-exp-1219": {
-		maxTokens: 8192,
-		contextWindow: 32_767,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-	"gemini-2.0-flash-exp": {
-		maxTokens: 8192,
+	"gemini-2.5-flash-preview-09-2025": {
+		maxTokens: 65_536,
 		contextWindow: 1_048_576,
 		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
+		supportsNativeTools: true,
+		supportsPromptCache: true,
+		inputPrice: 0.3,
+		outputPrice: 2.5,
+		cacheReadsPrice: 0.075,
+		cacheWritesPrice: 1.0,
+		maxThinkingTokens: 24_576,
+		supportsReasoningBudget: true,
 	},
-	"gemini-2.0-flash-001": {
-		maxTokens: 8192,
+	"gemini-2.5-flash": {
+		maxTokens: 64_000,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
+		supportsPromptCache: true,
+		inputPrice: 0.3,
+		outputPrice: 2.5,
+		cacheReadsPrice: 0.075,
+		cacheWritesPrice: 1.0,
+		maxThinkingTokens: 24_576,
+		supportsReasoningBudget: true,
+	},
+
+	// 2.5 Flash Lite models
+	"gemini-flash-lite-latest": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
 		inputPrice: 0.1,
 		outputPrice: 0.4,
 		cacheReadsPrice: 0.025,
 		cacheWritesPrice: 1.0,
+		supportsReasoningBudget: true,
+		maxThinkingTokens: 24_576,
 	},
-
-	// 2.0 Pro models
-	"gemini-2.0-pro-exp-02-05": {
-		maxTokens: 8192,
-		contextWindow: 2_097_152,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-
-	// 1.5 Flash models
-	"gemini-1.5-flash-002": {
-		maxTokens: 8192,
+	"gemini-2.5-flash-lite-preview-09-2025": {
+		maxTokens: 65_536,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsNativeTools: true,
 		supportsPromptCache: true,
-		inputPrice: 0.15, // This is the pricing for prompts above 128k tokens.
-		outputPrice: 0.6,
-		cacheReadsPrice: 0.0375,
+		inputPrice: 0.1,
+		outputPrice: 0.4,
+		cacheReadsPrice: 0.025,
 		cacheWritesPrice: 1.0,
-		tiers: [
-			{
-				contextWindow: 128_000,
-				inputPrice: 0.075,
-				outputPrice: 0.3,
-				cacheReadsPrice: 0.01875,
-			},
-			{
-				contextWindow: Infinity,
-				inputPrice: 0.15,
-				outputPrice: 0.6,
-				cacheReadsPrice: 0.0375,
-			},
-		],
-	},
-	"gemini-1.5-flash-exp-0827": {
-		maxTokens: 8192,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-	"gemini-1.5-flash-8b-exp-0827": {
-		maxTokens: 8192,
-		contextWindow: 1_048_576,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-
-	// 1.5 Pro models
-	"gemini-1.5-pro-002": {
-		maxTokens: 8192,
-		contextWindow: 2_097_152,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-	"gemini-1.5-pro-exp-0827": {
-		maxTokens: 8192,
-		contextWindow: 2_097_152,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-	},
-
-	// Experimental models
-	"gemini-exp-1206": {
-		maxTokens: 8192,
-		contextWindow: 2_097_152,
-		supportsImages: true,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
+		supportsReasoningBudget: true,
+		maxThinkingTokens: 24_576,
 	},
 } as const satisfies Record<string, ModelInfo>

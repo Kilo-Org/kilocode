@@ -1,6 +1,0 @@
-function processOrder(order) {
-  // TODO: Add comprehensive logging for order processing
-  console.log('Processing order:', order);
-  const result = validateOrder(order);
-  return result;
-}

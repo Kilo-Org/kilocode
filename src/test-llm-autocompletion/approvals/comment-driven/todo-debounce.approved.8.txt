@@ -1,6 +1,5 @@
 function handleSearch(query) {
   // TODO: Add debounce to prevent excessive API calls
-  const debouncedSearch = debounce(searchAPI, 500);
-  debouncedSearch(query);
+  // TODO: Add error handling for API call
   searchAPI(query);
 }

@@ -217,8 +217,8 @@ export function truncateText(text: string, maxLength: number = 100): string {
  * Format file path for display
  */
 export function formatFilePath(path: string): string {
-	// Remove leading ./ if present
-	return path.replace(/^\.\//, "")
+	// Trim whitespace and remove leading ./ if present
+	return path.trim().replace(/^\.\//, "")
 }
 
 /**
@@ -244,6 +244,35 @@ export function formatJson(jsonString: string, indent: number = 2): string | nul
 	} catch {
 		return null
 	}
+}
+
+/**
+ * Format content for unknown message types
+ * If the text looks like JSON (starts with { or [), try to parse and pretty-print it.
+ * Otherwise, return the text as-is.
+ *
+ * @param text - The message text to format
+ * @param fallback - Fallback text if text is empty/undefined
+ * @returns Formatted display content
+ */
+export function formatUnknownMessageContent(text: string | undefined, fallback: string): string {
+	if (!text) {
+		return fallback
+	}
+
+	const trimmed = text.trim()
+	// Only attempt JSON parsing if it looks like JSON
+	if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+		try {
+			const parsed = JSON.parse(text)
+			return JSON.stringify(parsed, null, 2)
+		} catch {
+			// Not valid JSON, return as-is
+			return text
+		}
+	}
+
+	return text
 }
 
 /**

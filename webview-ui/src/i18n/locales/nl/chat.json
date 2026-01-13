@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
 		"shareSuccessPublic": "Openbare link gekopieerd naar klembord",
 		"openInCloud": "Taak openen in Roo Code Cloud",
-		"openInCloudIntro": "Blijf Roo vanaf elke locatie monitoren of ermee interacteren. Scan, klik of kopieer om te openen."
+		"openInCloudIntro": "Blijf Roo vanaf elke locatie monitoren of ermee interacteren. Scan, klik of kopieer om te openen.",
+		"openApiHistory": "API-geschiedenis openen",
+		"openUiHistory": "UI-geschiedenis openen"
 	},
 	"history": {
 		"title": "Geschiedenis"
@@ -120,6 +122,7 @@
 	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",
+	"pressToSend": "Druk op {{keyCombination}} om te verzenden",
 	"stopTts": "Stop tekst-naar-spraak",
 	"typeMessage": "Typ een bericht...",
 	"typeTask": "Typ hier je taak...",
@@ -137,7 +140,19 @@
 		"failed": "API-verzoek mislukt",
 		"streaming": "API-verzoek...",
 		"cancelled": "API-verzoek geannuleerd",
-		"streamingFailed": "API-streaming mislukt"
+		"streamingFailed": "API-streaming mislukt",
+		"errorTitle": "API-fout {{code}}",
+		"errorMessage": {
+			"docs": "Documentatie",
+			"400": "De provider kon het verzoek niet verwerken zoals ingediend. Stop de taak en probeer een ander benadering.",
+			"401": "Kon niet authenticeren met provider. Controleer je API-sleutelconfiguratie.",
+			"402": "Het lijkt erop dat je funds/credits op je account op zijn. Ga naar je provider en voeg meer toe om door te gaan.",
+			"403": "Niet geautoriseerd. Je API-sleutel is geldig, maar de provider weigerde dit verzoek in te willigen.",
+			"429": "Te veel verzoeken. Je bent rate-gelimiteerd door de provider. Wacht alsjeblieft even voor je volgende API-aanroep.",
+			"500": "Provider-serverfout. Er is iets mis aan de kant van de provider, er is niets mis met je verzoek.",
+			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Kilo-ondersteuning.",
+			"connection": "Verbindingsfout. Zorg ervoor dat je een werkende internetverbinding hebt."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -255,6 +270,11 @@
 		"title": "Bewerking mislukt"
 	},
 	"troubleMessage": "Kilo Code ondervindt problemen...",
+	"errorDetails": {
+		"title": "Foutdetails",
+		"copyToClipboard": "Naar klembord kopiëren",
+		"copied": "Gekopieerd!"
+	},
 	"powershell": {
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
 	},
@@ -277,7 +297,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} uitgebracht",
+		"title": "Roo Code {{version}} uitgebracht",
+		"support": "Steun Roo Code door ons een ster te geven op <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Beperkt tijd GRATIS stealth model</bold> - Code Supernova: Nu geüpgraded met een <bold>1M token contextvenster</bold>! Een veelzijdig agentisch codeermodel dat beeldinvoer ondersteunt, beschikbaar via Roo Code Cloud.",
 			"note": "(Opmerking: prompts en aanvullingen worden gelogd door de modelmaker en gebruikt om het model te verbeteren)",
@@ -286,36 +307,44 @@
 			"goToSettingsButton": "Ga naar Instellingen"
 		},
 		"release": {
-			"heading": "Nieuw in de extensie:",
-			"openRouterEmbeddings": "Ondersteuning voor OpenRouter embedding-modellen",
-			"chutesDynamic": "Chutes laadt nu dynamisch de nieuwste modellen",
-			"queuedMessagesFix": "Oplossingen voor berichten in de wachtrij die verloren gaan"
+			"heading": "Nieuw:",
+			"contextRewind": "Verbeterde context-samenvatting stelt je nu in staat om de volledige vorige context te herstellen bij het terugspoelen naar een checkpoint",
+			"rooProvider": "De Roo Code Cloud-provider behoudt nu reasoninginhoud en gebruikt standaard native tools voor betere prestaties"
 		},
 		"cloudAgents": {
 			"heading": "Nieuw in de Cloud:",
-			"prFixer": "Introductie van de <bold>PR Fixer</bold> cloud-agent als aanvulling op de PR Reviewer.",
-			"prFixerDescription": "De PR Fixer van Roo Code past hoogwaardige wijzigingen toe op je PR's, direct vanuit GitHub. Roep het aan via een PR-opmerking en het leest de volledige opmerkingengeschiedenis om context, afspraken en afwegingen te begrijpen - en implementeert vervolgens de juiste oplossing.",
-			"tryPrFixerButton": "Probeer PR Fixer"
+			"specialized": "Introductie van <bold>Explainer</bold>, <bold>Planner</bold> en <bold>Coder</bold> - drie gespecialiseerde cloud-agents om je workflows te verbeteren.",
+			"description": "De agents werken samen in de cloud en kunnen worden geactiveerd vanaf het web of via Slack.",
+			"tryButton": "Probeer Cloud-agents"
 		},
 		"careers": "Ook, <careersLink>we nemen aan!</careersLink>",
-		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Denkt na",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Context samengevat",
-		"condensing": "Context aan het samenvatten...",
-		"errorHeader": "Context samenvatten mislukt",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Context samengevat",
+			"inProgress": "Context aan het samenvatten...",
+			"errorHeader": "Context samenvatten mislukt"
+		},
+		"truncation": {
+			"title": "Context ingekort",
+			"inProgress": "Context aan het inkorten...",
+			"messagesRemoved": "{{count}} bericht verwijderd",
+			"messagesRemoved_other": "{{count}} berichten verwijderd",
+			"description": "Oudere berichten zijn uit het gesprek verwijderd om binnen de limiet van het contextvenster te blijven. Dit is een snelle maar minder contextbehoudende aanpak in vergelijking met samenvoeging."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Kopiëren naar invoer (zelfde als shift + klik)",
-		"autoSelectCountdown": "Automatische selectie in {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Automatisch goedkeuren ingeschakeld. Selecteren in {{seconds}}s…"
 	},
 	"browser": {
+		"session": "Browsersessie",
 		"rooWantsToUse": "Kilo Code wil de browser gebruiken",
 		"consoleLogs": "Console-logboeken",
 		"noNewLogs": "(Geen nieuwe logboeken)",
@@ -328,12 +357,26 @@
 		},
 		"sessionStarted": "Browsersessie gestart",
 		"actions": {
-			"title": "Browse-actie: ",
+			"title": "Browseractie: ",
+			"launched": "Browser gestart",
 			"launch": "Browser starten op {{url}}",
+			"clicked": "Geklikt ({{coordinate}})",
 			"click": "Klik ({{coordinate}})",
+			"typed": "Getypt: {{text}}",
 			"type": "Typ \"{{text}}\"",
+			"pressed": "Ingedrukt: {{key}}",
+			"press": "Druk op {{key}}",
+			"scrolledDown": "Naar beneden gescrolld",
 			"scrollDown": "Scroll naar beneden",
+			"scrolledUp": "Naar boven gescrolld",
 			"scrollUp": "Scroll naar boven",
+			"hovered": "Zweefde ({{coordinate}})",
+			"hover": "Zweven ({{coordinate}})",
+			"resized": "Grootte gewijzigd naar: {{size}}",
+			"resize": "Grootte wijzigen naar {{size}}",
+			"screenshotSaved": "Schermopname opgeslagen",
+			"screenshot": "Schermopname opslaan naar {{path}}",
+			"closed": "Browser gesloten",
 			"close": "Browser sluiten"
 		}
 	},

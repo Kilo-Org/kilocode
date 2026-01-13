@@ -1,17 +1,16 @@
-import { Users, Building2, ArrowRight, Star, LucideIcon, Check, Cloud } from "lucide-react"
+import { Users, ArrowRight, LucideIcon, Check, SquareTerminal, CornerRightDown, Cloud } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 
 import { Button } from "@/components/ui"
 import { AnimatedBackground } from "@/components/homepage"
-import { ContactForm } from "@/components/enterprise/contact-form"
 import { SEO } from "@/lib/seo"
 import { ogImageUrl } from "@/lib/og"
 import { EXTERNAL_LINKS } from "@/lib/constants"
 
-const TITLE = "Roo Code Cloud Pricing"
+const TITLE = "Roo Code Pricing"
 const DESCRIPTION =
-	"Simple, transparent pricing for Roo Code Cloud. The VS Code extension is free forever. Choose the cloud plan that fits your needs."
+	"Simple, transparent pricing for all Roo Code products. The VS Code extension is free forever. Choose the cloud plan that fits your needs."
 const OG_DESCRIPTION = ""
 const PATH = "/pricing"
 
@@ -61,72 +60,67 @@ interface PricingTier {
 	name: string
 	icon: LucideIcon
 	price: string
+	priceSuffix: string
 	period?: string
 	creditPrice?: string
 	trial?: string
-	cancellation?: string
 	description: string
 	featuresIntro?: string
 	features: string[]
 	cta: {
 		text: string
 		href?: string
-		isContactForm?: boolean
 	}
 }
 
 const pricingTiers: PricingTier[] = [
 	{
+		name: "VS Code Extension",
+		icon: SquareTerminal,
+		price: "Free",
+		priceSuffix: "inference",
+		description: "The best local coding agent",
+		features: ["Unlimited local use", "Bring your own model", "Powerful, extensible modes", "Community support"],
+		cta: {
+			text: "Install Now",
+			href: EXTERNAL_LINKS.MARKETPLACE,
+		},
+	},
+	{
 		name: "Cloud Free",
 		icon: Cloud,
 		price: "$0",
-		cancellation: "Cancel anytime",
-		description: "For folks just getting started",
+		period: "/mo",
+		priceSuffix: "credits",
+		creditPrice: `$${PRICE_CREDITS}`,
+		description: "For AI-forward engineers",
+		featuresIntro: "Go beyond the extension with",
 		features: [
-			"Token usage analytics",
+			"Access to Cloud Agents: fully autonomous development you can call from Slack, Github and the web",
+			"Access to the Roo Code Cloud Provider",
 			"Follow your tasks from anywhere",
 			"Share tasks with friends and co-workers",
-			"Early access to free AI Models",
-			"Community support",
+			"Token usage analytics",
+			"Professional support",
 		],
 		cta: {
-			text: "Get started",
+			text: "Sign up",
 			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP,
 		},
 	},
 	{
-		name: "Pro",
-		icon: Star,
-		price: "$20",
-		period: "/mo",
-		trial: "Free 14-day trial · ",
-		creditPrice: `$${PRICE_CREDITS}`,
-		cancellation: "Cancel anytime",
-		description: "For pro Roo coders",
-		featuresIntro: "Everything in Free +",
-		features: [
-			"Cloud Agents: PR Reviewer and more",
-			"Roomote Control: Start, stop and control tasks from anywhere",
-			"Paid support",
-		],
-		cta: {
-			text: "Get started",
-			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP + "?redirect_url=/billing",
-		},
-	},
-	{
-		name: "Team",
+		name: "Cloud Team",
 		icon: Users,
 		price: "$99",
+		priceSuffix: "credits",
 		period: "/mo",
 		creditPrice: `$${PRICE_CREDITS}`,
-		trial: "Free 14-day trial · ",
-		cancellation: "Cancel anytime",
+		trial: "Free for 14 days, then",
 		description: "For AI-forward teams",
-		featuresIntro: "Everything in Pro +",
+		featuresIntro: "Everything in Free +",
 		features: ["Unlimited users (no per-seat cost)", "Shared configuration & policies", "Centralized billing"],
 		cta: {
-			text: "Get started",
+			text: "Sign up",
 			href: EXTERNAL_LINKS.CLOUD_APP_SIGNUP + "?redirect_url=/billing",
 		},
 	},
@@ -138,52 +132,43 @@ export default function PricingPage() {
 			<AnimatedBackground />
 
 			{/* Hero Section */}
-			<section className="relative overflow-hidden pt-16 pb-12">
+			<section className="relative overflow-hidden pt-12 pb-10">
 				<div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="text-center">
-						<h1 className="text-5xl font-bold tracking-tight">Roo Code Cloud Pricing</h1>
-						<p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-							Simple, transparent pricing that scales with your needs.
-							<br />
-							No inference markups. Free 14-day trials to kick the tires.
+						<h1 className="text-5xl font-bold tracking-tight">Roo Code Pricing</h1>
+						<p className="mt-4 text-lg text-muted-foreground">
+							For all of our products: the Roo Code VS Code Extension, Roo Code Cloud and the Roo Code
+							Cloud inference Provider.
 						</p>
 					</div>
 				</div>
 			</section>
 
-			{/* Free Extension Notice */}
-			<div className="mx-auto max-w-6xl">
-				<div className="rounded-xl p-4 mb-8 text-center bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-purple-500/10 border border-blue-500/20 dark:border-white/20">
-					<p className="text-center">
-						<strong className="font-semibold">The Roo Code extension is free! </strong>
-						Roo Code Cloud is an optional service which takes it to the next level.
-					</p>
-				</div>
-			</div>
-
 			{/* Pricing Tiers */}
 			<section className="">
 				<div className="container mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
+					<div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3 md:px-4">
 						{pricingTiers.map((tier) => {
 							const Icon = tier.icon
 							return (
 								<div
 									key={tier.name}
-									className="relative p-6 flex flex-col justify-start bg-background border rounded-2xl transition-all hover:shadow-lg">
+									className="relative group p-6 flex flex-col justify-start bg-background rounded-2xl outline outline-2 outline-border/50 hover:outline-8 transition-all shadow-xl hover:shadow-2xl hover:outline-6">
 									<div className="mb-6">
 										<div className="flex items-center justify-between">
 											<h3 className="text-2xl font-bold tracking-tight">{tier.name}</h3>
-											<Icon className="size-6" />
 										</div>
-										<p className="text-sm text-muted-foreground">{tier.description}</p>
+										<p className="text-sm font-medium">{tier.description}</p>
+									</div>
+									<div className="absolute -right-2 -top-4 rounded-full bg-card shadow-md p-4 outline outline-2 outline-border/50 group-hover:scale-105 group-hover:outline-8 transition-all">
+										<Icon className="size-6" strokeWidth={1.5} />
 									</div>
 
 									<div className="grow mb-8">
 										<p className="text-sm text-muted-foreground font-light mb-2">
 											{tier.featuresIntro}&nbsp;
 										</p>
-										<ul className="space-y-3 my-0 h-[148px]">
+										<ul className="space-y-3 my-0 md:h-[192px]">
 											{tier.features.map((feature) => (
 												<li key={feature} className="flex items-start gap-2">
 													<Check className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
@@ -193,52 +178,67 @@ export default function PricingPage() {
 										</ul>
 									</div>
 
-									<p className="text-2xl mt-0 mb-1 tracking-tight">
-										<strong>{tier.price}</strong>
-										{tier.period}
+									<p className="text-base font-light">{tier.trial}</p>
+
+									<p className="text-xl mb-1 tracking-tight font-light">
+										<strong className="font-bold">{tier.price}</strong>
+										{tier.period} + {tier.priceSuffix}
+										<CornerRightDown className="inline size-4 ml-1 relative top-0.5" />
 									</p>
 
-									{tier.creditPrice && (
-										<p className="text-sm text-muted-foreground mb-1">
-											+ {tier.creditPrice}/hour for Cloud tasks
-										</p>
-									)}
-
-									<p className="text-xs text-muted-foreground mb-4">
-										{tier.trial}
-										{tier.cancellation}
+									<p className="text-sm text-muted-foreground mb-5">
+										{tier.creditPrice && (
+											<>
+												Cloud Agents: {tier.creditPrice}/hour in credits
+												<br />
+											</>
+										)}
+										Inference:{" "}
+										<Link href="/provider" className="underline hover:no-underline">
+											Roo Provider pricing
+										</Link>{" "}
+										credits or{" "}
+										<abbr title="Bring Your Own Model" className="cursor-help">
+											BYOM
+										</abbr>
 									</p>
 
-									{tier.cta.isContactForm ? (
-										<ContactForm
-											formType="demo"
-											buttonText={tier.cta.text}
-											buttonClassName="w-full transition-all duration-300"
-										/>
-									) : (
-										<Button size="lg" className="w-full transition-all duration-300" asChild>
-											<Link href={tier.cta.href!} className="flex items-center justify-center">
-												{tier.cta.text}
-											</Link>
-										</Button>
-									)}
+									<Button size="lg" className="w-full transition-all duration-300" asChild>
+										<Link href={tier.cta.href!} className="flex items-center justify-center">
+											{tier.cta.text}
+											<ArrowRight />
+										</Link>
+									</Button>
+
+									{/* <div className="bg-foreground/20 h-8 absolute -bottom-8 left-1/2 w-[1px]" /> */}
+									<div className="h-[28px] absolute bottom-[-31px] left-1/2 w-[4px] transition-colors bg-gradient-to-b from-transparent to-violet-700/20 group-hover:from-violet-500/50 group-hover:to-violet-500/20" />
 								</div>
 							)
 						})}
 					</div>
-				</div>
 
-				<div className="mx-auto grid max-w-6xl gap-4 mt-4 relative">
-					<p className="bg-background border rounded-2xl p-6 text-center text-sm text-muted-foreground">
-						<Building2 className="inline size-4 mr-2 mb-0.5" />
-						Need SAML, advanced security, custom integrations or terms? Enterprise is for you.
-						<Link
-							href="/enterprise#contact"
-							className="font-medium ml-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-							Talk to Sales
-						</Link>
-						.
-					</p>
+					<div className="max-w-6xl mx-auto mt-8 p-7 flex flex-col md:flex-row gap-8 md:gap-4 bg-violet-200/20 outline-violet-700/20 outline outline-1 rounded-2xl transition-all shadow-none">
+						<div className="md:border-r md:pr-4">
+							<h3 className="text-lg font-medium mb-1">Roo Code Provider</h3>
+							<div className="text-sm text-muted-foreground">
+								<p className="">
+									On any plan, you can use your own LLM provider API key or use the built-in Roo Code
+									Cloud provider – curated models to work with Roo with no markup, including the
+									latest Gemini, GPT and Claude. Paid with credits.
+									<Link href="/provider/pricing" className="underline hover:no-underline ml-1">
+										See per model pricing.
+									</Link>
+								</p>
+							</div>
+						</div>
+						<div className="">
+							<h3 className="text-lg font-medium mb-1">Credits</h3>
+							<p className="text-sm text-muted-foreground">
+								Credits are pre-paid, in dollars, and are deducted with usage for inference and Cloud
+								Agent runs. You&apos;re always in control of your spend, no surprises.
+							</p>
+						</div>
+					</div>
 				</div>
 			</section>
 
@@ -249,7 +249,7 @@ export default function PricingPage() {
 						<h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Frequently Asked Questions</h2>
 					</div>
 					<div className="mx-auto mt-12 grid max-w-5xl gap-8 md:grid-cols-2">
-						<div className="rounded-lg border border-border bg-card p-6">
+						<div className="rounded-xl border border-border bg-card p-6">
 							<h3 className="font-semibold">Wait, is Roo Code free or not?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
 								Yes! The Roo Code VS Code extension is open source and free forever. The extension acts
@@ -257,7 +257,7 @@ export default function PricingPage() {
 								Code Cloud.
 							</p>
 						</div>
-						<div className="rounded-lg border border-border bg-card p-6">
+						<div className="rounded-xl border border-border bg-card p-6">
 							<h3 className="font-semibold">Is there a free trial?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
 								Yes, all paid plans come with a 14-day free trial to try out functionality.
@@ -266,12 +266,25 @@ export default function PricingPage() {
 								To use Cloud Agents, you can buy credits.
 							</p>
 						</div>
-						<div className="rounded-lg border border-border bg-card p-6">
-							<h3 className="font-semibold">How do Cloud Agent credits work?</h3>
+						<div className="rounded-xl border border-border bg-card p-6">
+							<h3 className="font-semibold">How do credits work?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
-								Cloud Agents are a version of Roo running in the cloud without depending on your IDE.
-								You can run as many as you want, and bring your own inference provider key.
+								Roo Code Cloud credits can be used in two ways:
 							</p>
+							<ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">
+								<li>To pay for Cloud Agents running time (${PRICE_CREDITS}/hour)</li>
+								<li>
+									To pay for AI model inference costs (
+									<a
+										href="https://app.roocode.com/provider/pricing"
+										target="_blank"
+										rel="noopener noreferrer"
+										className="underline">
+										varies by model
+									</a>
+									)
+								</li>
+							</ul>
 							<p className="mt-2 text-sm text-muted-foreground">
 								To cover our infrastructure costs, we charge ${PRICE_CREDITS}/hour while the agent is
 								running (independent of inference costs).
@@ -280,25 +293,38 @@ export default function PricingPage() {
 								There are no markups, no tiers, no dumbing-down of models to increase our profit.
 							</p>
 						</div>
-						<div className="rounded-lg border border-border bg-card p-6">
+						<div className="rounded-xl border border-border bg-card p-6">
 							<h3 className="font-semibold">Do I need a credit card for the free trial?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
 								Yes, but you won&apos;t be charged until your trial ends, except for credit purchases.
 							</p>
 							<p className="mt-2 text-sm text-muted-foreground">You can cancel anytime with one click.</p>
 						</div>
-						<div className="rounded-lg border border-border bg-card p-6">
+						<div className="rounded-xl border border-border bg-card p-6">
 							<h3 className="font-semibold">What payment methods do you accept?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
 								We accept all major credit cards, debit cards, and can arrange invoice billing for
 								Enterprise customers.
 							</p>
 						</div>
-						<div className="rounded-lg border border-border bg-card p-6">
-							<h3 className="font-semibold">Can I change plans anytime?</h3>
+						<div className="rounded-xl border border-border bg-card p-6">
+							<h3 className="font-semibold">Can I cancel or change plans?</h3>
 							<p className="mt-2 text-sm text-muted-foreground">
-								Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in
-								your next billing cycle.
+								Yes, you can upgrade, downgrade or cancel your plan at any time. Changes will be
+								reflected in your next billing cycle.
+							</p>
+						</div>
+						<div className="rounded-xl border border-border bg-card p-6 md:col-span-2">
+							<h3 className="font-semibold">
+								What if I have enterprise-level needs like SAML/SCIM, large-scale deployments, specific
+								integrations and custom terms?
+							</h3>
+							<p className="mt-2 text-sm text-muted-foreground">
+								We have an Enterprise plan which can be a fit. Please{" "}
+								<Link href="/enterprise#contact" className="underline hover:no-underline">
+									reach out to our sales team
+								</Link>{" "}
+								to discuss it.
 							</p>
 						</div>
 					</div>

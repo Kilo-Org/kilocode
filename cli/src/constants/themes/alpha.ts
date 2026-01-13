@@ -58,6 +58,17 @@ export const alphaTheme: Theme = {
 		lineNumber: "cyan",
 	},
 
+	markdown: {
+		text: "white",
+		heading: "yellow",
+		strong: "white",
+		em: "white",
+		code: "green",
+		blockquote: "gray",
+		link: "cyan",
+		list: "white",
+	},
+
 	ui: {
 		border: {
 			default: "gray",

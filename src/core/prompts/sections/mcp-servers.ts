@@ -53,6 +53,11 @@ export async function getMcpServersSection(
 					.join("\n\n")}`
 			: "(No MCP servers currently connected)"
 
+	// Different instructions based on protocol
+	const toolAccessInstructions = includeToolDescriptions
+		? `When a server is connected, you can use the server's tools via the \`use_mcp_tool\` tool, and access the server's resources via the \`access_mcp_resource\` tool.`
+		: `When a server is connected, each server's tools are available as native tools with the naming pattern \`mcp_{server_name}_{tool_name}\`. For example, a tool named 'get_forecast' from a server named 'weather' would be available as \`mcp_weather_get_forecast\`. You can also access server resources using the \`access_mcp_resource\` tool.`
+
 	const baseSection = `MCP SERVERS
 
 The Model Context Protocol (MCP) enables communication between the system and MCP servers that provide additional tools and resources to extend your capabilities. MCP servers can be one of two types:
@@ -62,7 +67,7 @@ The Model Context Protocol (MCP) enables communication between the system and MC
 
 # Connected MCP Servers
 
-When a server is connected, you can use the server's tools via the \`use_mcp_tool\` tool, and access the server's resources via the \`access_mcp_resource\` tool.
+${toolAccessInstructions}
 
 ${connectedServers}`
 

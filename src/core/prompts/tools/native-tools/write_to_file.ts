@@ -1,29 +1,43 @@
 import type OpenAI from "openai"
 
+const WRITE_TO_FILE_DESCRIPTION = `Request to write content to a file. This tool is primarily used for creating new files or for scenarios where a complete rewrite of an existing file is intentionally required. If the file exists, it will be overwritten. If it doesn't exist, it will be created. This tool will automatically create any directories needed to write the file.
+
+**Important:** You should prefer using other editing tools over write_to_file when making changes to existing files, since write_to_file is slower and cannot handle large files. Use write_to_file primarily for new file creation.
+
+When using this tool, use it directly with the desired content. You do not need to display the content before using the tool. ALWAYS provide the COMPLETE file content in your response. This is NON-NEGOTIABLE. Partial updates or placeholders like '// rest of code unchanged' are STRICTLY FORBIDDEN. You MUST include ALL parts of the file, even if they haven't been modified. Failure to do so will result in incomplete or broken code.
+
+When creating a new project, organize all new files within a dedicated project directory unless the user specifies otherwise. Structure the project logically, adhering to best practices for the specific type of project being created.
+
+Parameters:
+- path: (required) The path of the file to write to (relative to the current workspace directory)
+- content: (required) The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified. Do NOT include line numbers in the content.
+
+Example: Writing a configuration file
+{ "path": "frontend-config.json", "content": "{\\n  \\"apiEndpoint\\": \\"https://api.example.com\\",\\n  \\"theme\\": {\\n    \\"primaryColor\\": \\"#007bff\\"\\n  }\\n}" }`
+
+const PATH_PARAMETER_DESCRIPTION = `Path to the file to write, relative to the workspace`
+
+const CONTENT_PARAMETER_DESCRIPTION = `Full contents that the file should contain with no omissions or line numbers`
+
 export default {
 	type: "function",
 	function: {
 		name: "write_to_file",
-		description:
-			"Create a new file or completely overwrite an existing file with the exact content provided. Use only when a full rewrite is intended; the tool will create missing directories automatically.",
+		description: WRITE_TO_FILE_DESCRIPTION,
 		strict: true,
 		parameters: {
 			type: "object",
 			properties: {
 				path: {
 					type: "string",
-					description: "Path to the file to write, relative to the workspace",
+					description: PATH_PARAMETER_DESCRIPTION,
 				},
 				content: {
 					type: "string",
-					description: "Full contents that the file should contain with no omissions or line numbers",
-				},
-				line_count: {
-					type: "integer",
-					description: "Total number of lines in the written file, counting blank lines",
+					description: CONTENT_PARAMETER_DESCRIPTION,
 				},
 			},
-			required: ["path", "content", "line_count"],
+			required: ["path", "content"],
 			additionalProperties: false,
 		},
 	},

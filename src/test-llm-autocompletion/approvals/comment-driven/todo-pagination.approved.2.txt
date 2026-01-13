@@ -1,5 +1,0 @@
-function fetchUsers(page, limit) {
-  const offset = (page - 1) * limit;
-  return db.query('SELECT * FROM users LIMIT ? OFFSET ?', [limit, offset]);
-  return db.query('SELECT * FROM users');
-}

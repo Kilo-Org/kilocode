@@ -101,6 +101,12 @@
 					"label": "Configuration de l'API"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Taille du lot d'embedding",
+			"embeddingBatchSizeDescription": "Nombre de segments de code à regrouper pour la génération d'embeddings et les upserts de stockage vectoriel. Des valeurs plus élevées peuvent améliorer la vitesse d'indexation mais peuvent augmenter l'utilisation de la mémoire. Des valeurs plus faibles réduisent l'utilisation de la mémoire mais peuvent ralentir l'indexation.",
+			"scannerMaxBatchRetriesLabel": "Nombre max. de tentatives de lot du scanner",
+			"scannerMaxBatchRetriesDescription": "Nombre maximum de tentatives pour un lot échoué lors de l'analyse de répertoire. Des valeurs plus élevées augmentent la résilience aux erreurs transitoires mais peuvent ralentir l'indexation si les erreurs persistent. Des valeurs plus faibles échouent plus rapidement mais peuvent ignorer du contenu en cas de problèmes temporaires."
 		}
 	},
 	"toolCallStyle": {
@@ -217,29 +223,52 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Déclencheurs",
-			"keybindingDescription": "Les fonctionnalités Autocomplete peuvent être déclenchées par des commandes. Tu peux configurer les <DocsLink>Raccourcis Clavier ici</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Pause pour Compléter",
-				"description": "Quand activé, Kilo Code déclenchera automatiquement Autocomplete quand tu arrêtes de taper. Cela peut être utile pour des corrections rapides et des suggestions."
+				"label": "Auto-trigger Suggestions",
+				"description": "Afficher automatiquement des suggestions de code en ligne lorsque vous faites une pause dans la saisie."
 			},
 			"autoTriggerDelay": {
 				"label": "Délai de Déclenchement Automatique",
-				"description": "Le délai en secondes avant que Kilo Code déclenche Autocomplete après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus intensif en ressources."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tâche rapide ({{keybinding}})",
-				"description": "Tu n'as besoin que d'un changement rapide ? Sélectionne du code (ou pas !) et appuie sur Cmd+I. Décris ton objectif en français simple (\"créer un composant React avec ces props\", \"ajouter la gestion d'erreurs à cette fonction\"), et obtiens plusieurs suggestions prêtes à l'emploi directement dans ton éditeur. <DocsLink>Modifier le raccourci</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Saisie automatique manuelle ({{keybinding}})",
-				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Modifier le raccourci</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "introuvable",
-			"noModelConfigured": "Aucun modèle d'autocomplétion approprié trouvé. Configure un fournisseur dans les paramètres API.",
 			"configureAutocompleteProfile": "Utilise n'importe quel modèle en allant dans les profils et en configurant un Profil du Type de Profil Autocomplétion.",
 			"model": "Modèle",
-			"provider": "Fournisseur"
+			"provider": "Fournisseur",
+			"enableChatAutocomplete": {
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "Mettre en pause",
+				"unsnooze": "Réactiver",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 minute",
+					"5min": "5 minutes",
+					"15min": "15 minutes",
+					"30min": "30 minutes",
+					"1hour": "1 heure"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Aucun modèle d'autocomplétion configuré",
+				"description": "Pour activer l'autocomplétion, ajoutez un profil avec l'un de ces fournisseurs pris en charge :",
+				"learnMore": "En savoir plus sur la configuration de l'autocomplétion →"
+			},
+			"noCredits": {
+				"title": "Aucun crédit sur votre compte",
+				"description": "Votre compte Kilo Code n'a pas de crédits. Pour utiliser l'autocomplétion, veuillez ajouter des crédits à votre compte.",
+				"buyCredits": "Acheter des crédits →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nouveau : Partagez des modes en créant une organisation"
+	},
+	"deviceAuth": {
+		"title": "Se connecter à Kilo Code",
+		"step1": "Ouvre l'URL suivante dans ton navigateur",
+		"step2": "Vérifie le code et autorise cet appareil dans ton navigateur",
+		"scanQr": "Ou scanne ce code QR avec ton téléphone",
+		"openBrowser": "Ouvrir le navigateur",
+		"copyUrl": "Copier l'URL",
+		"waiting": "En attente d'autorisation...",
+		"timeRemaining": "Le code expire dans {{time}}",
+		"success": "Connexion réussie !",
+		"authenticatedAs": "Authentifié en tant que {{email}}",
+		"error": "Erreur d'authentification",
+		"unknownError": "Une erreur s'est produite. Réessaye.",
+		"cancel": "Annuler",
+		"retry": "Réessayer",
+		"tryAgain": "Réessayer",
+		"cancelled": "Authentification annulée",
+		"initiating": "Démarrage de l'authentification..."
+	},
+	"speechToText": {
+		"startRecording": "Démarrer la saisie vocale",
+		"stopRecording": "Arrêter la saisie vocale",
+		"setupPopover": {
+			"title": "Reconnaissance vocale",
+			"description": "La reconnaissance vocale est indisponible. La reconnaissance vocale nécessite à la fois FFmpeg et un fournisseur OpenAI valide configuré. <moreInfoLink>Cliquez ici pour plus d'informations</moreInfoLink>.",
+			"openAiReason": "Vous avez besoin d'un fournisseur OpenAI valide avec une clé API pour utiliser la transcription vocale.",
+			"ffmpegReason": "Vous devez installer FFmpeg. <ffmpegLink>Cliquez ici</ffmpegLink> pour que Kilo vous aide à installer FFmpeg.",
+			"ffmpegMessage": "Aidez-moi à installer FFmpeg"
+		},
+		"misconfiguredState": "Indisponible en raison de la configuration",
+		"errorState": "Indisponible en raison d'une erreur",
+		"microphone": {
+			"label": "Microphone",
+			"description": "Sélectionnez le périphérique microphone pour la reconnaissance vocale",
+			"loading": "Chargement des périphériques microphone...",
+			"noDevices": "Aucun périphérique de microphone trouvé",
+			"defaultOption": "Paramètre par défaut du système",
+			"refresh": "Actualiser"
+		}
 	}
 }

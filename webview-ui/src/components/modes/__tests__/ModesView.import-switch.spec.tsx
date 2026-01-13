@@ -30,10 +30,9 @@ const mockExtensionState = {
 }
 
 const renderModesView = (props = {}) => {
-	const mockOnDone = vitest.fn()
 	return render(
 		<ExtensionStateContext.Provider value={{ ...mockExtensionState, ...props } as any}>
-			<ModesView onDone={mockOnDone} />
+			<ModesView />
 		</ExtensionStateContext.Provider>,
 	)
 }

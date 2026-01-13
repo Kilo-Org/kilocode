@@ -33,7 +33,8 @@ import { Package } from "../../../shared/package"
 
 export class DirectoryScanner implements IDirectoryScanner {
 	private _cancelled = false // kilocode_change
-	private readonly batchSegmentThreshold: number
+	private batchSegmentThreshold: number // kilocode_change
+	private maxBatchRetries: number // kilocode_change
 
 	constructor(
 		private readonly embedder: IEmbedder,
@@ -42,6 +43,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 		private readonly cacheManager: CacheManager,
 		private readonly ignoreInstance: Ignore,
 		batchSegmentThreshold?: number,
+		maxBatchRetries?: number,
 	) {
 		// Get the configurable batch size from VSCode settings, fallback to default
 		// If not provided in constructor, try to get from VSCode settings
@@ -57,6 +59,8 @@ export class DirectoryScanner implements IDirectoryScanner {
 				this.batchSegmentThreshold = BATCH_SEGMENT_THRESHOLD
 			}
 		}
+
+		this.maxBatchRetries = maxBatchRetries !== undefined ? maxBatchRetries : MAX_BATCH_RETRIES // kilocode_change: Get the configurable max batch retries, fallback to default
 	}
 
 	// kilocode_change start
@@ -71,6 +75,14 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 	public get isCancelled(): boolean {
 		return this._cancelled
+	}
+
+	/**
+	 * Updates the batch segment threshold
+	 * @param newThreshold New batch segment threshold value
+	 */
+	public updateBatchSegmentThreshold(newThreshold: number): void {
+		this.batchSegmentThreshold = newThreshold
 	}
 	// kilocode_change end
 
@@ -446,14 +458,14 @@ export class DirectoryScanner implements IDirectoryScanner {
 		let success = false
 		let lastError: Error | null = null
 
-		while (attempts < MAX_BATCH_RETRIES && !success) {
+		while (attempts < this.maxBatchRetries /* kilocode_change */ && !success) {
 			attempts++
 
 			// kilocode_change start
 			if (this._cancelled) return
 
 			console.debug(
-				`[DirectoryScanner] Processing batch attempt ${attempts}/${MAX_BATCH_RETRIES} for ${batchBlocks.length} blocks`,
+				`[DirectoryScanner] Processing batch attempt ${attempts}/${this.maxBatchRetries} for ${batchBlocks.length} blocks`, // kilocode_change
 			)
 			// kilocode_change end
 
@@ -577,7 +589,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 					batchSize: batchBlocks.length,
 				})
 
-				if (attempts < MAX_BATCH_RETRIES) {
+				if (attempts < this.maxBatchRetries /* kilocode_change */) {
 					const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempts - 1)
 					console.debug(`[DirectoryScanner] Retrying batch in ${delay}ms`) // kilocode_change
 					await new Promise((resolve) => setTimeout(resolve, delay))
@@ -586,7 +598,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 		}
 
 		if (!success && lastError) {
-			console.error(`[DirectoryScanner] Failed to process batch after ${MAX_BATCH_RETRIES} attempts`)
+			console.error(`[DirectoryScanner] Failed to process batch after ${this.maxBatchRetries} attempts`)
 			if (onError) {
 				// Preserve the original error message from embedders which now have detailed i18n messages
 				const errorMessage = lastError.message || "Unknown error"
@@ -595,7 +607,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 				onError(
 					new Error(
 						t("embeddings:scanner.failedToProcessBatchWithError", {
-							maxRetries: MAX_BATCH_RETRIES,
+							maxRetries: this.maxBatchRetries, // kilocode_change
 							errorMessage,
 						}),
 					),

@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Liên kết tổ chức đã được sao chép vào clipboard",
 		"shareSuccessPublic": "Liên kết công khai đã được sao chép vào clipboard",
 		"openInCloud": "Mở tác vụ trong Roo Code Cloud",
-		"openInCloudIntro": "Tiếp tục theo dõi hoặc tương tác với Roo từ bất cứ đâu. Quét, nhấp hoặc sao chép để mở."
+		"openInCloudIntro": "Tiếp tục theo dõi hoặc tương tác với Roo từ bất cứ đâu. Quét, nhấp hoặc sao chép để mở.",
+		"openApiHistory": "Mở lịch sử API",
+		"openUiHistory": "Mở lịch sử UI"
 	},
 	"history": {
 		"title": "Lịch Sử"
@@ -110,6 +112,7 @@
 	"enhancePrompt": "Nâng cao yêu cầu với ngữ cảnh bổ sung",
 	"addImages": "Thêm hình ảnh vào tin nhắn",
 	"sendMessage": "Gửi tin nhắn",
+	"pressToSend": "Nhấn {{keyCombination}} để gửi",
 	"stopTts": "Dừng chuyển văn bản thành giọng nói",
 	"typeMessage": "Nhập tin nhắn...",
 	"typeTask": "Nhập nhiệm vụ của bạn tại đây...",
@@ -142,7 +145,19 @@
 		"failed": "Yêu cầu API thất bại",
 		"streaming": "Yêu cầu API...",
 		"cancelled": "Yêu cầu API đã hủy",
-		"streamingFailed": "Streaming API thất bại"
+		"streamingFailed": "Streaming API thất bại",
+		"errorTitle": "Lỗi API {{code}}",
+		"errorMessage": {
+			"docs": "Tài liệu",
+			"400": "Nhà cung cấp không thể xử lý yêu cầu theo cách này. Hãy dừng nhiệm vụ và thử một cách tiếp cận khác.",
+			"401": "Không thể xác thực với nhà cung cấp. Vui lòng kiểm tra cấu hình khóa API của bạn.",
+			"402": "Có vẻ như bạn đã hết tiền/tín dụng trong tài khoản. Hãy truy cập nhà cung cấp và thêm tiền để tiếp tục.",
+			"403": "Truy cập bị từ chối. Khóa API của bạn hợp lệ, nhưng nhà cung cấp từ chối hoàn thành yêu cầu này.",
+			"429": "Quá nhiều yêu cầu. Nhà cung cấp đang giới hạn tốc độ yêu cầu của bạn. Vui lòng chờ một chút trước khi gọi API tiếp theo.",
+			"500": "Lỗi máy chủ của nhà cung cấp. Có sự cố ở phía nhà cung cấp, không có gì sai với yêu cầu của bạn.",
+			"unknown": "Lỗi API không xác định. Vui lòng liên hệ hỗ trợ Kilo.",
+			"connection": "Lỗi kết nối. Đảm bảo rằng bạn có kết nối Internet hoạt động."
+		}
 	},
 	"checkpoint": {
 		"regular": "Điểm kiểm tra",
@@ -256,6 +271,11 @@
 		"hasQuestion": "Kilo Code có một câu hỏi"
 	},
 	"taskCompleted": "Nhiệm vụ hoàn thành",
+	"errorDetails": {
+		"title": "Chi tiết lỗi",
+		"copyToClipboard": "Sao chép vào clipboard",
+		"copied": "Đã sao chép!"
+	},
 	"powershell": {
 		"issues": "Có vẻ như bạn đang gặp vấn đề với Windows PowerShell, vui lòng xem"
 	},
@@ -281,19 +301,28 @@
 		"thinking": "Đang suy nghĩ",
 		"seconds": "{{count}} giây"
 	},
-	"contextCondense": {
-		"title": "Ngữ cảnh đã tóm tắt",
-		"condensing": "Đang cô đọng ngữ cảnh...",
-		"errorHeader": "Không thể cô đọng ngữ cảnh",
-		"tokens": "token"
+	"contextManagement": {
+		"tokens": "token",
+		"condensation": {
+			"title": "Ngữ cảnh đã tóm tắt",
+			"inProgress": "Đang cô đọng ngữ cảnh...",
+			"errorHeader": "Không thể cô đọng ngữ cảnh"
+		},
+		"truncation": {
+			"title": "Ngữ cảnh đã cắt bớt",
+			"inProgress": "Đang cắt bớt ngữ cảnh...",
+			"messagesRemoved": "{{count}} tin nhắn đã xóa",
+			"messagesRemoved_other": "{{count}} tin nhắn đã xóa",
+			"description": "Các tin nhắn cũ hơn đã bị xóa khỏi cuộc trò chuyện để giữ trong giới hạn cửa sổ ngữ cảnh. Đây là cách tiếp cận nhanh nhưng ít bảo toàn ngữ cảnh hơn so với cô đọng."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Sao chép vào ô nhập liệu (hoặc Shift + nhấp chuột)",
-		"autoSelectCountdown": "Tự động chọn sau {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Phê duyệt tự động được bật. Chọn trong {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Đã phát hành",
+		"title": "Roo Code {{version}} Đã phát hành",
+		"support": "Hãy ủng hộ Roo Code bằng cách gắn sao cho chúng tôi trên <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Mô hình stealth MIỄN PHÍ có thời hạn</bold> - Code Supernova: Hiện đã được nâng cấp với <bold>cửa sổ ngữ cảnh 1M token</bold>! Một mô hình lập trình agentic đa năng hỗ trợ đầu vào hình ảnh, có sẵn qua Roo Code Cloud.",
 			"note": "(Lưu ý: các prompt và completion được ghi lại bởi người tạo mô hình và được sử dụng để cải thiện mô hình)",
@@ -302,21 +331,21 @@
 			"goToSettingsButton": "Đi tới Cài đặt"
 		},
 		"release": {
-			"heading": "Mới trong Extension:",
-			"openRouterEmbeddings": "Hỗ trợ các mô hình nhúng OpenRouter",
-			"chutesDynamic": "Chutes giờ đây tải các mô hình mới nhất một cách động",
-			"queuedMessagesFix": "Sửa lỗi tin nhắn trong hàng đợi bị mất"
+			"heading": "Mới trong phiên bản này:",
+			"contextRewind": "Nén ngữ cảnh được cải thiện hiện cho phép bạn khôi phục bối cảnh trước đó đầy đủ khi cuộn lại đến một điểm kiểm tra",
+			"rooProvider": "Nhà cung cấp Roo Code Cloud hiện giữ lại nội dung lý luận và sử dụng các công cụ gốc theo mặc định để có hiệu suất tốt hơn"
 		},
 		"cloudAgents": {
 			"heading": "Mới trên Cloud:",
-			"prFixer": "Giới thiệu agent đám mây <bold>PR Fixer</bold> để bổ sung cho PR Reviewer.",
-			"prFixerDescription": "PR Fixer của Roo Code áp dụng các thay đổi chất lượng cao cho PR của bạn, ngay từ GitHub. Gọi qua bình luận PR và nó sẽ đọc toàn bộ lịch sử bình luận để hiểu ngữ cảnh, thỏa thuận và đánh đổi - sau đó triển khai bản sửa lỗi phù hợp.",
-			"tryPrFixerButton": "Dùng thử PR Fixer"
+			"specialized": "Giới thiệu <bold>Explainer</bold>, <bold>Planner</bold> và <bold>Coder</bold> - ba agent đám mây chuyên biệt để nâng cao quy trình làm việc của bạn.",
+			"description": "Các agent làm việc cùng nhau trên đám mây và có thể được kích hoạt từ web hoặc qua Slack.",
+			"tryButton": "Dùng thử Agents trên Cloud"
 		},
 		"careers": "Ngoài ra, <careersLink>chúng tôi đang tuyển dụng!</careersLink>",
-		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Tham gia với chúng tôi trên <xLink>X</xLink>, <discordLink>Discord</discordLink>, hoặc <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Phiên trình duyệt",
 		"rooWantsToUse": "Kilo Code muốn sử dụng trình duyệt",
 		"consoleLogs": "Nhật ký bảng điều khiển",
 		"noNewLogs": "(Không có nhật ký mới)",
@@ -330,11 +359,25 @@
 		"sessionStarted": "Phiên trình duyệt đã bắt đầu",
 		"actions": {
 			"title": "Hành động trình duyệt: ",
+			"launched": "Trình duyệt đã khởi chạy",
 			"launch": "Khởi chạy trình duyệt tại {{url}}",
+			"clicked": "Đã nhấp ({{coordinate}})",
 			"click": "Nhấp ({{coordinate}})",
+			"typed": "Đã gõ: {{text}}",
 			"type": "Gõ \"{{text}}\"",
+			"pressed": "Đã nhấn: {{key}}",
+			"press": "Nhấn {{key}}",
+			"scrolledDown": "Đã cuộn xuống",
 			"scrollDown": "Cuộn xuống",
+			"scrolledUp": "Đã cuộn lên",
 			"scrollUp": "Cuộn lên",
+			"hovered": "Đã di chuột ({{coordinate}})",
+			"hover": "Di chuột ({{coordinate}})",
+			"resized": "Đã thay đổi kích thước: {{size}}",
+			"resize": "Thay đổi kích thước thành {{size}}",
+			"screenshotSaved": "Ảnh chụp màn hình đã được lưu",
+			"screenshot": "Lưu ảnh chụp màn hình vào {{path}}",
+			"closed": "Trình duyệt đã đóng",
 			"close": "Đóng trình duyệt"
 		}
 	},

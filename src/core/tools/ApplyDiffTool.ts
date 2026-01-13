@@ -15,6 +15,7 @@ import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { computeDiffStats, sanitizeUnifiedDiff } from "../diff/stats"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
 import type { ToolUse } from "../../shared/tools"
+import { trackContribution } from "../../services/contribution-tracking/ContributionTrackingService" // kilocode_change
 
 interface ApplyDiffParams {
 	path: string
@@ -32,7 +33,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 	}
 
 	async execute(params: ApplyDiffParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { askApproval, handleError, pushToolResult } = callbacks
+		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 		let { path: relPath, diff: diffContent } = params
 
 		if (diffContent && !task.api.getModel().id.includes("claude")) {
@@ -58,7 +59,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 			if (!accessAllowed) {
 				await task.say("rooignore_error", relPath)
-				pushToolResult(formatResponse.toolError(formatResponse.rooIgnoreError(relPath)))
+				pushToolResult(formatResponse.rooIgnoreError(relPath, toolProtocol))
 				return
 			}
 
@@ -70,6 +71,7 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				task.recordToolError("apply_diff")
 				const formattedError = `File does not exist at path: ${absolutePath}\n\n<error_details>\nThe specified file could not be found. Please verify the file path and try again.\n</error_details>`
 				await task.say("error", formattedError)
+				task.didToolFailInCurrentTurn = true
 				pushToolResult(formattedError)
 				return
 			}
@@ -174,6 +176,19 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 
 				const didApprove = await askApproval("tool", completeMessage, toolProgressStatus, isWriteProtected)
 
+				// kilocode_change start
+				// Track contribution (fire-and-forget, never blocks user workflow)
+				trackContribution({
+					cwd: task.cwd,
+					filePath: relPath,
+					unifiedDiff: unifiedPatch,
+					status: didApprove ? "accepted" : "rejected",
+					taskId: task.taskId,
+					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+					kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+				})
+				// kilocode_change end
+
 				if (!didApprove) {
 					return
 				}
@@ -217,6 +232,19 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 				}
 
 				const didApprove = await askApproval("tool", completeMessage, toolProgressStatus, isWriteProtected)
+
+				// kilocode_change start
+				// Track contribution (fire-and-forget, never blocks user workflow)
+				trackContribution({
+					cwd: task.cwd,
+					filePath: relPath,
+					unifiedDiff: unifiedPatch,
+					status: didApprove ? "accepted" : "rejected",
+					taskId: task.taskId,
+					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+					kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+				})
+				// kilocode_change end
 
 				if (!didApprove) {
 					await task.diffViewProvider.revertChanges()

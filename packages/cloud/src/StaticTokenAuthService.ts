@@ -22,6 +22,11 @@ export class StaticTokenAuthService extends EventEmitter<AuthServiceEvents> impl
 		let payload
 
 		try {
+			const parts = typeof token === "string" ? token.split(".") : []
+			if (parts.length !== 3 || parts.some((p) => p.length === 0)) {
+				throw new Error("Invalid JWT format")
+			}
+
 			payload = jwtDecode<JWTPayload>(token)
 		} catch (error) {
 			this.log("[auth] Failed to parse JWT:", error)
@@ -47,7 +52,7 @@ export class StaticTokenAuthService extends EventEmitter<AuthServiceEvents> impl
 		this.emit("user-info", { userInfo: this.userInfo })
 	}
 
-	public async login(): Promise<void> {
+	public async login(_landingPageSlug?: string, _useProviderSignup?: boolean): Promise<void> {
 		throw new Error("Authentication methods are disabled in StaticTokenAuthService")
 	}
 
@@ -59,6 +64,7 @@ export class StaticTokenAuthService extends EventEmitter<AuthServiceEvents> impl
 		_code: string | null,
 		_state: string | null,
 		_organizationId?: string | null,
+		_providerModel?: string | null,
 	): Promise<void> {
 		throw new Error("Authentication methods are disabled in StaticTokenAuthService")
 	}

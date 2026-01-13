@@ -1,5 +1,6 @@
-# Description: Should fix bug described in FIXME comment
+#### Description: Should fix bug described in FIXME comment
+#### Filename: math-utils.js
 function divide(a, b) {
-  // FIXME: Handle division by zero<<<CURSOR>>>
+  // FIXME: Handle division by zero<<<AUTOCOMPLETE_HERE>>>
   return a / b;
 }

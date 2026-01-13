@@ -1,0 +1,39 @@
+#### Description: Should autocomplete method invocation from imported class
+#### Filename: app.ts
+import { UserService } from './services/user-service';
+
+const userService = new UserService();
+const user = userService.<<<AUTOCOMPLETE_HERE>>>
+
+#### Filename: services/user-service.ts
+export class UserService {
+  async findById(id: string): Promise<User | null> {
+    // Find user by ID
+    return null;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    // Find user by email
+    return null;
+  }
+
+  async createUser(data: CreateUserDto): Promise<User> {
+    // Create a new user
+    return {} as User;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    // Delete user
+  }
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+interface CreateUserDto {
+  email: string;
+  name: string;
+}

@@ -1,2 +1,0 @@
-const total = items.reduce((acc, item) => acc + item, 0);
-const items = [1, 2, 3, 4, 5];

@@ -101,6 +101,12 @@
 					"description": "Seleziona quale configurazione API utilizzare per generare comandi terminali. Lascia come 'Usa configurazione attuale' per utilizzare le tue impostazioni predefinite."
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Dimensione Batch Embedding",
+			"embeddingBatchSizeDescription": "Numero di segmenti di codice da raggruppare insieme per la generazione degli embedding e gli aggiornamenti del vector store. Valori più alti possono migliorare la velocità di indicizzazione ma potrebbero aumentare l'utilizzo della memoria. Valori più bassi riducono l'utilizzo della memoria ma potrebbero rallentare l'indicizzazione.",
+			"scannerMaxBatchRetriesLabel": "Tentativi Massimi Batch Scanner",
+			"scannerMaxBatchRetriesDescription": "Numero massimo di tentativi per riprovare un batch fallito durante la scansione delle directory. Valori più alti aumentano la resilienza agli errori transitori ma potrebbero rallentare l'indicizzazione se gli errori persistono. Valori più bassi falliscono più rapidamente ma potrebbero saltare contenuti in caso di problemi temporanei."
 		}
 	},
 	"chat": {
@@ -210,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Trigger",
+			"codeEditorSuggestions": "Suggerimenti Editor di Codice",
+			"chatSuggestions": "Suggerimenti Chat",
 			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Pausa per Completare",
@@ -220,19 +227,42 @@
 				"label": "Ritardo Attivazione Automatica",
 				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Attività Rapida ({{keybinding}})",
-				"description": "Hai bisogno solo di una modifica rapida? Seleziona del codice (o no!) e premi Cmd+I. Descrivi il tuo obiettivo in italiano semplice (\"crea un componente React con queste props\", \"aggiungi gestione errori a questa funzione\"), e ottieni più suggerimenti pronti all'uso direttamente nel tuo editor. <DocsLink>Modifica scorciatoia</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Completamento Automatico Manuale ({{keybinding}})",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
 			"keybindingNotFound": "non trovato",
-			"noModelConfigured": "Nessun modello di autocompletamento adatto trovato. Configura un provider nelle impostazioni API.",
 			"configureAutocompleteProfile": "Usa qualsiasi modello andando nei profili e configurando un Profilo del Tipo di Profilo Autocompletamento.",
 			"model": "Modello",
-			"provider": "Provider"
+			"provider": "Provider",
+			"enableChatAutocomplete": {
+				"label": "Completamento Automatico dell'Input della Chat",
+				"description": "Quando abilitato, Kilo Code suggerirà completamenti mentre digiti nell'area di chat. Premi Tab per accettare i suggerimenti."
+			},
+			"snooze": {
+				"label": "Sospendi Autocomplete",
+				"description": "Metti in pausa temporaneamente i suggerimenti di autocompletamento per una durata specificata.",
+				"button": "Sospendi",
+				"unsnooze": "Riattiva",
+				"currentlySnoozed": "L'autocompletamento è attualmente sospeso.",
+				"duration": {
+					"1min": "1 minuto",
+					"5min": "5 minuti",
+					"15min": "15 minuti",
+					"30min": "30 minuti",
+					"1hour": "1 ora"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Nessun modello di autocompletamento configurato",
+				"description": "Per abilitare l'autocompletamento, aggiungi un profilo con uno di questi provider supportati:",
+				"learnMore": "Scopri di più sulla configurazione dell'autocompletamento →"
+			},
+			"noCredits": {
+				"title": "Nessun credito nel tuo account",
+				"description": "Il tuo account Kilo Code non ha crediti. Per utilizzare l'autocompletamento, aggiungi crediti al tuo account.",
+				"buyCredits": "Acquista crediti →"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +312,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Novità: Condividi le modalità creando un'organizzazione"
+	},
+	"deviceAuth": {
+		"title": "Accedi a Kilo Code",
+		"step1": "Apri il seguente URL nel tuo browser",
+		"step2": "Verifica il codice e autorizza questo dispositivo nel tuo browser",
+		"scanQr": "Oppure scansiona questo codice QR con il tuo telefono",
+		"openBrowser": "Apri Browser",
+		"copyUrl": "Copia URL",
+		"waiting": "In attesa di autorizzazione...",
+		"timeRemaining": "Il codice scade tra {{time}}",
+		"success": "Accesso effettuato con successo!",
+		"authenticatedAs": "Autenticato come {{email}}",
+		"error": "Errore di autenticazione",
+		"unknownError": "Si è verificato un errore. Riprova.",
+		"cancel": "Annulla",
+		"retry": "Riprova",
+		"tryAgain": "Riprova",
+		"cancelled": "Autenticazione annullata",
+		"initiating": "Avvio autenticazione..."
+	},
+	"speechToText": {
+		"startRecording": "Avvia input vocale",
+		"stopRecording": "Interrompi input vocale",
+		"setupPopover": {
+			"title": "Sintesi vocale",
+			"description": "La sintesi vocale non è disponibile. La sintesi vocale richiede sia FFmpeg che un provider OpenAI valido configurato. <moreInfoLink>Clicca qui per maggiori informazioni</moreInfoLink>.",
+			"openAiReason": "È necessario un provider OpenAI valido con una chiave API per utilizzare la trascrizione vocale.",
+			"ffmpegReason": "È necessario avere FFmpeg installato. <ffmpegLink>Clicca qui</ffmpegLink> per far sì che Kilo ti aiuti a installare FFmpeg.",
+			"ffmpegMessage": "Aiutami a installare FFmpeg"
+		},
+		"misconfiguredState": "Non disponibile a causa della configurazione",
+		"errorState": "Non disponibile a causa di un errore",
+		"microphone": {
+			"label": "Microfono",
+			"noDevices": "Nessun dispositivo microfono trovato",
+			"loading": "Caricamento dei dispositivi microfono...",
+			"refresh": "Aggiorna",
+			"defaultOption": "Impostazione predefinita del sistema",
+			"description": "Seleziona il dispositivo microfono per il riconoscimento vocale"
+		}
 	}
 }

@@ -7,12 +7,25 @@
 		"imageWithSize": "Soubor obrázku ({{size}} KB)"
 	},
 	"toolRepetitionLimitReached": "Zdá se, že model uvízl ve smyčce a opakovaně se pokouší o stejnou akci ({{toolName}}). To může naznačovat problém s jeho současnou strategií. Zkus úkol přeformulovat, poskytnout konkrétnější pokyny nebo ho navést k jinému přístupu.",
+	"unknownToolError": "Kilo se pokusil použít neznámý nástroj: \"{{toolName}}\". Zkouším znovu...",
 	"codebaseSearch": {
 		"approval": "Hledání '{{query}}' v kódové základně..."
 	},
 	"newTask": {
 		"errors": {
 			"policy_restriction": "Nepodařilo se vytvořit nový úkol kvůli omezením zásad."
+		}
+	},
+	"generateImage": {
+		"openRouterApiKeyRequired": "Pro generování obrázků pomocí OpenRouter modelů je vyžadován OpenRouter API klíč. Nakonfiguruj ho prosím v experimentálním nastavení Generování obrázků.",
+		"failedWithStatus": "Generování obrázku selhalo: {{status}} {{statusText}}",
+		"failedWithMessage": "Generování obrázku selhalo: {{message}}",
+		"noImageGenerated": "V odpovědi nebyl vygenerován žádný obrázek",
+		"invalidImageData": "Neplatná data obrázku v odpovědi",
+		"invalidImageFormat": "Přijat neplatný formát obrázku",
+		"unknownError": "Nastala neznámá chyba",
+		"roo": {
+			"authRequired": "Pro generování obrázků je vyžadována autentizace Roo Code Cloud. Přihlas se prosím do Roo Code Cloud."
 		}
 	}
 }

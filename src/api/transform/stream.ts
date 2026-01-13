@@ -1,10 +1,7 @@
-import { ReasoningDetail } from "./kilocode/reasoning-details"
-
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
 export type ApiStreamChunk =
 	// kilocode_change start
-	| ApiStreamReasoningDetailsChunk
 	| ApiStreamAnthropicThinkingChunk
 	| ApiStreamAnthropicRedactedThinkingChunk
 	// kilocode_change end
@@ -13,6 +10,10 @@ export type ApiStreamChunk =
 	| ApiStreamReasoningChunk
 	| ApiStreamGroundingChunk
 	| ApiStreamToolCallChunk
+	| ApiStreamToolCallStartChunk
+	| ApiStreamToolCallDeltaChunk
+	| ApiStreamToolCallEndChunk
+	| ApiStreamToolCallPartialChunk
 	| ApiStreamError
 
 export interface ApiStreamError {
@@ -42,11 +43,6 @@ export interface ApiStreamAnthropicRedactedThinkingChunk {
 	type: "ant_redacted_thinking"
 	data: string
 }
-
-export interface ApiStreamReasoningDetailsChunk {
-	type: "reasoning_details"
-	reasoning_details: ReasoningDetail
-}
 // kilocode_change end
 
 export interface ApiStreamUsageChunk {
@@ -70,6 +66,36 @@ export interface ApiStreamToolCallChunk {
 	id: string
 	name: string
 	arguments: string
+}
+
+export interface ApiStreamToolCallStartChunk {
+	type: "tool_call_start"
+	id: string
+	name: string
+}
+
+export interface ApiStreamToolCallDeltaChunk {
+	type: "tool_call_delta"
+	id: string
+	delta: string
+}
+
+export interface ApiStreamToolCallEndChunk {
+	type: "tool_call_end"
+	id: string
+}
+
+/**
+ * Raw tool call chunk from the API stream.
+ * Providers emit this simple format; NativeToolCallParser handles all state management
+ * (tracking, buffering, emitting start/delta/end events).
+ */
+export interface ApiStreamToolCallPartialChunk {
+	type: "tool_call_partial"
+	index: number
+	id?: string
+	name?: string
+	arguments?: string
 }
 
 export interface GroundingSource {

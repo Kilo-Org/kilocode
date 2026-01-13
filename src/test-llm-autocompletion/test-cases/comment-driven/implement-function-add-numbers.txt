@@ -1,2 +1,3 @@
-# Description: Should fix bug described in FIXME comment
-// Implement functino to add two numbers<<<CURSOR>>>
+#### Description: Should fix bug described in FIXME comment
+#### Filename: calculator.js
+// Implement functino to add two numbers<<<AUTOCOMPLETE_HERE>>>

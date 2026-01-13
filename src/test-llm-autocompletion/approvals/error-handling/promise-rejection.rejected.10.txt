@@ -1,0 +1,16 @@
+fetchUser(userId)
+	.then(user => {
+		return processUser(user);
+	})
+	.catch(err => {
+		// handle error
+	});
+
+async function showUserAvatar(userId) {
+	try {
+		const user = await fetchUser(userId);
+		const processedUser = await processUser(user);
+	} catch (err) {
+		// handle error
+	}
+}

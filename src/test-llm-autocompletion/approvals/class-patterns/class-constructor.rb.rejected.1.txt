@@ -1,4 +1,0 @@
-class User
-	def initialize(username, email, role)
-		@username = username
-		@email = <<<AUTOCOMPLETE_HERE>>>

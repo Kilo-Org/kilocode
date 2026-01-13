@@ -16,7 +16,7 @@
 			"project": ["**/*.ts"]
 		},
 		"webview-ui": {
-			"entry": ["src/index.tsx"],
+			"entry": ["src/index.tsx", "src/browser-panel.tsx"],
 			"project": ["src/**/*.{ts,tsx}", "../src/shared/*.ts"]
 		},
 		"packages/{build,cloud,evals,ipc,telemetry,types}": {

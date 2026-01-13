@@ -28,7 +28,7 @@ const main = async () => {
 					} else if (runId !== -1) {
 						await runEvals(runId)
 					} else if (taskId !== -1) {
-						await processTask({ taskId })
+						await processTask({ taskId, jobToken: process.env.ROO_CODE_CLOUD_TOKEN || null })
 					} else {
 						throw new Error("Either runId or taskId must be provided.")
 					}

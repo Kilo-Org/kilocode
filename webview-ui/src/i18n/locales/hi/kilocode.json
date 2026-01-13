@@ -94,6 +94,12 @@
 					"current": "वर्तमान विन्यास का उपयोग करें"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Embedding बैच आकार",
+			"embeddingBatchSizeDescription": "Embedding जनरेशन और वेक्टर स्टोर अपसर्ट के लिए एक साथ बैच किए जाने वाले कोड सेगमेंट की संख्या। उच्च मान इंडेक्सिंग गति में सुधार कर सकते हैं लेकिन मेमोरी उपयोग बढ़ा सकते हैं। कम मान मेमोरी उपयोग कम करते हैं लेकिन इंडेक्सिंग को धीमा कर सकते हैं।",
+			"scannerMaxBatchRetriesLabel": "Scanner अधिकतम बैच पुनः प्रयास",
+			"scannerMaxBatchRetriesDescription": "निर्देशिका स्कैनिंग के दौरान विफल बैच को पुनः प्रयास करने की अधिकतम संख्या। उच्च मान क्षणिक त्रुटियों के प्रति लचीलापन बढ़ाते हैं लेकिन यदि त्रुटियां बनी रहती हैं तो इंडेक्सिंग धीमी हो सकती है। कम मान तेजी से विफल होते हैं लेकिन अस्थायी समस्याओं पर सामग्री छोड़ सकते हैं।"
 		}
 	},
 	"chat": {
@@ -203,29 +209,52 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "ट्रिगर्स",
-			"keybindingDescription": "Autocomplete सुविधाओं को कमांड द्वारा ट्रिगर किया जा सकता है। आप <DocsLink>कीबोर्ड शॉर्टकट यहाँ</DocsLink> कॉन्फ़िगर कर सकते हैं।",
 			"enableAutoTrigger": {
-				"label": "Autocomplete सक्षम करें",
-				"description": "जब सक्षम हो, तो Kilo Code आपके टाइपिंग बंद करने पर स्वचालित रूप से Autocomplete ट्रिगर करेगा। यह त्वरित सुधार और सुझावों के लिए उपयोगी हो सकता है।"
+				"label": "Auto-trigger Suggestions",
+				"description": "टाइपिंग रोकने पर स्वचालित रूप से इनलाइन कोड सुझाव दिखाएं।"
 			},
 			"autoTriggerDelay": {
 				"label": "ऑटो ट्रिगर देरी",
-				"description": "आपके टाइपिंग बंद करने के बाद Kilo Code के Autocomplete ट्रिगर करने से पहले सेकंड में देरी। कम देरी का मतलब तेज़ सुझाव है, लेकिन अधिक संसाधन-गहन हो सकता है।"
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "त्वरित कार्य ({{keybinding}})",
-				"description": "केवल एक त्वरित बदलाव चाहिए? कुछ कोड चुनें (या न चुनें!) और Cmd+I दबाएं। अपना लक्ष्य सरल हिंदी में बताएं (\"इन props के साथ React कंपोनेंट बनाएं\", \"इस फ़ंक्शन में एरर हैंडलिंग जोड़ें\"), और अपने एडिटर में सीधे कई तैयार-से-उपयोग सुझाव प्राप्त करें। <DocsLink>शॉर्टकट देखें</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "मैनुअल ऑटोकंप्लीट ({{keybinding}})",
-				"description": "त्वरित सुधार, पूर्णता, या रिफैक्टरिंग चाहिए? Kilo आसपास के संदर्भ का उपयोग करके तत्काल सुधार प्रदान करेगा, आपको प्रवाह में रखते हुए। <DocsLink>शॉर्टकट देखें</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "नहीं मिला",
-			"noModelConfigured": "कोई उपयुक्त ऑटोकम्पलीट मॉडल नहीं मिला। कृपया API सेटिंग्स में एक प्रदाता कॉन्फ़िगर करें।",
 			"configureAutocompleteProfile": "प्रोफाइल में जाकर और ऑटोकम्पलीट प्रोफाइल टाइप की एक प्रोफाइल कॉन्फ़िगर करके किसी भी मॉडल का उपयोग करें।",
 			"model": "मॉडल",
-			"provider": "प्रदाता"
+			"provider": "प्रदाता",
+			"enableChatAutocomplete": {
+				"label": "Enable Chat Autocomplete",
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions."
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "स्नूज़",
+				"unsnooze": "अनस्नूज़",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 मिनट",
+					"5min": "5 मिनट",
+					"15min": "15 मिनट",
+					"30min": "30 मिनट",
+					"1hour": "1 घंटा"
+				}
+			},
+			"noModelConfigured": {
+				"title": "कोई ऑटोकम्पलीट मॉडल कॉन्फ़िगर नहीं है",
+				"description": "ऑटोकम्पलीट सक्षम करने के लिए, इन समर्थित प्रदाताओं में से एक के साथ प्रोफ़ाइल जोड़ें:",
+				"learnMore": "ऑटोकम्पलीट सेटअप के बारे में और जानें →"
+			},
+			"noCredits": {
+				"title": "आपके खाते में कोई क्रेडिट नहीं है",
+				"description": "आपके Kilo Code खाते में कोई क्रेडिट नहीं है। ऑटोकम्पलीट का उपयोग करने के लिए, कृपया अपने खाते में क्रेडिट जोड़ें।",
+				"buyCredits": "क्रेडिट खरीदें →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "नया: एक संगठन बनाकर मोड साझा करें"
+	},
+	"deviceAuth": {
+		"title": "Kilo Code में साइन इन करें",
+		"step1": "अपने ब्राउज़र में निम्नलिखित URL खोलें",
+		"step2": "कोड सत्यापित करें और अपने ब्राउज़र में इस डिवाइस को अधिकृत करें",
+		"scanQr": "या अपने फोन से इस QR कोड को स्कैन करें",
+		"openBrowser": "ब्राउज़र खोलें",
+		"copyUrl": "URL कॉपी करें",
+		"waiting": "प्राधिकरण की प्रतीक्षा में...",
+		"timeRemaining": "कोड {{time}} में समाप्त हो जाएगा",
+		"success": "सफलतापूर्वक साइन इन हो गया!",
+		"authenticatedAs": "{{email}} के रूप में प्रमाणित",
+		"error": "प्रमाणीकरण त्रुटि",
+		"unknownError": "एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
+		"cancel": "रद्द करें",
+		"retry": "पुनः प्रयास करें",
+		"tryAgain": "पुनः प्रयास करें",
+		"cancelled": "प्रमाणीकरण रद्द किया गया",
+		"initiating": "प्रमाणीकरण शुरू हो रहा है..."
+	},
+	"speechToText": {
+		"stopRecording": "वॉयस इनपुट बंद करें",
+		"startRecording": "वॉयस इनपुट शुरू करें",
+		"setupPopover": {
+			"title": "वाक्-से-पाठ",
+			"description": "स्पीच-टू-टेक्स्ट उपलब्ध नहीं है। स्पीच-टू-टेक्स्ट के लिए FFmpeg और एक वैध OpenAI प्रोवाइडर दोनों कॉन्फ़िगर होने आवश्यक हैं। <moreInfoLink>अधिक जानकारी के लिए यहाँ क्लिक करें</moreInfoLink>।",
+			"openAiReason": "वॉयस ट्रांसक्रिप्शन का उपयोग करने के लिए आपको API key के साथ एक वैध OpenAI प्रदाता की आवश्यकता है।",
+			"ffmpegReason": "आपको FFmpeg इंस्टॉल करना होगा। FFmpeg इंस्टॉल करने में Kilo की मदद के लिए <ffmpegLink>यहाँ क्लिक करें</ffmpegLink>।",
+			"ffmpegMessage": "मुझे FFmpeg इंस्टॉल करने में मदद करें"
+		},
+		"misconfiguredState": "कॉन्फ़िग की वजह से अनुपलब्ध",
+		"errorState": "त्रुटि के कारण अनुपलब्ध",
+		"microphone": {
+			"label": "माइक्रोफ़ोन",
+			"defaultOption": "सिस्टम डिफ़ॉल्ट",
+			"loading": "माइक्रोफ़ोन डिवाइस लोड हो रहे हैं...",
+			"description": "स्पीच-टू-टेक्स्ट के लिए माइक्रोफ़ोन डिवाइस चुनें",
+			"noDevices": "कोई माइक्रोफ़ोन डिवाइस नहीं मिला",
+			"refresh": "रीफ़्रेश"
+		}
 	}
 }

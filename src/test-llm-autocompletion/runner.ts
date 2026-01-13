@@ -2,9 +2,14 @@
 
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
 import { GhostProviderTester } from "./ghost-provider-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
+import { generateHtmlReport } from "./html-report.js"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 interface TestResult {
 	testCase: TestCase
@@ -18,22 +23,44 @@ interface TestResult {
 }
 
 export class TestRunner {
-	private tester: GhostProviderTester
 	private verbose: boolean
 	private results: TestResult[] = []
 	private skipApproval: boolean
+	private useOpusApproval: boolean
+	private originalConsoleLog: typeof console.log
+	private originalConsoleInfo: typeof console.info
 
-	constructor(verbose: boolean = false, skipApproval: boolean = false) {
+	constructor(verbose: boolean = false, skipApproval: boolean = false, useOpusApproval: boolean = false) {
 		this.verbose = verbose
 		this.skipApproval = skipApproval
-		this.tester = new GhostProviderTester()
+		this.useOpusApproval = useOpusApproval
+		this.originalConsoleLog = console.log
+		this.originalConsoleInfo = console.info
 	}
 
-	async runTest(testCase: TestCase): Promise<TestResult> {
+	private suppressConsole(): void {
+		if (!this.verbose) {
+			console.log = () => {}
+			console.info = () => {}
+		}
+	}
+
+	private restoreConsole(): void {
+		console.log = this.originalConsoleLog
+		console.info = this.originalConsoleInfo
+	}
+
+	async runTest(testCase: TestCase, tester: GhostProviderTester): Promise<TestResult> {
 		try {
+			this.suppressConsole()
 			const startTime = performance.now()
-			const { prefix, completion, suffix } = await this.tester.getCompletion(testCase.input, testCase.name)
+			const { prefix, completion, suffix } = await tester.getCompletion(
+				testCase.input,
+				testCase.name,
+				testCase.contextFiles,
+			)
 			const llmRequestDuration = performance.now() - startTime
+			this.restoreConsole()
 			let actualValue: string = prefix + completion + suffix
 
 			if (completion === "") {
@@ -56,7 +83,11 @@ export class TestRunner {
 				testCase.name,
 				testCase.input,
 				actualValue,
+				completion,
+				testCase.filename,
+				testCase.contextFiles,
 				this.skipApproval,
+				this.useOpusApproval,
 			)
 
 			return {
@@ -67,6 +98,7 @@ export class TestRunner {
 				llmRequestDuration,
 			}
 		} catch (error) {
+			this.restoreConsole()
 			return {
 				testCase,
 				isApproved: false,
@@ -80,16 +112,23 @@ export class TestRunner {
 		return !result.isApproved && result.newOutput === true && this.skipApproval
 	}
 
-	async runAllTests(): Promise<void> {
+	async runAllTests(numRuns: number = 1): Promise<void> {
+		const tester = new GhostProviderTester()
 		const model = process.env.LLM_MODEL || "mistralai/codestral-2508"
-		const strategyName = this.tester.getName()
+		const strategyName = tester.getName()
 
 		console.log("\n🚀 Starting LLM Autocompletion Tests\n")
 		console.log("Provider: kilocode")
 		console.log("Model:", model)
 		console.log("Strategy:", strategyName)
+		if (numRuns > 1) {
+			console.log("Runs per test:", numRuns)
+		}
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
+		}
+		if (this.useOpusApproval) {
+			console.log("Opus Auto-Approval: enabled (using Claude Opus to judge completions)")
 		}
 		console.log("Total tests:", testCases.length)
 		console.log("Categories:", getCategories().join(", "))
@@ -102,53 +141,84 @@ export class TestRunner {
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
-
-				const result = await this.runTest(testCase)
-				result.strategyName = strategyName
-				this.results.push(result)
-
-				if (result.isApproved) {
-					console.log("✓ PASSED")
-					if (result.newOutput) {
-						console.log(`    (New output approved)`)
-					}
-				} else if (this.isUnknownResult(result)) {
-					console.log("? UNKNOWN")
-					console.log(`    (New output without approval)`)
+				if (numRuns > 1) {
+					console.log(`  Running ${testCase.name} [${strategyName}] (${numRuns} runs)...`)
 				} else {
-					console.log("✗ FAILED")
-					if (result.error) {
-						console.log(`    Error: ${result.error}`)
-					} else {
-						console.log(`    Input:`)
-						console.log("    " + "─".repeat(76))
-						console.log(
-							testCase.input
-								.split("\n")
-								.map((l) => "    " + l)
-								.join("\n"),
-						)
-						console.log("    " + "─".repeat(76))
-						console.log(`    Got:`)
-						console.log("    " + "─".repeat(76))
-						console.log(
-							(result.actualValue || "")
-								.split("\n")
-								.map((l) => "    " + l)
-								.join("\n"),
-						)
-						console.log("    " + "─".repeat(76))
+					process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
+				}
 
-						if (this.verbose && result.completion) {
-							console.log("    Full LLM Response:")
+				const runResults: TestResult[] = []
+				for (let run = 0; run < numRuns; run++) {
+					const result = await this.runTest(testCase, tester)
+					result.strategyName = strategyName
+					runResults.push(result)
+					this.results.push(result)
+
+					if (numRuns > 1) {
+						const status = result.isApproved ? "✓" : this.isUnknownResult(result) ? "?" : "✗"
+						process.stdout.write(`    Run ${run + 1}/${numRuns}: ${status}`)
+						if (result.llmRequestDuration) {
+							process.stdout.write(` (${result.llmRequestDuration.toFixed(0)}ms)`)
+						}
+						console.log()
+					}
+				}
+
+				// For single run, show result inline; for multiple runs, show summary
+				if (numRuns === 1) {
+					const result = runResults[0]
+					if (result.isApproved) {
+						console.log("✓ PASSED")
+						if (result.newOutput) {
+							console.log(`    (New output approved)`)
+						}
+					} else if (this.isUnknownResult(result)) {
+						console.log("? UNKNOWN")
+						console.log(`    (New output without approval)`)
+					} else {
+						console.log("✗ FAILED")
+						if (result.error) {
+							console.log(`    Error: ${result.error}`)
+						} else if (this.verbose) {
+							console.log(`    Input:`)
+							console.log("    " + "─".repeat(76))
 							console.log(
-								result.completion
+								testCase.input
 									.split("\n")
-									.map((l) => "      " + l)
+									.map((l) => "    " + l)
 									.join("\n"),
 							)
+							console.log("    " + "─".repeat(76))
+							console.log(`    Got:`)
+							console.log("    " + "─".repeat(76))
+							console.log(
+								(result.actualValue || "")
+									.split("\n")
+									.map((l) => "    " + l)
+									.join("\n"),
+							)
+							console.log("    " + "─".repeat(76))
+
+							if (result.completion) {
+								console.log("    Full LLM Response:")
+								console.log(
+									result.completion
+										.split("\n")
+										.map((l) => "      " + l)
+										.join("\n"),
+								)
+							}
 						}
+					}
+				} else {
+					// Summary for multiple runs
+					const passed = runResults.filter((r) => r.isApproved).length
+					const failed = runResults.filter((r) => !r.isApproved && !this.isUnknownResult(r)).length
+					const unknown = runResults.filter((r) => this.isUnknownResult(r)).length
+					const passRate = ((passed / numRuns) * 100).toFixed(0)
+					console.log(`    Summary: ${passed}/${numRuns} passed (${passRate}%)`)
+					if (failed > 0) {
+						console.log(`    Failed: ${failed}, Unknown: ${unknown}`)
 					}
 				}
 
@@ -158,7 +228,7 @@ export class TestRunner {
 			}
 		}
 
-		this.tester.dispose()
+		tester.dispose()
 		this.printSummary()
 	}
 
@@ -224,17 +294,6 @@ export class TestRunner {
 			}
 		}
 
-		// Failed tests details
-		if (failed > 0) {
-			console.log("\n❌ Failed Tests:")
-			for (const result of failedResults) {
-				console.log(`  • ${result.testCase.name} (${result.testCase.category})`)
-				if (result.error) {
-					console.log(`    Error: ${result.error}`)
-				}
-			}
-		}
-
 		// Unknown tests details
 		if (unknown > 0) {
 			console.log("\n❓ Unknown Tests (new outputs without approval):")
@@ -249,16 +308,16 @@ export class TestRunner {
 		process.exit(failed > 0 ? 1 : 0)
 	}
 
-	async runSingleTest(testName: string): Promise<void> {
+	async runSingleTest(testName: string, numRuns: number = 10): Promise<void> {
+		const tester = new GhostProviderTester()
 		const testCase = testCases.find((tc) => tc.name === testName)
 		if (!testCase) {
 			console.error(`Test "${testName}" not found`)
 			console.log("\nAvailable tests:")
 			testCases.forEach((tc) => console.log(`  - ${tc.name}`))
+			tester.dispose()
 			process.exit(1)
 		}
-
-		const numRuns = 10
 
 		console.log(`\n🧪 Running Single Test: ${testName} (${numRuns} times)\n`)
 		console.log("Category:", testCase.category)
@@ -272,7 +331,7 @@ export class TestRunner {
 		for (let i = 0; i < numRuns; i++) {
 			console.log(`\n🔄 Run ${i + 1}/${numRuns}...`)
 
-			const result = await this.runTest(testCase)
+			const result = await this.runTest(testCase, tester)
 
 			results.push(result)
 
@@ -324,7 +383,7 @@ export class TestRunner {
 			}
 		}
 
-		if (lastResult.completion) {
+		if (this.verbose && lastResult.completion) {
 			console.log("\nCompletion:")
 			console.log("  " + "─".repeat(78))
 			console.log(
@@ -338,7 +397,7 @@ export class TestRunner {
 
 		console.log("\n" + "═".repeat(80) + "\n")
 
-		this.tester.dispose()
+		tester.dispose()
 		process.exit(passedRuns === numRuns ? 0 : 1)
 	}
 
@@ -403,18 +462,35 @@ async function main() {
 	const args = process.argv.slice(2)
 	const verbose = args.includes("--verbose") || args.includes("-v")
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
+	const useOpusApproval = args.includes("--opus-approval") || args.includes("-oa")
 
-	const command = args.find((arg) => !arg.startsWith("-"))
+	// Parse --runs or -r option
+	let numRuns = 1
+	const runsIndex = args.findIndex((arg) => arg === "--runs" || arg === "-r")
+	if (runsIndex !== -1 && args[runsIndex + 1]) {
+		const parsedRuns = parseInt(args[runsIndex + 1], 10)
+		if (!isNaN(parsedRuns) && parsedRuns > 0) {
+			numRuns = parsedRuns
+		}
+	}
 
-	const runner = new TestRunner(verbose, skipApproval)
+	const command = args.find((arg, index) => !arg.startsWith("-") && (runsIndex === -1 || index !== runsIndex + 1))
 
 	try {
+		if (command === "report") {
+			await generateHtmlReport()
+			return
+		}
+
+		// Only create TestRunner for commands that need it
+		const runner = new TestRunner(verbose, skipApproval, useOpusApproval)
+
 		if (command === "clean") {
 			await runner.cleanApprovals()
 		} else if (command) {
-			await runner.runSingleTest(command)
+			await runner.runSingleTest(command, numRuns)
 		} else {
-			await runner.runAllTests()
+			await runner.runAllTests(numRuns)
 		}
 	} catch (error) {
 		console.error("\n❌ Fatal Error:", error)
@@ -439,5 +515,10 @@ function checkEnvironment() {
 	}
 }
 
-checkEnvironment()
+// Check if running a command that doesn't need API keys
+const argsForCheck = process.argv.slice(2)
+const commandForCheck = argsForCheck.find((arg) => !arg.startsWith("-"))
+if (commandForCheck !== "report" && commandForCheck !== "clean") {
+	checkEnvironment()
+}
 main().catch(console.error)

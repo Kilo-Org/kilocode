@@ -33,8 +33,9 @@ export const content: AgentPageContent = {
 			],
 		},
 		cta: {
-			buttonText: "Start 14-day Free Trial",
-			disclaimer: "(cancel anytime)",
+			buttonText: "Try now for free",
+			disclaimer: "",
+			tracking: "&agent=pr-fixer",
 		},
 	},
 	howItWorks: {
@@ -89,6 +90,6 @@ export const content: AgentPageContent = {
 	cta: {
 		heading: "Ship fixes, not follow-ups.",
 		description: "Let Roo Code's PR Fixer turn your review feedback into clean, ready-to-merge commits.",
-		buttonText: "Start 14-day Free Trial",
+		buttonText: "Try now for free",
 	},
 }

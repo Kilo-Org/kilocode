@@ -17,6 +17,24 @@
 		}
 	},
 	"chooseProvider": "Sihirini yapabilmesi için Kilo Code'nun bir API anahtarına ihtiyacı var.",
+	"providerSignup": {
+		"rooCloudProvider": "Roo Code Cloud Sağlayıcısı",
+		"rooCloudDescription": "Roo'yu kullanmanın en basit yolu. Düşük maliyetle seçilmiş ücretsiz ve ücretli modellerin karışımı",
+		"learnMore": "daha fazla bilgi",
+		"useAnotherProvider": "Başka bir sağlayıcı kullan",
+		"useAnotherProviderDescription": "Bir API anahtarı gir ve başla.",
+		"noApiKeys": "Anahtarlarla uğraşmak istemez misin? Roo Code Cloud Sağlayıcısı'nı seç.",
+		"getStarted": "Başla"
+	},
+	"waitingForCloud": {
+		"heading": "Seni Roo Code Cloud'a götürüyoruz...",
+		"description": "Tarayıcında kaydı tamamla ve otomatik olarak buraya döneceksin.",
+		"noPrompt": "URL açmanız istenmezse, <clickHere>buraya tıkla</clickHere>.",
+		"havingTrouble": "Kaydı tamamladıysan ama sorun yaşıyorsan, <clickHere>buraya tıkla</clickHere>.",
+		"pasteUrl": "Tarayıcınızdan geri arama URL'sini yapıştırın:",
+		"invalidURL": "Bu geçerli bir geri arama URL'si gibi görünmüyor. Roo Code Cloud'un tarayıcında gösterdiği şeyi kopyala.",
+		"goBack": "Geri Dön"
+	},
 	"startRouter": "Bir LLM yönlendiricisi kullanmanı öneririz:",
 	"startCustom": "Veya kendi API anahtarını kullanabilirsin:",
 	"telemetry": {

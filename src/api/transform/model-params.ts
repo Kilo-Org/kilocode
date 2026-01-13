@@ -42,6 +42,7 @@ type BaseModelParams = {
 	reasoningEffort: ReasoningEffortExtended | undefined
 	reasoningBudget: number | undefined
 	verbosity: VerbosityLevel | undefined
+	tools?: boolean
 }
 
 type AnthropicModelParams = {
@@ -94,7 +95,7 @@ export function getModelParams({
 		format,
 	})
 
-	let temperature = customTemperature ?? defaultTemperature
+	let temperature = customTemperature ?? model.defaultTemperature ?? defaultTemperature
 	let reasoningBudget: ModelParams["reasoningBudget"] = undefined
 	let reasoningEffort: ModelParams["reasoningEffort"] = undefined
 	let verbosity: VerbosityLevel | undefined = model.supportsVerbosity ? customVerbosity : undefined // kilocode_change
@@ -129,16 +130,17 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		const effort = (customReasoningEffort ?? model.reasoningEffort) as any
-		// Do not propagate "disable" into model params; treat as omission
+		// Only fallback to model default if user hasn't explicitly set a value.
+		// If customReasoningEffort is "disable", don't fallback to model default.
+		const effort =
+			customReasoningEffort !== undefined
+				? customReasoningEffort
+				: (model.reasoningEffort as ReasoningEffortExtended | "disable" | undefined)
+		// Capability and settings checks are handled by shouldUseReasoningEffort.
+		// Here we simply propagate the resolved effort into the params, while
+		// still treating "disable" as an omission.
 		if (effort && effort !== "disable") {
-			if (model.supportsReasoningEffort === true) {
-				// Boolean capability: accept extended efforts; UI still exposes low/medium/high by default
-				reasoningEffort = effort as ReasoningEffortExtended
-			} else {
-				// Array capability: honor exactly what's defined by the model
-				reasoningEffort = effort as ReasoningEffortExtended
-			}
+			reasoningEffort = effort as ReasoningEffortExtended
 		}
 	}
 
@@ -161,6 +163,7 @@ export function getModelParams({
 			format,
 			...params,
 			reasoning: getOpenAiReasoning({ model, reasoningBudget, reasoningEffort, settings }),
+			tools: model.supportsNativeTools,
 		}
 	} else if (format === "gemini") {
 		return {

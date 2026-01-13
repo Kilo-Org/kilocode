@@ -1,2 +1,2 @@
-const total = items.reduce((sum, item) => sum + item, 0);;
+const total = [0, 1, 2, 3].reduce((sum, value) => sum + value, 1);
 const items = [1, 2, 3, 4, 5];

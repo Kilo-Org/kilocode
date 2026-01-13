@@ -2,16 +2,17 @@
 title: Code Reviews
 sidebar_label: Code Reviews
 ---
+
 Kilo's **Code Reviews** feature automatically analyzes your pull requests using an AI model of your choice. It can review code the moment a PR is opened or updated, surface issues, and provide structured feedback across performance, security, style, and test coverage.
 
 ---
 
 ## What Code Reviews Enable
 
-- Automated AI review on every pull request  
-- Consistent feedback based on your team’s standards  
-- Automatic detection of bugs, security risks, and anti-patterns  
-- Deep reasoning over changed files, diffs, and repo context  
+- Automated AI review on every pull request
+- Consistent feedback based on your team’s standards
+- Automatic detection of bugs, security risks, and anti-patterns
+- Deep reasoning over changed files, diffs, and repo context
 - Customizable review strictness and focus areas
 
 ---
@@ -36,22 +37,22 @@ Before enabling Code Reviews:
 
 ## How to Use
 
-1. Go to the **Review Agent** section in your Kilo Code [personal](https://app.kilo.ai/profile) or [Organization](https://app.kilo.ai/organizations) dashboard.  
-2. Toggle **Enable AI Code Review** to automatically review PRs on open/update.  
-3. Choose an **AI Model** (e.g., Grok Code Fast 1).  
+1. Go to the **Review Agent** section in your Kilo Code [personal](https://app.kilo.ai/profile) or [Organization](https://app.kilo.ai/organizations) dashboard.
+2. Toggle **Enable AI Code Review** to automatically review PRs on open/update.
+3. Choose an **AI Model** (e.g., Grok Code Fast 1).
 4. Select a **Review Style**:
-    - Strict  
-    - Balanced  
-    - Lenient  
-5. Choose which **repositories** should receive automatic reviews.  
+    - Strict
+    - Balanced
+    - Lenient
+5. Choose which **repositories** should receive automatic reviews.
 6. Optionally select **Focus Areas** such as:
-    - Security vulnerabilities  
-    - Performance issues  
-    - Bug detection  
-    - Code style  
-    - Test coverage  
-    - Documentation gaps  
-7. Set a **maximum review time** (5–30 minutes).  
+    - Security vulnerabilities
+    - Performance issues
+    - Bug detection
+    - Code style
+    - Test coverage
+    - Documentation gaps
+7. Set a **maximum review time** (5–30 minutes).
 8. Add **custom instructions** to shape how the agent reviews your code.
 
 Once configured, the Review Agent will run automatically on PR events.
@@ -65,11 +66,11 @@ Once configured, the Review Agent will run automatically on PR events.
     2. The selected model analyzes all changes.
     3. The agent applies your chosen review style and focus areas.
     4. It generates a structured review with:
-        - Inline comments  
-        - Summary findings  
-        - Suggested fixes  
-        - Risk and severity tagging  
-- Reviews respect the **maximum time limit** you set.  
+        - Inline comments
+        - Summary findings
+        - Suggested fixes
+        - Risk and severity tagging
+- Reviews respect the **maximum time limit** you set.
 - Only repositories you’ve selected will trigger automatic analysis.
 
 Reviews are posted directly in GitHub as if coming from a team reviewer.
@@ -79,18 +80,21 @@ Reviews are posted directly in GitHub as if coming from a team reviewer.
 ## Review Styles
 
 ### Strict
-- Flags all potential issues  
-- Emphasizes correctness, quality, and security  
+
+- Flags all potential issues
+- Emphasizes correctness, quality, and security
 - Useful for mission-critical code paths or production services
 
 ### Balanced
-- Most popular option  
-- Prioritizes clarity and practicality  
+
+- Most popular option
+- Prioritizes clarity and practicality
 - Surfaces important issues without overwhelming noise
 
 ### Lenient
-- Flags only critical issues  
-- Encouraging and lightweight  
+
+- Flags only critical issues
+- Encouraging and lightweight
 - Ideal for exploratory PRs, prototypes, or early WIP reviews
 
 ---
@@ -100,33 +104,39 @@ Reviews are posted directly in GitHub as if coming from a team reviewer.
 You can tailor what the Review Agent pays attention to:
 
 ### Security Vulnerabilities
-- SQL injection  
-- XSS  
-- Unsafe APIs  
-- Secrets and credential exposure  
+
+- SQL injection
+- XSS
+- Unsafe APIs
+- Secrets and credential exposure
 
 ### Performance Issues
-- N+1 queries  
-- Inefficient loops  
-- High-complexity functions  
+
+- N+1 queries
+- Inefficient loops
+- High-complexity functions
 
 ### Bug Detection
-- Logic errors  
-- Edge-case failures  
-- Incorrect assumptions  
+
+- Logic errors
+- Edge-case failures
+- Incorrect assumptions
 
 ### Code Style
-- Formatting  
-- Naming conventions  
-- Readability improvements  
+
+- Formatting
+- Naming conventions
+- Readability improvements
 
 ### Test Coverage
-- Missing or inadequate tests  
-- Uncovered logic paths  
+
+- Missing or inadequate tests
+- Uncovered logic paths
 
 ### Documentation
-- Missing comments  
-- Unclear APIs  
+
+- Missing comments
+- Unclear APIs
 
 ---
 
@@ -145,8 +155,8 @@ The Review Agent is ideal for:
 
 ## Limitations and Guidance
 
-- Reviews can run for **up to 30 minutes** depending on your setting.  
-- The agent reviews **only the changed files**, not the entire repository.  
-- Some highly dynamic or domain-specific code may require additional context in custom instructions.  
-- The agent will only run on **selected repositories**.  
+- Reviews can run for **up to 30 minutes** depending on your setting.
+- The agent reviews **only the changed files**, not the entire repository.
+- Some highly dynamic or domain-specific code may require additional context in custom instructions.
+- The agent will only run on **selected repositories**.
 - During beta, review capacity may be throttled for extremely large PRs.

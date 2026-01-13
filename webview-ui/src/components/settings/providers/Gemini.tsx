@@ -27,12 +27,13 @@ type GeminiProps = {
 	organizationAllowList?: OrganizationAllowList
 	modelValidationError?: string
 	// kilocode_change end
+	simplifySettings?: boolean
 }
 
 export const Gemini = ({
 	apiConfiguration,
 	setApiConfigurationField,
-	fromWelcomeView,
+	simplifySettings,
 	// kilocode_change start
 	routerModels,
 	organizationAllowList,
@@ -99,7 +100,7 @@ export const Gemini = ({
 					/>
 				)}
 
-				{!fromWelcomeView && (
+				{!simplifySettings && (
 					<>
 						<Checkbox
 							className="mt-6"

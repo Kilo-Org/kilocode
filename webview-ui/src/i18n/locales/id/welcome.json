@@ -17,6 +17,24 @@
 		}
 	},
 	"chooseProvider": "Untuk melakukan keajaibannya, Kilo Code membutuhkan API key.",
+	"providerSignup": {
+		"rooCloudProvider": "Penyedia Roo Code Cloud",
+		"rooCloudDescription": "Cara termudah untuk menggunakan Roo. Campuran model gratis dan berbayar yang dikurasi dengan biaya rendah",
+		"learnMore": "pelajari lebih lanjut",
+		"useAnotherProvider": "Gunakan penyedia lain",
+		"useAnotherProviderDescription": "Masukkan kunci API dan mulai.",
+		"noApiKeys": "Tidak ingin menangani kunci? Pilih Penyedia Roo Code Cloud.",
+		"getStarted": "Mulai"
+	},
+	"waitingForCloud": {
+		"heading": "Membawamu ke Roo Code Cloud...",
+		"description": "Selesaikan pendaftaran di browser dan kamu akan secara otomatis kembali ke sini.",
+		"noPrompt": "Jika kamu tidak diminta untuk membuka URL, <clickHere>klik di sini</clickHere>.",
+		"havingTrouble": "Jika kamu telah menyelesaikan pendaftaran tetapi mengalami masalah, <clickHere>klik di sini</clickHere>.",
+		"pasteUrl": "Tempel URL callback dari browser Anda:",
+		"invalidURL": "Itu tidak terlihat seperti URL callback yang valid. Salin apa yang ditampilkan Roo Code Cloud di browser Anda.",
+		"goBack": "Kembali"
+	},
 	"startRouter": "Kami merekomendasikan menggunakan Router LLM:",
 	"startCustom": "Atau Anda dapat menggunakan API key Anda sendiri:",
 	"telemetry": {

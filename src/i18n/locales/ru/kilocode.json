@@ -94,11 +94,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "приостановлено",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (отключено)",
-				"tokenError": "Для использования Autocomplete необходимо установить действительный токен",
+				"noCredits": "**На вашем счёте нет кредитов**\n\nНа вашем счёте Kilo Code нет кредитов. Чтобы использовать автодополнение, пожалуйста, пополните счёт.\n\n[Открыть Настройки](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Модель автодополнения не настроена**\n\nЧтобы включить автодополнение, добавьте профиль с одним из поддерживаемых провайдеров: {{providers}}.\n\n[Открыть Настройки](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Общая стоимость сессии:",
 				"provider": "Провайдер:",
 				"model": "Модель:",
@@ -171,5 +173,40 @@
 		"checkpointsUnavailable": "Невозможно показать новые изменения, контрольные точки недоступны.",
 		"noChanges": "Невозможно показать новые изменения, изменения не найдены.",
 		"error": "Невозможно показать новые изменения, произошла ошибка."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Твоя версия Kilocode CLI устарела и не поддерживает Agent Manager. Обнови до последней версии.",
+			"cliNotFound": "Kilocode CLI не найден. Установи его для использования Agent Manager.",
+			"cliMisconfigured": "Kilocode CLI не настроен. Выполни 'kilocode auth' для входа или 'kilocode config' для настройки.",
+			"sessionFailed": "Не удалось запустить сессию агента",
+			"sessionFailedWithMessage": "Не удалось запустить сессию агента: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "Инструкции по Обновлению",
+			"installInstructions": "Инструкции по Установке",
+			"getHelp": "Получить Помощь",
+			"runInTerminal": "Запустить в Терминале",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "Обновить Глобально",
+			"updateLocal": "Обновить Локально",
+			"installGlobal": "Установить Глобально",
+			"installLocal": "Установить Локально"
+		},
+		"terminal": {
+			"installMessage": "Выполнение npm install для установки Kilocode CLI. После завершения можешь закрыть этот терминал и попробовать запустить Agent Manager снова.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Ваш API-ключ OpenAI недействителен или не имеет доступа к Realtime API. Пожалуйста, проверьте ваш API-ключ и попробуйте снова.",
+			"unknown": "Подключение не удалось. Пожалуйста, проверьте настройки и повторите попытку."
+		}
+	},
+	"configDiscovery": {
+		"added": "Код Кило: Добавлен {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Код Kilo: Удалено {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

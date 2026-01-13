@@ -17,11 +17,43 @@
 		}
 	},
 	"chooseProvider": "Aby mohl dělat svá kouzla, Kilo Code potřebuje API klíč.",
+	"providerSignup": {
+		"rooCloudProvider": "Roo Code Cloud Provider",
+		"rooCloudDescription": "Nejjednodušší způsob použití Roo. Kurátorovaná směs bezplatných a placených modelů za nízkou cenu",
+		"learnMore": "dozvědět se více",
+		"useAnotherProvider": "Použít jiného poskytovatele",
+		"useAnotherProviderDescription": "Zadejte API klíč a můžete začít.",
+		"noApiKeys": "Nechceš řešit klíče? Použij Roo Code Cloud Provider.",
+		"getStarted": "Začít"
+	},
+	"waitingForCloud": {
+		"heading": "Přesměrovávám vás do Roo Code Cloud...",
+		"description": "Dokončete registraci ve svém prohlížeči, poté se sem automaticky vrátíte.",
+		"noPrompt": "Pokud se nezobrazí výzva k otevření URL, <clickHere>klikněte zde</clickHere>.",
+		"havingTrouble": "Pokud jste dokončili registraci, ale máte problémy, <clickHere>klikněte zde</clickHere>.",
+		"pasteUrl": "Vložte zpětnou URL z vašeho prohlížeče:",
+		"invalidURL": "To nevypadá jako platná zpětná URL. Zkopíruj prosím to, co ukazuje Roo Code Cloud ve tvém prohlížeči.",
+		"goBack": "Jít zpět"
+	},
 	"startRouter": "Doporučujeme použít LLM Router:",
 	"startCustom": "Nebo můžeš přinést svůj vlastní API klíč poskytovatele:",
+	"rooCloudProviderHeading": "Roo Code Cloud Provider",
+	"rooCloudProviderBody": "Nejjednodušší způsob začátku s kurátorovanými modely",
+	"rooCloudProviderSignUp": "Registrovat se do cloudu",
+	"rooCloudProviderSignUpDesc": "Vytvořte si účet pro přístup ke cloudovým modelům",
+	"rooCloudProviderAuthButtonText": "Připojit se ke cloudu",
+	"rooCloudProviderPaidModelAnnouncement": "Nové placené modely nyní dostupné",
+	"rooCloudProviderPaidModelAnnouncementDesc": "Přístup k nejnovějším modelům s vylepšenými funkcemi",
+	"rooCloudProviderExplainer": "Explainer Agent",
+	"rooCloudProviderExplainerDesc": "Specializovaný agent pro vysvětlování kódu a konceptů",
+	"rooCloudProviderPlanner": "Planner Agent",
+	"rooCloudProviderPlannerDesc": "Agent pro plánování a architekturu projektů",
+	"rooCloudProviderCoder": "Coder Agent",
+	"rooCloudProviderCoderDesc": "Specializovaný agent pro psaní a refaktoring kódu",
 	"telemetry": {
 		"helpImprove": "Pomoz vylepšit Kilo Code",
-		"helpImproveMessage": "Kilo Code sbírá data o chybách a používání, aby nám pomohl opravit chyby a vylepšit rozšíření. Tato telemetrie nesbírá kód, prompts ani osobní informace. Můžeš to vypnout v <settingsLink>nastavení</settingsLink>."
+		"helpImproveMessage": "Kilo Code sbírá data o chybách a používání, aby nám pomohl opravit chyby a vylepšit rozšíření. Tato telemetrie nesbírá kód, prompts ani osobní informace. Můžeš to vypnout v <settingsLink>nastavení</settingsLink>.",
+		"changeSettings": "Toto můžete později změnit v dolní části <settingsLink>nastavení</settingsLink>"
 	},
 	"importSettings": "Importovat Nastavení"
 }

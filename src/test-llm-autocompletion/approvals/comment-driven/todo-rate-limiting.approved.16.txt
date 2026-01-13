@@ -1,8 +1,0 @@
-function handleAPIRequest(req, res) {
-  // TODO: Implement rate limiting to prevent abuse
-  // Implement rate limiting logic here
-  // For example, using a library like 'express-rate-limit'
-  // or a custom solution with Redis or an in-memory store
-
-  processRequest(req, res);
-}

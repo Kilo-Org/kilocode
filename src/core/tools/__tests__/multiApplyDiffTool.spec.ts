@@ -78,8 +78,19 @@ describe("multiApplyDiffTool", () => {
 				saveChanges: vi.fn().mockResolvedValue(undefined),
 				pushToolWriteResult: vi.fn().mockResolvedValue("File modified successfully"),
 			},
+			apiConfiguration: {
+				apiProvider: "anthropic",
+			},
 			api: {
-				getModel: vi.fn().mockReturnValue({ id: "test-model" }),
+				getModel: vi.fn().mockReturnValue({
+					id: "test-model",
+					info: {
+						maxTokens: 4096,
+						contextWindow: 128000,
+						supportsPromptCache: false,
+						supportsNativeTools: false,
+					},
+				}),
 			},
 			rooIgnoreController: {
 				validateAccess: vi.fn().mockReturnValue(true),

@@ -4,6 +4,7 @@ export interface KiloCodeWrapperProperties {
 	kiloCodeWrapperTitle: string | null
 	kiloCodeWrapperCode: string | null
 	kiloCodeWrapperVersion: string | null
+	kiloCodeWrapperJetbrains: boolean
 }
 
 export const JETBRAIN_PRODUCTS = {

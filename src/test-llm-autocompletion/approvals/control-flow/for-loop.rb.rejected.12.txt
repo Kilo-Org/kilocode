@@ -1,0 +1,10 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |item|
+	puts item
+end
+
+arr.each { |item| puts item }
+
+arr.each { |item| puts item.to_s + "!" }
+
+arr.each { |item| puts item.to_s + "!" if item > 3 }

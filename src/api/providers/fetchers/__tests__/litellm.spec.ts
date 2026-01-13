@@ -222,8 +222,11 @@ describe("getLiteLLMModels", () => {
 				contextWindow: 200000,
 				supportsImages: true,
 				supportsPromptCache: false,
+				supportsNativeTools: true,
 				inputPrice: 3,
 				outputPrice: 15,
+				cacheWritesPrice: undefined,
+				cacheReadsPrice: undefined,
 				description: "claude-3-5-sonnet via LiteLLM proxy",
 			},
 			"gpt-4-turbo": {
@@ -231,8 +234,11 @@ describe("getLiteLLMModels", () => {
 				contextWindow: 128000,
 				supportsImages: false,
 				supportsPromptCache: false,
+				supportsNativeTools: true,
 				inputPrice: 10,
 				outputPrice: 30,
+				cacheWritesPrice: undefined,
+				cacheReadsPrice: undefined,
 				description: "gpt-4-turbo via LiteLLM proxy",
 			},
 		})
@@ -299,8 +305,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 200000,
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "test-computer-model via LiteLLM proxy",
 		})
 
@@ -309,8 +318,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 200000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "test-non-computer-model via LiteLLM proxy",
 		})
 	})
@@ -443,8 +455,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 200000,
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "claude-3-5-sonnet-latest via LiteLLM proxy",
 		})
 
@@ -453,8 +468,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 128000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "gpt-4-turbo via LiteLLM proxy",
 		})
 	})
@@ -515,8 +533,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 200000,
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "claude-3-5-sonnet-latest via LiteLLM proxy",
 		})
 
@@ -525,8 +546,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 128000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "custom-model via LiteLLM proxy",
 		})
 
@@ -535,8 +559,11 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 128000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
+			cacheWritesPrice: undefined,
+			cacheReadsPrice: undefined,
 			description: "another-custom-model via LiteLLM proxy",
 		})
 	})
@@ -646,6 +673,7 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 200000,
 			supportsImages: true,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
 			cacheWritesPrice: undefined,
@@ -659,6 +687,7 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 128000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
 			cacheWritesPrice: undefined,
@@ -672,6 +701,7 @@ describe("getLiteLLMModels", () => {
 			contextWindow: 100000,
 			supportsImages: false,
 			supportsPromptCache: false,
+			supportsNativeTools: true,
 			inputPrice: undefined,
 			outputPrice: undefined,
 			cacheWritesPrice: undefined,

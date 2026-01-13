@@ -12,6 +12,7 @@ import {
 	apiConfigurationAtom,
 	chatMessagesAtom,
 	routerModelsAtom,
+	yoloModeAtom,
 } from "../../state/atoms/index.js"
 import { useGitInfo } from "../../state/hooks/useGitInfo.js"
 import { useContextUsage } from "../../state/hooks/useContextUsage.js"
@@ -102,6 +103,7 @@ export const StatusBar: React.FC = () => {
 	const apiConfig = useAtomValue(apiConfigurationAtom)
 	const messages = useAtomValue(chatMessagesAtom)
 	const routerModels = useAtomValue(routerModelsAtom)
+	const yoloMode = useAtomValue(yoloModeAtom)
 
 	// Get git info
 	const gitInfo = useGitInfo(cwd)
@@ -181,8 +183,20 @@ export const StatusBar: React.FC = () => {
 				) : null}
 			</Box>
 
-			{/* Right side: Mode, Model, and Context */}
+			{/* Right side: YOLO indicator, Mode, Model, and Context */}
 			<Box>
+				{/* YOLO Mode Indicator */}
+				{yoloMode && (
+					<>
+						<Text color="red" bold>
+							⚡ YOLO
+						</Text>
+						<Text color={theme.ui.text.dimmed} dimColor>
+							{" | "}
+						</Text>
+					</>
+				)}
+
 				{/* Mode */}
 				<Text color={theme.ui.text.highlight} bold>
 					{mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : "N/A"}

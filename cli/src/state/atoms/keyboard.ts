@@ -14,11 +14,12 @@ import {
 	fileMentionContextAtom,
 	selectedIndexAtom,
 	followupSuggestionsAtom,
-	showFollowupSuggestionsAtom,
+	followupSuggestionsMenuVisibleAtom,
 	clearFollowupSuggestionsAtom,
 	inputModeAtom,
 	type InputMode,
 	isStreamingAtom,
+	isCancellingAtom,
 } from "./ui.js"
 import {
 	textBufferStringAtom,
@@ -30,6 +31,8 @@ import {
 	moveToLineStartAtom,
 	moveToLineEndAtom,
 	moveToAtom,
+	moveToPreviousWordAtom,
+	moveToNextWordAtom,
 	insertCharAtom,
 	insertTextAtom,
 	insertNewlineAtom,
@@ -42,7 +45,7 @@ import {
 } from "./textBuffer.js"
 import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
-import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
+import { cancelTaskAtom, resumeTaskAtom, toggleYoloModeAtom, cycleNextModeAtom } from "./actions.js"
 import {
 	historyModeAtom,
 	historyEntriesAtom,
@@ -58,6 +61,8 @@ import {
 	navigateShellHistoryDownAtom,
 	executeShellCommandAtom,
 } from "./shell.js"
+import { saveClipboardImage, clipboardHasImage, cleanupOldClipboardImages } from "../../media/clipboard.js"
+import { logs } from "../../services/logs.js"
 
 // Export shell atoms for backward compatibility
 export {
@@ -66,6 +71,65 @@ export {
 	navigateShellHistoryUpAtom,
 	navigateShellHistoryDownAtom,
 	executeShellCommandAtom,
+}
+
+// ============================================================================
+// Clipboard Image Atoms
+// ============================================================================
+
+/**
+ * Map of image reference numbers to file paths for current message
+ * e.g., { 1: "/tmp/kilocode-clipboard/clipboard-xxx.png", 2: "/tmp/..." }
+ */
+export const imageReferencesAtom = atom<Map<number, string>>(new Map())
+
+/**
+ * Current image reference counter (increments with each paste)
+ */
+export const imageReferenceCounterAtom = atom<number>(0)
+
+/**
+ * Add a clipboard image and get its reference number
+ * Returns the reference number assigned to this image
+ */
+export const addImageReferenceAtom = atom(null, (get, set, filePath: string): number => {
+	const counter = get(imageReferenceCounterAtom) + 1
+	set(imageReferenceCounterAtom, counter)
+
+	const refs = new Map(get(imageReferencesAtom))
+	refs.set(counter, filePath)
+	set(imageReferencesAtom, refs)
+
+	return counter
+})
+
+/**
+ * Clear image references (after message is sent)
+ */
+export const clearImageReferencesAtom = atom(null, (_get, set) => {
+	set(imageReferencesAtom, new Map())
+	set(imageReferenceCounterAtom, 0)
+})
+
+/**
+ * Get all image references as an object for easier consumption
+ */
+export const getImageReferencesAtom = atom((get) => {
+	return Object.fromEntries(get(imageReferencesAtom))
+})
+
+/**
+ * Status message for clipboard operations
+ */
+export const clipboardStatusAtom = atom<string | null>(null)
+let clipboardStatusTimer: NodeJS.Timeout | null = null
+
+function setClipboardStatusWithTimeout(set: Setter, message: string, timeoutMs: number): void {
+	if (clipboardStatusTimer) {
+		clearTimeout(clipboardStatusTimer)
+	}
+	set(clipboardStatusAtom, message)
+	clipboardStatusTimer = setTimeout(() => set(clipboardStatusAtom, null), timeoutMs)
 }
 
 // ============================================================================
@@ -91,6 +155,41 @@ export const kittyProtocolEnabledAtom = atom<boolean>(false)
  * Debug mode for logging keystrokes
  */
 export const debugKeystrokeLoggingAtom = atom<boolean>(false)
+
+// ============================================================================
+// Exit Confirmation State
+// ============================================================================
+
+const EXIT_CONFIRMATION_WINDOW_MS = 2000
+
+type ExitPromptTimeout = ReturnType<typeof setTimeout>
+
+export const exitPromptVisibleAtom = atom<boolean>(false)
+const exitPromptTimeoutAtom = atom<ExitPromptTimeout | null>(null)
+export const exitRequestCounterAtom = atom<number>(0)
+
+export const triggerExitConfirmationAtom = atom(null, (get, set) => {
+	const exitPromptVisible = get(exitPromptVisibleAtom)
+	const existingTimeout = get(exitPromptTimeoutAtom)
+
+	if (existingTimeout) {
+		clearTimeout(existingTimeout)
+		set(exitPromptTimeoutAtom, null)
+	}
+
+	if (exitPromptVisible) {
+		set(exitPromptVisibleAtom, false)
+		set(exitRequestCounterAtom, (count) => count + 1)
+		return
+	}
+
+	set(exitPromptVisibleAtom, true)
+	const timeout = setTimeout(() => {
+		set(exitPromptVisibleAtom, false)
+		set(exitPromptTimeoutAtom, null)
+	}, EXIT_CONFIRMATION_WINDOW_MS)
+	set(exitPromptTimeoutAtom, timeout)
+})
 
 // ============================================================================
 // Buffer Atoms
@@ -311,14 +410,30 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 
 	// Convert Buffer to string if needed
 	const textStr = typeof text === "string" ? text : text.toString()
+	const trimmedText = textStr.trim()
+	const hasFollowupSuggestions = get(followupSuggestionsAtom).length > 0
+	const isSlashCommand = trimmedText.startsWith("/")
+	const slashCommandName = isSlashCommand ? (trimmedText.match(/^\/([^\s]+)/)?.[1]?.toLowerCase() ?? "") : ""
+	const shouldDismissFollowupOnSlashCommand = new Set(["clear", "c", "cls", "new", "n", "start", "exit", "q", "quit"])
 
-	if (callback && typeof callback === "function" && textStr && textStr.trim()) {
+	if (callback && typeof callback === "function" && trimmedText) {
 		// Call the submission callback
 		callback(textStr)
 
 		// Clear input and related state
 		set(clearTextBufferAtom)
-		set(clearFollowupSuggestionsAtom)
+		// If the user runs a slash command while a followup question is active,
+		// keep the followup question/suggestions so they can answer after the command runs.
+		if (hasFollowupSuggestions && isSlashCommand) {
+			if (slashCommandName && shouldDismissFollowupOnSlashCommand.has(slashCommandName)) {
+				set(clearFollowupSuggestionsAtom)
+			} else {
+				// Ensure followup stays in "no selection" mode after executing a slash command.
+				set(selectedIndexAtom, -1)
+			}
+		} else {
+			set(clearFollowupSuggestionsAtom)
+		}
 	}
 })
 
@@ -705,11 +820,19 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 			return
 
 		case "left":
-			set(moveLeftAtom)
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+			} else {
+				set(moveLeftAtom)
+			}
 			return
 
 		case "right":
-			set(moveRightAtom)
+			if (key.meta) {
+				set(moveToNextWordAtom)
+			} else {
+				set(moveRightAtom)
+			}
 			return
 
 		// Enter/Return
@@ -771,6 +894,21 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 				return
 			}
 			break
+
+		// Word navigation (Meta/Alt key)
+		case "b":
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+				return
+			}
+			break
+
+		case "f":
+			if (key.meta) {
+				set(moveToNextWordAtom)
+				return
+			}
+			break
 	}
 
 	// Character input
@@ -792,27 +930,82 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 }
 
 function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
+	// Debug logging for key detection (Ctrl or Meta/Cmd keys)
+	if (key.ctrl || key.meta || key.sequence === "\x16") {
+		logs.debug(
+			`Key detected: name=${key.name}, ctrl=${key.ctrl}, meta=${key.meta}, shift=${key.shift}, paste=${key.paste}, sequence=${JSON.stringify(key.sequence)}`,
+			"clipboard",
+		)
+	}
+
+	// Check for Ctrl+V by sequence first (ASCII 0x16 = SYN character)
+	// This is how Ctrl+V appears in most terminals
+	if (key.sequence === "\x16") {
+		logs.debug("Detected Ctrl+V via sequence \\x16", "clipboard")
+		handleClipboardImagePaste(get, set).catch((err) =>
+			logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+		)
+		return true
+	}
+
 	switch (key.name) {
 		case "c":
 			if (key.ctrl) {
-				process.exit(0)
+				set(triggerExitConfirmationAtom)
+				set(clearTextBufferAtom)
+				return true
+			}
+			break
+		case "v":
+			// Ctrl+V or Cmd+V (macOS) - check for clipboard image
+			if (key.ctrl || key.meta) {
+				logs.debug(`Detected ${key.meta ? "Cmd" : "Ctrl"}+V via key.name`, "clipboard")
+				// Handle clipboard image paste asynchronously
+				handleClipboardImagePaste(get, set).catch((err) =>
+					logs.error("Unhandled clipboard paste error", "clipboard", { error: err }),
+				)
+				return true
 			}
 			break
 		case "x":
 			if (key.ctrl) {
 				const isStreaming = get(isStreamingAtom)
 				if (isStreaming) {
+					set(isCancellingAtom, true)
 					set(cancelTaskAtom)
+					return true
 				}
+			}
+			break
+		case "escape": {
+			const isStreaming = get(isStreamingAtom)
+			if (isStreaming) {
+				set(isCancellingAtom, true)
+				set(cancelTaskAtom)
 				return true
 			}
 			break
+		}
 		case "r":
 			if (key.ctrl) {
 				const hasResumeTask = get(hasResumeTaskAtom)
 				if (hasResumeTask) {
 					set(resumeTaskAtom)
 				}
+				return true
+			}
+			break
+		case "y":
+			// Toggle YOLO mode with Ctrl+Y
+			if (key.ctrl) {
+				set(toggleYoloModeAtom)
+				return true
+			}
+			break
+		case "tab":
+			// Cycle through modes with Shift+Tab
+			if (key.shift) {
+				set(cycleNextModeAtom)
 				return true
 			}
 			break
@@ -832,6 +1025,85 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 }
 
 /**
+ * Atom to trigger clipboard image paste from external components (e.g., KeyboardProvider)
+ * This is used when a paste timeout occurs (e.g., Cmd+V with image in clipboard)
+ */
+export const triggerClipboardImagePasteAtom = atom(null, async (get, set, fallbackText?: string) => {
+	await handleClipboardImagePaste(get, set, fallbackText)
+})
+
+/**
+ * Handle clipboard image paste (Ctrl+V or Cmd+V on macOS)
+ * Saves clipboard image to a temp file and inserts @path reference into text buffer
+ * If fallbackText is provided and no image is found, broadcasts the fallback text as a paste event
+ */
+async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?: string): Promise<void> {
+	logs.debug("handleClipboardImagePaste called", "clipboard")
+	try {
+		// Check if clipboard has an image
+		logs.debug("Checking clipboard for image...", "clipboard")
+		const hasImage = await clipboardHasImage()
+		logs.debug(`clipboardHasImage returned: ${hasImage}`, "clipboard")
+		if (!hasImage) {
+			logs.debug("No image in clipboard", "clipboard")
+			// If fallback text provided, broadcast it as paste event
+			if (fallbackText) {
+				logs.debug("Using fallback text for paste", "clipboard")
+				set(broadcastKeyEventAtom, {
+					name: "",
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: true,
+					sequence: fallbackText,
+				})
+			}
+			return
+		}
+
+		// Save the image to a file in temp directory
+		const result = await saveClipboardImage()
+		if (result.success && result.filePath) {
+			// Add image to references and get its number
+			const refNumber = set(addImageReferenceAtom, result.filePath)
+
+			// Build the [Image #N] reference to insert
+			// Add space before and after if needed
+			const currentText = get(textBufferStringAtom)
+			let insertText = `[Image #${refNumber}]`
+
+			// Check if we need spaces around the insertion
+			const charBefore = currentText.length > 0 ? currentText[currentText.length - 1] : ""
+			if (charBefore && charBefore !== " " && charBefore !== "\n") {
+				insertText = " " + insertText
+			}
+			insertText = insertText + " "
+
+			// Insert at current cursor position
+			set(insertTextAtom, insertText)
+
+			setClipboardStatusWithTimeout(set, `Image #${refNumber} attached`, 2000)
+			logs.debug(`Inserted clipboard image #${refNumber}: ${result.filePath}`, "clipboard")
+
+			// Clean up old clipboard images in the background
+			cleanupOldClipboardImages().catch((cleanupError) => {
+				logs.debug("Clipboard cleanup failed", "clipboard", {
+					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+				})
+			})
+		} else {
+			setClipboardStatusWithTimeout(set, result.error || "Failed to save clipboard image", 3000)
+		}
+	} catch (error) {
+		setClipboardStatusWithTimeout(
+			set,
+			`Clipboard error: ${error instanceof Error ? error.message : String(error)}`,
+			3000,
+		)
+	}
+}
+
+/**
  * Main keyboard handler that routes based on mode
  * This is the central keyboard handling atom that all key events go through
  */
@@ -843,7 +1115,7 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 
 	// Priority 2: Determine current mode and route to mode-specific handler
 	const isApprovalPending = get(isApprovalPendingAtom)
-	const isFollowupVisible = get(showFollowupSuggestionsAtom)
+	const isFollowupVisible = get(followupSuggestionsMenuVisibleAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
 	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)

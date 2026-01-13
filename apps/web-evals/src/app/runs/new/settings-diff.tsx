@@ -1,12 +1,12 @@
-import { Fragment, HTMLAttributes } from "react"
-
 import { type Keys, type RooCodeSettings, GLOBAL_SETTINGS_KEYS, PROVIDER_SETTINGS_KEYS } from "@roo-code/types"
 
-import { cn } from "@/lib/utils"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui"
 
-export const ROO_CODE_SETTINGS_KEYS = [...GLOBAL_SETTINGS_KEYS, ...PROVIDER_SETTINGS_KEYS] as Keys<RooCodeSettings>[]
+export const ROO_CODE_SETTINGS_KEYS = [
+	...new Set([...GLOBAL_SETTINGS_KEYS, ...PROVIDER_SETTINGS_KEYS]),
+] as Keys<RooCodeSettings>[]
 
-type SettingsDiffProps = HTMLAttributes<HTMLDivElement> & {
+type SettingsDiffProps = {
 	defaultSettings: RooCodeSettings
 	customSettings: RooCodeSettings
 }
@@ -14,53 +14,45 @@ type SettingsDiffProps = HTMLAttributes<HTMLDivElement> & {
 export function SettingsDiff({
 	customSettings: { experiments: customExperiments, ...customSettings },
 	defaultSettings: { experiments: defaultExperiments, ...defaultSettings },
-	className,
-	...props
 }: SettingsDiffProps) {
 	const defaults = { ...defaultSettings, ...defaultExperiments }
 	const custom = { ...customSettings, ...customExperiments }
 
 	return (
-		<div className={cn("grid grid-cols-3 gap-2 text-sm p-2", className)} {...props}>
-			<div className="font-medium text-muted-foreground">Setting</div>
-			<div className="font-medium text-muted-foreground">Default</div>
-			<div className="font-medium text-muted-foreground">Custom</div>
-			{ROO_CODE_SETTINGS_KEYS.map((key) => {
-				const defaultValue = defaults[key as keyof typeof defaults]
-				const customValue = custom[key as keyof typeof custom]
-				const isDefault = JSON.stringify(defaultValue) === JSON.stringify(customValue)
+		<div className="border rounded-sm">
+			<Table>
+				<TableHeader>
+					<TableRow className="font-medium text-muted-foreground">
+						<TableHead>Setting</TableHead>
+						<TableHead>Default</TableHead>
+						<TableHead>Custom</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{ROO_CODE_SETTINGS_KEYS.map((key) => {
+						const defaultValue = JSON.stringify(defaults[key as keyof typeof defaults], null, 2)
+						const customValue = JSON.stringify(custom[key as keyof typeof custom], null, 2)
 
-				return isDefault ? null : (
-					<SettingDiff
-						key={key}
-						name={key}
-						defaultValue={JSON.stringify(defaultValue, null, 2)}
-						customValue={JSON.stringify(customValue, null, 2)}
-					/>
-				)
-			})}
+						return defaultValue === customValue ||
+							(isEmpty(defaultValue) && isEmpty(customValue)) ? null : (
+							<TableRow key={key}>
+								<TableCell className="font-mono" title={key}>
+									{key}
+								</TableCell>
+								<TableCell className="font-mono text-rose-500 line-through" title={defaultValue}>
+									{defaultValue}
+								</TableCell>
+								<TableCell className="font-mono text-teal-500" title={customValue}>
+									{customValue}
+								</TableCell>
+							</TableRow>
+						)
+					})}
+				</TableBody>
+			</Table>
 		</div>
 	)
 }
 
-type SettingDiffProps = HTMLAttributes<HTMLDivElement> & {
-	name: string
-	defaultValue?: string
-	customValue?: string
-}
-
-export function SettingDiff({ name, defaultValue, customValue, ...props }: SettingDiffProps) {
-	return (
-		<Fragment {...props}>
-			<div className="font-mono" title={name}>
-				{name}
-			</div>
-			<pre className="inline text-rose-500 line-through" title={defaultValue}>
-				{defaultValue}
-			</pre>
-			<pre className="inline text-teal-500" title={customValue}>
-				{customValue}
-			</pre>
-		</Fragment>
-	)
-}
+const isEmpty = (value: string | undefined) =>
+	value === undefined || value === "" || value === "null" || value === '""' || value === "[]" || value === "{}"

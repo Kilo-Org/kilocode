@@ -69,13 +69,13 @@ export const ModelInfoView = ({
 	].filter(Boolean)
 
 	const priceInfoItems = [
-		modelInfo?.inputPrice !== undefined && modelInfo.inputPrice > 0 && (
+		modelInfo?.inputPrice !== undefined && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.inputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.inputPrice)} / 1M tokens
 			</>
 		),
-		modelInfo?.outputPrice !== undefined && modelInfo.outputPrice > 0 && (
+		modelInfo?.outputPrice !== undefined && (
 			<>
 				<span className="font-medium">{t("settings:modelInfo.outputPrice")}:</span>{" "}
 				{formatPrice(modelInfo.outputPrice)} / 1M tokens

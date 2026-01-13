@@ -1,0 +1,8 @@
+function greet(name) { return 'Hello ' + name; }
+greet('James'); // returns 'Hello James'
+
+// function greet(name) {
+//     return 'Hello ' + name;
+//   }
+
+//   greet('James'); // returns 'Hello James'

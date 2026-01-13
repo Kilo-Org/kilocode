@@ -15,6 +15,7 @@ type RooProps = {
 	cloudIsAuthenticated: boolean
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 export const Roo = ({
@@ -24,14 +25,17 @@ export const Roo = ({
 	cloudIsAuthenticated,
 	organizationAllowList,
 	modelValidationError,
+	simplifySettings,
 }: RooProps) => {
 	const { t } = useAppTranslation()
 
 	return (
 		<>
 			{cloudIsAuthenticated ? (
-				<div className="text-sm text-vscode-descriptionForeground">
-					{t("settings:providers.roo.authenticatedMessage")}
+				<div className="flex justify-between items-center mb-2">
+					<div className="text-sm text-vscode-descriptionForeground">
+						{t("settings:providers.roo.authenticatedMessage")}
+					</div>
 				</div>
 			) : (
 				<div className="flex flex-col gap-2">
@@ -53,6 +57,7 @@ export const Roo = ({
 				serviceUrl="https://roocode.com"
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

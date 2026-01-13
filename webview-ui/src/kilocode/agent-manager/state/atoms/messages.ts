@@ -1,6 +1,8 @@
 import { atom } from "jotai"
 import { atomFamily } from "jotai/utils"
 import type { ClineMessage } from "@roo-code/types"
+import { sendSessionEventAtom } from "./stateMachine"
+import type { SessionEvent } from "../sessionStateMachine"
 
 // Per-session messages using atomFamily
 export const sessionMessagesAtomFamily = atomFamily((_sessionId: string) => atom<ClineMessage[]>([]))
@@ -40,6 +42,19 @@ export const updateSessionMessagesAtom = atom(
 		const newVersions = new Map<number, number>()
 		reconciled.forEach((m) => newVersions.set(m.ts, getContentLength(m)))
 		set(sessionMessageVersionsAtomFamily(sessionId), newVersions)
+
+		// Send events for new/updated messages (in order)
+		const previous = new Map(current.map((m) => [m.ts, m]))
+		for (const msg of reconciled) {
+			const prev = previous.get(msg.ts)
+			const isNew = !prev
+			const becameComplete = prev?.partial && !msg.partial
+			if (!isNew && !becameComplete) continue
+			const event = messageToEvent(msg)
+			if (event) {
+				set(sendSessionEventAtom, { sessionId, event })
+			}
+		}
 	},
 )
 
@@ -69,11 +84,11 @@ export const clearSessionMessagesAtom = atom(null, (_get, set, sessionId: string
 })
 
 // Helpers - adapted from cli/src/state/atoms/extension.ts
-function getContentLength(msg: ClineMessage): number {
+export function getContentLength(msg: ClineMessage): number {
 	return (msg.text?.length || 0) + (msg.say?.length || 0) + (msg.ask?.length || 0)
 }
 
-function reconcileMessages(
+export function reconcileMessages(
 	current: ClineMessage[],
 	incoming: ClineMessage[],
 	versions: Map<number, number>,
@@ -94,4 +109,80 @@ function reconcileMessages(
 
 		return incomingMsg
 	})
+}
+
+/**
+ * Convert a ClineMessage to a SessionEvent for the state machine.
+ * Returns null if the message doesn't map to a state-changing event.
+ */
+export function messageToEvent(msg: ClineMessage): SessionEvent | null {
+	const partial = msg.partial ?? false
+
+	// Say messages - check the say field for specific event types
+	if (msg.type === "say" && msg.say) {
+		switch (msg.say) {
+			// API request started - important for transitioning to streaming
+			case "api_req_started":
+				return { type: "api_req_started" }
+
+			// Text and other say messages - stay streaming
+			case "text":
+			case "command_output":
+			case "user_feedback":
+			case "user_feedback_diff":
+			case "api_req_finished":
+			case "api_req_retried":
+			case "completion_result":
+			case "shell_integration_warning":
+			case "checkpoint_saved":
+				return { type: "say_text", partial }
+
+			default:
+				return { type: "say_text", partial }
+		}
+	}
+
+	// Ask messages - depend on ask type
+	if (msg.type === "ask" && msg.ask) {
+		switch (msg.ask) {
+			// Approval-required asks
+			case "tool":
+				return { type: "ask_tool", partial }
+			case "command":
+				return { type: "ask_command", partial }
+			case "browser_action_launch":
+				return { type: "ask_browser_action_launch", partial }
+			case "use_mcp_server":
+				return { type: "ask_use_mcp_server", partial }
+
+			// Input-required asks
+			case "followup":
+				return { type: "ask_followup", partial }
+
+			// Completion
+			case "completion_result":
+				return { type: "ask_completion_result" }
+
+			// Errors
+			case "api_req_failed":
+				return { type: "ask_api_req_failed" }
+			case "mistake_limit_reached":
+				return { type: "ask_mistake_limit_reached" }
+			case "invalid_model":
+				return { type: "ask_invalid_model" }
+			case "payment_required_prompt":
+				return { type: "ask_payment_required_prompt" }
+
+			// Resumable
+			case "resume_task":
+				return { type: "ask_resume_task" }
+			case "resume_completed_task":
+				return { type: "ask_resume_task" }
+
+			default:
+				return null
+		}
+	}
+
+	return null
 }

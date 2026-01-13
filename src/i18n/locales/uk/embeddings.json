@@ -17,6 +17,12 @@
 		"modelNotEmbeddingCapable": "Модель Ollama не підтримує embedding: {{modelId}}",
 		"hostNotFound": "Хост Ollama не знайдено: {{baseUrl}}"
 	},
+	"bedrock": {
+		"invalidResponseFormat": "Недійсний формат відповіді від Amazon Bedrock",
+		"invalidCredentials": "Недійсні облікові дані AWS. Будь ласка, перевір свою конфігурацію AWS.",
+		"accessDenied": "Відмовлено в доступі до сервісу Amazon Bedrock. Будь ласка, перевір свої дозволи IAM.",
+		"modelNotFound": "Модель {{model}} не знайдена в Amazon Bedrock"
+	},
 	"scanner": {
 		"unknownErrorProcessingFile": "Невідома помилка при обробці файлу {{filePath}}",
 		"unknownErrorDeletingPoints": "Невідома помилка при видаленні точок для {{filePath}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Відсутня конфігурація Mistral для створення embedder",
 		"openRouterConfigMissing": "Відсутня конфігурація OpenRouter для створення embedder",
 		"vercelAiGatewayConfigMissing": "Відсутня конфігурація Vercel AI Gateway для створення embedder",
+		"bedrockConfigMissing": "Відсутня конфігурація Amazon Bedrock для створення embedder",
 		"invalidEmbedderType": "Налаштовано недійсний тип embedder: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Будь ласка, переконайся, що 'Розмірність Embedding' правильно встановлена в налаштуваннях провайдера OpenAI-Compatible.",
 		"vectorDimensionNotDetermined": "Не вдалося визначити розмірність вектора для моделі '{{modelId}}' з провайдером '{{provider}}'. Перевір профілі моделі або конфігурацію.",

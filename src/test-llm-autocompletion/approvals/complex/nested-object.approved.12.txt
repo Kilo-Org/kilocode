@@ -1,0 +1,11 @@
+const config = {
+	server: {
+	  port: 3000,
+	  host: 'localhost'
+	},
+	api: {
+	  url: 'https://api.github.com'
+	}
+  };
+
+  module.exports = config;

@@ -171,8 +171,9 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 		return this.sidebarProvider.getCurrentTaskStack()
 	}
 
-	public async clearCurrentTask(lastMessage?: string) {
-		await this.sidebarProvider.finishSubTask(lastMessage ?? "")
+	public async clearCurrentTask(_lastMessage?: string) {
+		// Legacy finishSubTask removed; clear current by closing active task instance.
+		await this.sidebarProvider.removeClineFromStack()
 		await this.sidebarProvider.postStateToWebview()
 	}
 
@@ -270,6 +271,18 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				this.emit(RooCodeEventName.TaskSpawned, task.taskId, childTaskId)
 			})
 
+			task.on(RooCodeEventName.TaskDelegated as any, (childTaskId: string) => {
+				;(this.emit as any)(RooCodeEventName.TaskDelegated, task.taskId, childTaskId)
+			})
+
+			task.on(RooCodeEventName.TaskDelegationCompleted as any, (childTaskId: string, summary: string) => {
+				;(this.emit as any)(RooCodeEventName.TaskDelegationCompleted, task.taskId, childTaskId, summary)
+			})
+
+			task.on(RooCodeEventName.TaskDelegationResumed as any, (childTaskId: string) => {
+				;(this.emit as any)(RooCodeEventName.TaskDelegationResumed, task.taskId, childTaskId)
+			})
+
 			// Task Execution
 
 			task.on(RooCodeEventName.Message, async (message) => {
@@ -294,8 +307,8 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				this.emit(RooCodeEventName.TaskToolFailed, taskId, tool, error)
 			})
 
-			task.on(RooCodeEventName.TaskTokenUsageUpdated, (_, usage) => {
-				this.emit(RooCodeEventName.TaskTokenUsageUpdated, task.taskId, usage)
+			task.on(RooCodeEventName.TaskTokenUsageUpdated, (_, tokenUsage, toolUsage) => {
+				this.emit(RooCodeEventName.TaskTokenUsageUpdated, task.taskId, tokenUsage, toolUsage)
 			})
 
 			// Let's go!

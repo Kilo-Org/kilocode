@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "组织链接已复制到剪贴板",
 		"shareSuccessPublic": "公开链接已复制到剪贴板",
 		"openInCloud": "在 Roo Code Cloud 中打开任务",
-		"openInCloudIntro": "从任何地方继续监控或与 Roo 交互。扫描、点击或复制以打开。"
+		"openInCloudIntro": "从任何地方继续监控或与 Roo 交互。扫描、点击或复制以打开。",
+		"openApiHistory": "打开 API 历史",
+		"openUiHistory": "打开 UI 历史"
 	},
 	"history": {
 		"title": "历史"
@@ -110,6 +112,7 @@
 	"enhancePrompt": "增强提示词",
 	"addImages": "添加图片到消息",
 	"sendMessage": "发送消息",
+	"pressToSend": "按 {{keyCombination}} 发送",
 	"stopTts": "停止文本转语音",
 	"typeMessage": "输入消息...",
 	"typeTask": "在此处输入您的任务...",
@@ -142,7 +145,19 @@
 		"failed": "API请求失败",
 		"streaming": "API请求...",
 		"cancelled": "API请求已取消",
-		"streamingFailed": "API流式传输失败"
+		"streamingFailed": "API流式传输失败",
+		"errorTitle": "API 错误 {{code}}",
+		"errorMessage": {
+			"docs": "文档",
+			"400": "提供商无法按此方式处理请求。请停止任务并尝试不同方法。",
+			"401": "无法向提供商进行身份验证。请检查您的 API 密钥配置。",
+			"402": "您的账户余额/积分似乎已用尽。请前往提供商处充值以继续。",
+			"403": "无权限。您的 API 密钥有效，但提供商拒绝完成此请求。",
+			"429": "请求过于频繁。提供商已对您的请求进行速率限制。请在下一次 API 调用前稍候。",
+			"500": "提供商服务器错误。提供商端出现问题，您的请求无问题。",
+			"unknown": "未知 API 错误。请联系 Kilo 支持。",
+			"connection": "连接错误。确保您有可用的互联网连接。"
+		}
 	},
 	"checkpoint": {
 		"regular": "检查点",
@@ -256,6 +271,11 @@
 		"hasQuestion": "Kilo Code有一个问题"
 	},
 	"taskCompleted": "任务完成",
+	"errorDetails": {
+		"title": "错误详情",
+		"copyToClipboard": "复制到剪贴板",
+		"copied": "已复制!"
+	},
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
 	},
@@ -281,19 +301,28 @@
 		"thinking": "思考中",
 		"seconds": "{{count}}秒"
 	},
-	"contextCondense": {
-		"title": "上下文已压缩",
-		"condensing": "正在压缩上下文...",
-		"errorHeader": "上下文压缩失败",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "Token",
+		"condensation": {
+			"title": "上下文已压缩",
+			"inProgress": "正在压缩上下文...",
+			"errorHeader": "上下文压缩失败"
+		},
+		"truncation": {
+			"title": "上下文已截断",
+			"inProgress": "正在截断上下文...",
+			"messagesRemoved": "已移除 {{count}} 条消息",
+			"messagesRemoved_other": "已移除 {{count}} 条消息",
+			"description": "为保持在上下文窗口限制内，已从对话中移除较旧的消息。与压缩相比，这是一种快速但上下文保留较少的方法。"
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "复制到输入框（或按住Shift点击）",
-		"autoSelectCountdown": "{{count}}秒后自动选择",
-		"countdownDisplay": "{{count}}秒"
+		"timerPrefix": "自动批准已启用。{{seconds}}秒后选择中…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} 已发布",
+		"title": "Roo Code {{version}} 已发布",
+		"support": "请在 <githubLink>GitHub</githubLink> 上为我们点星支持 Roo Code。",
 		"stealthModel": {
 			"feature": "<bold>限时免费隐形模型</bold> - Code Supernova：现已升级为 <bold>1M Token 上下文窗口</bold>！一个支持图像输入的多功能代理编程模型，通过 Roo Code Cloud 提供。",
 			"note": "(注意：提示词和补全内容会被模型创建者记录并用于改进模型)",
@@ -302,21 +331,21 @@
 			"goToSettingsButton": "前往设置"
 		},
 		"release": {
-			"heading": "扩展新功能：",
-			"openRouterEmbeddings": "支持 OpenRouter 嵌入模型",
-			"chutesDynamic": "Chutes 现在动态加载最新模型",
-			"queuedMessagesFix": "修复队列消息丢失问题"
+			"heading": "最新功能：",
+			"contextRewind": "改进的上下文压缩现在允许您在回到存档点时恢复完整的之前上下文",
+			"rooProvider": "Roo Code Cloud 提供商现在保留推理内容，并默认使用原生工具以获得更好的性能"
 		},
 		"cloudAgents": {
 			"heading": "云端新功能：",
-			"prFixer": "推出 <bold>PR Fixer</bold> 云端 Agent 以补充 PR 审查员。",
-			"prFixerDescription": "Roo Code 的 PR Fixer 直接在 GitHub 上为你的 PR 应用高质量更改。通过 PR 评论调用，它会读取整个评论历史以理解上下文、协议和权衡 - 然后实施正确的修复。",
-			"tryPrFixerButton": "试用 PR Fixer"
+			"specialized": "推出 <bold>Explainer</bold>、<bold>Planner</bold> 和 <bold>Coder</bold> - 三个专业云代理来增强你的工作流程。",
+			"description": "代理在云端协同工作，可从网页或通过 Slack 触发。",
+			"tryButton": "试用云代理"
 		},
 		"careers": "此外，<careersLink>我们正在招聘！</careersLink>",
-		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
+		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/KiloCode</redditLink> 上关注我们 🚀"
 	},
 	"browser": {
+		"session": "浏览器会话",
 		"rooWantsToUse": "Kilo Code想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
@@ -330,11 +359,25 @@
 		"sessionStarted": "浏览器会话已启动",
 		"actions": {
 			"title": "浏览器操作: ",
+			"launched": "浏览器已启动",
 			"launch": "访问 {{url}}",
+			"clicked": "点击位置: {{coordinate}}",
 			"click": "点击 ({{coordinate}})",
+			"typed": "输入: {{text}}",
 			"type": "输入 \"{{text}}\"",
+			"pressed": "已按 {{key}}",
+			"press": "按 {{key}}",
+			"scrolledDown": "已向下滚动",
 			"scrollDown": "向下滚动",
+			"scrolledUp": "已向上滚动",
 			"scrollUp": "向上滚动",
+			"hovered": "悬停位置: {{coordinate}}",
+			"hover": "悬停 ({{coordinate}})",
+			"resized": "大小已更改: {{size}}",
+			"resize": "调整大小为 {{size}}",
+			"screenshotSaved": "截图已保存",
+			"screenshot": "将截图保存到 {{path}}",
+			"closed": "浏览器已关闭",
 			"close": "关闭浏览器"
 		}
 	},

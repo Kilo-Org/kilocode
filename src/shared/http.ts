@@ -40,19 +40,44 @@ export async function fetchWithRetries({
 	try {
 		return await pRetry(
 			async (attemptCount: number) => {
-				const signals: AbortSignal[] = [AbortSignal.timeout(timeout)]
+				const timeoutSignal = AbortSignal.timeout(timeout)
 
+				let signal: AbortSignal = timeoutSignal
+				let cleanup = (): void => {}
+
+				// Avoid AbortSignal.any here because it accumulates "abort" listeners on
+				// long‑lived userProvidedSignal across retries/calls.
 				if (userProvidedSignal) {
-					signals.push(userProvidedSignal)
+					const controller = new AbortController()
+
+					const onUserAbort = (): void => controller.abort(userProvidedSignal.reason)
+					const onTimeoutAbort = (): void => controller.abort(timeoutSignal.reason)
+
+					userProvidedSignal.addEventListener("abort", onUserAbort)
+					timeoutSignal.addEventListener("abort", onTimeoutAbort)
+
+					// If the user signal was already aborted, propagate immediately.
+					if (userProvidedSignal.aborted) {
+						onUserAbort()
+					}
+
+					signal = controller.signal
+					cleanup = (): void => {
+						userProvidedSignal.removeEventListener("abort", onUserAbort)
+						timeoutSignal.removeEventListener("abort", onTimeoutAbort)
+					}
 				}
 
-				const signal = AbortSignal.any(signals)
-
 				// TODO: Fix this type coercion from type 'global.Response' to type 'Response'
-				const res = await fetch(url, {
-					...requestInit,
-					signal,
-				})
+				let res: Response
+				try {
+					res = await fetch(url, {
+						...requestInit,
+						signal,
+					})
+				} finally {
+					cleanup()
+				}
 
 				if (shouldRetry(res) && attemptCount < retries) {
 					console.log("got bad response for", url, "status", res.status, "retrying attempt", attemptCount)
@@ -65,7 +90,12 @@ export async function fetchWithRetries({
 		)
 	} catch (e) {
 		if (e instanceof DOMException) {
-			throw new RequestTimedOutError(url, timeout, retries)
+			// Timeout errors are surfaced as DOMException("TimeoutError")
+			if (e.name === "TimeoutError") {
+				throw new RequestTimedOutError(url, timeout, retries)
+			}
+			// Propagate explicit aborts (e.g., user cancellation)
+			throw e
 		} else {
 			throw e
 		}

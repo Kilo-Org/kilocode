@@ -1,0 +1,15 @@
+const orders = [{id: 1, items: [{price: 10}, {price: 20}]}, {id: 2, items: [{price: 15}]}];
+const totalRevenue = orders.reduce((acc, order) => {
+	const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
+	return acc + orderTotal;
+}, 0);
+
+console.log(totalRevenue); // 45
+
+// const orders = [{id: 1, items: [{price: 10}, {price: 20}]}, {id: 2, items: [{price: 15}]}];
+// const totalRevenue = orders.reduce((acc, order) => {
+// 	const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
+// 	return acc + orderTotal;
+// }, 0);
+
+// console.log(totalRevenue); // 45

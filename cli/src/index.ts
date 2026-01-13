@@ -18,6 +18,10 @@ import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
+import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+
+// Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
+logs.info(`CLI started from: ${import.meta.url}`)
 
 const program = new Command()
 let cli: CLI | null = null
@@ -33,7 +37,9 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("--yolo", "Auto-approve all tool permissions", false)
 	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
+	.option("-i, --json-io", "Bidirectional JSON mode (no TUI, stdin/stdout enabled)", false)
 	.option("-c, --continue", "Resume the last conversation from this workspace", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.option(
@@ -46,6 +52,13 @@ program
 	.option("-s, --session <sessionId>", "Restore a session by ID")
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
+	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option(
+		"--attach <path>",
+		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
+		accumulateAttachments,
+		[] as string[],
+	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate that --existing-branch requires --parallel
@@ -68,18 +81,6 @@ program
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
 			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
-			process.exit(1)
-		}
-
-		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
-			console.error("Error: Piped input requires --auto flag to be enabled")
-			process.exit(1)
-		}
-
-		// Validate that JSON mode requires autonomous mode
-		if (options.json && !options.auto) {
-			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -132,6 +133,18 @@ program
 			process.exit(1)
 		}
 
+		// Validate that piped stdin requires autonomous mode or json-io mode
+		if (!process.stdin.isTTY && !options.auto && !options.jsonIo) {
+			console.error("Error: Piped input requires --auto or --json-io flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that --json requires --auto (--json-io is independent)
+		if (options.json && !options.auto) {
+			console.error("Error: --json option requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
 		// Validate provider if specified
 		if (options.provider) {
 			// Load config to check if provider exists
@@ -141,6 +154,24 @@ program
 			if (!providerExists) {
 				const availableIds = config.providers.map((p) => p.id).join(", ")
 				console.error(`Error: Provider "${options.provider}" not found. Available providers: ${availableIds}`)
+				process.exit(1)
+			}
+		}
+
+		// Validate attachments if specified
+		const attachments: string[] = options.attach || []
+		const attachRequiresAutoResult = validateAttachRequiresAuto({ attach: attachments, auto: options.auto })
+		if (!attachRequiresAutoResult.valid) {
+			console.error(attachRequiresAutoResult.error)
+			process.exit(1)
+		}
+
+		if (attachments.length > 0) {
+			const validationResult = validateAttachments(attachments)
+			if (!validationResult.valid) {
+				for (const error of validationResult.errors) {
+					console.error(error)
+				}
 				process.exit(1)
 			}
 		}
@@ -205,11 +236,16 @@ program
 
 		logs.debug("Starting Kilo Code CLI", "Index", { options })
 
+		const jsonIoMode = options.jsonIo
+
 		cli = new CLI({
 			mode: options.mode,
 			workspace: finalWorkspace,
 			ci: options.auto,
-			json: options.json,
+			yolo: options.yolo,
+			// json-io mode implies json output (both modes output JSON to stdout)
+			json: options.json || jsonIoMode,
+			jsonInteractive: jsonIoMode,
 			prompt: finalPrompt,
 			timeout: options.timeout,
 			customModes: customModes,
@@ -221,6 +257,8 @@ program
 			session: options.session,
 			fork: options.fork,
 			noSplash: options.nosplash,
+			appendSystemPrompt: options.appendSystemPrompt,
+			attachments: attachments.length > 0 ? attachments : undefined,
 		})
 		await cli.start()
 		await cli.dispose()
@@ -268,6 +306,10 @@ program
 
 // Handle process termination signals
 process.on("SIGINT", async () => {
+	if (cli?.requestExitConfirmation()) {
+		return
+	}
+
 	if (cli) {
 		await cli.dispose("SIGINT")
 	} else {

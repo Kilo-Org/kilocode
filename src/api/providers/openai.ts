@@ -19,7 +19,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
+
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -95,7 +95,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const ark = modelUrl.includes(".volces.com")
 
 		if (modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")) {
-			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages)
+			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages, metadata)
 			return
 		}
 
@@ -164,14 +164,15 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				...(reasoning && reasoning),
+				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" && {
+					parallel_tool_calls: metadata.parallelToolCalls ?? false,
+				}),
 			}
 
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
-
-			// kilocode_change start: Add native tool call support when toolStyle is "json"
-			addNativeToolCallsToParams(requestOptions, this.options, metadata)
-			// kilocode_change end
 
 			let stream
 			try {
@@ -193,12 +194,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
-			const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices?.[0]?.delta ?? {}
-
-				yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
 
 				if (delta.content) {
 					for (const chunk of matcher.update(delta.content)) {
@@ -221,6 +219,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 				// kilocode_change end
 
+				if (delta.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						yield {
+							type: "tool_call_partial",
+							index: toolCall.index,
+							id: toolCall.id,
+							name: toolCall.function?.name,
+							arguments: toolCall.function?.arguments,
+						}
+					}
+				}
+
 				if (chunk.usage) {
 					lastUsage = chunk.usage
 				}
@@ -241,13 +251,16 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					: enabledLegacyFormat
 						? [systemMessage, ...convertToSimpleMessages(messages)]
 						: [systemMessage, ...convertToOpenAiMessages(messages)],
+				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" && {
+					parallel_tool_calls: metadata.parallelToolCalls ?? false,
+				}),
 			}
 
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
-			// kilocode_change start: Add native tool call support when toolStyle is "json"
-			addNativeToolCallsToParams(requestOptions, this.options, metadata)
-			// kilocode_change end
+
 			let response
 			try {
 				response = await this.client.chat.completions.create(
@@ -258,7 +271,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			// kilocode_change start: reasoning & tool calls.
+			// kilocode_change start: reasoning
 			const message = response.choices[0]?.message
 			if (message) {
 				if ("reasoning" in message && typeof message.reasoning === "string") {
@@ -273,20 +286,26 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 						text: message.content || "",
 					}
 				}
-				if (message.tool_calls) {
-					for (const toolCall of message.tool_calls) {
-						if (toolCall.type === "function") {
-							yield {
-								type: "tool_call",
-								id: toolCall.id,
-								name: toolCall.function.name,
-								arguments: toolCall.function.arguments,
-							}
+			}
+			// kilocode_change end
+
+			if (message?.tool_calls) {
+				for (const toolCall of message.tool_calls) {
+					if (toolCall.type === "function") {
+						yield {
+							type: "tool_call",
+							id: toolCall.id,
+							name: toolCall.function.name,
+							arguments: toolCall.function.arguments,
 						}
 					}
 				}
 			}
-			// kilocode_change end
+
+			yield {
+				type: "text",
+				text: message?.content || "",
+			}
 
 			yield this.processUsageMetrics(response.usage, modelInfo)
 		}
@@ -347,6 +366,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		modelId: string,
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const modelInfo = this.getModel().info
 		const methodIsAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
@@ -367,6 +387,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
+				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" && {
+					parallel_tool_calls: metadata.parallelToolCalls ?? false,
+				}),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -397,6 +422,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				],
 				reasoning_effort: modelInfo.reasoningEffort as "low" | "medium" | "high" | undefined,
 				temperature: undefined,
+				...(metadata?.tools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
+				...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
+				...(metadata?.toolProtocol === "native" && {
+					parallel_tool_calls: metadata.parallelToolCalls ?? false,
+				}),
 			}
 
 			// O3 family models do not support the deprecated max_tokens parameter
@@ -414,9 +444,23 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
+			const message = response.choices?.[0]?.message
+			if (message?.tool_calls) {
+				for (const toolCall of message.tool_calls) {
+					if (toolCall.type === "function") {
+						yield {
+							type: "tool_call",
+							id: toolCall.id,
+							name: toolCall.function.name,
+							arguments: toolCall.function.arguments,
+						}
+					}
+				}
+			}
+
 			yield {
 				type: "text",
-				text: response.choices?.[0]?.message.content || "",
+				text: message?.content || "",
 			}
 			yield this.processUsageMetrics(response.usage)
 		}
@@ -425,10 +469,26 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
 		for await (const chunk of stream) {
 			const delta = chunk.choices?.[0]?.delta
-			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+
+			if (delta) {
+				if (delta.content) {
+					yield {
+						type: "text",
+						text: delta.content,
+					}
+				}
+
+				// Emit raw tool call chunks - NativeToolCallParser handles state management
+				if (delta.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						yield {
+							type: "tool_call_partial",
+							index: toolCall.index,
+							id: toolCall.id,
+							name: toolCall.function?.name,
+							arguments: toolCall.function?.arguments,
+						}
+					}
 				}
 			}
 

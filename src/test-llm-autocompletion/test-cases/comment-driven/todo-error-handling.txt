@@ -1,5 +1,6 @@
-# Description: Should implement error handling after TODO comment
+#### Description: Should implement error handling after TODO comment
+#### Filename: data-processor.js
 function processData(data) {
-  // TODO: Implement error handling<<<CURSOR>>>
+  // TODO: Implement error handling<<<AUTOCOMPLETE_HERE>>>
   return processedData;
 }

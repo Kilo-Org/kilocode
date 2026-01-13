@@ -13,6 +13,7 @@ import { inputEventTransform, noTransform } from "../transforms"
 type AnthropicProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	simplifySettings?: boolean
 }
 
 export const Anthropic = ({ apiConfiguration, setApiConfigurationField }: AnthropicProps) => {

@@ -102,14 +102,41 @@
 		"noChanges": "नए परिवर्तन नहीं दिखाए जा सकते, कोई परिवर्तन नहीं मिले।",
 		"error": "नए परिवर्तन नहीं दिखाए जा सकते, एक त्रुटि हुई।"
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "आपका Kilocode CLI संस्करण पुराना है और Agent Manager का समर्थन नहीं करता। कृपया नवीनतम संस्करण में अपडेट करें।",
+			"cliNotFound": "Kilocode CLI नहीं मिला। Agent Manager का उपयोग करने के लिए कृपया इसे इंस्टॉल करें।",
+			"cliMisconfigured": "Kilocode CLI कॉन्फ़िगर नहीं है। साइन इन करने के लिए 'kilocode auth' चलाएं या कॉन्फ़िगर करने के लिए 'kilocode config' चलाएं।",
+			"sessionFailed": "एजेंट सत्र प्रारंभ करने में विफल",
+			"sessionFailedWithMessage": "एजेंट सत्र प्रारंभ करने में विफल: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "अपडेट निर्देश",
+			"installInstructions": "इंस्टॉल निर्देश",
+			"getHelp": "सहायता प्राप्त करें",
+			"runInTerminal": "टर्मिनल में चलाएं",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "ग्लोबल अपडेट करें",
+			"updateLocal": "लोकल अपडेट करें",
+			"installGlobal": "ग्लोबल इंस्टॉल करें",
+			"installLocal": "लोकल इंस्टॉल करें"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI इंस्टॉल करने के लिए npm install चल रहा है। पूर्ण होने के बाद, आप यह टर्मिनल बंद कर सकते हैं और Agent Manager को फिर से शुरू करने का प्रयास कर सकते हैं।",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "रोका गया",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (अक्षम)",
-				"tokenError": "Autocomplete का उपयोग करने के लिए एक वैध टोकन सेट करना होगा",
+				"noCredits": "**आपके खाते में कोई क्रेडिट नहीं है**\n\nआपके Kilo Code खाते में कोई क्रेडिट नहीं है। ऑटोकम्प्लीट का उपयोग करने के लिए, कृपया अपने खाते में क्रेडिट जोड़ें।\n\n[सेटिंग्स खोलें](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**कोई ऑटोकम्प्लीट मॉडल कॉन्फ़िगर नहीं किया गया**\n\nऑटोकम्प्लीट सक्षम करने के लिए, इन समर्थित प्रदाताओं में से एक के साथ एक प्रोफ़ाइल जोड़ें: {{providers}}।\n\n[सेटिंग्स खोलें](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "सत्र की कुल लागत:",
 				"provider": "प्रदाता:",
 				"model": "मॉडल:",
@@ -171,5 +198,15 @@
 			"cancelButton": "रद्द करें"
 		},
 		"tipMessage": "Kilo: टर्मिनल कमांड उत्पन्न करने के लिए {{shortcut}} दबाएँ"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "आपकी OpenAI API key अमान्य है या इसमें Realtime API तक पहुंच नहीं है। कृपया अपनी API key जांचें और पुनः प्रयास करें।",
+			"unknown": "कनेक्शन असफल हुआ। कृपया अपनी कॉन्फ़िगरेशन जांचें और पुनः प्रयास करें।"
+		}
+	},
+	"configDiscovery": {
+		"added": "किलो कोड: जोड़ा गया {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "किलो कोड: हटाया गया {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

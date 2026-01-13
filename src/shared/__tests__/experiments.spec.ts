@@ -23,15 +23,26 @@ describe("experiments", () => {
 		})
 	})
 
+	describe("SPEECH_TO_TEXT", () => {
+		it("is configured correctly", () => {
+			expect(EXPERIMENT_IDS.SPEECH_TO_TEXT).toBe("speechToText")
+			expect(experimentConfigsMap.SPEECH_TO_TEXT).toMatchObject({
+				enabled: true,
+			})
+		})
+	})
+
 	describe("isEnabled", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				morphFastApply: false, // kilocode_change
+				speechToText: false, // kilocode_change
 				powerSteering: false,
 				multiFileApplyDiff: false,
 				preventFocusDisruption: false,
 				imageGeneration: false,
 				runSlashCommand: false,
+				multipleNativeToolCalls: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -39,11 +50,13 @@ describe("experiments", () => {
 		it("returns true when experiment POWER_STEERING is enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				morphFastApply: false, // kilocode_change
+				speechToText: false, // kilocode_change
 				powerSteering: true,
 				multiFileApplyDiff: false,
 				preventFocusDisruption: false,
 				imageGeneration: false,
 				runSlashCommand: false,
+				multipleNativeToolCalls: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -51,11 +64,13 @@ describe("experiments", () => {
 		it("returns false when experiment is not present", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				morphFastApply: false, // kilocode_change
+				speechToText: false, // kilocode_change
 				powerSteering: false,
 				multiFileApplyDiff: false,
 				preventFocusDisruption: false,
 				imageGeneration: false,
 				runSlashCommand: false,
+				multipleNativeToolCalls: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})

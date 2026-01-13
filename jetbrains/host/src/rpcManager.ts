@@ -22,6 +22,7 @@ import { IRemoteConsoleLog } from "../deps/vscode/vs/base/common/console.js"
 import { FileType, FilePermission, FileSystemProviderErrorCode } from "../deps/vscode/vs/platform/files/common/files.js"
 import * as fs from "fs"
 import { promisify } from "util"
+import { exec } from "child_process"
 import { ConfigurationModel } from "../deps/vscode/vs/platform/configuration/common/configurationModels.js"
 import { NullLogService } from "../deps/vscode/vs/platform/log/common/log.js"
 import { ExtensionIdentifier } from "../deps/vscode/vs/platform/extensions/common/extensions.js"
@@ -307,9 +308,61 @@ export class RPCManager {
 				console.log("Get initial state")
 				return Promise.resolve({ isFocused: false, isActive: false })
 			},
-			$openUri(uri: UriComponents, uriString: string | undefined, options: any): Promise<boolean> {
+			async $openUri(uri: UriComponents, uriString: string | undefined, options: any): Promise<boolean> {
 				console.log("Open URI:", { uri, uriString, options })
-				return Promise.resolve(true)
+
+				try {
+					// Use the uriString if provided, otherwise construct from uri components
+					const urlToOpen = uriString || this.constructUriString(uri)
+
+					if (!urlToOpen) {
+						console.error("No valid URL to open")
+						return false
+					}
+
+					console.log("Opening URL in browser:", urlToOpen)
+
+					// Open URL in default browser based on platform
+					const execAsync = promisify(exec)
+					let command: string
+
+					switch (process.platform) {
+						case "darwin": // macOS
+							command = `open "${urlToOpen}"`
+							break
+						case "win32": // Windows
+							command = `start "" "${urlToOpen}"`
+							break
+						default: // Linux and others
+							command = `xdg-open "${urlToOpen}"`
+							break
+					}
+
+					await execAsync(command)
+					console.log("Successfully opened URL in browser")
+					return true
+				} catch (error) {
+					console.error("Failed to open URI:", error)
+					return false
+				}
+			},
+			constructUriString(uri: UriComponents): string | null {
+				if (!uri) return null
+
+				const scheme = uri.scheme || "https"
+				const authority = uri.authority || ""
+				const path = uri.path || ""
+				const query = uri.query ? `?${uri.query}` : ""
+				const fragment = uri.fragment ? `#${uri.fragment}` : ""
+
+				// Construct the full URI
+				if (authority) {
+					return `${scheme}://${authority}${path}${query}${fragment}`
+				} else if (path) {
+					return `${scheme}:${path}${query}${fragment}`
+				}
+
+				return null
 			},
 			$asExternalUri(uri: UriComponents, options: any): Promise<UriComponents> {
 				console.log("As external URI:", { uri, options })

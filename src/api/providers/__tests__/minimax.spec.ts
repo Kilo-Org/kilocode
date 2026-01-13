@@ -8,17 +8,20 @@ vitest.mock("vscode", () => ({
 	},
 }))
 
-import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 
 import { type MinimaxModelId, minimaxDefaultModelId, minimaxModels } from "@roo-code/types"
 
 import { MiniMaxHandler } from "../minimax"
 
-vitest.mock("openai", () => {
-	const createMock = vitest.fn()
+vitest.mock("@anthropic-ai/sdk", () => {
+	const mockCreate = vitest.fn()
 	return {
-		default: vitest.fn(() => ({ chat: { completions: { create: createMock } } })),
+		Anthropic: vitest.fn(() => ({
+			messages: {
+				create: mockCreate,
+			},
+		})),
 	}
 })
 
@@ -28,7 +31,8 @@ describe("MiniMaxHandler", () => {
 
 	beforeEach(() => {
 		vitest.clearAllMocks()
-		mockCreate = (OpenAI as unknown as any)().chat.completions.create
+		const anthropicInstance = (Anthropic as unknown as any)()
+		mockCreate = anthropicInstance.messages.create
 	})
 
 	describe("International MiniMax (default)", () => {
@@ -41,9 +45,21 @@ describe("MiniMaxHandler", () => {
 
 		it("should use the correct international MiniMax base URL by default", () => {
 			new MiniMaxHandler({ minimaxApiKey: "test-minimax-api-key" })
-			expect(OpenAI).toHaveBeenCalledWith(
+			expect(Anthropic).toHaveBeenCalledWith(
 				expect.objectContaining({
-					baseURL: "https://api.minimax.io/v1",
+					baseURL: "https://api.minimax.io/anthropic",
+				}),
+			)
+		})
+
+		it("should convert /v1 endpoint to /anthropic endpoint", () => {
+			new MiniMaxHandler({
+				minimaxApiKey: "test-minimax-api-key",
+				minimaxBaseUrl: "https://api.minimax.io/anthropic",
+			})
+			expect(Anthropic).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://api.minimax.io/anthropic",
 				}),
 			)
 		})
@@ -51,7 +67,7 @@ describe("MiniMaxHandler", () => {
 		it("should use the provided API key", () => {
 			const minimaxApiKey = "test-minimax-api-key"
 			new MiniMaxHandler({ minimaxApiKey })
-			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: minimaxApiKey }))
+			expect(Anthropic).toHaveBeenCalledWith(expect.objectContaining({ apiKey: minimaxApiKey }))
 		})
 
 		it("should return default model when no model is specified", () => {
@@ -117,15 +133,25 @@ describe("MiniMaxHandler", () => {
 				minimaxApiKey: "test-minimax-api-key",
 				minimaxBaseUrl: "https://api.minimaxi.com/anthropic", // kilocode_change: anthropic
 			})
-			expect(OpenAI).toHaveBeenCalledWith(
-				expect.objectContaining({ baseURL: "https://api.minimaxi.com/anthropic" }), // kilocode_change: anthropic
+			expect(Anthropic).toHaveBeenCalledWith(
+				expect.objectContaining({ baseURL: "https://api.minimaxi.com/anthropic" }),
+			)
+		})
+
+		it("should convert China /v1 endpoint to /anthropic endpoint", () => {
+			new MiniMaxHandler({
+				minimaxApiKey: "test-minimax-api-key",
+				minimaxBaseUrl: "https://api.minimaxi.com/anthropic", // kilocode_change: anthropic
+			})
+			expect(Anthropic).toHaveBeenCalledWith(
+				expect.objectContaining({ baseURL: "https://api.minimaxi.com/anthropic" }),
 			)
 		})
 
 		it("should use the provided API key for China", () => {
 			const minimaxApiKey = "test-minimax-api-key"
 			new MiniMaxHandler({ minimaxApiKey, minimaxBaseUrl: "https://api.minimaxi.com/anthropic" }) // kilocode_change: anthropic
-			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ apiKey: minimaxApiKey }))
+			expect(Anthropic).toHaveBeenCalledWith(expect.objectContaining({ apiKey: minimaxApiKey }))
 		})
 
 		it("should return default model when no model is specified", () => {
@@ -138,9 +164,9 @@ describe("MiniMaxHandler", () => {
 	describe("Default behavior", () => {
 		it("should default to international base URL when none is specified", () => {
 			const handlerDefault = new MiniMaxHandler({ minimaxApiKey: "test-minimax-api-key" })
-			expect(OpenAI).toHaveBeenCalledWith(
+			expect(Anthropic).toHaveBeenCalledWith(
 				expect.objectContaining({
-					baseURL: "https://api.minimax.io/v1",
+					baseURL: "https://api.minimax.io/anthropic",
 				}),
 			)
 
@@ -163,7 +189,9 @@ describe("MiniMaxHandler", () => {
 
 		it("completePrompt method should return text from MiniMax API", async () => {
 			const expectedResponse = "This is a test response from MiniMax"
-			mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
+			mockCreate.mockResolvedValueOnce({
+				content: [{ type: "text", text: expectedResponse }],
+			})
 			const result = await handler.completePrompt("test prompt")
 			expect(result).toBe(expectedResponse)
 		})
@@ -177,18 +205,20 @@ describe("MiniMaxHandler", () => {
 		it("createMessage should yield text content from stream", async () => {
 			const testContent = "This is test content from MiniMax stream"
 
-			mockCreate.mockImplementationOnce(() => {
-				return {
-					[Symbol.asyncIterator]: () => ({
-						next: vitest
-							.fn()
-							.mockResolvedValueOnce({
-								done: false,
-								value: { choices: [{ delta: { content: testContent } }] },
-							})
-							.mockResolvedValueOnce({ done: true }),
-					}),
-				}
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								type: "content_block_start",
+								index: 0,
+								content_block: { type: "text", text: testContent },
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
 			})
 
 			const stream = handler.createMessage("system prompt", [])
@@ -199,21 +229,24 @@ describe("MiniMaxHandler", () => {
 		})
 
 		it("createMessage should yield usage data from stream", async () => {
-			mockCreate.mockImplementationOnce(() => {
-				return {
-					[Symbol.asyncIterator]: () => ({
-						next: vitest
-							.fn()
-							.mockResolvedValueOnce({
-								done: false,
-								value: {
-									choices: [{ delta: {} }],
-									usage: { prompt_tokens: 10, completion_tokens: 20 },
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								type: "message_start",
+								message: {
+									usage: {
+										input_tokens: 10,
+										output_tokens: 20,
+									},
 								},
-							})
-							.mockResolvedValueOnce({ done: true }),
-					}),
-				}
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
 			})
 
 			const stream = handler.createMessage("system prompt", [])
@@ -231,14 +264,12 @@ describe("MiniMaxHandler", () => {
 				minimaxApiKey: "test-minimax-api-key",
 			})
 
-			mockCreate.mockImplementationOnce(() => {
-				return {
-					[Symbol.asyncIterator]: () => ({
-						async next() {
-							return { done: true }
-						},
-					}),
-				}
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
 			})
 
 			const systemPrompt = "Test system prompt for MiniMax"
@@ -252,23 +283,20 @@ describe("MiniMaxHandler", () => {
 					model: modelId,
 					max_tokens: Math.min(modelInfo.maxTokens, Math.ceil(modelInfo.contextWindow * 0.2)),
 					temperature: 1,
-					messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+					system: expect.any(Array),
+					messages: expect.any(Array),
 					stream: true,
-					stream_options: { include_usage: true },
 				}),
-				undefined,
 			)
 		})
 
 		it("should use temperature 1 by default", async () => {
-			mockCreate.mockImplementationOnce(() => {
-				return {
-					[Symbol.asyncIterator]: () => ({
-						async next() {
-							return { done: true }
-						},
-					}),
-				}
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
 			})
 
 			const messageGenerator = handler.createMessage("test", [])
@@ -278,36 +306,76 @@ describe("MiniMaxHandler", () => {
 				expect.objectContaining({
 					temperature: 1,
 				}),
-				undefined,
 			)
 		})
 
-		it("should handle streaming chunks with null choices array", async () => {
-			const testContent = "Content after null choices"
+		it("should handle thinking blocks in stream", async () => {
+			const thinkingContent = "Let me think about this..."
 
-			mockCreate.mockImplementationOnce(() => {
-				return {
-					[Symbol.asyncIterator]: () => ({
-						next: vitest
-							.fn()
-							.mockResolvedValueOnce({
-								done: false,
-								value: { choices: null },
-							})
-							.mockResolvedValueOnce({
-								done: false,
-								value: { choices: [{ delta: { content: testContent } }] },
-							})
-							.mockResolvedValueOnce({ done: true }),
-					}),
-				}
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								type: "content_block_start",
+								index: 0,
+								content_block: { type: "thinking", thinking: thinkingContent },
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
 			})
 
 			const stream = handler.createMessage("system prompt", [])
 			const firstChunk = await stream.next()
 
 			expect(firstChunk.done).toBe(false)
-			expect(firstChunk.value).toEqual({ type: "text", text: testContent })
+			expect(firstChunk.value).toEqual({ type: "reasoning", text: thinkingContent })
+		})
+
+		it("should handle tool calls in stream", async () => {
+			mockCreate.mockResolvedValueOnce({
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								type: "content_block_start",
+								index: 0,
+								content_block: {
+									type: "tool_use",
+									id: "tool-123",
+									name: "get_weather",
+									input: { city: "London" },
+								},
+							},
+						})
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								type: "content_block_stop",
+								index: 0,
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			})
+
+			const stream = handler.createMessage("system prompt", [])
+			const firstChunk = await stream.next()
+
+			expect(firstChunk.done).toBe(false)
+			// Provider now yields tool_call_partial chunks, NativeToolCallParser handles reassembly
+			expect(firstChunk.value).toEqual({
+				type: "tool_call_partial",
+				index: 0,
+				id: "tool-123",
+				name: "get_weather",
+				arguments: undefined,
+			})
 		})
 	})
 

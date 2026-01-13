@@ -10,7 +10,9 @@ suite("Kilo Code Extension", function () {
 		const expectedCommands = [
 			"activationCompleted",
 			"plusButtonClicked",
-			"promptsButtonClicked",
+			"popoutButtonClicked",
+			"openInNewTab",
+			"settingsButtonClicked",
 			"historyButtonClicked",
 			"popoutButtonClicked",
 			"accountButtonClicked",

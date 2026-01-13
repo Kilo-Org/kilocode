@@ -1,9 +1,10 @@
-import { RooModelsResponseSchema } from "@roo-code/types"
+import { RooModelsResponseSchema, type ModelInfo } from "@roo-code/types"
 
 import type { ModelRecord } from "../../../shared/api"
 import { parseApiPrice } from "../../../shared/cost"
 
 import { DEFAULT_HEADERS } from "../constants"
+import { resolveVersionedSettings, type VersionedSettings } from "./versionedSettings"
 
 /**
  * Fetches available models from the Roo Code Cloud provider
@@ -95,13 +96,17 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 				// Determine if the model supports native tool calling based on tags
 				const supportsNativeTools = tags.includes("tool-use")
 
+				// Determine if the model should hide vendor/company identity (stealth mode)
+				const isStealthModel = tags.includes("stealth")
+
 				// Parse pricing (API returns strings, convert to numbers)
 				const inputPrice = parseApiPrice(pricing.input)
 				const outputPrice = parseApiPrice(pricing.output)
 				const cacheReadPrice = pricing.input_cache_read ? parseApiPrice(pricing.input_cache_read) : undefined
 				const cacheWritePrice = pricing.input_cache_write ? parseApiPrice(pricing.input_cache_write) : undefined
 
-				models[modelId] = {
+				// Build the base model info from API response
+				const baseModelInfo = {
 					maxTokens,
 					contextWindow,
 					supportsImages,
@@ -116,7 +121,45 @@ export async function getRooModels(baseUrl: string, apiKey?: string): Promise<Mo
 					description: model.description || model.name,
 					deprecated: model.deprecated || false,
 					isFree: tags.includes("free"),
+					defaultTemperature: model.default_temperature,
+					defaultToolProtocol: "native" as const,
+					isStealthModel: isStealthModel || undefined,
 				}
+
+				// Apply API-provided settings on top of base model info
+				// Settings allow the proxy to dynamically configure model-specific options
+				// like includedTools, excludedTools, reasoningEffort, etc.
+				//
+				// Two fields are used for backward compatibility:
+				// - `settings`: Plain values that work with all client versions (e.g., { includedTools: ['search_replace'] })
+				// - `versionedSettings`: Version-keyed settings (e.g., { '3.36.4': { includedTools: ['search_replace'] } })
+				//
+				// New clients check versionedSettings first - if a matching version is found, those settings are used.
+				// Otherwise, falls back to plain `settings`. Old clients only see `settings`.
+				const apiSettings = model.settings as Record<string, unknown> | undefined
+				const apiVersionedSettings = model.versionedSettings as VersionedSettings | undefined
+
+				// Start with base model info
+				let modelInfo: ModelInfo = { ...baseModelInfo }
+
+				// Try to resolve versioned settings first (finds highest version <= current plugin version)
+				// If versioned settings match, use them exclusively (they contain all necessary settings)
+				// Otherwise fall back to plain settings for backward compatibility
+				if (apiVersionedSettings) {
+					const resolvedVersionedSettings = resolveVersionedSettings<Partial<ModelInfo>>(apiVersionedSettings)
+					if (Object.keys(resolvedVersionedSettings).length > 0) {
+						// Versioned settings found - use them exclusively
+						modelInfo = { ...modelInfo, ...resolvedVersionedSettings }
+					} else if (apiSettings) {
+						// No matching versioned settings - fall back to plain settings
+						modelInfo = { ...modelInfo, ...(apiSettings as Partial<ModelInfo>) }
+					}
+				} else if (apiSettings) {
+					// No versioned settings at all - use plain settings
+					modelInfo = { ...modelInfo, ...(apiSettings as Partial<ModelInfo>) }
+				}
+
+				models[modelId] = modelInfo
 			}
 
 			return models

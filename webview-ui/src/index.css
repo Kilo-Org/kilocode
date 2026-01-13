@@ -215,6 +215,18 @@
 	}
 }
 
+/* kilocode_change start: Cursor blink animation for voice recording */
+@keyframes blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+/* kilocode_change end */
+
 /* Form Element Focus States */
 
 textarea:focus {
@@ -530,3 +542,11 @@ input[cmdk-input]:focus {
 .diff-content-context {
 	background-color: color-mix(in srgb, var(--vscode-editorGroup-border) 100%, transparent);
 }
+
+/* kilocode_change start - STT preview text styling */
+.stt-preview-text {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+	opacity: 0.7;
+}
+/* kilocode_change end - STT preview text styling */

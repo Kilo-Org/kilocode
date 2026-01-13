@@ -6,6 +6,12 @@
 	"failedMaxAttempts": "No se pudieron crear las incrustaciones después de {{attempts}} intentos",
 	"textExceedsTokenLimit": "El texto en el índice {{index}} supera el límite máximo de tokens ({{itemTokens}} > {{maxTokens}}). Omitiendo.",
 	"rateLimitRetry": "Límite de velocidad alcanzado, reintentando en {{delayMs}}ms (intento {{attempt}}/{{maxRetries}})",
+	"bedrock": {
+		"invalidResponseFormat": "Formato de respuesta no válido de Amazon Bedrock",
+		"invalidCredentials": "Credenciales de AWS no válidas. Por favor, verifica tu configuración de AWS.",
+		"accessDenied": "Acceso denegado al servicio de Amazon Bedrock. Por favor, verifica tus permisos de IAM.",
+		"modelNotFound": "Modelo {{model}} no encontrado en Amazon Bedrock"
+	},
 	"ollama": {
 		"couldNotReadErrorBody": "No se pudo leer el cuerpo del error",
 		"requestFailed": "La solicitud de la API de Ollama falló con estado {{status}} {{statusText}}: {{errorBody}}",
@@ -51,6 +57,7 @@
 		"mistralConfigMissing": "Falta la configuración de Mistral para la creación del incrustador",
 		"openRouterConfigMissing": "Falta la configuración de OpenRouter para la creación del incrustador",
 		"vercelAiGatewayConfigMissing": "Falta la configuración de Vercel AI Gateway para la creación del incrustador",
+		"bedrockConfigMissing": "Falta la configuración de Amazon Bedrock para la creación del incrustador",
 		"invalidEmbedderType": "Tipo de incrustador configurado inválido: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "No se pudo determinar la dimensión del vector para el modelo '{{modelId}}' con el proveedor '{{provider}}'. Asegúrate de que la 'Dimensión de incrustación' esté configurada correctamente en los ajustes del proveedor compatible con OpenAI.",
 		"vectorDimensionNotDetermined": "No se pudo determinar la dimensión del vector para el modelo '{{modelId}}' con el proveedor '{{provider}}'. Verifica los perfiles del modelo o la configuración.",

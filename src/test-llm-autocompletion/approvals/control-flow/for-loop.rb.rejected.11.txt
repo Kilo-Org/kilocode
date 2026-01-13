@@ -1,0 +1,14 @@
+arr = [1, 2, 3, 4, 5]
+arr.each do |item|
+	puts item
+end
+
+arr.each { |item| puts item }
+
+arr.each { |item| puts item if item > 3 }
+
+arr.each { |item| puts item if item > 3 }
+
+arr.each { |item| puts item if item > 3 }
+
+arr.each { |item| puts item if item > 3 }

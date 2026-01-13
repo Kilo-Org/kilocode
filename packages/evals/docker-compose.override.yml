@@ -1,0 +1,45 @@
+# Development overrides - automatically loaded by docker compose
+# These settings only apply when running locally for development
+#
+# For production, use: docker compose -f docker-compose.yml up
+# (explicitly exclude override file)
+
+services:
+    web:
+        environment:
+            - NODE_ENV=development
+        volumes:
+            # Mount log files so web can access task logs
+            - /tmp/evals:/tmp/evals:ro
+            # Mount source code for hot reload in development
+            - ../../apps/web-evals:/roo/repo/apps/web-evals:delegated
+            - ../../packages/evals:/roo/repo/packages/evals:delegated
+            - ../../packages/types:/roo/repo/packages/types:delegated
+            - ../../packages/ipc:/roo/repo/packages/ipc:delegated
+            - ../../packages/cloud:/roo/repo/packages/cloud:delegated
+            # Exclude node_modules from being overwritten
+            - /roo/repo/node_modules
+            - /roo/repo/apps/web-evals/node_modules
+            - /roo/repo/packages/evals/node_modules
+            - /roo/repo/packages/types/node_modules
+            - /roo/repo/packages/ipc/node_modules
+            - /roo/repo/packages/cloud/node_modules
+        entrypoint: []
+        command:
+            - sh
+            - -c
+            - |
+                echo '🚀 Starting evals web service in development mode...'
+                wait_for_db() {
+                    echo '⏳ Waiting for database...'
+                    until pg_isready -h db -p 5432 -U postgres -d evals_development > /dev/null 2>&1; do
+                        echo '⏳ Database not ready yet, waiting 2 seconds...'
+                        sleep 2
+                    done
+                    echo '✅ Database is ready'
+                }
+                wait_for_db
+                echo '🔄 Running database migrations...'
+                pnpm --filter @roo-code/evals db:migrate
+                echo '🌐 Starting Next.js dev server...'
+                cd /roo/repo/apps/web-evals && npx next dev -p 3446

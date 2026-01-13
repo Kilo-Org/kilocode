@@ -1,6 +1,7 @@
-# Description: Should implement caching mechanism after TODO
+#### Description: Should implement caching mechanism after TODO
+#### Filename: data-service.js
 class DataService {
-  // TODO: Implement caching mechanism to reduce API calls<<<CURSOR>>>
+  // TODO: Implement caching mechanism to reduce API calls<<<AUTOCOMPLETE_HERE>>>
   async fetchData(id) {
     return await api.get(`/data/${id}`);
   }

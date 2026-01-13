@@ -9,14 +9,34 @@ declare global {
 export const ghostServiceSettingsSchema = z
 	.object({
 		enableAutoTrigger: z.boolean().optional(),
-		enableQuickInlineTaskKeybinding: z.boolean().optional(),
 		enableSmartInlineTaskKeybinding: z.boolean().optional(),
+		enableChatAutocomplete: z.boolean().optional(),
 		provider: z.string().optional(),
 		model: z.string().optional(),
+		snoozeUntil: z.number().optional(),
+		hasKilocodeProfileWithNoBalance: z.boolean().optional(),
 	})
 	.optional()
 
 export type GhostServiceSettings = z.infer<typeof ghostServiceSettingsSchema>
+
+/**
+ * Map of provider names to their default autocomplete models.
+ * These are the providers that support autocomplete functionality.
+ */
+export const AUTOCOMPLETE_PROVIDER_MODELS = new Map([
+	["mistral", "codestral-latest"],
+	["kilocode", "mistralai/codestral-2508"],
+	["openrouter", "mistralai/codestral-2508"],
+	["requesty", "mistral/codestral-latest"],
+	["bedrock", "mistral.codestral-2508-v1:0"],
+	["huggingface", "mistralai/Codestral-22B-v0.1"],
+	["litellm", "codestral/codestral-latest"],
+	["lmstudio", "mistralai/codestral-22b-v0.1"],
+	["ollama", "codestral:latest"],
+] as const)
+
+export type AutocompleteProviderKey = typeof AUTOCOMPLETE_PROVIDER_MODELS extends Map<infer K, unknown> ? K : never
 
 export const commitRangeSchema = z.object({
 	from: z.string(),
@@ -119,8 +139,8 @@ export function getAppUrl(path: string = ""): string {
 export function getApiUrl(path: string = ""): string {
 	const backend = getGlobalKilocodeBackendUrl()
 
-	// In development (localhost), API is served from the same origin (no /api prefix needed)
-	if (backend.includes("localhost")) {
+	// If using a custom backend (not the default production URL), use it directly
+	if (backend !== DEFAULT_KILOCODE_BACKEND_URL) {
 		return new URL(path, backend).toString()
 	}
 
@@ -136,7 +156,7 @@ export function getApiUrl(path: string = ""): string {
 export function getExtensionConfigUrl(): string {
 	try {
 		const backend = getGlobalKilocodeBackendUrl()
-		if (backend.includes("localhost")) {
+		if (backend !== DEFAULT_KILOCODE_BACKEND_URL) {
 			return getAppUrl("/extension-config.json")
 		} else {
 			return "https://api.kilo.ai/extension-config.json"

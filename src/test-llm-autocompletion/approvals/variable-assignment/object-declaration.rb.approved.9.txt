@@ -1,0 +1,11 @@
+user = {
+	name: 'John',
+	email: 'john@email.com',
+	password: 'password'
+}
+
+puts user[:name]
+
+user[:name] = 'Jack'
+
+puts user[:name]

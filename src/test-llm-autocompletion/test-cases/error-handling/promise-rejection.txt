@@ -1,4 +1,5 @@
-# Description: Should complete promise rejection handling
+#### Description: Should complete promise rejection handling
+#### Filename: user-service.js
 fetchUser(userId)
 	.then(user => {
 		return processUser(user);

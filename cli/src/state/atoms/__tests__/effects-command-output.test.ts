@@ -250,4 +250,115 @@ describe("Command Execution Status - CLI-Only Workaround", () => {
 			command: "",
 		})
 	})
+
+	it("should include exitCode in JSON output when command exits with non-zero code", () => {
+		const executionId = "test-exec-exit-code"
+		const command = "exit 1"
+
+		// Simulate command started
+		const startedStatus: CommandExecutionStatus = {
+			status: "started",
+			executionId,
+			command,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(startedStatus),
+		})
+
+		// Verify synthetic ask was created
+		let messages = store.get(chatMessagesAtom)
+		expect(messages.length).toBe(1)
+
+		// Simulate command exited with non-zero exit code
+		const exitedStatus: CommandExecutionStatus = {
+			status: "exited",
+			executionId,
+			exitCode: 1,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(exitedStatus),
+		})
+
+		// Verify the ask was updated with exitCode
+		messages = store.get(chatMessagesAtom)
+		expect(messages.length).toBe(1)
+		expect(messages[0]?.partial).toBe(false) // Command completed
+
+		const askData = JSON.parse(messages[0]!.text || "{}")
+		expect(askData.exitCode).toBe(1)
+		expect(askData.executionId).toBe(executionId)
+		expect(askData.command).toBe(command)
+	})
+
+	it("should include exitCode 0 in JSON output when command exits successfully", () => {
+		const executionId = "test-exec-exit-code-zero"
+		const command = "echo success"
+
+		// Simulate command started
+		const startedStatus: CommandExecutionStatus = {
+			status: "started",
+			executionId,
+			command,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(startedStatus),
+		})
+
+		// Simulate command exited with exit code 0
+		const exitedStatus: CommandExecutionStatus = {
+			status: "exited",
+			executionId,
+			exitCode: 0,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(exitedStatus),
+		})
+
+		// Verify the ask was updated with exitCode 0
+		const messages = store.get(chatMessagesAtom)
+		const askData = JSON.parse(messages[0]!.text || "{}")
+		expect(askData.exitCode).toBe(0)
+	})
+
+	it("should NOT include exitCode in JSON output when command times out", () => {
+		const executionId = "test-exec-timeout-no-exitcode"
+		const command = "sleep 1000"
+
+		// Simulate command started
+		const startedStatus: CommandExecutionStatus = {
+			status: "started",
+			executionId,
+			command,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(startedStatus),
+		})
+
+		// Simulate timeout (no exitCode)
+		const timeoutStatus: CommandExecutionStatus = {
+			status: "timeout",
+			executionId,
+		}
+
+		store.set(messageHandlerEffectAtom, {
+			type: "commandExecutionStatus",
+			text: JSON.stringify(timeoutStatus),
+		})
+
+		// Verify the ask does NOT have exitCode
+		const messages = store.get(chatMessagesAtom)
+		const askData = JSON.parse(messages[0]!.text || "{}")
+		expect(askData.exitCode).toBeUndefined()
+		expect(askData.executionId).toBe(executionId)
+	})
 })

@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "自訂儲存路徑 \"{{path}}\" 無法使用，將使用預設路徑",
 		"cannot_access_path": "無法存取路徑 {{path}}：{{error}}",
 		"settings_import_failed": "設定匯入失敗：{{error}}。",
-		"mistake_limit_guidance": "這可能表明模型思維過程失敗或無法正確使用工具，可透過使用者指導來緩解（例如「嘗試將任務分解為更小的步驟」）。",
+		"mistake_limit_guidance": "這可能表明模型推理失敗或無法正確使用工具。請嘗試以下方法之一：\n\n• 使用更聰明的模型，或直接更換模型（每個模型都有其弱點）\n• 減少上下文數量（簡化 LLM 的提示詞）\n• 提供有助於 LLM 的額外說明（例如「嘗試將任務分解為更小的步驟」）",
 		"violated_organization_allowlist": "執行任務失敗：目前設定檔與您的組織設定不相容",
 		"condense_failed": "壓縮上下文失敗",
 		"condense_not_enough_messages": "沒有足夠的訊息來壓縮 {{prevContextTokens}} Token 的上下文。至少需要 {{minimumMessageCount}} 則訊息，但只有 {{messageCount}} 則可用。",
@@ -126,7 +126,11 @@
 		"gemini": {
 			"generate_stream": "Gemini 產生內容串流錯誤：{{error}}",
 			"generate_complete_prompt": "Gemini 完成錯誤：{{error}}",
-			"sources": "來源："
+			"sources": "來源：",
+			"thinking_complete_no_output": "（思考完成，但未產生輸出。）",
+			"thinking_complete_truncated": "（思考完成，但由於 Token 限制輸出被截斷。）",
+			"thinking_complete_safety": "（思考完成，但由於安全設定輸出被阻止。）",
+			"thinking_complete_recitation": "（思考完成，但由於引用檢查輸出被阻止。）"
 		},
 		"cerebras": {
 			"authenticationFailed": "Cerebras API 驗證失敗。請檢查您的 API 金鑰是否有效且未過期。",
@@ -168,6 +172,7 @@
 		"image_saved": "圖片已儲存至 {{path}}",
 		"organization_share_link_copied": "組織分享連結已複製到剪貼簿！",
 		"public_share_link_copied": "公開分享連結已複製到剪貼簿！",
+		"session_share_link_copied_with_url": "會話已分享！連結已複製到剪貼簿：{{url}}",
 		"mode_exported": "模式 '{{mode}}' 已成功匯出",
 		"mode_imported": "模式已成功匯入"
 	},

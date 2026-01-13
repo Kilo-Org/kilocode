@@ -6,7 +6,7 @@ import type { ProviderSettings, ModelInfo, ToolProtocol } from "@roo-code/types"
 import { ApiStream } from "./transform/stream"
 
 import {
-	GlamaHandler,
+	GlamaHandler, // kilocode_change
 	AnthropicHandler,
 	AwsBedrockHandler,
 	CerebrasHandler,
@@ -36,7 +36,6 @@ import {
 	GeminiCliHandler,
 	SyntheticHandler,
 	OVHcloudAIEndpointsHandler,
-	MiniMaxAnthropicHandler,
 	SapAiCoreHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
@@ -50,11 +49,14 @@ import {
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
-	// MiniMaxHandler, // kilocode_change
+	MiniMaxHandler,
+	BasetenHandler,
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
+import type { FimHandler } from "./providers/kilocode/FimHandler" // kilocode_change
+export type { FimHandler } from "./providers/kilocode/FimHandler"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -109,6 +111,13 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * Used by providers to determine whether to include native tool definitions.
 	 */
 	toolProtocol?: ToolProtocol
+	/**
+	 * Controls whether the model can return multiple tool calls in a single response.
+	 * When true, parallel tool calls are enabled (OpenAI's parallel_tool_calls=true).
+	 * When false (default), only one tool call is returned per response.
+	 * Only applies when toolProtocol is "native".
+	 */
+	parallelToolCalls?: boolean
 }
 
 export interface ApiHandler {
@@ -130,6 +139,14 @@ export interface ApiHandler {
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
 
+	// kilocode_change start
+	/**
+	 * Returns a FimHandler if the provider supports FIM (Fill-In-the-Middle) completions,
+	 * or undefined if FIM is not supported.
+	 */
+	fimSupport?: () => FimHandler | undefined
+	// kilocode_change end
+
 	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }
 
@@ -149,8 +166,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new AnthropicHandler(options)
 		case "claude-code":
 			return new ClaudeCodeHandler(options)
+		// kilocode_change start
 		case "glama":
 			return new GlamaHandler(options)
+		// kilocode_change end
 		case "openrouter":
 			return new OpenRouterHandler(options)
 		case "bedrock":
@@ -234,7 +253,9 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
 		case "minimax":
-			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
+			return new MiniMaxHandler(options)
+		case "baseten":
+			return new BasetenHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

@@ -20,7 +20,8 @@ Cerebras is known for their ultra-fast AI inference powered by the Cerebras CS-3
 Kilo Code supports the following Cerebras models:
 
 - `gpt-oss-120b` (Default) – High-performance open-source model optimized for fast inference
-- `zai-glm-4.6` – Advanced GLM model with enhanced reasoning capabilities
+- `zai-glm-4.6` – Fast general-purpose model on Cerebras (up to 1,000 tokens/s). To be deprecated soon.
+- `zai-glm-4.7` – Highly capable general-purpose model on Cerebras (up to 1,000 tokens/s), competitive with leading proprietary models on coding tasks.
 
 Refer to the [Cerebras documentation](https://docs.cerebras.ai/) for detailed information on model capabilities and performance characteristics.
 

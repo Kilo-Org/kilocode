@@ -4,11 +4,11 @@
 
 package ai.kilocode.jetbrains.actors
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.WindowManager
-import java.awt.Desktop
 import java.net.URI
 
 /**
@@ -73,29 +73,22 @@ class MainThreadWindow(val project: Project) : MainThreadWindowShape {
         try {
             logger.info("Opening URI: $uriString")
 
-            // Try to get URI
-            val actualUri = if (uriString != null) {
-                try {
-                    URI(uriString)
-                } catch (e: Exception) {
-                    // If URI string is invalid, try to build from URI components
-                    createUriFromComponents(uri)
-                }
+            // Try to get URI string
+            val urlToOpen = if (uriString != null) {
+                uriString
             } else {
-                createUriFromComponents(uri)
+                // Build from URI components
+                val actualUri = createUriFromComponents(uri)
+                actualUri?.toString()
             }
 
-            return if (actualUri != null) {
-                // Check if Desktop operation is supported
-                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                    Desktop.getDesktop().browse(actualUri)
-                    true
-                } else {
-                    logger.warn("System does not support opening URI")
-                    false
-                }
+            return if (urlToOpen != null) {
+                // Use IntelliJ's BrowserUtil which works reliably in JetBrains IDEs
+                BrowserUtil.browse(urlToOpen)
+                logger.info("Successfully opened URI in browser: $urlToOpen")
+                true
             } else {
-                logger.warn("Cannot create valid URI")
+                logger.warn("Cannot create valid URI from components: $uri")
                 false
             }
         } catch (e: Exception) {

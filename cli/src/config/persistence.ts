@@ -202,6 +202,14 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 }
 
 export async function saveConfig(config: CLIConfig, skipValidation: boolean = false): Promise<void> {
+	// Don't write to disk in ephemeral mode - this prevents environment variable
+	// values from being persisted to config.json during integration tests or
+	// when running in ephemeral/Docker environments
+	if (isEphemeralMode()) {
+		logs.debug("Skipping config save in ephemeral mode", "ConfigPersistence")
+		return
+	}
+
 	try {
 		await ensureConfigDir()
 

@@ -1,4 +1,5 @@
-# Description: Gilded Rose Kata code with ReadStream. Should autocomplete 50
+#### Description: Gilded Rose Kata code with ReadStream. Should autocomplete 50
+#### Filename: gilded-rose.ts
 
 /* README
 

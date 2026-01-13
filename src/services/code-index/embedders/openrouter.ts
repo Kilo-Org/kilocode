@@ -15,6 +15,9 @@ import { Mutex } from "async-mutex"
 import { handleOpenAIError } from "../../../api/providers/utils/openai-error-handler"
 import { DEFAULT_HEADERS } from "../../../api/providers/constants" // kilocode_change
 
+// Default provider name when no specific provider is selected
+export const OPENROUTER_DEFAULT_PROVIDER_NAME = "[default]"
+
 interface EmbeddingItem {
 	embedding: string | number[]
 	[key: string]: any
@@ -39,6 +42,7 @@ export class OpenRouterEmbedder implements IEmbedder {
 	private readonly apiKey: string
 	private readonly maxItemTokens: number
 	private readonly baseUrl: string = "https://openrouter.ai/api/v1"
+	private readonly specificProvider?: string
 
 	// Global rate limiting state shared across all instances
 	private static globalRateLimitState = {
@@ -55,13 +59,17 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * @param apiKey The API key for authentication
 	 * @param modelId Optional model identifier (defaults to "openai/text-embedding-3-large")
 	 * @param maxItemTokens Optional maximum tokens per item (defaults to MAX_ITEM_TOKENS)
+	 * @param specificProvider Optional specific provider to route requests to
 	 */
-	constructor(apiKey: string, modelId?: string, maxItemTokens?: number) {
+	constructor(apiKey: string, modelId?: string, maxItemTokens?: number, specificProvider?: string) {
 		if (!apiKey) {
 			throw new Error(t("embeddings:validation.apiKeyRequired"))
 		}
 
 		this.apiKey = apiKey
+		// Only set specificProvider if it's not the default value
+		this.specificProvider =
+			specificProvider && specificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME ? specificProvider : undefined
 
 		// Wrap OpenAI client creation to handle invalid API key characters
 		try {
@@ -178,14 +186,28 @@ export class OpenRouterEmbedder implements IEmbedder {
 			await this.waitForGlobalRateLimit()
 
 			try {
-				const response = (await this.embeddingsClient.embeddings.create({
+				// Build the request parameters
+				const requestParams: any = {
 					input: batchTexts,
 					model: model,
 					// OpenAI package (as of v4.78.1) has a parsing issue that truncates embedding dimensions to 256
 					// when processing numeric arrays, which breaks compatibility with models using larger dimensions.
 					// By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
 					encoding_format: "base64",
-				})) as OpenRouterEmbeddingResponse
+				}
+
+				// Add provider routing if a specific provider is set
+				if (this.specificProvider) {
+					requestParams.provider = {
+						order: [this.specificProvider],
+						only: [this.specificProvider],
+						allow_fallbacks: false,
+					}
+				}
+
+				const response = (await this.embeddingsClient.embeddings.create(
+					requestParams,
+				)) as OpenRouterEmbeddingResponse
 
 				// Convert base64 embeddings to float32 arrays
 				const processedEmbeddings = response.data.map((item: EmbeddingItem) => {
@@ -272,11 +294,25 @@ export class OpenRouterEmbedder implements IEmbedder {
 				const testTexts = ["test"]
 				const modelToUse = this.defaultModelId
 
-				const response = (await this.embeddingsClient.embeddings.create({
+				// Build the request parameters
+				const requestParams: any = {
 					input: testTexts,
 					model: modelToUse,
 					encoding_format: "base64",
-				})) as OpenRouterEmbeddingResponse
+				}
+
+				// Add provider routing if a specific provider is set
+				if (this.specificProvider) {
+					requestParams.provider = {
+						order: [this.specificProvider],
+						only: [this.specificProvider],
+						allow_fallbacks: false,
+					}
+				}
+
+				const response = (await this.embeddingsClient.embeddings.create(
+					requestParams,
+				)) as OpenRouterEmbeddingResponse
 
 				// Check if we got a valid response
 				if (!response?.data || response.data.length === 0) {

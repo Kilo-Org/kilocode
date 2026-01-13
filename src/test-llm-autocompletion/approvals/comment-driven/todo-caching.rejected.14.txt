@@ -1,0 +1,9 @@
+class DataService {
+  // TODO: Implement caching mechanism to reduce API calls
+  // TODO: Implement error handling
+  // TODO: Implement loading state
+
+  async fetchData(id) {
+    return await api.get(`/data/${id}`);
+  }
+}

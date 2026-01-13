@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Tautan organisasi disalin ke clipboard",
 		"shareSuccessPublic": "Tautan publik disalin ke clipboard",
 		"openInCloud": "Buka tugas di Roo Code Cloud",
-		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka."
+		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka.",
+		"openApiHistory": "Buka Riwayat API",
+		"openUiHistory": "Buka Riwayat UI"
 	},
 	"history": {
 		"title": "Riwayat"
@@ -128,6 +130,7 @@
 	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
+	"pressToSend": "Tekan {{keyCombination}} untuk mengirim",
 	"stopTts": "Hentikan text-to-speech",
 	"typeMessage": "Ketik pesan...",
 	"typeTask": "Bangun, cari, tanya sesuatu",
@@ -145,7 +148,19 @@
 		"failed": "Permintaan API Gagal",
 		"streaming": "Permintaan API...",
 		"cancelled": "Permintaan API Dibatalkan",
-		"streamingFailed": "Streaming API Gagal"
+		"streamingFailed": "Streaming API Gagal",
+		"errorTitle": "Kesalahan API {{code}}",
+		"errorMessage": {
+			"docs": "Dokumentasi",
+			"400": "Penyedia tidak dapat memproses permintaan seperti yang dibuat. Hentikan tugas dan coba pendekatan berbeda.",
+			"401": "Tidak dapat mengautentikasi dengan penyedia. Harap periksa konfigurasi kunci API Anda.",
+			"402": "Tampaknya Anda telah kehabisan dana/kredit di akun Anda. Pergi ke penyedia Anda dan tambahkan lebih banyak untuk melanjutkan.",
+			"403": "Tidak sah. Kunci API Anda valid, tetapi penyedia menolak untuk menyelesaikan permintaan ini.",
+			"429": "Terlalu banyak permintaan. Anda dibatasi tingkat oleh penyedia. Harap tunggu sebentar sebelum panggilan API berikutnya Anda.",
+			"500": "Kesalahan server penyedia. Ada yang salah di sisi penyedia, tidak ada yang salah dengan permintaan Anda.",
+			"unknown": "Kesalahan API yang tidak diketahui. Harap hubungi dukungan Kilo.",
+			"connection": "Kesalahan koneksi. Pastikan Anda memiliki koneksi internet yang berfungsi."
+		}
 	},
 	"checkpoint": {
 		"regular": "Checkpoint",
@@ -166,11 +181,20 @@
 		},
 		"current": "Saat Ini"
 	},
-	"contextCondense": {
-		"title": "Konteks Dikondensasi",
-		"condensing": "Mengondensasi konteks...",
-		"errorHeader": "Gagal mengondensasi konteks",
-		"tokens": "token"
+	"contextManagement": {
+		"tokens": "token",
+		"condensation": {
+			"title": "Konteks Dikondensasi",
+			"inProgress": "Mengondensasi konteks...",
+			"errorHeader": "Gagal mengondensasi konteks"
+		},
+		"truncation": {
+			"title": "Konteks Dipotong",
+			"inProgress": "Memotong konteks...",
+			"messagesRemoved": "{{count}} pesan dihapus",
+			"messagesRemoved_other": "{{count}} pesan dihapus",
+			"description": "Pesan lama telah dihapus dari percakapan untuk tetap dalam batas jendela konteks. Ini adalah pendekatan yang cepat tetapi kurang mempertahankan konteks dibandingkan dengan kondensasi."
+		}
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
@@ -276,6 +300,11 @@
 		"title": "Edit Tidak Berhasil"
 	},
 	"troubleMessage": "Kilo Code mengalami masalah...",
+	"errorDetails": {
+		"title": "Detail Kesalahan",
+		"copyToClipboard": "Salin ke Clipboard",
+		"copied": "Disalin!"
+	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
 	},
@@ -298,7 +327,8 @@
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Dirilis",
+		"title": "Roo Code {{version}} Dirilis",
+		"support": "Dukung Roo Code dengan memberi kami bintang di <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Code Supernova: Sekarang diupgrade dengan <bold>jendela konteks 1M token</bold>! Model coding agentik serbaguna yang mendukung input gambar, tersedia melalui Roo Code Cloud.",
 			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
@@ -307,19 +337,18 @@
 			"goToSettingsButton": "Pergi ke Pengaturan"
 		},
 		"release": {
-			"heading": "Baru di Ekstensi:",
-			"openRouterEmbeddings": "Dukungan untuk model embedding OpenRouter",
-			"chutesDynamic": "Chutes sekarang memuat model terbaru secara dinamis",
-			"queuedMessagesFix": "Perbaikan untuk pesan antrian yang hilang"
+			"heading": "Terbaru:",
+			"contextRewind": "Kondensasi konteks yang ditingkatkan sekarang memungkinkan Anda mengembalikan konteks sebelumnya secara penuh saat memutar ulang ke checkpoint",
+			"rooProvider": "Penyedia Roo Code Cloud sekarang mempertahankan konten penalaran dan menggunakan alat asli secara default untuk kinerja yang lebih baik"
 		},
 		"cloudAgents": {
 			"heading": "Baru di Cloud:",
-			"prFixer": "Memperkenalkan agen cloud <bold>PR Fixer</bold> untuk melengkapi PR Reviewer.",
-			"prFixerDescription": "PR Fixer dari Roo Code menerapkan perubahan berkualitas tinggi ke PR Anda, langsung dari GitHub. Panggil melalui komentar PR dan ia akan membaca seluruh riwayat komentar untuk memahami konteks, kesepakatan, dan trade-off - kemudian menerapkan perbaikan yang tepat.",
-			"tryPrFixerButton": "Coba PR Fixer"
+			"specialized": "Memperkenalkan <bold>Explainer</bold>, <bold>Planner</bold>, dan <bold>Coder</bold> - tiga agen cloud khusus untuk meningkatkan alur kerja Anda.",
+			"description": "Agen bekerja bersama di cloud dan dapat dipicu dari web atau melalui Slack.",
+			"tryButton": "Coba Agen Cloud"
 		},
 		"careers": "Juga, <careersLink>kami sedang merekrut!</careersLink>",
-		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/KiloRooCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Berpikir",
@@ -327,10 +356,10 @@
 	},
 	"followUpSuggest": {
 		"copyToInput": "Salin ke input (sama dengan shift + klik)",
-		"autoSelectCountdown": "Pemilihan otomatis dalam {{count}}dtk",
-		"countdownDisplay": "{{count}}dtk"
+		"timerPrefix": "Persetujuan otomatis diaktifkan. Memilih dalam {{seconds}}s…"
 	},
 	"browser": {
+		"session": "Sesi Browser",
 		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
@@ -343,12 +372,26 @@
 		},
 		"sessionStarted": "Sesi Browser Dimulai",
 		"actions": {
-			"title": "Aksi Browse: ",
+			"title": "Aksi Browser: ",
+			"launched": "Browser diluncurkan",
 			"launch": "Luncurkan browser di {{url}}",
+			"clicked": "Diklik ({{coordinate}})",
 			"click": "Klik ({{coordinate}})",
+			"typed": "Diketik: {{text}}",
 			"type": "Ketik \"{{text}}\"",
+			"pressed": "Ditekan: {{key}}",
+			"press": "Tekan {{key}}",
+			"scrolledDown": "Digulir ke bawah",
 			"scrollDown": "Gulir ke bawah",
+			"scrolledUp": "Digulir ke atas",
 			"scrollUp": "Gulir ke atas",
+			"hovered": "Diarahkan ({{coordinate}})",
+			"hover": "Arahkan ({{coordinate}})",
+			"resized": "Ukuran diubah ke: {{size}}",
+			"resize": "Ubah ukuran ke {{size}}",
+			"screenshotSaved": "Screenshot disimpan",
+			"screenshot": "Simpan screenshot ke {{path}}",
+			"closed": "Browser ditutup",
 			"close": "Tutup browser"
 		}
 	},

@@ -188,18 +188,46 @@ export class ExtensionChannel extends BaseChannel<
 			{ from: RooCodeEventName.TaskPaused, to: ExtensionBridgeEventName.TaskPaused },
 			{ from: RooCodeEventName.TaskUnpaused, to: ExtensionBridgeEventName.TaskUnpaused },
 			{ from: RooCodeEventName.TaskSpawned, to: ExtensionBridgeEventName.TaskSpawned },
+			{ from: RooCodeEventName.TaskDelegated, to: ExtensionBridgeEventName.TaskDelegated },
+			{ from: RooCodeEventName.TaskDelegationCompleted, to: ExtensionBridgeEventName.TaskDelegationCompleted },
+			{ from: RooCodeEventName.TaskDelegationResumed, to: ExtensionBridgeEventName.TaskDelegationResumed },
 			{ from: RooCodeEventName.TaskUserMessage, to: ExtensionBridgeEventName.TaskUserMessage },
 			{ from: RooCodeEventName.TaskTokenUsageUpdated, to: ExtensionBridgeEventName.TaskTokenUsageUpdated },
 		] as const
 
 		eventMapping.forEach(({ from, to }) => {
 			// Create and store the listener function for cleanup.
-			const listener = async (..._args: unknown[]) => {
-				this.publish(ExtensionSocketEvents.EVENT, {
+			const listener = async (...args: unknown[]) => {
+				const baseEvent: {
+					type: ExtensionBridgeEventName
+					instance: ExtensionInstance
+					timestamp: number
+				} = {
 					type: to,
 					instance: await this.updateInstance(),
 					timestamp: Date.now(),
-				})
+				}
+
+				let eventToPublish: ExtensionBridgeEvent
+
+				// Add payload for delegation events while avoiding `any`
+				if (to === ExtensionBridgeEventName.TaskDelegationCompleted) {
+					const [parentTaskId, childTaskId, summary] = args as [string, string, string]
+					eventToPublish = {
+						...(baseEvent as unknown as ExtensionBridgeEvent),
+						payload: { parentTaskId, childTaskId, summary },
+					} as unknown as ExtensionBridgeEvent
+				} else if (to === ExtensionBridgeEventName.TaskDelegationResumed) {
+					const [parentTaskId, childTaskId] = args as [string, string]
+					eventToPublish = {
+						...(baseEvent as unknown as ExtensionBridgeEvent),
+						payload: { parentTaskId, childTaskId },
+					} as unknown as ExtensionBridgeEvent
+				} else {
+					eventToPublish = baseEvent as unknown as ExtensionBridgeEvent
+				}
+
+				this.publish(ExtensionSocketEvents.EVENT, eventToPublish)
 			}
 
 			this.eventListeners.set(from, listener)

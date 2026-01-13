@@ -1,4 +1,5 @@
-# Description: Should complete retry logic with exponential backoff
+#### Description: Should complete retry logic with exponential backoff
+#### Filename: fetch-utils.js
 async function fetchWithRetry(url, maxRetries = 3) {
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		try {

@@ -78,6 +78,12 @@
 				"description": "Quan està activat, Kilo Code realitzarà lectures de fitxers o sortides MCP molt grans encara que hi hagi una alta probabilitat de desbordar la finestra de context (mida del contingut >80% de la finestra de context)."
 			}
 		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Mida del Lot d'Incrustació",
+			"embeddingBatchSizeDescription": "Nombre de segments de codi a agrupar per a la generació d'incrustacions i actualitzacions del magatzem vectorial. Valors més alts poden millorar la velocitat d'indexació però poden augmentar l'ús de memòria. Valors més baixos redueixen l'ús de memòria però poden alentir la indexació.",
+			"scannerMaxBatchRetriesLabel": "Nombre Màxim de Reintents de Lot de l'Escàner",
+			"scannerMaxBatchRetriesDescription": "Nombre màxim de vegades per reintentar un lot fallit durant l'escaneig de directoris. Valors més alts augmenten la resiliència als errors transitoris però poden alentir la indexació si els errors persisteixen. Valors més baixos fallen més ràpidament però poden ometre contingut en problemes temporals."
+		},
 		"systemNotifications": {
 			"label": "Activar notificacions del sistema",
 			"description": "Quan està activat, Kilo Code enviarà notificacions del sistema per a esdeveniments importants com la finalització de tasques o errors.",
@@ -203,7 +209,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Activadors",
+			"codeEditorSuggestions": "Suggeriments de l'Editor de Codi",
+			"chatSuggestions": "Suggeriments del Xat",
 			"keybindingDescription": "Les funcionalitats d'Autocomplete es poden activar mitjançant ordres. Pots configurar les <DocsLink>Dreceres de Teclat aquí</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Habilitar Autocomplete",
@@ -213,19 +220,42 @@
 				"label": "Retard d'Activació Automàtica",
 				"description": "El retard en segons abans que Kilo Code activi Autocomplete després que deixis d'escriure. Un retard més curt significa suggeriments més ràpids, però pot ser més intensiu en recursos."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tasca ràpida ({{keybinding}})",
-				"description": "Només necessites un canvi ràpid? Selecciona codi (o no!) i prem Cmd+I. Descriu el teu objectiu en català simple (\"crear un component React amb aquestes props\", \"afegir gestió d'errors a aquesta funció\"), i obtén múltiples suggeriments llestos per usar directament al teu editor. <DocsLink>Veure drecera</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
 			"keybindingNotFound": "no trobat",
-			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
 			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
-			"provider": "Proveïdor"
+			"provider": "Proveïdor",
+			"enableChatAutocomplete": {
+				"description": "Quan està activat, Kilo Code suggerirà complecions mentre escriviu a l'entrada del xat. Premeu Tab per acceptar els suggeriments.",
+				"label": "Autocompletat d'entrada de xat"
+			},
+			"snooze": {
+				"label": "Posposar Autocomplete",
+				"description": "Pausa temporalment els suggeriments d'autocompletat durant un temps especificat.",
+				"button": "Posposar",
+				"unsnooze": "Reactivar",
+				"currentlySnoozed": "L'autocompletat està actualment posposat.",
+				"duration": {
+					"1min": "1 minut",
+					"5min": "5 minuts",
+					"15min": "15 minuts",
+					"30min": "30 minuts",
+					"1hour": "1 hora"
+				}
+			},
+			"noModelConfigured": {
+				"title": "No s'ha configurat cap model d'autocompletat",
+				"description": "Per habilitar l'autocompletat, afegeix un perfil amb un d'aquests proveïdors compatibles:",
+				"learnMore": "Més informació sobre la configuració de l'autocompletat →"
+			},
+			"noCredits": {
+				"title": "No hi ha crèdits al teu compte",
+				"description": "El teu compte de Kilo Code no té crèdits. Per utilitzar l'autocompletat, si us plau afegeix crèdits al teu compte.",
+				"buyCredits": "Comprar crèdits →"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +312,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
+	},
+	"deviceAuth": {
+		"title": "Inicia sessió a Kilo Code",
+		"step1": "Obre la següent URL al teu navegador",
+		"step2": "Verifica el codi i autoritza aquest dispositiu al teu navegador",
+		"scanQr": "O escaneja aquest codi QR amb el teu telèfon",
+		"openBrowser": "Obre el navegador",
+		"copyUrl": "Copia l'URL",
+		"waiting": "Esperant autorització...",
+		"timeRemaining": "El codi caduca en {{time}}",
+		"success": "Sessió iniciada correctament!",
+		"authenticatedAs": "Autenticat com a {{email}}",
+		"error": "Error d'autenticació",
+		"unknownError": "S'ha produït un error. Torna-ho a provar.",
+		"cancel": "Cancel·la",
+		"retry": "Torna-ho a provar",
+		"tryAgain": "Torna-ho a provar",
+		"cancelled": "Autenticació cancel·lada",
+		"initiating": "Iniciant autenticació..."
+	},
+	"speechToText": {
+		"stopRecording": "Atura l'entrada de veu",
+		"startRecording": "Inicia l'entrada de veu",
+		"setupPopover": {
+			"title": "Veu a text",
+			"description": "La conversió de veu a text no està disponible. La conversió de veu a text requereix tant FFmpeg com un proveïdor d'OpenAI vàlid configurat. <moreInfoLink>Feu clic aquí per a més informació</moreInfoLink>.",
+			"openAiReason": "Necessiteu un proveïdor d'OpenAI vàlid amb una clau API per utilitzar la transcripció de veu.",
+			"ffmpegReason": "Necessites tenir instal·lat FFmpeg. <ffmpegLink>Fes clic aquí</ffmpegLink> perquè Kilo t'ajudi a instal·lar FFmpeg.",
+			"ffmpegMessage": "Ajuda'm a instal·lar FFmpeg"
+		},
+		"misconfiguredState": "No disponible per la configuració",
+		"errorState": "No disponible a causa d'un error",
+		"microphone": {
+			"label": "Micròfon",
+			"description": "Seleccioneu el dispositiu de micròfon per a la conversió de veu a text",
+			"defaultOption": "Configuració predeterminada del sistema",
+			"loading": "Carregant dispositius de micròfon...",
+			"noDevices": "No s'han trobat dispositius de micròfon",
+			"refresh": "Actualitza"
+		}
 	}
 }

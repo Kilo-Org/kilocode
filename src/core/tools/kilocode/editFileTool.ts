@@ -13,6 +13,8 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 import { ClineSayTool } from "../../../shared/ExtensionMessage"
 import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../../shared/kilocode/headers"
+import { trackContribution } from "../../../services/contribution-tracking/ContributionTrackingService"
+import { sanitizeUnifiedDiff } from "../../diff/stats"
 
 const FAST_APPLY_MODEL_PRICING = {
 	"morph-v3-fast": {
@@ -179,6 +181,21 @@ export async function editFileTool(
 			cline.rooProtectedController?.isWriteProtected(relPath) || false,
 		)
 
+		// Track contribution (fire-and-forget, never blocks user workflow)
+		const provider = cline.providerRef.deref()
+		const state = await provider?.getState()
+		const unifiedPatchRaw = formatResponse.createPrettyPatch(relPath, originalContent, newContent)
+		const unifiedPatch = sanitizeUnifiedDiff(unifiedPatchRaw)
+		trackContribution({
+			cwd: cline.cwd,
+			filePath: relPath,
+			unifiedDiff: unifiedPatch,
+			status: approved ? "accepted" : "rejected",
+			taskId: cline.taskId,
+			organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
+			kilocodeToken: state?.apiConfiguration?.kilocodeToken || "",
+		})
+
 		if (!approved) {
 			await cline.diffViewProvider.revertChanges()
 			return
@@ -330,7 +347,7 @@ interface FastApplyConfiguration {
 
 function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfiguration {
 	// Check if Fast Apply is enabled in API configuration
-	if (state.experiments.morphFastApply !== true) {
+	if (state?.experiments?.morphFastApply !== true) {
 		return {
 			available: false,
 			error: "Fast Apply is disabled. Enable it in API Options > Enable Editing with Fast Apply",

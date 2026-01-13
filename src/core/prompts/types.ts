@@ -10,4 +10,6 @@ export interface SystemPromptSettings {
 	useAgentRules: boolean
 	newTaskRequireTodos: boolean
 	toolProtocol?: ToolProtocol
+	/** When true, model should hide vendor/company identity in responses */
+	isStealthModel?: boolean
 }

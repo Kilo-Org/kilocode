@@ -16,9 +16,9 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/kilocode/welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
-import McpView from "./components/mcp/McpView"
+import McpView from "./components/mcp/McpView" // kilocode_change
+import AuthView from "./components/kilocode/auth/AuthView" // kilocode_change
 import { MarketplaceView } from "./components/marketplace/MarketplaceView"
-import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import BottomControls from "./components/kilocode/BottomControls" // kilocode_change
 import { MemoryService } from "./services/MemoryService" // kilocode_change
@@ -33,7 +33,7 @@ import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 import { MemoryWarningBanner } from "./kilocode/MemoryWarningBanner"
 
-type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" // kilocode_change: add "profile"
+type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" | "auth" // kilocode_change: add "profile" and "auth"
 
 interface HumanRelayDialogState {
 	isOpen: boolean
@@ -64,13 +64,19 @@ const MemoizedHumanRelayDialog = React.memo(HumanRelayDialog)
 const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
-	promptsButtonClicked: "modes",
-	mcpButtonClicked: "mcp",
 	historyButtonClicked: "history",
 	profileButtonClicked: "profile",
 	marketplaceButtonClicked: "marketplace",
+	promptsButtonClicked: "settings", // kilocode_change: Navigate to settings with modes section
+	mcpButtonClicked: "mcp", // kilocode_change
 	// cloudButtonClicked: "cloud", // kilocode_change: no cloud
 }
+
+// kilocode_change start: Map certain actions to a default section when navigating to settings
+const defaultSectionByAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, string>> = {
+	promptsButtonClicked: "modes",
+}
+// kilocode_change end
 
 const App = () => {
 	const {
@@ -96,6 +102,9 @@ const App = () => {
 
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [tab, setTab] = useState<Tab>("chat")
+	const [authReturnTo, setAuthReturnTo] = useState<"chat" | "settings">("chat")
+	const [authProfileName, setAuthProfileName] = useState<string | undefined>(undefined)
+	const [settingsEditingProfile, setSettingsEditingProfile] = useState<string | undefined>(undefined)
 
 	const [humanRelayDialogState, setHumanRelayDialogState] = useState<HumanRelayDialogState>({
 		isOpen: false,
@@ -133,7 +142,11 @@ const App = () => {
 			setCurrentSection(undefined)
 			setCurrentMarketplaceTab(undefined)
 
-			if (settingsRef.current?.checkUnsaveChanges) {
+			// kilocode_change: start - Bypass unsaved changes check when navigating to auth tab
+			if (newTab === "auth") {
+				setTab(newTab)
+			} else if (settingsRef.current?.checkUnsaveChanges) {
+				// kilocode_change: end
 				settingsRef.current.checkUnsaveChanges(() => setTab(newTab))
 			} else {
 				setTab(newTab)
@@ -163,6 +176,19 @@ const App = () => {
 				// Handle switchTab action with tab parameter
 				if (message.action === "switchTab" && message.tab) {
 					const targetTab = message.tab as Tab
+					// kilocode_change start - Handle auth tab with returnTo and profileName parameters
+					if (targetTab === "auth") {
+						if (message.values?.returnTo) {
+							const returnTo = message.values.returnTo as "chat" | "settings"
+							setAuthReturnTo(returnTo)
+						}
+						if (message.values?.profileName) {
+							const profileName = message.values.profileName as string
+							setAuthProfileName(profileName)
+							setSettingsEditingProfile(profileName)
+						}
+					}
+					// kilocode_change end
 					switchTab(targetTab)
 					// Extract targetSection from values if provided
 					const targetSection = message.values?.section as string | undefined
@@ -171,13 +197,32 @@ const App = () => {
 				} else {
 					// Handle other actions using the mapping
 					const newTab = tabsByMessageAction[message.action]
-					const section = message.values?.section as string | undefined
+					// kilocode_change start
+					const section =
+						(message.values?.section as string | undefined) ?? defaultSectionByAction[message.action]
+					// kilocode_change end
 					const marketplaceTab = message.values?.marketplaceTab as string | undefined
+					const editingProfile = message.values?.editingProfile as string | undefined // kilocode_change
 
 					if (newTab) {
 						switchTab(newTab)
 						setCurrentSection(section)
 						setCurrentMarketplaceTab(marketplaceTab)
+						// kilocode_change start - If navigating to settings with editingProfile, forward it
+						if (newTab === "settings" && editingProfile) {
+							// Re-send the message to SettingsView with the editingProfile
+							setTimeout(() => {
+								window.postMessage(
+									{
+										type: "action",
+										action: "settingsButtonClicked",
+										values: { editingProfile },
+									},
+									"*",
+								)
+							}, 100)
+						}
+						// kilocode_change end
 					}
 				}
 			}
@@ -276,20 +321,28 @@ const App = () => {
 
 	// Do not conditionally load ChatView, it's expensive and there's state we
 	// don't want to lose (user input, disableInput, askResponse promise, etc.)
+	// kilocode_change: no WelcomeViewProvider toggle
 	return showWelcome ? (
 		<WelcomeView />
 	) : (
 		<>
-			{/* kilocode_change: add MemoryWarningBanner */}
+			{/* kilocode_change start */}
 			<MemoryWarningBanner />
-			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
 			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
+			{/* kilocode_change end */}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
+			{/* kilocode_change: auth redirect / editingProfile */}
 			{tab === "settings" && (
-				<SettingsView ref={settingsRef} onDone={() => switchTab("chat")} targetSection={currentSection} /> // kilocode_change
+				<SettingsView
+					ref={settingsRef}
+					onDone={() => switchTab("chat")}
+					targetSection={currentSection}
+					editingProfile={settingsEditingProfile}
+				/>
 			)}
-			{/* kilocode_change: add profileview */}
+			{/* kilocode_change: add profileview and authview */}
 			{tab === "profile" && <ProfileView onDone={() => switchTab("chat")} />}
+			{tab === "auth" && <AuthView returnTo={authReturnTo} profileName={authProfileName} />}
 			{tab === "marketplace" && (
 				<MarketplaceView
 					stateManager={marketplaceStateManager}
@@ -305,7 +358,6 @@ const App = () => {
 					isAuthenticated={cloudIsAuthenticated}
 					cloudApiUrl={cloudApiUrl}
 					organizations={cloudOrganizations}
-					onDone={() => switchTab("chat")}
 				/>
 			)} */}
 			{/* kilocode_change: we have our own profile view */}
@@ -386,8 +438,8 @@ const App = () => {
 				/>
 			)}
 			{/* kilocode_change */}
-			{/* Chat, modes and history view contain their own bottom controls */}
-			{!["chat", "modes", "history"].includes(tab) && (
+			{/* Chat, and history view contain their own bottom controls, settings doesn't need it */}
+			{!["chat", "settings", "history"].includes(tab) && (
 				<div className="fixed inset-0 top-auto">
 					<BottomControls />
 				</div>

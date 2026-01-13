@@ -1,7 +1,7 @@
 function processOrder(order) {
   // TODO: Add comprehensive logging for order processing
-  console.log(`Processing order: ${JSON.stringify(order)}`);
-  const startTime = Date.now();
+  console.log('Processing order:', order);
+
   const result = validateOrder(order);
   return result;
 }

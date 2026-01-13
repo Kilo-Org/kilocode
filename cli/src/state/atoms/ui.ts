@@ -55,6 +55,12 @@ export const messageCutoffTimestampAtom = atom<number>(0)
 export const errorAtom = atom<string | null>(null)
 
 /**
+ * Atom to track YOLO mode state
+ * When enabled, all operations are auto-approved without confirmation
+ */
+export const yoloModeAtom = atom<boolean>(false)
+
+/**
  * Atom to track when parallel mode is committing changes
  * Used to disable input and show "Committing your changes..." message
  */
@@ -127,6 +133,15 @@ export const isStreamingAtom = atom<boolean>((get) => {
 
 	return false
 })
+
+/**
+ * Atom to track when a cancellation is in progress
+ * This provides immediate feedback when user presses ESC to cancel
+ * The extension is the source of truth for streaming state, but this atom
+ * allows the CLI to show "Cancelling..." immediately without waiting for
+ * the extension to process the cancellation request
+ */
+export const isCancellingAtom = atom<boolean>(false)
 
 // ============================================================================
 // Input Mode System
@@ -222,6 +237,23 @@ export const followupSuggestionsAtom = atom<FollowupSuggestion[]>([])
  * Atom to control followup suggestions menu visibility
  */
 export const showFollowupSuggestionsAtom = atom<boolean>(false)
+
+/**
+ * Derived atom that hides followup suggestions when slash-command autocomplete or file-mention autocomplete is active.
+ * This prevents the followup menu (and its selection index) from intercepting "/" commands.
+ */
+export const followupSuggestionsMenuVisibleAtom = atom<boolean>((get) => {
+	if (!get(showFollowupSuggestionsAtom)) return false
+	if (get(followupSuggestionsAtom).length === 0) return false
+
+	// If the user starts a "/" command, show command autocomplete instead of followups.
+	if (get(showAutocompleteAtom)) return false
+
+	// If file-mention autocomplete is active, it should take precedence as well.
+	if (get(fileMentionSuggestionsAtom).length > 0) return false
+
+	return true
+})
 
 /**
  * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
@@ -447,6 +479,56 @@ export const clearFileMentionAtom = atom(null, (get, set) => {
 	set(fileMentionSuggestionsAtom, [])
 	set(fileMentionContextAtom, null)
 })
+
+/**
+ * Action atom to update all suggestion state atomically
+ * This ensures that selectedIndex is set after all suggestions are updated
+ */
+export const updateAllSuggestionsAtom = atom(
+	null,
+	(
+		get,
+		set,
+		params: {
+			commandSuggestions?: CommandSuggestion[]
+			argumentSuggestions?: ArgumentSuggestion[]
+			fileMentionSuggestions?: FileMentionSuggestion[]
+			fileMentionContext?: FileMentionContext | null
+		},
+	) => {
+		const { commandSuggestions, argumentSuggestions, fileMentionSuggestions, fileMentionContext } = params
+
+		// Set all suggestion arrays first
+		if (commandSuggestions !== undefined) {
+			set(suggestionsAtom, commandSuggestions)
+		}
+		if (argumentSuggestions !== undefined) {
+			set(argumentSuggestionsAtom, argumentSuggestions)
+		}
+		if (fileMentionSuggestions !== undefined) {
+			set(fileMentionSuggestionsAtom, fileMentionSuggestions)
+		}
+		if (fileMentionContext !== undefined) {
+			set(fileMentionContextAtom, fileMentionContext)
+		}
+
+		// Determine which suggestions are active and set selectedIndex accordingly
+		let activeSuggestions: (CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion)[] = []
+		if (fileMentionSuggestions && fileMentionSuggestions.length > 0) {
+			activeSuggestions = fileMentionSuggestions
+		} else if (commandSuggestions && commandSuggestions.length > 0) {
+			activeSuggestions = commandSuggestions
+		} else if (argumentSuggestions && argumentSuggestions.length > 0) {
+			activeSuggestions = argumentSuggestions
+		}
+
+		if (activeSuggestions.length > 0) {
+			set(selectedIndexAtom, 0)
+		} else {
+			set(selectedIndexAtom, -1)
+		}
+	},
+)
 
 /**
  * Action atom to select the next suggestion
@@ -690,7 +772,7 @@ export const resetMessageCutoffAtom = atom(null, (get, set) => {
  */
 export const splitMessagesAtom = atom((get) => {
 	const allMessages = get(mergedMessagesAtom)
-	return splitMessages(allMessages)
+	return splitMessages(allMessages, { hidePartialMessages: true })
 })
 
 /**

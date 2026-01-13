@@ -12,7 +12,8 @@ import { formatResponse } from "../../core/prompts/responses"
 import { diagnosticsToProblemsString, getNewDiagnostics } from "../diagnostics"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { Task } from "../../core/task/Task"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import { DEFAULT_WRITE_DELAY_MS, isNativeProtocol } from "@roo-code/types"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
 
 import { DecorationController } from "./DecorationController"
 
@@ -300,11 +301,12 @@ export class DiffViewProvider {
 	}
 
 	/**
-	 * Formats a standardized XML response for file write operations
+	 * Formats a standardized response for file write operations
 	 *
+	 * @param task Task instance to get protocol info
 	 * @param cwd Current working directory for path resolution
 	 * @param isNewFile Whether this is a new file or an existing file being modified
-	 * @returns Formatted message and say object for UI feedback
+	 * @returns Formatted message (JSON for native protocol, XML for legacy)
 	 */
 	async pushToolWriteResult(task: Task, cwd: string, isNewFile: boolean): Promise<string> {
 		if (!this.relPath) {
@@ -324,49 +326,75 @@ export class DiffViewProvider {
 			await task.say("user_feedback_diff", JSON.stringify(say))
 		}
 
-		// Build XML response
-		const xmlObj = {
-			file_write_result: {
+		// Check which protocol we're using
+		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info)
+		const useNative = isNativeProtocol(toolProtocol)
+
+		// Build notices array
+		const notices = [
+			"You do not need to re-read the file, as you have seen all changes",
+			"Proceed with the task using these changes as the new baseline.",
+			...(this.userEdits
+				? [
+						"If the user's edits have addressed part of the task or changed the requirements, adjust your approach accordingly.",
+					]
+				: []),
+		]
+
+		if (useNative) {
+			// Return JSON for native protocol
+			const result: any = {
 				path: this.relPath,
 				operation: isNewFile ? "created" : "modified",
-				user_edits: this.userEdits ? this.userEdits : undefined,
-				problems: this.newProblemsMessage || undefined,
-				notice: {
-					i: [
-						"You do not need to re-read the file, as you have seen all changes",
-						"Proceed with the task using these changes as the new baseline.",
-						...(this.userEdits
-							? [
-									"If the user's edits have addressed part of the task or changed the requirements, adjust your approach accordingly.",
-								]
-							: []),
-					],
+				notice: notices.join(" "),
+			}
+
+			if (this.userEdits) {
+				result.user_edits = this.userEdits
+			}
+
+			if (this.newProblemsMessage) {
+				result.problems = this.newProblemsMessage
+			}
+
+			return JSON.stringify(result)
+		} else {
+			// Build XML response for legacy protocol
+			const xmlObj = {
+				file_write_result: {
+					path: this.relPath,
+					operation: isNewFile ? "created" : "modified",
+					user_edits: this.userEdits ? this.userEdits : undefined,
+					problems: this.newProblemsMessage || undefined,
+					notice: {
+						i: notices,
+					},
 				},
-			},
+			}
+
+			const builder = new XMLBuilder({
+				format: true,
+				indentBy: "",
+				suppressEmptyNode: true,
+				processEntities: false,
+				tagValueProcessor: (name, value) => {
+					if (typeof value === "string") {
+						// Only escape <, >, and & characters
+						return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+					}
+					return value
+				},
+				attributeValueProcessor: (name, value) => {
+					if (typeof value === "string") {
+						// Only escape <, >, and & characters
+						return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+					}
+					return value
+				},
+			})
+
+			return builder.build(xmlObj)
 		}
-
-		const builder = new XMLBuilder({
-			format: true,
-			indentBy: "",
-			suppressEmptyNode: true,
-			processEntities: false,
-			tagValueProcessor: (name, value) => {
-				if (typeof value === "string") {
-					// Only escape <, >, and & characters
-					return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-				}
-				return value
-			},
-			attributeValueProcessor: (name, value) => {
-				if (typeof value === "string") {
-					// Only escape <, >, and & characters
-					return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-				}
-				return value
-			},
-		})
-
-		return builder.build(xmlObj)
 	}
 
 	async revertChanges(): Promise<void> {
@@ -659,6 +687,10 @@ export class DiffViewProvider {
 	}> {
 		const absolutePath = path.resolve(this.cwd, relPath)
 
+		// kilocode_change start: In CLI mode, skip VSCode-specific operations (diagnostics are mocked)
+		const skipVscodeOps = process.env.KILO_CLI_MODE === "true"
+		// kilocode_change end
+
 		// Get diagnostics before editing the file
 		this.preDiagnostics = vscode.languages.getDiagnostics()
 
@@ -668,28 +700,34 @@ export class DiffViewProvider {
 
 		// Open the document to ensure diagnostics are loaded
 		// When openFile is false (PREVENT_FOCUS_DISRUPTION enabled), we only open in memory
-		if (openFile) {
-			// Show the document in the editor
-			await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
-				preview: false,
-				preserveFocus: true,
-			})
-		} else {
-			// Just open the document in memory to trigger diagnostics without showing it
-			const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
+		// kilocode_change start: Skip document opening in CLI mode
+		if (!skipVscodeOps) {
+			// kilocode_change end
+			if (openFile) {
+				// Show the document in the editor
+				await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
+					preview: false,
+					preserveFocus: true,
+				})
+			} else {
+				// Just open the document in memory to trigger diagnostics without showing it
+				const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
 
-			// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
-			if (doc.isDirty) {
-				await doc.save()
+				// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
+				if (doc.isDirty) {
+					await doc.save()
+				}
+
+				// Force a small delay to ensure diagnostics are triggered
+				await new Promise((resolve) => setTimeout(resolve, 100))
 			}
-
-			// Force a small delay to ensure diagnostics are triggered
-			await new Promise((resolve) => setTimeout(resolve, 100))
 		}
 
 		let newProblemsMessage = ""
 
-		if (diagnosticsEnabled) {
+		// kilocode_change start: Skip diagnostic delay in CLI mode
+		if (diagnosticsEnabled && !skipVscodeOps) {
+			// kilocode_change end
 			// Add configurable delay to allow linters time to process
 			const safeDelayMs = Math.max(0, writeDelayMs)
 

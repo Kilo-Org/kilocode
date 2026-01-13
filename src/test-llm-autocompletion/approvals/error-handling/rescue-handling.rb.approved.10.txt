@@ -1,12 +1,9 @@
 def process_data(data)
 	begin
 		result = JSON.parse(data)
-		if result.is_a?(Hash)
-			result.each do |key, value|
-				puts "#{key}: #{value}"
-			end
+		result["status"] = "success"
+		rescue JSON::ParserError => e
+			result = { "status" => "error", "message" => e.message }
 		end
-	rescue JSON::ParserError => e
-		puts "Invalid JSON data: #{e.message}"
-	end
+		result.to_json
 end

@@ -48,6 +48,7 @@ export interface ToolData {
 	source?: string
 	additionalFileCount?: number
 	fastApplyResult?: unknown
+	diffStats?: { added: number; removed: number }
 }
 
 /**
@@ -99,14 +100,4 @@ export interface ApiReqInfo {
 export interface ImageData {
 	imageUri: string
 	imagePath: string
-}
-
-/**
- * Codebase search result structure
- */
-export interface CodebaseSearchResult {
-	file: string
-	line: number
-	content: string
-	score: number
 }

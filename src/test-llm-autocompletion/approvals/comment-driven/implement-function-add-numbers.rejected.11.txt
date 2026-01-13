@@ -1,0 +1,26 @@
+// Implement functino to add two numbers
+// without using + operator
+
+#include <iostream>
+using namespace std;
+
+int add(int a, int b)
+{
+    int carry;
+    while (b != 0)
+    {
+        carry = a & b;
+        a = a ^ b;
+        b = carry << 1;
+    }
+    return a;
+}
+
+int main()
+{
+    int a, b;
+    cout << "Enter two numbers: ";
+    cin >> a >> b;
+    cout << "Sum of two numbers is: " << add(a, b) << endl;
+    return 0;
+}

@@ -1,4 +1,5 @@
-# Description: Should complete Ruby initialize method with instance variables
+#### Description: Should complete Ruby initialize method with instance variables
+#### Filename: user.rb
 class User
 	def initialize(username, email, role)
 		@username = username

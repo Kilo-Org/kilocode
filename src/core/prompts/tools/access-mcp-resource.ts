@@ -1,7 +1,16 @@
 import { ToolArgs } from "./types"
+import { McpHub } from "../../../services/mcp/McpHub"
+
+/**
+ * Helper function to check if any MCP server has resources available
+ */
+function hasAnyMcpResources(mcpHub: McpHub): boolean {
+	const servers = mcpHub.getServers()
+	return servers.some((server) => server.resources && server.resources.length > 0)
+}
 
 export function getAccessMcpResourceDescription(args: ToolArgs): string | undefined {
-	if (!args.mcpHub) {
+	if (!args.mcpHub || !hasAnyMcpResources(args.mcpHub)) {
 		return undefined
 	}
 	return `## access_mcp_resource

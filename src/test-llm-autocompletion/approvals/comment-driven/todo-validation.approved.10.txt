@@ -1,8 +1,0 @@
-function registerUser(email, password) {
-  // TODO: Add input validation for email and password
-// Check if email is valid and password meets requirements
-  if (!validateEmail(email) || !validatePassword(password)) {
-    throw new Error('Invalid email or password');
-  }
-  return createUser(email, password);
-}

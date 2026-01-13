@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect, useRef, Fragment } from "react" // kilocode_change Fragment
+import { useState, useCallback, useEffect, useRef, useMemo, Fragment } from "react" // kilocode_change Fragment, useMemo
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
-import { ChevronsUpDown, Check, X } from "lucide-react"
+import { ChevronsUpDown, Check, X, Info } from "lucide-react"
 
 import type { ProviderSettings, ModelInfo, OrganizationAllowList } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
-import { usePreferredModels } from "@/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
+import { useGroupedModelIds } from "@/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
 // import { filterModels } from "./utils/organizationFilters" // kilocode_change: not doing this
 import { cn } from "@src/lib/utils"
 import {
@@ -21,7 +21,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	Button,
-	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 
@@ -31,7 +30,7 @@ import { KiloModelInfoView } from "../kilocode/settings/KiloModelInfoView"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
-	| "glamaModelId"
+	| "glamaModelId" // kilocode_change
 	| "openRouterModelId"
 	| "unboundModelId"
 	| "requestyModelId"
@@ -64,6 +63,7 @@ interface ModelPickerProps {
 	) => void
 	organizationAllowList: OrganizationAllowList
 	errorMessage?: string
+	simplifySettings?: boolean
 }
 
 export const ModelPicker = ({
@@ -76,6 +76,7 @@ export const ModelPicker = ({
 	setApiConfigurationField,
 	// organizationAllowList, // kilocode_change: unused
 	errorMessage,
+	simplifySettings,
 }: ModelPickerProps) => {
 	const { t } = useAppTranslation()
 
@@ -86,8 +87,9 @@ export const ModelPicker = ({
 	const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-	// kilocode_change start
-	const modelIds = usePreferredModels(models)
+	// kilocode_change start: Use grouped model IDs for section headers
+	const { preferredModelIds, restModelIds } = useGroupedModelIds(models)
+	const modelIds = useMemo(() => [...preferredModelIds, ...restModelIds], [preferredModelIds, restModelIds])
 	const [isPricingExpanded, setIsPricingExpanded] = useState(false)
 	// kilocode_change end
 
@@ -203,36 +205,51 @@ export const ModelPicker = ({
 										</div>
 									)}
 								</CommandEmpty>
-								<CommandGroup>
-									{/* kilocode_change start */}
-									{modelIds.map((model, i) => {
-										const isPreferred = Number.isInteger(models?.[model]?.preferredIndex)
-										const previousModelWasPreferred = Number.isInteger(
-											models?.[modelIds[i - 1]]?.preferredIndex,
-										)
-										return (
-											<Fragment key={model}>
-												{!isPreferred && previousModelWasPreferred ? <SelectSeparator /> : null}
-												<CommandItem
-													value={model}
-													onSelect={onSelect}
-													data-testid={`model-option-${model}`}
-													className={cn(isPreferred ? "font-semibold" : "")}>
-													<span className="truncate" title={model}>
-														{model}
-													</span>
-													<Check
-														className={cn(
-															"size-4 p-0.5 ml-auto",
-															model === selectedModelId ? "opacity-100" : "opacity-0",
-														)}
-													/>
-												</CommandItem>
-											</Fragment>
-										)
-									})}
-									{/* kilocode_change end */}
-								</CommandGroup>
+								{/* kilocode_change start: Section headers for recommended and all models */}
+								{preferredModelIds.length > 0 && (
+									<CommandGroup heading={t("settings:modelPicker.recommendedModels")}>
+										{preferredModelIds.map((model) => (
+											<CommandItem
+												key={model}
+												value={model}
+												onSelect={onSelect}
+												data-testid={`model-option-${model}`}
+												className="font-semibold">
+												<span className="truncate" title={model}>
+													{model}
+												</span>
+												<Check
+													className={cn(
+														"size-4 p-0.5 ml-auto",
+														model === selectedModelId ? "opacity-100" : "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								)}
+								{restModelIds.length > 0 && (
+									<CommandGroup heading={t("settings:modelPicker.allModels")}>
+										{restModelIds.map((model) => (
+											<CommandItem
+												key={model}
+												value={model}
+												onSelect={onSelect}
+												data-testid={`model-option-${model}`}>
+												<span className="truncate" title={model}>
+													{model}
+												</span>
+												<Check
+													className={cn(
+														"size-4 p-0.5 ml-auto",
+														model === selectedModelId ? "opacity-100" : "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								)}
+								{/* kilocode_change end */}
 							</CommandList>
 							{searchValue && !modelIds.includes(searchValue) && (
 								<div className="p-1 border-t border-vscode-input-border">
@@ -246,50 +263,64 @@ export const ModelPicker = ({
 				</Popover>
 			</div>
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
-			{
-				// kilocode_change start
-				selectedModelId &&
-					selectedModelInfo &&
-					(apiConfiguration.apiProvider === "kilocode" || apiConfiguration.apiProvider === "openrouter" ? (
-						<KiloModelInfoView
-							apiConfiguration={apiConfiguration}
-							modelId={selectedModelId}
-							model={selectedModelInfo}
-							isDescriptionExpanded={isDescriptionExpanded}
-							setIsDescriptionExpanded={setIsDescriptionExpanded}
-							isPricingExpanded={isPricingExpanded}
-							setIsPricingExpanded={setIsPricingExpanded}
-						/>
-					) : (
-						<ModelInfoView
-							apiProvider={apiConfiguration.apiProvider}
-							selectedModelId={selectedModelId}
-							modelInfo={selectedModelInfo}
-							isDescriptionExpanded={isDescriptionExpanded}
-							setIsDescriptionExpanded={setIsDescriptionExpanded}
-						/>
-					))
-				// kilocode_change end
-			}
-			<div className="text-sm text-vscode-descriptionForeground">
-				{
-					/*kilocode_change start*/
-					apiConfiguration.apiProvider === "kilocode" ? (
-						<Trans i18nKey="kilocode:settings.provider.automaticFetch" />
-					) : (
-						<Trans
-							i18nKey="settings:modelPicker.automaticFetch"
-							components={{
-								serviceLink: <VSCodeLink href={serviceUrl} className="text-sm" />,
-								defaultModelLink: (
-									<VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm" />
-								),
-							}}
-							values={{ serviceName, defaultModelId }}
-						/>
-					) /*kilocode_change end*/
-				}
-			</div>
+			{selectedModelInfo?.deprecated && (
+				<ApiErrorMessage errorMessage={t("settings:validation.modelDeprecated")} />
+			)}
+
+			{simplifySettings ? (
+				<p className="text-xs text-vscode-descriptionForeground m-0">
+					<Info className="size-3 inline mr-1" />
+					{t("settings:modelPicker.simplifiedExplanation")}
+				</p>
+			) : (
+				<div>
+					{
+						// kilocode_change start
+						selectedModelId &&
+							selectedModelInfo &&
+							(apiConfiguration.apiProvider === "kilocode" ||
+							apiConfiguration.apiProvider === "openrouter" ? (
+								<KiloModelInfoView
+									apiConfiguration={apiConfiguration}
+									modelId={selectedModelId}
+									model={selectedModelInfo}
+									isDescriptionExpanded={isDescriptionExpanded}
+									setIsDescriptionExpanded={setIsDescriptionExpanded}
+									isPricingExpanded={isPricingExpanded}
+									setIsPricingExpanded={setIsPricingExpanded}
+								/>
+							) : (
+								<ModelInfoView
+									apiProvider={apiConfiguration.apiProvider}
+									selectedModelId={selectedModelId}
+									modelInfo={selectedModelInfo}
+									isDescriptionExpanded={isDescriptionExpanded}
+									setIsDescriptionExpanded={setIsDescriptionExpanded}
+								/>
+							))
+						// kilocode_change end
+					}
+					<div className="text-sm text-vscode-descriptionForeground">
+						{
+							/*kilocode_change start*/
+							apiConfiguration.apiProvider === "kilocode" ? (
+								<Trans i18nKey="kilocode:settings.provider.automaticFetch" />
+							) : (
+								<Trans
+									i18nKey="settings:modelPicker.automaticFetch"
+									components={{
+										serviceLink: <VSCodeLink href={serviceUrl} className="text-sm" />,
+										defaultModelLink: (
+											<VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm" />
+										),
+									}}
+									values={{ serviceName, defaultModelId }}
+								/>
+							) /*kilocode_change end*/
+						}
+					</div>
+				</div>
+			)}
 		</>
 	)
 }

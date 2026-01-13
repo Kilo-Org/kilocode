@@ -74,6 +74,8 @@ function parseSyntheticModel(model: SyntheticModel): ModelInfo {
 		supportsReasoningBudget: (model.supported_features || []).includes("reasoning"),
 		supportedParameters: (model.supported_sampling_parameters || []).filter(isModelParameter),
 		supportsTemperature: (model.supported_sampling_parameters || []).includes("temperature"),
+		supportsNativeTools: true,
+		defaultToolProtocol: "native",
 	}
 }
 

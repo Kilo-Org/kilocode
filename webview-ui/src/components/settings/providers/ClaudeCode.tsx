@@ -7,6 +7,7 @@ import { Slider } from "@src/components/ui"
 interface ClaudeCodeProps {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	simplifySettings?: boolean
 }
 
 export const ClaudeCode: React.FC<ClaudeCodeProps> = ({ apiConfiguration, setApiConfigurationField }) => {

@@ -35,7 +35,9 @@ import {
 	fireworksModels,
 	featherlessModels,
 	ioIntelligenceModels,
+	basetenModels,
 	qwenCodeModels,
+	litellmDefaultModelInfo,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	isDynamicProvider,
 	getProviderDefaultModelId,
@@ -203,11 +205,13 @@ function getSelectedModel({
 			const info = routerModels.requesty?.[id]
 			return { id, info }
 		}
+		// kilocode_change start
 		case "glama": {
 			const id = getValidatedModelId(apiConfiguration.glamaModelId, routerModels.glama, defaultModelId)
 			const info = routerModels.glama?.[id]
 			return { id, info }
 		}
+		// kilocode_change end
 		case "unbound": {
 			const id = getValidatedModelId(apiConfiguration.unboundModelId, routerModels.unbound, defaultModelId)
 			const info = routerModels.unbound?.[id]
@@ -215,7 +219,7 @@ function getSelectedModel({
 		}
 		case "litellm": {
 			const id = getValidatedModelId(apiConfiguration.litellmModelId, routerModels.litellm, defaultModelId)
-			const info = routerModels.litellm?.[id]
+			const info = routerModels.litellm?.[id] ?? litellmDefaultModelInfo
 			return { id, info }
 		}
 		case "xai": {
@@ -241,6 +245,11 @@ function getSelectedModel({
 		case "chutes": {
 			const id = getValidatedModelId(apiConfiguration.apiModelId, routerModels.chutes, defaultModelId)
 			const info = routerModels.chutes?.[id]
+			return { id, info }
+		}
+		case "baseten": {
+			const id = apiConfiguration.apiModelId ?? defaultModelId
+			const info = basetenModels[id as keyof typeof basetenModels]
 			return { id, info }
 		}
 		case "bedrock": {
@@ -323,22 +332,34 @@ function getSelectedModel({
 			const info = apiConfiguration?.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
 			return { id, info }
 		}
+		// kilocode_change start - improved context window handling
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
 			const info = ollamaModels && ollamaModels[apiConfiguration.ollamaModelId!]
+			const userContextWindow = apiConfiguration?.ollamaNumCtx
 
-			const adjustedInfo =
-				info?.contextWindow &&
-				apiConfiguration?.ollamaNumCtx &&
-				apiConfiguration.ollamaNumCtx < info.contextWindow
-					? { ...info, contextWindow: apiConfiguration.ollamaNumCtx }
-					: info
+			// If user has set ollamaNumCtx, always use it as the context window (user's explicit setting takes precedence)
+			// If no user setting, use the fetched model info's context window
+			// If neither, provide a sensible default so UI doesn't show undefined
+			let adjustedInfo: ModelInfo | undefined
+			if (info) {
+				adjustedInfo = userContextWindow ? { ...info, contextWindow: userContextWindow } : info
+			} else if (userContextWindow) {
+				// No fetched model info but user has set context window - provide default model info with user's setting
+				adjustedInfo = {
+					maxTokens: userContextWindow,
+					contextWindow: userContextWindow,
+					supportsImages: true,
+					supportsPromptCache: true,
+				}
+			}
 
 			return {
 				id,
 				info: adjustedInfo || undefined,
 			}
 		}
+		// kilocode_change end
 		case "lmstudio": {
 			const id = apiConfiguration.lmStudioModelId ?? ""
 			const info = lmStudioModels && lmStudioModels[apiConfiguration.lmStudioModelId!]

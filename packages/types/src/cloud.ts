@@ -121,6 +121,14 @@ export const organizationDefaultSettingsSchema = globalSettingsSchema
 export type OrganizationDefaultSettings = z.infer<typeof organizationDefaultSettingsSchema>
 
 /**
+ * WorkspaceTaskVisibility
+ */
+
+const workspaceTaskVisibilitySchema = z.enum(["all", "list-only", "full-lockdown"])
+
+export type WorkspaceTaskVisibility = z.infer<typeof workspaceTaskVisibilitySchema>
+
+/**
  * OrganizationCloudSettings
  */
 
@@ -129,6 +137,7 @@ export const organizationCloudSettingsSchema = z.object({
 	enableTaskSharing: z.boolean().optional(),
 	taskShareExpirationDays: z.number().int().positive().optional(),
 	allowMembersViewAllTasks: z.boolean().optional(),
+	workspaceTaskVisibility: workspaceTaskVisibilitySchema.optional(),
 })
 
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
@@ -239,9 +248,14 @@ export interface AuthService extends EventEmitter<AuthServiceEvents> {
 	broadcast(): void
 
 	// Authentication methods
-	login(landingPageSlug?: string): Promise<void>
+	login(landingPageSlug?: string, useProviderSignup?: boolean): Promise<void>
 	logout(): Promise<void>
-	handleCallback(code: string | null, state: string | null, organizationId?: string | null): Promise<void>
+	handleCallback(
+		code: string | null,
+		state: string | null,
+		organizationId?: string | null,
+		providerModel?: string | null,
+	): Promise<void>
 	switchOrganization(organizationId: string | null): Promise<void>
 
 	// State methods
@@ -435,6 +449,9 @@ export enum ExtensionBridgeEventName {
 	TaskPaused = RooCodeEventName.TaskPaused,
 	TaskUnpaused = RooCodeEventName.TaskUnpaused,
 	TaskSpawned = RooCodeEventName.TaskSpawned,
+	TaskDelegated = RooCodeEventName.TaskDelegated,
+	TaskDelegationCompleted = RooCodeEventName.TaskDelegationCompleted,
+	TaskDelegationResumed = RooCodeEventName.TaskDelegationResumed,
 
 	TaskUserMessage = RooCodeEventName.TaskUserMessage,
 
@@ -512,6 +529,21 @@ export const extensionBridgeEventSchema = z.discriminatedUnion("type", [
 	}),
 	z.object({
 		type: z.literal(ExtensionBridgeEventName.TaskSpawned),
+		instance: extensionInstanceSchema,
+		timestamp: z.number(),
+	}),
+	z.object({
+		type: z.literal(ExtensionBridgeEventName.TaskDelegated),
+		instance: extensionInstanceSchema,
+		timestamp: z.number(),
+	}),
+	z.object({
+		type: z.literal(ExtensionBridgeEventName.TaskDelegationCompleted),
+		instance: extensionInstanceSchema,
+		timestamp: z.number(),
+	}),
+	z.object({
+		type: z.literal(ExtensionBridgeEventName.TaskDelegationResumed),
 		instance: extensionInstanceSchema,
 		timestamp: z.number(),
 	}),

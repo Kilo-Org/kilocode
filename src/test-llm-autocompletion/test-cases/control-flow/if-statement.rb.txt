@@ -1,4 +1,0 @@
-# Description: Should complete if statement body in Ruby
-x = 10
-if x > 5
-	<<<AUTOCOMPLETE_HERE>>>

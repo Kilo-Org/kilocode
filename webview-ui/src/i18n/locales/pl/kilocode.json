@@ -94,6 +94,12 @@
 					"current": "Użyj bieżącej konfiguracji"
 				}
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Rozmiar Partii Embeddingów",
+			"embeddingBatchSizeDescription": "Liczba segmentów kodu grupowanych razem do generowania embeddingów i aktualizacji magazynu wektorów. Wyższe wartości mogą przyspieszyć indeksowanie, ale mogą zwiększyć zużycie pamięci. Niższe wartości zmniejszają zużycie pamięci, ale mogą spowolnić indeksowanie.",
+			"scannerMaxBatchRetriesLabel": "Maksymalna Liczba Ponowień Partii Skanera",
+			"scannerMaxBatchRetriesDescription": "Maksymalna liczba ponowień nieudanej partii podczas skanowania katalogów. Wyższe wartości zwiększają odporność na przejściowe błędy, ale mogą spowolnić indeksowanie, jeśli błędy się utrzymują. Niższe wartości kończą się szybciej niepowodzeniem, ale mogą pominąć zawartość przy tymczasowych problemach."
 		}
 	},
 	"toolCallStyle": {
@@ -210,7 +216,8 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Wyzwalacze",
+			"codeEditorSuggestions": "Sugestie Edytora Kodu",
+			"chatSuggestions": "Sugestie Czatu",
 			"keybindingDescription": "Funkcje Autocomplete mogą być wyzwalane przez polecenia. Możesz skonfigurować <DocsLink>Skróty Klawiszowe tutaj</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Włącz Autocomplete",
@@ -220,19 +227,42 @@
 				"label": "Opóźnienie Automatycznego Wyzwalania",
 				"description": "Opóźnienie w sekundach przed tym, jak Kilo Code wyzwoli Autocomplete po tym, jak przestaniesz pisać. Krótsze opóźnienie oznacza szybsze sugestie, ale może być bardziej zasobożerne."
 			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Szybkie zadanie ({{keybinding}})",
-				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz trochę kodu (lub nie!) i naciśnij Cmd+I. Opisz swój cel w prostym języku polskim (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
-			},
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Ręczne uzupełnianie ({{keybinding}})",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"keybindingNotFound": "nie znaleziono",
-			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
 			"configureAutocompleteProfile": "Użyj dowolnego modelu, przechodząc do profili i konfigurując Profil typu Autouzupełnianie.",
 			"model": "Model",
-			"provider": "Dostawca"
+			"provider": "Dostawca",
+			"enableChatAutocomplete": {
+				"label": "Automatyczne uzupełnianie wpisów czatu",
+				"description": "Po włączeniu, Kilo Code będzie sugerować uzupełnienia podczas pisania w oknie czatu. Naciśnij Tab, aby zaakceptować sugestie."
+			},
+			"snooze": {
+				"label": "Wstrzymaj Autocomplete",
+				"description": "Tymczasowo wstrzymaj sugestie autouzupełniania na określony czas.",
+				"button": "Wstrzymaj",
+				"unsnooze": "Wznów",
+				"currentlySnoozed": "Autouzupełnianie jest obecnie wstrzymane.",
+				"duration": {
+					"1min": "1 minuta",
+					"5min": "5 minut",
+					"15min": "15 minut",
+					"30min": "30 minut",
+					"1hour": "1 godzina"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Nie skonfigurowano modelu autouzupełniania",
+				"description": "Aby włączyć autouzupełnianie, dodaj profil z jednym z tych obsługiwanych dostawców:",
+				"learnMore": "Dowiedz się więcej o konfiguracji autouzupełniania →"
+			},
+			"noCredits": {
+				"title": "Brak kredytów na koncie",
+				"description": "Twoje konto Kilo Code nie ma kredytów. Aby korzystać z autouzupełniania, dodaj kredyty do swojego konta.",
+				"buyCredits": "Kup kredyty →"
+			}
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +312,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
+	},
+	"deviceAuth": {
+		"title": "Zaloguj się do Kilo Code",
+		"step1": "Otwórz następujący adres URL w przeglądarce",
+		"step2": "Zweryfikuj kod i autoryzuj to urządzenie w przeglądarce",
+		"scanQr": "Lub zeskanuj ten kod QR telefonem",
+		"openBrowser": "Otwórz przeglądarkę",
+		"copyUrl": "Kopiuj URL",
+		"waiting": "Oczekiwanie na autoryzację...",
+		"timeRemaining": "Kod wygasa za {{time}}",
+		"success": "Pomyślnie zalogowano!",
+		"authenticatedAs": "Uwierzytelniono jako {{email}}",
+		"error": "Błąd uwierzytelniania",
+		"unknownError": "Wystąpił błąd. Spróbuj ponownie.",
+		"cancel": "Anuluj",
+		"retry": "Spróbuj ponownie",
+		"tryAgain": "Spróbuj ponownie",
+		"cancelled": "Uwierzytelnianie anulowane",
+		"initiating": "Rozpoczynanie uwierzytelniania..."
+	},
+	"speechToText": {
+		"startRecording": "Rozpocznij wprowadzanie głosowe",
+		"stopRecording": "Zatrzymaj wprowadzanie głosowe",
+		"setupPopover": {
+			"title": "Zamiana mowy na tekst",
+			"description": "Zamiana mowy na tekst jest niedostępna. Zamiana mowy na tekst wymaga zarówno FFmpeg, jak i skonfigurowanego prawidłowego dostawcy OpenAI. <moreInfoLink>Kliknij tutaj, aby uzyskać więcej informacji</moreInfoLink>.",
+			"openAiReason": "Aby korzystać z transkrypcji głosowej, potrzebujesz ważnego dostawcy OpenAI z kluczem API.",
+			"ffmpegReason": "Musisz mieć zainstalowany FFmpeg. <ffmpegLink>Kliknij tutaj</ffmpegLink>, aby Kilo pomógł Ci zainstalować FFmpeg.",
+			"ffmpegMessage": "Pomóż mi zainstalować FFmpeg"
+		},
+		"misconfiguredState": "Niedostępne z powodu konfiguracji",
+		"errorState": "Niedostępne z powodu błędu",
+		"microphone": {
+			"label": "Mikrofon",
+			"description": "Wybierz urządzenie mikrofonu do przetwarzania mowy na tekst",
+			"defaultOption": "Domyślny system",
+			"loading": "Ładowanie urządzeń mikrofonowych...",
+			"refresh": "Odśwież",
+			"noDevices": "Nie znaleziono urządzeń mikrofonowych"
+		}
 	}
 }

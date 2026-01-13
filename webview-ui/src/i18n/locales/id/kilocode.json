@@ -94,6 +94,12 @@
 				},
 				"provider": "Penyedia Pembuat Perintah Terminal"
 			}
+		},
+		"codeIndex": {
+			"embeddingBatchSizeLabel": "Ukuran Batch Embedding",
+			"embeddingBatchSizeDescription": "Jumlah segmen kode yang digabung untuk pembuatan embedding dan penyisipan vector store. Nilai lebih tinggi dapat meningkatkan kecepatan pengindeksan tetapi dapat meningkatkan penggunaan memori. Nilai lebih rendah mengurangi penggunaan memori tetapi dapat memperlambat pengindeksan.",
+			"scannerMaxBatchRetriesLabel": "Maksimum Percobaan Ulang Batch Scanner",
+			"scannerMaxBatchRetriesDescription": "Jumlah maksimum percobaan ulang batch yang gagal selama pemindaian direktori. Nilai lebih tinggi meningkatkan ketahanan terhadap error sementara tetapi dapat memperlambat pengindeksan jika error berlanjut. Nilai lebih rendah gagal lebih cepat tetapi dapat melewatkan konten pada masalah sementara."
 		}
 	},
 	"chat": {
@@ -203,29 +209,52 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Pemicu",
-			"keybindingDescription": "Fitur Autocomplete dapat dipicu oleh perintah. Anda dapat mengonfigurasi <DocsLink>Pintasan Keyboard di sini</DocsLink>.",
 			"enableAutoTrigger": {
-				"label": "Aktifkan Autocomplete",
-				"description": "Ketika diaktifkan, Kilo Code akan secara otomatis memicu Autocomplete saat Anda berhenti mengetik. Ini dapat berguna untuk perbaikan cepat dan saran."
+				"label": "Auto-trigger Suggestions",
+				"description": "Secara otomatis menampilkan saran kode inline saat Anda berhenti mengetik."
 			},
 			"autoTriggerDelay": {
 				"label": "Penundaan Pemicu Otomatis",
-				"description": "Penundaan dalam detik sebelum Kilo Code memicu Autocomplete setelah Anda berhenti mengetik. Penundaan yang lebih pendek berarti saran yang lebih cepat, tetapi mungkin lebih intensif sumber daya."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tugas Cepat ({{keybinding}})",
-				"description": "Hanya perlu perubahan cepat? Pilih beberapa kode (atau tidak!) dan tekan Cmd+I. Jelaskan tujuan Anda dalam bahasa Indonesia sederhana (\"buat komponen React dengan props ini\", \"tambahkan penanganan error ke fungsi ini\"), dan dapatkan beberapa saran siap pakai langsung di editor Anda. <DocsLink>Lihat pintasan</DocsLink>"
+				"description": "The delay in seconds before suggestions appear after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Pelengkapan Otomatis Manual ({{keybinding}})",
-				"description": "Perlu perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan langsung, menjaga Anda tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
+				"label": "Trigger on Keybinding ({{keybinding}})",
+				"description": "Press {{keybinding}} to request a code suggestion at your cursor position. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"keybindingNotFound": "tidak ditemukan",
-			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
 			"configureAutocompleteProfile": "Gunakan model apa pun dengan pergi ke profil dan mengonfigurasi Profil dengan Tipe Profil Autocomplete.",
 			"model": "Model",
-			"provider": "Penyedia"
+			"provider": "Penyedia",
+			"enableChatAutocomplete": {
+				"description": "Show completions as you type in the chat input. Press Tab to accept suggestions.",
+				"label": "Enable Chat Autocomplete"
+			},
+			"snooze": {
+				"label": "Snooze Suggestions",
+				"description": "Temporarily pause suggestions for a specified duration.",
+				"button": "Tunda",
+				"unsnooze": "Aktifkan Kembali",
+				"currentlySnoozed": "Suggestions are currently snoozed.",
+				"duration": {
+					"1min": "1 menit",
+					"5min": "5 menit",
+					"15min": "15 menit",
+					"30min": "30 menit",
+					"1hour": "1 jam"
+				}
+			},
+			"noModelConfigured": {
+				"title": "Tidak ada model autocomplete yang dikonfigurasi",
+				"description": "Untuk mengaktifkan autocomplete, tambahkan profil dengan salah satu penyedia yang didukung ini:",
+				"learnMore": "Pelajari lebih lanjut tentang pengaturan autocomplete →"
+			},
+			"noCredits": {
+				"title": "Tidak ada kredit di akun Anda",
+				"description": "Akun Kilo Code Anda tidak memiliki kredit. Untuk menggunakan autocomplete, silakan tambahkan kredit ke akun Anda.",
+				"buyCredits": "Beli kredit →"
+			},
+			"codeEditorSuggestions": "Code Editor Suggestions",
+			"chatSuggestions": "Chat Suggestions"
 		}
 	},
 	"virtualProvider": {
@@ -282,5 +311,45 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
+	},
+	"deviceAuth": {
+		"title": "Masuk ke Kilo Code",
+		"step1": "Buka URL berikut di browser kamu",
+		"step2": "Verifikasi kode dan otorisasi perangkat ini di browser kamu",
+		"scanQr": "Atau pindai kode QR ini dengan ponsel kamu",
+		"openBrowser": "Buka Browser",
+		"copyUrl": "Salin URL",
+		"waiting": "Menunggu otorisasi...",
+		"timeRemaining": "Kode kedaluwarsa dalam {{time}}",
+		"success": "Berhasil masuk!",
+		"authenticatedAs": "Diautentikasi sebagai {{email}}",
+		"error": "Kesalahan Autentikasi",
+		"unknownError": "Terjadi kesalahan. Silakan coba lagi.",
+		"cancel": "Batal",
+		"retry": "Coba Lagi",
+		"tryAgain": "Coba Lagi",
+		"cancelled": "Autentikasi Dibatalkan",
+		"initiating": "Memulai autentikasi..."
+	},
+	"speechToText": {
+		"startRecording": "Mulai input suara",
+		"stopRecording": "Hentikan input suara",
+		"setupPopover": {
+			"title": "Ucapan-ke-Teks",
+			"description": "Speech-to-text tidak tersedia. Speech-to-text memerlukan FFmpeg dan penyedia OpenAI yang valid untuk dikonfigurasi. <moreInfoLink>Klik di sini untuk informasi lebih lanjut</moreInfoLink>.",
+			"openAiReason": "Anda memerlukan penyedia OpenAI yang valid dengan kunci API untuk menggunakan transkripsi suara.",
+			"ffmpegReason": "Anda perlu menginstal FFmpeg. <ffmpegLink>Klik di sini</ffmpegLink> agar Kilo membantu Anda menginstal FFmpeg.",
+			"ffmpegMessage": "Bantu saya menginstal FFmpeg"
+		},
+		"misconfiguredState": "Tidak tersedia karena konfigurasi",
+		"errorState": "Tidak tersedia karena terjadi kesalahan",
+		"microphone": {
+			"label": "Mikrofon",
+			"defaultOption": "Default Sistem",
+			"description": "Pilih perangkat mikrofon untuk pengenalan suara-ke-teks",
+			"noDevices": "Tidak ada perangkat mikrofon yang ditemukan",
+			"loading": "Memuat perangkat mikrofon...",
+			"refresh": "Segarkan"
+		}
 	}
 }

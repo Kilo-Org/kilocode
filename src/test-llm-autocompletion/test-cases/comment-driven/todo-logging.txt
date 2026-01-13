@@ -1,6 +1,7 @@
-# Description: Should add logging functionality after TODO
+#### Description: Should add logging functionality after TODO
+#### Filename: order-processor.js
 function processOrder(order) {
-  // TODO: Add comprehensive logging for order processing<<<CURSOR>>>
+  // TODO: Add comprehensive logging for order processing<<<AUTOCOMPLETE_HERE>>>
   const result = validateOrder(order);
   return result;
 }

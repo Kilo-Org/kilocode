@@ -1095,6 +1095,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	inception: "gpt-4o",
 	synthetic: "synthetic-model",
 	"sap-ai-core": "gpt-4o",
+	baseten: "zai-org/GLM-4.6",
 }
 
 /**

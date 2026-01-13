@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "Fornitori",
+		"modes": "Modalità",
+		"mcp": "Server MCP",
 		"autoApprove": "Auto-approvazione",
 		"browser": "Accesso computer",
 		"checkpoints": "Punti di controllo",
@@ -37,6 +39,26 @@
 		"about": "Informazioni su Kilo Code",
 		"ghost": "Ghost",
 		"autoPurge": "Auto-pulizia"
+	},
+	"about": {
+		"bugReport": {
+			"label": "Hai trovato un bug?",
+			"link": "Segnala su GitHub"
+		},
+		"featureRequest": {
+			"label": "Hai un'idea?",
+			"link": "Condividila con noi"
+		},
+		"securityIssue": {
+			"label": "Hai scoperto una vulnerabilità?",
+			"link": "Segui il nostro processo di divulgazione"
+		},
+		"contact": {
+			"label": "Hai bisogno di parlarci? Scrivi"
+		},
+		"community": "Vuoi consigli o semplicemente uscire con altri utenti di Roo Code? Unisciti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "Contatti e Comunità",
+		"manageSettings": "Gestisci Impostazioni"
 	},
 	"slashCommands": {
 		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
@@ -58,9 +80,17 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Chiave API",
 		"vercelAiGatewayApiKeyPlaceholder": "Inserisci la tua chiave API Vercel AI Gateway",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "Regione AWS",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "Profilo AWS",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "Nome del profilo AWS da ~/.aws/credentials (richiesto).",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "Chiave API OpenRouter",
 		"openRouterApiKeyPlaceholder": "Inserisci la tua chiave API OpenRouter",
+		"openRouterProviderRoutingLabel": "Routing dei fornitori OpenRouter",
+		"openRouterProviderRoutingDescription": "OpenRouter indirizza le richieste ai migliori fornitori disponibili per il tuo modello di embedding. Per impostazione predefinita, le richieste sono bilanciate tra i principali fornitori per massimizzare il tempo di attività. Tuttavia, puoi scegliere un fornitore specifico da utilizzare per questo modello.",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Chiave API:",
 		"mistralApiKeyPlaceholder": "Inserisci la tua chiave API Mistral",
@@ -132,11 +162,14 @@
 			"geminiApiKeyRequired": "È richiesta la chiave API Gemini",
 			"mistralApiKeyRequired": "La chiave API di Mistral è richiesta",
 			"vercelAiGatewayApiKeyRequired": "È richiesta la chiave API Vercel AI Gateway",
+			"bedrockRegionRequired": "La regione AWS è richiesta",
+			"bedrockProfileRequired": "Il profilo AWS è richiesto",
 			"ollamaBaseUrlRequired": "È richiesto l'URL di base di Ollama",
 			"baseUrlRequired": "È richiesto l'URL di base",
 			"modelDimensionMinValue": "La dimensione del modello deve essere maggiore di 0",
 			"openRouterApiKeyRequired": "Chiave API OpenRouter è richiesta"
 		},
+		"optional": "opzionale",
 		"advancedConfigLabel": "Configurazione avanzata",
 		"searchMinScoreLabel": "Soglia punteggio di ricerca",
 		"searchMinScoreDescription": "Punteggio minimo di somiglianza (0.0-1.0) richiesto per i risultati della ricerca. Valori più bassi restituiscono più risultati ma potrebbero essere meno pertinenti. Valori più alti restituiscono meno risultati ma più pertinenti.",
@@ -279,9 +312,9 @@
 		"getOpenRouterApiKey": "Ottieni chiave API OpenRouter",
 		"vercelAiGatewayApiKey": "Chiave API Vercel AI Gateway",
 		"getVercelAiGatewayApiKey": "Ottieni chiave API Vercel AI Gateway",
-		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
 		"glamaApiKey": "Chiave API Glama",
 		"getGlamaApiKey": "Ottieni chiave API Glama",
+		"apiKeyStorageNotice": "Le chiavi API sono memorizzate in modo sicuro nell'Archivio Segreto di VSCode",
 		"useCustomBaseUrl": "Usa URL base personalizzato",
 		"useReasoning": "Abilita ragionamento",
 		"useHostHeader": "Usa intestazione Host personalizzata",
@@ -311,6 +344,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Inserisci nome deployment...",
 		"awsBedrock1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",
+		"basetenApiKey": "Chiave API Baseten",
+		"getBasetenApiKey": "Ottieni chiave API Baseten",
 		"cerebrasApiKey": "Chiave API Cerebras",
 		"getCerebrasApiKey": "Ottieni chiave API Cerebras",
 		"chutesApiKey": "Chiave API Chutes",
@@ -548,8 +583,10 @@
 			"none": "Nessuno",
 			"minimal": "Minimo (più veloce)",
 			"high": "Alto",
+			"xhigh": "Molto alto",
 			"medium": "Medio",
-			"low": "Basso"
+			"low": "Basso",
+			"xhigh": "Extra Alto"
 		},
 		"verbosity": {
 			"label": "Verbosity dell'output",
@@ -758,6 +795,10 @@
 		"includeCurrentCost": {
 			"label": "Includi il costo corrente nel contesto",
 			"description": "Se abilitato, il costo di utilizzo corrente dell'API verrà incluso nel prompt di sistema. Disabilita questa opzione se i modelli smettono di funzionare a causa di problemi di costo."
+		},
+		"maxGitStatusFiles": {
+			"label": "Git status max file",
+			"description": "Numero massimo di voci di file da includere nel contesto dello stato di git. Imposta a 0 per disabilitare. Le informazioni sul ramo e sui commit vengono sempre mostrate quando > 0."
 		}
 	},
 	"terminal": {
@@ -820,6 +861,14 @@
 	},
 	"advancedSettings": {
 		"title": "Impostazioni avanzate"
+	},
+	"toolProtocol": {
+		"label": "Protocollo di chiamata dello strumento",
+		"description": "Scegli come Kilo Code comunica con l'API. Nativo utilizza l'API di chiamata di funzione del provider, mentre XML utilizza definizioni di strumenti in formato XML.",
+		"default": "Predefinito",
+		"xml": "XML",
+		"native": "Nativo",
+		"currentDefault": "Predefinito: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -890,6 +939,8 @@
 			"description": "Quando abilitato, lo strumento new_task richiederà la fornitura di un parametro todos. Ciò garantisce che tutte le nuove attività inizino con un elenco chiaro di obiettivi. Quando disabilitato (impostazione predefinita), il parametro todos rimane facoltativo per la compatibilità con le versioni precedenti."
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "Provider",
+			"providerDescription": "Seleziona il provider per la generazione di immagini.",
 			"name": "Abilita generazione immagini AI",
 			"description": "Quando abilitato, Kilo Code può generare immagini da prompt di testo. Richiede una chiave API Kilo Code o OpenRouter configurata.",
 			"apiProvider": "Fornitore API",
@@ -929,6 +980,14 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "Abilita comandi slash avviati dal modello",
 			"description": "Quando abilitato, Kilo Code può eseguire i tuoi comandi slash per eseguire flussi di lavoro."
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "Chiamate parallele agli strumenti",
+			"description": "Quando abilitato, il protocollo nativo può eseguire più strumenti in un singolo turno di messaggio dell'assistente."
+		},
+		"SPEECH_TO_TEXT": {
+			"name": "Riconoscimento vocale (STT)",
+			"description": "Quando abilitato, Kilo Code può trascrivere la tua voce in testo utilizzando il modello Whisper di OpenAI. Clicca il pulsante del microfono nella chat per iniziare la registrazione. Richiede l'installazione di FFmpeg e un provider API OpenAI configurato."
 		}
 	},
 	"promptCaching": {
@@ -967,7 +1026,10 @@
 		"label": "Modello",
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "Nessuna corrispondenza trovata",
-		"useCustomModel": "Usa personalizzato: {{modelId}}"
+		"useCustomModel": "Usa personalizzato: {{modelId}}",
+		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito.",
+		"recommendedModels": "Modelli consigliati",
+		"allModels": "Tutti i modelli"
 	},
 	"footer": {
 		"feedback": "Se hai domande o feedback, sentiti libero di aprire un issue su <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",
@@ -1088,6 +1150,10 @@
 		"collapseThinking": {
 			"label": "Comprimi i messaggi di pensiero per impostazione predefinita",
 			"description": "Se abilitato, i blocchi di pensiero verranno compressi per impostazione predefinita finché non interagisci con essi"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "Richiedi {{primaryMod}}+Invio per inviare messaggi",
+			"description": "Quando abilitato, devi premere {{primaryMod}}+Invio per inviare messaggi invece di solo Invio"
 		}
 	}
 }

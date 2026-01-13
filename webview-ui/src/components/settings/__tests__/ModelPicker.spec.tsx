@@ -41,7 +41,7 @@ describe("ModelPicker", () => {
 	const defaultProps = {
 		apiConfiguration: {},
 		defaultModelId: "model1",
-		modelIdKey: "glamaModelId" as const,
+		modelIdKey: "glamaModelId" as const, // kilocode_change
 		serviceName: "Test Service",
 		serviceUrl: "https://test.service",
 		recommendedModel: "recommended-model",

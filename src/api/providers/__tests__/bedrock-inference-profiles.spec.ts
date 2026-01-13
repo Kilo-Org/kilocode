@@ -254,5 +254,46 @@ describe("Amazon Bedrock Inference Profiles", () => {
 			const usModel = usHandler.getModel()
 			expect(usModel.id).toBe("us.anthropic.claude-3-sonnet-20240229-v1:0")
 		})
+
+		it("should prioritize global inference over cross-region inference when both are enabled", () => {
+			// When both global inference and cross-region inference are enabled,
+			// global inference should take precedence
+			const handler = createHandler({
+				awsUseCrossRegionInference: true,
+				awsUseGlobalInference: true,
+				awsRegion: "us-east-1",
+				apiModelId: "anthropic.claude-sonnet-4-20250514-v1:0", // Model that supports global inference
+			})
+
+			const model = handler.getModel()
+			// Should use global. prefix, not us. prefix
+			expect(model.id).toBe("global.anthropic.claude-sonnet-4-20250514-v1:0")
+		})
+
+		it("should fall back to cross-region inference when global inference is disabled", () => {
+			const handler = createHandler({
+				awsUseCrossRegionInference: true,
+				awsUseGlobalInference: false,
+				awsRegion: "us-east-1",
+				apiModelId: "anthropic.claude-sonnet-4-20250514-v1:0",
+			})
+
+			const model = handler.getModel()
+			// Should use cross-region prefix since global is disabled
+			expect(model.id).toBe("us.anthropic.claude-sonnet-4-20250514-v1:0")
+		})
+
+		it("should not apply global inference prefix to unsupported models even when enabled", () => {
+			const handler = createHandler({
+				awsUseCrossRegionInference: true,
+				awsUseGlobalInference: true,
+				awsRegion: "us-east-1",
+				apiModelId: "anthropic.claude-3-sonnet-20240229-v1:0", // Model that does NOT support global inference
+			})
+
+			const model = handler.getModel()
+			// Should fall back to cross-region prefix since model doesn't support global inference
+			expect(model.id).toBe("us.anthropic.claude-3-sonnet-20240229-v1:0")
+		})
 	})
 })

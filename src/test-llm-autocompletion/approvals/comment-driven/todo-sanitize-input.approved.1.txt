@@ -1,6 +1,0 @@
-function renderUserComment(comment) {
-  // TODO: Sanitize input to prevent XSS attacks
-  // Sanitize input to prevent XSS attacks
-  const sanitizedComment = DOMPurify.sanitize(comment);
-  document.getElementById('comments').innerHTML = comment;
-}

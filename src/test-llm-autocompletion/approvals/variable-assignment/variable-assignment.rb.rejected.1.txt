@@ -1,2 +1,0 @@
-x = 10
-y = <<<AUTOCOMPLETE_HERE>>>

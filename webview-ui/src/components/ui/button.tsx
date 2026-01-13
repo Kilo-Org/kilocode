@@ -15,7 +15,7 @@ const buttonVariants = cva(
 				ghost: "hover:bg-accent hover:text-accent-foreground",
 				destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
 				outline:
-					"border border-foreground/50 text-secondary-foreground bg-transparent hover:bg-secondary hover:text-accent-foreground",
+					"border border-vscode-foreground/30 text-vscode-foreground bg-transparent hover:bg-secondary hover:text-accent-foreground",
 				link: "text-primary underline-offset-4 hover:underline",
 				combobox:
 					"border border-vscode-dropdown-border focus-visible:border-vscode-focusBorder bg-vscode-dropdown-background hover:bg-transparent text-vscode-dropdown-foreground font-normal",

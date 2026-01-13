@@ -3,7 +3,7 @@ import { LRUCache } from "lru-cache"
 // LRU cache for escapeHtml with reasonable size limit
 const escapeHtmlCache = new LRUCache<string, string>({ max: 500 })
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
 	// Check cache first
 	const cached = escapeHtmlCache.get(text)
 	if (cached !== undefined) {

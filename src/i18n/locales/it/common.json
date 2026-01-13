@@ -64,7 +64,7 @@
 		"custom_storage_path_unusable": "Il percorso di archiviazione personalizzato \"{{path}}\" non è utilizzabile, verrà utilizzato il percorso predefinito",
 		"cannot_access_path": "Impossibile accedere al percorso {{path}}: {{error}}",
 		"settings_import_failed": "Importazione delle impostazioni fallita: {{error}}.",
-		"mistake_limit_guidance": "Questo può indicare un fallimento nel processo di pensiero del modello o l'incapacità di utilizzare correttamente uno strumento, che può essere mitigato con la guida dell'utente (ad es. \"Prova a suddividere l'attività in passaggi più piccoli\").",
+		"mistake_limit_guidance": "Questo può indicare un fallimento nel ragionamento del modello o l'incapacità di utilizzare correttamente uno strumento. Prova una delle seguenti opzioni:\n\n• Usa un modello più intelligente, o semplicemente un modello diverso (ogni modello ha le sue debolezze)\n• Riduci la quantità di contesto (semplifica il prompt per l'LLM)\n• Fornisci istruzioni aggiuntive che aiutino l'LLM (ad es. \"Prova a suddividere l'attività in passaggi più piccoli\")",
 		"violated_organization_allowlist": "Impossibile eseguire l'attività: il profilo corrente non è compatibile con le impostazioni della tua organizzazione",
 		"condense_failed": "Impossibile condensare il contesto",
 		"condense_not_enough_messages": "Non ci sono abbastanza messaggi per condensare il contesto di {{prevContextTokens}} token. Sono richiesti almeno {{minimumMessageCount}} messaggi, ma ne sono disponibili solo {{messageCount}}.",
@@ -124,7 +124,11 @@
 		"gemini": {
 			"generate_stream": "Errore del flusso di contesto di generazione Gemini: {{error}}",
 			"generate_complete_prompt": "Errore di completamento Gemini: {{error}}",
-			"sources": "Fonti:"
+			"sources": "Fonti:",
+			"thinking_complete_no_output": "(Pensiero completato, ma non è stato generato alcun output.)",
+			"thinking_complete_truncated": "(Pensiero completato, ma l'output è stato troncato a causa del limite di token.)",
+			"thinking_complete_safety": "(Pensiero completato, ma l'output è stato bloccato a causa delle impostazioni di sicurezza.)",
+			"thinking_complete_recitation": "(Pensiero completato, ma l'output è stato bloccato a causa del controllo di recitazione.)"
 		},
 		"cerebras": {
 			"authenticationFailed": "Autenticazione API Cerebras fallita. Verifica che la tua chiave API sia valida e non scaduta.",
@@ -168,6 +172,7 @@
 		"image_saved": "Immagine salvata in {{path}}",
 		"organization_share_link_copied": "Link di condivisione organizzazione copiato negli appunti!",
 		"public_share_link_copied": "Link di condivisione pubblica copiato negli appunti!",
+		"session_share_link_copied_with_url": "Sessione condivisa! Link copiato negli appunti: {{url}}",
 		"mode_exported": "Modalità '{{mode}}' esportata con successo",
 		"mode_imported": "Modalità importata con successo"
 	},

@@ -1,2 +1,12 @@
-def calculate_sum(a, b):
-	<<<AUTOCOMPLETE_HERE>>>
+def calculate_sum(a, b)
+	sum = a + b
+	return sum
+end
+
+puts "Enter the first number: "
+a = gets.chomp.to_i
+puts "Enter the second number: "
+b = gets.chomp.to_i
+
+result = calculate_sum(a, b)
+puts "The sum of #{a} and #{b} is #{result}"

@@ -21,6 +21,7 @@ type IOIntelligenceProps = {
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
+	simplifySettings?: boolean
 }
 
 export const IOIntelligence = ({
@@ -28,6 +29,7 @@ export const IOIntelligence = ({
 	setApiConfigurationField,
 	organizationAllowList,
 	modelValidationError,
+	simplifySettings,
 }: IOIntelligenceProps) => {
 	const { t } = useAppTranslation()
 	const { routerModels } = useExtensionState()
@@ -71,6 +73,7 @@ export const IOIntelligence = ({
 				setApiConfigurationField={setApiConfigurationField}
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
+				simplifySettings={simplifySettings}
 			/>
 		</>
 	)

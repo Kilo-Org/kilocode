@@ -1,5 +1,7 @@
-import { getKiloBaseUriFromToken } from "@roo-code/types"
-import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
+import { getKiloBaseUriFromToken, AUTOCOMPLETE_PROVIDER_MODELS, AutocompleteProviderKey } from "@roo-code/types"
+
+export { AUTOCOMPLETE_PROVIDER_MODELS }
+export type { AutocompleteProviderKey }
 
 /**
  * Check if the Kilocode account has a positive balance
@@ -35,11 +37,3 @@ export async function checkKilocodeBalance(kilocodeToken: string, kilocodeOrgani
 		return false
 	}
 }
-
-export const AUTOCOMPLETE_PROVIDER_MODELS = new Map([
-	["mistral", "codestral-latest"],
-	["kilocode", "mistralai/codestral-2508"],
-	["openrouter", "mistralai/codestral-2508"],
-	["bedrock", "mistral.codestral-2508-v1:0"],
-] as const)
-export type AutocompleteProviderKey = typeof AUTOCOMPLETE_PROVIDER_MODELS extends Map<infer K, any> ? K : never

@@ -33,6 +33,7 @@ import {
 import { ClineRulesToggles } from "./cline-rules"
 import { KiloCodeWrapperProperties } from "./kilocode/wrapper"
 import { DeploymentRecord } from "../api/providers/fetchers/sap-ai-core"
+import { STTSegment, MicrophoneDevice } from "./sttContract" // kilocode_change: STT segment type and microphone device
 // kilocode_change end
 
 // Command interface for frontend/backend communication
@@ -133,6 +134,13 @@ export interface ExtensionMessage {
 		| "openInBrowser" // kilocode_change
 		| "acceptInput"
 		| "focusChatInput" // kilocode_change
+		| "stt:started" // kilocode_change: STT session started
+		| "stt:transcript" // kilocode_change: STT transcript update
+		| "stt:volume" // kilocode_change: STT volume level
+		| "stt:stopped" // kilocode_change: STT session stopped
+		| "stt:statusResponse" // kilocode_change: Response to stt:checkAvailability request
+		| "stt:devices" // kilocode_change: Microphone devices list
+		| "stt:deviceSelected" // kilocode_change: Device selection confirmation
 		| "setHistoryPreviewCollapsed"
 		| "commandExecutionStatus"
 		| "mcpExecutionStatus"
@@ -142,8 +150,10 @@ export interface ExtensionMessage {
 		| "updateProfileData" // kilocode_change
 		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
 		| "authenticatedUser"
+		| "condenseTaskContextStarted"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
+		| "rooCreditBalance"
 		| "indexingStatusUpdate"
 		| "indexCleared"
 		| "codebaseIndexConfig"
@@ -172,6 +182,10 @@ export interface ExtensionMessage {
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
 		| "interactionRequired"
+		| "managedIndexerState" // kilocode_change
+		| "managedIndexerEnabled" // kilocode_change
+		| "browserSessionUpdate"
+		| "browserSessionNavigate"
 		| "organizationSwitchResult"
 		| "showTimestamps" // kilocode_change
 		| "apiMessagesSaved" // kilocode_change: File save event for API messages
@@ -179,7 +193,12 @@ export interface ExtensionMessage {
 		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
 		| "managedIndexerState" // kilocode_change
 		| "singleCompletionResult" // kilocode_change
-		| "managedIndexerState" // kilocode_change
+		| "deviceAuthStarted" // kilocode_change: Device auth initiated
+		| "deviceAuthPolling" // kilocode_change: Device auth polling update
+		| "deviceAuthComplete" // kilocode_change: Device auth successful
+		| "deviceAuthFailed" // kilocode_change: Device auth failed
+		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -199,12 +218,12 @@ export interface ExtensionMessage {
 	}
 	action?:
 		| "chatButtonClicked"
-		| "mcpButtonClicked"
 		| "settingsButtonClicked"
 		| "historyButtonClicked"
-		| "promptsButtonClicked"
+		| "promptsButtonClicked" // kilocode_change
 		| "profileButtonClicked" // kilocode_change
 		| "marketplaceButtonClicked"
+		| "mcpButtonClicked" // kilocode_change
 		| "cloudButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
@@ -254,6 +273,14 @@ export interface ExtensionMessage {
 	slug?: string
 	success?: boolean
 	values?: Record<string, any>
+	sessionId?: string // kilocode_change: STT session ID
+	segments?: STTSegment[] // kilocode_change: STT transcript segments (complete state)
+	isFinal?: boolean // kilocode_change: STT transcript is final
+	level?: number // kilocode_change: STT volume level (0-1)
+	reason?: "completed" | "cancelled" | "error" // kilocode_change: STT stop reason
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status response
+	devices?: MicrophoneDevice[] // kilocode_change: Microphone devices list
+	device?: MicrophoneDevice | null // kilocode_change: Selected microphone device
 	requestId?: string
 	promptText?: string
 	results?: { path: string; type: "file" | "folder"; label?: string }[]
@@ -327,6 +354,18 @@ export interface ExtensionMessage {
 			}
 		}
 	}> // kilocode_change end: Managed Indexer
+	browserSessionMessages?: ClineMessage[] // For browser session panel updates
+	isBrowserSessionActive?: boolean // For browser session panel updates
+	stepIndex?: number // For browserSessionNavigate: the target step index to display
+	// kilocode_change start: Device auth data
+	deviceAuthCode?: string
+	deviceAuthVerificationUrl?: string
+	deviceAuthExpiresIn?: number
+	deviceAuthTimeRemaining?: number
+	deviceAuthToken?: string
+	deviceAuthUserEmail?: string
+	deviceAuthError?: string
+	// kilocode_change end: Device auth data
 }
 
 export type ExtensionState = Pick<
@@ -417,11 +456,15 @@ export type ExtensionState = Pick<
 	| "systemNotificationsEnabled" // kilocode_change
 	| "includeDiagnosticMessages"
 	| "maxDiagnosticMessages"
+	| "imageGenerationProvider"
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
+	| "enterBehavior"
 	| "includeCurrentTime"
 	| "includeCurrentCost"
+	| "maxGitStatusFiles"
+	| "selectedMicrophoneDevice" // kilocode_change: Selected microphone device for STT
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -481,6 +524,8 @@ export type ExtensionState = Pick<
 	organizationAllowList: OrganizationAllowList
 	organizationSettingsVersion?: number
 
+	isBrowserSessionActive: boolean // Actual browser session state
+
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number
 	marketplaceItems?: MarketplaceItem[]
@@ -501,6 +546,9 @@ export type ExtensionState = Pick<
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	debug?: boolean
+	speechToTextStatus?: { available: boolean; reason?: "openaiKeyMissing" | "ffmpegNotInstalled" } // kilocode_change: Speech-to-text availability status with failure reason
+	appendSystemPrompt?: string // kilocode_change: Custom text to append to system prompt (CLI only)
 }
 
 export interface ClineSayTool {
@@ -513,12 +561,10 @@ export interface ClineSayTool {
 		| "fetchInstructions"
 		| "listFilesTopLevel"
 		| "listFilesRecursive"
-		| "listCodeDefinitionNames"
 		| "searchFiles"
 		| "switchMode"
 		| "newTask"
 		| "finishTask"
-		| "insertContent"
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
@@ -588,10 +634,12 @@ export const browserActions = [
 	"click",
 	"hover",
 	"type",
+	"press",
 	"scroll_down",
 	"scroll_up",
 	"resize",
 	"close",
+	"screenshot",
 ] as const
 
 export type BrowserAction = (typeof browserActions)[number]
@@ -601,6 +649,7 @@ export interface ClineSayBrowserAction {
 	coordinate?: string
 	size?: string
 	text?: string
+	executedCoordinate?: string
 }
 
 export type BrowserActionResult = {
@@ -608,6 +657,8 @@ export type BrowserActionResult = {
 	logs?: string
 	currentUrl?: string
 	currentMousePosition?: string
+	viewportWidth?: number
+	viewportHeight?: number
 }
 
 export interface ClineAskUseMcpServer {

@@ -1,0 +1,11 @@
+arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+# arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+def find_missing(arr):
+    n = len(arr)
+    total = (n + 1) * (n + 2) // 2
+    sum_of_arr = sum(arr)
+    return total - sum_of_arr
+
+print(find_missing(arr))

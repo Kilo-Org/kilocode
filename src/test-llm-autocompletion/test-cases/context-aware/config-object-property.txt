@@ -1,0 +1,51 @@
+#### Description: Should autocomplete config object property based on type from another file
+#### Filename: server.ts
+import { ServerConfig, createServer } from './config/server-config';
+
+const config: ServerConfig = {
+  port: 3000,
+  host: 'localhost',
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+  logging: {
+    level: '<<<AUTOCOMPLETE_HERE>>>',
+  },
+};
+
+const server = createServer(config);
+server.start();
+
+#### Filename: config/server-config.ts
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+export interface CorsConfig {
+  origin: string | string[];
+  methods: string[];
+  credentials?: boolean;
+  maxAge?: number;
+}
+
+export interface LoggingConfig {
+  level: LogLevel;
+  format?: 'json' | 'pretty';
+  destination?: string;
+}
+
+export interface ServerConfig {
+  port: number;
+  host: string;
+  cors?: CorsConfig;
+  logging?: LoggingConfig;
+  timeout?: number;
+  maxConnections?: number;
+}
+
+export function createServer(config: ServerConfig) {
+  return {
+    config,
+    start: () => console.log(`Server starting on ${config.host}:${config.port}`),
+    stop: () => console.log('Server stopping'),
+  };
+}

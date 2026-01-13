@@ -99,11 +99,13 @@
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "일시 중지됨",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (비활성화됨)",
-				"tokenError": "Autocomplete를 사용하려면 유효한 토큰을 설정해야 합니다",
+				"noCredits": "**계정에 크레딧이 없습니다**\n\nKilo Code 계정에 크레딧이 없습니다. 자동완성을 사용하려면 계정에 크레딧을 추가해 주세요.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**자동완성 모델이 구성되지 않았습니다**\n\n자동완성을 활성화하려면 다음 지원되는 제공업체 중 하나로 프로필을 추가하세요: {{providers}}.\n\n[설정 열기](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "세션 총 비용:",
 				"provider": "제공업체:",
 				"model": "모델:",
@@ -171,5 +173,40 @@
 		"checkpointsUnavailable": "새로운 변경사항을 표시할 수 없습니다. 체크포인트를 사용할 수 없습니다.",
 		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
 		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
+	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "Kilocode CLI 버전이 오래되어 Agent Manager를 지원하지 않습니다. 최신 버전으로 업데이트하세요.",
+			"cliNotFound": "Kilocode CLI를 찾을 수 없습니다. Agent Manager를 사용하려면 설치하세요.",
+			"cliMisconfigured": "Kilocode CLI가 구성되지 않았습니다. 'kilocode auth'를 실행하여 로그인하거나 'kilocode config'로 구성하세요.",
+			"sessionFailed": "에이전트 세션 시작 실패",
+			"sessionFailedWithMessage": "에이전트 세션 시작 실패: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "업데이트 지침",
+			"installInstructions": "설치 지침",
+			"getHelp": "도움말 보기",
+			"runInTerminal": "터미널에서 실행",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "전역 업데이트",
+			"updateLocal": "로컬 업데이트",
+			"installGlobal": "전역 설치",
+			"installLocal": "로컬 설치"
+		},
+		"terminal": {
+			"installMessage": "Kilocode CLI를 설치하기 위해 npm install을 실행합니다. 완료되면 이 터미널을 닫고 Agent Manager를 다시 시작해 보세요.",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "OpenAI API 키가 유효하지 않거나 Realtime API에 대한 액세스 권한이 없습니다. API 키를 확인하고 다시 시도해 주세요.",
+			"unknown": "연결에 실패했습니다. 설정을 확인한 후 다시 시도해 주세요."
+		}
+	},
+	"configDiscovery": {
+		"added": "킬로 코드: {{source}} {{configType}}: {{name}}{{modeStr}} 추가됨",
+		"removed": "Kilo 코드: 제거됨 {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

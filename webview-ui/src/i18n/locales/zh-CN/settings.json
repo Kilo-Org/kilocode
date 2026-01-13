@@ -22,6 +22,8 @@
 	},
 	"sections": {
 		"providers": "提供商",
+		"modes": "模式",
+		"mcp": "MCP 服务器",
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
@@ -35,8 +37,27 @@
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
-		"mcp": "MCP 服务器",
 		"autoPurge": "自动清理"
+	},
+	"about": {
+		"bugReport": {
+			"label": "发现 Bug？",
+			"link": "在 GitHub 报告"
+		},
+		"featureRequest": {
+			"label": "有想法？",
+			"link": "与我们分享"
+		},
+		"securityIssue": {
+			"label": "发现安全漏洞？",
+			"link": "遵循我们的披露流程"
+		},
+		"contact": {
+			"label": "需要联系我们？请发送邮件至"
+		},
+		"community": "想要获取使用技巧或与其他 Kilo Code 用户交流？加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
+		"contactAndCommunity": "联系与社区",
+		"manageSettings": "管理设置"
 	},
 	"slashCommands": {
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
@@ -63,9 +84,17 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 密钥",
 		"vercelAiGatewayApiKeyPlaceholder": "输入您的 Vercel AI Gateway API 密钥",
+		"bedrockProvider": "Amazon Bedrock",
+		"bedrockRegionLabel": "AWS 区域",
+		"bedrockRegionPlaceholder": "us-east-1",
+		"bedrockProfileLabel": "AWS 配置文件",
+		"bedrockProfilePlaceholder": "default",
+		"bedrockProfileDescription": "来自 ~/.aws/credentials 的 AWS 配置文件名称（必需）。",
 		"openRouterProvider": "OpenRouter",
 		"openRouterApiKeyLabel": "OpenRouter API 密钥",
 		"openRouterApiKeyPlaceholder": "输入您的 OpenRouter API 密钥",
+		"openRouterProviderRoutingLabel": "OpenRouter 提供商路由",
+		"openRouterProviderRoutingDescription": "OpenRouter 将请求路由到适合您嵌入模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡以最大化正常运行时间。但是，您可以为此模型选择特定的提供商。",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
@@ -132,11 +161,14 @@
 			"geminiApiKeyRequired": "需要 Gemini API 密钥",
 			"mistralApiKeyRequired": "需要 Mistral API 密钥",
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 密钥",
+			"bedrockRegionRequired": "AWS 区域为必填项",
+			"bedrockProfileRequired": "AWS 配置文件为必填项",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0",
 			"openRouterApiKeyRequired": "OpenRouter API 密钥是必需的"
 		},
+		"optional": "可选",
 		"advancedConfigLabel": "高级配置",
 		"searchMinScoreLabel": "搜索分数阈值",
 		"searchMinScoreDescription": "搜索结果所需的最低相似度分数（0.0-1.0）。较低的值返回更多结果，但可能不太相关。较高的值返回较少但更相关的结果。",
@@ -270,9 +302,9 @@
 		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API 密钥",
 		"getVercelAiGatewayApiKey": "获取 Vercel AI Gateway API 密钥",
-		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
+		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
 		"useCustomBaseUrl": "使用自定义基础 URL",
 		"useReasoning": "启用推理",
 		"useHostHeader": "使用自定义 Host 标头",
@@ -310,6 +342,8 @@
 		"anthropicAzureDeploymentPlaceholder": "输入部署名称...",
 		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"basetenApiKey": "Baseten API 密钥",
+		"getBasetenApiKey": "获取 Baseten API 密钥",
 		"cerebrasApiKey": "Cerebras API 密钥",
 		"getCerebrasApiKey": "获取 Cerebras API 密钥",
 		"chutesApiKey": "Chutes API 密钥",
@@ -337,9 +371,6 @@
 		"getZaiApiKey": "获取 Z AI API 密钥",
 		"zaiEntrypoint": "Z AI 服务站点",
 		"zaiEntrypointDescription": "请根据您的位置选择适当的 API 服务站点。如果您在中国，请选择 open.bigmodel.cn。否则，请选择 api.z.ai。",
-		"minimaxApiKey": "MiniMax API 密钥",
-		"getMiniMaxApiKey": "获取 MiniMax API 密钥",
-		"minimaxBaseUrl": "MiniMax 服务站点",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
@@ -542,8 +573,10 @@
 			"none": "无",
 			"minimal": "最小 (最快)",
 			"high": "高",
+			"xhigh": "超高",
 			"medium": "中",
-			"low": "低"
+			"low": "低",
+			"xhigh": "极高"
 		},
 		"verbosity": {
 			"label": "输出详细程度",
@@ -761,6 +794,10 @@
 		"includeCurrentCost": {
 			"label": "在上下文中包含当前成本",
 			"description": "启用后，当前 API 使用成本将包含在系统提示中。如果模型因成本问题停止工作，请禁用此选项。"
+		},
+		"maxGitStatusFiles": {
+			"label": "Git 状态最大文件数",
+			"description": "git状态上下文中包含的最大文件条目数。设为0禁用。分支信息和提交在>0时始终显示。"
 		}
 	},
 	"terminal": {
@@ -823,6 +860,14 @@
 	},
 	"advancedSettings": {
 		"title": "高级设置"
+	},
+	"toolProtocol": {
+		"label": "工具调用协议",
+		"description": "选择 Kilo Code 如何与 API 通信。原生使用提供商的函数调用 API，而 XML 使用 XML 格式的工具定义。",
+		"default": "默认",
+		"xml": "XML",
+		"native": "原生",
+		"currentDefault": "默认: {{protocol}}"
 	},
 	"advanced": {
 		"diff": {
@@ -897,6 +942,8 @@
 			"description": "启用后，new_task 工具将需要提供 todos 参数。这可以确保所有新任务都以明确的目标列表开始。禁用时（默认），todos 参数保持可选，以实现向后兼容。"
 		},
 		"IMAGE_GENERATION": {
+			"providerLabel": "提供商",
+			"providerDescription": "选择用于图像生成的提供商。",
 			"name": "启用 AI 图像生成",
 			"description": "启用后，Kilo Code 可以从文本提示生成图像。需要配置 Kilo Code 或 OpenRouter API 密钥。",
 			"apiProvider": "API 提供商",
@@ -936,6 +983,14 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "启用模型发起的斜杠命令",
 			"description": "启用后 Kilo Code 可运行斜杠命令执行工作流程。"
+		},
+		"MULTIPLE_NATIVE_TOOL_CALLS": {
+			"name": "并行工具调用",
+			"description": "启用后，原生协议可在单个助手消息轮次中执行多个工具。"
+		},
+		"SPEECH_TO_TEXT": {
+			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
+			"name": "语音转文本 (STT)"
 		}
 	},
 	"promptCaching": {
@@ -974,7 +1029,10 @@
 		"label": "模型",
 		"searchPlaceholder": "搜索",
 		"noMatchFound": "未找到匹配项",
-		"useCustomModel": "使用自定义：{{modelId}}"
+		"useCustomModel": "使用自定义：{{modelId}}",
+		"simplifiedExplanation": "你可以稍后调整详细的模型设置。",
+		"recommendedModels": "推荐模型",
+		"allModels": "全部模型"
 	},
 	"footer": {
 		"feedback": "如果您有任何问题或反馈，请随时在 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 上提出问题或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilo.ai/discord</discordLink>",
@@ -1093,8 +1151,12 @@
 	},
 	"ui": {
 		"collapseThinking": {
-			"label": "默认折叠“思考”消息",
-			"description": "启用后，“思考”块将默认折叠，直到您与其交互"
+			"label": "默认折叠「思考」消息",
+			"description": "启用后，「思考」块将默认折叠，直到您与其交互"
+		},
+		"requireCtrlEnterToSend": {
+			"label": "需要 {{primaryMod}}+Enter 发送消息",
+			"description": "启用后，必须按 {{primaryMod}}+Enter 发送消息，而不仅仅是 Enter"
 		}
 	}
 }

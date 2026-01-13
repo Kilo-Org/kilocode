@@ -9,3 +9,4 @@ class Dog extends Animal {
 		super(name);
 		this.breed = breed;
 	}
+}

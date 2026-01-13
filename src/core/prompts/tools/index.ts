@@ -13,8 +13,6 @@ import { shouldUseSingleFileRead } from "@roo-code/types"
 import { getWriteToFileDescription } from "./write-to-file"
 import { getSearchFilesDescription } from "./search-files"
 import { getListFilesDescription } from "./list-files"
-import { getInsertContentDescription } from "./insert-content"
-import { getListCodeDefinitionNamesDescription } from "./list-code-definition-names"
 import { getBrowserActionDescription } from "./browser-action"
 import { getAskFollowupQuestionDescription } from "./ask-followup-question"
 import { getAttemptCompletionDescription } from "./attempt-completion"
@@ -51,7 +49,6 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	write_to_file: (args) => getWriteToFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
 	list_files: (args) => getListFilesDescription(args),
-	list_code_definition_names: (args) => getListCodeDefinitionNamesDescription(args),
 	browser_action: (args) => getBrowserActionDescription(args),
 	ask_followup_question: () => getAskFollowupQuestionDescription(),
 	attempt_completion: (args) => getAttemptCompletionDescription(args),
@@ -60,7 +57,6 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	codebase_search: (args) => getCodebaseSearchDescription(args),
 	switch_mode: () => getSwitchModeDescription(),
 	new_task: (args) => getNewTaskDescription(args),
-	insert_content: (args) => getInsertContentDescription(args),
 	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
 	delete_file: (args) => getDeleteFileDescription(args), // kilocode_change
 	apply_diff: (args) =>
@@ -129,6 +125,14 @@ export function getToolDescriptionsForMode(
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
+	// kilocode_change start
+	// Conditionally exclude ask_followup_question in yolo mode
+	// This prevents the agent from asking itself questions and auto-answering them
+	if (clineProviderState?.yoloMode) {
+		tools.delete("ask_followup_question")
+	}
+	// kilocode_change end
+
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	// kilocode_change start
 	const isCodebaseSearchAvailable =
@@ -145,7 +149,7 @@ export function getToolDescriptionsForMode(
 	// kilocode_change start: Morph fast apply
 	if (isFastApplyAvailable(clineProviderState)) {
 		// When Morph is enabled, disable traditional editing tools
-		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content"]
+		const traditionalEditingTools = ["apply_diff", "write_to_file"]
 		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	} else {
 		tools.delete("edit_file")
@@ -194,14 +198,12 @@ export {
 	getWriteToFileDescription,
 	getSearchFilesDescription,
 	getListFilesDescription,
-	getListCodeDefinitionNamesDescription,
 	getBrowserActionDescription,
 	getAskFollowupQuestionDescription,
 	getAttemptCompletionDescription,
 	getUseMcpToolDescription,
 	getAccessMcpResourceDescription,
 	getSwitchModeDescription,
-	getInsertContentDescription,
 	getEditFileDescription, // kilocode_change: Morph fast apply
 	getCodebaseSearchDescription,
 	getRunSlashCommandDescription,

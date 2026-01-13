@@ -1,8 +1,9 @@
 function handleSearch(query) {
   // TODO: Add debounce to prevent excessive API calls
-  const debouncedSearch = debounce((query) => {
-    searchAPI(query);
-  }, 300);
-
-  debouncedSearch(query);
+  // TODO: Add search history
+  // TODO: Add search suggestions
+  // TODO: Add search filters
+  // TODO: Add search sorting
+  // TODO: Add search pagination
+  searchAPI(query);
 }

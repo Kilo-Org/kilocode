@@ -1,0 +1,56 @@
+#### Description: Should autocomplete utility function call with correct parameters
+#### Filename: components/ProductCard.tsx
+import { formatPrice, formatDate } from '../utils/formatters';
+
+interface ProductCardProps {
+  name: string;
+  price: number;
+  releaseDate: Date;
+}
+
+export function ProductCard({ name, price, releaseDate }: ProductCardProps) {
+  return (
+    <div className="product-card">
+      <h2>{name}</h2>
+      <p className="price">{formatPrice(<<<AUTOCOMPLETE_HERE>>>)}</p>
+      <p className="date">Released: {formatDate(releaseDate)}</p>
+    </div>
+  );
+}
+
+#### Filename: utils/formatters.ts
+/**
+ * Format a price value to a currency string
+ * @param amount - The price amount in cents
+ * @param currency - The currency code (default: 'USD')
+ * @param locale - The locale for formatting (default: 'en-US')
+ */
+export function formatPrice(
+  amount: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+  }).format(amount / 100);
+}
+
+/**
+ * Format a date to a human-readable string
+ * @param date - The date to format
+ * @param options - Intl.DateTimeFormat options
+ */
+export function formatDate(
+  date: Date,
+  options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }
+): string {
+  return new Intl.DateTimeFormat('en-US', options).format(date);
+}
+
+/**
+ * Format a number with thousand separators
+ */
+export function formatNumber(value: number, locale: string = 'en-US'): string {
+  return new Intl.NumberFormat(locale).format(value);
+}

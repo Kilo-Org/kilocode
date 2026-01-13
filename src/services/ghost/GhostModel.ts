@@ -1,5 +1,6 @@
+// kilocode_change new file
 import { modelIdKeysByProvider, ProviderName } from "@roo-code/types"
-import { ApiHandler, buildApiHandler } from "../../api"
+import { ApiHandler, buildApiHandler, FimHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
 import { CompletionUsage } from "../../api/providers/openrouter"
@@ -7,6 +8,14 @@ import { ApiStreamChunk } from "../../api/transform/stream"
 import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
+import { ResponseMetaData } from "./types"
+
+function getFimHandler(handler: ApiHandler): FimHandler | undefined {
+	if (typeof handler.fimSupport === "function") {
+		return handler.fimSupport()
+	}
+	return undefined
+}
 
 // Convert PROVIDERS array to a lookup map for display names
 const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label }) => [value, label])) as Record<
@@ -20,6 +29,7 @@ export class GhostModel {
 	public profileType: string | null = null
 	private currentProvider: ProviderName | null = null
 	public loaded = false
+	public hasKilocodeProfileWithNoBalance = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
 		if (apiHandler) {
@@ -33,6 +43,7 @@ export class GhostModel {
 		this.profileType = null
 		this.currentProvider = null
 		this.loaded = false
+		this.hasKilocodeProfileWithNoBalance = false
 	}
 
 	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
@@ -59,7 +70,12 @@ export class GhostModel {
 			if (provider === "kilocode") {
 				// For all other providers, assume they are usable
 				if (!profile.kilocodeToken) continue
-				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
+				const hasBalance = await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId)
+				if (!hasBalance) {
+					// Track that we found a kilocode profile but it has no balance
+					this.hasKilocodeProfileWithNoBalance = true
+					continue
+				}
 			}
 			await useProfile(this, { ...profile, [modelIdKeysByProvider[provider]]: model }, provider)
 			return true
@@ -84,52 +100,40 @@ export class GhostModel {
 			return false
 		}
 
-		if (this.apiHandler instanceof KilocodeOpenrouterHandler) {
-			return this.apiHandler.supportsFim()
-		}
-
-		return false
+		return getFimHandler(this.apiHandler) !== undefined
 	}
 
 	/**
-	 * Generate FIM completion using the FIM API endpoint
+	 * Generate FIM completion using the FIM API endpoint.
 	 */
 	public async generateFimResponse(
 		prefix: string,
 		suffix: string,
 		onChunk: (text: string) => void,
 		taskId?: string,
-	): Promise<{
-		cost: number
-		inputTokens: number
-		outputTokens: number
-		cacheWriteTokens: number
-		cacheReadTokens: number
-	}> {
+	): Promise<ResponseMetaData> {
 		if (!this.apiHandler) {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")
 		}
 
-		if (!(this.apiHandler instanceof KilocodeOpenrouterHandler)) {
-			throw new Error("FIM is only supported for KiloCode provider")
+		const fimHandler = getFimHandler(this.apiHandler)
+		if (!fimHandler) {
+			throw new Error("Current provider/model does not support FIM completions")
 		}
 
-		if (!this.apiHandler.supportsFim()) {
-			throw new Error("Current model does not support FIM completions")
-		}
-
-		console.log("USED MODEL (FIM)", this.apiHandler.getModel())
+		console.log("USED MODEL (FIM)", fimHandler.getModel())
 
 		let usage: CompletionUsage | undefined
 
-		for await (const chunk of this.apiHandler.streamFim(prefix, suffix, taskId, (u) => {
+		for await (const chunk of fimHandler.streamFim(prefix, suffix, taskId, (u: CompletionUsage) => {
 			usage = u
 		})) {
 			onChunk(chunk)
 		}
 
-		const cost = usage ? this.apiHandler.getTotalCost(usage) : 0
+		// Calculate cost using the FimHandler's getTotalCost method
+		const cost = usage ? fimHandler.getTotalCost(usage) : 0
 		const inputTokens = usage?.prompt_tokens ?? 0
 		const outputTokens = usage?.completion_tokens ?? 0
 		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens ?? 0
@@ -150,13 +154,7 @@ export class GhostModel {
 		systemPrompt: string,
 		userPrompt: string,
 		onChunk: (chunk: ApiStreamChunk) => void,
-	): Promise<{
-		cost: number
-		inputTokens: number
-		outputTokens: number
-		cacheWriteTokens: number
-		cacheReadTokens: number
-	}> {
+	): Promise<ResponseMetaData> {
 		if (!this.apiHandler) {
 			console.error("API handler is not initialized")
 			throw new Error("API handler is not initialized. Please check your configuration.")

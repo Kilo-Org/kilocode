@@ -138,12 +138,12 @@ describe("Vertex", () => {
 			expect(urlContextCheckbox).toBeNull()
 		})
 
-		it("should NOT render URL context checkbox when fromWelcomeView is true", () => {
+		it("should NOT render URL context checkbox when simplifySettings is true", () => {
 			render(
 				<Vertex
 					apiConfiguration={defaultApiConfiguration}
 					setApiConfigurationField={mockSetApiConfigurationField}
-					fromWelcomeView={true}
+					simplifySettings={true}
 				/>,
 			)
 
@@ -208,12 +208,12 @@ describe("Vertex", () => {
 			expect(groundingCheckbox).toBeNull()
 		})
 
-		it("should NOT render grounding search checkbox when fromWelcomeView is true", () => {
+		it("should NOT render grounding search checkbox when simplifySettings is true", () => {
 			render(
 				<Vertex
 					apiConfiguration={defaultApiConfiguration}
 					setApiConfigurationField={mockSetApiConfigurationField}
-					fromWelcomeView={true}
+					simplifySettings={true}
 				/>,
 			)
 

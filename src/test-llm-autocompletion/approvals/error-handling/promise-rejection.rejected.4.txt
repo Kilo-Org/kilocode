@@ -1,0 +1,21 @@
+fetchUser(userId)
+	.then(user => {
+		return processUser(user);
+	})
+	.catch(error => {
+		console.error(error);
+	});
+
+async function fetchUser(userId) {
+	try {
+		const response = await fetch(`https://api.example.com/users/${userId}`);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch user: ${response.status}`);
+		}
+		const user = await response.json();
+		return user;
+	} catch (error) {
+		console.error(error);
+		throw error;
+	}
+}

@@ -18,6 +18,19 @@ vi.mock("@/components/ui", () => ({
 			onChange={(e) => onValueChange([parseInt(e.target.value)])}
 		/>
 	),
+	Select: ({ children, value, onValueChange: _onValueChange }: any) => (
+		<div data-testid="select" data-value={value}>
+			{children}
+		</div>
+	),
+	SelectTrigger: ({ children }: any) => <button data-testid="select-trigger">{children}</button>,
+	SelectValue: ({ placeholder }: any) => <span data-testid="select-value">{placeholder}</span>,
+	SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+	SelectItem: ({ children, value }: any) => (
+		<div data-testid={`select-item-${value}`} data-value={value}>
+			{children}
+		</div>
+	),
 }))
 
 vi.mock("@/components/ui/hooks/useSelectedModel", () => ({
@@ -214,5 +227,82 @@ describe("ThinkingBudget", () => {
 		fireEvent.change(sliders[0], { target: { value: "12000" } })
 
 		expect(setApiConfigurationField).toHaveBeenCalledWith("modelMaxTokens", 12000)
+	})
+
+	describe("reasoning effort dropdown", () => {
+		const reasoningEffortModelInfo: ModelInfo = {
+			supportsReasoningEffort: true,
+			contextWindow: 200000,
+			supportsPromptCache: true,
+		}
+
+		it("should show 'disable' option when supportsReasoningEffort is boolean true", () => {
+			render(<ThinkingBudget {...defaultProps} modelInfo={reasoningEffortModelInfo} />)
+
+			expect(screen.getByTestId("reasoning-effort")).toBeInTheDocument()
+			// "disable" should be shown when supportsReasoningEffort is true (boolean)
+			expect(screen.getByTestId("select-item-disable")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-low")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-medium")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-high")).toBeInTheDocument()
+		})
+
+		it("should NOT show 'disable' option when supportsReasoningEffort is an explicit array without disable", () => {
+			render(
+				<ThinkingBudget
+					{...defaultProps}
+					modelInfo={{
+						...reasoningEffortModelInfo,
+						supportsReasoningEffort: ["low", "high"],
+					}}
+				/>,
+			)
+
+			expect(screen.getByTestId("reasoning-effort")).toBeInTheDocument()
+			// "disable" should NOT be shown when model explicitly specifies only ["low", "high"]
+			expect(screen.queryByTestId("select-item-disable")).not.toBeInTheDocument()
+			expect(screen.getByTestId("select-item-low")).toBeInTheDocument()
+			expect(screen.queryByTestId("select-item-medium")).not.toBeInTheDocument()
+			expect(screen.getByTestId("select-item-high")).toBeInTheDocument()
+		})
+
+		it("should show 'disable' option when supportsReasoningEffort array explicitly includes disable", () => {
+			render(
+				<ThinkingBudget
+					{...defaultProps}
+					modelInfo={{
+						...reasoningEffortModelInfo,
+						supportsReasoningEffort: ["disable", "low", "high"],
+					}}
+				/>,
+			)
+
+			expect(screen.getByTestId("reasoning-effort")).toBeInTheDocument()
+			// "disable" should be shown when model explicitly includes it in the array
+			expect(screen.getByTestId("select-item-disable")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-low")).toBeInTheDocument()
+			expect(screen.queryByTestId("select-item-medium")).not.toBeInTheDocument()
+			expect(screen.getByTestId("select-item-high")).toBeInTheDocument()
+		})
+
+		it("should show 'none' option when supportsReasoningEffort array includes none", () => {
+			render(
+				<ThinkingBudget
+					{...defaultProps}
+					modelInfo={{
+						...reasoningEffortModelInfo,
+						supportsReasoningEffort: ["none", "low", "medium", "high"],
+					}}
+				/>,
+			)
+
+			expect(screen.getByTestId("reasoning-effort")).toBeInTheDocument()
+			// Only values from the explicit array should be shown
+			expect(screen.queryByTestId("select-item-disable")).not.toBeInTheDocument()
+			expect(screen.getByTestId("select-item-none")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-low")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-medium")).toBeInTheDocument()
+			expect(screen.getByTestId("select-item-high")).toBeInTheDocument()
+		})
 	})
 })

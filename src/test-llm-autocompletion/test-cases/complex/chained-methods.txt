@@ -1,4 +1,5 @@
-# Description: Should suggest chained array methods
+#### Description: Should suggest chained array methods
+#### Filename: array-utils.js
 const result = [1, 2, 3]
 	.map(x => x * 2)
 	.<<<AUTOCOMPLETE_HERE>>>

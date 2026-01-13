@@ -26,7 +26,9 @@
 		"shareSuccessOrganization": "Lien d'organisation copié dans le presse-papiers",
 		"shareSuccessPublic": "Lien public copié dans le presse-papiers",
 		"openInCloud": "Ouvrir la tâche dans Roo Code Cloud",
-		"openInCloudIntro": "Continue à surveiller ou interagir avec Roo depuis n'importe où. Scanne, clique ou copie pour ouvrir."
+		"openInCloudIntro": "Continue à surveiller ou interagir avec Roo depuis n'importe où. Scanne, clique ou copie pour ouvrir.",
+		"openApiHistory": "Ouvrir l'historique de l'API",
+		"openUiHistory": "Ouvrir l'historique de l'UI"
 	},
 	"history": {
 		"title": "Historique"
@@ -110,6 +112,7 @@
 	"enhancePrompt": "Améliorer la requête avec un contexte supplémentaire",
 	"addImages": "Ajouter des images au message",
 	"sendMessage": "Envoyer le message",
+	"pressToSend": "Appuie sur {{keyCombination}} pour envoyer",
 	"stopTts": "Arrêter la synthèse vocale",
 	"typeMessage": "Écrivez un message...",
 	"typeTask": "Écrivez votre tâche ici...",
@@ -142,7 +145,19 @@
 		"failed": "Échec de la requête API",
 		"streaming": "Requête API...",
 		"cancelled": "Requête API annulée",
-		"streamingFailed": "Échec du streaming API"
+		"streamingFailed": "Échec du streaming API",
+		"errorTitle": "Erreur API {{code}}",
+		"errorMessage": {
+			"docs": "Documentation",
+			"400": "Le fournisseur n'a pas pu traiter la demande telle que présentée. Arrête la tâche et essaie une approche différente.",
+			"401": "Impossible de s'authentifier auprès du fournisseur. Veuillez vérifier la configuration de votre clé API.",
+			"402": "Il semble que vous ayez épuisé vos fonds/crédits sur votre compte. Allez chez votre fournisseur et ajoutez-en plus pour continuer.",
+			"403": "Non autorisé. Votre clé API est valide, mais le fournisseur a refusé de compléter cette demande.",
+			"429": "Trop de demandes. Vous êtes limité par le fournisseur. Veuillez attendre un peu avant votre prochain appel API.",
+			"500": "Erreur du serveur du fournisseur. Quelque chose ne va pas du côté du fournisseur, il n'y a rien de mal avec votre demande.",
+			"unknown": "Erreur API inconnue. Veuillez contacter le support Kilo.",
+			"connection": "Erreur de connexion. Assurez-vous que vous avez une connexion Internet fonctionnelle."
+		}
 	},
 	"checkpoint": {
 		"regular": "Point de contrôle",
@@ -255,6 +270,11 @@
 		"hasQuestion": "Kilo Code a une question"
 	},
 	"taskCompleted": "Tâche terminée",
+	"errorDetails": {
+		"title": "Détails de l'erreur",
+		"copyToClipboard": "Copier dans le presse-papiers",
+		"copied": "Copié !"
+	},
 	"powershell": {
 		"issues": "Il semble que vous rencontriez des problèmes avec Windows PowerShell, veuillez consulter ce"
 	},
@@ -280,19 +300,28 @@
 		"thinking": "Réflexion",
 		"seconds": "{{count}}s"
 	},
-	"contextCondense": {
-		"title": "Contexte condensé",
-		"condensing": "Condensation du contexte...",
-		"errorHeader": "Échec de la condensation du contexte",
-		"tokens": "tokens"
+	"contextManagement": {
+		"tokens": "tokens",
+		"condensation": {
+			"title": "Contexte condensé",
+			"inProgress": "Condensation du contexte...",
+			"errorHeader": "Échec de la condensation du contexte"
+		},
+		"truncation": {
+			"title": "Contexte tronqué",
+			"inProgress": "Troncature du contexte...",
+			"messagesRemoved": "{{count}} message supprimé",
+			"messagesRemoved_other": "{{count}} messages supprimés",
+			"description": "Les messages plus anciens ont été supprimés de la conversation pour rester dans la limite de la fenêtre de contexte. C'est une approche rapide mais moins conservatrice du contexte par rapport à la condensation."
+		}
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copier vers l'entrée (ou Shift + clic)",
-		"autoSelectCountdown": "Sélection automatique dans {{count}}s",
-		"countdownDisplay": "{{count}}s"
+		"timerPrefix": "Approbation automatique activée. Sélection dans {{seconds}}s…"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} est sortie",
+		"title": "Roo Code {{version}} est sortie",
+		"support": "Soutiens Roo Code en nous donnant une étoile sur <githubLink>GitHub</githubLink>.",
 		"stealthModel": {
 			"feature": "<bold>Modèle stealth GRATUIT pour une durée limitée</bold> - Code Supernova : Maintenant amélioré avec une <bold>fenêtre de contexte de 1M tokens</bold> ! Un modèle de codage agentique polyvalent qui prend en charge les entrées d'images, accessible via Roo Code Cloud.",
 			"note": "(Note : les prompts et complétions sont enregistrés par le créateur du modèle et utilisés pour l'améliorer)",
@@ -301,21 +330,21 @@
 			"goToSettingsButton": "Aller aux Paramètres"
 		},
 		"release": {
-			"heading": "Nouveautés dans l'Extension :",
-			"openRouterEmbeddings": "Prise en charge des modèles d'embeddings OpenRouter",
-			"chutesDynamic": "Chutes charge maintenant les derniers modèles dynamiquement",
-			"queuedMessagesFix": "Corrections pour les messages en file d'attente qui se perdent"
+			"heading": "Nouveautés dans cette version :",
+			"contextRewind": "La condensation améliorée du contexte te permet désormais de restaurer le contexte précédent complet en rembobinant vers un point de contrôle",
+			"rooProvider": "Le fournisseur Roo Code Cloud préserve désormais le contenu du raisonnement et utilise par défaut les outils natifs pour de meilleures performances"
 		},
 		"cloudAgents": {
 			"heading": "Nouveautés dans le Cloud :",
-			"prFixer": "Présentation de l'agent cloud <bold>PR Fixer</bold> pour compléter le Réviseur de PR.",
-			"prFixerDescription": "Le PR Fixer de Roo Code applique des modifications de haute qualité à vos PR, directement depuis GitHub. Invoquez-le via un commentaire de PR et il lira tout l'historique des commentaires pour comprendre le contexte, les accords et les compromis - puis implémentera la bonne correction.",
-			"tryPrFixerButton": "Essayer le PR Fixer"
+			"specialized": "Présentation d'<bold>Explainer</bold>, <bold>Planner</bold> et <bold>Coder</bold> - trois agents cloud spécialisés pour améliorer tes workflows.",
+			"description": "Les agents travaillent ensemble dans le cloud et peuvent être déclenchés depuis le web ou via Slack.",
+			"tryButton": "Essayer les Agents Cloud"
 		},
 		"careers": "Aussi, <careersLink>on recrute !</careersLink>",
-		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
+		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/KiloCode</redditLink> 🚀"
 	},
 	"browser": {
+		"session": "Session du navigateur",
 		"rooWantsToUse": "Kilo Code veut utiliser le navigateur",
 		"consoleLogs": "Journaux de console",
 		"noNewLogs": "(Pas de nouveaux journaux)",
@@ -328,12 +357,26 @@
 		},
 		"sessionStarted": "Session de navigateur démarrée",
 		"actions": {
-			"title": "Action de navigation : ",
+			"title": "Action du navigateur : ",
+			"launched": "Navigateur lancé",
 			"launch": "Lancer le navigateur sur {{url}}",
+			"clicked": "Cliqué sur : {{coordinate}}",
 			"click": "Cliquer ({{coordinate}})",
+			"typed": "Saisi : {{text}}",
 			"type": "Saisir \"{{text}}\"",
+			"pressed": "Appuyé sur : {{key}}",
+			"press": "Appuyer sur {{key}}",
+			"scrolledDown": "Défilé vers le bas",
 			"scrollDown": "Défiler vers le bas",
+			"scrolledUp": "Défilé vers le haut",
 			"scrollUp": "Défiler vers le haut",
+			"hovered": "Survolé : {{coordinate}}",
+			"hover": "Survoler ({{coordinate}})",
+			"resized": "Redimensionné à : {{size}}",
+			"resize": "Redimensionner à {{size}}",
+			"screenshotSaved": "Capture d'écran enregistrée",
+			"screenshot": "Enregistrer une capture d'écran dans {{path}}",
+			"closed": "Navigateur fermé",
 			"close": "Fermer le navigateur"
 		}
 	},

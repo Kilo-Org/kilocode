@@ -102,14 +102,41 @@
 		"noChanges": "无法显示新更改，未发现任何更改。",
 		"error": "无法显示新更改，发生错误。"
 	},
+	"agentManager": {
+		"errors": {
+			"cliOutdated": "你的 Kilocode CLI 版本已过时，不支持 Agent Manager。请更新到最新版本。",
+			"cliNotFound": "未找到 Kilocode CLI。请安装以使用 Agent Manager。",
+			"cliMisconfigured": "Kilocode CLI 未配置。请运行 'kilocode auth' 登录或 'kilocode config' 进行配置。",
+			"sessionFailed": "启动代理会话失败",
+			"sessionFailedWithMessage": "启动代理会话失败: {{message}}"
+		},
+		"actions": {
+			"updateInstructions": "更新说明",
+			"installInstructions": "安装说明",
+			"getHelp": "获取帮助",
+			"runInTerminal": "运行命令",
+			"loginCli": "Run kilocode auth",
+			"configureCli": "Run kilocode config",
+			"updateGlobal": "全局更新",
+			"updateLocal": "本地更新",
+			"installGlobal": "全局安装",
+			"installLocal": "本地安装"
+		},
+		"terminal": {
+			"installMessage": "运行 npm install 安装 Kilocode CLI。完成后可关闭此终端，然后重新启动 Agent Manager。",
+			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
+		}
+	},
 	"ghost": {
 		"statusBar": {
 			"enabled": "$(kilo-logo) Autocomplete",
+			"snoozed": "已暂停",
 			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已禁用）",
-				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
+				"noCredits": "**账户余额不足**\n\n你的 Kilo Code 账户没有余额。要使用自动补全功能，请为账户充值。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "会话总费用:",
 				"provider": "提供商:",
 				"model": "模型:",
@@ -171,5 +198,15 @@
 			"cancelButton": "取消"
 		},
 		"tipMessage": "Kilo Code: 按下 {{shortcut}} 生成终端命令"
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "您的 OpenAI API 密钥无效或无权访问实时 API。请检查您的 API 密钥并重试。",
+			"unknown": "连接失败。请检查您的配置并重试。"
+		}
+	},
+	"configDiscovery": {
+		"added": "Kilo 代码：添加了{{source}} {{configType}}：{{name}}{{modeStr}}",
+		"removed": "Kilo代码：已移除{{source}} {{configType}}：{{name}}{{modeStr}}"
 	}
 }

@@ -7,7 +7,7 @@ import type {
 	AskApproval,
 	NativeToolArgs,
 } from "../../shared/tools"
-import type { ToolName } from "@roo-code/types"
+import type { ToolName, ToolProtocol } from "@roo-code/types"
 
 /**
  * Callbacks passed to tool execution
@@ -17,6 +17,8 @@ export interface ToolCallbacks {
 	handleError: HandleError
 	pushToolResult: PushToolResult
 	removeClosingTag: RemoveClosingTag
+	toolProtocol: ToolProtocol
+	toolCallId?: string
 }
 
 /**

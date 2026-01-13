@@ -1,3 +1,3 @@
-function greet(name: string, <<<AUTOCOMPLETE_HERE>>>) {
+function greet(name, greeting) {
   console.log(`Hello ${name}!`);
 }

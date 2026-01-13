@@ -1,13 +1,5 @@
 #!/bin/bash
 
-has_asdf_plugin() {
-  local plugin="$1"
-  case "$plugin" in
-    nodejs|python|golang|rust) echo "true" ;;
-    *) echo "false" ;;
-  esac
-}
-
 build_extension() {
   echo "🔨 Building the Kilo Code extension..."
   pnpm -w vsix -- --out ../bin/kilo-code-$(git rev-parse --short HEAD).vsix || exit 1
@@ -147,40 +139,33 @@ else
   echo "✅ Homebrew is installed ($BREW_VERSION)"
 fi
 
-ASDF_PATH="$(brew --prefix asdf)/libexec/asdf.sh"
+if ! command -v mise &>/dev/null; then
+  read -p "🛠️ mise (https://mise.jdx.dev) is required. Install it? (Y/n): " install_mise
 
-if ! command -v asdf &>/dev/null; then
-  if [[ -f "$ASDF_PATH" ]]; then
-    echo "⚠️ asdf is installed but not in your PATH"
-    exit 1
-  fi
-
-  read -p "🛠️ asdf (https://asdf-vm.com) is required. Install it? (Y/n): " install_asdf
-
-  if [[ "$install_asdf" =~ ^[Yy]|^$ ]]; then
-    echo "🛠️ Installing asdf..."
-    brew install asdf || exit 1
+  if [[ "$install_mise" =~ ^[Yy]|^$ ]]; then
+    echo "🛠️ Installing mise..."
+    brew install mise || exit 1
     # Can be undone with:
-    # brew uninstall asdf
-    # rm -rvf ~/.asdf
+    # brew uninstall mise
+    # rm -rvf ~/.local/share/mise ~/.config/mise
 
-    . "$ASDF_PATH"
+    eval "$(mise activate bash)"
 
-    if [[ "$SHELL" == "/bin/zsh" ]] && ! grep -q 'source "$(brew --prefix asdf)/libexec/asdf.sh"' ~/.zshrc; then
-      echo '[[ -s "/opt/homebrew/bin/brew" ]] && [[ -s "$(brew --prefix asdf)/libexec/asdf.sh" ]] && source "$(brew --prefix asdf)/libexec/asdf.sh"' >>~/.zprofile
-    elif [[ "$SHELL" == "/bin/bash" ]] && ! grep -q 'source "$(brew --prefix asdf)/libexec/asdf.sh"' ~/.bash_profile; then
-      echo '[[ -s "/opt/homebrew/bin/brew" ]] && [[ -s "$(brew --prefix asdf)/libexec/asdf.sh" ]] && source "$(brew --prefix asdf)/libexec/asdf.sh"' >>~/.bash_profile
+    if [[ "$SHELL" == "/bin/zsh" ]] && ! grep -q 'mise activate zsh' ~/.zprofile; then
+      echo 'eval "$(mise activate zsh)"' >>~/.zprofile
+    elif [[ "$SHELL" == "/bin/bash" ]] && ! grep -q 'mise activate bash' ~/.bash_profile; then
+      echo 'eval "$(mise activate bash)"' >>~/.bash_profile
     fi
 
-    ASDF_VERSION=$(asdf --version)
-    echo "✅ asdf is installed ($ASDF_VERSION)"
+    MISE_VERSION=$(mise --version)
+    echo "✅ mise is installed ($MISE_VERSION)"
   else
     exit 1
   fi
 else
-  ASDF_VERSION=$(asdf --version)
-  echo "✅ asdf is installed ($ASDF_VERSION)"
-  . "$ASDF_PATH"
+  MISE_VERSION=$(mise --version)
+  echo "✅ mise is installed ($MISE_VERSION)"
+  eval "$(mise activate bash)"
 fi
 
 if ! command -v gh &>/dev/null; then
@@ -197,108 +182,82 @@ else
   echo "✅ gh is installed ($GH_VERSION)"
 fi
 
-options=("nodejs" "python" "golang" "rust" "java")
-binaries=("node" "python" "go" "rustc" "javac")
+# Install language runtimes via mise
+if ! command -v node &>/dev/null; then
+  echo "📦 Installing Node.js via mise..."
+  mise install node@20.19.2 || exit 1
+  mise use --global node@20.19.2 || exit 1
+  eval "$(mise activate bash)"
+  NODE_VERSION=$(node --version)
+  echo "✅ Node.js is installed ($NODE_VERSION)"
+else
+  NODE_VERSION=$(node --version)
+  echo "✅ Node.js is installed ($NODE_VERSION)"
+fi
 
-for i in "${!options[@]}"; do
-  plugin="${options[$i]}"
-  binary="${binaries[$i]}"
+if [[ $(node --version) != "v20.19.2" ]]; then
+  NODE_VERSION=$(node --version)
+  echo "🚨 You have the wrong version of node installed ($NODE_VERSION)."
+  echo "💡 If you are using nvm then run 'nvm install' to install the version specified by the repo's .nvmrc."
+  exit 1
+fi
 
-  if [[ "$(has_asdf_plugin "$plugin")" == "true" ]]; then
-    if ! asdf plugin list | grep -q "^${plugin}$" && ! command -v "${binary}" &>/dev/null; then
-      echo "📦 Installing ${plugin} asdf plugin..."
-      asdf plugin add "${plugin}" || exit 1
-      echo "✅ asdf ${plugin} plugin installed successfully"
-    fi
-  fi
+if ! command -v python &>/dev/null; then
+  echo "📦 Installing Python via mise..."
+  mise install python@3.13.2 || exit 1
+  mise use --global python@3.13.2 || exit 1
+  eval "$(mise activate bash)"
+  PYTHON_VERSION=$(python --version)
+  echo "✅ Python is installed ($PYTHON_VERSION)"
+else
+  PYTHON_VERSION=$(python --version)
+  echo "✅ Python is installed ($PYTHON_VERSION)"
+fi
 
-  case "${plugin}" in
-  "nodejs")
-    if ! command -v node &>/dev/null; then
-      asdf install nodejs 20.19.2 || exit 1
-      asdf set nodejs 20.19.2 || exit 1
-      NODE_VERSION=$(node --version)
-      echo "✅ Node.js is installed ($NODE_VERSION)"
-    else
-      NODE_VERSION=$(node --version)
-      echo "✅ Node.js is installed ($NODE_VERSION)"
-    fi
+if ! command -v uv &>/dev/null; then
+  brew install uv || exit 1
+  UV_VERSION=$(uv --version)
+  echo "✅ uv is installed ($UV_VERSION)"
+else
+  UV_VERSION=$(uv --version)
+  echo "✅ uv is installed ($UV_VERSION)"
+fi
 
-    if [[ $(node --version) != "v20.19.2" ]]; then
-      NODE_VERSION=$(node --version)
-      echo "🚨 You have the wrong version of node installed ($NODE_VERSION)."
-      echo "💡 If you are using nvm then run 'nvm install' to install the version specified by the repo's .nvmrc."
-      exit 1
-    fi
-    ;;
+if ! command -v go &>/dev/null; then
+  echo "📦 Installing Go via mise..."
+  mise install go@1.24.2 || exit 1
+  mise use --global go@1.24.2 || exit 1
+  eval "$(mise activate bash)"
+  GO_VERSION=$(go version)
+  echo "✅ Go is installed ($GO_VERSION)"
+else
+  GO_VERSION=$(go version)
+  echo "✅ Go is installed ($GO_VERSION)"
+fi
 
-  "python")
-    if ! command -v python &>/dev/null; then
-      asdf install python 3.13.2 || exit 1
-      asdf set python 3.13.2 || exit 1
-      PYTHON_VERSION=$(python --version)
-      echo "✅ Python is installed ($PYTHON_VERSION)"
-    else
-      PYTHON_VERSION=$(python --version)
-      echo "✅ Python is installed ($PYTHON_VERSION)"
-    fi
+if ! command -v rustc &>/dev/null; then
+  echo "📦 Installing Rust via mise..."
+  mise install rust@1.85.1 || exit 1
+  mise use --global rust@1.85.1 || exit 1
+  eval "$(mise activate bash)"
+  RUST_VERSION=$(rustc --version)
+  echo "✅ Rust is installed ($RUST_VERSION)"
+else
+  RUST_VERSION=$(rustc --version)
+  echo "✅ Rust is installed ($RUST_VERSION)"
+fi
 
-    if ! command -v uv &>/dev/null; then
-      brew install uv || exit 1
-      UV_VERSION=$(uv --version)
-      echo "✅ uv is installed ($UV_VERSION)"
-    else
-      UV_VERSION=$(uv --version)
-      echo "✅ uv is installed ($UV_VERSION)"
-    fi
-    ;;
-
-  "golang")
-    if ! command -v go &>/dev/null; then
-      asdf install golang 1.24.2 || exit 1
-      asdf set golang 1.24.2 || exit 1
-      GO_VERSION=$(go version)
-      echo "✅ Go is installed ($GO_VERSION)"
-    else
-      GO_VERSION=$(go version)
-      echo "✅ Go is installed ($GO_VERSION)"
-    fi
-    ;;
-
-  "rust")
-    if ! command -v rustc &>/dev/null; then
-      asdf install rust 1.85.1 || exit 1
-      asdf set rust 1.85.1 || exit 1
-      RUST_VERSION=$(rustc --version)
-      echo "✅ Rust is installed ($RUST_VERSION)"
-    else
-      RUST_VERSION=$(rustc --version)
-      echo "✅ Rust is installed ($RUST_VERSION)"
-    fi
-    ;;
-
-  "java")
-    if ! command -v javac &>/dev/null || ! javac --version &>/dev/null; then
-      echo "☕ Installing Java..."
-      brew install openjdk@17 || exit 1
-
-      export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
-
-      if [[ "$SHELL" == "/bin/zsh" ]] && ! grep -q 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' ~/.zprofile; then
-        echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.zprofile
-      elif [[ "$SHELL" == "/bin/bash" ]] && ! grep -q 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' ~/.bash_profile; then
-        echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.bash_profile
-      fi
-
-      JAVA_VERSION=$(javac --version | head -n 1)
-      echo "✅ Java is installed ($JAVA_VERSION)"
-    else
-      JAVA_VERSION=$(javac --version | head -n 1)
-      echo "✅ Java is installed ($JAVA_VERSION)"
-    fi
-    ;;
-  esac
-done
+if ! command -v javac &>/dev/null || ! javac --version &>/dev/null; then
+  echo "☕ Installing Java via mise..."
+  mise install java@openjdk-17 || exit 1
+  mise use --global java@openjdk-17 || exit 1
+  eval "$(mise activate bash)"
+  JAVA_VERSION=$(javac --version | head -n 1)
+  echo "✅ Java is installed ($JAVA_VERSION)"
+else
+  JAVA_VERSION=$(javac --version | head -n 1)
+  echo "✅ Java is installed ($JAVA_VERSION)"
+fi
 
 if ! command -v pnpm &>/dev/null; then
   brew install pnpm || exit 1
