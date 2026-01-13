@@ -5,6 +5,7 @@
 import type { Command, CommandContext, ArgumentProviderContext, ArgumentSuggestion } from "./core/types.js"
 import { logs } from "../services/logs.js"
 import { ExtensionMessage } from "../types/messages.js"
+import { generateMessage } from "../ui/utils/messages.js"
 
 /**
  * Interface for checkpoint message from chatMessages
@@ -180,6 +181,79 @@ async function handleRestore(context: CommandContext, hash: string): Promise<voi
 }
 
 /**
+ * Handle /checkpoint enable
+ */
+async function handleEnable(context: CommandContext): Promise<void> {
+	const { addMessage, sendWebviewMessage } = context
+
+	logs.info("Enabling checkpoints", "checkpoint")
+
+	try {
+		await sendWebviewMessage({
+			type: "updateSettings",
+			updatedSettings: { enableCheckpoints: true },
+		})
+
+		addMessage({
+			...generateMessage(),
+			type: "system",
+			content: "Checkpoints **enabled**. New checkpoints will be created during task execution.",
+		})
+
+		logs.info("Checkpoints enabled successfully", "checkpoint")
+	} catch (error) {
+		logs.error("Failed to enable checkpoints", "checkpoint", { error })
+		addMessage({
+			...generateMessage(),
+			type: "error",
+			content: `Failed to enable checkpoints: ${error instanceof Error ? error.message : String(error)}`,
+		})
+	}
+}
+
+/**
+ * Get the checkpoints path based on the current platform
+ */
+function getCheckpointsPath(): string {
+	if (process.platform === "win32") {
+		return "%USERPROFILE%\\.kilocode\\cli\\global\\tasks\\*\\checkpoints\\"
+	}
+	return "~/.kilocode/cli/global/tasks/*/checkpoints/"
+}
+
+/**
+	* Handle /checkpoint disable
+	*/
+async function handleDisable(context: CommandContext): Promise<void> {
+	const { addMessage, sendWebviewMessage } = context
+
+	logs.info("Disabling checkpoints", "checkpoint")
+
+	try {
+		await sendWebviewMessage({
+			type: "updateSettings",
+			updatedSettings: { enableCheckpoints: false },
+		})
+
+		const checkpointsPath = getCheckpointsPath()
+		addMessage({
+			...generateMessage(),
+			type: "system",
+			content: `Checkpoints **disabled**. No new checkpoints will be created.\n\n**Note:** Existing checkpoints in \`${checkpointsPath}\` can be manually deleted to free disk space.`,
+		})
+
+		logs.info("Checkpoints disabled successfully", "checkpoint")
+	} catch (error) {
+		logs.error("Failed to disable checkpoints", "checkpoint", { error })
+		addMessage({
+			...generateMessage(),
+			type: "error",
+			content: `Failed to disable checkpoints: ${error instanceof Error ? error.message : String(error)}`,
+		})
+	}
+}
+
+/**
  * Argument provider for checkpoint hashes
  */
 async function provideCheckpointHashes(context: ArgumentProviderContext): Promise<ArgumentSuggestion[]> {
@@ -224,6 +298,8 @@ async function provideSubcommands(context: ArgumentProviderContext): Promise<Arg
 	const subcommands = [
 		{ value: "list", description: "List all available checkpoints" },
 		{ value: "restore", description: "Revert to a checkpoint" },
+		{ value: "enable", description: "Enable checkpoint creation" },
+		{ value: "disable", description: "Disable checkpoint creation" },
 	]
 
 	const query = context.partialInput.toLowerCase()
@@ -259,14 +335,14 @@ export const checkpointCommand: Command = {
 	name: "checkpoint",
 	aliases: ["cp"],
 	description: "Manage and revert to saved checkpoints",
-	usage: "/checkpoint <list|restore> [hash]",
-	examples: ["/checkpoint list", "/checkpoint restore 41db173a"],
+	usage: "/checkpoint <list|restore|enable|disable> [hash]",
+	examples: ["/checkpoint list", "/checkpoint restore 41db173a", "/checkpoint enable", "/checkpoint disable"],
 	category: "chat",
 	priority: 7,
 	arguments: [
 		{
 			name: "subcommand",
-			description: "The action to perform (list, restore)",
+			description: "The action to perform (list, restore, enable, disable)",
 			required: false,
 			provider: provideSubcommands,
 		},
@@ -294,10 +370,14 @@ export const checkpointCommand: Command = {
 					"**Commands:**",
 					"  list           List all available checkpoints",
 					"  restore <hash> Revert to a checkpoint (destructive)",
+					"  enable         Enable checkpoint creation",
+					"  disable        Disable checkpoint creation (saves disk space)",
 					"",
 					"**Examples:**",
 					"  /checkpoint list",
 					"  /checkpoint restore 00d185d5020969752bc9ae40823b9d6a723696e2",
+					"  /checkpoint enable",
+					"  /checkpoint disable",
 					"",
 					"**Note:** Hash must be the full 40-character git commit hash.",
 				].join("\n"),
@@ -332,12 +412,22 @@ export const checkpointCommand: Command = {
 				await handleRestore(context, hash)
 				break
 
+			case "enable":
+				logs.debug("Handling checkpoint enable command", "checkpoint")
+				await handleEnable(context)
+				break
+
+			case "disable":
+				logs.debug("Handling checkpoint disable command", "checkpoint")
+				await handleDisable(context)
+				break
+
 			default:
 				logs.warn("Unknown checkpoint subcommand", "checkpoint", { subcommand })
 				addMessage({
 					id: Date.now().toString(),
 					type: "error",
-					content: `Unknown command "${subcommand}". Available: list, restore`,
+					content: `Unknown command "${subcommand}". Available: list, restore, enable, disable`,
 					ts: Date.now(),
 				})
 		}

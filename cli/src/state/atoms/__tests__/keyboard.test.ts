@@ -18,9 +18,9 @@ import {
 	submissionCallbackAtom,
 	submitInputAtom,
 } from "../keyboard.js"
-import { pendingApprovalAtom } from "../approval.js"
+import { pendingApprovalAtom, approvalOptionsAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
-import { chatMessagesAtom } from "../extension.js"
+import { chatMessagesAtom, extensionModeAtom, customModesAtom } from "../extension.js"
 import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
@@ -1152,6 +1152,125 @@ describe("keypress atoms", () => {
 			// Exit prompt should be visible
 			expect(store.get(exitPromptVisibleAtom)).toBe(true)
 		})
+
+		it("should cycle to next mode when Shift+Tab is pressed", async () => {
+			// Set initial mode to "code"
+			store.set(extensionModeAtom, "code")
+			store.set(customModesAtom, [])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have cycled to the next mode
+			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator
+			// code is at index 1, so next is ask at index 2
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("ask")
+		})
+
+		it("should wrap around to first mode when at the last mode", async () => {
+			// Set initial mode to the last default mode
+			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator
+			store.set(extensionModeAtom, "orchestrator")
+			store.set(customModesAtom, [])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have wrapped around to the first mode (architect)
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("architect")
+		})
+
+		it("should include custom modes in the cycle", async () => {
+			// Set initial mode to "orchestrator" (last default mode)
+			store.set(extensionModeAtom, "orchestrator")
+			// Add a custom mode
+			store.set(customModesAtom, [
+				{
+					slug: "custom-mode",
+					name: "Custom Mode",
+					description: "A custom mode for testing",
+					roleDefinition: "You are a custom assistant",
+					groups: [],
+				},
+			])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have cycled to the custom mode (after orchestrator)
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("custom-mode")
+		})
+
+		it("should not cycle mode when Tab is pressed without Shift", async () => {
+			// Set initial mode
+			store.set(extensionModeAtom, "code")
+			store.set(customModesAtom, [])
+
+			// Type some text first to avoid history mode
+			const chars = ["h", "i"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Tab without Shift
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, tabKey)
+
+			// Mode should remain unchanged
+			const mode = store.get(extensionModeAtom)
+			expect(mode).toBe("code")
+		})
 	})
 
 	describe("followup suggestions vs slash command input", () => {
@@ -1251,6 +1370,587 @@ describe("keypress atoms", () => {
 
 			expect(mockCallback).toHaveBeenCalledWith("/new")
 			expect(store.get(followupSuggestionsAtom)).toHaveLength(0)
+		})
+	})
+
+	describe("word navigation", () => {
+		it("should move cursor to previous word with Meta+B", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
+
+			// Press Meta+B (previous word)
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+B again
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+B again
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			// Should move to start of "hello"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of text
+		})
+
+		it("should move cursor to next word with Meta+F", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to start
+			const homeKey: Key = {
+				name: "a",
+				sequence: "a",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, homeKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0)
+
+			// Press Meta+F (next word)
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+F again
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+F again
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			// Should move to end of text
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // End of text
+		})
+
+		it("should handle word navigation across lines", () => {
+			// Type "hello\nworld"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Add newline
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: true, // Shift+Enter for newline
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, enterKey)
+
+			// Type "world"
+			const worldChars = ["w", "o", "r", "l", "d"]
+			for (const char of worldChars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Should have "hello\nworld"
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("hello\nworld")
+
+			// Cursor should already be on second line at end of "world" after typing
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(1)
+			expect(cursor.col).toBe(5) // End of "world"
+
+			// Press Meta+F (next word) - should stay on same line since no more words
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(1)
+			expect(cursor.col).toBe(5) // End of "world"
+
+			// Press Meta+B (previous word) - should move to previous line
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.row).toBe(0)
+			expect(cursor.col).toBe(0) // Start of "hello"
+		})
+
+		it("should handle empty text gracefully", () => {
+			// Empty buffer
+			expect(store.get(textBufferStringAtom)).toBe("")
+
+			// Press Meta+B - should not crash
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, metaBKey)).not.toThrow()
+
+			// Press Meta+F - should not crash
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, metaFKey)).not.toThrow()
+		})
+
+		it("should handle single word correctly", () => {
+			// Type "hello"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to middle of word
+			const leftKey: Key = {
+				name: "left",
+				sequence: "\x1b[D",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, leftKey)
+			store.set(keyboardHandlerAtom, leftKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(3) // Position before 'l' in "hello"
+
+			// Press Meta+B - should move to start of word
+			const metaBKey: Key = {
+				name: "b",
+				sequence: "b",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaBKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of "hello"
+
+			// Press Meta+F - should move to end of word
+			const metaFKey: Key = {
+				name: "f",
+				sequence: "f",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaFKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5) // End of "hello"
+		})
+
+		it("should move cursor to previous word with Meta+Left arrow", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // "hello world test" has 16 characters
+
+			// Press Meta+Left (previous word)
+			const metaLeftKey: Key = {
+				name: "left",
+				sequence: "\x1b[1;3D",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+Left again
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+Left again
+			store.set(keyboardHandlerAtom, metaLeftKey)
+
+			// Should move to start of "hello"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0) // Start of text
+		})
+
+		it("should move cursor to next word with Meta+Right arrow", () => {
+			// Type "hello world test"
+			const input = "hello world test"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Move cursor to start
+			const homeKey: Key = {
+				name: "a",
+				sequence: "a",
+				ctrl: true,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, homeKey)
+
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(0)
+
+			// Press Meta+Right (next word)
+			const metaRightKey: Key = {
+				name: "right",
+				sequence: "\x1b[1;3C",
+				ctrl: false,
+				meta: true,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to start of "world"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(6) // Position of "w" in "hello world test"
+
+			// Press Meta+Right again
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to start of "test"
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(12) // Position of "t" in "hello world test"
+
+			// Press Meta+Right again
+			store.set(keyboardHandlerAtom, metaRightKey)
+
+			// Should move to end of text
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(16) // End of text
+		})
+
+		it("should move one character with plain Left/Right arrows (no meta)", () => {
+			// Type "hello"
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Cursor should be at end
+			let cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5)
+
+			// Press plain Left (no meta) - should move one character
+			const leftKey: Key = {
+				name: "left",
+				sequence: "\x1b[D",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, leftKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(4) // Moved one character left
+
+			// Press plain Right (no meta) - should move one character
+			const rightKey: Key = {
+				name: "right",
+				sequence: "\x1b[C",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, rightKey)
+
+			cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5) // Moved one character right
+		})
+	})
+
+	describe("approval mode number key hotkeys", () => {
+		it("should select and execute option when pressing number key hotkey (1, 2, 3)", async () => {
+			// Set up a command approval with hierarchical options
+			// Command "mkdir test-dir" should generate:
+			// - Run Command (y)
+			// - Always Run "mkdir" (1)
+			// - Always Run "mkdir test-dir" (2)
+			// - Reject (n)
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we have the expected options with number hotkeys
+			const options = store.get(approvalOptionsAtom)
+			expect(options.length).toBeGreaterThanOrEqual(4)
+			expect(options[0].hotkey).toBe("y") // Run Command
+			expect(options[1].hotkey).toBe("1") // Always Run "mkdir"
+			expect(options[2].hotkey).toBe("2") // Always Run "mkdir test-dir"
+			expect(options[options.length - 1].hotkey).toBe("n") // Reject
+
+			// Press "1" key - should select the "Always Run mkdir" option
+			const key1: Key = {
+				name: "1",
+				sequence: "1",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key1)
+
+			// The option at index 1 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(1)
+		})
+
+		it("should select option 2 when pressing '2' key", async () => {
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Press "2" key
+			const key2: Key = {
+				name: "2",
+				sequence: "2",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key2)
+
+			// The option at index 2 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(2)
+		})
+
+		it("should select option 3 when pressing '3' key for command with 3 hierarchy levels", async () => {
+			// Command with 3 parts: "mkdir test-dir && touch test-dir/file.ts"
+			// Should generate:
+			// - Run Command (y)
+			// - Always Run "mkdir" (1)
+			// - Always Run "mkdir test-dir" (2)
+			// - Always Run "mkdir test-dir && touch test-dir/file.ts" (3)
+			// - Reject (n)
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir && touch test-dir/file.ts",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we have option with hotkey "3"
+			const options = store.get(approvalOptionsAtom)
+			const option3 = options.find((opt) => opt.hotkey === "3")
+			expect(option3).toBeDefined()
+
+			// Press "3" key
+			const key3: Key = {
+				name: "3",
+				sequence: "3",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key3)
+
+			// The option at index 3 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(3)
+		})
+
+		it("should not select anything when pressing number key that has no matching hotkey", async () => {
+			// Simple command with only 1 hierarchy level
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "ls",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we only have options with hotkeys y, 1, n (no 2 or 3)
+			const options = store.get(approvalOptionsAtom)
+			expect(options.find((opt) => opt.hotkey === "2")).toBeUndefined()
+			expect(options.find((opt) => opt.hotkey === "3")).toBeUndefined()
+
+			// Initial selection should be 0
+			expect(store.get(selectedIndexAtom)).toBe(0)
+
+			// Press "2" key - should not change selection since there's no option with hotkey "2"
+			const key2: Key = {
+				name: "2",
+				sequence: "2",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key2)
+
+			// Selection should remain unchanged
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(0)
 		})
 	})
 })

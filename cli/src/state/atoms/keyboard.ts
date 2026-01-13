@@ -31,6 +31,8 @@ import {
 	moveToLineStartAtom,
 	moveToLineEndAtom,
 	moveToAtom,
+	moveToPreviousWordAtom,
+	moveToNextWordAtom,
 	insertCharAtom,
 	insertTextAtom,
 	insertNewlineAtom,
@@ -43,7 +45,7 @@ import {
 } from "./textBuffer.js"
 import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
-import { cancelTaskAtom, resumeTaskAtom, toggleYoloModeAtom } from "./actions.js"
+import { cancelTaskAtom, resumeTaskAtom, toggleYoloModeAtom, cycleNextModeAtom } from "./actions.js"
 import {
 	historyModeAtom,
 	historyEntriesAtom,
@@ -509,6 +511,14 @@ function handleApprovalKeys(get: Getter, set: Setter, key: Key) {
 	// Guard against empty options array to prevent NaN from modulo 0
 	if (options.length === 0) return
 
+	// Check if the key matches any option's hotkey (for number keys 1, 2, 3, etc.)
+	const hotkeyIndex = options.findIndex((opt) => opt.hotkey === key.name)
+	if (hotkeyIndex !== -1) {
+		set(selectedIndexAtom, hotkeyIndex)
+		set(executeSelectedAtom)
+		return
+	}
+
 	switch (key.name) {
 		case "down":
 			set(selectedIndexAtom, (selectedIndex + 1) % options.length)
@@ -818,11 +828,19 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 			return
 
 		case "left":
-			set(moveLeftAtom)
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+			} else {
+				set(moveLeftAtom)
+			}
 			return
 
 		case "right":
-			set(moveRightAtom)
+			if (key.meta) {
+				set(moveToNextWordAtom)
+			} else {
+				set(moveRightAtom)
+			}
 			return
 
 		// Enter/Return
@@ -881,6 +899,21 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 		case "u":
 			if (key.ctrl) {
 				set(killLineLeftAtom)
+				return
+			}
+			break
+
+		// Word navigation (Meta/Alt key)
+		case "b":
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+				return
+			}
+			break
+
+		case "f":
+			if (key.meta) {
+				set(moveToNextWordAtom)
 				return
 			}
 			break
@@ -974,6 +1007,13 @@ function handleGlobalHotkeys(get: Getter, set: Setter, key: Key): boolean {
 			// Toggle YOLO mode with Ctrl+Y
 			if (key.ctrl) {
 				set(toggleYoloModeAtom)
+				return true
+			}
+			break
+		case "tab":
+			// Cycle through modes with Shift+Tab
+			if (key.shift) {
+				set(cycleNextModeAtom)
 				return true
 			}
 			break

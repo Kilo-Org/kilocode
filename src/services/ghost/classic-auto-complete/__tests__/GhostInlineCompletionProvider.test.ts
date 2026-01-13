@@ -572,12 +572,26 @@ describe("shouldShowOnlyFirstLine", () => {
 		expect(shouldShowOnlyFirstLine("const x = 1\nconst y = foo", "bar\nbaz")).toBe(true)
 	})
 
-	it("returns true at start of line when suggestion is 3+ lines", () => {
-		expect(shouldShowOnlyFirstLine("const x = 1\n    ", "l1\nl2\nl3")).toBe(true)
+	it("returns false at start of line when suggestion is 3+ lines but current line has no word characters", () => {
+		// When current line has only whitespace (no word characters), show the whole block
+		expect(shouldShowOnlyFirstLine("const x = 1\n    ", "l1\nl2\nl3")).toBe(false)
+	})
+
+	it("returns true at start of line when suggestion is 3+ lines and current line has word characters", () => {
+		// When current line has word characters (e.g., partial code), show only first line
+		expect(shouldShowOnlyFirstLine("const x = 1\n    const", "l1\nl2\nl3")).toBe(true)
 	})
 
 	it("returns false at start of line when suggestion is 2 lines", () => {
 		expect(shouldShowOnlyFirstLine("const x = 1\n", "l1\nl2")).toBe(false)
+	})
+
+	it("returns false when current line has only non-word characters (e.g., indentation after comma)", () => {
+		// Simulates typing comma + Enter in an array of objects, then getting a multi-line suggestion
+		// The prefix ends with whitespace-only line (indentation), suggestion is the next object block
+		const prefix = "const items = [\n\t{ name: 'first' },\n\t"
+		const suggestion = "{ name: 'second' },\n\t{ name: 'third' },"
+		expect(shouldShowOnlyFirstLine(prefix, suggestion)).toBe(false)
 	})
 })
 
