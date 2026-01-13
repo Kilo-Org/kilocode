@@ -3,10 +3,18 @@
  * This enables bidirectional communication with the Agent Manager.
  */
 
-import { useEffect } from "react"
-import { useSetAtom } from "jotai"
+import { useEffect, useRef } from "react"
+import { useSetAtom, useAtomValue } from "jotai"
 import { createInterface } from "readline"
 import { sendAskResponseAtom, cancelTaskAtom, respondToToolAtom } from "../atoms/actions.js"
+import { isServiceReadyAtom } from "../atoms/service.js"
+import { isStreamingAtom } from "../atoms/ui.js"
+import { isApprovalPendingAtom } from "../atoms/approval.js"
+import { clearStdinQueueSignalAtom } from "../atoms/queuedMessages.js"
+import { SequentialWorkQueue } from "../../utils/sequential-work-queue.js"
+import { createStateChangeWaiter, type StateChangeWaiter } from "../../utils/state-change-waiter.js"
+import { waitForAgentReaction } from "../../utils/wait-for-agent-reaction.js"
+import { pendingFollowupAskTsAtom } from "../atoms/ui.js"
 import { logs } from "../../services/logs.js"
 
 export interface StdinMessage {
@@ -78,10 +86,177 @@ export async function handleStdinMessage(
 	}
 }
 
+export interface StdinMessageQueueState {
+	isServiceReady: boolean
+	isStreaming: boolean
+	isApprovalPending: boolean
+	followupAskTs: number | null
+}
+
+export interface QueuedStdinMessageProcessorOptions {
+	pollIntervalMs?: number
+	reactionStartTimeoutMs?: number
+	reactionDoneTimeoutMs?: number
+	maxAttempts?: number
+	waitForStateChange?: () => Promise<void>
+}
+
+export interface QueuedStdinMessageProcessor {
+	enqueue: (message: StdinMessage) => void
+	notify: () => void
+	clear: () => void
+	dispose: () => void
+}
+
+function isRetryableStdinHandlerError(error: unknown): boolean {
+	if (!(error instanceof Error)) return true
+	const msg = error.message.toLowerCase()
+	return msg.includes("extensionservice not ready") || msg.includes("not available") || msg.includes("disposed")
+}
+
+function isAgentAffectingStdinMessage(message: StdinMessage): boolean {
+	if (message.type === "askResponse") return true
+	if (message.type === "respondToApproval") return true
+	return false
+}
+
+export function createQueuedStdinMessageProcessor(params: {
+	getState: () => StdinMessageQueueState
+	handlers: StdinMessageHandlers
+	options?: QueuedStdinMessageProcessorOptions
+}): QueuedStdinMessageProcessor {
+	const pollIntervalMs = params.options?.pollIntervalMs ?? 25
+	const reactionStartTimeoutMs = params.options?.reactionStartTimeoutMs ?? 10_000
+	const reactionDoneTimeoutMs = params.options?.reactionDoneTimeoutMs ?? 10 * 60_000
+	const maxAttempts = params.options?.maxAttempts ?? 50
+	const waitForStateChange = params.options?.waitForStateChange
+
+	const queue = new SequentialWorkQueue<StdinMessage>({
+		canProcess: (item) => {
+			const { value } = item
+			const state = params.getState()
+
+			// Unknown message types can be dropped immediately (no dependency on agent state).
+			if (value.type !== "askResponse" && value.type !== "cancelTask" && value.type !== "respondToApproval") {
+				return true
+			}
+
+			if (value.type === "cancelTask") {
+				return true
+			}
+
+			if (!state.isServiceReady) {
+				return false
+			}
+
+			if (value.type === "respondToApproval") {
+				return state.isApprovalPending
+			}
+
+			if (value.type === "askResponse") {
+				const askResponse = value.askResponse
+				if (askResponse === "yesButtonClicked" || askResponse === "noButtonClicked") {
+					return state.isApprovalPending
+				}
+
+				// messageResponse: only send when the agent isn't streaming and no approval is pending.
+				return !state.isStreaming && !state.isApprovalPending
+			}
+
+			return true
+		},
+		process: async ({ value, enqueuedAt }) => {
+			const followupAskTs = params.getState().followupAskTs
+			if (value.type === "askResponse") {
+				const askResponse = value.askResponse
+				const isToolApprovalResponse = askResponse === "yesButtonClicked" || askResponse === "noButtonClicked"
+				if (!isToolApprovalResponse && followupAskTs !== null && enqueuedAt < followupAskTs) {
+					logs.debug(
+						"Dropping stdin message due to pending followup question",
+						"QueuedStdinMessageProcessor",
+						{
+							type: value.type,
+						},
+					)
+					return
+				}
+			}
+
+			const result = await handleStdinMessage(value, params.handlers)
+			if (!result.handled) {
+				logs.warn("Unknown stdin message type", "QueuedStdinMessageProcessor", { type: value.type })
+				return
+			}
+
+			if (isAgentAffectingStdinMessage(value)) {
+				await waitForAgentReaction({
+					getState: params.getState,
+					pollIntervalMs,
+					reactionStartTimeoutMs,
+					reactionDoneTimeoutMs,
+					...(waitForStateChange ? { waitForStateChange } : {}),
+				})
+			}
+		},
+		shouldRetry: ({ item, error }) => {
+			if (item.attempts >= maxAttempts) return false
+			return isRetryableStdinHandlerError(error)
+		},
+		onDrop: ({ item, error }) => {
+			logs.error("Dropping stdin message after retries", "QueuedStdinMessageProcessor", {
+				type: item.value.type,
+				attempts: item.attempts,
+				error: error instanceof Error ? error.message : String(error),
+			})
+		},
+	})
+
+	return {
+		enqueue: (message) => {
+			if (message.type === "cancelTask") {
+				queue.clear()
+			}
+			queue.enqueue(message)
+		},
+		notify: () => queue.notify(),
+		clear: () => queue.clear(),
+		dispose: () => queue.dispose(),
+	}
+}
+
 export function useStdinJsonHandler(enabled: boolean) {
 	const sendAskResponse = useSetAtom(sendAskResponseAtom)
 	const cancelTask = useSetAtom(cancelTaskAtom)
 	const respondToTool = useSetAtom(respondToToolAtom)
+	const isServiceReady = useAtomValue(isServiceReadyAtom)
+	const isStreaming = useAtomValue(isStreamingAtom)
+	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const followupAskTs = useAtomValue(pendingFollowupAskTsAtom)
+	const clearSignal = useAtomValue(clearStdinQueueSignalAtom)
+	const stateRef = useRef<StdinMessageQueueState>({
+		isServiceReady,
+		isStreaming,
+		isApprovalPending,
+		followupAskTs,
+	})
+	const stateChangeWaiterRef = useRef<StateChangeWaiter>(createStateChangeWaiter())
+	const processorRef = useRef<QueuedStdinMessageProcessor | null>(null)
+
+	useEffect(() => {
+		stateRef.current = {
+			isServiceReady,
+			isStreaming,
+			isApprovalPending,
+			followupAskTs,
+		}
+		stateChangeWaiterRef.current.notifyChanged()
+		processorRef.current?.notify()
+	}, [isServiceReady, isStreaming, isApprovalPending, followupAskTs])
+
+	useEffect(() => {
+		processorRef.current?.clear()
+		stateChangeWaiterRef.current.notifyChanged()
+	}, [clearSignal])
 
 	useEffect(() => {
 		if (!enabled) {
@@ -107,6 +282,15 @@ export function useStdinJsonHandler(enabled: boolean) {
 			},
 		}
 
+		const processor = createQueuedStdinMessageProcessor({
+			getState: () => stateRef.current,
+			handlers,
+			options: {
+				waitForStateChange: () => stateChangeWaiterRef.current.waitForChange(),
+			},
+		})
+		processorRef.current = processor
+
 		const handleLine = async (line: string) => {
 			const trimmed = line.trim()
 			if (!trimmed) return
@@ -114,11 +298,7 @@ export function useStdinJsonHandler(enabled: boolean) {
 			try {
 				const message: StdinMessage = JSON.parse(trimmed)
 				logs.debug("Received stdin message", "useStdinJsonHandler", { type: message.type })
-
-				const result = await handleStdinMessage(message, handlers)
-				if (!result.handled) {
-					logs.warn("Unknown stdin message type", "useStdinJsonHandler", { type: message.type })
-				}
+				processor.enqueue(message)
 			} catch (error) {
 				logs.error("Failed to parse stdin JSON", "useStdinJsonHandler", {
 					error: error instanceof Error ? error.message : String(error),
@@ -140,6 +320,8 @@ export function useStdinJsonHandler(enabled: boolean) {
 		})
 
 		return () => {
+			processor.dispose()
+			processorRef.current = null
 			rl.close()
 		}
 	}, [enabled, sendAskResponse, cancelTask, respondToTool])

@@ -3,13 +3,20 @@ import React from "react"
 import { render } from "ink-testing-library"
 import { CommandInput } from "../CommandInput.js"
 
+const { queuedUserMessagesAtom } = vi.hoisted(() => ({
+	queuedUserMessagesAtom: {},
+}))
+
 // Mock jotai
 vi.mock("jotai", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("jotai")>()
 	return {
 		...actual,
 		useSetAtom: vi.fn(() => vi.fn()),
-		useAtomValue: vi.fn(() => 0),
+		useAtomValue: vi.fn((atom) => {
+			if (atom === queuedUserMessagesAtom) return []
+			return 0
+		}),
 		useAtom: vi.fn(() => [0, vi.fn()]),
 	}
 })
@@ -64,7 +71,7 @@ vi.mock("../../../state/hooks/useFollowupSuggestions.js", () => ({
 vi.mock("../../../state/hooks/useTheme.js", () => ({
 	useTheme: () => ({
 		actions: { pending: "yellow" },
-		ui: { border: { active: "blue" } },
+		ui: { border: { active: "blue" }, text: { dimmed: "gray" } },
 	}),
 }))
 
@@ -78,6 +85,10 @@ vi.mock("../../../state/atoms/ui.js", () => ({
 	selectedIndexAtom: {},
 	isCommittingParallelModeAtom: {},
 	commitCountdownSecondsAtom: {},
+}))
+
+vi.mock("../../../state/atoms/queuedMessages.js", () => ({
+	queuedUserMessagesAtom,
 }))
 
 describe("CommandInput", () => {
