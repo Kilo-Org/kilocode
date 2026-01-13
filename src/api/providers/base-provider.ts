@@ -5,6 +5,7 @@ import type { ModelInfo } from "@roo-code/types"
 import type { ApiHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { ApiStream } from "../transform/stream"
 import { countTokens } from "../../utils/countTokens"
+import { isMcpTool } from "../../utils/mcp-name"
 
 import { normalizeObjectAdditionalPropertiesFalse } from "./kilocode/openai-strict-schema" // kilocode_change
 
@@ -30,18 +31,26 @@ export abstract class BaseProvider implements ApiHandler {
 			return undefined
 		}
 
-		return tools.map((tool) =>
-			tool.type === "function"
-				? {
-						...tool,
-						function: {
-							...tool.function,
-							strict: true,
-							parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
-						},
-					}
-				: tool,
-		)
+		return tools.map((tool) => {
+			if (tool.type !== "function") {
+				return tool
+			}
+
+			// MCP tools use the 'mcp--' prefix - disable strict mode for them
+			// to preserve optional parameters from the MCP server schema
+			const isMcp = isMcpTool(tool.function.name)
+
+			return {
+				...tool,
+				function: {
+					...tool.function,
+					strict: !isMcp,
+					parameters: isMcp
+						? tool.function.parameters
+						: this.convertToolSchemaForOpenAI(tool.function.parameters),
+				},
+			}
+		})
 	}
 
 	/**

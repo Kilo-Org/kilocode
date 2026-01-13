@@ -8,6 +8,8 @@ import {
 	vertexDefaultModelId,
 	vertexModels,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
+	TOOL_PROTOCOL,
+	VERTEX_1M_CONTEXT_MODEL_IDS,
 } from "@roo-code/types"
 
 import { ApiHandlerOptions } from "../../shared/api"
@@ -17,6 +19,11 @@ import { ApiStream } from "../transform/stream"
 import { addCacheBreakpoints } from "../transform/caching/vertex"
 import { getModelParams } from "../transform/model-params"
 import { filterNonAnthropicBlocks } from "../transform/anthropic-filter"
+import { resolveToolProtocol } from "../../utils/resolveToolProtocol"
+import {
+	convertOpenAIToolsToAnthropic,
+	convertOpenAIToolChoiceToAnthropic,
+} from "../../core/prompts/tools/native-tools/converters"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -65,16 +72,29 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		let {
-			id,
-			info: { supportsPromptCache },
-			temperature,
-			maxTokens,
-			reasoning: thinking,
-		} = this.getModel()
+		let { id, info, temperature, maxTokens, reasoning: thinking, betas } = this.getModel()
+
+		const { supportsPromptCache } = info
 
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
 		const sanitizedMessages = filterNonAnthropicBlocks(messages)
+
+		// Enable native tools using resolveToolProtocol (which checks model's defaultToolProtocol)
+		// This matches the approach used in AnthropicHandler
+		// Also exclude tools when tool_choice is "none" since that means "don't use tools"
+		const toolProtocol = resolveToolProtocol(this.options, info, metadata?.toolProtocol)
+		const shouldIncludeNativeTools =
+			metadata?.tools &&
+			metadata.tools.length > 0 &&
+			toolProtocol === TOOL_PROTOCOL.NATIVE &&
+			metadata?.tool_choice !== "none"
+
+		const nativeToolParams = shouldIncludeNativeTools
+			? {
+					tools: convertOpenAIToolsToAnthropic(metadata.tools!),
+					tool_choice: convertOpenAIToolChoiceToAnthropic(metadata.tool_choice, metadata.parallelToolCalls),
+				}
+			: {}
 
 		/**
 		 * Vertex API has specific limitations for prompt caching:
@@ -100,9 +120,13 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 				: systemPrompt,
 			messages: supportsPromptCache ? addCacheBreakpoints(sanitizedMessages) : sanitizedMessages,
 			stream: true,
+			...nativeToolParams,
 		}
 
-		const stream = await this.client.messages.create(params)
+		// and prompt caching
+		const requestOptions = betas?.length ? { headers: { "anthropic-beta": betas.join(",") } } : undefined
+
+		const stream = await this.client.messages.create(params, requestOptions)
 
 		for await (const chunk of stream) {
 			switch (chunk.type) {
@@ -146,6 +170,17 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 							yield { type: "reasoning", text: (chunk.content_block as any).thinking }
 							break
 						}
+						case "tool_use": {
+							// Emit initial tool call partial with id and name
+							yield {
+								type: "tool_call_partial",
+								index: chunk.index,
+								id: chunk.content_block!.id,
+								name: chunk.content_block!.name,
+								arguments: undefined,
+							}
+							break
+						}
 					}
 
 					break
@@ -160,12 +195,24 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 							yield { type: "reasoning", text: (chunk.delta as any).thinking }
 							break
 						}
+						case "input_json_delta": {
+							// Emit tool call partial chunks as arguments stream in
+							yield {
+								type: "tool_call_partial",
+								index: chunk.index,
+								id: undefined,
+								name: undefined,
+								arguments: (chunk.delta as any).partial_json,
+							}
+							break
+						}
 					}
 
 					break
 				}
 				case "content_block_stop": {
 					// Block complete - no action needed for now.
+					// NativeToolCallParser handles tool call completion
 					// Note: Signature for multi-turn thinking would require using stream.finalMessage()
 					// after iteration completes, which requires restructuring the streaming approach.
 					break
@@ -177,14 +224,49 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 	getModel() {
 		const modelId = this.options.apiModelId
 		let id = modelId && modelId in vertexModels ? (modelId as VertexModelId) : vertexDefaultModelId
-		const info: ModelInfo = vertexModels[id]
+		let info: ModelInfo = vertexModels[id]
+
+		// Check if 1M context beta should be enabled for supported models
+		const supports1MContext = VERTEX_1M_CONTEXT_MODEL_IDS.includes(
+			id as (typeof VERTEX_1M_CONTEXT_MODEL_IDS)[number],
+		)
+		const enable1MContext = supports1MContext && this.options.vertex1MContext
+
+		// If 1M context beta is enabled, update the model info with tier pricing
+		if (enable1MContext) {
+			const tier = info.tiers?.[0]
+			if (tier) {
+				info = {
+					...info,
+					contextWindow: tier.contextWindow,
+					inputPrice: tier.inputPrice,
+					outputPrice: tier.outputPrice,
+					cacheWritesPrice: tier.cacheWritesPrice,
+					cacheReadsPrice: tier.cacheReadsPrice,
+				}
+			}
+		}
+
 		const params = getModelParams({ format: "anthropic", modelId: id, model: info, settings: this.options })
+
+		// Build betas array for request headers
+		const betas: string[] = []
+
+		// Add 1M context beta flag if enabled for supported models
+		if (enable1MContext) {
+			betas.push("context-1m-2025-08-07")
+		}
 
 		// The `:thinking` suffix indicates that the model is a "Hybrid"
 		// reasoning model and that reasoning is required to be enabled.
 		// The actual model ID honored by Anthropic's API does not have this
 		// suffix.
-		return { id: id.endsWith(":thinking") ? id.replace(":thinking", "") : id, info, ...params }
+		return {
+			id: id.endsWith(":thinking") ? id.replace(":thinking", "") : id,
+			info,
+			betas: betas.length > 0 ? betas : undefined,
+			...params,
+		}
 	}
 
 	async completePrompt(prompt: string) {

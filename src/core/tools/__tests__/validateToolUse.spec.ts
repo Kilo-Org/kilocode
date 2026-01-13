@@ -2,10 +2,10 @@
 
 import type { ModeConfig } from "@roo-code/types"
 
-import { isToolAllowedForMode, modes } from "../../../shared/modes"
+import { modes } from "../../../shared/modes"
 import { TOOL_GROUPS } from "../../../shared/tools"
 
-import { validateToolUse } from "../validateToolUse"
+import { validateToolUse, isToolAllowedForMode } from "../validateToolUse"
 
 const codeMode = modes.find((m) => m.slug === "code")?.slug || "code"
 const architectMode = modes.find((m) => m.slug === "architect")?.slug || "architect"

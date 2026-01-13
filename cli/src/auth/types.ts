@@ -1,4 +1,26 @@
+/**
+ * Authentication Types
+ *
+ * Re-exports types from @kilocode/core-schemas for runtime validation
+ * and backward compatibility with existing code.
+ */
+
 import type { ProviderConfig } from "../config/types.js"
+
+// Re-export Kilocode schemas from core-schemas
+export { kilocodeOrganizationSchema, kilocodeProfileDataSchema } from "@kilocode/core-schemas"
+
+// Re-export Kilocode types from core-schemas
+export type { KilocodeOrganization, KilocodeProfileData } from "@kilocode/core-schemas"
+
+// Device auth (from @roo-code/types via core-schemas)
+export {
+	DeviceAuthInitiateResponseSchema,
+	DeviceAuthPollResponseSchema,
+	type DeviceAuthInitiateResponse,
+	type DeviceAuthPollResponse,
+	type DeviceAuthState,
+} from "@kilocode/core-schemas"
 
 /**
  * Result of a successful authentication flow
@@ -20,50 +42,15 @@ export interface AuthProvider {
 }
 
 /**
- * Device authorization response from initiate endpoint
+ * Result of a poll operation
  */
-export interface DeviceAuthInitiateResponse {
-	/** Verification code to display to user */
-	code: string
-	/** URL for user to visit in browser */
-	verificationUrl: string
-	/** Time in seconds until code expires */
-	expiresIn: number
-}
-
-/**
- * Device authorization poll response
- */
-export interface DeviceAuthPollResponse {
-	/** Current status of the authorization */
-	status: "pending" | "approved" | "denied" | "expired"
-	/** API token (only present when approved) */
-	token?: string
-	/** User ID (only present when approved) */
-	userId?: string
-	/** User email (only present when approved) */
-	userEmail?: string
-}
-
-/**
- * Organization data from Kilocode API
- */
-export interface KilocodeOrganization {
-	id: string
-	name: string
-	role: string
-}
-
-/**
- * Profile data structure from Kilocode API
- */
-export interface KilocodeProfileData {
-	user?: {
-		name?: string
-		email?: string
-		image?: string
-	}
-	organizations?: KilocodeOrganization[]
+export interface PollResult {
+	/** Whether polling should continue */
+	continue: boolean
+	/** Optional data returned when polling completes */
+	data?: unknown
+	/** Optional error if polling failed */
+	error?: Error
 }
 
 /**
@@ -78,16 +65,4 @@ export interface PollingOptions {
 	pollFn: () => Promise<PollResult>
 	/** Optional callback for progress updates */
 	onProgress?: (attempt: number, maxAttempts: number) => void
-}
-
-/**
- * Result of a poll operation
- */
-export interface PollResult {
-	/** Whether polling should continue */
-	continue: boolean
-	/** Optional data returned when polling completes */
-	data?: unknown
-	/** Optional error if polling failed */
-	error?: Error
 }

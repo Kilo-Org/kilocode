@@ -140,7 +140,8 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 			const stream = await this.createStream(systemPrompt, messages, metadata, { headers })
 
 			let lastUsage: RooUsage | undefined = undefined
-			// Accumulator for reasoning_details: accumulate text by type-index key
+			// Accumulator for reasoning_details FROM the API.
+			// We preserve the original shape of reasoning_details to prevent malformed responses.
 			const reasoningDetailsAccumulator = new Map<
 				string,
 				{
@@ -154,6 +155,11 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 					index: number
 				}
 			>()
+
+			// Track whether we've yielded displayable text from reasoning_details.
+			// When reasoning_details has displayable content (reasoning.text or reasoning.summary),
+			// we skip yielding the top-level reasoning field to avoid duplicate display.
+			let hasYieldedReasoningFromDetails = false
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
@@ -179,7 +185,10 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 					if (deltaWithReasoning.reasoning_details && Array.isArray(deltaWithReasoning.reasoning_details)) {
 						for (const detail of deltaWithReasoning.reasoning_details) {
 							const index = detail.index ?? 0
-							const key = `${detail.type}-${index}`
+							// Use id as key when available to merge chunks that share the same reasoning block id
+							// This ensures that reasoning.summary and reasoning.encrypted chunks with the same id
+							// are merged into a single object, matching the provider's expected format
+							const key = detail.id ?? `${detail.type}-${index}`
 							const existing = reasoningDetailsAccumulator.get(key)
 
 							if (existing) {
@@ -194,6 +203,8 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 									existing.data = (existing.data || "") + detail.data
 								}
 								// Update other fields if provided
+								// Note: Don't update type - keep original type (e.g., reasoning.summary)
+								// even when encrypted data chunks arrive with type reasoning.encrypted
 								if (detail.id !== undefined) existing.id = detail.id
 								if (detail.format !== undefined) existing.format = detail.format
 								if (detail.signature !== undefined) existing.signature = detail.signature
@@ -212,29 +223,32 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 							}
 
 							// Yield text for display (still fragmented for live streaming)
+							// Only reasoning.text and reasoning.summary have displayable content
+							// reasoning.encrypted is intentionally skipped as it contains redacted content
 							let reasoningText: string | undefined
 							if (detail.type === "reasoning.text" && typeof detail.text === "string") {
 								reasoningText = detail.text
 							} else if (detail.type === "reasoning.summary" && typeof detail.summary === "string") {
 								reasoningText = detail.summary
 							}
-							// Note: reasoning.encrypted types are intentionally skipped as they contain redacted content
 
 							if (reasoningText) {
+								hasYieldedReasoningFromDetails = true
 								yield { type: "reasoning", text: reasoningText }
 							}
 						}
-					} else if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
-						// Handle legacy reasoning format - only if reasoning_details is not present
-						yield {
-							type: "reasoning",
-							text: delta.reasoning,
+					}
+
+					// Handle top-level reasoning field for UI display.
+					// Skip if we've already yielded from reasoning_details to avoid duplicate display.
+					if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
+						if (!hasYieldedReasoningFromDetails) {
+							yield { type: "reasoning", text: delta.reasoning }
 						}
 					} else if ("reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 						// Also check for reasoning_content for backward compatibility
-						yield {
-							type: "reasoning",
-							text: delta.reasoning_content,
+						if (!hasYieldedReasoningFromDetails) {
+							yield { type: "reasoning", text: delta.reasoning_content }
 						}
 					}
 
@@ -271,7 +285,7 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<string> {
 				}
 			}
 
-			// After streaming completes, store the accumulated reasoning_details
+			// After streaming completes, store ONLY the reasoning_details we received from the API.
 			if (reasoningDetailsAccumulator.size > 0) {
 				this.currentReasoningDetails = Array.from(reasoningDetailsAccumulator.values())
 			}

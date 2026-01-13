@@ -294,6 +294,7 @@
 		"makeActiveProfile": "Nastavit jako aktivní profil",
 		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
 		"apiProvider": "Poskytovatel API",
+		"apiProviderDocs": "Dokumentace poskytovatele",
 		"model": "Model",
 		"nameEmpty": "Jméno nemůže být prázdné",
 		"nameExists": "Profil s tímto názvem již existuje",
@@ -349,6 +350,8 @@
 		"anthropic1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
 		"awsBedrock1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Povolit 1M okno kontextu (Beta)",
+		"vertex1MContextBetaDescription": "Rozšířit okno kontextu na 1 milion tokenů pro Claude Sonnet 4",
 		"basetenApiKey": "Klíč API Baseten",
 		"basetenApiKeyPlaceholder": "Zadejte svůj klíč API Baseten",
 		"getBasetenApiKey": "Získat klíč API Baseten",
@@ -472,6 +475,14 @@
 		"awsRegion": "Region AWS",
 		"awsCrossRegion": "Použít meziregionální odvozování",
 		"awsGlobalInference": "Použít globální odvozování (automatický výběr optimálního regionu AWS)",
+		"awsServiceTier": "Úroveň služby",
+		"awsServiceTierStandard": "Standardní",
+		"awsServiceTierStandardDesc": "Vyvážený výkon a náklady",
+		"awsServiceTierFlex": "Flex (50% sleva)",
+		"awsServiceTierFlexDesc": "Nižší náklady, vyšší latence pro nekritické úkoly",
+		"awsServiceTierPriority": "Prioritní (75% příplatek)",
+		"awsServiceTierPriorityDesc": "Nejrychlejší výkon pro kritické aplikace",
+		"awsServiceTierNote": "Úrovně služeb ovlivňují ceny a výkon. Flex nabízí 50% slevu s vyšší latencí, Prioritní nabízí o 25% lepší výkon s 75% příplatkem.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Použít vlastní koncový bod VPC",
 			"vpcEndpointUrlPlaceholder": "Zadejte URL koncového bodu VPC (volitelné)",
@@ -481,7 +492,7 @@
 		"enablePromptCachingTitle": "Povolte ukládání výzev do mezipaměti, abyste zlepšili výkon a snížili náklady na podporované modely.",
 		"cacheUsageNote": "Poznámka: Pokud nevidíte využití mezipaměti, zkuste vybrat jiný model a poté znovu vybrat požadovaný model.",
 		"vscodeLmModel": "Jazykový model",
-		"vscodeLmWarning": "Poznámka: Jedná se o velmi experimentální integraci a podpora poskytovatele se bude lišit. Pokud se zobrazí chyba, že model není podporován, jedná se o problém na straně poskytovatele.",
+		"vscodeLmWarning": "Poznámka: Modely přístupné prostřednictvím API jazykového modelu VS Code mohou být zabaleny nebo doladěny poskytovatelem, takže se chování může lišit od použití stejného modelu přímo od typického poskytovatele nebo routeru. Chcete-li použít model z rozevírací nabídky jazykového modelu, nejprve přepněte na tento model a poté klikněte na Přijmout v promptu Copilot Chat; jinak může dojít k chybě, jako je 400 \"Požadovaný model není podporován\".",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Povolit kontext URL",
@@ -825,6 +836,10 @@
 			"label": "Zobrazit soubory ignorované .kilocodeignore v seznamech a vyhledáváních",
 			"description": "Pokud je povoleno, soubory odpovídající vzorům v .kilocodeignore se zobrazí v seznamech se symbolem zámku. Pokud je zakázáno, tyto soubory budou zcela skryty ze seznamů souborů a vyhledávání."
 		},
+		"enableSubfolderRules": {
+			"label": "Povolit pravidla podadresářů",
+			"description": "Rekurzivně objevovat a načítat soubory .roo/rules a AGENTS.md z podadresářů. Užitečné pro monorepa s pravidly specifickými pro balíčky."
+		},
 		"maxConcurrentFileReads": {
 			"label": "Limit souběžného čtení souborů",
 			"description": "Maximální počet souborů, které může nástroj 'read_file' zpracovávat souběžně. Vyšší hodnoty mohou urychlit čtení více malých souborů, ale zvyšují využití paměti."
@@ -877,7 +892,8 @@
 		"includeCurrentCost": {
 			"label": "Zahrnout aktuální náklady do kontextu",
 			"description": "Pokud je povoleno, aktuální náklady na využití API budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o náklady."
-		}
+		},
+		"apiProviderDocs": "Dokumentace poskytovatele"
 	},
 	"terminal": {
 		"basic": {
@@ -1069,6 +1085,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Převod řeči na text (STT)",
 			"description": "Když je povoleno, Kilo Code může přepsat váš hlas do textu pomocí modelu Whisper od OpenAI. Klikněte na tlačítko mikrofonu v chatu pro zahájení nahrávání. Vyžaduje nainstalovaný FFmpeg a nakonfigurovaného poskytovatele OpenAI API."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Povolit vlastní nástroje",
+			"description": "Pokud je povoleno, Kilo může načítat a používat vlastní nástroje TypeScript/JavaScript z adresáře .kilocode/tools vašeho projektu nebo ~/.kilocode/tools pro globální nástroje. Poznámka: tyto nástroje budou automaticky schváleny.",
+			"toolsHeader": "Dostupné vlastní nástroje",
+			"noTools": "Nejsou načteny žádné vlastní nástroje. Přidejte soubory .ts nebo .js do adresáře .kilocode/tools vašeho projektu nebo ~/.kilocode/tools pro globální nástroje.",
+			"refreshButton": "Obnovit",
+			"refreshing": "Obnovování...",
+			"refreshSuccess": "Nástroje úspěšně obnoveny",
+			"refreshError": "Nepodařilo se obnovit nástroje",
+			"toolParameters": "Parametry"
 		}
 	},
 	"promptCaching": {

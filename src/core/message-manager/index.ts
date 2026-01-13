@@ -133,6 +133,14 @@ export class MessageManager {
 	 * 1. Avoids multiple writes to API history
 	 * 2. Only writes if the history actually changed
 	 * 3. Handles both truncation and cleanup atomically
+	 *
+	 * Note on timestamp handling:
+	 * Due to async execution during streaming, clineMessage timestamps may not
+	 * perfectly align with API message timestamps. Specifically, a "user_feedback"
+	 * clineMessage can have a timestamp BEFORE the assistant API message that
+	 * triggered it (because tool execution happens concurrently with stream
+	 * completion). To handle this race condition, we find the first API user
+	 * message at or after the cutoff and use its timestamp as the actual boundary.
 	 */
 	private async truncateApiHistoryWithCleanup(
 		cutoffTs: number,
@@ -142,10 +150,35 @@ export class MessageManager {
 		const originalHistory = this.task.apiConversationHistory
 		let apiHistory = [...originalHistory]
 
-		// Step 1: Filter by timestamp
-		apiHistory = apiHistory.filter((m) => !m.ts || m.ts < cutoffTs)
+		// Step 1: Determine the actual cutoff timestamp
+		// Check if there's an API message with an exact timestamp match
+		const hasExactMatch = apiHistory.some((m) => m.ts === cutoffTs)
+		// Check if there are any messages before the cutoff that would be preserved
+		const hasMessageBeforeCutoff = apiHistory.some((m) => m.ts !== undefined && m.ts < cutoffTs)
 
-		// Step 2: Remove Summaries whose condense_context was removed
+		let actualCutoff: number = cutoffTs
+
+		if (!hasExactMatch && hasMessageBeforeCutoff) {
+			// No exact match but there are earlier messages means we might have a race
+			// condition where the clineMessage timestamp is earlier than any API message
+			// due to async execution. In this case, look for the first API user message
+			// at or after the cutoff to use as the actual boundary.
+			// This ensures assistant messages that preceded the user's response are preserved.
+			const firstUserMsgIndexToRemove = apiHistory.findIndex(
+				(m) => m.ts !== undefined && m.ts >= cutoffTs && m.role === "user",
+			)
+
+			if (firstUserMsgIndexToRemove !== -1) {
+				// Use the user message's timestamp as the actual cutoff
+				actualCutoff = apiHistory[firstUserMsgIndexToRemove].ts!
+			}
+			// else: no user message found, use original cutoffTs (fallback)
+		}
+
+		// Step 2: Filter by the actual cutoff timestamp
+		apiHistory = apiHistory.filter((m) => !m.ts || m.ts < actualCutoff)
+
+		// Step 3: Remove Summaries whose condense_context was removed
 		if (removedIds.condenseIds.size > 0) {
 			apiHistory = apiHistory.filter((msg) => {
 				if (msg.isSummary && msg.condenseId && removedIds.condenseIds.has(msg.condenseId)) {
@@ -156,7 +189,7 @@ export class MessageManager {
 			})
 		}
 
-		// Step 3: Remove truncation markers whose sliding_window_truncation was removed
+		// Step 4: Remove truncation markers whose sliding_window_truncation was removed
 		if (removedIds.truncationIds.size > 0) {
 			apiHistory = apiHistory.filter((msg) => {
 				if (msg.isTruncationMarker && msg.truncationId && removedIds.truncationIds.has(msg.truncationId)) {
@@ -169,7 +202,7 @@ export class MessageManager {
 			})
 		}
 
-		// Step 4: Cleanup orphaned tags (unless skipped)
+		// Step 5: Cleanup orphaned tags (unless skipped)
 		if (!skipCleanup) {
 			apiHistory = cleanupAfterTruncation(apiHistory)
 		}

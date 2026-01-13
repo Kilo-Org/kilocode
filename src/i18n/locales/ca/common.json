@@ -102,8 +102,7 @@
 			"errorOutput": "Sortida d'error: {{output}}",
 			"processExitedWithError": "El procés Claude Code ha sortit amb codi {{exitCode}}. Sortida d'error: {{output}}",
 			"stoppedWithReason": "Claude Code s'ha aturat per la raó: {{reason}}",
-			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla.",
-			"notFound": "No s'ha trobat l'executable Claude Code '{{claudePath}}'.\n\nInstal·la Claude Code CLI:\n1. Visita {{installationUrl}} per descarregar Claude Code\n2. Segueix les instruccions d'instal·lació per al teu sistema operatiu\n3. Assegura't que la comanda 'claude' estigui disponible al teu PATH\n4. Alternativament, configura una ruta personalitzada a la configuració de Kilo Code sota 'Ruta de Claude Code'\n\nError original: {{originalError}}"
+			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Clau API de Groq",
-			"getGroqApiKey": "Obté la clau API de Groq",
-			"claudeCode": {
-				"pathLabel": "Ruta de Claude Code",
-				"description": "Ruta opcional a la teva CLI de Claude Code. Per defecte 'claude' si no s'estableix.",
-				"placeholder": "Per defecte: claude"
-			}
+			"getGroqApiKey": "Obté la clau API de Groq"
 		}
 	},
 	"customModes": {

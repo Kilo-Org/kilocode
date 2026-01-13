@@ -214,11 +214,6 @@
 			"label": "浏览器",
 			"description": "自动执行浏览器操作而无需批准 — 注意：仅当模型支持计算机功能调用时适用"
 		},
-		"retry": {
-			"label": "重试",
-			"description": "当服务器返回错误响应时自动重试失败的 API 请求",
-			"delayLabel": "重试请求前的延迟"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "允许自动调用MCP服务而无需批准"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "设为活动配置",
 		"makeActiveTooltip": "激活此配置用于 API 请求",
 		"apiProvider": "API提供商",
+		"apiProviderDocs": "提供商文档",
 		"model": "模型",
 		"nameEmpty": "名称不能为空",
 		"nameExists": "已存在同名的配置文件",
@@ -332,7 +328,6 @@
 		"getRequestyApiKey": "获取 Requesty API 密钥",
 		"getRequestyBaseUrl": "基础 URL",
 		"requestyUseCustomBaseUrl": "使用自定义基础 URL",
-		"openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
 		"anthropicApiKey": "Anthropic API 密钥",
 		"getAnthropicApiKey": "获取 Anthropic API 密钥",
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
@@ -342,6 +337,8 @@
 		"anthropicAzureDeploymentPlaceholder": "输入部署名称...",
 		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
 		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"vertex1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
+		"vertex1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
 		"basetenApiKey": "Baseten API 密钥",
 		"getBasetenApiKey": "获取 Baseten API 密钥",
 		"cerebrasApiKey": "Cerebras API 密钥",
@@ -442,6 +439,14 @@
 		"awsRegion": "AWS 区域",
 		"awsCrossRegion": "使用跨区域推理",
 		"awsGlobalInference": "使用全局推理（自动选择最佳 AWS 区域）",
+		"awsServiceTier": "服务层级",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "性能和成本均衡",
+		"awsServiceTierFlex": "Flex（50% 折扣）",
+		"awsServiceTierFlexDesc": "低成本，非关键任务的延迟较高",
+		"awsServiceTierPriority": "Priority（75% 费用溢价）",
+		"awsServiceTierPriorityDesc": "为关键业务应用提供最快性能",
+		"awsServiceTierNote": "服务层级会影响定价和性能。Flex 提供 50% 折扣但延迟较高，Priority 提供 25% 更好的性能但费用溢价 75%。",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自定义 VPC 端点",
 			"vpcEndpointUrlPlaceholder": "输入 VPC 端点 URL（可选）",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git 状态最大文件数",
 			"description": "git状态上下文中包含的最大文件条目数。设为0禁用。分支信息和提交在>0时始终显示。"
+		},
+		"enableSubfolderRules": {
+			"label": "启用子文件夹规则",
+			"description": "递归发现并加载子目录中的 .roo/rules 和 AGENTS.md 文件。适用于具有每包规则的 monorepo。"
 		}
 	},
 	"terminal": {
@@ -991,6 +1000,17 @@
 		"SPEECH_TO_TEXT": {
 			"description": "启用后，Kilo Code 可以使用 OpenAI 的 Whisper 模型将您的语音转录为文本。点击聊天中的麦克风按钮开始录音。需要安装 FFmpeg 并配置 OpenAI API 提供商。",
 			"name": "语音转文本 (STT)"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "启用自定义工具",
+			"description": "启用后 Kilo 可从项目中的 .kilocode/tools 目录或全局工具目录 ~/.kilocode/tools 加载并使用自定义 TypeScript/JavaScript 工具。注意：这些工具将自动获批。",
+			"toolsHeader": "可用自定义工具",
+			"noTools": "未加载自定义工具。请向项目的 .kilocode/tools 目录或全局工具目录 ~/.kilocode/tools 添加 .ts 或 .js 文件。",
+			"refreshButton": "刷新",
+			"refreshing": "正在刷新...",
+			"refreshSuccess": "工具刷新成功",
+			"refreshError": "工具刷新失败",
+			"toolParameters": "参数"
 		}
 	},
 	"promptCaching": {

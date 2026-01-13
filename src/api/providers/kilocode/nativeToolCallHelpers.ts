@@ -26,7 +26,14 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
 	metadata?: ApiHandlerCreateMessageMetadata,
 ): T {
 	// When toolStyle is "native" and allowedTools exist, add them to params
-	if (resolveToolProtocol(options) === "native" && metadata?.tools) {
+	// But respect metadata.toolProtocol if explicitly set to "xml"
+	// Only set these if they haven't already been set (avoid overwriting)
+	if (
+		resolveToolProtocol(options) === "native" &&
+		metadata?.tools &&
+		metadata?.toolProtocol !== "xml" &&
+		!params.tools
+	) {
 		params.tools = metadata.tools
 		//optimally we'd have tool_choice as 'required', but many providers, especially
 		// those using SGlang dont properly handle that setting and barf with a 400.

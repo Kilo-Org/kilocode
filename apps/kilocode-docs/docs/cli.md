@@ -44,16 +44,16 @@ Upgrade the Kilo CLI package:
 
 ### Keyboard shortcuts
 
-| Shortcut    | Description                                                      |
-| ----------- | ---------------------------------------------------------------- |
+| Shortcut    | Description                                                                        |
+| ----------- | ---------------------------------------------------------------------------------- |
 | `Shift+Tab` | Cycle through modes (architect → code → ask → debug → orchestrator → custom modes) |
-| `Ctrl+C`    | Exit (press twice to confirm)                                    |
-| `Ctrl+X`    | Cancel current task                                              |
-| `Esc`       | Cancel current task (while streaming) or clear input             |
-| `Ctrl+Y`    | Toggle YOLO mode (auto-approve all operations)                   |
-| `Ctrl+R`    | Resume task (when a task is ready to resume)                     |
-| `!`         | Enter shell mode (when input is empty)                           |
-| `↑/↓`       | Navigate command history (when input is empty)                   |
+| `Ctrl+C`    | Exit (press twice to confirm)                                                      |
+| `Ctrl+X`    | Cancel current task                                                                |
+| `Esc`       | Cancel current task (while streaming) or clear input                               |
+| `Ctrl+Y`    | Toggle YOLO mode (auto-approve all operations)                                     |
+| `Ctrl+R`    | Resume task (when a task is ready to resume)                                       |
+| `!`         | Enter shell mode (when input is empty)                                             |
+| `↑/↓`       | Navigate command history (when input is empty)                                     |
 
 ### CLI commands
 

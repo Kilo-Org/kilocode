@@ -57,6 +57,7 @@ async function ensureRouterModels(context: CommandContext): Promise<boolean> {
 		"io-intelligence",
 		"vercel-ai-gateway",
 		"ovhcloud",
+		"nano-gpt",
 	].includes(routerName)
 
 	if (!needsRouterModels) {

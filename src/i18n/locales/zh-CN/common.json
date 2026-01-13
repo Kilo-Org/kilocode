@@ -104,8 +104,7 @@
 			"errorOutput": "错误输出：{{output}}",
 			"processExitedWithError": "Claude Code 进程退出，退出码：{{exitCode}}。错误输出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}",
@@ -215,12 +214,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API 密钥",
-			"getGroqApiKey": "获取 Groq API 密钥",
-			"claudeCode": {
-				"pathLabel": "Claude Code 路径",
-				"description": "Claude Code CLI 的可选路径。如果未设置，默认为 'claude'。",
-				"placeholder": "默认: claude"
-			}
+			"getGroqApiKey": "获取 Groq API 密钥"
 		}
 	},
 	"customModes": {

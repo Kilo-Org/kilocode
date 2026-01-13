@@ -5,9 +5,11 @@ import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import {
 	type ProviderSettings,
 	type ModelInfo,
+	type BedrockServiceTier,
 	BEDROCK_REGIONS,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	BEDROCK_GLOBAL_INFERENCE_MODEL_IDS,
+	BEDROCK_SERVICE_TIER_MODEL_IDS,
 } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -34,6 +36,10 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 	const supportsGlobalInference =
 		!!apiConfiguration?.apiModelId &&
 		BEDROCK_GLOBAL_INFERENCE_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
+
+	// Check if the selected model supports service tiers
+	const supportsServiceTiers =
+		!!apiConfiguration?.apiModelId && BEDROCK_SERVICE_TIER_MODEL_IDS.includes(apiConfiguration.apiModelId as any)
 
 	// Update the endpoint enabled state when the configuration changes
 	useEffect(() => {
@@ -150,6 +156,28 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 					</SelectContent>
 				</Select>
 			</div>
+			{supportsServiceTiers && (
+				<div>
+					<label className="block font-medium mb-1">{t("settings:providers.awsServiceTier")}</label>
+					<Select
+						value={apiConfiguration?.awsBedrockServiceTier || "STANDARD"}
+						onValueChange={(value) =>
+							setApiConfigurationField("awsBedrockServiceTier", value as BedrockServiceTier)
+						}>
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder={t("settings:common.select")} />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="STANDARD">{t("settings:providers.awsServiceTierStandard")}</SelectItem>
+							<SelectItem value="FLEX">{t("settings:providers.awsServiceTierFlex")}</SelectItem>
+							<SelectItem value="PRIORITY">{t("settings:providers.awsServiceTierPriority")}</SelectItem>
+						</SelectContent>
+					</Select>
+					<div className="text-sm text-vscode-descriptionForeground mt-1">
+						{t("settings:providers.awsServiceTierNote")}
+					</div>
+				</div>
+			)}
 			{supportsGlobalInference && (
 				<Checkbox
 					checked={apiConfiguration?.awsUseGlobalInference || false}

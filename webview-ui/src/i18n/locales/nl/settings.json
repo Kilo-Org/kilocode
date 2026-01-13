@@ -214,11 +214,6 @@
 			"label": "Browser",
 			"description": "Automatisch browseracties uitvoeren zonder goedkeuring. Let op: geldt alleen als het model computergebruik ondersteunt."
 		},
-		"retry": {
-			"label": "Opnieuw proberen",
-			"description": "Automatisch mislukte API-verzoeken opnieuw proberen wanneer de server een foutmelding geeft",
-			"delayLabel": "Vertraging voordat het verzoek opnieuw wordt geprobeerd"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Automatische goedkeuring van individuele MCP-tools in het MCP-serversoverzicht inschakelen (vereist zowel deze instelling als het selectievakje 'Altijd toestaan' bij de tool)"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Maak actief profiel",
 		"makeActiveTooltip": "Activeer dit profiel om het te gebruiken voor API-verzoeken",
 		"apiProvider": "API-provider",
+		"apiProviderDocs": "Providerdocumentatie",
 		"model": "Model",
 		"nameEmpty": "Naam mag niet leeg zijn",
 		"nameExists": "Er bestaat al een profiel met deze naam",
@@ -324,7 +320,6 @@
 		"getRequestyApiKey": "Requesty API-sleutel ophalen",
 		"getRequestyBaseUrl": "Basis-URL",
 		"requestyUseCustomBaseUrl": "Gebruik aangepaste basis-URL",
-		"openRouterTransformsText": "Comprimeer prompts en berichtreeksen tot de contextgrootte (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API-sleutel",
 		"getAnthropicApiKey": "Anthropic API-sleutel ophalen",
 		"anthropicUseAuthToken": "Anthropic API-sleutel als Authorization-header doorgeven in plaats van X-Api-Key",
@@ -334,6 +329,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Voer deployment naam in...",
 		"awsBedrock1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
 		"awsBedrock1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "1M contextvenster inschakelen (bèta)",
+		"vertex1MContextBetaDescription": "Breidt het contextvenster uit tot 1 miljoen tokens voor Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-sleutel",
 		"getBasetenApiKey": "Baseten API-sleutel verkrijgen",
 		"cerebrasApiKey": "Cerebras API-sleutel",
@@ -416,6 +413,14 @@
 		"awsRegion": "AWS-regio",
 		"awsCrossRegion": "Gebruik cross-region inference",
 		"awsGlobalInference": "Gebruik wereldwijde inferentie (automatische selectie van optimale AWS-regio)",
+		"awsServiceTier": "Servicelaag",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Gebalanceerde prestaties en kosten",
+		"awsServiceTierFlex": "Flex (50% korting)",
+		"awsServiceTierFlexDesc": "Lagere kosten, hogere latency voor niet-kritieke taken",
+		"awsServiceTierPriority": "Priority (75% premie)",
+		"awsServiceTierPriorityDesc": "Snelste prestaties voor kritieke toepassingen",
+		"awsServiceTierNote": "Servicelagen beïnvloeden prijzen en prestaties. Flex biedt 50% korting met hogere latency, Priority biedt 25% betere prestaties met 75% premie.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Aangepast VPC-eindpunt gebruiken",
 			"vpcEndpointUrlPlaceholder": "Voer VPC-eindpunt URL in (optioneel)",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status max bestanden",
 			"description": "Maximum aantal bestandsvermeldingen dat in de git-statuscontext moet worden opgenomen. Stel in op 0 om uit te schakelen. Branch-info en commits worden altijd getoond wanneer > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Submap-regels inschakelen",
+			"description": "Recursief .roo/rules en AGENTS.md-bestanden uit submappen ontdekken en laden. Handig voor monorepo's met regels per pakket."
 		}
 	},
 	"terminal": {
@@ -987,6 +996,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Spraak-naar-Tekst (STT)",
 			"description": "Wanneer ingeschakeld kan Kilo Code je stem naar tekst transcriberen met behulp van OpenAI's Whisper model. Klik op de microfoonknop in de chat om op te nemen. Vereist dat FFmpeg geïnstalleerd is en een geconfigureerde OpenAI API provider."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Aangepaste tools inschakelen",
+			"description": "Indien ingeschakeld kan Kilo aangepaste TypeScript/JavaScript-tools laden en gebruiken uit de map .kilocode/tools van je project of ~/.kilocode/tools voor globale tools. Opmerking: deze tools worden automatisch goedgekeurd.",
+			"toolsHeader": "Beschikbare aangepaste tools",
+			"noTools": "Geen aangepaste tools geladen. Voeg .ts- of .js-bestanden toe aan de map .kilocode/tools van je project of ~/.kilocode/tools voor globale tools.",
+			"refreshButton": "Vernieuwen",
+			"refreshing": "Vernieuwen...",
+			"refreshSuccess": "Tools succesvol vernieuwd",
+			"refreshError": "Kan tools niet vernieuwen",
+			"toolParameters": "Parameters"
 		}
 	},
 	"promptCaching": {

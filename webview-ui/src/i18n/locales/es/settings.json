@@ -214,11 +214,6 @@
 			"label": "Navegador",
 			"description": "Realizar acciones del navegador automáticamente sin requerir aprobación. Nota: Solo se aplica cuando el modelo admite el uso del ordenador"
 		},
-		"retry": {
-			"label": "Reintentar",
-			"description": "Reintentar automáticamente solicitudes de API fallidas cuando el servidor devuelve una respuesta de error",
-			"delayLabel": "Retraso antes de reintentar la solicitud"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Habilitar la aprobación automática de herramientas MCP individuales en la vista de Servidores MCP (requiere tanto esta configuración como la casilla \"Permitir siempre\" de la herramienta)"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Hacer perfil activo",
 		"makeActiveTooltip": "Activa este perfil para usarlo en solicitudes de API",
 		"apiProvider": "Proveedor de API",
+		"apiProviderDocs": "Documentación del Proveedor",
 		"model": "Modelo",
 		"nameEmpty": "El nombre no puede estar vacío",
 		"nameExists": "Ya existe un perfil con este nombre",
@@ -333,7 +329,6 @@
 		"getRequestyApiKey": "Obtener clave API de Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilice una URL base personalizada",
-		"openRouterTransformsText": "Comprimir prompts y cadenas de mensajes al tamaño del contexto (<a>Transformaciones de OpenRouter</a>)",
 		"anthropicApiKey": "Clave API de Anthropic",
 		"getAnthropicApiKey": "Obtener clave API de Anthropic",
 		"anthropicUseAuthToken": "Pasar la clave API de Anthropic como encabezado de autorización en lugar de X-Api-Key",
@@ -343,6 +338,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Introduce el nombre del despliegue...",
 		"awsBedrock1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Habilitar ventana de contexto de 1M (Beta)",
+		"vertex1MContextBetaDescription": "Amplía la ventana de contexto a 1 millón de tokens para Claude Sonnet 4",
 		"basetenApiKey": "Clave API de Baseten",
 		"getBasetenApiKey": "Obtener clave API de Baseten",
 		"cerebrasApiKey": "Clave API de Cerebras",
@@ -425,6 +422,14 @@
 		"awsRegion": "Región de AWS",
 		"awsCrossRegion": "Usar inferencia entre regiones",
 		"awsGlobalInference": "Usar inferencia global (selección automática de la región óptima de AWS)",
+		"awsServiceTier": "Nivel de servicio",
+		"awsServiceTierStandard": "Estándar",
+		"awsServiceTierStandardDesc": "Rendimiento y costo equilibrados",
+		"awsServiceTierFlex": "Flexible (50% de descuento)",
+		"awsServiceTierFlexDesc": "Menor costo, mayor latencia para tareas no críticas",
+		"awsServiceTierPriority": "Prioridad (75% de prima)",
+		"awsServiceTierPriorityDesc": "Rendimiento más rápido para aplicaciones críticas",
+		"awsServiceTierNote": "Los niveles de servicio afectan los precios y rendimiento. Flexible ofrece 50% de descuento con mayor latencia, Prioridad ofrece 25% mejor rendimiento con 75% de prima.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usar punto de conexión VPC personalizado",
 			"vpcEndpointUrlPlaceholder": "Ingrese URL del punto de conexión VPC (opcional)",
@@ -797,6 +802,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status máx. archivos",
 			"description": "Número máximo de entradas de archivo para incluir en el contexto de estado de git. Establézcalo en 0 para deshabilitar. La información de la rama y los commits siempre se muestran cuando es > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Activar reglas de subcarpetas",
+			"description": "Descubrir y cargar recursivamente archivos .roo/rules y AGENTS.md desde subdirectorios. Útil para monorepos con reglas por paquete."
 		}
 	},
 	"terminal": {
@@ -986,6 +995,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Voz a Texto (STT)",
 			"description": "Cuando esté habilitado, Kilo Code puede transcribir tu voz a texto usando el modelo Whisper de OpenAI. Haz clic en el botón del micrófono en el chat para comenzar a grabar. Requiere que FFmpeg esté instalado y un proveedor de API de OpenAI configurado."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Habilitar herramientas personalizadas",
+			"description": "Cuando está habilitado, Kilo puede cargar y usar herramientas TypeScript/JavaScript personalizadas desde el directorio .kilocode/tools de tu proyecto o ~/.kilocode/tools para herramientas globales. Nota: estas herramientas se aprobarán automáticamente.",
+			"toolsHeader": "Herramientas personalizadas disponibles",
+			"noTools": "No hay herramientas personalizadas cargadas. Añade archivos .ts o .js al directorio .kilocode/tools de tu proyecto o ~/.kilocode/tools para herramientas globales.",
+			"refreshButton": "Actualizar",
+			"refreshing": "Actualizando...",
+			"refreshSuccess": "Herramientas actualizadas correctamente",
+			"refreshError": "Error al actualizar las herramientas",
+			"toolParameters": "Parámetros"
 		}
 	},
 	"promptCaching": {

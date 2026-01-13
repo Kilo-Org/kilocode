@@ -38,15 +38,15 @@ Note that available settings vary by provider and model. Each provider offers di
       <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-2.png" alt="Provider selection dropdown" width="550" />
     - Enter API key
 
-                 <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API key entry field" width="550" />
+                   <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API key entry field" width="550" />
 
     - Choose a model
 
-                 <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="Model selection interface" width="550" />
+                   <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="Model selection interface" width="550" />
 
     - Adjust model parameters
 
-                 <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="Model parameter adjustment controls" width="550" />
+                   <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="Model parameter adjustment controls" width="550" />
 
 ### Switching Profiles
 
