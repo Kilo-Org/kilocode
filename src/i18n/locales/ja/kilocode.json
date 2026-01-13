@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（無効）",
-				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
+				"noCredits": "**アカウントにクレジットがありません**\n\nKilo Code アカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "セッション合計コスト:",
 				"provider": "プロバイダー:",
 				"model": "モデル:",

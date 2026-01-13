@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 0.19.3
+
+### Patch Changes
+
+- [#4827](https://github.com/Kilo-Org/kilocode/pull/4827) [`2a66afb`](https://github.com/Kilo-Org/kilocode/commit/2a66afb98b582a73d43b2147d941df32f3eb43a4) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix slash commands being intercepted by followup suggestions during `ask_followup_question` prompts.
+
+- [#4940](https://github.com/Kilo-Org/kilocode/pull/4940) [`9809864`](https://github.com/Kilo-Org/kilocode/commit/9809864ce51474c29b0db2635a19a92520a2f1f1) Thanks [@Drilmo](https://github.com/Drilmo)! - Add KILOCODE_DEV_CLI_PATH support for easier extension + CLI development workflow
+
 ## 0.19.2
 
 ### Patch Changes

@@ -48,6 +48,7 @@ export interface ToolData {
 	source?: string
 	additionalFileCount?: number
 	fastApplyResult?: unknown
+	diffStats?: { added: number; removed: number }
 }
 
 /**
