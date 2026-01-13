@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 
 // Mock the telemetry constants module to return a valid API key
 // This must be done before importing TelemetryService
-vi.mock("../../constants/telemetry.js", async () => {
+vi.mock("../../../constants/telemetry.js", async () => {
 	return {
 		KILOCODE_POSTHOG_API_KEY: "test-posthog-api-key",
 	}
