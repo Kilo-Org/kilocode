@@ -160,11 +160,44 @@
 		"organization": "Organization",
 		"personal": "Personal",
 		"shop": {
-			"title": "Buy Credits",
+			"title": "Top Up",
+			"description": "One-time credit purchases to boost your balance",
 			"popular": "Popular",
 			"credits": "credits",
 			"action": "Buy Now",
 			"viewAll": "View all pricing options"
+		},
+		"kiloPass": {
+			"title": "Kilo Pass",
+			"description": "Subscribe for predictable AI spending with growing bonus credits",
+			"recommended": "Recommended",
+			"perMonth": "/mo",
+			"action": "Get Kilo Pass",
+			"learnMore": "Learn more about Kilo Pass",
+			"yourSubscription": "Your Kilo Pass",
+			"status": {
+				"active": "Active",
+				"canceled": "Canceled",
+				"past_due": "Past Due",
+				"trialing": "Trial",
+				"paused": "Paused",
+				"cancelling": "Cancelling"
+			},
+			"tiers": {
+				"tier_19": "Starter",
+				"tier_49": "Pro",
+				"tier_199": "Expert"
+			},
+			"cadence": {
+				"monthly": "Monthly",
+				"yearly": "Yearly"
+			},
+			"nextBilling": "Next billing: {{date}}",
+			"activeUntil": "Active until: {{date}}",
+			"streak": "{{count}} month streak",
+			"streakPlural": "{{count}} months streak",
+			"bonusCredits": "+${{amount}} bonus on {{date}}",
+			"manage": "Manage Subscription"
 		},
 		"detailedUsage": "Detailed Usage",
 		"createOrganization": "Create an Organization to Track Detailed Usage"

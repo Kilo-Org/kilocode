@@ -201,6 +201,7 @@ export interface ExtensionMessage {
 		| "vsCodeSetting"
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
+		| "kiloPassStateResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
 		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
 		| "authenticatedUser"
@@ -269,6 +270,7 @@ export interface ExtensionMessage {
 	payload?:
 		| ProfileDataResponsePayload
 		| BalanceDataResponsePayload
+		| KiloPassStateResponsePayload
 		| TasksByIdResponsePayload
 		| TaskHistoryResponsePayload
 		| [string, string] // For file save events [taskId, filePath]
@@ -833,6 +835,8 @@ export interface WebviewMessage {
 		| "fetchProfileDataRequest" // kilocode_change
 		| "profileDataResponse" // kilocode_change
 		| "fetchBalanceDataRequest" // kilocode_change
+		| "fetchKiloPassStateRequest" // kilocode_change
+		| "kiloPassStateResponse" // kilocode_change
 		| "shopBuyCredits" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
@@ -1126,6 +1130,41 @@ export interface BalanceDataResponsePayload {
 	data?: unknown
 	error?: string
 }
+
+// kilocode_change start: Kilo Pass subscription state types
+export type KiloPassTier = "tier_19" | "tier_49" | "tier_199"
+export type KiloPassCadence = "monthly" | "yearly"
+export type KiloPassSubscriptionStatus =
+	| "active"
+	| "canceled"
+	| "incomplete"
+	| "incomplete_expired"
+	| "past_due"
+	| "paused"
+	| "trialing"
+	| "unpaid"
+
+export interface KiloPassSubscriptionState {
+	stripeSubscriptionId: string
+	tier: KiloPassTier
+	cadence: KiloPassCadence
+	status: KiloPassSubscriptionStatus
+	cancelAtPeriodEnd: boolean
+	currentStreakMonths: number
+	nextYearlyIssueAt: string | null
+	nextBonusCreditsAt: string | null
+	nextBonusCreditsUsd: number | null
+	nextBillingAt: string | null
+}
+
+export interface KiloPassStateResponsePayload {
+	success: boolean
+	data?: {
+		subscription: KiloPassSubscriptionState | null
+	}
+	error?: string
+}
+// kilocode_change end: Kilo Pass subscription state types
 
 export interface SeeNewChangesPayload {
 	commitRange: CommitRange
