@@ -619,25 +619,45 @@ export function getOpenAiModelInfo(modelId: string): ModelInfo | undefined {
 		bedrockModels,
 	]
 
+	// Helper function to sanitize and return model info
+	const sanitizeModelInfo = (info: ModelInfo): ModelInfo => {
+		if (info.tiers) {
+			return {
+				...info,
+				tiers: info.tiers.map((tier) => ({
+					...tier,
+					// Replace Infinity/null with Number.MAX_SAFE_INTEGER (essentially unlimited)
+					contextWindow:
+						tier.contextWindow === Infinity || tier.contextWindow === null
+							? Number.MAX_SAFE_INTEGER
+							: tier.contextWindow,
+				})),
+			}
+		}
+		return info
+	}
+
+	// Try exact match first
 	for (const modelMap of models) {
 		if (modelId in modelMap) {
-			const info = modelMap[modelId]
-			// Sanitize tiers to handle Infinity values (which become null when serialized to JSON)
-			// This prevents validation errors when saving the config
-			if (info.tiers) {
-				return {
-					...info,
-					tiers: info.tiers.map((tier) => ({
-						...tier,
-						// Replace Infinity/null with Number.MAX_SAFE_INTEGER (essentially unlimited)
-						contextWindow:
-							tier.contextWindow === Infinity || tier.contextWindow === null
-								? Number.MAX_SAFE_INTEGER
-								: tier.contextWindow,
-					})),
-				}
+			return sanitizeModelInfo(modelMap[modelId])
+		}
+	}
+
+	// Normalize search ID: remove provider prefix (e.g., "google/", "anthropic/") and convert to lowercase
+	const normalizedSearchId = modelId.replace(/^[a-z-]+\//i, "").toLowerCase()
+
+	// Try fuzzy matching: find models where the key contains the normalized search ID
+	// or where the normalized search ID contains the model key's base name
+	for (const modelMap of models) {
+		const keys = Object.keys(modelMap)
+		for (const key of keys) {
+			const normalizedKey = key.toLowerCase()
+			// Check if key contains search term or search term contains key's base (without date suffix)
+			const keyBase = normalizedKey.replace(/-\d{8}$/, "") // Remove date suffixes like -20241022
+			if (normalizedKey.includes(normalizedSearchId) || normalizedSearchId.includes(keyBase)) {
+				return sanitizeModelInfo(modelMap[key])
 			}
-			return info
 		}
 	}
 

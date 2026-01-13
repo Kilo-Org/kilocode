@@ -1170,32 +1170,65 @@ export const webviewMessageHandler = async (
 			break
 		case "requestOpenAiModelInfo":
 			if (message?.values?.openAiModelId) {
-				let modelInfo = getOpenAiModelInfo(message.values.openAiModelId)
+				let modelInfo: ReturnType<typeof getOpenAiModelInfo>
 
-				if (!modelInfo) {
-					try {
-						const { getOpenRouterModels } = await import("../../api/providers/fetchers/openrouter")
-						// If forceRefresh is true (manual Auto-fill click), flush cache first
-						if (message?.values?.forceRefresh) {
-							await flushModels("openrouter", true)
-						}
-						const openRouterModels = await getOpenRouterModels()
-						modelInfo = openRouterModels[message.values.openAiModelId]
-
-						if (!modelInfo) {
-							const searchId = message.values.openAiModelId.toLowerCase()
-							const keys = Object.keys(openRouterModels)
-							const matches = keys.filter((id) => id.toLowerCase().includes(searchId))
-
-							if (matches.length > 0) {
-								// Sort by length to find the most concise match (often the base model)
-								matches.sort((a, b) => a.length - b.length)
-								modelInfo = openRouterModels[matches[0]]
-							}
-						}
-					} catch (error) {
-						console.error("Error fetching OpenRouter models for auto-fill:", error)
+				// Primary: Try OpenRouter first (most comprehensive and up-to-date)
+				try {
+					const { getOpenRouterModels } = await import("../../api/providers/fetchers/openrouter")
+					// If forceRefresh is true (manual Auto-fill click), flush cache first
+					if (message?.values?.forceRefresh) {
+						await flushModels("openrouter", true)
 					}
+					const openRouterModels = await getOpenRouterModels()
+					modelInfo = openRouterModels[message.values.openAiModelId]
+
+					if (!modelInfo) {
+						const searchId = message.values.openAiModelId.toLowerCase()
+						// Normalize search ID by removing provider prefix
+						const normalizedSearchId = searchId.replace(/^[a-z-]+\//i, "")
+						const keys = Object.keys(openRouterModels)
+						// Find matches where either:
+						// 1. OpenRouter ID contains the search term
+						// 2. Normalized OpenRouter ID (without provider prefix) matches normalized search
+						const matches = keys.filter((id) => {
+							const lowerId = id.toLowerCase()
+							const normalizedId = lowerId.replace(/^[a-z-]+\//, "") // Remove provider prefix
+							return (
+								lowerId.includes(searchId) ||
+								normalizedId.includes(normalizedSearchId) ||
+								normalizedSearchId.includes(normalizedId)
+							)
+						})
+
+						if (matches.length > 0) {
+							// Sort by length to find the most concise match (often the base model)
+							matches.sort((a, b) => a.length - b.length)
+							modelInfo = openRouterModels[matches[0]]
+						}
+					}
+				} catch (error) {
+					console.error("Error fetching OpenRouter models for auto-fill:", error)
+				}
+
+				// Merge: Get additional data from static maps (computer use, image support, etc.)
+				const staticModelInfo = getOpenAiModelInfo(message.values.openAiModelId)
+				if (modelInfo && staticModelInfo) {
+					// Merge static map data into OpenRouter data (static has curated capability flags)
+					modelInfo = {
+						...modelInfo,
+						// Override with static map values if they provide additional capability info
+						supportsComputerUse: staticModelInfo.supportsComputerUse ?? modelInfo.supportsComputerUse,
+						supportsImages: staticModelInfo.supportsImages ?? modelInfo.supportsImages,
+						supportsNativeTools: staticModelInfo.supportsNativeTools ?? modelInfo.supportsNativeTools,
+						supportsPromptCache: staticModelInfo.supportsPromptCache ?? modelInfo.supportsPromptCache,
+						supportsReasoningBudget:
+							staticModelInfo.supportsReasoningBudget ?? modelInfo.supportsReasoningBudget,
+						supportsReasoningBinary:
+							staticModelInfo.supportsReasoningBinary ?? modelInfo.supportsReasoningBinary,
+					}
+				} else if (!modelInfo) {
+					// Fallback: Use static map if OpenRouter returned nothing
+					modelInfo = staticModelInfo
 				}
 
 				// Heuristic: Auto-detect capabilities from model ID
