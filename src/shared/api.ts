@@ -195,6 +195,7 @@ const dynamicProviderExtras = {
 	unbound: {} as { apiKey?: string },
 	// kilocode_change start
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	openai: {} as { apiKey?: string; baseUrl?: string; headers?: Record<string, string> }, // OpenAI Compatible provider
 	// kilocode_change end
 	"nano-gpt": {} as { nanoGptModelList?: "all" | "personalized" | "subscription" }, // kilocode_change
 	ollama: {} as { numCtx?: number }, // kilocode_change

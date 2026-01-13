@@ -42,6 +42,7 @@ describe("getModelsByProvider", () => {
 		synthetic: { "test-model": testModel },
 		inception: { "test-model": testModel },
 		roo: { "test-model": testModel },
+		openai: { "test-model": testModel },
 	}
 
 	it("returns models for all providers", () => {
@@ -50,7 +51,6 @@ describe("getModelsByProvider", () => {
 			"huggingface", // don't know what this is
 			"human-relay", // no models
 			"nano-gpt", // dynamic provider - models fetched from API
-			"openai", // not implemented
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
 			"vercel-ai-gateway", // different structure

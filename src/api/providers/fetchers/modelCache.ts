@@ -40,6 +40,7 @@ import { getHuggingFaceModels } from "./huggingface"
 import { getRooModels } from "./roo"
 import { getChutesModels } from "./chutes"
 import { getNanoGptModels } from "./nano-gpt" //kilocode_change
+import { getOpenAiModels } from "./openai" // kilocode_change: OpenAI Compatible provider
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -171,6 +172,14 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			models = await getNanoGptModels({
 				nanoGptModelList: options.nanoGptModelList,
 				apiKey: options.apiKey,
+			})
+			break
+		case "openai":
+			// OpenAI Compatible provider - fetches models from custom baseUrl
+			models = await getOpenAiModels({
+				baseUrl: options.baseUrl,
+				apiKey: options.apiKey,
+				headers: options.headers,
 			})
 			break
 		//kilocode_change end

@@ -174,9 +174,8 @@ export const getModelsByProvider = ({
 			}
 		}
 		case "openai": {
-			// TODO(catrielmuller): Support the fetch here
 			return {
-				models: {},
+				models: routerModels.openai || {},
 				defaultModel: "",
 			}
 		}
@@ -364,6 +363,10 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		nanoGptModelList: apiConfiguration?.nanoGptModelList,
 		//kilocode_change end
 		syntheticApiKey: apiConfiguration?.syntheticApiKey, // kilocode_change
+		// OpenAI Compatible provider parameters
+		openAiApiKey: apiConfiguration?.openAiApiKey,
+		openAiBaseUrl: apiConfiguration?.openAiBaseUrl,
+		openAiHeaders: apiConfiguration?.openAiHeaders,
 	})
 
 	const options = getOptionsForProvider(provider, apiConfiguration)
