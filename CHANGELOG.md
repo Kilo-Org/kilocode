@@ -1,5 +1,31 @@
 # kilo-code
 
+## 4.145.0
+
+### Minor Changes
+
+- [#4955](https://github.com/Kilo-Org/kilocode/pull/4955) [`8789f84`](https://github.com/Kilo-Org/kilocode/commit/8789f84e7d652185fce1767dcc29893080c7da87) Thanks [@iscekic](https://github.com/iscekic)! - add /condense and /compact commands
+
+### Patch Changes
+
+- [#4876](https://github.com/Kilo-Org/kilocode/pull/4876) [`7010f60`](https://github.com/Kilo-Org/kilocode/commit/7010f60bec33b5e1cdeff4a5bc2ad3c638e584cc) Thanks [@markijbema](https://github.com/markijbema)! - Autocomplete: Show entire suggestion when first line has no word characters
+
+- [#4183](https://github.com/Kilo-Org/kilocode/pull/4183) [`de30ffa`](https://github.com/Kilo-Org/kilocode/commit/de30ffa307c2bf0ad72eec67782b67725172f71f) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - fix(cerebras): use conservative max_tokens and add integration header
+
+    **Conservative max_tokens:**
+    Cerebras rate limiter estimates token consumption using max_completion_tokens upfront rather than actual usage. When agentic tools automatically set this to the model maximum (e.g., 64K), users exhaust their quota prematurely and get rate-limited despite minimal actual token consumption.
+
+    This fix uses a conservative default of 8K tokens instead of the model maximum. This is sufficient for most agentic tool use while preserving rate limit headroom.
+
+    **Integration header:**
+    Added `X-Cerebras-3rd-Party-Integration: kilocode` header to all Cerebras API requests for tracking and analytics.
+
+- [#4856](https://github.com/Kilo-Org/kilocode/pull/4856) [`100462e`](https://github.com/Kilo-Org/kilocode/commit/100462e956f7f7799525ebddb7d10050435047da) Thanks [@markijbema](https://github.com/markijbema)! - Improve autocomplete tooltip messaging when there's no balance
+
+    When a user has a Kilo Code account with no credits, the autocomplete status bar now shows a helpful message explaining that they need to add credits to use autocomplete, rather than just showing a generic token error.
+
+- [#4793](https://github.com/Kilo-Org/kilocode/pull/4793) [`4fff873`](https://github.com/Kilo-Org/kilocode/commit/4fff873a4b28fa66afbcf837358bcd584665a8be) Thanks [@mcowger](https://github.com/mcowger)! - Restore various providers to modelCache endpoint to fix outdated entries.
+
 ## 4.144.0
 
 ### Minor Changes
