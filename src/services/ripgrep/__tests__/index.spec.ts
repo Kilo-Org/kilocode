@@ -3,9 +3,18 @@
 import * as path from "path" // kilocode_change
 import { getBinPath, truncateLine } from "../index" // kilocode_change
 import { fileExistsAtPath } from "../../../utils/fs" // kilocode_change
+import * as childProcess from "child_process" // kilocode_change
 // kilocode_change start
+vi.mock("vscode", () => ({
+	env: {
+		appRoot: "/mock/vscode/app/root",
+	},
+}))
 vi.mock("../../../utils/fs", () => ({
 	fileExistsAtPath: vi.fn(),
+}))
+vi.mock("child_process", () => ({
+	execSync: vi.fn(),
 }))
 // kilocode_change end
 describe("Ripgrep line truncation", () => {
@@ -115,14 +124,36 @@ describe("getBinPath", () => {
 
 	it("should return undefined when ripgrep is not found anywhere", async () => {
 		const vscodeAppRoot = "/path/to/nonexistent"
+		const mockExecSync = childProcess.execSync as ReturnType<typeof vi.fn>
 
 		// Mock all paths not existing
 		mockFileExists.mockResolvedValue(false)
+		// Mock which/where failing (binary not in PATH)
+		mockExecSync.mockImplementation(() => {
+			throw new Error("not found")
+		})
 
 		const result = await getBinPath(vscodeAppRoot)
 
 		// Should return undefined when no paths exist and require.resolve fails
 		expect(result).toBeUndefined()
+	})
+
+	it("should find ripgrep in system PATH when bundled paths fail", async () => {
+		const vscodeAppRoot = "/path/to/nonexistent"
+		const systemRgPath = "/usr/bin/rg"
+		const mockExecSync = childProcess.execSync as ReturnType<typeof vi.fn>
+
+		// Mock bundled paths not existing, but system path exists
+		mockFileExists.mockImplementation(async (filePath: string) => {
+			return filePath === systemRgPath
+		})
+		// Mock which returning the system rg path
+		mockExecSync.mockReturnValue(systemRgPath + "\n")
+
+		const result = await getBinPath(vscodeAppRoot)
+
+		expect(result).toBe(systemRgPath)
 	})
 
 	it("should prioritize traditional paths over require.resolve", async () => {
