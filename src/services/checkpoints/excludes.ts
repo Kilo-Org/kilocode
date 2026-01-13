@@ -198,6 +198,23 @@ const getLfsPatterns = async (workspacePath: string) => {
 	return []
 }
 
+// kilocode_change: read .kilocodeignore patterns for checkpoints
+const getKilocodeIgnorePatterns = async (workspacePath: string) => {
+	try {
+		const ignorePath = join(workspacePath, ".kilocodeignore")
+		if (await fileExistsAtPath(ignorePath)) {
+			const content = await fs.readFile(ignorePath, "utf8")
+			return content
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line && !line.startsWith("#"))
+		}
+	} catch (error) {
+		console.debug("[getKilocodeIgnorePatterns] Failed to read .kilocodeignore:", error)
+	}
+	return []
+}
+
 export const getExcludePatterns = async (workspacePath: string) => [
 	".git/",
 	...getBuildArtifactPatterns(),
@@ -209,4 +226,5 @@ export const getExcludePatterns = async (workspacePath: string) => [
 	...getGeospatialPatterns(),
 	...getLogFilePatterns(),
 	...(await getLfsPatterns(workspacePath)),
+	...(await getKilocodeIgnorePatterns(workspacePath)), // kilocode_change: respect .kilocodeignore
 ]

@@ -130,3 +130,45 @@ export const getWorkspacePathForContext = (contextPath?: string): string => {
 	// Fall back to current behavior
 	return getWorkspacePath()
 }
+
+/**
+ * Expands environment variables in a file path.
+ * Supports both Unix-style ($VAR, ${VAR}) and Windows-style (%VAR%) syntax.
+ * Also expands ~ to the user's home directory.
+ *
+ * @param filePath - The file path that may contain environment variables
+ * @returns The expanded path with variables replaced by their values
+ *
+ * @example
+ * expandPathVariables("$HOME/Documents") // "/Users/username/Documents"
+ * expandPathVariables("~/Downloads") // "/Users/username/Downloads"
+ * expandPathVariables("%USERPROFILE%/Documents") // "C:\\Users\\username\\Documents" (Windows)
+ */
+export function expandPathVariables(filePath: string): string {
+	if (!filePath) {
+		return filePath
+	}
+
+	let expanded = filePath
+
+	// Expand ~ to home directory first (tilde expansion)
+	if (expanded.startsWith("~/") || expanded === "~") {
+		const homeDir = os.homedir()
+		expanded = homeDir + expanded.slice(1)
+	}
+
+	// Expand Unix-style environment variables: $VAR and ${VAR}
+	expanded = expanded.replace(/\$\{([^}]+)\}|\$([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, braced, unbraced) => {
+		const varName = braced || unbraced
+		return process.env[varName] || ""
+	})
+
+	// Expand Windows-style environment variables: %VAR%
+	if (process.platform === "win32") {
+		expanded = expanded.replace(/%([^%]+)%/g, (_, varName) => {
+			return process.env[varName] || ""
+		})
+	}
+
+	return expanded
+}
