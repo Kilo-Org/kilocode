@@ -1756,5 +1756,5 @@ MiniMax AI platform.
 For issues or questions about provider configuration:
 
 - Open an issue on [GitHub](https://github.com/kilo-org/kilocode)
-- Join our [Discord community](https://discord.gg/kilocode)
+- Join our [Discord community](https://kilo.ai/discord)
 - Check the [FAQ](https://docs.kilocode.com/faq)
