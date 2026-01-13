@@ -76,7 +76,7 @@ export function mapConfigToExtensionState(
 	}
 }
 
-function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettings {
+export function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettings {
 	const config: ProviderSettings = {
 		apiProvider: provider.provider,
 	}
