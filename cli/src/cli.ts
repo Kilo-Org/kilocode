@@ -45,6 +45,8 @@ export class CLI {
 	private options: CLIOptions
 	private isInitialized = false
 	private sessionService: SessionManager | null = null
+	private lastEmittedTaskId: string | null = null
+	private stateChangeHandler: ((state: unknown) => void) | null = null
 
 	constructor(options: CLIOptions = {}) {
 		this.options = options
@@ -137,6 +139,26 @@ export class CLI {
 			// This sets up all event listeners and activates the extension
 			await this.store.set(initializeServiceEffectAtom, this.store)
 			logs.info("ExtensionService initialized through effects", "CLI")
+
+			// Setup task creation detection for JSON mode (Agent Manager integration)
+			// This emits session_created when a task is first started, independent of cloud sync
+			if (this.options.json) {
+				this.stateChangeHandler = (state: unknown) => {
+					const taskId = (state as { currentTaskItem?: { id?: string } })?.currentTaskItem?.id
+					if (taskId && taskId !== this.lastEmittedTaskId) {
+						this.lastEmittedTaskId = taskId
+						console.log(
+							JSON.stringify({
+								event: "session_created",
+								sessionId: taskId,
+								timestamp: Date.now(),
+							}),
+						)
+						logs.debug("Emitted session_created event", "CLI", { taskId })
+					}
+				}
+				this.service.on("stateChange", this.stateChangeHandler)
+			}
 
 			// Track successful extension initialization
 			telemetryService.trackExtensionInitialized(true)
@@ -475,6 +497,12 @@ export class CLI {
 			if (this.ui) {
 				await this.ui.unmount()
 				this.ui = null
+			}
+
+			// Cleanup state change listener
+			if (this.stateChangeHandler && this.service) {
+				this.service.off("stateChange", this.stateChangeHandler)
+				this.stateChangeHandler = null
 			}
 
 			// Dispose service
