@@ -1,15 +1,15 @@
 ---
-title: Kilo Slackbot
-sidebar_label: Kilo Slackbot
+title: Kilo for Slack
+sidebar_label: Kilo for Slack
 ---
 
-# Kilo Slackbot
+# Kilo for Slack
 
-The Kilo Slackbot brings the power of Kilo Code directly into your Slack workspace. Ask questions about your repositories, request code implementations, or get help with issues—all without leaving Slack.
+Kilo for Slack brings the power of Kilo Code directly into your Slack workspace. Ask questions about your repositories, request code implementations, or get help with issues—all without leaving Slack.
 
 ---
 
-## What You Can Do With the Slackbot
+## What You Can Do With Kilo for Slack
 
 - **Ask questions about your repositories** — Get explanations about code, architecture, or implementation details
 - **Request code implementations** — Tell the bot to implement fixes or features suggested in Slack threads
@@ -20,20 +20,20 @@ The Kilo Slackbot brings the power of Kilo Code directly into your Slack workspa
 
 ## Prerequisites
 
-Before using the Kilo Slackbot:
+Before using Kilo for Slack:
 
 - You must have a **Kilo Code account** with available credits
-- Your **GitHub Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so the Slackbot can access your repositories
+- Your **GitHub Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so Kilo can access your repositories
 
-To install the Kilo Slackbot, simply go to the integrations menu in the sidebar on https://app.kilo.ai and set up the Slack integration.
+To install Kilo for Slack, simply go to the integrations menu in the sidebar on https://app.kilo.ai and set up the Slack integration.
 
 ---
 
-## How to Interact with the Slackbot
+## How to Interact with Kilo
 
 ### Direct Messages
 
-You can message the Kilo Slackbot directly through Slack DMs for private conversations:
+You can message Kilo directly through Slack DMs for private conversations:
 
 1. Find **Kilo** in your Slack workspace's app list
 2. Start a direct message conversation
@@ -104,16 +104,16 @@ Can you help me understand what's causing it?
 
 ## How It Works
 
-1. **Message the bot** — Either through DMs or by mentioning it in a channel
-2. **Bot processes your request** — The Slackbot uses your connected GitHub repositories to understand context
+1. **Message Kilo** — Either through DMs or by mentioning it in a channel
+2. **Kilo processes your request** — Kilo uses your connected GitHub repositories to understand context
 3. **AI generates a response** — Kilo Code's AI analyzes your request and provides helpful responses
-4. **Code changes (if requested)** — For implementation requests, the bot can create pull requests
+4. **Code changes (if requested)** — For implementation requests, Kilo can create pull requests
 
 ---
 
 ## Cost
 
-- **Kilo Code credits are used** when the Slackbot performs work (model usage, operations, etc.)
+- **Kilo Code credits are used** when Kilo performs work (model usage, operations, etc.)
 - Credit usage is similar to using Kilo Code through other interfaces
 
 ---
@@ -129,38 +129,38 @@ Can you help me understand what's causing it?
 
 ## Limitations
 
-- The Slackbot can only access repositories you've connected through the [Integrations](https://app.kilo.ai/integrations) page
+- Kilo can only access repositories you've connected through the [Integrations](https://app.kilo.ai/integrations) page
 - Complex multi-step implementations may require follow-up messages
 - Response times may vary based on the complexity of your request
 
 ---
 
-## Changing the Slackbot Model
+## Changing the Model
 
-You can customize which AI model the Slackbot uses for generating responses. The model affects the quality, speed, and capabilities of the Slackbot's responses.
+You can customize which AI model Kilo uses for generating responses. The model affects the quality, speed, and capabilities of Kilo's responses.
 
 1. Go to your [Kilo Workspace](https://app.kilo.ai/)
 2. Navigate to **Integrations** > **Slack**
 3. Select your preferred model for Kilo for Slack
 
-The Slackbot will start using the new model immediately for subsequent requests.
+Kilo will start using the new model immediately for subsequent requests.
 
 ### Available Models
 
-The Slackbot supports over 400+ models across different providers.
+Kilo for Slack supports over 400+ models across different providers.
 
 ---
 
 ## Troubleshooting
 
-**"The bot isn't responding."**
-Ensure the Kilo Slackbot is installed in your workspace and has been added to the channel you're using.
+**"Kilo isn't responding."**
+Ensure Kilo for Slack is installed in your workspace and has been added to the channel you're using.
 
-**"The bot can't access my repository."**
+**"Kilo can't access my repository."**
 Verify your GitHub integration is configured correctly in the [Integrations tab](https://app.kilo.ai/integrations).
 
 **"I'm getting incomplete responses."**
 Try breaking your request into smaller, more specific questions.
 
-**"The bot doesn't understand my codebase."**
+**"Kilo doesn't understand my codebase."**
 Make sure the repository you're asking about is connected and accessible through your GitHub integration.

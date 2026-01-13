@@ -18,7 +18,7 @@ import {
 	submissionCallbackAtom,
 	submitInputAtom,
 } from "../keyboard.js"
-import { pendingApprovalAtom } from "../approval.js"
+import { pendingApprovalAtom, approvalOptionsAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
 import { chatMessagesAtom, extensionModeAtom, customModesAtom } from "../extension.js"
 import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
@@ -1802,6 +1802,155 @@ describe("keypress atoms", () => {
 
 			cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5) // Moved one character right
+		})
+	})
+
+	describe("approval mode number key hotkeys", () => {
+		it("should select and execute option when pressing number key hotkey (1, 2, 3)", async () => {
+			// Set up a command approval with hierarchical options
+			// Command "mkdir test-dir" should generate:
+			// - Run Command (y)
+			// - Always Run "mkdir" (1)
+			// - Always Run "mkdir test-dir" (2)
+			// - Reject (n)
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we have the expected options with number hotkeys
+			const options = store.get(approvalOptionsAtom)
+			expect(options.length).toBeGreaterThanOrEqual(4)
+			expect(options[0].hotkey).toBe("y") // Run Command
+			expect(options[1].hotkey).toBe("1") // Always Run "mkdir"
+			expect(options[2].hotkey).toBe("2") // Always Run "mkdir test-dir"
+			expect(options[options.length - 1].hotkey).toBe("n") // Reject
+
+			// Press "1" key - should select the "Always Run mkdir" option
+			const key1: Key = {
+				name: "1",
+				sequence: "1",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key1)
+
+			// The option at index 1 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(1)
+		})
+
+		it("should select option 2 when pressing '2' key", async () => {
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Press "2" key
+			const key2: Key = {
+				name: "2",
+				sequence: "2",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key2)
+
+			// The option at index 2 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(2)
+		})
+
+		it("should select option 3 when pressing '3' key for command with 3 hierarchy levels", async () => {
+			// Command with 3 parts: "mkdir test-dir && touch test-dir/file.ts"
+			// Should generate:
+			// - Run Command (y)
+			// - Always Run "mkdir" (1)
+			// - Always Run "mkdir test-dir" (2)
+			// - Always Run "mkdir test-dir && touch test-dir/file.ts" (3)
+			// - Reject (n)
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "mkdir test-dir && touch test-dir/file.ts",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we have option with hotkey "3"
+			const options = store.get(approvalOptionsAtom)
+			const option3 = options.find((opt) => opt.hotkey === "3")
+			expect(option3).toBeDefined()
+
+			// Press "3" key
+			const key3: Key = {
+				name: "3",
+				sequence: "3",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key3)
+
+			// The option at index 3 should be selected
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(3)
+		})
+
+		it("should not select anything when pressing number key that has no matching hotkey", async () => {
+			// Simple command with only 1 hierarchy level
+			const mockMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "command",
+				text: "ls",
+				partial: false,
+				isAnswered: false,
+				say: "assistant",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+
+			// Verify we only have options with hotkeys y, 1, n (no 2 or 3)
+			const options = store.get(approvalOptionsAtom)
+			expect(options.find((opt) => opt.hotkey === "2")).toBeUndefined()
+			expect(options.find((opt) => opt.hotkey === "3")).toBeUndefined()
+
+			// Initial selection should be 0
+			expect(store.get(selectedIndexAtom)).toBe(0)
+
+			// Press "2" key - should not change selection since there's no option with hotkey "2"
+			const key2: Key = {
+				name: "2",
+				sequence: "2",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, key2)
+
+			// Selection should remain unchanged
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).toBe(0)
 		})
 	})
 })
