@@ -303,4 +303,38 @@ describe("mapConfigToExtensionState", () => {
 			expect(state.mode).toBe("architect")
 		})
 	})
+
+	describe("context management settings mapping", () => {
+		it("should use default maxConcurrentFileReads of 5 when not specified", () => {
+			const config: CLIConfig = {
+				...baseConfig,
+			}
+
+			const state = mapConfigToExtensionState(config)
+
+			expect(state.maxConcurrentFileReads).toBe(5)
+		})
+
+		it("should map custom maxConcurrentFileReads value", () => {
+			const config: CLIConfig = {
+				...baseConfig,
+				maxConcurrentFileReads: 10,
+			}
+
+			const state = mapConfigToExtensionState(config)
+
+			expect(state.maxConcurrentFileReads).toBe(10)
+		})
+
+		it("should map maxConcurrentFileReads of 1 for single file reads only", () => {
+			const config: CLIConfig = {
+				...baseConfig,
+				maxConcurrentFileReads: 1,
+			}
+
+			const state = mapConfigToExtensionState(config)
+
+			expect(state.maxConcurrentFileReads).toBe(1)
+		})
+	})
 })

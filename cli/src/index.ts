@@ -311,6 +311,17 @@ program
 		await debugFunction()
 	})
 
+// Models command - list available models as JSON for programmatic use
+program
+	.command("models")
+	.description("List available models for the current provider as JSON")
+	.option("--provider <id>", "Use specific provider instead of default")
+	.option("--json", "Output as JSON (default)", true)
+	.action(async (options: { provider?: string; json?: boolean }) => {
+		const { modelsApiCommand } = await import("./commands/models-api.js")
+		await modelsApiCommand(options)
+	})
+
 // Handle process termination signals
 process.on("SIGINT", async () => {
 	if (cli?.requestExitConfirmation()) {
