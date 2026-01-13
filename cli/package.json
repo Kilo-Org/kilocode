@@ -11,6 +11,7 @@
 	"scripts": {
 		"build": "node esbuild.config.mjs",
 		"dev": "pnpm build --watch",
+		"dev:setup": "pnpm build && pnpm deps:install",
 		"deps:install": "npm install --omit=dev --prefix ./dist",
 		"deps:freeze": "npm shrinkwrap --prefix ./dist",
 		"shrinkwrap": "pnpm run deps:install && pnpm run deps:freeze && cp ./dist/npm-shrinkwrap.json ./npm-shrinkwrap.dist.json",
@@ -85,8 +86,8 @@
 		"lodash.debounce": "^4.0.8",
 		"lru-cache": "^11.2.4",
 		"mammoth": "^1.11.0",
-		"marked": "^11.2.0",
-		"marked-terminal": "^6.2.0",
+		"marked": "^15.0.0",
+		"marked-terminal": "^7.3.0",
 		"monaco-vscode-textmate-theme-converter": "^0.1.7",
 		"node-cache": "^5.1.2",
 		"node-ipc": "npm:catrielmuller-node-ipc@12.0.1",
