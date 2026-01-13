@@ -511,6 +511,14 @@ function handleApprovalKeys(get: Getter, set: Setter, key: Key) {
 	// Guard against empty options array to prevent NaN from modulo 0
 	if (options.length === 0) return
 
+	// Check if the key matches any option's hotkey (for number keys 1, 2, 3, etc.)
+	const hotkeyIndex = options.findIndex((opt) => opt.hotkey === key.name)
+	if (hotkeyIndex !== -1) {
+		set(selectedIndexAtom, hotkeyIndex)
+		set(executeSelectedAtom)
+		return
+	}
+
 	switch (key.name) {
 		case "down":
 			set(selectedIndexAtom, (selectedIndex + 1) % options.length)

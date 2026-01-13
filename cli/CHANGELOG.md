@@ -1,5 +1,31 @@
 # @kilocode/cli
 
+## 0.20.0
+
+### Minor Changes
+
+- [#4943](https://github.com/Kilo-Org/kilocode/pull/4943) [`eef76d0`](https://github.com/Kilo-Org/kilocode/commit/eef76d0e4b962c7b9680e5c9226b22ecaa3fa79b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add Shift+Tab keyboard shortcut to cycle through modes in the CLI
+
+### Patch Changes
+
+- [#4941](https://github.com/Kilo-Org/kilocode/pull/4941) [`b7052cc`](https://github.com/Kilo-Org/kilocode/commit/b7052cc2030466626a832e19061675d91edb6f94) Thanks [@Drilmo](https://github.com/Drilmo)! - Add extension path resolution for F5 debug workflow
+
+    - CLI resolves extension from src/dist/ when KILOCODE_DEV_CLI_PATH is set
+    - Add watch:cli:setup and watch:cli:deps tasks for reliable CLI builds
+
+- [#4967](https://github.com/Kilo-Org/kilocode/pull/4967) [`99029a5`](https://github.com/Kilo-Org/kilocode/commit/99029a556253b82ee8a8b56445dabd65b56e4fef) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improved file update display in CLI with compact format and colored diffs
+
+- [#4949](https://github.com/Kilo-Org/kilocode/pull/4949) [`f56d88a`](https://github.com/Kilo-Org/kilocode/commit/f56d88af3697993b2b33863741d5c47cd06e17be) Thanks [@eshurakov](https://github.com/eshurakov)! - Add --attach flag for file attachments in CLI
+
+- [#4959](https://github.com/Kilo-Org/kilocode/pull/4959) [`2dce098`](https://github.com/Kilo-Org/kilocode/commit/2dce098cb2f2476fb9978dcbb49b5070ba96a296) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - feat(cli): add word-by-word cursor navigation
+
+    Adds support for word-by-word cursor navigation in the CLI text input:
+
+    - `Meta+b` / `Meta+Left` to move to the beginning of the previous word
+    - `Meta+f` / `Meta+Right` to move to the beginning of the next word
+
+    This enhances the editing experience with Emacs-style keybindings and standard Meta+Arrow key navigation.
+
 ## 0.19.3
 
 ### Patch Changes

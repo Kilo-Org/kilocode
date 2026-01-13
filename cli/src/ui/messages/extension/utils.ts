@@ -200,6 +200,8 @@ export function getToolIcon(tool: string): string {
 			return "📖"
 		case "runSlashCommand":
 			return "▶"
+		case "deleteFile":
+			return "🗑️"
 		default:
 			return "⚙"
 	}
