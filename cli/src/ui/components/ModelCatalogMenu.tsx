@@ -24,7 +24,7 @@ import type { ModelCatalogItem } from "../../types/modelCatalog.js"
 const SORT_LABELS: Record<string, string> = {
 	preferred: "Preferred",
 	name: "Name",
-	context: "Ctx",
+	context: "Context",
 	price: "Price",
 }
 
@@ -194,7 +194,7 @@ const ModelList: React.FC<ModelListProps> = ({ items, selectedIndex }) => {
 
 						<Text color={theme.ui.text.dimmed}>
 							{" "}
-							({Math.floor((item.model.contextWindow || 0) / 1000)}K ctx)
+							({Math.floor((item.model.contextWindow || 0) / 1000)}K context)
 						</Text>
 
 						{item.model.supportsImages && <Text color={theme.ui.text.dimmed}> [Images]</Text>}

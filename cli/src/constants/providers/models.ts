@@ -1,5 +1,6 @@
 import type { ProviderName, ProviderSettings } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
+import { providerNames } from "@roo-code/types"
 
 // Import model definitions from @roo-code/types
 import {
@@ -636,58 +637,7 @@ export function prettyModelName(modelId: string): string {
  * All providers that have model definitions
  * Used for iterating through all providers in the model catalog
  */
-export const ALL_PROVIDERS: readonly ProviderName[] = [
-	// Dynamic providers
-	"openrouter",
-	"vercel-ai-gateway",
-	"huggingface",
-	"litellm",
-	"kilocode",
-	"ovhcloud",
-	"gemini",
-	"inception",
-	"synthetic",
-	"sap-ai-core",
-	"deepinfra",
-	"io-intelligence",
-	"requesty",
-	"unbound",
-	"glama",
-	"roo",
-	"chutes",
-	"nano-gpt",
-	// Local providers
-	"ollama",
-	"lmstudio",
-	// Internal providers
-	"vscode-lm",
-	// Custom providers
-	"openai",
-	// Faux providers
-	"fake-ai",
-	"human-relay",
-	// Static model providers
-	"anthropic",
-	"bedrock",
-	"baseten",
-	"cerebras",
-	"claude-code",
-	"doubao",
-	"deepseek",
-	"featherless",
-	"fireworks",
-	"gemini-cli",
-	"groq",
-	"mistral",
-	"moonshot",
-	"minimax",
-	"openai-native",
-	"qwen-code",
-	"sambanova",
-	"vertex",
-	"xai",
-	"zai",
-] as const
+export const ALL_PROVIDERS: readonly ProviderName[] = providerNames satisfies readonly ProviderName[]
 
 /**
  * Get all models from all providers

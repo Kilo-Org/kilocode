@@ -1204,15 +1204,7 @@ async function handleClipboardImagePaste(get: Getter, set: Setter, fallbackText?
  * Model catalog keyboard handler
  */
 function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
-	const _visibleItems = get(modelCatalogVisibleAtom)
-	const _page = get(prevModelCatalogPageAtom)
-	const _pageCount = get(nextModelCatalogPageAtom)
 	const search = get(modelCatalogSearchAtom)
-
-	// Suppress unused variable warnings
-	void _visibleItems
-	void _page
-	void _pageCount
 
 	// Ignore paste events in model catalog mode — pasted text should not
 	// be injected into other buffers or cause unexpected copying.
@@ -1238,7 +1230,6 @@ function handleModelCatalogKeys(get: Getter, set: Setter, key: Key): void {
 			return
 
 		case "backspace":
-			// Handle backspace for search - remove last character
 			if (search.length > 0) {
 				set(setModelCatalogSearchAtom, search.slice(0, -1))
 			}
