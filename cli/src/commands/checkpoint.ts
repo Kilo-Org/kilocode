@@ -212,8 +212,18 @@ async function handleEnable(context: CommandContext): Promise<void> {
 }
 
 /**
- * Handle /checkpoint disable
+ * Get the checkpoints path based on the current platform
  */
+function getCheckpointsPath(): string {
+	if (process.platform === "win32") {
+		return "%USERPROFILE%\\.kilocode\\cli\\global\\tasks\\*\\checkpoints\\"
+	}
+	return "~/.kilocode/cli/global/tasks/*/checkpoints/"
+}
+
+/**
+	* Handle /checkpoint disable
+	*/
 async function handleDisable(context: CommandContext): Promise<void> {
 	const { addMessage, sendWebviewMessage } = context
 
@@ -225,11 +235,11 @@ async function handleDisable(context: CommandContext): Promise<void> {
 			updatedSettings: { enableCheckpoints: false },
 		})
 
+		const checkpointsPath = getCheckpointsPath()
 		addMessage({
 			...generateMessage(),
 			type: "system",
-			content:
-				"Checkpoints **disabled**. No new checkpoints will be created.\n\n**Note:** Existing checkpoints in `~/.kilocode/cli/global/tasks/*/checkpoints/` can be manually deleted to free disk space.",
+			content: `Checkpoints **disabled**. No new checkpoints will be created.\n\n**Note:** Existing checkpoints in \`${checkpointsPath}\` can be manually deleted to free disk space.`,
 		})
 
 		logs.info("Checkpoints disabled successfully", "checkpoint")

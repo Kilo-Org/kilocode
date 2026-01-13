@@ -190,6 +190,8 @@ describe("/checkpoint command", () => {
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.content).toContain("Existing checkpoints")
 			expect(message.content).toContain("manually deleted")
+			// Should contain a path (either Unix or Windows style)
+			expect(message.content).toMatch(/checkpoints/)
 		})
 
 		it("should handle errors when disabling checkpoints", async () => {
