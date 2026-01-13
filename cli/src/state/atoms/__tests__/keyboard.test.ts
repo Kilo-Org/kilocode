@@ -20,7 +20,7 @@ import {
 } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
-import { chatMessagesAtom } from "../extension.js"
+import { chatMessagesAtom, extensionModeAtom, customModesAtom } from "../extension.js"
 import { extensionServiceAtom, isServiceReadyAtom } from "../service.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
@@ -1151,6 +1151,125 @@ describe("keypress atoms", () => {
 
 			// Exit prompt should be visible
 			expect(store.get(exitPromptVisibleAtom)).toBe(true)
+		})
+
+		it("should cycle to next mode when Shift+Tab is pressed", async () => {
+			// Set initial mode to "code"
+			store.set(extensionModeAtom, "code")
+			store.set(customModesAtom, [])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have cycled to the next mode
+			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator
+			// code is at index 1, so next is ask at index 2
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("ask")
+		})
+
+		it("should wrap around to first mode when at the last mode", async () => {
+			// Set initial mode to the last default mode
+			// DEFAULT_MODES order: architect, code, ask, debug, orchestrator
+			store.set(extensionModeAtom, "orchestrator")
+			store.set(customModesAtom, [])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have wrapped around to the first mode (architect)
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("architect")
+		})
+
+		it("should include custom modes in the cycle", async () => {
+			// Set initial mode to "orchestrator" (last default mode)
+			store.set(extensionModeAtom, "orchestrator")
+			// Add a custom mode
+			store.set(customModesAtom, [
+				{
+					slug: "custom-mode",
+					name: "Custom Mode",
+					description: "A custom mode for testing",
+					roleDefinition: "You are a custom assistant",
+					groups: [],
+				},
+			])
+
+			// Press Shift+Tab
+			const shiftTabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, shiftTabKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
+			// Should have cycled to the custom mode (after orchestrator)
+			const newMode = store.get(extensionModeAtom)
+			expect(newMode).toBe("custom-mode")
+		})
+
+		it("should not cycle mode when Tab is pressed without Shift", async () => {
+			// Set initial mode
+			store.set(extensionModeAtom, "code")
+			store.set(customModesAtom, [])
+
+			// Type some text first to avoid history mode
+			const chars = ["h", "i"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Tab without Shift
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			await store.set(keyboardHandlerAtom, tabKey)
+
+			// Mode should remain unchanged
+			const mode = store.get(extensionModeAtom)
+			expect(mode).toBe("code")
 		})
 	})
 

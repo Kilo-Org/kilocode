@@ -56,6 +56,23 @@ const afterBuildPlugin = {
 	},
 }
 
+// Problem matcher plugin for VS Code task integration
+const esbuildProblemMatcherPlugin = {
+	name: "esbuild-problem-matcher",
+	setup(build) {
+		build.onStart(() => console.log("[esbuild-problem-matcher#onStart]"))
+		build.onEnd((result) => {
+			result.errors.forEach(({ text, location }) => {
+				console.error(`✘ [ERROR] ${text}`)
+				if (location && location.file) {
+					console.error(`    ${location.file}:${location.line}:${location.column}:`)
+				}
+			})
+			console.log("[esbuild-problem-matcher#onEnd]")
+		})
+	},
+}
+
 const config = {
 	entryPoints: ["src/index.ts"],
 	bundle: true,
@@ -169,7 +186,7 @@ const __dirname = __dirname__(__filename);
 	minify: false,
 	treeShaking: true,
 	logLevel: "info",
-	plugins: [afterBuildPlugin],
+	plugins: [esbuildProblemMatcherPlugin, afterBuildPlugin],
 	alias: {
 		'is-in-ci': path.resolve(__dirname, 'src/patches/is-in-ci.ts'),
 	}

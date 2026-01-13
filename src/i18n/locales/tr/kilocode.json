@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (devre dışı)",
-				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
+				"noCredits": "**Hesabınızda kredi yok**\n\nKilo Code hesabınızda kredi bulunmuyor. Otomatik tamamlamayı kullanmak için lütfen hesabınıza kredi ekleyin.\n\n[Ayarları Aç](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Otomatik tamamlama modeli yapılandırılmadı**\n\nOtomatik tamamlamayı etkinleştirmek için desteklenen sağlayıcılardan biriyle bir profil ekleyin: {{providers}}.\n\n[Ayarları Aç](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
 				"model": "Model:",
@@ -203,5 +204,9 @@
 			"invalidApiKey": "OpenAI API anahtarınız geçersiz veya Realtime API'ye erişim izni bulunmuyor. Lütfen API anahtarınızı kontrol edin ve tekrar deneyin.",
 			"unknown": "Bağlantı başarısız oldu. Lütfen yapılandırmanızı kontrol edin ve tekrar deneyin."
 		}
+	},
+	"configDiscovery": {
+		"added": "Kilo Kodu: {{source}} {{configType}}: {{name}}{{modeStr}} eklendi.",
+		"removed": "Kilo Kodu: Kaldırıldı {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }
