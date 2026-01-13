@@ -11,6 +11,7 @@
 	"scripts": {
 		"build": "node esbuild.config.mjs",
 		"dev": "pnpm build --watch",
+		"dev:setup": "pnpm build && pnpm deps:install",
 		"deps:install": "npm install --omit=dev --prefix ./dist",
 		"deps:freeze": "npm shrinkwrap --prefix ./dist",
 		"shrinkwrap": "pnpm run deps:install && pnpm run deps:freeze && cp ./dist/npm-shrinkwrap.json ./npm-shrinkwrap.dist.json",
