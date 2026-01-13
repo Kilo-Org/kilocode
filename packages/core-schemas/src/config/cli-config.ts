@@ -4,6 +4,12 @@ import { autoApprovalConfigSchema } from "./auto-approval.js"
 import { themeSchema, themeIdSchema } from "../theme/theme.js"
 
 /**
+ * Default maximum number of files that can be read in a single read_file request.
+ * This is a CLI-specific constant that matches the extension's default value.
+ */
+export const DEFAULT_MAX_CONCURRENT_FILE_READS = 5
+
+/**
  * CLI configuration schema
  */
 export const cliConfigSchema = z.object({
@@ -15,6 +21,7 @@ export const cliConfigSchema = z.object({
 	autoApproval: autoApprovalConfigSchema.optional(),
 	theme: themeIdSchema.optional(),
 	customThemes: z.record(themeSchema).optional(),
+	maxConcurrentFileReads: z.number().min(1).default(DEFAULT_MAX_CONCURRENT_FILE_READS).optional(),
 })
 
 // Inferred type

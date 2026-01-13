@@ -1,6 +1,7 @@
 import type { CLIConfig, ProviderConfig } from "./types.js"
 import type { ExtensionState, ProviderSettings, ProviderSettingsEntry } from "../types/messages.js"
 import { logs } from "../services/logs.js"
+import { DEFAULT_MAX_CONCURRENT_FILE_READS } from "@kilocode/core-schemas"
 
 export function mapConfigToExtensionState(
 	config: CLIConfig,
@@ -69,6 +70,8 @@ export function mapConfigToExtensionState(
 			alwaysAllowFollowupQuestions: autoApprovalEnabled && (autoApproval?.question?.enabled ?? false),
 			followupAutoApproveTimeoutMs: (autoApproval?.question?.timeout ?? 60) * 1000,
 			alwaysAllowUpdateTodoList: autoApprovalEnabled && (autoApproval?.todo?.enabled ?? false),
+			// Context management settings
+			maxConcurrentFileReads: config.maxConcurrentFileReads ?? DEFAULT_MAX_CONCURRENT_FILE_READS,
 		}
 	} catch (error) {
 		logs.error("Failed to map config to extension state", "ConfigMapper", { error })
