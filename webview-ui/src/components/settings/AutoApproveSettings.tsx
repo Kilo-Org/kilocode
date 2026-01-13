@@ -23,6 +23,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowWrite?: boolean
 	alwaysAllowWriteOutsideWorkspace?: boolean
 	alwaysAllowWriteProtected?: boolean
+	alwaysAllowDelete?: boolean
 	alwaysAllowBrowser?: boolean
 	alwaysApproveResubmit?: boolean
 	requestDelaySeconds: number
@@ -73,6 +74,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowWrite,
 	alwaysAllowWriteOutsideWorkspace,
 	alwaysAllowWriteProtected,
+	alwaysAllowDelete,
 	alwaysAllowBrowser,
 	alwaysApproveResubmit,
 	requestDelaySeconds,
@@ -200,6 +202,7 @@ export const AutoApproveSettings = ({
 					<AutoApproveToggle
 						alwaysAllowReadOnly={alwaysAllowReadOnly}
 						alwaysAllowWrite={alwaysAllowWrite}
+						alwaysAllowDelete={alwaysAllowDelete}
 						alwaysAllowBrowser={alwaysAllowBrowser}
 						alwaysApproveResubmit={alwaysApproveResubmit}
 						alwaysAllowMcp={alwaysAllowMcp}
