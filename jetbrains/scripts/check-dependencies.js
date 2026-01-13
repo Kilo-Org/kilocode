@@ -309,21 +309,6 @@ function checkBuildSystem() {
 	const gradlew = path.join(pluginDir, process.platform === "win32" ? "gradlew.bat" : "gradlew")
 	const buildGradle = path.join(pluginDir, "build.gradle.kts")
 	const gradleProps = path.join(pluginDir, "gradle.properties")
-	const gradlePropsTemplate = path.join(pluginDir, "gradle.properties.template")
-
-	// Auto-generate gradle.properties from template if missing
-	if (!fs.existsSync(gradleProps) && fs.existsSync(gradlePropsTemplate)) {
-		try {
-			printWarning("gradle.properties is missing, generating from template...")
-			let content = fs.readFileSync(gradlePropsTemplate, "utf8")
-			// Use a default version for CI check - strict version sync happens later via sync:version
-			content = content.replace("{{VERSION}}", "0.0.0-dev")
-			fs.writeFileSync(gradleProps, content)
-			printFix("Generated gradle.properties from template")
-		} catch (error) {
-			printError(`Failed to generate gradle.properties: ${error.message}`)
-		}
-	}
 
 	if (fs.existsSync(gradlew) && fs.existsSync(buildGradle) && fs.existsSync(gradleProps)) {
 		printSuccess("Gradle build system is configured")
