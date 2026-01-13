@@ -34,10 +34,10 @@
 				"--exec",
 				"pnpm install"
 			],
-			"group": "none",
+			"group": "build",
 			"isBackground": true,
 			"presentation": {
-				"group": "none",
+				"group": "watch:core",
 				"reveal": "always"
 			},
 			"problemMatcher": {
@@ -66,7 +66,7 @@
 			},
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},
@@ -89,7 +89,7 @@
 			},
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},
@@ -98,17 +98,49 @@
 			"dependsOn": ["watch:pnpm"],
 			"type": "shell",
 			"command": "npx turbo watch:tsc",
-			"group": "none",
+			"group": "build",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {
-				"group": "none",
+				"group": "watch:core",
 				"reveal": "always"
 			}
 		},
 		{
-			"label": "watch:cli",
+			"label": "watch:cli:setup",
 			"dependsOn": ["watch:pnpm"],
+			"type": "shell",
+			"command": "node -e \"require('fs').existsSync('cli/dist/node_modules') || process.exit(1)\" || pnpm --filter @kilocode/cli dev:setup",
+			"group": "build",
+			"presentation": {
+				"group": "watch:cli",
+				"reveal": "silent"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "watch:cli:deps",
+			"dependsOn": ["watch:cli:setup"],
+			"type": "shell",
+			"command": "npx nodemon --watch cli/package.dist.json --exec \"pnpm --filter @kilocode/cli deps:install\"",
+			"group": "build",
+			"isBackground": true,
+			"presentation": {
+				"group": "watch:cli",
+				"reveal": "silent"
+			},
+			"problemMatcher": {
+				"pattern": { "regexp": "^$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "\\[nodemon\\] starting",
+					"endsPattern": "\\[nodemon\\] clean exit - waiting for changes before restart"
+				}
+			}
+		},
+		{
+			"label": "watch:cli",
+			"dependsOn": ["watch:cli:setup", "watch:cli:deps"],
 			"type": "shell",
 			"command": "pnpm --filter @kilocode/cli dev",
 			"group": "build",
@@ -125,7 +157,7 @@
 			},
 			"isBackground": true,
 			"presentation": {
-				"group": "watch",
+				"group": "watch:cli",
 				"reveal": "always"
 			}
 		},
