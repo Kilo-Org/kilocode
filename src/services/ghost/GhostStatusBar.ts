@@ -65,10 +65,10 @@ export class GhostStatusBar {
 		this.statusBar.dispose()
 	}
 
-	// kilocode_change start - Show status message on click
+	// kilocode_change start - Show status dialog on click
 	private showStatusMessage() {
 		if (this.props.hasKilocodeProfileWithNoBalance) {
-			vscode.window.showWarningMessage(t("kilocode:ghost.statusBar.tooltip.noCredits"))
+			vscode.window.showWarningMessage(t("kilocode:ghost.statusBar.tooltip.noCredits"), { modal: true })
 			return
 		}
 		if (this.props.hasNoUsableProvider) {
@@ -76,6 +76,7 @@ export class GhostStatusBar {
 			const providerList = providers.join(", ")
 			vscode.window.showWarningMessage(
 				t("kilocode:ghost.statusBar.tooltip.noUsableProvider", { providers: providerList }),
+				{ modal: true },
 			)
 			return
 		}
@@ -83,7 +84,7 @@ export class GhostStatusBar {
 		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		const message = [
+		const details = [
 			t("kilocode:ghost.statusBar.tooltip.completionSummary", {
 				count: this.props.completionCount,
 				startTime: sessionStartTime,
@@ -98,9 +99,9 @@ export class GhostStatusBar {
 				: undefined,
 		]
 			.filter(Boolean)
-			.join(" | ")
+			.join("\n\n")
 
-		vscode.window.showInformationMessage(message)
+		vscode.window.showInformationMessage(details, { modal: true })
 	}
 	// kilocode_change end
 

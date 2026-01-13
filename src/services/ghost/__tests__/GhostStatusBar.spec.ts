@@ -104,26 +104,30 @@ describe("GhostStatusBar", () => {
 	})
 
 	describe("click behavior", () => {
-		it("should show information message with completion summary when clicked", () => {
+		it("should show modal information dialog with completion summary when clicked", () => {
 			statusBar.update(defaultProps)
 			registeredCommandCallback()
 
-			expect(vscode.window.showInformationMessage).toHaveBeenCalled()
+			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(expect.any(String), { modal: true })
 		})
 
-		it("should show warning message when no credits", () => {
+		it("should show modal warning dialog when no credits", () => {
 			statusBar.update({ ...defaultProps, hasKilocodeProfileWithNoBalance: true })
 			registeredCommandCallback()
 
-			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith("kilocode:ghost.statusBar.tooltip.noCredits")
+			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+				"kilocode:ghost.statusBar.tooltip.noCredits",
+				{ modal: true },
+			)
 		})
 
-		it("should show warning message when no usable provider", () => {
+		it("should show modal warning dialog when no usable provider", () => {
 			statusBar.update({ ...defaultProps, hasNoUsableProvider: true })
 			registeredCommandCallback()
 
 			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
 				expect.stringContaining("kilocode:ghost.statusBar.tooltip.noUsableProvider"),
+				{ modal: true },
 			)
 		})
 	})
