@@ -132,6 +132,47 @@ Can you help me understand what's causing it?
 
 ---
 
+## Changing the Slackbot Model
+
+The Slackbot uses the AI models configured in your Kilo Code account. You can change which model the Slackbot uses to optimize for different tasks or cost considerations.
+
+### How to Change the Model
+
+1. **Navigate to your Kilo Code dashboard** at [https://app.kilo.ai](https://app.kilo.ai)
+2. **Go to Settings → Providers** in the sidebar
+3. **Select or create an API Configuration Profile** with your desired model
+   - For personal use: Configure in your [Profile settings](https://app.kilo.ai/profile)
+   - For team use: Configure in your [Organization settings](https://app.kilo.ai/organizations)
+
+### Recommended Models for Slackbot
+
+Different models offer different tradeoffs between speed, cost, and capability:
+
+- **Fast/Budget models** (Qwen, DeepSeek, GLM-4.5): Great for quick questions and simple tasks
+- **Mid-tier models** (Claude 3.5 Sonnet, GPT-4o): Balanced performance for most coding tasks
+- **Premium models** (Claude 4 Sonnet, GPT-5 class): Best for complex architectural decisions and difficult problems
+
+### Setting Up Different Models for Different Modes
+
+You can configure the Slackbot to use different models for different types of requests:
+
+1. Create multiple [API Configuration Profiles](/features/api-configuration-profiles) with different models
+2. Associate specific profiles with different modes
+3. The Slackbot will use the appropriate model based on the task complexity
+
+For example:
+- Create a "Slackbot - Quick" profile with a fast, budget model for simple questions
+- Create a "Slackbot - Complex" profile with a premium model for detailed code reviews
+
+### Model Selection Tips
+
+- **Simple questions**: Use faster, cheaper models to save credits
+- **Code reviews**: Use more capable models for thorough analysis
+- **Implementation requests**: Use models with good coding capabilities
+- **Debugging**: Use reasoning-capable models for complex issues
+
+---
+
 ## Troubleshooting
 
 **"The bot isn't responding."**  
