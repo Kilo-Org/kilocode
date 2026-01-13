@@ -220,9 +220,8 @@ describe("TelemetryService", () => {
 			ciMode: false,
 		})
 
-		// In test environment without KILOCODE_POSTHOG_API_KEY, telemetry will be disabled
-		// The service initializes successfully but isEnabled() returns false without an API key
-		expect(service.isEnabled()).toBe(false)
+		// With the mocked KILOCODE_POSTHOG_API_KEY, telemetry should be enabled
+		expect(service.isEnabled()).toBe(true)
 	})
 
 	it("should track session events", async () => {
