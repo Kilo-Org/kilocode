@@ -20,7 +20,7 @@ export const modelCatalogVisibleAtom = atom<boolean>(false)
 
 export const modelCatalogSearchAtom = atom<string>("")
 
-export const modelCatalogProviderFilterAtom = atom<ProviderName | null>(null)
+export const modelCatalogProviderFilterAtom = atom<ProviderName | "all" | "kilocode">("kilocode")
 
 export const modelCatalogSortAtom = atom<ModelSortOption>("preferred")
 
@@ -55,7 +55,7 @@ export const modelCatalogItemsAtom = atom<ModelCatalogItem[]>((get) => {
 			search,
 			sort,
 			capabilities,
-			provider: providerFilter,
+			provider: providerFilter === "all" ? null : (providerFilter as ProviderName),
 		},
 	})
 })
@@ -168,11 +168,23 @@ export const cycleModelCatalogProviderFilterAtom = atom(null, (get, set) => {
 
 	const providers = Object.keys(allModels) as ProviderName[]
 
-	const currentIndex = currentFilter === null ? -1 : providers.indexOf(currentFilter)
-	const nextIndex = (currentIndex + 1) % providers.length
-	const nextProvider = providers[nextIndex]
-	if (nextProvider !== undefined) {
-		set(modelCatalogProviderFilterAtom, nextProvider)
+	// Start from kilocode, then cycle through all providers, and "all" is always the last option
+	const sortedProviders: Array<ProviderName | "kilocode"> = [
+		"kilocode",
+		...providers.filter((p) => p !== "kilocode"),
+	] as Array<ProviderName | "kilocode">
+
+	const currentIndex =
+		currentFilter === "all" ? sortedProviders.length : sortedProviders.indexOf(currentFilter as ProviderName)
+	const nextIndex = (currentIndex + 1) % (sortedProviders.length + 1) // +1 for "all"
+
+	if (nextIndex === sortedProviders.length) {
+		set(modelCatalogProviderFilterAtom, "all")
+	} else {
+		const nextProvider = sortedProviders[nextIndex]
+		if (nextProvider !== undefined) {
+			set(modelCatalogProviderFilterAtom, nextProvider)
+		}
 	}
 	set(modelCatalogPageAtom, 0)
 	set(modelCatalogSelectedIndexAtom, 0)

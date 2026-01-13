@@ -260,7 +260,7 @@ export function useCommandContext(): UseCommandContextReturn {
 
 					openModelCatalog({
 						allModels,
-						currentProvider: currentProvider?.provider ?? "anthropic",
+						currentProvider: currentProvider?.provider ?? "kilocode",
 						currentModelId,
 					})
 				},
