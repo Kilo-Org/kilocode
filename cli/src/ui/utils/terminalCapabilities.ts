@@ -1,7 +1,63 @@
 /**
  * Terminal capability detection utilities
  * Detects support for Kitty keyboard protocol and other advanced features
+ * Also handles Windows terminal compatibility for proper display rendering
  */
+
+/**
+ * Check if running on Windows platform
+ */
+export function isWindowsTerminal(): boolean {
+	return process.platform === "win32"
+}
+
+/**
+ * Get the appropriate terminal clear sequence for the current platform
+ *
+ * On Windows cmd.exe, the \x1b[3J (clear scrollback buffer) escape sequence
+ * is not properly supported and can cause display artifacts like raw escape
+ * sequences appearing in the output (e.g., [\r\n\t...]).
+ *
+ * This function returns a platform-appropriate clear sequence:
+ * - Windows: \x1b[2J\x1b[H (clear screen + cursor home)
+ * - Unix/Mac: \x1b[2J\x1b[3J\x1b[H (clear screen + clear scrollback + cursor home)
+ */
+export function getTerminalClearSequence(): string {
+	if (isWindowsTerminal()) {
+		// Windows cmd.exe doesn't properly support \x1b[3J (clear scrollback)
+		// Using only clear screen and cursor home to avoid display artifacts
+		return "\x1b[2J\x1b[H"
+	}
+	// Full clear sequence for Unix/Mac terminals
+	return "\x1b[2J\x1b[3J\x1b[H"
+}
+
+/**
+ * Normalize line endings for internal processing
+ * Converts all line endings to LF (\n) for consistent internal handling
+ */
+export function normalizeLineEndings(text: string): string {
+	// Convert CRLF to LF, then any remaining CR to LF
+	return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+}
+
+/**
+ * Normalize line endings for terminal output
+ * On Windows, converts LF to CRLF for proper display in cmd.exe
+ * On Unix/Mac, returns the text unchanged
+ *
+ * This prevents display artifacts where bare LF characters cause
+ * improper line rendering in Windows terminals.
+ */
+export function normalizeLineEndingsForOutput(text: string): string {
+	if (isWindowsTerminal()) {
+		// First normalize to LF, then convert to CRLF for Windows
+		// This prevents double-conversion of already CRLF strings
+		const normalized = normalizeLineEndings(text)
+		return normalized.replace(/\n/g, "\r\n")
+	}
+	return text
+}
 
 /**
  * Check if terminal supports Kitty protocol
