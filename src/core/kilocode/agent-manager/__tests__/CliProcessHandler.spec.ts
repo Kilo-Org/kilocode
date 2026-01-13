@@ -342,7 +342,10 @@ describe("CliProcessHandler", () => {
 
 					expect(spawnMock).toHaveBeenCalledWith(
 						expectedCommand,
-						expect.arrayContaining(["/c", "C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd"]),
+						expect.arrayContaining([
+							"/c",
+							"C:\\Users\\test\\.kilocode\\cli\\pkg\\node_modules\\.bin\\kilocode.cmd",
+						]),
 						expect.objectContaining({ shell: false }),
 					)
 					const args = spawnMock.mock.calls[0]?.[1] as string[]

@@ -135,7 +135,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
-				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
+				"noCredits": "**ไม่มีเครดิตในบัญชีของคุณ**\n\nบัญชี Kilo Code ของคุณไม่มีเครดิต หากต้องการใช้การเติมข้อความอัตโนมัติ กรุณาเพิ่มเครดิตในบัญชีของคุณ\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**ไม่ได้กำหนดค่าโมเดลการเติมข้อความอัตโนมัติ**\n\nหากต้องการเปิดใช้งานการเติมข้อความอัตโนมัติ ให้เพิ่มโปรไฟล์กับผู้ให้บริการที่รองรับเหล่านี้: {{providers}}\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:",

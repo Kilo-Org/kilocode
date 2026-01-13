@@ -135,7 +135,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (zakázáno)",
-				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
+				"noCredits": "**Na tvém účtu nejsou žádné kredity**\n\nTvůj účet Kilo Code nemá žádné kredity. Pro použití automatického doplňování prosím přidej kredity na svůj účet.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Není nakonfigurován žádný model automatického doplňování**\n\nPro povolení automatického doplňování přidej profil s jedním z těchto podporovaných poskytovatelů: {{providers}}.\n\n[Otevřít Nastavení](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Celkové náklady relace:",
 				"provider": "Poskytovatel:",
 				"model": "Model:",

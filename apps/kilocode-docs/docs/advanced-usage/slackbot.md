@@ -23,7 +23,7 @@ The Kilo Slackbot brings the power of Kilo Code directly into your Slack workspa
 Before using the Kilo Slackbot:
 
 - You must have a **Kilo Code account** with available credits
-- Your **GitHub Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so the Slackbot can access your repositories 
+- Your **GitHub Integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so the Slackbot can access your repositories
 
 To install the Kilo Slackbot, simply go to the integrations menu in the sidebar on https://app.kilo.ai and set up the Slack integration.
 
@@ -40,6 +40,7 @@ You can message the Kilo Slackbot directly through Slack DMs for private convers
 3. Ask your question or describe what you need
 
 This is ideal for:
+
 - Private questions about your code
 - Sensitive debugging sessions
 - Personal productivity tasks
@@ -53,6 +54,7 @@ Mention the bot in any channel where it's been added:
 ```
 
 This is great for:
+
 - Team discussions where AI assistance would help
 - Collaborative debugging sessions
 - Getting quick answers during code reviews
@@ -82,6 +84,7 @@ When your team identifies an issue or improvement in a Slack thread, ask the bot
 ```
 
 The bot can:
+
 - Read the context from the thread
 - Understand the proposed solution
 - Create a branch with the implementation
@@ -132,16 +135,32 @@ Can you help me understand what's causing it?
 
 ---
 
+## Changing the Slackbot Model
+
+You can customize which AI model the Slackbot uses for generating responses. The model affects the quality, speed, and capabilities of the Slackbot's responses.
+
+1. Go to your [Kilo Workspace](https://app.kilo.ai/)
+2. Navigate to **Integrations** > **Slack**
+3. Select your preferred model for Kilo for Slack
+
+The Slackbot will start using the new model immediately for subsequent requests.
+
+### Available Models
+
+The Slackbot supports over 400+ models across different providers.
+
+---
+
 ## Troubleshooting
 
-**"The bot isn't responding."**  
+**"The bot isn't responding."**
 Ensure the Kilo Slackbot is installed in your workspace and has been added to the channel you're using.
 
-**"The bot can't access my repository."**  
+**"The bot can't access my repository."**
 Verify your GitHub integration is configured correctly in the [Integrations tab](https://app.kilo.ai/integrations).
 
-**"I'm getting incomplete responses."**  
+**"I'm getting incomplete responses."**
 Try breaking your request into smaller, more specific questions.
 
-**"The bot doesn't understand my codebase."**  
+**"The bot doesn't understand my codebase."**
 Make sure the repository you're asking about is connected and accessible through your GitHub integration.

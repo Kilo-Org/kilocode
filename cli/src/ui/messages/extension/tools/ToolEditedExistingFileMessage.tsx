@@ -1,40 +1,62 @@
-import React from "react"
+import React, { useMemo } from "react"
 import { Box, Text } from "ink"
 import type { ToolMessageProps, BatchDiffItem } from "../types.js"
-import { getToolIcon, formatFilePath, truncateText } from "../utils.js"
+import { formatFilePath } from "../utils.js"
+import { parseDiffContent, calculateDiffStats } from "../diff.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { getBoxWidth } from "../../../utils/width.js"
+import { DiffLine } from "./DiffLine.js"
 
 /**
  * Display file edits with diff (handles both editedExistingFile and appliedDiff tool types)
+ * Uses compact format similar to modern CLI tools:
+ * - Update(filename) header with diff stats
+ * - Colored diff with line numbers
  */
 export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ toolData }) => {
 	const theme = useTheme()
-	const icon = getToolIcon(toolData.tool)
 	const isBatch = toolData.batchDiffs && toolData.batchDiffs.length > 0
+
+	// Use content (unified diff) if available, otherwise fall back to diff (raw SEARCH/REPLACE)
+	const diffContent = toolData.content || toolData.diff || ""
+
+	// Parse diff content
+	const parsedLines = useMemo(() => parseDiffContent(diffContent), [diffContent])
+
+	// Calculate stats from parsed lines if not provided
+	const stats = useMemo(() => {
+		if (toolData.diffStats) return toolData.diffStats
+		return calculateDiffStats(parsedLines)
+	}, [toolData.diffStats, parsedLines])
+
+	// Generate diff summary text
+	const diffSummary = useMemo(() => {
+		const parts: string[] = []
+		if (stats.added > 0) {
+			parts.push(`+${stats.added}`)
+		}
+		if (stats.removed > 0) {
+			parts.push(`-${stats.removed}`)
+		}
+		return parts.length > 0 ? `⎿ ${parts.join(", ")}` : ""
+	}, [stats])
 
 	if (isBatch) {
 		return (
-			<Box
-				width={getBoxWidth(1)}
-				flexDirection="column"
-				borderStyle="single"
-				borderColor={theme.semantic.info}
-				paddingX={1}
-				marginY={1}>
+			<Box flexDirection="column" marginY={1}>
 				<Box>
 					<Text color={theme.semantic.info} bold>
-						{icon} Edit Files ({toolData.batchDiffs!.length} files)
+						⏺ Update ({toolData.batchDiffs!.length} files)
 					</Text>
 				</Box>
-				<Box flexDirection="column" marginTop={1}>
+				<Box flexDirection="column" marginTop={1} marginLeft={2}>
 					{toolData.batchDiffs!.map((batchDiff: BatchDiffItem, index: number) => (
-						<Box key={index} flexDirection="column" marginBottom={1}>
-							<Text color={theme.semantic.info}>{formatFilePath(batchDiff.path || "")}</Text>
+						<Box key={index} flexDirection="row">
+							<Text color={theme.ui.text.primary}>{formatFilePath(batchDiff.path || "")}</Text>
 							{batchDiff.isProtected && (
 								<Text color={theme.semantic.warning} dimColor>
 									{" "}
-									🔒 Protected
+									🔒
 								</Text>
 							)}
 						</Box>
@@ -44,55 +66,53 @@ export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ tool
 		)
 	}
 
+	// Determine if this is a new file or update
+	const isNewFile = toolData.tool === "newFileCreated"
+	const actionText = isNewFile ? "Create" : "Update"
+	const icon = isNewFile ? "📄" : "⏺"
+
 	return (
 		<Box flexDirection="column" marginY={1}>
+			{/* Compact header: ⏺ Update(filename) ⎿ +X, -Y */}
 			<Box>
 				<Text color={theme.semantic.info} bold>
-					{icon} Edit File: {formatFilePath(toolData.path || "")}
+					{icon} {actionText}(
+				</Text>
+				<Text color={theme.semantic.info} bold>
+					{formatFilePath(toolData.path || "")}
+				</Text>
+				<Text color={theme.semantic.info} bold>
+					)
 				</Text>
 				{toolData.isProtected && (
 					<Text color={theme.semantic.warning} dimColor>
 						{" "}
-						🔒 Protected
+						🔒
 					</Text>
 				)}
 				{toolData.isOutsideWorkspace && (
 					<Text color={theme.semantic.warning} dimColor>
 						{" "}
-						⚠ Outside workspace
+						⚠
+					</Text>
+				)}
+				{diffSummary && (
+					<Text color={theme.ui.text.dimmed} dimColor>
+						{" "}
+						{diffSummary}
 					</Text>
 				)}
 			</Box>
 
-			{toolData.diff && (
-				<Box
-					width={getBoxWidth(3)}
-					flexDirection="column"
-					borderStyle="single"
-					borderColor={theme.ui.border.default}
-					paddingX={1}
-					marginTop={1}
-					marginLeft={2}>
-					{toolData.diff
-						.split("\n")
-						.slice(0, 10)
-						.map((line, index) => {
-							const color = line.startsWith("+")
-								? theme.code.addition
-								: line.startsWith("-")
-									? theme.code.deletion
-									: line.startsWith("@@")
-										? theme.semantic.info
-										: theme.code.context
-							return (
-								<Text key={index} color={color}>
-									{truncateText(line, 80)}
-								</Text>
-							)
-						})}
-					{toolData.diff.split("\n").length > 10 && (
+			{/* Diff content with colored lines */}
+			{parsedLines.length > 0 && (
+				<Box width={getBoxWidth(3)} flexDirection="column" marginTop={1} marginLeft={2}>
+					{parsedLines.slice(0, 20).map((line, index) => (
+						<DiffLine key={index} line={line} theme={theme} showLineNumbers={true} />
+					))}
+					{parsedLines.length > 20 && (
 						<Text color={theme.ui.text.dimmed} dimColor>
-							... ({toolData.diff.split("\n").length - 10} more lines)
+							... ({parsedLines.length - 20} more lines)
 						</Text>
 					)}
 				</Box>
