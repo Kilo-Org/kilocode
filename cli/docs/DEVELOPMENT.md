@@ -7,25 +7,29 @@ We use `pnpm` for package management. Please make sure `pnpm` is installed.
 The CLI is currently built by bundling the extension core and replacing the vscode rendering parts with a cli rendering engine. To _develop_ on the CLI you need to follow a few steps:
 
 1. Install dependencies from the root workspace folder:
-   ```bash
-   pnpm install
-   ```
+
+    ```bash
+    pnpm install
+    ```
 
 2. Set up your environment file. Copy the sample and configure your API keys:
-   ```bash
-   cp .env.sample cli/dist/.env
-   # Edit cli/dist/.env with your API keys
-   ```
+
+    ```bash
+    cp .env.sample cli/dist/.env
+    # Edit cli/dist/.env with your API keys
+    ```
 
 3. Build the extension core from the root workspace folder:
-   ```bash
-   pnpm cli:bundle
-   ```
+
+    ```bash
+    pnpm cli:bundle
+    ```
 
 4. Change into the cli folder:
-   ```bash
-   cd ./cli
-   ```
+
+    ```bash
+    cd ./cli
+    ```
 
 5. Build & run the extension by running `pnpm start:dev`. If you want to use the CLI to work on its own code, you can run `pnpm start:dev -w ../` which will start it within the root workspace folder.
 

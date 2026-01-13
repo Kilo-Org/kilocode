@@ -41,7 +41,11 @@ function showAvailableModes(allModes: ModeConfig[], addMessage: CommandContext["
 	})
 }
 
-function showInvalidModeError(requestedMode: string, availableSlugs: string[], addMessage: CommandContext["addMessage"]) {
+function showInvalidModeError(
+	requestedMode: string,
+	availableSlugs: string[],
+	addMessage: CommandContext["addMessage"],
+) {
 	addMessage({
 		id: Date.now().toString(),
 		type: "error",

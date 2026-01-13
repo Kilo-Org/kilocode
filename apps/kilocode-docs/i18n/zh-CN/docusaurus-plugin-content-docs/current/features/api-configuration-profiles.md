@@ -36,19 +36,19 @@ API 配置配置文件允许您创建和切换不同的 AI 设置集。每个配
 
     - 选择您的 API 提供商
 
-                          <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-2.png" alt="提供商选择下拉菜单" width="550" />
+                            <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-2.png" alt="提供商选择下拉菜单" width="550" />
 
     - 输入 API 密钥
 
-                          <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API 密钥输入字段" width="550" />
+                            <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-3.png" alt="API 密钥输入字段" width="550" />
 
     - 选择模型
 
-                          <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="模型选择界面" width="550" />
+                            <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-8.png" alt="模型选择界面" width="550" />
 
     - 调整模型参数
 
-                          <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="模型参数调整控件" width="550" />
+                            <img src="/docs/img/api-configuration-profiles/api-configuration-profiles-5.png" alt="模型参数调整控件" width="550" />
 
 ### 切换配置文件
 

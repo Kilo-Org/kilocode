@@ -31,6 +31,8 @@ import {
 	moveToLineStartAtom,
 	moveToLineEndAtom,
 	moveToAtom,
+	moveToPreviousWordAtom,
+	moveToNextWordAtom,
 	insertCharAtom,
 	insertTextAtom,
 	insertNewlineAtom,
@@ -875,11 +877,19 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 			return
 
 		case "left":
-			set(moveLeftAtom)
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+			} else {
+				set(moveLeftAtom)
+			}
 			return
 
 		case "right":
-			set(moveRightAtom)
+			if (key.meta) {
+				set(moveToNextWordAtom)
+			} else {
+				set(moveRightAtom)
+			}
 			return
 
 		// Enter/Return
@@ -938,6 +948,21 @@ function handleTextInputKeys(get: Getter, set: Setter, key: Key) {
 		case "u":
 			if (key.ctrl) {
 				set(killLineLeftAtom)
+				return
+			}
+			break
+
+		// Word navigation (Meta/Alt key)
+		case "b":
+			if (key.meta) {
+				set(moveToPreviousWordAtom)
+				return
+			}
+			break
+
+		case "f":
+			if (key.meta) {
+				set(moveToNextWordAtom)
 				return
 			}
 			break

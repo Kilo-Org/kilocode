@@ -1,6 +1,7 @@
 ---
 title: Autocomplete
 sidebar_position: 4
+slug: /basic-usage/autocomplete
 ---
 
 # Autocomplete
@@ -102,4 +103,4 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 
 ## Related Features
 
-- [Code Actions](../features/code-actions) - Context menu options for common coding tasks
+- [Code Actions](/features/code-actions) - Context menu options for common coding tasks
