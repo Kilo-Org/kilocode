@@ -57,10 +57,10 @@
 		"noBranches": "Nie znaleziono gałęzi",
 		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
 		"openTerminal": "Otwórz terminal",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Wybierz model",
+		"modelTooltip": "Wybierz, którego modelu AI użyć w tej sesji",
+		"defaultModel": "Domyślny model",
+		"loadingModels": "Ładowanie..."
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",

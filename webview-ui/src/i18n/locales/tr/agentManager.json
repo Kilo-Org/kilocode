@@ -55,10 +55,10 @@
 		"noBranches": "Dal bulunamadı",
 		"noMatchingBranches": "Aramanla eşleşen dal yok",
 		"openTerminal": "Terminali aç",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Model seç",
+		"modelTooltip": "Bu oturum için hangi AI modelini kullanacağını seç",
+		"defaultModel": "Varsayılan model",
+		"loadingModels": "Yükleniyor..."
 	},
 	"messages": {
 		"waiting": "Ajan yanıtı bekleniyor...",

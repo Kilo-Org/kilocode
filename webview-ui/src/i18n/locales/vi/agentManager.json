@@ -55,10 +55,10 @@
 		"noBranches": "Không tìm thấy nhánh nào",
 		"noMatchingBranches": "Không có nhánh nào khớp với tìm kiếm của bạn",
 		"openTerminal": "Mở terminal",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Chọn mô hình",
+		"modelTooltip": "Chọn mô hình AI để sử dụng cho phiên này",
+		"defaultModel": "Mô hình mặc định",
+		"loadingModels": "Đang tải..."
 	},
 	"messages": {
 		"waiting": "Đang chờ phản hồi từ agent...",

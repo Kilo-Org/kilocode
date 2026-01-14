@@ -59,10 +59,10 @@
 		"noBranches": "لم يتم العثور على فروع",
 		"noMatchingBranches": "لا توجد فروع تطابق بحثك",
 		"openTerminal": "فتح الطرفية",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "اختر النموذج",
+		"modelTooltip": "اختر نموذج الذكاء الاصطناعي لهذه الجلسة",
+		"defaultModel": "النموذج الافتراضي",
+		"loadingModels": "جاري التحميل..."
 	},
 	"messages": {
 		"waiting": "في انتظار رد الوكيل...",

@@ -55,10 +55,10 @@
 		"noBranches": "Keine Branches gefunden",
 		"noMatchingBranches": "Keine Branches entsprechen deiner Suche",
 		"openTerminal": "Terminal öffnen",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Modell auswählen",
+		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
+		"defaultModel": "Standard-Modell",
+		"loadingModels": "Wird geladen..."
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",

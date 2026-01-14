@@ -55,10 +55,10 @@
 		"noBranches": "Tidak ada cabang ditemukan",
 		"noMatchingBranches": "Tidak ada cabang yang cocok dengan pencarian kamu",
 		"openTerminal": "Buka terminal",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Pilih model",
+		"modelTooltip": "Pilih model AI mana yang akan digunakan untuk sesi ini",
+		"defaultModel": "Model default",
+		"loadingModels": "Memuat..."
 	},
 	"messages": {
 		"waiting": "Menunggu respons agen...",

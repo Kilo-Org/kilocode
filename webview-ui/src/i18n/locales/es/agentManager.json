@@ -55,10 +55,10 @@
 		"noBranches": "No se encontraron ramas",
 		"noMatchingBranches": "Ninguna rama coincide con tu búsqueda",
 		"openTerminal": "Abrir terminal",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "Seleccionar modelo",
+		"modelTooltip": "Elige qué modelo de IA usar para esta sesión",
+		"defaultModel": "Modelo predeterminado",
+		"loadingModels": "Cargando..."
 	},
 	"messages": {
 		"waiting": "Esperando respuesta del agente...",

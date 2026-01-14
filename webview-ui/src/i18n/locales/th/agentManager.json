@@ -55,10 +55,10 @@
 		"noBranches": "ไม่พบสาขา",
 		"noMatchingBranches": "ไม่มีสาขาที่ตรงกับการค้นหาของคุณ",
 		"openTerminal": "เปิดเทอร์มินัล",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "เลือกโมเดล",
+		"modelTooltip": "เลือกโมเดล AI ที่จะใช้สำหรับเซสชันนี้",
+		"defaultModel": "โมเดลเริ่มต้น",
+		"loadingModels": "กำลังโหลด..."
 	},
 	"messages": {
 		"waiting": "รอการตอบกลับจากเอเจนต์...",

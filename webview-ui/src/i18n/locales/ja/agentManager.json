@@ -55,10 +55,10 @@
 		"noBranches": "ブランチが見つかりません",
 		"noMatchingBranches": "検索に一致するブランチがありません",
 		"openTerminal": "ターミナルを開く",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "モデルを選択",
+		"modelTooltip": "このセッションで使用するAIモデルを選択",
+		"defaultModel": "デフォルトモデル",
+		"loadingModels": "読み込み中..."
 	},
 	"messages": {
 		"waiting": "エージェントの応答を待っています...",

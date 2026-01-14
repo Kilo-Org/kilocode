@@ -55,10 +55,10 @@
 		"noBranches": "找不到 Branch",
 		"noMatchingBranches": "沒有符合的 Branch",
 		"openTerminal": "開啟終端機",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "選擇模型",
+		"modelTooltip": "選擇此工作階段使用的 AI 模型",
+		"defaultModel": "預設模型",
+		"loadingModels": "載入中..."
 	},
 	"messages": {
 		"waiting": "等待代理回應...",

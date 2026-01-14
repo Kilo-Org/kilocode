@@ -55,10 +55,10 @@
 		"noBranches": "कोई ब्रांच नहीं मिली",
 		"noMatchingBranches": "आपकी खोज से मेल खाने वाली कोई ब्रांच नहीं",
 		"openTerminal": "टर्मिनल खोलें",
-		"selectModel": "Select model",
-		"modelTooltip": "Choose which AI model to use for this session",
-		"defaultModel": "Default model",
-		"loadingModels": "Loading..."
+		"selectModel": "मॉडल चुनें",
+		"modelTooltip": "इस सत्र के लिए कौन सा AI मॉडल उपयोग करना है चुनें",
+		"defaultModel": "डिफ़ॉल्ट मॉडल",
+		"loadingModels": "लोड हो रहा है..."
 	},
 	"messages": {
 		"waiting": "एजेंट की प्रतिक्रिया की प्रतीक्षा में...",
