@@ -169,7 +169,13 @@
 			"cliNotFound": "Kilocode CLI not found. Please install it to use the Agent Manager.",
 			"cliMisconfigured": "Kilocode CLI is not configured. Please run 'kilocode auth' to sign in or 'kilocode config' to configure.",
 			"sessionFailed": "Failed to start agent session",
-			"sessionFailedWithMessage": "Failed to start agent session: {{message}}"
+			"sessionFailedWithMessage": "Failed to start agent session: {{message}}",
+			"cloudRequiresLogin": "Cloud agents require a Kilo Code account. Please sign in to use cloud agents.",
+			"cloudSessionFailed": "Failed to start cloud agent session: {{message}}",
+			"noGitUrl": "Cloud agents require a Git repository. Please open a folder with a Git repository."
+		},
+		"info": {
+			"cloudSessionStarted": "Cloud agent session started successfully!"
 		},
 		"actions": {
 			"updateInstructions": "Update Instructions",

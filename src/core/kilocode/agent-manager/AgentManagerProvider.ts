@@ -26,8 +26,10 @@ import { getNonce } from "../../webview/getNonce"
 import { getViteDevServerConfig } from "../../webview/getViteDevServerConfig"
 import { getRemoteUrl } from "../../../services/code-index/managed/git-utils"
 import { normalizeGitUrl } from "./normalizeGitUrl"
+import { extractRepositoryName } from "../../../utils/git"
 import type { ClineMessage } from "@roo-code/types"
 import type { ProviderSettings } from "@roo-code/types"
+import { CloudAgentService } from "../../../services/kilocode/CloudAgentService"
 import {
 	captureAgentManagerOpened,
 	captureAgentManagerSessionStarted,
@@ -243,6 +245,9 @@ export class AgentManagerProvider implements vscode.Disposable {
 					break
 				case "agentManager.startSession":
 					void this.handleStartSession(message)
+					break
+				case "agentManager.startCloudSession":
+					void this.handleStartCloudSession(message)
 					break
 				case "agentManager.stopSession":
 					this.stopAgentSession(message.sessionId as string)
@@ -1814,6 +1819,132 @@ export class AgentManagerProvider implements vscode.Disposable {
 		} catch {
 			// .git doesn't exist or can't be accessed
 			return false
+		}
+	}
+
+	/**
+	 * Handle starting a cloud agent session.
+	 * Validates the user has a kilocodeToken, then prepares and initiates a cloud session.
+	 * If no token is available, redirects the user to login.
+	 */
+	private async handleStartCloudSession(message: { [key: string]: unknown }): Promise<void> {
+		const prompt = message.prompt as string
+		if (!prompt) {
+			this.outputChannel.appendLine("[AgentManager] ERROR: Cloud session prompt is empty")
+			return
+		}
+
+		this.outputChannel.appendLine(
+			`[AgentManager] Starting cloud session with prompt: ${prompt.substring(0, 100)}...`,
+		)
+
+		// Get the kilocodeToken from provider state
+		let kilocodeToken: string | undefined
+		try {
+			const { apiConfiguration } = await this.provider.getState()
+			kilocodeToken = apiConfiguration?.kilocodeToken
+		} catch (error) {
+			this.outputChannel.appendLine(
+				`[AgentManager] Failed to get provider state: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
+		// Check if user has a valid token
+		const cloudAgentService = new CloudAgentService()
+		if (!cloudAgentService.hasValidToken(kilocodeToken)) {
+			this.outputChannel.appendLine("[AgentManager] No valid kilocodeToken found, redirecting to login")
+			// Notify webview that login is required
+			this.postMessage({ type: "agentManager.requiresLogin" })
+			// Show login prompt to user
+			const loginLabel = t("kilocode:agentManager.actions.loginCli")
+			void vscode.window
+				.showWarningMessage(t("kilocode:agentManager.errors.cloudRequiresLogin"), loginLabel)
+				.then((selection) => {
+					if (selection === loginLabel) {
+						this.runAuthInTerminal()
+					}
+				})
+			return
+		}
+
+		// Get git URL for the workspace
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+		let gitUrl: string | undefined
+		if (workspaceFolder) {
+			try {
+				gitUrl = normalizeGitUrl(await getRemoteUrl(workspaceFolder))
+			} catch (error) {
+				this.outputChannel.appendLine(
+					`[AgentManager] Could not get git URL: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+
+		if (!gitUrl) {
+			this.outputChannel.appendLine("[AgentManager] ERROR: No git URL found for workspace")
+			void vscode.window.showErrorMessage(t("kilocode:agentManager.errors.noGitUrl"))
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+			return
+		}
+
+		// Extract githubRepo from gitUrl using the shared utility
+		// This handles various URL formats including SSH aliases like github.com-kilocode
+		const githubRepo = extractRepositoryName(gitUrl)
+
+		if (!githubRepo) {
+			this.outputChannel.appendLine("[AgentManager] ERROR: Could not extract GitHub repo from git URL")
+			void vscode.window.showErrorMessage(t("kilocode:agentManager.errors.noGitUrl"))
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+			return
+		}
+
+		// Get mode and model from message or use defaults
+		const mode = (message.mode as "architect" | "code" | "ask" | "debug" | "orchestrator") ?? "code"
+		const model = (message.model as string) ?? "claude-sonnet-4-20250514"
+
+		try {
+			// Prepare the cloud session
+			this.outputChannel.appendLine(
+				`[AgentManager] Preparing cloud agent session with githubRepo: ${githubRepo}, mode: ${mode}, model: ${model}`,
+			)
+			const prepareResponse = await cloudAgentService.prepareSession({
+				githubRepo,
+				prompt,
+				mode,
+				model,
+				kilocodeToken: kilocodeToken!,
+			})
+
+			this.outputChannel.appendLine(
+				`[AgentManager] Cloud session prepared: ${prepareResponse.cloudAgentSessionId}`,
+			)
+
+			// Initiate the session
+			this.outputChannel.appendLine("[AgentManager] Initiating cloud agent session...")
+			const initiateResponse = await cloudAgentService.initiateSession(prepareResponse.cloudAgentSessionId)
+
+			this.outputChannel.appendLine(`[AgentManager] Cloud session initiated: ${JSON.stringify(initiateResponse)}`)
+
+			// Get the WebSocket stream URL for future use
+			const streamUrl = cloudAgentService.getStreamUrl(prepareResponse.cloudAgentSessionId)
+			this.outputChannel.appendLine(`[AgentManager] Cloud session stream URL: ${streamUrl}`)
+
+			// Notify webview of successful cloud session start
+			this.postMessage({
+				type: "agentManager.cloudSessionStarted",
+				cloudAgentSessionId: prepareResponse.cloudAgentSessionId,
+				streamUrl,
+			})
+
+			// Show success message
+			void vscode.window.showInformationMessage(t("kilocode:agentManager.info.cloudSessionStarted"))
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.outputChannel.appendLine(`[AgentManager] Failed to start cloud session: ${errorMsg}`)
+			void vscode.window.showErrorMessage(
+				t("kilocode:agentManager.errors.cloudSessionFailed", { message: errorMsg }),
+			)
+			this.postMessage({ type: "agentManager.startSessionFailed" })
 		}
 	}
 }

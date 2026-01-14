@@ -62,7 +62,8 @@ export const startSessionFailedCounterAtom = atom(0)
 export const sessionInputAtomFamily = atomFamily((_sessionId: string) => atom(""))
 
 // User preference for run mode (persisted across new agent forms)
-export type RunMode = "local" | "worktree"
+// kilocode_change - added "cloud" option for cloud agent support
+export type RunMode = "local" | "worktree" | "cloud"
 // Default to local until worktree mode is ready to ship
 export const preferredRunModeAtom = atom<RunMode>("local")
 

@@ -29,6 +29,7 @@ import {
 	Layers,
 	X,
 	Terminal,
+	Cloud,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -246,9 +247,9 @@ function NewAgentForm() {
 	const versionDropdownRef = useRef<HTMLDivElement>(null)
 	const startSessionFailedCounter = useAtomValue(startSessionFailedCounterAtom)
 
-	// Multi-version mode forces worktree mode
+	// Multi-version mode forces worktree mode (cloud mode is independent)
 	const isMultiVersion = versionCount > 1
-	const effectiveRunMode = isMultiVersion ? "worktree" : runMode
+	const effectiveRunMode = runMode === "cloud" ? "cloud" : isMultiVersion ? "worktree" : runMode
 
 	// Reset loading state when session start fails (e.g., no workspace folder)
 	useEffect(() => {
@@ -296,6 +297,15 @@ function NewAgentForm() {
 		if (isEmpty || isStarting) return
 
 		setIsStarting(true)
+
+		if (effectiveRunMode === "cloud") {
+			// Start cloud agent session
+			vscode.postMessage({
+				type: "agentManager.startCloudSession",
+				prompt: trimmedPrompt,
+			})
+			return
+		}
 
 		// Generate labels for multi-version mode
 		const labels = isMultiVersion ? generateVersionLabels(trimmedPrompt.slice(0, 50), versionCount) : undefined
@@ -401,14 +411,22 @@ function NewAgentForm() {
 										? t("sessionDetail.versionsHelperText", { count: versionCount })
 										: effectiveRunMode === "local"
 											? t("sessionDetail.runModeLocal")
-											: t("sessionDetail.runModeWorktree")
+											: effectiveRunMode === "cloud"
+												? t("sessionDetail.runModeCloud")
+												: t("sessionDetail.runModeWorktree")
 								}>
 								<button
 									className={cn("am-run-mode-trigger-inline", isMultiVersion && "am-locked")}
 									onClick={() => !isMultiVersion && setIsDropdownOpen(!isDropdownOpen)}
 									disabled={isStarting || isMultiVersion}
 									type="button">
-									{effectiveRunMode === "local" ? <Folder size={14} /> : <GitBranch size={14} />}
+									{effectiveRunMode === "local" ? (
+										<Folder size={14} />
+									) : effectiveRunMode === "cloud" ? (
+										<Cloud size={14} />
+									) : (
+										<GitBranch size={14} />
+									)}
 									{!isMultiVersion && (
 										<ChevronDown
 											size={10}
@@ -440,6 +458,17 @@ function NewAgentForm() {
 										<GitBranch size={12} />
 										<span className="am-run-mode-label">{t("sessionDetail.runModeWorktree")}</span>
 										{runMode === "worktree" && <span className="am-checkmark">✓</span>}
+									</button>
+									<button
+										className={cn(
+											"am-run-mode-option-inline",
+											runMode === "cloud" && "am-selected",
+										)}
+										onClick={() => handleSelectMode("cloud")}
+										type="button">
+										<Cloud size={12} />
+										<span className="am-run-mode-label">{t("sessionDetail.runModeCloud")}</span>
+										{runMode === "cloud" && <span className="am-checkmark">✓</span>}
 									</button>
 								</div>
 							)}
