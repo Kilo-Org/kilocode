@@ -36,7 +36,6 @@ import {
 	Layers,
 	X,
 	Terminal,
-	Sparkles,
 } from "lucide-react"
 import DynamicTextArea from "react-textarea-autosize"
 import { cn } from "../../../lib/utils"
@@ -571,7 +570,6 @@ function NewAgentForm() {
 							{isStarting ? <Loader2 size={16} className="am-spinning" /> : <SendHorizontal size={16} />}
 						</button>
 					</div>
-
 				</div>
 			</div>
 
