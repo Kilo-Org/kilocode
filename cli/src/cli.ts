@@ -5,6 +5,7 @@ import { createStore } from "jotai"
 import { createExtensionService, ExtensionService } from "./services/extension.js"
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
+import { initializeSyntaxHighlighter } from "./ui/utils/syntaxHighlight.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
@@ -65,6 +66,12 @@ export class CLI {
 		try {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 			logs.info(`Version: ${Package.version}`, "CLI")
+
+			// Initialize syntax highlighter early so it's ready when diffs are displayed
+			// This runs in the background and doesn't block startup
+			void initializeSyntaxHighlighter().then(() => {
+				logs.debug("Syntax highlighter initialized", "CLI")
+			})
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
