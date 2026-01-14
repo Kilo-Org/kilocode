@@ -1,4 +1,5 @@
 import { postprocessCompletion } from "../../continuedev/core/autocomplete/postprocessing/index.js"
+import { applyLanguageFilter } from "./language-filters"
 
 export type AutocompleteSuggestion = {
 	suggestion: string
@@ -135,11 +136,13 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
  * @param params.prefix - The text before the cursor position
  * @param params.suffix - The text after the cursor position
  * @param params.model - The model string (e.g., "codestral", "qwen3", etc.)
+ * @param params.languageId - Optional language ID for language-specific filtering
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */
 export function postprocessGhostSuggestion(
 	params: AutocompleteSuggestion & {
 		model: string
+		languageId?: string
 	},
 ): string | undefined {
 	// First, run through the continuedev postprocessing pipeline
@@ -154,9 +157,19 @@ export function postprocessGhostSuggestion(
 		return undefined
 	}
 
+	// Apply language-specific filtering if languageId is provided
+	const languageFilteredSuggestion = params.languageId
+		? applyLanguageFilter({
+				suggestion: processedSuggestion,
+				prefix: params.prefix,
+				suffix: params.suffix,
+				languageId: params.languageId,
+			})
+		: processedSuggestion
+
 	if (
 		suggestionConsideredDuplication({
-			suggestion: processedSuggestion,
+			suggestion: languageFilteredSuggestion,
 			prefix: params.prefix,
 			suffix: params.suffix,
 		})
@@ -164,5 +177,5 @@ export function postprocessGhostSuggestion(
 		return undefined
 	}
 
-	return processedSuggestion
+	return languageFilteredSuggestion
 }
