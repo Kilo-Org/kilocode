@@ -153,12 +153,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			process.env["PASTE_WORKAROUND"] === "1" ||
 			process.env["PASTE_WORKAROUND"] === "true"
 
-		if (process.env.NODE_ENV === "test") {
-			console.log(
-				`DEBUG: KeyboardProvider usePassthrough=${usePassthrough} node=${process.versions.node} env=${process.env["PASTE_WORKAROUND"]}`,
-			)
-		}
-
 		// Setup streams
 		const keypressStream = usePassthrough ? new PassThrough() : stdin
 		const rl = readline.createInterface({
