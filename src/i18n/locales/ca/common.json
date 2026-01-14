@@ -5,7 +5,7 @@
 	},
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Tot un equip de desenvolupadors d'IA al teu editor."
+		"description": "Agent de codificació d'IA de codi obert que genera codi a partir de llenguatge natural, automatitza tasques i executa comandes de terminal. Inclou autocompletat en línia, automatització del navegador, refactorització automatitzada i modes personalitzats per planificar, codificar i depurar. Compatible amb més de 500 models d'IA, incloent Gemini, Claude i GPT amb claus API opcionals."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

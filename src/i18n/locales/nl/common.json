@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Een compleet ontwikkelteam van AI-agenten in je editor."
+		"description": "Open source AI-codeeringsagent die code genereert uit natuurlijke taal, taken automatiseert en terminalcommando's uitvoert. Bevat inline automatisch aanvullen, browserautomatisering, geautomatiseerde refactoring en aangepaste modi voor planning, coderen en debuggen. Ondersteunt 500+ AI-modellen waaronder Gemini, Claude en GPT met optionele API-sleutels."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

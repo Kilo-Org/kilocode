@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode."
+		"description": "Agen coding AI open source yang menghasilkan kode dari bahasa alami, mengotomatiskan tugas, dan menjalankan perintah terminal. Fitur autocomplete inline, otomasi browser, refactoring otomatis, dan mode kustom untuk perencanaan, coding, dan debugging. Mendukung 500+ model AI termasuk Gemini, Claude, dan GPT dengan kunci API opsional."
 	},
 	"number_format": {
 		"thousand_suffix": "rb",

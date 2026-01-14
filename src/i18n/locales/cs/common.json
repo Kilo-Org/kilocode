@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu."
+		"description": "Open source AI kódovací agent, který generuje kód z přirozeného jazyka, automatizuje úkoly a spouští terminálové příkazy. Obsahuje inline automatické dokončování, automatizaci prohlížeče, automatizované refaktorování a vlastní režimy pro plánování, kódování a ladění. Podporuje více než 500 AI modelů včetně Gemini, Claude a GPT s volitelnými API klíči."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

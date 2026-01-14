@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Asystent kodowania AI o otwartym kodzie źródłowym do planowania, tworzenia i naprawiania kodu."
+		"description": "Agent kodowania AI o otwartym kodzie źródłowym, który generuje kod z języka naturalnego, automatyzuje zadania i uruchamia polecenia terminala. Zawiera autouzupełnianie w linii, automatyzację przeglądarki, automatyczne refaktoryzowanie i niestandardowe tryby planowania, kodowania i debugowania. Obsługuje ponad 500 modeli AI, w tym Gemini, Claude i GPT z opcjonalnymi kluczami API."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
