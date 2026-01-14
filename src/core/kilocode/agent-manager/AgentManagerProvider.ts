@@ -43,6 +43,7 @@ import { SessionManager } from "../../../shared/kilocode/cli-sessions/core/Sessi
 import { WorkspaceGitService } from "./WorkspaceGitService"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { fetchAvailableModels, type ModelsApiResponse } from "./CliModelsFetcher"
+import { startSessionMessageSchema, type StartSessionMessage } from "./types"
 
 /**
  * AgentManagerProvider
@@ -339,17 +340,23 @@ export class AgentManagerProvider implements vscode.Disposable {
 		// every time they try to start an agent and authentication fails.
 		this.lastAuthErrorMessage = undefined
 
-		const prompt = message.prompt as string
+		// Validate message using zod schema for type safety
+		const parseResult = startSessionMessageSchema.safeParse(message)
+		if (!parseResult.success) {
+			this.outputChannel.appendLine(`[AgentManager] Invalid startSession message: ${parseResult.error.message}`)
+			this.postMessage({ type: "agentManager.startSessionFailed" })
+			return
+		}
+
+		const validatedMessage: StartSessionMessage = parseResult.data
+		const { prompt, parallelMode = false, existingBranch, model } = validatedMessage
+
 		// Clamp versions to valid range to prevent runaway process spawning
-		const rawVersions = (message.versions as number) ?? 1
+		const rawVersions = validatedMessage.versions ?? 1
 		const versions = Math.min(Math.max(rawVersions, 1), MAX_VERSION_COUNT)
 		// Only use labels if they match the version count, otherwise ignore
-		const rawLabels = message.labels as string[] | undefined
+		const rawLabels = validatedMessage.labels
 		const labels = rawLabels?.length === versions ? rawLabels : undefined
-		const parallelMode = (message.parallelMode as boolean) ?? false
-		const existingBranch = (message.existingBranch as string) ?? undefined
-		// Model selection (optional - uses CLI default if not provided)
-		const model = (message.model as string) ?? undefined
 
 		// Extract session configurations
 		const configs = extractSessionConfigs({ prompt, versions, labels, parallelMode, existingBranch })

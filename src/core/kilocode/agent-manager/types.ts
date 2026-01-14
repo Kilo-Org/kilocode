@@ -19,6 +19,7 @@ export {
 	agentManagerMessageSchema,
 	agentManagerExtensionMessageSchema,
 	availableModelSchema,
+	startSessionMessageSchema,
 	// Types
 	type AgentStatus,
 	type SessionSource,
@@ -29,6 +30,7 @@ export {
 	type AgentManagerMessage,
 	type AgentManagerExtensionMessage,
 	type AvailableModel,
+	type StartSessionMessage,
 } from "@kilocode/core-schemas"
 
 // Re-export remote session shape from shared session client for consistency

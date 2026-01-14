@@ -70,15 +70,22 @@ export const agentManagerStateSchema = z.object({
 /**
  * Messages from Webview to Extension
  */
+/**
+ * Start session message schema - used for runtime validation of webview messages
+ */
+export const startSessionMessageSchema = z.object({
+	type: z.literal("agentManager.startSession"),
+	prompt: z.string(),
+	parallelMode: z.boolean().optional(),
+	existingBranch: z.string().optional(),
+	model: z.string().optional(), // Model ID to use for this session
+	versions: z.number().optional(), // Number of versions for multi-version mode
+	labels: z.array(z.string()).optional(), // Labels for multi-version sessions
+})
+
 export const agentManagerMessageSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("agentManager.webviewReady") }),
-	z.object({
-		type: z.literal("agentManager.startSession"),
-		prompt: z.string(),
-		parallelMode: z.boolean().optional(),
-		existingBranch: z.string().optional(),
-		model: z.string().optional(), // Model ID to use for this session
-	}),
+	startSessionMessageSchema,
 	z.object({ type: z.literal("agentManager.stopSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.selectSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.refreshRemoteSessions") }),
@@ -145,3 +152,4 @@ export type PendingSession = z.infer<typeof pendingSessionSchema>
 export type AgentManagerState = z.infer<typeof agentManagerStateSchema>
 export type AgentManagerMessage = z.infer<typeof agentManagerMessageSchema>
 export type AgentManagerExtensionMessage = z.infer<typeof agentManagerExtensionMessageSchema>
+export type StartSessionMessage = z.infer<typeof startSessionMessageSchema>
