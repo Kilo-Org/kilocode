@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AIコーディングエージェント、Copilot、および自動補完",
-	"extension.description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。",
+	"extension.description": "自然言語からコードを生成し、タスクを自動化し、ターミナルコマンドを実行するオープンソース AI コーディングエージェント。インライン自動補完、ブラウザ自動化、自動リファクタリング、計画・コーディング・デバッグ用のカスタムモードを搭載。Claude (Anthropic)、Gemini、Grok、GPT、Codex、GLM を含む 500 以上の AI モデルをサポート。",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.sidebar.name": "Kilo Code",
