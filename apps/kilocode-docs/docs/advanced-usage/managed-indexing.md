@@ -39,20 +39,18 @@ Before enabling Managed Indexing:
 
 ---
 
-## How to Disable
-
-Codebase Indexing is rolling out across our users. It will automatically engage unless your repository root is configured to opt out.
-
+## How to Disable (Per Project)
+You can disable Managed Indexing for **specific repositories** using a local configuration file.
 1. Create a `.kilocode/config.json` file in the root of your repository (if it doesn't already exist).
 2. Add the following configuration:
-
 ```json
 {
-	"project": {
-		"managedIndexingEnabled": false
-	}
+  "project": {
+    "managedIndexingEnabled": false
+  }
 }
 ```
+If you would like to remove Managed Indexing completely for your organization, please raise a support ticket at [kilo.ai/support](https://kilo.ai/support).
 
 ### Configuration Options
 
