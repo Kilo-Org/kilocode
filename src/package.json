@@ -326,6 +326,26 @@
 					"light": "assets/icons/kilo-light.svg",
 					"dark": "assets/icons/kilo-dark.svg"
 				}
+			},
+			{
+				"command": "kilo-code.nextEdit.start",
+				"title": "Start Next Edit Session",
+				"category": "Next Edit"
+			},
+			{
+				"command": "kilo-code.nextEdit.accept",
+				"title": "Accept Current Edit",
+				"category": "Next Edit"
+			},
+			{
+				"command": "kilo-code.nextEdit.skip",
+				"title": "Skip Current Edit",
+				"category": "Next Edit"
+			},
+			{
+				"command": "kilo-code.nextEdit.undo",
+				"title": "Undo Last Edit",
+				"category": "Next Edit"
 			}
 		],
 		"menus": {
@@ -509,6 +529,24 @@
 				"mac": "cmd+alt+a",
 				"win": "ctrl+alt+a",
 				"linux": "ctrl+alt+a"
+			},
+			{
+				"command": "kilo-code.nextEdit.accept",
+				"key": "ctrl+enter",
+				"mac": "cmd+enter",
+				"when": "kilo-code.nextEdit.active"
+			},
+			{
+				"command": "kilo-code.nextEdit.skip",
+				"key": "ctrl+shift+enter",
+				"mac": "cmd+shift+enter",
+				"when": "kilo-code.nextEdit.active"
+			},
+			{
+				"command": "kilo-code.nextEdit.undo",
+				"key": "ctrl+z",
+				"mac": "cmd+z",
+				"when": "kilo-code.nextEdit.active"
 			}
 		],
 		"submenus": [

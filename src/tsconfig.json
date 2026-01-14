@@ -1,6 +1,10 @@
 {
 	"compilerOptions": {
 		"types": ["vitest/globals"],
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./*"]
+		},
 		"esModuleInterop": true,
 		"experimentalDecorators": true,
 		"forceConsistentCasingInFileNames": true,

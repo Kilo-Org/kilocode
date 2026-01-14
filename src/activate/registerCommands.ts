@@ -406,6 +406,49 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		})
 	},
 	// kilocode_change end
+
+	// kilocode_change start - Next Edit commands
+	"nextEdit.start": async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "nextEdit.start",
+		} as any)
+	},
+	"nextEdit.accept": async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "nextEdit.accept",
+		} as any)
+	},
+	"nextEdit.skip": async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "nextEdit.skip",
+		} as any)
+	},
+	"nextEdit.undo": async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "nextEdit.undo",
+		} as any)
+	},
+	// kilocode_change end
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {

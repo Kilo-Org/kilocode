@@ -280,7 +280,8 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	delete_file: "delete files",
 	report_bug: "report bug",
 	condense: "condense the current context window",
-	// kilocode_change start
+	next_edit: "start next edit session",
+	// kilocode_change end
 	search_and_replace: "apply changes using search and replace",
 	search_replace: "apply single search and replace",
 	apply_patch: "apply patches using codex format",

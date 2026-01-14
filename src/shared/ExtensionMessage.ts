@@ -199,6 +199,10 @@ export interface ExtensionMessage {
 		| "deviceAuthFailed" // kilocode_change: Device auth failed
 		| "deviceAuthCancelled" // kilocode_change: Device auth cancelled
 		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
+		| "nextEdit.showPanel" // kilocode_change: Show Next Edit panel
+		| "nextEdit.hidePanel" // kilocode_change: Hide Next Edit panel
+		| "nextEdit.showStartDialog" // kilocode_change: Show Next Edit start dialog
+		| "nextEdit.hideStartDialog" // kilocode_change: Hide Next Edit start dialog
 	text?: string
 	// kilocode_change start
 	completionRequestId?: string // Correlation ID from request
@@ -366,6 +370,9 @@ export interface ExtensionMessage {
 	deviceAuthUserEmail?: string
 	deviceAuthError?: string
 	// kilocode_change end: Device auth data
+	// kilocode_change start: Next Edit data
+	nextEditSessionId?: string // For nextEdit.showPanel: session ID to load
+	// kilocode_change end: Next Edit data
 }
 
 export type ExtensionState = Pick<
