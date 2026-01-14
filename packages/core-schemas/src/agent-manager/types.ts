@@ -129,6 +129,10 @@ export const agentManagerExtensionMessageSchema = z.discriminatedUnion("type", [
 		currentModel: z.string(),
 		models: z.array(availableModelSchema),
 	}),
+	z.object({
+		type: z.literal("agentManager.modelsLoadFailed"),
+		error: z.string().optional(),
+	}),
 ])
 
 // Inferred types

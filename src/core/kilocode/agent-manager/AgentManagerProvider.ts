@@ -1346,6 +1346,11 @@ export class AgentManagerProvider implements vscode.Disposable {
 				})
 			} else {
 				this.outputChannel.appendLine("[AgentManager] Failed to fetch models from CLI")
+				// Notify webview that model loading failed so it can exit loading state
+				this.postMessage({
+					type: "agentManager.modelsLoadFailed",
+					error: "Failed to fetch models from CLI",
+				})
 			}
 		} catch (error) {
 			this.outputChannel.appendLine(

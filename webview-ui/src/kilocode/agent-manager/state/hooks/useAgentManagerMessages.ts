@@ -4,7 +4,7 @@ import type { ClineMessage } from "@roo-code/types"
 import { updateSessionMessagesAtom } from "../atoms/messages"
 import { updateSessionTodosAtom } from "../atoms/todos"
 import { updateBranchesAtom } from "../atoms/branches"
-import { updateModelsConfigAtom, type AvailableModel } from "../atoms/models"
+import { updateModelsConfigAtom, modelsLoadFailedAtom, type AvailableModel } from "../atoms/models"
 import { extractTodosFromMessages } from "./extractTodosFromMessages"
 import {
 	upsertSessionAtom,
@@ -72,6 +72,11 @@ interface AvailableModelsMessage {
 	models: AvailableModel[]
 }
 
+interface ModelsLoadFailedMessage {
+	type: "agentManager.modelsLoadFailed"
+	error?: string
+}
+
 type ExtensionMessage =
 	| ChatMessagesMessage
 	| StateMessage
@@ -81,6 +86,7 @@ type ExtensionMessage =
 	| StateEventMessage
 	| BranchesMessage
 	| AvailableModelsMessage
+	| ModelsLoadFailedMessage
 	| { type: string; [key: string]: unknown }
 
 /**
@@ -142,6 +148,7 @@ export function useAgentManagerMessages() {
 	const updateSessionTodos = useSetAtom(updateSessionTodosAtom)
 	const updateBranches = useSetAtom(updateBranchesAtom)
 	const updateModelsConfig = useSetAtom(updateModelsConfigAtom)
+	const handleModelsLoadFailed = useSetAtom(modelsLoadFailedAtom)
 	const upsertSession = useSetAtom(upsertSessionAtom)
 	const removeSession = useSetAtom(removeSessionAtom)
 	const setSelectedSessionId = useSetAtom(selectedSessionIdAtom)
@@ -257,6 +264,12 @@ export function useAgentManagerMessages() {
 					updateModelsConfig({ provider, currentModel, models })
 					break
 				}
+
+				case "agentManager.modelsLoadFailed": {
+					const { error } = message as ModelsLoadFailedMessage
+					handleModelsLoadFailed(error)
+					break
+				}
 			}
 		}
 
@@ -267,6 +280,7 @@ export function useAgentManagerMessages() {
 		updateSessionTodos,
 		updateBranches,
 		updateModelsConfig,
+		handleModelsLoadFailed,
 		upsertSession,
 		removeSession,
 		setSelectedSessionId,

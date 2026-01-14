@@ -107,6 +107,15 @@ export const updateModelsConfigAtom = atom(
 )
 
 /**
+ * Action atom to handle model loading failure.
+ * Sets loading to false so UI exits loading state.
+ */
+export const modelsLoadFailedAtom = atom(null, (_get, set, _error?: string) => {
+	set(modelsLoadingAtom, false)
+	// Keep modelsConfigAtom as null - UI will show nothing for model selector
+})
+
+/**
  * Action atom to set selected model ID with localStorage persistence
  */
 export const setSelectedModelIdAtom = atom(null, (_get, set, modelId: string | null) => {
