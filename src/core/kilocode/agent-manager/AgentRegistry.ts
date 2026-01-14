@@ -2,6 +2,7 @@ import { AgentSession, AgentStatus, AgentManagerState, PendingSession, ParallelM
 
 export interface CreateSessionOptions {
 	parallelMode?: boolean
+	model?: string
 }
 
 const MAX_SESSIONS = 10
@@ -67,6 +68,7 @@ export class AgentRegistry {
 			source: "local",
 			...(options?.parallelMode && { parallelMode: { enabled: true } }),
 			gitUrl: options?.gitUrl,
+			model: options?.model,
 		}
 
 		this.sessions.set(sessionId, session)

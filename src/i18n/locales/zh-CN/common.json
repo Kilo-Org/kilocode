@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "用于规划、构建和修复代码的开源 AI 编码助手。"
+		"description": "开源 AI 编码代理，可从自然语言生成代码、自动化任务并运行终端命令。具有内联自动补全、浏览器自动化、自动重构以及用于规划、编码和调试的自定义模式。支持 500 多种 AI 模型，包括 Claude (Anthropic)、Gemini、Grok、GPT、Codex 和 GLM。"
 	},
 	"number_format": {
 		"thousand_suffix": "k",

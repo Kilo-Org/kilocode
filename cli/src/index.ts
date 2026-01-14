@@ -61,6 +61,14 @@ program
 	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
+		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
+		// This is a defensive check for cases where Commander.js routing might not work as expected
+		// (e.g., when spawned as a child process with stdin disconnected)
+		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		if (SUBCOMMANDS.includes(prompt)) {
+			return
+		}
+
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
@@ -309,6 +317,17 @@ program
 		}
 
 		await debugFunction()
+	})
+
+// Models command - list available models as JSON for programmatic use
+program
+	.command("models")
+	.description("List available models for the current provider as JSON")
+	.option("--provider <id>", "Use specific provider instead of default")
+	.option("--json", "Output as JSON (default)", true)
+	.action(async (options: { provider?: string; json?: boolean }) => {
+		const { modelsApiCommand } = await import("./commands/models-api.js")
+		await modelsApiCommand(options)
 	})
 
 // Handle process termination signals
