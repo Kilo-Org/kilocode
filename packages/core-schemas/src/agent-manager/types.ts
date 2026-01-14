@@ -45,6 +45,7 @@ export const agentSessionSchema = z.object({
 	source: sessionSourceSchema,
 	parallelMode: parallelModeInfoSchema.optional(),
 	gitUrl: z.string().optional(),
+	model: z.string().optional(), // Model ID used for this session
 })
 
 /**
@@ -76,11 +77,13 @@ export const agentManagerMessageSchema = z.discriminatedUnion("type", [
 		prompt: z.string(),
 		parallelMode: z.boolean().optional(),
 		existingBranch: z.string().optional(),
+		model: z.string().optional(), // Model ID to use for this session
 	}),
 	z.object({ type: z.literal("agentManager.stopSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.selectSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.refreshRemoteSessions") }),
 	z.object({ type: z.literal("agentManager.listBranches") }),
+	z.object({ type: z.literal("agentManager.refreshModels") }),
 ])
 
 /**
@@ -93,6 +96,18 @@ export const remoteSessionSchema = z
 		status: z.string().optional(),
 	})
 	.passthrough() // Allow additional fields from the full RemoteSession type
+
+/**
+ * Available model schema (from CLI models command)
+ */
+export const availableModelSchema = z.object({
+	id: z.string(),
+	displayName: z.string().nullable(),
+	contextWindow: z.number(),
+	supportsImages: z.boolean().optional(),
+	inputPrice: z.number().optional(),
+	outputPrice: z.number().optional(),
+})
 
 /**
  * Messages from Extension to Webview
@@ -108,11 +123,18 @@ export const agentManagerExtensionMessageSchema = z.discriminatedUnion("type", [
 		branches: z.array(z.string()),
 		currentBranch: z.string().optional(),
 	}),
+	z.object({
+		type: z.literal("agentManager.availableModels"),
+		provider: z.string(),
+		currentModel: z.string(),
+		models: z.array(availableModelSchema),
+	}),
 ])
 
 // Inferred types
 export type AgentStatus = z.infer<typeof agentStatusSchema>
 export type SessionSource = z.infer<typeof sessionSourceSchema>
+export type AvailableModel = z.infer<typeof availableModelSchema>
 export type ParallelModeInfo = z.infer<typeof parallelModeInfoSchema>
 export type AgentSession = z.infer<typeof agentSessionSchema>
 export type PendingSession = z.infer<typeof pendingSessionSchema>

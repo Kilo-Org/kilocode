@@ -61,6 +61,14 @@ program
 	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
+		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
+		// This is a defensive check for cases where Commander.js routing might not work as expected
+		// (e.g., when spawned as a child process with stdin disconnected)
+		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		if (SUBCOMMANDS.includes(prompt)) {
+			return
+		}
+
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")

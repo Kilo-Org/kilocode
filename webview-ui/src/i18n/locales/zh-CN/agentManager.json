@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLO 模式 - 工具操作自动批准",
 		"starting": "正在启动...",
 		"startAriaLabel": "使用提供的提示启动代理",
-		"keyboardHint": "按 Enter 启动，Shift+Enter 换行",
 		"runModeLocal": "本地",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "云端",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "切换基础 Branch",
 		"noBranches": "未找到 Branch",
 		"noMatchingBranches": "没有匹配的 Branch",
-		"openTerminal": "打开终端"
+		"openTerminal": "打开终端",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "等待代理响应...",

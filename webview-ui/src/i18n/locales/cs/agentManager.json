@@ -28,7 +28,6 @@
 		"autoModeWarning": "Režim YOLO - operace nástrojů jsou automaticky schváleny",
 		"starting": "Spouštění...",
 		"startAriaLabel": "Spustit agenta s poskytnutým příkazem",
-		"keyboardHint": "Stiskněte Enter pro spuštění, Shift+Enter pro nový řádek",
 		"runModeLocal": "Lokální",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -56,7 +55,11 @@
 		"branchPickerTooltip": "Změnit základní větev",
 		"noBranches": "Nebyly nalezeny žádné větve",
 		"noMatchingBranches": "Žádné větve neodpovídají tvému vyhledávání",
-		"openTerminal": "Otevřít terminál"
+		"openTerminal": "Otevřít terminál",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Čekání na odpověď agenta...",

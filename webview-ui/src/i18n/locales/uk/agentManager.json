@@ -28,7 +28,6 @@
 		"autoModeWarning": "Режим YOLO - операції з інструментами схвалюються автоматично",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустити агента з наданим промптом",
-		"keyboardHint": "Натисніть Enter для запуску, Shift+Enter для нового рядка",
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Хмара",
@@ -57,7 +56,11 @@
 		"branchPickerTooltip": "Змінити базову гілку",
 		"noBranches": "Гілки не знайдено",
 		"noMatchingBranches": "Немає гілок, що відповідають твоєму пошуку",
-		"openTerminal": "Відкрити термінал"
+		"openTerminal": "Відкрити термінал",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Очікування відповіді агента...",

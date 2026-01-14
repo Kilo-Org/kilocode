@@ -28,7 +28,6 @@
 		"autoModeWarning": "Tryb YOLO - operacje narzędzi są automatycznie zatwierdzane",
 		"starting": "Uruchamianie...",
 		"startAriaLabel": "Uruchom agenta z podanym poleceniem",
-		"keyboardHint": "Naciśnij Enter, aby uruchomić, Shift+Enter dla nowej linii",
 		"runModeLocal": "Lokalny",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Chmura",
@@ -57,7 +56,11 @@
 		"branchPickerTooltip": "Zmień gałąź bazową",
 		"noBranches": "Nie znaleziono gałęzi",
 		"noMatchingBranches": "Brak gałęzi pasujących do twojego wyszukiwania",
-		"openTerminal": "Otwórz terminal"
+		"openTerminal": "Otwórz terminal",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Oczekiwanie na odpowiedź agenta...",

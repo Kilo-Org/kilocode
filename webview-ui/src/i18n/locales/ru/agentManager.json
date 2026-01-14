@@ -28,7 +28,6 @@
 		"autoModeWarning": "Режим YOLO - операции с инструментами одобряются автоматически",
 		"starting": "Запуск...",
 		"startAriaLabel": "Запустить агента с указанным промптом",
-		"keyboardHint": "Нажмите Enter для запуска, Shift+Enter для новой строки",
 		"runModeLocal": "Локально",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Облако",
@@ -57,7 +56,11 @@
 		"branchPickerTooltip": "Сменить базовую ветку",
 		"noBranches": "Ветки не найдены",
 		"noMatchingBranches": "Нет веток, соответствующих твоему поиску",
-		"openTerminal": "Открыть терминал"
+		"openTerminal": "Открыть терминал",
+		"selectModel": "Select model",
+		"modelTooltip": "Choose which AI model to use for this session",
+		"defaultModel": "Default model",
+		"loadingModels": "Loading..."
 	},
 	"messages": {
 		"waiting": "Ожидание ответа агента...",
