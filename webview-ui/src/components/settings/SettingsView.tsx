@@ -362,7 +362,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 			setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 			setChangeDetected(false)
 		}
-	}, [settingsImportedAt, extensionState])
+		// eslint-disable-next-line
+	}, [settingsImportedAt])
 
 	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = useCallback((field, value) => {
 		setCachedState((prevState) => {
