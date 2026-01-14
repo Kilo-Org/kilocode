@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { autoPurgeSettingsSchema } from "@roo-code/types"
 import { providerConfigSchema } from "./provider.js"
 import { autoApprovalConfigSchema } from "./auto-approval.js"
 import { themeSchema, themeIdSchema } from "../theme/theme.js"
@@ -18,6 +19,7 @@ export const cliConfigSchema = z.object({
 	telemetry: z.boolean(),
 	provider: z.string(),
 	providers: z.array(providerConfigSchema),
+	autoPurge: autoPurgeSettingsSchema.optional(),
 	autoApproval: autoApprovalConfigSchema.optional(),
 	theme: themeIdSchema.optional(),
 	customThemes: z.record(themeSchema).optional(),

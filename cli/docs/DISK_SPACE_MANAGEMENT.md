@@ -9,22 +9,52 @@ Delete the CLI data directory to free disk space:
 **macOS/Linux:**
 
 ```bash
-rm -rf ~/.kilocode/cli
+rm -rf ~/.kilocode/cli/global/tasks/*
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-Remove-Item -Recurse -Force "$env:USERPROFILE\.kilocode\cli"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.kilocode\cli\global\tasks\*"
 ```
 
 **Windows (Command Prompt):**
 
 ```cmd
-rmdir /s /q "%USERPROFILE%\.kilocode\cli"
+del /s /q "%USERPROFILE%\.kilocode\cli\global\tasks\*"
+rmdir /s /q "%USERPROFILE%\.kilocode\cli\global\tasks"
+mkdir "%USERPROFILE%\.kilocode\cli\global\tasks"
 ```
 
-> **Note:** This deletes all task history. The directory will be recreated on next CLI use.
+> **Note:** This deletes all task history but preserves your configuration (API keys, settings).
+
+## CLI Auto-Purge Configuration
+
+The CLI has a built-in auto-purge feature that automatically cleans up old tasks on startup. Add the following to your `~/.kilocode/cli/config.json` (or `%USERPROFILE%\.kilocode\cli\config.json` on Windows):
+
+```json
+{
+	"autoPurge": {
+		"enabled": true,
+		"defaultRetentionDays": 30,
+		"favoritedTaskRetentionDays": null,
+		"completedTaskRetentionDays": 30,
+		"incompleteTaskRetentionDays": 30
+	}
+}
+```
+
+### Configuration Options
+
+| Option                        | Type           | Default | Description                                     |
+| ----------------------------- | -------------- | ------- | ----------------------------------------------- |
+| `enabled`                     | boolean        | `false` | Enable automatic cleanup                        |
+| `defaultRetentionDays`        | number         | `30`    | Fallback retention period                       |
+| `favoritedTaskRetentionDays`  | number \| null | `null`  | Days to keep favorited tasks (`null` = forever) |
+| `completedTaskRetentionDays`  | number         | `30`    | Days to keep completed tasks                    |
+| `incompleteTaskRetentionDays` | number         | `30`    | Days to keep incomplete tasks                   |
+
+> **Tip:** Set `favoritedTaskRetentionDays` to `null` to preserve important tasks indefinitely.
 
 ## Using the VS Code Extension
 

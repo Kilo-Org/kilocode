@@ -31,6 +31,41 @@
 				"$ref": "#/definitions/provider"
 			}
 		},
+		"autoPurge": {
+			"type": "object",
+			"description": "Configuration for automatic task history cleanup",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable automatic purging of old tasks"
+				},
+				"defaultRetentionDays": {
+					"type": "number",
+					"minimum": 1,
+					"default": 30,
+					"description": "Default retention period in days for tasks"
+				},
+				"favoritedTaskRetentionDays": {
+					"type": ["number", "null"],
+					"minimum": 1,
+					"default": null,
+					"description": "Retention period in days for favorited tasks (null to keep forever)"
+				},
+				"completedTaskRetentionDays": {
+					"type": "number",
+					"minimum": 1,
+					"default": 30,
+					"description": "Retention period in days for completed tasks"
+				},
+				"incompleteTaskRetentionDays": {
+					"type": "number",
+					"minimum": 1,
+					"default": 30,
+					"description": "Retention period in days for incomplete tasks"
+				}
+			}
+		},
 		"autoApproval": {
 			"type": "object",
 			"description": "Auto approval configuration for CLI operations",
