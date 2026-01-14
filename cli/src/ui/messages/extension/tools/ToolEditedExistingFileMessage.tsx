@@ -6,6 +6,16 @@ import { parseDiffContent, calculateDiffStats } from "../diff.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { getBoxWidth } from "../../../utils/width.js"
 import { DiffLine } from "./DiffLine.js"
+import {
+	detectLanguage,
+	highlightLineSync,
+	type HighlightedToken,
+	type ThemeType,
+} from "../../../utils/syntaxHighlight.js"
+
+// Configuration for diff display
+const MAX_DIFF_LINES = 50 // Maximum lines to show
+const CONTEXT_LINES = 3 // Lines of context around changes
 
 /**
  * Display file edits with diff (handles both editedExistingFile and appliedDiff tool types)
@@ -22,6 +32,98 @@ export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ tool
 
 	// Parse diff content
 	const parsedLines = useMemo(() => parseDiffContent(diffContent), [diffContent])
+
+	// Detect language from file path
+	const language = useMemo(() => {
+		return toolData.path ? detectLanguage(toolData.path) : null
+	}, [toolData.path])
+
+	// Get theme type for syntax highlighting
+	const themeType: ThemeType = theme.type === "light" ? "light" : "dark"
+
+	// Filter lines to show changes with context
+	const displayLines = useMemo(() => {
+		// Find indices of all changed lines (additions/deletions)
+		const changedIndices = new Set<number>()
+		parsedLines.forEach((line, index) => {
+			if (line.type === "addition" || line.type === "deletion") {
+				changedIndices.add(index)
+			}
+		})
+
+		// If no changes or small diff, show all lines
+		if (changedIndices.size === 0 || parsedLines.length <= MAX_DIFF_LINES) {
+			return {
+				lines: parsedLines.slice(0, MAX_DIFF_LINES),
+				indexMap: new Map(parsedLines.slice(0, MAX_DIFF_LINES).map((_, i) => [i, i])),
+				hasMore: parsedLines.length > MAX_DIFF_LINES,
+				hiddenCount: Math.max(0, parsedLines.length - MAX_DIFF_LINES),
+			}
+		}
+
+		// Build set of indices to show (changes + context)
+		const indicesToShow = new Set<number>()
+		for (const idx of changedIndices) {
+			// Add context before and after each change
+			for (
+				let i = Math.max(0, idx - CONTEXT_LINES);
+				i <= Math.min(parsedLines.length - 1, idx + CONTEXT_LINES);
+				i++
+			) {
+				indicesToShow.add(i)
+			}
+		}
+
+		// Convert to sorted array and build display lines
+		const sortedIndices = Array.from(indicesToShow).sort((a, b) => a - b)
+		const result: typeof parsedLines = []
+		const indexMap = new Map<number, number>()
+		let lastIdx = -1
+
+		for (const idx of sortedIndices) {
+			// Add separator if there's a gap
+			if (lastIdx !== -1 && idx > lastIdx + 1) {
+				const gapSize = idx - lastIdx - 1
+				result.push({
+					type: "header",
+					content: `  ... ${gapSize} unchanged line${gapSize > 1 ? "s" : ""} ...`,
+				})
+			}
+			const line = parsedLines[idx]
+			if (line) {
+				indexMap.set(result.length, idx)
+				result.push(line)
+			}
+			lastIdx = idx
+
+			// Stop if we've collected enough lines
+			if (result.length >= MAX_DIFF_LINES) break
+		}
+
+		return {
+			lines: result,
+			indexMap,
+			hasMore: result.length < sortedIndices.length || parsedLines.length > sortedIndices.length,
+			hiddenCount: parsedLines.length - indicesToShow.size,
+		}
+	}, [parsedLines])
+
+	// Generate highlighted tokens for each line (synchronous - highlighter is pre-initialized at startup)
+	const highlightedLines = useMemo((): Map<number, HighlightedToken[] | null> => {
+		const map = new Map<number, HighlightedToken[] | null>()
+		if (!language) {
+			return map
+		}
+
+		displayLines.lines.forEach((line, displayIndex) => {
+			if (line.type === "addition" || line.type === "deletion" || line.type === "context") {
+				const tokens = highlightLineSync(line.content, language, themeType)
+				map.set(displayIndex, tokens)
+			}
+		})
+
+		return map
+	}, [displayLines, language, themeType])
 
 	// Calculate stats from parsed lines if not provided
 	const stats = useMemo(() => {
@@ -104,15 +206,21 @@ export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ tool
 				)}
 			</Box>
 
-			{/* Diff content with colored lines */}
-			{parsedLines.length > 0 && (
+			{/* Diff content with colored lines and syntax highlighting */}
+			{displayLines.lines.length > 0 && (
 				<Box width={getBoxWidth(3)} flexDirection="column" marginTop={1} marginLeft={2}>
-					{parsedLines.slice(0, 20).map((line, index) => (
-						<DiffLine key={index} line={line} theme={theme} showLineNumbers={true} />
+					{displayLines.lines.map((line, index) => (
+						<DiffLine
+							key={index}
+							line={line}
+							theme={theme}
+							showLineNumbers={true}
+							highlightedTokens={highlightedLines.get(index) ?? null}
+						/>
 					))}
-					{parsedLines.length > 20 && (
+					{displayLines.hasMore && (
 						<Text color={theme.ui.text.dimmed} dimColor>
-							... ({parsedLines.length - 20} more lines)
+							... ({displayLines.hiddenCount} more lines)
 						</Text>
 					)}
 				</Box>
