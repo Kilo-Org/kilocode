@@ -72,6 +72,13 @@ export const commandIds = [
 	"completions.toggleNaturalLanguageTranslation",
 	"completions.showSettings",
 	// kilocode_change end
+
+	// kilocode_change start - Next Edit commands
+	"nextEdit.start",
+	"nextEdit.accept",
+	"nextEdit.skip",
+	"nextEdit.undo",
+	// kilocode_change end
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

@@ -32,8 +32,17 @@ import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
 import { MemoryWarningBanner } from "./kilocode/MemoryWarningBanner"
+import { NextEditPanel } from "./components/next-edit/NextEditPanel" // kilocode_change
+import { NextEditStartDialog } from "./components/next-edit/NextEditStartDialog" // kilocode_change
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" | "auth" // kilocode_change: add "profile" and "auth"
+
+// kilocode_change start: Next Edit state
+interface NextEditState {
+	isVisible: boolean
+	sessionId: string | null
+}
+// kilocode_change end
 
 interface HumanRelayDialogState {
 	isOpen: boolean
@@ -125,6 +134,14 @@ const App = () => {
 		hasCheckpoint: false,
 		images: [],
 	})
+
+	// kilocode_change start: Next Edit state
+	const [nextEditState, setNextEditState] = useState<NextEditState>({
+		isVisible: false,
+		sessionId: null,
+	})
+	const [showNextEditStartDialog, setShowNextEditStartDialog] = useState(false)
+	// kilocode_change end
 
 	const settingsRef = useRef<SettingsViewRef>(null)
 	const chatViewRef = useRef<ChatViewRef & { focusInput: () => void }>(null) // kilocode_change
@@ -253,6 +270,27 @@ const App = () => {
 			if (message.type === "acceptInput") {
 				chatViewRef.current?.acceptInput()
 			}
+
+			// kilocode_change start: Handle Next Edit messages
+			if (message.type === "nextEdit.showPanel") {
+				setNextEditState({
+					isVisible: true,
+					sessionId: message.nextEditSessionId || null,
+				})
+			}
+			if (message.type === "nextEdit.hidePanel") {
+				setNextEditState({
+					isVisible: false,
+					sessionId: null,
+				})
+			}
+			if (message.type === "nextEdit.showStartDialog") {
+				setShowNextEditStartDialog(true)
+			}
+			if (message.type === "nextEdit.hideStartDialog") {
+				setShowNextEditStartDialog(false)
+			}
+			// kilocode_change end
 		},
 		// kilocode_change: add tab
 		[tab, switchTab],
@@ -444,6 +482,13 @@ const App = () => {
 					<BottomControls />
 				</div>
 			)}
+			{/* kilocode_change start: Next Edit components */}
+			<NextEditPanel
+				isVisible={nextEditState.isVisible}
+				onClose={() => setNextEditState({ isVisible: false, sessionId: null })}
+			/>
+			<NextEditStartDialog isOpen={showNextEditStartDialog} onClose={() => setShowNextEditStartDialog(false)} />
+			{/* kilocode_change end */}
 		</>
 	)
 }
