@@ -145,6 +145,7 @@ import { mergeApiMessages, addOrMergeUserContent } from "./kilocode"
 import { AutoApprovalHandler, checkAutoApproval } from "../auto-approval"
 import { MessageManager } from "../message-manager"
 import { validateAndFixToolResultIds } from "./validateToolResultIds"
+import { computeSessionMetrics, type SessionTerminationReason } from "./sessionMetrics" // kilocode_change
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -332,6 +333,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	consecutiveNoToolUseCount: number = 0
 	consecutiveNoAssistantMessagesCount: number = 0
 	toolUsage: ToolUsage = {}
+
+	// Session metrics (Phase 1b) // kilocode_change
+	private readonly sessionStartedAtMs = Date.now() // kilocode_change
+	private sessionMetricsCaptured = false // kilocode_change
 
 	// Checkpoints
 	enableCheckpoints: boolean
@@ -2219,6 +2224,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		// Force final token usage update before abort event
 		this.emitFinalTokenUsageUpdate()
+
+		// kilocode_change start: Session metrics termination
+		const terminationReason: SessionTerminationReason =
+			isAbandoned || this.abortReason === "user_cancelled"
+				? "user_closed"
+				: this.abortReason === "streaming_failed"
+					? this.inferTimeoutFromStreamingFailure()
+						? "timeout"
+						: "error"
+					: "error"
+
+		this.captureSessionMetricsOnce(terminationReason)
+		// kilocode_change end
 
 		this.emit(RooCodeEventName.TaskAborted)
 
@@ -4696,6 +4714,56 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	// Metrics
+
+	// kilocode_change start
+	private inferTimeoutFromStreamingFailure(): boolean {
+		// Look at the last api_req_started metadata, which carries streamingFailedMessage when applicable.
+		const lastApiReqIndex = findLastIndex(
+			this.clineMessages,
+			(m) => m.type === "say" && m.say === "api_req_started" && typeof m.text === "string" && m.text.length > 0,
+		)
+
+		if (lastApiReqIndex === -1) {
+			return false
+		}
+
+		try {
+			const parsed = JSON.parse(this.clineMessages[lastApiReqIndex].text ?? "{}") as {
+				cancelReason?: string
+				streamingFailedMessage?: string
+			}
+
+			if (parsed.cancelReason !== "streaming_failed") {
+				return false
+			}
+
+			const msg = parsed.streamingFailedMessage ?? ""
+			return /timeout|timed out|Timeou?tError/i.test(msg)
+		} catch {
+			return false
+		}
+	}
+
+	public captureSessionMetricsOnce(terminationReason: SessionTerminationReason): void {
+		if (this.sessionMetricsCaptured) {
+			return
+		}
+		this.sessionMetricsCaptured = true
+
+		const tokenUsage = this.getTokenUsage()
+		const metrics = computeSessionMetrics({
+			startedAtMs: this.sessionStartedAtMs,
+			endedAtMs: Date.now(),
+			clineMessages: this.clineMessages,
+			toolUsage: this.toolUsage,
+			tokenUsage,
+			abortReason: this.abortReason,
+			terminationReason,
+		})
+
+		TelemetryService.instance.captureEvent(TelemetryEventName.SESSION_METRICS, { taskId: this.taskId, ...metrics })
+	}
+	// kilocode_change end
 
 	public combineMessages(messages: ClineMessage[]) {
 		return combineApiRequests(combineCommandSequences(messages))

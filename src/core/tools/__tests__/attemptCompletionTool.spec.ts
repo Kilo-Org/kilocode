@@ -30,6 +30,23 @@ vi.mock("../../../shared/package", () => ({
 	},
 }))
 
+// Mock telemetry (AttemptCompletionTool emits task completion telemetry)
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureTaskCompleted: vi.fn(),
+			captureEvent: vi.fn(),
+		},
+		hasInstance: vi.fn(() => true),
+		createInstance: vi.fn(),
+	},
+}))
+
+// Mock commit range helper to avoid touching git/checkpoints in unit tests
+vi.mock("../../checkpoints/kilocode/seeNewChanges", () => ({
+	getCommitRangeForNewCompletion: vi.fn(async () => undefined),
+}))
+
 import { attemptCompletionTool, AttemptCompletionCallbacks } from "../AttemptCompletionTool"
 import { Task } from "../../task/Task"
 import * as vscode from "vscode"
@@ -475,6 +492,59 @@ describe("attemptCompletionTool", () => {
 
 				expect(mockTask.consecutiveMistakeCount).toBe(0)
 				expect(mockTask.recordToolError).not.toHaveBeenCalled()
+			})
+		})
+
+		describe("session metrics", () => {
+			it("should capture session metrics once on explicit completion", async () => {
+				const block: AttemptCompletionToolUse = {
+					type: "tool_use",
+					name: "attempt_completion",
+					params: { result: "Task completed successfully" },
+					partial: false,
+				}
+
+				const captureSessionMetricsOnce = vi.fn()
+				const emitFinalTokenUsageUpdate = vi.fn()
+				const getTokenUsage = vi.fn().mockReturnValue({
+					totalTokensIn: 1,
+					totalTokensOut: 2,
+					totalCacheWrites: 0,
+					totalCacheReads: 0,
+					totalCost: 0,
+					contextTokens: 0,
+				})
+
+				mockTask = {
+					taskId: "task-123",
+					consecutiveMistakeCount: 0,
+					recordToolError: vi.fn(),
+					todoList: undefined,
+					toolUsage: {},
+					say: vi.fn().mockResolvedValue(undefined),
+					ask: vi
+						.fn()
+						.mockResolvedValue({ response: "yesButtonClicked", text: undefined, images: undefined }),
+					emit: vi.fn(),
+					emitFinalTokenUsageUpdate,
+					getTokenUsage,
+					captureSessionMetricsOnce,
+				}
+
+				const callbacks: AttemptCompletionCallbacks = {
+					askApproval: mockAskApproval,
+					handleError: mockHandleError,
+					pushToolResult: mockPushToolResult,
+					removeClosingTag: mockRemoveClosingTag,
+					askFinishSubTaskApproval: mockAskFinishSubTaskApproval,
+					toolDescription: mockToolDescription,
+					toolProtocol: "xml",
+				}
+
+				await attemptCompletionTool.handle(mockTask as Task, block, callbacks)
+
+				expect(emitFinalTokenUsageUpdate).toHaveBeenCalled()
+				expect(captureSessionMetricsOnce).toHaveBeenCalledWith("explicit_completion")
 			})
 		})
 	})

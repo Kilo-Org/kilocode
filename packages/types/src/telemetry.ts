@@ -62,6 +62,7 @@ export enum TelemetryEventName {
 	TASK_CREATED = "Task Created",
 	TASK_RESTARTED = "Task Reopened",
 	TASK_COMPLETED = "Task Completed",
+	SESSION_METRICS = "Session Metrics", // kilocode_change
 	TASK_MESSAGE = "Task Message",
 	TASK_CONVERSATION_MESSAGE = "Conversation Message",
 	LLM_COMPLETION = "LLM Completion",
@@ -285,6 +286,23 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.CUSTOM_MODE_CREATED,
 		]),
 		properties: telemetryPropertiesSchema,
+	}),
+	z.object({
+		// kilocode_change start
+		type: z.literal(TelemetryEventName.SESSION_METRICS),
+		properties: z.object({
+			...telemetryPropertiesSchema.shape,
+			taskId: z.string(),
+			sessionDurationMs: z.number(),
+			totalTurns: z.number(),
+			toolCallsByType: z.record(z.number()),
+			errorsByType: z.record(z.number()),
+			totalTokensConsumed: z.number(),
+			totalTokensIn: z.number(),
+			totalTokensOut: z.number(),
+			terminationReason: z.enum(["user_closed", "timeout", "explicit_completion", "error"]),
+		}),
+		// kilocode_change end
 	}),
 	z.object({
 		type: z.literal(TelemetryEventName.TELEMETRY_SETTINGS_CHANGED),
