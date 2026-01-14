@@ -4,6 +4,8 @@ import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import type { IndexingStatus } from "@roo/ExtensionMessage"
 
+import { getAppUrl } from "@roo-code/types"
+
 import { Popover, PopoverContent } from "@src/components/ui"
 import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
@@ -58,7 +60,7 @@ export const ManagedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({ child
 const Content = () => {
 	const state = useExtensionState()
 	const orgId = state.apiConfiguration?.kilocodeOrganizationId
-	const href = `https://kilo.ai/organizations/${orgId}/code-indexing`
+	const href = getAppUrl(`/organizations/${orgId}/code-indexing`)
 	const [workspaceFolders, setWorkspaceFolders] = useState<WorkspaceFolderState[]>([])
 
 	// Request initial state when popover opens

@@ -5,6 +5,8 @@ import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import type { IndexingStatus } from "@roo/ExtensionMessage"
 
+import { getAppUrl } from "@roo-code/types"
+
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -133,7 +135,7 @@ export const OrganizationIndexingTab: React.FC<OrganizationIndexingTabProps> = (
 					<div className="pt-2 border-t border-vscode-dropdown-border">
 						<div className="text-xs text-vscode-descriptionForeground">
 							<VSCodeLink
-								href={`https://app.kilo.ai/organizations/${organizationId}/code-indexing`}
+								href={getAppUrl(`/organizations/${organizationId}/code-indexing`)}
 								className="inline-flex items-center gap-1 hover:underline">
 								<svg
 									className="w-3 h-3"
