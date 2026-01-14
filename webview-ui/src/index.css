@@ -550,3 +550,28 @@ input[cmdk-input]:focus {
 	opacity: 0.7;
 }
 /* kilocode_change end - STT preview text styling */
+@keyframes ground-slide {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-30px);
+	}
+}
+
+.animate-ground-slide {
+	animation: ground-slide 1s linear infinite;
+}
+
+@keyframes sun {
+	0% {
+		transform: translateX(200px);
+	}
+	100% {
+		transform: translateX(-200px);
+	}
+}
+
+.animate-sun {
+	animation: sun 30s linear infinite;
+}

@@ -8,8 +8,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
-import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
+import { setFollowupSuggestionsAtom, isCancellingAtom } from "../../../state/atoms/ui.js"
 import { chatMessagesAtom } from "../../../state/atoms/extension.js"
+import { exitPromptVisibleAtom } from "../../../state/atoms/keyboard.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 // Mock the hooks
@@ -62,7 +63,7 @@ describe("StatusIndicator", () => {
 	})
 
 	it("should show followup hotkeys when suggestions are visible", () => {
-		store.set(showFollowupSuggestionsAtom, true)
+		store.set(setFollowupSuggestionsAtom, [{ answer: "Yes, continue" }, { answer: "No, stop" }])
 
 		const { lastFrame } = render(
 			<JotaiProvider store={store}>
@@ -79,7 +80,7 @@ describe("StatusIndicator", () => {
 	it("should show general command hints when idle", () => {
 		// No messages = not streaming
 		store.set(chatMessagesAtom, [])
-		store.set(showFollowupSuggestionsAtom, false)
+		store.set(setFollowupSuggestionsAtom, [])
 
 		const { lastFrame } = render(
 			<JotaiProvider store={store}>
@@ -90,6 +91,19 @@ describe("StatusIndicator", () => {
 		const output = lastFrame()
 		expect(output).toContain("/help")
 		expect(output).toContain("for commands")
+	})
+
+	it("should show exit confirmation prompt when Ctrl+C is pressed once", () => {
+		store.set(exitPromptVisibleAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		expect(output).toMatch(/Press (?:Ctrl|Cmd)\+C again to exit\./)
 	})
 
 	it("should not show Thinking status when not streaming", () => {
@@ -152,5 +166,54 @@ describe("StatusIndicator", () => {
 
 		const output = lastFrame()
 		expect(output).toContain("Task ready to resume")
+	})
+
+	it("should show Cancelling status when isCancellingAtom is true", () => {
+		// Set up streaming state with a partial message
+		const partialMessage: ExtensionChatMessage = {
+			type: "say",
+			say: "text",
+			ts: Date.now(),
+			text: "Processing...",
+			partial: true,
+		}
+		store.set(chatMessagesAtom, [partialMessage])
+		// Set cancelling state
+		store.set(isCancellingAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		expect(output).toContain("Cancelling...")
+		// Should NOT show "Thinking..." when cancelling
+		expect(output).not.toContain("Thinking...")
+	})
+
+	it("should show Cancelling instead of Thinking when both streaming and cancelling", () => {
+		// Set up streaming state
+		const partialMessage: ExtensionChatMessage = {
+			type: "say",
+			say: "text",
+			ts: Date.now(),
+			text: "Processing...",
+			partial: true,
+		}
+		store.set(chatMessagesAtom, [partialMessage])
+		store.set(isCancellingAtom, true)
+
+		const { lastFrame } = render(
+			<JotaiProvider store={store}>
+				<StatusIndicator disabled={false} />
+			</JotaiProvider>,
+		)
+
+		const output = lastFrame()
+		// Should show Cancelling, not Thinking
+		expect(output).toContain("Cancelling...")
+		expect(output).not.toContain("Thinking...")
 	})
 })

@@ -42,6 +42,8 @@ interface PendingProcessInfo {
 	desiredLabel?: string
 	worktreeBranch?: string // Captured from welcome event before session_created
 	worktreePath?: string // Captured from welcome event before session_created
+	/** Worktree info if created by extension (for parallel mode) - has full details upfront */
+	worktreeInfo?: { branch: string; path: string; parentBranch: string }
 	provisionalSessionId?: string // Used to show streaming content before session_created
 	sawApiReqStarted?: boolean // Track if api_req_started arrived before session_created
 	gitUrl?: string
@@ -147,6 +149,8 @@ export class CliProcessHandler {
 					existingBranch?: string
 					/** Shell PATH from login shell - ensures CLI can access tools like git on macOS */
 					shellPath?: string
+					/** Worktree info if created by extension (for parallel mode) */
+					worktreeInfo?: { branch: string; path: string; parentBranch: string }
 			  }
 			| undefined,
 		onCliEvent: (sessionId: string, event: StreamEvent) => void,
@@ -181,26 +185,28 @@ export class CliProcessHandler {
 		}
 
 		// Build CLI command
+		// Note: Worktree/parallel mode is handled by AgentManagerProvider creating the worktree
+		// and passing the worktree path as the workspace. CLI is unaware of worktrees.
 		const cliArgs = buildCliArgs(workspace, prompt, {
-			parallelMode: options?.parallelMode,
 			sessionId: options?.sessionId,
-			existingBranch: options?.existingBranch,
 		})
-		this.debugLog(`Command: ${cliPath} ${cliArgs.join(" ")}`)
-		this.debugLog(`Working dir: ${workspace}`)
-
 		const env = this.buildEnvWithApiConfiguration(options?.apiConfiguration, options?.shellPath)
 
-		// On Windows, .cmd files need to be executed through cmd.exe (shell: true)
-		// Without this, spawn() fails silently because .cmd files are batch scripts
-		const needsShell = process.platform === "win32" && cliPath.toLowerCase().endsWith(".cmd")
+		// On Windows, batch files must be launched via cmd.exe to handle paths with spaces reliably.
+		const isWindowsBatch =
+			process.platform === "win32" && [".cmd", ".bat"].includes(path.extname(cliPath).toLowerCase())
+		const spawnCommand = isWindowsBatch ? process.env.ComSpec || "cmd.exe" : cliPath
+		const spawnArgs = isWindowsBatch ? ["/d", "/s", "/c", cliPath, ...cliArgs] : cliArgs
+
+		this.debugLog(`Command: ${spawnCommand} ${spawnArgs.join(" ")}`)
+		this.debugLog(`Working dir: ${workspace}`)
 
 		// Spawn CLI process
-		const proc = spawn(cliPath, cliArgs, {
+		const proc = spawn(spawnCommand, spawnArgs, {
 			cwd: workspace,
 			stdio: ["pipe", "pipe", "pipe"],
 			env,
-			shell: needsShell,
+			shell: false,
 		})
 
 		if (proc.pid) {
@@ -240,6 +246,7 @@ export class CliProcessHandler {
 				desiredSessionId: options?.sessionId,
 				desiredLabel: options?.label,
 				gitUrl: options?.gitUrl,
+				worktreeInfo: options?.worktreeInfo,
 				stderrBuffer: [],
 				stdoutBuffer: [],
 				timeoutId: setTimeout(() => this.handlePendingTimeout(), PENDING_SESSION_TIMEOUT_MS),
@@ -351,6 +358,10 @@ export class CliProcessHandler {
 
 	public hasProcess(sessionId: string): boolean {
 		return this.activeSessions.has(sessionId)
+	}
+
+	public hasPendingProcess(): boolean {
+		return this.pendingProcess !== null
 	}
 
 	/**
@@ -538,6 +549,7 @@ export class CliProcessHandler {
 		realSessionId: string,
 		worktreeBranch: string | undefined,
 		worktreePath: string | undefined,
+		worktreeInfo: { branch: string; path: string; parentBranch: string } | undefined,
 		parallelMode: boolean | undefined,
 	): void {
 		this.debugLog(`Upgrading provisional session ${provisionalSessionId} -> ${realSessionId}`)
@@ -552,7 +564,15 @@ export class CliProcessHandler {
 
 		this.callbacks.onSessionRenamed?.(provisionalSessionId, realSessionId)
 
-		if (parallelMode && (worktreeBranch || worktreePath)) {
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(realSessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+		} else if (parallelMode && (worktreeBranch || worktreePath)) {
+			// Fallback: use branch/path from CLI welcome event
 			this.registry.updateParallelModeInfo(realSessionId, {
 				branch: worktreeBranch,
 				worktreePath,
@@ -616,6 +636,7 @@ export class CliProcessHandler {
 			parallelMode,
 			worktreeBranch,
 			worktreePath,
+			worktreeInfo,
 			desiredSessionId,
 			desiredLabel,
 			sawApiReqStarted,
@@ -639,6 +660,7 @@ export class CliProcessHandler {
 				sessionId,
 				worktreeBranch,
 				worktreePath,
+				worktreeInfo,
 				parallelMode,
 			)
 			return
@@ -666,10 +688,18 @@ export class CliProcessHandler {
 
 		this.debugLog(`Session created with CLI sessionId: ${event.sessionId}, mapped to: ${session.sessionId}`)
 
-		// Apply worktree branch if captured from welcome event
-		if (worktreeBranch && parallelMode) {
+		// Apply worktree info if we have it (extension created the worktree)
+		if (worktreeInfo && parallelMode) {
+			this.registry.updateParallelModeInfo(session.sessionId, {
+				branch: worktreeInfo.branch,
+				worktreePath: worktreeInfo.path,
+				parentBranch: worktreeInfo.parentBranch,
+			})
+			this.debugLog(`Applied worktree info: ${worktreeInfo.path} (branch: ${worktreeInfo.branch})`)
+		} else if (worktreeBranch && parallelMode) {
+			// Fallback: use branch from CLI welcome event
 			this.registry.updateParallelModeInfo(session.sessionId, { branch: worktreeBranch })
-			this.debugLog(`Applied worktree branch: ${worktreeBranch}`)
+			this.debugLog(`Applied worktree branch from CLI: ${worktreeBranch}`)
 		}
 
 		const resolvedWorktreePath =

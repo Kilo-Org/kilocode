@@ -97,6 +97,17 @@ const config: Config = {
 		[
 			"@docusaurus/plugin-client-redirects",
 			{
+				createRedirects(existingPath) {
+					// Redirect old /contributing/specs/spec-* paths to /contributing/architecture/*
+					if (existingPath.startsWith("/contributing/architecture/")) {
+						const filename = existingPath.replace("/contributing/architecture/", "")
+						return [
+							`/contributing/specs/spec-${filename}`, // spec- prefix
+							`/contributing/specs/${filename}`, // without prefix
+						]
+					}
+					return undefined
+				},
 				redirects: [
 					// Files moved from advanced-usage to features
 					{
@@ -108,12 +119,36 @@ const config: Config = {
 						from: ["/advanced-usage/code-actions"],
 					},
 					{
-						to: "/advanced-usage/custom-instructions",
-						from: ["/features/custom-instructions"],
+						to: "/agent-behavior/custom-instructions",
+						from: [
+							"/advanced-usage/custom-instructions",
+							"/features/custom-instructions",
+							"/customization/custom-instructions",
+						],
 					},
 					{
-						to: "/features/custom-modes",
-						from: ["/advanced-usage/custom-modes"],
+						to: "/agent-behavior/custom-modes",
+						from: ["/features/custom-modes", "/advanced-usage/custom-modes", "/customization/custom-modes"],
+					},
+					{
+						to: "/agent-behavior/custom-rules",
+						from: ["/advanced-usage/custom-rules", "/customization/custom-rules"],
+					},
+					{
+						to: "/agent-behavior/skills",
+						from: ["/features/skills", "/customization/skills"],
+					},
+					{
+						to: "/agent-behavior/workflows",
+						from: ["/features/slash-commands/workflows", "/customization/workflows"],
+					},
+					{
+						to: "/basic-usage/settings-management",
+						from: ["/features/settings-management", "/customization/settings-management"],
+					},
+					{
+						to: "/agent-behavior/prompt-engineering",
+						from: ["/advanced-usage/prompt-engineering"],
 					},
 					{
 						to: "/features/enhance-prompt",
@@ -134,6 +169,11 @@ const config: Config = {
 					{
 						to: "/features/api-configuration-profiles",
 						from: ["/advanced-usage/api-configuration-profiles"],
+					},
+
+					{
+						to: "/slack",
+						from: ["/advanced-usage/slackbot"],
 					},
 
 					// MCP related redirects

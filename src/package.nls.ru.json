@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
-	"extension.description": "Целая команда ИИ-разработчиков в вашем редакторе.",
+	"extension.displayName": "Kilo Code: AI-агент для кодирования, Copilot и автозаполнение",
+	"extension.description": "AI-агент для кодирования с открытым исходным кодом, который генерирует код из естественного языка, автоматизирует задачи и выполняет команды терминала. Включает встроенное автодополнение, автоматизацию браузера, автоматический рефакторинг и пользовательские режимы для планирования, кодирования и отладки. Поддерживает более 500 AI-моделей, включая Claude (Anthropic), Gemini, Grok, GPT, Codex и GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.sidebar.name": "Kilo Code",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Включить синхронизацию настроек Kilo Code между устройствами через VS Code Settings Sync. При включении ваши API-конфигурации, пользовательские режимы и предпочтения будут автоматически синхронизироваться при входе в VS Code Settings Sync.",
 	"settings.autoImportSettingsPath.description": "Путь к файлу конфигурации Kilo Code для автоматического импорта при запуске расширения. Поддерживает абсолютные пути и пути относительно домашнего каталога (например, '~/Documents/kilo-code-settings.json'). Оставьте пустым, чтобы отключить автоматический импорт.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Максимальное количество файлов для индексации при поиске файлов @. Большие значения обеспечивают лучшие результаты поиска в крупных проектах, но могут потреблять больше памяти. По умолчанию: 10 000.",
-	"settings.useAgentRules.description": "Включить загрузку файлов AGENTS.md для специфичных для агента правил (см. https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Включить загрузку файлов AGENTS.md для специфичных для агента правил (см. https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Максимальное время в секундах для ожидания ответов API (0 = нет тайм-аута, 1-86400 с, по умолчанию: 600 с). Рекомендуются более высокие значения для локальных провайдеров, таких как LM Studio и Ollama, которым может потребоваться больше времени на обработку.",
 	"settings.newTaskRequireTodos.description": "Требовать параметр todos при создании новых задач с помощью инструмента new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Размер пакета для операций встраивания во время индексации кода. Настройте это в соответствии с ограничениями вашего API-провайдера. По умолчанию 60.",

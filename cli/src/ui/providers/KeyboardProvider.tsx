@@ -14,11 +14,9 @@ import { logs } from "../../services/logs.js"
 import {
 	broadcastKeyEventAtom,
 	setPasteModeAtom,
-	appendToPasteBufferAtom,
-	pasteBufferAtom,
+	kittySequenceBufferAtom,
 	appendToKittyBufferAtom,
 	clearKittyBufferAtom,
-	kittySequenceBufferAtom,
 	kittyProtocolEnabledAtom,
 	setKittyProtocolAtom,
 	debugKeystrokeLoggingAtom,
@@ -32,7 +30,6 @@ import {
 	isFocusEvent,
 	mapAltKeyCharacter,
 	parseReadlineKey,
-	createPasteKey,
 	createSpecialKey,
 } from "../utils/keyParsing.js"
 import { autoEnableKittyProtocol } from "../utils/terminalCapabilities.js"
@@ -51,9 +48,9 @@ interface KeyboardProviderProps {
 }
 
 export function KeyboardProvider({ children, config = {} }: KeyboardProviderProps) {
-	// Default escapeCodeTimeout to 500ms to allow proper parsing of Kitty protocol sequences
-	// When set to 0, readline immediately processes each character, breaking up escape sequences
-	const { debugKeystrokeLogging = false, escapeCodeTimeout = 500 } = config
+	// escapeCodeTimeout=0 provides instant ESC response. This doesn't break Kitty protocol
+	// because those sequences are sent atomically by the terminal and parsed by parseKittySequence().
+	const { debugKeystrokeLogging = false, escapeCodeTimeout = 0 } = config
 
 	// Get stdin and raw mode control
 	const { stdin, setRawMode } = useStdin()
@@ -61,7 +58,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Jotai setters
 	const broadcastKey = useSetAtom(broadcastKeyEventAtom)
 	const setPasteMode = useSetAtom(setPasteModeAtom)
-	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
 	const appendToKittyBuffer = useSetAtom(appendToKittyBufferAtom)
 	const clearKittyBuffer = useSetAtom(clearKittyBufferAtom)
 	const setKittyProtocol = useSetAtom(setKittyProtocolAtom)
@@ -70,7 +66,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const setupKeyboard = useSetAtom(setupKeyboardAtom)
 
 	// Jotai getters (for reading current state)
-	const pasteBuffer = useAtomValue(pasteBufferAtom)
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
 	const isKittyEnabled = useAtomValue(kittyProtocolEnabledAtom)
 	const isDebugEnabled = useAtomValue(debugKeystrokeLoggingAtom)
@@ -97,17 +92,28 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Handle paste completion
 	const completePaste = useCallback(() => {
 		const currentBuffer = pasteBufferRef.current
-		if (isPasteRef.current && currentBuffer) {
-			// Normalize line endings: convert \r\n and \r to \n
-			// This handles different line ending formats from various terminals/platforms
-			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+		const wasPasting = isPasteRef.current
 
-			broadcastKey(createPasteKey(normalizedBuffer))
-			setPasteMode(false)
-			isPasteRef.current = false
-			pasteBufferRef.current = ""
+		// Reset paste state
+		setPasteMode(false)
+		isPasteRef.current = false
+		pasteBufferRef.current = ""
+
+		if (wasPasting && currentBuffer) {
+			// Normalize line endings: convert \r\n and \r to \n
+			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+			// Directly broadcast paste event - skip clipboard image check for bracketed pastes
+			// Clipboard image check only runs for explicit Cmd+V (handled in handleGlobalHotkeys)
+			broadcastKey({
+				name: "",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: true,
+				sequence: normalizedBuffer,
+			})
 		}
-	}, [broadcastKey, setPasteMode])
+	}, [setPasteMode, broadcastKey])
 
 	useEffect(() => {
 		// Save original raw mode state
@@ -196,7 +202,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			if (isPasteRef.current) {
 				if (!usePassthrough) {
 					pasteBufferRef.current += parsedKey.sequence
-					appendToPasteBuffer(parsedKey.sequence)
 				}
 				return
 			}
@@ -354,9 +359,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					// No more markers
 					if (isPasteRef.current) {
 						// We're in paste mode - accumulate the remaining data in paste buffer
-						const chunk = dataStr.slice(pos)
-						pasteBufferRef.current += chunk
-						appendToPasteBuffer(chunk)
+						pasteBufferRef.current += dataStr.slice(pos)
 					} else {
 						// Not in paste mode - write remaining data to stream
 						keypressStream.write(data.slice(pos))
@@ -368,9 +371,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				if (nextMarkerPos > pos) {
 					if (isPasteRef.current) {
 						// We're in paste mode - accumulate data in paste buffer
-						const chunk = dataStr.slice(pos, nextMarkerPos)
-						pasteBufferRef.current += chunk
-						appendToPasteBuffer(chunk)
+						pasteBufferRef.current += dataStr.slice(pos, nextMarkerPos)
 					} else {
 						// Not in paste mode - write data to stream
 						keypressStream.write(data.slice(pos, nextMarkerPos))
@@ -414,9 +415,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Clear timers
 			clearBackslashTimer()
 
-			// Flush any pending buffers
-			completePaste()
-			clearBuffers()
+			// DON'T flush paste buffers here - React StrictMode causes re-mounts
+			// that would interrupt an in-progress paste operation.
+			// The paste buffer refs persist across re-mounts and will be
+			// properly flushed when the paste end marker is received.
 		}
 	}, [
 		stdin,
@@ -424,12 +426,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		escapeCodeTimeout,
 		broadcastKey,
 		setPasteMode,
-		appendToPasteBuffer,
 		appendToKittyBuffer,
 		clearKittyBuffer,
 		clearBuffers,
 		setKittyProtocol,
-		pasteBuffer,
 		kittyBuffer,
 		isKittyEnabled,
 		isDebugEnabled,

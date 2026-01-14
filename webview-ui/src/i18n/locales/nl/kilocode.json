@@ -50,7 +50,6 @@
 				"title": "Provider Routing",
 				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",
 				"createOrganization": "Maak organisatie aan om Provider Routing te beheren",
-				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 				"sorting": {
 					"default": "Standaard provider sortering",
 					"price": "Voorkeur voor providers met lagere prijs",
@@ -223,39 +222,32 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"triggers": "Triggers",
-			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
+			"codeEditorSuggestions": "Code Editor Suggesties",
+			"chatSuggestions": "Chat Suggesties",
+			"model": "Model",
+			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Pauze om te Voltooien",
-				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
+				"label": "Automatisch Suggesties Activeren",
+				"description": "Toon automatisch inline code-suggesties wanneer je pauzeert met typen."
 			},
 			"autoTriggerDelay": {
 				"label": "Automatische Activeringsvertraging",
-				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
-			},
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Snelle Taak ({{keybinding}})",
-				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Sneltoets bewerken</DocsLink>"
+				"description": "De vertraging in seconden voordat suggesties verschijnen nadat je stopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
-				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
+				"label": "Activeren met Sneltoets ({{keybinding}})",
+				"description": "Druk op {{keybinding}} om een codesuggestie op te vragen op je cursorpositie. <DocsLink>Sneltoets bewerken</DocsLink>"
 			},
-			"keybindingNotFound": "niet gevonden",
-			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
-			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren.",
-			"model": "Model",
-			"provider": "Provider",
 			"enableChatAutocomplete": {
-				"label": "Chatinvoer Automatisch Aanvullen",
-				"description": "Wanneer ingeschakeld, zal Kilo Code suggesties voor aanvullingen geven terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
+				"label": "Chat Autocomplete Inschakelen",
+				"description": "Toon aanvullingen terwijl je typt in de chatinvoer. Druk op Tab om suggesties te accepteren."
 			},
 			"snooze": {
-				"label": "Autocomplete Snoozen",
-				"description": "Pauzeer autocomplete-suggesties tijdelijk voor een opgegeven duur.",
+				"label": "Suggesties Snoozen",
+				"description": "Pauzeer suggesties tijdelijk voor een opgegeven duur.",
 				"button": "Snoozen",
 				"unsnooze": "Snooze opheffen",
-				"currentlySnoozed": "Autocomplete is momenteel gesnoozed.",
+				"currentlySnoozed": "Suggesties zijn momenteel gesnoozed.",
 				"duration": {
 					"1min": "1 minuut",
 					"5min": "5 minuten",
@@ -263,7 +255,19 @@
 					"30min": "30 minuten",
 					"1hour": "1 uur"
 				}
-			}
+			},
+			"noModelConfigured": {
+				"title": "Geen autocomplete-model geconfigureerd",
+				"description": "Om autocomplete in te schakelen, voeg een profiel toe met een van deze ondersteunde providers:",
+				"learnMore": "Meer informatie over autocomplete-configuratie →"
+			},
+			"noCredits": {
+				"title": "Geen tegoed op je account",
+				"description": "Je Kilo Code-account heeft geen tegoed. Om autocomplete te gebruiken, voeg tegoed toe aan je account.",
+				"buyCredits": "Tegoed kopen →"
+			},
+			"keybindingNotFound": "niet gevonden",
+			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren."
 		}
 	},
 	"virtualProvider": {
@@ -328,9 +332,23 @@
 	},
 	"speechToText": {
 		"startRecording": "Start spraakinvoer",
-		"stopRecording": "Stop spraakinvoer",
-		"unavailableOpenAiKeyMissing": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI provider met een API-sleutel om spraaktranscriptie te gebruiken.",
-		"unavailableBoth": "Spraak-naar-tekst is niet beschikbaar. Het vereist een geldige OpenAI-provider en FFmpeg moet geïnstalleerd zijn.",
-		"unavailableFfmpegNotInstalled": "Spraak-naar-tekst is niet beschikbaar. Installeer FFmpeg om spraaktranscriptie te gebruiken."
+		"stopRecording": "Stop spraakherkenning",
+		"setupPopover": {
+			"title": "Spraak-naar-Tekst",
+			"description": "Spraak-naar-tekst is niet beschikbaar. Spraak-naar-tekst vereist zowel FFmpeg als een geldige OpenAI-provider die is geconfigureerd. <moreInfoLink>Klik hier voor meer informatie</moreInfoLink>.",
+			"openAiReason": "Je hebt een geldige OpenAI-provider met een API-sleutel nodig om spraaktranscriptie te gebruiken.",
+			"ffmpegMessage": "Help me FFmpeg te installeren",
+			"ffmpegReason": "Je hebt FFmpeg nodig. <ffmpegLink>Klik hier</ffmpegLink> om Kilo te laten helpen met het installeren van FFmpeg."
+		},
+		"misconfiguredState": "Niet beschikbaar vanwege configuratie",
+		"errorState": "Niet beschikbaar vanwege een fout",
+		"microphone": {
+			"label": "Microfoon",
+			"defaultOption": "Systeemstandaard",
+			"description": "Selecteer het microfoonapparaat voor spraak-naar-tekst",
+			"loading": "Microfoonapparaten laden...",
+			"noDevices": "Geen microfoonapparaten gevonden",
+			"refresh": "Vernieuwen"
+		}
 	}
 }

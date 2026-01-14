@@ -80,6 +80,7 @@
 		"cancelTitle": "取消代理",
 		"finishToBranchTitle": "完成 Worktree 并准备分支：{{branch}}",
 		"finishToBranchTitleNoBranch": "完成 Worktree 并准备分支",
+		"createPRTitle": "创建 Pull Request",
 		"sendTitle": "发送消息",
 		"resumeTitle": "继续代理",
 		"hint": "按 Enter 发送，Shift+Enter 换行"

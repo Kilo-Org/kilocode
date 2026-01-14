@@ -214,11 +214,6 @@
 			"label": "ब्राउज़र",
 			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ब्राउज़र क्रियाएँ करें — नोट: केवल तभी लागू होता है जब मॉडल कंप्यूटर उपयोग का समर्थन करता है"
 		},
-		"retry": {
-			"label": "पुनः प्रयास",
-			"description": "जब सर्वर त्रुटि प्रतिक्रिया देता है तो स्वचालित रूप से विफल API अनुरोधों को पुनः प्रयास करें",
-			"delayLabel": "अनुरोध को पुनः प्रयास करने से पहले विलंब"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "MCP सर्वर व्यू में व्यक्तिगत MCP टूल्स के स्वतः अनुमोदन को सक्षम करें (इस सेटिंग और टूल के \"हमेशा अनुमति दें\" चेकबॉक्स दोनों की आवश्यकता है)"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "सक्रिय प्रोफ़ाइल बनाएं",
 		"makeActiveTooltip": "API अनुरोधों के लिए इस प्रोफ़ाइल को सक्रिय करें",
 		"apiProvider": "API प्रदाता",
+		"apiProviderDocs": "प्रदाता डॉक्स",
 		"model": "मॉडल",
 		"nameEmpty": "नाम खाली नहीं हो सकता",
 		"nameExists": "इस नाम वाला प्रोफ़ाइल पहले से मौजूद है",
@@ -332,7 +328,6 @@
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"getRequestyBaseUrl": "बेस URL",
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
-		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
 		"anthropicApiKey": "Anthropic API कुंजी",
 		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
 		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
@@ -342,6 +337,8 @@
 		"anthropicAzureDeploymentPlaceholder": "डिप्लॉयमेंट नाम दर्ज करें...",
 		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
 		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"vertex1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"vertex1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
 		"basetenApiKey": "Baseten API कुंजी",
 		"getBasetenApiKey": "Baseten API कुंजी प्राप्त करें",
 		"cerebrasApiKey": "Cerebras API कुंजी",
@@ -442,6 +439,14 @@
 		"awsRegion": "AWS क्षेत्र",
 		"awsCrossRegion": "क्रॉस-क्षेत्र अनुमान का उपयोग करें",
 		"awsGlobalInference": "वैश्विक अनुमान का उपयोग करें (स्वचालित रूप से श्रेष्ठ AWS क्षेत्र चुनें)",
+		"awsServiceTier": "सेवा स्तर",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "संतुलित प्रदर्शन और लागत",
+		"awsServiceTierFlex": "Flex (50% छूट)",
+		"awsServiceTierFlexDesc": "कम लागत, गैर-महत्वपूर्ण कार्यों के लिए उच्च विलंबता",
+		"awsServiceTierPriority": "Priority (75% प्रीमियम)",
+		"awsServiceTierPriorityDesc": "मिशन-क्रिटिकल एप्लिकेशन के लिए सबसे तेज़ प्रदर्शन",
+		"awsServiceTierNote": "सेवा स्तर मूल्य निर्धारण और प्रदर्शन को प्रभावित करते हैं। Flex 50% छूट के साथ उच्च विलंबता प्रदान करता है, Priority 75% प्रीमियम के साथ 25% बेहतर प्रदर्शन प्रदान करता है।",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "कस्टम VPC एंडपॉइंट का उपयोग करें",
 			"vpcEndpointUrlPlaceholder": "VPC एंडपॉइंट URL दर्ज करें (वैकल्पिक)",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "गिट स्थिति अधिकतम फ़ाइलें",
 			"description": "गिट स्थिति संदर्भ में शामिल करने के लिए फ़ाइल प्रविष्टियों की अधिकतम संख्या। अक्षम करने के लिए 0 पर सेट करें। शाखा जानकारी और कमिट हमेशा दिखाए जाते हैं जब > 0 होता है।"
+		},
+		"enableSubfolderRules": {
+			"label": "सबफ़ोल्डर नियम सक्षम करें",
+			"description": "उपनिर्देशिकाओं से .roo/rules और AGENTS.md फ़ाइलों को पुनरावर्ती रूप से खोजें और लोड करें। प्रति-पैकेज नियमों वाले मोनोरेपो के लिए उपयोगी।"
 		}
 	},
 	"terminal": {
@@ -987,6 +996,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "वाक्-से-पाठ (STT)",
 			"description": "जब सक्षम किया जाता है, तो Kilo Code OpenAI के Whisper मॉडल का उपयोग करके आपकी आवाज़ को टेक्स्ट में बदल सकता है। रिकॉर्डिंग शुरू करने के लिए चैट में माइक्रोफ़ोन बटन पर क्लिक करें। इसके लिए FFmpeg इंस्टॉल होना और एक कॉन्फ़िगर किया गया OpenAI API प्रोवाइडर होना आवश्यक है।"
+		},
+		"CUSTOM_TOOLS": {
+			"name": "कस्टम टूल सक्षम करें",
+			"description": "सक्षम होने पर, Kilo आपके प्रोजेक्ट की .kilocode/tools निर्देशिका या वैश्विक टूल के लिए ~/.kilocode/tools से कस्टम TypeScript/JavaScript टूल लोड और उपयोग कर सकता है। नोट: ये टूल स्वचालित रूप से स्वत:-अनुमोदित होंगे।",
+			"toolsHeader": "उपलब्ध कस्टम टूल",
+			"noTools": "कोई कस्टम टूल लोड नहीं हुआ। अपने प्रोजेक्ट की .kilocode/tools निर्देशिका या वैश्विक टूल के लिए ~/.kilocode/tools में .ts या .js फ़ाइलें जोड़ें।",
+			"refreshButton": "रिफ्रेश करें",
+			"refreshing": "रिफ्रेश हो रहा है...",
+			"refreshSuccess": "टूल सफलतापूर्वक रिफ्रेश हुए",
+			"refreshError": "टूल रिफ्रेश करने में विफल",
+			"toolParameters": "पैरामीटर"
 		}
 	},
 	"promptCaching": {
@@ -1026,7 +1046,9 @@
 		"searchPlaceholder": "खोजें",
 		"noMatchFound": "कोई मिलान नहीं मिला",
 		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}",
-		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।"
+		"simplifiedExplanation": "आप बाद में विस्तृत मॉडल सेटिंग्स समायोजित कर सकते हैं।",
+		"recommendedModels": "अनुशंसित मॉडल",
+		"allModels": "सभी मॉडल"
 	},
 	"footer": {
 		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilo.ai/discord</discordLink> में शामिल होने में संकोच न करें",

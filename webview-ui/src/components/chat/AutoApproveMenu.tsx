@@ -22,7 +22,6 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 	const {
 		autoApprovalEnabled,
 		setAutoApprovalEnabled,
-		alwaysApproveResubmit,
 		allowedMaxRequests, // kilocode_change
 		allowedMaxCost, // kilocode_change
 		setAlwaysAllowReadOnly,
@@ -33,26 +32,14 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setAlwaysAllowMcp,
 		setAlwaysAllowModeSwitch,
 		setAlwaysAllowSubtasks,
-		setAlwaysApproveResubmit,
 		setAlwaysAllowFollowupQuestions,
-		setAlwaysAllowUpdateTodoList,
 		setAllowedMaxRequests, // kilocode_change
 		setAllowedMaxCost, // kilocode_change
 	} = useExtensionState()
 
 	const { t } = useAppTranslation()
 
-	const baseToggles = useAutoApprovalToggles()
-
-	// AutoApproveMenu needs alwaysApproveResubmit in addition to the base toggles
-	const toggles = useMemo(
-		() => ({
-			...baseToggles,
-			alwaysApproveResubmit: alwaysApproveResubmit,
-		}),
-		[baseToggles, alwaysApproveResubmit],
-	)
-
+	const toggles = useAutoApprovalToggles()
 	const { hasEnabledOptions, effectiveAutoApprovalEnabled } = useAutoApprovalState(toggles, autoApprovalEnabled)
 
 	const onAutoApproveToggle = useCallback(
@@ -87,14 +74,8 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 				case "alwaysAllowSubtasks":
 					setAlwaysAllowSubtasks(value)
 					break
-				case "alwaysApproveResubmit":
-					setAlwaysApproveResubmit(value)
-					break
 				case "alwaysAllowFollowupQuestions":
 					setAlwaysAllowFollowupQuestions(value)
-					break
-				case "alwaysAllowUpdateTodoList":
-					setAlwaysAllowUpdateTodoList(value)
 					break
 			}
 
@@ -129,9 +110,7 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 			setAlwaysAllowMcp,
 			setAlwaysAllowModeSwitch,
 			setAlwaysAllowSubtasks,
-			setAlwaysApproveResubmit,
 			setAlwaysAllowFollowupQuestions,
-			setAlwaysAllowUpdateTodoList,
 			setAutoApprovalEnabled,
 		],
 	)

@@ -1,5 +1,92 @@
 # @kilocode/cli
 
+## 0.20.0
+
+### Minor Changes
+
+- [#4943](https://github.com/Kilo-Org/kilocode/pull/4943) [`eef76d0`](https://github.com/Kilo-Org/kilocode/commit/eef76d0e4b962c7b9680e5c9226b22ecaa3fa79b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add Shift+Tab keyboard shortcut to cycle through modes in the CLI
+
+### Patch Changes
+
+- [#4941](https://github.com/Kilo-Org/kilocode/pull/4941) [`b7052cc`](https://github.com/Kilo-Org/kilocode/commit/b7052cc2030466626a832e19061675d91edb6f94) Thanks [@Drilmo](https://github.com/Drilmo)! - Add extension path resolution for F5 debug workflow
+
+    - CLI resolves extension from src/dist/ when KILOCODE_DEV_CLI_PATH is set
+    - Add watch:cli:setup and watch:cli:deps tasks for reliable CLI builds
+
+- [#4967](https://github.com/Kilo-Org/kilocode/pull/4967) [`99029a5`](https://github.com/Kilo-Org/kilocode/commit/99029a556253b82ee8a8b56445dabd65b56e4fef) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improved file update display in CLI with compact format and colored diffs
+
+- [#4949](https://github.com/Kilo-Org/kilocode/pull/4949) [`f56d88a`](https://github.com/Kilo-Org/kilocode/commit/f56d88af3697993b2b33863741d5c47cd06e17be) Thanks [@eshurakov](https://github.com/eshurakov)! - Add --attach flag for file attachments in CLI
+
+- [#4959](https://github.com/Kilo-Org/kilocode/pull/4959) [`2dce098`](https://github.com/Kilo-Org/kilocode/commit/2dce098cb2f2476fb9978dcbb49b5070ba96a296) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - feat(cli): add word-by-word cursor navigation
+
+    Adds support for word-by-word cursor navigation in the CLI text input:
+
+    - `Meta+b` / `Meta+Left` to move to the beginning of the previous word
+    - `Meta+f` / `Meta+Right` to move to the beginning of the next word
+
+    This enhances the editing experience with Emacs-style keybindings and standard Meta+Arrow key navigation.
+
+## 0.19.3
+
+### Patch Changes
+
+- [#4827](https://github.com/Kilo-Org/kilocode/pull/4827) [`2a66afb`](https://github.com/Kilo-Org/kilocode/commit/2a66afb98b582a73d43b2147d941df32f3eb43a4) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix slash commands being intercepted by followup suggestions during `ask_followup_question` prompts.
+
+- [#4940](https://github.com/Kilo-Org/kilocode/pull/4940) [`9809864`](https://github.com/Kilo-Org/kilocode/commit/9809864ce51474c29b0db2635a19a92520a2f1f1) Thanks [@Drilmo](https://github.com/Drilmo)! - Add KILOCODE_DEV_CLI_PATH support for easier extension + CLI development workflow
+
+## 0.19.2
+
+### Patch Changes
+
+- [#4829](https://github.com/Kilo-Org/kilocode/pull/4829) [`4e09e36`](https://github.com/Kilo-Org/kilocode/commit/4e09e36bba165a2ab6f5e07f71a420faa49ea3ec) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix browser action results displaying raw base64 screenshot data as hexadecimal garbage
+
+## 0.19.1
+
+### Patch Changes
+
+- [#4810](https://github.com/Kilo-Org/kilocode/pull/4810) [`2d8f5b4`](https://github.com/Kilo-Org/kilocode/commit/2d8f5b4f823750d22701d962ba27885b01f78acb) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add `--append-system-prompt` CLI option to append custom instructions to the system prompt
+
+## 0.19.0
+
+### Minor Changes
+
+- [#4730](https://github.com/Kilo-Org/kilocode/pull/4730) [`695f68f`](https://github.com/Kilo-Org/kilocode/commit/695f68f41e6b58e484d4ab914b568f5092ebdcfc) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add autocomplete for `/mode` command in CLI, similar to model autocomplete. When typing `/mode ` and pressing tab, users now see suggestions for all available modes including default and custom modes with their names, descriptions, and source labels.
+
+### Patch Changes
+
+- [#4792](https://github.com/Kilo-Org/kilocode/pull/4792) [`25b7efe`](https://github.com/Kilo-Org/kilocode/commit/25b7efe9b4514e1e4ec7945dfcfcd34cc725f629) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix API request cost updates in the CLI when using static message rendering
+
+- [#4735](https://github.com/Kilo-Org/kilocode/pull/4735) [`ffabf05`](https://github.com/Kilo-Org/kilocode/commit/ffabf05c2684f36303610c97e6ca94d0ce0e48a9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add CLI `/condense` command for manual context condensation
+
+- [#4732](https://github.com/Kilo-Org/kilocode/pull/4732) [`2f16482`](https://github.com/Kilo-Org/kilocode/commit/2f16482b9fd84fb397a0ac6341edd9887d8b42e5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add instant ESC/Ctrl+X cancellation feedback with optimistic UI and reduced readline escape timeout
+
+- [#4740](https://github.com/Kilo-Org/kilocode/pull/4740) [`f291417`](https://github.com/Kilo-Org/kilocode/commit/f29141793f4c9340da139caaa62360daaef64e43) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Fix CLI formatting for unknown message types, JSON content, and codebase search results
+
+    - Improved JSON parsing in CI mode with proper error handling
+    - Enhanced unknown message type handling with JSON formatting
+    - Fixed codebase search results parsing to match extension payload format
+    - Fixed operator precedence bug in SayMessageRouter.tsx
+
+- [#4797](https://github.com/Kilo-Org/kilocode/pull/4797) [`ae3701b`](https://github.com/Kilo-Org/kilocode/commit/ae3701b85eb945c4ab5415690fca96226de3ad53) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix slash command suggestions to select first entry by default when typing `/`
+
+- [#4778](https://github.com/Kilo-Org/kilocode/pull/4778) [`ea212ca`](https://github.com/Kilo-Org/kilocode/commit/ea212caa226234f8c126a3ffaa93d2696414dea3) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Fix CLI auto-update regression caused by inverted conditional logic with --nosplash flag. The version check now runs for all users by default, regardless of the nosplash flag state.
+
+- [#4780](https://github.com/Kilo-Org/kilocode/pull/4780) [`0cfe8b0`](https://github.com/Kilo-Org/kilocode/commit/0cfe8b0b9313b3016eaddfeb7ae1a247cd9b4011) Thanks [@Drilmo](https://github.com/Drilmo)! - Add log file rotation to prevent unbounded disk usage
+
+    The CLI log file at `~/.kilocode/cli/logs/cli.txt` now automatically rotates at startup when it exceeds 10 MB, keeping only the most recent ~5 MB of logs. This prevents the log file from growing indefinitely and consuming excessive disk space for heavy CLI users or long-running sessions.
+
+## 0.18.1
+
+### Patch Changes
+
+- [#4728](https://github.com/Kilo-Org/kilocode/pull/4728) [`8ecb081`](https://github.com/Kilo-Org/kilocode/commit/8ecb081d10ee273613f138e651abae5e1b28ab1e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Clear input field when Ctrl+C is pressed
+
+- [#4244](https://github.com/Kilo-Org/kilocode/pull/4244) [`f32adee`](https://github.com/Kilo-Org/kilocode/commit/f32adee47a681aa82ed65b412f9ddaeb46c051a5) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add image paste support to CLI
+
+    - Allow Ctrl+V in the CLI to paste clipboard images, attach them as [Image #N], and send them with messages (macOS only, with status feedback and cleanup)
+    - Add image mention parsing (@path and [Image #N]) so pasted or referenced images are included when sending messages
+    - Split media code into a dedicated module with platform-specific clipboard handlers and image utilities
+
 ## 0.18.0
 
 ### Minor Changes

@@ -4,6 +4,7 @@
 
 package ai.kilocode.jetbrains.editor
 
+import ai.kilocode.jetbrains.plugin.SystemObjectProvider
 import ai.kilocode.jetbrains.util.URI
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.chains.DiffRequestChain
@@ -131,18 +132,48 @@ class EditorAndDocManager(val project: Project) : Disposable {
 
     fun initCurrentIdeaEditor() {
         CoroutineScope(Dispatchers.Default).launch {
-            FileEditorManager.getInstance(project).allEditors.forEach { editor ->
-                // Record and synchronize
-                if (editor is FileEditor) {
-                    val uri = URI.file(editor.file.path)
-                    val handle = sync2ExtHost(uri, false)
-                    handle.ideaEditor = editor
-                    val group = tabManager.createTabGroup(EditorGroupColumn.BESIDE.value, true)
-                    val options = TabOptions(isActive = true)
-                    val tab = group.addTab(EditorTabInput(uri, uri.path, ""), options)
-                    handle.tab = tab
-                    handle.group = group
+            // Wait for extension host to be ready before initializing editors
+            try {
+                // Get ExtensionHostManager from SystemObjectProvider
+                val systemObjectProvider = SystemObjectProvider.getInstance(project)
+                val extensionHostManager = systemObjectProvider.get<ai.kilocode.jetbrains.core.ExtensionHostManager>("extensionHostManager")
+                
+                if (extensionHostManager == null) {
+                    logger.error("ExtensionHostManager not available in SystemObjectProvider, skipping editor initialization")
+                    return@launch
                 }
+                
+                val isReady = try {
+                    extensionHostManager.waitForReady().get()
+                } catch (e: Exception) {
+                    logger.error("Error waiting for extension host to be ready", e)
+                    false
+                }
+                
+                if (!isReady) {
+                    logger.error("Extension host failed to initialize, skipping editor initialization")
+                    return@launch
+                }
+                
+                logger.info("Extension host ready, initializing current IDE editors")
+                
+                FileEditorManager.getInstance(project).allEditors.forEach { editor ->
+                    // Record and synchronize
+                    if (editor is FileEditor) {
+                        val uri = URI.file(editor.file.path)
+                        val handle = sync2ExtHost(uri, false)
+                        handle.ideaEditor = editor
+                        val group = tabManager.createTabGroup(EditorGroupColumn.BESIDE.value, true)
+                        val options = TabOptions(isActive = true)
+                        val tab = group.addTab(EditorTabInput(uri, uri.path, ""), options)
+                        handle.tab = tab
+                        handle.group = group
+                    }
+                }
+                
+                logger.info("Completed initialization of ${FileEditorManager.getInstance(project).allEditors.size} editors")
+            } catch (e: Exception) {
+                logger.error("Error during editor initialization", e)
             }
         }
     }

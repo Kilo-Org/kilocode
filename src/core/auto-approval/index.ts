@@ -13,13 +13,11 @@ export type AutoApprovalState =
 	| "alwaysAllowWrite"
 	| "alwaysAllowDelete" // kilocode_change
 	| "alwaysAllowBrowser"
-	| "alwaysApproveResubmit"
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"
 	| "alwaysAllowSubtasks"
 	| "alwaysAllowExecute"
 	| "alwaysAllowFollowupQuestions"
-	| "alwaysAllowUpdateTodoList"
 
 // Some of these actions have additional settings associated with them.
 export type AutoApprovalStateOptions =
@@ -145,7 +143,7 @@ export async function checkAutoApproval({
 		}
 
 		if (tool.tool === "updateTodoList") {
-			return state.alwaysAllowUpdateTodoList === true ? { decision: "approve" } : { decision: "ask" }
+			return { decision: "approve" }
 		}
 
 		if (tool?.tool === "fetchInstructions") {

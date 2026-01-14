@@ -1,5 +1,195 @@
 # kilo-code
 
+## 4.145.0
+
+### Minor Changes
+
+- [#4955](https://github.com/Kilo-Org/kilocode/pull/4955) [`8789f84`](https://github.com/Kilo-Org/kilocode/commit/8789f84e7d652185fce1767dcc29893080c7da87) Thanks [@iscekic](https://github.com/iscekic)! - add /condense and /compact commands
+
+### Patch Changes
+
+- [#4876](https://github.com/Kilo-Org/kilocode/pull/4876) [`7010f60`](https://github.com/Kilo-Org/kilocode/commit/7010f60bec33b5e1cdeff4a5bc2ad3c638e584cc) Thanks [@markijbema](https://github.com/markijbema)! - Autocomplete: Show entire suggestion when first line has no word characters
+
+- [#4183](https://github.com/Kilo-Org/kilocode/pull/4183) [`de30ffa`](https://github.com/Kilo-Org/kilocode/commit/de30ffa307c2bf0ad72eec67782b67725172f71f) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - fix(cerebras): use conservative max_tokens and add integration header
+
+    **Conservative max_tokens:**
+    Cerebras rate limiter estimates token consumption using max_completion_tokens upfront rather than actual usage. When agentic tools automatically set this to the model maximum (e.g., 64K), users exhaust their quota prematurely and get rate-limited despite minimal actual token consumption.
+
+    This fix uses a conservative default of 8K tokens instead of the model maximum. This is sufficient for most agentic tool use while preserving rate limit headroom.
+
+    **Integration header:**
+    Added `X-Cerebras-3rd-Party-Integration: kilocode` header to all Cerebras API requests for tracking and analytics.
+
+- [#4856](https://github.com/Kilo-Org/kilocode/pull/4856) [`100462e`](https://github.com/Kilo-Org/kilocode/commit/100462e956f7f7799525ebddb7d10050435047da) Thanks [@markijbema](https://github.com/markijbema)! - Improve autocomplete tooltip messaging when there's no balance
+
+    When a user has a Kilo Code account with no credits, the autocomplete status bar now shows a helpful message explaining that they need to add credits to use autocomplete, rather than just showing a generic token error.
+
+- [#4793](https://github.com/Kilo-Org/kilocode/pull/4793) [`4fff873`](https://github.com/Kilo-Org/kilocode/commit/4fff873a4b28fa66afbcf837358bcd584665a8be) Thanks [@mcowger](https://github.com/mcowger)! - Restore various providers to modelCache endpoint to fix outdated entries.
+
+## 4.144.0
+
+### Minor Changes
+
+- [#4888](https://github.com/Kilo-Org/kilocode/pull/4888) [`334328d`](https://github.com/Kilo-Org/kilocode/commit/334328de5fa1825726b07be5d587550de2c52d91) Thanks [@hassoncs](https://github.com/hassoncs)! - Show notifications when skills are added or removed from the project or global config
+
+### Patch Changes
+
+- [#4880](https://github.com/Kilo-Org/kilocode/pull/4880) [`909bca7`](https://github.com/Kilo-Org/kilocode/commit/909bca7665b91753c3a9fd0435b13f1c91bcb2f2) Thanks [@markijbema](https://github.com/markijbema)! - Fixed that some tasks in task history were red
+
+- [#4862](https://github.com/Kilo-Org/kilocode/pull/4862) [`10ce725`](https://github.com/Kilo-Org/kilocode/commit/10ce72547d207b4f03538ebb3dc525d5bd92727d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Add Kilo icon to editor toolbar for quick access to open Kilo from any context
+
+- [#4940](https://github.com/Kilo-Org/kilocode/pull/4940) [`9809864`](https://github.com/Kilo-Org/kilocode/commit/9809864ce51474c29b0db2635a19a92520a2f1f1) Thanks [@Drilmo](https://github.com/Drilmo)! - Add KILOCODE_DEV_CLI_PATH support for easier extension + CLI development workflow
+
+- [#4899](https://github.com/Kilo-Org/kilocode/pull/4899) [`7a58919`](https://github.com/Kilo-Org/kilocode/commit/7a58919c7e4e12e0c954031081e12745419bf8b9) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Disable ask_followup_question tool when yolo mode is enabled to prevent the agent from asking itself questions and auto-answering them. Applied to:
+
+    - XML tool descriptions (system prompt)
+    - Native tool filtering
+    - Tool execution (returns error message if model still tries to use the tool from conversation history)
+
+- [#4863](https://github.com/Kilo-Org/kilocode/pull/4863) [`c65b798`](https://github.com/Kilo-Org/kilocode/commit/c65b798d99cd07bae2312d284663cd298a1b3f9e) Thanks [@hassoncs](https://github.com/hassoncs)! - Allow users to pick an input device for Speech-to-Text input
+
+- [#4892](https://github.com/Kilo-Org/kilocode/pull/4892) [`b37c944`](https://github.com/Kilo-Org/kilocode/commit/b37c944a8bea644660b6f2c4400d0b47cbdee979) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager session disappearing immediately after starting due to gitUrl race condition
+
+- [#4898](https://github.com/Kilo-Org/kilocode/pull/4898) [`14b22b6`](https://github.com/Kilo-Org/kilocode/commit/14b22b6b9b947ceab6418d6e43962b5535adad1e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix session becoming non-interactable after clicking "Finish to Branch" button. The session now remains active so users can continue working after committing changes.
+
+- [#4835](https://github.com/Kilo-Org/kilocode/pull/4835) [`d55c093`](https://github.com/Kilo-Org/kilocode/commit/d55c093797c4a816a86ee5ee000f32a98f28199b) Thanks [@lambertjosh](https://github.com/lambertjosh)! - Add section headers to model selection dropdowns for "Recommended models" and "All models"
+
+- [#4891](https://github.com/Kilo-Org/kilocode/pull/4891) [`20f1a16`](https://github.com/Kilo-Org/kilocode/commit/20f1a16e2ed37bd79332bac8ea1358b01c4acbc0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Fix: prevent double display of MCP marketplace section in settings view
+
+- [#4873](https://github.com/Kilo-Org/kilocode/pull/4873) [`72ed20b`](https://github.com/Kilo-Org/kilocode/commit/72ed20b686f28062fb795beb44377a993bb40a7b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improve support for VSCode's HTTP proxy settings
+
+- [#4901](https://github.com/Kilo-Org/kilocode/pull/4901) [`140bbf7`](https://github.com/Kilo-Org/kilocode/commit/140bbf7630a81591b18cc60a989690142e6b6039) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Agent Manager: Parallel mode no longer modifies .gitignore
+
+    Worktree exclusion rules are now written to `.git/info/exclude` instead, avoiding changes to tracked files in your repository.
+
+## 4.143.2
+
+### Patch Changes
+
+- [#4833](https://github.com/Kilo-Org/kilocode/pull/4833) [`2c7cd08`](https://github.com/Kilo-Org/kilocode/commit/2c7cd084bf4707eedda61fed554cf15fcc8b065b) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - Add `zai-glm-4.7` to Cerebras models
+
+- [#4853](https://github.com/Kilo-Org/kilocode/pull/4853) [`435c879`](https://github.com/Kilo-Org/kilocode/commit/435c879a29d55b75f5f6ffe7bf14854630e085cb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved prompt caching when using Anthropic models on OpenRouter with native tool calling
+
+- [#4859](https://github.com/Kilo-Org/kilocode/pull/4859) [`35fb2ad`](https://github.com/Kilo-Org/kilocode/commit/35fb2adc65dfb1e71e28f7368f96765062c43579) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Architect mode unnecessarily switching to Code mode to edit markdown files
+
+- [#4829](https://github.com/Kilo-Org/kilocode/pull/4829) [`4e09e36`](https://github.com/Kilo-Org/kilocode/commit/4e09e36bba165a2ab6f5e07f71a420faa49ea3ec) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix browser action results displaying raw base64 screenshot data as hexadecimal garbage
+
+## 4.143.1
+
+### Patch Changes
+
+- [#4832](https://github.com/Kilo-Org/kilocode/pull/4832) [`22a4ebf`](https://github.com/Kilo-Org/kilocode/commit/22a4ebfcd9f885b6ef9979dc6830226db9a4f397) Thanks [@Drilmo](https://github.com/Drilmo)! - Support Cmd+V for pasting images on macOS in VSCode terminal
+
+    - Detect empty bracketed paste (when clipboard contains image instead of text)
+    - Trigger clipboard image check on empty paste or paste timeout
+    - Add Cmd+V (meta key) support alongside Ctrl+V for image paste
+
+- [#3856](https://github.com/Kilo-Org/kilocode/pull/3856) [`91e0a17`](https://github.com/Kilo-Org/kilocode/commit/91e0a1788963b8be50c58881f11ded96516ab163) Thanks [@markijbema](https://github.com/markijbema)! - Faster autocomplete when using the Mistral provider
+
+- [#4839](https://github.com/Kilo-Org/kilocode/pull/4839) [`abaada6`](https://github.com/Kilo-Org/kilocode/commit/abaada6b7ced6d3f4e37e69441e722e453289b81) Thanks [@markijbema](https://github.com/markijbema)! - Enable autocomplete by default in the JetBrains extension
+
+- [#4831](https://github.com/Kilo-Org/kilocode/pull/4831) [`a9cbb2c`](https://github.com/Kilo-Org/kilocode/commit/a9cbb2cebd75e0c675dc3b55e7a1653ccb93921b) Thanks [@Drilmo](https://github.com/Drilmo)! - Fix paste truncation in VSCode terminal
+
+    - Prevent React StrictMode cleanup from interrupting paste operations
+    - Remove `completePaste()` and `clearBuffers()` from useEffect cleanup
+    - Paste buffer refs now persist across React re-mounts and flush properly when paste end marker is received
+
+- [#4847](https://github.com/Kilo-Org/kilocode/pull/4847) [`8ee812a`](https://github.com/Kilo-Org/kilocode/commit/8ee812a18da5da691bf76ee5c5d9d94cfb678f25) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Disable structured outputs for Anthropic models, because the tool schema doesn't yet support it
+
+- [#4843](https://github.com/Kilo-Org/kilocode/pull/4843) [`0e3520a`](https://github.com/Kilo-Org/kilocode/commit/0e3520a0aa9a74f7a28af1f820558d2343fd4fba) Thanks [@markijbema](https://github.com/markijbema)! - Filter unhelpful suggestions in chat autocomplete
+
+## 4.143.0
+
+### Minor Changes
+
+- [#4643](https://github.com/Kilo-Org/kilocode/pull/4643) [`bf89c48`](https://github.com/Kilo-Org/kilocode/commit/bf89c4849342d9c0f3cfa335d65e98980d869e36) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Migrate worktree creation from CLI to extension for parallel mode sessions
+
+### Patch Changes
+
+- [#4804](https://github.com/Kilo-Org/kilocode/pull/4804) [`e83c30a`](https://github.com/Kilo-Org/kilocode/commit/e83c30a4160309c45bcfedf60faad3eedff0549e) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add comprehensive AGENTS.md documentation page to Agent Behavior section
+
+- [#4810](https://github.com/Kilo-Org/kilocode/pull/4810) [`2d8f5b4`](https://github.com/Kilo-Org/kilocode/commit/2d8f5b4f823750d22701d962ba27885b01f78acb) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add `--append-system-prompt` CLI option to append custom instructions to the system prompt
+
+- [#4808](https://github.com/Kilo-Org/kilocode/pull/4808) [`3253a5f`](https://github.com/Kilo-Org/kilocode/commit/3253a5f0a9ef3db176b0cc027a9a0f246faa27e6) Thanks [@markijbema](https://github.com/markijbema)! - Rename and reorganize autocomplete settings to use more familiar terminology
+
+- [#4815](https://github.com/Kilo-Org/kilocode/pull/4815) [`1530050`](https://github.com/Kilo-Org/kilocode/commit/15300507c8febd2096282e97148e39a0bfda9e23) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Allow null for tool arguments
+
+## 4.142.0
+
+### Minor Changes
+
+- [#4587](https://github.com/Kilo-Org/kilocode/pull/4587) [`d1c35c5`](https://github.com/Kilo-Org/kilocode/commit/d1c35c54c253b22a264ee4ce90fd25f5d93343da) Thanks [@hassoncs](https://github.com/hassoncs)! - Improve the initial setup experience for the speech-to-text feature by adding an inline setup tooltip
+
+### Patch Changes
+
+- [#4785](https://github.com/Kilo-Org/kilocode/pull/4785) [`acc529e`](https://github.com/Kilo-Org/kilocode/commit/acc529e884be601d635ad9e714a0f3b2a4e9b639) Thanks [@markijbema](https://github.com/markijbema)! - Removed the cmd-i (quick inline task) functionality, as cmd-k-a (add to context) is now equivalent
+
+- [#4765](https://github.com/Kilo-Org/kilocode/pull/4765) [`725b0bc`](https://github.com/Kilo-Org/kilocode/commit/725b0bc56d1262b9e847861db86a3609c40479d9) Thanks [@Drilmo](https://github.com/Drilmo)! - Fixed exit prompt showing "Cmd+C" instead of "Ctrl+C" on Mac. Ctrl+C is the universal terminal interrupt signal on all platforms.
+
+- [#4787](https://github.com/Kilo-Org/kilocode/pull/4787) [`84033fa`](https://github.com/Kilo-Org/kilocode/commit/84033fa3015a757b358cc4799308b8209646ec5e) Thanks [@markijbema](https://github.com/markijbema)! - Keep config screen in sync with whether chat autocomplete is enabled
+
+- [#4800](https://github.com/Kilo-Org/kilocode/pull/4800) [`c089dc2`](https://github.com/Kilo-Org/kilocode/commit/c089dc2351daefe7690adf1a3f01cc8b82a27409) Thanks [@hassoncs](https://github.com/hassoncs)! - Add fuzzy matching to / commands
+
+## 4.141.2
+
+### Patch Changes
+
+- [#4747](https://github.com/Kilo-Org/kilocode/pull/4747) [`e4f9e65`](https://github.com/Kilo-Org/kilocode/commit/e4f9e65e130d0ef34cbf110b64b44f2156d0a425) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed no checkpoint being created before a file is edited
+
+- [#4754](https://github.com/Kilo-Org/kilocode/pull/4754) [`d936b50`](https://github.com/Kilo-Org/kilocode/commit/d936b50f6c28592a910c83c52433eb59aa019cf5) Thanks [@keeganwitt](https://github.com/keeganwitt)! - Added ability to use Codestral for autocomplete from HuggingFace, LiteLLM, LM Studio and Ollama
+
+## 4.141.1
+
+### Patch Changes
+
+- [#4736](https://github.com/Kilo-Org/kilocode/pull/4736) [`c7bd7b7`](https://github.com/Kilo-Org/kilocode/commit/c7bd7b7ad385d32e114f75dfffa6d5d4168ca073) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Skip VSCode-specific diagnostic operations in CLI mode for improved performance
+
+- [#4725](https://github.com/Kilo-Org/kilocode/pull/4725) [`2dcce20`](https://github.com/Kilo-Org/kilocode/commit/2dcce2020b645b8c839a763d4ec97a03f8811aef) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Prevent empty checkpoints from being created on every tool use
+
+- [#4723](https://github.com/Kilo-Org/kilocode/pull/4723) [`b9d0d16`](https://github.com/Kilo-Org/kilocode/commit/b9d0d164bd5a3feaab000a040fb9a04f4cd65f77) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Enable chat autocomplete by default
+
+- [#4681](https://github.com/Kilo-Org/kilocode/pull/4681) [`2be56b8`](https://github.com/Kilo-Org/kilocode/commit/2be56b8b09a0cab177adf18c8dd8998f6362cc2d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains IDEs - Improve intialization process
+
+## 4.141.0
+
+### Minor Changes
+
+- [#4702](https://github.com/Kilo-Org/kilocode/pull/4702) [`b84a66f`](https://github.com/Kilo-Org/kilocode/commit/b84a66f5923cf2600a6d5c8e2b5fd49759406696) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add support for skills
+
+### Patch Changes
+
+- [#4710](https://github.com/Kilo-Org/kilocode/pull/4710) [`c128319`](https://github.com/Kilo-Org/kilocode/commit/c1283192df1b0e59fef8b9ab2d3442bf4a07abde) Thanks [@sebastiand-cerebras](https://github.com/sebastiand-cerebras)! - Update Cerebras maxTokens from 8192 to 16384 for all models
+
+- [#4718](https://github.com/Kilo-Org/kilocode/pull/4718) [`9a465b0`](https://github.com/Kilo-Org/kilocode/commit/9a465b06fe401f70dd166fb5b320a8070f07c727) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix terminal scroll-flicker in CLI by disabling streaming output and enabling Ink incremental rendering
+
+- [#4719](https://github.com/Kilo-Org/kilocode/pull/4719) [`57b0873`](https://github.com/Kilo-Org/kilocode/commit/57b08737788cd504954563d46eb1e6323d619301) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Confirm before exiting the CLI on Ctrl+C/Cmd+C.
+
+## 4.140.3
+
+### Patch Changes
+
+- [#4648](https://github.com/Kilo-Org/kilocode/pull/4648) [`4710d11`](https://github.com/Kilo-Org/kilocode/commit/4710d119ba6ead7f0198c22ae4e902478a63867e) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager multi-version sessions to wait for pending CLI processes so terminals are available per worktree.
+
+- [#4658](https://github.com/Kilo-Org/kilocode/pull/4658) [`e189583`](https://github.com/Kilo-Org/kilocode/commit/e1895837b7dde1b8302f3d3eb49dad2b417fc1bb) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improve Agent Manager telemetry
+
+- [#4647](https://github.com/Kilo-Org/kilocode/pull/4647) [`c1a0692`](https://github.com/Kilo-Org/kilocode/commit/c1a06926e838af15e4be27a476ea3e35be430551) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix: reduce GPU usage in Agent Manager with message virtualization
+
+- [#4693](https://github.com/Kilo-Org/kilocode/pull/4693) [`eb5e835`](https://github.com/Kilo-Org/kilocode/commit/eb5e835be3f3c5a7cf5f7cc4baec87bfade6e2b2) Thanks [@keeganwitt](https://github.com/keeganwitt)! - Add Requesty Codestral to autocomplete provider models
+
+- [#4659](https://github.com/Kilo-Org/kilocode/pull/4659) [`fa42cfa`](https://github.com/Kilo-Org/kilocode/commit/fa42cfaa7b77a7f410c26eaf3810808cf3631ced) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Agent Manager CLI detection and Windows spawn by sanitizing shell output and running .cmd via cmd.exe.
+
+- [#4692](https://github.com/Kilo-Org/kilocode/pull/4692) [`1401220`](https://github.com/Kilo-Org/kilocode/commit/140122089a4de591c80573306ce81cd49091b510) Thanks [@mcowger](https://github.com/mcowger)! - Fix loss of Synthetic auto model refresh
+
+## 4.140.2
+
+### Patch Changes
+
+- [#4628](https://github.com/Kilo-Org/kilocode/pull/4628) [`ab0085e`](https://github.com/Kilo-Org/kilocode/commit/ab0085ea0ba6226f6adce508965302b101f60233) Thanks [@kiloconnect](https://github.com/apps/kiloconnect)! - Add GLM-4.7 model support to Z.ai provider
+
+- [#4622](https://github.com/Kilo-Org/kilocode/pull/4622) [`25de94b`](https://github.com/Kilo-Org/kilocode/commit/25de94b22fc103ebb9747433444f3fef9a7eeeb8) Thanks [@alvinward](https://github.com/alvinward)! - Added model selection support below prompt for Z.ai
+
+- [#4637](https://github.com/Kilo-Org/kilocode/pull/4637) [`b47994f`](https://github.com/Kilo-Org/kilocode/commit/b47994f0b6186490230c7eac01c5b9b75146d47a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Add MiniMax-M2.1 model for MiniMax provider
+
 ## 4.140.1
 
 ### Patch Changes

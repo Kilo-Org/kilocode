@@ -278,6 +278,7 @@
 		"makeActiveProfile": "Rendi profilo attivo",
 		"makeActiveTooltip": "Attiva questo profilo per utilizzarlo nelle richieste API",
 		"apiProvider": "Fornitore API",
+		"apiProviderDocs": "Documentazione del Provider",
 		"model": "Modello",
 		"nameEmpty": "Il nome non può essere vuoto",
 		"nameExists": "Esiste già un profilo con questo nome",
@@ -334,7 +335,6 @@
 		"getRequestyApiKey": "Ottieni chiave API Requesty",
 		"getRequestyBaseUrl": "URL base",
 		"requestyUseCustomBaseUrl": "Utilizza URL di base personalizzato",
-		"openRouterTransformsText": "Comprimi prompt e catene di messaggi alla dimensione del contesto (<a>Trasformazioni OpenRouter</a>)",
 		"anthropicApiKey": "Chiave API Anthropic",
 		"getAnthropicApiKey": "Ottieni chiave API Anthropic",
 		"anthropicUseAuthToken": "Passa la chiave API Anthropic come header di autorizzazione invece di X-Api-Key",
@@ -344,6 +344,8 @@
 		"anthropicAzureDeploymentPlaceholder": "Inserisci nome deployment...",
 		"awsBedrock1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
 		"awsBedrock1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Abilita finestra di contesto da 1M (Beta)",
+		"vertex1MContextBetaDescription": "Estende la finestra di contesto a 1 milione di token per Claude Sonnet 4",
 		"basetenApiKey": "Chiave API Baseten",
 		"getBasetenApiKey": "Ottieni chiave API Baseten",
 		"cerebrasApiKey": "Chiave API Cerebras",
@@ -376,6 +378,14 @@
 		"geminiApiKey": "Chiave API Gemini",
 		"getGroqApiKey": "Ottieni chiave API Groq",
 		"groqApiKey": "Chiave API Groq",
+		"nanoGptApiKey": "Chiave API Nano-GPT",
+		"getNanoGptApiKey": "Ottieni chiave API Nano-GPT",
+		"nanoGptModelList": "Elenco modelli",
+		"nanoGptModelListOptions": {
+			"all": "Tutti i modelli",
+			"personalized": "Modelli personalizzati",
+			"subscription": "Modelli in abbonamento"
+		},
 		"getSambaNovaApiKey": "Ottieni chiave API SambaNova",
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
@@ -444,6 +454,14 @@
 		"awsRegion": "Regione AWS",
 		"awsCrossRegion": "Usa inferenza cross-regione",
 		"awsGlobalInference": "Usa l'inferenza globale (selezione automatica della regione AWS ottimale)",
+		"awsServiceTier": "Livello di servizio",
+		"awsServiceTierStandard": "Standard",
+		"awsServiceTierStandardDesc": "Prestazioni e costo equilibrati",
+		"awsServiceTierFlex": "Flex (sconto del 50%)",
+		"awsServiceTierFlexDesc": "Costo inferiore, latenza più alta per attività non critiche",
+		"awsServiceTierPriority": "Priority (premio del 75%)",
+		"awsServiceTierPriorityDesc": "Prestazioni più veloci per applicazioni mission-critical",
+		"awsServiceTierNote": "I livelli di servizio influenzano i prezzi e le prestazioni. Flex offre uno sconto del 50% con latenza più alta, Priority offre il 25% di prestazioni migliori con un premio del 75%.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usa endpoint VPC personalizzato",
 			"vpcEndpointUrlPlaceholder": "Inserisci URL endpoint VPC (opzionale)",
@@ -499,14 +517,6 @@
 		"getUnboundApiKey": "Ottieni chiave API Unbound",
 		"unboundRefreshModelsSuccess": "Lista dei modelli aggiornata! Ora puoi selezionare tra gli ultimi modelli.",
 		"unboundInvalidApiKey": "Chiave API non valida. Controlla la tua chiave API e riprova.",
-		"nanoGptApiKey": "Chiave API Nano-GPT",
-		"getNanoGptApiKey": "Ottieni chiave API Nano-GPT",
-		"nanoGptModelList": "Elenco modelli",
-		"nanoGptModelListOptions": {
-			"all": "Tutti i modelli",
-			"personalized": "Modelli personalizzati",
-			"subscription": "Modelli in abbonamento"
-		},
 		"humanRelay": {
 			"description": "Non è richiesta alcuna chiave API, ma l'utente dovrà aiutare a copiare e incollare le informazioni nella chat web AI.",
 			"instructions": "Durante l'uso, apparirà una finestra di dialogo e il messaggio corrente verrà automaticamente copiato negli appunti. Dovrai incollarlo nelle versioni web dell'AI (come ChatGPT o Claude), quindi copiare la risposta dell'AI nella finestra di dialogo e fare clic sul pulsante di conferma."
@@ -799,6 +809,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git status max file",
 			"description": "Numero massimo di voci di file da includere nel contesto dello stato di git. Imposta a 0 per disabilitare. Le informazioni sul ramo e sui commit vengono sempre mostrate quando > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Abilita regole sottocartelle",
+			"description": "Scopri e carica ricorsivamente i file .roo/rules e AGENTS.md dalle sottodirectory. Utile per i monorepo con regole per pacchetto."
 		}
 	},
 	"terminal": {
@@ -988,6 +1002,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Riconoscimento vocale (STT)",
 			"description": "Quando abilitato, Kilo Code può trascrivere la tua voce in testo utilizzando il modello Whisper di OpenAI. Clicca il pulsante del microfono nella chat per iniziare la registrazione. Richiede l'installazione di FFmpeg e un provider API OpenAI configurato."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Abilita strumenti personalizzati",
+			"description": "Quando abilitato, Kilo può caricare e utilizzare strumenti personalizzati TypeScript/JavaScript dalla directory .kilocode/tools del tuo progetto o ~/.kilocode/tools per strumenti globali. Nota: questi strumenti saranno automaticamente auto-approvati.",
+			"toolsHeader": "Strumenti personalizzati disponibili",
+			"noTools": "Nessuno strumento personalizzato caricato. Aggiungi file .ts o .js alla directory .kilocode/tools del tuo progetto o ~/.kilocode/tools per strumenti globali.",
+			"refreshButton": "Aggiorna",
+			"refreshing": "Aggiornamento in corso...",
+			"refreshSuccess": "Strumenti aggiornati con successo",
+			"refreshError": "Aggiornamento strumenti non riuscito",
+			"toolParameters": "Parametri"
 		}
 	},
 	"promptCaching": {
@@ -1027,7 +1052,9 @@
 		"searchPlaceholder": "Cerca",
 		"noMatchFound": "Nessuna corrispondenza trovata",
 		"useCustomModel": "Usa personalizzato: {{modelId}}",
-		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito."
+		"simplifiedExplanation": "Puoi modificare le impostazioni dettagliate del modello in seguito.",
+		"recommendedModels": "Modelli consigliati",
+		"allModels": "Tutti i modelli"
 	},
 	"footer": {
 		"feedback": "Se hai domande o feedback, sentiti libero di aprire un issue su <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirti a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilo.ai/discord</discordLink>",

@@ -323,7 +323,14 @@ export async function manageContext({
 		const effectiveMessages = truncationResult.messages.filter(
 			(msg) => !msg.truncationParent && !msg.isTruncationMarker,
 		)
-		let newContextTokensAfterTruncation = 0
+
+		// Include system prompt tokens so this value matches what we send to the API.
+		// Note: `prevContextTokens` is computed locally here (totalTokens + lastMessageTokens).
+		let newContextTokensAfterTruncation = await estimateTokenCount(
+			[{ type: "text", text: systemPrompt }],
+			apiHandler,
+		)
+
 		for (const msg of effectiveMessages) {
 			const content = msg.content
 			if (Array.isArray(content)) {

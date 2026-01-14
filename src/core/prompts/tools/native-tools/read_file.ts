@@ -1,39 +1,39 @@
 import type OpenAI from "openai"
 
-const READ_FILE_BASE_DESCRIPTION = `Read one or more files and return their contents with line numbers for diffing or discussion.`
-
 const READ_FILE_SUPPORTS_NOTE = `Supports text extraction from PDF and DOCX files, but may not handle other binary files properly.`
+
+/**
+ * Options for creating the read_file tool definition.
+ */
+export interface ReadFileToolOptions {
+	/** Whether to include line_ranges parameter (default: true) */
+	partialReadsEnabled?: boolean
+	/** Maximum number of files that can be read in a single request (default: 5) */
+	maxConcurrentFileReads?: number
+}
 
 /**
  * Creates the read_file tool definition, optionally including line_ranges support
  * based on whether partial reads are enabled.
  *
- * @param partialReadsEnabled - Whether to include line_ranges parameter
+ * @param options - Configuration options for the tool
  * @returns Native tool definition for read_file
  */
-export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.Chat.ChatCompletionTool {
+export function createReadFileTool(options: ReadFileToolOptions = {}): OpenAI.Chat.ChatCompletionTool {
+	const { partialReadsEnabled = true, maxConcurrentFileReads = 5 } = options
+	const isMultipleReadsEnabled = maxConcurrentFileReads > 1
+
+	// Build description intro with concurrent reads limit message
+	const descriptionIntro = isMultipleReadsEnabled
+		? `Read one or more files and return their contents with line numbers for diffing or discussion. IMPORTANT: You can read a maximum of ${maxConcurrentFileReads} files in a single request. If you need to read more files, use multiple sequential read_file requests. `
+		: "Read a file and return its contents with line numbers for diffing or discussion. IMPORTANT: Multiple file reads are currently disabled. You can only read one file at a time. "
+
 	const baseDescription =
-		READ_FILE_BASE_DESCRIPTION +
-		" Structure: { files: [{ path: 'relative/path.ts'" +
+		descriptionIntro +
+		"Structure: { files: [{ path: 'relative/path.ts'" +
 		(partialReadsEnabled ? ", line_ranges: [[1, 50], [100, 150]]" : "") +
 		" }] }. " +
 		"The 'path' is required and relative to workspace. "
-
-	// kilocode_change start
-	const example = {
-		files: [
-			{
-				path: "relative/path.ts",
-				line_ranges: partialReadsEnabled
-					? [
-							[1, 50],
-							[100, 150],
-						]
-					: undefined,
-			},
-		],
-	}
-	// kilocode_change end
 
 	const optionalRangesDescription = partialReadsEnabled
 		? "The 'line_ranges' is optional for reading specific sections. Each range is a [start, end] tuple (1-based inclusive). "
@@ -42,9 +42,13 @@ export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.
 	const examples = partialReadsEnabled
 		? "Example single file: { files: [{ path: 'src/app.ts' }] }. " +
 			"Example with line ranges: { files: [{ path: 'src/app.ts', line_ranges: [[1, 50], [100, 150]] }] }. " +
-			"Example multiple files: { files: [{ path: 'file1.ts', line_ranges: [[1, 50]] }, { path: 'file2.ts' }] }"
+			(isMultipleReadsEnabled
+				? `Example multiple files (within ${maxConcurrentFileReads}-file limit): { files: [{ path: 'file1.ts', line_ranges: [[1, 50]] }, { path: 'file2.ts' }] }`
+				: "")
 		: "Example single file: { files: [{ path: 'src/app.ts' }] }. " +
-			"Example multiple files: { files: [{ path: 'file1.ts' }, { path: 'file2.ts' }] }"
+			(isMultipleReadsEnabled
+				? `Example multiple files (within ${maxConcurrentFileReads}-file limit): { files: [{ path: 'file1.ts' }, { path: 'file2.ts' }] }`
+				: "")
 
 	const description = baseDescription + optionalRangesDescription + READ_FILE_SUPPORTS_NOTE + " " + examples
 
@@ -97,11 +101,10 @@ export function createReadFileTool(partialReadsEnabled: boolean = true): OpenAI.
 					},
 				},
 				required: ["files"],
-				examples: [example], // kilocode_change
 				additionalProperties: false,
 			},
 		},
 	} satisfies OpenAI.Chat.ChatCompletionTool
 }
 
-export const read_file = createReadFileTool(false)
+export const read_file = createReadFileTool({ partialReadsEnabled: false })

@@ -72,25 +72,63 @@ describe("PostHogTelemetryClient", () => {
 	})
 
 	describe("isPropertyCapturable", () => {
-		it("should filter out git repository properties", () => {
+		it("should filter out git repository properties for all users", () => {
 			const client = new PostHogTelemetryClient()
 
-			const isPropertyCapturable = getPrivateProperty<(propertyName: string) => boolean>(
-				client,
-				"isPropertyCapturable",
-			).bind(client)
+			const isPropertyCapturable = getPrivateProperty<
+				(propertyName: string, allProperties: Record<string, unknown>) => boolean
+			>(client, "isPropertyCapturable").bind(client)
+
+			const noOrgProperties = { appVersion: "1.0.0" }
 
 			// Git properties should be filtered out
-			expect(isPropertyCapturable("repositoryUrl")).toBe(false)
-			expect(isPropertyCapturable("repositoryName")).toBe(false)
-			expect(isPropertyCapturable("defaultBranch")).toBe(false)
+			expect(isPropertyCapturable("repositoryUrl", noOrgProperties)).toBe(false)
+			expect(isPropertyCapturable("repositoryName", noOrgProperties)).toBe(false)
+			expect(isPropertyCapturable("defaultBranch", noOrgProperties)).toBe(false)
 
 			// Other properties should be included
-			expect(isPropertyCapturable("appVersion")).toBe(true)
-			expect(isPropertyCapturable("vscodeVersion")).toBe(true)
-			expect(isPropertyCapturable("platform")).toBe(true)
-			expect(isPropertyCapturable("mode")).toBe(true)
-			expect(isPropertyCapturable("customProperty")).toBe(true)
+			expect(isPropertyCapturable("appVersion", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("vscodeVersion", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("platform", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("mode", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("customProperty", noOrgProperties)).toBe(true)
+		})
+
+		it("should filter out error properties for organization users", () => {
+			const client = new PostHogTelemetryClient()
+
+			const isPropertyCapturable = getPrivateProperty<
+				(propertyName: string, allProperties: Record<string, unknown>) => boolean
+			>(client, "isPropertyCapturable").bind(client)
+
+			const orgProperties = { appVersion: "1.0.0", kilocodeOrganizationId: "org-123" }
+
+			// Error properties should be filtered out for org users
+			expect(isPropertyCapturable("errorMessage", orgProperties)).toBe(false)
+			expect(isPropertyCapturable("cliPath", orgProperties)).toBe(false)
+			expect(isPropertyCapturable("stderrPreview", orgProperties)).toBe(false)
+
+			// Git properties should still be filtered
+			expect(isPropertyCapturable("repositoryUrl", orgProperties)).toBe(false)
+
+			// Other properties should be included
+			expect(isPropertyCapturable("appVersion", orgProperties)).toBe(true)
+			expect(isPropertyCapturable("platform", orgProperties)).toBe(true)
+		})
+
+		it("should allow error properties for non-organization users", () => {
+			const client = new PostHogTelemetryClient()
+
+			const isPropertyCapturable = getPrivateProperty<
+				(propertyName: string, allProperties: Record<string, unknown>) => boolean
+			>(client, "isPropertyCapturable").bind(client)
+
+			const noOrgProperties = { appVersion: "1.0.0" }
+
+			// Error properties should be included for non-org users
+			expect(isPropertyCapturable("errorMessage", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("cliPath", noOrgProperties)).toBe(true)
+			expect(isPropertyCapturable("stderrPreview", noOrgProperties)).toBe(true)
 		})
 	})
 

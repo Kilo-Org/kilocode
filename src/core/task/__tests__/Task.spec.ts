@@ -137,7 +137,7 @@ vi.mock("vscode", () => {
 
 vi.mock("../../mentions", () => ({
 	parseMentions: vi.fn().mockImplementation((text) => {
-		return Promise.resolve(`processed: ${text}`)
+		return Promise.resolve({ text: `processed: ${text}`, mode: undefined })
 	}),
 	openMention: vi.fn(),
 	getLatestTerminalOutput: vi.fn(),
@@ -713,11 +713,8 @@ describe("Cline", () => {
 					return mockSuccessStream
 				})
 
-				// Set alwaysApproveResubmit and requestDelaySeconds
-				mockProvider.getState = vi.fn().mockResolvedValue({
-					alwaysApproveResubmit: true,
-					requestDelaySeconds: 3,
-				})
+				// Set up mock state
+				mockProvider.getState = vi.fn().mockResolvedValue({})
 
 				// Mock previous API request message
 				cline.clineMessages = [
@@ -739,7 +736,7 @@ describe("Cline", () => {
 				await iterator.next()
 
 				// Calculate expected delay for first retry
-				const baseDelay = 3 // from requestDelaySeconds
+				const baseDelay = 3 // test retry delay
 
 				// Verify countdown messages
 				for (let i = baseDelay; i > 0; i--) {
@@ -838,11 +835,8 @@ describe("Cline", () => {
 					return mockSuccessStream
 				})
 
-				// Set alwaysApproveResubmit and requestDelaySeconds
-				mockProvider.getState = vi.fn().mockResolvedValue({
-					alwaysApproveResubmit: true,
-					requestDelaySeconds: 3,
-				})
+				// Set up mock state
+				mockProvider.getState = vi.fn().mockResolvedValue({})
 
 				// Mock previous API request message
 				cline.clineMessages = [
@@ -864,7 +858,7 @@ describe("Cline", () => {
 				await iterator.next()
 
 				// Verify delay is only applied for the countdown
-				const baseDelay = 3 // from requestDelaySeconds
+				const baseDelay = 3 // test retry delay
 				const expectedDelayCount = baseDelay // One delay per second for countdown
 				expect(mockDelay).toHaveBeenCalledTimes(expectedDelayCount)
 				expect(mockDelay).toHaveBeenCalledWith(1000) // Each delay should be 1 second
@@ -937,7 +931,7 @@ describe("Cline", () => {
 						} as Anthropic.ToolResultBlockParam,
 					]
 
-					const processedContent = await processUserContentMentions({
+					const { content: processedContent } = await processUserContentMentions({
 						userContent,
 						cwd: cline.cwd,
 						urlContentFetcher: cline.urlContentFetcher,
@@ -999,6 +993,8 @@ describe("Cline", () => {
 					getState: vi.fn().mockResolvedValue({
 						apiConfiguration: mockApiConfig,
 					}),
+					getMcpHub: vi.fn().mockReturnValue(undefined),
+					getSkillsManager: vi.fn().mockReturnValue(undefined),
 					say: vi.fn(),
 					postStateToWebview: vi.fn().mockResolvedValue(undefined),
 					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
@@ -1066,6 +1062,9 @@ describe("Cline", () => {
 					context: mockExtensionContext,
 				})
 
+				// Spy on child.say to verify the emitted message type
+				const saySpy = vi.spyOn(child, "say")
+
 				// Mock the child's API stream
 				const childMockStream = {
 					async *[Symbol.asyncIterator]() {
@@ -1092,6 +1091,17 @@ describe("Cline", () => {
 				// Verify rate limiting was applied
 				expect(mockDelay).toHaveBeenCalledTimes(mockApiConfig.rateLimitSeconds)
 				expect(mockDelay).toHaveBeenCalledWith(1000)
+
+				// Verify we used the non-error rate-limit wait message type (JSON format)
+				expect(saySpy).toHaveBeenCalledWith(
+					"api_req_rate_limit_wait",
+					expect.stringMatching(/\{"seconds":\d+\}/),
+					undefined,
+					true,
+				)
+
+				// Verify the wait message was finalized
+				expect(saySpy).toHaveBeenCalledWith("api_req_rate_limit_wait", undefined, undefined, false)
 			}, 10000) // Increase timeout to 10 seconds
 
 			it("should not apply rate limiting if enough time has passed", async () => {

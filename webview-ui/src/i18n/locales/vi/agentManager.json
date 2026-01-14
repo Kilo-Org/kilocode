@@ -80,6 +80,7 @@
 		"cancelTitle": "Hủy agent",
 		"finishToBranchTitle": "Hoàn tất worktree và chuẩn bị branch: {{branch}}",
 		"finishToBranchTitleNoBranch": "Hoàn tất worktree và chuẩn bị branch",
+		"createPRTitle": "Tạo pull request",
 		"sendTitle": "Gửi tin nhắn",
 		"resumeTitle": "Tiếp tục agent",
 		"hint": "Nhấn Enter để gửi, Shift+Enter để xuống dòng"

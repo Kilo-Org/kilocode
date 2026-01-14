@@ -104,7 +104,8 @@
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desabilitado)",
-				"tokenError": "Um token válido deve ser definido para usar o Autocomplete",
+				"noCredits": "**Sem créditos na sua conta**\n\nSua conta Kilo Code não tem créditos. Para usar o autocompletar, adicione créditos à sua conta.\n\n[Abrir Configurações](command:kilo-code.settingsButtonClicked)",
+				"noUsableProvider": "**Nenhum modelo de autocompletar configurado**\n\nPara habilitar o autocompletar, adicione um perfil com um destes provedores suportados: {{providers}}.\n\n[Abrir Configurações](command:kilo-code.settingsButtonClicked)",
 				"sessionTotal": "Custo total da sessão:",
 				"provider": "Provedor:",
 				"model": "Modelo:",
@@ -197,5 +198,15 @@
 			"installMessage": "Executando npm install para instalar o Kilocode CLI. Após a conclusão, você pode fechar este terminal e tentar iniciar o Gerenciador de Agentes novamente.",
 			"authReminder": "If this is your first install, run `kilocode auth` to sign in before starting the Agent Manager."
 		}
+	},
+	"speechToText": {
+		"errors": {
+			"invalidApiKey": "Sua chave da API OpenAI é inválida ou não tem acesso à API Realtime. Por favor, verifique sua chave da API e tente novamente.",
+			"unknown": "Falha na conexão. Verifique sua configuração e tente novamente."
+		}
+	},
+	"configDiscovery": {
+		"added": "Código Kilo: Adicionado {{source}} {{configType}}: {{name}}{{modeStr}}",
+		"removed": "Código Kilo: Removido {{source}} {{configType}}: {{name}}{{modeStr}}"
 	}
 }

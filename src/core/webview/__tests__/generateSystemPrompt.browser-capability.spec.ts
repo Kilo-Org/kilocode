@@ -49,6 +49,7 @@ function makeProviderStub() {
 			rooIgnoreController: { getInstructions: () => undefined },
 		}),
 		getMcpHub: () => undefined,
+		getSkillsManager: () => undefined,
 		// State must enable browser tool and provide apiConfiguration
 		getState: async () => ({
 			apiConfiguration: {

@@ -345,13 +345,26 @@ export class ContextProxy {
 	 * This prevents schema validation errors for removed providers.
 	 */
 	private sanitizeProviderValues(values: RooCodeSettings): RooCodeSettings {
+		// Remove legacy Claude Code CLI wrapper keys that may still exist in global state.
+		// These keys were used by a removed local CLI runner and are no longer part of ProviderSettings.
+		const legacyKeys = ["claudeCodePath", "claudeCodeMaxOutputTokens"] as const
+
+		let sanitizedValues = values
+		for (const key of legacyKeys) {
+			if (key in sanitizedValues) {
+				const copy = { ...sanitizedValues } as Record<string, unknown>
+				delete copy[key as string]
+				sanitizedValues = copy as RooCodeSettings
+			}
+		}
+
 		if (values.apiProvider !== undefined && !isProviderName(values.apiProvider)) {
 			logger.info(`[ContextProxy] Sanitizing invalid provider "${values.apiProvider}" - resetting to undefined`)
 			// Return a new values object without the invalid apiProvider
-			const { apiProvider, ...restValues } = values
+			const { apiProvider, ...restValues } = sanitizedValues
 			return restValues as RooCodeSettings
 		}
-		return values
+		return sanitizedValues
 	}
 
 	public async setProviderSettings(values: ProviderSettings) {

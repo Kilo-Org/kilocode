@@ -82,6 +82,29 @@ describe("AgentManagerProvider CLI spawning", () => {
 			getRemoteUrl: vi.fn().mockResolvedValue(undefined),
 		}))
 
+		// Mock WorktreeManager for parallel mode tests
+		vi.doMock("../WorktreeManager", () => ({
+			WorktreeManager: vi.fn().mockImplementation(() => ({
+				createWorktree: vi.fn().mockResolvedValue({
+					branch: "test-branch-123",
+					path: "/tmp/workspace/.kilocode/worktrees/test-branch-123",
+					parentBranch: "main",
+				}),
+				commitChanges: vi.fn().mockResolvedValue({ success: true }),
+				removeWorktree: vi.fn().mockResolvedValue(undefined),
+				discoverWorktrees: vi.fn().mockResolvedValue([]),
+				ensureGitExclude: vi.fn().mockResolvedValue(undefined),
+			})),
+			WorktreeError: class WorktreeError extends Error {
+				constructor(
+					public code: string,
+					message: string,
+				) {
+					super(message)
+				}
+			},
+		}))
+
 		class TestProc extends EventEmitter {
 			stdout = new EventEmitter()
 			stderr = new EventEmitter()
@@ -121,7 +144,7 @@ describe("AgentManagerProvider CLI spawning", () => {
 	// We don't simulate Windows on other platforms - let the actual Windows CI test it
 	const windowsOnlyTest = isWindows ? it : it.skip
 
-	windowsOnlyTest("spawns with shell: true when CLI path ends with .cmd", async () => {
+	windowsOnlyTest("spawns via cmd.exe when CLI path ends with .cmd", async () => {
 		vi.resetModules()
 
 		const testNpmDir = "C:\\npm"
@@ -207,9 +230,16 @@ describe("AgentManagerProvider CLI spawning", () => {
 			await (windowsProvider as any).startAgentSession("test windows cmd")
 
 			expect(spawnMock).toHaveBeenCalledTimes(1)
-			const [cmd, , options] = spawnMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>]
-			expect(cmd.toLowerCase()).toContain(".cmd")
-			expect(options?.shell).toBe(true)
+			const [cmd, args, options] = spawnMock.mock.calls[0] as unknown as [
+				string,
+				string[],
+				Record<string, unknown>,
+			]
+			const expectedCommand = process.env.ComSpec ?? "cmd.exe"
+			expect(cmd.toLowerCase()).toBe(expectedCommand.toLowerCase())
+			expect(args.slice(0, 3)).toEqual(["/d", "/s", "/c"])
+			expect(args).toEqual(expect.arrayContaining([cmdPath]))
+			expect(options?.shell).toBe(false)
 
 			windowsProvider.dispose()
 		} finally {
@@ -244,6 +274,33 @@ describe("AgentManagerProvider CLI spawning", () => {
 		const sessions = (provider as any).registry.getSessions()
 		expect(sessions).toHaveLength(1)
 		expect(sessions[0].sessionId).toBe("cli-session-123")
+	})
+
+	it("waits for pending processes to clear before resolving multi-version sequencing", async () => {
+		vi.useFakeTimers()
+
+		try {
+			const registry = (provider as any).registry
+			const processHandler = (provider as any).processHandler
+
+			registry.clearPendingSession()
+			processHandler.pendingProcess = {}
+
+			let resolved = false
+			const waitPromise = (provider as any).waitForPendingSessionToClear().then(() => {
+				resolved = true
+			})
+
+			await Promise.resolve()
+			expect(resolved).toBe(false)
+
+			processHandler.pendingProcess = null
+			vi.advanceTimersByTime(200)
+			await waitPromise
+			expect(resolved).toBe(true)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it("shows existing terminal when selecting a session", () => {
@@ -785,6 +842,28 @@ describe("AgentManagerProvider gitUrl filtering", () => {
 		expect(state.sessions[0].sessionId).toBe("session-2")
 	})
 
+	it("updates currentGitUrl when starting a session if not already set (race condition fix)", async () => {
+		// Simulate the race condition: currentGitUrl is undefined because initializeCurrentGitUrl hasn't completed
+		;(provider as any).currentGitUrl = undefined
+
+		// Start a session - this should update currentGitUrl
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should now be set from the session's gitUrl
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/repo.git")
+	})
+
+	it("does not overwrite currentGitUrl if already set", async () => {
+		// Set a different currentGitUrl
+		;(provider as any).currentGitUrl = "https://github.com/org/other-repo.git"
+
+		// Start a session
+		await (provider as any).startAgentSession("test prompt")
+
+		// currentGitUrl should NOT be overwritten
+		expect((provider as any).currentGitUrl).toBe("https://github.com/org/other-repo.git")
+	})
+
 	describe("filterRemoteSessionsByGitUrl", () => {
 		it("returns only sessions with matching git_url when currentGitUrl is set", () => {
 			const remoteSessions = [
@@ -1027,7 +1106,7 @@ describe("AgentManagerProvider telemetry", () => {
 	})
 
 	describe("Regression Tests - finishWorktreeSession validation (P0)", () => {
-		it("should not attempt to terminate non-running worktree sessions", async () => {
+		it("should not attempt to finish non-running worktree sessions", async () => {
 			const registry = (provider as any).registry
 			const sessionId = "session-done-1"
 			registry.createSession(sessionId, "test done session", undefined, { parallelMode: true })
@@ -1039,11 +1118,11 @@ describe("AgentManagerProvider telemetry", () => {
 			// Call finishWorktreeSession on a done session
 			;(provider as any).finishWorktreeSession(sessionId)
 
-			// Should NOT call terminateProcess
+			// Should NOT call terminateProcess - session is not running
 			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
 		})
 
-		it("should only allow finishing running worktree sessions", async () => {
+		it("should keep session interactive after finishing running worktree sessions", async () => {
 			const registry = (provider as any).registry
 			const sessionId = "session-running-1"
 			registry.createSession(sessionId, "test running session", undefined, { parallelMode: true })
@@ -1056,8 +1135,8 @@ describe("AgentManagerProvider telemetry", () => {
 			// Call finishWorktreeSession on a running session
 			;(provider as any).finishWorktreeSession(sessionId)
 
-			// Should call terminateProcess
-			expect(processHandler.terminateProcess).toHaveBeenCalledWith(sessionId, "SIGTERM")
+			// Should NOT call terminateProcess - session should remain interactive
+			expect(processHandler.terminateProcess).not.toHaveBeenCalled()
 		})
 	})
 })

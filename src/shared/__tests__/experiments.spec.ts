@@ -27,7 +27,7 @@ describe("experiments", () => {
 		it("is configured correctly", () => {
 			expect(EXPERIMENT_IDS.SPEECH_TO_TEXT).toBe("speechToText")
 			expect(experimentConfigsMap.SPEECH_TO_TEXT).toMatchObject({
-				enabled: false,
+				enabled: true,
 			})
 		})
 	})
@@ -43,6 +43,7 @@ describe("experiments", () => {
 				imageGeneration: false,
 				runSlashCommand: false,
 				multipleNativeToolCalls: false,
+				customTools: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -57,6 +58,7 @@ describe("experiments", () => {
 				imageGeneration: false,
 				runSlashCommand: false,
 				multipleNativeToolCalls: false,
+				customTools: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -71,6 +73,7 @@ describe("experiments", () => {
 				imageGeneration: false,
 				runSlashCommand: false,
 				multipleNativeToolCalls: false,
+				customTools: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})

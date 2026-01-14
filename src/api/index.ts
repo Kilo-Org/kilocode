@@ -55,6 +55,8 @@ import {
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
+import type { FimHandler } from "./providers/kilocode/FimHandler" // kilocode_change
+export type { FimHandler } from "./providers/kilocode/FimHandler"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -136,6 +138,14 @@ export interface ApiHandler {
 	 * @returns A promise resolving to the token count
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
+
+	// kilocode_change start
+	/**
+	 * Returns a FimHandler if the provider supports FIM (Fill-In-the-Middle) completions,
+	 * or undefined if FIM is not supported.
+	 */
+	fimSupport?: () => FimHandler | undefined
+	// kilocode_change end
 
 	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }

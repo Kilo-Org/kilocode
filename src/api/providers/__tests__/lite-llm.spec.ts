@@ -42,6 +42,7 @@ vi.mock("../fetchers/modelCache", () => ({
 			"gpt-4-turbo": { ...litellmDefaultModelInfo, maxTokens: 8192 },
 		})
 	}),
+	getModelsFromCache: vi.fn().mockReturnValue(undefined),
 }))
 
 describe("LiteLLMHandler", () => {

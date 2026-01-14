@@ -1,6 +1,6 @@
 {
-	"extension.displayName": "Kilo Code AI Agent",
-	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
+	"extension.displayName": "Kilo Code: Trợ lý Lập trình AI, Copilot và Tự động Hoàn thành",
+	"extension.description": "Trợ lý lập trình AI nguồn mở tạo mã từ ngôn ngữ tự nhiên, tự động hóa tác vụ và chạy lệnh terminal. Bao gồm tự động hoàn thành inline, tự động hóa trình duyệt, tái cấu trúc tự động và các chế độ tùy chỉnh cho lập kế hoạch, lập trình và gỡ lỗi. Hỗ trợ hơn 500 mô hình AI bao gồm Claude (Anthropic), Gemini, Grok, GPT, Codex và GLM.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
 	"command.fixCode.title": "Sửa Mã",
@@ -44,7 +44,7 @@
 	"settings.enableSettingsSync.description": "Bật đồng bộ hóa cài đặt Kilo Code trên các thiết bị qua VS Code Settings Sync. Khi được bật, cấu hình API, chế độ tùy chỉnh và tùy chọn của bạn sẽ tự động đồng bộ khi bạn đăng nhập vào VS Code Settings Sync.",
 	"settings.autoImportSettingsPath.description": "Đường dẫn đến tệp cấu hình Kilo Code để tự động nhập khi khởi động tiện ích mở rộng. Hỗ trợ đường dẫn tuyệt đối và đường dẫn tương đối đến thư mục chính (ví dụ: '~/Documents/kilo-code-settings.json'). Để trống để tắt tính năng tự động nhập.",
 	"settings.maximumIndexedFilesForFileSearch.description": "Số lượng tệp tối đa để lập chỉ mục cho tính năng tìm kiếm tệp @. Giá trị cao hơn cung cấp kết quả tìm kiếm tốt hơn trong các dự án lớn nhưng có thể sử dụng nhiều bộ nhớ hơn. Mặc định: 10.000.",
-	"settings.useAgentRules.description": "Bật tải tệp AGENTS.md cho các quy tắc dành riêng cho tác nhân (xem https://agent-rules.org/)",
+	"settings.useAgentRules.description": "Bật tải tệp AGENTS.md cho các quy tắc dành riêng cho tác nhân (xem https://agents.md/)",
 	"settings.apiRequestTimeout.description": "Thời gian tối đa tính bằng giây để đợi phản hồi API (0 = không có thời gian chờ, 1-86400 giây, mặc định: 600 giây). Nên sử dụng các giá trị cao hơn cho các nhà cung cấp cục bộ như LM Studio và Ollama có thể cần thêm thời gian xử lý.",
 	"settings.newTaskRequireTodos.description": "Yêu cầu tham số todos khi tạo nhiệm vụ mới với công cụ new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Kích thước lô cho các hoạt động nhúng trong quá trình lập chỉ mục mã. Điều chỉnh điều này dựa trên giới hạn của nhà cung cấp API của bạn. Mặc định là 60.",

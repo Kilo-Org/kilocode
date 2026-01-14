@@ -161,6 +161,20 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
 
+#### Context Management Configuration
+
+You can also configure context management settings:
+
+```json
+{
+	"maxConcurrentFileReads": 5
+}
+```
+
+**Configuration Options:**
+
+- `maxConcurrentFileReads`: Maximum number of files that can be read in a single `read_file` request (default: 5, minimum: 1). The AI will be instructed about this limit and requests exceeding it will be rejected. Set to `1` to disable multi-file reads.
+
 #### Command Approval Patterns
 
 The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
@@ -245,7 +259,7 @@ To build and run the CLI locally off your branch:
 cd src
 pnpm bundle
 pnpm vsix
-pnpm vsix:unpackged
+pnpm vsix:unpacked
 cd ..
 ```
 

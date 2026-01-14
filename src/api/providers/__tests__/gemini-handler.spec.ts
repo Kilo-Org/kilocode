@@ -1,7 +1,19 @@
 import { t } from "i18next"
+import { TelemetryService } from "@roo-code/telemetry" // kilocode_change
 
 import { GeminiHandler } from "../gemini"
 import type { ApiHandlerOptions } from "../../../shared/api"
+
+// kilocode_change start
+// Mock TelemetryService
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: vi.fn(),
+		},
+	},
+}))
+// kilocode_change end
 
 describe("GeminiHandler backend support", () => {
 	it("passes tools for URL context and grounding in config", async () => {

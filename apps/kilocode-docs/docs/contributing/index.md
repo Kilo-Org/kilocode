@@ -24,7 +24,7 @@ Setting Up the Development Environment is described in details on the [Developme
 
 ## Understanding the Architecture
 
-Before diving into the code, we recommend reviewing the [Architecture Overview](/contributing/architecture) to understand how the different components of Kilo Code fit together.
+Before diving into the code, we recommend reviewing the [Architecture Overview](architecture) to understand how the different components of Kilo Code fit together.
 
 ## Development Workflow
 
@@ -82,7 +82,7 @@ git checkout -b your-branch-name
 
 Custom modes are a powerful way to extend Kilo Code's capabilities. To create and share a custom mode:
 
-1. Follow the [Custom Modes documentation](/features/custom-modes) to create your mode
+1. Follow the [Custom Modes documentation](/agent-behavior/custom-modes) to create your mode
 
 2. Test your mode thoroughly
 
@@ -90,7 +90,7 @@ Custom modes are a powerful way to extend Kilo Code's capabilities. To create an
 
 ## Engineering Specs
 
-For larger features, we write engineering specs to align on requirements before implementation. Check out the [Engineering Specs](/contributing/specs) section to see planned features and learn how to contribute specs.
+For larger features, we write engineering specs to align on requirements before implementation. Check out the [Architecture](/contributing/architecture) section to see planned features and learn how to contribute specs.
 
 ## Documentation Contributions
 
