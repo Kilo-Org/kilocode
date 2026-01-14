@@ -19,15 +19,17 @@ Autocomplete analyzes your code context and provides:
 
 ## Triggering Options
 
-### Pause to Complete
+### Code Editor Suggestions
 
-When enabled, Kilo Code automatically triggers autocomplete when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
+#### Auto-trigger suggestions
 
-- **Auto Trigger Delay**: Configure the delay (in seconds) before autocomplete triggers after you stop typing
+When enabled, Kilo Code automatically shows inline suggestions when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
+
+- **Auto Trigger Delay**: Configure the delay (in seconds) before suggestions appear after you stop typing
 - Default is 3 seconds, but this can be adjusted up or down
 - Shorter delays mean quicker suggestions but may be more resource-intensive
 
-### Manual Autocomplete (Cmd+L)
+#### Trigger on keybinding (Cmd+L)
 
 For more control over when suggestions appear:
 
@@ -44,6 +46,12 @@ This is ideal for:
 - Keeping you in the flow without interruptions
 
 You can customize this keyboard shortcut as well in your VS Code settings.
+
+### Chat Suggestions
+
+#### Enable Chat Autocomplete
+
+When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions.
 
 ## Provider and Model Selection
 

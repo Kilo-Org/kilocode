@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Asistente de codificación de IA de código abierto para planificar, crear y corregir código."
+		"description": "Agente de programación de IA de código abierto que genera código a partir de lenguaje natural, automatiza tareas y ejecuta comandos de terminal. Incluye autocompletado en línea, automatización del navegador, refactorización automática y modos personalizados para planificación, programación y depuración. Compatible con más de 500 modelos de IA, incluyendo Claude (Anthropic), Gemini, Grok, GPT, Codex y GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

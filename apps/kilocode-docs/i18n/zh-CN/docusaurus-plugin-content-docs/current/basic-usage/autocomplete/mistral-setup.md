@@ -28,13 +28,21 @@ sidebar_position: 1
 
 ## 步骤 3：命名您的配置文件
 
-在"新建配置文件"对话框中，输入名称如"Mistral profile"，然后点击**创建配置文件**。
+在"新建配置文件"对话框中，输入名称如"Mistral profile"（名称可以是您喜欢的任何内容），然后点击**创建配置文件**。
+
+:::note
+配置文件名称只是供您参考的标签——它不会影响功能。选择任何有助于您识别此配置的名称。
+:::
 
 ![创建 Mistral 配置文件](./mistral-setup/03-name-your-profile.png)
 
 ## 步骤 4：选择 Mistral 作为提供商
 
 在 **API 提供商**下拉菜单中，搜索并选择 **Mistral**。
+
+:::note
+创建自动补全配置文件时，您无需选择特定模型——Kilo Code 将自动使用为代码补全优化的适当 Codestral 模型。
+:::
 
 ![选择 Mistral 提供商](./mistral-setup/04-select-mistral-provider.png)
 

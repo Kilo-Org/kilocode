@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI 編碼代理、Copilot 和自動完成",
-	"extension.description": "用於規劃、建置和修復程式碼的開源 AI 開發助理。",
+	"extension.description": "開源 AI 編碼代理，可從自然語言產生程式碼、自動化工作並執行終端機命令。具有內嵌自動完成、瀏覽器自動化、自動重構以及用於規劃、編碼和除錯的自訂模式。支援 500 多種 AI 模型，包括 Claude (Anthropic)、Gemini、Grok、GPT、Codex 和 GLM。",
 	"command.newTask.title": "新建任務",
 	"command.explainCode.title": "解釋程式碼",
 	"command.fixCode.title": "修復程式碼",

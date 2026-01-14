@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: وكيل برمجة الذكاء الاصطناعي، Copilot، والإكمال التلقائي",
-	"extension.description": "مساعد برمجة ذكاء اصطناعي مفتوح المصدر يساعدك تخطط وتبني وتعدل الكود.",
+	"extension.description": "وكيل برمجة ذكاء اصطناعي مفتوح المصدر يولّد الكود من اللغة الطبيعية، ويؤتمت المهام، وينفذ أوامر الطرفية. يتميز بالإكمال التلقائي المضمّن، وأتمتة المتصفح، وإعادة الهيكلة الآلية، وأنماط مخصصة للتخطيط والبرمجة وتصحيح الأخطاء. يدعم أكثر من 500 نموذج ذكاء اصطناعي بما في ذلك Claude (Anthropic) و Gemini و Grok و GPT و Codex و GLM.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
 	"views.activitybar.title": "Kilo Code",
