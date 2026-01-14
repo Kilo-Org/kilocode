@@ -4,12 +4,33 @@
  * This module provides syntax highlighting for code diffs in the CLI.
  * It uses Shiki for accurate, language-aware syntax coloring.
  *
- * Language detection leverages Shiki's bundledLanguages for comprehensive
- * coverage without maintaining a separate mapping. Special filenames and
- * common extensions are handled explicitly for reliability.
+ * Language detection uses GitHub's Linguist library data (via linguist-languages)
+ * which provides comprehensive file extension and filename mappings used by
+ * GitHub for syntax highlighting. This is the same data source used by VS Code,
+ * GitHub, and many other editors.
  */
-import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme, bundledLanguages } from "shiki"
+import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme, bundledLanguagesInfo } from "shiki"
+import * as linguist from "linguist-languages"
 import path from "path"
+
+/**
+ * Type definition for Linguist language data.
+ * This matches the structure exported by linguist-languages.
+ */
+interface LinguistLanguage {
+	name: string
+	type: "programming" | "markup" | "data" | "prose"
+	aceMode?: string
+	aliases?: string[]
+	extensions?: string[]
+	filenames?: string[]
+	languageId?: number
+	tmScope?: string
+	codemirrorMode?: string
+	codemirrorMimeType?: string
+	color?: string
+	interpreters?: string[]
+}
 
 // Token with color information
 export interface HighlightedToken {
@@ -32,133 +53,124 @@ const SHIKI_THEMES: Record<ThemeType, BundledTheme> = {
 }
 
 /**
- * Common languages to pre-load at startup for instant highlighting.
- * These are the most frequently used languages in typical development.
- * Other languages are loaded on-demand when first encountered.
+ * Build a map from Shiki language aliases to canonical language IDs.
+ * This allows us to look up languages by their aliases (e.g., "js" -> "javascript").
  */
-const COMMON_LANGUAGES: BundledLanguage[] = [
-	"javascript",
-	"typescript",
-	"tsx",
-	"jsx",
-	"python",
-	"json",
-	"html",
-	"css",
-	"markdown",
-	"yaml",
-	"bash",
-	"shellscript",
-	"go",
-	"rust",
-	"java",
-	"c",
-	"cpp",
-]
-
-/**
- * Extension to language mapping for common file types.
- * This provides explicit mappings for extensions that don't directly
- * match Shiki language names or need special handling.
- *
- * For extensions not listed here, we fall back to checking if the
- * extension itself is a valid Shiki language name (e.g., ".py" -> "python"
- * won't work, but ".lua" -> "lua" will).
- */
-const extensionToLanguage: Record<string, BundledLanguage> = {
-	// JavaScript/TypeScript variants
-	".js": "javascript",
-	".jsx": "jsx",
-	".ts": "typescript",
-	".tsx": "tsx",
-	".mjs": "javascript",
-	".cjs": "javascript",
-	".mts": "typescript",
-	".cts": "typescript",
-	// Python
-	".py": "python",
-	".pyi": "python",
-	".pyw": "python",
-	".ipynb": "python",
-	// Ruby
-	".rb": "ruby",
-	".rake": "ruby",
-	".gemspec": "ruby",
-	// Shell
-	".sh": "shellscript",
-	".bash": "shellscript",
-	".zsh": "shellscript",
-	// C/C++ header disambiguation
-	".h": "c",
-	".hpp": "cpp",
-	".hxx": "cpp",
-	".cc": "cpp",
-	".cxx": "cpp",
-	// Common config formats
-	".yml": "yaml",
-	".jsonc": "jsonc",
-	// Kotlin
-	".kt": "kotlin",
-	".kts": "kotlin",
-	// Elixir
-	".ex": "elixir",
-	".exs": "elixir",
-	// Erlang
-	".erl": "erlang",
-	".hrl": "erlang",
-	// Clojure
-	".clj": "clojure",
-	".cljs": "clojure",
-	".cljc": "clojure",
-	".edn": "clojure",
-	// F#
-	".fs": "fsharp",
-	".fsi": "fsharp",
-	".fsx": "fsharp",
-	// Objective-C
-	".m": "objective-c",
-	".mm": "objective-cpp",
-	// GraphQL
-	".gql": "graphql",
-	// Terraform
-	".tf": "terraform",
-	".tfvars": "terraform",
+function buildShikiAliasMap(): Map<string, BundledLanguage> {
+	const aliasMap = new Map<string, BundledLanguage>()
+	for (const lang of bundledLanguagesInfo) {
+		// Map the canonical ID
+		aliasMap.set(lang.id.toLowerCase(), lang.id as BundledLanguage)
+		// Map the display name
+		aliasMap.set(lang.name.toLowerCase(), lang.id as BundledLanguage)
+		// Map all aliases
+		if (lang.aliases) {
+			for (const alias of lang.aliases) {
+				aliasMap.set(alias.toLowerCase(), lang.id as BundledLanguage)
+			}
+		}
+	}
+	return aliasMap
 }
 
 /**
- * Special filename mappings for files without extensions or with
- * non-standard naming conventions.
+ * Languages to skip when building extension maps.
+ * These are obscure languages that conflict with more common ones.
+ * For example, "GCC Machine Description" uses .md but we want Markdown.
  */
-const specialFilenames: Record<string, BundledLanguage> = {
-	makefile: "makefile",
-	gnumakefile: "makefile",
-	dockerfile: "dockerfile",
-	containerfile: "dockerfile",
-	"docker-compose.yml": "yaml",
-	"docker-compose.yaml": "yaml",
-	".gitignore": "ini", // gitignore files use ini-like syntax
-	".gitattributes": "ini",
-	".dockerignore": "ini",
-	".editorconfig": "ini",
-	".prettierrc": "json",
-	".eslintrc": "json",
-	".babelrc": "json",
-	"tsconfig.json": "jsonc",
-	"jsconfig.json": "jsonc",
-	"package.json": "json",
-	"package-lock.json": "json",
-	"composer.json": "json",
-	"cargo.toml": "toml",
-	"pyproject.toml": "toml",
-	"go.mod": "go",
-	"go.sum": "go",
-	gemfile: "ruby",
-	rakefile: "ruby",
-	vagrantfile: "ruby",
-	brewfile: "ruby",
-	podfile: "ruby",
-	cmakelists: "cmake",
-	"cmakelists.txt": "cmake",
+const SKIP_LANGUAGES = new Set([
+	"GCC Machine Description", // Uses .md, conflicts with Markdown
+])
+
+/**
+ * Build extension-to-language and filename-to-language maps from Linguist data.
+ * Linguist is GitHub's library for language detection, providing comprehensive
+ * and well-maintained mappings.
+ *
+ * We prioritize programming languages over markup/data languages when there
+ * are conflicts (e.g., .ts is both TypeScript and XML), but skip certain
+ * obscure languages that would conflict with common ones.
+ */
+function buildLanguageMaps(shikiAliasMap: Map<string, BundledLanguage>): {
+	extensionMap: Map<string, BundledLanguage>
+	filenameMap: Map<string, BundledLanguage>
+} {
+	const extensionMap = new Map<string, BundledLanguage>()
+	const filenameMap = new Map<string, BundledLanguage>()
+
+	// Helper to find Shiki language for a Linguist language
+	const findShikiLanguage = (lang: LinguistLanguage): BundledLanguage | null => {
+		// Try language name
+		const byName = shikiAliasMap.get(lang.name.toLowerCase())
+		if (byName) return byName
+
+		// Try ace mode (often matches Shiki IDs)
+		if (lang.aceMode) {
+			const byAce = shikiAliasMap.get(lang.aceMode.toLowerCase())
+			if (byAce) return byAce
+		}
+
+		// Try aliases
+		if (lang.aliases) {
+			for (const alias of lang.aliases) {
+				const byAlias = shikiAliasMap.get(alias.toLowerCase())
+				if (byAlias) return byAlias
+			}
+		}
+
+		return null
+	}
+
+	// Process languages in priority order: programming > markup > data > prose
+	const typeOrder = ["programming", "markup", "data", "prose"]
+
+	for (const type of typeOrder) {
+		for (const lang of Object.values(linguist) as LinguistLanguage[]) {
+			if (lang.type !== type) continue
+
+			// Skip obscure languages that conflict with common ones
+			if (SKIP_LANGUAGES.has(lang.name)) continue
+
+			const shikiLang = findShikiLanguage(lang)
+			if (!shikiLang) continue
+
+			// Map extensions (only if not already mapped by higher priority type)
+			if (lang.extensions) {
+				for (const ext of lang.extensions) {
+					const normalizedExt = ext.toLowerCase()
+					if (!extensionMap.has(normalizedExt)) {
+						extensionMap.set(normalizedExt, shikiLang)
+					}
+				}
+			}
+
+			// Map filenames
+			if (lang.filenames) {
+				for (const filename of lang.filenames) {
+					const normalizedFilename = filename.toLowerCase()
+					if (!filenameMap.has(normalizedFilename)) {
+						filenameMap.set(normalizedFilename, shikiLang)
+					}
+				}
+			}
+		}
+	}
+
+	return { extensionMap, filenameMap }
+}
+
+// Initialize maps lazily
+let shikiAliasMap: Map<string, BundledLanguage> | null = null
+let extensionMap: Map<string, BundledLanguage> | null = null
+let filenameMap: Map<string, BundledLanguage> | null = null
+
+function ensureMapsInitialized(): void {
+	if (!shikiAliasMap) {
+		shikiAliasMap = buildShikiAliasMap()
+		const maps = buildLanguageMaps(shikiAliasMap)
+		extensionMap = maps.extensionMap
+		filenameMap = maps.filenameMap
+	}
 }
 
 // Singleton highlighter state
@@ -183,13 +195,9 @@ async function getHighlighter(): Promise<Highlighter> {
 
 	highlighterPromise = createHighlighter({
 		themes: [SHIKI_THEMES.dark, SHIKI_THEMES.light],
-		langs: ["plaintext", ...COMMON_LANGUAGES],
+		langs: ["plaintext"],
 	}).then((h) => {
 		highlighter = h
-		// Mark common languages as loaded
-		for (const lang of COMMON_LANGUAGES) {
-			loadedLanguages.add(lang)
-		}
 		return h
 	})
 
@@ -197,7 +205,7 @@ async function getHighlighter(): Promise<Highlighter> {
 }
 
 /**
- * Initialize the syntax highlighter with common languages.
+ * Initialize the syntax highlighter.
  * Call this early in the application lifecycle for instant highlighting.
  */
 export async function initializeSyntaxHighlighter(): Promise<void> {
@@ -206,6 +214,9 @@ export async function initializeSyntaxHighlighter(): Promise<void> {
 	}
 
 	try {
+		// Initialize language maps
+		ensureMapsInitialized()
+		// Initialize highlighter
 		await getHighlighter()
 		initializationComplete = true
 	} catch (error) {
@@ -249,81 +260,42 @@ async function ensureLanguageLoaded(lang: BundledLanguage): Promise<void> {
 }
 
 /**
- * Detect language from file path using multiple strategies:
- * 1. Check explicit extension mappings for common/ambiguous extensions
- * 2. Check special filename mappings (Makefile, Dockerfile, etc.)
- * 3. Fall back to Shiki's bundledLanguages using the extension as language name
+ * Detect language from file path using GitHub's Linguist data.
  *
- * This approach leverages Shiki's comprehensive language support while
- * providing explicit mappings for cases where the extension doesn't
- * directly match the language name.
+ * This uses the same language detection data that GitHub uses for syntax
+ * highlighting, providing comprehensive coverage of file extensions and
+ * special filenames.
  *
  * @param filePath - The file path to detect language for
  * @returns The detected BundledLanguage or null if unknown
  */
 export function detectLanguage(filePath: string): BundledLanguage | null {
+	ensureMapsInitialized()
+
 	const ext = path.extname(filePath).toLowerCase()
 	const basename = path.basename(filePath).toLowerCase()
 
 	// 1. Check special filenames first (highest priority)
-	const langFromFilename = specialFilenames[basename]
+	// This handles files like Makefile, Dockerfile, .gitignore, etc.
+	const langFromFilename = filenameMap!.get(basename)
 	if (langFromFilename) {
-		// Verify the language is actually available in Shiki
-		if (Object.prototype.hasOwnProperty.call(bundledLanguages, langFromFilename)) {
-			return langFromFilename
-		}
+		return langFromFilename
 	}
 
-	// 2. Check explicit extension mappings
-	const langFromMap = extensionToLanguage[ext]
-	if (langFromMap) {
-		return langFromMap
+	// 2. Check extension mapping from Linguist
+	const langFromExt = extensionMap!.get(ext)
+	if (langFromExt) {
+		return langFromExt
 	}
 
-	// 3. Try extension (without dot) as language name
-	// This leverages Shiki's bundledLanguages which includes many languages
-	// where the extension matches the language name (e.g., .lua -> lua, .go -> go)
+	// 3. Try extension (without dot) as Shiki language alias
+	// This catches cases where the extension directly matches a Shiki language
 	const extWithoutDot = ext.slice(1)
-	if (extWithoutDot && Object.prototype.hasOwnProperty.call(bundledLanguages, extWithoutDot)) {
-		return extWithoutDot as BundledLanguage
-	}
-
-	// 4. Handle some common cases where extension differs from language name
-	// These are languages where the extension is commonly used but doesn't
-	// match Shiki's language identifier
-	const fallbackMappings: Record<string, BundledLanguage> = {
-		htm: "html",
-		hs: "haskell",
-		rs: "rust",
-		cs: "csharp",
-		vb: "vb",
-		pl: "perl",
-		pm: "perl",
-		r: "r",
-		jl: "julia",
-		sc: "scala",
-		sol: "solidity",
-		asm: "asm",
-		s: "asm",
-		v: "v",
-		nim: "nim",
-		rkt: "racket",
-		scm: "scheme",
-		lisp: "lisp",
-		el: "elisp",
-		vim: "viml",
-		proto: "protobuf",
-		hcl: "hcl",
-		nix: "nix",
-		rst: "rst",
-		tex: "latex",
-		cls: "latex",
-		sty: "latex",
-	}
-
-	const langFromFallback = fallbackMappings[extWithoutDot]
-	if (langFromFallback && Object.prototype.hasOwnProperty.call(bundledLanguages, langFromFallback)) {
-		return langFromFallback
+	if (extWithoutDot) {
+		const langFromAlias = shikiAliasMap!.get(extWithoutDot)
+		if (langFromAlias) {
+			return langFromAlias
+		}
 	}
 
 	return null
