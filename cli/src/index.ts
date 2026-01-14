@@ -53,6 +53,7 @@ program
 	.option("-f, --fork <shareId>", "Fork a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.option("--append-system-prompt <text>", "Append custom instructions to the system prompt")
+	.option("--create-pr", "Prompt the agent to create a pull request when the task completes", false)
 	.option(
 		"--attach <path>",
 		"Attach a file to the prompt (can be repeated). Currently supports images: png, jpg, jpeg, webp, gif, tiff",
@@ -149,6 +150,12 @@ program
 		// Validate that --json requires --auto (--json-io is independent)
 		if (options.json && !options.auto) {
 			console.error("Error: --json option requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that --create-pr requires --auto
+		if (options.createPr && !options.auto) {
+			console.error("Error: --create-pr option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -266,6 +273,7 @@ program
 			noSplash: options.nosplash,
 			appendSystemPrompt: options.appendSystemPrompt,
 			attachments: attachments.length > 0 ? attachments : undefined,
+			createPr: options.createPr,
 		})
 		await cli.start()
 		await cli.dispose()
