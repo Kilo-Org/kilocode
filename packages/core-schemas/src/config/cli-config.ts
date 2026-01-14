@@ -1,8 +1,20 @@
 import { z } from "zod"
-import { autoPurgeSettingsSchema } from "@roo-code/types"
 import { providerConfigSchema } from "./provider.js"
 import { autoApprovalConfigSchema } from "./auto-approval.js"
 import { themeSchema, themeIdSchema } from "../theme/theme.js"
+
+/**
+ * Auto-purge settings schema for CLI config
+ * Defined locally to avoid circular dependency issues with @roo-code/types
+ */
+const cliAutoPurgeSettingsSchema = z.object({
+	enabled: z.boolean(),
+	defaultRetentionDays: z.number().min(1),
+	favoritedTaskRetentionDays: z.number().min(1).nullable(),
+	completedTaskRetentionDays: z.number().min(1),
+	incompleteTaskRetentionDays: z.number().min(1),
+	lastRunTimestamp: z.number().optional(),
+})
 
 /**
  * Default maximum number of files that can be read in a single read_file request.
@@ -19,7 +31,7 @@ export const cliConfigSchema = z.object({
 	telemetry: z.boolean(),
 	provider: z.string(),
 	providers: z.array(providerConfigSchema),
-	autoPurge: autoPurgeSettingsSchema.optional(),
+	autoPurge: cliAutoPurgeSettingsSchema.optional(),
 	autoApproval: autoApprovalConfigSchema.optional(),
 	theme: themeIdSchema.optional(),
 	customThemes: z.record(themeSchema).optional(),
