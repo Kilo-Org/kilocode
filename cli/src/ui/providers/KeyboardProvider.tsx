@@ -23,6 +23,7 @@ import {
 	setDebugLoggingAtom,
 	clearBuffersAtom,
 	setupKeyboardAtom,
+	appendToPasteBufferAtom,
 } from "../../state/atoms/keyboard.js"
 import {
 	parseKittySequence,
@@ -31,6 +32,7 @@ import {
 	mapAltKeyCharacter,
 	parseReadlineKey,
 	createSpecialKey,
+	createPasteKey,
 } from "../utils/keyParsing.js"
 import { autoEnableKittyProtocol } from "../utils/terminalCapabilities.js"
 import {
@@ -64,6 +66,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const setDebugLogging = useSetAtom(setDebugLoggingAtom)
 	const clearBuffers = useSetAtom(clearBuffersAtom)
 	const setupKeyboard = useSetAtom(setupKeyboardAtom)
+	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
 
 	// Jotai getters (for reading current state)
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
@@ -104,14 +107,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
 			// Directly broadcast paste event - skip clipboard image check for bracketed pastes
 			// Clipboard image check only runs for explicit Cmd+V (handled in handleGlobalHotkeys)
-			broadcastKey({
-				name: "",
-				ctrl: false,
-				meta: false,
-				shift: false,
-				paste: true,
-				sequence: normalizedBuffer,
-			})
+			broadcastKey(createPasteKey(normalizedBuffer))
 		}
 	}, [setPasteMode, broadcastKey])
 
@@ -156,6 +152,12 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			nodeMajorVersion < 20 ||
 			process.env["PASTE_WORKAROUND"] === "1" ||
 			process.env["PASTE_WORKAROUND"] === "true"
+
+		if (process.env.NODE_ENV === "test") {
+			console.log(
+				`DEBUG: KeyboardProvider usePassthrough=${usePassthrough} node=${process.versions.node} env=${process.env["PASTE_WORKAROUND"]}`,
+			)
+		}
 
 		// Setup streams
 		const keypressStream = usePassthrough ? new PassThrough() : stdin
@@ -202,6 +204,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			if (isPasteRef.current) {
 				if (!usePassthrough) {
 					pasteBufferRef.current += parsedKey.sequence
+					appendToPasteBuffer(parsedKey.sequence)
 				}
 				return
 			}
@@ -359,7 +362,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					// No more markers
 					if (isPasteRef.current) {
 						// We're in paste mode - accumulate the remaining data in paste buffer
-						pasteBufferRef.current += dataStr.slice(pos)
+						const chunk = dataStr.slice(pos)
+						pasteBufferRef.current += chunk
+						appendToPasteBuffer(chunk)
 					} else {
 						// Not in paste mode - write remaining data to stream
 						keypressStream.write(data.slice(pos))
@@ -371,7 +376,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				if (nextMarkerPos > pos) {
 					if (isPasteRef.current) {
 						// We're in paste mode - accumulate data in paste buffer
-						pasteBufferRef.current += dataStr.slice(pos, nextMarkerPos)
+						const chunk = dataStr.slice(pos, nextMarkerPos)
+						pasteBufferRef.current += chunk
+						appendToPasteBuffer(chunk)
 					} else {
 						// Not in paste mode - write data to stream
 						keypressStream.write(data.slice(pos, nextMarkerPos))
@@ -401,9 +408,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 			rl.close()
 
-			// Cleanup keyboard handler
-			unsubscribeKeyboard()
-
 			// Disable bracketed paste mode
 			process.stdout.write("\x1b[?2004l")
 
@@ -415,10 +419,16 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Clear timers
 			clearBackslashTimer()
 
-			// DON'T flush paste buffers here - React StrictMode causes re-mounts
-			// that would interrupt an in-progress paste operation.
-			// The paste buffer refs persist across re-mounts and will be
-			// properly flushed when the paste end marker is received.
+			// Flush any pending buffers
+			// Note: This was previously removed to support React StrictMode, but it caused
+			// issues with large pastes in production where the component might re-render
+			// or unmount during a paste operation, leading to lost paste state and
+			// raw input processing (submitting on newlines).
+			completePaste()
+			clearBuffers()
+
+			// Cleanup keyboard handler LAST to ensure pending buffers can be processed
+			unsubscribeKeyboard()
 		}
 	}, [
 		stdin,
@@ -426,6 +436,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		escapeCodeTimeout,
 		broadcastKey,
 		setPasteMode,
+		appendToPasteBuffer,
 		appendToKittyBuffer,
 		clearKittyBuffer,
 		clearBuffers,
