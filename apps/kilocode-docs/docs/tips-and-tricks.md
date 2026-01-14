@@ -2,7 +2,7 @@
 
 A collection of quick tips to help you get the most out of Kilo Code.
 
-- Drag Kilo Code to the [Secondary Sidebar](https://code.visualstudio.com/api/ux-guidelines/sidebars#secondary-sidebar) so you can see the Explorer, Search, Source Control, etc.
+- **Move Kilo Code to the Secondary Sidebar**: Drag the Kilo icon from the primary sidebar to the tab section of the [Secondary Sidebar](https://code.visualstudio.com/api/ux-guidelines/sidebars#secondary-sidebar) (typically on the right-hand side). This allows you to position Kilo Code like Copilot while keeping the Explorer, Search, Source Control, and other views accessible in the primary sidebar.
 - Once you have Kilo Code in a separate sidebar from the file explorer, you can drag files from the explorer into the chat window (and even multiple at once). Just make sure to hold down the shift key after you start dragging the files.
 - **Autocomplete Tips:**
     - Use chat for multi-file changes, refactoring, or when you need to explain intent. Use autocomplete for quick, localized edits where the context is already clear from surrounding code.
