@@ -48,6 +48,20 @@ export const NextEditPanel: React.FC<NextEditPanelProps> = ({ isVisible, onClose
 	const panelRef = useRef<HTMLDivElement>(null)
 	const acceptButtonRef = useRef<HTMLButtonElement>(null)
 
+	const handleAccept = useCallback(() => {
+		if (!currentEdit) return
+		vscode.postMessage({ type: "nextEdit.accept" } as any)
+	}, [currentEdit])
+
+	const handleSkip = useCallback(() => {
+		if (!currentEdit) return
+		vscode.postMessage({ type: "nextEdit.skip" } as any)
+	}, [currentEdit])
+
+	const handleUndo = useCallback(() => {
+		vscode.postMessage({ type: "nextEdit.undo" } as any)
+	}, [])
+
 	// Handle messages from extension
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
@@ -121,20 +135,6 @@ export const NextEditPanel: React.FC<NextEditPanelProps> = ({ isVisible, onClose
 			acceptButtonRef.current.focus()
 		}
 	}, [isVisible, currentEdit])
-
-	const handleAccept = useCallback(() => {
-		if (!currentEdit) return
-		vscode.postMessage({ type: "nextEdit.accept" } as any)
-	}, [currentEdit])
-
-	const handleSkip = useCallback(() => {
-		if (!currentEdit) return
-		vscode.postMessage({ type: "nextEdit.skip" } as any)
-	}, [currentEdit])
-
-	const handleUndo = useCallback(() => {
-		vscode.postMessage({ type: "nextEdit.undo" } as any)
-	}, [])
 
 	if (!isVisible) return null
 

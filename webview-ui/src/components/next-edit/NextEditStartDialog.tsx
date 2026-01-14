@@ -29,36 +29,6 @@ export const NextEditStartDialog: React.FC<NextEditStartDialogProps> = ({ isOpen
 	const goalInputRef = useRef<HTMLInputElement>(null)
 	const cancelButtonRef = useRef<HTMLButtonElement>(null)
 
-	// Focus management: Focus goal input when dialog opens
-	useEffect(() => {
-		if (isOpen && goalInputRef.current) {
-			goalInputRef.current.focus()
-		}
-	}, [isOpen])
-
-	// Handle keyboard shortcuts
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (!isOpen) return
-
-			// Escape: Close dialog
-			if (e.key === "Escape") {
-				e.preventDefault()
-				onClose()
-			}
-			// Ctrl+Enter: Start session
-			else if (e.ctrlKey && e.key === "Enter") {
-				e.preventDefault()
-				if (goal.trim()) {
-					handleStart()
-				}
-			}
-		}
-
-		window.addEventListener("keydown", handleKeyDown)
-		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [isOpen, goal, onClose, handleStart])
-
 	const handleStart = useCallback(() => {
 		if (!goal.trim()) {
 			return
@@ -105,6 +75,36 @@ export const NextEditStartDialog: React.FC<NextEditStartDialogProps> = ({ isOpen
 		setExcludePatterns("")
 		setMaxFiles("")
 	}, [goal, includePatterns, excludePatterns, maxFiles, onClose])
+
+	// Focus management: Focus goal input when dialog opens
+	useEffect(() => {
+		if (isOpen && goalInputRef.current) {
+			goalInputRef.current.focus()
+		}
+	}, [isOpen])
+
+	// Handle keyboard shortcuts
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (!isOpen) return
+
+			// Escape: Close dialog
+			if (e.key === "Escape") {
+				e.preventDefault()
+				onClose()
+			}
+			// Ctrl+Enter: Start session
+			else if (e.ctrlKey && e.key === "Enter") {
+				e.preventDefault()
+				if (goal.trim()) {
+					handleStart()
+				}
+			}
+		}
+
+		window.addEventListener("keydown", handleKeyDown)
+		return () => window.removeEventListener("keydown", handleKeyDown)
+	}, [isOpen, goal, onClose, handleStart])
 
 	if (!isOpen) return null
 
