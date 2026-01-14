@@ -775,6 +775,21 @@ describe("extractRepositoryName", () => {
 	})
 })
 
+it("should extract repository name from SSH URL with custom alias", () => {
+	// Regression test for SSH aliases like github.com-kilocode
+	const url = "git@github.com-kilocode:Kilo-Org/kilocode.git"
+	const repoName = extractRepositoryName(url)
+
+	expect(repoName).toBe("Kilo-Org/kilocode")
+})
+
+it("should extract repository name from SSH URL with custom alias without .git suffix", () => {
+	const url = "git@github.com-myalias:owner/repo"
+	const repoName = extractRepositoryName(url)
+
+	expect(repoName).toBe("owner/repo")
+})
+
 describe("getWorkspaceGitInfo", () => {
 	const workspaceRoot = "/test/workspace"
 
