@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "코드를 계획, 빌드, 수정하기 위한 오픈소스 AI 코딩 도우미입니다."
+		"description": "자연어로 코드를 생성하고, 작업을 자동화하며, 터미널 명령을 실행하는 오픈소스 AI 코딩 에이전트입니다. 인라인 자동완성, 브라우저 자동화, 자동 리팩토링, 계획·코딩·디버깅을 위한 커스텀 모드를 제공합니다. Claude (Anthropic), Gemini, Grok, GPT, Codex, GLM을 포함한 500개 이상의 AI 모델을 지원합니다."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
