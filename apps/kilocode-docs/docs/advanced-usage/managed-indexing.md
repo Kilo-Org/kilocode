@@ -37,7 +37,7 @@ Before enabling Managed Indexing:
 
 ---
 
-## How to Enable
+## How to Disable
 
 Codebase Indexing is rolling out across our users. It will automatically engage unless your repository root is configured to opt out.
 
