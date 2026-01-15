@@ -6,6 +6,7 @@ import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL } from "./defaults.js"
 import { validateConfig, type ValidationResult } from "./validation.js"
 import { logs } from "../services/logs.js"
 import { buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
+import { detectTerminalThemeSync, getThemeIdForTerminal } from "../utils/terminal-theme-detection.js"
 
 /**
  * Result of loading config, includes both the config and validation status
@@ -160,10 +161,20 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 			// This prevents creating an empty config file if the user interrupts the auth wizard
 			logs.debug("No config file found, returning default config in memory", "ConfigPersistence")
 
-			// Validate the default config
-			const validation = await validateConfig(DEFAULT_CONFIG)
+			// Auto-detect terminal theme for new installations
+			const detectedTheme = detectTerminalThemeSync()
+			const themeId = detectedTheme ? getThemeIdForTerminal(detectedTheme) : "dark"
+			logs.info(`Auto-detected terminal theme: ${themeId}`, "ConfigPersistence")
+
+			const configWithDetectedTheme = {
+				...DEFAULT_CONFIG,
+				theme: themeId,
+			}
+
+			// Validate the default config with detected theme
+			const validation = await validateConfig(configWithDetectedTheme)
 			return {
-				config: DEFAULT_CONFIG,
+				config: configWithDetectedTheme,
 				validation,
 			}
 		}
