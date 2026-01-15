@@ -13,6 +13,7 @@ import {
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
+	openAiCodexModels,
 	qwenCodeModels,
 	vertexModels,
 	xaiModels,
@@ -41,6 +42,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
+	"openai-codex": openAiCodexModels,
 	"qwen-code": qwenCodeModels,
 	vertex: vertexModels,
 	xai: xaiModels,
@@ -74,6 +76,7 @@ export const PROVIDERS = [
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
+	{ value: "openai-codex", label: "OpenAI - ChatGPT Plus/Pro" },
 	{ value: "openai", label: "OpenAI Compatible" },
 	{ value: "qwen-code", label: "Qwen Code" },
 	{ value: "vertex", label: "GCP Vertex AI" },
