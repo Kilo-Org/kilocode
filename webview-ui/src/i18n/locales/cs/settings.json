@@ -420,6 +420,8 @@
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "Klíč API MiniMax",
 		"getMiniMaxApiKey": "Získat klíč API MiniMax",
 		"minimaxBaseUrl": "Vstupní bod MiniMax",

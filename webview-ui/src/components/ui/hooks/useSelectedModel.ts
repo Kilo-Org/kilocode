@@ -558,6 +558,11 @@ function getSelectedModel({
 			}
 			return { id, info }
 		}
+		case "nscale": {
+			const id = apiConfiguration.nscaleModelId ?? defaultModelId
+			const info = routerModels.nscale?.[id]
+			return { id, info }
+		}
 		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":

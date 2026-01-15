@@ -403,6 +403,8 @@
 		"moonshotApiKey": "Moonshot API 密钥",
 		"getMoonshotApiKey": "获取 Moonshot API 密钥",
 		"moonshotBaseUrl": "Moonshot 服务站点",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "MiniMax API 密钥",
 		"getMiniMaxApiKey": "获取 MiniMax API 密钥",
 		"minimaxBaseUrl": "MiniMax 服务站点",

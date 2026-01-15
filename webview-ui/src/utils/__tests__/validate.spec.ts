@@ -84,6 +84,7 @@ describe("Model Validation Functions", () => {
 		inception: {},
 		synthetic: {},
 		"sap-ai-core": {},
+		nscale: {},
 		// kilocode_change end
 		roo: {},
 		chutes: {},

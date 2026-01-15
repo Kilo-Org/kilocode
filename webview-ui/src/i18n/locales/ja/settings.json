@@ -400,6 +400,8 @@
 		"moonshotApiKey": "Moonshot APIキー",
 		"getMoonshotApiKey": "Moonshot APIキーを取得",
 		"moonshotBaseUrl": "Moonshot エントリーポイント",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI APIキー",
 		"getZaiApiKey": "Z AI APIキーを取得",
 		"zaiEntrypoint": "Z AI エントリーポイント",

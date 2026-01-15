@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Kunci API Moonshot",
 		"getMoonshotApiKey": "Dapatkan Kunci API Moonshot",
 		"moonshotBaseUrl": "Titik Masuk Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Kunci API Z AI",
 		"getZaiApiKey": "Dapatkan Kunci API Z AI",
 		"zaiEntrypoint": "Titik Masuk Z AI",

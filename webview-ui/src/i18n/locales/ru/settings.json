@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Moonshot API-ключ",
 		"getMoonshotApiKey": "Получить Moonshot API-ключ",
 		"moonshotBaseUrl": "Точка входа Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI API-ключ",
 		"getZaiApiKey": "Получить Z AI API-ключ",
 		"zaiEntrypoint": "Точка входа Z AI",

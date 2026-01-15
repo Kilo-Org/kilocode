@@ -413,6 +413,8 @@
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "MiniMax API Key",
 		"getMiniMaxApiKey": "Get MiniMax API Key",
 		"minimaxBaseUrl": "MiniMax Entrypoint",

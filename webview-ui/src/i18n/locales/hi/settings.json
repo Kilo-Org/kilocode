@@ -403,6 +403,8 @@
 		"moonshotApiKey": "Moonshot API कुंजी",
 		"getMoonshotApiKey": "Moonshot API कुंजी प्राप्त करें",
 		"moonshotBaseUrl": "Moonshot प्रवेश बिंदु",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI API कुंजी",
 		"getZaiApiKey": "Z AI API कुंजी प्राप्त करें",
 		"zaiEntrypoint": "Z AI प्रवेश बिंदु",

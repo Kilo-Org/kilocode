@@ -403,6 +403,8 @@
 		"moonshotApiKey": "Khóa API Moonshot",
 		"getMoonshotApiKey": "Lấy khóa API Moonshot",
 		"moonshotBaseUrl": "Điểm vào Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Khóa API Z AI",
 		"getZaiApiKey": "Lấy khóa API Z AI",
 		"zaiEntrypoint": "Điểm vào Z AI",

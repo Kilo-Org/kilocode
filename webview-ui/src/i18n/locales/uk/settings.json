@@ -432,6 +432,8 @@
 		"moonshotApiKey": "Ключ API Moonshot",
 		"getMoonshotApiKey": "Отримати ключ API Moonshot",
 		"moonshotBaseUrl": "Точка входу Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "Ключ API MiniMax",
 		"getMiniMaxApiKey": "Отримати ключ API MiniMax",
 		"minimaxBaseUrl": "Точка входу MiniMax",

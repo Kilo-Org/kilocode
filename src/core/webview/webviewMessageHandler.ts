@@ -929,6 +929,7 @@ export const webviewMessageHandler = async (
 						"sap-ai-core": {}, // kilocode_change
 						chutes: {},
 						"nano-gpt": {}, // kilocode_change
+						nscale: {},
 					}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -1030,6 +1031,10 @@ export const webviewMessageHandler = async (
 				{
 					key: "chutes",
 					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
+				},
+				{
+					key: "nscale",
+					options: { provider: "nscale", apiKey: apiConfiguration.nscaleApiKey },
 				},
 			]
 			// kilocode_change end

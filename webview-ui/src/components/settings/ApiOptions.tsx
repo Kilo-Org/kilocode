@@ -47,6 +47,7 @@ import {
 	deepInfraDefaultModelId,
 	minimaxDefaultModelId,
 	nanoGptDefaultModelId, //kilocode_change
+	nscaleDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -112,6 +113,7 @@ import {
 	OvhCloudAiEndpoints,
 	Inception,
 	SapAiCore,
+	Nscale,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -457,6 +459,7 @@ const ApiOptions = ({
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
 				inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId },
 				// kilocode_change end
+				nscale: { field: "nscaleModelId", default: nscaleDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -953,6 +956,16 @@ const ApiOptions = ({
 				<SapAiCore apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 			{/* kilocode_change end */}
+			{selectedProvider === "nscale" && (
+				<Nscale
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
 
 			{/* Skip generic model picker for claude-code/openai-codex since they have their own model pickers */}
 			{selectedProviderModels.length > 0 &&

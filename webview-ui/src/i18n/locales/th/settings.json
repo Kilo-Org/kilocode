@@ -425,6 +425,8 @@
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
 		"getMoonshotApiKey": "รับคีย์ API ของ Moonshot",
 		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "คีย์ API ของ MiniMax",
 		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
 		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",

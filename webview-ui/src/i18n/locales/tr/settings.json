@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Moonshot API Anahtarı",
 		"getMoonshotApiKey": "Moonshot API Anahtarı Al",
 		"moonshotBaseUrl": "Moonshot Giriş Noktası",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI API Anahtarı",
 		"getZaiApiKey": "Z AI API Anahtarı Al",
 		"zaiEntrypoint": "Z AI Giriş Noktası",

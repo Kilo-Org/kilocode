@@ -15,6 +15,7 @@ import {
 	fireworksModels,
 	// kilocode_change start
 	syntheticModels,
+	nscaleModels,
 	// geminiModels,
 	// kilocode_change end
 	groqModels,
@@ -57,6 +58,7 @@ export const dynamicProviders = [
 	"synthetic",
 	"sap-ai-core",
 	// kilocode_change end
+	"nscale",
 	"deepinfra",
 	"io-intelligence",
 	"requesty",
@@ -517,6 +519,11 @@ const syntheticSchema = apiModelIdProviderModelSchema.extend({
 })
 // kilocode_change end
 
+const nscaleSchema = baseProviderSettingsSchema.extend({
+	nscaleApiKey: z.string().optional(),
+	nscaleModelId: z.string().optional(),
+})
+
 const featherlessSchema = apiModelIdProviderModelSchema.extend({
 	featherlessApiKey: z.string().optional(),
 })
@@ -593,6 +600,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
 	inceptionSchema.merge(z.object({ apiProvider: z.literal("inception") })),
 	// kilocode_change end
+	nscaleSchema.merge(z.object({ apiProvider: z.literal("nscale") })),
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	basetenSchema.merge(z.object({ apiProvider: z.literal("baseten") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -701,6 +709,7 @@ export const modelIdKeys = [
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
 	"sapAiCoreModelId", // kilocode_change
+	"nscaleModelId",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -749,6 +758,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	inception: "inceptionLabsModelId",
 	"sap-ai-core": "sapAiCoreModelId",
 	// kilocode_change end
+	nscale: "nscaleModelId",
 	groq: "apiModelId",
 	baseten: "apiModelId",
 	chutes: "apiModelId",
@@ -921,6 +931,7 @@ export const MODELS_BY_PROVIDER: Record<
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },
 	// kilocode_change end
+	nscale: { id: "nscale", label: "Nscale", models: Object.keys(nscaleModels) },
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
 	chutes: { id: "chutes", label: "Chutes AI", models: [] },

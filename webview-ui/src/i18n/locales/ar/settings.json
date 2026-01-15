@@ -433,6 +433,8 @@
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"minimaxApiKey": "مفتاح MiniMax API",
 		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
 		"minimaxBaseUrl": "نقطة دخول MiniMax",

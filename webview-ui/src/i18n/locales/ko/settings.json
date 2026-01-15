@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Moonshot API 키",
 		"getMoonshotApiKey": "Moonshot API 키 받기",
 		"moonshotBaseUrl": "Moonshot 엔트리포인트",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI API 키",
 		"getZaiApiKey": "Z AI API 키 받기",
 		"zaiEntrypoint": "Z AI 엔트리포인트",

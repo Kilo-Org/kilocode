@@ -21,6 +21,7 @@ import {
 	DeepSeekHandler,
 	MoonshotHandler,
 	NanoGptHandler, // kilocode_change
+	NscaleHandler,
 	MistralHandler,
 	VsCodeLmHandler,
 	UnboundHandler,
@@ -212,6 +213,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "nano-gpt":
 			return new NanoGptHandler(options)
 		// kilocode_change end
+		case "nscale":
+			return new NscaleHandler(options)
 		case "vscode-lm":
 			return new VsCodeLmHandler(options)
 		case "mistral":

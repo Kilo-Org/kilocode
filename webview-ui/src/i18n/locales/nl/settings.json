@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"nanoGptApiKey": "Nano-GPT API-sleutel",
 		"getNanoGptApiKey": "Nano-GPT API-sleutel ophalen",
 		"nanoGptModelList": "Modellenlijst",

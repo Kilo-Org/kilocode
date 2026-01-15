@@ -206,6 +206,7 @@ const dynamicProviderExtras = {
 		sapAiCoreResourceGroup?: string
 		sapAiCoreUseOrchestration?: boolean
 	},
+	nscale: {} as { apiKey?: string },
 	// kilocode_change end
 } as const satisfies Record<RouterName, object>
 

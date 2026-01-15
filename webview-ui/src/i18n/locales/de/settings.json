@@ -404,6 +404,8 @@
 		"moonshotApiKey": "Moonshot API-Schlüssel",
 		"getMoonshotApiKey": "Moonshot API-Schlüssel erhalten",
 		"moonshotBaseUrl": "Moonshot-Einstiegspunkt",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Z AI API-Schlüssel",
 		"getZaiApiKey": "Z AI API-Schlüssel erhalten",
 		"zaiEntrypoint": "Z AI Einstiegspunkt",

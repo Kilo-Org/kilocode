@@ -395,6 +395,8 @@
 		"moonshotApiKey": "Klucz API Moonshot",
 		"getMoonshotApiKey": "Uzyskaj klucz API Moonshot",
 		"moonshotBaseUrl": "Punkt wejścia Moonshot",
+		"nscaleApiKey": "Nscale API Key",
+		"getNscaleApiKey": "Get Nscale API Key",
 		"zaiApiKey": "Klucz API Z AI",
 		"getZaiApiKey": "Uzyskaj klucz API Z AI",
 		"zaiEntrypoint": "Punkt wejścia Z AI",
