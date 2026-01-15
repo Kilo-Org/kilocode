@@ -2,6 +2,12 @@
 sidebar_label: Claude Code
 ---
 
+:::warning Important Notice
+Anthropic now blocks usage of Claude Code credentials from Kilo Code and other third-party harnesses. Claude Code accounts cannot be used inside Kilo Code. This was Anthropic's decision to restrict their CLI credentials to their official Claude Code product only.
+
+For continued use of Anthropic models in Kilo Code, please use the Anthropic API provider with an API key instead.
+:::
+
 # Using Claude Code With Kilo Code
 
 Claude Code is Anthropic's official CLI that provides direct access to Claude models from your terminal. Using Claude Code with Kilo Code lets you leverage your existing CLI setup without needing separate API keys.
