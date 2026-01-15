@@ -547,12 +547,24 @@ function getSelectedModel({
 			}
 			return { id, info }
 		}
+		case "nscale": {
+			const id = apiConfiguration.nscaleModelId ?? defaultModelId
+			const info = routerModels.nscale?.[id]
+			return { id, info }
+		}
 		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "fake-ai" | "human-relay" | "kilocode"
+			provider satisfies
+				| "anthropic"
+				| "nscale"
+				| "gemini-cli"
+				| "qwen-code"
+				| "fake-ai"
+				| "human-relay"
+				| "kilocode"
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

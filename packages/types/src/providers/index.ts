@@ -25,6 +25,7 @@ export * from "./lm-studio.js"
 export * from "./mistral.js"
 export * from "./moonshot.js"
 export * from "./nano-gpt.js" // kilocode_change
+export * from "./nscale.js"
 export * from "./ollama.js"
 export * from "./openai.js"
 export * from "./openrouter.js"
@@ -71,6 +72,7 @@ import { vercelAiGatewayDefaultModelId } from "./vercel-ai-gateway.js"
 import { internationalZAiDefaultModelId, mainlandZAiDefaultModelId } from "./zai.js"
 import { deepInfraDefaultModelId } from "./deepinfra.js"
 import { minimaxDefaultModelId } from "./minimax.js"
+import { nscaleDefaultModelId } from "./nscale.js"
 
 // Import the ProviderName type from provider-settings to avoid duplication
 import type { ProviderName } from "../provider-settings.js"
@@ -155,6 +157,8 @@ export function getProviderDefaultModelId(
 			return qwenCodeDefaultModelId
 		case "vercel-ai-gateway":
 			return vercelAiGatewayDefaultModelId
+		case "nscale":
+			return nscaleDefaultModelId
 		case "anthropic":
 		case "gemini-cli":
 		case "human-relay":
