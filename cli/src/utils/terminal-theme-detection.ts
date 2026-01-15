@@ -44,7 +44,7 @@ function parseColorFgBg(value: string): TerminalThemeType | null {
 		return null
 	}
 
-	const bgColor = parseInt(parts[1], 10)
+	const bgColor = parseInt(parts[1]!, 10)
 	if (isNaN(bgColor)) {
 		return null
 	}
@@ -111,9 +111,9 @@ function parseOscResponse(response: string): TerminalThemeType | null {
 		return hex.length === 2 ? value * 257 : value
 	}
 
-	const r = parseHex(match[1])
-	const g = parseHex(match[2])
-	const b = parseHex(match[3])
+	const r = parseHex(match[1]!)
+	const g = parseHex(match[2]!)
+	const b = parseHex(match[3]!)
 
 	const luminance = calculateLuminance(r, g, b)
 
