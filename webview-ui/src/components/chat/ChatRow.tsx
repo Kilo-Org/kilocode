@@ -2,7 +2,6 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
-import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
 import { Mode } from "@roo/modes"
@@ -17,6 +16,8 @@ import { vscode } from "@src/utils/vscode"
 import { formatPathTooltip } from "@src/utils/formatPathTooltip"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
+// kilocode_change: Use extended SlashCommandItem for workflow execution
+import { SlashCommandItem } from "./SlashCommandItem"
 import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import { TodoChangeDisplay } from "./TodoChangeDisplay"
 import CodeAccordian from "../common/CodeAccordian"
@@ -993,74 +994,15 @@ export const ChatRowContent = ({
 					</>
 				)
 			case "runSlashCommand": {
-				const slashCommandInfo = tool
+				// kilocode_change: Use extended SlashCommandItem for workflow execution
 				return (
-					<>
-						<div style={headerStyle}>
-							{toolIcon("play")}
-							<span style={{ fontWeight: "bold" }}>
-								{message.type === "ask"
-									? t("chat:slashCommand.wantsToRun")
-									: t("chat:slashCommand.didRun")}
-							</span>
-						</div>
-						<div
-							style={{
-								marginTop: "4px",
-								backgroundColor: "var(--vscode-editor-background)",
-								border: "1px solid var(--vscode-editorGroup-border)",
-								borderRadius: "4px",
-								overflow: "hidden",
-								cursor: "pointer",
-							}}
-							onClick={handleToggleExpand}>
-							<ToolUseBlockHeader
-								className="group"
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "space-between",
-									padding: "10px 12px",
-								}}>
-								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-									<span style={{ fontWeight: "500", fontSize: "var(--vscode-font-size)" }}>
-										/{slashCommandInfo.command}
-									</span>
-									{slashCommandInfo.source && (
-										<VSCodeBadge style={{ fontSize: "calc(var(--vscode-font-size) - 2px)" }}>
-											{slashCommandInfo.source}
-										</VSCodeBadge>
-									)}
-								</div>
-								<span
-									className={`codicon codicon-chevron-${isExpanded ? "up" : "down"} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}></span>
-							</ToolUseBlockHeader>
-							{isExpanded && (slashCommandInfo.args || slashCommandInfo.description) && (
-								<div
-									style={{
-										padding: "12px 16px",
-										borderTop: "1px solid var(--vscode-editorGroup-border)",
-										display: "flex",
-										flexDirection: "column",
-										gap: "8px",
-									}}>
-									{slashCommandInfo.args && (
-										<div>
-											<span style={{ fontWeight: "500" }}>Arguments: </span>
-											<span style={{ color: "var(--vscode-descriptionForeground)" }}>
-												{slashCommandInfo.args}
-											</span>
-										</div>
-									)}
-									{slashCommandInfo.description && (
-										<div style={{ color: "var(--vscode-descriptionForeground)" }}>
-											{slashCommandInfo.description}
-										</div>
-									)}
-								</div>
-							)}
-						</div>
-					</>
+					<SlashCommandItem
+						isWorkflowExecution
+						tool={tool as any}
+						messageType={message.type}
+						isExpanded={isExpanded}
+						onToggleExpand={handleToggleExpand}
+					/>
 				)
 			}
 			case "generateImage":
@@ -1578,73 +1520,15 @@ export const ChatRowContent = ({
 
 					switch (sayTool.tool) {
 						case "runSlashCommand": {
-							const slashCommandInfo = sayTool
+							// kilocode_change: Use extended SlashCommandItem for workflow execution
 							return (
-								<>
-									<div style={headerStyle}>
-										<span
-											className="codicon codicon-terminal-cmd"
-											style={{
-												color: "var(--vscode-foreground)",
-												marginBottom: "-1.5px",
-											}}></span>
-										<span style={{ fontWeight: "bold" }}>{t("chat:slashCommand.didRun")}</span>
-									</div>
-									<div className="pl-6">
-										<ToolUseBlock>
-											<ToolUseBlockHeader
-												style={{
-													display: "flex",
-													flexDirection: "column",
-													alignItems: "flex-start",
-													gap: "4px",
-													padding: "10px 12px",
-												}}>
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "8px",
-														width: "100%",
-													}}>
-													<span
-														style={{
-															fontWeight: "500",
-															fontSize: "var(--vscode-font-size)",
-														}}>
-														/{slashCommandInfo.command}
-													</span>
-													{slashCommandInfo.args && (
-														<span
-															style={{
-																color: "var(--vscode-descriptionForeground)",
-																fontSize: "var(--vscode-font-size)",
-															}}>
-															{slashCommandInfo.args}
-														</span>
-													)}
-												</div>
-												{slashCommandInfo.description && (
-													<div
-														style={{
-															color: "var(--vscode-descriptionForeground)",
-															fontSize: "calc(var(--vscode-font-size) - 1px)",
-														}}>
-														{slashCommandInfo.description}
-													</div>
-												)}
-												{slashCommandInfo.source && (
-													<div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-														<VSCodeBadge
-															style={{ fontSize: "calc(var(--vscode-font-size) - 2px)" }}>
-															{slashCommandInfo.source}
-														</VSCodeBadge>
-													</div>
-												)}
-											</ToolUseBlockHeader>
-										</ToolUseBlock>
-									</div>
-								</>
+								<SlashCommandItem
+									isWorkflowExecution
+									tool={sayTool as any}
+									messageType={message.type}
+									isExpanded={isExpanded}
+									onToggleExpand={handleToggleExpand}
+								/>
 							)
 						}
 						default:
