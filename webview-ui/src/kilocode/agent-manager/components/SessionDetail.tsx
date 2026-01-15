@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import {
 	selectedSessionAtom,
@@ -12,6 +12,13 @@ import {
 	type RunMode,
 	type VersionCount,
 } from "../state/atoms/sessions"
+import {
+	modelsConfigAtom,
+	modelsLoadingAtom,
+	effectiveModelIdAtom,
+	setSelectedModelIdAtom,
+} from "../state/atoms/models"
+import { SelectDropdown, type DropdownOption } from "../../../components/ui/select-dropdown"
 import { sessionMachineUiStateAtom, selectedSessionMachineStateAtom } from "../state/atoms/stateMachine"
 import { MessageList } from "./MessageList"
 import { ChatInput } from "./ChatInput"
@@ -175,6 +182,7 @@ export function SessionDetail() {
 				worktreeBranchName={branchName}
 				parentBranch={parentBranch}
 				sessionStatus={selectedSession.status}
+				modelId={selectedSession.model}
 			/>
 		</div>
 	)
@@ -236,6 +244,10 @@ function NewAgentForm() {
 	const [promptText, setPromptText] = useState("")
 	const [runMode, setRunMode] = useAtom(preferredRunModeAtom)
 	const [versionCount, setVersionCount] = useAtom(versionCountAtom)
+	const setSelectedModelId = useSetAtom(setSelectedModelIdAtom)
+	const modelsConfig = useAtomValue(modelsConfigAtom)
+	const modelsLoading = useAtomValue(modelsLoadingAtom)
+	const effectiveModelId = useAtomValue(effectiveModelIdAtom)
 	const [isStarting, setIsStarting] = useState(false)
 	const [isFocused, setIsFocused] = useState(false)
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -307,6 +319,7 @@ function NewAgentForm() {
 			versions: versionCount,
 			labels,
 			existingBranch: selectedBranch || undefined,
+			model: effectiveModelId || undefined,
 		})
 	}
 
@@ -326,6 +339,19 @@ function NewAgentForm() {
 		setVersionCount(count)
 		setIsVersionDropdownOpen(false)
 	}
+
+	// Convert models to SelectDropdown options
+	const modelOptions: DropdownOption[] = useMemo(() => {
+		if (!modelsConfig) return []
+		return modelsConfig.models.map((model) => ({
+			value: model.id,
+			label: model.displayName || model.id,
+			description: model.contextWindow ? `${Math.floor(model.contextWindow / 1000)}K context` : undefined,
+		}))
+	}, [modelsConfig])
+
+	// Check if models are available (loaded and have items)
+	const hasModels = modelsConfig && modelsConfig.models.length > 0
 
 	return (
 		<div className="am-center-form">
@@ -480,6 +506,28 @@ function NewAgentForm() {
 							)}
 						</div>
 
+						{/* Model selector - show loading spinner while fetching, then SelectDropdown */}
+						{modelsLoading ? (
+							<div className="am-run-mode-trigger-inline opacity-70">
+								<Loader2 size={14} className="am-spinning" />
+								<span className="text-sm">{t("sessionDetail.loadingModels")}</span>
+							</div>
+						) : hasModels ? (
+							<div className="am-model-selector">
+								<SelectDropdown
+									value={effectiveModelId || ""}
+									options={modelOptions}
+									onChange={(value) => setSelectedModelId(value)}
+									disabled={isStarting}
+									placeholder={t("sessionDetail.selectModel")}
+									title={t("sessionDetail.modelTooltip")}
+									triggerClassName="am-model-selector-trigger"
+									contentClassName="am-model-selector-content"
+									align="end"
+								/>
+							</div>
+						) : null}
+
 						{effectiveRunMode === "worktree" && !isMultiVersion && (
 							<StandardTooltip content={t("sessionDetail.branchPickerTooltip")}>
 								<button
@@ -522,22 +570,6 @@ function NewAgentForm() {
 							{isStarting ? <Loader2 size={16} className="am-spinning" /> : <SendHorizontal size={16} />}
 						</button>
 					</div>
-
-					{/* Hint Text inside input */}
-					{!promptText && (
-						<div
-							className="absolute left-3 right-[140px] z-30 flex items-center h-8 overflow-hidden text-ellipsis whitespace-nowrap"
-							style={{
-								bottom: "0.25rem",
-								color: "var(--vscode-descriptionForeground)",
-								opacity: 0.7,
-								fontSize: "11px",
-								userSelect: "none",
-								pointerEvents: "none",
-							}}>
-							{t("sessionDetail.keyboardHint")}
-						</div>
-					)}
 				</div>
 			</div>
 
