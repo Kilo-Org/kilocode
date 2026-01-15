@@ -2,10 +2,10 @@
 sidebar_label: Claude Code
 ---
 
-:::warning Important Notice
-Anthropic now blocks usage of Claude Code credentials from Kilo Code and other third-party harnesses. Claude Code accounts cannot be used inside Kilo Code. This was Anthropic's decision to restrict their CLI credentials to their official Claude Code product only.
+:::warning[Important Notice]
+In January 2026, Anthropic decided to restrict Claude Code CLI to official Claude Code clients. Claude Code credentials cannot be used in Kilo Code or other third-party harnesses. 
 
-For continued use of Anthropic models in Kilo Code, please use the Anthropic API provider with an API key instead.
+For continued use of Anthropic models in Kilo Code, please use the [Anthropic API provider](/providers/anthropic) with an API key instead.
 :::
 
 # Using Claude Code With Kilo Code
