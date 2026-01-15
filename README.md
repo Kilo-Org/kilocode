@@ -54,6 +54,8 @@ Contributions are welcome, and they are greatly appreciated! Get started by read
 
 Thanks to all the contributors who help make Kilo better!
 
+I love kilo!
+
 <table>
   <tr>
     <td align="center">
