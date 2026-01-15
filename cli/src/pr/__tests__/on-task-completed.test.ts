@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { finishWithOnTaskCompleted, onTaskCompletedTimeout } from "../on-task-completed.js"
+import {
+	finishWithOnTaskCompleted,
+	onTaskCompletedTimeout,
+	validateOnTaskCompletedPrompt,
+} from "../on-task-completed.js"
 import type { CLI } from "../../cli.js"
 
 // Mock the logs module
@@ -137,6 +141,91 @@ Step 4: Push to remote`
 	describe("timeout constant", () => {
 		it("should have a reasonable timeout value", () => {
 			expect(onTaskCompletedTimeout).toBe(90000) // 90 seconds
+		})
+	})
+
+	describe("validateOnTaskCompletedPrompt", () => {
+		it("should accept a valid prompt", () => {
+			const result = validateOnTaskCompletedPrompt("Create a pull request")
+			expect(result.valid).toBe(true)
+			expect(result.error).toBeUndefined()
+		})
+
+		it("should reject an empty prompt", () => {
+			const result = validateOnTaskCompletedPrompt("")
+			expect(result.valid).toBe(false)
+			expect(result.error).toBe("--on-task-completed prompt cannot be empty")
+		})
+
+		it("should reject a whitespace-only prompt", () => {
+			const result = validateOnTaskCompletedPrompt("   \t\n  ")
+			expect(result.valid).toBe(false)
+			expect(result.error).toBe("--on-task-completed prompt cannot be empty")
+		})
+
+		it("should reject a prompt exceeding maximum length", () => {
+			const longPrompt = "a".repeat(50001)
+			const result = validateOnTaskCompletedPrompt(longPrompt)
+			expect(result.valid).toBe(false)
+			expect(result.error).toContain("exceeds maximum length")
+		})
+
+		it("should accept a prompt at maximum length", () => {
+			const maxPrompt = "a".repeat(50000)
+			const result = validateOnTaskCompletedPrompt(maxPrompt)
+			expect(result.valid).toBe(true)
+		})
+
+		describe("special characters and markdown", () => {
+			it("should accept prompts with markdown formatting", () => {
+				const result = validateOnTaskCompletedPrompt("# Title\n\n- item 1\n- item 2\n\n```code```")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with special characters", () => {
+				const result = validateOnTaskCompletedPrompt('Create PR with title: "feat: add feature"')
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with unicode characters", () => {
+				const result = validateOnTaskCompletedPrompt("Create PR 🚀 with emoji and 中文")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with newlines", () => {
+				const result = validateOnTaskCompletedPrompt("Step 1\nStep 2\nStep 3")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with tabs and mixed whitespace", () => {
+				const result = validateOnTaskCompletedPrompt("Step 1\t\tStep 2\n\t\tStep 3")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with quotes", () => {
+				const result = validateOnTaskCompletedPrompt(`Use 'single' and "double" quotes`)
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with escape sequences", () => {
+				const result = validateOnTaskCompletedPrompt("Path: C:\\Users\\test\\file.txt")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with JSON content", () => {
+				const result = validateOnTaskCompletedPrompt('{"key": "value", "array": [1, 2, 3]}')
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with shell commands", () => {
+				const result = validateOnTaskCompletedPrompt("Run: git commit -m 'message' && git push")
+				expect(result.valid).toBe(true)
+			})
+
+			it("should accept prompts with HTML/XML content", () => {
+				const result = validateOnTaskCompletedPrompt("<div class='test'>Content</div>")
+				expect(result.valid).toBe(true)
+			})
 		})
 	})
 })
