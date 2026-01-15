@@ -16,8 +16,9 @@ export function loadEnvFile(): void {
 
 	// Check if .env file exists
 	if (!existsSync(envPath)) {
-		console.error(`Error: Required .env file not found at: ${envPath}`)
-		process.exit(1)
+		// It's okay if .env doesn't exist, we might be running in a production environment
+		// or relying on system environment variables
+		return
 	}
 
 	// Load the .env file

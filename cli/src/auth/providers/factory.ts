@@ -3,6 +3,7 @@ import type { ProviderName } from "../../types/messages.js"
 import { PROVIDER_REQUIRED_FIELDS } from "../../constants/providers/validation.js"
 import { FIELD_REGISTRY, isOptionalField, getProviderDefaultModel } from "../../constants/providers/settings.js"
 import { PROVIDER_LABELS } from "../../constants/providers/labels.js"
+import { isModelField } from "../../constants/providers/models.js"
 import inquirer from "inquirer"
 
 /**
@@ -19,6 +20,11 @@ function createGenericAuthFunction(providerName: ProviderName) {
 
 		// Build prompts from required fields
 		for (const field of requiredFields) {
+			// Skip model fields as they are handled by the main auth wizard
+			if (isModelField(field) || field === "apiModelId") {
+				continue
+			}
+
 			const fieldMeta = FIELD_REGISTRY[field]
 			if (!fieldMeta) {
 				// Skip fields without metadata
