@@ -8,7 +8,7 @@ import { getBoxWidth } from "../../../utils/width.js"
 import { DiffLine } from "./DiffLine.js"
 import {
 	detectLanguage,
-	highlightLineSync,
+	highlightCodeBlockSync,
 	type HighlightedToken,
 	type ThemeType,
 } from "../../../utils/syntaxHighlight.js"
@@ -97,19 +97,35 @@ export const ToolSearchAndReplaceMessage: React.FC<ToolMessageProps> = ({ toolDa
 		}
 	}, [parsedLines])
 
-	// Generate highlighted tokens for each line (synchronous - highlighter is pre-initialized at startup)
+	// Generate highlighted tokens for all lines at once (preserves multiline context)
+	// This ensures proper highlighting of template literals, multiline strings, etc.
 	const highlightedLines = useMemo((): Map<number, HighlightedToken[] | null> => {
 		const map = new Map<number, HighlightedToken[] | null>()
 		if (!language) {
 			return map
 		}
 
+		// Extract code content from lines that need highlighting
+		const codeLines: string[] = []
+		const lineIndexMap: number[] = [] // Maps code line index to display line index
+
 		displayLines.lines.forEach((line, displayIndex) => {
 			if (line.type === "addition" || line.type === "deletion" || line.type === "context") {
-				const tokens = highlightLineSync(line.content, language, themeType)
-				map.set(displayIndex, tokens)
+				codeLines.push(line.content)
+				lineIndexMap.push(displayIndex)
 			}
 		})
+
+		// Highlight all lines together to preserve multiline context
+		const tokens = highlightCodeBlockSync(codeLines, language, themeType)
+		if (tokens) {
+			tokens.forEach((lineTokens, codeIndex) => {
+				const displayIndex = lineIndexMap[codeIndex]
+				if (displayIndex !== undefined) {
+					map.set(displayIndex, lineTokens)
+				}
+			})
+		}
 
 		return map
 	}, [displayLines, language, themeType])

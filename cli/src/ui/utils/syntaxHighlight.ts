@@ -470,6 +470,125 @@ export function highlightLineSync(
 }
 
 /**
+ * Highlight an entire code block and return tokens for each line.
+ * This is the preferred method for diff highlighting as it preserves
+ * multiline context (e.g., template literals, multiline strings, comments).
+ *
+ * Unlike highlightLineSync which tokenizes each line independently,
+ * this function tokenizes the entire block together, ensuring proper
+ * highlighting of constructs that span multiple lines.
+ *
+ * @param lines - Array of code lines to highlight
+ * @param language - The language to use for highlighting
+ * @param themeType - The theme type (dark, light, custom)
+ * @returns Array of token arrays, one per input line. Returns null if highlighter not ready.
+ *
+ * @example
+ * ```typescript
+ * const lines = [
+ *   'const msg = `Hello',
+ *   'World',
+ *   '`;'
+ * ]
+ * const tokens = highlightCodeBlockSync(lines, 'javascript', 'dark')
+ * // tokens[0] = tokens for 'const msg = `Hello'
+ * // tokens[1] = tokens for 'World' (highlighted as string content)
+ * // tokens[2] = tokens for '`;'
+ * ```
+ */
+export function highlightCodeBlockSync(
+	lines: string[],
+	language: BundledLanguage | null,
+	themeType: ThemeType = "dark",
+): HighlightedToken[][] | null {
+	if (!language || lines.length === 0 || !highlighter || !loadedLanguages.has(language)) {
+		return null
+	}
+
+	try {
+		const shikiTheme = SHIKI_THEMES[themeType]
+		// Join lines with newlines to preserve multiline context
+		const code = lines.join("\n")
+		const tokenLines = highlighter.codeToTokensBase(code, {
+			lang: language,
+			theme: shikiTheme,
+		})
+
+		// Convert Shiki tokens to our format, one array per line
+		const result: HighlightedToken[][] = []
+		for (const lineTokens of tokenLines) {
+			const lineResult: HighlightedToken[] = []
+			for (const token of lineTokens) {
+				const tokenEntry: HighlightedToken = { content: token.content }
+				if (token.color) {
+					tokenEntry.color = token.color
+				}
+				lineResult.push(tokenEntry)
+			}
+			// If line has no tokens, add empty content
+			result.push(lineResult.length > 0 ? lineResult : [{ content: "" }])
+		}
+
+		return result
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Async version of highlightCodeBlock that ensures language is loaded first.
+ *
+ * @param lines - Array of code lines to highlight
+ * @param language - The language to use for highlighting
+ * @param themeType - The theme type (dark, light, custom)
+ * @returns Promise resolving to array of token arrays, one per input line
+ */
+export async function highlightCodeBlock(
+	lines: string[],
+	language: BundledLanguage | null,
+	themeType: ThemeType = "dark",
+): Promise<HighlightedToken[][]> {
+	// If no language or empty lines, return plain text tokens
+	if (!language || lines.length === 0) {
+		return lines.map((line) => [{ content: line }])
+	}
+
+	try {
+		// Ensure language is loaded
+		await ensureLanguageLoaded(language)
+
+		const h = await getHighlighter()
+		const shikiTheme = SHIKI_THEMES[themeType]
+		// Join lines with newlines to preserve multiline context
+		const code = lines.join("\n")
+		const tokenLines = h.codeToTokensBase(code, {
+			lang: language,
+			theme: shikiTheme,
+		})
+
+		// Convert Shiki tokens to our format, one array per line
+		const result: HighlightedToken[][] = []
+		for (const lineTokens of tokenLines) {
+			const lineResult: HighlightedToken[] = []
+			for (const token of lineTokens) {
+				const tokenEntry: HighlightedToken = { content: token.content }
+				if (token.color) {
+					tokenEntry.color = token.color
+				}
+				lineResult.push(tokenEntry)
+			}
+			// If line has no tokens, add empty content
+			result.push(lineResult.length > 0 ? lineResult : [{ content: "" }])
+		}
+
+		return result
+	} catch {
+		// On error, return plain text tokens
+		return lines.map((line) => [{ content: line }])
+	}
+}
+
+/**
  * Pre-load a language for later sync use
  */
 export async function preloadLanguage(language: BundledLanguage | null): Promise<void> {

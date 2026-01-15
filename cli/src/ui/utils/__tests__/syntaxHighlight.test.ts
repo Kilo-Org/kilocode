@@ -10,6 +10,8 @@ import {
 	detectLanguage,
 	highlightLine,
 	highlightLineSync,
+	highlightCodeBlock,
+	highlightCodeBlockSync,
 	initializeSyntaxHighlighter,
 	isHighlighterReady,
 	isLanguageReady,
@@ -346,6 +348,97 @@ describe("syntaxHighlight", () => {
 				// Use an obscure language that's unlikely to be preloaded
 				const result = highlightLineSync("code", "cobol" as unknown as string)
 				expect(result).toBeNull()
+			})
+		})
+
+		describe("highlightCodeBlock", () => {
+			it("should highlight multiple lines together", async () => {
+				const lines = ["const x = 1;", "const y = 2;", "const z = x + y;"]
+				const result = await highlightCodeBlock(lines, "typescript")
+				expect(Array.isArray(result)).toBe(true)
+				expect(result.length).toBe(3)
+				// Each line should have tokens
+				result.forEach((lineTokens) => {
+					expect(Array.isArray(lineTokens)).toBe(true)
+					expect(lineTokens.length).toBeGreaterThan(0)
+				})
+			})
+
+			it("should preserve multiline string context", async () => {
+				// Template literal spanning multiple lines
+				const lines = ["const msg = `Hello", "World", "`;"]
+				const result = await highlightCodeBlock(lines, "typescript")
+				expect(result.length).toBe(3)
+				// The middle line should be highlighted as string content
+				// (not as plain text like line-by-line would do)
+				const middleLineTokens = result[1]
+				expect(middleLineTokens).toBeDefined()
+				expect(middleLineTokens!.length).toBeGreaterThan(0)
+				// Should have color (string color)
+				expect(middleLineTokens!.some((t) => t.color !== undefined)).toBe(true)
+			})
+
+			it("should return plain text for null language", async () => {
+				const lines = ["line 1", "line 2"]
+				const result = await highlightCodeBlock(lines, null)
+				expect(result).toEqual([[{ content: "line 1" }], [{ content: "line 2" }]])
+			})
+
+			it("should return empty array for empty input", async () => {
+				const result = await highlightCodeBlock([], "typescript")
+				expect(result).toEqual([])
+			})
+
+			it("should handle different themes", async () => {
+				const lines = ["const x = 1;"]
+				const darkResult = await highlightCodeBlock(lines, "typescript", "dark")
+				const lightResult = await highlightCodeBlock(lines, "typescript", "light")
+
+				// Both should return tokens
+				expect(darkResult.length).toBe(1)
+				expect(lightResult.length).toBe(1)
+
+				// Content should be the same
+				expect(darkResult[0]!.map((t) => t.content)).toEqual(lightResult[0]!.map((t) => t.content))
+			})
+		})
+
+		describe("highlightCodeBlockSync", () => {
+			it("should work synchronously after preload", async () => {
+				await preloadLanguage("typescript")
+				const lines = ["const x = 1;", "const y = 2;"]
+				const result = highlightCodeBlockSync(lines, "typescript")
+				expect(result).not.toBeNull()
+				expect(Array.isArray(result)).toBe(true)
+				expect(result!.length).toBe(2)
+			})
+
+			it("should return null for null language", () => {
+				const result = highlightCodeBlockSync(["line"], null)
+				expect(result).toBeNull()
+			})
+
+			it("should return null for empty lines", () => {
+				const result = highlightCodeBlockSync([], "typescript")
+				expect(result).toBeNull()
+			})
+
+			it("should return null for unloaded language", () => {
+				const result = highlightCodeBlockSync(["code"], "cobol" as unknown as string)
+				expect(result).toBeNull()
+			})
+
+			it("should preserve multiline context synchronously", async () => {
+				await preloadLanguage("javascript")
+				// Multiline comment
+				const lines = ["/*", " * Comment", " */"]
+				const result = highlightCodeBlockSync(lines, "javascript")
+				expect(result).not.toBeNull()
+				expect(result!.length).toBe(3)
+				// All lines should have comment coloring
+				result!.forEach((lineTokens) => {
+					expect(lineTokens.some((t) => t.color !== undefined)).toBe(true)
+				})
 			})
 		})
 	})
