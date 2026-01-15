@@ -28,7 +28,6 @@
 		"autoModeWarning": "Mode YOLO - les opérations d'outils sont approuvées automatiquement",
 		"starting": "Démarrage...",
 		"startAriaLabel": "Démarrer l'agent avec le prompt fourni",
-		"keyboardHint": "Appuyez sur Entrée pour démarrer, Shift+Entrée pour nouvelle ligne",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Changer de branche de base",
 		"noBranches": "Aucune branche trouvée",
 		"noMatchingBranches": "Aucune branche ne correspond à ta recherche",
-		"openTerminal": "Ouvrir le terminal"
+		"openTerminal": "Ouvrir le terminal",
+		"selectModel": "Sélectionner le modèle",
+		"modelTooltip": "Choisis quel modèle d'IA utiliser pour cette session",
+		"defaultModel": "Modèle par défaut",
+		"loadingModels": "Chargement..."
 	},
 	"messages": {
 		"waiting": "En attente de la réponse de l'agent...",

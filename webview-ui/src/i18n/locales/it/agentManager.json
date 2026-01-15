@@ -28,7 +28,6 @@
 		"autoModeWarning": "Modalità YOLO - le operazioni degli strumenti vengono approvate automaticamente",
 		"starting": "Avvio in corso...",
 		"startAriaLabel": "Avvia agente con il prompt fornito",
-		"keyboardHint": "Premi Invio per avviare, Shift+Invio per nuova riga",
 		"runModeLocal": "Locale",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Cambia branch di base",
 		"noBranches": "Nessun branch trovato",
 		"noMatchingBranches": "Nessun branch corrisponde alla tua ricerca",
-		"openTerminal": "Apri terminale"
+		"openTerminal": "Apri terminale",
+		"selectModel": "Seleziona modello",
+		"modelTooltip": "Scegli quale modello AI usare per questa sessione",
+		"defaultModel": "Modello predefinito",
+		"loadingModels": "Caricamento..."
 	},
 	"messages": {
 		"waiting": "In attesa della risposta dell'agente...",
