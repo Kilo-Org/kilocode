@@ -19,6 +19,7 @@ import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 import { logs } from "./services/logs.js"
 import { validateAttachments, validateAttachRequiresAuto, accumulateAttachments } from "./validation/attachments.js"
+import { isNonInteractiveMode, getNonInteractiveReason, getConfigRequiredError } from "./utils/interactive.js"
 
 // Log CLI location for debugging (visible in VS Code "Kilo-Code" output channel)
 logs.info(`CLI started from: ${import.meta.url}`)
@@ -216,7 +217,36 @@ program
 		const hasEnvConfig = envConfigExists()
 
 		if (!hasConfig && !hasEnvConfig) {
-			// No config file and no env config - show auth wizard
+			// No config file and no env config
+			// Check if we're in non-interactive mode before attempting auth wizard
+			const nonInteractiveOptions = {
+				auto: options.auto,
+				json: options.json,
+				jsonIo: options.jsonIo,
+			}
+
+			if (isNonInteractiveMode(nonInteractiveOptions)) {
+				// Cannot run auth wizard in non-interactive mode
+				const reason = getNonInteractiveReason(nonInteractiveOptions)
+				const errorMessage = getConfigRequiredError(reason)
+
+				// In JSON mode, output structured error to maintain consistent format
+				if (options.json || options.jsonIo) {
+					console.error(
+						JSON.stringify({
+							type: "error",
+							error: "configuration_required",
+							message: errorMessage,
+							reason: reason,
+						}),
+					)
+				} else {
+					console.error(errorMessage)
+				}
+				process.exit(1)
+			}
+
+			// Interactive mode - show auth wizard
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()
