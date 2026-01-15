@@ -994,6 +994,14 @@ export const ChatRowContent = ({
 					</>
 				)
 			case "runSlashCommand": {
+				// kilocode_change: Add diagnostic logging for workflow display issue
+				console.log(`[ChatRow] Processing runSlashCommand tool:`, {
+					tool,
+					messageType: message.type,
+					isExpanded,
+					messageText: message.text,
+				})
+				// kilocode_change end
 				// kilocode_change: Use extended SlashCommandItem for workflow execution
 				return (
 					<SlashCommandItem
@@ -1520,6 +1528,14 @@ export const ChatRowContent = ({
 
 					switch (sayTool.tool) {
 						case "runSlashCommand": {
+							// kilocode_change: Add diagnostic logging for workflow display issue
+							console.log(`[ChatRow] Processing say runSlashCommand tool:`, {
+								sayTool,
+								messageType: message.type,
+								isExpanded,
+								messageText: message.text,
+							})
+							// kilocode_change end
 							// kilocode_change: Use extended SlashCommandItem for workflow execution
 							return (
 								<SlashCommandItem
