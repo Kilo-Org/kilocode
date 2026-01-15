@@ -1,10 +1,3 @@
-# James Kilo Forking (temp)
-.kilocode
-.kilocodemodes
-.husky/pre-push
-packages/build/.deja-dup-ignore
-scripts/monitor-resources.sh
-scripts/optimized-build.sh
 
 #
 .pnpm-store
@@ -38,7 +31,7 @@ docs/_site/
 .env.*
 !.env.*.sample
 
-# venv (remove?)
+# venv
 env/
 
 # Logging

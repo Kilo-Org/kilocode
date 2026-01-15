@@ -43,6 +43,9 @@ describe("runSlashCommandTool", () => {
 			pushToolResult: vi.fn(),
 			removeClosingTag: vi.fn((tag, text) => text || ""),
 		}
+		
+		// Reset mock calls to avoid accumulation from previous tests
+		mockCallbacks.pushToolResult.mockClear()
 	})
 
 	it("should handle missing command parameter", async () => {
@@ -97,7 +100,7 @@ describe("runSlashCommandTool", () => {
 			content: "Initialize project",
 			source: "project" as const,
 			filePath: ".kilocode/workflows/init.md",
-			description: "Initialize the project",
+			description: "Initialize project",
 		}
 
 		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
@@ -124,7 +127,7 @@ describe("runSlashCommandTool", () => {
 			content: "Initialize project",
 			source: "project" as const,
 			filePath: ".kilocode/workflows/init.md",
-			description: "Initialize the project",
+			description: "Initialize project",
 		}
 
 		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
@@ -171,9 +174,13 @@ describe("runSlashCommandTool", () => {
 
 		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
-		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+		// Create fresh mock to avoid accumulation from previous tests
+		const freshPushToolResult = vi.fn()
+		const freshCallbacks = { ...mockCallbacks, pushToolResult: freshPushToolResult }
 
-		expect(mockCallbacks.askApproval).toHaveBeenCalledWith(
+		await runSlashCommandTool.handle(mockTask as Task, block, freshCallbacks)
+
+		expect(freshCallbacks.askApproval).toHaveBeenCalledWith(
 			"tool",
 			JSON.stringify({
 				tool: "runSlashCommand",
@@ -184,7 +191,7 @@ describe("runSlashCommandTool", () => {
 			}),
 		)
 
-		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
+		expect(freshPushToolResult).toHaveBeenCalledWith(
 			`Workflow: /init
 Description: Analyze codebase and create AGENTS.md
 Source: project
@@ -352,7 +359,7 @@ Deploy application to production`,
 		expect(mockTask.consecutiveMistakeCount).toBe(0)
 	})
 
-	it("should switch mode when mode is specified in command", async () => {
+	it("should switch mode when mode is specified in workflow", async () => {
 		const mockHandleModeSwitch = vi.fn()
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
@@ -363,43 +370,43 @@ Deploy application to production`,
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "debug-app",
-			content: "Start debugging the application",
+			content: "Start debugging application",
 			source: "project" as const,
-			filePath: ".roo/commands/debug-app.md",
-			description: "Debug the application",
+			filePath: ".kilocode/workflows/debug-app.md",
+			description: "Debug application",
 			mode: "debug",
 		}
 
 		mockTask.providerRef.deref = vi.fn().mockReturnValue({
 			getState: vi.fn().mockResolvedValue({
 				experiments: {
-					runSlashCommand: true,
+					autoExecuteWorkflow: false,
 				},
 				customModes: undefined,
 			}),
 			handleModeSwitch: mockHandleModeSwitch,
 		})
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
 		expect(mockHandleModeSwitch).toHaveBeenCalledWith("debug")
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
-			`Command: /debug-app
-Description: Debug the application
+			`Workflow: /debug-app
+Description: Debug application
 Mode: debug
 Source: project
 
---- Command Content ---
+--- Workflow Content ---
 
-Start debugging the application`,
+Start debugging application`,
 		)
 	})
 
-	it("should not switch mode when mode is not specified in command", async () => {
+	it("should not switch mode when mode is not specified in workflow", async () => {
 		const mockHandleModeSwitch = vi.fn()
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
@@ -410,25 +417,25 @@ Start debugging the application`,
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "test",
 			content: "Run tests",
 			source: "project" as const,
-			filePath: ".roo/commands/test.md",
+			filePath: ".kilocode/workflows/test.md",
 			description: "Run project tests",
 		}
 
 		mockTask.providerRef.deref = vi.fn().mockReturnValue({
 			getState: vi.fn().mockResolvedValue({
 				experiments: {
-					runSlashCommand: true,
+					autoExecuteWorkflow: false,
 				},
 				customModes: undefined,
 			}),
 			handleModeSwitch: mockHandleModeSwitch,
 		})
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
@@ -445,26 +452,26 @@ Start debugging the application`,
 			partial: false,
 		}
 
-		const mockCommand = {
+		const mockWorkflow = {
 			name: "debug-app",
 			content: "Start debugging",
 			source: "project" as const,
-			filePath: ".roo/commands/debug-app.md",
-			description: "Debug the application",
+			filePath: ".kilocode/workflows/debug-app.md",
+			description: "Debug application",
 			mode: "debug",
 		}
 
 		mockTask.providerRef.deref = vi.fn().mockReturnValue({
 			getState: vi.fn().mockResolvedValue({
 				experiments: {
-					runSlashCommand: true,
+					autoExecuteWorkflow: false,
 				},
 				customModes: undefined,
 			}),
 			handleModeSwitch: vi.fn(),
 		})
 
-		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+		vi.mocked(getWorkflow).mockResolvedValue(mockWorkflow)
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
 
@@ -475,7 +482,7 @@ Start debugging the application`,
 				command: "debug-app",
 				args: undefined,
 				source: "project",
-				description: "Debug the application",
+				description: "Debug application",
 				mode: "debug",
 			}),
 		)
