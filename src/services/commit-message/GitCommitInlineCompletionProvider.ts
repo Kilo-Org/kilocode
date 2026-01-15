@@ -450,8 +450,8 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 	/**
 	 * Convert a suggestion string to inline completion items.
 	 * When the input box is empty (position at 0,0), we prepend a newline to visually
-	 * separate the suggestion from the placeholder text, but use filterText to ensure
-	 * only the actual message is inserted when accepted.
+	 * separate the suggestion from the placeholder text. Git strips leading newlines
+	 * from commit messages automatically.
 	 */
 	private stringToInlineCompletions(
 		text: string,
@@ -470,11 +470,6 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 			command: GIT_COMMIT_COMPLETION_ACCEPTED_COMMAND,
 			title: "Commit Message Accepted",
 		})
-
-		// Use filterText to ensure only the actual message (without newline) is inserted
-		if (isEmptyInput) {
-			item.filterText = text
-		}
 
 		return [item]
 	}
