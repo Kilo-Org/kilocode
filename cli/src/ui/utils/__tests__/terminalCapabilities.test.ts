@@ -5,8 +5,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
-// Store original platform
+// Store original values
 const originalPlatform = process.platform
+const originalEnv = { ...process.env }
 
 /**
  * Helper to mock process.platform
@@ -30,6 +31,35 @@ function restorePlatform() {
 	})
 }
 
+/**
+ * Helper to mock environment variables
+ */
+function mockEnv(env: Record<string, string | undefined>) {
+	for (const [key, value] of Object.entries(env)) {
+		if (value === undefined) {
+			delete process.env[key]
+		} else {
+			process.env[key] = value
+		}
+	}
+}
+
+/**
+ * Helper to restore original environment
+ */
+function restoreEnv() {
+	// Clear all env vars that weren't in original
+	for (const key of Object.keys(process.env)) {
+		if (!(key in originalEnv)) {
+			delete process.env[key]
+		}
+	}
+	// Restore original values
+	for (const [key, value] of Object.entries(originalEnv)) {
+		process.env[key] = value
+	}
+}
+
 describe("terminalCapabilities", () => {
 	let writtenData: string[] = []
 	let originalWrite: typeof process.stdout.write
@@ -46,10 +76,11 @@ describe("terminalCapabilities", () => {
 	afterEach(() => {
 		vi.restoreAllMocks()
 		restorePlatform()
+		restoreEnv()
 		process.stdout.write = originalWrite
 	})
 
-	describe("Windows terminal detection", () => {
+	describe("Windows platform detection", () => {
 		it("should detect Windows platform correctly", () => {
 			mockPlatform("win32")
 			expect(process.platform).toBe("win32")
@@ -64,39 +95,100 @@ describe("terminalCapabilities", () => {
 		})
 	})
 
-	describe("isWindowsTerminal", () => {
+	describe("isWindows", () => {
 		it("should return true on Windows platform", async () => {
 			mockPlatform("win32")
-			const { isWindowsTerminal } = await import("../terminalCapabilities.js")
-			expect(isWindowsTerminal()).toBe(true)
+			vi.resetModules()
+			const { isWindows } = await import("../terminalCapabilities.js")
+			expect(isWindows()).toBe(true)
 		})
 
 		it("should return false on non-Windows platforms", async () => {
 			mockPlatform("darwin")
-			// Need to re-import to get fresh module state
 			vi.resetModules()
-			const { isWindowsTerminal } = await import("../terminalCapabilities.js")
-			expect(isWindowsTerminal()).toBe(false)
+			const { isWindows } = await import("../terminalCapabilities.js")
+			expect(isWindows()).toBe(false)
+		})
+	})
+
+	describe("supportsScrollbackClear", () => {
+		it("should return true when WT_SESSION is set (Windows Terminal)", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: "some-session-id" })
+			vi.resetModules()
+			const { supportsScrollbackClear } = await import("../terminalCapabilities.js")
+			expect(supportsScrollbackClear()).toBe(true)
+		})
+
+		it("should return true when TERM_PROGRAM is vscode", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: "vscode" })
+			vi.resetModules()
+			const { supportsScrollbackClear } = await import("../terminalCapabilities.js")
+			expect(supportsScrollbackClear()).toBe(true)
+		})
+
+		it("should return false on Windows without modern terminal indicators", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
+			vi.resetModules()
+			const { supportsScrollbackClear } = await import("../terminalCapabilities.js")
+			expect(supportsScrollbackClear()).toBe(false)
+		})
+
+		it("should return true on non-Windows platforms", async () => {
+			mockPlatform("darwin")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
+			vi.resetModules()
+			const { supportsScrollbackClear } = await import("../terminalCapabilities.js")
+			expect(supportsScrollbackClear()).toBe(true)
 		})
 	})
 
 	describe("getTerminalClearSequence", () => {
-		it("should return Windows-compatible clear sequence on Windows", async () => {
+		it("should return Windows-compatible clear sequence on legacy Windows (cmd.exe)", async () => {
 			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { getTerminalClearSequence } = await import("../terminalCapabilities.js")
 			const clearSeq = getTerminalClearSequence()
 
-			// Windows should NOT use \x1b[3J (clear scrollback) as it causes display issues
-			// in cmd.exe and older Windows terminals
+			// Legacy Windows should NOT use \x1b[3J (clear scrollback) as it causes display issues
 			expect(clearSeq).not.toContain("\x1b[3J")
 			// Should still clear screen and move cursor home
 			expect(clearSeq).toContain("\x1b[2J")
 			expect(clearSeq).toContain("\x1b[H")
 		})
 
+		it("should return full ANSI clear sequence on Windows Terminal", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: "some-session-id" })
+			vi.resetModules()
+			const { getTerminalClearSequence } = await import("../terminalCapabilities.js")
+			const clearSeq = getTerminalClearSequence()
+
+			// Windows Terminal supports full clear sequence
+			expect(clearSeq).toContain("\x1b[2J")
+			expect(clearSeq).toContain("\x1b[3J")
+			expect(clearSeq).toContain("\x1b[H")
+		})
+
+		it("should return full ANSI clear sequence on VS Code terminal", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: "vscode" })
+			vi.resetModules()
+			const { getTerminalClearSequence } = await import("../terminalCapabilities.js")
+			const clearSeq = getTerminalClearSequence()
+
+			// VS Code terminal supports full clear sequence
+			expect(clearSeq).toContain("\x1b[2J")
+			expect(clearSeq).toContain("\x1b[3J")
+			expect(clearSeq).toContain("\x1b[H")
+		})
+
 		it("should return full ANSI clear sequence on non-Windows platforms", async () => {
 			mockPlatform("darwin")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { getTerminalClearSequence } = await import("../terminalCapabilities.js")
 			const clearSeq = getTerminalClearSequence()
@@ -109,8 +201,7 @@ describe("terminalCapabilities", () => {
 	})
 
 	describe("normalizeLineEndings", () => {
-		it("should convert CRLF to LF on non-Windows platforms", async () => {
-			mockPlatform("darwin")
+		it("should convert CRLF to LF", async () => {
 			vi.resetModules()
 			const { normalizeLineEndings } = await import("../terminalCapabilities.js")
 
@@ -119,8 +210,20 @@ describe("terminalCapabilities", () => {
 			expect(result).toBe("line1\nline2\nline3")
 		})
 
-		it("should preserve CRLF on Windows for output", async () => {
+		it("should convert standalone CR to LF", async () => {
+			vi.resetModules()
+			const { normalizeLineEndings } = await import("../terminalCapabilities.js")
+
+			const input = "line1\rline2\rline3"
+			const result = normalizeLineEndings(input)
+			expect(result).toBe("line1\nline2\nline3")
+		})
+	})
+
+	describe("normalizeLineEndingsForOutput", () => {
+		it("should convert LF to CRLF on legacy Windows", async () => {
 			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { normalizeLineEndingsForOutput } = await import("../terminalCapabilities.js")
 
@@ -129,8 +232,31 @@ describe("terminalCapabilities", () => {
 			expect(result).toBe("line1\r\nline2\r\nline3")
 		})
 
-		it("should not double-convert already CRLF strings on Windows", async () => {
+		it("should not convert on Windows Terminal", async () => {
 			mockPlatform("win32")
+			mockEnv({ WT_SESSION: "some-session-id" })
+			vi.resetModules()
+			const { normalizeLineEndingsForOutput } = await import("../terminalCapabilities.js")
+
+			const input = "line1\nline2\nline3"
+			const result = normalizeLineEndingsForOutput(input)
+			expect(result).toBe("line1\nline2\nline3")
+		})
+
+		it("should not convert on VS Code terminal", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: "vscode" })
+			vi.resetModules()
+			const { normalizeLineEndingsForOutput } = await import("../terminalCapabilities.js")
+
+			const input = "line1\nline2\nline3"
+			const result = normalizeLineEndingsForOutput(input)
+			expect(result).toBe("line1\nline2\nline3")
+		})
+
+		it("should not double-convert already CRLF strings on legacy Windows", async () => {
+			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { normalizeLineEndingsForOutput } = await import("../terminalCapabilities.js")
 
@@ -148,8 +274,9 @@ describe("terminalCapabilities", () => {
 		 * Windows cmd mode display bug where GUI refreshes fast at the end
 		 * with [\r\n\t...] appearing incorrectly
 		 */
-		it("should not output raw escape sequences that cause display artifacts on Windows", async () => {
+		it("should not output raw escape sequences that cause display artifacts on legacy Windows", async () => {
 			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { getTerminalClearSequence, normalizeLineEndingsForOutput } = await import(
 				"../terminalCapabilities.js"
@@ -161,14 +288,14 @@ describe("terminalCapabilities", () => {
 			// Get the clear sequence
 			const clearSeq = getTerminalClearSequence()
 
-			// The clear sequence should not contain problematic sequences for Windows
+			// The clear sequence should not contain problematic sequences for legacy Windows
 			// \x1b[3J causes scrollback buffer issues in cmd.exe
 			expect(clearSeq).not.toContain("\x1b[3J")
 
 			// Normalize the output for Windows
 			const normalizedOutput = normalizeLineEndingsForOutput(longResponse)
 
-			// On Windows, line endings should be CRLF
+			// On legacy Windows, line endings should be CRLF
 			expect(normalizedOutput).toContain("\r\n")
 			// Should not have bare LF (which causes display issues in cmd.exe)
 			const bareLineFeeds = normalizedOutput.match(/(?<!\r)\n/g)
@@ -177,6 +304,7 @@ describe("terminalCapabilities", () => {
 
 		it("should handle rapid updates without display artifacts", async () => {
 			mockPlatform("win32")
+			mockEnv({ WT_SESSION: undefined, TERM_PROGRAM: undefined })
 			vi.resetModules()
 			const { getTerminalClearSequence } = await import("../terminalCapabilities.js")
 
@@ -191,7 +319,7 @@ describe("terminalCapabilities", () => {
 			const uniqueSequences = new Set(updates)
 			expect(uniqueSequences.size).toBe(1)
 
-			// The sequence should be Windows-safe
+			// The sequence should be Windows-safe for legacy terminals
 			const clearSeq = updates[0]
 			expect(clearSeq).not.toContain("\x1b[3J")
 		})

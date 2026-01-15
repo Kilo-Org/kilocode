@@ -7,28 +7,54 @@
 /**
  * Check if running on Windows platform
  */
-export function isWindowsTerminal(): boolean {
+export function isWindows(): boolean {
 	return process.platform === "win32"
 }
 
 /**
- * Get the appropriate terminal clear sequence for the current platform
+ * Check if the terminal supports the scrollback clear escape sequence (\x1b[3J)
+ *
+ * Modern terminals like Windows Terminal and VS Code's integrated terminal
+ * support this sequence, but legacy cmd.exe does not.
+ *
+ * Detection is based on environment variables:
+ * - WT_SESSION: Set by Windows Terminal
+ * - TERM_PROGRAM === 'vscode': Set by VS Code's integrated terminal
+ * - Non-Windows platforms: Generally support it
+ */
+export function supportsScrollbackClear(): boolean {
+	// Windows Terminal sets WT_SESSION env var
+	if (process.env.WT_SESSION) {
+		return true
+	}
+	// VS Code integrated terminal
+	if (process.env.TERM_PROGRAM === "vscode") {
+		return true
+	}
+	// Default: Unix/Mac support it, Windows cmd.exe doesn't
+	return !isWindows()
+}
+
+/**
+ * Get the appropriate terminal clear sequence for the current terminal
  *
  * On Windows cmd.exe, the \x1b[3J (clear scrollback buffer) escape sequence
  * is not properly supported and can cause display artifacts like raw escape
  * sequences appearing in the output (e.g., [\r\n\t...]).
  *
- * This function returns a platform-appropriate clear sequence:
- * - Windows: \x1b[2J\x1b[H (clear screen + cursor home)
- * - Unix/Mac: \x1b[2J\x1b[3J\x1b[H (clear screen + clear scrollback + cursor home)
+ * Modern terminals (Windows Terminal, VS Code) support the full sequence.
+ *
+ * This function returns a terminal-appropriate clear sequence:
+ * - Legacy Windows (cmd.exe): \x1b[2J\x1b[H (clear screen + cursor home)
+ * - Modern terminals: \x1b[2J\x1b[3J\x1b[H (clear screen + clear scrollback + cursor home)
  */
 export function getTerminalClearSequence(): string {
-	if (isWindowsTerminal()) {
-		// Windows cmd.exe doesn't properly support \x1b[3J (clear scrollback)
+	if (!supportsScrollbackClear()) {
+		// Legacy Windows cmd.exe doesn't properly support \x1b[3J (clear scrollback)
 		// Using only clear screen and cursor home to avoid display artifacts
 		return "\x1b[2J\x1b[H"
 	}
-	// Full clear sequence for Unix/Mac terminals
+	// Full clear sequence for modern terminals
 	return "\x1b[2J\x1b[3J\x1b[H"
 }
 
@@ -43,14 +69,15 @@ export function normalizeLineEndings(text: string): string {
 
 /**
  * Normalize line endings for terminal output
- * On Windows, converts LF to CRLF for proper display in cmd.exe
- * On Unix/Mac, returns the text unchanged
+ * On Windows (without modern terminal), converts LF to CRLF for proper display in cmd.exe
+ * On modern terminals, returns the text unchanged
  *
  * This prevents display artifacts where bare LF characters cause
- * improper line rendering in Windows terminals.
+ * improper line rendering in legacy Windows terminals.
  */
 export function normalizeLineEndingsForOutput(text: string): string {
-	if (isWindowsTerminal()) {
+	// Only convert for legacy Windows terminals (not Windows Terminal or VS Code)
+	if (isWindows() && !process.env.WT_SESSION && process.env.TERM_PROGRAM !== "vscode") {
 		// First normalize to LF, then convert to CRLF for Windows
 		// This prevents double-conversion of already CRLF strings
 		const normalized = normalizeLineEndings(text)
