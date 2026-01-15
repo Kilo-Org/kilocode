@@ -23,6 +23,7 @@ import { getTelemetryService, getIdentityManager } from "./services/telemetry/in
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
+import { finishWithOnTaskCompleted } from "./pr/on-task-completed.js"
 import { isGitWorktree } from "./utils/git.js"
 import { Package } from "./constants/package.js"
 import type { CLIOptions } from "./types/cli.js"
@@ -464,6 +465,19 @@ export class CLI {
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
 				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+			}
+
+			// Handle --on-task-completed flag (only if not in parallel mode, which has its own flow)
+			if (this.options.onTaskCompleted && !this.options.parallel) {
+				const onTaskCompletedBeforeExit = await finishWithOnTaskCompleted(this, {
+					cwd: this.options.workspace || process.cwd(),
+					prompt: this.options.onTaskCompleted,
+				})
+				const originalBeforeExit = beforeExit
+				beforeExit = () => {
+					originalBeforeExit()
+					onTaskCompletedBeforeExit()
+				}
 			}
 
 			// Shutdown telemetry service before exiting

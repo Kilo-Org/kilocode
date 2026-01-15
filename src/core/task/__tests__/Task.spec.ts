@@ -126,6 +126,7 @@ vi.mock("vscode", () => {
 		env: {
 			uriScheme: "vscode",
 			language: "en",
+			appName: "Visual Studio Code", // kilocode_change
 		},
 		EventEmitter: vi.fn().mockImplementation(() => mockEventEmitter),
 		Disposable: {
