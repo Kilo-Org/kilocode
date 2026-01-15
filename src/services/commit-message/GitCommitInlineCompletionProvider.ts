@@ -128,7 +128,7 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 		// Check cache first for matching suggestions
 		const cachedResult = this.findMatchingSuggestion(prefix, contextHash)
 		if (cachedResult) {
-			return this.stringToInlineCompletions(cachedResult, position)
+			return this.stringToInlineCompletions(cachedResult, position, prefix)
 		}
 
 		// Skip if user has typed a substantial amount (let them finish their thought)
@@ -142,7 +142,7 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 		// Check cache again after fetch
 		const newCachedResult = this.findMatchingSuggestion(prefix, contextHash)
 		if (newCachedResult) {
-			return this.stringToInlineCompletions(newCachedResult, position)
+			return this.stringToInlineCompletions(newCachedResult, position, prefix)
 		}
 
 		return []
@@ -449,16 +449,32 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 
 	/**
 	 * Convert a suggestion string to inline completion items.
+	 * When the input box is empty (position at 0,0), we prepend a newline to visually
+	 * separate the suggestion from the placeholder text, but use filterText to ensure
+	 * only the actual message is inserted when accepted.
 	 */
-	private stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
+	private stringToInlineCompletions(
+		text: string,
+		position: vscode.Position,
+		prefix: string,
+	): vscode.InlineCompletionItem[] {
 		if (text === "") {
 			return []
 		}
 
-		const item = new vscode.InlineCompletionItem(text, new vscode.Range(position, position), {
+		// When the input box is empty, prepend a newline to visually separate from placeholder
+		const isEmptyInput = prefix === ""
+		const displayText = isEmptyInput ? "\n" + text : text
+
+		const item = new vscode.InlineCompletionItem(displayText, new vscode.Range(position, position), {
 			command: GIT_COMMIT_COMPLETION_ACCEPTED_COMMAND,
 			title: "Commit Message Accepted",
 		})
+
+		// Use filterText to ensure only the actual message (without newline) is inserted
+		if (isEmptyInput) {
+			item.filterText = text
+		}
 
 		return [item]
 	}
