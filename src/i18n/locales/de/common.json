@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code."
+		"description": "Open-Source-KI-Coding-Agent, der Code aus natürlicher Sprache generiert, Aufgaben automatisiert und Terminal-Befehle ausführt. Mit Inline-Autovervollständigung, Browser-Automatisierung, automatischem Refactoring und benutzerdefinierten Modi für Planung, Programmierung und Debugging. Unterstützt über 500 KI-Modelle, darunter Claude (Anthropic), Gemini, Grok, GPT, Codex und GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

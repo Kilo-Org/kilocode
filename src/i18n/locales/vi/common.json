@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã."
+		"description": "Agent lập trình AI mã nguồn mở tạo mã từ ngôn ngữ tự nhiên, tự động hóa tác vụ và chạy lệnh terminal. Tính năng bao gồm tự động hoàn thành inline, tự động hóa trình duyệt, tái cấu trúc tự động và các chế độ tùy chỉnh cho lập kế hoạch, lập trình và gỡ lỗi. Hỗ trợ hơn 500 mô hình AI bao gồm Claude (Anthropic), Gemini, Grok, GPT, Codex và GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",

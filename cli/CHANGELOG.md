@@ -1,5 +1,63 @@
 # @kilocode/cli
 
+## 0.22.0
+
+### Minor Changes
+
+- [#5046](https://github.com/Kilo-Org/kilocode/pull/5046) [`fd2029c`](https://github.com/Kilo-Org/kilocode/commit/fd2029c1de9adeedb4ac4974c10f43c936d60914) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `--on-task-completed <prompt>` flag to send a custom prompt to the agent when the task completes. This flag requires `--auto` mode and allows users to define any follow-up action (e.g., creating a PR, running tests, generating documentation). The prompt is sent to the agent after the main task completes, enabling flexible post-task automation.
+
+- [#5022](https://github.com/Kilo-Org/kilocode/pull/5022) [`2fc244c`](https://github.com/Kilo-Org/kilocode/commit/2fc244c85c7b1b3758e1139667e3615822656e10) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add syntax highlighting to code edit diffs in the CLI. Diffs now display with language-aware syntax coloring using Shiki, making code changes easier to read. Includes support for 60+ languages, automatic language detection from file extensions, and theme-aware highlighting that works with both light and dark themes. Also increased the diff display limit from 20 to 50 lines with smart context collapsing around changes.
+
+### Patch Changes
+
+- [#4988](https://github.com/Kilo-Org/kilocode/pull/4988) [`7253ac0`](https://github.com/Kilo-Org/kilocode/commit/7253ac0457bf226688cad475002123a84916ea44) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Bedrock provider validation to support API key authentication without requiring access keys
+
+- [#5064](https://github.com/Kilo-Org/kilocode/pull/5064) [`2713d06`](https://github.com/Kilo-Org/kilocode/commit/2713d069e9775e3e7b7e7f5954152b275029bd0d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add default autocomplete suggestions for select commands (`/model select`, `/provider select`, `/tasks select`, `/session select`)
+
+- [#5066](https://github.com/Kilo-Org/kilocode/pull/5066) [`8055f15`](https://github.com/Kilo-Org/kilocode/commit/8055f153d1491c39eb2254d74c3842e4616a79d2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI dispose, randomUUID, and debug UX issues
+
+- [#5011](https://github.com/Kilo-Org/kilocode/pull/5011) [`9c8bb7b`](https://github.com/Kilo-Org/kilocode/commit/9c8bb7b9bde56eb4d32093a2ee4bb72ac0906e92) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix multiline paste regression where pasting text with newlines would submit after the first line
+
+- [#5000](https://github.com/Kilo-Org/kilocode/pull/5000) [`1c88a66`](https://github.com/Kilo-Org/kilocode/commit/1c88a66caaacef3b96bc819456181d84174b82b2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix empty files being created when project path contains non-Latin characters (e.g., Cyrillic, Chinese)
+
+    The CLI's `write_to_file` command was creating empty files when the project directory path contained non-Latin characters. This was caused by improper handling of `Uint8Array` content in the `FileSystemAPI.writeFile` method. The fix ensures proper `Buffer.from()` conversion before writing to the filesystem.
+
+- [#5058](https://github.com/Kilo-Org/kilocode/pull/5058) [`c9f1f6a`](https://github.com/Kilo-Org/kilocode/commit/c9f1f6afe32cdec374e7138c997c2a0b89b4989b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix autocomplete for `/teams select` and other multi-argument commands
+
+- [#4985](https://github.com/Kilo-Org/kilocode/pull/4985) [`69a541a`](https://github.com/Kilo-Org/kilocode/commit/69a541a6d85cf79580c7d80c691bf3f5a6aa6b89) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Windows cmd.exe display bug with escape sequences
+
+    On Windows cmd.exe, the `\x1b[3J` (clear scrollback buffer) escape sequence is not properly supported and causes display artifacts like raw escape sequences appearing in the output (e.g., `[\r\n\t...]`).
+
+## 0.21.0
+
+### Minor Changes
+
+- [#4916](https://github.com/Kilo-Org/kilocode/pull/4916) [`f02364c`](https://github.com/Kilo-Org/kilocode/commit/f02364c5a75729b5d17f447dee7570ee1e7490e6) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Abbreviate large pasted text in CLI input as `[Pasted text #N +X lines]` to prevent input field overflow when pasting logs or large code blocks
+
+- [#4997](https://github.com/Kilo-Org/kilocode/pull/4997) [`2a663be`](https://github.com/Kilo-Org/kilocode/commit/2a663bedc2a0b129a9d79321dea0ad280ec3a5da) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `kilocode models --json` command to expose available models as JSON for programmatic use
+
+- [#4936](https://github.com/Kilo-Org/kilocode/pull/4936) [`bfcd1d5`](https://github.com/Kilo-Org/kilocode/commit/bfcd1d5f38a887a9e0c736410ef2ff84ec0f5f3b) Thanks [@idreesmuhammadqazi-create](https://github.com/idreesmuhammadqazi-create)! - Add colorblind theme support to CLI
+
+    - Colorblind-friendly theme with high contrast colors for accessibility
+
+### Patch Changes
+
+- [#4983](https://github.com/Kilo-Org/kilocode/pull/4983) [`82ef9b0`](https://github.com/Kilo-Org/kilocode/commit/82ef9b0ad09f1b75f66db116bf9cf7c1a34edd01) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `/checkpoint enable` and `/checkpoint disable` subcommands to toggle checkpoint creation and save disk space
+
+- [#4982](https://github.com/Kilo-Org/kilocode/pull/4982) [`7d02d43`](https://github.com/Kilo-Org/kilocode/commit/7d02d4364b1dc4c04ce55b2feb368329b3b9c3c4) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix(cli): improve error message for custom mode not found
+
+- [#4996](https://github.com/Kilo-Org/kilocode/pull/4996) [`d7016fa`](https://github.com/Kilo-Org/kilocode/commit/d7016faa01dc0d0eefeff0b7abd5cf873ab54616) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add maxConcurrentFileReads configuration support to CLI with documentation
+
+- [#4981](https://github.com/Kilo-Org/kilocode/pull/4981) [`0268494`](https://github.com/Kilo-Org/kilocode/commit/0268494f53276e4c5411204b01e50c15c9b02787) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI `/model list` returning "No models available" for nano-gpt provider
+
+- [#4977](https://github.com/Kilo-Org/kilocode/pull/4977) [`c71cff8`](https://github.com/Kilo-Org/kilocode/commit/c71cff8451927052c00b5306c0b552b4afe33dbd) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add proper display for deleteFile tool in CLI instead of showing "Unknown tool: deleteFile"
+
+- [#4978](https://github.com/Kilo-Org/kilocode/pull/4978) [`ed5073c`](https://github.com/Kilo-Org/kilocode/commit/ed5073ccb6ffc8acc53cb9e7191b1f618001ed40) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix number key hotkeys (1, 2, 3) not working in command approval menu
+
+- [#4993](https://github.com/Kilo-Org/kilocode/pull/4993) [`c3c7bbe`](https://github.com/Kilo-Org/kilocode/commit/c3c7bbe70ed1832e62c8cb05f3a0db4cdbc0dd25) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI hanging on rate limit errors in autonomous mode by enabling auto-retry for API failures
+
+- [#4995](https://github.com/Kilo-Org/kilocode/pull/4995) [`95e9b6d`](https://github.com/Kilo-Org/kilocode/commit/95e9b6d234681d34f3903715de1ceba67e745516) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - fix: use correct api url for some endpoints
+
 ## 0.20.0
 
 ### Minor Changes

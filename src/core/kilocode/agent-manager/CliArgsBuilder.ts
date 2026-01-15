@@ -1,5 +1,6 @@
 export interface BuildCliArgsOptions {
 	sessionId?: string
+	model?: string
 }
 
 /**
@@ -12,6 +13,10 @@ export function buildCliArgs(workspace: string, prompt: string, options?: BuildC
 	// Note: --json (without -io) exists for CI/CD read-only mode but isn't used here
 	// --yolo: auto-approve tool uses (file reads, writes, commands, etc.)
 	const args = ["--json-io", "--yolo", `--workspace=${workspace}`]
+
+	if (options?.model) {
+		args.push(`--model=${options.model}`)
+	}
 
 	if (options?.sessionId) {
 		args.push(`--session=${options.sessionId}`)

@@ -8,6 +8,12 @@ import Image from '@site/src/components/Image';
 
 :::
 
+:::note[Prefer quick completions?]
+
+If you're typing code in the editor and want AI to finish your line or block, check out [Autocomplete](/basic-usage/autocomplete) instead. Chat is best for larger tasks, explanations, and multi-file changes.
+
+:::
+
 ## Quick Setup
 
 Find the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
@@ -40,6 +46,14 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 - **Use @ mentions** - Reference files and code directly with `@filename`
 - **One task at a time** - Break complex work into manageable steps
 - **Include examples** - Show the style or format you want
+
+:::info[Chat vs Autocomplete]
+
+**Use chat** when you need to describe what you want, ask questions, or make changes across multiple files.
+
+**Use [autocomplete](/basic-usage/autocomplete)** when you're already typing code and want the AI to finish your thought inline.
+
+:::
 
 ## The Chat Interface
 
@@ -74,12 +88,13 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 
 ## Common Mistakes to Avoid
 
-| Instead of this...          | Try this                                                         |
-| --------------------------- | ---------------------------------------------------------------- |
-| "Fix the code"              | "Fix the bug in `calculateTotal` that returns incorrect results" |
-| Assuming Kilo knows context | Use `@` to reference specific files                              |
-| Multiple unrelated tasks    | Submit one focused request at a time                             |
-| Technical jargon overload   | Clear, straightforward language works best                       |
+| Instead of this...                | Try this                                                             |
+| --------------------------------- | -------------------------------------------------------------------- |
+| "Fix the code"                    | "Fix the bug in `calculateTotal` that returns incorrect results"     |
+| Assuming Kilo knows context       | Use `@` to reference specific files                                  |
+| Multiple unrelated tasks          | Submit one focused request at a time                                 |
+| Technical jargon overload         | Clear, straightforward language works best                           |
+| Using chat for tiny code changes. | Use [autocomplete](/basic-usage/autocomplete) for inline completions |
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 

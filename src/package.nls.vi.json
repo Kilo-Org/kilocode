@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: Trợ lý Lập trình AI, Copilot và Tự động Hoàn thành",
-	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
+	"extension.description": "Trợ lý lập trình AI nguồn mở tạo mã từ ngôn ngữ tự nhiên, tự động hóa tác vụ và chạy lệnh terminal. Bao gồm tự động hoàn thành inline, tự động hóa trình duyệt, tái cấu trúc tự động và các chế độ tùy chỉnh cho lập kế hoạch, lập trình và gỡ lỗi. Hỗ trợ hơn 500 mô hình AI bao gồm Claude (Anthropic), Gemini, Grok, GPT, Codex và GLM.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",
 	"command.fixCode.title": "Sửa Mã",

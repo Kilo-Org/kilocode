@@ -9,10 +9,7 @@ This guide walks you through setting up Mistral's Codestral model for free autoc
 
 ## Video Walkthrough
 
-<video controls width="100%">
-  <source src="/docs/videos/configure_free_codestral.mp4" type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
+<iframe width="100%" height="400" src="https://www.youtube.com/embed/0aqBbB8fPho" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Step 1: Open Kilo Code Settings
 
@@ -28,13 +25,21 @@ Navigate to **Settings → Providers** and click **Add Profile** to create a new
 
 ## Step 3: Name Your Profile
 
-In the "New Configuration Profile" dialog, enter a name like "Mistral profile" and click **Create Profile**.
+In the "New Configuration Profile" dialog, enter a name like "Mistral profile" (the name can be anything you prefer) and click **Create Profile**.
+
+:::note
+The profile name is just a label for your reference—it doesn't affect functionality. Choose any name that helps you identify this configuration.
+:::
 
 ![Create Mistral Profile](./mistral-setup/03-name-your-profile.png)
 
 ## Step 4: Select Mistral as Provider
 
 In the **API Provider** dropdown, search for and select **Mistral**.
+
+:::note
+When creating an autocomplete profile, you don't need to select a specific model—Kilo Code will automatically use the appropriate Codestral model optimized for code completions.
+:::
 
 ![Select Mistral Provider](./mistral-setup/04-select-mistral-provider.png)
 
