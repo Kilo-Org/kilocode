@@ -60,6 +60,18 @@ interface CommitMessageSuggestion {
  * Based on the GhostInlineCompletionProvider pattern but simplified for
  * commit message generation.
  */
+/**
+ * Represents a pending request with its associated prefix and context.
+ */
+interface PendingRequest {
+	/** The prefix (user input) when this request was started */
+	prefix: string
+	/** Hash of the git diff context when this request was started */
+	contextHash: string
+	/** The promise that resolves when the request completes */
+	promise: Promise<void>
+}
+
 export class GitCommitInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: CommitMessageSuggestion[] = []
 	private generator: CommitMessageGenerator
@@ -67,7 +79,7 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 	private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
 	private latencyHistory: number[] = []
 	private isFirstCall: boolean = true
-	private pendingRequest: Promise<void> | null = null
+	private pendingRequests: PendingRequest[] = []
 	private lastContextHash: string = ""
 	private acceptedCommand: vscode.Disposable | null = null
 
@@ -138,9 +150,10 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 
 	/**
 	 * Find a matching suggestion from the history based on current prefix and context.
+	 * Returns only the first (most recent) match to avoid overlapping suggestions.
 	 */
 	private findMatchingSuggestion(prefix: string, contextHash: string): string | null {
-		// Search from most recent to least recent
+		// Search from most recent to least recent, return first match only
 		for (let i = this.suggestionsHistory.length - 1; i >= 0; i--) {
 			const suggestion = this.suggestionsHistory[i]
 
@@ -149,16 +162,28 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 				continue
 			}
 
-			// Exact prefix match
+			// Exact prefix match - return the suggestion text as-is
 			if (prefix === suggestion.prefix) {
 				return suggestion.text
 			}
 
 			// Partial typing match: user has typed more of the suggestion
+			// This handles the case where user types "fe" and we have a suggestion for "" with text "feat: add feature"
+			// We need to check if what the user typed matches the beginning of the full message
+			const fullMessage = suggestion.prefix + suggestion.text
+			if (
+				fullMessage.toLowerCase().startsWith(prefix.toLowerCase()) &&
+				prefix.length > suggestion.prefix.length
+			) {
+				// User has typed part of the suggestion, return the remaining part
+				return fullMessage.substring(prefix.length)
+			}
+
+			// Also check if user typed exactly what was in the suggestion text
 			if (
 				suggestion.text !== "" &&
 				prefix.startsWith(suggestion.prefix) &&
-				suggestion.text.startsWith(prefix.substring(suggestion.prefix.length))
+				suggestion.text.toLowerCase().startsWith(prefix.substring(suggestion.prefix.length).toLowerCase())
 			) {
 				const typedContent = prefix.substring(suggestion.prefix.length)
 				return suggestion.text.substring(typedContent.length)
@@ -197,7 +222,45 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 	}
 
 	/**
-	 * Debounced fetch with leading edge execution.
+	 * Find a pending request that covers the current prefix and context.
+	 * A request covers the current position if:
+	 * 1. The context hash matches (same staged changes)
+	 * 2. The current prefix either equals or extends the pending prefix
+	 *    (user is typing forward, not backspacing or editing earlier)
+	 *
+	 * @returns The covering pending request, or null if none found
+	 */
+	private findCoveringPendingRequest(prefix: string, contextHash: string): PendingRequest | null {
+		for (const pendingRequest of this.pendingRequests) {
+			// Context hash must match exactly (same staged changes)
+			if (contextHash !== pendingRequest.contextHash) {
+				continue
+			}
+
+			// Current prefix must start with the pending prefix (user typed more)
+			// or be exactly equal (same position)
+			if (prefix.startsWith(pendingRequest.prefix)) {
+				return pendingRequest
+			}
+		}
+		return null
+	}
+
+	/**
+	 * Remove a pending request from the list when it completes.
+	 */
+	private removePendingRequest(request: PendingRequest): void {
+		const index = this.pendingRequests.indexOf(request)
+		if (index !== -1) {
+			this.pendingRequests.splice(index, 1)
+		}
+	}
+
+	/**
+	 * Debounced fetch with leading edge execution and pending request reuse.
+	 * - First call executes immediately (leading edge)
+	 * - Subsequent calls reset the timer and wait for debounce delay of inactivity (trailing edge)
+	 * - If a pending request covers the current prefix/context, reuse it instead of starting a new one
 	 */
 	private debouncedFetchAndCacheSuggestion(
 		workspacePath: string,
@@ -205,9 +268,11 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 		contextHash: string,
 		token: vscode.CancellationToken,
 	): Promise<void> {
-		// Reuse pending request if one exists
-		if (this.pendingRequest) {
-			return this.pendingRequest
+		// Check if any existing pending request covers this one
+		const coveringRequest = this.findCoveringPendingRequest(prefix, contextHash)
+		if (coveringRequest) {
+			// Wait for the existing request to complete - no need to start a new one
+			return coveringRequest.promise
 		}
 
 		// First call executes immediately
@@ -221,17 +286,30 @@ export class GitCommitInlineCompletionProvider implements vscode.InlineCompletio
 			clearTimeout(this.debounceTimer)
 		}
 
+		// Create the pending request object first so we can reference it in the cleanup
+		const pendingRequest: PendingRequest = {
+			prefix,
+			contextHash,
+			promise: null!, // Will be set immediately below
+		}
+
 		const requestPromise = new Promise<void>((resolve) => {
 			this.debounceTimer = setTimeout(async () => {
 				this.debounceTimer = null
 				this.isFirstCall = true
 				await this.fetchAndCacheSuggestion(workspacePath, prefix, contextHash, token)
-				this.pendingRequest = null
+				// Remove this request from pending when done
+				this.removePendingRequest(pendingRequest)
 				resolve()
 			}, this.debounceDelayMs)
 		})
 
-		this.pendingRequest = requestPromise
+		// Complete the pending request object
+		pendingRequest.promise = requestPromise
+
+		// Add to the list of pending requests
+		this.pendingRequests.push(pendingRequest)
+
 		return requestPromise
 	}
 

@@ -262,6 +262,40 @@ describe("GitCommitInlineCompletionProvider", () => {
 			const result = (provider as any).findMatchingSuggestion("fix: ", "abc123")
 			expect(result).toBeNull()
 		})
+
+		it("should find match when user types from empty prefix", () => {
+			// Simulate a suggestion generated with empty prefix
+			;(provider as any).suggestionsHistory = [
+				{ text: "feat: add new feature", prefix: "", contextHash: "abc123" },
+			]
+
+			// User types "fe" - should match the beginning of the full message
+			const result = (provider as any).findMatchingSuggestion("fe", "abc123")
+			expect(result).toBe("at: add new feature")
+		})
+
+		it("should find match when user types more of the suggestion (case insensitive)", () => {
+			// Simulate a suggestion generated with empty prefix
+			;(provider as any).suggestionsHistory = [
+				{ text: "feat: add new feature", prefix: "", contextHash: "abc123" },
+			]
+
+			// User types "FEAT" in uppercase - should still match
+			const result = (provider as any).findMatchingSuggestion("FEAT", "abc123")
+			expect(result).toBe(": add new feature")
+		})
+
+		it("should return only first match to avoid overlapping suggestions", () => {
+			// Add multiple suggestions with same context
+			;(provider as any).suggestionsHistory = [
+				{ text: "old suggestion", prefix: "", contextHash: "abc123" },
+				{ text: "new suggestion", prefix: "", contextHash: "abc123" },
+			]
+
+			// Should return the most recent (last) match
+			const result = (provider as any).findMatchingSuggestion("", "abc123")
+			expect(result).toBe("new suggestion")
+		})
 	})
 
 	describe("adaptive debounce", () => {
