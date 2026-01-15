@@ -9,7 +9,13 @@
  * GitHub for syntax highlighting. This is the same data source used by VS Code,
  * GitHub, and many other editors.
  */
-import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme, bundledLanguagesInfo } from "shiki"
+import {
+	createHighlighter,
+	type Highlighter,
+	type BundledLanguage,
+	type BundledTheme,
+	bundledLanguagesInfo,
+} from "shiki"
 import * as linguist from "linguist-languages"
 import path from "path"
 
@@ -81,6 +87,19 @@ function buildShikiAliasMap(): Map<string, BundledLanguage> {
 const SKIP_LANGUAGES = new Set([
 	"GCC Machine Description", // Uses .md, conflicts with Markdown
 ])
+
+/**
+ * Extension overrides for optimal Shiki highlighting.
+ * Linguist sometimes maps extensions to language names that don't give
+ * the best Shiki highlighting. For example, .jsx maps to "JavaScript"
+ * but Shiki's "jsx" language provides better JSX element highlighting.
+ */
+const EXTENSION_OVERRIDES: Record<string, BundledLanguage> = {
+	".jsx": "jsx", // Linguist maps to JavaScript, but Shiki's jsx has better JSX support
+	".tsx": "tsx", // Linguist maps to TypeScript, but Shiki's tsx has better JSX support
+	".vue": "vue", // Ensure Vue files use Shiki's vue language
+	".php": "php", // Linguist may map to Hack for some PHP files
+}
 
 /**
  * Build extension-to-language and filename-to-language maps from Linguist data.
@@ -173,6 +192,59 @@ function ensureMapsInitialized(): void {
 	}
 }
 
+/**
+ * Common languages to pre-load for instant highlighting.
+ * These are loaded at startup to ensure synchronous highlighting works
+ * immediately for the most frequently used languages.
+ *
+ * This list covers:
+ * - Web development: JavaScript, TypeScript, JSX, TSX, HTML, CSS, SCSS, Vue, Svelte
+ * - Backend: Python, Ruby, PHP, Go, Rust, Java, Kotlin, C#, C, C++
+ * - Data/Config: JSON, YAML, TOML, XML, GraphQL, SQL
+ * - Shell/Scripts: Bash, PowerShell, Dockerfile, Makefile
+ * - Documentation: Markdown
+ */
+const COMMON_LANGUAGES: BundledLanguage[] = [
+	// Web frontend
+	"javascript",
+	"typescript",
+	"jsx",
+	"tsx",
+	"html",
+	"css",
+	"scss",
+	"vue",
+	"svelte",
+	// Backend languages
+	"python",
+	"ruby",
+	"php",
+	"go",
+	"rust",
+	"java",
+	"kotlin",
+	"csharp",
+	"c",
+	"cpp",
+	// Data and config formats
+	"json",
+	"jsonc",
+	"yaml",
+	"toml",
+	"xml",
+	"graphql",
+	"sql",
+	// Shell and scripts
+	"bash",
+	"shellscript",
+	"powershell",
+	"dockerfile",
+	"makefile",
+	// Documentation
+	"markdown",
+	"mdx",
+]
+
 // Singleton highlighter state
 let highlighter: Highlighter | null = null
 let highlighterPromise: Promise<Highlighter> | null = null
@@ -181,8 +253,9 @@ const loadedLanguages = new Set<string>(["plaintext"])
 const pendingLoads = new Map<string, Promise<void>>()
 
 /**
- * Get or create the singleton highlighter instance
- * Loads both light and dark themes for theme switching
+ * Get or create the singleton highlighter instance.
+ * Pre-loads common languages for instant highlighting.
+ * Additional languages are loaded on-demand via ensureLanguageLoaded().
  */
 async function getHighlighter(): Promise<Highlighter> {
 	if (highlighter) {
@@ -195,9 +268,13 @@ async function getHighlighter(): Promise<Highlighter> {
 
 	highlighterPromise = createHighlighter({
 		themes: [SHIKI_THEMES.dark, SHIKI_THEMES.light],
-		langs: ["plaintext"],
+		langs: ["plaintext", ...COMMON_LANGUAGES],
 	}).then((h) => {
 		highlighter = h
+		// Mark common languages as loaded
+		for (const lang of COMMON_LANGUAGES) {
+			loadedLanguages.add(lang)
+		}
 		return h
 	})
 
@@ -206,7 +283,8 @@ async function getHighlighter(): Promise<Highlighter> {
 
 /**
  * Initialize the syntax highlighter.
- * Call this early in the application lifecycle for instant highlighting.
+ * Call this early in the application lifecycle.
+ * Languages are loaded on-demand, so this just initializes the highlighter.
  */
 export async function initializeSyntaxHighlighter(): Promise<void> {
 	if (initializationComplete) {
@@ -219,9 +297,8 @@ export async function initializeSyntaxHighlighter(): Promise<void> {
 		// Initialize highlighter
 		await getHighlighter()
 		initializationComplete = true
-	} catch (error) {
+	} catch {
 		// Silently fail - highlighting will fall back to plain text
-		console.error("[SyntaxHighlight] Failed to initialize:", error)
 	}
 }
 
@@ -250,6 +327,8 @@ async function ensureLanguageLoaded(lang: BundledLanguage): Promise<void> {
 			const h = await getHighlighter()
 			await h.loadLanguage(lang)
 			loadedLanguages.add(lang)
+		} catch {
+			// Silently fail - highlighting will fall back to plain text
 		} finally {
 			pendingLoads.delete(lang)
 		}
@@ -275,7 +354,14 @@ export function detectLanguage(filePath: string): BundledLanguage | null {
 	const ext = path.extname(filePath).toLowerCase()
 	const basename = path.basename(filePath).toLowerCase()
 
-	// 1. Check special filenames first (highest priority)
+	// 0. Check extension overrides first (highest priority)
+	// These are cases where Linguist's mapping doesn't give optimal Shiki highlighting
+	const langFromOverride = EXTENSION_OVERRIDES[ext]
+	if (langFromOverride) {
+		return langFromOverride
+	}
+
+	// 1. Check special filenames (high priority)
 	// This handles files like Makefile, Dockerfile, .gitignore, etc.
 	const langFromFilename = filenameMap!.get(basename)
 	if (langFromFilename) {
