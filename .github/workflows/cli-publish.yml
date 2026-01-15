@@ -27,11 +27,11 @@ jobs:
             publish: ${{ steps.check.outputs.publish }}
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
             - name: Check Published Version
@@ -53,7 +53,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Install pnpm
@@ -61,12 +61,12 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -91,7 +91,7 @@ jobs:
               working-directory: cli/dist
               run: npm pack
             - name: Upload Packaged CLI
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: cli-packaged
                   path: cli/dist/*.tgz
@@ -106,17 +106,17 @@ jobs:
             contents: read
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
             - name: Update npm
               run: npm install -g npm@latest
             - name: Download Build Artifact
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: cli-packaged
                   path: cli/dist
@@ -131,7 +131,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Set up Docker Buildx
@@ -142,12 +142,12 @@ jobs:
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PASSWORD }}
             - name: Download Packaged CLI
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: cli-packaged
                   path: cli/dist
             - name: Build and push Debian image
-              uses: docker/build-push-action@v5
+              uses: docker/build-push-action@v6
               with:
                   context: ./cli
                   file: ./cli/Dockerfile
@@ -171,7 +171,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Set up Docker Buildx
@@ -182,12 +182,12 @@ jobs:
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PASSWORD }}
             - name: Download Packaged CLI
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: cli-packaged
                   path: cli/dist
             - name: Build and push Alpine image
-              uses: docker/build-push-action@v5
+              uses: docker/build-push-action@v6
               with:
                   context: ./cli
                   file: ./cli/Dockerfile
@@ -211,11 +211,11 @@ jobs:
             contents: write
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Download Build Artifact
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: cli-packaged
                   path: cli/dist

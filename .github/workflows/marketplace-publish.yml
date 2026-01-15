@@ -25,7 +25,7 @@ jobs:
             version: ${{ steps.get-version.outputs.version }}
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Install pnpm
@@ -33,7 +33,7 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
@@ -114,7 +114,7 @@ jobs:
                     bin/kilo-code-${current_package_version}.vsix
                   echo "Successfully created GitHub Release v${current_package_version}"
             - name: Upload VSIX artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: kilo-code-vsix
                   path: bin/kilo-code-${{ steps.get-version.outputs.version }}.vsix
@@ -129,7 +129,7 @@ jobs:
             github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   ref: ${{ env.GIT_REF }}
             - name: Install pnpm
@@ -137,14 +137,14 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
             - name: Install dependencies
               run: pnpm install
             - name: Download VSIX artifact
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: kilo-code-vsix
                   path: bin/
@@ -170,7 +170,7 @@ jobs:
             github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   submodules: recursive
                   lfs: true
@@ -179,18 +179,18 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
-            - uses: actions/setup-java@v4
+            - uses: actions/setup-java@v5
               with:
                   distribution: "jetbrains"
                   java-version: "21"
                   check-latest: false
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Gradle
-              uses: gradle/actions/setup-gradle@v4
+              uses: gradle/actions/setup-gradle@v5
               with:
                   cache-read-only: false
             - name: Install system dependencies
@@ -203,7 +203,7 @@ jobs:
                     build-essential \
                     python3
             - name: Turbo cache setup
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -229,7 +229,7 @@ jobs:
                     --clobber
                   echo "Successfully attached JetBrains plugin to GitHub Release v${current_package_version}"
             - name: Upload artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: ${{ env.BUNDLE_NAME }}
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
