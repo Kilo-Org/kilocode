@@ -1,11 +1,9 @@
 /**
- * Minimal configuration for autocomplete and NextEdit features.
+ * Minimal configuration for autocomplete features.
  * This replaces the complex ConfigHandler system with simple hardcoded defaults.
  *
  * Analysis of ConfigHandler usage:
  * - CompletionProvider needs: config.tabAutocompleteOptions, config.experimental.enableStaticContextualization, currentProfile.profileType
- * - NextEditProvider needs: config.tabAutocompleteOptions, currentProfile.profileType
- * - NextEdit context fetching needs: config.modelsByRole, config.selectedModelByRole
  *
  * The profileType is only used for logging/telemetry, so we can set it to undefined for a minimal extraction.
  */

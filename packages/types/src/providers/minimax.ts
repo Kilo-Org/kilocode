@@ -14,7 +14,9 @@ export const minimaxModels = {
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
-		defaultToolProtocol: "native", // kilocode_change
+		defaultToolProtocol: "native",
+		includedTools: ["search_and_replace"],
+		excludedTools: ["apply_diff"],
 		preserveReasoning: true,
 		inputPrice: 0.3,
 		outputPrice: 1.2,
@@ -29,7 +31,9 @@ export const minimaxModels = {
 		supportsImages: false,
 		supportsPromptCache: true,
 		supportsNativeTools: true,
-		defaultToolProtocol: "native", // kilocode_change
+		defaultToolProtocol: "native",
+		includedTools: ["search_and_replace"],
+		excludedTools: ["apply_diff"],
 		preserveReasoning: true,
 		inputPrice: 0.3,
 		outputPrice: 1.2,

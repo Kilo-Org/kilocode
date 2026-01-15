@@ -141,10 +141,10 @@ describe("convertToBedrockConverseMessages", () => {
 		}
 	})
 
-	it("converts tool result messages correctly", () => {
+	it("converts tool result messages to XML text format (default, useNativeTools: false)", () => {
 		const messages: Anthropic.Messages.MessageParam[] = [
 			{
-				role: "assistant",
+				role: "user",
 				content: [
 					{
 						type: "tool_result",
@@ -155,6 +155,8 @@ describe("convertToBedrockConverseMessages", () => {
 			},
 		]
 
+		// Default behavior (useNativeTools: false) converts tool_result to XML text format
+		// This fixes the Bedrock error "toolConfig field must be defined when using toolUse and toolResult content blocks"
 		const result = convertToBedrockConverseMessages(messages)
 
 		if (!result[0] || !result[0].content) {
@@ -162,7 +164,41 @@ describe("convertToBedrockConverseMessages", () => {
 			return
 		}
 
-		expect(result[0].role).toBe("assistant")
+		expect(result[0].role).toBe("user")
+		const textBlock = result[0].content[0] as ContentBlock
+		if ("text" in textBlock) {
+			expect(textBlock.text).toContain("<tool_result>")
+			expect(textBlock.text).toContain("<tool_use_id>test-id</tool_use_id>")
+			expect(textBlock.text).toContain("File contents here")
+			expect(textBlock.text).toContain("</tool_result>")
+		} else {
+			expect.fail("Expected text block with XML content not found")
+		}
+	})
+
+	it("converts tool result messages to native format (useNativeTools: true)", () => {
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "test-id",
+						content: [{ type: "text", text: "File contents here" }],
+					},
+				],
+			},
+		]
+
+		// With useNativeTools: true, keeps tool_result as native format
+		const result = convertToBedrockConverseMessages(messages, { useNativeTools: true })
+
+		if (!result[0] || !result[0].content) {
+			expect.fail("Expected result to have content")
+			return
+		}
+
+		expect(result[0].role).toBe("user")
 		const resultBlock = result[0].content[0] as ContentBlock
 		if ("toolResult" in resultBlock && resultBlock.toolResult) {
 			const expectedContent: ToolResultContentBlock[] = [{ text: "File contents here" }]
@@ -176,7 +212,7 @@ describe("convertToBedrockConverseMessages", () => {
 		}
 	})
 
-	it("converts tool result messages with string content correctly", () => {
+	it("converts tool result messages with string content to XML text format (default)", () => {
 		const messages: Anthropic.Messages.MessageParam[] = [
 			{
 				role: "user",
@@ -198,6 +234,39 @@ describe("convertToBedrockConverseMessages", () => {
 		}
 
 		expect(result[0].role).toBe("user")
+		const textBlock = result[0].content[0] as ContentBlock
+		if ("text" in textBlock) {
+			expect(textBlock.text).toContain("<tool_result>")
+			expect(textBlock.text).toContain("<tool_use_id>test-id</tool_use_id>")
+			expect(textBlock.text).toContain("File: test.txt")
+			expect(textBlock.text).toContain("Hello World")
+		} else {
+			expect.fail("Expected text block with XML content not found")
+		}
+	})
+
+	it("converts tool result messages with string content to native format (useNativeTools: true)", () => {
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "test-id",
+						content: "File: test.txt\nLines 1-5:\nHello World",
+					} as any, // Anthropic types don't allow string content but runtime can have it
+				],
+			},
+		]
+
+		const result = convertToBedrockConverseMessages(messages, { useNativeTools: true })
+
+		if (!result[0] || !result[0].content) {
+			expect.fail("Expected result to have content")
+			return
+		}
+
+		expect(result[0].role).toBe("user")
 		const resultBlock = result[0].content[0] as ContentBlock
 		if ("toolResult" in resultBlock && resultBlock.toolResult) {
 			expect(resultBlock.toolResult).toEqual({
@@ -208,6 +277,56 @@ describe("convertToBedrockConverseMessages", () => {
 		} else {
 			expect.fail("Expected tool result block not found")
 		}
+	})
+
+	it("converts both tool_use and tool_result consistently when native tools disabled", () => {
+		// This test ensures tool_use AND tool_result are both converted to XML text
+		// when useNativeTools is false, preventing Bedrock toolConfig errors
+		const messages: Anthropic.Messages.MessageParam[] = [
+			{
+				role: "assistant",
+				content: [
+					{
+						type: "tool_use",
+						id: "call-123",
+						name: "read_file",
+						input: { path: "test.txt" },
+					},
+				],
+			},
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "call-123",
+						content: "File contents here",
+					} as any,
+				],
+			},
+		]
+
+		const result = convertToBedrockConverseMessages(messages) // default useNativeTools: false
+
+		// Both should be text blocks, not native toolUse/toolResult
+		const assistantContent = result[0]?.content?.[0] as ContentBlock
+		const userContent = result[1]?.content?.[0] as ContentBlock
+
+		// tool_use should be XML text
+		expect("text" in assistantContent).toBe(true)
+		if ("text" in assistantContent) {
+			expect(assistantContent.text).toContain("<tool_use>")
+		}
+
+		// tool_result should also be XML text (this is what the fix addresses)
+		expect("text" in userContent).toBe(true)
+		if ("text" in userContent) {
+			expect(userContent.text).toContain("<tool_result>")
+		}
+
+		// Neither should have native format
+		expect("toolUse" in assistantContent).toBe(false)
+		expect("toolResult" in userContent).toBe(false)
 	})
 
 	it("handles text content correctly", () => {

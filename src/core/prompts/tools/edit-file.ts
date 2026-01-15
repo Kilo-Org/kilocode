@@ -1,18 +1,18 @@
 // kilocode_change: Morph fast apply - file added
 
 export function getFastApplyEditingInstructions(modelType: "Morph" | "Relace"): string {
-	return `- **${modelType} FastApply is enabled.** You have access to the \`edit_file\` tool which uses a specialized model optimized for intelligent code understanding and modification.
-- **ONLY use the edit_file tool for file modifications.**
-- **Focus on clear instructions and precise code edits** using the edit_file format with \`// ... existing code ...\` placeholders to represent unchanged sections.
-- **The edit_file tool requires three parameters:**
-  - \`target_file\`: Full path to the file to modify
-  - \`instructions\`: Single sentence describing what you're doing (use first person)
-  - \`code_edit\`: Only the lines you want to change, using \`// ... existing code ...\` for unchanged sections
-- **Always make all edits to a file in a single edit_file call** rather than multiple calls to the same file.`
+	return `- **${modelType} FastApply is enabled.** You have access to the \`fast_edit_file\` tool which uses a specialized model optimized for intelligent code understanding and modification.
+- **ONLY use the fast_edit_file tool for file modifications.**
+- **Focus on clear instructions and precise code edits** using the fast_edit_file format with \`// ... existing code ...\` placeholders to represent unchanged sections.
+- **The fast_edit_file tool requires three parameters:**
+   - \`target_file\`: Full path to the file to modify
+   - \`instructions\`: Single sentence describing what you're doing (use first person)
+   - \`code_edit\`: Only the lines you want to change, using \`// ... existing code ...\` for unchanged sections
+- **Always make all edits to a file in a single fast_edit_file call** rather than multiple calls to the same file.`
 }
 
-export function getEditFileDescription(): string {
-	return `## edit_file
+export function getFastEditFileDescription(): string {
+	return `## fast_edit_file
 
 **Description**: Use this tool to make an edit to a file.
 
@@ -36,7 +36,7 @@ But, each edit should contain sufficient context of unchanged lines around the c
 DO NOT omit spans of pre-existing code (or comments) without using the \`// ... existing code ...\` comment to indicate its absence. If you omit the existing code comment, the model may inadvertently delete these lines.
 If you plan on deleting a section, you must provide context before and after to delete it. If the initial code is \`\`\`code \\n Block 1 \\n Block 2 \\n Block 3 \\n code\`\`\`, and you want to remove Block 2, you would output \`\`\`// ... existing code ... \\n Block 1 \\n  Block 3 \\n // ... existing code ...\`\`\`.
 Make sure it is clear what the edit should be, and where it should be applied.
-ALWAYS make all edits to a file in a single edit_file instead of multiple edit_file calls to the same file. The apply model can handle many distinct edits at once.
+ALWAYS make all edits to a file in a single fast_edit_file instead of multiple fast_edit_file calls to the same file. The apply model can handle many distinct edits at once.
 
 **REQUIRED Parameters**:
 
@@ -48,3 +48,6 @@ ALWAYS make all edits to a file in a single edit_file instead of multiple edit_f
 
 **ALL THREE PARAMETERS (target_file, instructions, code_edit) ARE MANDATORY**`
 }
+
+// kilocode_change: Backward-compatible export name
+export const getEditFileDescription = getFastEditFileDescription

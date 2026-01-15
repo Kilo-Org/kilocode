@@ -86,6 +86,7 @@ RUN mkdir -p \
   packages/build \
   packages/config-eslint \
   packages/config-typescript \
+  packages/core \
   packages/evals \
   packages/ipc \
   packages/telemetry \
@@ -101,6 +102,7 @@ COPY ./scripts/bootstrap.mjs                   ./scripts/
 COPY ./packages/build/package.json             ./packages/build/
 COPY ./packages/config-eslint/package.json     ./packages/config-eslint/
 COPY ./packages/config-typescript/package.json ./packages/config-typescript/
+COPY ./packages/core/package.json              ./packages/core/
 COPY ./packages/evals/package.json             ./packages/evals/
 COPY ./packages/ipc/package.json               ./packages/ipc/
 COPY ./packages/telemetry/package.json         ./packages/telemetry/

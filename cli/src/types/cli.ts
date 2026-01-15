@@ -35,4 +35,5 @@ export interface CLIOptions {
 	noSplash?: boolean
 	appendSystemPrompt?: string
 	attachments?: string[] | undefined
+	onTaskCompleted?: string
 }

@@ -825,3 +825,56 @@
 .am-followup-copy-btn:hover {
 	color: var(--vscode-foreground);
 }
+
+/* Model Selector Styles */
+.am-model-selector {
+	display: inline-flex;
+	align-items: center;
+}
+
+.am-model-selector-trigger {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	border-radius: 4px !important;
+	color: var(--vscode-descriptionForeground) !important;
+	font-size: 12px !important;
+	cursor: pointer !important;
+	transition: all 0.15s !important;
+	opacity: 0.6 !important;
+}
+
+.am-model-selector-trigger:hover:not(:disabled) {
+	opacity: 1 !important;
+	color: var(--vscode-foreground) !important;
+	background-color: rgba(255, 255, 255, 0.03) !important;
+	border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.am-model-selector-trigger:disabled {
+	opacity: 0.4 !important;
+	cursor: not-allowed !important;
+}
+
+.am-model-selector-content {
+	max-height: 300px !important;
+	min-width: 200px !important;
+}
+
+/* Read-only model indicator in chat input */
+.am-model-indicator {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.6;
+}
+
+.am-model-indicator svg {
+	flex-shrink: 0;
+}

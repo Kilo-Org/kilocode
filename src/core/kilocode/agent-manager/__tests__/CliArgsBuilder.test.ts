@@ -34,4 +34,23 @@ describe("CliArgsBuilder", () => {
 		expect(args).not.toContain("--parallel")
 		expect(args.some((arg) => arg.includes("--existing-branch"))).toBe(false)
 	})
+
+	it("adds --model flag when model is provided", () => {
+		const args = buildCliArgs(workspace, prompt, { model: "claude-opus-4" })
+
+		expect(args).toContain("--model=claude-opus-4")
+	})
+
+	it("does not add --model flag when model is not provided", () => {
+		const args = buildCliArgs(workspace, prompt)
+
+		expect(args.some((arg) => arg.startsWith("--model="))).toBe(false)
+	})
+
+	it("combines model with sessionId when both are provided", () => {
+		const args = buildCliArgs(workspace, prompt, { model: "claude-opus-4", sessionId: "abc123" })
+
+		expect(args).toContain("--model=claude-opus-4")
+		expect(args).toContain("--session=abc123")
+	})
 })

@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Assistant de codage d'IA Open Source pour la planification, la création et la correction de code."
+		"description": "Agent de programmation IA open source qui génère du code à partir du langage naturel, automatise les tâches et exécute des commandes terminal. Comprend l'autocomplétion en ligne, l'automatisation du navigateur, le refactoring automatisé et des modes personnalisés pour la planification, le codage et le débogage. Compatible avec plus de 500 modèles d'IA, dont Claude (Anthropic), Gemini, Grok, GPT, Codex et GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -99,8 +99,7 @@
 			"errorOutput": "Sortie d'erreur : {{output}}",
 			"processExitedWithError": "Le processus Claude Code s'est terminé avec le code {{exitCode}}. Sortie d'erreur : {{output}}",
 			"stoppedWithReason": "Claude Code s'est arrêté pour la raison : {{reason}}",
-			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan.",
-			"notFound": "Exécutable Claude Code '{{claudePath}}' introuvable.\n\nVeuillez installer Claude Code CLI :\n1. Visitez {{installationUrl}} pour télécharger Claude Code\n2. Suivez les instructions d'installation pour votre système d'exploitation\n3. Assurez-vous que la commande 'claude' est disponible dans votre PATH\n4. Alternativement, configurez un chemin personnalisé dans les paramètres Kilo Code sous 'Chemin de Claude Code'\n\nErreur originale : {{originalError}}"
+			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Clé API Groq",
-			"getGroqApiKey": "Obtenir la clé API Groq",
-			"claudeCode": {
-				"pathLabel": "Chemin de Claude Code",
-				"description": "Chemin optionnel vers votre CLI Claude Code. Par défaut 'claude' si non défini.",
-				"placeholder": "Par défaut : claude"
-			}
+			"getGroqApiKey": "Obtenir la clé API Groq"
 		}
 	},
 	"customModes": {

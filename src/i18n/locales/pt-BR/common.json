@@ -5,7 +5,7 @@
 	},
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Assistente de codificação de IA de código aberto para planejamento, construção e correção de código."
+		"description": "Agente de programação de IA de código aberto que gera código a partir de linguagem natural, automatiza tarefas e executa comandos de terminal. Inclui autocompletar inline, automação de navegador, refatoração automatizada e modos personalizados para planejamento, codificação e depuração. Suporta mais de 500 modelos de IA, incluindo Claude (Anthropic), Gemini, Grok, GPT, Codex e GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -103,8 +103,7 @@
 			"errorOutput": "Saída de erro: {{output}}",
 			"processExitedWithError": "O processo Claude Code saiu com código {{exitCode}}. Saída de erro: {{output}}",
 			"stoppedWithReason": "Claude Code parou pela razão: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Falha ao carregar credenciais OAuth. Por favor, autentique-se primeiro: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Chave de API Groq",
-			"getGroqApiKey": "Obter chave de API Groq",
-			"claudeCode": {
-				"pathLabel": "Caminho do Claude Code",
-				"description": "Caminho opcional para sua CLI do Claude Code. Padrão 'claude' se não for definido.",
-				"placeholder": "Padrão: claude"
-			}
+			"getGroqApiKey": "Obter chave de API Groq"
 		}
 	},
 	"customModes": {

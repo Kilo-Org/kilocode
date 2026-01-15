@@ -5,11 +5,11 @@
 	"start": "Aan de slag!",
 	"routers": {
 		"requesty": {
-			"description": "Jouw geoptimaliseerde LLM-router",
-			"incentive": "$1 gratis tegoed"
+			"description": "Je geoptimaliseerde LLM-router",
+			"incentive": "1 dollar gratis tegoed"
 		},
 		"openrouter": {
-			"description": "Een uniforme interface voor LLM's"
+			"description": "Een geïntegreerde interface voor LLM's"
 		},
 		"roo": {
 			"description": "De beste gratis modellen om mee te beginnen",
@@ -18,25 +18,30 @@
 	},
 	"chooseProvider": "Om zijn magie te doen, heeft Kilo Code een API-sleutel nodig.",
 	"providerSignup": {
+		"heading": "Kies je provider",
+		"chooseProvider": "Roo heeft een LLM-provider nodig om te werken. Kies er een om te beginnen, je kunt er later meer toevoegen.",
 		"rooCloudProvider": "Roo Code Cloud Provider",
-		"rooCloudDescription": "De eenvoudigste manier om Roo te gebruiken. Een samengestelde mix van gratis en betaalde modellen tegen lage kosten",
-		"learnMore": "meer informatie",
-		"useAnotherProvider": "Gebruik een andere provider",
-		"useAnotherProviderDescription": "Voer een API-sleutel in en ga aan de slag.",
-		"noApiKeys": "Geen zin in sleutels? Kies dan voor de Roo Code Cloud Provider.",
-		"getStarted": "Beginnen"
+		"rooCloudDescription": "De eenvoudigste manier om te beginnen is met de Roo Code Cloud Provider: een zorgvuldig samengesteld mix van gratis en betaalde modellen tegen lage kosten.",
+		"learnMore": "Meer informatie",
+		"useAnotherProvider": "Provider van derden",
+		"useAnotherProviderDescription": "Voer een API-sleutel in en begin.",
+		"noApiKeys": "Wil je je niet bezighouden met API-sleutels en aparte accounts?",
+		"backToRoo": "Kies de Roo Code Cloud Provider.",
+		"goBack": "Terug",
+		"finish": "Klaar"
 	},
 	"waitingForCloud": {
-		"heading": "We brengen je naar Roo Code Cloud...",
-		"description": "Voltooi de registratie in je browser en je keert automatisch hier terug.",
-		"noPrompt": "Als je niet wordt gevraagd een URL te openen, <clickHere>klik hier</clickHere>.",
-		"havingTrouble": "Als je de registratie hebt voltooid maar problemen hebt, <clickHere>klik hier</clickHere>.",
-		"pasteUrl": "Plak de callback-URL vanuit je browser:",
-		"invalidURL": "Dat ziet er niet uit als een geldige callback-URL. Kopieer wat Roo Code Cloud in je browser toont.",
+		"heading": "Aanmelden bij Roo Code Cloud...",
+		"description": "We brengen je naar je browser om je aan te melden voor Roo Code Cloud. Dan brengen we je hierheen terug om af te ronden.",
+		"noPrompt": "Als je niet wordt gevraagd een URL te openen, <clickHere>klik dan hier</clickHere>.",
+		"havingTrouble": "Als je de registratie hebt voltooid maar problemen ondervindt, <clickHere>klik dan hier</clickHere>.",
+		"pasteUrl": "Plak de callback-URL uit je browser:",
+		"docsLink": "Werkt het niet? <DocsLink>Raadpleeg de documentatie</DocsLink>.",
+		"invalidURL": "Dit ziet er niet uit als een geldige callback-URL. Kopieer alstublieft wat Roo Code Cloud in je browser weergeeft.",
 		"goBack": "Terug"
 	},
-	"startRouter": "We raden aan om een LLM-router te gebruiken:",
-	"startCustom": "Of je kunt je eigen API-sleutel gebruiken:",
+	"startRouter": "We raden aan een LLM-router te gebruiken:",
+	"startCustom": "Of je kunt je eigen API-sleutel meebrengen:",
 	"telemetry": {
 		"helpImprove": "Help Kilo Code verbeteren",
 		"helpImproveMessage": "Kilo Code verzamelt fout- en gebruiksgegevens om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt geen code, prompts of persoonlijke gegevens. Je kunt dit uitschakelen in de <settingsLink>instellingen</settingsLink>."

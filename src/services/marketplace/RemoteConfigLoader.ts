@@ -1,7 +1,7 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-import { getAppUrl } from "@roo-code/types" // kilocode_change
+import { getApiUrl } from "@roo-code/types" // kilocode_change
 import {
 	type MarketplaceItem,
 	type MarketplaceItemType,
@@ -48,7 +48,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getAppUrl("/api/marketplace/modes") // kilocode_change
+		const url = getApiUrl("/api/marketplace/modes") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
@@ -71,7 +71,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getAppUrl("/api/marketplace/mcps") // kilocode_change
+		const url = getApiUrl("/api/marketplace/mcps") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)

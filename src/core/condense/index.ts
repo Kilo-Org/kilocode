@@ -31,21 +31,48 @@ function getToolUseBlocks(message: ApiMessage): Anthropic.Messages.ToolUseBlock[
 }
 
 /**
+ * Gets reasoning blocks from a message's content array.
+ * Task stores reasoning as {type: "reasoning", text: "..."} blocks,
+ * which convertToR1Format and convertToZAiFormat already know how to extract.
+ */
+function getReasoningBlocks(message: ApiMessage): Anthropic.Messages.ContentBlockParam[] {
+	if (message.role !== "assistant" || typeof message.content === "string") {
+		return []
+	}
+	// Filter for reasoning blocks and cast to ContentBlockParam (the type field is compatible)
+	return message.content.filter((block) => (block as any).type === "reasoning") as any[]
+}
+
+/**
+ * Result of getKeepMessagesWithToolBlocks
+ */
+export type KeepMessagesResult = {
+	keepMessages: ApiMessage[]
+	toolUseBlocksToPreserve: Anthropic.Messages.ToolUseBlock[]
+	// Reasoning blocks from the preceding assistant message, needed for DeepSeek/Z.ai
+	// when tool_use blocks are preserved. Task stores reasoning as {type: "reasoning", text: "..."}
+	// blocks, and convertToR1Format/convertToZAiFormat already extract these.
+	reasoningBlocksToPreserve: Anthropic.Messages.ContentBlockParam[]
+}
+
+/**
  * Extracts tool_use blocks that need to be preserved to match tool_result blocks in keepMessages.
  * When the first kept message is a user message with tool_result blocks,
  * we need to find the corresponding tool_use blocks from the preceding assistant message.
  * These tool_use blocks will be appended to the summary message to maintain proper pairing.
  *
+ * Also extracts reasoning blocks from the preceding assistant message, which are required
+ * by DeepSeek and Z.ai for interleaved thinking mode. Without these, the API returns a 400 error
+ * "Missing reasoning_content field in the assistant message".
+ * See: https://api-docs.deepseek.com/guides/thinking_mode#tool-calls
+ *
  * @param messages - The full conversation messages
  * @param keepCount - The number of messages to keep from the end
- * @returns Object containing keepMessages and any tool_use blocks to preserve
+ * @returns Object containing keepMessages, tool_use blocks, and reasoning blocks to preserve
  */
-export function getKeepMessagesWithToolBlocks(
-	messages: ApiMessage[],
-	keepCount: number,
-): { keepMessages: ApiMessage[]; toolUseBlocksToPreserve: Anthropic.Messages.ToolUseBlock[] } {
+export function getKeepMessagesWithToolBlocks(messages: ApiMessage[], keepCount: number): KeepMessagesResult {
 	if (messages.length <= keepCount) {
-		return { keepMessages: messages, toolUseBlocksToPreserve: [] }
+		return { keepMessages: messages, toolUseBlocksToPreserve: [], reasoningBlocksToPreserve: [] }
 	}
 
 	const startIndex = messages.length - keepCount
@@ -59,13 +86,20 @@ export function getKeepMessagesWithToolBlocks(
 			const precedingMessage = messages[precedingIndex]
 			const toolUseBlocks = getToolUseBlocks(precedingMessage)
 			if (toolUseBlocks.length > 0) {
-				// Return the tool_use blocks to be merged into the summary message
-				return { keepMessages, toolUseBlocksToPreserve: toolUseBlocks }
+				// Also extract reasoning blocks for DeepSeek/Z.ai interleaved thinking
+				// Task stores reasoning as {type: "reasoning", text: "..."} content blocks
+				const reasoningBlocks = getReasoningBlocks(precedingMessage)
+				// Return the tool_use blocks and reasoning blocks to be merged into the summary message
+				return {
+					keepMessages,
+					toolUseBlocksToPreserve: toolUseBlocks,
+					reasoningBlocksToPreserve: reasoningBlocks,
+				}
 			}
 		}
 	}
 
-	return { keepMessages, toolUseBlocksToPreserve: [] }
+	return { keepMessages, toolUseBlocksToPreserve: [], reasoningBlocksToPreserve: [] }
 }
 
 export const N_MESSAGES_TO_KEEP = 3
@@ -168,11 +202,15 @@ export async function summarizeConversation(
 	// Always preserve the first message (which may contain slash command content)
 	const firstMessage = messages[0]
 
-	// Get keepMessages and any tool_use blocks that need to be preserved for tool_result pairing
-	// Only preserve tool_use blocks when using native tools protocol (XML protocol doesn't need them)
-	const { keepMessages, toolUseBlocksToPreserve } = useNativeTools
+	// Get keepMessages and any tool_use/reasoning blocks that need to be preserved for tool_result pairing
+	// Only preserve these blocks when using native tools protocol (XML protocol doesn't need them)
+	const { keepMessages, toolUseBlocksToPreserve, reasoningBlocksToPreserve } = useNativeTools
 		? getKeepMessagesWithToolBlocks(messages, N_MESSAGES_TO_KEEP)
-		: { keepMessages: messages.slice(-N_MESSAGES_TO_KEEP), toolUseBlocksToPreserve: [] }
+		: {
+				keepMessages: messages.slice(-N_MESSAGES_TO_KEEP),
+				toolUseBlocksToPreserve: [],
+				reasoningBlocksToPreserve: [],
+			}
 
 	const keepStartIndex = Math.max(messages.length - N_MESSAGES_TO_KEEP, 0)
 	const includeFirstKeptMessageInSummary = toolUseBlocksToPreserve.length > 0
@@ -275,15 +313,39 @@ export async function summarizeConversation(
 	}
 
 	// Build the summary message content
-	// If there are tool_use blocks to preserve (for tool_result pairing), append them to the summary
-	let summaryContent: string | Anthropic.Messages.ContentBlockParam[]
+	// CRITICAL: Always include a reasoning block in the summary for DeepSeek-reasoner compatibility.
+	// DeepSeek-reasoner requires `reasoning_content` on ALL assistant messages, not just those with tool_calls.
+	// Without this, we get: "400 Missing `reasoning_content` field in the assistant message"
+	// See: https://api-docs.deepseek.com/guides/thinking_mode
+	//
+	// The summary content structure is:
+	// 1. Synthetic reasoning block (always present) - for DeepSeek-reasoner compatibility
+	// 2. Any preserved reasoning blocks from the condensed assistant message (if tool_use blocks are preserved)
+	// 3. Text block with the summary
+	// 4. Tool_use blocks (if any need to be preserved for tool_result pairing)
+
+	// Create a synthetic reasoning block that explains the summary
+	// This is minimal but satisfies DeepSeek's requirement for reasoning_content on all assistant messages
+	const syntheticReasoningBlock = {
+		type: "reasoning" as const,
+		text: "Condensing conversation context. The summary below captures the key information from the prior conversation.",
+	}
+
+	const textBlock: Anthropic.Messages.TextBlockParam = { type: "text", text: summary }
+
+	let summaryContent: Anthropic.Messages.ContentBlockParam[]
 	if (toolUseBlocksToPreserve.length > 0) {
-		// Create content array with text block followed by tool_use blocks
-		// Use TextBlockParam which doesn't require citations field
-		const textBlock: Anthropic.Messages.TextBlockParam = { type: "text", text: summary }
-		summaryContent = [textBlock, ...toolUseBlocksToPreserve]
+		// Include: synthetic reasoning, preserved reasoning (if any), summary text, and tool_use blocks
+		summaryContent = [
+			syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam,
+			...reasoningBlocksToPreserve,
+			textBlock,
+			...toolUseBlocksToPreserve,
+		]
 	} else {
-		summaryContent = summary
+		// Include: synthetic reasoning and summary text
+		// This ensures the summary always has reasoning_content for DeepSeek-reasoner
+		summaryContent = [syntheticReasoningBlock as unknown as Anthropic.Messages.ContentBlockParam, textBlock]
 	}
 
 	// Generate a unique condenseId for this summary
