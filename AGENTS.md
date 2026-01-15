@@ -57,7 +57,11 @@ Brief description of the change
 - Use `patch` for fixes, `minor` for features, `major` for breaking changes
 - For CLI changes, use `"@kilocode/cli": patch` instead
 
-Keep changesets concise but well-written as they become part of release notes.
+Keep changesets concise and feature-oriented as they appear directly in release notes.
+
+- **Only for actual changes**: Documentation-only or internal tooling changes do not need a changeset.
+- **User-focused**: Avoid technical descriptions, code references, or PR numbers. Readers may not know the codebase.
+- **Concise**: Use a one-liner for small fixes. For larger features, a few words or a short sentence is sufficient.
 
 ## Fork Merge Process
 
@@ -94,6 +98,7 @@ Code in these directories is Kilo Code-specific and doesn't need markers:
 
 - `cli/` - CLI package
 - `jetbrains/` - JetBrains plugin
+- `agent-manager/` directories
 - Any path containing `kilocode` in filename or directory name
 - `src/services/ghost/` - Ghost service
 

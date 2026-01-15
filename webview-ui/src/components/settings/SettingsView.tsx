@@ -246,6 +246,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 		autoPurgeCompletedTaskRetentionDays,
 		autoPurgeIncompleteTaskRetentionDays,
 		autoPurgeLastRunTimestamp,
+		kiloCodeWrapperProperties,
 		// kilocode_change end - Auto-purge settings
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
@@ -1211,7 +1212,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>((props, ref)
 
 					{/* About Section */}
 					{activeTab === "about" && (
-						<About telemetrySetting={telemetrySetting} setTelemetrySetting={setTelemetrySetting} />
+						<About
+							telemetrySetting={telemetrySetting}
+							setTelemetrySetting={setTelemetrySetting}
+							isVsCode={kiloCodeWrapperProperties?.kiloCodeWrapped !== true /*kilocode_change*/}
+						/>
 					)}
 				</TabContent>
 			</div>

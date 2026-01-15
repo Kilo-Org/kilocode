@@ -11,7 +11,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	openrouter: ["openRouterApiKey", "openRouterModelId"],
 	ollama: ["ollamaBaseUrl", "ollamaModelId"],
 	lmstudio: ["lmStudioBaseUrl", "lmStudioModelId"],
-	bedrock: ["awsAccessKey", "awsSecretKey", "awsRegion", "apiModelId"],
+	bedrock: ["awsRegion", "apiModelId"], // Auth fields handled in handleSpecialValidations (supports API key, profile, or direct credentials)
 	gemini: ["geminiApiKey", "apiModelId"],
 	"claude-code": ["claudeCodePath", "apiModelId"],
 	mistral: ["mistralApiKey", "apiModelId"],
