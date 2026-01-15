@@ -28,7 +28,7 @@ function parseSearchReplaceFormat(lines: string[]): ParsedDiffLine[] {
 
 	for (const line of lines) {
 		if (line.startsWith("<<<<<<< SEARCH")) {
-			result.push({ type: "marker", content: line })
+			// Skip marker - don't add to result
 			inSearch = true
 			inReplace = false
 		} else if (line.startsWith(":start_line:")) {
@@ -37,15 +37,15 @@ function parseSearchReplaceFormat(lines: string[]): ParsedDiffLine[] {
 				oldLineNum = parseInt(match[1], 10)
 				newLineNum = oldLineNum
 			}
-			result.push({ type: "marker", content: line })
+			// Skip marker - don't add to result
 		} else if (line === "-------") {
-			result.push({ type: "marker", content: line })
+			// Skip marker - don't add to result
 		} else if (line === "=======") {
-			result.push({ type: "marker", content: line })
+			// Skip marker - don't add to result
 			inSearch = false
 			inReplace = true
 		} else if (line.startsWith(">>>>>>> REPLACE")) {
-			result.push({ type: "marker", content: line })
+			// Skip marker - don't add to result
 			inSearch = false
 			inReplace = false
 		} else if (inSearch) {
