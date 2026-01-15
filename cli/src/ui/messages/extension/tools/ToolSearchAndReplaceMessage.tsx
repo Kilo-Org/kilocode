@@ -16,6 +16,7 @@ import {
 // Configuration for diff display
 const MAX_DIFF_LINES = 50 // Maximum lines to show
 const CONTEXT_LINES = 3 // Lines of context around changes
+const MIN_CONTEXT_LINES = 2 // Minimum context lines to show even for small diffs
 
 /**
  * Display search and replace operations
@@ -48,8 +49,8 @@ export const ToolSearchAndReplaceMessage: React.FC<ToolMessageProps> = ({ toolDa
 			}
 		})
 
-		// If no changes or small diff, show all lines
-		if (changedIndices.size === 0 || parsedLines.length <= MAX_DIFF_LINES) {
+		// If no changes, show all lines up to max
+		if (changedIndices.size === 0) {
 			return {
 				lines: parsedLines.slice(0, MAX_DIFF_LINES),
 				hasMore: parsedLines.length > MAX_DIFF_LINES,
@@ -57,15 +58,28 @@ export const ToolSearchAndReplaceMessage: React.FC<ToolMessageProps> = ({ toolDa
 			}
 		}
 
+		// For small diffs, ensure we show at least MIN_CONTEXT_LINES around changes
+		// This helps users understand the context of small updates
+		const contextLines = Math.max(CONTEXT_LINES, MIN_CONTEXT_LINES)
+
 		// Build set of indices to show (changes + context)
 		const indicesToShow = new Set<number>()
 		for (const idx of changedIndices) {
 			for (
-				let i = Math.max(0, idx - CONTEXT_LINES);
-				i <= Math.min(parsedLines.length - 1, idx + CONTEXT_LINES);
+				let i = Math.max(0, idx - contextLines);
+				i <= Math.min(parsedLines.length - 1, idx + contextLines);
 				i++
 			) {
 				indicesToShow.add(i)
+			}
+		}
+
+		// If the diff is small enough with context, show all
+		if (parsedLines.length <= MAX_DIFF_LINES) {
+			return {
+				lines: parsedLines.slice(0, MAX_DIFF_LINES),
+				hasMore: parsedLines.length > MAX_DIFF_LINES,
+				hiddenCount: Math.max(0, parsedLines.length - MAX_DIFF_LINES),
 			}
 		}
 
