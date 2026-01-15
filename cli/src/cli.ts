@@ -36,6 +36,7 @@ import { KiloCodePathProvider, ExtensionMessengerAdapter } from "./services/sess
 import { getKiloToken } from "./config/persistence.js"
 import { SessionManager } from "../../src/shared/kilocode/cli-sessions/core/SessionManager.js"
 import { triggerExitConfirmationAtom } from "./state/atoms/keyboard.js"
+import { randomUUID } from "crypto"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -224,7 +225,7 @@ export class CLI {
 								}
 
 								// Otherwise, fetch the task from history using promise-based request/response pattern
-								const requestId = crypto.randomUUID()
+								const requestId = randomUUID()
 
 								// Create a promise that will be resolved when the response arrives
 								const responsePromise = new Promise<TaskHistoryData>((resolve, reject) => {
@@ -435,7 +436,8 @@ export class CLI {
 		// Determine exit code based on signal type and CI mode
 		let exitCode = 0
 
-		let beforeExit = () => {}
+		// beforeExit may be an async cleanup function or a sync one. Default to noop.
+		let beforeExit: (() => Promise<void>) | (() => void) = async () => {}
 
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
@@ -471,7 +473,12 @@ export class CLI {
 
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
-				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				const cleanup = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				if (typeof cleanup === "function") {
+					beforeExit = cleanup as (() => Promise<void>) | (() => void)
+				} else {
+					beforeExit = async () => {}
+				}
 			}
 
 			// Handle --on-task-completed flag (only if not in parallel mode, which has its own flow)
@@ -514,7 +521,12 @@ export class CLI {
 
 			exitCode = 1
 		} finally {
-			beforeExit()
+			try {
+				// Await cleanup in case it's async; catch and log errors but don't prevent process.exit
+				await Promise.resolve(beforeExit())
+			} catch (err) {
+				logs.error("Error during beforeExit cleanup", "CLI", { error: err })
+			}
 
 			// Exit process with appropriate code
 			process.exit(exitCode)

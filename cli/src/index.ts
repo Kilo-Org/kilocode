@@ -319,7 +319,13 @@ program
 	.description("Run a system compatibility check for the Kilo Code CLI")
 	.argument("[mode]", `The mode to debug (${DEBUG_MODES.join(", ")})`, "")
 	.action(async (mode: string) => {
-		if (!mode || !DEBUG_MODES.includes(mode)) {
+		// If no mode is provided, show available debug modes (helpful UX)
+		if (!mode) {
+			console.log(`Available debug modes: ${DEBUG_MODES.join(", ")}`)
+			process.exit(0)
+		}
+
+		if (!DEBUG_MODES.includes(mode)) {
 			console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
 			process.exit(1)
 		}
