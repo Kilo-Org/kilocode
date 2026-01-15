@@ -43,7 +43,7 @@ export interface FinishWithOnTaskCompletedInput {
  */
 export async function finishWithOnTaskCompleted(cli: CLI, input: FinishWithOnTaskCompletedInput): Promise<() => void> {
 	const { prompt } = input
-	let beforeExit = () => {}
+	const beforeExit = () => {}
 
 	try {
 		const service = cli.getService()
@@ -68,16 +68,6 @@ export async function finishWithOnTaskCompleted(cli: CLI, input: FinishWithOnTas
 		await new Promise((resolve) => setTimeout(resolve, onTaskCompletedTimeout))
 
 		logs.info("On-task-completed flow completed", "OnTaskCompleted")
-
-		beforeExit = () => {
-			const green = "\x1b[32m"
-			const cyan = "\x1b[36m"
-			const reset = "\x1b[0m"
-
-			console.log("\n" + cyan + "─".repeat(80) + reset)
-			console.log(`${green}✓${reset} On-task-completed prompt executed!`)
-			console.log(cyan + "─".repeat(80) + reset + "\n")
-		}
 
 		// Track telemetry
 		getTelemetryService().trackFeatureUsed("on_task_completed", 1, true)
