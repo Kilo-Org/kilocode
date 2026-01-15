@@ -106,6 +106,7 @@ import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_chang
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
 import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
 import { SessionManager } from "../../shared/kilocode/cli-sessions/core/SessionManager" // kilocode_change
+import { getEffectiveTelemetrySetting } from "../kilocode/wrapper"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -545,7 +546,7 @@ export const webviewMessageHandler = async (
 			// If user already opted in to telemetry, enable telemetry service
 			provider.getStateToPostToWebview().then(async (/*kilocode_change*/ state) => {
 				const { telemetrySetting } = state
-				const isOptedIn = telemetrySetting !== "disabled"
+				const isOptedIn = getEffectiveTelemetrySetting(telemetrySetting) === "enabled" // kilocode_change
 				TelemetryService.instance.updateTelemetryState(isOptedIn)
 				await TelemetryService.instance.updateIdentity(state.apiConfiguration.kilocodeToken ?? "") // kilocode_change
 			})
@@ -2968,7 +2969,7 @@ export const webviewMessageHandler = async (
 		case "telemetrySetting": {
 			const telemetrySetting = message.text as TelemetrySetting
 			const previousSetting = getGlobalState("telemetrySetting") || "unset"
-			const isOptedIn = telemetrySetting !== "disabled"
+			const isOptedIn = getEffectiveTelemetrySetting(telemetrySetting) === "enabled" // kilocode_change
 			const wasPreviouslyOptedIn = previousSetting !== "disabled"
 
 			// If turning telemetry OFF, fire event BEFORE disabling

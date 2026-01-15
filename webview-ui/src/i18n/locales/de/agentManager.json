@@ -28,7 +28,6 @@
 		"autoModeWarning": "YOLO-Modus - Tool-Operationen werden automatisch genehmigt",
 		"starting": "Wird gestartet...",
 		"startAriaLabel": "Agent mit angegebenem Prompt starten",
-		"keyboardHint": "Enter zum Starten, Shift+Enter für neue Zeile",
 		"runModeLocal": "Lokal",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Cloud",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Basis-Branch wechseln",
 		"noBranches": "Keine Branches gefunden",
 		"noMatchingBranches": "Keine Branches entsprechen deiner Suche",
-		"openTerminal": "Terminal öffnen"
+		"openTerminal": "Terminal öffnen",
+		"selectModel": "Modell auswählen",
+		"modelTooltip": "Wähle, welches KI-Modell für diese Sitzung verwendet werden soll",
+		"defaultModel": "Standard-Modell",
+		"loadingModels": "Wird geladen..."
 	},
 	"messages": {
 		"waiting": "Warte auf Antwort des Agenten...",
