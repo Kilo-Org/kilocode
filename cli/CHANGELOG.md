@@ -1,5 +1,61 @@
 # @kilocode/cli
 
+## 0.21.0
+
+### Minor Changes
+
+- [#4916](https://github.com/Kilo-Org/kilocode/pull/4916) [`f02364c`](https://github.com/Kilo-Org/kilocode/commit/f02364c5a75729b5d17f447dee7570ee1e7490e6) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Abbreviate large pasted text in CLI input as `[Pasted text #N +X lines]` to prevent input field overflow when pasting logs or large code blocks
+
+- [#4997](https://github.com/Kilo-Org/kilocode/pull/4997) [`2a663be`](https://github.com/Kilo-Org/kilocode/commit/2a663bedc2a0b129a9d79321dea0ad280ec3a5da) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `kilocode models --json` command to expose available models as JSON for programmatic use
+
+- [#4936](https://github.com/Kilo-Org/kilocode/pull/4936) [`bfcd1d5`](https://github.com/Kilo-Org/kilocode/commit/bfcd1d5f38a887a9e0c736410ef2ff84ec0f5f3b) Thanks [@idreesmuhammadqazi-create](https://github.com/idreesmuhammadqazi-create)! - Add colorblind theme support to CLI
+
+    - Colorblind-friendly theme with high contrast colors for accessibility
+
+### Patch Changes
+
+- [#4983](https://github.com/Kilo-Org/kilocode/pull/4983) [`82ef9b0`](https://github.com/Kilo-Org/kilocode/commit/82ef9b0ad09f1b75f66db116bf9cf7c1a34edd01) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `/checkpoint enable` and `/checkpoint disable` subcommands to toggle checkpoint creation and save disk space
+
+- [#4982](https://github.com/Kilo-Org/kilocode/pull/4982) [`7d02d43`](https://github.com/Kilo-Org/kilocode/commit/7d02d4364b1dc4c04ce55b2feb368329b3b9c3c4) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - fix(cli): improve error message for custom mode not found
+
+- [#4996](https://github.com/Kilo-Org/kilocode/pull/4996) [`d7016fa`](https://github.com/Kilo-Org/kilocode/commit/d7016faa01dc0d0eefeff0b7abd5cf873ab54616) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add maxConcurrentFileReads configuration support to CLI with documentation
+
+- [#4981](https://github.com/Kilo-Org/kilocode/pull/4981) [`0268494`](https://github.com/Kilo-Org/kilocode/commit/0268494f53276e4c5411204b01e50c15c9b02787) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI `/model list` returning "No models available" for nano-gpt provider
+
+- [#4977](https://github.com/Kilo-Org/kilocode/pull/4977) [`c71cff8`](https://github.com/Kilo-Org/kilocode/commit/c71cff8451927052c00b5306c0b552b4afe33dbd) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add proper display for deleteFile tool in CLI instead of showing "Unknown tool: deleteFile"
+
+- [#4978](https://github.com/Kilo-Org/kilocode/pull/4978) [`ed5073c`](https://github.com/Kilo-Org/kilocode/commit/ed5073ccb6ffc8acc53cb9e7191b1f618001ed40) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix number key hotkeys (1, 2, 3) not working in command approval menu
+
+- [#4993](https://github.com/Kilo-Org/kilocode/pull/4993) [`c3c7bbe`](https://github.com/Kilo-Org/kilocode/commit/c3c7bbe70ed1832e62c8cb05f3a0db4cdbc0dd25) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI hanging on rate limit errors in autonomous mode by enabling auto-retry for API failures
+
+- [#4995](https://github.com/Kilo-Org/kilocode/pull/4995) [`95e9b6d`](https://github.com/Kilo-Org/kilocode/commit/95e9b6d234681d34f3903715de1ceba67e745516) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - fix: use correct api url for some endpoints
+
+## 0.20.0
+
+### Minor Changes
+
+- [#4943](https://github.com/Kilo-Org/kilocode/pull/4943) [`eef76d0`](https://github.com/Kilo-Org/kilocode/commit/eef76d0e4b962c7b9680e5c9226b22ecaa3fa79b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add Shift+Tab keyboard shortcut to cycle through modes in the CLI
+
+### Patch Changes
+
+- [#4941](https://github.com/Kilo-Org/kilocode/pull/4941) [`b7052cc`](https://github.com/Kilo-Org/kilocode/commit/b7052cc2030466626a832e19061675d91edb6f94) Thanks [@Drilmo](https://github.com/Drilmo)! - Add extension path resolution for F5 debug workflow
+
+    - CLI resolves extension from src/dist/ when KILOCODE_DEV_CLI_PATH is set
+    - Add watch:cli:setup and watch:cli:deps tasks for reliable CLI builds
+
+- [#4967](https://github.com/Kilo-Org/kilocode/pull/4967) [`99029a5`](https://github.com/Kilo-Org/kilocode/commit/99029a556253b82ee8a8b56445dabd65b56e4fef) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Improved file update display in CLI with compact format and colored diffs
+
+- [#4949](https://github.com/Kilo-Org/kilocode/pull/4949) [`f56d88a`](https://github.com/Kilo-Org/kilocode/commit/f56d88af3697993b2b33863741d5c47cd06e17be) Thanks [@eshurakov](https://github.com/eshurakov)! - Add --attach flag for file attachments in CLI
+
+- [#4959](https://github.com/Kilo-Org/kilocode/pull/4959) [`2dce098`](https://github.com/Kilo-Org/kilocode/commit/2dce098cb2f2476fb9978dcbb49b5070ba96a296) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - feat(cli): add word-by-word cursor navigation
+
+    Adds support for word-by-word cursor navigation in the CLI text input:
+
+    - `Meta+b` / `Meta+Left` to move to the beginning of the previous word
+    - `Meta+f` / `Meta+Right` to move to the beginning of the next word
+
+    This enhances the editing experience with Emacs-style keybindings and standard Meta+Arrow key navigation.
+
 ## 0.19.3
 
 ### Patch Changes

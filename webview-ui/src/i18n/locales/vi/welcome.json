@@ -6,40 +6,45 @@
 	"routers": {
 		"requesty": {
 			"description": "Bộ định tuyến LLM được tối ưu hóa của bạn",
-			"incentive": "$1 tín dụng miễn phí"
+			"incentive": "Tín dụng miễn phí $1"
 		},
 		"openrouter": {
-			"description": "Giao diện thống nhất cho các LLM"
+			"description": "Giao diện thống nhất cho LLM"
 		},
 		"roo": {
-			"description": "Những mô hình miễn phí tốt nhất để bắt đầu",
+			"description": "Các mô hình miễn phí tốt nhất để bắt đầu",
 			"incentive": "Dùng thử Roo miễn phí"
 		}
 	},
 	"chooseProvider": "Để thực hiện phép màu của mình, Kilo Code cần một khóa API.",
 	"providerSignup": {
+		"heading": "Chọn nhà cung cấp của bạn",
+		"chooseProvider": "Roo cần một nhà cung cấp LLM để hoạt động. Chọn một để bắt đầu, bạn có thể thêm nhiều hơn sau.",
 		"rooCloudProvider": "Nhà cung cấp Roo Code Cloud",
-		"rooCloudDescription": "Cách đơn giản nhất để sử dụng Roo. Sự kết hợp được tuyển chọn của các mô hình miễn phí và trả phí với chi phí thấp",
-		"learnMore": "tìm hiểu thêm",
-		"useAnotherProvider": "Sử dụng nhà cung cấp khác",
+		"rooCloudDescription": "Cách dễ nhất để bắt đầu là với Nhà cung cấp Roo Code Cloud: một sự kết hợp được sắp xếp cẩn thận của các mô hình miễn phí và trả tiền với chi phí thấp.",
+		"learnMore": "Tìm hiểu thêm",
+		"useAnotherProvider": "Nhà cung cấp bên thứ ba",
 		"useAnotherProviderDescription": "Nhập khóa API và bắt đầu.",
-		"noApiKeys": "Không muốn phải xử lý các khóa? Hãy sử dụng Nhà cung cấp Roo Code Cloud.",
-		"getStarted": "Bắt đầu"
+		"noApiKeys": "Bạn không muốn xử lý các khóa API và tài khoản riêng biệt?",
+		"backToRoo": "Sử dụng Nhà cung cấp Roo Code Cloud.",
+		"goBack": "Quay lại",
+		"finish": "Hoàn thành"
 	},
 	"waitingForCloud": {
-		"heading": "Đang đưa bạn đến Roo Code Cloud...",
-		"description": "Hoàn thành đăng ký trong trình duyệt và bạn sẽ tự động quay lại đây.",
-		"noPrompt": "Nếu bạn không được nhắc mở URL, <clickHere>hãy nhấp vào đây</clickHere>.",
+		"heading": "Đăng nhập vào Roo Code Cloud...",
+		"description": "Chúng tôi sẽ dẫn bạn đến trình duyệt để đăng ký Roo Code Cloud. Sau đó, chúng tôi sẽ đưa bạn trở lại đây để hoàn thành.",
+		"noPrompt": "Nếu bạn không được yêu cầu mở URL, <clickHere>hãy nhấp vào đây</clickHere>.",
 		"havingTrouble": "Nếu bạn đã hoàn thành đăng ký nhưng gặp sự cố, <clickHere>hãy nhấp vào đây</clickHere>.",
-		"pasteUrl": "Dán URL callback từ trình duyệt của bạn:",
-		"invalidURL": "Điều đó không giống như một URL callback hợp lệ. Vui lòng sao chép những gì Roo Code Cloud đang hiển thị trong trình duyệt của bạn.",
+		"pasteUrl": "Dán URL gọi lại từ trình duyệt của bạn:",
+		"docsLink": "Không hoạt động? <DocsLink>Kiểm tra tài liệu</DocsLink>.",
+		"invalidURL": "Điều đó không giống như một URL gọi lại hợp lệ. Vui lòng sao chép những gì Roo Code Cloud đang hiển thị trong trình duyệt của bạn.",
 		"goBack": "Quay lại"
 	},
 	"startRouter": "Chúng tôi khuyên bạn nên sử dụng bộ định tuyến LLM:",
-	"startCustom": "Hoặc bạn có thể sử dụng khóa API của riêng mình:",
+	"startCustom": "Hoặc bạn có thể mang theo khóa API của riêng mình:",
 	"telemetry": {
 		"helpImprove": "Giúp cải thiện Kilo Code",
 		"helpImproveMessage": "Kilo Code thu thập dữ liệu lỗi và sử dụng để giúp chúng tôi sửa lỗi và cải thiện tiện ích mở rộng. Dữ liệu viễn trắc này không thu thập mã, prompts hoặc thông tin cá nhân. Bạn có thể tắt tính năng này trong <settingsLink>cài đặt</settingsLink>."
 	},
-	"importSettings": "Nhập cài đặt"
+	"importSettings": "Nhập Cài đặt"
 }

@@ -1,3 +1,13 @@
+// Mock TelemetryService - must come before other imports
+const mockCaptureException = vi.hoisted(() => vi.fn())
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureException: mockCaptureException,
+		},
+	},
+}))
+
 // Mock Mistral client - must come before other imports
 const mockCreate = vi.fn()
 const mockComplete = vi.fn()
@@ -59,6 +69,7 @@ describe("MistralHandler", () => {
 		handler = new MistralHandler(mockOptions)
 		mockCreate.mockClear()
 		mockComplete.mockClear()
+		mockCaptureException.mockClear()
 	})
 
 	describe("constructor", () => {
@@ -251,11 +262,10 @@ describe("MistralHandler", () => {
 			},
 		]
 
-		it("should include tools in request when toolProtocol is native", async () => {
+		it("should include tools in request by default (native is default)", async () => {
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: mockTools,
-				toolProtocol: "native",
 			}
 
 			const iterator = handler.createMessage(systemPrompt, messages, metadata)
@@ -329,7 +339,6 @@ describe("MistralHandler", () => {
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: mockTools,
-				toolProtocol: "native",
 			}
 
 			const iterator = handler.createMessage(systemPrompt, messages, metadata)
@@ -393,7 +402,6 @@ describe("MistralHandler", () => {
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: mockTools,
-				toolProtocol: "native",
 			}
 
 			const iterator = handler.createMessage(systemPrompt, messages, metadata)
@@ -427,7 +435,6 @@ describe("MistralHandler", () => {
 			const metadata: ApiHandlerCreateMessageMetadata = {
 				taskId: "test-task",
 				tools: mockTools,
-				toolProtocol: "native",
 				tool_choice: "auto", // This should be ignored
 			}
 

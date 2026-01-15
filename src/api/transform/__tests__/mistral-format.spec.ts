@@ -2,7 +2,44 @@
 
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { convertToMistralMessages } from "../mistral-format"
+import { convertToMistralMessages, normalizeMistralToolCallId } from "../mistral-format"
+
+describe("normalizeMistralToolCallId", () => {
+	it("should strip non-alphanumeric characters and truncate to 9 characters", () => {
+		// OpenAI-style tool call ID: "call_5019f900..." -> "call5019f900..." -> first 9 chars = "call5019f"
+		expect(normalizeMistralToolCallId("call_5019f900a247472bacde0b82")).toBe("call5019f")
+	})
+
+	it("should handle Anthropic-style tool call IDs", () => {
+		// Anthropic-style tool call ID
+		expect(normalizeMistralToolCallId("toolu_01234567890abcdef")).toBe("toolu0123")
+	})
+
+	it("should pad short IDs to 9 characters", () => {
+		expect(normalizeMistralToolCallId("abc")).toBe("abc000000")
+		expect(normalizeMistralToolCallId("tool-1")).toBe("tool10000")
+	})
+
+	it("should handle IDs that are exactly 9 alphanumeric characters", () => {
+		expect(normalizeMistralToolCallId("abcd12345")).toBe("abcd12345")
+	})
+
+	it("should return consistent results for the same input", () => {
+		const id = "call_5019f900a247472bacde0b82"
+		expect(normalizeMistralToolCallId(id)).toBe(normalizeMistralToolCallId(id))
+	})
+
+	it("should handle edge cases", () => {
+		// Empty string
+		expect(normalizeMistralToolCallId("")).toBe("000000000")
+
+		// Only non-alphanumeric characters
+		expect(normalizeMistralToolCallId("---___---")).toBe("000000000")
+
+		// Mixed special characters
+		expect(normalizeMistralToolCallId("a-b_c.d@e")).toBe("abcde0000")
+	})
+})
 
 describe("convertToMistralMessages", () => {
 	it("should convert simple text messages for user and assistant roles", () => {
@@ -87,7 +124,9 @@ describe("convertToMistralMessages", () => {
 		const mistralMessages = convertToMistralMessages(anthropicMessages)
 		expect(mistralMessages).toHaveLength(1)
 		expect(mistralMessages[0].role).toBe("tool")
-		expect((mistralMessages[0] as { toolCallId?: string }).toolCallId).toBe("weather-123")
+		expect((mistralMessages[0] as { toolCallId?: string }).toolCallId).toBe(
+			normalizeMistralToolCallId("weather-123"),
+		)
 		expect(mistralMessages[0].content).toBe("Current temperature in London: 20°C")
 	})
 
@@ -124,7 +163,9 @@ describe("convertToMistralMessages", () => {
 
 		// Only the tool result should be present
 		expect(mistralMessages[0].role).toBe("tool")
-		expect((mistralMessages[0] as { toolCallId?: string }).toolCallId).toBe("weather-123")
+		expect((mistralMessages[0] as { toolCallId?: string }).toolCallId).toBe(
+			normalizeMistralToolCallId("weather-123"),
+		)
 		expect(mistralMessages[0].content).toBe("Current temperature in London: 20°C")
 	})
 
@@ -265,7 +306,9 @@ describe("convertToMistralMessages", () => {
 
 		// Tool result message
 		expect(mistralMessages[2].role).toBe("tool")
-		expect((mistralMessages[2] as { toolCallId?: string }).toolCallId).toBe("search-123")
+		expect((mistralMessages[2] as { toolCallId?: string }).toolCallId).toBe(
+			normalizeMistralToolCallId("search-123"),
+		)
 		expect(mistralMessages[2].content).toBe("Found information about different mountain types.")
 
 		// Final assistant message

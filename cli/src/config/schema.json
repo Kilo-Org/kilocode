@@ -212,6 +212,12 @@
 					}
 				}
 			}
+		},
+		"maxConcurrentFileReads": {
+			"type": "number",
+			"minimum": 1,
+			"default": 5,
+			"description": "Maximum number of files that can be read in a single read_file request. The AI will be instructed about this limit and requests exceeding it will be rejected."
 		}
 	},
 	"definitions": {

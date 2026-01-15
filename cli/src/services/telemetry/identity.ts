@@ -8,7 +8,7 @@ import * as path from "path"
 import * as crypto from "crypto"
 import { KiloCodePaths } from "../../utils/paths.js"
 import { logs } from "../logs.js"
-import { getAppUrl } from "@roo-code/types"
+import { getApiUrl } from "@roo-code/types"
 import { machineIdSync } from "node-machine-id"
 
 /**
@@ -108,7 +108,7 @@ export class IdentityManager {
 
 		try {
 			// Fetch user profile from Kilocode API
-			const response = await fetch(getAppUrl("/api/profile"), {
+			const response = await fetch(getApiUrl("/api/profile"), {
 				headers: {
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",

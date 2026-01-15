@@ -171,6 +171,11 @@ const config: Config = {
 						from: ["/advanced-usage/api-configuration-profiles"],
 					},
 
+					{
+						to: "/slack",
+						from: ["/advanced-usage/slackbot"],
+					},
+
 					// MCP related redirects
 					{
 						to: "/features/mcp/overview",

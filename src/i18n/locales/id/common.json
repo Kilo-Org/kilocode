@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode."
+		"description": "Agen coding AI open source yang menghasilkan kode dari bahasa alami, mengotomatisasi tugas, dan menjalankan perintah terminal. Dilengkapi dengan autocomplete inline, otomatisasi browser, refactoring otomatis, dan mode kustom untuk perencanaan, coding, dan debugging. Mendukung 500+ model AI termasuk Claude (Anthropic), Gemini, Grok, GPT, Codex, dan GLM."
 	},
 	"number_format": {
 		"thousand_suffix": "rb",
@@ -99,8 +99,7 @@
 			"errorOutput": "Output error: {{output}}",
 			"processExitedWithError": "Proses Claude Code keluar dengan kode {{exitCode}}. Output error: {{output}}",
 			"stoppedWithReason": "Claude Code berhenti karena alasan: {{reason}}",
-			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan."
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Gagal memuat kredensial OAuth. Silakan autentikasi terlebih dahulu: {{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Kunci API Groq",
-			"getGroqApiKey": "Dapatkan Kunci API Groq",
-			"claudeCode": {
-				"pathLabel": "Jalur Claude Code",
-				"description": "Jalur opsional ke CLI Claude Code Anda. Defaultnya 'claude' jika tidak diatur.",
-				"placeholder": "Default: claude"
-			}
+			"getGroqApiKey": "Dapatkan Kunci API Groq"
 		}
 	},
 	"customModes": {

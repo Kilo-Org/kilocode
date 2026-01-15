@@ -13,7 +13,7 @@ import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
-import { loadCustomModes } from "./config/customModes.js"
+import { loadCustomModes, getSearchedPaths } from "./config/customModes.js"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
@@ -61,6 +61,14 @@ program
 	)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
+		// Subcommand names - if prompt matches one, Commander.js should handle it via subcommand
+		// This is a defensive check for cases where Commander.js routing might not work as expected
+		// (e.g., when spawned as a child process with stdin disconnected)
+		const SUBCOMMANDS = ["auth", "config", "debug", "models"]
+		if (SUBCOMMANDS.includes(prompt)) {
+			return
+		}
+
 		// Validate that --existing-branch requires --parallel
 		if (options.existingBranch && !options.parallel) {
 			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
@@ -80,7 +88,14 @@ program
 
 		// Validate mode if provided
 		if (options.mode && !allValidModes.includes(options.mode)) {
-			console.error(`Error: Invalid mode "${options.mode}". Valid modes are: ${allValidModes.join(", ")}`)
+			const searchedPaths = getSearchedPaths()
+			console.error(`Error: Mode "${options.mode}" not found.\n`)
+			console.error("The CLI searched for custom modes in:")
+			for (const searched of searchedPaths) {
+				const status = searched.found ? `found, ${searched.modesCount} mode(s)` : "not found"
+				console.error(`  • ${searched.type === "global" ? "Global" : "Project"}: ${searched.path} (${status})`)
+			}
+			console.error(`\nAvailable modes: ${allValidModes.join(", ")}`)
 			process.exit(1)
 		}
 
@@ -302,6 +317,17 @@ program
 		}
 
 		await debugFunction()
+	})
+
+// Models command - list available models as JSON for programmatic use
+program
+	.command("models")
+	.description("List available models for the current provider as JSON")
+	.option("--provider <id>", "Use specific provider instead of default")
+	.option("--json", "Output as JSON (default)", true)
+	.action(async (options: { provider?: string; json?: boolean }) => {
+		const { modelsApiCommand } = await import("./commands/models-api.js")
+		await modelsApiCommand(options)
 	})
 
 // Handle process termination signals

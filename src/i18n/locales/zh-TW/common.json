@@ -1,7 +1,7 @@
 {
 	"extension": {
 		"name": "Kilo Code",
-		"description": "用於規劃、建置和修復程式碼的開源 AI 編碼助理。"
+		"description": "開源 AI 編碼代理，可從自然語言產生程式碼、自動化工作並執行終端機命令。具有內嵌自動完成、瀏覽器自動化、自動重構以及用於規劃、編碼和除錯的自訂模式。支援 500 多種 AI 模型，包括 Claude (Anthropic)、Gemini、Grok、GPT、Codex 和 GLM。"
 	},
 	"number_format": {
 		"thousand_suffix": "k",
@@ -98,8 +98,7 @@
 			"errorOutput": "錯誤輸出：{{output}}",
 			"processExitedWithError": "Claude Code 程序退出，退出碼：{{exitCode}}。錯誤輸出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
-			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。",
-			"notFound": "找不到 Claude Code 可執行檔案 '{{claudePath}}'。\n\n請安裝 Claude Code CLI：\n1. 造訪 {{installationUrl}} 下載 Claude Code\n2. 依照作業系統的安裝說明進行操作\n3. 確保 'claude' 指令在 PATH 中可用\n4. 或者在 Kilo Code 設定中的 'Claude Code 路徑' 下設定自訂路徑\n\n原始錯誤：{{originalError}}"
+			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}",
@@ -210,12 +209,7 @@
 	"settings": {
 		"providers": {
 			"groqApiKey": "Groq API 金鑰",
-			"getGroqApiKey": "取得 Groq API 金鑰",
-			"claudeCode": {
-				"pathLabel": "Claude Code 路徑",
-				"description": "Claude Code CLI 的選用路徑。如果未設定，預設為 'claude'。",
-				"placeholder": "預設: claude"
-			}
+			"getGroqApiKey": "取得 Groq API 金鑰"
 		}
 	},
 	"customModes": {

@@ -1,6 +1,6 @@
 {
 	"extension.displayName": "Kilo Code: AI Kodlama Ajanı, Copilot ve Otomatik Tamamlama",
-	"extension.description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı.",
+	"extension.description": "Doğal dilden kod üreten, görevleri otomatikleştiren ve terminal komutlarını çalıştıran açık kaynaklı AI kodlama ajanı. Satır içi otomatik tamamlama, tarayıcı otomasyonu, otomatik yeniden düzenleme ve planlama, kodlama ve hata ayıklama için özel modlar içerir. Claude (Anthropic), Gemini, Grok, GPT, Codex ve GLM dahil 500'den fazla AI modelini destekler.",
 	"command.newTask.title": "Yeni Görev",
 	"command.explainCode.title": "Kodu Açıkla",
 	"command.fixCode.title": "Kodu Düzelt",

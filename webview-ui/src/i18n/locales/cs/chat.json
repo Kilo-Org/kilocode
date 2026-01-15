@@ -159,9 +159,11 @@
 		"streaming": "API požadavek...",
 		"cancelled": "API požadavek zrušen",
 		"streamingFailed": "Streamování API selhalo",
-		"errorTitle": "API Chyba {{code}}",
+		"rateLimitWait": "Omezení rychlosti",
+		"errorTitle": "Chyba poskytovatele {{code}}",
 		"errorMessage": {
 			"docs": "Dokumentace",
+			"goToSettings": "Nastavení",
 			"400": "Poskytovatel nemohl zpracovat požadavek jak byl zadán. Zastav úkol a zkus jiný přístup.",
 			"401": "Nepodařilo se autentizovat u poskytovatele. Zkontroluj konfiguraci svého API klíče.",
 			"402": "Zdá se, že ti došly prostředky/kredity na účtu. Jdi ke svému poskytovateli a přidej více pro pokračování.",
@@ -169,6 +171,7 @@
 			"429": "Příliš mnoho požadavků. Poskytovatel tě omezuje rychlostí. Počkej chvíli před dalším API voláním.",
 			"500": "Chyba serveru poskytovatele. Něco je špatně na straně poskytovatele, s tvým požadavkem není nic v nepořádku.",
 			"connection": "Chyba připojení. Ujisti se, že máš funkční připojení k internetu.",
+			"claudeCodeNotAuthenticated": "Musíš se přihlásit, abys mohl používat Claude Code. Jdi do Nastavení a klikni na \"Přihlásit se ke Claude Code\" pro autentizaci.",
 			"unknown": "Neznámá API chyba. Kontaktuj prosím podporu Kilo."
 		}
 	},
@@ -309,10 +312,19 @@
 	},
 	"taskCompleted": "Úkol dokončen",
 	"error": "Chyba",
+	"modelResponseIncomplete": "Odpověď modelu neúplná",
+	"modelResponseErrors": {
+		"noToolsUsed": "Model nepoužil žádné nástroje ve své odpovědi. To se obvykle stává, když model poskytne pouze text/uvažování bez volání požadovaných nástrojů k dokončení úkolu.",
+		"noToolsUsedDetails": "Model poskytl text/uvažování, ale nevolal žádné požadované nástroje. To obvykle naznačuje, že model nepochopil úkol nebo má potíže s určením, který nástroj použít. Model byl automaticky vyzván k opakování s řádným použitím nástrojů.",
+		"noAssistantMessages": "Model neposkytl žádný obsah odpovědi. To může naznačovat problém s API nebo výstupem modelu.",
+		"noAssistantMessagesDetails": "Jazykový model vrátil prázdnou odpověď bez jakéhokoli textu nebo volání nástrojů. To se může stát kvůli problémům s API, omezení rychlosti nebo problémům specifickým pro model. Model byl automaticky vyzván k opakování."
+	},
 	"errorDetails": {
+		"link": "Detaily",
 		"title": "Detaily chyby",
-		"copyToClipboard": "Kopírovat do schránky",
-		"copied": "Zkopírováno!"
+		"copyToClipboard": "Kopírovat základní informace o chybě",
+		"copied": "Zkopírováno!",
+		"diagnostics": "Získat podrobné informace o chybě"
 	},
 	"diffError": {
 		"title": "Úprava neúspěšná"
@@ -359,7 +371,9 @@
 			"goToSettingsButton": "Jít do Nastavení"
 		},
 		"release": {
-			"heading": "Nové v rozšíření:",
+			"heading": "Co je nového:",
+			"skills": "Roo nyní podporuje <skillsLink>Agent Skills</skillsLink> - znovupoužitelné balíčky promptů, nástrojů a zdrojů pro rozšíření schopností Roo.",
+			"nativeToolCalling": "Nativní volání nástrojů je nyní vyžadováno pro všechny nové úkoly. <blogLink>Přečti si více</blogLink> o motivaci a co dělat, pokud narazíš na problémy.",
 			"openRouterEmbeddings": "Podpora pro embedding modely OpenRouter",
 			"chutesDynamic": "Chutes nyní dynamicky načítá nejnovější modely",
 			"queuedMessagesFix": "Opravy pro ztracené zprávy ve frontě",

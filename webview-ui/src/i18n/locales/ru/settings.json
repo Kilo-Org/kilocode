@@ -214,11 +214,6 @@
 			"label": "Браузер",
 			"description": "Автоматически выполнять действия в браузере без необходимости одобрения. Применяется только, если модель поддерживает использование компьютера"
 		},
-		"retry": {
-			"label": "Повтор",
-			"description": "Автоматически повторять неудачные запросы к API при ошибке сервера",
-			"delayLabel": "Задержка перед повтором запроса"
-		},
 		"mcp": {
 			"label": "MCP",
 			"description": "Включить автоодобрение отдельных инструментов MCP в представлении MCP Servers (требуется включить как этот параметр, так и индивидуальный чекбокс инструмента \"Всегда разрешать\")"
@@ -277,6 +272,7 @@
 		"makeActiveProfile": "Сделать активным профилем",
 		"makeActiveTooltip": "Активируй этот профиль для использования в API-запросах",
 		"apiProvider": "Провайдер API",
+		"apiProviderDocs": "Документация провайдера",
 		"model": "Модель",
 		"nameEmpty": "Имя не может быть пустым",
 		"nameExists": "Профиль с таким именем уже существует",
@@ -324,7 +320,6 @@
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
-		"openRouterTransformsText": "Сжимать подсказки и цепочки сообщений до размера контекста (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API-ключ",
 		"getAnthropicApiKey": "Получить Anthropic API-ключ",
 		"anthropicUseAuthToken": "Передавать Anthropic API-ключ как Authorization-заголовок вместо X-Api-Key",
@@ -334,6 +329,8 @@
 		"anthropic1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"awsBedrock1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
 		"awsBedrock1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
+		"vertex1MContextBetaLabel": "Включить контекстное окно 1M (бета)",
+		"vertex1MContextBetaDescription": "Расширяет контекстное окно до 1 миллиона токенов для Claude Sonnet 4",
 		"basetenApiKey": "Baseten API-ключ",
 		"getBasetenApiKey": "Получить Baseten API-ключ",
 		"cerebrasApiKey": "Cerebras API-ключ",
@@ -434,6 +431,14 @@
 		"awsRegion": "Регион AWS",
 		"awsCrossRegion": "Использовать кросс-региональный вывод",
 		"awsGlobalInference": "Использовать глобальный вывод (автоматический выбор оптимального региона AWS)",
+		"awsServiceTier": "Уровень обслуживания",
+		"awsServiceTierStandard": "Стандартный",
+		"awsServiceTierStandardDesc": "Сбалансированная производительность и стоимость",
+		"awsServiceTierFlex": "Гибкий (50% скидка)",
+		"awsServiceTierFlexDesc": "Более низкая стоимость, более высокая задержка для некритичных задач",
+		"awsServiceTierPriority": "Приоритетный (75% надбавка)",
+		"awsServiceTierPriorityDesc": "Максимальная производительность для критичных приложений",
+		"awsServiceTierNote": "Уровни обслуживания влияют на цены и производительность. Гибкий предлагает 50% скидку с более высокой задержкой, Приоритетный предлагает 25% лучшую производительность с 75% надбавкой.",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Использовать пользовательскую конечную точку VPC",
 			"vpcEndpointUrlPlaceholder": "Введите URL конечной точки VPC (опционально)",
@@ -798,6 +803,10 @@
 		"maxGitStatusFiles": {
 			"label": "Git статус макс. файлов",
 			"description": "Максимальное количество записей файлов для включения в контекст статуса git. Установите значение 0, чтобы отключить. Информация о ветке и коммитах всегда отображается, если значение > 0."
+		},
+		"enableSubfolderRules": {
+			"label": "Включить правила подпапок",
+			"description": "Рекурсивно обнаруживать и загружать файлы .roo/rules и AGENTS.md из подкаталогов. Полезно для монорепозиториев с правилами для каждого пакета."
 		}
 	},
 	"terminal": {
@@ -987,6 +996,17 @@
 		"SPEECH_TO_TEXT": {
 			"name": "Речь-в-текст (STT)",
 			"description": "При включении Kilo Code может преобразовывать вашу речь в текст с помощью модели Whisper от OpenAI. Нажмите кнопку микрофона в чате, чтобы начать запись. Требуется установленный FFmpeg и настроенный API-провайдер OpenAI."
+		},
+		"CUSTOM_TOOLS": {
+			"name": "Включить пользовательские инструменты",
+			"description": "Если включено, Kilo может загружать и использовать пользовательские инструменты TypeScript/JavaScript из каталога .kilocode/tools вашего проекта или ~/.kilocode/tools для глобальных инструментов. Примечание: эти инструменты будут одобрены автоматически.",
+			"toolsHeader": "Доступные пользовательские инструменты",
+			"noTools": "Пользовательские инструменты не загружены. Добавьте файлы .ts или .js в каталог .kilocode/tools вашего проекта или ~/.kilocode/tools для глобальных инструментов.",
+			"refreshButton": "Обновить",
+			"refreshing": "Обновление...",
+			"refreshSuccess": "Инструменты успешно обновлены",
+			"refreshError": "Не удалось обновить инструменты",
+			"toolParameters": "Параметры"
 		}
 	},
 	"promptCaching": {

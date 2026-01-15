@@ -45,6 +45,7 @@ export const agentSessionSchema = z.object({
 	source: sessionSourceSchema,
 	parallelMode: parallelModeInfoSchema.optional(),
 	gitUrl: z.string().optional(),
+	model: z.string().optional(), // Model ID used for this session
 })
 
 /**
@@ -69,28 +70,51 @@ export const agentManagerStateSchema = z.object({
 /**
  * Messages from Webview to Extension
  */
+/**
+ * Start session message schema - used for runtime validation of webview messages
+ */
+export const startSessionMessageSchema = z.object({
+	type: z.literal("agentManager.startSession"),
+	prompt: z.string(),
+	parallelMode: z.boolean().optional(),
+	existingBranch: z.string().optional(),
+	model: z.string().optional(), // Model ID to use for this session
+	versions: z.number().optional(), // Number of versions for multi-version mode
+	labels: z.array(z.string()).optional(), // Labels for multi-version sessions
+})
+
 export const agentManagerMessageSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("agentManager.webviewReady") }),
-	z.object({
-		type: z.literal("agentManager.startSession"),
-		prompt: z.string(),
-		parallelMode: z.boolean().optional(),
-		existingBranch: z.string().optional(),
-	}),
+	startSessionMessageSchema,
 	z.object({ type: z.literal("agentManager.stopSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.selectSession"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.refreshRemoteSessions") }),
 	z.object({ type: z.literal("agentManager.listBranches") }),
+	z.object({ type: z.literal("agentManager.refreshModels") }),
 ])
 
 /**
  * Remote session schema (simplified - full type comes from shared session client)
  */
-export const remoteSessionSchema = z.object({
+export const remoteSessionSchema = z
+	.object({
+		id: z.string(),
+		name: z.string().optional(),
+		status: z.string().optional(),
+	})
+	.passthrough() // Allow additional fields from the full RemoteSession type
+
+/**
+ * Available model schema (from CLI models command)
+ */
+export const availableModelSchema = z.object({
 	id: z.string(),
-	name: z.string().optional(),
-	status: z.string().optional(),
-}).passthrough() // Allow additional fields from the full RemoteSession type
+	displayName: z.string().nullable(),
+	contextWindow: z.number(),
+	supportsImages: z.boolean().optional(),
+	inputPrice: z.number().optional(),
+	outputPrice: z.number().optional(),
+})
 
 /**
  * Messages from Extension to Webview
@@ -101,15 +125,31 @@ export const agentManagerExtensionMessageSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("agentManager.sessionRemoved"), sessionId: z.string() }),
 	z.object({ type: z.literal("agentManager.error"), error: z.string() }),
 	z.object({ type: z.literal("agentManager.remoteSessions"), sessions: z.array(remoteSessionSchema) }),
-	z.object({ type: z.literal("agentManager.branches"), branches: z.array(z.string()), currentBranch: z.string().optional() }),
+	z.object({
+		type: z.literal("agentManager.branches"),
+		branches: z.array(z.string()),
+		currentBranch: z.string().optional(),
+	}),
+	z.object({
+		type: z.literal("agentManager.availableModels"),
+		provider: z.string(),
+		currentModel: z.string(),
+		models: z.array(availableModelSchema),
+	}),
+	z.object({
+		type: z.literal("agentManager.modelsLoadFailed"),
+		error: z.string().optional(),
+	}),
 ])
 
 // Inferred types
 export type AgentStatus = z.infer<typeof agentStatusSchema>
 export type SessionSource = z.infer<typeof sessionSourceSchema>
+export type AvailableModel = z.infer<typeof availableModelSchema>
 export type ParallelModeInfo = z.infer<typeof parallelModeInfoSchema>
 export type AgentSession = z.infer<typeof agentSessionSchema>
 export type PendingSession = z.infer<typeof pendingSessionSchema>
 export type AgentManagerState = z.infer<typeof agentManagerStateSchema>
 export type AgentManagerMessage = z.infer<typeof agentManagerMessageSchema>
 export type AgentManagerExtensionMessage = z.infer<typeof agentManagerExtensionMessageSchema>
+export type StartSessionMessage = z.infer<typeof startSessionMessageSchema>

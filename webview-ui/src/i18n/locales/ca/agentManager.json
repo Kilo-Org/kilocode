@@ -28,7 +28,6 @@
 		"autoModeWarning": "Mode YOLO - les operacions d'eines s'aproven automàticament",
 		"starting": "Iniciant...",
 		"startAriaLabel": "Iniciar agent amb la instrucció proporcionada",
-		"keyboardHint": "Prem Enter per iniciar, Shift+Enter per a nova línia",
 		"runModeLocal": "Local",
 		"runModeWorktree": "Worktree",
 		"runModeCloud": "Núvol",
@@ -55,7 +54,11 @@
 		"branchPickerTooltip": "Canvia la branca base",
 		"noBranches": "No s'han trobat branques",
 		"noMatchingBranches": "No hi ha branques que coincideixin amb la teva cerca",
-		"openTerminal": "Obrir terminal"
+		"openTerminal": "Obrir terminal",
+		"selectModel": "Selecciona model",
+		"modelTooltip": "Tria quin model d'IA utilitzar per a aquesta sessió",
+		"defaultModel": "Model per defecte",
+		"loadingModels": "Carregant..."
 	},
 	"messages": {
 		"waiting": "Esperant resposta de l'agent...",

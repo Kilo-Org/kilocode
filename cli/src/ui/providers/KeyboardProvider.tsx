@@ -14,18 +14,16 @@ import { logs } from "../../services/logs.js"
 import {
 	broadcastKeyEventAtom,
 	setPasteModeAtom,
-	appendToPasteBufferAtom,
-	pasteBufferAtom,
+	kittySequenceBufferAtom,
 	appendToKittyBufferAtom,
 	clearKittyBufferAtom,
-	kittySequenceBufferAtom,
 	kittyProtocolEnabledAtom,
 	setKittyProtocolAtom,
 	debugKeystrokeLoggingAtom,
 	setDebugLoggingAtom,
 	clearBuffersAtom,
 	setupKeyboardAtom,
-	triggerClipboardImagePasteAtom,
+	appendToPasteBufferAtom,
 } from "../../state/atoms/keyboard.js"
 import {
 	parseKittySequence,
@@ -34,6 +32,7 @@ import {
 	mapAltKeyCharacter,
 	parseReadlineKey,
 	createSpecialKey,
+	createPasteKey,
 } from "../utils/keyParsing.js"
 import { autoEnableKittyProtocol } from "../utils/terminalCapabilities.js"
 import {
@@ -61,17 +60,15 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Jotai setters
 	const broadcastKey = useSetAtom(broadcastKeyEventAtom)
 	const setPasteMode = useSetAtom(setPasteModeAtom)
-	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
 	const appendToKittyBuffer = useSetAtom(appendToKittyBufferAtom)
 	const clearKittyBuffer = useSetAtom(clearKittyBufferAtom)
 	const setKittyProtocol = useSetAtom(setKittyProtocolAtom)
 	const setDebugLogging = useSetAtom(setDebugLoggingAtom)
 	const clearBuffers = useSetAtom(clearBuffersAtom)
 	const setupKeyboard = useSetAtom(setupKeyboardAtom)
-	const triggerClipboardImagePaste = useSetAtom(triggerClipboardImagePasteAtom)
+	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
 
 	// Jotai getters (for reading current state)
-	const pasteBuffer = useAtomValue(pasteBufferAtom)
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
 	const isKittyEnabled = useAtomValue(kittyProtocolEnabledAtom)
 	const isDebugEnabled = useAtomValue(debugKeystrokeLoggingAtom)
@@ -105,16 +102,14 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		isPasteRef.current = false
 		pasteBufferRef.current = ""
 
-		if (wasPasting) {
+		if (wasPasting && currentBuffer) {
 			// Normalize line endings: convert \r\n and \r to \n
-			// This handles different line ending formats from various terminals/platforms
-			const normalizedBuffer = currentBuffer ? currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n") : ""
-			// Always check clipboard for image first (prioritize image over text)
-			// If no image found, the fallback text will be used
-			// This handles: Cmd+V with image file copied from Finder (terminal sends filename as text)
-			triggerClipboardImagePaste(normalizedBuffer || undefined)
+			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+			// Directly broadcast paste event - skip clipboard image check for bracketed pastes
+			// Clipboard image check only runs for explicit Cmd+V (handled in handleGlobalHotkeys)
+			broadcastKey(createPasteKey(normalizedBuffer))
 		}
-	}, [setPasteMode, triggerClipboardImagePaste])
+	}, [setPasteMode, broadcastKey])
 
 	useEffect(() => {
 		// Save original raw mode state
@@ -407,9 +402,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 			rl.close()
 
-			// Cleanup keyboard handler
-			unsubscribeKeyboard()
-
 			// Disable bracketed paste mode
 			process.stdout.write("\x1b[?2004l")
 
@@ -421,10 +413,16 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Clear timers
 			clearBackslashTimer()
 
-			// DON'T flush paste buffers here - React StrictMode causes re-mounts
-			// that would interrupt an in-progress paste operation.
-			// The paste buffer refs persist across re-mounts and will be
-			// properly flushed when the paste end marker is received.
+			// Flush any pending buffers
+			// Note: This was previously removed to support React StrictMode, but it caused
+			// issues with large pastes in production where the component might re-render
+			// or unmount during a paste operation, leading to lost paste state and
+			// raw input processing (submitting on newlines).
+			completePaste()
+			clearBuffers()
+
+			// Cleanup keyboard handler LAST to ensure pending buffers can be processed
+			unsubscribeKeyboard()
 		}
 	}, [
 		stdin,
@@ -437,9 +435,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		clearKittyBuffer,
 		clearBuffers,
 		setKittyProtocol,
-		pasteBuffer,
 		kittyBuffer,
-		triggerClipboardImagePaste,
 		isKittyEnabled,
 		isDebugEnabled,
 		completePaste,
