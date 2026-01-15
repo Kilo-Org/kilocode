@@ -253,6 +253,11 @@
 			"minimum": 1,
 			"default": 5,
 			"description": "Maximum number of files that can be read in a single read_file request. The AI will be instructed about this limit and requests exceeding it will be rejected."
+		},
+		"codebaseIndexConfig": {
+			"type": "object",
+			"description": "Code indexing configuration for semantic search. All properties starting with 'codebaseIndex' are passed through to the extension. See packages/types/src/codebase-index.ts for the full schema.",
+			"additionalProperties": true
 		}
 	},
 	"definitions": {

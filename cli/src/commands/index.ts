@@ -17,6 +17,7 @@ import { providerCommand } from "./provider.js"
 import { profileCommand } from "./profile.js"
 import { teamsCommand } from "./teams.js"
 import { configCommand } from "./config.js"
+import { indexConfigCommand } from "./indexconfig.js"
 import { tasksCommand } from "./tasks.js"
 import { themeCommand } from "./theme.js"
 import { checkpointCommand } from "./checkpoint.js"
@@ -38,6 +39,7 @@ export function initializeCommands(): void {
 	commandRegistry.register(profileCommand)
 	commandRegistry.register(teamsCommand)
 	commandRegistry.register(configCommand)
+	commandRegistry.register(indexConfigCommand)
 	commandRegistry.register(tasksCommand)
 	commandRegistry.register(themeCommand)
 	commandRegistry.register(checkpointCommand)

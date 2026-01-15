@@ -1338,6 +1338,16 @@ export const webviewMessageHandler = async (
 
 				try {
 					await provider.getCurrentTask()?.checkpointRestore(result.data)
+					// kilocode_change start: Wait for the second cancelTask() (inside checkpointRestore) to complete
+					// and task to reinitialize, then explicitly sync state to webview to ensure CLI receives
+					// the updated message list after conversation restore
+					try {
+						await pWaitFor(() => provider.getCurrentTask()?.isInitialized === true, { timeout: 3_000 })
+					} catch {
+						// Timeout is acceptable - task may already be initialized
+					}
+					await provider.postStateToWebview()
+					// kilocode_change end
 				} catch (error) {
 					vscode.window.showErrorMessage(t("common:errors.checkpoint_failed"))
 				}
