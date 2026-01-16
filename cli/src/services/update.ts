@@ -4,7 +4,7 @@
  * Handles checking for updates, performing updates, and restarting the CLI.
  */
 
-import { spawn } from "child_process"
+import { spawn, ChildProcess } from "child_process"
 import { readFileSync } from "fs"
 import { logs } from "./logs.js"
 import semver from "semver"
@@ -160,12 +160,14 @@ export function restartCLI(): {
 
 	try {
 		// Spawn a new process with the same arguments
-		const child = spawn(process.execPath, [process.argv[1], ...args], {
+		const scriptPath = process.argv[1] || ""
+		const child = spawn(process.execPath, [scriptPath, ...args], {
 			detached: true,
 			stdio: "ignore",
 		})
 
-		child.unref()
+		// kilocode_change - Type assertion to handle complex spawn return type
+		;(child as ChildProcess).unref()
 
 		// Exit the current process
 		process.exit(0)
