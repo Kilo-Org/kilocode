@@ -11,13 +11,15 @@ import { type ModelInfo, type GeminiCliModelId, geminiCliDefaultModelId, geminiC
 import type { ApiHandlerOptions } from "../../shared/api"
 import { t } from "../../i18n"
 
-import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import type { ApiStream } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
 import { getExtensionConfigUrl } from "@roo-code/types"
+import { FunctionCallingConfigMode } from "@google/genai"
+import OpenAI from "openai"
 
 // OAuth2 Configuration (from Cline implementation)
 const OAUTH_REDIRECT_URI = "http://localhost:45289"
@@ -280,8 +282,27 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 		const { id: model, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
 
+		// Check if model supports native tools and tools are provided
+		const supportsNativeTools = info.supportsNativeTools ?? false
+		const useNativeTools =
+			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
+
+		// Build a map of tool IDs to names from previous messages
+		// This is needed because Anthropic's tool_result blocks only contain the ID,
+		// but Gemini requires the name in functionResponse
+		const toolIdToName = new Map<string, string>()
+		for (const message of messages) {
+			if (Array.isArray(message.content)) {
+				for (const block of message.content) {
+					if (block.type === "tool_use") {
+						toolIdToName.set(block.id, block.name)
+					}
+				}
+			}
+		}
+
 		// Convert messages to Gemini format
-		const contents = messages.map((message) => convertAnthropicMessageToGemini(message))
+		const contents = messages.map((message) => convertAnthropicMessageToGemini(message, { toolIdToName })).flat()
 
 		// Prepare request body for Code Assist API - matching Cline's structure
 		const requestBody: any = {
@@ -307,6 +328,46 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			requestBody.request.generationConfig.thinkingConfig = thinkingConfig
 		}
 
+		// Add tools if using native tool calling
+		if (useNativeTools && metadata?.tools) {
+			requestBody.request.tools = [
+				{
+					functionDeclarations: metadata.tools.map((tool) => ({
+						name: (tool as OpenAI.ChatCompletionFunctionTool).function.name,
+						description: (tool as OpenAI.ChatCompletionFunctionTool).function.description,
+						parameters: (tool as OpenAI.ChatCompletionFunctionTool).function.parameters,
+					})),
+				},
+			]
+
+			// Add tool config for tool_choice
+			if (metadata.tool_choice) {
+				const choice = metadata.tool_choice
+				let mode: FunctionCallingConfigMode
+				let allowedFunctionNames: string[] | undefined
+
+				if (choice === "auto") {
+					mode = FunctionCallingConfigMode.AUTO
+				} else if (choice === "none") {
+					mode = FunctionCallingConfigMode.NONE
+				} else if (choice === "required") {
+					mode = FunctionCallingConfigMode.ANY
+				} else if (typeof choice === "object" && "function" in choice && choice.type === "function") {
+					mode = FunctionCallingConfigMode.ANY
+					allowedFunctionNames = [choice.function.name]
+				} else {
+					mode = FunctionCallingConfigMode.AUTO
+				}
+
+				requestBody.request.toolConfig = {
+					functionCallingConfig: {
+						mode,
+						...(allowedFunctionNames ? { allowedFunctionNames } : {}),
+					},
+				}
+			}
+		}
+
 		try {
 			// Call Code Assist streaming endpoint using OAuth2Client
 			const response = await this.authClient.request({
@@ -322,6 +383,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 			// Process the SSE stream
 			let lastUsageMetadata: any = undefined
+			let toolCallCounter = 0
 
 			for await (const jsonData of this.parseSSEStream(response.data as NodeJS.ReadableStream)) {
 				// Extract content from the response
@@ -343,6 +405,30 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 									text: part.text,
 								}
 							}
+						} else if (part.functionCall) {
+							// Handle function calls - emit as partial chunks for NativeToolCallParser
+							const callId = `${part.functionCall.name}-${toolCallCounter}`
+							const args = JSON.stringify(part.functionCall.args)
+
+							// Emit name first
+							yield {
+								type: "tool_call_partial",
+								index: toolCallCounter,
+								id: callId,
+								name: part.functionCall.name,
+								arguments: undefined,
+							}
+
+							// Then emit arguments
+							yield {
+								type: "tool_call_partial",
+								index: toolCallCounter,
+								id: callId,
+								name: undefined,
+								arguments: args,
+							}
+
+							toolCallCounter++
 						}
 					}
 				}
