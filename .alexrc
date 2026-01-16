@@ -1,0 +1,8 @@
+{
+  "allow": [
+    "master",
+    "slave",
+    "whitelist",
+    "blacklist"
+  ]
+}

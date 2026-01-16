@@ -48,6 +48,7 @@
 		"@types/glob": "^9.0.0",
 		"@types/node": "20.x",
 		"@vscode/vsce": "3.3.2",
+		"alex": "^11.0.1",
 		"esbuild": "^0.25.0",
 		"eslint": "^9.27.0",
 		"glob": "^11.1.0",
@@ -75,8 +76,7 @@
 			"undici": ">=5.29.0",
 			"brace-expansion": "^2.0.2",
 			"form-data": ">=4.0.4",
-			"bluebird": ">=3.7.2",
-			"glob": ">=11.1.0"
+			"bluebird": ">=3.7.2"
 		}
 	}
 }
