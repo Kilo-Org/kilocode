@@ -336,7 +336,7 @@ async function parseFile(
 		// Process the captures
 		return processCaptures(captures, lines, extLang)
 	} catch (error) {
-		console.log(`Error parsing file: ${error}\n`)
+		console.error(`Error parsing file: ${error}\n`)
 		// Return null on parsing error to avoid showing error messages in the output
 		return null
 	}
