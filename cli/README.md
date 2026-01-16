@@ -280,7 +280,7 @@ This instructs the AI to proceed without user input.
 
 To build and run the CLI locally off your branch:
 
-#### Build the VS Code extension
+#### Build the VSCode extension
 
 ```shell
 cd src
@@ -295,7 +295,6 @@ cd ..
 ```shell
 cd cli
 pnpm install
-pnpm deps:install
 ```
 
 #### Build the CLI
@@ -305,6 +304,20 @@ pnpm clean
 pnpm clean:kilocode
 pnpm copy:kilocode
 pnpm build
+```
+
+#### Install production dependencies
+
+```shell
+pnpm deps:install
+```
+
+#### Create required .env file
+
+The CLI requires a `.env` file in the `dist` directory:
+
+```shell
+touch dist/.env
 ```
 
 #### Configure CLI settings

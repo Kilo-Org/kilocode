@@ -10,7 +10,7 @@ Before you begin, choose one of the following development environment options:
 
 1. **Git** - For version control
 2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
-3. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
+3. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) exactly - other versions may cause issues)
 4. **pnpm** - Package manager (https://pnpm.io/)
 5. **Visual Studio Code** - Our recommended IDE for development
 
@@ -22,6 +22,8 @@ Before you begin, choose one of the following development environment options:
 4. **Visual Studio Code** - Our recommended IDE for development
 5. **Dev Containers extension** - VSCode extension for container development
 
+> **Note**: The devcontainer automatically provides the correct Node.js version (20.19.2)
+
 > **Note for Windows Contributors**: If you're having issues with WSL or want a standardized development environment, we recommend using the devcontainer option. It provides the exact same environment as our Nix flake configuration but works seamlessly on Windows without WSL.
 
 ### Option 3: Nix Flake (Recommended for NixOS/Nix users)
@@ -31,6 +33,8 @@ Before you begin, choose one of the following development environment options:
 3. **Nix** - The Nix package manager with flakes enabled
 4. **direnv** - For automatic environment loading
 5. **Visual Studio Code** - Our recommended IDE for development
+
+> **Note**: The Nix flake automatically provides the correct Node.js version (20.19.2)
 
 ## Getting Started
 
@@ -254,6 +258,8 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 2. **Webview not updating**: Try reloading the window (Developer: Reload Window)
 3. **Build errors**: Make sure all dependencies are installed with `pnpm install`
 4. **Ripgrep missing**: We bundle `@vscode/ripgrep`, but if that binary is missing the extension will fall back to `rg` on your `PATH` (commonly `/opt/homebrew/bin/rg` on macOS) or the path set in `RIPGREP_PATH`.
+5. **Git LFS hook conflicts**: If you see "Hook already exists: pre-push", run `git lfs update --force` to resolve conflicts with existing Git hooks.
+6. **Node version issues**: Ensure you're using exactly Node.js v20.19.2. Other versions may cause build or runtime issues.
 
 ### Debugging Tips
 
