@@ -148,7 +148,8 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 				trackContribution({
 					cwd: task.cwd,
 					filePath: relPath,
-					unifiedDiff: unified,
+					originalContent: task.diffViewProvider.originalContent || "",
+					newContent,
 					status: didApprove ? "accepted" : "rejected",
 					taskId: task.taskId,
 					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
@@ -193,7 +194,8 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 				trackContribution({
 					cwd: task.cwd,
 					filePath: relPath,
-					unifiedDiff: unified,
+					originalContent: task.diffViewProvider.originalContent || "",
+					newContent,
 					status: didApprove ? "accepted" : "rejected",
 					taskId: task.taskId,
 					organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
