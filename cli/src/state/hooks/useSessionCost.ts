@@ -48,15 +48,8 @@ export function useSessionCost(): SessionCostInfo {
 /**
  * Format cost for display
  * @param cost - Cost in dollars
- * @returns Formatted cost string (e.g., "$0.0123")
+ * @returns Formatted cost string (e.g., "$1.23")
  */
 export function formatSessionCost(cost: number): string {
-	if (cost === 0) {
-		return "$0.00"
-	}
-	// Show 4 decimal places for small costs, 2 for larger
-	if (cost < 0.01) {
-		return `$${cost.toFixed(4)}`
-	}
 	return `$${cost.toFixed(2)}`
 }

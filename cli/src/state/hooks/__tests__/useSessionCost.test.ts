@@ -20,13 +20,10 @@ describe("useSessionCost", () => {
 			expect(formatSessionCost(0)).toBe("$0.00")
 		})
 
-		it("should format small costs with 4 decimal places", () => {
-			expect(formatSessionCost(0.0001)).toBe("$0.0001")
-			expect(formatSessionCost(0.0012)).toBe("$0.0012")
-			expect(formatSessionCost(0.0099)).toBe("$0.0099")
-		})
-
-		it("should format larger costs with 2 decimal places", () => {
+		it("should format costs with 2 decimal places", () => {
+			expect(formatSessionCost(0.0001)).toBe("$0.00")
+			expect(formatSessionCost(0.0012)).toBe("$0.00")
+			expect(formatSessionCost(0.0099)).toBe("$0.01")
 			expect(formatSessionCost(0.01)).toBe("$0.01")
 			expect(formatSessionCost(0.12)).toBe("$0.12")
 			expect(formatSessionCost(1.23)).toBe("$1.23")
