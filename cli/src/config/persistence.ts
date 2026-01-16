@@ -6,6 +6,7 @@ import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL } from "./defaults.js"
 import { validateConfig, type ValidationResult } from "./validation.js"
 import { logs } from "../services/logs.js"
 import { buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
+import { detectTerminalTheme, shouldAutoDetectTheme } from "../utils/detectTerminalTheme.js" // kilocode_change
 
 /**
  * Result of loading config, includes both the config and validation status
@@ -124,6 +125,14 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 	if (!merged.customThemes) {
 		merged.customThemes = {}
 	}
+
+	// kilocode_change start - Auto-detect terminal theme if not explicitly set
+	if (shouldAutoDetectTheme(merged.theme)) {
+		const detectedTheme = detectTerminalTheme()
+		logs.debug(`Auto-detected terminal theme: ${detectedTheme}`, "ConfigPersistence")
+		merged.theme = detectedTheme
+	}
+	// kilocode_change end
 
 	return merged
 }
