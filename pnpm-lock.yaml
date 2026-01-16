@@ -1545,8 +1545,8 @@ importers:
   packages/core-schemas:
     dependencies:
       zod:
-        specifier: ^3.25.61
-        version: 3.25.76
+        specifier: ^4.3.5
+        version: 4.3.5
     devDependencies:
       '@roo-code/config-eslint':
         specifier: workspace:^

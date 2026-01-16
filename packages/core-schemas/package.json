@@ -21,7 +21,7 @@
 		"clean": "rimraf dist .turbo"
 	},
 	"dependencies": {
-		"zod": "^3.25.61"
+		"zod": "^4.3.5"
 	},
 	"peerDependencies": {
 		"@roo-code/types": "workspace:^"
