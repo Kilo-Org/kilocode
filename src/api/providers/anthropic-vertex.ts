@@ -77,7 +77,9 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		const { supportsPromptCache } = info
 
 		// Filter out non-Anthropic blocks (reasoning, thoughtSignature, etc.) before sending to the API
-		const sanitizedMessages = filterNonAnthropicBlocks(messages)
+		// kilocode_change start
+		const sanitizedMessages = filterNonAnthropicBlocks(messages, thinking)
+		// kilocode_change end
 
 		// Enable native tools using resolveToolProtocol (which checks model's defaultToolProtocol)
 		// This matches the approach used in AnthropicHandler
