@@ -13,4 +13,14 @@ There are lots of ways to contribute to the project
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
+## Important: Changesets
+
+When making code changes that affect user-facing behavior, please create a changeset:
+
+```bash
+pnpm changeset
+```
+
+This helps us automatically generate a changelog for releases.
+
 The Kilocode Community is [on Discord](https://kilo.ai/discord)
