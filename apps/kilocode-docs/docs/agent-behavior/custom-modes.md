@@ -56,7 +56,7 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 **Importing a Mode:**
 
 1. Click the Import Mode button (upload icon) in the Modes view
-2. Select the mode's YAML file
+2. Select the mode's `.yaml` file (only YAML format is supported for import)
 3. Choose the import level:
     - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
     - **Global:** Available in all projects (saved to global settings)
@@ -83,24 +83,24 @@ Create a new mode called "Documentation Writer". It should only be able to read 
 
 Kilo Code will guide you through the process, prompting for necessary information and creating the mode using the preferred YAML format.
 
-### 2. Using the Prompts Tab
+### 2. Using the Modes View
 
-1. **Open Prompts Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
-2. **Create New Mode:** Click the <Codicon name="add" /> button to the right of the Modes heading
+1. **Open Modes View:** Click the mode selector in the Kilo Code chat panel to open the Modes view
+2. **Create New Mode:** Click the <Codicon name="add" /> button to create a new mode
 3. **Fill in Fields:**
 
-<img src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Prompts tab" width="600" />
+<img src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface" width="600" />
 
 _The custom mode creation interface showing fields for name, slug, description, save location, role definition, available tools, custom instructions._
 
 The interface provides fields for Name, Slug, Description, Save Location, Role Definition, When to Use (optional), Available Tools, and Custom Instructions. After filling these, click the "Create Mode" button. Kilo Code will save the new mode in YAML format.
 
-### 3. Manual Configuration (YAML & JSON)
+### 3. Manual Configuration (YAML)
 
-You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code now supports both YAML (preferred) and JSON formats.
+You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code uses YAML as the primary format for custom mode configuration.
 
-- **Global Modes:** Edit the `custom_modes.yaml` (preferred) or `custom_modes.json` file. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Global Prompts") > "Edit Global Modes"
-- **Project Modes:** Edit the `.kilocodemodes` file (which can be YAML or JSON) in your project root. Access it via Prompts Tab > <Codicon name="gear" /> (Settings Menu icon next to "Project Prompts") > "Edit Project Modes"
+- **Global Modes:** Edit the `custom_modes.yaml` file in your global Kilo Code settings directory. This file is accessed via the Modes view settings menu.
+- **Project Modes:** Edit the `.kilocodemodes` file in your project root. This file uses YAML format and is accessed via the Modes view settings menu.
 
 These files define an array/list of custom modes.
 
