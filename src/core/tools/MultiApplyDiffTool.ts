@@ -645,7 +645,8 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					trackContribution({
 						cwd: cline.cwd,
 						filePath: relPath,
-						unifiedDiff: unifiedPatch,
+						originalContent: beforeContent!,
+						newContent: originalContent!,
 						status: didApprove ? "accepted" : "rejected",
 						taskId: cline.taskId,
 						organizationId: state?.apiConfiguration?.kilocodeOrganizationId,
@@ -680,12 +681,11 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 					// Batch operations - already approved above
 					// kilocode_change start
 					// Track contribution for batch file operation (fire-and-forget)
-					const unifiedPatchRaw = formatResponse.createPrettyPatch(relPath, beforeContent!, originalContent!)
-					const unifiedPatch = sanitizeUnifiedDiff(unifiedPatchRaw)
 					trackContribution({
 						cwd: cline.cwd,
 						filePath: relPath,
-						unifiedDiff: unifiedPatch,
+						originalContent: beforeContent!,
+						newContent: originalContent!,
 						status: "accepted", // Batch operations are already approved at this point
 						taskId: cline.taskId,
 						organizationId: state?.apiConfiguration?.kilocodeOrganizationId,

@@ -1,5 +1,33 @@
 # @kilocode/cli
 
+## 0.22.0
+
+### Minor Changes
+
+- [#5046](https://github.com/Kilo-Org/kilocode/pull/5046) [`fd2029c`](https://github.com/Kilo-Org/kilocode/commit/fd2029c1de9adeedb4ac4974c10f43c936d60914) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add `--on-task-completed <prompt>` flag to send a custom prompt to the agent when the task completes. This flag requires `--auto` mode and allows users to define any follow-up action (e.g., creating a PR, running tests, generating documentation). The prompt is sent to the agent after the main task completes, enabling flexible post-task automation.
+
+- [#5022](https://github.com/Kilo-Org/kilocode/pull/5022) [`2fc244c`](https://github.com/Kilo-Org/kilocode/commit/2fc244c85c7b1b3758e1139667e3615822656e10) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add syntax highlighting to code edit diffs in the CLI. Diffs now display with language-aware syntax coloring using Shiki, making code changes easier to read. Includes support for 60+ languages, automatic language detection from file extensions, and theme-aware highlighting that works with both light and dark themes. Also increased the diff display limit from 20 to 50 lines with smart context collapsing around changes.
+
+### Patch Changes
+
+- [#4988](https://github.com/Kilo-Org/kilocode/pull/4988) [`7253ac0`](https://github.com/Kilo-Org/kilocode/commit/7253ac0457bf226688cad475002123a84916ea44) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Bedrock provider validation to support API key authentication without requiring access keys
+
+- [#5064](https://github.com/Kilo-Org/kilocode/pull/5064) [`2713d06`](https://github.com/Kilo-Org/kilocode/commit/2713d069e9775e3e7b7e7f5954152b275029bd0d) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Add default autocomplete suggestions for select commands (`/model select`, `/provider select`, `/tasks select`, `/session select`)
+
+- [#5066](https://github.com/Kilo-Org/kilocode/pull/5066) [`8055f15`](https://github.com/Kilo-Org/kilocode/commit/8055f153d1491c39eb2254d74c3842e4616a79d2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix CLI dispose, randomUUID, and debug UX issues
+
+- [#5011](https://github.com/Kilo-Org/kilocode/pull/5011) [`9c8bb7b`](https://github.com/Kilo-Org/kilocode/commit/9c8bb7b9bde56eb4d32093a2ee4bb72ac0906e92) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix multiline paste regression where pasting text with newlines would submit after the first line
+
+- [#5000](https://github.com/Kilo-Org/kilocode/pull/5000) [`1c88a66`](https://github.com/Kilo-Org/kilocode/commit/1c88a66caaacef3b96bc819456181d84174b82b2) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix empty files being created when project path contains non-Latin characters (e.g., Cyrillic, Chinese)
+
+    The CLI's `write_to_file` command was creating empty files when the project directory path contained non-Latin characters. This was caused by improper handling of `Uint8Array` content in the `FileSystemAPI.writeFile` method. The fix ensures proper `Buffer.from()` conversion before writing to the filesystem.
+
+- [#5058](https://github.com/Kilo-Org/kilocode/pull/5058) [`c9f1f6a`](https://github.com/Kilo-Org/kilocode/commit/c9f1f6afe32cdec374e7138c997c2a0b89b4989b) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix autocomplete for `/teams select` and other multi-argument commands
+
+- [#4985](https://github.com/Kilo-Org/kilocode/pull/4985) [`69a541a`](https://github.com/Kilo-Org/kilocode/commit/69a541a6d85cf79580c7d80c691bf3f5a6aa6b89) Thanks [@marius-kilocode](https://github.com/marius-kilocode)! - Fix Windows cmd.exe display bug with escape sequences
+
+    On Windows cmd.exe, the `\x1b[3J` (clear scrollback buffer) escape sequence is not properly supported and causes display artifacts like raw escape sequences appearing in the output (e.g., `[\r\n\t...]`).
+
 ## 0.21.0
 
 ### Minor Changes

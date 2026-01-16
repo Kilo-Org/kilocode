@@ -739,6 +739,9 @@ importers:
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
+      linguist-languages:
+        specifier: ^9.2.0
+        version: 9.2.0
       lodash.debounce:
         specifier: ^4.0.8
         version: 4.0.8
@@ -15179,6 +15182,9 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
+  linguist-languages@9.2.0:
+    resolution: {integrity: sha512-s13kOULTt5LvuijOcR5U/WSuR+K+VOH/Od77oaQFnoAEIDIFAW4FKYv7zAdcGfyw8RR3vFuTlCjFf96th4J+NQ==}
+
   linkify-it@5.0.0:
     resolution: {integrity: sha512-5aHCbzQRADcdP+ATqnDuhhJ/MRIqDkZX5pyjFHRRysS8vZ5AbqGEoFIb6pYHPZ+L/OC2Lc+xT8uHVVR5CAK/wQ==}
 
@@ -20961,6 +20967,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-fetch@3.6.20:
     resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
@@ -37895,6 +37902,8 @@ snapshots:
       unicode-trie: 2.0.0
 
   lines-and-columns@1.2.4: {}
+
+  linguist-languages@9.2.0: {}
 
   linkify-it@5.0.0:
     dependencies:

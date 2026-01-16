@@ -1,5 +1,7 @@
 import { parseCommand } from "../../shared/parse-command"
 
+declare const process: any
+
 /**
  * Detect dangerous parameter substitutions that could lead to command execution.
  * These patterns are never auto-approved and always require explicit user approval.
@@ -60,7 +62,8 @@ export function containsDangerousSubstitution(source: string): boolean {
 		indirectExpansion ||
 		hereStringWithSubstitution ||
 		zshProcessSubstitution ||
-		zshGlobQualifier
+		zshGlobQualifier ||
+		((process as any).platform === "win32" && /\^/.test(source)) // kilocode_change: Windows CMD specific escape character
 	)
 }
 

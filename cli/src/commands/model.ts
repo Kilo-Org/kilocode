@@ -928,6 +928,7 @@ export const modelCommand: Command = {
 			name: "model-or-list-subcommand",
 			description: "Model name (for info/select) or list subcommand (page, next, prev, sort, filter)",
 			required: false,
+			provider: modelAutocompleteProvider,
 			conditionalProviders: [
 				{
 					condition: (context) => {
