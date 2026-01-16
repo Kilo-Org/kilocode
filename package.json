@@ -38,7 +38,10 @@
 		"cli:dev": "pnpm --filter @kilocode/cli run dev",
 		"cli:run": "pnpm --filter @kilocode/cli run start",
 		"docs:start": "pnpm --filter kilocode-docs start",
-		"docs:build": "pnpm --filter kilocode-docs build"
+		"docs:build": "pnpm --filter kilocode-docs build",
+		"alex": "alex '**/*.md' '!**/node_modules/**' '!releases/**'",
+		"alex:docs": "alex 'apps/kilocode-docs/docs/**/*.md' '!**/node_modules/**'",
+		"alex:fix": "alex '**/*.md' '!**/node_modules/**' '!releases/**' --fix"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",
