@@ -40,8 +40,6 @@ Can you check if my website at https://kilo.ai is displaying correctly?
 Browse http://localhost:3000, scroll down to the bottom of the page and check if the footer information is displaying correctly.
 ```
 
-<img src="/docs/features/KiloCodeBrowser.png" alt="Browser use example" width="300" />
-
 ## How Browser Actions Work
 
 The browser_action tool controls a browser instance that returns screenshots and console logs after each action, allowing you to see the results of interactions.
