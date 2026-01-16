@@ -55,8 +55,13 @@ export const messageCutoffTimestampAtom = atom<number>(0)
 export const errorAtom = atom<string | null>(null)
 
 /**
- * Atom to track YOLO mode state
- * When enabled, all operations are auto-approved without confirmation
+ * Atom to track YOLO mode state (local to this CLI instance)
+ * When enabled, all operations are auto-approved without confirmation.
+ *
+ * NOTE: This state is intentionally NOT sent to the extension host.
+ * Each CLI instance manages its own yoloMode locally to ensure session isolation.
+ * Agent Manager sessions get their isolated yoloMode through the --yolo flag.
+ * See: https://github.com/Kilo-Org/kilocode/pull/4890
  */
 export const yoloModeAtom = atom<boolean>(false)
 

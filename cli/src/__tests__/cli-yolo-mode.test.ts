@@ -1,63 +1,76 @@
 import { describe, it, expect } from "vitest"
 
 /**
- * Tests for YOLO mode behavior in JSON-IO mode.
+ * Tests for YOLO mode isolation behavior.
  *
- * In JSON-IO mode (--json-io flag), we don't send the yoloMode message to the extension host.
- * This prevents Task.ts from auto-answering followup questions, allowing the CLI's own
- * approval layer to handle YOLO behavior (which correctly excludes followups from auto-approval).
+ * IMPORTANT: The CLI does NOT send yoloMode messages to the extension host.
+ * This is intentional to ensure session isolation:
+ *
+ * 1. Each CLI instance manages its own yoloMode state locally via yoloModeAtom
+ * 2. Sending yoloMode to the extension host would pollute the global state
+ * 3. This would affect other sessions (like Agent Manager) that should have
+ *    isolated yoloMode per session via the --yolo flag
+ *
+ * See: https://github.com/Kilo-Org/kilocode/pull/4890
  */
-describe("CLI yoloMode in JSON-IO mode", () => {
-	describe("shouldSendYoloModeToExtension", () => {
-		// Extract the logic we're testing into a pure function
-		function shouldSendYoloModeToExtension(options: {
+describe("CLI yoloMode isolation", () => {
+	describe("yoloMode state management", () => {
+		/**
+		 * This function represents the OLD behavior that was removed.
+		 * Previously, CLI would send yoloMode to extension host in non-JSON-IO mode.
+		 * Now, yoloMode is NEVER sent to extension host to ensure session isolation.
+		 */
+		function shouldSendYoloModeToExtension(_options: {
 			jsonInteractive?: boolean
 			ci?: boolean
 			yolo?: boolean
 		}): boolean {
-			// This mirrors the condition in cli.ts:
-			// if (!this.options.jsonInteractive) { sendWebviewMessage({ type: "yoloMode", ... }) }
-			return !options.jsonInteractive
+			// NEW BEHAVIOR: Never send yoloMode to extension host
+			// Each CLI instance manages its own state locally
+			return false
 		}
 
-		function getYoloModeValue(options: { ci?: boolean; yolo?: boolean }): boolean {
-			// This mirrors: Boolean(this.options.ci || this.options.yolo)
+		/**
+		 * Helper to get local yoloMode value based on CLI flags.
+		 * This value is stored in the CLI's local yoloModeAtom, not sent to extension.
+		 */
+		function getLocalYoloModeValue(options: { ci?: boolean; yolo?: boolean }): boolean {
 			return Boolean(options.ci || options.yolo)
 		}
 
-		it("should send yoloMode message when not in JSON-IO mode", () => {
-			expect(shouldSendYoloModeToExtension({ jsonInteractive: false })).toBe(true)
-			expect(shouldSendYoloModeToExtension({ jsonInteractive: undefined })).toBe(true)
-			expect(shouldSendYoloModeToExtension({})).toBe(true)
+		it("should NEVER send yoloMode message to extension host (session isolation)", () => {
+			// Even in non-JSON-IO mode, we don't send yoloMode to avoid global state pollution
+			expect(shouldSendYoloModeToExtension({ jsonInteractive: false })).toBe(false)
+			expect(shouldSendYoloModeToExtension({ jsonInteractive: undefined })).toBe(false)
+			expect(shouldSendYoloModeToExtension({})).toBe(false)
 		})
 
-		it("should NOT send yoloMode message when in JSON-IO mode", () => {
+		it("should NOT send yoloMode message in JSON-IO mode", () => {
 			expect(shouldSendYoloModeToExtension({ jsonInteractive: true })).toBe(false)
 		})
 
-		it("should NOT send yoloMode message in JSON-IO mode even with yolo flag", () => {
+		it("should NOT send yoloMode message with any flag combination", () => {
 			expect(shouldSendYoloModeToExtension({ jsonInteractive: true, yolo: true })).toBe(false)
-		})
-
-		it("should NOT send yoloMode message in JSON-IO mode even with ci flag", () => {
 			expect(shouldSendYoloModeToExtension({ jsonInteractive: true, ci: true })).toBe(false)
+			expect(shouldSendYoloModeToExtension({ jsonInteractive: false, yolo: true })).toBe(false)
+			expect(shouldSendYoloModeToExtension({ jsonInteractive: false, ci: true })).toBe(false)
 		})
 
-		it("should set yoloMode value to true when yolo flag is set", () => {
-			expect(getYoloModeValue({ yolo: true })).toBe(true)
+		it("should set local yoloMode value to true when yolo flag is set", () => {
+			expect(getLocalYoloModeValue({ yolo: true })).toBe(true)
 		})
 
-		it("should set yoloMode value to true when ci flag is set", () => {
-			expect(getYoloModeValue({ ci: true })).toBe(true)
+		it("should set local yoloMode value to true when ci flag is set", () => {
+			expect(getLocalYoloModeValue({ ci: true })).toBe(true)
 		})
 
-		it("should set yoloMode value to true when both flags are set", () => {
-			expect(getYoloModeValue({ yolo: true, ci: true })).toBe(true)
+		it("should set local yoloMode value to true when both flags are set", () => {
+			expect(getLocalYoloModeValue({ yolo: true, ci: true })).toBe(true)
 		})
 
-		it("should set yoloMode value to false when neither flag is set", () => {
-			expect(getYoloModeValue({})).toBe(false)
-			expect(getYoloModeValue({ yolo: false, ci: false })).toBe(false)
+		it("should set local yoloMode value to false when neither flag is set", () => {
+			expect(getLocalYoloModeValue({})).toBe(false)
+			expect(getLocalYoloModeValue({ yolo: false, ci: false })).toBe(false)
 		})
 	})
 })
