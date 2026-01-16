@@ -223,6 +223,22 @@ pnpm lint          # Run ESLint
 pnpm check-types   # Run TypeScript type checking
 ```
 
+### Inclusive Language Check
+
+We use [alex](https://github.com/get-alex/alex) to check our documentation for inclusive language.
+
+Run the check:
+
+```bash
+pnpm alex:docs
+```
+
+Auto-fix issues:
+
+```bash
+pnpm alex:fix
+```
+
 ## Git Hooks
 
 This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks, which automate certain checks before commits and pushes. The hooks are located in the `.husky/` directory.
